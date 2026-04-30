@@ -28,6 +28,21 @@ bool isSemanticFileHandleTypeText(const std::string &typeText) {
          normalizeCollectionBindingTypeName(base) == "File";
 }
 
+std::string resolveSemanticProductPayloadTypeText(
+    const SemanticProductTargetAdapter &semanticProductTargets,
+    const std::string &text,
+    SymbolId textId) {
+  std::string resolvedText = text;
+  if (resolvedText.empty() &&
+      textId != InvalidSymbolId &&
+      semanticProductTargets.semanticProgram != nullptr) {
+    resolvedText = std::string(semanticProgramResolveCallTargetString(
+        *semanticProductTargets.semanticProgram,
+        textId));
+  }
+  return trimTemplateTypeText(resolvedText);
+}
+
 bool resolveSemanticProductResultOkPayloadInfo(
     const Expr &payloadExpr,
     const SemanticProductTargetAdapter *semanticProductTargets,
@@ -43,16 +58,21 @@ bool resolveSemanticProductResultOkPayloadInfo(
   if (const auto *bindingFact = findSemanticProductBindingFact(
           *semanticProductTargets, payloadExpr);
       bindingFact != nullptr) {
-    bindingTypeText = bindingFact->bindingTypeText;
+    bindingTypeText = resolveSemanticProductPayloadTypeText(
+        *semanticProductTargets,
+        bindingFact->bindingTypeText,
+        bindingFact->bindingTypeTextId);
   }
   if (bindingTypeText.empty()) {
     if (const auto *queryFact = findSemanticProductQueryFact(
             *semanticProductTargets, payloadExpr);
         queryFact != nullptr) {
-      bindingTypeText = queryFact->bindingTypeText;
+      bindingTypeText = resolveSemanticProductPayloadTypeText(
+          *semanticProductTargets,
+          queryFact->bindingTypeText,
+          queryFact->bindingTypeTextId);
     }
   }
-  bindingTypeText = trimTemplateTypeText(bindingTypeText);
   if (bindingTypeText.empty()) {
     return false;
   }
@@ -409,8 +429,25 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
     return ResultOkMethodCallEmitResult::Error;
   }
   ResultOkPayloadSemanticInfo semanticPayload;
+  std::string builtinComparison;
+  const bool isSyntaxOwnedComparisonPayload =
+      getBuiltinComparisonName(expr.args[1], builtinComparison);
+  const bool requiresSemanticPayloadInfo =
+      semanticProductTargets != nullptr &&
+      semanticProductTargets->hasSemanticProduct &&
+      expr.args[1].semanticNodeId != 0 &&
+      (expr.args[1].kind == Expr::Kind::Name ||
+       (expr.args[1].kind == Expr::Kind::Call &&
+        !expr.args[1].isMethodCall &&
+        !expr.args[1].isFieldAccess &&
+        !isSyntaxOwnedComparisonPayload));
   const bool hasSemanticPayloadInfo =
       resolveSemanticProductResultOkPayloadInfo(expr.args[1], semanticProductTargets, semanticPayload);
+  if (requiresSemanticPayloadInfo && !hasSemanticPayloadInfo) {
+    error = "missing semantic-product Result.ok payload metadata: " +
+            expr.args[1].name;
+    return ResultOkMethodCallEmitResult::Error;
+  }
   Expr rewrittenDirectMapExpr;
   if (!hasSemanticPayloadInfo &&
       rewritePackedResultMapConstructorExpr(expr.args[1],
@@ -427,8 +464,7 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
                                      ? semanticPayload.valueKind
                                      : inferExprKind(expr.args[1], localsIn);
   if (argKind == LocalInfo::ValueKind::Unknown) {
-    std::string builtinComparison;
-    if (getBuiltinComparisonName(expr.args[1], builtinComparison)) {
+    if (isSyntaxOwnedComparisonPayload) {
       argKind = LocalInfo::ValueKind::Bool;
     }
   }

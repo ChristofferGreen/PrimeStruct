@@ -1283,7 +1283,7 @@ TEST_CASE("ir lowerer result helpers emit Result.ok payloads from semantic query
       .scopePath = "/main",
       .callName = "lookup",
       .queryTypeText = "i32",
-      .bindingTypeText = "i32",
+      .bindingTypeText = "",
       .receiverBindingTypeText = "",
       .hasResultType = false,
       .resultTypeHasValue = false,
@@ -1336,6 +1336,46 @@ TEST_CASE("ir lowerer result helpers emit Result.ok payloads from semantic query
         EmitResult::Emitted);
   CHECK(error.empty());
   CHECK(emitCalled);
+  CHECK_FALSE(inferCalled);
+  CHECK(resolveDefinitionCalls == 0);
+
+  primec::SemanticProgram missingSemanticProgram;
+  const auto missingSemanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&missingSemanticProgram);
+  resolveDefinitionCalls = 0;
+  inferCalled = false;
+  emitCalled = false;
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitResultOkCall(
+            okExpr,
+            {},
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              inferCalled = true;
+              return ValueKind::Int32;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return std::string{};
+            },
+            [&](const primec::Expr &valueExpr) -> const primec::Definition * {
+              ++resolveDefinitionCalls;
+              CHECK(valueExpr.semanticNodeId == 913);
+              return &staleCallee;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              emitCalled = true;
+              return true;
+            },
+            []() { return 17; },
+            [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) {
+              return false;
+            },
+            [&](primec::IrOpcode, uint64_t) {},
+            error,
+            &missingSemanticTargets) ==
+        EmitResult::Error);
+  CHECK(error == "missing semantic-product Result.ok payload metadata: lookup");
+  CHECK_FALSE(emitCalled);
   CHECK_FALSE(inferCalled);
   CHECK(resolveDefinitionCalls == 0);
 }

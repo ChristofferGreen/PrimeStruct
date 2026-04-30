@@ -679,8 +679,10 @@ Task template:
     - Completed slice: native packed `Result.ok(...)` emission now consumes
       semantic-product binding/query payload facts before invoking scalar
       inference, direct map rewrite reconstruction, collection fallback, or
-      struct fallback. Syntax-only compatibility keeps the legacy inference
-      and direct-callee paths.
+      struct fallback. Missing semantic-product payload facts now fail closed
+      with a deterministic `Result.ok(...)` payload diagnostic;
+      syntax-only compatibility keeps the legacy inference and direct-callee
+      paths.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.

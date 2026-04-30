@@ -1474,6 +1474,9 @@ TEST_CASE("native Result ok emission uses semantic-product payload facts") {
       source.find("resolveSemanticProductResultOkPayloadInfo", emitPos);
   const size_t rewriteFallbackPos =
       source.find("!hasSemanticPayloadInfo", emitPos);
+  const size_t missingDiagnosticPos =
+      source.find("missing semantic-product Result.ok payload metadata",
+                  emitPos);
   const size_t inferKindPos = source.find("inferExprKind(expr.args[1], localsIn)", emitPos);
   const size_t collectionFallbackPos =
       source.find("inferDirectResultValueCollectionInfo", emitPos);
@@ -1481,13 +1484,18 @@ TEST_CASE("native Result ok emission uses semantic-product payload facts") {
       source.find("inferPackedResultStructType", emitPos);
   REQUIRE(semanticPayloadPos != std::string::npos);
   REQUIRE(rewriteFallbackPos != std::string::npos);
+  REQUIRE(missingDiagnosticPos != std::string::npos);
   REQUIRE(inferKindPos != std::string::npos);
   REQUIRE(collectionFallbackPos != std::string::npos);
   REQUIRE(structFallbackPos != std::string::npos);
   CHECK(semanticPayloadPos < rewriteFallbackPos);
+  CHECK(missingDiagnosticPos < rewriteFallbackPos);
   CHECK(semanticPayloadPos < inferKindPos);
+  CHECK(missingDiagnosticPos < inferKindPos);
   CHECK(semanticPayloadPos < collectionFallbackPos);
+  CHECK(missingDiagnosticPos < collectionFallbackPos);
   CHECK(semanticPayloadPos < structFallbackPos);
+  CHECK(missingDiagnosticPos < structFallbackPos);
 }
 
 TEST_CASE("native try Result lowering uses semantic-product variant metadata") {
