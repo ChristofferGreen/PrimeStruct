@@ -324,6 +324,10 @@ Planned non-template inference migration contract:
   target classification now resolves `bindingTypeTextId` and `queryTypeTextId` before copied
   query-fact text fields, so collection receiver classification consumes graph-owned query
   metadata instead of requiring duplicated text.
+- Completed lowerer-side binding adapter ID slice: binding-kind, value-kind, string/file-error,
+  and reference-array adapter decisions now resolve `bindingTypeTextId` before copied binding-fact
+  text fields, so local setup consumes graph-owned binding metadata instead of stale duplicated
+  text.
 - Completed collection specialization metadata diagnostic slice: semantic-product collection
   specialization completeness validation now checks interned family, binding type, element type, and
   key/value type metadata before lowerer collection consumers can read collection fact text fields.

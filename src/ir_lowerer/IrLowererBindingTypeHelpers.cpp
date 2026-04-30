@@ -68,6 +68,21 @@ bool requiresSemanticBindingFact(const SemanticProgram *semanticProgram,
   return semanticProgram != nullptr && expr.semanticNodeId != 0;
 }
 
+std::string resolveSemanticBindingFactTypeText(
+    const SemanticProgram *semanticProgram,
+    const SemanticProgramBindingFact &bindingFact) {
+  if (semanticProgram != nullptr &&
+      bindingFact.bindingTypeTextId != InvalidSymbolId) {
+    std::string resolvedTypeText = std::string(
+        semanticProgramResolveCallTargetString(*semanticProgram,
+                                               bindingFact.bindingTypeTextId));
+    if (!resolvedTypeText.empty()) {
+      return trimTemplateTypeText(resolvedTypeText);
+    }
+  }
+  return trimTemplateTypeText(bindingFact.bindingTypeText);
+}
+
 bool isLocalAutoBindingCandidate(const Expr &expr) {
   std::string typeName;
   std::vector<std::string> templateArgs;
@@ -948,8 +963,12 @@ BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgr
     }
     if (const SemanticProgramBindingFact *bindingFact =
             findSemanticProductBindingFact(semanticIndex, expr);
-        bindingFact != nullptr && !bindingFact->bindingTypeText.empty()) {
-      return bindingKindFromTypeText(bindingFact->bindingTypeText);
+        bindingFact != nullptr) {
+      const std::string bindingTypeText =
+          resolveSemanticBindingFactTypeText(semanticProgram, *bindingFact);
+      if (!bindingTypeText.empty()) {
+        return bindingKindFromTypeText(bindingTypeText);
+      }
     }
     if (requiresSemanticBindingFact(semanticProgram, expr)) {
       return LocalInfo::Kind::Value;
@@ -965,7 +984,8 @@ BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgr
     if (requiresSemanticBindingFact(semanticProgram, expr)) {
       const SemanticProgramBindingFact *bindingFact =
           findSemanticProductBindingFact(semanticIndex, expr);
-      if (bindingFact == nullptr || bindingFact->bindingTypeText.empty()) {
+      if (bindingFact == nullptr ||
+          resolveSemanticBindingFactTypeText(semanticProgram, *bindingFact).empty()) {
         return false;
       }
       return true;
@@ -975,8 +995,12 @@ BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgr
   adapters.isStringBinding = [semanticProgram, semanticIndex](const Expr &expr) {
     if (const SemanticProgramBindingFact *bindingFact =
             findSemanticProductBindingFact(semanticIndex, expr);
-        bindingFact != nullptr && !bindingFact->bindingTypeText.empty()) {
-      return isStringBindingTypeText(bindingFact->bindingTypeText);
+        bindingFact != nullptr) {
+      const std::string bindingTypeText =
+          resolveSemanticBindingFactTypeText(semanticProgram, *bindingFact);
+      if (!bindingTypeText.empty()) {
+        return isStringBindingTypeText(bindingTypeText);
+      }
     }
     if (requiresSemanticBindingFact(semanticProgram, expr)) {
       return false;
@@ -986,8 +1010,12 @@ BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgr
   adapters.isFileErrorBinding = [semanticProgram, semanticIndex](const Expr &expr) {
     if (const SemanticProgramBindingFact *bindingFact =
             findSemanticProductBindingFact(semanticIndex, expr);
-        bindingFact != nullptr && !bindingFact->bindingTypeText.empty()) {
-      return isFileErrorBindingTypeText(bindingFact->bindingTypeText);
+        bindingFact != nullptr) {
+      const std::string bindingTypeText =
+          resolveSemanticBindingFactTypeText(semanticProgram, *bindingFact);
+      if (!bindingTypeText.empty()) {
+        return isFileErrorBindingTypeText(bindingTypeText);
+      }
     }
     if (requiresSemanticBindingFact(semanticProgram, expr)) {
       return false;
@@ -1002,8 +1030,12 @@ BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgr
     }
     if (const SemanticProgramBindingFact *bindingFact =
             findSemanticProductBindingFact(semanticIndex, expr);
-        bindingFact != nullptr && !bindingFact->bindingTypeText.empty()) {
-      return bindingValueKindFromTypeText(bindingFact->bindingTypeText, kind);
+        bindingFact != nullptr) {
+      const std::string bindingTypeText =
+          resolveSemanticBindingFactTypeText(semanticProgram, *bindingFact);
+      if (!bindingTypeText.empty()) {
+        return bindingValueKindFromTypeText(bindingTypeText, kind);
+      }
     }
     if (requiresSemanticBindingFact(semanticProgram, expr)) {
       return LocalInfo::ValueKind::Unknown;
@@ -1019,8 +1051,12 @@ BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgr
     }
     if (const SemanticProgramBindingFact *bindingFact =
             findSemanticProductBindingFact(semanticIndex, expr);
-        bindingFact != nullptr && !bindingFact->bindingTypeText.empty()) {
-      setReferenceArrayInfoFromTypeText(bindingFact->bindingTypeText, info);
+        bindingFact != nullptr) {
+      const std::string bindingTypeText =
+          resolveSemanticBindingFactTypeText(semanticProgram, *bindingFact);
+      if (!bindingTypeText.empty()) {
+        setReferenceArrayInfoFromTypeText(bindingTypeText, info);
+      }
       return;
     }
     if (requiresSemanticBindingFact(semanticProgram, expr)) {

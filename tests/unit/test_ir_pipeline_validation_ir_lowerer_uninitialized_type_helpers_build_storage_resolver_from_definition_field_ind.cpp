@@ -631,6 +631,115 @@ TEST_CASE("ir lowerer binding type helpers prefer semantic product temporary fac
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
+TEST_CASE("ir lowerer binding type adapters resolve interned binding type ids before copied text") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "temporary",
+      .name = "makeVec",
+      .bindingTypeText = "i32",
+      .bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "vector<i64>"),
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 20,
+      .sourceColumn = 7,
+      .semanticNodeId = 31,
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/makeVec"),
+  });
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "temporary",
+      .name = "loadArrayRef",
+      .bindingTypeText = "Reference<array<i32>>",
+      .bindingTypeTextId = primec::semanticProgramInternCallTargetString(
+          semanticProgram, "Reference<array<i64>>"),
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 21,
+      .sourceColumn = 9,
+      .semanticNodeId = 37,
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/loadArrayRef"),
+  });
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "temporary",
+      .name = "loadString",
+      .bindingTypeText = "i32",
+      .bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "string"),
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 22,
+      .sourceColumn = 9,
+      .semanticNodeId = 41,
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/loadString"),
+  });
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "temporary",
+      .name = "loadFileError",
+      .bindingTypeText = "i32",
+      .bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 23,
+      .sourceColumn = 9,
+      .semanticNodeId = 43,
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/loadFileError"),
+  });
+
+  auto adapters = primec::ir_lowerer::makeBindingTypeAdapters(&semanticProgram);
+
+  primec::Expr tempVectorCall;
+  tempVectorCall.kind = primec::Expr::Kind::Call;
+  tempVectorCall.name = "makeVec";
+  tempVectorCall.semanticNodeId = 31;
+  CHECK(adapters.hasExplicitBindingTypeTransform(tempVectorCall));
+  CHECK(adapters.bindingKind(tempVectorCall) == primec::ir_lowerer::LocalInfo::Kind::Vector);
+  CHECK(adapters.bindingValueKind(tempVectorCall, primec::ir_lowerer::LocalInfo::Kind::Vector) ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+
+  primec::Expr tempRefCall;
+  tempRefCall.kind = primec::Expr::Kind::Call;
+  tempRefCall.name = "loadArrayRef";
+  tempRefCall.semanticNodeId = 37;
+  primec::ir_lowerer::LocalInfo info;
+  info.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  info.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  adapters.setReferenceArrayInfo(tempRefCall, info);
+  CHECK(adapters.bindingKind(tempRefCall) == primec::ir_lowerer::LocalInfo::Kind::Reference);
+  CHECK(info.referenceToArray);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+
+  primec::Expr tempStringCall;
+  tempStringCall.kind = primec::Expr::Kind::Call;
+  tempStringCall.name = "loadString";
+  tempStringCall.semanticNodeId = 41;
+  CHECK(adapters.isStringBinding(tempStringCall));
+  CHECK_FALSE(adapters.isFileErrorBinding(tempStringCall));
+
+  primec::Expr tempFileErrorCall;
+  tempFileErrorCall.kind = primec::Expr::Kind::Call;
+  tempFileErrorCall.name = "loadFileError";
+  tempFileErrorCall.semanticNodeId = 43;
+  CHECK(adapters.isFileErrorBinding(tempFileErrorCall));
+  CHECK_FALSE(adapters.isStringBinding(tempFileErrorCall));
+}
+
 TEST_CASE("ir lowerer binding type helpers prefer semantic collection specialization facts") {
   primec::SemanticProgram semanticProgram;
   semanticProgram.collectionSpecializations.push_back(
