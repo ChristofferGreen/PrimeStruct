@@ -155,6 +155,20 @@ bool isReferenceReturnType(const std::string &returnType) {
   return normalizeCollectionBindingTypeName(base) == "Reference";
 }
 
+std::string resolveSemanticReturnFactBindingType(
+    const SemanticProgram *semanticProgram,
+    const SemanticProgramReturnFact &returnFact) {
+  if (semanticProgram != nullptr && returnFact.bindingTypeTextId != InvalidSymbolId) {
+    std::string resolvedTypeText = std::string(
+        semanticProgramResolveCallTargetString(*semanticProgram,
+                                               returnFact.bindingTypeTextId));
+    if (!resolvedTypeText.empty()) {
+      return trimTemplateTypeText(resolvedTypeText);
+    }
+  }
+  return trimTemplateTypeText(returnFact.bindingTypeText);
+}
+
 bool resolveAggregatePointerLikeCallExpr(
     const Expr &expr,
     const ResolveConversionsAndCallsDefinitionCallFn &resolveDefinitionCall,
@@ -179,14 +193,8 @@ bool resolveAggregatePointerLikeCallExpr(
         findSemanticProductReturnFactByPath(*semanticProductTargets, callee->fullPath);
     std::string returnBindingType;
     if (returnFact != nullptr) {
-      returnBindingType = returnFact->bindingTypeText;
-      if (returnBindingType.empty() &&
-          returnFact->bindingTypeTextId != InvalidSymbolId &&
-          semanticProductTargets->semanticProgram != nullptr) {
-        returnBindingType = std::string(semanticProgramResolveCallTargetString(
-            *semanticProductTargets->semanticProgram,
-            returnFact->bindingTypeTextId));
-      }
+      returnBindingType = resolveSemanticReturnFactBindingType(
+          semanticProductTargets->semanticProgram, *returnFact);
     }
     if (returnFact == nullptr || returnBindingType.empty()) {
       error = "missing semantic-product aggregate pointer return metadata: " +
@@ -236,14 +244,8 @@ bool resolveReferenceReturnCallExpr(
         findSemanticProductReturnFactByPath(*semanticProductTargets, callee->fullPath);
     std::string returnBindingType;
     if (returnFact != nullptr) {
-      returnBindingType = returnFact->bindingTypeText;
-      if (returnBindingType.empty() &&
-          returnFact->bindingTypeTextId != InvalidSymbolId &&
-          semanticProductTargets->semanticProgram != nullptr) {
-        returnBindingType = std::string(semanticProgramResolveCallTargetString(
-            *semanticProductTargets->semanticProgram,
-            returnFact->bindingTypeTextId));
-      }
+      returnBindingType = resolveSemanticReturnFactBindingType(
+          semanticProductTargets->semanticProgram, *returnFact);
     }
     if (returnFact == nullptr || returnBindingType.empty()) {
       error = "missing semantic-product location reference return metadata: " +

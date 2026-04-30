@@ -1403,10 +1403,26 @@ TEST_CASE("native aggregate pointer dereference calls use semantic-product retur
   REQUIRE(std::filesystem::exists(operatorMemoryPointerHelpersPath));
 
   const std::string source = readTextFile(operatorMemoryPointerHelpersPath);
+  const size_t helperPos = source.find("resolveSemanticReturnFactBindingType");
+  REQUIRE(helperPos != std::string::npos);
+  const size_t idPos = source.find("returnFact.bindingTypeTextId", helperPos);
+  const size_t semanticResolvePos =
+      source.find("semanticProgramResolveCallTargetString(", idPos);
+  const size_t fallbackTextPos =
+      source.find("return trimTemplateTypeText(returnFact.bindingTypeText)", semanticResolvePos);
+  REQUIRE(idPos != std::string::npos);
+  REQUIRE(semanticResolvePos != std::string::npos);
+  REQUIRE(fallbackTextPos != std::string::npos);
+  CHECK(helperPos < idPos);
+  CHECK(idPos < semanticResolvePos);
+  CHECK(semanticResolvePos < fallbackTextPos);
+
   const size_t resolverPos = source.find("resolveAggregatePointerLikeCallExpr");
   REQUIRE(resolverPos != std::string::npos);
   const size_t returnFactPos =
       source.find("findSemanticProductReturnFactByPath", resolverPos);
+  const size_t helperCallPos =
+      source.find("resolveSemanticReturnFactBindingType", returnFactPos);
   const size_t missingDiagnosticPos =
       source.find("missing semantic-product aggregate pointer return metadata",
                   resolverPos);
@@ -1414,9 +1430,12 @@ TEST_CASE("native aggregate pointer dereference calls use semantic-product retur
       source.find("for (const auto &transform : callee->transforms)",
                   resolverPos);
   REQUIRE(returnFactPos != std::string::npos);
+  REQUIRE(helperCallPos != std::string::npos);
   REQUIRE(missingDiagnosticPos != std::string::npos);
   REQUIRE(fallbackTransformScanPos != std::string::npos);
   CHECK(returnFactPos < fallbackTransformScanPos);
+  CHECK(returnFactPos < helperCallPos);
+  CHECK(helperCallPos < fallbackTransformScanPos);
   CHECK(missingDiagnosticPos < fallbackTransformScanPos);
 }
 
@@ -1431,10 +1450,26 @@ TEST_CASE("native location direct reference calls use semantic-product return fa
   REQUIRE(std::filesystem::exists(operatorMemoryPointerHelpersPath));
 
   const std::string source = readTextFile(operatorMemoryPointerHelpersPath);
+  const size_t helperPos = source.find("resolveSemanticReturnFactBindingType");
+  REQUIRE(helperPos != std::string::npos);
+  const size_t idPos = source.find("returnFact.bindingTypeTextId", helperPos);
+  const size_t semanticResolvePos =
+      source.find("semanticProgramResolveCallTargetString(", idPos);
+  const size_t fallbackTextPos =
+      source.find("return trimTemplateTypeText(returnFact.bindingTypeText)", semanticResolvePos);
+  REQUIRE(idPos != std::string::npos);
+  REQUIRE(semanticResolvePos != std::string::npos);
+  REQUIRE(fallbackTextPos != std::string::npos);
+  CHECK(helperPos < idPos);
+  CHECK(idPos < semanticResolvePos);
+  CHECK(semanticResolvePos < fallbackTextPos);
+
   const size_t resolverPos = source.find("resolveReferenceReturnCallExpr");
   REQUIRE(resolverPos != std::string::npos);
   const size_t returnFactPos =
       source.find("findSemanticProductReturnFactByPath", resolverPos);
+  const size_t helperCallPos =
+      source.find("resolveSemanticReturnFactBindingType", returnFactPos);
   const size_t missingDiagnosticPos =
       source.find("missing semantic-product location reference return metadata",
                   resolverPos);
@@ -1442,9 +1477,12 @@ TEST_CASE("native location direct reference calls use semantic-product return fa
       source.find("for (const auto &transform : callee->transforms)",
                   resolverPos);
   REQUIRE(returnFactPos != std::string::npos);
+  REQUIRE(helperCallPos != std::string::npos);
   REQUIRE(missingDiagnosticPos != std::string::npos);
   REQUIRE(fallbackTransformScanPos != std::string::npos);
   CHECK(returnFactPos < fallbackTransformScanPos);
+  CHECK(returnFactPos < helperCallPos);
+  CHECK(helperCallPos < fallbackTransformScanPos);
   CHECK(missingDiagnosticPos < fallbackTransformScanPos);
 }
 

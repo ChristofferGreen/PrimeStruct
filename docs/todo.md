@@ -433,7 +433,10 @@ Task template:
     value-shape validation. The lowerer return-info ID consumer slice is
     complete for semantic-product-backed entry return transforms and
     return-info setup. The lowerer return binding completeness ID consumer
-    slice is complete for return metadata validation. The lowerer statement
+    slice is complete for return metadata validation. The lowerer
+    pointer/location return ID consumer slice is complete for native
+    aggregate `dereference(...)` and `location(...)` return classification.
+    The lowerer statement
     binding ID consumer slice is
     complete for semantic-product-backed local-auto
     declarations, for-condition declarations, and final LocalInfo fallback
@@ -611,6 +614,10 @@ Task template:
     - Completed slice: semantic-product return binding completeness
       validation now resolves interned return binding type IDs before
       consulting copied return fact text fields.
+    - Completed slice: semantic-product-addressed aggregate
+      `dereference(...)` and `location(...)` direct-call return checks now
+      resolve interned return binding type IDs before consulting copied
+      return fact text fields.
     - Completed slice: semantic-product-addressed statement binding setup now
       resolves interned binding type IDs before consulting copied binding text
       fields for local-auto declarations, for-condition declarations, and

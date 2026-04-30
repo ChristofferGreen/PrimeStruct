@@ -356,6 +356,9 @@ Planned non-template inference migration contract:
 - Completed lowerer-side return binding completeness ID slice: return metadata completeness
   validation now resolves interned return binding type ids before copied return-fact text, so valid
   binding metadata no longer depends on duplicated compatibility text.
+- Completed lowerer-side pointer/location return ID slice: native aggregate `dereference(...)` and
+  `location(...)` direct-call return checks now resolve interned return binding type ids before
+  copied return-fact text, so pointer/reference classification consumes graph-owned facts first.
 - Completed lowerer-side statement binding ID slice: local-auto statement bindings,
   for-condition bindings, and statement binding LocalInfo fallback now resolve
   `bindingTypeTextId` before copied binding-fact text, so declaration and final local setup
