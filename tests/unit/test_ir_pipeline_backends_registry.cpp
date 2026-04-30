@@ -1422,6 +1422,41 @@ TEST_CASE("native packed Result payloads use semantic-product type facts") {
                     semanticResolverPos) != std::string::npos);
 }
 
+TEST_CASE("direct Result ok payload metadata uses semantic-product type facts first") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path resultMetadataHelpersPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererResultMetadataHelpers.cpp";
+  if (!std::filesystem::exists(resultMetadataHelpersPath)) {
+    resultMetadataHelpersPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererResultMetadataHelpers.cpp";
+  }
+  REQUIRE(std::filesystem::exists(resultMetadataHelpersPath));
+
+  const std::string source = readTextFile(resultMetadataHelpersPath);
+  const size_t metadataPos = source.find("void applyDirectResultValueMetadata");
+  REQUIRE(metadataPos != std::string::npos);
+  const size_t semanticFactPos =
+      source.find("applySemanticDirectValueMetadataFact(valueExpr, semanticIndex, out)",
+                  metadataPos);
+  const size_t collectionFallbackPos =
+      source.find("inferDirectResultValueCollectionInfo(",
+                  metadataPos);
+  const size_t structFallbackPos =
+      source.find("inferDirectResultValueStructType(",
+                  metadataPos);
+  const size_t suppressFallbackPos =
+      source.find("suppressSemanticCallDefinitionFallback",
+                  metadataPos);
+  REQUIRE(semanticFactPos != std::string::npos);
+  REQUIRE(collectionFallbackPos != std::string::npos);
+  REQUIRE(structFallbackPos != std::string::npos);
+  REQUIRE(suppressFallbackPos != std::string::npos);
+  CHECK(semanticFactPos < collectionFallbackPos);
+  CHECK(semanticFactPos < structFallbackPos);
+  CHECK(suppressFallbackPos < collectionFallbackPos);
+  CHECK(suppressFallbackPos < structFallbackPos);
+}
+
 TEST_CASE("native try Result lowering uses semantic-product variant metadata") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path tryHelpersPath =

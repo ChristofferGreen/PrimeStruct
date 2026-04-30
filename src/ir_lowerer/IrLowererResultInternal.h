@@ -23,13 +23,15 @@ bool mergeControlFlowResultInfos(const ResultExprInfo &first,
 bool inferDirectResultValueStructType(const Expr &expr,
                                       const LocalMap &localsIn,
                                       const ResolveCallDefinitionFn &resolveDefinitionCall,
-                                      std::string &structTypeOut);
+                                      std::string &structTypeOut,
+                                      bool suppressCallDefinitionFallback = false);
 bool inferDirectResultValueCollectionInfo(const Expr &expr,
                                           const LocalMap &localsIn,
                                           const ResolveCallDefinitionFn &resolveDefinitionCall,
                                           LocalInfo::Kind &collectionKindOut,
                                           LocalInfo::ValueKind &valueKindOut,
-                                          LocalInfo::ValueKind &mapKeyKindOut);
+                                          LocalInfo::ValueKind &mapKeyKindOut,
+                                          bool suppressCallDefinitionFallback = false);
 void applyResultValueInfoToLocal(const ResultExprInfo &resultInfo, LocalInfo &paramInfo);
 void applyDirectResultValueMetadata(const Expr &valueExpr,
                                     const LocalMap &localsIn,

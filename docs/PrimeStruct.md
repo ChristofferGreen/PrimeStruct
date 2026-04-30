@@ -455,6 +455,12 @@ Planned non-template inference migration contract:
   callee return transforms. Missing return metadata fails closed with a
   deterministic location-reference return diagnostic; syntax-only or
   no-semantic-product compatibility keeps the old transform-scan path.
+- Completed direct `Result.ok(...)` payload-metadata slice:
+  semantic-product-addressed direct-call payloads now resolve payload type
+  metadata from published binding/query facts before direct callee collection
+  or struct reconstruction can classify the payload. Missing direct-call
+  payload facts keep the value unresolved on the semantic-product path, while
+  syntax-only compatibility keeps the legacy reconstruction path.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

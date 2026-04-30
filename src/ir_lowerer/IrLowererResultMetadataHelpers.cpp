@@ -520,12 +520,32 @@ bool applySemanticDirectValueTypeText(const std::string &typeText, ResultExprInf
   return true;
 }
 
+bool applySemanticDirectValueMetadataFact(const Expr &valueExpr,
+                                          const SemanticProductIndex *semanticIndex,
+                                          ResultExprInfo &out) {
+  if (semanticIndex == nullptr || valueExpr.semanticNodeId == 0) {
+    return false;
+  }
+  if (const auto *bindingFact = findSemanticProductBindingFact(*semanticIndex, valueExpr);
+      bindingFact != nullptr && !bindingFact->bindingTypeText.empty() &&
+      applySemanticDirectValueTypeText(bindingFact->bindingTypeText, out)) {
+    return true;
+  }
+  if (const auto *queryFact = findSemanticProductQueryFactBySemanticId(*semanticIndex, valueExpr);
+      queryFact != nullptr && !queryFact->bindingTypeText.empty() &&
+      applySemanticDirectValueTypeText(queryFact->bindingTypeText, out)) {
+    return true;
+  }
+  return false;
+}
+
 } // namespace
 
 bool inferDirectResultValueStructType(const Expr &expr,
                                       const LocalMap &localsIn,
                                       const ResolveCallDefinitionFn &resolveDefinitionCall,
-                                      std::string &structTypeOut) {
+                                      std::string &structTypeOut,
+                                      bool suppressCallDefinitionFallback) {
   structTypeOut.clear();
   if (expr.kind == Expr::Kind::Name) {
     auto localIt = localsIn.find(expr.name);
@@ -549,6 +569,10 @@ bool inferDirectResultValueStructType(const Expr &expr,
     return true;
   }
 
+  if (suppressCallDefinitionFallback) {
+    return false;
+  }
+
   const Definition *callee = resolveDefinitionCall ? resolveDefinitionCall(expr) : nullptr;
   if (callee != nullptr && isStructDefinition(*callee)) {
     structTypeOut = callee->fullPath;
@@ -562,7 +586,8 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
                                           const ResolveCallDefinitionFn &resolveDefinitionCall,
                                           LocalInfo::Kind &collectionKindOut,
                                           LocalInfo::ValueKind &valueKindOut,
-                                          LocalInfo::ValueKind &mapKeyKindOut) {
+                                          LocalInfo::ValueKind &mapKeyKindOut,
+                                          bool suppressCallDefinitionFallback) {
   collectionKindOut = LocalInfo::Kind::Value;
   valueKindOut = LocalInfo::ValueKind::Unknown;
   mapKeyKindOut = LocalInfo::ValueKind::Unknown;
@@ -723,7 +748,8 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
                                                  resolveDefinitionCall,
                                                  sourceCollectionKind,
                                                  sourceValueKind,
-                                                 sourceMapKeyKind)) {
+                                                 sourceMapKeyKind,
+                                                 suppressCallDefinitionFallback)) {
           collectionKindOut = LocalInfo::Kind::Buffer;
           valueKindOut = sourceValueKind;
           mapKeyKindOut = LocalInfo::ValueKind::Unknown;
@@ -731,6 +757,10 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
         }
       }
     }
+  }
+
+  if (suppressCallDefinitionFallback) {
+    return false;
   }
 
   const Definition *callee = resolveDefinitionCall ? resolveDefinitionCall(expr) : nullptr;
@@ -800,7 +830,8 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
                                              resolveDefinitionCall,
                                              sourceCollectionKind,
                                              sourceValueKind,
-                                             sourceMapKeyKind)) {
+                                             sourceMapKeyKind,
+                                             suppressCallDefinitionFallback)) {
       valueKindOut = sourceValueKind;
     }
   }
@@ -842,13 +873,15 @@ void applyDirectResultValueMetadata(const Expr &valueExpr,
                                     const SemanticProgram *semanticProgram,
                                     const SemanticProductIndex *semanticIndex,
                                     ResultExprInfo &out) {
-  if (semanticProgram != nullptr && semanticIndex != nullptr && valueExpr.semanticNodeId != 0 &&
-      valueExpr.kind == Expr::Kind::Name) {
-    if (const auto *bindingFact = findSemanticProductBindingFact(*semanticIndex, valueExpr);
-        bindingFact != nullptr && !bindingFact->bindingTypeText.empty() &&
-        applySemanticDirectValueTypeText(bindingFact->bindingTypeText, out)) {
+  const bool hasSemanticProductValueFactContext =
+      semanticProgram != nullptr && semanticIndex != nullptr &&
+      valueExpr.semanticNodeId != 0;
+  if (hasSemanticProductValueFactContext) {
+    if (applySemanticDirectValueMetadataFact(valueExpr, semanticIndex, out)) {
       return;
     }
+  }
+  if (hasSemanticProductValueFactContext && valueExpr.kind == Expr::Kind::Name) {
     if (auto localIt = localsIn.find(valueExpr.name);
         localIt != localsIn.end() && localIt->second.isFileHandle) {
       out.valueKind = LocalInfo::ValueKind::Int64;
@@ -876,13 +909,16 @@ void applyDirectResultValueMetadata(const Expr &valueExpr,
   LocalInfo::Kind valueCollectionKind = LocalInfo::Kind::Value;
   LocalInfo::ValueKind collectionValueKind = LocalInfo::ValueKind::Unknown;
   LocalInfo::ValueKind collectionMapKeyKind = LocalInfo::ValueKind::Unknown;
+  const bool suppressSemanticCallDefinitionFallback =
+      hasSemanticProductValueFactContext && valueExpr.kind == Expr::Kind::Call;
   if (inferDirectResultValueCollectionInfo(
           valueExpr,
           localsIn,
           resolveDefinitionCall,
           valueCollectionKind,
           collectionValueKind,
-          collectionMapKeyKind)) {
+          collectionMapKeyKind,
+          suppressSemanticCallDefinitionFallback)) {
     out.valueCollectionKind = valueCollectionKind;
     out.valueKind = collectionValueKind;
     out.valueMapKeyKind = collectionMapKeyKind;
@@ -891,27 +927,17 @@ void applyDirectResultValueMetadata(const Expr &valueExpr,
     return;
   }
   std::string valueStructType;
-  if (inferDirectResultValueStructType(valueExpr, localsIn, resolveDefinitionCall, valueStructType)) {
+  if (inferDirectResultValueStructType(valueExpr,
+                                       localsIn,
+                                       resolveDefinitionCall,
+                                       valueStructType,
+                                       suppressSemanticCallDefinitionFallback)) {
     out.valueStructType = std::move(valueStructType);
     out.valueKind = LocalInfo::ValueKind::Unknown;
     out.valueIsFileHandle = false;
     return;
   }
   if (valueExpr.semanticNodeId != 0) {
-    if (semanticIndex != nullptr) {
-      if (const auto *bindingFact = findSemanticProductBindingFact(*semanticIndex, valueExpr);
-          bindingFact != nullptr && !bindingFact->bindingTypeText.empty() &&
-          applySemanticDirectValueTypeText(bindingFact->bindingTypeText, out)) {
-        return;
-      }
-    }
-    if (semanticIndex != nullptr) {
-      if (const auto *queryFact = findSemanticProductQueryFactBySemanticId(*semanticIndex, valueExpr);
-          queryFact != nullptr && !queryFact->bindingTypeText.empty() &&
-          applySemanticDirectValueTypeText(queryFact->bindingTypeText, out)) {
-        return;
-      }
-    }
     if (semanticProgram != nullptr && semanticIndex != nullptr && valueExpr.kind == Expr::Kind::Call) {
       return;
     }

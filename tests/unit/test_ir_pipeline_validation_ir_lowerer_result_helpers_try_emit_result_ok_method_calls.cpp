@@ -627,8 +627,13 @@ TEST_CASE("ir lowerer result helpers use semantic query facts for direct Result 
                                     const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
     return nullptr;
   };
-  const auto resolveDefinitionCall = [](const primec::Expr &) -> const primec::Definition * {
-    return nullptr;
+  primec::Definition staleCallee;
+  staleCallee.fullPath = "/StalePayload";
+  int resolveDefinitionCalls = 0;
+  const auto resolveDefinitionCall = [&](const primec::Expr &expr) -> const primec::Definition * {
+    ++resolveDefinitionCalls;
+    CHECK(expr.semanticNodeId == 263);
+    return &staleCallee;
   };
   const auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
     return false;
@@ -674,13 +679,16 @@ TEST_CASE("ir lowerer result helpers use semantic query facts for direct Result 
   CHECK(out.isResult);
   CHECK(out.hasValue);
   CHECK(out.valueKind == ValueKind::Int32);
+  CHECK(out.valueStructType.empty());
   CHECK_FALSE(fallbackCalled);
+  CHECK(resolveDefinitionCalls == 0);
 
   primec::SemanticProgram missingSemanticProgram;
   const auto missingTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&missingSemanticProgram);
   out = {};
   fallbackCalled = false;
+  resolveDefinitionCalls = 0;
   CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(okExpr,
                                                             {},
                                                             resolveMethodCall,
@@ -692,7 +700,9 @@ TEST_CASE("ir lowerer result helpers use semantic query facts for direct Result 
   CHECK(out.isResult);
   CHECK(out.hasValue);
   CHECK(out.valueKind == ValueKind::Unknown);
+  CHECK(out.valueStructType.empty());
   CHECK_FALSE(fallbackCalled);
+  CHECK(resolveDefinitionCalls == 0);
 }
 
 TEST_CASE("ir lowerer result helpers use semantic binding facts for direct Result ok name payloads") {
