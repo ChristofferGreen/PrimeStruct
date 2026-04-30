@@ -341,6 +341,9 @@ Planned non-template inference migration contract:
 - Completed lowerer-side query Result completeness ID slice: query Result value-shape
   completeness validation now resolves `resultValueTypeId` before copied query-fact text, so
   valid interned value metadata no longer depends on duplicated compatibility text.
+- Completed lowerer-side callable Result completeness ID slice: callable result metadata
+  completeness validation now resolves `resultValueTypeId` before copied callable-summary text, so
+  valid interned value metadata no longer depends on duplicated compatibility text.
 - Completed lowerer-side return-info ID slice: entry return transform analysis and return-info
   setup now resolve interned callable return/result ids plus return binding ids before copied
   semantic-product text, so return metadata consumes graph-owned facts before compatibility text.

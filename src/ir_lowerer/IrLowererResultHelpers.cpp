@@ -211,7 +211,9 @@ bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *se
     }
     if (summary->hasResultType && summary->resultTypeHasValue) {
       ResultExprInfo resultInfo;
-      if (!applySemanticResultValueTypeText(summary->resultValueType, resultInfo)) {
+      const std::string resultValueType = resolveSemanticResultFactText(
+          *semanticProgram, summary->resultValueType, summary->resultValueTypeId);
+      if (!applySemanticResultValueTypeText(resultValueType, resultInfo)) {
         error = "missing semantic-product callable result metadata: " +
                 std::string(callablePath);
         return false;

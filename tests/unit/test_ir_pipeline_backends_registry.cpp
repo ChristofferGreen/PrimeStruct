@@ -4470,6 +4470,44 @@ TEST_CASE("ir lowerer rejects missing semantic-product callable result metadata"
   CHECK(diagnosticInfo.message == error);
 }
 
+TEST_CASE("ir lowerer callable result metadata uses interned value ids") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .isExecution = false,
+      .returnKind = "return",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = true,
+      .resultTypeHasValue = true,
+      .resultValueType = "",
+      .resultErrorType = "FileError",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 8202,
+      .provenanceHandle = 0,
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .resultValueTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+      .resultErrorTypeId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
+  });
+
+  std::string error;
+  CHECK(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
+      &semanticProgram, error));
+  CHECK(error.empty());
+
+  semanticProgram.callableSummaries.back().resultValueTypeId =
+      static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size() + 1u);
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
+      &semanticProgram, error));
+  CHECK(error == "missing semantic-product callable result metadata: /main");
+}
+
 TEST_CASE("ir lowerer rejects missing semantic-product callable summary path id") {
   primec::Program program;
 
