@@ -4941,6 +4941,13 @@ TEST_CASE("ir lowerer rejects stale semantic-product query result metadata") {
       &semanticProgram, error));
   CHECK(error.empty());
 
+  semanticProgram.queryFacts.back().resultValueType.clear();
+  error.clear();
+
+  CHECK(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
+      &semanticProgram, error));
+  CHECK(error.empty());
+
   semanticProgram.queryFacts.back().resultValueType = "i64";
   semanticProgram.queryFacts.back().resultValueTypeId =
       primec::semanticProgramInternCallTargetString(semanticProgram, "i64");

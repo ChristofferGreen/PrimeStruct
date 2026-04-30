@@ -367,7 +367,9 @@ bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *se
     }
     if (queryFact->hasResultType && queryFact->resultTypeHasValue) {
       ResultExprInfo resultInfo;
-      if (!applySemanticResultValueTypeText(queryFact->resultValueType, resultInfo)) {
+      if (!applySemanticResultValueTypeText(
+              resolveSemanticQueryResultValueTypeText(*semanticProgram, *queryFact),
+              resultInfo)) {
         error = "incomplete semantic-product query fact: " + queryCallName;
         return false;
       }

@@ -338,6 +338,9 @@ Planned non-template inference migration contract:
   `Result.error(...)` direct-call status-only source checks now resolve `resultErrorTypeId`
   before copied query-fact text, so error-domain matching consumes graph-owned metadata before
   compatibility text.
+- Completed lowerer-side query Result completeness ID slice: query Result value-shape
+  completeness validation now resolves `resultValueTypeId` before copied query-fact text, so
+  valid interned value metadata no longer depends on duplicated compatibility text.
 - Completed collection specialization metadata diagnostic slice: semantic-product collection
   specialization completeness validation now checks interned family, binding type, element type, and
   key/value type metadata before lowerer collection consumers can read collection fact text fields.

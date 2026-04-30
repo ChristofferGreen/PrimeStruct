@@ -426,7 +426,9 @@ Task template:
     is complete for semantic-product-backed `try(...)` value/error
     propagation. The lowerer status Result source ID consumer slice is
     complete for semantic-product-backed `Result.why(...)` and
-    `Result.error(...)` source error-domain matching. The
+    `Result.error(...)` source error-domain matching. The lowerer query
+    Result completeness ID consumer slice is complete for
+    semantic-product-backed value-shape validation. The
     direct `Result.ok(...)` payload metadata slice is
     complete for semantic-product-backed direct-call payload type facts and
     interned payload type IDs. The native `Result.ok(...)` payload-emission
@@ -569,6 +571,9 @@ Task template:
       sources for native `Result.why(...)` and `Result.error(...)` now resolve
       interned query result error IDs before consulting copied query text
       fields for error-domain matching.
+    - Completed slice: semantic-product query Result value-shape
+      completeness validation now resolves interned query result value IDs
+      before consulting copied query text fields.
     - Completed slice: semantic-product collection specialization
       completeness validation now rejects missing or stale interned collection
       family, binding type, element type, and key/value type metadata before
