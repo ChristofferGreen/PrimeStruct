@@ -412,7 +412,9 @@ Task template:
     pointer return slice is complete for semantic-product-backed direct-call
     operands to aggregate `dereference(...)`. The native location reference
     return slice is complete for semantic-product-backed direct-call operands
-    to `location(...)`. The direct `Result.ok(...)` payload metadata slice is
+    to `location(...)`. The query Result-metadata ID consumer slice is
+    complete for semantic-product-backed generic call result facts. The
+    direct `Result.ok(...)` payload metadata slice is
     complete for semantic-product-backed direct-call payload type facts and
     interned payload type IDs. The native `Result.ok(...)` payload-emission
     slice is complete for
@@ -522,6 +524,11 @@ Task template:
       rejects stale interned Result payload/error metadata that contradicts
       the published callable summary for the resolved target before lowering
       can consume the inconsistent query fact.
+    - Completed slice: semantic-product-addressed generic call Result
+      metadata now resolves interned query result value/error IDs before
+      consulting copied query text fields, so unresolved `Result.map(...)`
+      metadata and direct generic call result metadata consume graph-owned
+      interned facts.
     - Completed slice: semantic-product query completeness validation now
       rejects missing or stale interned query type, binding type, and receiver
       binding type metadata before lowerer consumers can read inconsistent

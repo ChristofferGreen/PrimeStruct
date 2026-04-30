@@ -308,6 +308,10 @@ Planned non-template inference migration contract:
   now checks interned query Result payload/error metadata against the published callable summary
   for the resolved target before lowerer result metadata can consume the query fact. Contradictory
   Result shape facts fail closed with a deterministic stale query metadata diagnostic.
+- Completed lowerer-side query Result-metadata ID slice: semantic-product-addressed generic
+  call result metadata now resolves `resultValueTypeId` and `resultErrorTypeId` before consulting
+  copied query-fact text fields, so unresolved `Result.map(...)` and generic call result paths
+  consume the graph-owned intern table rather than requiring duplicated payload/error text.
 - Completed query type-metadata diagnostic slice: semantic-product query completeness validation now
   checks interned query type, binding type, and receiver binding type metadata before lowerer
   consumers can read query fact text fields. Missing or contradictory type ids fail closed with

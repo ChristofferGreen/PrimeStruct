@@ -76,6 +76,37 @@ bool applySemanticResultValueTypeText(const std::string &valueTypeText, ResultEx
   return true;
 }
 
+std::string resolveSemanticResultFactText(const SemanticProgram &semanticProgram,
+                                          const std::string &text,
+                                          SymbolId textId) {
+  if (textId != InvalidSymbolId) {
+    std::string resolvedText = std::string(
+        semanticProgramResolveCallTargetString(semanticProgram, textId));
+    if (!resolvedText.empty()) {
+      return trimTemplateTypeText(resolvedText);
+    }
+  }
+  return trimTemplateTypeText(text);
+}
+
+std::string resolveSemanticQueryResultValueTypeText(
+    const SemanticProgram &semanticProgram,
+    const SemanticProgramQueryFact &queryFact) {
+  return resolveSemanticResultFactText(
+      semanticProgram,
+      queryFact.resultValueType,
+      queryFact.resultValueTypeId);
+}
+
+std::string resolveSemanticQueryResultErrorTypeText(
+    const SemanticProgram &semanticProgram,
+    const SemanticProgramQueryFact &queryFact) {
+  return resolveSemanticResultFactText(
+      semanticProgram,
+      queryFact.resultErrorType,
+      queryFact.resultErrorTypeId);
+}
+
 bool applySemanticQueryFactResultInfo(const Expr &expr,
                                       const SemanticProgram *semanticProgram,
                                       const SemanticProductIndex *semanticIndex,
@@ -97,11 +128,12 @@ bool applySemanticQueryFactResultInfo(const Expr &expr,
   }
   out.isResult = true;
   out.hasValue = queryFact->resultTypeHasValue;
-  out.errorType = queryFact->resultErrorType;
+  out.errorType = resolveSemanticQueryResultErrorTypeText(*semanticProgram, *queryFact);
   if (!out.hasValue) {
     return true;
   }
-  if (!applySemanticResultValueTypeText(queryFact->resultValueType, out)) {
+  if (!applySemanticResultValueTypeText(
+          resolveSemanticQueryResultValueTypeText(*semanticProgram, *queryFact), out)) {
     assignSemanticResultError(
         errorOut, "incomplete semantic-product query fact: " + describeSemanticResultCall(expr));
     return false;
@@ -1126,11 +1158,12 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     }
     out.isResult = true;
     out.hasValue = queryFact->resultTypeHasValue;
-    out.errorType = queryFact->resultErrorType;
+    out.errorType = resolveSemanticQueryResultErrorTypeText(*semanticProgram, *queryFact);
     if (!out.hasValue) {
       return true;
     }
-    if (!applySemanticResultValueTypeText(queryFact->resultValueType, out)) {
+    if (!applySemanticResultValueTypeText(
+            resolveSemanticQueryResultValueTypeText(*semanticProgram, *queryFact), out)) {
       assignSemanticResultError(
           errorOut,
           "incomplete semantic-product query fact: " + describeSemanticResultCall(expr));
