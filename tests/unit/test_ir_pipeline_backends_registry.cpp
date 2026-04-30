@@ -1245,6 +1245,39 @@ TEST_CASE("native Result why direct-call sources use semantic-product query fact
   CHECK(staleDiagnosticPos < fallbackTransformScanPos);
 }
 
+TEST_CASE("native Result error direct-call sources use semantic-product query facts") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path packedResultHelpersPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererPackedResultHelpers.cpp";
+  if (!std::filesystem::exists(packedResultHelpersPath)) {
+    packedResultHelpersPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererPackedResultHelpers.cpp";
+  }
+  REQUIRE(std::filesystem::exists(packedResultHelpersPath));
+
+  const std::string source = readTextFile(packedResultHelpersPath);
+  const size_t directCallResolverPos =
+      source.find("directCallReturnsImportedStdlibResultSum");
+  REQUIRE(directCallResolverPos != std::string::npos);
+  const size_t queryFactPos =
+      source.find("findSemanticProductQueryFact(", directCallResolverPos);
+  const size_t missingDiagnosticPos =
+      source.find("missing semantic-product Result.error source query fact",
+                  directCallResolverPos);
+  const size_t staleDiagnosticPos =
+      source.find("stale semantic-product Result.error source query metadata",
+                  directCallResolverPos);
+  const size_t fallbackTransformScanPos =
+      source.find("for (const auto &transform : calleeDef->transforms)",
+                  directCallResolverPos);
+  REQUIRE(queryFactPos != std::string::npos);
+  REQUIRE(missingDiagnosticPos != std::string::npos);
+  REQUIRE(staleDiagnosticPos != std::string::npos);
+  REQUIRE(fallbackTransformScanPos != std::string::npos);
+  CHECK(queryFactPos < fallbackTransformScanPos);
+  CHECK(staleDiagnosticPos < fallbackTransformScanPos);
+}
+
 TEST_CASE("native field receivers use semantic-product type facts") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path lowerEmitExprPath =

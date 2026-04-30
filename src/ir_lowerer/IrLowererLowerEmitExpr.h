@@ -769,6 +769,7 @@
             },
             [&]() { return allocTempLocal(); },
             [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+            &callResolutionAdapters.semanticProductTargets,
             error);
         if (resultErrorCallResult == ir_lowerer::ResultErrorMethodCallEmitResult::Emitted) {
           return true;

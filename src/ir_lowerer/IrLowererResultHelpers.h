@@ -165,6 +165,7 @@ ResultErrorMethodCallEmitResult tryEmitResultErrorCall(
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<int32_t()> &allocTempLocal,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const SemanticProductTargetAdapter *semanticProductTargets,
     std::string &error);
 bool emitResultWhyLocalsFromValueExpr(
     const Expr &valueExpr,

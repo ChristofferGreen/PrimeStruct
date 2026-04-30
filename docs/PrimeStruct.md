@@ -431,6 +431,12 @@ Planned non-template inference migration contract:
   before scanning callee return transforms. Missing or stale query metadata
   fails closed with deterministic Result.why source diagnostics; syntax-only
   or no-query compatibility keeps the old transform-scan path.
+- Completed native `Result.error(...)` source-query slice:
+  semantic-product-addressed direct-call operands for `Result.error(...)` now
+  resolve status-only stdlib Result sources from the published query fact
+  before scanning callee return transforms. Missing or stale query metadata
+  fails closed with deterministic Result.error source diagnostics; syntax-only
+  or no-query compatibility keeps the old transform-scan path.
 - Completed native `try(...)` Result-variant slice: semantic-product-addressed
   stdlib Result sum matching, source `ok`/`error` payload loads, propagated
   return-error copies, and source/target tag writes now validate and consume

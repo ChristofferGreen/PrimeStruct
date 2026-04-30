@@ -404,6 +404,8 @@ Task template:
     slice is complete for semantic-product-backed direct-call source sum
     resolution. The native `Result.why(...)` source-query slice is complete
     for semantic-product-backed direct-call status-only Result sources. The
+    native `Result.error(...)` source-query slice is complete for
+    semantic-product-backed direct-call status-only Result sources. The
     native `try(...)` Result-variant slice is complete for
     semantic-product-backed stdlib Result sum matching, payload loads,
     propagated error copies, and source/target tags.
@@ -636,6 +638,12 @@ Task template:
       from the published query fact before scanning callee return transforms.
       Missing or stale query metadata fails closed with deterministic
       Result.why source diagnostics while syntax-only or no-query
+      compatibility keeps the old transform-scan path.
+    - Completed slice: semantic-product-addressed direct-call operands for
+      native `Result.error(...)` now resolve status-only stdlib Result sources
+      from the published query fact before scanning callee return transforms.
+      Missing or stale query metadata fails closed with deterministic
+      Result.error source diagnostics while syntax-only or no-query
       compatibility keeps the old transform-scan path.
     - Completed slice: native `try(...)` lowering now validates and consumes
       published stdlib Result sum-variant metadata before matching candidate

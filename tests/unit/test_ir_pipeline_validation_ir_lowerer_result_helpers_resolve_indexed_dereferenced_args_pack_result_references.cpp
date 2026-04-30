@@ -540,6 +540,7 @@ TEST_CASE("ir lowerer result helpers try emit Result.error method calls") {
         return allocCounter == 1 ? 13 : 17;
       },
       [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      nullptr,
       error);
   CHECK(emitted == EmitResult::Emitted);
   CHECK(error.empty());
@@ -579,10 +580,172 @@ TEST_CASE("ir lowerer result helpers try emit Result.error method calls") {
       [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
       [&]() { return 0; },
       [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      nullptr,
       error);
   CHECK(badCall == EmitResult::Error);
   CHECK(error == "Result.error requires exactly one argument");
   CHECK(instructions.empty());
+}
+
+TEST_CASE("ir lowerer Result.error direct calls prefer semantic-product query facts") {
+  using EmitResult = primec::ir_lowerer::ResultErrorMethodCallEmitResult;
+
+  primec::Expr resultType;
+  resultType.kind = primec::Expr::Kind::Name;
+  resultType.name = "Result";
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "loadStatus";
+  callExpr.semanticNodeId = 91;
+
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.isMethodCall = true;
+  expr.name = "error";
+  expr.args = {resultType, callExpr};
+
+  primec::Definition stdlibResultDef;
+  stdlibResultDef.fullPath = "/std/result/Result";
+  const std::unordered_map<std::string, const primec::Definition *> defMap{
+      {"/std/result/Result", &stdlibResultDef},
+  };
+
+  const auto resolveResultExprInfo =
+      [](const primec::Expr &valueExpr,
+         const primec::ir_lowerer::LocalMap &,
+         primec::ir_lowerer::ResultExprInfo &resultInfoOut) {
+        if (valueExpr.kind != primec::Expr::Kind::Call ||
+            valueExpr.name != "loadStatus") {
+          return false;
+        }
+        resultInfoOut = primec::ir_lowerer::ResultExprInfo{};
+        resultInfoOut.isResult = true;
+        resultInfoOut.hasValue = false;
+        resultInfoOut.errorType = "ParseError";
+        return true;
+      };
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      .scopePath = "/main",
+      .callName = "loadStatus",
+      .queryTypeText = "Result<ParseError>",
+      .bindingTypeText = "Result<ParseError>",
+      .receiverBindingTypeText = "",
+      .hasResultType = true,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "ParseError",
+      .sourceLine = 4,
+      .sourceColumn = 9,
+      .semanticNodeId = 91,
+  });
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+
+  std::vector<primec::IrInstruction> instructions;
+  int resolverCalls = 0;
+  int emitCalls = 0;
+  int allocCounter = 0;
+  std::string error;
+
+  const EmitResult emitted = primec::ir_lowerer::tryEmitResultErrorCall(
+      expr,
+      {},
+      defMap,
+      resolveResultExprInfo,
+      [&](const primec::Expr &) -> const primec::Definition * {
+        ++resolverCalls;
+        return nullptr;
+      },
+      [&](const primec::Expr &valueExpr, const primec::ir_lowerer::LocalMap &) {
+        ++emitCalls;
+        CHECK(valueExpr.semanticNodeId == 91);
+        instructions.push_back({primec::IrOpcode::LoadLocal, 5});
+        return true;
+      },
+      [&]() {
+        ++allocCounter;
+        return 17;
+      },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      &semanticTargets,
+      error);
+  CHECK(emitted == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(resolverCalls == 0);
+  CHECK(emitCalls == 1);
+  CHECK(allocCounter == 1);
+  REQUIRE(instructions.size() == 8);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 17);
+  CHECK(instructions[2].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[2].imm == 17);
+  CHECK(instructions[3].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[3].imm == primec::IrSlotBytes);
+  CHECK(instructions[4].op == primec::IrOpcode::AddI64);
+  CHECK(instructions[5].op == primec::IrOpcode::LoadIndirect);
+  CHECK(instructions[6].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[6].imm == 1);
+  CHECK(instructions[7].op == primec::IrOpcode::CmpEqI32);
+
+  primec::SemanticProgram staleSemanticProgram = semanticProgram;
+  staleSemanticProgram.queryFacts.front().resultErrorType = "OtherError";
+  const auto staleSemanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&staleSemanticProgram);
+  instructions.clear();
+  resolverCalls = 0;
+  emitCalls = 0;
+  allocCounter = 0;
+  error.clear();
+  const EmitResult staleResult = primec::ir_lowerer::tryEmitResultErrorCall(
+      expr,
+      {},
+      defMap,
+      resolveResultExprInfo,
+      [&](const primec::Expr &) -> const primec::Definition * {
+        ++resolverCalls;
+        return nullptr;
+      },
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        ++emitCalls;
+        return true;
+      },
+      [&]() {
+        ++allocCounter;
+        return 0;
+      },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      &staleSemanticTargets,
+      error);
+  CHECK(staleResult == EmitResult::Error);
+  CHECK(error == "stale semantic-product Result.error source query metadata: loadStatus");
+  CHECK(resolverCalls == 0);
+  CHECK(emitCalls == 0);
+  CHECK(allocCounter == 0);
+  CHECK(instructions.empty());
+
+  primec::SemanticProgram missingSemanticProgram;
+  const auto missingSemanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&missingSemanticProgram);
+  error.clear();
+  const EmitResult missingResult = primec::ir_lowerer::tryEmitResultErrorCall(
+      expr,
+      {},
+      defMap,
+      resolveResultExprInfo,
+      [](const primec::Expr &) -> const primec::Definition * { return nullptr; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return true;
+      },
+      []() { return 0; },
+      [](primec::IrOpcode, uint64_t) {},
+      &missingSemanticTargets,
+      error);
+  CHECK(missingResult == EmitResult::Error);
+  CHECK(error == "missing semantic-product Result.error source query fact: loadStatus");
 }
 
 

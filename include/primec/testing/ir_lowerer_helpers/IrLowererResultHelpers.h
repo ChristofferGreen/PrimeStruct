@@ -158,6 +158,7 @@ ResultErrorMethodCallEmitResult tryEmitResultErrorCall(
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<int32_t()> &allocTempLocal,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const SemanticProductTargetAdapter *semanticProductTargets,
     std::string &error);
 bool emitResultWhyLocalsFromValueExpr(
     const Expr &valueExpr,
@@ -185,6 +186,7 @@ ResultWhyMethodCallEmitResult tryEmitResultWhyCall(
     const std::function<LocalInfo::ValueKind(const std::string &)> &valueKindFromTypeName,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCall,
     const std::function<bool(int32_t)> &emitFileErrorWhy,
+    const SemanticProductTargetAdapter *semanticProductTargets,
     std::vector<IrInstruction> *instructionsOut,
     std::string &error);
 ResultWhyDispatchEmitResult tryEmitResultWhyDispatchCall(
@@ -205,6 +207,7 @@ ResultWhyDispatchEmitResult tryEmitResultWhyDispatchCall(
     const std::function<LocalInfo::ValueKind(const std::string &)> &valueKindFromTypeName,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCall,
     const std::function<bool(int32_t)> &emitFileErrorWhy,
+    const SemanticProductTargetAdapter *semanticProductTargets,
     std::vector<IrInstruction> *instructionsOut,
     std::string &error);
 ResultWhyExprOps makeResultWhyExprOps(

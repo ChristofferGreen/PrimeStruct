@@ -2,6 +2,7 @@
 
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
@@ -490,6 +491,7 @@ ResultErrorMethodCallEmitResult tryEmitResultErrorCall(
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<int32_t()> &allocTempLocal,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const SemanticProductTargetAdapter *semanticProductTargets,
     std::string &error) {
   if (!(expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
         expr.args.front().name == "Result" && expr.name == "error")) {
@@ -506,14 +508,36 @@ ResultErrorMethodCallEmitResult tryEmitResultErrorCall(
     return defMap.find("/std/result/Result") != defMap.end();
   };
 
-  auto directCallReturnsImportedStdlibResultSum = [&](const Expr &valueExpr) {
+  auto directCallReturnsImportedStdlibResultSum =
+      [&](const Expr &valueExpr, bool &returnsResultOut) {
+    returnsResultOut = false;
     if (valueExpr.kind != Expr::Kind::Call || valueExpr.isMethodCall ||
         resultInfo.hasValue || !resolveDefinitionCall || !hasImportedStdlibResultSum()) {
-      return false;
+      return true;
+    }
+    if (semanticProductTargets != nullptr &&
+        semanticProductTargets->hasSemanticProduct &&
+        valueExpr.semanticNodeId != 0) {
+      const SemanticProgramQueryFact *queryFact =
+          findSemanticProductQueryFact(*semanticProductTargets, valueExpr);
+      if (queryFact == nullptr) {
+        error = "missing semantic-product Result.error source query fact: " +
+                valueExpr.name;
+        return false;
+      }
+      if (!queryFact->hasResultType || queryFact->resultTypeHasValue ||
+          trimTemplateTypeText(queryFact->resultErrorType) !=
+              trimTemplateTypeText(resultInfo.errorType)) {
+        error = "stale semantic-product Result.error source query metadata: " +
+                valueExpr.name;
+        return false;
+      }
+      returnsResultOut = true;
+      return true;
     }
     const Definition *calleeDef = resolveDefinitionCall(valueExpr);
     if (calleeDef == nullptr) {
-      return false;
+      return true;
     }
     for (const auto &transform : calleeDef->transforms) {
       if (transform.name != "return" || transform.templateArgs.size() != 1) {
@@ -525,10 +549,11 @@ ResultErrorMethodCallEmitResult tryEmitResultErrorCall(
         continue;
       }
       if (normalizeCollectionBindingTypeName(base) == "Result") {
+        returnsResultOut = true;
         return true;
       }
     }
-    return false;
+    return true;
   };
 
   auto tryEmitStdlibResultSumValue = [&](bool &emittedOut) -> bool {
@@ -545,7 +570,12 @@ ResultErrorMethodCallEmitResult tryEmitResultErrorCall(
         }
       }
     }
-    if (directCallReturnsImportedStdlibResultSum(valueExpr)) {
+    bool directCallReturnsStdlibResult = false;
+    if (!directCallReturnsImportedStdlibResultSum(
+            valueExpr, directCallReturnsStdlibResult)) {
+      return false;
+    }
+    if (directCallReturnsStdlibResult) {
       emittedOut = true;
       return emitExpr(valueExpr, localsIn);
     }
