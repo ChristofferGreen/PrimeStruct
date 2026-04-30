@@ -1360,12 +1360,29 @@ TEST_CASE("native field receivers use semantic-product type facts") {
   const size_t fallbackStructPathPos =
       source.find("structPath = inferStructExprPath(receiver, localsIn)",
                   semanticResolverPos);
+  const size_t internedTypeResolverPos =
+      source.find("semanticProgramResolveCallTargetString(",
+                  semanticResolverPos);
   REQUIRE(bindingFactPos != std::string::npos);
   REQUIRE(queryFactPos != std::string::npos);
+  REQUIRE(internedTypeResolverPos != std::string::npos);
   REQUIRE(staleDiagnosticPos != std::string::npos);
   REQUIRE(fallbackStructPathPos != std::string::npos);
+  CHECK(source.find("addCandidateTypeText(bindingFact->bindingTypeText",
+                    semanticResolverPos) != std::string::npos);
+  CHECK(source.find("bindingFact->bindingTypeTextId",
+                    semanticResolverPos) != std::string::npos);
+  CHECK(source.find("addCandidateTypeText(queryFact->bindingTypeText",
+                    semanticResolverPos) != std::string::npos);
+  CHECK(source.find("queryFact->bindingTypeTextId",
+                    semanticResolverPos) != std::string::npos);
+  CHECK(source.find("addCandidateTypeText(queryFact->queryTypeText",
+                    semanticResolverPos) != std::string::npos);
+  CHECK(source.find("queryFact->queryTypeTextId",
+                    semanticResolverPos) != std::string::npos);
   CHECK(source.find("splitTemplateTypeName(normalizedTypeText, wrapperBase, wrapperArgs)",
                     semanticResolverPos) != std::string::npos);
+  CHECK(internedTypeResolverPos < fallbackStructPathPos);
   CHECK(bindingFactPos < fallbackStructPathPos);
   CHECK(queryFactPos < fallbackStructPathPos);
   CHECK(source.find("if (!resolvedFieldReceiverBySemanticProduct.has_value())",
@@ -1407,13 +1424,31 @@ TEST_CASE("native packed Result payloads use semantic-product type facts") {
   const size_t collectionFallbackPos =
       source.find("resolveCollectionPayload(collectionKind, collectionValueKind)",
                   semanticResolverPos);
+  const size_t internedTypeResolverPos =
+      source.find("semanticProgramResolveCallTargetString(",
+                  semanticResolverPos);
   REQUIRE(bindingFactPos != std::string::npos);
   REQUIRE(queryFactPos != std::string::npos);
+  REQUIRE(internedTypeResolverPos != std::string::npos);
   REQUIRE(collectionTypePos != std::string::npos);
   REQUIRE(staleDiagnosticPos != std::string::npos);
   REQUIRE(fallbackKindPos != std::string::npos);
   REQUIRE(fallbackStructPos != std::string::npos);
   REQUIRE(collectionFallbackPos != std::string::npos);
+  CHECK(source.find("addCandidateTypeText(bindingFact->bindingTypeText",
+                    semanticResolverPos) != std::string::npos);
+  CHECK(source.find("bindingFact->bindingTypeTextId",
+                    semanticResolverPos) != std::string::npos);
+  CHECK(source.find("addCandidateTypeText(queryFact->bindingTypeText",
+                    semanticResolverPos) != std::string::npos);
+  CHECK(source.find("queryFact->bindingTypeTextId",
+                    semanticResolverPos) != std::string::npos);
+  CHECK(source.find("addCandidateTypeText(queryFact->queryTypeText",
+                    semanticResolverPos) != std::string::npos);
+  CHECK(source.find("queryFact->queryTypeTextId",
+                    semanticResolverPos) != std::string::npos);
+  CHECK(internedTypeResolverPos < collectionFallbackPos);
+  CHECK(internedTypeResolverPos < fallbackKindPos);
   CHECK(bindingFactPos < collectionFallbackPos);
   CHECK(queryFactPos < collectionFallbackPos);
   CHECK(bindingFactPos < fallbackKindPos);

@@ -420,7 +420,9 @@ Task template:
     semantic-product-backed map/vector receiver classification. The lowerer
     binding adapter ID consumer slice is complete for semantic-product-backed
     binding-kind, value-kind, string/file-error, and reference-array local
-    setup decisions. The
+    setup decisions. The native field/packed payload ID consumer slice is
+    complete for semantic-product-backed field receiver and packed Result
+    payload classification. The
     direct `Result.ok(...)` payload metadata slice is
     complete for semantic-product-backed direct-call payload type facts and
     interned payload type IDs. The native `Result.ok(...)` payload-emission
@@ -552,6 +554,10 @@ Task template:
       now resolve interned binding type IDs before consulting copied binding
       text fields for binding-kind, value-kind, string/file-error, and
       reference-array local setup decisions.
+    - Completed slice: semantic-product-addressed native field receiver and
+      packed Result payload classifiers now resolve interned binding/query
+      type IDs before consulting copied semantic-product text fields for
+      struct and packed-payload classification.
     - Completed slice: semantic-product collection specialization
       completeness validation now rejects missing or stale interned collection
       family, binding type, element type, and key/value type metadata before
