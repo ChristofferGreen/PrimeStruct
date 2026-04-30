@@ -41,6 +41,19 @@ bool isSpecializedExperimentalMapTypeText(const std::string &typeText) {
   return normalized.rfind("/std/collections/experimental_map/Map__", 0) == 0;
 }
 
+std::string resolveSemanticBindingTypeText(const SemanticProgram *semanticProgram,
+                                           const SemanticProgramBindingFact &bindingFact) {
+  if (semanticProgram != nullptr && bindingFact.bindingTypeTextId != InvalidSymbolId) {
+    std::string resolvedTypeText = std::string(
+        semanticProgramResolveCallTargetString(*semanticProgram,
+                                               bindingFact.bindingTypeTextId));
+    if (!resolvedTypeText.empty()) {
+      return trimTemplateTypeText(resolvedTypeText);
+    }
+  }
+  return trimTemplateTypeText(bindingFact.bindingTypeText);
+}
+
 bool isSpecializedExperimentalVectorTypeText(const std::string &typeText) {
   std::string normalized = trimTemplateTypeText(typeText);
   if (!normalized.empty() && normalized.front() != '/') {
@@ -1393,13 +1406,17 @@ bool inferCallParameterLocalInfo(const Expr &param,
     if (!hasElementTypeText && semanticProgram != nullptr && semanticIndex != nullptr &&
         param.semanticNodeId != 0) {
       const auto *bindingFact = findSemanticProductBindingFact(*semanticIndex, param);
-      if (bindingFact == nullptr || bindingFact->bindingTypeText.empty()) {
+      const std::string bindingTypeText =
+          bindingFact != nullptr
+              ? resolveSemanticBindingTypeText(semanticProgram, *bindingFact)
+              : std::string{};
+      if (bindingFact == nullptr || bindingTypeText.empty()) {
         error = "missing semantic-product args-pack binding type: " +
                 (param.name.empty() ? std::string("<unnamed>") : param.name);
         return false;
       }
       hasElementTypeText = extractArgsPackElementTypeTextFromTypeText(
-          bindingFact->bindingTypeText, elementTypeText);
+          bindingTypeText, elementTypeText);
       if (!hasElementTypeText) {
         error = "incomplete semantic-product args-pack binding type: " +
                 (param.name.empty() ? std::string("<unnamed>") : param.name);

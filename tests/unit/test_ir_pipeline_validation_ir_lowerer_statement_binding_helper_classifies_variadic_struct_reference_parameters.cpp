@@ -643,7 +643,7 @@ TEST_CASE("ir lowerer statement binding helper uses semantic-product args-pack b
       .scopePath = "/pkg/score_refs",
       .siteKind = "parameter",
       .name = "values",
-      .bindingTypeText = "args<Reference<Pair>>",
+      .bindingTypeText = "",
       .isMutable = false,
       .isEntryArgString = false,
       .isUnsafeReference = false,
@@ -652,6 +652,9 @@ TEST_CASE("ir lowerer statement binding helper uses semantic-product args-pack b
       .sourceColumn = 12,
       .semanticNodeId = 9101,
       .resolvedPathId = primec::InvalidSymbolId,
+      .bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(
+              semanticProgram, "args<Reference<Pair>>"),
   });
   const auto semanticIndex =
       primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
