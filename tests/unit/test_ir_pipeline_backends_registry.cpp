@@ -1566,6 +1566,48 @@ TEST_CASE("native try Result lowering uses semantic-product variant metadata") {
   CHECK(source.find("targetErrorVariant->variantIndex") == std::string::npos);
 }
 
+TEST_CASE("native try operand result metadata resolves interned query ids") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path tryHelpersPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTryHelpers.h";
+  if (!std::filesystem::exists(tryHelpersPath)) {
+    tryHelpersPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTryHelpers.h";
+  }
+  REQUIRE(std::filesystem::exists(tryHelpersPath));
+
+  const std::string source = readTextFile(tryHelpersPath);
+  const size_t applyPos = source.find("auto applySemanticOperandResultType");
+  REQUIRE(applyPos != std::string::npos);
+  const size_t resolverPos = source.find("resolveQueryResultTypeText", applyPos);
+  const size_t semanticResolvePos =
+      source.find("semanticProgramResolveCallTargetString(", resolverPos);
+  const size_t errorTypePos =
+      source.find("resolveQueryResultTypeText(queryFact->resultErrorType,", resolverPos);
+  const size_t errorIdPos = source.find("queryFact->resultErrorTypeId", errorTypePos);
+  const size_t valueTypePos =
+      source.find("resolveQueryResultTypeText(queryFact->resultValueType,", errorIdPos);
+  const size_t valueIdPos = source.find("queryFact->resultValueTypeId", valueTypePos);
+  const size_t fallbackPos = source.find("auto resolveLambdaReturnedValueExpr", valueIdPos);
+  REQUIRE(resolverPos != std::string::npos);
+  REQUIRE(semanticResolvePos != std::string::npos);
+  REQUIRE(errorTypePos != std::string::npos);
+  REQUIRE(errorIdPos != std::string::npos);
+  REQUIRE(valueTypePos != std::string::npos);
+  REQUIRE(valueIdPos != std::string::npos);
+  REQUIRE(fallbackPos != std::string::npos);
+  CHECK(resolverPos < semanticResolvePos);
+  CHECK(semanticResolvePos < errorTypePos);
+  CHECK(errorTypePos < errorIdPos);
+  CHECK(errorIdPos < valueTypePos);
+  CHECK(valueTypePos < valueIdPos);
+  CHECK(valueIdPos < fallbackPos);
+  CHECK(source.find("resultInfoOut.errorType = queryFact->resultErrorType;") ==
+        std::string::npos);
+  CHECK(source.find("return applySemanticTryValueType(queryFact->resultValueType,") ==
+        std::string::npos);
+}
+
 TEST_CASE("for-condition auto bindings use semantic-product binding facts") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path loopsPath =

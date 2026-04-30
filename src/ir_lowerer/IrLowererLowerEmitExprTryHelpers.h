@@ -67,13 +67,33 @@
             if (queryFact == nullptr || !queryFact->hasResultType) {
               return false;
             }
+            auto resolveQueryResultTypeText = [&](const std::string &typeText,
+                                                  SymbolId typeTextId) {
+              const auto &semanticTargets =
+                  callResolutionAdapters.semanticProductTargets;
+              if (semanticTargets.semanticProgram != nullptr &&
+                  typeTextId != InvalidSymbolId) {
+                std::string resolvedTypeText = std::string(
+                    semanticProgramResolveCallTargetString(
+                        *semanticTargets.semanticProgram, typeTextId));
+                if (!resolvedTypeText.empty()) {
+                  return trimTemplateTypeText(resolvedTypeText);
+                }
+              }
+              return trimTemplateTypeText(typeText);
+            };
             resultInfoOut.isResult = true;
             resultInfoOut.hasValue = queryFact->resultTypeHasValue;
-            resultInfoOut.errorType = queryFact->resultErrorType;
+            resultInfoOut.errorType =
+                resolveQueryResultTypeText(queryFact->resultErrorType,
+                                           queryFact->resultErrorTypeId);
             if (!resultInfoOut.hasValue) {
               return true;
             }
-            return applySemanticTryValueType(queryFact->resultValueType, resultInfoOut);
+            return applySemanticTryValueType(
+                resolveQueryResultTypeText(queryFact->resultValueType,
+                                           queryFact->resultValueTypeId),
+                resultInfoOut);
           };
           auto resolveLambdaReturnedValueExpr = [&](const Expr &lambdaExpr,
                                                     const Expr *&valueExprOut) {

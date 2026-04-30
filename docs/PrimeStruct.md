@@ -331,6 +331,9 @@ Planned non-template inference migration contract:
 - Completed lowerer-side field/packed payload ID slice: native field receiver and packed Result
   payload classifiers now resolve binding/query type ids before copied semantic-product text, so
   struct and packed-payload classification consume graph-owned metadata before compatibility text.
+- Completed lowerer-side try operand Result ID slice: `try(...)` operand result metadata now
+  resolves `resultValueTypeId` and `resultErrorTypeId` before copied query-fact text, so
+  value/error propagation consumes graph-owned Result metadata before compatibility text.
 - Completed collection specialization metadata diagnostic slice: semantic-product collection
   specialization completeness validation now checks interned family, binding type, element type, and
   key/value type metadata before lowerer collection consumers can read collection fact text fields.
