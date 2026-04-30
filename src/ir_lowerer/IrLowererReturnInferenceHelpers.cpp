@@ -36,6 +36,19 @@ bool extractResultValueTypeText(const std::string &typeText, std::string &valueT
   return true;
 }
 
+std::string resolveSemanticProductReturnText(const SemanticProgram &semanticProgram,
+                                             const std::string &text,
+                                             SymbolId textId) {
+  if (textId != InvalidSymbolId) {
+    std::string resolvedText =
+        std::string(semanticProgramResolveCallTargetString(semanticProgram, textId));
+    if (!resolvedText.empty()) {
+      return trimTemplateTypeText(resolvedText);
+    }
+  }
+  return trimTemplateTypeText(text);
+}
+
 } // namespace
 
 bool analyzeEntryReturnTransforms(const Definition &entryDef,
@@ -58,8 +71,10 @@ bool analyzeEntryReturnTransforms(const Definition &entryDef,
       error = "missing semantic-product callable summary: " + entryPath;
       return false;
     }
+    const std::string returnKind = resolveSemanticProductReturnText(
+        *semanticProgram, callableSummary->returnKind, callableSummary->returnKindId);
     out.hasReturnTransform = true;
-    out.returnsVoid = callableSummary->returnKind == "void";
+    out.returnsVoid = returnKind == "void";
     out.hasResultInfo = callableSummary->hasResultType;
     if (callableSummary->hasResultType) {
       out.resultInfo.isResult = true;
@@ -73,7 +88,9 @@ bool analyzeEntryReturnTransforms(const Definition &entryDef,
     }
     std::string base;
     std::string arg;
-    if (splitTemplateTypeName(returnFact->bindingTypeText, base, arg) && base == "array" &&
+    const std::string bindingTypeText = resolveSemanticProductReturnText(
+        *semanticProgram, returnFact->bindingTypeText, returnFact->bindingTypeTextId);
+    if (splitTemplateTypeName(bindingTypeText, base, arg) && base == "array" &&
         valueKindFromTypeName(trimTemplateTypeText(arg)) == LocalInfo::ValueKind::String) {
       error = "native backend does not support string array return types on " + entryPath;
       return false;

@@ -428,10 +428,12 @@ Task template:
     complete for semantic-product-backed `Result.why(...)` and
     `Result.error(...)` source error-domain matching. The lowerer query
     Result completeness ID consumer slice is complete for
-    semantic-product-backed value-shape validation. The lowerer statement
-    binding ID consumer slice is complete for semantic-product-backed
-    local-auto declarations, for-condition declarations, and final LocalInfo
-    fallback setup. The native pick target ID consumer slice is complete for
+    semantic-product-backed value-shape validation. The lowerer return-info ID
+    consumer slice is complete for semantic-product-backed entry return
+    transforms and return-info setup. The lowerer statement binding ID
+    consumer slice is complete for semantic-product-backed local-auto
+    declarations, for-condition declarations, and final LocalInfo fallback
+    setup. The native pick target ID consumer slice is complete for
     semantic-product-backed named and direct-call target sum classification.
     The native sum source ID consumer slice is complete for
     semantic-product-backed sum initializer and pick aggregate-result source
@@ -580,6 +582,10 @@ Task template:
     - Completed slice: semantic-product query Result value-shape
       completeness validation now resolves interned query result value IDs
       before consulting copied query text fields.
+    - Completed slice: semantic-product-addressed return-info setup now
+      resolves interned callable return/result IDs plus return binding type
+      IDs before consulting copied semantic-product text fields for entry
+      return-transform analysis and return-info setup.
     - Completed slice: semantic-product-addressed statement binding setup now
       resolves interned binding type IDs before consulting copied binding text
       fields for local-auto declarations, for-condition declarations, and

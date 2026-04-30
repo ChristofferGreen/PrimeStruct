@@ -361,8 +361,8 @@ TEST_CASE("ir lowerer inference get-return-info step uses semantic-product retur
       .activeCapabilities = {},
       .hasResultType = true,
       .resultTypeHasValue = true,
-      .resultValueType = "Pair",
-      .resultErrorType = "MyError",
+      .resultValueType = "StalePair",
+      .resultErrorType = "StaleError",
       .hasOnError = false,
       .onErrorHandlerPath = "",
       .onErrorErrorType = "",
@@ -370,11 +370,15 @@ TEST_CASE("ir lowerer inference get-return-info step uses semantic-product retur
       .semanticNodeId = 91,
       .provenanceHandle = 0,
       .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/pkg/current"),
+      .resultValueTypeId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "Pair"),
+      .resultErrorTypeId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "MyError"),
   });
   semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
       .returnKind = "int64",
       .structPath = "/pkg/Pair",
-      .bindingTypeText = "Result<Pair, MyError>",
+      .bindingTypeText = "Result<StalePair, StaleError>",
       .isMutable = false,
       .isEntryArgString = false,
       .isUnsafeReference = false,
@@ -384,6 +388,8 @@ TEST_CASE("ir lowerer inference get-return-info step uses semantic-product retur
       .semanticNodeId = 91,
       .definitionPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/pkg/legacy"),
+      .bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "Result<Pair, MyError>"),
   });
   const auto semanticIndex = primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
 
@@ -424,7 +430,7 @@ TEST_CASE("ir lowerer inference get-return-info setup precomputes semantic-produ
   primec::SemanticProgram semanticProgram;
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
       .isExecution = false,
-      .returnKind = "array",
+      .returnKind = "void",
       .isCompute = false,
       .isUnsafe = false,
       .activeEffects = {},
@@ -440,11 +446,12 @@ TEST_CASE("ir lowerer inference get-return-info setup precomputes semantic-produ
       .semanticNodeId = 97,
       .provenanceHandle = 0,
       .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/pkg/current"),
+      .returnKindId = primec::semanticProgramInternCallTargetString(semanticProgram, "array"),
   });
   semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
       .returnKind = "array",
       .structPath = "/vector",
-      .bindingTypeText = "vector<Pair>",
+      .bindingTypeText = "vector<StalePair>",
       .isMutable = false,
       .isEntryArgString = false,
       .isUnsafeReference = false,
@@ -454,6 +461,8 @@ TEST_CASE("ir lowerer inference get-return-info setup precomputes semantic-produ
       .semanticNodeId = 97,
       .definitionPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/pkg/current"),
+      .bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "vector<Pair>"),
   });
   const auto semanticIndex = primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
 

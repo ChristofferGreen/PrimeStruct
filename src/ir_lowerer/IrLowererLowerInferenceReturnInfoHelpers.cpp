@@ -65,6 +65,19 @@ bool isSemanticFileHandleTypeText(const std::string &typeText) {
          normalizeCollectionBindingTypeName(base) == "File";
 }
 
+std::string resolveSemanticProductReturnText(const SemanticProgram &semanticProgram,
+                                             const std::string &text,
+                                             SymbolId textId) {
+  if (textId != InvalidSymbolId) {
+    std::string resolvedText =
+        std::string(semanticProgramResolveCallTargetString(semanticProgram, textId));
+    if (!resolvedText.empty()) {
+      return trimTemplateTypeText(resolvedText);
+    }
+  }
+  return trimTemplateTypeText(text);
+}
+
 void clearReturnInfoResultValue(ReturnInfo &info) {
   info.resultHasValue = false;
   info.resultValueKind = LocalInfo::ValueKind::Unknown;
@@ -147,7 +160,9 @@ bool buildSemanticProductReturnInfo(const LowerInferenceReturnInfoSetupInput &in
     errorOut = "missing semantic-product return fact: " + definition.fullPath;
     return false;
   }
-  if (returnFact->bindingTypeText.empty()) {
+  const std::string returnBindingTypeText = resolveSemanticProductReturnText(
+      semanticProgram, returnFact->bindingTypeText, returnFact->bindingTypeTextId);
+  if (returnBindingTypeText.empty()) {
     errorOut = "missing semantic-product return binding type: " + definition.fullPath;
     return false;
   }
@@ -160,7 +175,7 @@ bool buildSemanticProductReturnInfo(const LowerInferenceReturnInfoSetupInput &in
   semanticReturnDefinition.semanticNodeId = definition.semanticNodeId;
   semanticReturnDefinition.transforms.push_back(Transform{
       .name = "return",
-      .templateArgs = {returnFact->bindingTypeText},
+      .templateArgs = {returnBindingTypeText},
   });
 
   infoOut = {};
@@ -184,11 +199,15 @@ bool buildSemanticProductReturnInfo(const LowerInferenceReturnInfoSetupInput &in
   }
 
   if (callableSummary->hasResultType) {
+    const std::string resultValueType = resolveSemanticProductReturnText(
+        semanticProgram, callableSummary->resultValueType, callableSummary->resultValueTypeId);
+    const std::string resultErrorType = resolveSemanticProductReturnText(
+        semanticProgram, callableSummary->resultErrorType, callableSummary->resultErrorTypeId);
     infoOut.returnsVoid = false;
     infoOut.returnsArray = false;
     infoOut.isResult = true;
     infoOut.resultHasValue = callableSummary->resultTypeHasValue;
-    infoOut.resultErrorType = callableSummary->resultErrorType;
+    infoOut.resultErrorType = resultErrorType;
     infoOut.kind = callableSummary->resultTypeHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
     infoOut.resultValueCollectionKind = LocalInfo::Kind::Value;
     infoOut.resultValueKind = LocalInfo::ValueKind::Unknown;
@@ -196,7 +215,7 @@ bool buildSemanticProductReturnInfo(const LowerInferenceReturnInfoSetupInput &in
     infoOut.resultValueIsFileHandle = false;
     infoOut.resultValueStructType.clear();
     if (callableSummary->resultTypeHasValue) {
-      if (!applySemanticResultValueTypeText(input, definition, callableSummary->resultValueType, infoOut)) {
+      if (!applySemanticResultValueTypeText(input, definition, resultValueType, infoOut)) {
         errorOut = "missing semantic-product callable result metadata: " + definition.fullPath;
         return false;
       }
@@ -206,7 +225,9 @@ bool buildSemanticProductReturnInfo(const LowerInferenceReturnInfoSetupInput &in
     return false;
   } else {
     clearReturnInfoResultValue(infoOut);
-    if (callableSummary->returnKind == "void") {
+    const std::string returnKind = resolveSemanticProductReturnText(
+        semanticProgram, callableSummary->returnKind, callableSummary->returnKindId);
+    if (returnKind == "void") {
       infoOut = {};
       infoOut.returnsVoid = true;
     }
