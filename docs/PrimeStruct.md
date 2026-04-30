@@ -320,6 +320,10 @@ Planned non-template inference migration contract:
   scalar inference now resolves `queryTypeTextId` and `bindingTypeTextId` before copied query-fact
   text fields, so scalar call kind inference consumes the graph-owned intern table rather than
   stale duplicated text.
+- Completed lowerer-side tail-dispatch collection query ID slice: native tail-dispatch map/vector
+  target classification now resolves `bindingTypeTextId` and `queryTypeTextId` before copied
+  query-fact text fields, so collection receiver classification consumes graph-owned query
+  metadata instead of requiring duplicated text.
 - Completed collection specialization metadata diagnostic slice: semantic-product collection
   specialization completeness validation now checks interned family, binding type, element type, and
   key/value type metadata before lowerer collection consumers can read collection fact text fields.

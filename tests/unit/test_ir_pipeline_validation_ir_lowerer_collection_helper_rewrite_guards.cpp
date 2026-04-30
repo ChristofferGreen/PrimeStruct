@@ -584,6 +584,46 @@ TEST_CASE("ir lowerer tail dispatch rewrite guards explicit map defs") {
         std::string::npos);
 }
 
+TEST_CASE("ir lowerer tail dispatch semantic query targets resolve interned type ids") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path tailDispatchPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h";
+
+  REQUIRE(std::filesystem::exists(tailDispatchPath));
+  const std::string source = readText(tailDispatchPath);
+
+  CHECK(source.find("auto resolveSemanticQueryFactTypeText =") !=
+        std::string::npos);
+  CHECK(source.find("SymbolId typeTextId") != std::string::npos);
+  CHECK(source.find("semanticProgramResolveCallTargetString(*semanticProgram, typeTextId)") !=
+        std::string::npos);
+  CHECK(source.find("resolveFactTypeText(queryFact.bindingTypeText, queryFact.bindingTypeTextId)") !=
+        std::string::npos);
+  CHECK(source.find("resolveFactTypeText(queryFact.queryTypeText, queryFact.queryTypeTextId)") !=
+        std::string::npos);
+  CHECK(source.find("const std::string bindingType = resolveSemanticQueryFactTypeText(*queryFact);") !=
+        std::string::npos);
+  CHECK(source.find("std::string bindingType = resolveSemanticQueryFactTypeText(*queryFact);") !=
+        std::string::npos);
+  CHECK(source.find("std::string bindingType = ir_lowerer::trimTemplateTypeText(queryFact->bindingTypeText);") ==
+        std::string::npos);
+  CHECK(source.find("bindingType = ir_lowerer::trimTemplateTypeText(queryFact->queryTypeText);") ==
+        std::string::npos);
+}
+
 TEST_CASE("ir lowerer statement expr guards inline builtin map insert family") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);

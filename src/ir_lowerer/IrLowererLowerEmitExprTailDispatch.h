@@ -560,6 +560,27 @@
           resolvedCallExpr.namespacePrefix.clear();
           return getMathBuiltinName(resolvedCallExpr, mathBuiltinName);
         };
+        auto resolveSemanticQueryFactTypeText =
+            [&](const SemanticProgramQueryFact &queryFact) {
+              auto resolveFactTypeText = [&](const std::string &typeText,
+                                             SymbolId typeTextId) {
+                if (semanticProgram != nullptr && typeTextId != InvalidSymbolId) {
+                  std::string resolvedTypeText = std::string(
+                      semanticProgramResolveCallTargetString(*semanticProgram, typeTextId));
+                  if (!resolvedTypeText.empty()) {
+                    return ir_lowerer::trimTemplateTypeText(resolvedTypeText);
+                  }
+                }
+                return ir_lowerer::trimTemplateTypeText(typeText);
+              };
+              std::string bindingType =
+                  resolveFactTypeText(queryFact.bindingTypeText, queryFact.bindingTypeTextId);
+              if (bindingType.empty()) {
+                bindingType =
+                    resolveFactTypeText(queryFact.queryTypeText, queryFact.queryTypeTextId);
+              }
+              return bindingType;
+            };
 
         const auto nativeTailResult = ir_lowerer::tryEmitNativeCallTailDispatchWithLocals(
             nativeTailExpr,
@@ -605,10 +626,7 @@
                 if (queryFact == nullptr) {
                   return false;
                 }
-                std::string bindingType = ir_lowerer::trimTemplateTypeText(queryFact->bindingTypeText);
-                if (bindingType.empty()) {
-                  bindingType = ir_lowerer::trimTemplateTypeText(queryFact->queryTypeText);
-                }
+                const std::string bindingType = resolveSemanticQueryFactTypeText(*queryFact);
                 std::string base;
                 std::string argText;
                 if (!splitTemplateTypeName(bindingType, base, argText) ||
@@ -783,10 +801,7 @@
                 if (queryFact == nullptr) {
                   return false;
                 }
-                std::string bindingType = ir_lowerer::trimTemplateTypeText(queryFact->bindingTypeText);
-                if (bindingType.empty()) {
-                  bindingType = ir_lowerer::trimTemplateTypeText(queryFact->queryTypeText);
-                }
+                std::string bindingType = resolveSemanticQueryFactTypeText(*queryFact);
                 if (bindingType.empty()) {
                   return false;
                 }
