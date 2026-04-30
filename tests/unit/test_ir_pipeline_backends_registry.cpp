@@ -1278,6 +1278,34 @@ TEST_CASE("native Result error direct-call sources use semantic-product query fa
   CHECK(staleDiagnosticPos < fallbackTransformScanPos);
 }
 
+TEST_CASE("native aggregate pointer dereference calls use semantic-product return facts") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path operatorMemoryPointerHelpersPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererOperatorMemoryPointerHelpers.cpp";
+  if (!std::filesystem::exists(operatorMemoryPointerHelpersPath)) {
+    operatorMemoryPointerHelpersPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererOperatorMemoryPointerHelpers.cpp";
+  }
+  REQUIRE(std::filesystem::exists(operatorMemoryPointerHelpersPath));
+
+  const std::string source = readTextFile(operatorMemoryPointerHelpersPath);
+  const size_t resolverPos = source.find("resolveAggregatePointerLikeCallExpr");
+  REQUIRE(resolverPos != std::string::npos);
+  const size_t returnFactPos =
+      source.find("findSemanticProductReturnFactByPath", resolverPos);
+  const size_t missingDiagnosticPos =
+      source.find("missing semantic-product aggregate pointer return metadata",
+                  resolverPos);
+  const size_t fallbackTransformScanPos =
+      source.find("for (const auto &transform : callee->transforms)",
+                  resolverPos);
+  REQUIRE(returnFactPos != std::string::npos);
+  REQUIRE(missingDiagnosticPos != std::string::npos);
+  REQUIRE(fallbackTransformScanPos != std::string::npos);
+  CHECK(returnFactPos < fallbackTransformScanPos);
+  CHECK(missingDiagnosticPos < fallbackTransformScanPos);
+}
+
 TEST_CASE("native field receivers use semantic-product type facts") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path lowerEmitExprPath =

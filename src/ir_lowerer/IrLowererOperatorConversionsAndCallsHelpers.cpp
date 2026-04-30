@@ -33,7 +33,8 @@ bool emitConversionsAndCallsOperatorExpr(
     std::vector<IrInstruction> &instructions,
     bool &handled,
     std::string &error,
-    const ResolveConversionsAndCallsDefinitionCallFn &resolveDefinitionCall) {
+    const ResolveConversionsAndCallsDefinitionCallFn &resolveDefinitionCall,
+    const SemanticProductTargetAdapter *semanticProductTargets) {
   handled = true;
   std::string builtin;
   if (getBuiltinConvertName(expr)) {
@@ -261,7 +262,8 @@ bool emitConversionsAndCallsOperatorExpr(
       emitStructCopyFromPtrs,
       instructions,
       error,
-      resolveDefinitionCall};
+      resolveDefinitionCall,
+      semanticProductTargets};
 
   if (!emitConversionsAndCallsMemoryAndPointerExpr(expr, context, handled)) {
     return false;

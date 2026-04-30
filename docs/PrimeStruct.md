@@ -442,6 +442,13 @@ Planned non-template inference migration contract:
   return-error copies, and source/target tag writes now validate and consume
   published sum-variant metadata instead of reading AST payload shape or
   variant order. Syntax-only compatibility keeps the old AST payload/tag path.
+- Completed native aggregate-pointer return slice:
+  semantic-product-addressed direct-call operands for aggregate
+  `dereference(...)` now resolve pointer/reference return shape from the
+  published return fact before scanning callee return transforms. Missing
+  return metadata fails closed with a deterministic aggregate-pointer return
+  diagnostic; syntax-only or no-semantic-product compatibility keeps the old
+  transform-scan path.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

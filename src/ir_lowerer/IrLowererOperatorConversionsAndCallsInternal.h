@@ -26,6 +26,7 @@ struct ConversionsAndCallsOperatorContext {
   std::vector<IrInstruction> &instructions;
   std::string &error;
   const ResolveConversionsAndCallsDefinitionCallFn &resolveDefinitionCall;
+  const SemanticProductTargetAdapter *semanticProductTargets = nullptr;
 };
 
 bool emitConversionsAndCallsMemoryAndPointerExpr(

@@ -47,7 +47,8 @@
 	                function.instructions,
 	                handledConversionsAndCalls,
 	                error,
-	                [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); })) {
+		                [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
+		                &callResolutionAdapters.semanticProductTargets)) {
           return false;
         }
         if (handledConversionsAndCalls) {

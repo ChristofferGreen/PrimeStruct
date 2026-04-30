@@ -5,6 +5,7 @@
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererIndexKindHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererStructFieldBindingHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
@@ -111,17 +112,81 @@ bool isAggregatePointerLikeExpr(const Expr &expr, const LocalMap &localsIn) {
   return false;
 }
 
-bool isAggregatePointerLikeCallExpr(
+bool isAggregatePointerLikeReturnType(
+    const std::string &returnType,
+    const std::string &namespacePrefix,
+    const ResolveConversionsAndCallsStructTypeNameFn &resolveStructTypeName) {
+  std::string base;
+  std::string argList;
+  if (!splitTemplateTypeName(trimTemplateTypeText(returnType), base, argList)) {
+    return false;
+  }
+  base = normalizeCollectionBindingTypeName(base);
+  if (base != "Reference" && base != "Pointer") {
+    return false;
+  }
+
+  std::vector<std::string> args;
+  if (!splitTemplateArgs(argList, args) || args.size() != 1) {
+    return false;
+  }
+
+  const std::string targetType = trimTemplateTypeText(args.front());
+  std::string targetBase;
+  std::string targetArgList;
+  if (splitTemplateTypeName(targetType, targetBase, targetArgList)) {
+    targetBase = normalizeCollectionBindingTypeName(targetBase);
+    if (targetBase == "array" || targetBase == "vector" ||
+        targetBase == "map" || targetBase == "soa_vector") {
+      return true;
+    }
+  }
+
+  std::string resolvedStruct;
+  return resolveStructTypeName(targetType, namespacePrefix, resolvedStruct);
+}
+
+bool resolveAggregatePointerLikeCallExpr(
     const Expr &expr,
     const ResolveConversionsAndCallsDefinitionCallFn &resolveDefinitionCall,
-    const ResolveConversionsAndCallsStructTypeNameFn &resolveStructTypeName) {
+    const ResolveConversionsAndCallsStructTypeNameFn &resolveStructTypeName,
+    const SemanticProductTargetAdapter *semanticProductTargets,
+    bool &aggregatePointerLikeOut,
+    std::string &error) {
+  aggregatePointerLikeOut = false;
   if (expr.kind != Expr::Kind::Call || !resolveDefinitionCall) {
-    return false;
+    return true;
   }
 
   const Definition *callee = resolveDefinitionCall(expr);
   if (callee == nullptr) {
-    return false;
+    return true;
+  }
+
+  if (semanticProductTargets != nullptr &&
+      semanticProductTargets->hasSemanticProduct &&
+      expr.semanticNodeId != 0) {
+    const SemanticProgramReturnFact *returnFact =
+        findSemanticProductReturnFactByPath(*semanticProductTargets, callee->fullPath);
+    std::string returnBindingType;
+    if (returnFact != nullptr) {
+      returnBindingType = returnFact->bindingTypeText;
+      if (returnBindingType.empty() &&
+          returnFact->bindingTypeTextId != InvalidSymbolId &&
+          semanticProductTargets->semanticProgram != nullptr) {
+        returnBindingType = std::string(semanticProgramResolveCallTargetString(
+            *semanticProductTargets->semanticProgram,
+            returnFact->bindingTypeTextId));
+      }
+    }
+    if (returnFact == nullptr || returnBindingType.empty()) {
+      error = "missing semantic-product aggregate pointer return metadata: " +
+              callee->fullPath;
+      return false;
+    }
+    aggregatePointerLikeOut = isAggregatePointerLikeReturnType(
+        returnBindingType, callee->namespacePrefix, resolveStructTypeName);
+    return true;
   }
 
   for (const auto &transform : callee->transforms) {
@@ -129,39 +194,14 @@ bool isAggregatePointerLikeCallExpr(
       continue;
     }
 
-    std::string base;
-    std::string argList;
-    if (!splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), base, argList)) {
-      continue;
-    }
-    base = normalizeCollectionBindingTypeName(base);
-    if (base != "Reference" && base != "Pointer") {
-      continue;
-    }
-
-    std::vector<std::string> args;
-    if (!splitTemplateArgs(argList, args) || args.size() != 1) {
-      continue;
-    }
-
-    const std::string targetType = trimTemplateTypeText(args.front());
-    std::string targetBase;
-    std::string targetArgList;
-    if (splitTemplateTypeName(targetType, targetBase, targetArgList)) {
-      targetBase = normalizeCollectionBindingTypeName(targetBase);
-      if (targetBase == "array" || targetBase == "vector" || targetBase == "map" ||
-          targetBase == "soa_vector") {
-        return true;
-      }
-    }
-
-    std::string resolvedStruct;
-    if (resolveStructTypeName(targetType, callee->namespacePrefix, resolvedStruct)) {
+    if (isAggregatePointerLikeReturnType(
+            transform.templateArgs.front(), callee->namespacePrefix, resolveStructTypeName)) {
+      aggregatePointerLikeOut = true;
       return true;
     }
   }
 
-  return false;
+  return true;
 }
 
 } // namespace
@@ -184,6 +224,8 @@ bool emitConversionsAndCallsMemoryAndPointerExpr(
   auto &instructions = context.instructions;
   auto &error = context.error;
   const auto &resolveDefinitionCall = context.resolveDefinitionCall;
+  const SemanticProductTargetAdapter *semanticProductTargets =
+      context.semanticProductTargets;
 
   handled = true;
   std::string builtin;
@@ -568,6 +610,17 @@ bool emitConversionsAndCallsMemoryAndPointerExpr(
     }
 
     const Expr &pointerExpr = expr.args.front();
+    bool aggregatePointerLike = isAggregatePointerLikeExpr(pointerExpr, localsIn);
+    if (builtin == "dereference" && !aggregatePointerLike) {
+      if (!resolveAggregatePointerLikeCallExpr(pointerExpr,
+                                              resolveDefinitionCall,
+                                              resolveStructTypeName,
+                                              semanticProductTargets,
+                                              aggregatePointerLike,
+                                              error)) {
+        return false;
+      }
+    }
     if (pointerExpr.kind == Expr::Kind::Name) {
       auto it = localsIn.find(pointerExpr.name);
       if (it == localsIn.end()) {
@@ -584,9 +637,7 @@ bool emitConversionsAndCallsMemoryAndPointerExpr(
         return false;
       }
     }
-    if (builtin == "dereference" &&
-        (isAggregatePointerLikeExpr(pointerExpr, localsIn) ||
-         isAggregatePointerLikeCallExpr(pointerExpr, resolveDefinitionCall, resolveStructTypeName))) {
+    if (builtin == "dereference" && aggregatePointerLike) {
       return true;
     }
     instructions.push_back({IrOpcode::LoadIndirect, 0});

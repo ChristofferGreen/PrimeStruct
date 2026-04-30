@@ -15,6 +15,7 @@
 namespace primec::ir_lowerer {
 
 struct LayoutFieldBinding;
+struct SemanticProductTargetAdapter;
 
 using EmitConversionsAndCallsExprWithLocalsFn = std::function<bool(const Expr &, const LocalMap &)>;
 using EmitConversionsAndCallsStatementWithLocalsFn = std::function<bool(const Expr &, LocalMap &)>;
@@ -81,7 +82,8 @@ bool emitConversionsAndCallsOperatorExpr(
     std::vector<IrInstruction> &instructions,
     bool &handled,
     std::string &error,
-    const ResolveConversionsAndCallsDefinitionCallFn &resolveDefinitionCall = {});
+    const ResolveConversionsAndCallsDefinitionCallFn &resolveDefinitionCall = {},
+    const SemanticProductTargetAdapter *semanticProductTargets = nullptr);
 
 bool emitConversionsAndCallsOperatorExpr(
     const Expr &expr,

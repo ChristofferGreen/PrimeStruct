@@ -408,7 +408,9 @@ Task template:
     semantic-product-backed direct-call status-only Result sources. The
     native `try(...)` Result-variant slice is complete for
     semantic-product-backed stdlib Result sum matching, payload loads,
-    propagated error copies, and source/target tags.
+    propagated error copies, and source/target tags. The native aggregate
+    pointer return slice is complete for semantic-product-backed direct-call
+    operands to aggregate `dereference(...)`.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -651,6 +653,12 @@ Task template:
       return-error payloads, or branching/storing source and target tags on
       the semantic-product path. Syntax-only compatibility keeps the old AST
       payload-storage and tag reconstruction path.
+    - Completed slice: semantic-product-addressed direct-call operands for
+      aggregate `dereference(...)` now resolve pointer/reference return shape
+      from the published return fact before scanning callee return transforms.
+      Missing return metadata fails closed with a deterministic aggregate
+      pointer return diagnostic while syntax-only or no-semantic-product
+      compatibility keeps the old transform-scan path.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.
