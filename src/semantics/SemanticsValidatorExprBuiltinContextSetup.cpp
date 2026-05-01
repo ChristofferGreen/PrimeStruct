@@ -52,7 +52,11 @@ void SemanticsValidator::prepareExprCountCapacityMapBuiltinContext(
       [&](const Expr &target) {
         std::string keyType;
         std::string valueType;
-        return dispatchResolvers.resolveMapTarget(target, keyType, valueType);
+        return dispatchResolvers.resolveMapTarget(target, keyType, valueType) ||
+               dispatchResolvers.resolveExperimentalMapTarget(target, keyType,
+                                                              valueType) ||
+               this->isIndexedArgsPackMapReceiverTarget(target,
+                                                        dispatchResolvers);
       };
   contextOut.dispatchResolverAdapters = &dispatchResolverAdapters;
   contextOut.dispatchResolvers = &dispatchResolvers;

@@ -155,7 +155,7 @@ main() {
   uint64_t result = 0;
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
-  CHECK(result == 23);
+  CHECK(result == 29);
 }
 
 TEST_CASE("ir lowerer materializes variadic struct pointer packs from borrowed pack access") {
@@ -237,7 +237,7 @@ main() {
   uint64_t result = 0;
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
-  CHECK(result == 65);
+  CHECK(result == 75);
 }
 
 TEST_CASE("ir lowerer materializes variadic scalar reference packs from borrowed pack access") {
@@ -309,7 +309,7 @@ main() {
   uint64_t result = 0;
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
-  CHECK(result == 23);
+  CHECK(result == 29);
 }
 
 TEST_CASE("ir lowerer materializes variadic struct reference packs from borrowed pack access") {
@@ -391,7 +391,7 @@ main() {
   uint64_t result = 0;
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
-  CHECK(result == 65);
+  CHECK(result == 75);
 }
 
 TEST_CASE("ir lowerer materializes variadic scalar pointer packs from borrowed pack field access") {
@@ -467,7 +467,7 @@ main() {
   uint64_t result = 0;
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
-  CHECK(result == 23);
+  CHECK(result == 29);
 }
 
 TEST_CASE("ir lowerer materializes variadic struct pointer packs from borrowed pack field access") {

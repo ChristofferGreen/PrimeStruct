@@ -104,7 +104,9 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
   if (context.resolveMapTarget != nullptr && expr.isMethodCall &&
       !requestsExplicitVectorCompatibilityMethod &&
       isCanonicalMapMethodHelper(normalizedMethodName) && !expr.args.empty() &&
-      context.resolveMapTarget(expr.args.front())) {
+      (context.resolveMapTarget(expr.args.front()) ||
+       (context.isIndexedArgsPackMapReceiverTarget != nullptr &&
+        context.isIndexedArgsPackMapReceiverTarget(expr.args.front())))) {
     Expr rewrittenMapMethodCall = expr;
     rewrittenMapMethodCall.isMethodCall = false;
     rewrittenMapMethodCall.namespacePrefix.clear();

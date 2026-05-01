@@ -349,6 +349,7 @@
       bool &handledOut);
   struct ExprLateUnknownTargetFallbackContext {
     std::function<bool(const Expr &)> resolveMapTarget;
+    std::function<bool(const Expr &)> isIndexedArgsPackMapReceiverTarget;
   };
   bool validateExprLateUnknownTargetFallbacks(
       const std::vector<ParameterInfo> &params,
@@ -607,6 +608,7 @@
     bool isDirectStdNamespacedVectorCountWrapperMapTarget = false;
     bool shouldBuiltinValidateBareMapCountCall = false;
     std::function<bool(const Expr &)> resolveMapTarget;
+    std::function<bool(const Expr &)> isIndexedArgsPackMapReceiverTarget;
     std::function<bool(const Expr &)> isArrayNamespacedVectorCountCompatibilityCall;
     std::function<bool(const std::string &, Expr &)> tryRewriteBareVectorHelperCall;
     std::function<void(const Expr &, std::string &, bool &, bool)> promoteCapacityToBuiltinValidation;

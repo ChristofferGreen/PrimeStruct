@@ -359,8 +359,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   const bool routesThroughResolvedMapCountMethodSurface =
       expr.isMethodCall &&
       !expr.args.empty() &&
-      context.resolveMapTarget != nullptr &&
-      context.resolveMapTarget(expr.args.front()) &&
+      ((context.resolveMapTarget != nullptr &&
+        context.resolveMapTarget(expr.args.front())) ||
+       (context.isIndexedArgsPackMapReceiverTarget != nullptr &&
+        context.isIndexedArgsPackMapReceiverTarget(expr.args.front()))) &&
       (resolvedMapCountMethodPath == "/std/collections/map/count" ||
        resolvedMapCountMethodPath == "/std/collections/map/count_ref" ||
        resolvedMapCountMethodPath == "/map/count" ||
@@ -491,6 +493,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     const bool resolvesMapCountReceiver =
         context.resolveMapTarget != nullptr &&
         context.resolveMapTarget(receiver);
+    const bool resolvesIndexedArgsPackMapCountReceiver =
+        context.isIndexedArgsPackMapReceiverTarget != nullptr &&
+        context.isIndexedArgsPackMapReceiverTarget(receiver);
     const bool requestsStdNamespacedVectorCountHelper =
         expr.namespacePrefix == "std/collections/vector" ||
         expr.namespacePrefix == "/std/collections/vector" ||
@@ -515,7 +520,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     const bool allowsStdlibMapCountFallbackRoute =
         !hasDeclaredDefinitionPath(bareMapCountTargetPath) &&
         hasVisibleStdlibMapCountDefinition &&
-        resolvesMapCountReceiver;
+        (resolvesMapCountReceiver ||
+         resolvesIndexedArgsPackMapCountReceiver);
     const bool routesThroughStdlibMapCountFallback =
         routesThroughUnnamespacedMapCountFallbackSurface &&
         allowsStdlibMapCountFallbackRoute;
@@ -545,7 +551,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                           resolvedCountMethodTargetDirectly &&
                           expr.isMethodCall &&
                           requestsStdNamespacedVectorCountHelper &&
-                          resolvesMapCountReceiver &&
+                          (resolvesMapCountReceiver ||
+                           resolvesIndexedArgsPackMapCountReceiver) &&
                           (methodResolved == bareMapCountTargetPath ||
                            methodResolved == stdlibMapCountTargetPath);
                   if (redirectsCanonicalStdNamespacedVectorCountMethodToExplicitTarget) {
@@ -562,7 +569,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                       return false;
                     }
                     const bool usesCountResolveMissMapFallback =
-                        resolvesMapCountReceiver &&
+                        (resolvesMapCountReceiver ||
+                         resolvesIndexedArgsPackMapCountReceiver) &&
                         !routesThroughNamespacedVectorCountHelperSurface;
                     std::string countResolveMissTargetPath;
                     if (usesCountResolveMissMapFallback) {

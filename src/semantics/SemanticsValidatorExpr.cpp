@@ -992,6 +992,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     collectionCountCapacityDispatchContext.resolveMapTarget =
         dispatchBootstrap.resolveMapTarget;
     collectionCountCapacityDispatchContext
+        .isIndexedArgsPackMapReceiverTarget =
+        [&](const Expr &target) {
+          return this->isIndexedArgsPackMapReceiverTarget(
+              target, dispatchBootstrap.dispatchResolvers);
+        };
+    collectionCountCapacityDispatchContext
         .isArrayNamespacedVectorCountCompatibilityCall =
         [&](const Expr &target) {
           return this->isArrayNamespacedVectorCountCompatibilityCall(
@@ -1268,6 +1274,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       ExprLateUnknownTargetFallbackContext lateUnknownTargetFallbackContext;
       lateUnknownTargetFallbackContext.resolveMapTarget =
           dispatchBootstrap.resolveMapTarget;
+      lateUnknownTargetFallbackContext.isIndexedArgsPackMapReceiverTarget =
+          [&](const Expr &target) {
+            return this->isIndexedArgsPackMapReceiverTarget(
+                target, dispatchBootstrap.dispatchResolvers);
+          };
       bool handledLateUnknownTargetFallback = false;
       if (!validateExprLateUnknownTargetFallbacks(
               params, locals, expr, lateUnknownTargetFallbackContext,
