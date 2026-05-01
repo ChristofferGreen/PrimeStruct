@@ -76,6 +76,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
+  INFO(error);
   REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 
@@ -148,6 +149,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
+  INFO(error);
   REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 
@@ -230,6 +232,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
+  INFO(error);
   REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 
@@ -302,6 +305,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
+  INFO(error);
   REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 
@@ -384,6 +388,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
+  INFO(error);
   REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 
@@ -460,6 +465,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
+  INFO(error);
   REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 
@@ -546,6 +552,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
+  INFO(error);
   REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 
@@ -641,6 +648,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
+  INFO(error);
   REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 
