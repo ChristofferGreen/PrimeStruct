@@ -48,15 +48,11 @@ ResultWhyMethodCallEmitResult tryEmitResultWhyCall(
   auto resolveSemanticQueryResultErrorTypeText =
       [&](const SemanticProgramQueryFact &queryFact) {
     if (semanticProductTargets != nullptr &&
-        semanticProductTargets->semanticProgram != nullptr &&
-        queryFact.resultErrorTypeId != InvalidSymbolId) {
-      std::string resolvedErrorType = std::string(
-          semanticProgramResolveCallTargetString(
-              *semanticProductTargets->semanticProgram,
-              queryFact.resultErrorTypeId));
-      if (!resolvedErrorType.empty()) {
-        return trimTemplateTypeText(resolvedErrorType);
-      }
+        semanticProductTargets->semanticProgram != nullptr) {
+      return trimTemplateTypeText(std::string(semanticProgramResolvePublishedText(
+          *semanticProductTargets->semanticProgram,
+          queryFact.resultErrorTypeId,
+          queryFact.resultErrorType)));
     }
     return trimTemplateTypeText(queryFact.resultErrorType);
   };

@@ -6,6 +6,34 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 1, 2026)**
+- [x] TODO-4298: Require status Result source text IDs
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-01
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 native `Result.error(...)` / `Result.why(...)`
+    status-source text authority slice that makes frozen query result error
+    type facts resolve through interned IDs instead of copied raw text.
+  - acceptance:
+    - Frozen native `Result.error(...)` direct-call source checks no longer
+      recover copied query result error type text when interned IDs are
+      missing.
+    - Frozen native `Result.why(...)` direct-call source checks no longer
+      recover copied query result error type text when interned IDs are
+      missing.
+    - Published interned query result error type IDs still produce the same
+      status-source error-domain matching decisions.
+    - Mutable hand-built semantic products keep their fixture-only copied-text
+      fallback before freeze.
+  - stop_rule: Stop once native `Result.error(...)` and `Result.why(...)`
+    source checks require interned query result error type text after freeze
+    and docs record the remaining TODO-4298 work.
+  - evidence: Routed native `Result.error(...)` / `Result.why(...)` source
+    error-domain resolution through `semanticProgramResolvePublishedText(...)`,
+    updated source-contract coverage, added focused frozen-raw and mapped
+    source-check coverage, and skipped local test execution per the lite
+    workflow.
+
 - [x] TODO-4298: Require Result ok payload text IDs
   - owner: ai
   - created_at: 2026-04-28

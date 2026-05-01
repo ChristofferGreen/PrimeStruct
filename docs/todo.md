@@ -521,7 +521,9 @@ Task template:
     declaration synthesis, final local-info fallback, `for(...)` condition
     binding declarations, and args-pack parameter metadata. The frozen native
     `Result.ok(...)` payload-emission text authority slice is complete for
-    query/binding payload type facts.
+    query/binding payload type facts. The frozen status Result source text
+    authority slice is complete for native `Result.error(...)` /
+    `Result.why(...)` query result error facts.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -676,6 +678,13 @@ Task template:
       no longer recovers packed payload shape decisions after publication
       freezes the semantic product, while mutable hand-built products keep
       their fixture-only copied-text fallback before freeze.
+    - Completed slice: frozen semantic-product native `Result.error(...)`
+      and `Result.why(...)` source checks now use
+      `semanticProgramResolvePublishedText(...)` for query result error type
+      facts. Copied query error type text no longer recovers status-source
+      error-domain matching after publication freezes the semantic product,
+      while mutable hand-built products keep their fixture-only copied-text
+      fallback before freeze.
     - Completed slice: semantic-product-addressed Result-combinator metadata
       now requires published query facts when direct lambda payload analysis
       cannot infer the resulting value kind, covering `Result.map`,

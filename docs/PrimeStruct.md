@@ -908,6 +908,11 @@ Compile-pipeline publication contract:
   query/binding facts resolve through interned IDs after publication freezes the semantic product, and copied
   query/binding type text is not a recovery path for deciding the packed payload shape. Mutable hand-built products
   may still use copied-text fallbacks before `freezeSemanticProgramPublishedStorage(...)`.
+- Native `Result.error(...)` and `Result.why(...)` status-source checks use the same frozen-product rule for semantic
+  Result error type text: direct source query facts resolve through interned `resultErrorTypeId` after publication
+  freezes the semantic product, and copied query error type text is not a recovery path for deciding whether a
+  status-only direct call matches the consumer error domain. Mutable hand-built products may still use copied-text
+  fallbacks before `freezeSemanticProgramPublishedStorage(...)`.
 - Callable-summary lookup follows the same published-map authority rule once the semantic product is frozen by the
   publication path: `callableSummaryIndicesByPathId` is the authority, while raw `callableSummaries` scanning remains
   limited to mutable hand-built products before `freezeSemanticProgramPublishedStorage(...)`. Lowerer return-info

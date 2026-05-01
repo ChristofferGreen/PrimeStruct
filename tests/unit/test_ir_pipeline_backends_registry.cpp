@@ -1545,8 +1545,8 @@ TEST_CASE("native Result why direct-call sources use semantic-product query fact
   const std::string source = readTextFile(resultWhyHelpersPath);
   const size_t resolverPos =
       source.find("resolveSemanticQueryResultErrorTypeText");
-  const size_t semanticResolvePos =
-      source.find("semanticProgramResolveCallTargetString(", resolverPos);
+  const size_t publishedTextPos =
+      source.find("semanticProgramResolvePublishedText(", resolverPos);
   const size_t errorTypeIdPos =
       source.find("queryFact.resultErrorTypeId", resolverPos);
   const size_t directCallResolverPos =
@@ -1568,15 +1568,20 @@ TEST_CASE("native Result why direct-call sources use semantic-product query fact
   REQUIRE(staleDiagnosticPos != std::string::npos);
   REQUIRE(fallbackTransformScanPos != std::string::npos);
   REQUIRE(resolverPos != std::string::npos);
-  REQUIRE(semanticResolvePos != std::string::npos);
+  REQUIRE(publishedTextPos != std::string::npos);
   REQUIRE(errorTypeIdPos != std::string::npos);
   CHECK(resolverPos < directCallResolverPos);
+  CHECK(resolverPos < publishedTextPos);
+  CHECK(publishedTextPos < errorTypeIdPos);
   CHECK(resolverPos < errorTypeIdPos);
-  CHECK(errorTypeIdPos < semanticResolvePos);
   CHECK(queryFactPos < fallbackTransformScanPos);
   CHECK(staleDiagnosticPos < fallbackTransformScanPos);
   CHECK(source.find("trimTemplateTypeText(queryFact->resultErrorType)") ==
         std::string::npos);
+  const size_t rawStringResolverPos =
+      source.find("semanticProgramResolveCallTargetString(", resolverPos);
+  CHECK((rawStringResolverPos == std::string::npos ||
+         rawStringResolverPos > directCallResolverPos));
 }
 
 TEST_CASE("native Result error direct-call sources use semantic-product query facts") {
@@ -1592,8 +1597,8 @@ TEST_CASE("native Result error direct-call sources use semantic-product query fa
   const std::string source = readTextFile(packedResultHelpersPath);
   const size_t resolverPos =
       source.find("resolveSemanticQueryResultErrorTypeText");
-  const size_t semanticResolvePos =
-      source.find("semanticProgramResolveCallTargetString(", resolverPos);
+  const size_t publishedTextPos =
+      source.find("semanticProgramResolvePublishedText(", resolverPos);
   const size_t errorTypeIdPos =
       source.find("queryFact.resultErrorTypeId", resolverPos);
   const size_t directCallResolverPos =
@@ -1615,15 +1620,20 @@ TEST_CASE("native Result error direct-call sources use semantic-product query fa
   REQUIRE(staleDiagnosticPos != std::string::npos);
   REQUIRE(fallbackTransformScanPos != std::string::npos);
   REQUIRE(resolverPos != std::string::npos);
-  REQUIRE(semanticResolvePos != std::string::npos);
+  REQUIRE(publishedTextPos != std::string::npos);
   REQUIRE(errorTypeIdPos != std::string::npos);
   CHECK(resolverPos < directCallResolverPos);
+  CHECK(resolverPos < publishedTextPos);
+  CHECK(publishedTextPos < errorTypeIdPos);
   CHECK(resolverPos < errorTypeIdPos);
-  CHECK(errorTypeIdPos < semanticResolvePos);
   CHECK(queryFactPos < fallbackTransformScanPos);
   CHECK(staleDiagnosticPos < fallbackTransformScanPos);
   CHECK(source.find("trimTemplateTypeText(queryFact->resultErrorType)") ==
         std::string::npos);
+  const size_t rawStringResolverPos =
+      source.find("semanticProgramResolveCallTargetString(", resolverPos);
+  CHECK((rawStringResolverPos == std::string::npos ||
+         rawStringResolverPos > directCallResolverPos));
 }
 
 TEST_CASE("native aggregate pointer dereference calls use semantic-product return facts") {
