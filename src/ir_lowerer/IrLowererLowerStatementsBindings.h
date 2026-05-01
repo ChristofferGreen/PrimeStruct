@@ -554,23 +554,24 @@
         if (init.kind == Expr::Kind::Call) {
           initCallee = resolveDefinitionCall(init);
         }
+        auto adoptStructInitializerCallee = [&](const Definition &callee) {
+          initStruct = callee.fullPath;
+          if (!info.structTypeName.empty() && info.structTypeName.front() != '/') {
+            const std::string declaredStructSurface =
+                trimTemplateTypeText(info.structTypeName);
+            const size_t calleeLeafOffset = callee.fullPath.find_last_of('/');
+            const std::string calleeStructSurface =
+                calleeLeafOffset == std::string::npos
+                    ? callee.fullPath
+                    : callee.fullPath.substr(calleeLeafOffset + 1);
+            if (declaredStructSurface == calleeStructSurface) {
+              info.structTypeName = callee.fullPath;
+            }
+          }
+        };
         if (initCallee != nullptr) {
           if (ir_lowerer::isStructDefinition(*initCallee)) {
-            initStruct = initCallee->fullPath;
-            if (!info.structTypeName.empty() &&
-                info.structTypeName.front() != '/') {
-              const std::string declaredStructSurface =
-                  trimTemplateTypeText(info.structTypeName);
-              const size_t calleeLeafOffset =
-                  initCallee->fullPath.find_last_of('/');
-              const std::string calleeStructSurface =
-                  calleeLeafOffset == std::string::npos
-                      ? initCallee->fullPath
-                      : initCallee->fullPath.substr(calleeLeafOffset + 1);
-              if (declaredStructSurface == calleeStructSurface) {
-                info.structTypeName = initCallee->fullPath;
-              }
-            }
+            adoptStructInitializerCallee(*initCallee);
           } else if (initStruct.empty()) {
             initStruct = ir_lowerer::inferStructReturnPathFromDefinition(
                 initCallee->fullPath,
@@ -582,6 +583,15 @@
                 },
                 [&](const Expr &exprIn) { return resolveExprPath(exprIn); },
                 defMap);
+          }
+        }
+        if (initCallee == nullptr && init.kind == Expr::Kind::Call &&
+            !initStruct.empty()) {
+          const auto initDefIt = defMap.find(initStruct);
+          if (initDefIt != defMap.end() && initDefIt->second != nullptr &&
+              ir_lowerer::isStructDefinition(*initDefIt->second)) {
+            initCallee = initDefIt->second;
+            adoptStructInitializerCallee(*initCallee);
           }
         }
         if (!initStruct.empty() && initStruct != info.structTypeName) {

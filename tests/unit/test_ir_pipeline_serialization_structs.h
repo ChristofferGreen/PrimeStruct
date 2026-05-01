@@ -72,8 +72,14 @@ main() {
 )";
   std::string error;
   primec::IrModule module;
+  INFO(error);
   REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(result == 3);
 }
 
 TEST_CASE("ir lowers struct return values") {

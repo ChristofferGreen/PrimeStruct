@@ -82,6 +82,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: `SoaColumn`, generated `SoaColumnsN`, and `SoaVector` temporary copies need native disarm logic for nested `ownsData` fields so copied heap buffers are not freed through the source temporary.
 - Evidence: `stdlib/std/collections/internal_soa_storage.prime` stores `ownsData` inside each `SoaColumn`, and `IrLowererFlowControlHelpers.cpp` now disarms `SoaColumn`, `SoaColumnsN`, and `SoaVector` temporary copies at their computed `ownsData` slot offsets.
 
+### struct-brace-constructors-recover-callees-by-type
+- Updated: 2026-05-01
+- Tags: ir, structs, lowering
+- Fact: Statement binding lowering can infer a brace constructor's struct path even when direct call resolution misses the constructor, so it must recover the struct definition by inferred path before falling back to generic struct copy lowering.
+- Evidence: The saved release log failed `ir lowers struct brace constructor binding`; `IrLowererLowerStatementsBindings.h` now looks up inferred struct constructor paths in `defMap` and inline-lowers them, and the serialization test executes the lowered module to confirm the named-field default path returns `3`.
+
 ### vm-vector-shadow-precedence-and-expression-blockers
 - Updated: 2026-04-20
 - Tags: tests, vm, collections
