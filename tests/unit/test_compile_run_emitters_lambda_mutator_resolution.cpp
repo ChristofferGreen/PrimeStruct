@@ -13,8 +13,8 @@ void expectCollectDiagnosticsFailure(const std::string& emitKind,
   const std::string srcPath = writeTemp(std::string(fileStem) + ".prime", source);
   const std::string errPath = (testScratchPath("") / (std::string(fileStem) + ".json")).string();
   const std::string cmd = "./primec --emit=" + emitKind + " " + quoteShellArg(srcPath) +
-                          " --entry /main --emit-diagnostics --collect-diagnostics > " +
-                          quoteShellArg(errPath) + " 2>&1";
+                          " --entry /main --emit-diagnostics --collect-diagnostics 2> " +
+                          quoteShellArg(errPath);
 
   CHECK(runCommand(cmd) == 2);
 
