@@ -472,5 +472,5 @@ main() {
             "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/"
             "saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
         std::string::npos);
-  CHECK(error.find("call=/std/collections/map/at_unsafe") != std::string::npos);
+  CHECK(error.find("call=/std/collections/map/tryAt") != std::string::npos);
 }

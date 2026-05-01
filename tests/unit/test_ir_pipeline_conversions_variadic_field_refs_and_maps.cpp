@@ -498,5 +498,5 @@ main() {
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.find("native backend only supports arithmetic/comparison") !=
         std::string::npos);
-  CHECK(error.find("call=/std/collections/map/at_unsafe") != std::string::npos);
+  CHECK(error.find("call=/std/collections/map/tryAt") != std::string::npos);
 }

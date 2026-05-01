@@ -352,7 +352,7 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
   CHECK(instructions.empty());
 }
 
-TEST_CASE("ir lowerer call helpers lower explicit map access for value args-pack receivers") {
+TEST_CASE("ir lowerer call helpers lower explicit map access for args-pack receivers") {
   using Result = primec::ir_lowerer::NativeCallTailDispatchResult;
   using LocalInfo = primec::ir_lowerer::LocalInfo;
   using MapAccessTargetInfo = primec::ir_lowerer::MapAccessTargetInfo;
@@ -376,6 +376,15 @@ TEST_CASE("ir lowerer call helpers lower explicit map access for value args-pack
   pointerValuesInfo.mapValueKind = LocalInfo::ValueKind::Int64;
   locals.emplace("pointerValues", pointerValuesInfo);
 
+  LocalInfo referenceValuesInfo;
+  referenceValuesInfo.index = 8;
+  referenceValuesInfo.isArgsPack = true;
+  referenceValuesInfo.argsPackElementKind = LocalInfo::Kind::Reference;
+  referenceValuesInfo.referenceToMap = true;
+  referenceValuesInfo.mapKeyKind = LocalInfo::ValueKind::Int32;
+  referenceValuesInfo.mapValueKind = LocalInfo::ValueKind::Int64;
+  locals.emplace("referenceValues", referenceValuesInfo);
+
   LocalInfo indexInfo;
   indexInfo.kind = LocalInfo::Kind::Value;
   indexInfo.index = 9;
@@ -395,6 +404,10 @@ TEST_CASE("ir lowerer call helpers lower explicit map access for value args-pack
   primec::Expr pointerValuesName;
   pointerValuesName.kind = primec::Expr::Kind::Name;
   pointerValuesName.name = "pointerValues";
+
+  primec::Expr referenceValuesName;
+  referenceValuesName.kind = primec::Expr::Kind::Name;
+  referenceValuesName.name = "referenceValues";
 
   primec::Expr indexName;
   indexName.kind = primec::Expr::Kind::Name;
@@ -487,7 +500,8 @@ TEST_CASE("ir lowerer call helpers lower explicit map access for value args-pack
   };
 
   expectDispatch(makeIndexedReceiver(valuesName), Result::Emitted, true);
-  expectDispatch(makeIndexedReceiver(pointerValuesName), Result::NotHandled, false);
+  expectDispatch(makeIndexedReceiver(pointerValuesName), Result::Emitted, true);
+  expectDispatch(makeIndexedReceiver(referenceValuesName), Result::Emitted, true);
 }
 
 TEST_CASE("ir lowerer call helpers emit explicit vector count while deferring bare count") {

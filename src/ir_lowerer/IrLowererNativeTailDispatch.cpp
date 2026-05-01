@@ -491,19 +491,19 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
         (explicitHelperName == "at" || explicitHelperName == "at_ref" ||
          explicitHelperName == "at_unsafe" ||
          explicitHelperName == "at_unsafe_ref");
-    const auto isValueMapArgsPackAccessReceiver = [&](const Expr &receiver) {
+    const auto isMapArgsPackAccessReceiver = [&](const Expr &receiver) {
       const auto accessTargetInfo = resolveArrayVectorAccessTargetInfo(
           receiver, localsIn, resolveCallArrayVectorAccessTargetInfo);
       return accessTargetInfo.isArgsPackTarget &&
-             accessTargetInfo.isMapTarget &&
-             !accessTargetInfo.isWrappedMapTarget;
+             (accessTargetInfo.isMapTarget ||
+              accessTargetInfo.isWrappedMapTarget);
     };
     if (isExplicitMapAccessCall && !expr.args.empty() &&
         expr.args.front().kind == Expr::Kind::Call) {
       const auto mapTargetInfo = resolveMapAccessTargetInfo(
           expr.args.front(), localsIn, resolveCallMapAccessTargetInfo);
-      if (!mapTargetInfo.isMapTarget || mapTargetInfo.isWrappedMapTarget ||
-          !isValueMapArgsPackAccessReceiver(expr.args.front())) {
+      if (!mapTargetInfo.isMapTarget ||
+          !isMapArgsPackAccessReceiver(expr.args.front())) {
         return NativeCallTailDispatchResult::NotHandled;
       }
     }
@@ -515,8 +515,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
           expr.args.front(), localsIn, resolveCallMapAccessTargetInfo);
       if (mapTargetInfo.isMapTarget &&
           (expr.args.front().kind != Expr::Kind::Call ||
-           !isValueMapArgsPackAccessReceiver(expr.args.front()) ||
-           mapTargetInfo.isWrappedMapTarget)) {
+           !isMapArgsPackAccessReceiver(expr.args.front()))) {
         return NativeCallTailDispatchResult::NotHandled;
       }
     }
