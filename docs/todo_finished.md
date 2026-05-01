@@ -6,6 +6,27 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 1, 2026)**
+- [x] TODO-4298: Use published definition maps
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-01
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 definition lookup authority slice that makes
+    frozen published semantic products consume `definitionIndicesByPathId` for
+    path-id definition lookup.
+  - acceptance:
+    - Frozen semantic-product definition lookup ignores raw `definitions`
+      entries when `definitionIndicesByPathId` is missing.
+    - Definition lookup still resolves mapped definitions after
+      `freezeSemanticProgramPublishedStorage(...)`.
+    - Focused coverage proves the mutable fixture-only scan is quarantined to
+      pre-freeze products while frozen products require the published map.
+  - stop_rule: Stop once frozen definition path consumers require the
+    published definition map and docs record the remaining TODO-4298 work.
+  - evidence: Quarantined the raw definition scan behind unfrozen semantic
+    products, added focused coverage for raw and mapped frozen definition
+    lookup, and skipped local test execution per the lite workflow.
+
 - [x] TODO-4298: Use published return maps
   - owner: ai
   - created_at: 2026-04-28

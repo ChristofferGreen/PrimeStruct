@@ -280,6 +280,9 @@ const SemanticProgramDefinition *semanticProgramLookupPublishedDefinitionByPathI
     }
     return nullptr;
   }
+  if (semanticProgram.publishedStorageFrozen) {
+    return nullptr;
+  }
   const std::string_view resolvedPath = semanticProgramResolveCallTargetString(semanticProgram, fullPathId);
   if (resolvedPath.empty()) {
     return nullptr;

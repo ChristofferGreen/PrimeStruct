@@ -840,6 +840,10 @@ Compile-pipeline publication contract:
   publication path: the lowerer semantic-product adapter requires `returnFactIndicesByDefinitionId` for
   definition-scoped return facts instead of recovering by scanning raw `returnFacts` storage. Mutable hand-built
   products may still use the raw scan before `freezeSemanticProgramPublishedStorage(...)`.
+- Definition lookup follows the same published-map authority rule once the semantic product is frozen by the
+  publication path: public definition lookup helpers require `definitionIndicesByPathId` for path-id lookups instead
+  of recovering by scanning raw `definitions` storage. Mutable hand-built products may still use the raw scan before
+  `freezeSemanticProgramPublishedStorage(...)`.
 - Collection-specialization lookup follows the same published-map authority rule for semantic-node ids: public
   published collection-specialization lookup helpers and the lowerer semantic-product adapter require
   `collectionSpecializationIndicesByExpr` for expression-scoped collection facts instead of recovering by scanning
