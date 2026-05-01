@@ -34,6 +34,30 @@ bool isGeneratedStdlibCollectionConstructorHelperPath(std::string_view path) {
          isSinglePathSegmentWithPrefix(path, "/std/collections/experimental_soa_vector/soa_vector__");
 }
 
+bool isGeneratedStdlibVectorImplementationHelperPath(std::string_view path) {
+  constexpr std::string_view Prefix = "/std/collections/experimental_vector/";
+  if (!isSinglePathSegmentWithPrefix(path, Prefix)) {
+    return false;
+  }
+  std::string_view leaf = path.substr(Prefix.size());
+  const size_t generatedSuffix = leaf.find("__");
+  if (generatedSuffix == std::string_view::npos) {
+    return false;
+  }
+  leaf = leaf.substr(0, generatedSuffix);
+  return leaf == "vectorSlotUnsafe" ||
+         leaf == "vectorDataPtr" ||
+         leaf == "vectorInitSlot" ||
+         leaf == "vectorDropSlot" ||
+         leaf == "vectorTakeSlot" ||
+         leaf == "vectorBorrowSlot" ||
+         leaf == "vectorDropRange" ||
+         leaf == "vectorMovePrefixToBuffer" ||
+         leaf == "vectorCheckShape" ||
+         leaf == "vectorCheckIndex" ||
+         leaf == "vectorReserveInternal";
+}
+
 } // namespace
 
 bool prepareInlineDefinitionCallContext(
@@ -68,7 +92,8 @@ bool prepareInlineDefinitionCallContext(
   const bool alreadyInInlineStack = inlineStack.count(callee.fullPath) != 0;
   const bool allowsGeneratedCollectionReentry =
       (out.structDefinition && isGeneratedStdlibCollectionStructPath(callee.fullPath)) ||
-      isGeneratedStdlibCollectionConstructorHelperPath(callee.fullPath);
+      isGeneratedStdlibCollectionConstructorHelperPath(callee.fullPath) ||
+      isGeneratedStdlibVectorImplementationHelperPath(callee.fullPath);
   if (alreadyInInlineStack && !allowsGeneratedCollectionReentry) {
     error = "native backend does not support recursive calls: " + callee.fullPath;
     return false;

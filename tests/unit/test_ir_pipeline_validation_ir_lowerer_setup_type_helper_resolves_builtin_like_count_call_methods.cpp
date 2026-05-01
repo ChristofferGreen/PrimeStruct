@@ -626,6 +626,36 @@ TEST_CASE("ir lowerer inline call context helper reports setup diagnostics") {
   CHECK(inlineStack.count(generatedVectorCtorHelper.fullPath) == 1u);
   CHECK(loweredCallTargets.count(generatedVectorCtorHelper.fullPath) == 1u);
 
+  for (const std::string generatedVectorHelperPath :
+       {"/std/collections/experimental_vector/vectorInitSlot__ti32",
+        "/std/collections/experimental_vector/vectorCheckShape__ti32"}) {
+    primec::Definition generatedVectorHelper;
+    generatedVectorHelper.fullPath = generatedVectorHelperPath;
+    error.clear();
+    inlineStack.clear();
+    loweredCallTargets.clear();
+    inlineStack.insert(generatedVectorHelper.fullPath);
+    CHECK(primec::ir_lowerer::prepareInlineDefinitionCallContext(
+        generatedVectorHelper,
+        false,
+        [](const std::string &, primec::ir_lowerer::ReturnInfo &infoOut) {
+          infoOut = primec::ir_lowerer::ReturnInfo{};
+          infoOut.returnsVoid = false;
+          return true;
+        },
+        [](const primec::Definition &) { return false; },
+        inlineStack,
+        loweredCallTargets,
+        onErrorByDef,
+        out,
+        error));
+    CHECK(error.empty());
+    CHECK_FALSE(out.structDefinition);
+    CHECK_FALSE(out.insertedInlineStackEntry);
+    CHECK(inlineStack.count(generatedVectorHelper.fullPath) == 1u);
+    CHECK(loweredCallTargets.count(generatedVectorHelper.fullPath) == 1u);
+  }
+
   primec::Definition generatedVectorMoveHelper;
   generatedVectorMoveHelper.fullPath = "/std/collections/experimental_vector/Vector__ti32/Move";
   error.clear();
