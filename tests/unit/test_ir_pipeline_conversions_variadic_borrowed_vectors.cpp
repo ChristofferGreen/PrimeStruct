@@ -74,6 +74,7 @@ main() {
   primec::Program program;
   primec::SemanticProgram semanticProgram;
   std::string error;
+  INFO(error);
   REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
@@ -85,6 +86,7 @@ main() {
 
   primec::Vm vm;
   uint64_t result = 0;
+  INFO(error);
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
   CHECK(result == 25);
@@ -150,6 +152,7 @@ main() {
   primec::Program program;
   primec::SemanticProgram semanticProgram;
   std::string error;
+  INFO(error);
   REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
@@ -161,6 +164,7 @@ main() {
 
   primec::Vm vm;
   uint64_t result = 0;
+  INFO(error);
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
   CHECK(result == 9);
@@ -226,6 +230,7 @@ main() {
   primec::Program program;
   primec::SemanticProgram semanticProgram;
   std::string error;
+  INFO(error);
   REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
@@ -237,6 +242,7 @@ main() {
 
   primec::Vm vm;
   uint64_t result = 0;
+  INFO(error);
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
   CHECK(result == 9);
@@ -281,6 +287,7 @@ main() {
   primec::Program program;
   primec::SemanticProgram semanticProgram;
   std::string error;
+  INFO(error);
   REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
@@ -292,6 +299,7 @@ main() {
 
   primec::Vm vm;
   uint64_t result = 0;
+  INFO(error);
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
   CHECK(result == 9);
@@ -331,6 +339,7 @@ main() {
   primec::Program program;
   primec::SemanticProgram semanticProgram;
   std::string error;
+  INFO(error);
   REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
@@ -342,6 +351,7 @@ main() {
 
   primec::Vm vm;
   uint64_t result = 0;
+  INFO(error);
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
   CHECK(result == 11);
@@ -377,6 +387,7 @@ main() {
   primec::Program program;
   primec::SemanticProgram semanticProgram;
   std::string error;
+  INFO(error);
   REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
@@ -388,6 +399,7 @@ main() {
 
   primec::Vm vm;
   uint64_t result = 0;
+  INFO(error);
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
   CHECK(result == 52);
@@ -431,6 +443,7 @@ main() {
   primec::Program program;
   primec::SemanticProgram semanticProgram;
   std::string error;
+  INFO(error);
   REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
@@ -442,6 +455,7 @@ main() {
 
   primec::Vm vm;
   uint64_t result = 0;
+  INFO(error);
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
   CHECK(result == 60);
@@ -485,6 +499,7 @@ main() {
   primec::Program program;
   primec::SemanticProgram semanticProgram;
   std::string error;
+  INFO(error);
   REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
@@ -496,6 +511,7 @@ main() {
 
   primec::Vm vm;
   uint64_t result = 0;
+  INFO(error);
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
   CHECK(result == 11);
