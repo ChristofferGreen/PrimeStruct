@@ -850,6 +850,10 @@ Compile-pipeline publication contract:
   storage order instead of recovering by scanning raw `definitions` storage. Mutable hand-built products may still use
   the raw scan before
   `freezeSemanticProgramPublishedStorage(...)`.
+- Direct-call coverage treats definition-family matching as a published path-id decision: when the semantic product is
+  present, `definitionIndicesByPathId` keys must resolve through the string table before the lowerer can classify an
+  otherwise untracked call as targeting a published definition family. Raw definition text is not a recovery path for
+  malformed or missing published path ids.
 - Published fact-family views follow the same rule once the semantic product is frozen by the publication path:
   per-module `moduleResolvedArtifacts` indexes are the authority for direct-call, method-call, bridge-path,
   callable-summary, binding, return, collection-specialization, local-auto, query, try, and `on_error` views. Mutable

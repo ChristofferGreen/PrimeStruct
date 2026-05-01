@@ -6,6 +6,27 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 1, 2026)**
+- [x] TODO-4298: Require published definition paths
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-01
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 direct-call coverage definition-family authority
+    slice that makes missing-target validation trust only resolvable published
+    definition path IDs.
+  - acceptance:
+    - Direct-call coverage no longer uses raw `definitions` text to classify
+      an otherwise untracked call as targeting a published definition family.
+    - Malformed `definitionIndicesByPathId` entries with unresolved string IDs
+      do not recover from raw definition storage.
+    - Focused coverage captures the fail-closed malformed-path behavior.
+  - stop_rule: Stop once direct-call definition-family matching depends on
+    resolvable published path IDs and docs record the remaining TODO-4298 work.
+  - evidence: Removed the raw definition text fallback from
+    `resolvesToPublishedDefinitionFamilyTarget`, added focused coverage for an
+    unresolved published definition path ID, and skipped local test execution
+    per the lite workflow.
+
 - [x] TODO-4298: Use definition view in dumps
   - owner: ai
   - created_at: 2026-04-28

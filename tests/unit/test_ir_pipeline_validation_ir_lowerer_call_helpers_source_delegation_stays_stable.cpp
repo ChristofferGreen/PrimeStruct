@@ -4181,6 +4181,39 @@ TEST_CASE("ir lowerer direct-call coverage uses published definition and import-
         std::string::npos);
 }
 
+TEST_CASE("ir lowerer direct-call coverage requires resolvable published definition paths") {
+  primec::Program program;
+
+  primec::Definition helperDef;
+  helperDef.fullPath = "/foo";
+  helperDef.name = "foo";
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "foo";
+  callExpr.semanticNodeId = 23;
+  mainDef.statements.push_back(callExpr);
+
+  program.definitions.push_back(helperDef);
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.definitions.push_back(primec::SemanticProgramDefinition{
+      .name = "foo",
+      .fullPath = "/foo",
+      .namespacePrefix = "",
+  });
+  semanticProgram.publishedRoutingLookups.definitionIndicesByPathId.insert_or_assign(77, 0);
+  primec::freezeSemanticProgramPublishedStorage(semanticProgram);
+
+  std::string error;
+  CHECK(primec::ir_lowerer::validateSemanticProductDirectCallCoverage(
+      program, &semanticProgram, error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("semantic product definition lookup requires published maps after freeze") {
   primec::SemanticProgram semanticProgram;
   const auto helperPathId =
