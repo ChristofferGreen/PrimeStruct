@@ -1159,6 +1159,9 @@ void publishReturnFacts(
     return;
   }
   state.semanticProgram.returnFacts.reserve(returnFacts.size());
+  state.semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId.reserve(
+      state.semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId.size() +
+      returnFacts.size());
   for (const auto &snapshotEntry : returnFacts) {
     SemanticProgramReturnFact entry;
     entry.returnKind = returnKindSnapshotName(snapshotEntry.kind);
@@ -1184,6 +1187,11 @@ void publishReturnFacts(
     const std::size_t entryIndex = state.semanticProgram.returnFacts.size() - 1;
     state.ensureModuleResolvedArtifacts(snapshotEntry.definitionPath).returnFactIndices.push_back(
         entryIndex);
+    if (state.semanticProgram.returnFacts.back().semanticNodeId != 0) {
+      state.semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId
+          .insert_or_assign(state.semanticProgram.returnFacts.back().semanticNodeId,
+                            entryIndex);
+    }
   }
 }
 

@@ -77,14 +77,22 @@ struct SemanticProductIndexBuilder {
   }
 
   void buildReturnIndex(SemanticProductIndex &index) const {
+    populateSemanticFactIndex(
+        index.returnFactsByDefinitionId,
+        semanticProgram->publishedRoutingLookups.returnFactIndicesByDefinitionId,
+        semanticProgram->returnFacts);
+    if (semanticProgram->publishedStorageFrozen) {
+      return;
+    }
     const auto returnFacts = semanticProgramReturnFactView(*semanticProgram);
-    index.returnFactsByDefinitionId.reserve(returnFacts.size());
+    index.returnFactsByDefinitionId.reserve(index.returnFactsByDefinitionId.size() +
+                                            returnFacts.size());
     for (const auto *entry : returnFacts) {
       if (entry == nullptr) {
         continue;
       }
       if (entry->semanticNodeId != 0) {
-        index.returnFactsByDefinitionId.insert_or_assign(entry->semanticNodeId, entry);
+        index.returnFactsByDefinitionId.try_emplace(entry->semanticNodeId, entry);
       }
     }
   }

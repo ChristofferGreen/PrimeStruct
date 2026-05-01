@@ -2315,6 +2315,64 @@ TEST_CASE("ir lowerer semantic-product index does not expose return path fallbac
   CHECK(returnFact == nullptr);
 }
 
+TEST_CASE("ir lowerer semantic-product index requires return maps after freeze") {
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 7611;
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
+      .returnKind = "return",
+      .structPath = "/i32",
+      .bindingTypeText = "i32",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 9,
+      .sourceColumn = 3,
+      .semanticNodeId = 7611,
+      .definitionPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+  });
+
+  primec::freezeSemanticProgramPublishedStorage(semanticProgram);
+  const auto missingMapIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+  CHECK(missingMapIndex.returnFactsByDefinitionId.empty());
+  CHECK(primec::ir_lowerer::findSemanticProductReturnFact(
+            &semanticProgram, missingMapIndex, mainDef) == nullptr);
+
+  primec::SemanticProgram mappedSemanticProgram;
+  mappedSemanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
+      .returnKind = "return",
+      .structPath = "/i32",
+      .bindingTypeText = "i32",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 9,
+      .sourceColumn = 3,
+      .semanticNodeId = 7612,
+      .definitionPathId =
+          primec::semanticProgramInternCallTargetString(mappedSemanticProgram, "/main"),
+  });
+  mappedSemanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId
+      .insert_or_assign(7612, 0);
+  primec::freezeSemanticProgramPublishedStorage(mappedSemanticProgram);
+
+  mainDef.semanticNodeId = 7612;
+  const auto mappedIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&mappedSemanticProgram);
+  const auto *returnFact =
+      primec::ir_lowerer::findSemanticProductReturnFact(
+          &mappedSemanticProgram, mappedIndex, mainDef);
+  REQUIRE(returnFact != nullptr);
+  CHECK(returnFact->semanticNodeId == 7612);
+  CHECK(returnFact->bindingTypeText == "i32");
+}
+
 TEST_CASE("ir lowerer semantic-product adapter ignores on_error definition-path fallback") {
   primec::Definition mainDef;
   mainDef.fullPath = "/main";
