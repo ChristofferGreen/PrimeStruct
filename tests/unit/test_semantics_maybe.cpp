@@ -261,6 +261,28 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib maybe import resolves specialized helper methods") {
+  const std::string source = R"(
+import /std/maybe/*
+
+[return<int>]
+main() {
+  [Maybe<i32>] empty{none<i32>()}
+  [Maybe<i32>] value{some<i32>(1i32)}
+  if(not(empty.is_empty())) {
+    return(0i32)
+  }
+  if(not(value.isSome())) {
+    return(0i32)
+  }
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("maybe direct constructor accepts explicit present variant") {
   const std::string source = kMaybePrelude + R"(
 [return<int>]

@@ -26,6 +26,25 @@ bool returnInfoEquals(const ReturnInfo &left, const ReturnInfo &right) {
          left.resultErrorType == right.resultErrorType;
 }
 
+bool isSumDefinitionForReturnInfo(const Definition &definition) {
+  for (const auto &transform : definition.transforms) {
+    if (transform.name == "sum") {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool assignTypeDefinitionReturnInfo(const Definition &definition,
+                                    ReturnInfo &infoOut) {
+  if (!isSumDefinitionForReturnInfo(definition)) {
+    return false;
+  }
+  infoOut = {};
+  infoOut.returnsArray = true;
+  return true;
+}
+
 void sortDefinitionsForDeterministicReturnSolve(std::vector<const Definition *> &definitions) {
   std::stable_sort(definitions.begin(), definitions.end(), [](const Definition *left, const Definition *right) {
     const int leftLine = left->sourceLine > 0 ? left->sourceLine : std::numeric_limits<int>::max();
@@ -139,6 +158,9 @@ bool buildSemanticProductReturnInfo(const LowerInferenceReturnInfoSetupInput &in
                                     const Definition &definition,
                                     ReturnInfo &infoOut,
                                     std::string &errorOut) {
+  if (assignTypeDefinitionReturnInfo(definition, infoOut)) {
+    return true;
+  }
   if (!input.resolveStructTypeName) {
     errorOut = "native backend missing inference return-info setup dependency: resolveStructTypeName";
     return false;
@@ -694,6 +716,10 @@ bool runLowerInferenceGetReturnInfoStep(const LowerInferenceGetReturnInfoStepInp
   if (defIt == input.defMap->end() || !defIt->second) {
     errorOut = "native backend cannot resolve definition: " + path;
     return false;
+  }
+  if (assignTypeDefinitionReturnInfo(*defIt->second, outInfo)) {
+    returnInfoCache.insert_or_assign(path, outInfo);
+    return true;
   }
   if (input.semanticProgram != nullptr && input.semanticIndex != nullptr) {
     ReturnInfo info;

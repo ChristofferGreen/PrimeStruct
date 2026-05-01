@@ -2,6 +2,7 @@
 #include "MapConstructorHelpers.h"
 #include "primec/StdlibSurfaceRegistry.h"
 
+#include <algorithm>
 #include <cctype>
 #include <cstdint>
 #include <sstream>
@@ -440,6 +441,54 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return sumDef->fullPath;
     }
     return "";
+  };
+  auto resolveDeclaredSumMethodTarget = [&](const std::string &sumPath) -> bool {
+    if (sumPath.empty() || sumNames_.count(sumPath) == 0) {
+      return false;
+    }
+    auto stripGeneratedLeafSuffix = [](std::string path) {
+      const size_t leafStart = path.find_last_of('/');
+      const size_t searchStart =
+          leafStart == std::string::npos ? 0 : leafStart + 1;
+      const size_t generatedSuffix = path.find("__", searchStart);
+      if (generatedSuffix != std::string::npos) {
+        path.erase(generatedSuffix);
+      }
+      return path;
+    };
+    auto appendCandidate = [](std::vector<std::string> &candidates,
+                              std::string candidate) {
+      if (!candidate.empty() &&
+          std::find(candidates.begin(), candidates.end(), candidate) ==
+              candidates.end()) {
+        candidates.push_back(std::move(candidate));
+      }
+    };
+
+    std::vector<std::string> candidates;
+    appendCandidate(candidates, sumPath + "/" + normalizedMethodName);
+    const std::string canonicalSumPath = stripGeneratedLeafSuffix(sumPath);
+    if (canonicalSumPath != sumPath) {
+      appendCandidate(candidates,
+                      canonicalSumPath + "/" + normalizedMethodName);
+    }
+    const size_t leafStart = canonicalSumPath.find_last_of('/');
+    const std::string leafName = leafStart == std::string::npos
+                                     ? canonicalSumPath
+                                     : canonicalSumPath.substr(leafStart + 1);
+    if (!leafName.empty()) {
+      appendCandidate(candidates, "/" + leafName + "/" + normalizedMethodName);
+    }
+
+    for (const std::string &candidate : candidates) {
+      if (hasDefinitionFamilyPath(candidate) ||
+          hasImportedDefinitionPath(candidate)) {
+        resolvedOut = candidate;
+        isBuiltinOut = false;
+        return true;
+      }
+    }
+    return false;
   };
   auto resolveExperimentalVectorValueTarget = [&](const Expr &target, std::string &elemTypeOut) -> bool {
     elemTypeOut.clear();
@@ -3140,6 +3189,9 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   }
   if (resolvedType.empty()) {
     resolvedType = resolveTypePath(typeName, receiver.namespacePrefix);
+  }
+  if (resolveDeclaredSumMethodTarget(resolvedType)) {
+    return true;
   }
   if (traceFileErrorResult && receiver.kind == Expr::Kind::Name &&
       receiver.name == "FileError" && resolvedType.empty()) {
