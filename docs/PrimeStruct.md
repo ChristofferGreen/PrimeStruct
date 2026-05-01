@@ -851,6 +851,7 @@ Compile-pipeline publication contract:
 - Type-shape metadata lookup follows the same rule once the semantic product is frozen by the publication path:
   `typeMetadataIndicesByPathId` and `structFieldMetadataIndicesByStructPathId` are the authorities for type and
   struct-field metadata lookup instead of recovering by scanning raw `typeMetadata` or `structFieldMetadata` storage.
+  Struct-like type metadata views also enumerate through `typeMetadataIndicesByPathId` in deterministic storage order.
   Mutable hand-built products may still use the raw scan before `freezeSemanticProgramPublishedStorage(...)`.
 - Sum metadata lookup follows the same rule once the semantic product is frozen by the publication path:
   `sumTypeMetadataIndicesByPathId` and `sumVariantMetadataIndicesBySumPathAndVariantNameId` are the authorities for

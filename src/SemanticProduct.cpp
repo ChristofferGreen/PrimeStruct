@@ -686,12 +686,37 @@ const SemanticProgramTypeMetadata *semanticProgramLookupTypeMetadata(
 std::vector<const SemanticProgramTypeMetadata *>
 semanticProgramStructTypeMetadataView(const SemanticProgram &semanticProgram) {
   std::vector<const SemanticProgramTypeMetadata *> view;
-  view.reserve(semanticProgram.typeMetadata.size());
-  for (const auto &entry : semanticProgram.typeMetadata) {
+  auto appendStructLike = [&](std::size_t entryIndex) {
+    if (entryIndex >= semanticProgram.typeMetadata.size()) {
+      return;
+    }
+    const auto &entry = semanticProgram.typeMetadata[entryIndex];
     if (entry.category == "struct" || entry.category == "pod" || entry.category == "handle" ||
         entry.category == "gpu_lane") {
       view.push_back(&entry);
     }
+  };
+  if (semanticProgram.publishedStorageFrozen) {
+    std::vector<std::size_t> indices;
+    indices.reserve(semanticProgram.publishedRoutingLookups.typeMetadataIndicesByPathId.size());
+    for (const auto &[pathId, entryIndex] :
+         semanticProgram.publishedRoutingLookups.typeMetadataIndicesByPathId) {
+      (void)pathId;
+      indices.push_back(entryIndex);
+    }
+    std::sort(indices.begin(), indices.end());
+    indices.erase(std::unique(indices.begin(), indices.end()), indices.end());
+    view.reserve(indices.size());
+    for (const std::size_t entryIndex : indices) {
+      appendStructLike(entryIndex);
+    }
+    return view;
+  }
+
+  view.reserve(semanticProgram.typeMetadata.size());
+  for (std::size_t entryIndex = 0; entryIndex < semanticProgram.typeMetadata.size();
+       ++entryIndex) {
+    appendStructLike(entryIndex);
   }
   return view;
 }

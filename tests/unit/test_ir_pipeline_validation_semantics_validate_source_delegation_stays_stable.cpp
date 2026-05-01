@@ -141,6 +141,10 @@ void checkParticleTypeMetadataVisible(const primec::SemanticProgram &semanticPro
   REQUIRE(typeMetadata != nullptr);
   CHECK(typeMetadata == &semanticProgram.typeMetadata.front());
 
+  const auto structTypes = primec::semanticProgramStructTypeMetadataView(semanticProgram);
+  REQUIRE(structTypes.size() == 1);
+  CHECK(structTypes.front() == &semanticProgram.typeMetadata.front());
+
   const auto fields =
       primec::semanticProgramStructFieldMetadataView(semanticProgram, "/Particle");
   REQUIRE(fields.size() == 2);
@@ -245,6 +249,7 @@ TEST_CASE("semantic product type metadata requires published maps after freeze")
 
   CHECK(primec::semanticProgramLookupTypeMetadata(rawFrozenSemanticProgram, "/Particle") ==
         nullptr);
+  CHECK(primec::semanticProgramStructTypeMetadataView(rawFrozenSemanticProgram).empty());
   CHECK(primec::semanticProgramStructFieldMetadataView(rawFrozenSemanticProgram, "/Particle").empty());
 
   primec::SemanticProgram mappedSemanticProgram;
