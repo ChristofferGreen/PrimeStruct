@@ -160,6 +160,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: Direct struct and Result packs plus borrowed and pointer variadic arg-pack access for scalar, array, struct, nested struct-field, uninitialized, Result, and FileError surfaces are supported materialized behavior, so regression tests should assert direct value results instead of older rejection diagnostics or raw-pointer-shaped numeric results.
 - Evidence: Saved release logs showed current IR/native lowering accepting these pack forms and returning direct sums such as `2`, `3`, `15`, `17`, `23`, `24`, `27`, `36`, `39`, `65`, `72`, and `75` while older tests still expected `variadic parameter type mismatch`, `struct field type mismatch`, `unknown struct field: value`, or stale large numeric constants.
 
+### variadic-pointer-map-lookups-are-supported
+- Updated: 2026-05-01
+- Tags: tests, ir, native, variadic, collections
+- Fact: Pointer map variadic pack elements support direct `contains` and `at`/`at_unsafe` lookup helpers, so regression tests should assert the materialized lookup result instead of native-call rejection diagnostics.
+- Evidence: Saved release logs showed the IR lowerer and native backend accepting the direct pointer-map lookup pack case that returns `48` while older tests still expected a `/std/collections/map/at_unsafe` native-call rejection.
+
 ### vector-args-pack-elements-are-handles
 - Updated: 2026-04-28
 - Tags: ir, collections, variadic

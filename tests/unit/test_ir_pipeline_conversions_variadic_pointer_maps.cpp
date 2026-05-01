@@ -271,7 +271,7 @@ main() {
   CHECK(result == 11);
 }
 
-TEST_CASE("ir lowerer rejects variadic pointer map packs with indexed lookup helpers") {
+TEST_CASE("ir lowerer materializes variadic pointer map packs with indexed lookup helpers") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -329,12 +329,14 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find(
-            "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/"
-            "saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
-        std::string::npos);
-  CHECK(error.find("call=/std/collections/map/at_unsafe") != std::string::npos);
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 48);
 }
 
 TEST_CASE("ir lowerer materializes variadic pointer map packs with indexed dereference lookup helpers") {
