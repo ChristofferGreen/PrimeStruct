@@ -532,8 +532,10 @@ bool populateBindingTypeInfoFromTypeText(
     } else {
       infoOut.structTypeName.clear();
     }
+    std::string soaVectorStructPath;
     if (resolveSpecializedExperimentalSoaVectorStructPath(targetType,
-                                                          infoOut.structTypeName)) {
+                                                          soaVectorStructPath)) {
+      infoOut.structTypeName = std::move(soaVectorStructPath);
       infoOut.valueKind = LocalInfo::ValueKind::Unknown;
     }
     return true;
