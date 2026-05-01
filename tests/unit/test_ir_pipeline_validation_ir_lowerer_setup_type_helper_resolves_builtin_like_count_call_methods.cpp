@@ -506,7 +506,7 @@ TEST_CASE("ir lowerer inline call context helper prepares scoped setup") {
         infoOut = returnInfo;
         return true;
       },
-      [](const primec::Definition &) { return true; },
+      [](const primec::Definition &) { return false; },
       inlineStack,
       loweredCallTargets,
       onErrorByDef,
