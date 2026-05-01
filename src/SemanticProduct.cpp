@@ -485,11 +485,6 @@ const SemanticProgramOnErrorFact *semanticProgramLookupPublishedOnErrorFactByDef
       it != semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionId.end()) {
     return lookupPublishedSemanticEntryByIndex(semanticProgram.onErrorFacts, it->second);
   }
-  for (const auto &entry : semanticProgram.onErrorFacts) {
-    if (entry.semanticNodeId == semanticNodeId) {
-      return &entry;
-    }
-  }
   return nullptr;
 }
 
@@ -504,11 +499,6 @@ const SemanticProgramOnErrorFact *semanticProgramLookupPublishedOnErrorFactByDef
               definitionPathId);
       it != semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionPathId.end()) {
     return lookupPublishedSemanticEntryByIndex(semanticProgram.onErrorFacts, it->second);
-  }
-  for (const auto &entry : semanticProgram.onErrorFacts) {
-    if (entry.definitionPathId == definitionPathId) {
-      return &entry;
-    }
   }
   return nullptr;
 }

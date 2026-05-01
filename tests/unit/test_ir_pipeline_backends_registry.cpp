@@ -6151,6 +6151,8 @@ TEST_CASE("ir lowerer rejects stale semantic-product try on_error facts") {
       .returnResultValueTypeId = primec::InvalidSymbolId,
       .returnResultErrorTypeId = primec::InvalidSymbolId,
   });
+  semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionId
+      .insert_or_assign(8401, 0);
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
@@ -6268,6 +6270,8 @@ TEST_CASE("ir lowerer rejects missing semantic-product on_error handler path id"
       .errorTypeId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
   });
+  semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionId
+      .insert_or_assign(9201, 0);
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
@@ -6442,6 +6446,8 @@ TEST_CASE("ir lowerer rejects stale semantic-product on_error facts") {
       .errorTypeId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "ContainerError"),
   });
+  semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionId
+      .insert_or_assign(95, 0);
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
@@ -6549,6 +6555,8 @@ TEST_CASE("ir lowerer rejects stale semantic-product on_error result metadata") 
       .returnResultErrorTypeId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
   });
+  semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionId
+      .insert_or_assign(9601, 0);
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
@@ -6652,6 +6660,8 @@ TEST_CASE("ir lowerer rejects mismatched semantic-product on_error bound args") 
       .semanticNodeId = 93,
       .handlerPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
   });
+  semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionId
+      .insert_or_assign(93, 0);
 
   primec::IrLowerer lowerer;
   primec::IrModule module;

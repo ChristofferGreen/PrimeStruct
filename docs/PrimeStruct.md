@@ -840,6 +840,10 @@ Compile-pipeline publication contract:
 - Try fact lookup follows the same published-map authority rule for semantic-node ids: public published try lookup
   helpers and the lowerer semantic-product adapter require `tryFactIndicesByExpr` for expression-scoped try facts
   instead of recovering by scanning raw `tryFacts` storage.
+- `on_error` fact lookup follows the same published-map authority rule for definition semantic-node ids: public
+  published `on_error` lookup helpers and the lowerer semantic-product adapter require
+  `onErrorFactIndicesByDefinitionId` for definition-scoped handler facts instead of recovering by scanning raw
+  `onErrorFacts` storage.
 - The same adapter quarantine now applies to `on_error` definition-path indexes: lowerer handler setup resolves
   `on_error` facts by definition semantic id, while definition-path lookup remains a published inspection surface.
 - Return facts follow the same adapter-cache rule for direct definition lookup: the semantic-product adapter no longer

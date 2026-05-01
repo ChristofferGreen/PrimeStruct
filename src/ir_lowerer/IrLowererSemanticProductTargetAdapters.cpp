@@ -71,21 +71,9 @@ struct SemanticProductIndexBuilder {
   }
 
   void buildOnErrorIndex(SemanticProductIndex &index) const {
-    if (!semanticProgram->publishedRoutingLookups.onErrorFactIndicesByDefinitionId.empty()) {
-      populateSemanticFactIndex(index.onErrorFactsByDefinitionId,
-                                semanticProgram->publishedRoutingLookups.onErrorFactIndicesByDefinitionId,
-                                semanticProgram->onErrorFacts);
-    }
-    const auto onErrorFacts = semanticProgramOnErrorFactView(*semanticProgram);
-    index.onErrorFactsByDefinitionId.reserve(index.onErrorFactsByDefinitionId.size() + onErrorFacts.size());
-    for (const auto *entry : onErrorFacts) {
-      if (entry == nullptr) {
-        continue;
-      }
-      if (entry->semanticNodeId != 0) {
-        index.onErrorFactsByDefinitionId.try_emplace(entry->semanticNodeId, entry);
-      }
-    }
+    populateSemanticFactIndex(index.onErrorFactsByDefinitionId,
+                              semanticProgram->publishedRoutingLookups.onErrorFactIndicesByDefinitionId,
+                              semanticProgram->onErrorFacts);
   }
 
   void buildReturnIndex(SemanticProductIndex &index) const {

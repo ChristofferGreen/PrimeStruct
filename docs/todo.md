@@ -480,6 +480,8 @@ Task template:
     target and stdlib-surface lookups. The query fact published-map authority
     slice is complete for semantic-node-id lookups. The try fact
     published-map authority slice is complete for semantic-node-id lookups.
+    The `on_error` fact published-map authority slice is complete for
+    definition semantic-node-id lookups.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -506,6 +508,11 @@ Task template:
       lowerer try adapter indexes now require `tryFactIndicesByExpr` for
       semantic-node-id try facts. Raw `tryFacts` storage no longer recovers
       missing published try maps for expression-scoped try consumers.
+    - Completed slice: semantic-product published `on_error` lookup helpers
+      and lowerer `on_error` adapter indexes now require
+      `onErrorFactIndicesByDefinitionId` for definition semantic-node-id
+      facts. Raw `onErrorFacts` storage no longer recovers missing published
+      `on_error` maps for definition-scoped consumers.
     - Completed slice: semantic-product-addressed Result-combinator metadata
       now requires published query facts when direct lambda payload analysis
       cannot infer the resulting value kind, covering `Result.map`,

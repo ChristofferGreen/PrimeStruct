@@ -2284,6 +2284,8 @@ TEST_CASE("ir lowerer semantic-product adapter ignores on_error definition-path 
   REQUIRE(mainPathId.has_value());
   semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionPathId.insert_or_assign(
       *mainPathId, 0);
+  CHECK(primec::semanticProgramLookupPublishedOnErrorFactByDefinitionPathId(
+            semanticProgram, *mainPathId) == &semanticProgram.onErrorFacts[0]);
 
   const auto semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
@@ -2292,12 +2294,14 @@ TEST_CASE("ir lowerer semantic-product adapter ignores on_error definition-path 
   CHECK(onErrorFact == nullptr);
 }
 
-TEST_CASE("ir lowerer semantic-product index does not expose on_error path fallback") {
+TEST_CASE("ir lowerer semantic-product adapter ignores raw on_error facts without maps") {
   primec::Definition mainDef;
   mainDef.fullPath = "/main";
-  mainDef.semanticNodeId = 0;
+  mainDef.semanticNodeId = 5303;
 
   primec::SemanticProgram semanticProgram;
+  const primec::SymbolId mainPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/main");
   semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
       .definitionPath = "/main",
       .returnKind = "return",
@@ -2307,9 +2311,8 @@ TEST_CASE("ir lowerer semantic-product index does not expose on_error path fallb
       .returnResultHasValue = false,
       .returnResultValueType = "",
       .returnResultErrorType = "",
-      .semanticNodeId = 0,
-      .definitionPathId =
-          primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .semanticNodeId = 5303,
+      .definitionPathId = mainPathId,
       .returnKindId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "return"),
       .handlerPathId =
@@ -2321,11 +2324,13 @@ TEST_CASE("ir lowerer semantic-product index does not expose on_error path fallb
       },
   });
 
+  CHECK(primec::semanticProgramLookupPublishedOnErrorFactByDefinitionSemanticId(
+            semanticProgram, 5303) == nullptr);
+  CHECK(primec::semanticProgramLookupPublishedOnErrorFactByDefinitionPathId(
+            semanticProgram, mainPathId) == nullptr);
+
   const auto semanticIndex =
       primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
-  const auto mainPathId =
-      primec::semanticProgramLookupCallTargetStringId(semanticProgram, "/main");
-  REQUIRE(mainPathId.has_value());
   CHECK(semanticIndex.onErrorFactsByDefinitionId.empty());
   const auto *onErrorFact =
       primec::ir_lowerer::findSemanticProductOnErrorFact(

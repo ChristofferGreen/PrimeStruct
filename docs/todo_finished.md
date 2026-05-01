@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 1, 2026)**
+- [x] TODO-4298: Use published on_error maps
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-01
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 `on_error` fact authority slice that makes
+    definition-scoped handler lookup consume only published
+    `onErrorFactIndicesByDefinitionId` maps.
+  - acceptance:
+    - Public published `on_error` lookup by definition semantic node id
+      ignores raw `onErrorFacts` entries when
+      `onErrorFactIndicesByDefinitionId` is missing.
+    - The lowerer semantic-product adapter builds `on_error` fact indexes
+      only from `onErrorFactIndicesByDefinitionId`.
+    - Focused coverage proves raw `on_error` facts without the published
+      definition-id map stay unresolved while mapped facts still resolve.
+  - stop_rule: Stop once definition-scoped `on_error` consumers require the
+    published `on_error` map and docs record the remaining TODO-4298 work.
+  - evidence: Removed raw `on_error` fact scans from published lookup helpers
+    and lowerer adapter index construction, updated hand-built fixtures to
+    publish `on_error` maps explicitly, expanded adapter coverage for raw
+    `on_error` facts without maps, and skipped local test execution per the
+    lite workflow.
+
 - [x] TODO-4298: Use published try maps
   - owner: ai
   - created_at: 2026-04-28
