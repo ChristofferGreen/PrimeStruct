@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 1, 2026)**
+- [x] TODO-4298: Use semantic ids for pick bindings
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-01
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes
+    semantic-product-addressed native `pick(value)` target classification
+    look up the target binding fact by expression semantic node id instead of
+    scanning all binding facts by scope/name.
+  - acceptance:
+    - Named `pick(value)` target classification uses
+      `findSemanticProductBindingFact(semanticTargets, targetExpr)` on the
+      semantic-product path.
+    - The lowerer semantic-product adapter no longer exposes the scope/name
+      binding-fact lookup helper.
+    - Focused source-lock and pipeline-facing coverage pin expression-id
+      binding fact consumption for named pick targets.
+  - stop_rule: Stop once the production named-pick binding lookup uses the
+    graph-backed expression fact and docs record the remaining TODO-4298 work.
+  - evidence: Rewired named pick target classification to use semantic-id
+    binding fact lookup, removed the scope/name adapter helper from the
+    lowerer/testing helper surface, refreshed source locks and pick-target
+    coverage, and skipped local test execution per the lite workflow.
+
 - [x] TODO-4298: Use Result facts for base call kind
   - owner: ai
   - created_at: 2026-04-28

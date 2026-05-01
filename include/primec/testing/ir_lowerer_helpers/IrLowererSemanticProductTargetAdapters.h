@@ -127,10 +127,6 @@ const SemanticProgramBindingFact *findSemanticProductBindingFact(const SemanticP
                                                                 const Expr &expr);
 const SemanticProgramBindingFact *findSemanticProductBindingFact(const SemanticProductTargetAdapter &adapter,
                                                                 const Expr &expr);
-const SemanticProgramBindingFact *findSemanticProductBindingFactByScopeAndName(
-    const SemanticProductTargetAdapter &adapter,
-    std::string_view scopePath,
-    std::string_view name);
 const SemanticProgramSumTypeMetadata *findSemanticProductSumTypeMetadata(
     const SemanticProductTargetAdapter &adapter,
     std::string_view fullPath);

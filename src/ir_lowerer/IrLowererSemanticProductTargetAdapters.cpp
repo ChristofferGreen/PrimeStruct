@@ -617,33 +617,6 @@ const SemanticProgramBindingFact *findSemanticProductBindingFact(const SemanticP
   return findSemanticProductBindingFact(adapter.semanticIndex, expr);
 }
 
-const SemanticProgramBindingFact *findSemanticProductBindingFactByScopeAndName(
-    const SemanticProductTargetAdapter &adapter,
-    std::string_view scopePath,
-    std::string_view name) {
-  if (adapter.semanticProgram == nullptr || scopePath.empty() || name.empty()) {
-    return nullptr;
-  }
-  const auto bindingFacts = semanticProgramBindingFactView(*adapter.semanticProgram);
-  for (const auto *entry : bindingFacts) {
-    if (entry == nullptr) {
-      continue;
-    }
-    const std::string_view entryScopePath =
-        entry->scopePathId != InvalidSymbolId
-            ? semanticProgramResolveCallTargetString(*adapter.semanticProgram, entry->scopePathId)
-            : std::string_view(entry->scopePath);
-    const std::string_view entryName =
-        entry->nameId != InvalidSymbolId
-            ? semanticProgramResolveCallTargetString(*adapter.semanticProgram, entry->nameId)
-            : std::string_view(entry->name);
-    if (entryScopePath == scopePath && entryName == name) {
-      return entry;
-    }
-  }
-  return nullptr;
-}
-
 const SemanticProgramSumTypeMetadata *findSemanticProductSumTypeMetadata(
     const SemanticProductTargetAdapter &adapter,
     std::string_view fullPath) {

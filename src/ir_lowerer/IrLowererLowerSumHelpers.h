@@ -1385,8 +1385,7 @@
 
       if (targetExpr.kind == Expr::Kind::Name) {
         const SemanticProgramBindingFact *bindingFact =
-            findSemanticProductBindingFactByScopeAndName(
-                semanticTargets, function.name, targetExpr.name);
+            findSemanticProductBindingFact(semanticTargets, targetExpr);
         const std::string bindingTypeText =
             bindingFact != nullptr
                 ? resolveSemanticProductTypeText(bindingFact->bindingTypeText,

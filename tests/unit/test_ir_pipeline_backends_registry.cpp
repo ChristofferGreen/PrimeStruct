@@ -724,9 +724,22 @@ main() {
 
   const auto semanticProductTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  const auto *mainDefinition = findSemanticEntry(
+      program.definitions,
+      [](const primec::Definition &definition) {
+        return definition.fullPath == "/main";
+      });
+  REQUIRE(mainDefinition != nullptr);
+  REQUIRE(mainDefinition->returnExpr.has_value());
+  REQUIRE(mainDefinition->returnExpr->kind == primec::Expr::Kind::Call);
+  REQUIRE(mainDefinition->returnExpr->name == "pick");
+  REQUIRE(!mainDefinition->returnExpr->args.empty());
+  const primec::Expr &choiceTarget = mainDefinition->returnExpr->args.front();
+  REQUIRE(choiceTarget.kind == primec::Expr::Kind::Name);
+  REQUIRE(choiceTarget.name == "choice");
   const auto *choiceFact =
-      primec::ir_lowerer::findSemanticProductBindingFactByScopeAndName(
-          semanticProductTargets, "/main", "choice");
+      primec::ir_lowerer::findSemanticProductBindingFact(
+          semanticProductTargets, choiceTarget);
   REQUIRE(choiceFact != nullptr);
   CHECK(choiceFact->bindingTypeText == "Choice");
   REQUIRE(primec::ir_lowerer::findSemanticProductSumTypeMetadata(
@@ -980,6 +993,9 @@ TEST_CASE("native pick target sum resolution resolves interned type ids") {
       source.find("resolveSemanticProductTypeText", resolverPos);
   const size_t semanticResolvePos =
       source.find("semanticProgramResolveCallTargetString(", typeResolverPos);
+  const size_t bindingFactPos =
+      source.find("findSemanticProductBindingFact(semanticTargets, targetExpr)",
+                  typeResolverPos);
   const size_t bindingIdPos =
       source.find("bindingFact->bindingTypeTextId", typeResolverPos);
   const size_t queryBindingIdPos =
@@ -993,17 +1009,21 @@ TEST_CASE("native pick target sum resolution resolves interned type ids") {
                   returnIdPos);
   REQUIRE(typeResolverPos != std::string::npos);
   REQUIRE(semanticResolvePos != std::string::npos);
+  REQUIRE(bindingFactPos != std::string::npos);
   REQUIRE(bindingIdPos != std::string::npos);
   REQUIRE(queryBindingIdPos != std::string::npos);
   REQUIRE(queryTypeIdPos != std::string::npos);
   REQUIRE(returnIdPos != std::string::npos);
   REQUIRE(metadataPos != std::string::npos);
   CHECK(typeResolverPos < semanticResolvePos);
-  CHECK(semanticResolvePos < bindingIdPos);
+  CHECK(semanticResolvePos < bindingFactPos);
+  CHECK(bindingFactPos < bindingIdPos);
   CHECK(bindingIdPos < queryBindingIdPos);
   CHECK(queryBindingIdPos < queryTypeIdPos);
   CHECK(queryTypeIdPos < returnIdPos);
   CHECK(returnIdPos < metadataPos);
+  CHECK(source.find("findSemanticProductBindingFactByScopeAndName") ==
+        std::string::npos);
 }
 
 TEST_CASE("native sum construction uses semantic-product variant tags") {

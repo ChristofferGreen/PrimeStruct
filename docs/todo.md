@@ -450,6 +450,8 @@ Task template:
     for semantic-product-backed variadic parameter metadata. The native pick
     target ID consumer slice is complete for
     semantic-product-backed named and direct-call target sum classification.
+    The native named pick binding lookup slice is complete for
+    semantic-product-backed target expression binding facts.
     The native sum source ID consumer slice is complete for
     semantic-product-backed sum initializer and pick aggregate-result source
     payload classification. The lowerer collection specialization ID consumer
@@ -660,6 +662,11 @@ Task template:
       sum resolution now resolves interned binding, query, and return binding
       type IDs before consulting copied semantic-product text fields for
       named and direct-call target classification.
+    - Completed slice: semantic-product-addressed native `pick(value)` target
+      classification now looks up the published binding fact by the target
+      expression semantic node id instead of scanning binding facts by
+      scope/name. Missing semantic-id facts fail closed on the semantic-product
+      path while syntax-only compatibility keeps local reconstruction.
     - Completed slice: semantic-product-addressed native sum initializer and
       `pick(...)` aggregate-result source classification now resolve interned
       binding/query type IDs before consulting copied semantic-product text
@@ -691,6 +698,9 @@ Task template:
       the semantic-product path. Missing/contradictory graph-owned facts fail
       closed with deterministic pick-target diagnostics; the old local-map
       reconstruction remains only for syntax-only compatibility.
+    - Completed slice: native `pick(value)` target binding lookup is now
+      keyed by the target expression semantic node id, removing the lowerer
+      adapter's scope/name binding-fact scan from production.
     - Completed slice: native `pick(makeValue())` lowering now uses the
       published query fact plus the callee's published return fact to resolve
       direct-call pick targets, instead of relying on target-name

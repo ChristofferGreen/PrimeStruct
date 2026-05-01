@@ -382,6 +382,11 @@ Planned non-template inference migration contract:
   resolves binding, query, and return binding type ids before copied semantic-product text, so
   named and direct-call pick target classification consumes graph-owned metadata before
   compatibility text.
+- Completed lowerer-side named pick binding lookup slice: semantic-product-addressed
+  `pick(value)` target classification now finds the published binding fact by the target
+  expression's semantic node id instead of scanning binding facts by scope/name. Missing semantic-id
+  facts fail closed on the semantic-product path while syntax-only compatibility keeps the local
+  reconstruction path.
 - Completed lowerer-side sum source ID slice: native sum initializer payload-shape and
   `pick(...)` aggregate-result source classification now resolve binding/query type ids before
   copied semantic-product text, so source payload classification consumes graph-owned metadata
@@ -415,6 +420,9 @@ Planned non-template inference migration contract:
   binding facts, and binding facts that contradict lowerer-local shape, fail closed with
   deterministic pick-target diagnostics. Syntax-only compatibility keeps the old local-map/type-name
   reconstruction path.
+- Completed native pick target binding lookup slice: that `pick(value)` binding lookup is now keyed
+  by the target expression semantic node id rather than a lowerer-local scope/name scan over all
+  published binding facts.
 - Completed native pick query-target slice: semantic-product-addressed `pick(makeValue())`
   lowering now resolves direct call targets from the published query fact, checks the query type
   against the callee's published return fact when available, and confirms the sum layout through
