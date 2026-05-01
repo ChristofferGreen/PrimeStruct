@@ -90,21 +90,9 @@ struct SemanticProductIndexBuilder {
   }
 
   void buildLocalAutoIndex(SemanticProductIndex &index) const {
-    if (!semanticProgram->publishedRoutingLookups.localAutoFactIndicesByExpr.empty()) {
-      populateSemanticFactIndex(index.localAutoFactsByExpr,
-                                semanticProgram->publishedRoutingLookups.localAutoFactIndicesByExpr,
-                                semanticProgram->localAutoFacts);
-    }
-    const auto localAutoFacts = semanticProgramLocalAutoFactView(*semanticProgram);
-    index.localAutoFactsByExpr.reserve(index.localAutoFactsByExpr.size() + localAutoFacts.size());
-    for (const auto *entry : localAutoFacts) {
-      if (entry == nullptr) {
-        continue;
-      }
-      if (entry->semanticNodeId != 0) {
-        index.localAutoFactsByExpr.try_emplace(entry->semanticNodeId, entry);
-      }
-    }
+    populateSemanticFactIndex(index.localAutoFactsByExpr,
+                              semanticProgram->publishedRoutingLookups.localAutoFactIndicesByExpr,
+                              semanticProgram->localAutoFacts);
   }
 
   void buildQueryIndex(SemanticProductIndex &index) const {

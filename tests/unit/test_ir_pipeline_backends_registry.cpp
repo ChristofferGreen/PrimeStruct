@@ -4309,6 +4309,7 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
   localAutoFact.initializerResolvedPathId =
       static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size() + 1u);
   semanticProgram.localAutoFacts.push_back(std::move(localAutoFact));
+  semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr.insert_or_assign(47, 0);
   error.clear();
   diagnosticInfo = {};
   CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
@@ -4464,6 +4465,7 @@ TEST_CASE("semantic-product local-auto call paths accept stdlib surface equivale
   localAutoFact.initializerDirectCallReturnKindId =
       primec::semanticProgramInternCallTargetString(semanticProgram, "i32");
   semanticProgram.localAutoFacts.push_back(localAutoFact);
+  semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr.insert_or_assign(47, 0);
 
   std::string error;
   CHECK(primec::ir_lowerer::validateSemanticProductLocalAutoCoverage(
@@ -4513,6 +4515,7 @@ TEST_CASE("semantic-product local-auto call paths accept specialized direct call
       primec::semanticProgramInternCallTargetString(
           semanticProgram, "/wrapValues__t9b7bdbb33f7d43aa");
   semanticProgram.localAutoFacts.push_back(localAutoFact);
+  semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr.insert_or_assign(47, 0);
 
   std::string error;
   CHECK(primec::ir_lowerer::validateSemanticProductLocalAutoCoverage(

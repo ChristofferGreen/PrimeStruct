@@ -536,11 +536,6 @@ const SemanticProgramLocalAutoFact *semanticProgramLookupPublishedLocalAutoFactB
       it != semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr.end()) {
     return lookupPublishedSemanticEntryByIndex(semanticProgram.localAutoFacts, it->second);
   }
-  for (const auto &entry : semanticProgram.localAutoFacts) {
-    if (entry.semanticNodeId == semanticNodeId) {
-      return &entry;
-    }
-  }
   return nullptr;
 }
 
@@ -558,12 +553,6 @@ const SemanticProgramLocalAutoFact *semanticProgramLookupPublishedLocalAutoFactB
               compositeKey);
       it != semanticProgram.publishedRoutingLookups.localAutoFactIndicesByInitPathAndBindingNameId.end()) {
     return lookupPublishedSemanticEntryByIndex(semanticProgram.localAutoFacts, it->second);
-  }
-  for (const auto &entry : semanticProgram.localAutoFacts) {
-    if (entry.initializerResolvedPathId == initializerPathId &&
-        entry.bindingNameId == bindingNameId) {
-      return &entry;
-    }
   }
   return nullptr;
 }

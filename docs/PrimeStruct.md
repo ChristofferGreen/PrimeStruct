@@ -829,6 +829,9 @@ Compile-pipeline publication contract:
   cleanup/removal passes; add a concrete TODO before changing any of those seams.
 - Local-auto lowering consumes semantic-node-id facts only. Initializer-path plus binding-name indexes may remain as
   published metadata for inspection, but production lowering must fail closed instead of using them as a recovery path.
+- Local-auto fact lookup follows the same published-map authority rule for semantic-node ids: public published
+  local-auto lookup helpers and the lowerer semantic-product adapter require `localAutoFactIndicesByExpr` for
+  expression-scoped local-auto facts instead of recovering by scanning raw `localAutoFacts` storage.
 - Query, `try(...)`, and `on_error` lowering/completeness checks follow the same rule: semantic-node-id facts are the
   production authority, while resolved-path/source/path-id indexes remain inspection metadata only.
 - The lowerer semantic-product adapter no longer builds local-auto initializer-path, query resolved-path/call-name, or

@@ -2132,6 +2132,7 @@ TEST_CASE("ir lowerer semantic-product adapter joins facts by semantic id withou
       .initializerResolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/id"),
   });
+  semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr.insert_or_assign(62, 0);
   semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
       .scopePath = "/main",
       .callName = "lookup",
@@ -2469,6 +2470,9 @@ TEST_CASE("ir lowerer semantic-product adapter ignores local-auto initializer-pa
       .insert_or_assign((static_cast<uint64_t>(initializerPathId) << 32) |
                             static_cast<uint64_t>(bindingNameId),
                         0);
+  CHECK(primec::semanticProgramLookupPublishedLocalAutoFactByInitializerPathAndBindingNameId(
+            semanticProgram, initializerPathId, bindingNameId) ==
+        &semanticProgram.localAutoFacts[0]);
 
   const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
   CHECK(adapter.semanticIndex.localAutoFactsByExpr.empty());
@@ -2476,7 +2480,7 @@ TEST_CASE("ir lowerer semantic-product adapter ignores local-auto initializer-pa
   CHECK(localAutoFact == nullptr);
 }
 
-TEST_CASE("ir lowerer semantic-product index does not expose local-auto path fallback") {
+TEST_CASE("ir lowerer semantic-product adapter ignores raw local-auto facts without maps") {
   primec::Expr initCall;
   initCall.kind = primec::Expr::Kind::Call;
   initCall.name = "id";
@@ -2486,7 +2490,7 @@ TEST_CASE("ir lowerer semantic-product index does not expose local-auto path fal
   localBinding.kind = primec::Expr::Kind::Name;
   localBinding.isBinding = true;
   localBinding.name = "value";
-  localBinding.semanticNodeId = 0;
+  localBinding.semanticNodeId = 7302;
   localBinding.args = {initCall};
 
   primec::SemanticProgram semanticProgram;
@@ -2526,7 +2530,7 @@ TEST_CASE("ir lowerer semantic-product index does not expose local-auto path fal
       .initializerTryOnErrorBoundArgCount = 0,
       .sourceLine = 12,
       .sourceColumn = 3,
-      .semanticNodeId = 0,
+      .semanticNodeId = 7302,
       .provenanceHandle = 0,
       .initializerDirectCallResolvedPath = "",
       .initializerDirectCallReturnKind = "",
@@ -2538,6 +2542,11 @@ TEST_CASE("ir lowerer semantic-product index does not expose local-auto path fal
       .bindingNameId = bindingNameId,
       .initializerResolvedPathId = initializerPathId,
   });
+
+  CHECK(primec::semanticProgramLookupPublishedLocalAutoFactBySemanticId(
+            semanticProgram, 7302) == nullptr);
+  CHECK(primec::semanticProgramLookupPublishedLocalAutoFactByInitializerPathAndBindingNameId(
+            semanticProgram, initializerPathId, bindingNameId) == nullptr);
 
   const auto semanticIndex =
       primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
