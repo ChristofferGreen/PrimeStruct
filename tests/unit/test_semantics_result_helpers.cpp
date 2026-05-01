@@ -484,6 +484,44 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib result legacy combinators accept direct sum-return sources") {
+  const std::string source = R"(
+import /std/result/*
+
+[return<Result<i32, i32>>]
+make_success([i32] value) {
+  return(ok<i32, i32>(value))
+}
+
+[return<Result<i32, i32>>]
+make_failure([i32] code) {
+  return(error<i32, i32>(code))
+}
+
+[return<int>]
+main() {
+  [Result<i32, i32>] mapped{
+    Result.map(make_success(5i32), []([i32] value) { return(plus(value, 2i32)) })
+  }
+  [Result<i32, i32>] chained{
+    Result.and_then(make_success(6i32), []([i32] value) { return(Result.ok(plus(value, 4i32))) })
+  }
+  [Result<i32, i32>] summed{
+    Result.map2(make_success(2i32), make_failure(8i32), []([i32] left, [i32] right) {
+      return(plus(left, right))
+    })
+  }
+  [bool] mappedFailed{Result.error(mapped)}
+  [bool] chainedFailed{Result.error(chained)}
+  [bool] summedFailed{Result.error(summed)}
+  if(or(or(mappedFailed, chainedFailed), not(summedFailed)), then(){ return(1i32) }, else(){ return(0i32) })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib result value sum rejects default construction") {
   const std::string source = R"(
 import /std/result/*

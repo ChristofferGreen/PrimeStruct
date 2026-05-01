@@ -31,6 +31,55 @@ bool isResultTypeBaseName(const std::string &base) {
          normalized == "std/result/Result";
 }
 
+std::string sumVariantPayloadTypeText(const SumVariant &variant) {
+  if (!variant.payloadTypeText.empty()) {
+    return variant.payloadTypeText;
+  }
+  if (variant.payloadType.empty()) {
+    return {};
+  }
+  if (variant.payloadTemplateArgs.empty()) {
+    return variant.payloadType;
+  }
+  return variant.payloadType + "<" + joinTemplateArgs(variant.payloadTemplateArgs) + ">";
+}
+
+bool isStdlibResultSumPath(std::string path) {
+  path = normalizeBindingTypeName(trimText(path));
+  if (!path.empty() && path.front() != '/') {
+    path.insert(path.begin(), '/');
+  }
+  return path == "/std/result/Result" ||
+         path.rfind("/std/result/Result__arity", 0) == 0;
+}
+
+bool resolveResultTypeFromStdlibResultSumDefinition(const Definition &sumDef,
+                                                    ResultTypeInfo &out) {
+  if (!isStdlibResultSumPath(sumDef.fullPath)) {
+    return false;
+  }
+
+  const SumVariant *okVariant = nullptr;
+  const SumVariant *errorVariant = nullptr;
+  for (const auto &variant : sumDef.sumVariants) {
+    if (variant.name == "ok") {
+      okVariant = &variant;
+    } else if (variant.name == "error") {
+      errorVariant = &variant;
+    }
+  }
+  if (okVariant == nullptr || errorVariant == nullptr || !errorVariant->hasPayload) {
+    return false;
+  }
+
+  out = ResultTypeInfo{};
+  out.isResult = true;
+  out.hasValue = okVariant->hasPayload;
+  out.valueType = okVariant->hasPayload ? sumVariantPayloadTypeText(*okVariant) : std::string{};
+  out.errorType = sumVariantPayloadTypeText(*errorVariant);
+  return !out.errorType.empty() && (!out.hasValue || !out.valueType.empty());
+}
+
 std::string_view normalizeFileResultMethodName(std::string_view methodName) {
   if (methodName == "readByte") {
     return "read_byte";
@@ -82,10 +131,13 @@ bool SemanticsValidator::resolveResultTypeFromTypeName(const std::string &typeNa
   out = ResultTypeInfo{};
   std::string base;
   std::string arg;
-  if (!splitTemplateTypeName(typeName, base, arg) || !isResultTypeBaseName(base)) {
-    return false;
+  if (splitTemplateTypeName(typeName, base, arg) && isResultTypeBaseName(base)) {
+    return resolveResultTypeFromTemplateArg(arg, out);
   }
-  return resolveResultTypeFromTemplateArg(arg, out);
+  if (const Definition *sumDef = resolveSumDefinitionForTypeText(typeName, "")) {
+    return resolveResultTypeFromStdlibResultSumDefinition(*sumDef, out);
+  }
+  return false;
 }
 
 bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
