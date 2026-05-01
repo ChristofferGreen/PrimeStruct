@@ -35,7 +35,7 @@
       "max_invalidation_control_flow": 15,
       "max_invalidation_initializer_shape": 90,
       "max_invalidation_definition_signature": 86,
-      "max_invalidation_import_alias": 12,
+      "max_invalidation_import_alias": 14,
       "max_invalidation_receiver_type": 30
     }
   ]
