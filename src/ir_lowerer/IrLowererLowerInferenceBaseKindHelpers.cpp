@@ -79,6 +79,37 @@ bool inferBaseSetupSemanticQueryFactValueKind(const Expr &expr,
   return false;
 }
 
+bool inferBaseSetupSemanticTryFactValueKind(const Expr &expr,
+                                            const SemanticProgram *semanticProgram,
+                                            const SemanticProductIndex *semanticIndex,
+                                            LocalInfo::ValueKind &kindOut,
+                                            bool &hasSemanticTrySiteOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  hasSemanticTrySiteOut = false;
+  if (semanticProgram == nullptr || semanticIndex == nullptr || expr.semanticNodeId == 0 ||
+      expr.kind != Expr::Kind::Call || !isSimpleCallName(expr, "try")) {
+    return false;
+  }
+  hasSemanticTrySiteOut = true;
+  const auto *tryFact = findSemanticProductTryFactBySemanticId(*semanticIndex, expr);
+  if (tryFact == nullptr) {
+    return false;
+  }
+  std::string valueTypeText = trimTemplateTypeText(tryFact->valueType);
+  if (tryFact->valueTypeId != InvalidSymbolId) {
+    const std::string resolvedTypeText =
+        std::string(semanticProgramResolveCallTargetString(*semanticProgram, tryFact->valueTypeId));
+    if (!resolvedTypeText.empty()) {
+      valueTypeText = trimTemplateTypeText(resolvedTypeText);
+    }
+  }
+  kindOut = valueKindFromTypeName(valueTypeText);
+  if (kindOut == LocalInfo::ValueKind::Unknown && !valueTypeText.empty()) {
+    kindOut = LocalInfo::ValueKind::Int64;
+  }
+  return kindOut != LocalInfo::ValueKind::Unknown;
+}
+
 bool resolveBaseSetupResultExprInfo(const Expr &expr,
                                     const LocalMap &localsIn,
                                     const ResolveMethodCallWithLocalsFn *resolveMethodCall,
@@ -170,6 +201,14 @@ LocalInfo::ValueKind inferBaseSetupSimpleExprKind(const Expr &expr,
       LocalInfo::ValueKind kindOut = LocalInfo::ValueKind::Unknown;
       if (inferBaseSetupSemanticQueryFactValueKind(expr, semanticProgram, semanticIndex, kindOut)) {
         return kindOut;
+      }
+      bool hasSemanticTrySite = false;
+      if (inferBaseSetupSemanticTryFactValueKind(
+              expr, semanticProgram, semanticIndex, kindOut, hasSemanticTrySite)) {
+        return kindOut;
+      }
+      if (hasSemanticTrySite) {
+        return LocalInfo::ValueKind::Unknown;
       }
       ResultExprInfo resultInfo;
       if (resolveBaseSetupResultExprInfo(
@@ -493,6 +532,14 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
     return true;
   }
   if (inferBaseSetupSemanticQueryFactValueKind(expr, semanticProgram, semanticIndex, kindOut)) {
+    return true;
+  }
+  bool hasSemanticTrySite = false;
+  if (inferBaseSetupSemanticTryFactValueKind(
+          expr, semanticProgram, semanticIndex, kindOut, hasSemanticTrySite)) {
+    return true;
+  }
+  if (hasSemanticTrySite) {
     return true;
   }
   if (expr.isMethodCall) {

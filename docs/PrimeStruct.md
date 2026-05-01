@@ -822,6 +822,8 @@ Compile-pipeline publication contract:
 - Return facts follow the same adapter-cache rule for direct definition lookup: the semantic-product adapter no longer
   materializes a return definition-path index as a recovery surface. The explicit return-by-path helper remains
   available for call-site consumers that already resolved a callee path.
+- Base call-kind inference now applies the same graph-backed rule for `try(...)`: semantic-product `try` facts provide
+  the value kind before local `Result` state can infer it, and missing facts leave the semantic-product path unresolved.
 - Dump-stage handling should be able to read either the syntax-facing canonical AST dump or the future semantic-product
   dump from the same compile-pipeline success result without re-running semantics.
 - Backend/runtime entrypoints should consume the semantic product from compile-pipeline output once available rather

@@ -6,6 +6,29 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 1, 2026)**
+- [x] TODO-4298: Use try facts in base call-kind inference
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-01
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes base call-kind
+    inference for semantic-product-addressed `try(...)` expressions consume
+    the published try fact before local `Result` metadata can infer the value
+    kind.
+  - acceptance:
+    - `inferCallExprBaseKind` resolves `try(...)` value kind from interned
+      semantic-product try value type metadata before local `Result` state.
+    - Missing semantic-product try facts leave the base-kind result unresolved
+      instead of reconstructing it from local `Result` metadata.
+    - Focused call-base setup tests cover stale local metadata losing to the
+      semantic try fact and missing try facts failing closed.
+  - stop_rule: Stop once base call-kind inference uses graph-backed try facts
+    as the semantic-product authority and docs record the remaining TODO-4298
+    work.
+  - evidence: Routed base call-kind `try(...)` inference through semantic
+    try facts before local `Result` fallback, added focused positive/missing
+    fact coverage, and skipped local test execution per the lite workflow.
+
 - [x] TODO-4298: Quarantine return path cache
   - owner: ai
   - created_at: 2026-04-28

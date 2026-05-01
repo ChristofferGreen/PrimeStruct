@@ -208,6 +208,131 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup does not infer missing
   CHECK_FALSE(fallbackCalled);
 }
 
+TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic try facts before local Result state") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.tryFacts.push_back(primec::SemanticProgramTryFact{
+      .scopePath = "/main",
+      .operandBindingTypeText = "Result<string, FileError>",
+      .operandReceiverBindingTypeText = "",
+      .operandQueryTypeText = "",
+      .valueType = "i64",
+      .errorType = "FileError",
+      .contextReturnKind = "return",
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 901,
+      .valueTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "i64"),
+      .errorTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
+  });
+  const auto semanticIndex = primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  state.semanticProgram = &semanticProgram;
+  state.semanticIndex = &semanticIndex;
+
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallBaseSetup(
+      {
+          .inferStructExprPath = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+          .resolveStructFieldSlot =
+              [](const std::string &, const std::string &, primec::ir_lowerer::StructSlotFieldInfo &) { return false; },
+          .resolveUninitializedStorage =
+              [](const primec::Expr &,
+                 const primec::ir_lowerer::LocalMap &,
+                 primec::ir_lowerer::UninitializedStorageAccessInfo &,
+                 bool &resolved) {
+                resolved = false;
+                return true;
+              },
+      },
+      state,
+      error));
+  CHECK(error.empty());
+  REQUIRE(static_cast<bool>(state.inferCallExprBaseKind));
+
+  primec::ir_lowerer::LocalInfo staleLocalResult;
+  staleLocalResult.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  staleLocalResult.isResult = true;
+  staleLocalResult.resultHasValue = true;
+  staleLocalResult.resultValueKind = ValueKind::String;
+
+  primec::ir_lowerer::LocalMap locals;
+  locals.emplace("result", staleLocalResult);
+
+  primec::Expr resultExpr;
+  resultExpr.kind = primec::Expr::Kind::Name;
+  resultExpr.name = "result";
+
+  primec::Expr tryExpr;
+  tryExpr.kind = primec::Expr::Kind::Call;
+  tryExpr.name = "try";
+  tryExpr.args = {resultExpr};
+  tryExpr.semanticNodeId = 901;
+
+  ValueKind kindOut = ValueKind::Unknown;
+  CHECK(state.inferCallExprBaseKind(tryExpr, locals, kindOut));
+  CHECK(kindOut == ValueKind::Int64);
+}
+
+TEST_CASE("ir lowerer inference expr-kind call-base setup does not infer missing try facts from local Result state") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::SemanticProgram semanticProgram;
+  const auto semanticIndex = primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  state.semanticProgram = &semanticProgram;
+  state.semanticIndex = &semanticIndex;
+
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallBaseSetup(
+      {
+          .inferStructExprPath = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+          .resolveStructFieldSlot =
+              [](const std::string &, const std::string &, primec::ir_lowerer::StructSlotFieldInfo &) { return false; },
+          .resolveUninitializedStorage =
+              [](const primec::Expr &,
+                 const primec::ir_lowerer::LocalMap &,
+                 primec::ir_lowerer::UninitializedStorageAccessInfo &,
+                 bool &resolved) {
+                resolved = false;
+                return true;
+              },
+      },
+      state,
+      error));
+  CHECK(error.empty());
+  REQUIRE(static_cast<bool>(state.inferCallExprBaseKind));
+
+  primec::ir_lowerer::LocalInfo localResult;
+  localResult.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  localResult.isResult = true;
+  localResult.resultHasValue = true;
+  localResult.resultValueKind = ValueKind::String;
+
+  primec::ir_lowerer::LocalMap locals;
+  locals.emplace("result", localResult);
+
+  primec::Expr resultExpr;
+  resultExpr.kind = primec::Expr::Kind::Name;
+  resultExpr.name = "result";
+
+  primec::Expr tryExpr;
+  tryExpr.kind = primec::Expr::Kind::Call;
+  tryExpr.name = "try";
+  tryExpr.args = {resultExpr};
+  tryExpr.semanticNodeId = 902;
+
+  ValueKind kindOut = ValueKind::Unknown;
+  CHECK(state.inferCallExprBaseKind(tryExpr, locals, kindOut));
+  CHECK(kindOut == ValueKind::Unknown);
+}
+
 TEST_CASE("ir lowerer inference expr-kind call-base setup leaves builtin comparison kind unresolved without semantic facts") {
   primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
   std::string error;
