@@ -64,6 +64,26 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("imported canonical map count validates builtin map method receivers") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<map<K, V>>]
+wrapMap<K, V>([K] key, [V] value) {
+  return(mapSingle<K, V>(key, value))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<string, i32>] values{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
+  return(plus(values.count(), wrapMap<string, i32>("only"raw_utf8, 4i32).count()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("bare map count call still validates when only compatibility alias is present") {
   const std::string source = R"(
 [return<int>]

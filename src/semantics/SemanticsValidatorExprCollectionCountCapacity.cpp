@@ -346,19 +346,42 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       context.isUnnamespacedMapCountFallbackCall;
   const bool routesThroughResolvedMapCountSurface =
       context.isResolvedMapCountCall;
+  const auto stripsTemplateSpecializationSuffix =
+      [](std::string path) {
+        const size_t suffix = path.find("__t");
+        if (suffix != std::string::npos) {
+          path.erase(suffix);
+        }
+        return path;
+      };
+  const std::string resolvedMapCountMethodPath =
+      stripsTemplateSpecializationSuffix(resolved);
+  const bool routesThroughResolvedMapCountMethodSurface =
+      expr.isMethodCall &&
+      !expr.args.empty() &&
+      context.resolveMapTarget != nullptr &&
+      context.resolveMapTarget(expr.args.front()) &&
+      (resolvedMapCountMethodPath == "/std/collections/map/count" ||
+       resolvedMapCountMethodPath == "/std/collections/map/count_ref" ||
+       resolvedMapCountMethodPath == "/map/count" ||
+       resolvedMapCountMethodPath == "/map/count_ref");
   const bool routesThroughMapCountCallSurface =
       routesThroughStdNamespacedMapCountSurface ||
       routesThroughNamespacedMapCountSurface ||
       routesThroughUnnamespacedMapCountFallbackSurface ||
-      routesThroughResolvedMapCountSurface;
+      routesThroughResolvedMapCountSurface ||
+      routesThroughResolvedMapCountMethodSurface;
   const std::string countHelperName =
       [&]() -> std::string {
         const std::string resolvedPath = resolveCalleePath(expr);
         if (routesThroughStdNamespacedMapCountSurface ||
             routesThroughNamespacedMapCountSurface ||
-            routesThroughResolvedMapCountSurface) {
+            routesThroughResolvedMapCountSurface ||
+            routesThroughResolvedMapCountMethodSurface) {
           if (resolvedPath == "/std/collections/map/count_ref" ||
               resolved == "/std/collections/map/count_ref" ||
+              resolvedMapCountMethodPath == "/std/collections/map/count_ref" ||
+              resolvedMapCountMethodPath == "/map/count_ref" ||
               resolved == "/map/count_ref") {
             return "count_ref";
           }
