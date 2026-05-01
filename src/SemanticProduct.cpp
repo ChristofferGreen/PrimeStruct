@@ -453,6 +453,9 @@ const SemanticProgramCallableSummary *semanticProgramLookupPublishedCallableSumm
     }
     return nullptr;
   }
+  if (semanticProgram.publishedStorageFrozen) {
+    return nullptr;
+  }
   for (const auto &entry : semanticProgram.callableSummaries) {
     if (entry.fullPathId != fullPathId) {
       continue;

@@ -1949,6 +1949,69 @@ TEST_CASE("ir lowerer semantic-product adapter indexes callable summaries by ful
   CHECK(primec::ir_lowerer::findSemanticProductCallableSummary(adapter, "/missing") == nullptr);
 }
 
+TEST_CASE("semantic product callable summary lookup requires maps after freeze") {
+  primec::SemanticProgram semanticProgram;
+  const auto mainPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/main");
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .isExecution = false,
+      .returnKind = "void",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 204,
+      .provenanceHandle = 0,
+      .fullPathId = mainPathId,
+  });
+
+  CHECK(primec::semanticProgramLookupPublishedCallableSummary(
+            semanticProgram, "/main") == &semanticProgram.callableSummaries[0]);
+
+  primec::freezeSemanticProgramPublishedStorage(semanticProgram);
+  CHECK(primec::semanticProgramLookupPublishedCallableSummary(
+            semanticProgram, "/main") == nullptr);
+
+  primec::SemanticProgram mappedSemanticProgram;
+  const auto mappedMainPathId =
+      primec::semanticProgramInternCallTargetString(mappedSemanticProgram, "/main");
+  mappedSemanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .isExecution = false,
+      .returnKind = "void",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 205,
+      .provenanceHandle = 0,
+      .fullPathId = mappedMainPathId,
+  });
+  mappedSemanticProgram.publishedRoutingLookups.callableSummaryIndicesByPathId
+      .insert_or_assign(mappedMainPathId, 0);
+  primec::freezeSemanticProgramPublishedStorage(mappedSemanticProgram);
+
+  const auto *summary = primec::semanticProgramLookupPublishedCallableSummary(
+      mappedSemanticProgram, "/main");
+  REQUIRE(summary != nullptr);
+  CHECK(summary->semanticNodeId == 205);
+}
+
 TEST_CASE("ir lowerer call helpers require semantic-product bridge-path choices") {
   const std::unordered_map<std::string, const primec::Definition *> defMap;
   const std::unordered_map<std::string, std::string> importAliases;

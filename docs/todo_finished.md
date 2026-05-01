@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 1, 2026)**
+- [x] TODO-4298: Use published callable maps
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-01
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 callable-summary authority slice that makes
+    frozen published semantic products consume
+    `callableSummaryIndicesByPathId` for callable-summary path lookups.
+  - acceptance:
+    - Frozen semantic-product callable-summary lookup ignores raw
+      `callableSummaries` entries when `callableSummaryIndicesByPathId` is
+      missing.
+    - Callable-summary lookup still resolves mapped callable summaries after
+      `freezeSemanticProgramPublishedStorage(...)`.
+    - Focused coverage proves the mutable fixture-only scan is quarantined to
+      pre-freeze products while frozen products require the published map.
+  - stop_rule: Stop once frozen callable-summary consumers require the
+    published callable-summary map and docs record the remaining TODO-4298
+    work.
+  - evidence: Quarantined the raw callable-summary scan behind unfrozen
+    semantic products, added focused coverage for raw and mapped frozen
+    callable-summary lookup, and skipped local test execution per the lite
+    workflow.
+
 - [x] TODO-4298: Use published collection maps
   - owner: ai
   - created_at: 2026-04-28

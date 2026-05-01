@@ -484,7 +484,8 @@ Task template:
     definition semantic-node-id lookups. The local-auto fact published-map
     authority slice is complete for semantic-node-id lookups. The collection
     specialization published-map authority slice is complete for
-    semantic-node-id lookups.
+    semantic-node-id lookups. The frozen callable-summary published-map
+    authority slice is complete for path-id lookups.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -527,6 +528,11 @@ Task template:
       collection facts. Raw `collectionSpecializations` storage no longer
       recovers missing published collection maps for expression-scoped
       consumers.
+    - Completed slice: frozen semantic-product callable-summary lookup now
+      requires `callableSummaryIndicesByPathId` for path-id facts. Raw
+      `callableSummaries` storage no longer recovers missing callable-summary
+      maps after publication freezes the semantic product, while mutable
+      hand-built products keep their fixture-only scan before freeze.
     - Completed slice: semantic-product-addressed Result-combinator metadata
       now requires published query facts when direct lambda payload analysis
       cannot infer the resulting value kind, covering `Result.map`,
