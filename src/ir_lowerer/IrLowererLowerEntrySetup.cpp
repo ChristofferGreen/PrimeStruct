@@ -35,8 +35,26 @@ struct SemanticProductCompletenessCheck {
 
 struct SemanticProductContractManifest {
   uint32_t version = SemanticProductContractVersionCurrent;
-  const std::array<SemanticProductCompletenessCheck, 7> *checks = nullptr;
+  const std::array<SemanticProductCompletenessCheck, 10> *checks = nullptr;
 };
+
+bool validateDirectCallFactFamily(const SemanticProductCompletenessContext &context,
+                                  std::string &error) {
+  return validateSemanticProductDirectCallCoverage(
+      context.program, context.semanticProgram, error);
+}
+
+bool validateBridgePathFactFamily(const SemanticProductCompletenessContext &context,
+                                  std::string &error) {
+  return validateSemanticProductBridgePathCoverage(
+      context.program, context.semanticProgram, error);
+}
+
+bool validateMethodCallFactFamily(const SemanticProductCompletenessContext &context,
+                                  std::string &error) {
+  return validateSemanticProductMethodCallCoverage(
+      context.program, context.semanticProgram, error);
+}
 
 bool validateBindingFactFamily(const SemanticProductCompletenessContext &context,
                                std::string &error) {
@@ -162,7 +180,10 @@ bool validateOnErrorFactFamily(const SemanticProductCompletenessContext &context
   return true;
 }
 
-const std::array<SemanticProductCompletenessCheck, 7> kSemanticProductCompletenessMatrix = {{
+const std::array<SemanticProductCompletenessCheck, 10> kSemanticProductCompletenessMatrix = {{
+    {"routing.direct-call", "directCallTargets[].resolvedPathId", validateDirectCallFactFamily},
+    {"routing.bridge-path", "bridgePathChoices[].chosenPathId", validateBridgePathFactFamily},
+    {"routing.method-call", "methodCallTargets[].resolvedPathId", validateMethodCallFactFamily},
     {"type-shape.binding", "bindingFacts[].resolvedPathId", validateBindingFactFamily},
     {"type-shape.collection-specialization",
      "collectionSpecializations[].collectionFamily",

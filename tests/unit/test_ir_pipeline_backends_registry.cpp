@@ -2708,6 +2708,19 @@ TEST_CASE("ir lowerer rejects semantic-product module artifact index overflow") 
   CHECK(diagnosticInfo.message == error);
 }
 
+TEST_CASE("ir lowerer semantic-product completeness manifest covers routing facts") {
+  const std::filesystem::path sourcePath =
+      repoRoot() / "src" / "ir_lowerer" / "IrLowererLowerEntrySetup.cpp";
+  const std::string source = readTextFile(sourcePath);
+
+  CHECK(source.find("{\"routing.direct-call\", \"directCallTargets[].resolvedPathId\", "
+                    "validateDirectCallFactFamily}") != std::string::npos);
+  CHECK(source.find("{\"routing.bridge-path\", \"bridgePathChoices[].chosenPathId\", "
+                    "validateBridgePathFactFamily}") != std::string::npos);
+  CHECK(source.find("{\"routing.method-call\", \"methodCallTargets[].resolvedPathId\", "
+                    "validateMethodCallFactFamily}") != std::string::npos);
+}
+
 TEST_CASE("ir preparation helper reports lowering-stage failure for unresolved entry") {
   primec::Program program;
   primec::SemanticProgram semanticProgram;

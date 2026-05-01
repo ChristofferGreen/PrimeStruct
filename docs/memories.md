@@ -52,17 +52,23 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: Namespaced indexed writes can be validated or lowered after access calls have been canonicalized to stdlib legacy helper paths such as `/std/collections/vectorAt__...`, so semantic, IR-lowerer, and emitter array-access classifiers must all recognize those aliases.
 - Evidence: `./primec --emit=ir` on a `/std/image` helper with `values[0i32] = 9i32` reproduced the original semantic rejection until `getBuiltinArrayAccessName` in semantics accepted `vectorAt` aliases; the follow-on IR lowering repro required the matching alias support in `IrLowererBuiltinNameHelpers.cpp` and `EmitterBuiltinCallPathHelpers.cpp`.
 
-### skipped-doctest-queue-locks-current-docs-and-source-surfaces
-- Updated: 2026-04-20
-- Tags: tests, docs, todo
-- Fact: `tests/unit/test_compile_run_examples_docs_locks.cpp` source-locks both the skipped-debt queue shape in `docs/todo*.md` and the current active `vm_math` and `vm_maps` surfaces, so resolving skipped-doctest lanes requires updating the queue docs and that lock file together.
-- Evidence: Refreshing the `examples_docs_locks` shard after landing the VM math/map skip cleanups required retiring `TODO-4110`, `TODO-4117`, and `TODO-4118` from `docs/todo.md`, archiving them in `docs/todo_finished.md`, and updating the queue/surface assertions in `tests/unit/test_compile_run_examples_docs_locks.cpp` before the focused release rerun passed.
+### semantic-product-routing-completeness-gates-lowering
+- Updated: 2026-05-01
+- Tags: semantics, ir, routing
+- Fact: IR lowering entry setup treats semantic-product direct-call, bridge-path, and method-call routing facts as required completeness gates before any fallback lowering path can run.
+- Evidence: The saved release log showed `IrLowerer::lower` accepting missing direct-call and bridge-path facts; `IrLowererLowerEntrySetup.cpp` now includes routing.direct-call, routing.bridge-path, and routing.method-call in the semantic-product completeness manifest.
 
 ### semantic-product-sums-omit-callable-summaries
 - Updated: 2026-05-01
 - Tags: semantics, ir, sums
 - Fact: Semantic-product sum definitions publish type metadata but not callable summaries, so lowerer setup code must treat sums as type metadata instead of requiring callable-summary facts.
 - Evidence: The saved release log showed `missing semantic-product callable summary: /Choice`; `SemanticsValidatorSnapshots.cpp` skips sum definitions when collecting callable summaries, and `IrLowererOnErrorHelpers.cpp`, `IrLowererLowerEffects.cpp`, and `IrLowererLowerInferenceReturnInfoHelpers.cpp` now skip or short-circuit semantic-product sum metadata before requiring callable summaries.
+
+### skipped-doctest-queue-locks-current-docs-and-source-surfaces
+- Updated: 2026-04-20
+- Tags: tests, docs, todo
+- Fact: `tests/unit/test_compile_run_examples_docs_locks.cpp` source-locks both the skipped-debt queue shape in `docs/todo*.md` and the current active `vm_math` and `vm_maps` surfaces, so resolving skipped-doctest lanes requires updating the queue docs and that lock file together.
+- Evidence: Refreshing the `examples_docs_locks` shard after landing the VM math/map skip cleanups required retiring `TODO-4110`, `TODO-4117`, and `TODO-4118` from `docs/todo.md`, archiving them in `docs/todo_finished.md`, and updating the queue/surface assertions in `tests/unit/test_compile_run_examples_docs_locks.cpp` before the focused release rerun passed.
 
 ### soa-storage-temporaries-own-nested-buffers
 - Updated: 2026-04-28
