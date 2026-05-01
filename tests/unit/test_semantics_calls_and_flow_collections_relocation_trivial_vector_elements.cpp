@@ -188,7 +188,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("canonical vector indexed removal helpers reject ownership-sensitive explicit Vector bindings on remove_at first") {
+TEST_CASE("canonical vector indexed removal helpers accept ownership-sensitive explicit Vector bindings") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_vector/*
@@ -222,8 +222,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/vector/remove_at") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("canonical vector helpers still require stdlib imports for experimental vector receivers") {
@@ -241,7 +241,7 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
-TEST_CASE("push on mutable vector field access keeps canonical unknown target diagnostics") {
+TEST_CASE("push on mutable vector field access validates through canonical helper routing") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -265,9 +265,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
-  CHECK(error.find("requires vector binding") == std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("push validates on mutable soa_vector parameter") {

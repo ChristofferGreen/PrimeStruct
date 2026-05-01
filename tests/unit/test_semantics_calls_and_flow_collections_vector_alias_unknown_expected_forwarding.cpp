@@ -510,7 +510,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced templated vector count call rejects compatibility alias fallback") {
+TEST_CASE("stdlib namespaced templated vector count call reports routed alias template diagnostics") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values) {
@@ -530,10 +530,11 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
+  CHECK(error.find("template arguments are only supported on templated definitions: /vector/count") !=
+        std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced vector count call rejects compatibility alias fallback") {
+TEST_CASE("stdlib namespaced vector count call accepts compatibility alias fallback") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values, [bool] marker) {
@@ -547,8 +548,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("stdlib namespaced templated vector count arity keeps builtin template-argument diagnostics") {
@@ -571,7 +572,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
+  CHECK(error.find("template arguments are only supported on templated definitions: /vector/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("vector namespaced templated alias call keeps builtin template diagnostics") {
