@@ -786,13 +786,15 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   };
   auto accessAliasFromMemberName = [&](std::string memberName) -> bool {
     memberName = stripGeneratedSuffix(stripTemplateSpecializationSuffix(std::move(memberName)));
-    if (memberName == "at" || memberName == "At" || memberName == "vectorAt" ||
-        memberName == "mapAt") {
+    if (memberName == "at" || memberName == "at_ref" || memberName == "At" ||
+        memberName == "vectorAt" || memberName == "mapAt" ||
+        memberName == "mapAtRef") {
       out = "at";
       return true;
     }
-    if (memberName == "at_unsafe" || memberName == "AtUnsafe" ||
-        memberName == "vectorAtUnsafe" || memberName == "mapAtUnsafe") {
+    if (memberName == "at_unsafe" || memberName == "at_unsafe_ref" ||
+        memberName == "AtUnsafe" || memberName == "vectorAtUnsafe" ||
+        memberName == "mapAtUnsafe" || memberName == "mapAtUnsafeRef") {
       out = "at_unsafe";
       return true;
     }

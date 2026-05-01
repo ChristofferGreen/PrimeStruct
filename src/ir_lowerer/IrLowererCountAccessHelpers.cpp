@@ -672,14 +672,6 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     return true;
   };
   if (isInternalSoaStorageMetadataCall(expr, "field_count") &&
-      isDynamicVectorCountTargetFn != nullptr &&
-      isDynamicVectorCountTargetFn(expr.args.front(), localsIn)) {
-    if (!emitDynamicVectorCount(expr.args.front())) {
-      return CountAccessCallEmitResult::Error;
-    }
-    return CountAccessCallEmitResult::Emitted;
-  }
-  if (isInternalSoaStorageMetadataCall(expr, "field_count") &&
       isInternalSoaStorageMetadataTarget(expr.args.front(), localsIn)) {
     if (!emitInternalSoaStorageMetadataBase(
             expr.args.front(), localsIn, emitInstruction, emitExpr)) {
@@ -688,10 +680,10 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     emitInternalSoaStorageMetadataLoad("field_count", emitInstruction);
     return CountAccessCallEmitResult::Emitted;
   }
-  if (isInternalSoaStorageMetadataCall(expr, "field_capacity") &&
-      isDynamicVectorCapacityTargetFn != nullptr &&
-      isDynamicVectorCapacityTargetFn(expr.args.front(), localsIn)) {
-    if (!emitDynamicVectorCapacity(expr.args.front())) {
+  if (isInternalSoaStorageMetadataCall(expr, "field_count") &&
+      isDynamicVectorCountTargetFn != nullptr &&
+      isDynamicVectorCountTargetFn(expr.args.front(), localsIn)) {
+    if (!emitDynamicVectorCount(expr.args.front())) {
       return CountAccessCallEmitResult::Error;
     }
     return CountAccessCallEmitResult::Emitted;
@@ -703,6 +695,14 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       return CountAccessCallEmitResult::Error;
     }
     emitInternalSoaStorageMetadataLoad("field_capacity", emitInstruction);
+    return CountAccessCallEmitResult::Emitted;
+  }
+  if (isInternalSoaStorageMetadataCall(expr, "field_capacity") &&
+      isDynamicVectorCapacityTargetFn != nullptr &&
+      isDynamicVectorCapacityTargetFn(expr.args.front(), localsIn)) {
+    if (!emitDynamicVectorCapacity(expr.args.front())) {
+      return CountAccessCallEmitResult::Error;
+    }
     return CountAccessCallEmitResult::Emitted;
   }
   const bool namedArgVectorTemporaryCountTarget =

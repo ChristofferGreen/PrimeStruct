@@ -435,8 +435,12 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
       alias = alias.substr(slash + 1);
     }
     alias = stripGeneratedSuffix(std::move(alias));
-    if (alias == "at" || alias == "at_unsafe") {
-      out = alias;
+    if (alias == "at" || alias == "at_ref") {
+      out = "at";
+      return true;
+    }
+    if (alias == "at_unsafe" || alias == "at_unsafe_ref") {
+      out = "at_unsafe";
       return true;
     }
     return false;
@@ -452,11 +456,12 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
       return false;
     }
     alias = stripGeneratedSuffix(std::move(alias));
-    if (alias == "vectorAt" || alias == "mapAt") {
+    if (alias == "vectorAt" || alias == "mapAt" || alias == "mapAtRef") {
       out = "at";
       return true;
     }
-    if (alias == "vectorAtUnsafe" || alias == "mapAtUnsafe") {
+    if (alias == "vectorAtUnsafe" || alias == "mapAtUnsafe" ||
+        alias == "mapAtUnsafeRef") {
       out = "at_unsafe";
       return true;
     }

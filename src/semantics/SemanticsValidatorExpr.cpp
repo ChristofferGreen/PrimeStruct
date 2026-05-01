@@ -714,7 +714,27 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         methodCompatibilitySetup.promoteCapacityToBuiltinValidation;
     methodResolutionContext.unavailableMethodDiagnostic =
         methodCompatibilitySetup.unavailableMethodDiagnostic;
+    const bool isIndexedArgsPackMapMethodReceiver = [&]() {
+      if (!expr.isMethodCall || expr.args.empty() ||
+          !this->isIndexedArgsPackMapReceiverTarget(
+              expr.args.front(), dispatchBootstrap.dispatchResolvers)) {
+        return false;
+      }
+      std::string methodName = normalizeCollectionMethodName(expr.name);
+      const size_t slash = methodName.find_last_of('/');
+      if (slash != std::string::npos) {
+        methodName = methodName.substr(slash + 1);
+      }
+      return methodName == "count" || methodName == "count_ref" ||
+             methodName == "size" ||
+             methodName == "contains" || methodName == "contains_ref" ||
+             methodName == "tryAt" || methodName == "tryAt_ref" ||
+             methodName == "at" || methodName == "at_ref" ||
+             methodName == "at_unsafe" || methodName == "at_unsafe_ref" ||
+             methodName == "insert" || methodName == "insert_ref";
+    }();
     if (expr.isMethodCall && !expr.args.empty() &&
+        !isIndexedArgsPackMapMethodReceiver &&
         expr.args.front().kind == Expr::Kind::Call) {
       if (!validateExpr(params, locals, expr.args.front())) {
         return false;

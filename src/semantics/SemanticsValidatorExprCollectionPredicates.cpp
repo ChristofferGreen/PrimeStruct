@@ -247,13 +247,19 @@ bool SemanticsValidator::isIndexedArgsPackMapReceiverTarget(
   std::string elemType;
   std::string keyType;
   std::string valueType;
-  return (((dispatchResolvers.resolveIndexedArgsPackElementType != nullptr &&
-            dispatchResolvers.resolveIndexedArgsPackElementType(receiverExpr, elemType)) ||
-           (dispatchResolvers.resolveWrappedIndexedArgsPackElementType != nullptr &&
-            dispatchResolvers.resolveWrappedIndexedArgsPackElementType(receiverExpr, elemType)) ||
-           (dispatchResolvers.resolveDereferencedIndexedArgsPackElementType != nullptr &&
-            dispatchResolvers.resolveDereferencedIndexedArgsPackElementType(receiverExpr, elemType))) &&
-          extractMapKeyValueTypesFromTypeText(elemType, keyType, valueType));
+  if (!((dispatchResolvers.resolveIndexedArgsPackElementType != nullptr &&
+         dispatchResolvers.resolveIndexedArgsPackElementType(receiverExpr, elemType)) ||
+        (dispatchResolvers.resolveWrappedIndexedArgsPackElementType != nullptr &&
+         dispatchResolvers.resolveWrappedIndexedArgsPackElementType(receiverExpr, elemType)) ||
+        (dispatchResolvers.resolveDereferencedIndexedArgsPackElementType != nullptr &&
+         dispatchResolvers.resolveDereferencedIndexedArgsPackElementType(receiverExpr, elemType)))) {
+    return false;
+  }
+  const std::string unwrappedElemType =
+      normalizeBindingTypeName(unwrapReferencePointerTypeText(elemType));
+  const std::string mapElemType =
+      unwrappedElemType.empty() ? elemType : unwrappedElemType;
+  return extractMapKeyValueTypesFromTypeText(mapElemType, keyType, valueType);
 }
 
 bool SemanticsValidator::validateCollectionElementType(

@@ -78,6 +78,9 @@ bool SemanticsValidator::validateExprMethodCallTarget(
         resolveExperimentalMapTarget(target, keyType, valueType)) {
       return true;
     }
+    if (isIndexedArgsPackMapReceiverTarget(target, dispatchResolvers)) {
+      return true;
+    }
     std::string inferredTypeText;
     return inferQueryExprTypeText(target, params, locals, inferredTypeText) &&
            returnsMapCollectionType(inferredTypeText);
@@ -143,10 +146,6 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   if (!removedMapMethodPath.empty()) {
     return failMethodResolutionDiagnostic("unknown method: " + removedMapMethodPath);
   }
-  if (context.hasVectorHelperCallResolution) {
-    resolvedMethod = false;
-    return true;
-  }
   if (expr.args.empty()) {
     return failMethodResolutionDiagnostic("method call missing receiver");
   }
@@ -154,6 +153,79 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   hasMethodReceiverIndex = true;
   methodReceiverIndex = 0;
   bool isBuiltinMethod = false;
+  auto resolveIndexedArgsPackMapMethod = [&]() -> bool {
+    if (!(normalizedMethodName == "count" ||
+          normalizedMethodName == "count_ref" ||
+          normalizedMethodName == "size" ||
+          normalizedMethodName == "contains" ||
+          normalizedMethodName == "contains_ref" ||
+          normalizedMethodName == "tryAt" ||
+          normalizedMethodName == "tryAt_ref" ||
+          normalizedMethodName == "at" ||
+          normalizedMethodName == "at_ref" ||
+          normalizedMethodName == "at_unsafe" ||
+          normalizedMethodName == "at_unsafe_ref" ||
+          normalizedMethodName == "insert" ||
+          normalizedMethodName == "insert_ref")) {
+      return false;
+    }
+    const Expr &receiverExpr = expr.args.front();
+    std::string elemType;
+    bool borrowedReceiver = false;
+    if (dispatchResolvers.resolveIndexedArgsPackElementType != nullptr &&
+        dispatchResolvers.resolveIndexedArgsPackElementType(receiverExpr, elemType)) {
+      const std::string unwrapped = unwrapReferencePointerTypeText(elemType);
+      borrowedReceiver = !unwrapped.empty() &&
+                         normalizeBindingTypeName(unwrapped) !=
+                             normalizeBindingTypeName(elemType);
+    } else if (dispatchResolvers.resolveWrappedIndexedArgsPackElementType != nullptr &&
+               dispatchResolvers.resolveWrappedIndexedArgsPackElementType(receiverExpr, elemType)) {
+      borrowedReceiver = false;
+    } else if (dispatchResolvers.resolveDereferencedIndexedArgsPackElementType != nullptr &&
+               dispatchResolvers.resolveDereferencedIndexedArgsPackElementType(receiverExpr, elemType)) {
+      borrowedReceiver = false;
+    } else {
+      return false;
+    }
+    std::string keyType;
+    std::string valueType;
+    const std::string unwrappedElemType =
+        normalizeBindingTypeName(unwrapReferencePointerTypeText(elemType));
+    const std::string mapElemType =
+        unwrappedElemType.empty() ? elemType : unwrappedElemType;
+    if (!extractMapKeyValueTypesFromTypeText(mapElemType, keyType, valueType)) {
+      return false;
+    }
+    std::string helperName = normalizedMethodName;
+    if (borrowedReceiver) {
+      if (helperName == "count") {
+        helperName = "count_ref";
+      } else if (helperName == "contains") {
+        helperName = "contains_ref";
+      } else if (helperName == "tryAt") {
+        helperName = "tryAt_ref";
+      } else if (helperName == "at") {
+        helperName = "at_ref";
+      } else if (helperName == "at_unsafe") {
+        helperName = "at_unsafe_ref";
+      } else if (helperName == "insert") {
+        helperName = "insert_ref";
+      }
+    }
+    resolved = preferredMapMethodTargetForCall(params, locals, receiverExpr,
+                                              helperName);
+    isBuiltinMethod = resolved.rfind("/std/collections/map/", 0) == 0 &&
+                      (shouldBuiltinValidateCurrentMapWrapperHelper(helperName) ||
+                       hasImportedDefinitionPath(resolved));
+    return true;
+  };
+  const bool hasIndexedArgsPackMapMethodTarget =
+      resolveIndexedArgsPackMapMethod();
+  if (context.hasVectorHelperCallResolution &&
+      !hasIndexedArgsPackMapMethodTarget) {
+    resolvedMethod = false;
+    return true;
+  }
   const bool hasBlockArgs = expr.hasBodyArguments || !expr.bodyArguments.empty();
   auto shouldRewriteExperimentalVectorCompatibilityMethodTargetToCanonical =
       [&](std::string_view methodTarget) {
@@ -166,7 +238,8 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   };
   std::string vectorMethodTarget;
   bool resolvedCanonicalVectorCompatibilityMethod = false;
-  if (isVectorCompatibilityMethod &&
+  if (hasIndexedArgsPackMapMethodTarget) {
+  } else if (isVectorCompatibilityMethod &&
       expr.namespacePrefix != "vector" &&
       expr.namespacePrefix != "/vector" &&
       expr.namespacePrefix != "std/collections/vector" &&

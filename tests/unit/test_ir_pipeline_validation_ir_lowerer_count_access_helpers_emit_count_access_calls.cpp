@@ -285,7 +285,7 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
@@ -322,7 +322,7 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
             },

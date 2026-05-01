@@ -691,8 +691,14 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     std::string indexedElemType;
     std::string keyType;
     std::string valueType;
-    if (!resolveArgsPackAccessTarget(*accessReceiver, indexedElemType) ||
-        !extractMapKeyValueTypesFromTypeText(indexedElemType, keyType, valueType)) {
+    if (!resolveArgsPackAccessTarget(*accessReceiver, indexedElemType)) {
+      return false;
+    }
+    const std::string unwrappedIndexedElemType =
+        normalizeBindingTypeName(unwrapReferencePointerTypeText(indexedElemType));
+    const std::string indexedMapTypeText =
+        unwrappedIndexedElemType.empty() ? indexedElemType : unwrappedIndexedElemType;
+    if (!extractMapKeyValueTypesFromTypeText(indexedMapTypeText, keyType, valueType)) {
       return false;
     }
     resolvedOut = preferredMapMethodTargetForCall(params, locals, receiverExpr, helperName);

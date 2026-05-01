@@ -2237,11 +2237,18 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     std::string indexedElemType;
     std::string keyType;
     std::string valueType;
+    auto isMapElementType = [&](const std::string &typeText) {
+      const std::string unwrappedType =
+          normalizeBindingTypeName(unwrapReferencePointerTypeText(typeText));
+      const std::string mapTypeText =
+          unwrappedType.empty() ? typeText : unwrappedType;
+      return extractMapKeyValueTypesFromTypeText(mapTypeText, keyType, valueType);
+    };
     const bool resolvedIndexedMapType =
         ((resolveIndexedArgsPackElementType(receiverExpr, indexedElemType) ||
           resolveWrappedIndexedArgsPackElementType(receiverExpr, indexedElemType) ||
           resolveDereferencedIndexedArgsPackElementType(receiverExpr, indexedElemType)) &&
-         extractMapKeyValueTypesFromTypeText(indexedElemType, keyType, valueType));
+         isMapElementType(indexedElemType));
     const bool resolvedReceiverPackType = [&]() {
       std::string accessName;
       if (!getBuiltinArrayAccessName(receiverExpr, accessName)) {
@@ -2250,7 +2257,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       const Expr *accessReceiver = resolveBuiltinAccessReceiverExpr(receiverExpr);
       return accessReceiver != nullptr &&
              resolveArgsPackAccessTarget(*accessReceiver, indexedElemType) &&
-             extractMapKeyValueTypesFromTypeText(indexedElemType, keyType, valueType);
+             isMapElementType(indexedElemType);
     }();
     if (!resolvedIndexedMapType && !resolvedReceiverPackType) {
       return false;
@@ -2263,6 +2270,15 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return isResolvedPublishedMapConstructorPath(resolveCalleePath(receiverExpr));
   };
+  if ((normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
+       normalizedMethodName == "size" ||
+       normalizedMethodName == "contains" || normalizedMethodName == "contains_ref" ||
+       normalizedMethodName == "tryAt" || normalizedMethodName == "tryAt_ref" ||
+       isCanonicalMapAccessMethodName(normalizedMethodName) ||
+       normalizedMethodName == "insert" || normalizedMethodName == "insert_ref") &&
+      setIndexedArgsPackMapMethodTarget(receiver, normalizedMethodName)) {
+    return true;
+  }
   auto setMethodTargetFromTypeText =
       [&](const std::string &typeText, const std::string &typeNamespace) -> bool {
     const std::string normalizedType =
@@ -2665,18 +2681,21 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
                                                         removedVectorAccessCompatibilityPath);
           }
         }
-        auto accessDefIt = defMap_.find(resolveCalleePath(receiver));
-        if (accessDefIt != defMap_.end() && accessDefIt->second != nullptr) {
-          BindingInfo inferredReturn;
-          if (inferDefinitionReturnBinding(*accessDefIt->second, inferredReturn)) {
-            const std::string inferredTypeText =
-                inferredReturn.typeTemplateArg.empty()
-                    ? inferredReturn.typeName
-                    : inferredReturn.typeName + "<" + inferredReturn.typeTemplateArg + ">";
-            if (setMethodTargetFromTypeText(
-                    inferredTypeText,
-                    accessDefIt->second->namespacePrefix)) {
-              return true;
+        std::string indexedArgsPackElemType;
+        if (!resolveArgsPackAccessTarget(accessReceiver, indexedArgsPackElemType)) {
+          auto accessDefIt = defMap_.find(resolveCalleePath(receiver));
+          if (accessDefIt != defMap_.end() && accessDefIt->second != nullptr) {
+            BindingInfo inferredReturn;
+            if (inferDefinitionReturnBinding(*accessDefIt->second, inferredReturn)) {
+              const std::string inferredTypeText =
+                  inferredReturn.typeTemplateArg.empty()
+                      ? inferredReturn.typeName
+                      : inferredReturn.typeName + "<" + inferredReturn.typeTemplateArg + ">";
+              if (setMethodTargetFromTypeText(
+                      inferredTypeText,
+                      accessDefIt->second->namespacePrefix)) {
+                return true;
+              }
             }
           }
         }
@@ -3131,6 +3150,29 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         canonicalCollectionHelperName == "ref_ref" ||
         canonicalCollectionHelperName == "to_aos" ||
         canonicalCollectionHelperName == "to_aos_ref";
+    if (normalizedPointeeCollectionTypePath == "/map" &&
+        (normalizedMethodName == "count" ||
+         normalizedMethodName == "contains" ||
+         normalizedMethodName == "tryAt" ||
+         normalizedMethodName == "at" ||
+         normalizedMethodName == "at_unsafe" ||
+         normalizedMethodName == "insert")) {
+      std::string borrowedHelperName = normalizedMethodName;
+      if (borrowedHelperName == "count") {
+        borrowedHelperName = "count_ref";
+      } else if (borrowedHelperName == "contains") {
+        borrowedHelperName = "contains_ref";
+      } else if (borrowedHelperName == "tryAt") {
+        borrowedHelperName = "tryAt_ref";
+      } else if (borrowedHelperName == "at") {
+        borrowedHelperName = "at_ref";
+      } else if (borrowedHelperName == "at_unsafe") {
+        borrowedHelperName = "at_unsafe_ref";
+      } else if (borrowedHelperName == "insert") {
+        borrowedHelperName = "insert_ref";
+      }
+      return setPreferredMapMethodTarget(receiver, borrowedHelperName);
+    }
     if (normalizedPointeeCollectionTypePath == "/soa_vector" &&
         isCanonicalBorrowedSoaWrapperMethod) {
       return setCollectionMethodTarget(

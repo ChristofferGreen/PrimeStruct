@@ -610,7 +610,21 @@ void applyArgsPackElementStructMetadata(const Expr &param,
   Transform syntheticTransform;
   std::string base;
   std::string arg;
-  if (splitTemplateTypeName(elementTypeText, base, arg)) {
+  bool unwrappedPointerLikeElementType = false;
+  const std::string structElementTypeText = [&]() {
+    std::string wrappedBase;
+    std::string wrappedArg;
+    if (!splitTemplateTypeName(elementTypeText, wrappedBase, wrappedArg)) {
+      return trimTemplateTypeText(elementTypeText);
+    }
+    wrappedBase = trimTemplateTypeText(wrappedBase);
+    if (wrappedBase != "Reference" && wrappedBase != "Pointer") {
+      return trimTemplateTypeText(elementTypeText);
+    }
+    unwrappedPointerLikeElementType = true;
+    return trimTemplateTypeText(wrappedArg);
+  }();
+  if (splitTemplateTypeName(structElementTypeText, base, arg)) {
     syntheticTransform.name = trimTemplateTypeText(base);
     if (!arg.empty()) {
       std::vector<std::string> templateArgs;
@@ -621,13 +635,16 @@ void applyArgsPackElementStructMetadata(const Expr &param,
       }
     }
   } else {
-    syntheticTransform.name = trimTemplateTypeText(elementTypeText);
+    syntheticTransform.name = trimTemplateTypeText(structElementTypeText);
   }
   syntheticBinding.transforms.push_back(std::move(syntheticTransform));
 
   LocalInfo elementInfo = infoOut;
-  elementInfo.kind = (infoOut.argsPackElementKind == LocalInfo::Kind::Value) ? LocalInfo::Kind::Value
-                                                                              : infoOut.argsPackElementKind;
+  elementInfo.kind =
+      (infoOut.argsPackElementKind == LocalInfo::Kind::Value ||
+       unwrappedPointerLikeElementType)
+          ? LocalInfo::Kind::Value
+          : infoOut.argsPackElementKind;
   elementInfo.isArgsPack = false;
   applyStructArrayInfo(syntheticBinding, elementInfo);
   applyStructValueInfo(syntheticBinding, elementInfo);

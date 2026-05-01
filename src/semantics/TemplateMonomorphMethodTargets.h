@@ -229,6 +229,57 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     return std::string(helperName);
   };
   const Expr &receiver = expr.args.front();
+  auto resolveIndexedArgsPackMapMethodTarget = [&]() -> bool {
+    if (receiver.kind != Expr::Kind::Call || receiver.isBinding ||
+        receiver.isMethodCall || receiver.args.size() != 2 ||
+        (!isSimpleCallName(receiver, "at") &&
+         !isSimpleCallName(receiver, "at_unsafe"))) {
+      return false;
+    }
+    const Expr &packReceiver = receiver.args.front();
+    if (packReceiver.kind != Expr::Kind::Name) {
+      return false;
+    }
+    auto bindingIt = locals.find(packReceiver.name);
+    if (bindingIt == locals.end()) {
+      return false;
+    }
+    std::string elemType;
+    if (!getArgsPackElementType(bindingIt->second, elemType)) {
+      return false;
+    }
+    std::string keyType;
+    std::string valueType;
+    if (!extractMapKeyValueTypesFromTypeText(elemType, keyType, valueType)) {
+      return false;
+    }
+    std::string helperName = normalizeCollectionMethodName("map", methodName);
+    std::string base;
+    std::string argText;
+    const bool receiverIsWrapped =
+        splitTemplateTypeName(normalizeBindingTypeName(elemType), base,
+                              argText) &&
+        (normalizeBindingTypeName(base) == "Reference" ||
+         normalizeBindingTypeName(base) == "Pointer");
+    if (receiverIsWrapped) {
+      if (helperName == "count") {
+        helperName = "count_ref";
+      } else if (helperName == "contains") {
+        helperName = "contains_ref";
+      } else if (helperName == "tryAt") {
+        helperName = "tryAt_ref";
+      } else if (helperName == "at") {
+        helperName = "at_ref";
+      } else if (helperName == "at_unsafe") {
+        helperName = "at_unsafe_ref";
+      } else if (helperName == "insert") {
+        helperName = "insert_ref";
+      }
+    }
+    pathOut = selectHelperOverloadPath(
+        expr, "/std/collections/map/" + helperName, ctx);
+    return true;
+  };
   bool isBorrowedSoaReceiver = false;
   if (receiver.kind == Expr::Kind::Name && normalizeBindingTypeName(receiver.name) == "FileError") {
     if (methodName == "result") {
@@ -324,6 +375,9 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
         }
       }
     }
+  }
+  if (resolveIndexedArgsPackMapMethodTarget()) {
+    return true;
   }
   if (typeName.empty()) {
     return false;

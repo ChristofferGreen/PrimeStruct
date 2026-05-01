@@ -5446,6 +5446,70 @@ std::string canonicalBuiltinMapInsertSurfacePath(bool receiverIsReference) {
       receiverIsReference ? "insert_ref" : "insert");
 }
 
+std::string resolveBuiltinMapReadSurfaceMemberName(std::string_view name) {
+  std::string normalizedName(name);
+  if (!normalizedName.empty() && normalizedName.front() == '/') {
+    normalizedName.erase(normalizedName.begin());
+  }
+  constexpr std::string_view canonicalPrefix = "std/collections/map/";
+  constexpr std::string_view aliasPrefix = "map/";
+  if (normalizedName.rfind(canonicalPrefix, 0) == 0) {
+    normalizedName.erase(0, canonicalPrefix.size());
+    name = normalizedName;
+  } else if (normalizedName.rfind(aliasPrefix, 0) == 0) {
+    normalizedName.erase(0, aliasPrefix.size());
+    name = normalizedName;
+  }
+  normalizedName = std::string(name);
+  const size_t generatedSuffix = normalizedName.find("__t");
+  if (generatedSuffix != std::string::npos) {
+    normalizedName.erase(generatedSuffix);
+    name = normalizedName;
+  }
+  if (name == "count" || name == "count_ref" || name == "size" ||
+      name == "contains" || name == "contains_ref" ||
+      name == "tryAt" || name == "tryAt_ref" ||
+      name == "at" || name == "at_ref" ||
+      name == "at_unsafe" || name == "at_unsafe_ref") {
+    return name == "size" ? std::string("count") : std::string(name);
+  }
+  if (name == "mapCount") {
+    return "count";
+  }
+  if (name == "mapCountRef") {
+    return "count_ref";
+  }
+  if (name == "mapContains") {
+    return "contains";
+  }
+  if (name == "mapContainsRef") {
+    return "contains_ref";
+  }
+  if (name == "mapTryAt") {
+    return "tryAt";
+  }
+  if (name == "mapTryAtRef") {
+    return "tryAt_ref";
+  }
+  if (name == "mapAt") {
+    return "at";
+  }
+  if (name == "mapAtRef") {
+    return "at_ref";
+  }
+  if (name == "mapAtUnsafe") {
+    return "at_unsafe";
+  }
+  if (name == "mapAtUnsafeRef") {
+    return "at_unsafe_ref";
+  }
+  return {};
+}
+
+bool isBuiltinMapReadHelperName(std::string_view name) {
+  return !resolveBuiltinMapReadSurfaceMemberName(name).empty();
+}
+
 bool isBuiltinMapInsertValueHelperName(std::string_view name) {
   return resolveBuiltinMapInsertSurfaceMemberName(name) == "insert";
 }
@@ -5559,6 +5623,20 @@ std::optional<semantics::BindingInfo> resolveBuiltinMapInsertReceiverBinding(
     return bindingInfoFromTypeText(borrowedBinding->typeTemplateArg);
   }
 
+  std::string accessName;
+  if (semantics::getBuiltinArrayAccessName(expr, accessName) &&
+      expr.args.size() == 2 && expr.args.front().kind == Expr::Kind::Name) {
+    auto packIt = bindings.find(expr.args.front().name);
+    if (packIt == bindings.end()) {
+      return std::nullopt;
+    }
+    std::string elemType;
+    if (!semantics::getArgsPackElementType(packIt->second, elemType)) {
+      return std::nullopt;
+    }
+    return bindingInfoFromTypeText(elemType);
+  }
+
   if (expr.kind == Expr::Kind::Call && !expr.isMethodCall) {
     for (const std::string &candidatePath :
          candidateDefinitionPaths(expr, definitionNamespace)) {
@@ -5593,6 +5671,66 @@ void rewriteBuiltinMapInsertExpr(
         definitionNamespace);
   }
   if (expr.kind != Expr::Kind::Call || expr.args.empty()) {
+    return;
+  }
+
+  const bool matchesBuiltinReadMethod =
+      expr.isMethodCall && isBuiltinMapReadHelperName(expr.name);
+  const std::string scopedExprName =
+      !expr.namespacePrefix.empty() && expr.name.find('/') == std::string::npos
+          ? expr.namespacePrefix + "/" + expr.name
+          : expr.name;
+  const std::string directReadHelper =
+      !expr.isMethodCall ? resolveBuiltinMapReadSurfaceMemberName(scopedExprName)
+                         : std::string{};
+  const bool matchesBuiltinAccessCall =
+      directReadHelper == "at" || directReadHelper == "at_unsafe";
+  if (matchesBuiltinReadMethod || matchesBuiltinAccessCall) {
+    const Expr &receiver = expr.args.front();
+    auto receiverBinding = resolveBuiltinMapInsertReceiverBinding(
+        receiver, bindings, definitionMap, structPaths, definitionNamespace);
+    if (!receiverBinding.has_value() ||
+        !isBuiltinMapMutationBinding(*receiverBinding)) {
+      return;
+    }
+    const bool receiverIsReference =
+        isBuiltinMapReferenceBinding(*receiverBinding);
+    std::string helperName(
+        resolveBuiltinMapReadSurfaceMemberName(scopedExprName));
+    if (helperName.empty()) {
+      return;
+    }
+    if (helperName == "count_ref") {
+      helperName = "count";
+    } else if (helperName == "contains_ref") {
+      helperName = "contains";
+    } else if (helperName == "tryAt_ref") {
+      helperName = "tryAt";
+    } else if (helperName == "at_ref") {
+      helperName = "at";
+    } else if (helperName == "at_unsafe_ref") {
+      helperName = "at_unsafe";
+    }
+    std::string keyType;
+    std::string valueType;
+    if (!semantics::extractMapKeyValueTypesFromTypeText(
+            bindingTypeText(*receiverBinding), keyType, valueType)) {
+      return;
+    }
+    expr.isMethodCall = false;
+    expr.isFieldAccess = false;
+    if (matchesBuiltinAccessCall && receiverIsReference) {
+      helperName += "_ref";
+    }
+    if (matchesBuiltinAccessCall) {
+      helperName = "/std/collections/map/" + helperName;
+    }
+    expr.name = helperName;
+    expr.namespacePrefix.clear();
+    if (matchesBuiltinAccessCall) {
+      expr.templateArgs.clear();
+    }
+    expr.argNames.clear();
     return;
   }
 
@@ -5718,6 +5856,16 @@ bool rewriteBuiltinMapInsertMethods(Program &program, std::string &error) {
     for (const Expr &param : def.parameters) {
       if (auto binding = extractParsedBindingInfo(param, &structPaths); binding.has_value()) {
         bindings[param.name] = *binding;
+      } else {
+        for (const auto &transform : param.transforms) {
+          if (transform.name == "args" && transform.templateArgs.size() == 1) {
+            semantics::BindingInfo argsBinding;
+            argsBinding.typeName = "args";
+            argsBinding.typeTemplateArg = transform.templateArgs.front();
+            bindings[param.name] = std::move(argsBinding);
+            break;
+          }
+        }
       }
     }
     std::string definitionNamespace;
