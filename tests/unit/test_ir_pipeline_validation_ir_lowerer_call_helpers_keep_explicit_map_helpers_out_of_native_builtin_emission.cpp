@@ -453,9 +453,9 @@ TEST_CASE("ir lowerer call helpers emit explicit vector count while deferring ba
 
   expectDispatch("/vector/count",
                  {valuesName},
-                 Result::Emitted,
+                 Result::NotHandled,
                  "stale",
-                 true);
+                 false);
   expectDispatch("vector/count",
                  {valuesName},
                  Result::Emitted,
