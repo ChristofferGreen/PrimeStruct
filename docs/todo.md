@@ -461,7 +461,8 @@ Task template:
     native `Result.ok(...)` payload-emission slice is complete for
     semantic-product-backed direct-call payload type facts. The lowerer native
     `Result.ok(...)` payload-emission ID-order correction is complete for
-    stale copied payload type text.
+    stale copied payload type text. The lowerer `on_error` ID consumer slice is
+    complete for semantic-product-backed error-type and bound-arg text facts.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -528,6 +529,10 @@ Task template:
       rejects stale interned return Result metadata that contradicts the
       published callable summary before lowering setup can install the
       inconsistent handler fact.
+    - Completed slice: semantic-product-addressed `on_error` handler setup now
+      resolves interned error-type and bound-arg text IDs before consulting
+      copied on-error fact text, so graph-owned handler metadata cannot be
+      overridden by stale duplicated text.
     - Completed slice: semantic-product query completeness validation now
       rejects stale query facts whose resolved target path contradicts the
       published direct or method call target for the same semantic node.

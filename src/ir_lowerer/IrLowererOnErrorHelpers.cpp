@@ -4,6 +4,7 @@
 #include "primec/Parser.h"
 
 #include <memory>
+#include <string_view>
 #include <utility>
 
 namespace primec::ir_lowerer {
@@ -32,7 +33,17 @@ bool buildOnErrorHandlerFromSemanticFact(const Definition &def,
                                          std::optional<OnErrorHandler> &out,
                                          std::string &error) {
   out = OnErrorHandler{};
-  out->errorType = fact.errorType;
+  if (fact.errorTypeId != InvalidSymbolId) {
+    const std::string_view resolvedErrorType =
+        semanticProgramResolveCallTargetString(semanticProgram, fact.errorTypeId);
+    if (resolvedErrorType.empty()) {
+      error = "missing semantic-product on_error error type id: " + def.fullPath;
+      return false;
+    }
+    out->errorType = std::string(resolvedErrorType);
+  } else {
+    out->errorType = fact.errorType;
+  }
   const auto handlerPath = semanticProgramOnErrorFactHandlerPath(semanticProgram, fact);
   if (fact.handlerPathId == InvalidSymbolId || handlerPath.empty()) {
     error = "missing semantic-product on_error handler path id: " + def.fullPath;
@@ -42,15 +53,31 @@ bool buildOnErrorHandlerFromSemanticFact(const Definition &def,
   out->boundArgs.clear();
   out->boundArgs.reserve(fact.boundArgCount);
 
-  if (fact.boundArgCount == 0) {
-    return true;
+  std::vector<std::string> boundArgTexts;
+  boundArgTexts.reserve(fact.boundArgCount);
+  if (!fact.boundArgTextIds.empty()) {
+    if (fact.boundArgTextIds.size() != fact.boundArgCount) {
+      error = "semantic-product on_error bound arg id mismatch on " + def.fullPath;
+      return false;
+    }
+    for (const SymbolId argTextId : fact.boundArgTextIds) {
+      const std::string_view argText =
+          semanticProgramResolveCallTargetString(semanticProgram, argTextId);
+      if (argTextId == InvalidSymbolId || argText.empty()) {
+        error = "missing semantic-product on_error bound arg text id: " + def.fullPath;
+        return false;
+      }
+      boundArgTexts.emplace_back(argText);
+    }
+  } else {
+    if (fact.boundArgTexts.size() != fact.boundArgCount) {
+      error = "semantic-product on_error bound arg mismatch on " + def.fullPath;
+      return false;
+    }
+    boundArgTexts = fact.boundArgTexts;
   }
 
-  if (fact.boundArgTexts.size() != fact.boundArgCount) {
-    error = "semantic-product on_error bound arg mismatch on " + def.fullPath;
-    return false;
-  }
-  for (const auto &argText : fact.boundArgTexts) {
+  for (const auto &argText : boundArgTexts) {
     Expr argExpr;
     if (!parseTransformArgumentExpr(argText, def.namespacePrefix, argExpr, error)) {
       return false;

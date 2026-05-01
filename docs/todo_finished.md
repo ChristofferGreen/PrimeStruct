@@ -5,6 +5,33 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Completion (May 1, 2026)**
+- [x] TODO-4298: Use on_error ID facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes
+    semantic-product-backed `on_error` handler setup resolve interned
+    error-type and bound-arg text IDs before copied on-error fact text.
+  - implementation_notes:
+    - Keep syntax-only transform parsing, handler path resolution, and bound-arg
+      expression parsing unchanged.
+    - Preserve copied text only as compatibility fallback when interned IDs are
+      absent.
+  - acceptance:
+    - `buildOnErrorByDefinition` resolves `errorTypeId` and
+      `boundArgTextIds` before copied `errorType` / `boundArgTexts`.
+    - Stale copied text cannot override graph-owned interned metadata.
+    - Focused lowerer helper coverage proves the ID-first path.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once semantic-product-backed on-error setup consumes
+    interned error and bound-arg metadata before copied compatibility text.
+  - finished_at: 2026-05-01
+  - evidence: Routed lowerer on-error handler setup through interned error-type
+    and bound-arg text IDs before copied fact text, added stale-text coverage,
+    and documented the remaining TODO-4298 work. Local test execution was
+    skipped per the lite workflow.
+
 **Todo Completion (April 29, 2026)**
 - [x] TODO-4298: Use packed Result facts
   - owner: ai

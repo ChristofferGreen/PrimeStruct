@@ -167,14 +167,16 @@ TEST_CASE("ir lowerer on_error helpers prefer semantic-product metadata") {
   semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
       .definitionPath = "/semantic/main",
       .returnKind = "void",
-      .errorType = "FileError",
+      .errorType = "StaleError",
       .boundArgCount = 1,
-      .boundArgTexts = {"2i32"},
+      .boundArgTexts = {"99i32"},
       .returnResultHasValue = false,
       .returnResultValueType = "",
       .returnResultErrorType = "",
       .semanticNodeId = 22,
       .handlerPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
+      .errorTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
+      .boundArgTextIds = {primec::semanticProgramInternCallTargetString(semanticProgram, "2i32")},
   });
 
   primec::ir_lowerer::OnErrorByDefinition onErrorByDef;
@@ -189,6 +191,64 @@ TEST_CASE("ir lowerer on_error helpers prefer semantic-product metadata") {
   CHECK(onErrorByDef.at("/main")->handlerPath == "/handler");
   REQUIRE(onErrorByDef.at("/main")->boundArgs.size() == 1);
   CHECK(onErrorByDef.at("/main")->boundArgs.front().literalValue == 2);
+}
+
+TEST_CASE("ir lowerer on_error helpers reject missing semantic bound arg ids") {
+  primec::Program program;
+
+  primec::Definition handlerDef;
+  handlerDef.fullPath = "/handler";
+  handlerDef.namespacePrefix = "";
+  handlerDef.semanticNodeId = 21;
+  program.definitions.push_back(handlerDef);
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.namespacePrefix = "";
+  mainDef.semanticNodeId = 22;
+  program.definitions.push_back(mainDef);
+
+  auto resolveExprPath = [](const primec::Expr &expr) {
+    if (!expr.name.empty() && expr.name[0] == '/') {
+      return expr.name;
+    }
+    return std::string("/") + expr.name;
+  };
+  auto definitionExists = [](const std::string &path) { return path == "/handler" || path == "/main"; };
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .semanticNodeId = 21,
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
+  });
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .hasOnError = true,
+      .onErrorHandlerPath = "/handler",
+      .onErrorErrorType = "FileError",
+      .onErrorBoundArgCount = 1,
+      .semanticNodeId = 22,
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+  });
+  semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
+      .definitionPath = "/semantic/main",
+      .returnKind = "void",
+      .errorType = "FileError",
+      .boundArgCount = 1,
+      .boundArgTexts = {"2i32"},
+      .returnResultHasValue = false,
+      .returnResultValueType = "",
+      .returnResultErrorType = "",
+      .semanticNodeId = 22,
+      .handlerPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
+      .errorTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
+      .boundArgTextIds = {primec::InvalidSymbolId},
+  });
+
+  primec::ir_lowerer::OnErrorByDefinition onErrorByDef;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::buildOnErrorByDefinition(
+      program, &semanticProgram, resolveExprPath, definitionExists, onErrorByDef, error));
+  CHECK(error == "missing semantic-product on_error bound arg text id: /main");
 }
 
 TEST_CASE("ir lowerer on_error helpers require definition semantic ids for semantic-product metadata") {
