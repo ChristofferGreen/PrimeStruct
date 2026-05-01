@@ -52,6 +52,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: Namespaced indexed writes can be validated or lowered after access calls have been canonicalized to stdlib legacy helper paths such as `/std/collections/vectorAt__...`, so semantic, IR-lowerer, and emitter array-access classifiers must all recognize those aliases.
 - Evidence: `./primec --emit=ir` on a `/std/image` helper with `values[0i32] = 9i32` reproduced the original semantic rejection until `getBuiltinArrayAccessName` in semantics accepted `vectorAt` aliases; the follow-on IR lowering repro required the matching alias support in `IrLowererBuiltinNameHelpers.cpp` and `EmitterBuiltinCallPathHelpers.cpp`.
 
+### result-ok-arithmetic-payloads-are-syntax-owned
+- Updated: 2026-05-01
+- Tags: ir, semantics, results
+- Fact: Direct `Result.ok(...)` arithmetic payload calls such as `multiply(...)` are syntax-owned builtin payloads and must not require semantic-product query metadata before normal expression-kind inference can classify them.
+- Evidence: The saved release log showed `missing semantic-product Result.ok payload metadata: multiply`; `IrLowererPackedResultHelpers.cpp` now exempts builtin operators from the semantic payload metadata requirement alongside builtin comparisons.
+
 ### semantic-product-routing-completeness-gates-lowering
 - Updated: 2026-05-01
 - Tags: semantics, ir, routing

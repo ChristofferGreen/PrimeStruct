@@ -437,7 +437,10 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
     return ResultOkMethodCallEmitResult::Error;
   }
   ResultOkPayloadSemanticInfo semanticPayload;
+  std::string builtinOperator;
   std::string builtinComparison;
+  const bool isSyntaxOwnedOperatorPayload =
+      getBuiltinOperatorName(expr.args[1], builtinOperator);
   const bool isSyntaxOwnedComparisonPayload =
       getBuiltinComparisonName(expr.args[1], builtinComparison);
   const bool requiresSemanticPayloadInfo =
@@ -447,6 +450,7 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
       expr.args[1].kind == Expr::Kind::Call &&
       !expr.args[1].isMethodCall &&
       !expr.args[1].isFieldAccess &&
+      !isSyntaxOwnedOperatorPayload &&
       !isSyntaxOwnedComparisonPayload;
   const bool hasSemanticPayloadInfo =
       resolveSemanticProductResultOkPayloadInfo(expr.args[1], semanticProductTargets, semanticPayload);

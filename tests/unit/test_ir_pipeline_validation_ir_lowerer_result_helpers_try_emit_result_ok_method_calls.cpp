@@ -1265,6 +1265,71 @@ TEST_CASE("ir lowerer result helpers emit direct Result.ok comparison payloads")
   CHECK(emitCalled);
 }
 
+TEST_CASE("ir lowerer result helpers emit direct Result.ok arithmetic payloads") {
+  using EmitResult = primec::ir_lowerer::ResultOkMethodCallEmitResult;
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr resultType;
+  resultType.kind = primec::Expr::Kind::Name;
+  resultType.name = "Result";
+
+  primec::Expr lhs;
+  lhs.kind = primec::Expr::Kind::Literal;
+  lhs.literalValue = 2;
+
+  primec::Expr rhs = lhs;
+  rhs.literalValue = 3;
+
+  primec::Expr multiplyExpr;
+  multiplyExpr.kind = primec::Expr::Kind::Call;
+  multiplyExpr.name = "multiply";
+  multiplyExpr.semanticNodeId = 1377;
+  multiplyExpr.args = {lhs, rhs};
+
+  primec::Expr okExpr;
+  okExpr.kind = primec::Expr::Kind::Call;
+  okExpr.isMethodCall = true;
+  okExpr.name = "ok";
+  okExpr.args = {resultType, multiplyExpr};
+
+  primec::SemanticProgram semanticProgram;
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+
+  bool inferCalled = false;
+  bool emitCalled = false;
+  std::string error;
+  CHECK(primec::ir_lowerer::tryEmitResultOkCall(
+            okExpr,
+            {},
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              inferCalled = true;
+              return ValueKind::Int32;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return std::string{};
+            },
+            [](const primec::Expr &) -> const primec::Definition * {
+              return nullptr;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              emitCalled = true;
+              return true;
+            },
+            []() { return 17; },
+            [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) {
+              return false;
+            },
+            [&](primec::IrOpcode, uint64_t) {},
+            error,
+            &semanticTargets) ==
+        EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(inferCalled);
+  CHECK(emitCalled);
+}
+
 TEST_CASE("ir lowerer result helpers emit Result.ok payloads from semantic query facts") {
   using EmitResult = primec::ir_lowerer::ResultOkMethodCallEmitResult;
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
