@@ -6,6 +6,31 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 1, 2026)**
+- [x] TODO-4298: Quarantine graph fact recovery indexes
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-01
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that removes local-auto
+    initializer-path, query resolved-path/call-name, and `try(...)`
+    operand-path/source composite lookup maps from the lowerer
+    semantic-product adapter.
+  - acceptance:
+    - `SemanticProductIndex` exposes only semantic-node-id indexes for
+      local-auto, query, and `try(...)` facts.
+    - Published semantic-product composite lookup metadata remains available
+      for inspection/publication, but lowerer adapter consumers cannot recover
+      facts through it.
+    - Focused lowerer adapter tests cover missing semantic ids staying
+      unresolved even when composite published lookups are present, and
+      successful semantic-id facts still win over contradictory composite
+      metadata.
+  - stop_rule: Stop once the lowerer adapter has no local-auto/query/try
+    composite fact maps and source/docs record the remaining TODO-4298 work.
+  - evidence: Source changes remove the lowerer adapter composite indexes and
+    update lowerer adapter tests/docs; local test execution skipped per the
+    lite workflow.
+
 - [x] TODO-4298: Use try result ID facts
   - owner: ai
   - created_at: 2026-04-28

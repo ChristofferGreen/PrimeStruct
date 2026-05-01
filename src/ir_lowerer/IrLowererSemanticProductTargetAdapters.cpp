@@ -52,26 +52,6 @@ void populateSemanticFactIndex(std::unordered_map<KeyT, const EntryT *> &destina
   }
 }
 
-uint64_t makeLocalAutoInitPathBindingNameKey(SymbolId initializerPathId, SymbolId bindingNameId) {
-  return (static_cast<uint64_t>(initializerPathId) << 32) |
-         static_cast<uint64_t>(bindingNameId);
-}
-
-uint64_t makeQueryFactResolvedPathCallNameKey(SymbolId resolvedPathId, SymbolId callNameId) {
-  return (static_cast<uint64_t>(resolvedPathId) << 32) |
-         static_cast<uint64_t>(callNameId);
-}
-
-uint64_t makeTryFactOperandPathSourceKey(SymbolId operandPathId, int sourceLine, int sourceColumn) {
-  const uint64_t lineBits = static_cast<uint64_t>(
-      static_cast<uint32_t>(sourceLine > 0 ? sourceLine : 0));
-  const uint64_t columnBits = static_cast<uint64_t>(
-      static_cast<uint32_t>(sourceColumn > 0 ? sourceColumn : 0));
-  return (static_cast<uint64_t>(operandPathId) << 32) ^
-         (lineBits * 1315423911ULL) ^
-         columnBits;
-}
-
 struct SemanticProductIndexBuilder {
   const SemanticProgram *semanticProgram = nullptr;
 
@@ -144,20 +124,13 @@ struct SemanticProductIndexBuilder {
   }
 
   void buildLocalAutoIndex(SemanticProductIndex &index) const {
-    if (!semanticProgram->publishedRoutingLookups.localAutoFactIndicesByExpr.empty() ||
-        !semanticProgram->publishedRoutingLookups.localAutoFactIndicesByInitPathAndBindingNameId.empty()) {
+    if (!semanticProgram->publishedRoutingLookups.localAutoFactIndicesByExpr.empty()) {
       populateSemanticFactIndex(index.localAutoFactsByExpr,
                                 semanticProgram->publishedRoutingLookups.localAutoFactIndicesByExpr,
-                                semanticProgram->localAutoFacts);
-      populateSemanticFactIndex(index.localAutoFactsByInitPathAndBindingNameId,
-                                semanticProgram->publishedRoutingLookups
-                                    .localAutoFactIndicesByInitPathAndBindingNameId,
                                 semanticProgram->localAutoFacts);
     }
     const auto localAutoFacts = semanticProgramLocalAutoFactView(*semanticProgram);
     index.localAutoFactsByExpr.reserve(index.localAutoFactsByExpr.size() + localAutoFacts.size());
-    index.localAutoFactsByInitPathAndBindingNameId.reserve(
-        index.localAutoFactsByInitPathAndBindingNameId.size() + localAutoFacts.size());
     for (const auto *entry : localAutoFacts) {
       if (entry == nullptr) {
         continue;
@@ -165,31 +138,17 @@ struct SemanticProductIndexBuilder {
       if (entry->semanticNodeId != 0) {
         index.localAutoFactsByExpr.try_emplace(entry->semanticNodeId, entry);
       }
-      if (entry->initializerResolvedPathId == InvalidSymbolId ||
-          entry->bindingNameId == InvalidSymbolId) {
-        continue;
-      }
-      index.localAutoFactsByInitPathAndBindingNameId.try_emplace(
-          makeLocalAutoInitPathBindingNameKey(entry->initializerResolvedPathId, entry->bindingNameId),
-          entry);
     }
   }
 
   void buildQueryIndex(SemanticProductIndex &index) const {
-    if (!semanticProgram->publishedRoutingLookups.queryFactIndicesByExpr.empty() ||
-        !semanticProgram->publishedRoutingLookups.queryFactIndicesByResolvedPathAndCallNameId.empty()) {
+    if (!semanticProgram->publishedRoutingLookups.queryFactIndicesByExpr.empty()) {
       populateSemanticFactIndex(index.queryFactsByExpr,
                                 semanticProgram->publishedRoutingLookups.queryFactIndicesByExpr,
-                                semanticProgram->queryFacts);
-      populateSemanticFactIndex(index.queryFactsByResolvedPathAndCallNameId,
-                                semanticProgram->publishedRoutingLookups
-                                    .queryFactIndicesByResolvedPathAndCallNameId,
                                 semanticProgram->queryFacts);
     }
     const auto queryFacts = semanticProgramQueryFactView(*semanticProgram);
     index.queryFactsByExpr.reserve(index.queryFactsByExpr.size() + queryFacts.size());
-    index.queryFactsByResolvedPathAndCallNameId.reserve(
-        index.queryFactsByResolvedPathAndCallNameId.size() + queryFacts.size());
     for (const auto *entry : queryFacts) {
       if (entry == nullptr) {
         continue;
@@ -197,29 +156,17 @@ struct SemanticProductIndexBuilder {
       if (entry->semanticNodeId != 0) {
         index.queryFactsByExpr.try_emplace(entry->semanticNodeId, entry);
       }
-      if (entry->resolvedPathId == InvalidSymbolId ||
-          entry->callNameId == InvalidSymbolId) {
-        continue;
-      }
-      index.queryFactsByResolvedPathAndCallNameId.try_emplace(
-          makeQueryFactResolvedPathCallNameKey(entry->resolvedPathId, entry->callNameId),
-          entry);
     }
   }
 
   void buildTryIndex(SemanticProductIndex &index) const {
-    if (!semanticProgram->publishedRoutingLookups.tryFactIndicesByExpr.empty() ||
-        !semanticProgram->publishedRoutingLookups.tryFactIndicesByOperandPathAndSource.empty()) {
+    if (!semanticProgram->publishedRoutingLookups.tryFactIndicesByExpr.empty()) {
       populateSemanticFactIndex(index.tryFactsByExpr,
                                 semanticProgram->publishedRoutingLookups.tryFactIndicesByExpr,
-                                semanticProgram->tryFacts);
-      populateSemanticFactIndex(index.tryFactsByOperandPathAndSource,
-                                semanticProgram->publishedRoutingLookups.tryFactIndicesByOperandPathAndSource,
                                 semanticProgram->tryFacts);
     }
     const auto tryFacts = semanticProgramTryFactView(*semanticProgram);
     index.tryFactsByExpr.reserve(index.tryFactsByExpr.size() + tryFacts.size());
-    index.tryFactsByOperandPathAndSource.reserve(index.tryFactsByOperandPathAndSource.size() + tryFacts.size());
     for (const auto *entry : tryFacts) {
       if (entry == nullptr) {
         continue;
@@ -227,16 +174,6 @@ struct SemanticProductIndexBuilder {
       if (entry->semanticNodeId != 0) {
         index.tryFactsByExpr.try_emplace(entry->semanticNodeId, entry);
       }
-      if (entry->operandResolvedPathId == InvalidSymbolId ||
-          entry->sourceLine <= 0 ||
-          entry->sourceColumn <= 0) {
-        continue;
-      }
-      index.tryFactsByOperandPathAndSource.try_emplace(
-          makeTryFactOperandPathSourceKey(entry->operandResolvedPathId,
-                                          entry->sourceLine,
-                                          entry->sourceColumn),
-          entry);
     }
   }
 

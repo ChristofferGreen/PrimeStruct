@@ -464,7 +464,9 @@ Task template:
     stale copied payload type text. The lowerer `on_error` ID consumer slice is
     complete for semantic-product-backed error-type and bound-arg text facts.
     The lowerer try result ID consumer slice is complete for
-    semantic-product-backed value/error type facts.
+    semantic-product-backed value/error type facts. The lowerer graph fact
+    recovery-index quarantine slice is complete for local-auto, query, and
+    `try(...)` adapter indexes.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for

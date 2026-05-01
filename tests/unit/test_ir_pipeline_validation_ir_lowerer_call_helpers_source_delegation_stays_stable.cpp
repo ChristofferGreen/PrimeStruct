@@ -2390,13 +2390,11 @@ TEST_CASE("ir lowerer semantic-product adapter ignores local-auto initializer-pa
 
   const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
   CHECK(adapter.semanticIndex.localAutoFactsByExpr.empty());
-  CHECK(adapter.semanticIndex.localAutoFactsByInitPathAndBindingNameId.count(
-            (static_cast<uint64_t>(initializerPathId) << 32) | static_cast<uint64_t>(bindingNameId)) == 1);
   const auto *localAutoFact = primec::ir_lowerer::findSemanticProductLocalAutoFact(adapter, localBinding);
   CHECK(localAutoFact == nullptr);
 }
 
-TEST_CASE("ir lowerer semantic-product index keeps local-auto path index non-authoritative") {
+TEST_CASE("ir lowerer semantic-product index does not expose local-auto path fallback") {
   primec::Expr initCall;
   initCall.kind = primec::Expr::Kind::Call;
   initCall.name = "id";
@@ -2462,9 +2460,6 @@ TEST_CASE("ir lowerer semantic-product index keeps local-auto path index non-aut
   const auto semanticIndex =
       primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
   CHECK(semanticIndex.localAutoFactsByExpr.empty());
-  CHECK(semanticIndex.localAutoFactsByInitPathAndBindingNameId.count(
-            (static_cast<uint64_t>(initializerPathId) << 32) |
-            static_cast<uint64_t>(bindingNameId)) == 1);
   const auto *localAutoFact =
       primec::ir_lowerer::findSemanticProductLocalAutoFact(
           &semanticProgram, semanticIndex, localBinding);
@@ -2782,8 +2777,6 @@ TEST_CASE("ir lowerer semantic-product adapter ignores query resolved-path fallb
 
   const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
   CHECK(adapter.semanticIndex.queryFactsByExpr.empty());
-  CHECK(adapter.semanticIndex.queryFactsByResolvedPathAndCallNameId.count(
-            (static_cast<uint64_t>(resolvedPathId) << 32) | static_cast<uint64_t>(callNameId)) == 1);
   const auto *queryFact = primec::ir_lowerer::findSemanticProductQueryFact(adapter, queryExpr);
   CHECK(queryFact == nullptr);
 }
@@ -2915,14 +2908,14 @@ TEST_CASE("ir lowerer semantic-product adapter uses raw query semantic-id withou
                         1);
 
   const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
-  CHECK(adapter.semanticIndex.queryFactsByExpr.empty());
+  CHECK(adapter.semanticIndex.queryFactsByExpr.count(8303) == 1);
   const auto *queryFact = primec::ir_lowerer::findSemanticProductQueryFact(adapter, queryExpr);
   REQUIRE(queryFact != nullptr);
   CHECK(queryFact->semanticNodeId == 8303);
   CHECK(queryFact->queryTypeText == "Result<i32, FileError>");
 }
 
-TEST_CASE("ir lowerer semantic-product index keeps query path index non-authoritative") {
+TEST_CASE("ir lowerer semantic-product index does not expose query path fallback") {
   primec::Expr queryExpr;
   queryExpr.kind = primec::Expr::Kind::Call;
   queryExpr.name = "lookup";
@@ -2962,8 +2955,6 @@ TEST_CASE("ir lowerer semantic-product index keeps query path index non-authorit
   const auto semanticIndex =
       primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
   CHECK(semanticIndex.queryFactsByExpr.empty());
-  CHECK(semanticIndex.queryFactsByResolvedPathAndCallNameId.count(
-            (static_cast<uint64_t>(resolvedPathId) << 32) | static_cast<uint64_t>(callNameId)) == 1);
   const auto *queryFact =
       primec::ir_lowerer::findSemanticProductQueryFact(&semanticProgram, semanticIndex, queryExpr);
   CHECK(queryFact == nullptr);
@@ -3020,7 +3011,6 @@ TEST_CASE("ir lowerer semantic-product adapter ignores try operand-path fallback
 
   const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
   CHECK(adapter.semanticIndex.tryFactsByExpr.empty());
-  CHECK(adapter.semanticIndex.tryFactsByOperandPathAndSource.count(tryKey) == 1);
   const auto *tryFact = primec::ir_lowerer::findSemanticProductTryFact(adapter, tryExpr);
   CHECK(tryFact == nullptr);
 }
@@ -3100,7 +3090,7 @@ TEST_CASE("ir lowerer semantic-product adapter uses try semantic-id matches with
   CHECK(tryFact->valueType == "i32");
 }
 
-TEST_CASE("ir lowerer semantic-product index keeps try operand-path index non-authoritative") {
+TEST_CASE("ir lowerer semantic-product index does not expose try operand-path fallback") {
   primec::Expr operandExpr;
   operandExpr.kind = primec::Expr::Kind::Call;
   operandExpr.name = "lookup";
@@ -3145,12 +3135,7 @@ TEST_CASE("ir lowerer semantic-product index keeps try operand-path index non-au
 
   const auto semanticIndex =
       primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
-  const uint64_t tryKey =
-      (static_cast<uint64_t>(operandResolvedPathId) << 32) ^
-      (static_cast<uint64_t>(static_cast<uint32_t>(tryExpr.sourceLine)) * 1315423911ULL) ^
-      static_cast<uint64_t>(static_cast<uint32_t>(tryExpr.sourceColumn));
   CHECK(semanticIndex.tryFactsByExpr.empty());
-  CHECK(semanticIndex.tryFactsByOperandPathAndSource.count(tryKey) == 1);
   const auto *tryFact =
       primec::ir_lowerer::findSemanticProductTryFact(&semanticProgram, semanticIndex, tryExpr);
   CHECK(tryFact == nullptr);

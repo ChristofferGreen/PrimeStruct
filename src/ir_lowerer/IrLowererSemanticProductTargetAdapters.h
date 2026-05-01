@@ -19,11 +19,8 @@ struct SemanticProductIndex {
   std::unordered_map<uint64_t, const SemanticProgramReturnFact *> returnFactsByDefinitionId;
   std::unordered_map<SymbolId, const SemanticProgramReturnFact *> returnFactsByDefinitionPathId;
   std::unordered_map<uint64_t, const SemanticProgramLocalAutoFact *> localAutoFactsByExpr;
-  std::unordered_map<uint64_t, const SemanticProgramLocalAutoFact *> localAutoFactsByInitPathAndBindingNameId;
   std::unordered_map<uint64_t, const SemanticProgramQueryFact *> queryFactsByExpr;
-  std::unordered_map<uint64_t, const SemanticProgramQueryFact *> queryFactsByResolvedPathAndCallNameId;
   std::unordered_map<uint64_t, const SemanticProgramTryFact *> tryFactsByExpr;
-  std::unordered_map<uint64_t, const SemanticProgramTryFact *> tryFactsByOperandPathAndSource;
   std::unordered_map<uint64_t, const SemanticProgramCollectionSpecialization *> collectionSpecializationsByExpr;
   std::unordered_map<uint64_t, const SemanticProgramBindingFact *> bindingFactsByExpr;
 };
