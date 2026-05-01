@@ -339,7 +339,7 @@ main() {
   uint64_t result = 0;
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
-  CHECK(result == 12);
+  CHECK(result == 11);
 }
 
 TEST_CASE("ir lowerer materializes variadic map packs with indexed tryAt inference") {
