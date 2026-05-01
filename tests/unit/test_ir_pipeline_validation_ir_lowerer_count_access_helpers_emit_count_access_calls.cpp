@@ -826,6 +826,33 @@ TEST_CASE("ir lowerer count access helpers build count classifier adapters") {
   countCanonicalToAos.args = {canonicalToAosCall};
   CHECK_FALSE(isArrayCountCall(countCanonicalToAos, locals));
 
+  primec::Expr zeroIndex;
+  zeroIndex.kind = primec::Expr::Kind::Literal;
+  zeroIndex.intWidth = 32;
+  zeroIndex.literalValue = 0;
+
+  primec::Expr borrowedSoaValues;
+  borrowedSoaValues.kind = primec::Expr::Kind::Name;
+  borrowedSoaValues.name = "borrowedSoaValues";
+  primec::ir_lowerer::LocalInfo borrowedSoaPackInfo;
+  borrowedSoaPackInfo.isArgsPack = true;
+  borrowedSoaPackInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  borrowedSoaPackInfo.referenceToVector = true;
+  borrowedSoaPackInfo.isSoaVector = true;
+  locals.emplace("borrowedSoaValues", borrowedSoaPackInfo);
+
+  primec::Expr borrowedSoaAccess;
+  borrowedSoaAccess.kind = primec::Expr::Kind::Call;
+  borrowedSoaAccess.name = "at";
+  borrowedSoaAccess.args = {borrowedSoaValues, zeroIndex};
+  primec::Expr borrowedSoaDeref;
+  borrowedSoaDeref.kind = primec::Expr::Kind::Call;
+  borrowedSoaDeref.name = "dereference";
+  borrowedSoaDeref.args = {borrowedSoaAccess};
+  countEntry.name = "count";
+  countEntry.args = {borrowedSoaDeref};
+  CHECK(isArrayCountCall(countEntry, locals));
+
   primec::Expr stringCount;
   stringCount.kind = primec::Expr::Kind::Call;
   stringCount.name = "count";
@@ -909,6 +936,33 @@ TEST_CASE("ir lowerer count access helpers build bundled classifiers") {
   countCanonicalToAos.name = "count";
   countCanonicalToAos.args = {canonicalToAosCall};
   CHECK_FALSE(classifiers.isArrayCountCall(countCanonicalToAos, locals));
+
+  primec::Expr zeroIndex;
+  zeroIndex.kind = primec::Expr::Kind::Literal;
+  zeroIndex.intWidth = 32;
+  zeroIndex.literalValue = 0;
+
+  primec::Expr pointerSoaValues;
+  pointerSoaValues.kind = primec::Expr::Kind::Name;
+  pointerSoaValues.name = "pointerSoaValues";
+  primec::ir_lowerer::LocalInfo pointerSoaPackInfo;
+  pointerSoaPackInfo.isArgsPack = true;
+  pointerSoaPackInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+  pointerSoaPackInfo.pointerToVector = true;
+  pointerSoaPackInfo.isSoaVector = true;
+  locals.emplace("pointerSoaValues", pointerSoaPackInfo);
+
+  primec::Expr pointerSoaAccess;
+  pointerSoaAccess.kind = primec::Expr::Kind::Call;
+  pointerSoaAccess.name = "at";
+  pointerSoaAccess.args = {pointerSoaValues, zeroIndex};
+  primec::Expr pointerSoaDeref;
+  pointerSoaDeref.kind = primec::Expr::Kind::Call;
+  pointerSoaDeref.name = "dereference";
+  pointerSoaDeref.args = {pointerSoaAccess};
+  countEntry.name = "count";
+  countEntry.args = {pointerSoaDeref};
+  CHECK(classifiers.isArrayCountCall(countEntry, locals));
   CHECK_FALSE(classifiers.isStringCountCall(capacityCall, locals));
 }
 

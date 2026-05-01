@@ -140,6 +140,10 @@ bool isDereferencedCollectionCountTarget(const Expr &, const Expr &target, const
         !info.isSoaVector &&
         ((kind == LocalInfo::Kind::Reference && info.referenceToVector) ||
          (kind == LocalInfo::Kind::Pointer && info.pointerToVector));
+    const bool isSoaVectorTarget =
+        info.isSoaVector &&
+        ((kind == LocalInfo::Kind::Reference && info.referenceToVector) ||
+         (kind == LocalInfo::Kind::Pointer && info.pointerToVector));
     const bool isBufferTarget =
         (kind == LocalInfo::Kind::Reference && info.referenceToBuffer) ||
         (kind == LocalInfo::Kind::Pointer && info.pointerToBuffer);
@@ -147,7 +151,7 @@ bool isDereferencedCollectionCountTarget(const Expr &, const Expr &target, const
         (kind == LocalInfo::Kind::Reference && info.referenceToMap) ||
         (kind == LocalInfo::Kind::Pointer && info.pointerToMap) ||
         hasInferredTypedWrappedMap(info, kind);
-    if (!isArrayTarget && !isVectorTarget && !isBufferTarget && !isMapTarget) {
+    if (!isArrayTarget && !isVectorTarget && !isSoaVectorTarget && !isBufferTarget && !isMapTarget) {
       return false;
     }
     return true;
