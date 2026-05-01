@@ -39,6 +39,8 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
       repoRoot / "src" / "ir_lowerer" / "IrLowererCountAccessHelpers.cpp";
   const std::filesystem::path nativeTailDispatchPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererNativeTailDispatch.cpp";
+  const std::filesystem::path tailDispatchPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h";
   const std::filesystem::path operatorCollectionMutationHelpersPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererOperatorCollectionMutationHelpers.cpp";
   const std::filesystem::path operatorMemoryPointerHelpersPath =
@@ -57,6 +59,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   REQUIRE(std::filesystem::exists(countAccessClassifiersPath));
   REQUIRE(std::filesystem::exists(countAccessHelpersPath));
   REQUIRE(std::filesystem::exists(nativeTailDispatchPath));
+  REQUIRE(std::filesystem::exists(tailDispatchPath));
   REQUIRE(std::filesystem::exists(operatorCollectionMutationHelpersPath));
   REQUIRE(std::filesystem::exists(operatorMemoryPointerHelpersPath));
   REQUIRE(std::filesystem::exists(astCallPathHelpersPath));
@@ -74,6 +77,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   const std::string countAccessClassifiersSource = readText(countAccessClassifiersPath);
   const std::string countAccessHelpersSource = readText(countAccessHelpersPath);
   const std::string nativeTailDispatchSource = readText(nativeTailDispatchPath);
+  const std::string tailDispatchSource = readText(tailDispatchPath);
   const std::string operatorCollectionMutationHelpersSource =
       readText(operatorCollectionMutationHelpersPath);
   const std::string operatorMemoryPointerHelpersSource =
@@ -534,6 +538,10 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(nativeTailDispatchSource.find("NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(") !=
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("const auto countAccessResult = tryEmitCountAccessCall(") !=
+        std::string::npos);
+  CHECK(tailDispatchSource.find("auto stripGeneratedLeafSuffix = [](std::string helperPath)") !=
+        std::string::npos);
+  CHECK(tailDispatchSource.find("return findByPath(canonicalPath);") !=
         std::string::npos);
   CHECK(countAccessHelpersSource.find("bool isExplicitPublishedVectorCountCall(const Expr &expr)") !=
         std::string::npos);

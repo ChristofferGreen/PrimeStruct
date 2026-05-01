@@ -17,29 +17,54 @@
               callee != nullptr) {
             return callee;
           }
+          auto stripGeneratedLeafSuffix = [](std::string helperPath) {
+            const size_t leafStart = helperPath.find_last_of('/');
+            const size_t searchStart =
+                leafStart == std::string::npos ? 0 : leafStart + 1;
+            const size_t generatedSuffix = helperPath.find("__", searchStart);
+            if (generatedSuffix != std::string::npos) {
+              helperPath.erase(generatedSuffix);
+            }
+            return helperPath;
+          };
           auto findDirectHelperDefinition = [&](const std::string &path)
               -> const Definition * {
-            auto defIt = defMap.find(path);
-            if (defIt != defMap.end()) {
-              return defIt->second;
-            }
-            auto matchesGeneratedLeafDefinition = [&](const std::string &candidatePath,
-                                                      const char *marker,
-                                                      size_t markerSize) {
-              return candidatePath.rfind(path, 0) == 0 &&
-                     candidatePath.compare(path.size(), markerSize, marker) == 0 &&
-                     candidatePath.find('/', path.size() + markerSize) ==
-                         std::string::npos;
+            auto findByPath = [&](const std::string &lookupPath)
+                -> const Definition * {
+              auto defIt = defMap.find(lookupPath);
+              if (defIt != defMap.end()) {
+                return defIt->second;
+              }
+              auto matchesGeneratedLeafDefinition =
+                  [&](const std::string &candidatePath,
+                      const char *marker,
+                      size_t markerSize) {
+                    return candidatePath.rfind(lookupPath, 0) == 0 &&
+                           candidatePath.compare(
+                               lookupPath.size(), markerSize, marker) == 0 &&
+                           candidatePath.find('/',
+                                              lookupPath.size() + markerSize) ==
+                               std::string::npos;
+                  };
+              for (const auto &[candidatePath, def] : defMap) {
+                if (def == nullptr) {
+                  continue;
+                }
+                if (matchesGeneratedLeafDefinition(candidatePath, "__t", 3) ||
+                    matchesGeneratedLeafDefinition(candidatePath, "__ov", 4) ||
+                    matchesGeneratedLeafDefinition(candidatePath, "<", 1)) {
+                  return def;
+                }
+              }
+              return nullptr;
             };
-            for (const auto &[candidatePath, def] : defMap) {
-              if (def == nullptr) {
-                continue;
-              }
-              if (matchesGeneratedLeafDefinition(candidatePath, "__t", 3) ||
-                  matchesGeneratedLeafDefinition(candidatePath, "__ov", 4) ||
-                  matchesGeneratedLeafDefinition(candidatePath, "<", 1)) {
-                return def;
-              }
+            if (const Definition *direct = findByPath(path);
+                direct != nullptr) {
+              return direct;
+            }
+            const std::string canonicalPath = stripGeneratedLeafSuffix(path);
+            if (canonicalPath != path) {
+              return findByPath(canonicalPath);
             }
             return nullptr;
           };
