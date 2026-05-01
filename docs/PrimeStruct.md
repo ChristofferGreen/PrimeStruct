@@ -844,6 +844,10 @@ Compile-pipeline publication contract:
   publication path: public definition lookup helpers require `definitionIndicesByPathId` for path-id lookups instead
   of recovering by scanning raw `definitions` storage. Mutable hand-built products may still use the raw scan before
   `freezeSemanticProgramPublishedStorage(...)`.
+- Published fact-family views follow the same rule once the semantic product is frozen by the publication path:
+  per-module `moduleResolvedArtifacts` indexes are the authority for direct-call, method-call, bridge-path,
+  callable-summary, binding, return, collection-specialization, local-auto, query, try, and `on_error` views. Mutable
+  hand-built products may still use the raw flat-storage scan before `freezeSemanticProgramPublishedStorage(...)`.
 - Collection-specialization lookup follows the same published-map authority rule for semantic-node ids: public
   published collection-specialization lookup helpers and the lowerer semantic-product adapter require
   `collectionSpecializationIndicesByExpr` for expression-scoped collection facts instead of recovering by scanning

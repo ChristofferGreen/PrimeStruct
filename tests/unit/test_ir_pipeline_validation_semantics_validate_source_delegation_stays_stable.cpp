@@ -32,7 +32,120 @@ const primec::SemanticProgramModuleResolvedArtifacts *findModuleArtifacts(const 
       });
 }
 
+void populateOneSemanticModuleViewEntry(primec::SemanticProgram &semanticProgram) {
+  semanticProgram.directCallTargets.emplace_back();
+  semanticProgram.methodCallTargets.emplace_back();
+  semanticProgram.bridgePathChoices.emplace_back();
+  semanticProgram.callableSummaries.emplace_back();
+  semanticProgram.bindingFacts.emplace_back();
+  semanticProgram.returnFacts.emplace_back();
+  semanticProgram.collectionSpecializations.emplace_back();
+  semanticProgram.localAutoFacts.emplace_back();
+  semanticProgram.queryFacts.emplace_back();
+  semanticProgram.tryFacts.emplace_back();
+  semanticProgram.onErrorFacts.emplace_back();
+}
+
+void indexOneSemanticModuleViewEntry(primec::SemanticProgramModuleResolvedArtifacts &module) {
+  module.directCallTargetIndices.push_back(0);
+  module.methodCallTargetIndices.push_back(0);
+  module.bridgePathChoiceIndices.push_back(0);
+  module.callableSummaryIndices.push_back(0);
+  module.bindingFactIndices.push_back(0);
+  module.returnFactIndices.push_back(0);
+  module.collectionSpecializationIndices.push_back(0);
+  module.localAutoFactIndices.push_back(0);
+  module.queryFactIndices.push_back(0);
+  module.tryFactIndices.push_back(0);
+  module.onErrorFactIndices.push_back(0);
+}
+
+void checkSemanticModuleViewsEmpty(const primec::SemanticProgram &semanticProgram) {
+  CHECK(primec::semanticProgramDirectCallTargetView(semanticProgram).empty());
+  CHECK(primec::semanticProgramMethodCallTargetView(semanticProgram).empty());
+  CHECK(primec::semanticProgramBridgePathChoiceView(semanticProgram).empty());
+  CHECK(primec::semanticProgramCallableSummaryView(semanticProgram).empty());
+  CHECK(primec::semanticProgramBindingFactView(semanticProgram).empty());
+  CHECK(primec::semanticProgramReturnFactView(semanticProgram).empty());
+  CHECK(primec::semanticProgramCollectionSpecializationView(semanticProgram).empty());
+  CHECK(primec::semanticProgramLocalAutoFactView(semanticProgram).empty());
+  CHECK(primec::semanticProgramQueryFactView(semanticProgram).empty());
+  CHECK(primec::semanticProgramTryFactView(semanticProgram).empty());
+  CHECK(primec::semanticProgramOnErrorFactView(semanticProgram).empty());
+}
+
+void checkSemanticModuleViewsReturnStoredEntry(const primec::SemanticProgram &semanticProgram) {
+  const auto directCallTargets = primec::semanticProgramDirectCallTargetView(semanticProgram);
+  const auto methodCallTargets = primec::semanticProgramMethodCallTargetView(semanticProgram);
+  const auto bridgePathChoices = primec::semanticProgramBridgePathChoiceView(semanticProgram);
+  const auto callableSummaries = primec::semanticProgramCallableSummaryView(semanticProgram);
+  const auto bindingFacts = primec::semanticProgramBindingFactView(semanticProgram);
+  const auto returnFacts = primec::semanticProgramReturnFactView(semanticProgram);
+  const auto collectionSpecializations =
+      primec::semanticProgramCollectionSpecializationView(semanticProgram);
+  const auto localAutoFacts = primec::semanticProgramLocalAutoFactView(semanticProgram);
+  const auto queryFacts = primec::semanticProgramQueryFactView(semanticProgram);
+  const auto tryFacts = primec::semanticProgramTryFactView(semanticProgram);
+  const auto onErrorFacts = primec::semanticProgramOnErrorFactView(semanticProgram);
+
+  REQUIRE(directCallTargets.size() == 1);
+  REQUIRE(methodCallTargets.size() == 1);
+  REQUIRE(bridgePathChoices.size() == 1);
+  REQUIRE(callableSummaries.size() == 1);
+  REQUIRE(bindingFacts.size() == 1);
+  REQUIRE(returnFacts.size() == 1);
+  REQUIRE(collectionSpecializations.size() == 1);
+  REQUIRE(localAutoFacts.size() == 1);
+  REQUIRE(queryFacts.size() == 1);
+  REQUIRE(tryFacts.size() == 1);
+  REQUIRE(onErrorFacts.size() == 1);
+
+  CHECK(directCallTargets.front() == &semanticProgram.directCallTargets.front());
+  CHECK(methodCallTargets.front() == &semanticProgram.methodCallTargets.front());
+  CHECK(bridgePathChoices.front() == &semanticProgram.bridgePathChoices.front());
+  CHECK(callableSummaries.front() == &semanticProgram.callableSummaries.front());
+  CHECK(bindingFacts.front() == &semanticProgram.bindingFacts.front());
+  CHECK(returnFacts.front() == &semanticProgram.returnFacts.front());
+  CHECK(collectionSpecializations.front() == &semanticProgram.collectionSpecializations.front());
+  CHECK(localAutoFacts.front() == &semanticProgram.localAutoFacts.front());
+  CHECK(queryFacts.front() == &semanticProgram.queryFacts.front());
+  CHECK(tryFacts.front() == &semanticProgram.tryFacts.front());
+  CHECK(onErrorFacts.front() == &semanticProgram.onErrorFacts.front());
+}
+
 } // namespace
+
+TEST_CASE("semantic product module views require module indexes after freeze") {
+  primec::SemanticProgram mutableSemanticProgram;
+  populateOneSemanticModuleViewEntry(mutableSemanticProgram);
+
+  checkSemanticModuleViewsReturnStoredEntry(mutableSemanticProgram);
+
+  primec::SemanticProgram rawFrozenSemanticProgram;
+  populateOneSemanticModuleViewEntry(rawFrozenSemanticProgram);
+  primec::freezeSemanticProgramPublishedStorage(rawFrozenSemanticProgram);
+
+  checkSemanticModuleViewsEmpty(rawFrozenSemanticProgram);
+
+  primec::SemanticProgram missingIndexSemanticProgram;
+  populateOneSemanticModuleViewEntry(missingIndexSemanticProgram);
+  primec::SemanticProgramModuleResolvedArtifacts emptyModule;
+  emptyModule.identity.moduleKey = "/main";
+  missingIndexSemanticProgram.moduleResolvedArtifacts.push_back(std::move(emptyModule));
+  primec::freezeSemanticProgramPublishedStorage(missingIndexSemanticProgram);
+
+  checkSemanticModuleViewsEmpty(missingIndexSemanticProgram);
+
+  primec::SemanticProgram mappedSemanticProgram;
+  populateOneSemanticModuleViewEntry(mappedSemanticProgram);
+  primec::SemanticProgramModuleResolvedArtifacts mappedModule;
+  mappedModule.identity.moduleKey = "/main";
+  indexOneSemanticModuleViewEntry(mappedModule);
+  mappedSemanticProgram.moduleResolvedArtifacts.push_back(std::move(mappedModule));
+  primec::freezeSemanticProgramPublishedStorage(mappedSemanticProgram);
+
+  checkSemanticModuleViewsReturnStoredEntry(mappedSemanticProgram);
+}
 
 TEST_CASE("semantics validate publishes allowlisted pilot routing artifacts") {
   const std::string source = R"(

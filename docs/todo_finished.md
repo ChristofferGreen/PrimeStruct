@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 1, 2026)**
+- [x] TODO-4298: Use published module views
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-01
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 fact-family view authority slice that makes
+    frozen published semantic products consume `moduleResolvedArtifacts`
+    indexes for published fact-family views.
+  - acceptance:
+    - Frozen semantic-product views ignore raw flat fact storage when module
+      artifacts are missing or omit a family index.
+    - Mutable hand-built semantic products still expose the raw flat-storage
+      view before `freezeSemanticProgramPublishedStorage(...)`.
+    - Focused coverage proves frozen mapped module artifacts remain visible
+      for direct-call, method-call, bridge-path, callable-summary, binding,
+      return, collection-specialization, local-auto, query, try, and
+      `on_error` views.
+  - stop_rule: Stop once frozen fact-family views require module artifact
+    indexes and docs record the remaining TODO-4298 work.
+  - evidence: Centralized semantic-product view construction, quarantined raw
+    flat-storage scans behind unfrozen products, added focused raw/missing
+    index/mapped frozen view coverage, and skipped local test execution per
+    the lite workflow.
+
 - [x] TODO-4298: Use published definition maps
   - owner: ai
   - created_at: 2026-04-28

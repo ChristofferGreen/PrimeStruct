@@ -489,7 +489,10 @@ Task template:
     published-map authority slice is complete for semantic-node-id lookups.
     The frozen return-fact published-map authority slice is complete for
     definition semantic-node-id lookups. The frozen definition published-map
-    authority slice is complete for path-id lookups.
+    authority slice is complete for path-id lookups. The frozen fact-family
+    view authority slice is complete for module artifact indexes across
+    direct-call, method-call, bridge-path, callable-summary, binding, return,
+    collection-specialization, local-auto, query, try, and `on_error` views.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -552,6 +555,11 @@ Task template:
       no longer recovers missing definition maps after publication freezes the
       semantic product, while mutable hand-built products keep their
       fixture-only scan before freeze.
+    - Completed slice: frozen semantic-product fact-family views now require
+      `moduleResolvedArtifacts` indexes. Raw flat storage no longer recovers
+      missing module artifacts after publication freezes the semantic product,
+      while mutable hand-built products keep their fixture-only scan before
+      freeze.
     - Completed slice: semantic-product-addressed Result-combinator metadata
       now requires published query facts when direct lambda payload analysis
       cannot infer the resulting value kind, covering `Result.map`,
