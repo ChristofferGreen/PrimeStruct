@@ -337,7 +337,7 @@ TEST_CASE("import resolves methods on struct types") {
   const std::string source = R"(
 import /util
 [public struct]
-/util/Widget{} {
+/util/Widget() {
   [i32] value{1i32}
 }
 [public return<int>]
