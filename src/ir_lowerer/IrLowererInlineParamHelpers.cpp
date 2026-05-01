@@ -840,7 +840,8 @@ bool emitInlineDefinitionCallParameters(
       } else if (!emitStructCopySlots(baseLocal, srcPtrLocal, layout.totalSlots)) {
         return false;
       }
-      if (!builtinSoaToAosStructBridge && orderedArg->kind == Expr::Kind::Call) {
+      if (!builtinSoaToAosStructBridge &&
+          shouldDisarmStructCopySourceExpr(*orderedArg)) {
         emitDisarmTemporaryStructAfterCopy(emitInstruction, srcPtrLocal, paramInfo.structTypeName);
       }
       calleeLocals.emplace(param.name, paramInfo);

@@ -549,7 +549,7 @@ bool emitInlinePackedCallParameter(
     if (!emitStructCopySlots(destBaseLocal, srcPtrLocal, structLayout.totalSlots)) {
       return false;
     }
-    if (argExpr.kind == Expr::Kind::Call) {
+    if (shouldDisarmStructCopySourceExpr(argExpr)) {
       emitDisarmTemporaryStructAfterCopy(emitInstruction, srcPtrLocal, paramInfo.structTypeName);
     }
     return true;

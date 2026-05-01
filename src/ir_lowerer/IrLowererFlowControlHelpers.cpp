@@ -240,6 +240,20 @@ void emitDisarmTemporaryStructAfterCopy(const std::function<void(IrOpcode, uint6
   }
 }
 
+bool shouldDisarmStructCopySourceExpr(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call) {
+    return false;
+  }
+  if (isSimpleCallName(expr, "dereference") || isSimpleCallName(expr, "location")) {
+    return false;
+  }
+  std::string accessName;
+  if (getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2) {
+    return false;
+  }
+  return true;
+}
+
 const char *resolveGpuBuiltinLocalName(const std::string &gpuBuiltin) {
   if (gpuBuiltin == "global_id_x") {
     return kGpuGlobalIdXName;

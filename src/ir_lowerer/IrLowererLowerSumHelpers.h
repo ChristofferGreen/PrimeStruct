@@ -789,7 +789,7 @@
           if (!emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, selection.payloadSlotCount)) {
             return false;
           }
-          if (selection.payloadExpr->kind == Expr::Kind::Call) {
+          if (shouldDisarmStructCopySourceExpr(*selection.payloadExpr)) {
             ir_lowerer::emitDisarmTemporaryStructAfterCopy(
                 [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
                 srcPtrLocal,
@@ -835,7 +835,7 @@
         if (!emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, targetPayload.slotCount)) {
           return false;
         }
-        if (mappedExpr.kind == Expr::Kind::Call) {
+        if (shouldDisarmStructCopySourceExpr(mappedExpr)) {
           ir_lowerer::emitDisarmTemporaryStructAfterCopy(
               [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
               srcPtrLocal,
@@ -2115,7 +2115,7 @@
           if (!emitStructCopyFromPtrs(resultLocal, srcPtrLocal, aggregateResultLayout.totalSlots)) {
             return LoweredSumPickEmitResult::Error;
           }
-          if (valueExpr->kind == Expr::Kind::Call) {
+          if (shouldDisarmStructCopySourceExpr(*valueExpr)) {
             ir_lowerer::emitDisarmTemporaryStructAfterCopy(
                 [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
                 srcPtrLocal,

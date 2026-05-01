@@ -89,6 +89,7 @@ bool emitVectorMoveSlot(
 void emitDisarmTemporaryStructAfterCopy(const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
                                         int32_t srcPtrLocal,
                                         const std::string &structPath);
+bool shouldDisarmStructCopySourceExpr(const Expr &expr);
 bool emitCompareToZero(std::vector<IrInstruction> &instructions,
                        LocalInfo::ValueKind kind,
                        bool equals,

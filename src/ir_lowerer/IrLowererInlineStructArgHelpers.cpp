@@ -253,7 +253,7 @@ bool emitInlineStructDefinitionArguments(const std::string &calleePath,
     if (!emitStructCopySlots(baseLocal + field.slotOffset, srcPtrLocal, field.slotCount)) {
       return false;
     }
-    if (arg->kind == Expr::Kind::Call) {
+    if (shouldDisarmStructCopySourceExpr(*arg)) {
       emitDisarmTemporaryStructAfterCopy(emitInstruction, srcPtrLocal, field.structPath);
     }
     LocalInfo fieldInfo;

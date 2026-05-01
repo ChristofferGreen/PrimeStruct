@@ -868,7 +868,7 @@
             if (!emitStructCopySlots(baseLocal, srcPtrLocal, layout.totalSlots)) {
               return false;
             }
-            if (receiverExpr->kind == Expr::Kind::Call) {
+            if (shouldDisarmStructCopySourceExpr(*receiverExpr)) {
               ir_lowerer::emitDisarmTemporaryStructAfterCopy(
                   [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
                   srcPtrLocal,

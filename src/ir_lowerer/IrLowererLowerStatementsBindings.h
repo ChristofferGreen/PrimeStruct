@@ -775,7 +775,7 @@
         if (!emitStructCopySlots(baseLocal, srcPtrLocal, layout.totalSlots)) {
           return false;
         }
-        if (init.kind == Expr::Kind::Call) {
+        if (shouldDisarmStructCopySourceExpr(init)) {
           ir_lowerer::emitDisarmTemporaryStructAfterCopy(
               [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
               srcPtrLocal,
@@ -1035,10 +1035,13 @@
         if (!emitStructCopySlots(baseLocal, srcPtrLocal, layout.totalSlots)) {
           return false;
         }
-        ir_lowerer::emitDisarmTemporaryStructAfterCopy(
-            [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
-            srcPtrLocal,
-            aggregateStructPath);
+        if (stableReturnValueExpr.kind == Expr::Kind::Name ||
+            shouldDisarmStructCopySourceExpr(stableReturnValueExpr)) {
+          ir_lowerer::emitDisarmTemporaryStructAfterCopy(
+              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+              srcPtrLocal,
+              aggregateStructPath);
+        }
         rewrittenReturnLocals = localsIn;
         LocalInfo returnInfo;
         returnInfo.kind = LocalInfo::Kind::Value;

@@ -469,6 +469,40 @@ TEST_CASE("ir lowerer flow helpers disarm soa storage temporaries after copy") {
   checkDisarmAt(instructions, 0, 5u * primec::IrSlotBytes);
 }
 
+TEST_CASE("ir lowerer flow helpers classify borrowed struct copy sources") {
+  primec::Expr localName;
+  localName.kind = primec::Expr::Kind::Name;
+  localName.name = "value";
+  CHECK_FALSE(primec::ir_lowerer::shouldDisarmStructCopySourceExpr(localName));
+
+  primec::Expr temporaryCall;
+  temporaryCall.kind = primec::Expr::Kind::Call;
+  temporaryCall.name = "make_value";
+  CHECK(primec::ir_lowerer::shouldDisarmStructCopySourceExpr(temporaryCall));
+
+  primec::Expr derefCall;
+  derefCall.kind = primec::Expr::Kind::Call;
+  derefCall.name = "dereference";
+  derefCall.args.push_back(localName);
+  CHECK_FALSE(primec::ir_lowerer::shouldDisarmStructCopySourceExpr(derefCall));
+
+  primec::Expr locationCall;
+  locationCall.kind = primec::Expr::Kind::Call;
+  locationCall.name = "location";
+  locationCall.args.push_back(localName);
+  CHECK_FALSE(primec::ir_lowerer::shouldDisarmStructCopySourceExpr(locationCall));
+
+  primec::Expr indexLiteral;
+  indexLiteral.kind = primec::Expr::Kind::Literal;
+  indexLiteral.literalValue = 0;
+  primec::Expr accessCall;
+  accessCall.kind = primec::Expr::Kind::Call;
+  accessCall.name = "at";
+  accessCall.args.push_back(localName);
+  accessCall.args.push_back(indexLiteral);
+  CHECK_FALSE(primec::ir_lowerer::shouldDisarmStructCopySourceExpr(accessCall));
+}
+
 TEST_CASE("ir lowerer flow helpers emit destroy helper calls from ptr locals") {
   const primec::Definition destroyHelper = [] {
     primec::Definition def;
