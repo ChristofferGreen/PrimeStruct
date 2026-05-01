@@ -91,21 +91,12 @@ struct SemanticProductIndexBuilder {
   void buildReturnIndex(SemanticProductIndex &index) const {
     const auto returnFacts = semanticProgramReturnFactView(*semanticProgram);
     index.returnFactsByDefinitionId.reserve(returnFacts.size());
-    index.returnFactsByDefinitionPathId.reserve(returnFacts.size());
     for (const auto *entry : returnFacts) {
       if (entry == nullptr) {
         continue;
       }
       if (entry->semanticNodeId != 0) {
         index.returnFactsByDefinitionId.insert_or_assign(entry->semanticNodeId, entry);
-      }
-      if (entry->definitionPathId == InvalidSymbolId) {
-        continue;
-      }
-      const std::string_view definitionPath =
-          semanticProgramResolveCallTargetString(*semanticProgram, entry->definitionPathId);
-      if (!definitionPath.empty()) {
-        index.returnFactsByDefinitionPathId.insert_or_assign(entry->definitionPathId, entry);
       }
     }
   }

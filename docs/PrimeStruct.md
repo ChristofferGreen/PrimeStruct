@@ -819,6 +819,9 @@ Compile-pipeline publication contract:
   inspection metadata rather than production lowerer lookup surfaces.
 - The same adapter quarantine now applies to `on_error` definition-path indexes: lowerer handler setup resolves
   `on_error` facts by definition semantic id, while definition-path lookup remains a published inspection surface.
+- Return facts follow the same adapter-cache rule for direct definition lookup: the semantic-product adapter no longer
+  materializes a return definition-path index as a recovery surface. The explicit return-by-path helper remains
+  available for call-site consumers that already resolved a callee path.
 - Dump-stage handling should be able to read either the syntax-facing canonical AST dump or the future semantic-product
   dump from the same compile-pipeline success result without re-running semantics.
 - Backend/runtime entrypoints should consume the semantic product from compile-pipeline output once available rather

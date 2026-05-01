@@ -6,6 +6,29 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 1, 2026)**
+- [x] TODO-4298: Quarantine return path cache
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-01
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that removes the return
+    definition-path lookup map from the lowerer semantic-product adapter while
+    preserving the explicit return-by-path helper for call-site consumers that
+    already resolved a callee path.
+  - acceptance:
+    - `SemanticProductIndex` exposes only definition semantic-id lookup for
+      direct return fact lookup.
+    - Return path lookup is not available as a general adapter recovery map.
+    - The explicit `findSemanticProductReturnFactByPath` helper remains
+      available for production consumers that have a resolved callee path.
+    - Focused lowerer adapter tests cover missing definition semantic ids
+      staying unresolved even when return facts carry a definition path.
+  - stop_rule: Stop once the lowerer adapter has no return definition-path
+    fact map and source/docs record the remaining TODO-4298 work.
+  - evidence: Source changes remove the lowerer adapter return definition-path
+    cache and update lowerer adapter tests/docs; local test execution skipped
+    per the lite workflow.
+
 - [x] TODO-4298: Quarantine on_error path index
   - owner: ai
   - created_at: 2026-04-28

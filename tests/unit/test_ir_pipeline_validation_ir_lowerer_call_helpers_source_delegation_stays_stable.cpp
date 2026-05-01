@@ -2171,7 +2171,7 @@ TEST_CASE("ir lowerer semantic-product adapter joins facts by semantic id withou
   CHECK(tryFact->onErrorHandlerPath == "/handler");
 }
 
-TEST_CASE("ir lowerer semantic-product adapter keeps return path index non-authoritative") {
+TEST_CASE("ir lowerer semantic-product adapter does not expose return path fallback") {
   primec::Definition mainDef;
   mainDef.fullPath = "/main";
   mainDef.semanticNodeId = 0;
@@ -2194,16 +2194,12 @@ TEST_CASE("ir lowerer semantic-product adapter keeps return path index non-autho
 
   const auto semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
-  const auto mainPathId =
-      primec::semanticProgramLookupCallTargetStringId(semanticProgram, "/main");
-  REQUIRE(mainPathId.has_value());
   CHECK(semanticTargets.semanticIndex.returnFactsByDefinitionId.empty());
-  CHECK(semanticTargets.semanticIndex.returnFactsByDefinitionPathId.count(*mainPathId) == 1);
   const auto *returnFact = primec::ir_lowerer::findSemanticProductReturnFact(semanticTargets, mainDef);
   CHECK(returnFact == nullptr);
 }
 
-TEST_CASE("ir lowerer semantic-product index keeps return path index non-authoritative") {
+TEST_CASE("ir lowerer semantic-product index does not expose return path fallback") {
   primec::Definition mainDef;
   mainDef.fullPath = "/main";
   mainDef.semanticNodeId = 0;
@@ -2226,11 +2222,7 @@ TEST_CASE("ir lowerer semantic-product index keeps return path index non-authori
 
   const auto semanticIndex =
       primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
-  const auto mainPathId =
-      primec::semanticProgramLookupCallTargetStringId(semanticProgram, "/main");
-  REQUIRE(mainPathId.has_value());
   CHECK(semanticIndex.returnFactsByDefinitionId.empty());
-  CHECK(semanticIndex.returnFactsByDefinitionPathId.count(*mainPathId) == 1);
   const auto *returnFact =
       primec::ir_lowerer::findSemanticProductReturnFact(
           &semanticProgram, semanticIndex, mainDef);

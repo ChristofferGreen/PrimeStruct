@@ -467,7 +467,9 @@ Task template:
     semantic-product-backed value/error type facts. The lowerer graph fact
     recovery-index quarantine slice is complete for local-auto, query, and
     `try(...)` adapter indexes. The lowerer `on_error` definition-path index
-    quarantine slice is complete.
+    quarantine slice is complete. The lowerer return definition-path adapter
+    cache quarantine slice is complete while the explicit return-by-path
+    helper remains available for resolved callee-path consumers.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
