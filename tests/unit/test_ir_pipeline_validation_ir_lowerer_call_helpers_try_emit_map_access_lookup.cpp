@@ -422,7 +422,7 @@ TEST_CASE("ir lowerer call helpers emit array vector indexed access") {
       [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
       error));
   CHECK(error ==
-        "native backend only supports at() on numeric/bool/string arrays or vectors, plus args<Struct>/args<map<K, V>>/args<Pointer<Struct>>/args<Reference<Struct>>/args<Pointer<map<K, V>>>/args<Reference<map<K, V>>>/args<vector<T>>/args<Pointer<vector<T>>>/args<Reference<vector<T>>>/args<Pointer<soa_vector<T>>>/args<Reference<soa_vector<T>>> packs");
+        "native backend only supports at() on numeric/bool/string arrays or vectors, plus args<Struct>/args<map<K, V>>/args<Pointer<T>>/args<Reference<T>>/args<Pointer<Struct>>/args<Reference<Struct>>/args<Pointer<map<K, V>>>/args<Reference<map<K, V>>>/args<vector<T>>/args<Pointer<vector<T>>>/args<Reference<vector<T>>>/args<Pointer<soa_vector<T>>>/args<Reference<soa_vector<T>>> packs");
   CHECK(inferCalls == 0);
   CHECK(allocCalls == 0);
   CHECK(emitExprCalls == 0);
@@ -586,6 +586,87 @@ TEST_CASE("ir lowerer call helpers emit array vector indexed access") {
   CHECK(instructions[4].op == primec::IrOpcode::LoadLocal);
   CHECK(instructions[4].imm == 60u);
   CHECK(instructions.back().op == primec::IrOpcode::AddI64);
+}
+
+TEST_CASE("ir lowerer call helpers emit scalar borrowed args pack indexed access") {
+  using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
+  using LocalKind = primec::ir_lowerer::LocalInfo::Kind;
+
+  primec::Expr targetExpr;
+  targetExpr.kind = primec::Expr::Kind::Name;
+  targetExpr.name = "values";
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Name;
+  indexExpr.name = "idx";
+
+  auto checkScalarPack = [&](LocalKind packElementKind) {
+    primec::ir_lowerer::LocalMap locals;
+    primec::ir_lowerer::LocalInfo argsPackInfo;
+    argsPackInfo.kind = LocalKind::Array;
+    argsPackInfo.isArgsPack = true;
+    argsPackInfo.argsPackElementKind = packElementKind;
+    argsPackInfo.valueKind = Kind::Int32;
+    locals.emplace("values", argsPackInfo);
+
+    const auto resolved =
+        primec::ir_lowerer::resolveArrayVectorAccessTargetInfo(targetExpr, locals);
+    CHECK(resolved.isArrayOrVectorTarget);
+    CHECK(resolved.elemKind == Kind::Int32);
+    CHECK_FALSE(resolved.isVectorTarget);
+    CHECK(resolved.isArgsPackTarget);
+    CHECK(resolved.argsPackElementKind == packElementKind);
+    std::string error;
+    CHECK(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(resolved, error));
+    CHECK(error.empty());
+
+    std::vector<primec::IrInstruction> instructions;
+    int inferCalls = 0;
+    int emitExprCalls = 0;
+    int arrayIndexOutOfBoundsCalls = 0;
+    int allocCalls = 0;
+
+    CHECK(primec::ir_lowerer::emitArrayVectorIndexedAccess(
+        "at",
+        targetExpr,
+        indexExpr,
+        locals,
+        [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          ++inferCalls;
+          return Kind::Int32;
+        },
+        [&]() { return 70 + allocCalls++; },
+        [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+          ++emitExprCalls;
+          if (expr.kind == primec::Expr::Kind::Name && expr.name == "values") {
+            instructions.push_back({primec::IrOpcode::LoadLocal, 12});
+            return true;
+          }
+          instructions.push_back({primec::IrOpcode::PushI32, 1});
+          return true;
+        },
+        [&]() { ++arrayIndexOutOfBoundsCalls; },
+        [&]() { return instructions.size(); },
+        [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+        [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
+        error));
+    CHECK(error.empty());
+    CHECK(inferCalls == 1);
+    CHECK(emitExprCalls == 2);
+    CHECK(arrayIndexOutOfBoundsCalls == 2);
+    REQUIRE(instructions.size() >= 6);
+    CHECK(instructions.front().op == primec::IrOpcode::LoadLocal);
+    CHECK(instructions.front().imm == 12u);
+    CHECK(instructions.back().op == primec::IrOpcode::LoadIndirect);
+    CHECK(std::count_if(instructions.begin(),
+                        instructions.end(),
+                        [](const primec::IrInstruction &instruction) {
+                          return instruction.op == primec::IrOpcode::LoadIndirect;
+                        }) == 2);
+  };
+
+  checkScalarPack(LocalKind::Reference);
+  checkScalarPack(LocalKind::Pointer);
 }
 
 TEST_SUITE_END();

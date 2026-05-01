@@ -610,6 +610,12 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       }
       return true;
     }
+    if (localInfo.argsPackElementKind == LocalInfo::Kind::Reference &&
+        localInfo.valueKind != LocalInfo::ValueKind::Unknown) {
+      info.isArrayOrVectorTarget = true;
+      info.isVectorTarget = false;
+      return true;
+    }
     if (localInfo.argsPackElementKind == LocalInfo::Kind::Pointer &&
         (localInfo.pointerToArray || localInfo.pointerToVector || localInfo.pointerToBuffer ||
          localInfo.pointerToMap || !localInfo.structTypeName.empty())) {
@@ -620,6 +626,12 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       if (localInfo.pointerToMap && dereferenced) {
         info.structTypeName = localInfo.structTypeName;
       }
+      return true;
+    }
+    if (localInfo.argsPackElementKind == LocalInfo::Kind::Pointer &&
+        localInfo.valueKind != LocalInfo::ValueKind::Unknown) {
+      info.isArrayOrVectorTarget = true;
+      info.isVectorTarget = false;
       return true;
     }
     return false;

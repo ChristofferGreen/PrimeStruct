@@ -571,6 +571,13 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   scalarRefArgsInfo.valueKind = Kind::Int32;
   locals.emplace("scalarRefArgs", scalarRefArgsInfo);
 
+  LocalInfo scalarPtrArgsInfo{};
+  scalarPtrArgsInfo.kind = LocalInfo::Kind::Array;
+  scalarPtrArgsInfo.isArgsPack = true;
+  scalarPtrArgsInfo.argsPackElementKind = LocalInfo::Kind::Pointer;
+  scalarPtrArgsInfo.valueKind = Kind::Int32;
+  locals.emplace("scalarPtrArgs", scalarPtrArgsInfo);
+
   primec::Expr arrName;
   arrName.kind = primec::Expr::Kind::Name;
   arrName.name = "arr";
@@ -761,11 +768,23 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
 
   resolved = primec::ir_lowerer::resolveArrayVectorAccessTargetInfo(
       makeDereferencedArgsPackAccess("scalarRefArgs"), locals);
-  CHECK_FALSE(resolved.isArrayOrVectorTarget);
+  CHECK(resolved.isArrayOrVectorTarget);
+  CHECK(resolved.elemKind == Kind::Int32);
+  CHECK_FALSE(resolved.isVectorTarget);
+  CHECK_FALSE(resolved.isArgsPackTarget);
   error.clear();
-  CHECK_FALSE(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(resolved, error));
-  CHECK(error ==
-        "native backend only supports at() on numeric/bool/string arrays or vectors, plus args<Struct>/args<map<K, V>>/args<Pointer<Struct>>/args<Reference<Struct>>/args<Pointer<map<K, V>>>/args<Reference<map<K, V>>>/args<vector<T>>/args<Pointer<vector<T>>>/args<Reference<vector<T>>>/args<Pointer<soa_vector<T>>>/args<Reference<soa_vector<T>>> packs");
+  CHECK(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(resolved, error));
+  CHECK(error.empty());
+
+  resolved = primec::ir_lowerer::resolveArrayVectorAccessTargetInfo(
+      makeDereferencedArgsPackAccess("scalarPtrArgs"), locals);
+  CHECK(resolved.isArrayOrVectorTarget);
+  CHECK(resolved.elemKind == Kind::Int32);
+  CHECK_FALSE(resolved.isVectorTarget);
+  CHECK_FALSE(resolved.isArgsPackTarget);
+  error.clear();
+  CHECK(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(resolved, error));
+  CHECK(error.empty());
 
   primec::Expr plain;
   plain.kind = primec::Expr::Kind::Name;
@@ -804,7 +823,7 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   error.clear();
   CHECK_FALSE(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(resolved, error));
   CHECK(error ==
-        "native backend only supports at() on numeric/bool/string arrays or vectors, plus args<Struct>/args<map<K, V>>/args<Pointer<Struct>>/args<Reference<Struct>>/args<Pointer<map<K, V>>>/args<Reference<map<K, V>>>/args<vector<T>>/args<Pointer<vector<T>>>/args<Reference<vector<T>>>/args<Pointer<soa_vector<T>>>/args<Reference<soa_vector<T>>> packs");
+        "native backend only supports at() on numeric/bool/string arrays or vectors, plus args<Struct>/args<map<K, V>>/args<Pointer<T>>/args<Reference<T>>/args<Pointer<Struct>>/args<Reference<Struct>>/args<Pointer<map<K, V>>>/args<Reference<map<K, V>>>/args<vector<T>>/args<Pointer<vector<T>>>/args<Reference<vector<T>>>/args<Pointer<soa_vector<T>>>/args<Reference<soa_vector<T>>> packs");
 
   primec::ir_lowerer::ArrayVectorAccessTargetInfo stringElem;
   stringElem.isArrayOrVectorTarget = true;
