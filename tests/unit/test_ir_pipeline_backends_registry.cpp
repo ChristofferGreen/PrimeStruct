@@ -1650,16 +1650,21 @@ TEST_CASE("native aggregate pointer dereference calls use semantic-product retur
   const size_t helperPos = source.find("resolveSemanticReturnFactBindingType");
   REQUIRE(helperPos != std::string::npos);
   const size_t idPos = source.find("returnFact.bindingTypeTextId", helperPos);
-  const size_t semanticResolvePos =
-      source.find("semanticProgramResolveCallTargetString(", idPos);
+  const size_t publishedTextPos =
+      source.find("semanticProgramResolvePublishedText(", helperPos);
   const size_t fallbackTextPos =
-      source.find("return trimTemplateTypeText(returnFact.bindingTypeText)", semanticResolvePos);
+      source.find("return trimTemplateTypeText(returnFact.bindingTypeText)", helperPos);
   REQUIRE(idPos != std::string::npos);
-  REQUIRE(semanticResolvePos != std::string::npos);
+  REQUIRE(publishedTextPos != std::string::npos);
   REQUIRE(fallbackTextPos != std::string::npos);
   CHECK(helperPos < idPos);
-  CHECK(idPos < semanticResolvePos);
-  CHECK(semanticResolvePos < fallbackTextPos);
+  CHECK(helperPos < publishedTextPos);
+  CHECK(publishedTextPos < idPos);
+  CHECK(publishedTextPos < fallbackTextPos);
+  const size_t rawStringResolverPos =
+      source.find("semanticProgramResolveCallTargetString(", helperPos);
+  CHECK((rawStringResolverPos == std::string::npos ||
+         rawStringResolverPos > fallbackTextPos));
 
   const size_t resolverPos = source.find("resolveAggregatePointerLikeCallExpr");
   REQUIRE(resolverPos != std::string::npos);
@@ -1697,16 +1702,21 @@ TEST_CASE("native location direct reference calls use semantic-product return fa
   const size_t helperPos = source.find("resolveSemanticReturnFactBindingType");
   REQUIRE(helperPos != std::string::npos);
   const size_t idPos = source.find("returnFact.bindingTypeTextId", helperPos);
-  const size_t semanticResolvePos =
-      source.find("semanticProgramResolveCallTargetString(", idPos);
+  const size_t publishedTextPos =
+      source.find("semanticProgramResolvePublishedText(", helperPos);
   const size_t fallbackTextPos =
-      source.find("return trimTemplateTypeText(returnFact.bindingTypeText)", semanticResolvePos);
+      source.find("return trimTemplateTypeText(returnFact.bindingTypeText)", helperPos);
   REQUIRE(idPos != std::string::npos);
-  REQUIRE(semanticResolvePos != std::string::npos);
+  REQUIRE(publishedTextPos != std::string::npos);
   REQUIRE(fallbackTextPos != std::string::npos);
   CHECK(helperPos < idPos);
-  CHECK(idPos < semanticResolvePos);
-  CHECK(semanticResolvePos < fallbackTextPos);
+  CHECK(helperPos < publishedTextPos);
+  CHECK(publishedTextPos < idPos);
+  CHECK(publishedTextPos < fallbackTextPos);
+  const size_t rawStringResolverPos =
+      source.find("semanticProgramResolveCallTargetString(", helperPos);
+  CHECK((rawStringResolverPos == std::string::npos ||
+         rawStringResolverPos > fallbackTextPos));
 
   const size_t resolverPos = source.find("resolveReferenceReturnCallExpr");
   REQUIRE(resolverPos != std::string::npos);

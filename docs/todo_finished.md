@@ -6,6 +6,34 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 1, 2026)**
+- [x] TODO-4298: Require pointer return text IDs
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-01
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 native pointer/location return text authority
+    slice that makes frozen direct-call return binding type facts resolve
+    through interned IDs instead of copied raw text.
+  - acceptance:
+    - Frozen native aggregate-pointer `dereference(...)` return
+      classification no longer recovers copied return binding type text when
+      the interned binding type ID is missing.
+    - Frozen native reference-return `location(...)` classification no longer
+      recovers copied return binding type text when the interned binding type
+      ID is missing.
+    - Published interned return binding type IDs still produce the same
+      pointer/reference classification even when copied text is stale.
+    - Mutable hand-built semantic products keep their fixture-only copied-text
+      fallback before freeze.
+  - stop_rule: Stop once pointer/location return classification requires
+    interned return binding type text after freeze and docs record the
+    remaining TODO-4298 work.
+  - evidence: Routed pointer/location return binding type resolution through
+    `semanticProgramResolvePublishedText(...)`, updated source-contract
+    coverage, added focused frozen-raw failure and mapped frozen success
+    coverage for `dereference(...)` and `location(...)`, and skipped local
+    test execution per the lite workflow.
+
 - [x] TODO-4298: Require on_error setup text IDs
   - owner: ai
   - created_at: 2026-04-28

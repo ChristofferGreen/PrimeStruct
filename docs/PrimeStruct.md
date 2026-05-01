@@ -917,6 +917,11 @@ Compile-pipeline publication contract:
   argument expressions resolve through interned IDs after publication freezes the semantic product, and copied
   `on_error` fact text is not a recovery path for constructing the handler metadata. Mutable hand-built products may
   still use copied-text fallbacks before `freezeSemanticProgramPublishedStorage(...)`.
+- Native pointer/location return classification uses the same frozen-product rule for semantic return binding text:
+  direct-call `dereference(...)` aggregate-pointer classification and `location(...)` reference-return classification
+  resolve return binding type text through interned IDs after publication freezes the semantic product, and copied
+  return fact text is not a recovery path for those pointer decisions. Mutable hand-built products may still use
+  copied-text fallbacks before `freezeSemanticProgramPublishedStorage(...)`.
 - Callable-summary lookup follows the same published-map authority rule once the semantic product is frozen by the
   publication path: `callableSummaryIndicesByPathId` is the authority, while raw `callableSummaries` scanning remains
   limited to mutable hand-built products before `freezeSemanticProgramPublishedStorage(...)`. Lowerer return-info

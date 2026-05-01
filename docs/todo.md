@@ -525,7 +525,9 @@ Task template:
     authority slice is complete for native `Result.error(...)` /
     `Result.why(...)` query result error facts. The frozen `on_error` setup
     text authority slice is complete for handler error type and bound
-    argument expression facts.
+    argument expression facts. The frozen native pointer/location return
+    text authority slice is complete for aggregate-pointer `dereference(...)`
+    and reference-return `location(...)` classification.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -693,6 +695,13 @@ Task template:
       longer recovers handler metadata after publication freezes the semantic
       product, while mutable hand-built products keep their fixture-only
       copied-text fallback before freeze.
+    - Completed slice: frozen semantic-product native pointer/location return
+      classification now uses `semanticProgramResolvePublishedText(...)` for
+      return binding type facts. Copied return fact text no longer recovers
+      aggregate-pointer `dereference(...)` or reference-return `location(...)`
+      classification after publication freezes the semantic product, while
+      mutable hand-built products keep their fixture-only copied-text fallback
+      before freeze.
     - Completed slice: semantic-product-addressed Result-combinator metadata
       now requires published query facts when direct lambda payload analysis
       cannot infer the resulting value kind, covering `Result.map`,
