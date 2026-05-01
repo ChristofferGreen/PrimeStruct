@@ -309,8 +309,9 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
         resolvedExperimentalMapStructPath(localInfo.structTypeName);
     const bool preserveDirectExperimentalMapStruct =
         isDirectMapStorage && isExperimentalMapStructPath(resolvedStructTypeName);
-    if ((!info.isWrappedMapTarget || dereferenced) &&
-        (!isDirectMapStorage || preserveDirectExperimentalMapStruct)) {
+    if (((!info.isWrappedMapTarget || dereferenced) &&
+         (!isDirectMapStorage || preserveDirectExperimentalMapStruct)) ||
+        (info.isWrappedMapTarget && isExperimentalMapStructPath(resolvedStructTypeName))) {
       info.structTypeName = resolvedStructTypeName;
     }
     return true;
@@ -360,8 +361,9 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
         resolvedExperimentalMapStructPath(localInfo.structTypeName);
     const bool preserveDirectExperimentalMapStruct =
         isDirectMapStorage && isExperimentalMapStructPath(resolvedStructTypeName);
-    if ((!info.isWrappedMapTarget || dereferenced) &&
-        (!isDirectMapStorage || preserveDirectExperimentalMapStruct)) {
+    if (((!info.isWrappedMapTarget || dereferenced) &&
+         (!isDirectMapStorage || preserveDirectExperimentalMapStruct)) ||
+        (info.isWrappedMapTarget && isExperimentalMapStructPath(resolvedStructTypeName))) {
       info.structTypeName = resolvedStructTypeName;
     }
     return true;

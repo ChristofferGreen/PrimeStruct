@@ -345,6 +345,7 @@ TEST_CASE("ir lowerer call helpers resolve and validate map access targets") {
   mapPointerInfo.pointerToMap = true;
   mapPointerInfo.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Bool;
   mapPointerInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  mapPointerInfo.structTypeName = "/std/collections/experimental_map/Map";
   locals.emplace("mapPtr", mapPointerInfo);
 
   primec::Expr mapPtrName;
@@ -354,6 +355,8 @@ TEST_CASE("ir lowerer call helpers resolve and validate map access targets") {
   CHECK(resolved.isMapTarget);
   CHECK(resolved.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
   CHECK(resolved.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(resolved.isWrappedMapTarget);
+  CHECK(resolved.structTypeName.rfind("/std/collections/experimental_map/Map__", 0) == 0);
 
   primec::Expr mapPtrDeref;
   mapPtrDeref.kind = primec::Expr::Kind::Call;
@@ -372,6 +375,7 @@ TEST_CASE("ir lowerer call helpers resolve and validate map access targets") {
   mapPtrArgsInfo.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   mapPtrArgsInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Bool;
   mapPtrArgsInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Bool;
+  mapPtrArgsInfo.structTypeName = "/std/collections/experimental_map/Map";
   locals.emplace("mapPtrArgs", mapPtrArgsInfo);
 
   primec::Expr mapPtrArgsName;
@@ -388,6 +392,8 @@ TEST_CASE("ir lowerer call helpers resolve and validate map access targets") {
   CHECK(resolved.isMapTarget);
   CHECK(resolved.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(resolved.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+  CHECK(resolved.isWrappedMapTarget);
+  CHECK(resolved.structTypeName.rfind("/std/collections/experimental_map/Map__", 0) == 0);
 
   primec::Expr mapPtrArgsDeref;
   mapPtrArgsDeref.kind = primec::Expr::Kind::Call;
@@ -397,6 +403,8 @@ TEST_CASE("ir lowerer call helpers resolve and validate map access targets") {
   CHECK(resolved.isMapTarget);
   CHECK(resolved.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(resolved.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+  CHECK_FALSE(resolved.isWrappedMapTarget);
+  CHECK(resolved.structTypeName.rfind("/std/collections/experimental_map/Map__", 0) == 0);
 
   primec::Expr plain;
   plain.kind = primec::Expr::Kind::Name;

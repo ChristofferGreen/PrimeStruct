@@ -291,7 +291,9 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       error = "contains requires exactly two arguments";
       return NativeCallTailDispatchResult::Error;
     }
-    if (expr.args.front().kind == Expr::Kind::Call) {
+    const auto mapTargetInfo = resolveMapAccessTargetInfo(
+        expr.args.front(), localsIn, resolveCallMapAccessTargetInfo);
+    if (expr.args.front().kind == Expr::Kind::Call && !mapTargetInfo.isMapTarget) {
       return NativeCallTailDispatchResult::NotHandled;
     }
     const auto containsResult = tryEmitMapContainsLookup(
@@ -325,7 +327,10 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       error = "contains requires exactly two arguments";
       return NativeCallTailDispatchResult::Error;
     }
-    if (expr.args.front().kind == Expr::Kind::Call) {
+    const auto mapTargetInfo = resolveMapAccessTargetInfo(
+        expr.args.front(), localsIn, resolveCallMapAccessTargetInfo);
+    if (expr.args.front().kind == Expr::Kind::Call &&
+        (!mapTargetInfo.isMapTarget || mapTargetInfo.isWrappedMapTarget)) {
       return NativeCallTailDispatchResult::NotHandled;
     }
     const auto containsResult = tryEmitMapContainsLookup(
@@ -356,10 +361,11 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       error = "tryAt requires exactly two arguments";
       return NativeCallTailDispatchResult::Error;
     }
-    if (expr.args.front().kind == Expr::Kind::Call) {
+    const auto mapTargetInfo = resolveMapAccessTargetInfo(
+        expr.args.front(), localsIn, resolveCallMapAccessTargetInfo);
+    if (expr.args.front().kind == Expr::Kind::Call && !mapTargetInfo.isMapTarget) {
       return NativeCallTailDispatchResult::NotHandled;
     }
-    const auto mapTargetInfo = resolveMapAccessTargetInfo(expr.args.front(), localsIn, resolveCallMapAccessTargetInfo);
     if (!mapTargetInfo.isMapTarget) {
       error = "tryAt requires map target";
       return NativeCallTailDispatchResult::Error;
@@ -394,10 +400,12 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       error = "tryAt requires exactly two arguments";
       return NativeCallTailDispatchResult::Error;
     }
-    if (expr.args.front().kind == Expr::Kind::Call) {
+    const auto mapTargetInfo = resolveMapAccessTargetInfo(
+        expr.args.front(), localsIn, resolveCallMapAccessTargetInfo);
+    if (expr.args.front().kind == Expr::Kind::Call &&
+        (!mapTargetInfo.isMapTarget || mapTargetInfo.isWrappedMapTarget)) {
       return NativeCallTailDispatchResult::NotHandled;
     }
-    const auto mapTargetInfo = resolveMapAccessTargetInfo(expr.args.front(), localsIn, resolveCallMapAccessTargetInfo);
     if (!mapTargetInfo.isMapTarget) {
       error = "tryAt requires map target";
       return NativeCallTailDispatchResult::Error;
