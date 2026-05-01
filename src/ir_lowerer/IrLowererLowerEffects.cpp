@@ -4,6 +4,7 @@
 #include "IrLowererHelpers.h"
 #include "IrLowererSemanticProductTargetAdapters.h"
 #include "primec/Ir.h"
+#include "primec/SemanticProduct.h"
 
 namespace primec::ir_lowerer {
 namespace {
@@ -16,6 +17,27 @@ void expandEffectImplications(std::unordered_set<std::string> &effects) {
 
 bool isDefinitionCallableForEffectMetadata(const Definition &def) {
   return !definitionHasTransform(def, "sum");
+}
+
+bool isDefinitionCallableForEffectMetadata(const Definition &def,
+                                           const SemanticProgram *semanticProgram) {
+  if (!isDefinitionCallableForEffectMetadata(def)) {
+    return false;
+  }
+  if (semanticProgram == nullptr) {
+    return true;
+  }
+  if (const auto *typeMetadata =
+          semanticProgramLookupTypeMetadata(*semanticProgram, def.fullPath);
+      typeMetadata != nullptr && typeMetadata->category == "sum") {
+    return false;
+  }
+  for (const auto &sumMetadata : semanticProgram->sumTypeMetadata) {
+    if (sumMetadata.fullPath == def.fullPath) {
+      return false;
+    }
+  }
+  return true;
 }
 
 } // namespace
@@ -254,7 +276,7 @@ bool validateProgramEffectsForBackendSurface(const Program &program,
   };
 
   for (const auto &def : program.definitions) {
-    if (isDefinitionCallableForEffectMetadata(def) &&
+    if (isDefinitionCallableForEffectMetadata(def, semanticProgram) &&
         !validateCallableEffects(def.fullPath, def.transforms, def.fullPath == entryPath, def.fullPath)) {
       return false;
     }

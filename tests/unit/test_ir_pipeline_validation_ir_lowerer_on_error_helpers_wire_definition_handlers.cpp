@@ -211,6 +211,12 @@ TEST_CASE("ir lowerer on_error helpers skip semantic-product sum definitions") {
   choiceDef.transforms.push_back(sumTransform);
   program.definitions.push_back(choiceDef);
 
+  primec::Definition generatedResultDef;
+  generatedResultDef.fullPath = "/std/result/Result__arity2__tabc";
+  generatedResultDef.namespacePrefix = "";
+  generatedResultDef.semanticNodeId = 24;
+  program.definitions.push_back(generatedResultDef);
+
   primec::Definition mainDef;
   mainDef.fullPath = "/main";
   mainDef.namespacePrefix = "";
@@ -266,6 +272,16 @@ TEST_CASE("ir lowerer on_error helpers skip semantic-product sum definitions") {
       .provenanceHandle = 0,
       .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
   });
+  semanticProgram.typeMetadata.push_back(primec::SemanticProgramTypeMetadata{
+      .fullPath = generatedResultDef.fullPath,
+      .category = "sum",
+      .semanticNodeId = generatedResultDef.semanticNodeId,
+  });
+  semanticProgram.sumTypeMetadata.push_back(primec::SemanticProgramSumTypeMetadata{
+      .fullPath = generatedResultDef.fullPath,
+      .variantCount = 2,
+      .semanticNodeId = generatedResultDef.semanticNodeId,
+  });
 
   primec::ir_lowerer::OnErrorByDefinition onErrorByDef;
   std::string error;
@@ -273,6 +289,7 @@ TEST_CASE("ir lowerer on_error helpers skip semantic-product sum definitions") {
       program, &semanticProgram, resolveExprPath, definitionExists, onErrorByDef, error));
   CHECK(error.empty());
   CHECK(onErrorByDef.count("/Choice") == 0);
+  CHECK(onErrorByDef.count(generatedResultDef.fullPath) == 0);
   REQUIRE(onErrorByDef.count("/handler") == 1);
   CHECK_FALSE(onErrorByDef.at("/handler").has_value());
   REQUIRE(onErrorByDef.count("/main") == 1);

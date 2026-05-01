@@ -4588,6 +4588,57 @@ TEST_CASE("ir lowerer rejects missing semantic-product callable summaries") {
   CHECK(diagnosticInfo.message == error);
 }
 
+TEST_CASE("ir lowerer effect validation skips semantic-product sum definitions") {
+  primec::Program program;
+
+  primec::Definition sumDef;
+  sumDef.fullPath = "/std/result/Result__arity2__tabc";
+  sumDef.semanticNodeId = 81;
+  program.definitions.push_back(sumDef);
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 82;
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.typeMetadata.push_back(primec::SemanticProgramTypeMetadata{
+      .fullPath = sumDef.fullPath,
+      .category = "sum",
+      .semanticNodeId = sumDef.semanticNodeId,
+  });
+  semanticProgram.sumTypeMetadata.push_back(primec::SemanticProgramSumTypeMetadata{
+      .fullPath = sumDef.fullPath,
+      .variantCount = 2,
+      .semanticNodeId = sumDef.semanticNodeId,
+  });
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .isExecution = false,
+      .returnKind = "void",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = mainDef.semanticNodeId,
+      .provenanceHandle = 0,
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+  });
+
+  std::string error;
+  CHECK(primec::ir_lowerer::validateProgramEffectsForBackendSurface(
+      program, &semanticProgram, "/main", {}, {}, "native backend", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer rejects missing semantic-product entry parameter facts") {
   primec::Program program;
 

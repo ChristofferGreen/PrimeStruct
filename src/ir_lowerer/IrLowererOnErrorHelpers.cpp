@@ -2,6 +2,7 @@
 
 #include "primec/Lexer.h"
 #include "primec/Parser.h"
+#include "primec/SemanticProduct.h"
 
 #include <memory>
 #include <string_view>
@@ -29,6 +30,27 @@ bool validateSemanticProductCallableSummaryPathIds(const SemanticProgram &semant
 
 bool definitionCanCarryOnErrorHandler(const Definition &def) {
   return !definitionHasTransform(def, "sum");
+}
+
+bool definitionCanCarryOnErrorHandler(const Definition &def,
+                                      const SemanticProgram *semanticProgram) {
+  if (!definitionCanCarryOnErrorHandler(def)) {
+    return false;
+  }
+  if (semanticProgram == nullptr) {
+    return true;
+  }
+  if (const auto *typeMetadata =
+          semanticProgramLookupTypeMetadata(*semanticProgram, def.fullPath);
+      typeMetadata != nullptr && typeMetadata->category == "sum") {
+    return false;
+  }
+  for (const auto &sumMetadata : semanticProgram->sumTypeMetadata) {
+    if (sumMetadata.fullPath == def.fullPath) {
+      return false;
+    }
+  }
+  return true;
 }
 
 bool buildOnErrorHandlerFromSemanticFact(const Definition &def,
@@ -178,7 +200,7 @@ bool buildOnErrorByDefinition(const Program &program,
   out.clear();
   out.reserve(program.definitions.size());
   for (const auto &def : program.definitions) {
-    if (!definitionCanCarryOnErrorHandler(def)) {
+    if (!definitionCanCarryOnErrorHandler(def, semanticProgram)) {
       continue;
     }
     std::optional<OnErrorHandler> handler;
