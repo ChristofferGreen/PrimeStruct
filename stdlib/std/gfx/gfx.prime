@@ -280,7 +280,7 @@ namespace std {
 
   namespace GraphicsSubstrate {
     [return<Result<i32, GfxError>>]
-    createWindow([SubstrateWindowConfig] config) {
+    createWindow([/std/gfx/SubstrateWindowConfig] config) {
       if(or(less_than(config.hostToken, 1i32),
             or(less_than(config.width, 1i32), less_than(config.height, 1i32)))) {
         return(/std/gfx/GfxError/result<i32>(windowCreateFailed()))
@@ -289,7 +289,7 @@ namespace std {
     }
 
     [return<Result<i32, GfxError>>]
-    createDevice([SubstrateDeviceConfig] config) {
+    createDevice([/std/gfx/SubstrateDeviceConfig] config) {
       if(or(less_than(config.window.token, 1i32), less_than(config.deviceToken, 1i32))) {
         return(/std/gfx/GfxError/result<i32>(deviceCreateFailed()))
       }
@@ -297,7 +297,7 @@ namespace std {
     }
 
     [return<Result<i32, GfxError>>]
-    createQueue([SubstrateDeviceConfig] config) {
+    createQueue([/std/gfx/SubstrateDeviceConfig] config) {
       if(or(less_than(config.window.token, 1i32), less_than(config.queueToken, 1i32))) {
         return(/std/gfx/GfxError/result<i32>(deviceCreateFailed()))
       }
@@ -305,7 +305,7 @@ namespace std {
     }
 
     [return<Result<i32, GfxError>>]
-    createSwapchain([SubstrateSwapchainConfig] config) {
+    createSwapchain([/std/gfx/SubstrateSwapchainConfig] config) {
       if(or(less_than(config.window.token, 1i32),
             or(less_than(config.device.token, 1i32), less_than(config.swapchainToken, 1i32)))) {
         return(/std/gfx/GfxError/result<i32>(swapchainCreateFailed()))
@@ -314,7 +314,7 @@ namespace std {
     }
 
     [return<Result<i32, GfxError>>]
-    createMesh([SubstrateMeshConfig] config) {
+    createMesh([/std/gfx/SubstrateMeshConfig] config) {
       if(or(less_than(config.meshToken, 1i32),
             or(less_than(config.vertexCount, 1i32), less_than(config.indexCount, 1i32)))) {
         return(/std/gfx/GfxError/result<i32>(meshCreateFailed()))
@@ -323,7 +323,7 @@ namespace std {
     }
 
     [return<Result<i32, GfxError>>]
-    createPipeline([SubstratePipelineConfig] config) {
+    createPipeline([/std/gfx/SubstratePipelineConfig] config) {
       if(less_than(config.pipelineToken, 1i32)) {
         return(/std/gfx/GfxError/result<i32>(pipelineCreateFailed()))
       }
@@ -331,7 +331,7 @@ namespace std {
     }
 
     [return<Result<i32, GfxError>>]
-    acquireFrame([SubstrateFrameConfig] config) {
+    acquireFrame([/std/gfx/SubstrateFrameConfig] config) {
       if(or(less_than(config.swapchain.token, 1i32), less_than(config.frameToken, 1i32))) {
         return(/std/gfx/GfxError/result<i32>(frameAcquireFailed()))
       }
@@ -339,7 +339,7 @@ namespace std {
     }
 
     [return<i32>]
-    openRenderPass([SubstrateRenderPassConfig] config) {
+    openRenderPass([/std/gfx/SubstrateRenderPassConfig] config) {
       if(or(less_than(config.frame.token, 1i32), less_than(config.renderPassToken, 1i32))) {
         return(0i32)
       }
@@ -347,7 +347,7 @@ namespace std {
     }
 
     [return<i32>]
-    drawMesh([SubstrateDrawMeshConfig] config) {
+    drawMesh([/std/gfx/SubstrateDrawMeshConfig] config) {
       if(or(less_than(config.renderPass.token, 1i32),
             or(less_than(config.mesh.token, 1i32), less_than(config.material.token, 1i32)))) {
         return(0i32)
@@ -356,7 +356,7 @@ namespace std {
     }
 
     [return<i32>]
-    endRenderPass([SubstrateRenderPassEndConfig] config) {
+    endRenderPass([/std/gfx/SubstrateRenderPassEndConfig] config) {
       if(or(less_than(config.renderPass.token, 1i32), less_than(config.endToken, 1i32))) {
         return(0i32)
       }
