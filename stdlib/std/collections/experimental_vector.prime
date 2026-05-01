@@ -399,7 +399,6 @@ namespace std {
 
   [public return<T>]
   vectorAtUnsafe<T>([Vector<T>] values, [i32] index) {
-    vectorCheckIndex<T>(values, index)
     return(dereference(vectorBorrowSlot<T>(values, index)))
   }
   }
