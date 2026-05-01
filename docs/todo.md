@@ -466,7 +466,8 @@ Task template:
     The lowerer try result ID consumer slice is complete for
     semantic-product-backed value/error type facts. The lowerer graph fact
     recovery-index quarantine slice is complete for local-auto, query, and
-    `try(...)` adapter indexes.
+    `try(...)` adapter indexes. The lowerer `on_error` definition-path index
+    quarantine slice is complete.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for

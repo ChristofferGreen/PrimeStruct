@@ -15,7 +15,6 @@ namespace primec::ir_lowerer {
 
 struct SemanticProductIndex {
   std::unordered_map<uint64_t, const SemanticProgramOnErrorFact *> onErrorFactsByDefinitionId;
-  std::unordered_map<SymbolId, const SemanticProgramOnErrorFact *> onErrorFactsByDefinitionPathId;
   std::unordered_map<uint64_t, const SemanticProgramReturnFact *> returnFactsByDefinitionId;
   std::unordered_map<SymbolId, const SemanticProgramReturnFact *> returnFactsByDefinitionPathId;
   std::unordered_map<uint64_t, const SemanticProgramLocalAutoFact *> localAutoFactsByExpr;

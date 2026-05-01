@@ -817,6 +817,8 @@ Compile-pipeline publication contract:
 - The lowerer semantic-product adapter no longer builds local-auto initializer-path, query resolved-path/call-name, or
   `try(...)` operand-path/source composite recovery indexes. Those composite lookup maps remain publication and
   inspection metadata rather than production lowerer lookup surfaces.
+- The same adapter quarantine now applies to `on_error` definition-path indexes: lowerer handler setup resolves
+  `on_error` facts by definition semantic id, while definition-path lookup remains a published inspection surface.
 - Dump-stage handling should be able to read either the syntax-facing canonical AST dump or the future semantic-product
   dump from the same compile-pipeline success result without re-running semantics.
 - Backend/runtime entrypoints should consume the semantic product from compile-pipeline output once available rather

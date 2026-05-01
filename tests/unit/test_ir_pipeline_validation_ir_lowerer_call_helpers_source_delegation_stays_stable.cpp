@@ -2274,12 +2274,11 @@ TEST_CASE("ir lowerer semantic-product adapter ignores on_error definition-path 
   const auto semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
   CHECK(semanticTargets.semanticIndex.onErrorFactsByDefinitionId.empty());
-  CHECK(semanticTargets.semanticIndex.onErrorFactsByDefinitionPathId.count(*mainPathId) == 1);
   const auto *onErrorFact = primec::ir_lowerer::findSemanticProductOnErrorFact(semanticTargets, mainDef);
   CHECK(onErrorFact == nullptr);
 }
 
-TEST_CASE("ir lowerer semantic-product index keeps on_error path index non-authoritative") {
+TEST_CASE("ir lowerer semantic-product index does not expose on_error path fallback") {
   primec::Definition mainDef;
   mainDef.fullPath = "/main";
   mainDef.semanticNodeId = 0;
@@ -2314,11 +2313,75 @@ TEST_CASE("ir lowerer semantic-product index keeps on_error path index non-autho
       primec::semanticProgramLookupCallTargetStringId(semanticProgram, "/main");
   REQUIRE(mainPathId.has_value());
   CHECK(semanticIndex.onErrorFactsByDefinitionId.empty());
-  CHECK(semanticIndex.onErrorFactsByDefinitionPathId.count(*mainPathId) == 1);
   const auto *onErrorFact =
       primec::ir_lowerer::findSemanticProductOnErrorFact(
           &semanticProgram, semanticIndex, mainDef);
   CHECK(onErrorFact == nullptr);
+}
+
+TEST_CASE("ir lowerer semantic-product adapter uses on_error semantic-id matches without path fallback") {
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 5201;
+
+  primec::SemanticProgram semanticProgram;
+  const primec::SymbolId mainPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/main");
+  semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
+      .definitionPath = "/main",
+      .returnKind = "return",
+      .errorType = "FileError",
+      .boundArgCount = 1,
+      .boundArgTexts = {"value"},
+      .returnResultHasValue = false,
+      .returnResultValueType = "",
+      .returnResultErrorType = "",
+      .semanticNodeId = 5201,
+      .definitionPathId = mainPathId,
+      .returnKindId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "return"),
+      .handlerPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
+      .errorTypeId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
+      .boundArgTextIds = {
+          primec::semanticProgramInternCallTargetString(semanticProgram, "value"),
+      },
+  });
+  semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
+      .definitionPath = "/main",
+      .returnKind = "return",
+      .errorType = "OtherError",
+      .boundArgCount = 2,
+      .boundArgTexts = {"stale", "value"},
+      .returnResultHasValue = false,
+      .returnResultValueType = "",
+      .returnResultErrorType = "",
+      .semanticNodeId = 0,
+      .definitionPathId = mainPathId,
+      .returnKindId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "return"),
+      .handlerPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/stale_handler"),
+      .errorTypeId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "OtherError"),
+      .boundArgTextIds = {
+          primec::semanticProgramInternCallTargetString(semanticProgram, "stale"),
+          primec::semanticProgramInternCallTargetString(semanticProgram, "value"),
+      },
+  });
+  semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionId
+      .insert_or_assign(5201, 0);
+  semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionPathId
+      .insert_or_assign(mainPathId, 1);
+
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  const auto *onErrorFact = primec::ir_lowerer::findSemanticProductOnErrorFact(semanticTargets, mainDef);
+  REQUIRE(onErrorFact != nullptr);
+  CHECK(onErrorFact->semanticNodeId == 5201);
+  CHECK(onErrorFact->errorType == "FileError");
+  CHECK(onErrorFact->boundArgCount == 1);
 }
 
 TEST_CASE("ir lowerer semantic-product adapter ignores local-auto initializer-path fallback") {
