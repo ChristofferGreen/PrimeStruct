@@ -628,7 +628,8 @@ TEST_CASE("ir lowerer inline call context helper reports setup diagnostics") {
 
   for (const std::string generatedVectorHelperPath :
        {"/std/collections/experimental_vector/vectorInitSlot__ti32",
-        "/std/collections/experimental_vector/vectorCheckShape__ti32"}) {
+        "/std/collections/experimental_vector/vectorCheckShape__ti32",
+        "/std/collections/experimental_vector/vectorCheckIndex__ti32"}) {
     primec::Definition generatedVectorHelper;
     generatedVectorHelper.fullPath = generatedVectorHelperPath;
     error.clear();
