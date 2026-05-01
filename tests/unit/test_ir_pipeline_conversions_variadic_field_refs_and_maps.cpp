@@ -103,16 +103,19 @@ main() {
   primec::Program program;
   primec::SemanticProgram semanticProgram;
   std::string error;
+  INFO(error);
   REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
+  INFO(error);
   REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
   uint64_t result = 0;
+  INFO(error);
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
   CHECK(result == 75);
@@ -162,16 +165,19 @@ main() {
   primec::Program program;
   primec::SemanticProgram semanticProgram;
   std::string error;
+  INFO(error);
   REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
+  INFO(error);
   REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
   uint64_t result = 0;
+  INFO(error);
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
   CHECK(result == 27);
@@ -221,16 +227,19 @@ main() {
   primec::Program program;
   primec::SemanticProgram semanticProgram;
   std::string error;
+  INFO(error);
   REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
+  INFO(error);
   REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
   uint64_t result = 0;
+  INFO(error);
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
   CHECK(result == 27);
@@ -286,16 +295,19 @@ main() {
   primec::Program program;
   primec::SemanticProgram semanticProgram;
   std::string error;
+  INFO(error);
   REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
+  INFO(error);
   REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
   uint64_t result = 0;
+  INFO(error);
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
   CHECK(result == 11);
@@ -352,16 +364,19 @@ main() {
   primec::Program program;
   primec::SemanticProgram semanticProgram;
   std::string error;
+  INFO(error);
   REQUIRE(parseAndValidate(source, program, semanticProgram, error));
   CHECK(error.empty());
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
+  INFO(error);
   REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
   uint64_t result = 0;
+  INFO(error);
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
   CHECK(result == 11);
