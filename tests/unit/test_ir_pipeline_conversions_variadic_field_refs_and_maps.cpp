@@ -13,7 +13,7 @@
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.conversions");
 
-TEST_CASE("ir lowerer rejects variadic struct pointer packs from borrowed pack reference fields") {
+TEST_CASE("ir lowerer materializes variadic struct pointer packs from borrowed pack reference fields") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -108,11 +108,17 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error == "variadic parameter type mismatch");
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 75);
 }
 
-TEST_CASE("ir lowerer rejects variadic pointer uninitialized scalar packs with indexed init and take") {
+TEST_CASE("ir lowerer materializes variadic pointer uninitialized scalar packs with indexed init and take") {
   const std::string source = R"(
 [return<int>]
 score_ptrs([args<Pointer<uninitialized<i32>>>] values) {
@@ -161,11 +167,17 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error == "unsupported operand types for plus");
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 27);
 }
 
-TEST_CASE("ir lowerer rejects variadic borrowed uninitialized scalar packs with indexed init and take") {
+TEST_CASE("ir lowerer materializes variadic borrowed uninitialized scalar packs with indexed init and take") {
   const std::string source = R"(
 [return<int>]
 score_refs([args<Reference<uninitialized<i32>>>] values) {
@@ -214,8 +226,14 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error == "unsupported operand types for plus");
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 27);
 }
 
 TEST_CASE("ir lowerer materializes variadic borrowed map packs with indexed count methods") {
