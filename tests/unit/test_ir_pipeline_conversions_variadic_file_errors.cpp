@@ -65,7 +65,7 @@ TEST_CASE("ir lowerer materializes variadic FileError packs with indexed why met
   CHECK(result == 36);
 }
 
-TEST_CASE("ir lowerer rejects variadic borrowed FileError packs with indexed dereference why methods") {
+TEST_CASE("ir lowerer materializes variadic borrowed FileError packs with indexed dereference why methods") {
   const std::string source =
       "[return<int>]\n"
       "score_refs([args<Reference<FileError>>] values) {\n"
@@ -114,8 +114,14 @@ TEST_CASE("ir lowerer rejects variadic borrowed FileError packs with indexed der
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error == "variadic parameter type mismatch");
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 36);
 }
 
 TEST_CASE("ir lowerer rejects prefix spread borrowed FileError packs") {
@@ -166,7 +172,7 @@ TEST_CASE("ir lowerer rejects prefix spread borrowed FileError packs") {
   CHECK(error.find("spread argument must be final") != std::string::npos);
 }
 
-TEST_CASE("ir lowerer rejects variadic pointer FileError packs with indexed dereference why methods") {
+TEST_CASE("ir lowerer materializes variadic pointer FileError packs with indexed dereference why methods") {
   const std::string source =
       "[return<int>]\n"
       "score_ptrs([args<Pointer<FileError>>] values) {\n"
@@ -215,11 +221,17 @@ TEST_CASE("ir lowerer rejects variadic pointer FileError packs with indexed dere
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error == "variadic parameter type mismatch");
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 36);
 }
 
-TEST_CASE("ir lowerer rejects variadic wrapped FileError packs with named free builtin at receivers") {
+TEST_CASE("ir lowerer materializes variadic wrapped FileError packs with named free builtin at receivers") {
   const std::string source =
       "[return<int>]\n"
       "score_refs([args<Reference<FileError>>] values) {\n"
@@ -306,8 +318,14 @@ TEST_CASE("ir lowerer rejects variadic wrapped FileError packs with named free b
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error == "variadic parameter type mismatch");
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 72);
 }
 
 

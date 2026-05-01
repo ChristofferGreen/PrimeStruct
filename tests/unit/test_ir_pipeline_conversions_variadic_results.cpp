@@ -12,7 +12,7 @@
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.conversions");
 
-TEST_CASE("ir lowerer rejects variadic Result packs with indexed why and try access") {
+TEST_CASE("ir lowerer materializes variadic Result packs with indexed why and try access") {
   const std::string source = R"(
 [struct]
 ParseError() {
@@ -64,8 +64,14 @@ main() {
   )";
   std::string error;
   primec::IrModule module;
-  CHECK_FALSE(parseValidateAndLower(source, module, error));
-  CHECK(error == "variadic parameter type mismatch");
+  REQUIRE(parseValidateAndLower(source, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 24);
 }
 
 TEST_CASE("ir lowerer materializes variadic borrowed Result packs with indexed dereference try and why access") {
@@ -226,7 +232,7 @@ main() {
   CHECK(result == 24);
 }
 
-TEST_CASE("ir lowerer rejects variadic status-only Result packs with indexed error and why access") {
+TEST_CASE("ir lowerer materializes variadic status-only Result packs with indexed error and why access") {
   const std::string source = R"(
 [struct]
 ParseError() {
@@ -276,8 +282,14 @@ main() {
   )";
   std::string error;
   primec::IrModule module;
-  CHECK_FALSE(parseValidateAndLower(source, module, error));
-  CHECK(error == "variadic parameter type mismatch");
+  REQUIRE(parseValidateAndLower(source, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 39);
 }
 
 TEST_CASE("ir lowerer materializes variadic borrowed status-only Result packs with indexed dereference error and why access") {
