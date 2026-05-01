@@ -66,6 +66,12 @@ bool SemanticsValidator::buildParameters() {
                             moveSuffix.data(),
                             moveSuffix.size()) == 0;
   };
+  auto isLifecycleSelfReferenceParam =
+      [](const BindingInfo &binding, const std::string &parentPath) {
+    return binding.typeName == "Reference" &&
+           (binding.typeTemplateArg == parentPath ||
+            binding.typeTemplateArg == "Self");
+  };
   auto isStructHelperDefinition = [&](const Definition &def, std::string &parentOut) -> bool {
     parentOut.clear();
     if (!def.isNested) {
@@ -347,7 +353,7 @@ bool SemanticsValidator::buildParameters() {
               def.fullPath);
         }
         const auto &copyParam = params.front();
-        if (copyParam.binding.typeName != "Reference" || copyParam.binding.typeTemplateArg != parentPath) {
+        if (!isLifecycleSelfReferenceParam(copyParam.binding, parentPath)) {
           return failBuildParameterDefinitionDiagnostic(
               "Copy/Move helpers require [Reference<Self>] parameter: " +
               def.fullPath);

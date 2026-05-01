@@ -279,6 +279,30 @@ main() {
   CHECK(validateProgram(source, "/main", error));
 }
 
+TEST_CASE("Copy helper accepts resolved Reference parameter") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value{1i32}
+
+  [mut]
+  Copy([Reference</thing>] other) {
+    assign(this, other)
+  }
+}
+
+[return<int>]
+main() {
+  [thing mut] a{thing{}}
+  [thing] b{thing{}}
+  /thing/Copy(a, b)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+}
+
 TEST_CASE("Copy helper requires reference parameter") {
   const std::string source = R"(
 [struct]
