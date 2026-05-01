@@ -12,7 +12,7 @@ void checkMapPairTemplateConflict(const std::string &error) {
 
 TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
 
-TEST_CASE("field-bound experimental map compatibility count calls keep canonical missing-helper diagnostics") {
+TEST_CASE("field-bound experimental map compatibility count calls require alias helpers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
@@ -29,12 +29,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find(
-            "unknown call target: /std/collections/experimental_map/mapCount") !=
-        std::string::npos);
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
-TEST_CASE("field-bound experimental map stdlib namespaced count methods keep canonical missing-helper diagnostics") {
+TEST_CASE("field-bound experimental map stdlib namespaced count methods validate") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
@@ -50,10 +48,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find(
-            "unknown call target: /std/collections/experimental_map/mapCount") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("stdlib map constructor assignments accept explicit experimental map struct fields") {

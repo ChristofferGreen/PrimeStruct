@@ -34,6 +34,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: Native `FileError.why` and `Result.why(FileError)` lowering must forward the FileError why emitter as a possibly-empty callback instead of wrapping it in an unconditional lambda.
 - Evidence: Known native image compile-run failures aborted with `std::bad_function_call`; `IrLowererLowerEmitExpr.h`, `IrLowererResultWhyHelpers.cpp`, and `IrLowererRuntimeErrorHelpers.cpp` now preserve empty callbacks and report `FileError.why emitter is unavailable` through focused helper tests.
 
+### map-compatibility-aliases-require-source-definitions
+- Updated: 2026-05-01
+- Tags: semantics, collections, compatibility
+- Fact: Removed map aliases such as `/map/count` should count as available only when an explicit source definition family exists, not when template monomorphization has generated a `__...` specialization.
+- Evidence: Field-bound `Map<K, V>` compatibility triage showed generated map helper specializations could mask missing `/map/count` aliases unless removed-alias checks ignored generated-only definition paths.
+
 ### native-vector-auto-inference-expression-blockers
 - Updated: 2026-04-20
 - Tags: tests, native, collections

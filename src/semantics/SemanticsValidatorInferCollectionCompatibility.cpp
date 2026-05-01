@@ -7,6 +7,7 @@
 #include <optional>
 #include <sstream>
 #include <string_view>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 
@@ -60,6 +61,24 @@ std::string explicitCallPathForCandidate(const Expr &candidate) {
     return "/" + candidate.name;
   }
   return namespacePrefix + "/" + candidate.name;
+}
+
+bool hasExplicitDefinitionFamilyPath(
+    const Program &program,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    std::string_view path) {
+  const std::string pathText(path);
+  if (defMap.find(pathText) != defMap.end()) {
+    return true;
+  }
+  const std::string templatedPrefix = pathText + "<";
+  for (const Definition &definition : program.definitions) {
+    if (definition.fullPath == pathText ||
+        definition.fullPath.rfind(templatedPrefix, 0) == 0) {
+      return true;
+    }
+  }
+  return false;
 }
 
 } // namespace
@@ -506,7 +525,7 @@ std::string SemanticsValidator::mapNamespacedMethodCompatibilityPath(
     return "";
   }
   const std::string removedPath = "/map/" + helperName;
-  if (hasDefinitionPath(removedPath)) {
+  if (hasExplicitDefinitionFamilyPath(program_, defMap_, removedPath)) {
     return "";
   }
   if (!resolveAnyMapTarget(candidate.args.front())) {
@@ -579,7 +598,8 @@ std::string SemanticsValidator::directMapHelperCompatibilityPath(
     return "";
   }
   const std::string removedPath = "/map/" + helperName;
-  if (hasDefinitionPath(removedPath) || candidate.args.empty()) {
+  if (hasExplicitDefinitionFamilyPath(program_, defMap_, removedPath) ||
+      candidate.args.empty()) {
     return "";
   }
   if (helperName == "at" || helperName == "at_unsafe") {
@@ -639,7 +659,8 @@ std::string SemanticsValidator::methodRemovedCollectionCompatibilityPath(
       makeBuiltinCollectionDispatchResolvers(params, locals, adapters);
   if (family == RemovedCollectionHelperFamily::Map) {
     const std::string removedPath = removedCollectionMethodPath(family, helperName, preserveArrayPath);
-    if (removedPath.empty() || hasDefinitionPath(removedPath)) {
+    if (removedPath.empty() ||
+        hasExplicitDefinitionFamilyPath(program_, defMap_, removedPath)) {
       return "";
     }
     std::string keyType;
