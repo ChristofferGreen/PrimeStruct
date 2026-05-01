@@ -709,6 +709,76 @@ TEST_CASE("ir lowerer result helpers use semantic query facts for direct Result 
   CHECK(resolveDefinitionCalls == 0);
 }
 
+TEST_CASE("ir lowerer result helpers infer syntax-owned direct Result ok payloads") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr resultType;
+  resultType.kind = primec::Expr::Kind::Name;
+  resultType.name = "Result";
+
+  primec::Expr left;
+  left.kind = primec::Expr::Kind::Name;
+  left.name = "value";
+
+  primec::Expr right;
+  right.kind = primec::Expr::Kind::Literal;
+  right.literalValue = 3;
+  right.intWidth = 32;
+
+  primec::Expr plusExpr;
+  plusExpr.kind = primec::Expr::Kind::Call;
+  plusExpr.name = "plus";
+  plusExpr.args = {left, right};
+  plusExpr.semanticNodeId = 464;
+
+  primec::Expr okExpr;
+  okExpr.kind = primec::Expr::Kind::Call;
+  okExpr.isMethodCall = true;
+  okExpr.name = "ok";
+  okExpr.args = {resultType, plusExpr};
+
+  const auto resolveMethodCall = [](const primec::Expr &,
+                                    const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+    return nullptr;
+  };
+  int resolveDefinitionCalls = 0;
+  const auto resolveDefinitionCall = [&](const primec::Expr &) -> const primec::Definition * {
+    ++resolveDefinitionCalls;
+    return nullptr;
+  };
+  const auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
+    return false;
+  };
+
+  primec::SemanticProgram semanticProgram;
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+
+  int fallbackCalls = 0;
+  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind =
+      [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+        ++fallbackCalls;
+        CHECK(expr.name == "plus");
+        return ValueKind::Int32;
+      };
+
+  primec::ir_lowerer::ResultExprInfo out;
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(okExpr,
+                                                            {},
+                                                            resolveMethodCall,
+                                                            resolveDefinitionCall,
+                                                            lookupReturnInfo,
+                                                            inferExprKind,
+                                                            out,
+                                                            &semanticTargets));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.valueKind == ValueKind::Int32);
+  CHECK(out.valueStructType.empty());
+  CHECK(fallbackCalls == 1);
+  CHECK(resolveDefinitionCalls == 0);
+}
+
 TEST_CASE("ir lowerer result helpers use semantic binding facts for direct Result ok name payloads") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
 

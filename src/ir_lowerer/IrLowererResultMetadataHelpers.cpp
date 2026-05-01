@@ -969,7 +969,12 @@ void applyDirectResultValueMetadata(const Expr &valueExpr,
   }
   if (valueExpr.semanticNodeId != 0) {
     if (semanticProgram != nullptr && semanticIndex != nullptr && valueExpr.kind == Expr::Kind::Call) {
-      return;
+      std::string builtinOperator;
+      std::string builtinComparison;
+      if (!getBuiltinOperatorName(valueExpr, builtinOperator) &&
+          !getBuiltinComparisonName(valueExpr, builtinComparison)) {
+        return;
+      }
     }
   }
   if (inferExprKind) {

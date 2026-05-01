@@ -62,7 +62,7 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Updated: 2026-05-01
 - Tags: ir, semantics, results
 - Fact: Direct `Result.ok(...)` arithmetic payload calls such as `multiply(...)` are syntax-owned builtin payloads and must not require semantic-product query metadata before normal expression-kind inference can classify them.
-- Evidence: The saved release log showed `missing semantic-product Result.ok payload metadata: multiply`; `IrLowererPackedResultHelpers.cpp` now exempts builtin operators from the semantic payload metadata requirement alongside builtin comparisons.
+- Evidence: The saved release log showed `missing semantic-product Result.ok payload metadata: multiply` and unsupported auto-bound `Result.and_then` payloads; `IrLowererPackedResultHelpers.cpp` and `IrLowererResultMetadataHelpers.cpp` now exempt builtin operators from semantic query requirements alongside builtin comparisons.
 
 ### semantic-product-pick-target-query-facts
 - Updated: 2026-05-01
