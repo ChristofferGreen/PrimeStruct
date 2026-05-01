@@ -6,6 +6,28 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 1, 2026)**
+- [x] TODO-4298: Use published definition views
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-01
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 definition-view authority slice that makes
+    frozen published semantic products enumerate definitions through
+    `definitionIndicesByPathId` and routes callable orchestration through that
+    view.
+  - acceptance:
+    - Frozen semantic-product definition views ignore raw `definitions`
+      entries when `definitionIndicesByPathId` is missing.
+    - Frozen mapped definition views still return entries in deterministic
+      storage order.
+    - Callable orchestration consumes the public definition view instead of
+      iterating raw semantic-product definitions directly.
+  - stop_rule: Stop once frozen definition views require the published
+    definition map and docs record the remaining TODO-4298 work.
+  - evidence: Added `semanticProgramDefinitionView`, rewired lowerer callable
+    orchestration to consume it, added focused raw/mapped frozen coverage, and
+    skipped local test execution per the lite workflow.
+
 - [x] TODO-4298: Use published struct type views
   - owner: ai
   - created_at: 2026-04-28

@@ -287,10 +287,18 @@ CallableDefinitionOrchestrationResult lowerCallableDefinitionOrchestration(
   };
 
   if (semanticProgram != nullptr && !semanticProgram->definitions.empty()) {
-    for (const auto &definitionEntry : semanticProgram->definitions) {
-      const auto defIt = definitionsByPath.find(definitionEntry.fullPath);
+    const auto semanticDefinitions = semanticProgramDefinitionView(*semanticProgram);
+    if (semanticDefinitions.empty()) {
+      error = "semantic product definitions missing published indexes";
+      return CallableDefinitionOrchestrationResult::Error;
+    }
+    for (const auto *definitionEntry : semanticDefinitions) {
+      if (definitionEntry == nullptr) {
+        continue;
+      }
+      const auto defIt = definitionsByPath.find(definitionEntry->fullPath);
       if (defIt == definitionsByPath.end() || defIt->second == nullptr) {
-        error = "semantic product definition missing AST body: " + definitionEntry.fullPath;
+        error = "semantic product definition missing AST body: " + definitionEntry->fullPath;
         return CallableDefinitionOrchestrationResult::Error;
       }
       if (lowerDefinition(*defIt->second) == CallableDefinitionOrchestrationResult::Error) {

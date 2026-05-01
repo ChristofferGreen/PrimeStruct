@@ -456,6 +456,8 @@ bool semanticProgramFactFamilyIsAstProvenanceOwned(std::string_view familyName);
 
 std::vector<const SemanticProgramBridgePathChoice *>
 semanticProgramBridgePathChoiceView(const SemanticProgram &semanticProgram);
+std::vector<const SemanticProgramDefinition *>
+semanticProgramDefinitionView(const SemanticProgram &semanticProgram);
 std::vector<const SemanticProgramCallableSummary *>
 semanticProgramCallableSummaryView(const SemanticProgram &semanticProgram);
 const SemanticProgramTypeMetadata *semanticProgramLookupTypeMetadata(

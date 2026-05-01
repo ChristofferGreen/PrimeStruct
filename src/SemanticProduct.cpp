@@ -119,6 +119,43 @@ std::vector<const EntryT *> makeSemanticProgramModuleResolvedView(
   return entries;
 }
 
+std::vector<const SemanticProgramDefinition *>
+makeSemanticProgramPublishedDefinitionView(const SemanticProgram &semanticProgram) {
+  std::vector<const SemanticProgramDefinition *> entries;
+  const auto &publishedDefinitionIndices =
+      semanticProgram.publishedRoutingLookups.definitionIndicesByPathId;
+  if (!publishedDefinitionIndices.empty()) {
+    std::vector<std::size_t> storageIndices;
+    storageIndices.reserve(publishedDefinitionIndices.size());
+    for (const auto &[pathId, entryIndex] : publishedDefinitionIndices) {
+      (void)pathId;
+      if (entryIndex < semanticProgram.definitions.size()) {
+        storageIndices.push_back(entryIndex);
+      }
+    }
+    std::sort(storageIndices.begin(), storageIndices.end());
+    storageIndices.erase(std::unique(storageIndices.begin(), storageIndices.end()),
+                         storageIndices.end());
+    entries.reserve(storageIndices.size());
+    for (const std::size_t entryIndex : storageIndices) {
+      entries.push_back(&semanticProgram.definitions[entryIndex]);
+    }
+    if (!entries.empty() || semanticProgram.definitions.empty() ||
+        semanticProgram.publishedStorageFrozen) {
+      return entries;
+    }
+  }
+  if (semanticProgram.publishedStorageFrozen) {
+    return entries;
+  }
+
+  entries.reserve(semanticProgram.definitions.size());
+  for (const auto &entry : semanticProgram.definitions) {
+    entries.push_back(&entry);
+  }
+  return entries;
+}
+
 uint64_t makeLocalAutoInitPathBindingNameKey(SymbolId initializerPathId, SymbolId bindingNameId) {
   return (static_cast<uint64_t>(initializerPathId) << 32) |
          static_cast<uint64_t>(bindingNameId);
@@ -936,6 +973,11 @@ semanticProgramBridgePathChoiceView(const SemanticProgram &semanticProgram) {
       [](const SemanticProgramModuleResolvedArtifacts &module) -> const std::vector<std::size_t> & {
         return module.bridgePathChoiceIndices;
       });
+}
+
+std::vector<const SemanticProgramDefinition *>
+semanticProgramDefinitionView(const SemanticProgram &semanticProgram) {
+  return makeSemanticProgramPublishedDefinitionView(semanticProgram);
 }
 
 std::vector<const SemanticProgramCallableSummary *>

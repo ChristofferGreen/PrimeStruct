@@ -113,6 +113,34 @@ void checkSemanticModuleViewsReturnStoredEntry(const primec::SemanticProgram &se
   CHECK(onErrorFacts.front() == &semanticProgram.onErrorFacts.front());
 }
 
+void populateDefinitionMetadata(primec::SemanticProgram &semanticProgram) {
+  primec::SemanticProgramDefinition laterDefinition;
+  laterDefinition.fullPath = "/later";
+  laterDefinition.isExecution = false;
+  semanticProgram.definitions.push_back(std::move(laterDefinition));
+
+  primec::SemanticProgramDefinition earlierDefinition;
+  earlierDefinition.fullPath = "/earlier";
+  earlierDefinition.isExecution = false;
+  semanticProgram.definitions.push_back(std::move(earlierDefinition));
+}
+
+void checkDefinitionMetadataVisible(const primec::SemanticProgram &semanticProgram) {
+  const auto definitions = primec::semanticProgramDefinitionView(semanticProgram);
+  REQUIRE(definitions.size() == 2);
+  CHECK(definitions[0] == &semanticProgram.definitions[0]);
+  CHECK(definitions[1] == &semanticProgram.definitions[1]);
+
+  const auto *laterDefinition =
+      primec::semanticProgramLookupPublishedDefinition(semanticProgram, "/later");
+  const auto *earlierDefinition =
+      primec::semanticProgramLookupPublishedDefinition(semanticProgram, "/earlier");
+  REQUIRE(laterDefinition != nullptr);
+  REQUIRE(earlierDefinition != nullptr);
+  CHECK(laterDefinition == &semanticProgram.definitions[0]);
+  CHECK(earlierDefinition == &semanticProgram.definitions[1]);
+}
+
 void populateParticleTypeMetadata(primec::SemanticProgram &semanticProgram) {
   primec::SemanticProgramTypeMetadata typeMetadata;
   typeMetadata.fullPath = "/Particle";
@@ -235,6 +263,35 @@ TEST_CASE("semantic product module views require module indexes after freeze") {
   primec::freezeSemanticProgramPublishedStorage(mappedSemanticProgram);
 
   checkSemanticModuleViewsReturnStoredEntry(mappedSemanticProgram);
+}
+
+TEST_CASE("semantic product definition view requires published maps after freeze") {
+  primec::SemanticProgram mutableSemanticProgram;
+  populateDefinitionMetadata(mutableSemanticProgram);
+
+  CHECK(primec::semanticProgramDefinitionView(mutableSemanticProgram).size() == 2);
+
+  primec::SemanticProgram rawFrozenSemanticProgram;
+  populateDefinitionMetadata(rawFrozenSemanticProgram);
+  primec::freezeSemanticProgramPublishedStorage(rawFrozenSemanticProgram);
+
+  CHECK(primec::semanticProgramDefinitionView(rawFrozenSemanticProgram).empty());
+  CHECK(primec::semanticProgramLookupPublishedDefinition(rawFrozenSemanticProgram, "/later") ==
+        nullptr);
+
+  primec::SemanticProgram mappedSemanticProgram;
+  populateDefinitionMetadata(mappedSemanticProgram);
+  const auto laterPathId =
+      primec::semanticProgramInternCallTargetString(mappedSemanticProgram, "/later");
+  const auto earlierPathId =
+      primec::semanticProgramInternCallTargetString(mappedSemanticProgram, "/earlier");
+  mappedSemanticProgram.publishedRoutingLookups.definitionIndicesByPathId.insert_or_assign(
+      earlierPathId, 1);
+  mappedSemanticProgram.publishedRoutingLookups.definitionIndicesByPathId.insert_or_assign(
+      laterPathId, 0);
+  primec::freezeSemanticProgramPublishedStorage(mappedSemanticProgram);
+
+  checkDefinitionMetadataVisible(mappedSemanticProgram);
 }
 
 TEST_CASE("semantic product type metadata requires published maps after freeze") {
