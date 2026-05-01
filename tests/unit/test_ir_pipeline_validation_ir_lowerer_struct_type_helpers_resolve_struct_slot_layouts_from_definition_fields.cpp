@@ -177,6 +177,67 @@ TEST_CASE("ir lowerer struct type helpers resolve struct slots from definition f
   CHECK(error == "native backend cannot resolve struct layout: /pkg/Null");
 }
 
+TEST_CASE("ir lowerer struct type helpers synthesize generated soa vector layouts") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+  auto collectStructLayoutFields = [](const std::string &,
+                                      std::vector<primec::ir_lowerer::StructLayoutFieldInfo> &) {
+    return false;
+  };
+  auto resolveDefinitionNamespacePrefix = [](const std::string &, std::string &) {
+    return false;
+  };
+  auto resolveStructTypeName = [](const std::string &, const std::string &, std::string &) {
+    return false;
+  };
+  auto valueKindFromTypeName = [](const std::string &) {
+    return ValueKind::Unknown;
+  };
+
+  primec::ir_lowerer::StructSlotLayoutCache layoutCache;
+  std::unordered_set<std::string> layoutStack;
+  primec::ir_lowerer::StructSlotLayoutInfo layout;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::resolveStructSlotLayoutFromDefinitionFields(
+      "/std/collections/experimental_soa_vector/SoaVector__t1234",
+      collectStructLayoutFields,
+      resolveDefinitionNamespacePrefix,
+      resolveStructTypeName,
+      valueKindFromTypeName,
+      layoutCache,
+      layoutStack,
+      layout,
+      error));
+  CHECK(error.empty());
+  CHECK(layout.structPath == "/std/collections/experimental_soa_vector/SoaVector__t1234");
+  CHECK(layout.totalSlots == 6);
+  REQUIRE(layout.fields.size() == 1);
+  CHECK(layout.fields[0].name == "storage");
+  CHECK(layout.fields[0].slotOffset == 1);
+  CHECK(layout.fields[0].slotCount == 5);
+  CHECK(layout.fields[0].structPath == "/std/collections/internal_soa_storage/SoaColumn__t1234");
+
+  primec::ir_lowerer::StructSlotLayoutInfo storageLayout;
+  REQUIRE(primec::ir_lowerer::resolveStructSlotLayoutFromDefinitionFields(
+      layout.fields[0].structPath,
+      collectStructLayoutFields,
+      resolveDefinitionNamespacePrefix,
+      resolveStructTypeName,
+      valueKindFromTypeName,
+      layoutCache,
+      layoutStack,
+      storageLayout,
+      error));
+  CHECK(storageLayout.structPath == "/std/collections/internal_soa_storage/SoaColumn__t1234");
+  CHECK(storageLayout.totalSlots == 5);
+  REQUIRE(storageLayout.fields.size() == 4);
+  CHECK(storageLayout.fields[0].name == "count");
+  CHECK(storageLayout.fields[0].slotOffset == 1);
+  CHECK(storageLayout.fields[0].valueKind == ValueKind::Int32);
+  CHECK(storageLayout.fields[3].name == "ownsData");
+  CHECK(storageLayout.fields[3].slotOffset == 4);
+  CHECK(storageLayout.fields[3].valueKind == ValueKind::Bool);
+}
+
 TEST_CASE("ir lowerer struct type helpers resolve bare std ui field aliases") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
   const primec::ir_lowerer::StructLayoutFieldIndex fieldIndex =

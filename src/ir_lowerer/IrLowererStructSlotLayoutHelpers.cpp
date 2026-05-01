@@ -25,6 +25,22 @@ bool isBuiltinSoaVectorTypeName(const std::string &typeName) {
          typeName == "std/collections/soa_vector" || typeName == "/std/collections/soa_vector";
 }
 
+bool isExperimentalSoaVectorTypeName(const std::string &typeName) {
+  return typeName == "SoaVector" ||
+         typeName == "std/collections/experimental_soa_vector/SoaVector" ||
+         typeName == "/std/collections/experimental_soa_vector/SoaVector" ||
+         typeName.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) == 0 ||
+         typeName.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+}
+
+bool isInternalSoaColumnTypeName(const std::string &typeName) {
+  return typeName == "SoaColumn" ||
+         typeName == "std/collections/internal_soa_storage/SoaColumn" ||
+         typeName == "/std/collections/internal_soa_storage/SoaColumn" ||
+         typeName.rfind("std/collections/internal_soa_storage/SoaColumn__", 0) == 0 ||
+         typeName.rfind("/std/collections/internal_soa_storage/SoaColumn__", 0) == 0;
+}
+
 bool isExperimentalVectorTypeName(const std::string &typeName) {
   return typeName == "Vector" || typeName == "std/collections/experimental_vector/Vector" ||
          typeName == "/std/collections/experimental_vector/Vector" ||
@@ -84,6 +100,35 @@ std::string normalizeVectorStructPath(const std::string &typeName) {
     return "/" + typeName;
   }
   return typeName;
+}
+
+std::string internalSoaColumnStructPathForSoaVectorPath(
+    const std::string &soaVectorStructPath) {
+  const std::string slashPrefix = "/std/collections/experimental_soa_vector/SoaVector";
+  const std::string noSlashPrefix = "std/collections/experimental_soa_vector/SoaVector";
+  if (soaVectorStructPath.rfind(slashPrefix, 0) == 0) {
+    return "/std/collections/internal_soa_storage/SoaColumn" +
+           soaVectorStructPath.substr(slashPrefix.size());
+  }
+  if (soaVectorStructPath.rfind(noSlashPrefix, 0) == 0) {
+    return "/std/collections/internal_soa_storage/SoaColumn" +
+           soaVectorStructPath.substr(noSlashPrefix.size());
+  }
+  return "/std/collections/internal_soa_storage/SoaColumn";
+}
+
+std::string normalizeInternalSoaColumnStructPath(const std::string &structPath) {
+  if (structPath == "SoaColumn") {
+    return "/std/collections/internal_soa_storage/SoaColumn";
+  }
+  return structPath.front() == '/' ? structPath : "/" + structPath;
+}
+
+std::string normalizeExperimentalSoaVectorStructPath(const std::string &structPath) {
+  if (structPath == "SoaVector") {
+    return "/std/collections/experimental_soa_vector/SoaVector";
+  }
+  return structPath.front() == '/' ? structPath : "/" + structPath;
 }
 
 std::string buildTemplatedTypeName(const std::string &typeName, const std::string &typeTemplateArg) {
@@ -261,6 +306,27 @@ bool resolveStructSlotLayoutFromDefinitionFields(
     layout.fields.push_back({"capacity", 1, 1, LocalInfo::ValueKind::Int32, ""});
     layout.fields.push_back({"data", 2, 1, LocalInfo::ValueKind::Int64, ""});
     layout.fields.push_back({"ownsData", 3, 1, LocalInfo::ValueKind::Bool, ""});
+    out = layout;
+    return true;
+  }
+  if (isInternalSoaColumnTypeName(structPath)) {
+    StructSlotLayoutInfo layout;
+    layout.structPath = normalizeInternalSoaColumnStructPath(structPath);
+    layout.totalSlots = 5;
+    layout.fields.push_back({"count", 1, 1, LocalInfo::ValueKind::Int32, ""});
+    layout.fields.push_back({"capacity", 2, 1, LocalInfo::ValueKind::Int32, ""});
+    layout.fields.push_back({"data", 3, 1, LocalInfo::ValueKind::Int64, ""});
+    layout.fields.push_back({"ownsData", 4, 1, LocalInfo::ValueKind::Bool, ""});
+    out = layout;
+    return true;
+  }
+  if (isExperimentalSoaVectorTypeName(structPath)) {
+    StructSlotLayoutInfo layout;
+    layout.structPath = normalizeExperimentalSoaVectorStructPath(structPath);
+    const std::string storageStructPath =
+        internalSoaColumnStructPathForSoaVectorPath(layout.structPath);
+    layout.totalSlots = 6;
+    layout.fields.push_back({"storage", 1, 5, LocalInfo::ValueKind::Unknown, storageStructPath});
     out = layout;
     return true;
   }
