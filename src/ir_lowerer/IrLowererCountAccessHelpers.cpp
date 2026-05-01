@@ -98,6 +98,10 @@ bool isExplicitRemovedCountLikeAliasCall(const Expr &expr,
     return false;
   }
   const std::string scopedPath = resolveScopedCallPath(expr);
+  if (helperName == "count" &&
+      (scopedPath == "/vector/count" || scopedPath == "vector/count")) {
+    return false;
+  }
   return scopedPath == std::string("/vector/") + std::string(helperName) ||
          scopedPath == std::string("vector/") + std::string(helperName) ||
          scopedPath == std::string("/array/") + std::string(helperName) ||

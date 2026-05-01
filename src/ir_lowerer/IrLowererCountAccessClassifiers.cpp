@@ -32,6 +32,10 @@ bool isExplicitRemovedCountLikeAliasCall(const Expr &expr,
   if (scopedPath.find('/') == std::string::npos && !expr.namespacePrefix.empty()) {
     scopedPath = expr.namespacePrefix + "/" + scopedPath;
   }
+  if (helperName == "count" &&
+      (scopedPath == "/vector/count" || scopedPath == "vector/count")) {
+    return false;
+  }
   return scopedPath == std::string("/vector/") + std::string(helperName) ||
          scopedPath == std::string("vector/") + std::string(helperName) ||
          scopedPath == std::string("/array/") + std::string(helperName) ||
