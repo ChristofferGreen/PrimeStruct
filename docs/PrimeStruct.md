@@ -876,7 +876,9 @@ Compile-pipeline publication contract:
   production authority, while resolved-path/source/path-id indexes remain inspection metadata only.
 - Callable-summary lookup follows the same published-map authority rule once the semantic product is frozen by the
   publication path: `callableSummaryIndicesByPathId` is the authority, while raw `callableSummaries` scanning remains
-  limited to mutable hand-built products before `freezeSemanticProgramPublishedStorage(...)`.
+  limited to mutable hand-built products before `freezeSemanticProgramPublishedStorage(...)`. Lowerer return-info
+  precompute follows the same rule and requires frozen callable summaries to be addressable through
+  `callableSummaryIndicesByPathId`, even when module artifact indexes could otherwise enumerate raw summary storage.
 - The lowerer semantic-product adapter no longer builds local-auto initializer-path, query resolved-path/call-name, or
   `try(...)` operand-path/source composite recovery indexes. Those composite lookup maps remain publication and
   inspection metadata rather than production lowerer lookup surfaces.

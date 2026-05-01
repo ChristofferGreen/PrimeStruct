@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 1, 2026)**
+- [x] TODO-4298: Require callable summary maps
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-01
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 lowerer return-info precompute authority slice
+    that requires frozen callable summaries to be addressable through
+    `callableSummaryIndicesByPathId`.
+  - acceptance:
+    - Frozen semantic-product return-info precompute no longer recovers
+      callable summaries from module artifact indexes when
+      `callableSummaryIndicesByPathId` is missing.
+    - Published callable-summary map entries are validated through the public
+      lookup helper before definitions are precomputed.
+    - Mutable hand-built semantic products keep their fixture-only
+      callable-summary view fallback before freeze.
+  - stop_rule: Stop once return-info precompute requires the published
+    callable-summary path map after freeze and docs record the remaining
+    TODO-4298 work.
+  - evidence: Rewired return-info precompute to fail closed on frozen raw
+    callable summaries without `callableSummaryIndicesByPathId`, added focused
+    coverage for module-index recovery quarantine, and skipped local test
+    execution per the lite workflow.
+
 - [x] TODO-4298: Require published definition paths
   - owner: ai
   - created_at: 2026-04-28
