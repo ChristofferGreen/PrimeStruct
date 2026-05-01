@@ -104,6 +104,147 @@ TEST_CASE("ir lowerer count access helpers prefer semantic product entry args fa
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer count access helpers require interned entry parameter facts after freeze") {
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+  primec::Expr staleParam;
+  staleParam.name = "stale";
+  primec::Transform staleTransform;
+  staleTransform.name = "array";
+  staleTransform.templateArgs = {"i64"};
+  staleParam.transforms.push_back(staleTransform);
+  entryDef.parameters = {staleParam};
+
+  primec::SemanticProgram rawFrozenSemanticProgram;
+  rawFrozenSemanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "parameter",
+      .name = "argv",
+      .bindingTypeText = "array<string>",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 2,
+      .sourceColumn = 3,
+  });
+  primec::SemanticProgramModuleResolvedArtifacts rawModule;
+  rawModule.identity.moduleKey = "/";
+  rawModule.bindingFactIndices.push_back(0);
+  rawFrozenSemanticProgram.moduleResolvedArtifacts.push_back(rawModule);
+  primec::freezeSemanticProgramPublishedStorage(rawFrozenSemanticProgram);
+
+  primec::ir_lowerer::EntryCountAccessSetup setup;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::buildEntryCountAccessSetup(
+      entryDef, &rawFrozenSemanticProgram, setup, error));
+  CHECK(error == "missing semantic-product entry parameter fact: /main");
+
+  primec::SemanticProgram missingBindingTextSemanticProgram;
+  const primec::SymbolId missingBindingScopeId =
+      primec::semanticProgramInternCallTargetString(missingBindingTextSemanticProgram, "/main");
+  const primec::SymbolId missingBindingSiteId =
+      primec::semanticProgramInternCallTargetString(missingBindingTextSemanticProgram, "parameter");
+  const primec::SymbolId missingBindingNameId =
+      primec::semanticProgramInternCallTargetString(missingBindingTextSemanticProgram, "argv");
+  missingBindingTextSemanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "parameter",
+      .name = "argv",
+      .bindingTypeText = "array<string>",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 2,
+      .sourceColumn = 3,
+      .scopePathId = missingBindingScopeId,
+      .siteKindId = missingBindingSiteId,
+      .nameId = missingBindingNameId,
+  });
+  primec::SemanticProgramModuleResolvedArtifacts missingBindingModule;
+  missingBindingModule.identity.moduleKey = "/";
+  missingBindingModule.bindingFactIndices.push_back(0);
+  missingBindingTextSemanticProgram.moduleResolvedArtifacts.push_back(missingBindingModule);
+  primec::freezeSemanticProgramPublishedStorage(missingBindingTextSemanticProgram);
+
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::buildEntryCountAccessSetup(
+      entryDef, &missingBindingTextSemanticProgram, setup, error));
+  CHECK(error == "native backend entry parameter must be array<string>");
+
+  primec::SemanticProgram missingNameSemanticProgram;
+  const primec::SymbolId missingNameScopeId =
+      primec::semanticProgramInternCallTargetString(missingNameSemanticProgram, "/main");
+  const primec::SymbolId missingNameSiteId =
+      primec::semanticProgramInternCallTargetString(missingNameSemanticProgram, "parameter");
+  const primec::SymbolId missingNameBindingId =
+      primec::semanticProgramInternCallTargetString(missingNameSemanticProgram, "array<string>");
+  missingNameSemanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "parameter",
+      .name = "argv",
+      .bindingTypeText = "array<string>",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 2,
+      .sourceColumn = 3,
+      .scopePathId = missingNameScopeId,
+      .siteKindId = missingNameSiteId,
+      .bindingTypeTextId = missingNameBindingId,
+  });
+  primec::SemanticProgramModuleResolvedArtifacts missingNameModule;
+  missingNameModule.identity.moduleKey = "/";
+  missingNameModule.bindingFactIndices.push_back(0);
+  missingNameSemanticProgram.moduleResolvedArtifacts.push_back(missingNameModule);
+  primec::freezeSemanticProgramPublishedStorage(missingNameSemanticProgram);
+
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::buildEntryCountAccessSetup(
+      entryDef, &missingNameSemanticProgram, setup, error));
+  CHECK(error == "missing semantic-product entry parameter name: /main");
+
+  primec::SemanticProgram mappedFrozenSemanticProgram;
+  const primec::SymbolId mappedScopeId =
+      primec::semanticProgramInternCallTargetString(mappedFrozenSemanticProgram, "/main");
+  const primec::SymbolId mappedSiteId =
+      primec::semanticProgramInternCallTargetString(mappedFrozenSemanticProgram, "parameter");
+  const primec::SymbolId mappedNameId =
+      primec::semanticProgramInternCallTargetString(mappedFrozenSemanticProgram, "semanticArgv");
+  const primec::SymbolId mappedBindingId =
+      primec::semanticProgramInternCallTargetString(mappedFrozenSemanticProgram, "array<string>");
+  mappedFrozenSemanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/stale",
+      .siteKind = "local",
+      .name = "staleArgv",
+      .bindingTypeText = "array<i64>",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 2,
+      .sourceColumn = 3,
+      .scopePathId = mappedScopeId,
+      .siteKindId = mappedSiteId,
+      .nameId = mappedNameId,
+      .bindingTypeTextId = mappedBindingId,
+  });
+  primec::SemanticProgramModuleResolvedArtifacts mappedModule;
+  mappedModule.identity.moduleKey = "/";
+  mappedModule.bindingFactIndices.push_back(0);
+  mappedFrozenSemanticProgram.moduleResolvedArtifacts.push_back(mappedModule);
+  primec::freezeSemanticProgramPublishedStorage(mappedFrozenSemanticProgram);
+
+  error.clear();
+  REQUIRE(primec::ir_lowerer::buildEntryCountAccessSetup(
+      entryDef, &mappedFrozenSemanticProgram, setup, error));
+  CHECK(error.empty());
+  CHECK(setup.hasEntryArgs);
+  CHECK(setup.entryArgsName == "semanticArgv");
+}
+
 TEST_CASE("ir lowerer count access helpers reject removed /array/capacity alias") {
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo vecInfo;

@@ -891,6 +891,10 @@ Compile-pipeline publication contract:
   validation resolve interned text IDs for callable-result and return binding fields, and do not recover copied text
   after publication freezes the semantic product. Mutable hand-built products may still use copied-text fallbacks
   before `freezeSemanticProgramPublishedStorage(...)`.
+- Entry-argument count-access setup uses the same frozen-product rule for published binding facts: entry parameter
+  scope, site-kind, name, and binding-type text must resolve through interned IDs after publication freezes the
+  semantic product. Mutable hand-built products may still use copied-text fallbacks before
+  `freezeSemanticProgramPublishedStorage(...)`.
 - Callable-summary lookup follows the same published-map authority rule once the semantic product is frozen by the
   publication path: `callableSummaryIndicesByPathId` is the authority, while raw `callableSummaries` scanning remains
   limited to mutable hand-built products before `freezeSemanticProgramPublishedStorage(...)`. Lowerer return-info

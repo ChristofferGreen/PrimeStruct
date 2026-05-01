@@ -25,13 +25,7 @@ namespace {
 std::string_view resolveSemanticProductText(const SemanticProgram &semanticProgram,
                                             SymbolId id,
                                             const std::string &fallback) {
-  if (id != InvalidSymbolId) {
-    const std::string_view resolved = semanticProgramResolveCallTargetString(semanticProgram, id);
-    if (!resolved.empty()) {
-      return resolved;
-    }
-  }
-  return fallback;
+  return semanticProgramResolvePublishedText(semanticProgram, id, fallback);
 }
 
 std::string resolveScopedCallPath(const Expr &expr) {
@@ -255,9 +249,15 @@ bool resolveEntryArgsParameterFromSemanticProduct(const Definition &entryDef,
     return false;
   }
 
+  const std::string_view entryArgsName = resolveSemanticProductText(
+      *semanticProgram, entryParamFact->nameId, entryParamFact->name);
+  if (entryArgsName.empty()) {
+    error = "missing semantic-product entry parameter name: " + entryDef.fullPath;
+    return false;
+  }
+
   hasEntryArgsOut = true;
-  entryArgsNameOut = std::string(resolveSemanticProductText(
-      *semanticProgram, entryParamFact->nameId, entryParamFact->name));
+  entryArgsNameOut = std::string(entryArgsName);
   return true;
 }
 

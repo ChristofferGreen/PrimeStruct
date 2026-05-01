@@ -6,6 +6,28 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 1, 2026)**
+- [x] TODO-4298: Require entry args text IDs
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-01
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 entry-args count-access text authority slice
+    that makes frozen entry parameter scope, site-kind, name, and binding
+    type facts resolve through interned text IDs instead of copied raw text.
+  - acceptance:
+    - Frozen entry-args count-access setup no longer recovers copied binding
+      fact text when interned text IDs are missing.
+    - Published interned text IDs still produce the same entry-args setup.
+    - Mutable hand-built semantic products keep their fixture-only
+      copied-text fallback before freeze.
+  - stop_rule: Stop once entry-args count-access setup requires interned
+    binding fact text after freeze and docs record the remaining TODO-4298
+    work.
+  - evidence: Routed entry-args count-access binding fact text resolution
+    through `semanticProgramResolvePublishedText(...)`, added missing-name
+    diagnostics, added focused frozen-raw and mapped coverage, and skipped
+    local test execution per the lite workflow.
+
 - [x] TODO-4298: Require return lowerer text IDs
   - owner: ai
   - created_at: 2026-04-28
