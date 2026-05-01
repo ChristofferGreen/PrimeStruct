@@ -342,6 +342,51 @@ main() {
   CHECK(result == 11);
 }
 
+TEST_CASE("ir lowerer materializes variadic map packs with indexed contains helpers") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+score_maps([args<map<i32, i32>>] values) {
+  return(if(/std/collections/map/contains<i32, i32>(at(values, 2i32), 11i32),
+            then(){ return(plus(/std/collections/map/at_unsafe<i32, i32>(at(values, 0i32), 3i32),
+                                /std/collections/map/at_unsafe<i32, i32>(at(values, 2i32), 11i32))) },
+            else(){ return(0i32) }))
+}
+
+[return<int>]
+forward([args<map<i32, i32>>] values) {
+  return(score_maps([spread] values))
+}
+
+[return<int>]
+main() {
+  return(plus(score_maps(map<i32, i32>(1i32, 2i32, 3i32, 4i32),
+                         map<i32, i32>(5i32, 6i32),
+                         map<i32, i32>(7i32, 8i32, 9i32, 10i32, 11i32, 12i32)),
+              forward(map<i32, i32>(13i32, 14i32, 3i32, 16i32),
+                      map<i32, i32>(15i32, 16i32),
+                      map<i32, i32>(17i32, 18i32, 11i32, 20i32))))
+}
+)";
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 52);
+}
+
 TEST_CASE("ir lowerer materializes variadic map packs with indexed tryAt inference") {
   const std::string source = R"(
 import /std/collections/*

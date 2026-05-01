@@ -50,6 +50,19 @@ bool isExplicitDirectMapCountContainsTryAtCall(const SemanticProgram *semanticPr
          (helperName == "count" || helperName == "contains" || helperName == "tryAt");
 }
 
+bool shouldPreserveExplicitDirectMapHelperCall(
+    const SemanticProgram *semanticProgram,
+    const Expr &expr,
+    const MapAccessTargetInfo &mapTargetInfo) {
+  if (!isExplicitDirectMapCountContainsTryAtCall(semanticProgram, expr)) {
+    return false;
+  }
+  return expr.args.empty() ||
+         expr.args.front().kind != Expr::Kind::Call ||
+         !mapTargetInfo.isMapTarget ||
+         mapTargetInfo.isWrappedMapTarget;
+}
+
 bool isExplicitDirectVectorCountCall(const SemanticProgram *semanticProgram,
                                      const Expr &expr) {
   if (expr.isMethodCall || expr.kind != Expr::Kind::Call) {
@@ -320,15 +333,15 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
   }
 
   if (!expr.isMethodCall && isMapContainsHelperName(expr)) {
-    if (isExplicitDirectMapCountContainsTryAtCall(semanticProgram, expr)) {
-      return NativeCallTailDispatchResult::NotHandled;
-    }
     if (expr.args.size() != 2) {
       error = "contains requires exactly two arguments";
       return NativeCallTailDispatchResult::Error;
     }
     const auto mapTargetInfo = resolveMapAccessTargetInfo(
         expr.args.front(), localsIn, resolveCallMapAccessTargetInfo);
+    if (shouldPreserveExplicitDirectMapHelperCall(semanticProgram, expr, mapTargetInfo)) {
+      return NativeCallTailDispatchResult::NotHandled;
+    }
     if (expr.args.front().kind == Expr::Kind::Call &&
         (!mapTargetInfo.isMapTarget || mapTargetInfo.isWrappedMapTarget)) {
       return NativeCallTailDispatchResult::NotHandled;
@@ -393,15 +406,15 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
   }
 
   if (!expr.isMethodCall && isMapTryAtHelperName(expr)) {
-    if (isExplicitDirectMapCountContainsTryAtCall(semanticProgram, expr)) {
-      return NativeCallTailDispatchResult::NotHandled;
-    }
     if (expr.args.size() != 2) {
       error = "tryAt requires exactly two arguments";
       return NativeCallTailDispatchResult::Error;
     }
     const auto mapTargetInfo = resolveMapAccessTargetInfo(
         expr.args.front(), localsIn, resolveCallMapAccessTargetInfo);
+    if (shouldPreserveExplicitDirectMapHelperCall(semanticProgram, expr, mapTargetInfo)) {
+      return NativeCallTailDispatchResult::NotHandled;
+    }
     if (expr.args.front().kind == Expr::Kind::Call &&
         (!mapTargetInfo.isMapTarget || mapTargetInfo.isWrappedMapTarget)) {
       return NativeCallTailDispatchResult::NotHandled;
