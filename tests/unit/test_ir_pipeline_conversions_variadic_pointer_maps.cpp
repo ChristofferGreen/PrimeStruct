@@ -277,7 +277,7 @@ import /std/collections/*
 
 [return<int>]
 score_ptrs([args<Pointer</std/collections/map<i32, i32>>>] values) {
-  [auto] head{/std/collections/map/at_unsafe<i32, i32>(at(values, 0i32), 3i32)}
+  [auto] head{at(values, 0i32).at_unsafe(3i32)}
   if(at(values, 2i32).contains(11i32),
      then(){ return(plus(head, at(values, 2i32).at(11i32))) },
      else(){ return(0i32) })

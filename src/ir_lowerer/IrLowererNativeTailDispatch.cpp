@@ -463,7 +463,12 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
         !expr.args.empty() &&
         expr.args.front().kind == Expr::Kind::Call &&
         (accessName == "at" || accessName == "at_unsafe");
-    if (isMethodCallTempReceiver) {
+    const bool isMapMethodTempReceiver =
+        isMethodCallTempReceiver &&
+        resolveMapAccessTargetInfo(
+            expr.args.front(), localsIn, resolveCallMapAccessTargetInfo)
+            .isMapTarget;
+    if (isMethodCallTempReceiver && !isMapMethodTempReceiver) {
       return NativeCallTailDispatchResult::NotHandled;
     }
     const auto arrayVectorTargetInfo = !expr.args.empty()
