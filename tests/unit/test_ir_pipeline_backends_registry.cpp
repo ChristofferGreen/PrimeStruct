@@ -20,6 +20,8 @@
 #include "primec/IrLowerer.h"
 #include "primec/IrPreparation.h"
 #include "primec/SemanticValidationPlan.h"
+#include "primec/semantic_product/DirectCallFacts.h"
+#include "primec/semantic_product/MethodCallFacts.h"
 #include "primec/testing/CompilePipelineDumpHelpers.h"
 #include "primec/testing/IrLowererHelpers.h"
 
@@ -558,6 +560,118 @@ TEST_CASE("compile pipeline semantic handoff gate reaches lowering and rejects s
   CHECK(staleFailure.message ==
         "missing semantic-product direct-call target: /main -> helper");
   CHECK(staleFailure.diagnosticInfo.message == staleFailure.message);
+}
+
+TEST_CASE("published target lookups ignore raw routing facts without maps") {
+  primec::SemanticProgram semanticProgram;
+  const auto directPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/helper");
+  const auto methodPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram,
+                                                    "/vector/count");
+  const auto bridgePathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram,
+                                                    "/vector/count");
+
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "helper",
+      .sourceLine = 1,
+      .sourceColumn = 1,
+      .semanticNodeId = 11,
+      .provenanceHandle = 0,
+      .scopePathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .callNameId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "helper"),
+      .resolvedPathId = directPathId,
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsMapHelpers,
+  });
+  semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
+      .scopePath = "/main",
+      .methodName = "count",
+      .receiverTypeText = "vector<i32>",
+      .sourceLine = 1,
+      .sourceColumn = 1,
+      .semanticNodeId = 12,
+      .provenanceHandle = 0,
+      .scopePathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .methodNameId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "count"),
+      .receiverTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram,
+                                                        "vector<i32>"),
+      .resolvedPathId = methodPathId,
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelpers,
+  });
+  semanticProgram.bridgePathChoices.push_back(primec::SemanticProgramBridgePathChoice{
+      .scopePath = "/main",
+      .collectionFamily = "vector",
+      .sourceLine = 1,
+      .sourceColumn = 1,
+      .semanticNodeId = 13,
+      .provenanceHandle = 0,
+      .scopePathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .collectionFamilyId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "vector"),
+      .helperNameId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "count"),
+      .chosenPathId = bridgePathId,
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelpers,
+  });
+
+  CHECK_FALSE(
+      primec::semanticProgramLookupPublishedDirectCallTargetId(semanticProgram, 11)
+          .has_value());
+  CHECK_FALSE(
+      primec::semanticProgramLookupPublishedMethodCallTargetId(semanticProgram, 12)
+          .has_value());
+  CHECK_FALSE(
+      primec::semanticProgramLookupPublishedBridgePathChoiceId(semanticProgram, 13)
+          .has_value());
+  CHECK_FALSE(primec::semanticProgramLookupPublishedDirectCallTargetStdlibSurfaceId(
+                  semanticProgram, 11)
+                  .has_value());
+  CHECK_FALSE(primec::semanticProgramLookupPublishedMethodCallTargetStdlibSurfaceId(
+                  semanticProgram, 12)
+                  .has_value());
+  CHECK_FALSE(primec::semanticProgramLookupPublishedBridgePathChoiceStdlibSurfaceId(
+                  semanticProgram, 13)
+                  .has_value());
+
+  semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr
+      .insert_or_assign(11, directPathId);
+  semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr
+      .insert_or_assign(12, methodPathId);
+  semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr
+      .insert_or_assign(13, bridgePathId);
+  semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr
+      .insert_or_assign(11, primec::StdlibSurfaceId::CollectionsMapHelpers);
+  semanticProgram.publishedRoutingLookups.methodCallStdlibSurfaceIdsByExpr
+      .insert_or_assign(12, primec::StdlibSurfaceId::CollectionsVectorHelpers);
+  semanticProgram.publishedRoutingLookups.bridgePathChoiceStdlibSurfaceIdsByExpr
+      .insert_or_assign(13, primec::StdlibSurfaceId::CollectionsVectorHelpers);
+
+  CHECK(primec::semanticProgramLookupPublishedDirectCallTargetId(
+            semanticProgram, 11)
+            .value_or(primec::InvalidSymbolId) == directPathId);
+  CHECK(primec::semanticProgramLookupPublishedMethodCallTargetId(
+            semanticProgram, 12)
+            .value_or(primec::InvalidSymbolId) == methodPathId);
+  CHECK(primec::semanticProgramLookupPublishedBridgePathChoiceId(
+            semanticProgram, 13)
+            .value_or(primec::InvalidSymbolId) == bridgePathId);
+  CHECK(primec::semanticProgramLookupPublishedDirectCallTargetStdlibSurfaceId(
+            semanticProgram, 11) ==
+        primec::StdlibSurfaceId::CollectionsMapHelpers);
+  CHECK(primec::semanticProgramLookupPublishedMethodCallTargetStdlibSurfaceId(
+            semanticProgram, 12) ==
+        primec::StdlibSurfaceId::CollectionsVectorHelpers);
+  CHECK(primec::semanticProgramLookupPublishedBridgePathChoiceStdlibSurfaceId(
+            semanticProgram, 13) ==
+        primec::StdlibSurfaceId::CollectionsVectorHelpers);
 }
 
 TEST_CASE("native pick target sum resolution uses semantic-product facts") {
