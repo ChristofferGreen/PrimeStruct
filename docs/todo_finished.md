@@ -6,6 +6,31 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 1, 2026)**
+- [x] TODO-4298: Use Result facts for base call kind
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-01
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes base call-kind
+    inference for semantic-product-addressed `Result.ok(...)`,
+    `Result.error(...)`, and `Result.why(...)` consume published
+    query/binding facts before the legacy Result method arity fallback.
+  - acceptance:
+    - `inferCallExprBaseKind` resolves semantic `Result.ok(...)` payload kind
+      from published semantic-product query/binding facts before local arity
+      fallback.
+    - Missing semantic-product Result method facts leave the base-kind result
+      unresolved instead of reconstructing it from local fallback inference.
+    - Syntax-only `Result.ok(...)`, `Result.error(...)`, and
+      `Result.why(...)` base-kind fallback behavior remains unchanged.
+  - stop_rule: Stop once base call-kind Result method inference uses
+    graph-backed facts as the semantic-product authority and docs record the
+    remaining TODO-4298 work.
+  - evidence: Routed semantic-product Result method base-kind inference
+    through published query/binding facts, added focused positive/missing-fact
+    and syntax-only fallback coverage, and skipped local test execution per
+    the lite workflow.
+
 - [x] TODO-4298: Use try facts in base call-kind inference
   - owner: ai
   - created_at: 2026-04-28

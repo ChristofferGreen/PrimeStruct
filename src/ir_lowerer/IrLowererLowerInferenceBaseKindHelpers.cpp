@@ -31,6 +31,28 @@ bool isBaseSetupResultOrTryCall(const Expr &expr) {
          expr.args.front().name == "Result";
 }
 
+bool isBaseSetupResultTypeMethodCall(const Expr &expr) {
+  return expr.kind == Expr::Kind::Call && expr.isMethodCall && !expr.args.empty() &&
+         expr.args.front().kind == Expr::Kind::Name && expr.args.front().name == "Result" &&
+         (expr.name == "ok" || expr.name == "error" || expr.name == "why");
+}
+
+bool hasSemanticProductBaseSetupSite(const Expr &expr,
+                                     const SemanticProgram *semanticProgram,
+                                     const SemanticProductIndex *semanticIndex) {
+  return semanticProgram != nullptr && semanticIndex != nullptr && expr.semanticNodeId != 0;
+}
+
+bool hasSemanticProductResultMethodFactContext(const Expr &expr,
+                                               const SemanticProgram *semanticProgram,
+                                               const SemanticProductIndex *semanticIndex) {
+  if (hasSemanticProductBaseSetupSite(expr, semanticProgram, semanticIndex)) {
+    return true;
+  }
+  return semanticProgram != nullptr && semanticIndex != nullptr && expr.name == "ok" &&
+         expr.args.size() > 1 && expr.args[1].semanticNodeId != 0;
+}
+
 LocalInfo::ValueKind inferBaseSetupSimpleExprKind(const Expr &expr,
                                                   const LocalMap &localsIn,
                                                   const ResolveMethodCallWithLocalsFn *resolveMethodCall,
@@ -147,7 +169,9 @@ bool resolveBaseSetupResultExprInfo(const Expr &expr,
             semanticIndex,
             fallbackInferExprKind);
       },
-      out);
+      out,
+      semanticProgram,
+      semanticIndex);
 }
 
 LocalInfo::ValueKind inferBaseSetupSimpleExprKind(const Expr &expr,
@@ -544,6 +568,33 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
   }
   if (expr.isMethodCall) {
     if (!expr.args.empty() && expr.args.front().kind == Expr::Kind::Name && expr.args.front().name == "Result") {
+      ResultExprInfo resultInfo;
+      if (hasSemanticProductResultMethodFactContext(expr, semanticProgram, semanticIndex) &&
+          expr.name == "ok" &&
+          resolveBaseSetupResultExprInfo(
+              expr,
+              localsIn,
+              resolveMethodCall,
+              resolveDefinitionCall,
+              lookupReturnInfo,
+              semanticProgram,
+              semanticIndex,
+              fallbackInferExprKind,
+              resultInfo) &&
+          resultInfo.isResult) {
+        if (!resultInfo.hasValue) {
+          kindOut = LocalInfo::ValueKind::Int32;
+          return true;
+        }
+        if (resultInfo.valueKind != LocalInfo::ValueKind::Unknown) {
+          kindOut = resultInfo.valueKind;
+        }
+        return true;
+      }
+      if (hasSemanticProductBaseSetupSite(expr, semanticProgram, semanticIndex) &&
+          isBaseSetupResultTypeMethodCall(expr)) {
+        return true;
+      }
       if (expr.name == "ok") {
         kindOut = expr.args.size() > 1 ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
         return true;
@@ -646,6 +697,32 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
       }
     }
     if (arg.kind == Expr::Kind::Call) {
+      if (isBaseSetupResultTypeMethodCall(arg) &&
+          hasSemanticProductResultMethodFactContext(arg, semanticProgram, semanticIndex)) {
+        ResultExprInfo resultInfo;
+        if (arg.name == "ok" &&
+            resolveBaseSetupResultExprInfo(
+                arg,
+                localsIn,
+                resolveMethodCall,
+                resolveDefinitionCall,
+                lookupReturnInfo,
+                semanticProgram,
+                semanticIndex,
+                fallbackInferExprKind,
+                resultInfo) &&
+            resultInfo.isResult) {
+          if (!resultInfo.hasValue) {
+            kindOut = LocalInfo::ValueKind::Int32;
+            return true;
+          }
+          if (resultInfo.valueKind != LocalInfo::ValueKind::Unknown) {
+            kindOut = resultInfo.valueKind;
+          }
+          return true;
+        }
+        return true;
+      }
       if (inferMapTryAtResultValueKind(arg, localsIn, kindOut)) {
         return true;
       }

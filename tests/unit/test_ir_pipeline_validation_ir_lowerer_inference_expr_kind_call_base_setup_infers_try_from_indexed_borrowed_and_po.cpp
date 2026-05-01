@@ -146,6 +146,252 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic query fa
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
 }
 
+TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic Result.ok payload facts") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      .scopePath = "/main",
+      .callName = "lookup",
+      .queryTypeText = "bool",
+      .bindingTypeText = "bool",
+      .receiverBindingTypeText = "",
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 801,
+      .provenanceHandle = 0,
+      .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .callNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "lookup"),
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main/lookup"),
+      .queryTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "bool"),
+      .bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "bool"),
+  });
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "local",
+      .name = "payload",
+      .bindingTypeText = "",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 803,
+      .resolvedPathId = primec::InvalidSymbolId,
+      .bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "bool"),
+  });
+  const auto semanticIndex = primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  state.semanticProgram = &semanticProgram;
+  state.semanticIndex = &semanticIndex;
+
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallBaseSetup(
+      {
+          .inferStructExprPath = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+          .resolveStructFieldSlot =
+              [](const std::string &, const std::string &, primec::ir_lowerer::StructSlotFieldInfo &) { return false; },
+          .resolveUninitializedStorage =
+              [](const primec::Expr &,
+                 const primec::ir_lowerer::LocalMap &,
+                 primec::ir_lowerer::UninitializedStorageAccessInfo &,
+                 bool &resolved) {
+                resolved = false;
+                return true;
+              },
+      },
+      state,
+      error));
+  CHECK(error.empty());
+  REQUIRE(static_cast<bool>(state.inferCallExprBaseKind));
+
+  bool fallbackCalled = false;
+  state.inferExprKind = [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    fallbackCalled = true;
+    return ValueKind::Int64;
+  };
+
+  primec::Expr resultType;
+  resultType.kind = primec::Expr::Kind::Name;
+  resultType.name = "Result";
+
+  primec::Expr payloadExpr;
+  payloadExpr.kind = primec::Expr::Kind::Call;
+  payloadExpr.name = "lookup";
+  payloadExpr.semanticNodeId = 801;
+
+  primec::Expr okExpr;
+  okExpr.kind = primec::Expr::Kind::Call;
+  okExpr.isMethodCall = true;
+  okExpr.name = "ok";
+  okExpr.args = {resultType, payloadExpr};
+  okExpr.semanticNodeId = 802;
+
+  ValueKind kindOut = ValueKind::Unknown;
+  CHECK(state.inferCallExprBaseKind(okExpr, primec::ir_lowerer::LocalMap{}, kindOut));
+  CHECK(kindOut == ValueKind::Bool);
+  CHECK_FALSE(fallbackCalled);
+
+  primec::Expr payloadName;
+  payloadName.kind = primec::Expr::Kind::Name;
+  payloadName.name = "payload";
+  payloadName.semanticNodeId = 803;
+
+  primec::Expr okNameExpr = okExpr;
+  okNameExpr.args = {resultType, payloadName};
+  okNameExpr.semanticNodeId = 804;
+
+  primec::ir_lowerer::LocalInfo stalePayload;
+  stalePayload.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  stalePayload.valueKind = ValueKind::Int64;
+  const primec::ir_lowerer::LocalMap locals{{"payload", stalePayload}};
+
+  fallbackCalled = false;
+  kindOut = ValueKind::Unknown;
+  CHECK(state.inferCallExprBaseKind(okNameExpr, locals, kindOut));
+  CHECK(kindOut == ValueKind::Bool);
+  CHECK_FALSE(fallbackCalled);
+}
+
+TEST_CASE("ir lowerer inference expr-kind call-base setup does not infer missing Result method facts from fallback") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::SemanticProgram semanticProgram;
+  const auto semanticIndex = primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  state.semanticProgram = &semanticProgram;
+  state.semanticIndex = &semanticIndex;
+
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallBaseSetup(
+      {
+          .inferStructExprPath = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+          .resolveStructFieldSlot =
+              [](const std::string &, const std::string &, primec::ir_lowerer::StructSlotFieldInfo &) { return false; },
+          .resolveUninitializedStorage =
+              [](const primec::Expr &,
+                 const primec::ir_lowerer::LocalMap &,
+                 primec::ir_lowerer::UninitializedStorageAccessInfo &,
+                 bool &resolved) {
+                resolved = false;
+                return true;
+              },
+      },
+      state,
+      error));
+  CHECK(error.empty());
+  REQUIRE(static_cast<bool>(state.inferCallExprBaseKind));
+
+  bool fallbackCalled = false;
+  state.inferExprKind = [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    fallbackCalled = true;
+    return ValueKind::Int64;
+  };
+
+  primec::Expr resultType;
+  resultType.kind = primec::Expr::Kind::Name;
+  resultType.name = "Result";
+
+  primec::Expr payloadExpr;
+  payloadExpr.kind = primec::Expr::Kind::Call;
+  payloadExpr.name = "lookup";
+  payloadExpr.semanticNodeId = 811;
+
+  primec::Expr okExpr;
+  okExpr.kind = primec::Expr::Kind::Call;
+  okExpr.isMethodCall = true;
+  okExpr.name = "ok";
+  okExpr.args = {resultType, payloadExpr};
+  okExpr.semanticNodeId = 812;
+
+  ValueKind kindOut = ValueKind::Unknown;
+  CHECK(state.inferCallExprBaseKind(okExpr, primec::ir_lowerer::LocalMap{}, kindOut));
+  CHECK(kindOut == ValueKind::Unknown);
+
+  primec::Expr errorExpr = okExpr;
+  errorExpr.name = "error";
+  errorExpr.args = {resultType};
+  errorExpr.semanticNodeId = 813;
+
+  kindOut = ValueKind::Unknown;
+  CHECK(state.inferCallExprBaseKind(errorExpr, primec::ir_lowerer::LocalMap{}, kindOut));
+  CHECK(kindOut == ValueKind::Unknown);
+
+  primec::Expr whyExpr = errorExpr;
+  whyExpr.name = "why";
+  whyExpr.semanticNodeId = 814;
+
+  kindOut = ValueKind::Unknown;
+  CHECK(state.inferCallExprBaseKind(whyExpr, primec::ir_lowerer::LocalMap{}, kindOut));
+  CHECK(kindOut == ValueKind::Unknown);
+  CHECK_FALSE(fallbackCalled);
+}
+
+TEST_CASE("ir lowerer inference expr-kind call-base setup keeps syntax Result method fallback") {
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallBaseSetup(
+      {
+          .inferStructExprPath = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+          .resolveStructFieldSlot =
+              [](const std::string &, const std::string &, primec::ir_lowerer::StructSlotFieldInfo &) { return false; },
+          .resolveUninitializedStorage =
+              [](const primec::Expr &,
+                 const primec::ir_lowerer::LocalMap &,
+                 primec::ir_lowerer::UninitializedStorageAccessInfo &,
+                 bool &resolved) {
+                resolved = false;
+                return true;
+              },
+      },
+      state,
+      error));
+  CHECK(error.empty());
+  REQUIRE(static_cast<bool>(state.inferCallExprBaseKind));
+
+  primec::Expr resultType;
+  resultType.kind = primec::Expr::Kind::Name;
+  resultType.name = "Result";
+
+  primec::Expr payloadExpr;
+  payloadExpr.kind = primec::Expr::Kind::Literal;
+  payloadExpr.intWidth = 32;
+  payloadExpr.literalValue = 1;
+
+  primec::Expr okExpr;
+  okExpr.kind = primec::Expr::Kind::Call;
+  okExpr.isMethodCall = true;
+  okExpr.name = "ok";
+  okExpr.args = {resultType, payloadExpr};
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut =
+      primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprBaseKind(okExpr, primec::ir_lowerer::LocalMap{}, kindOut));
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+
+  primec::Expr errorExpr = okExpr;
+  errorExpr.name = "error";
+  errorExpr.args = {resultType};
+
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprBaseKind(errorExpr, primec::ir_lowerer::LocalMap{}, kindOut));
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+
+  primec::Expr whyExpr = errorExpr;
+  whyExpr.name = "why";
+
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprBaseKind(whyExpr, primec::ir_lowerer::LocalMap{}, kindOut));
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
+}
+
 TEST_CASE("ir lowerer inference expr-kind call-base setup does not infer missing query facts from fallback") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
 

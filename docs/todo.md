@@ -470,7 +470,10 @@ Task template:
     quarantine slice is complete. The lowerer return definition-path adapter
     cache quarantine slice is complete while the explicit return-by-path
     helper remains available for resolved callee-path consumers. The lowerer
-    base call-kind `try(...)` fact authority slice is complete.
+    base call-kind `try(...)` fact authority slice is complete. The lowerer
+    base call-kind Result method fact-authority slice is complete for
+    semantic-product-addressed `Result.ok(...)`, `Result.error(...)`, and
+    `Result.why(...)` calls.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -597,6 +600,12 @@ Task template:
       now resolves interned query/binding type IDs before consulting copied
       query text fields, so scalar call kind inference consumes graph-owned
       interned facts.
+    - Completed slice: semantic-product-addressed call-base Result method
+      inference now consumes published query/binding facts for
+      `Result.ok(...)`, `Result.error(...)`, and `Result.why(...)` before
+      legacy Result method arity fallback can answer. Missing facts leave the
+      value kind unresolved on the semantic-product path while syntax-only
+      compatibility keeps the old fallback.
     - Completed slice: semantic-product-addressed native tail-dispatch
       map/vector receiver classification now resolves interned query/binding
       type IDs before consulting copied query text fields, so collection
