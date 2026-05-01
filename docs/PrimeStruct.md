@@ -848,6 +848,10 @@ Compile-pipeline publication contract:
   per-module `moduleResolvedArtifacts` indexes are the authority for direct-call, method-call, bridge-path,
   callable-summary, binding, return, collection-specialization, local-auto, query, try, and `on_error` views. Mutable
   hand-built products may still use the raw flat-storage scan before `freezeSemanticProgramPublishedStorage(...)`.
+- Type-shape metadata lookup follows the same rule once the semantic product is frozen by the publication path:
+  `typeMetadataIndicesByPathId` and `structFieldMetadataIndicesByStructPathId` are the authorities for type and
+  struct-field metadata lookup instead of recovering by scanning raw `typeMetadata` or `structFieldMetadata` storage.
+  Mutable hand-built products may still use the raw scan before `freezeSemanticProgramPublishedStorage(...)`.
 - Collection-specialization lookup follows the same published-map authority rule for semantic-node ids: public
   published collection-specialization lookup helpers and the lowerer semantic-product adapter require
   `collectionSpecializationIndicesByExpr` for expression-scoped collection facts instead of recovering by scanning

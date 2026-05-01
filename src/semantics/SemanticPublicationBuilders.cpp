@@ -995,6 +995,9 @@ void publishTypeMetadataFacts(
   if (typeMetadata.empty()) {
     return;
   }
+  state.semanticProgram.publishedRoutingLookups.typeMetadataIndicesByPathId.reserve(
+      state.semanticProgram.publishedRoutingLookups.typeMetadataIndicesByPathId.size() +
+      typeMetadata.size());
   state.semanticProgram.typeMetadata.reserve(typeMetadata.size());
   for (const auto &entry : typeMetadata) {
     state.semanticProgram.typeMetadata.push_back(SemanticProgramTypeMetadata{
@@ -1012,6 +1015,13 @@ void publishTypeMetadataFacts(
         entry.semanticNodeId,
         makeSemanticProvenanceHandle(entry.semanticNodeId),
     });
+    const std::size_t entryIndex = state.semanticProgram.typeMetadata.size() - 1;
+    const SymbolId fullPathId =
+        semanticProgramInternCallTargetString(state.semanticProgram, entry.fullPath);
+    if (fullPathId != InvalidSymbolId) {
+      state.semanticProgram.publishedRoutingLookups.typeMetadataIndicesByPathId
+          .insert_or_assign(fullPathId, entryIndex);
+    }
   }
 }
 
@@ -1021,6 +1031,9 @@ void publishStructFieldMetadataFacts(
   if (structFieldMetadata.empty()) {
     return;
   }
+  state.semanticProgram.publishedRoutingLookups.structFieldMetadataIndicesByStructPathId.reserve(
+      state.semanticProgram.publishedRoutingLookups.structFieldMetadataIndicesByStructPathId.size() +
+      structFieldMetadata.size());
   state.semanticProgram.structFieldMetadata.reserve(structFieldMetadata.size());
   for (const auto &entry : structFieldMetadata) {
     state.semanticProgram.structFieldMetadata.push_back(SemanticProgramStructFieldMetadata{
@@ -1033,6 +1046,14 @@ void publishStructFieldMetadataFacts(
         entry.semanticNodeId,
         makeSemanticProvenanceHandle(entry.semanticNodeId),
     });
+    const std::size_t entryIndex = state.semanticProgram.structFieldMetadata.size() - 1;
+    const SymbolId structPathId =
+        semanticProgramInternCallTargetString(state.semanticProgram, entry.structPath);
+    if (structPathId != InvalidSymbolId) {
+      state.semanticProgram.publishedRoutingLookups.structFieldMetadataIndicesByStructPathId
+          [structPathId]
+          .push_back(entryIndex);
+    }
   }
 }
 

@@ -113,6 +113,41 @@ void checkSemanticModuleViewsReturnStoredEntry(const primec::SemanticProgram &se
   CHECK(onErrorFacts.front() == &semanticProgram.onErrorFacts.front());
 }
 
+void populateParticleTypeMetadata(primec::SemanticProgram &semanticProgram) {
+  primec::SemanticProgramTypeMetadata typeMetadata;
+  typeMetadata.fullPath = "/Particle";
+  typeMetadata.category = "struct";
+  typeMetadata.fieldCount = 2;
+  semanticProgram.typeMetadata.push_back(std::move(typeMetadata));
+
+  primec::SemanticProgramStructFieldMetadata rightField;
+  rightField.structPath = "/Particle";
+  rightField.fieldName = "right";
+  rightField.fieldIndex = 1;
+  rightField.bindingTypeText = "i64";
+  semanticProgram.structFieldMetadata.push_back(std::move(rightField));
+
+  primec::SemanticProgramStructFieldMetadata leftField;
+  leftField.structPath = "/Particle";
+  leftField.fieldName = "left";
+  leftField.fieldIndex = 0;
+  leftField.bindingTypeText = "i32";
+  semanticProgram.structFieldMetadata.push_back(std::move(leftField));
+}
+
+void checkParticleTypeMetadataVisible(const primec::SemanticProgram &semanticProgram) {
+  const auto *typeMetadata =
+      primec::semanticProgramLookupTypeMetadata(semanticProgram, "/Particle");
+  REQUIRE(typeMetadata != nullptr);
+  CHECK(typeMetadata == &semanticProgram.typeMetadata.front());
+
+  const auto fields =
+      primec::semanticProgramStructFieldMetadataView(semanticProgram, "/Particle");
+  REQUIRE(fields.size() == 2);
+  CHECK(fields[0] == &semanticProgram.structFieldMetadata[1]);
+  CHECK(fields[1] == &semanticProgram.structFieldMetadata[0]);
+}
+
 } // namespace
 
 TEST_CASE("semantic product module views require module indexes after freeze") {
@@ -145,6 +180,33 @@ TEST_CASE("semantic product module views require module indexes after freeze") {
   primec::freezeSemanticProgramPublishedStorage(mappedSemanticProgram);
 
   checkSemanticModuleViewsReturnStoredEntry(mappedSemanticProgram);
+}
+
+TEST_CASE("semantic product type metadata requires published maps after freeze") {
+  primec::SemanticProgram mutableSemanticProgram;
+  populateParticleTypeMetadata(mutableSemanticProgram);
+
+  checkParticleTypeMetadataVisible(mutableSemanticProgram);
+
+  primec::SemanticProgram rawFrozenSemanticProgram;
+  populateParticleTypeMetadata(rawFrozenSemanticProgram);
+  primec::freezeSemanticProgramPublishedStorage(rawFrozenSemanticProgram);
+
+  CHECK(primec::semanticProgramLookupTypeMetadata(rawFrozenSemanticProgram, "/Particle") ==
+        nullptr);
+  CHECK(primec::semanticProgramStructFieldMetadataView(rawFrozenSemanticProgram, "/Particle").empty());
+
+  primec::SemanticProgram mappedSemanticProgram;
+  populateParticleTypeMetadata(mappedSemanticProgram);
+  const auto particlePathId =
+      primec::semanticProgramInternCallTargetString(mappedSemanticProgram, "/Particle");
+  mappedSemanticProgram.publishedRoutingLookups.typeMetadataIndicesByPathId.insert_or_assign(
+      particlePathId, 0);
+  mappedSemanticProgram.publishedRoutingLookups.structFieldMetadataIndicesByStructPathId
+      [particlePathId] = {0, 1};
+  primec::freezeSemanticProgramPublishedStorage(mappedSemanticProgram);
+
+  checkParticleTypeMetadataVisible(mappedSemanticProgram);
 }
 
 TEST_CASE("semantics validate publishes allowlisted pilot routing artifacts") {

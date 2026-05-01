@@ -6,6 +6,29 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 1, 2026)**
+- [x] TODO-4298: Use published type metadata maps
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-01
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 type-shape metadata authority slice that makes
+    frozen published semantic products consume `typeMetadataIndicesByPathId`
+    and `structFieldMetadataIndicesByStructPathId` for type and struct-field
+    metadata lookups.
+  - acceptance:
+    - Frozen semantic-product type metadata lookup ignores raw `typeMetadata`
+      entries when `typeMetadataIndicesByPathId` is missing.
+    - Frozen semantic-product struct-field metadata lookup ignores raw
+      `structFieldMetadata` entries when
+      `structFieldMetadataIndicesByStructPathId` is missing.
+    - Focused coverage proves the mutable fixture-only scan is quarantined to
+      pre-freeze products while frozen products require the published maps.
+  - stop_rule: Stop once frozen type-shape metadata consumers require the
+    published metadata maps and docs record the remaining TODO-4298 work.
+  - evidence: Added published type and struct-field metadata maps, rewired
+    frozen lookup helpers to require them, added focused raw/mapped frozen
+    coverage, and skipped local test execution per the lite workflow.
+
 - [x] TODO-4298: Use published module views
   - owner: ai
   - created_at: 2026-04-28

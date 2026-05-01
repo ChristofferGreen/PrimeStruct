@@ -660,6 +660,16 @@ const SemanticProgramTypeMetadata *semanticProgramLookupTypeMetadata(
   if (fullPath.empty()) {
     return nullptr;
   }
+  if (const auto fullPathId = semanticProgramLookupCallTargetStringId(semanticProgram, fullPath);
+      fullPathId.has_value()) {
+    if (const auto it = semanticProgram.publishedRoutingLookups.typeMetadataIndicesByPathId.find(*fullPathId);
+        it != semanticProgram.publishedRoutingLookups.typeMetadataIndicesByPathId.end()) {
+      return lookupPublishedSemanticEntryByIndex(semanticProgram.typeMetadata, it->second);
+    }
+  }
+  if (semanticProgram.publishedStorageFrozen) {
+    return nullptr;
+  }
   for (const auto &entry : semanticProgram.typeMetadata) {
     if (entry.fullPath == fullPath) {
       return &entry;
@@ -688,9 +698,28 @@ semanticProgramStructFieldMetadataView(const SemanticProgram &semanticProgram,
   if (structPath.empty()) {
     return view;
   }
-  for (const auto &entry : semanticProgram.structFieldMetadata) {
-    if (entry.structPath == structPath) {
-      view.push_back(&entry);
+  if (const auto structPathId = semanticProgramLookupCallTargetStringId(semanticProgram, structPath);
+      structPathId.has_value()) {
+    if (const auto it =
+            semanticProgram.publishedRoutingLookups.structFieldMetadataIndicesByStructPathId.find(
+                *structPathId);
+        it != semanticProgram.publishedRoutingLookups.structFieldMetadataIndicesByStructPathId.end()) {
+      view.reserve(it->second.size());
+      for (const std::size_t entryIndex : it->second) {
+        if (entryIndex < semanticProgram.structFieldMetadata.size()) {
+          view.push_back(&semanticProgram.structFieldMetadata[entryIndex]);
+        }
+      }
+    }
+  }
+  if (view.empty()) {
+    if (semanticProgram.publishedStorageFrozen) {
+      return view;
+    }
+    for (const auto &entry : semanticProgram.structFieldMetadata) {
+      if (entry.structPath == structPath) {
+        view.push_back(&entry);
+      }
     }
   }
   std::stable_sort(view.begin(),
