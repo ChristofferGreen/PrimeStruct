@@ -878,6 +878,10 @@ Compile-pipeline publication contract:
   raw `collectionSpecializations` storage.
 - Query, `try(...)`, and `on_error` lowering/completeness checks follow the same rule: semantic-node-id facts are the
   production authority, while resolved-path/source/path-id indexes remain inspection metadata only.
+- Graph fact formatting follows the same rule once the semantic product is frozen by the publication path: local-auto,
+  query, `try(...)`, and `on_error` dump fields resolve interned text IDs and no longer recover copied text when those
+  IDs are absent or unresolved. Mutable hand-built products may still use copied-text fallbacks before
+  `freezeSemanticProgramPublishedStorage(...)`.
 - Callable-summary lookup follows the same published-map authority rule once the semantic product is frozen by the
   publication path: `callableSummaryIndicesByPathId` is the authority, while raw `callableSummaries` scanning remains
   limited to mutable hand-built products before `freezeSemanticProgramPublishedStorage(...)`. Lowerer return-info

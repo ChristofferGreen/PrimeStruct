@@ -113,6 +113,112 @@ void checkSemanticModuleViewsReturnStoredEntry(const primec::SemanticProgram &se
   CHECK(onErrorFacts.front() == &semanticProgram.onErrorFacts.front());
 }
 
+void populateGraphFactFormatterStrings(primec::SemanticProgram &semanticProgram) {
+  primec::SemanticProgramLocalAutoFact localAutoFact;
+  localAutoFact.scopePath = "/raw/local";
+  localAutoFact.bindingName = "rawLocal";
+  localAutoFact.bindingTypeText = "RawLocalType";
+  localAutoFact.initializerBindingTypeText = "RawInitializerType";
+  localAutoFact.initializerTryValueType = "RawTryValue";
+  localAutoFact.initializerTryErrorType = "RawTryError";
+  semanticProgram.localAutoFacts.push_back(std::move(localAutoFact));
+
+  primec::SemanticProgramQueryFact queryFact;
+  queryFact.scopePath = "/raw/query";
+  queryFact.callName = "rawQuery";
+  queryFact.queryTypeText = "RawQueryType";
+  queryFact.bindingTypeText = "RawQueryBinding";
+  queryFact.resultValueType = "RawQueryValue";
+  queryFact.resultErrorType = "RawQueryError";
+  semanticProgram.queryFacts.push_back(std::move(queryFact));
+
+  primec::SemanticProgramTryFact tryFact;
+  tryFact.scopePath = "/raw/try";
+  tryFact.operandBindingTypeText = "RawTryOperand";
+  tryFact.valueType = "RawTryValue";
+  tryFact.errorType = "RawTryError";
+  tryFact.contextReturnKind = "RawTryReturn";
+  tryFact.onErrorErrorType = "RawTryOnError";
+  semanticProgram.tryFacts.push_back(std::move(tryFact));
+
+  primec::SemanticProgramOnErrorFact onErrorFact;
+  onErrorFact.definitionPath = "/raw/on_error";
+  onErrorFact.returnKind = "RawOnErrorReturn";
+  onErrorFact.errorType = "RawOnErrorError";
+  onErrorFact.boundArgTexts = {"RawBoundArg"};
+  onErrorFact.returnResultValueType = "RawOnErrorValue";
+  onErrorFact.returnResultErrorType = "RawOnErrorResultError";
+  semanticProgram.onErrorFacts.push_back(std::move(onErrorFact));
+}
+
+void indexGraphFactFormatterStrings(primec::SemanticProgram &semanticProgram) {
+  auto &localAutoFact = semanticProgram.localAutoFacts.front();
+  localAutoFact.scopePathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/mapped/local");
+  localAutoFact.bindingNameId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "mappedLocal");
+  localAutoFact.bindingTypeTextId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedLocalType");
+  localAutoFact.initializerBindingTypeTextId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedInitializerType");
+  localAutoFact.initializerTryValueTypeId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedTryValue");
+  localAutoFact.initializerTryErrorTypeId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedTryError");
+
+  auto &queryFact = semanticProgram.queryFacts.front();
+  queryFact.scopePathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/mapped/query");
+  queryFact.callNameId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "mappedQuery");
+  queryFact.queryTypeTextId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedQueryType");
+  queryFact.bindingTypeTextId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedQueryBinding");
+  queryFact.resultValueTypeId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedQueryValue");
+  queryFact.resultErrorTypeId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedQueryError");
+
+  auto &tryFact = semanticProgram.tryFacts.front();
+  tryFact.scopePathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/mapped/try");
+  tryFact.operandBindingTypeTextId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedTryOperand");
+  tryFact.valueTypeId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedTryValue");
+  tryFact.errorTypeId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedTryError");
+  tryFact.contextReturnKindId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedTryReturn");
+  tryFact.onErrorErrorTypeId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedTryOnError");
+
+  auto &onErrorFact = semanticProgram.onErrorFacts.front();
+  onErrorFact.definitionPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/mapped/on_error");
+  onErrorFact.returnKindId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedOnErrorReturn");
+  onErrorFact.errorTypeId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedOnErrorError");
+  onErrorFact.boundArgTextIds = {
+      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedBoundArg")};
+  onErrorFact.returnResultValueTypeId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedOnErrorValue");
+  onErrorFact.returnResultErrorTypeId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedOnErrorResultError");
+}
+
+void indexGraphFactModuleEntries(primec::SemanticProgram &semanticProgram) {
+  primec::SemanticProgramModuleResolvedArtifacts module;
+  module.identity.moduleKey = "/main";
+  module.localAutoFactIndices.push_back(0);
+  module.queryFactIndices.push_back(0);
+  module.tryFactIndices.push_back(0);
+  module.onErrorFactIndices.push_back(0);
+  semanticProgram.moduleResolvedArtifacts.push_back(std::move(module));
+}
+
 void populateDefinitionMetadata(primec::SemanticProgram &semanticProgram) {
   primec::SemanticProgramDefinition laterDefinition;
   laterDefinition.fullPath = "/later";
@@ -281,6 +387,49 @@ TEST_CASE("semantic product module views require module indexes after freeze") {
   primec::freezeSemanticProgramPublishedStorage(mappedSemanticProgram);
 
   checkSemanticModuleViewsReturnStoredEntry(mappedSemanticProgram);
+}
+
+TEST_CASE("semantic product graph fact dumps require interned text after freeze") {
+  primec::SemanticProgram mutableSemanticProgram;
+  populateGraphFactFormatterStrings(mutableSemanticProgram);
+  indexGraphFactModuleEntries(mutableSemanticProgram);
+
+  const std::string mutableDump = primec::formatSemanticProgram(mutableSemanticProgram);
+  CHECK(mutableDump.find("/raw/local") != std::string::npos);
+  CHECK(mutableDump.find("RawQueryType") != std::string::npos);
+  CHECK(mutableDump.find("RawTryReturn") != std::string::npos);
+  CHECK(mutableDump.find("RawBoundArg") != std::string::npos);
+
+  primec::SemanticProgram rawFrozenSemanticProgram;
+  populateGraphFactFormatterStrings(rawFrozenSemanticProgram);
+  indexGraphFactModuleEntries(rawFrozenSemanticProgram);
+  primec::freezeSemanticProgramPublishedStorage(rawFrozenSemanticProgram);
+
+  const std::string rawFrozenDump = primec::formatSemanticProgram(rawFrozenSemanticProgram);
+  CHECK(rawFrozenDump.find("local_auto_facts[0]") != std::string::npos);
+  CHECK(rawFrozenDump.find("query_facts[0]") != std::string::npos);
+  CHECK(rawFrozenDump.find("try_facts[0]") != std::string::npos);
+  CHECK(rawFrozenDump.find("on_error_facts[0]") != std::string::npos);
+  CHECK(rawFrozenDump.find("/raw/local") == std::string::npos);
+  CHECK(rawFrozenDump.find("RawQueryType") == std::string::npos);
+  CHECK(rawFrozenDump.find("RawTryReturn") == std::string::npos);
+  CHECK(rawFrozenDump.find("RawBoundArg") == std::string::npos);
+
+  primec::SemanticProgram mappedSemanticProgram;
+  populateGraphFactFormatterStrings(mappedSemanticProgram);
+  indexGraphFactFormatterStrings(mappedSemanticProgram);
+  indexGraphFactModuleEntries(mappedSemanticProgram);
+  primec::freezeSemanticProgramPublishedStorage(mappedSemanticProgram);
+
+  const std::string mappedDump = primec::formatSemanticProgram(mappedSemanticProgram);
+  CHECK(mappedDump.find("/mapped/local") != std::string::npos);
+  CHECK(mappedDump.find("MappedQueryType") != std::string::npos);
+  CHECK(mappedDump.find("MappedTryReturn") != std::string::npos);
+  CHECK(mappedDump.find("MappedBoundArg") != std::string::npos);
+  CHECK(mappedDump.find("/raw/local") == std::string::npos);
+  CHECK(mappedDump.find("RawQueryType") == std::string::npos);
+  CHECK(mappedDump.find("RawTryReturn") == std::string::npos);
+  CHECK(mappedDump.find("RawBoundArg") == std::string::npos);
 }
 
 TEST_CASE("semantic product definition view requires published maps after freeze") {

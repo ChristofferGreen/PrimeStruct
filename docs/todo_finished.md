@@ -6,6 +6,28 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 1, 2026)**
+- [x] TODO-4298: Require graph fact dump IDs
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-01
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 graph fact formatter authority slice that makes
+    frozen local-auto, query, try, and `on_error` dump fields resolve through
+    interned text IDs instead of copied raw text.
+  - acceptance:
+    - Frozen semantic-product formatting no longer recovers copied local-auto,
+      query, try, or `on_error` text when interned text IDs are missing.
+    - Published interned text IDs still produce deterministic dump output for
+      the same graph fact families.
+    - Mutable hand-built semantic products keep their fixture-only copied-text
+      fallback before freeze.
+  - stop_rule: Stop once graph fact dump fields require interned text IDs
+    after freeze and docs record the remaining TODO-4298 work.
+  - evidence: Added a formatter helper that suppresses copied-text fallback
+    after publication freeze, routed local-auto/query/try/on_error dump fields
+    through it, added focused frozen-raw and mapped dump coverage, and skipped
+    local test execution per the lite workflow.
+
 - [x] TODO-4298: Use metadata views in dumps
   - owner: ai
   - created_at: 2026-04-28

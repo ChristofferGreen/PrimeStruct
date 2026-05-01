@@ -505,7 +505,9 @@ Task template:
     lookups. The frozen sum metadata published-map authority slice is complete
     for sum type path and sum variant path/name lookups. The frozen metadata
     formatter view authority slice is complete for semantic-product dumps
-    across type, struct-field, sum-type, and sum-variant metadata views.
+    across type, struct-field, sum-type, and sum-variant metadata views. The
+    frozen graph-fact formatter text authority slice is complete for
+    local-auto, query, try, and `on_error` dump fields.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -614,6 +616,11 @@ Task template:
       sum-variant dump sections. Raw metadata storage no longer recovers
       formatter output after publication freezes the semantic product, while
       mutable hand-built products keep their fixture-only scan before freeze.
+    - Completed slice: frozen semantic-product graph fact formatting now
+      resolves local-auto, query, try, and `on_error` text through interned
+      IDs. Copied raw text no longer recovers formatter output after
+      publication freezes the semantic product, while mutable hand-built
+      products keep their fixture-only copied-text fallback before freeze.
     - Completed slice: semantic-product-addressed Result-combinator metadata
       now requires published query facts when direct lambda payload analysis
       cannot infer the resulting value kind, covering `Result.map`,
