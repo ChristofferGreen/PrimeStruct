@@ -562,8 +562,11 @@ bool emitInlineDefinitionCallParameters(
         paramInfo.usesBuiltinCollectionLayout = true;
       }
     }
+    const bool isPackedParam =
+        i == packedParamIndex &&
+        (paramInfo.isArgsPack || !packedArgs.empty() || orderedArg == nullptr);
     const bool reserveIndexEarly =
-        i == packedParamIndex ||
+        isPackedParam ||
         paramInfo.kind != LocalInfo::Kind::Map ||
         !paramInfo.structTypeName.empty();
     if (reserveIndexEarly) {
@@ -572,7 +575,7 @@ bool emitInlineDefinitionCallParameters(
       paramInfo.index = -1;
     }
 
-    if (i == packedParamIndex) {
+    if (isPackedParam) {
       if (!emitInlinePackedCallParameter(param,
                                          paramInfo,
                                          packedArgs,
@@ -729,6 +732,26 @@ bool emitInlineDefinitionCallParameters(
       calleeLocals.emplace(param.name, aliasedParamInfo);
       emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(aliasedParamInfo.index));
       continue;
+    }
+
+    if ((paramInfo.kind == LocalInfo::Kind::Value ||
+         paramInfo.kind == LocalInfo::Kind::Map) &&
+        !paramInfo.isMutable && !paramInfo.isFileHandle &&
+        !paramInfo.structTypeName.empty() && orderedArg != nullptr &&
+        orderedArg->kind == Expr::Kind::Name) {
+      auto argIt = callerLocals.find(orderedArg->name);
+      if (argIt != callerLocals.end() &&
+          argIt->second.kind == LocalInfo::Kind::Map &&
+          isStructParamMatch(calleePath, paramInfo.structTypeName, argIt->second.structTypeName) &&
+          (paramInfo.mapKeyKind == LocalInfo::ValueKind::Unknown ||
+           paramInfo.mapKeyKind == argIt->second.mapKeyKind) &&
+          (paramInfo.mapValueKind == LocalInfo::ValueKind::Unknown ||
+           paramInfo.mapValueKind == argIt->second.mapValueKind)) {
+        emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(argIt->second.index));
+        calleeLocals.emplace(param.name, paramInfo);
+        emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(paramInfo.index));
+        continue;
+      }
     }
 
     if ((paramInfo.kind == LocalInfo::Kind::Value ||

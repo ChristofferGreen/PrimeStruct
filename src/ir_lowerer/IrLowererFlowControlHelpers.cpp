@@ -205,18 +205,6 @@ void emitDisarmTemporaryStructAfterCopy(const std::function<void(IrOpcode, uint6
   }
 
   const std::string leaf = generatedStructLeaf(structPath);
-  if (structPath.rfind("/std/collections/internal_soa_storage/SoaColumn", 0) == 0 ||
-      leaf == "SoaColumn") {
-    emitStoreFalseAtOffset(4ull * IrSlotBytes);
-    return;
-  }
-
-  if (structPath.rfind("/std/collections/experimental_soa_vector/SoaVector", 0) == 0 ||
-      leaf == "SoaVector") {
-    emitStoreFalseAtOffset(5ull * IrSlotBytes);
-    return;
-  }
-
   if (structPath.rfind("/std/collections/internal_soa_storage/SoaColumns", 0) == 0 ||
       leaf.rfind("SoaColumns", 0) == 0) {
     constexpr std::string_view Prefix = "SoaColumns";
@@ -231,6 +219,18 @@ void emitDisarmTemporaryStructAfterCopy(const std::function<void(IrOpcode, uint6
         emitStoreFalseAtOffset(static_cast<uint64_t>(1 + column * 5 + 4) * IrSlotBytes);
       }
     }
+    return;
+  }
+
+  if (structPath.rfind("/std/collections/experimental_soa_vector/SoaVector", 0) == 0 ||
+      leaf == "SoaVector") {
+    emitStoreFalseAtOffset(5ull * IrSlotBytes);
+    return;
+  }
+
+  if (structPath.rfind("/std/collections/internal_soa_storage/SoaColumn", 0) == 0 ||
+      leaf == "SoaColumn") {
+    emitStoreFalseAtOffset(4ull * IrSlotBytes);
     return;
   }
 

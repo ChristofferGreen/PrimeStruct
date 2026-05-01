@@ -732,9 +732,14 @@ TEST_CASE("ir lowerer inline param helper aliases immutable concrete map params 
       error));
 
   CHECK(error.empty());
+  CHECK(nextLocal == 4);
   REQUIRE(calleeLocals.count("entries") == 1u);
   CHECK(calleeLocals.at("entries").structTypeName == MapStructPath);
-  CHECK_FALSE(instructions.empty());
+  REQUIRE(instructions.size() == 2u);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 21u);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 3u);
 }
 
 TEST_CASE("ir lowerer inline param helper aliases mutable concrete map params from map locals") {
@@ -948,7 +953,7 @@ TEST_CASE("ir lowerer inline param helper accepts bare std ui immutable struct p
       error));
 
   CHECK(error.empty());
-  CHECK(nextLocal == 7);
+  CHECK(nextLocal == 8);
   REQUIRE(calleeLocals.count("layout") == 1u);
   CHECK(calleeLocals.at("layout").structTypeName == "LayoutTree");
   CHECK_FALSE(instructions.empty());

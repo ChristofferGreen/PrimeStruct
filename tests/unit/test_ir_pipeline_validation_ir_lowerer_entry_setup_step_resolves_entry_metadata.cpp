@@ -112,7 +112,7 @@ TEST_CASE("ir lowerer entry setup step rejects published runtime reflection pref
         "native backend requires compile-time reflection query elimination before IR emission: /meta/type_name");
 }
 
-TEST_CASE("ir lowerer entry setup step defers routing completeness to conformance coverage") {
+TEST_CASE("ir lowerer entry setup step rejects missing routing completeness") {
   primec::Program program;
   primec::Definition entryDef;
   entryDef.fullPath = "/main";
@@ -153,17 +153,17 @@ TEST_CASE("ir lowerer entry setup step defers routing completeness to conformanc
   uint64_t entryEffectMask = 0;
   uint64_t entryCapabilityMask = 0;
   std::string error;
-  CHECK(primec::ir_lowerer::runLowerEntrySetup(program,
-                                               &semanticProgram,
-                                               "/main",
-                                               {"io_out"},
-                                               {"io_err"},
-                                               primec::IrValidationTarget::Native,
-                                               resolvedEntry,
-                                               entryEffectMask,
-                                               entryCapabilityMask,
-                                               error));
-  CHECK(error.empty());
+  CHECK_FALSE(primec::ir_lowerer::runLowerEntrySetup(program,
+                                                     &semanticProgram,
+                                                     "/main",
+                                                     {"io_out"},
+                                                     {"io_err"},
+                                                     primec::IrValidationTarget::Native,
+                                                     resolvedEntry,
+                                                     entryEffectMask,
+                                                     entryCapabilityMask,
+                                                     error));
+  CHECK(error == "missing semantic-product method-call target: /main -> count");
   REQUIRE(resolvedEntry != nullptr);
   CHECK(resolvedEntry->fullPath == "/main");
 }

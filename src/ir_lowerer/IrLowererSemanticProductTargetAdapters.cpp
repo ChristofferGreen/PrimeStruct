@@ -99,17 +99,16 @@ struct SemanticProductIndexBuilder {
       populateSemanticFactIndex(index.onErrorFactsByDefinitionPathId,
                                 semanticProgram->publishedRoutingLookups.onErrorFactIndicesByDefinitionPathId,
                                 semanticProgram->onErrorFacts);
-      return;
     }
     const auto onErrorFacts = semanticProgramOnErrorFactView(*semanticProgram);
-    index.onErrorFactsByDefinitionId.reserve(onErrorFacts.size());
-    index.onErrorFactsByDefinitionPathId.reserve(onErrorFacts.size());
+    index.onErrorFactsByDefinitionId.reserve(index.onErrorFactsByDefinitionId.size() + onErrorFacts.size());
+    index.onErrorFactsByDefinitionPathId.reserve(index.onErrorFactsByDefinitionPathId.size() + onErrorFacts.size());
     for (const auto *entry : onErrorFacts) {
       if (entry == nullptr) {
         continue;
       }
       if (entry->semanticNodeId != 0) {
-        index.onErrorFactsByDefinitionId.insert_or_assign(entry->semanticNodeId, entry);
+        index.onErrorFactsByDefinitionId.try_emplace(entry->semanticNodeId, entry);
       }
       if (entry->definitionPathId == InvalidSymbolId) {
         continue;
@@ -117,7 +116,7 @@ struct SemanticProductIndexBuilder {
       const std::string_view definitionPath =
           semanticProgramResolveCallTargetString(*semanticProgram, entry->definitionPathId);
       if (!definitionPath.empty()) {
-        index.onErrorFactsByDefinitionPathId.insert_or_assign(entry->definitionPathId, entry);
+        index.onErrorFactsByDefinitionPathId.try_emplace(entry->definitionPathId, entry);
       }
     }
   }
@@ -154,23 +153,23 @@ struct SemanticProductIndexBuilder {
                                 semanticProgram->publishedRoutingLookups
                                     .localAutoFactIndicesByInitPathAndBindingNameId,
                                 semanticProgram->localAutoFacts);
-      return;
     }
     const auto localAutoFacts = semanticProgramLocalAutoFactView(*semanticProgram);
-    index.localAutoFactsByExpr.reserve(localAutoFacts.size());
-    index.localAutoFactsByInitPathAndBindingNameId.reserve(localAutoFacts.size());
+    index.localAutoFactsByExpr.reserve(index.localAutoFactsByExpr.size() + localAutoFacts.size());
+    index.localAutoFactsByInitPathAndBindingNameId.reserve(
+        index.localAutoFactsByInitPathAndBindingNameId.size() + localAutoFacts.size());
     for (const auto *entry : localAutoFacts) {
       if (entry == nullptr) {
         continue;
       }
       if (entry->semanticNodeId != 0) {
-        index.localAutoFactsByExpr.insert_or_assign(entry->semanticNodeId, entry);
+        index.localAutoFactsByExpr.try_emplace(entry->semanticNodeId, entry);
       }
       if (entry->initializerResolvedPathId == InvalidSymbolId ||
           entry->bindingNameId == InvalidSymbolId) {
         continue;
       }
-      index.localAutoFactsByInitPathAndBindingNameId.insert_or_assign(
+      index.localAutoFactsByInitPathAndBindingNameId.try_emplace(
           makeLocalAutoInitPathBindingNameKey(entry->initializerResolvedPathId, entry->bindingNameId),
           entry);
     }
@@ -186,23 +185,23 @@ struct SemanticProductIndexBuilder {
                                 semanticProgram->publishedRoutingLookups
                                     .queryFactIndicesByResolvedPathAndCallNameId,
                                 semanticProgram->queryFacts);
-      return;
     }
     const auto queryFacts = semanticProgramQueryFactView(*semanticProgram);
-    index.queryFactsByExpr.reserve(queryFacts.size());
-    index.queryFactsByResolvedPathAndCallNameId.reserve(queryFacts.size());
+    index.queryFactsByExpr.reserve(index.queryFactsByExpr.size() + queryFacts.size());
+    index.queryFactsByResolvedPathAndCallNameId.reserve(
+        index.queryFactsByResolvedPathAndCallNameId.size() + queryFacts.size());
     for (const auto *entry : queryFacts) {
       if (entry == nullptr) {
         continue;
       }
       if (entry->semanticNodeId != 0) {
-        index.queryFactsByExpr.insert_or_assign(entry->semanticNodeId, entry);
+        index.queryFactsByExpr.try_emplace(entry->semanticNodeId, entry);
       }
       if (entry->resolvedPathId == InvalidSymbolId ||
           entry->callNameId == InvalidSymbolId) {
         continue;
       }
-      index.queryFactsByResolvedPathAndCallNameId.insert_or_assign(
+      index.queryFactsByResolvedPathAndCallNameId.try_emplace(
           makeQueryFactResolvedPathCallNameKey(entry->resolvedPathId, entry->callNameId),
           entry);
     }
@@ -217,24 +216,23 @@ struct SemanticProductIndexBuilder {
       populateSemanticFactIndex(index.tryFactsByOperandPathAndSource,
                                 semanticProgram->publishedRoutingLookups.tryFactIndicesByOperandPathAndSource,
                                 semanticProgram->tryFacts);
-      return;
     }
     const auto tryFacts = semanticProgramTryFactView(*semanticProgram);
-    index.tryFactsByExpr.reserve(tryFacts.size());
-    index.tryFactsByOperandPathAndSource.reserve(tryFacts.size());
+    index.tryFactsByExpr.reserve(index.tryFactsByExpr.size() + tryFacts.size());
+    index.tryFactsByOperandPathAndSource.reserve(index.tryFactsByOperandPathAndSource.size() + tryFacts.size());
     for (const auto *entry : tryFacts) {
       if (entry == nullptr) {
         continue;
       }
       if (entry->semanticNodeId != 0) {
-        index.tryFactsByExpr.insert_or_assign(entry->semanticNodeId, entry);
+        index.tryFactsByExpr.try_emplace(entry->semanticNodeId, entry);
       }
       if (entry->operandResolvedPathId == InvalidSymbolId ||
           entry->sourceLine <= 0 ||
           entry->sourceColumn <= 0) {
         continue;
       }
-      index.tryFactsByOperandPathAndSource.insert_or_assign(
+      index.tryFactsByOperandPathAndSource.try_emplace(
           makeTryFactOperandPathSourceKey(entry->operandResolvedPathId,
                                           entry->sourceLine,
                                           entry->sourceColumn),
@@ -261,20 +259,65 @@ struct SemanticProductIndexBuilder {
           index.collectionSpecializationsByExpr,
           semanticProgram->publishedRoutingLookups.collectionSpecializationIndicesByExpr,
           semanticProgram->collectionSpecializations);
-      return;
     }
     const auto collectionSpecializations = semanticProgramCollectionSpecializationView(*semanticProgram);
-    index.collectionSpecializationsByExpr.reserve(collectionSpecializations.size());
+    index.collectionSpecializationsByExpr.reserve(
+        index.collectionSpecializationsByExpr.size() + collectionSpecializations.size());
     for (const auto *entry : collectionSpecializations) {
       if (entry == nullptr) {
         continue;
       }
       if (entry->semanticNodeId != 0) {
-        index.collectionSpecializationsByExpr.insert_or_assign(entry->semanticNodeId, entry);
+        index.collectionSpecializationsByExpr.try_emplace(entry->semanticNodeId, entry);
       }
     }
   }
 };
+
+const SemanticProgramDirectCallTarget *findDirectCallTargetBySemanticId(
+    const SemanticProgram &semanticProgram,
+    uint64_t semanticNodeId) {
+  if (semanticNodeId == 0) {
+    return nullptr;
+  }
+  const auto directCallTargets = semanticProgramDirectCallTargetView(semanticProgram);
+  for (const auto *entry : directCallTargets) {
+    if (entry != nullptr && entry->semanticNodeId == semanticNodeId) {
+      return entry;
+    }
+  }
+  return nullptr;
+}
+
+const SemanticProgramMethodCallTarget *findMethodCallTargetBySemanticId(
+    const SemanticProgram &semanticProgram,
+    uint64_t semanticNodeId) {
+  if (semanticNodeId == 0) {
+    return nullptr;
+  }
+  const auto methodCallTargets = semanticProgramMethodCallTargetView(semanticProgram);
+  for (const auto *entry : methodCallTargets) {
+    if (entry != nullptr && entry->semanticNodeId == semanticNodeId) {
+      return entry;
+    }
+  }
+  return nullptr;
+}
+
+const SemanticProgramBridgePathChoice *findBridgePathChoiceBySemanticId(
+    const SemanticProgram &semanticProgram,
+    uint64_t semanticNodeId) {
+  if (semanticNodeId == 0) {
+    return nullptr;
+  }
+  const auto bridgePathChoices = semanticProgramBridgePathChoiceView(semanticProgram);
+  for (const auto *entry : bridgePathChoices) {
+    if (entry != nullptr && entry->semanticNodeId == semanticNodeId) {
+      return entry;
+    }
+  }
+  return nullptr;
+}
 
 } // namespace
 
@@ -316,6 +359,10 @@ std::string findSemanticProductDirectCallTarget(const SemanticProgram *semanticP
         pathId.has_value()) {
       return resolvePathId(*pathId);
     }
+    if (const auto *entry = findDirectCallTargetBySemanticId(*semanticProgram, expr.semanticNodeId);
+        entry != nullptr) {
+      return resolvePathId(entry->resolvedPathId);
+    }
   }
   return {};
 }
@@ -331,8 +378,15 @@ std::optional<StdlibSurfaceId> findSemanticProductDirectCallStdlibSurfaceId(
     return std::nullopt;
   }
   if (expr.semanticNodeId != 0) {
-    return semanticProgramLookupPublishedDirectCallTargetStdlibSurfaceId(
-        *semanticProgram, expr.semanticNodeId);
+    if (const auto surfaceId = semanticProgramLookupPublishedDirectCallTargetStdlibSurfaceId(
+            *semanticProgram, expr.semanticNodeId);
+        surfaceId.has_value()) {
+      return surfaceId;
+    }
+    if (const auto *entry = findDirectCallTargetBySemanticId(*semanticProgram, expr.semanticNodeId);
+        entry != nullptr) {
+      return semanticProgramDirectCallTargetStdlibSurfaceId(*entry);
+    }
   }
   return std::nullopt;
 }
@@ -364,6 +418,10 @@ std::string findSemanticProductMethodCallTarget(const SemanticProgram *semanticP
         pathId.has_value()) {
       return resolvePathId(*pathId);
     }
+    if (const auto *entry = findMethodCallTargetBySemanticId(*semanticProgram, expr.semanticNodeId);
+        entry != nullptr) {
+      return resolvePathId(entry->resolvedPathId);
+    }
   }
   return {};
 }
@@ -379,8 +437,15 @@ std::optional<StdlibSurfaceId> findSemanticProductMethodCallStdlibSurfaceId(
     return std::nullopt;
   }
   if (expr.semanticNodeId != 0) {
-    return semanticProgramLookupPublishedMethodCallTargetStdlibSurfaceId(
-        *semanticProgram, expr.semanticNodeId);
+    if (const auto surfaceId = semanticProgramLookupPublishedMethodCallTargetStdlibSurfaceId(
+            *semanticProgram, expr.semanticNodeId);
+        surfaceId.has_value()) {
+      return surfaceId;
+    }
+    if (const auto *entry = findMethodCallTargetBySemanticId(*semanticProgram, expr.semanticNodeId);
+        entry != nullptr) {
+      return semanticProgramMethodCallTargetStdlibSurfaceId(*entry);
+    }
   }
   return std::nullopt;
 }
@@ -404,6 +469,20 @@ std::string findSemanticProductBridgePathChoice(const SemanticProgram *semanticP
       return std::string(chosenPath);
     }
   }
+  if (const auto *entry = findBridgePathChoiceBySemanticId(*semanticProgram, expr.semanticNodeId);
+      entry != nullptr && entry->chosenPathId != InvalidSymbolId &&
+      entry->helperNameId != InvalidSymbolId) {
+    const std::string_view helperName =
+        semanticProgramBridgePathChoiceHelperName(*semanticProgram, *entry);
+    if (helperName.empty()) {
+      return {};
+    }
+    const std::string_view chosenPath =
+        semanticProgramResolveCallTargetString(*semanticProgram, entry->chosenPathId);
+    if (!chosenPath.empty()) {
+      return std::string(chosenPath);
+    }
+  }
   return {};
 }
 
@@ -417,8 +496,16 @@ std::optional<StdlibSurfaceId> findSemanticProductBridgePathChoiceStdlibSurfaceI
   if (semanticProgram == nullptr || expr.semanticNodeId == 0) {
     return std::nullopt;
   }
-  return semanticProgramLookupPublishedBridgePathChoiceStdlibSurfaceId(
-      *semanticProgram, expr.semanticNodeId);
+  if (const auto surfaceId = semanticProgramLookupPublishedBridgePathChoiceStdlibSurfaceId(
+          *semanticProgram, expr.semanticNodeId);
+      surfaceId.has_value()) {
+    return surfaceId;
+  }
+  if (const auto *entry = findBridgePathChoiceBySemanticId(*semanticProgram, expr.semanticNodeId);
+      entry != nullptr) {
+    return semanticProgramBridgePathChoiceStdlibSurfaceId(*entry);
+  }
+  return std::nullopt;
 }
 
 std::optional<StdlibSurfaceId> findSemanticProductBridgePathChoiceStdlibSurfaceId(

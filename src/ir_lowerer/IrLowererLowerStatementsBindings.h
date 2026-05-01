@@ -547,8 +547,7 @@
           }
         }
       }
-      if ((info.kind == LocalInfo::Kind::Value || info.kind == LocalInfo::Kind::Map) &&
-          !info.structTypeName.empty()) {
+      if (info.kind == LocalInfo::Kind::Value && !info.structTypeName.empty()) {
         std::string initStruct = inferStructExprPath(init, localsIn);
         const Definition *initCallee = nullptr;
         if (init.kind == Expr::Kind::Call) {
