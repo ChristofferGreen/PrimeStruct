@@ -2877,6 +2877,67 @@ TEST_CASE("ir lowerer semantic-product index resolves binding facts by semantic 
   CHECK(bindingFact->bindingTypeText == "i32");
 }
 
+TEST_CASE("ir lowerer semantic-product index requires binding maps after freeze") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "local",
+      .name = "selected",
+      .bindingTypeText = "i32",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 14,
+      .sourceColumn = 7,
+      .semanticNodeId = 7411,
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/selected"),
+  });
+
+  primec::Expr bindingExpr;
+  bindingExpr.kind = primec::Expr::Kind::Name;
+  bindingExpr.isBinding = true;
+  bindingExpr.name = "selected";
+  bindingExpr.semanticNodeId = 7411;
+
+  primec::freezeSemanticProgramPublishedStorage(semanticProgram);
+  const auto missingMapIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+  CHECK(missingMapIndex.bindingFactsByExpr.empty());
+  CHECK(primec::ir_lowerer::findSemanticProductBindingFact(
+            missingMapIndex, bindingExpr) == nullptr);
+
+  primec::SemanticProgram mappedSemanticProgram;
+  mappedSemanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "local",
+      .name = "selected",
+      .bindingTypeText = "i32",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 14,
+      .sourceColumn = 7,
+      .semanticNodeId = 7412,
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(mappedSemanticProgram, "/selected"),
+  });
+  mappedSemanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr
+      .insert_or_assign(7412, 0);
+  primec::freezeSemanticProgramPublishedStorage(mappedSemanticProgram);
+
+  bindingExpr.semanticNodeId = 7412;
+  const auto mappedIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&mappedSemanticProgram);
+  const auto *bindingFact =
+      primec::ir_lowerer::findSemanticProductBindingFact(mappedIndex, bindingExpr);
+  REQUIRE(bindingFact != nullptr);
+  CHECK(bindingFact->semanticNodeId == 7412);
+  CHECK(bindingFact->bindingTypeText == "i32");
+}
+
 TEST_CASE("ir lowerer statement binding helper consumes semantic-product index directly") {
   primec::SemanticProgram semanticProgram;
   semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{

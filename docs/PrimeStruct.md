@@ -832,6 +832,10 @@ Compile-pipeline publication contract:
 - Local-auto fact lookup follows the same published-map authority rule for semantic-node ids: public published
   local-auto lookup helpers and the lowerer semantic-product adapter require `localAutoFactIndicesByExpr` for
   expression-scoped local-auto facts instead of recovering by scanning raw `localAutoFacts` storage.
+- Binding fact lookup follows the same published-map authority rule once the semantic product is frozen by the
+  publication path: the lowerer semantic-product adapter requires `bindingFactIndicesByExpr` for expression-scoped
+  binding facts instead of recovering by scanning raw `bindingFacts` storage. Mutable hand-built products may still
+  use the raw scan before `freezeSemanticProgramPublishedStorage(...)`.
 - Collection-specialization lookup follows the same published-map authority rule for semantic-node ids: public
   published collection-specialization lookup helpers and the lowerer semantic-product adapter require
   `collectionSpecializationIndicesByExpr` for expression-scoped collection facts instead of recovering by scanning

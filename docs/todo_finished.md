@@ -6,6 +6,28 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 1, 2026)**
+- [x] TODO-4298: Use published binding maps
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-01
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 binding-fact authority slice that makes frozen
+    published semantic products consume `bindingFactIndicesByExpr` for
+    expression-scoped binding-fact lookup.
+  - acceptance:
+    - Frozen semantic-product binding indexes ignore raw `bindingFacts`
+      entries when `bindingFactIndicesByExpr` is missing.
+    - Semantic-product publication fills `bindingFactIndicesByExpr` for
+      published binding facts with semantic node ids.
+    - Focused coverage proves the mutable fixture-only scan is quarantined to
+      pre-freeze products while frozen products require the published map.
+  - stop_rule: Stop once frozen expression-scoped binding consumers require
+    the published binding map and docs record the remaining TODO-4298 work.
+  - evidence: Added `bindingFactIndicesByExpr` publication, rewired lowerer
+    binding indexes to require the map after freeze, added focused raw/mapped
+    frozen binding index coverage, and skipped local test execution per the
+    lite workflow.
+
 - [x] TODO-4298: Use published callable maps
   - owner: ai
   - created_at: 2026-04-28

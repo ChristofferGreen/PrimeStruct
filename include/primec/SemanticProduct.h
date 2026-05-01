@@ -394,6 +394,7 @@ struct SemanticProgramPublishedRoutingLookups {
   std::unordered_map<uint64_t, StdlibSurfaceId> methodCallStdlibSurfaceIdsByExpr;
   std::unordered_map<uint64_t, StdlibSurfaceId> bridgePathChoiceStdlibSurfaceIdsByExpr;
   std::unordered_map<SymbolId, std::size_t> callableSummaryIndicesByPathId;
+  std::unordered_map<uint64_t, std::size_t> bindingFactIndicesByExpr;
   std::unordered_map<uint64_t, std::size_t> collectionSpecializationIndicesByExpr;
   std::unordered_map<uint64_t, std::size_t> onErrorFactIndicesByDefinitionId;
   std::unordered_map<SymbolId, std::size_t> onErrorFactIndicesByDefinitionPathId;
