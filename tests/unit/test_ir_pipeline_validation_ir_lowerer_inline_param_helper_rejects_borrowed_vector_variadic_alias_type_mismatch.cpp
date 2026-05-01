@@ -387,6 +387,97 @@ TEST_CASE("ir lowerer inline param helper aliases pure struct pointer variadic f
   CHECK(instructions[1].imm == 2u);
 }
 
+TEST_CASE("ir lowerer inline param helper materializes mixed struct pointer variadic forwarding") {
+  primec::Expr valuesParam;
+  valuesParam.kind = primec::Expr::Kind::Name;
+  valuesParam.isBinding = true;
+  valuesParam.name = "values";
+
+  primec::Expr firstArg;
+  firstArg.kind = primec::Expr::Kind::Name;
+  firstArg.name = "head";
+  primec::Expr spreadArg;
+  spreadArg.kind = primec::Expr::Kind::Name;
+  spreadArg.name = "source";
+  spreadArg.isSpread = true;
+
+  primec::ir_lowerer::LocalMap callerLocals;
+  primec::ir_lowerer::LocalInfo headInfo;
+  headInfo.index = 21;
+  headInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+  headInfo.structTypeName = "/pkg/Pair";
+  callerLocals.emplace("head", headInfo);
+
+  primec::ir_lowerer::LocalInfo sourceInfo;
+  sourceInfo.index = 33;
+  sourceInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  sourceInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  sourceInfo.isArgsPack = true;
+  sourceInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+  sourceInfo.structTypeName = "/pkg/Pair";
+  sourceInfo.argsPackElementCount = 2;
+  callerLocals.emplace("source", sourceInfo);
+
+  int32_t nextLocal = 3;
+  primec::ir_lowerer::LocalMap calleeLocals;
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+
+  REQUIRE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
+      {valuesParam},
+      {nullptr},
+      {&firstArg, &spreadArg},
+      0,
+      callerLocals,
+      nextLocal,
+      calleeLocals,
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
+        infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+        infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+        infoOut.isArgsPack = true;
+        infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+        infoOut.structTypeName = "/pkg/Pair";
+        return true;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &,
+         const primec::ir_lowerer::LocalMap &,
+         primec::ir_lowerer::LocalInfo::StringSource &,
+         int32_t &,
+         bool &) { return true; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
+      [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &locals) {
+        auto it = locals.find(arg.name);
+        if (it == locals.end()) {
+          return false;
+        }
+        instructions.push_back({primec::IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+        return true;
+      },
+      [](int32_t, int32_t, int32_t) { return true; },
+      [&]() { return nextLocal++; },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [](int32_t) {},
+      error));
+
+  CHECK(error.empty());
+  REQUIRE(calleeLocals.count("values") == 1u);
+  CHECK(calleeLocals.at("values").argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Pointer);
+  CHECK(calleeLocals.at("values").structTypeName == "/pkg/Pair");
+  CHECK(calleeLocals.at("values").argsPackElementCount == 3);
+  REQUIRE(instructions.size() >= 9u);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[0].imm == 3u);
+  CHECK(instructions[2].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[2].imm == 21u);
+  CHECK(instructions[4].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[4].imm == 33u);
+}
+
 TEST_CASE("ir lowerer inline param helper rejects struct pointer variadic alias type mismatch") {
   primec::Expr valuesParam;
   valuesParam.kind = primec::Expr::Kind::Name;
