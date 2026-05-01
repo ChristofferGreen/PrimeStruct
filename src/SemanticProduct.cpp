@@ -129,6 +129,11 @@ uint64_t makeQueryFactResolvedPathCallNameKey(SymbolId resolvedPathId, SymbolId 
          static_cast<uint64_t>(callNameId);
 }
 
+uint64_t makeSumVariantMetadataKey(SymbolId sumPathId, SymbolId variantNameId) {
+  return (static_cast<uint64_t>(sumPathId) << 32) |
+         static_cast<uint64_t>(variantNameId);
+}
+
 uint64_t makeTryFactOperandPathSourceKey(SymbolId operandPathId, int sourceLine, int sourceColumn) {
   const uint64_t lineBits = static_cast<uint64_t>(
       static_cast<uint32_t>(sourceLine > 0 ? sourceLine : 0));
@@ -732,6 +737,63 @@ semanticProgramStructFieldMetadataView(const SemanticProgram &semanticProgram,
                      return left->fieldName < right->fieldName;
                    });
   return view;
+}
+
+const SemanticProgramSumTypeMetadata *semanticProgramLookupPublishedSumTypeMetadata(
+    const SemanticProgram &semanticProgram,
+    std::string_view fullPath) {
+  if (fullPath.empty()) {
+    return nullptr;
+  }
+  if (const auto fullPathId = semanticProgramLookupCallTargetStringId(semanticProgram, fullPath);
+      fullPathId.has_value()) {
+    if (const auto it =
+            semanticProgram.publishedRoutingLookups.sumTypeMetadataIndicesByPathId.find(
+                *fullPathId);
+        it != semanticProgram.publishedRoutingLookups.sumTypeMetadataIndicesByPathId.end()) {
+      return lookupPublishedSemanticEntryByIndex(semanticProgram.sumTypeMetadata, it->second);
+    }
+  }
+  if (semanticProgram.publishedStorageFrozen) {
+    return nullptr;
+  }
+  for (const auto &entry : semanticProgram.sumTypeMetadata) {
+    if (entry.fullPath == fullPath) {
+      return &entry;
+    }
+  }
+  return nullptr;
+}
+
+const SemanticProgramSumVariantMetadata *semanticProgramLookupPublishedSumVariantMetadata(
+    const SemanticProgram &semanticProgram,
+    std::string_view sumPath,
+    std::string_view variantName) {
+  if (sumPath.empty() || variantName.empty()) {
+    return nullptr;
+  }
+  const auto sumPathId = semanticProgramLookupCallTargetStringId(semanticProgram, sumPath);
+  const auto variantNameId = semanticProgramLookupCallTargetStringId(semanticProgram, variantName);
+  if (sumPathId.has_value() && variantNameId.has_value()) {
+    const uint64_t compositeKey =
+        makeSumVariantMetadataKey(*sumPathId, *variantNameId);
+    if (const auto it =
+            semanticProgram.publishedRoutingLookups
+                .sumVariantMetadataIndicesBySumPathAndVariantNameId.find(compositeKey);
+        it != semanticProgram.publishedRoutingLookups
+                  .sumVariantMetadataIndicesBySumPathAndVariantNameId.end()) {
+      return lookupPublishedSemanticEntryByIndex(semanticProgram.sumVariantMetadata, it->second);
+    }
+  }
+  if (semanticProgram.publishedStorageFrozen) {
+    return nullptr;
+  }
+  for (const auto &entry : semanticProgram.sumVariantMetadata) {
+    if (entry.sumPath == sumPath && entry.variantName == variantName) {
+      return &entry;
+    }
+  }
+  return nullptr;
 }
 
 std::string_view semanticProgramDirectCallTargetResolvedPath(

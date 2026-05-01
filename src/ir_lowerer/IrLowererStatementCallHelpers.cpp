@@ -36,12 +36,7 @@ bool isSumDefinitionForCallableOrchestration(const Definition &def,
       typeMetadata != nullptr) {
     return typeMetadata->category == "sum";
   }
-  for (const auto &sumMetadata : semanticProgram->sumTypeMetadata) {
-    if (sumMetadata.fullPath == def.fullPath) {
-      return true;
-    }
-  }
-  return false;
+  return semanticProgramLookupPublishedSumTypeMetadata(*semanticProgram, def.fullPath) != nullptr;
 }
 
 } // namespace

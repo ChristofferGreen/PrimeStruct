@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 1, 2026)**
+- [x] TODO-4298: Use published sum metadata maps
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-01
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 sum metadata authority slice that makes frozen
+    published semantic products consume `sumTypeMetadataIndicesByPathId` and
+    `sumVariantMetadataIndicesBySumPathAndVariantNameId` for sum type and
+    variant metadata lookups.
+  - acceptance:
+    - Frozen semantic-product sum type lookup ignores raw `sumTypeMetadata`
+      entries when `sumTypeMetadataIndicesByPathId` is missing.
+    - Frozen semantic-product sum variant lookup ignores raw
+      `sumVariantMetadata` entries when
+      `sumVariantMetadataIndicesBySumPathAndVariantNameId` is missing.
+    - Lowerer sum metadata consumers use the published lookup helpers instead
+      of direct raw vector scans.
+  - stop_rule: Stop once frozen sum metadata consumers require the published
+    metadata maps and docs record the remaining TODO-4298 work.
+  - evidence: Added published sum type and variant metadata maps, rewired
+    lowerer sum metadata consumers to use published lookup helpers, added
+    focused raw/mapped frozen coverage, and skipped local test execution per
+    the lite workflow.
+
 - [x] TODO-4298: Use published type metadata maps
   - owner: ai
   - created_at: 2026-04-28

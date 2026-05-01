@@ -497,12 +497,7 @@ const SemanticProgramSumTypeMetadata *findSemanticProductSumTypeMetadata(
   if (adapter.semanticProgram == nullptr || fullPath.empty()) {
     return nullptr;
   }
-  for (const auto &entry : adapter.semanticProgram->sumTypeMetadata) {
-    if (entry.fullPath == fullPath) {
-      return &entry;
-    }
-  }
-  return nullptr;
+  return semanticProgramLookupPublishedSumTypeMetadata(*adapter.semanticProgram, fullPath);
 }
 
 const SemanticProgramSumVariantMetadata *findSemanticProductSumVariantMetadata(
@@ -512,12 +507,8 @@ const SemanticProgramSumVariantMetadata *findSemanticProductSumVariantMetadata(
   if (adapter.semanticProgram == nullptr || sumPath.empty() || variantName.empty()) {
     return nullptr;
   }
-  for (const auto &entry : adapter.semanticProgram->sumVariantMetadata) {
-    if (entry.sumPath == sumPath && entry.variantName == variantName) {
-      return &entry;
-    }
-  }
-  return nullptr;
+  return semanticProgramLookupPublishedSumVariantMetadata(
+      *adapter.semanticProgram, sumPath, variantName);
 }
 
 const SemanticProgramCollectionSpecialization *findSemanticProductCollectionSpecialization(

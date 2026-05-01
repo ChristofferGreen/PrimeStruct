@@ -852,6 +852,11 @@ Compile-pipeline publication contract:
   `typeMetadataIndicesByPathId` and `structFieldMetadataIndicesByStructPathId` are the authorities for type and
   struct-field metadata lookup instead of recovering by scanning raw `typeMetadata` or `structFieldMetadata` storage.
   Mutable hand-built products may still use the raw scan before `freezeSemanticProgramPublishedStorage(...)`.
+- Sum metadata lookup follows the same rule once the semantic product is frozen by the publication path:
+  `sumTypeMetadataIndicesByPathId` and `sumVariantMetadataIndicesBySumPathAndVariantNameId` are the authorities for
+  sum type and variant metadata lookup instead of recovering by scanning raw `sumTypeMetadata` or
+  `sumVariantMetadata` storage. Mutable hand-built products may still use the raw scan before
+  `freezeSemanticProgramPublishedStorage(...)`.
 - Collection-specialization lookup follows the same published-map authority rule for semantic-node ids: public
   published collection-specialization lookup helpers and the lowerer semantic-product adapter require
   `collectionSpecializationIndicesByExpr` for expression-scoped collection facts instead of recovering by scanning

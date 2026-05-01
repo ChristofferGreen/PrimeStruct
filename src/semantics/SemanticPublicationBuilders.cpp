@@ -383,6 +383,11 @@ uint64_t makeQueryFactResolvedPathCallNameKey(SymbolId resolvedPathId, SymbolId 
          static_cast<uint64_t>(callNameId);
 }
 
+uint64_t makeSumVariantMetadataKey(SymbolId sumPathId, SymbolId variantNameId) {
+  return (static_cast<uint64_t>(sumPathId) << 32) |
+         static_cast<uint64_t>(variantNameId);
+}
+
 uint64_t makeTryFactOperandPathSourceKey(SymbolId operandPathId, int sourceLine, int sourceColumn) {
   const uint64_t lineBits = static_cast<uint64_t>(
       static_cast<uint32_t>(sourceLine > 0 ? sourceLine : 0));
@@ -1063,6 +1068,9 @@ void publishSumTypeMetadataFacts(
   if (sumTypeMetadata.empty()) {
     return;
   }
+  state.semanticProgram.publishedRoutingLookups.sumTypeMetadataIndicesByPathId.reserve(
+      state.semanticProgram.publishedRoutingLookups.sumTypeMetadataIndicesByPathId.size() +
+      sumTypeMetadata.size());
   state.semanticProgram.sumTypeMetadata.reserve(sumTypeMetadata.size());
   for (const auto &entry : sumTypeMetadata) {
     state.semanticProgram.sumTypeMetadata.push_back(SemanticProgramSumTypeMetadata{
@@ -1076,6 +1084,13 @@ void publishSumTypeMetadataFacts(
         entry.semanticNodeId,
         makeSemanticProvenanceHandle(entry.semanticNodeId),
     });
+    const std::size_t entryIndex = state.semanticProgram.sumTypeMetadata.size() - 1;
+    const SymbolId fullPathId =
+        semanticProgramInternCallTargetString(state.semanticProgram, entry.fullPath);
+    if (fullPathId != InvalidSymbolId) {
+      state.semanticProgram.publishedRoutingLookups.sumTypeMetadataIndicesByPathId
+          .insert_or_assign(fullPathId, entryIndex);
+    }
   }
 }
 
@@ -1085,6 +1100,11 @@ void publishSumVariantMetadataFacts(
   if (sumVariantMetadata.empty()) {
     return;
   }
+  state.semanticProgram.publishedRoutingLookups
+      .sumVariantMetadataIndicesBySumPathAndVariantNameId.reserve(
+          state.semanticProgram.publishedRoutingLookups
+              .sumVariantMetadataIndicesBySumPathAndVariantNameId.size() +
+          sumVariantMetadata.size());
   state.semanticProgram.sumVariantMetadata.reserve(sumVariantMetadata.size());
   for (const auto &entry : sumVariantMetadata) {
     state.semanticProgram.sumVariantMetadata.push_back(SemanticProgramSumVariantMetadata{
@@ -1099,6 +1119,16 @@ void publishSumVariantMetadataFacts(
         entry.semanticNodeId,
         makeSemanticProvenanceHandle(entry.semanticNodeId),
     });
+    const std::size_t entryIndex = state.semanticProgram.sumVariantMetadata.size() - 1;
+    const SymbolId sumPathId =
+        semanticProgramInternCallTargetString(state.semanticProgram, entry.sumPath);
+    const SymbolId variantNameId =
+        semanticProgramInternCallTargetString(state.semanticProgram, entry.variantName);
+    if (sumPathId != InvalidSymbolId && variantNameId != InvalidSymbolId) {
+      state.semanticProgram.publishedRoutingLookups
+          .sumVariantMetadataIndicesBySumPathAndVariantNameId
+          .insert_or_assign(makeSumVariantMetadataKey(sumPathId, variantNameId), entryIndex);
+    }
   }
 }
 

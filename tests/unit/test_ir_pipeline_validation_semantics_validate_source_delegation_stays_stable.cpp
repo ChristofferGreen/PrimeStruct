@@ -148,6 +148,57 @@ void checkParticleTypeMetadataVisible(const primec::SemanticProgram &semanticPro
   CHECK(fields[1] == &semanticProgram.structFieldMetadata[0]);
 }
 
+void populateResultSumMetadata(primec::SemanticProgram &semanticProgram) {
+  primec::SemanticProgramSumTypeMetadata sumMetadata;
+  sumMetadata.fullPath = "/Result";
+  sumMetadata.isPublic = true;
+  sumMetadata.activeTagTypeText = "u32";
+  sumMetadata.payloadStorageText = "ResultPayload";
+  sumMetadata.variantCount = 2;
+  semanticProgram.sumTypeMetadata.push_back(std::move(sumMetadata));
+
+  primec::SemanticProgramSumVariantMetadata errorVariant;
+  errorVariant.sumPath = "/Result";
+  errorVariant.variantName = "error";
+  errorVariant.variantIndex = 1;
+  errorVariant.tagValue = 1;
+  errorVariant.hasPayload = true;
+  errorVariant.payloadTypeText = "Err";
+  semanticProgram.sumVariantMetadata.push_back(std::move(errorVariant));
+
+  primec::SemanticProgramSumVariantMetadata okVariant;
+  okVariant.sumPath = "/Result";
+  okVariant.variantName = "ok";
+  okVariant.variantIndex = 0;
+  okVariant.tagValue = 0;
+  okVariant.hasPayload = true;
+  okVariant.payloadTypeText = "i32";
+  semanticProgram.sumVariantMetadata.push_back(std::move(okVariant));
+}
+
+uint64_t makeTestSumVariantMetadataKey(primec::SymbolId sumPathId,
+                                       primec::SymbolId variantNameId) {
+  return (static_cast<uint64_t>(sumPathId) << 32) |
+         static_cast<uint64_t>(variantNameId);
+}
+
+void checkResultSumMetadataVisible(const primec::SemanticProgram &semanticProgram) {
+  const auto *sumMetadata =
+      primec::semanticProgramLookupPublishedSumTypeMetadata(semanticProgram, "/Result");
+  REQUIRE(sumMetadata != nullptr);
+  CHECK(sumMetadata == &semanticProgram.sumTypeMetadata.front());
+
+  const auto *okVariant = primec::semanticProgramLookupPublishedSumVariantMetadata(
+      semanticProgram, "/Result", "ok");
+  REQUIRE(okVariant != nullptr);
+  CHECK(okVariant == &semanticProgram.sumVariantMetadata[1]);
+
+  const auto *errorVariant = primec::semanticProgramLookupPublishedSumVariantMetadata(
+      semanticProgram, "/Result", "error");
+  REQUIRE(errorVariant != nullptr);
+  CHECK(errorVariant == &semanticProgram.sumVariantMetadata[0]);
+}
+
 } // namespace
 
 TEST_CASE("semantic product module views require module indexes after freeze") {
@@ -207,6 +258,42 @@ TEST_CASE("semantic product type metadata requires published maps after freeze")
   primec::freezeSemanticProgramPublishedStorage(mappedSemanticProgram);
 
   checkParticleTypeMetadataVisible(mappedSemanticProgram);
+}
+
+TEST_CASE("semantic product sum metadata requires published maps after freeze") {
+  primec::SemanticProgram mutableSemanticProgram;
+  populateResultSumMetadata(mutableSemanticProgram);
+
+  checkResultSumMetadataVisible(mutableSemanticProgram);
+
+  primec::SemanticProgram rawFrozenSemanticProgram;
+  populateResultSumMetadata(rawFrozenSemanticProgram);
+  primec::freezeSemanticProgramPublishedStorage(rawFrozenSemanticProgram);
+
+  CHECK(primec::semanticProgramLookupPublishedSumTypeMetadata(
+            rawFrozenSemanticProgram, "/Result") == nullptr);
+  CHECK(primec::semanticProgramLookupPublishedSumVariantMetadata(
+            rawFrozenSemanticProgram, "/Result", "ok") == nullptr);
+
+  primec::SemanticProgram mappedSemanticProgram;
+  populateResultSumMetadata(mappedSemanticProgram);
+  const auto resultPathId =
+      primec::semanticProgramInternCallTargetString(mappedSemanticProgram, "/Result");
+  const auto okNameId =
+      primec::semanticProgramInternCallTargetString(mappedSemanticProgram, "ok");
+  const auto errorNameId =
+      primec::semanticProgramInternCallTargetString(mappedSemanticProgram, "error");
+  mappedSemanticProgram.publishedRoutingLookups.sumTypeMetadataIndicesByPathId
+      .insert_or_assign(resultPathId, 0);
+  mappedSemanticProgram.publishedRoutingLookups
+      .sumVariantMetadataIndicesBySumPathAndVariantNameId
+      .insert_or_assign(makeTestSumVariantMetadataKey(resultPathId, okNameId), 1);
+  mappedSemanticProgram.publishedRoutingLookups
+      .sumVariantMetadataIndicesBySumPathAndVariantNameId
+      .insert_or_assign(makeTestSumVariantMetadataKey(resultPathId, errorNameId), 0);
+  primec::freezeSemanticProgramPublishedStorage(mappedSemanticProgram);
+
+  checkResultSumMetadataVisible(mappedSemanticProgram);
 }
 
 TEST_CASE("semantics validate publishes allowlisted pilot routing artifacts") {

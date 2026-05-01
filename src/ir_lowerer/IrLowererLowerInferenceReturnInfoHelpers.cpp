@@ -48,12 +48,7 @@ bool isSumDefinitionForReturnInfo(const Definition &definition,
       typeMetadata != nullptr && typeMetadata->category == "sum") {
     return true;
   }
-  for (const auto &sumMetadata : semanticProgram->sumTypeMetadata) {
-    if (sumMetadata.fullPath == definition.fullPath) {
-      return true;
-    }
-  }
-  return false;
+  return semanticProgramLookupPublishedSumTypeMetadata(*semanticProgram, definition.fullPath) != nullptr;
 }
 
 bool assignTypeDefinitionReturnInfo(const Definition &definition,
