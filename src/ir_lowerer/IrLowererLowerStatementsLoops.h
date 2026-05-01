@@ -160,15 +160,11 @@
                   callResolutionAdapters.semanticProductTargets, cond);
           std::string bindingTypeText;
           if (bindingFact != nullptr) {
-            if (bindingFact->bindingTypeTextId != InvalidSymbolId) {
-              bindingTypeText = std::string(semanticProgramResolveCallTargetString(
-                  *callResolutionAdapters.semanticProgram,
-                  bindingFact->bindingTypeTextId));
-            }
-            if (bindingTypeText.empty()) {
-              bindingTypeText = bindingFact->bindingTypeText;
-            }
-            bindingTypeText = trimTemplateTypeText(bindingTypeText);
+            bindingTypeText = trimTemplateTypeText(std::string(
+                semanticProgramResolvePublishedText(
+                    *callResolutionAdapters.semanticProgram,
+                    bindingFact->bindingTypeTextId,
+                    bindingFact->bindingTypeText)));
           }
           if (bindingTypeText.empty()) {
             const std::string scopePath =

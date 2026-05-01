@@ -6,6 +6,35 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 1, 2026)**
+- [x] TODO-4298: Require statement binding text IDs
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-01
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 statement-binding setup text authority slice
+    that makes frozen statement binding type-info, local-auto declaration
+    synthesis, final local-info fallback, `for(...)` condition binding
+    declarations, and args-pack parameter metadata resolve binding type text
+    through interned IDs instead of copied raw text.
+  - acceptance:
+    - Frozen statement binding type-info no longer recovers copied binding
+      fact text when interned binding-type IDs are missing.
+    - Frozen local-auto and `for(...)` binding declaration setup no longer
+      recovers copied binding fact text when interned binding-type IDs are
+      missing.
+    - Frozen final local-info fallback and args-pack parameter metadata use
+      interned binding-type IDs rather than copied binding fact text.
+    - Published interned text IDs still produce the same setup decisions.
+    - Mutable hand-built semantic products keep their fixture-only
+      copied-text fallback before freeze.
+  - stop_rule: Stop once statement-binding setup requires interned binding
+    type text after freeze and docs record the remaining TODO-4298 work.
+  - evidence: Routed statement-binding setup text resolution through
+    `semanticProgramResolvePublishedText(...)`, updated source-contract
+    checks for local-auto/for-condition/final local-info setup, added focused
+    frozen-raw and mapped coverage for initializer binding type inference,
+    and skipped local test execution per the lite workflow.
+
 - [x] TODO-4298: Require binding coverage text IDs
   - owner: ai
   - created_at: 2026-04-28

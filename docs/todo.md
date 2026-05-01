@@ -516,7 +516,10 @@ Task template:
     text authority slice is complete for entry parameter scope, site-kind,
     name, and binding type. The frozen binding/local-auto/collection coverage
     text authority slice is complete for binding type, collection family, and
-    collection element/key/value text.
+    collection element/key/value text. The frozen statement-binding setup text
+    authority slice is complete for statement binding type-info, local-auto
+    declaration synthesis, final local-info fallback, `for(...)` condition
+    binding declarations, and args-pack parameter metadata.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -655,6 +658,14 @@ Task template:
       collection family, and collection element/key/value text. Copied
       binding and collection fact text no longer recovers coverage
       validation after publication freezes the semantic product, while
+      mutable hand-built products keep their fixture-only copied-text
+      fallback before freeze.
+    - Completed slice: frozen semantic-product statement-binding setup now
+      uses `semanticProgramResolvePublishedText(...)` for statement binding
+      type-info, local-auto declaration synthesis, final local-info fallback,
+      `for(...)` condition binding declarations, and args-pack parameter
+      metadata. Copied binding and local-auto fact text no longer recovers
+      those setup paths after publication freezes the semantic product, while
       mutable hand-built products keep their fixture-only copied-text
       fallback before freeze.
     - Completed slice: semantic-product-addressed Result-combinator metadata

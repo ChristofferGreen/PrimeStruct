@@ -2096,13 +2096,14 @@ TEST_CASE("for-condition auto bindings use semantic-product binding facts") {
   CHECK(source.find("isSemanticForConditionBindingCandidate") != std::string::npos);
   CHECK(source.find("findSemanticProductBindingFact(") != std::string::npos);
   CHECK(source.find("bindingFact->bindingTypeTextId") != std::string::npos);
-  CHECK(source.find("semanticProgramResolveCallTargetString(") != std::string::npos);
+  CHECK(source.find("semanticProgramResolvePublishedText(") != std::string::npos);
   CHECK(source.find("missing semantic-product for-condition binding fact") != std::string::npos);
   CHECK(source.find("semanticForConditionBindingExpr.semanticNodeId = 0;") != std::string::npos);
   CHECK(source.find("*conditionBindingForDeclaration") != std::string::npos);
   CHECK(source.find(
             "bindingFact != nullptr ? trimTemplateTypeText(bindingFact->bindingTypeText)") ==
         std::string::npos);
+  CHECK(source.find("bindingTypeText = bindingFact->bindingTypeText") == std::string::npos);
   CHECK(source.find("declareForConditionBinding(\n                cond,") == std::string::npos);
 }
 
@@ -2123,20 +2124,18 @@ TEST_CASE("local-auto statement bindings resolve interned binding ids") {
       source.find("findSemanticProductLocalAutoFactBySemanticId", candidatePos);
   const size_t idPos = source.find("localAutoFact->bindingTypeTextId", factPos);
   const size_t resolverPos =
-      source.find("semanticProgramResolveCallTargetString(", idPos);
-  const size_t fallbackTextPos =
-      source.find("bindingTypeText = localAutoFact->bindingTypeText", resolverPos);
+      source.find("semanticProgramResolvePublishedText(", idPos);
   const size_t transformPos =
-      source.find("semanticLocalAutoBindingExpr.transforms.push_back", fallbackTextPos);
+      source.find("semanticLocalAutoBindingExpr.transforms.push_back", resolverPos);
   REQUIRE(factPos != std::string::npos);
   REQUIRE(idPos != std::string::npos);
   REQUIRE(resolverPos != std::string::npos);
-  REQUIRE(fallbackTextPos != std::string::npos);
   REQUIRE(transformPos != std::string::npos);
   CHECK(factPos < idPos);
   CHECK(idPos < resolverPos);
-  CHECK(resolverPos < fallbackTextPos);
-  CHECK(fallbackTextPos < transformPos);
+  CHECK(resolverPos < transformPos);
+  CHECK(source.find("bindingTypeText = localAutoFact->bindingTypeText") ==
+        std::string::npos);
   CHECK(source.find(
             "localAutoFact != nullptr ? trimTemplateTypeText(localAutoFact->bindingTypeText)") ==
         std::string::npos);
@@ -2160,19 +2159,17 @@ TEST_CASE("statement binding local info resolves interned binding ids") {
   const size_t factPos = source.find("findSemanticProductBindingFact(", fallbackPos);
   const size_t idPos = source.find("bindingFact->bindingTypeTextId", factPos);
   const size_t resolverPos =
-      source.find("semanticProgramResolveCallTargetString(", idPos);
-  const size_t fallbackTextPos =
-      source.find("semanticTypeText = bindingFact->bindingTypeText", resolverPos);
-  const size_t valueKindPos = source.find("valueKindFromTypeName(semanticTypeText)", fallbackTextPos);
+      source.find("semanticProgramResolvePublishedText(", idPos);
+  const size_t valueKindPos = source.find("valueKindFromTypeName(semanticTypeText)", resolverPos);
   REQUIRE(factPos != std::string::npos);
   REQUIRE(idPos != std::string::npos);
   REQUIRE(resolverPos != std::string::npos);
-  REQUIRE(fallbackTextPos != std::string::npos);
   REQUIRE(valueKindPos != std::string::npos);
   CHECK(factPos < idPos);
   CHECK(idPos < resolverPos);
-  CHECK(resolverPos < fallbackTextPos);
-  CHECK(fallbackTextPos < valueKindPos);
+  CHECK(resolverPos < valueKindPos);
+  CHECK(source.find("semanticTypeText = bindingFact->bindingTypeText") ==
+        std::string::npos);
   CHECK(source.find("bindingFact != nullptr && !bindingFact->bindingTypeText.empty()") ==
         std::string::npos);
 }

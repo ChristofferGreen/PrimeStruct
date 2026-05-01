@@ -335,15 +335,11 @@
                 stmt);
         std::string bindingTypeText;
         if (localAutoFact != nullptr) {
-          if (localAutoFact->bindingTypeTextId != InvalidSymbolId) {
-            bindingTypeText = std::string(semanticProgramResolveCallTargetString(
-                *callResolutionAdapters.semanticProgram,
-                localAutoFact->bindingTypeTextId));
-          }
-          if (bindingTypeText.empty()) {
-            bindingTypeText = localAutoFact->bindingTypeText;
-          }
-          bindingTypeText = trimTemplateTypeText(bindingTypeText);
+          bindingTypeText = trimTemplateTypeText(std::string(
+              semanticProgramResolvePublishedText(
+                  *callResolutionAdapters.semanticProgram,
+                  localAutoFact->bindingTypeTextId,
+                  localAutoFact->bindingTypeText)));
         }
         if (bindingTypeText.empty()) {
           const std::string scopePath =

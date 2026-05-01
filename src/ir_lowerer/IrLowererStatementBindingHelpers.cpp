@@ -43,13 +43,9 @@ bool isSpecializedExperimentalMapTypeText(const std::string &typeText) {
 
 std::string resolveSemanticBindingTypeText(const SemanticProgram *semanticProgram,
                                            const SemanticProgramBindingFact &bindingFact) {
-  if (semanticProgram != nullptr && bindingFact.bindingTypeTextId != InvalidSymbolId) {
-    std::string resolvedTypeText = std::string(
-        semanticProgramResolveCallTargetString(*semanticProgram,
-                                               bindingFact.bindingTypeTextId));
-    if (!resolvedTypeText.empty()) {
-      return trimTemplateTypeText(resolvedTypeText);
-    }
+  if (semanticProgram != nullptr) {
+    return trimTemplateTypeText(std::string(semanticProgramResolvePublishedText(
+        *semanticProgram, bindingFact.bindingTypeTextId, bindingFact.bindingTypeText)));
   }
   return trimTemplateTypeText(bindingFact.bindingTypeText);
 }
