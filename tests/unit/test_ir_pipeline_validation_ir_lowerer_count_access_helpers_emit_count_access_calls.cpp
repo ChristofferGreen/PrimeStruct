@@ -106,7 +106,8 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
   primitiveArgsInfo.isArgsPack = true;
   primitiveArgsInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Value;
   primitiveArgsInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-  primitiveArgsInfo.argsPackElementCount = 6;
+  primitiveArgsInfo.index = 4;
+  primitiveArgsInfo.argsPackElementCount = 0;
   primitiveArgsLocals.emplace("values", primitiveArgsInfo);
 
   instructions.clear();
@@ -125,9 +126,10 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
             error) == Result::Emitted);
-  REQUIRE(instructions.size() == 1);
-  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
-  CHECK(instructions[0].imm == 6);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 4);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadIndirect);
 
   primec::ir_lowerer::LocalMap experimentalVectorLocals;
   primec::ir_lowerer::LocalInfo experimentalVectorInfo;

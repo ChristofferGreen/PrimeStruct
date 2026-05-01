@@ -750,8 +750,9 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     if ((isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) && expr.args.size() == 1 &&
         expr.args.front().kind == Expr::Kind::Name) {
       auto it = localsIn.find(expr.args.front().name);
-      if (it != localsIn.end() && it->second.isArgsPack && it->second.argsPackElementCount >= 0) {
-        emitInstruction(IrOpcode::PushI32, static_cast<uint64_t>(it->second.argsPackElementCount));
+      if (it != localsIn.end() && it->second.isArgsPack) {
+        emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
+        emitInstruction(IrOpcode::LoadIndirect, 0);
         return CountAccessCallEmitResult::Emitted;
       }
     }
