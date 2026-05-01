@@ -464,7 +464,11 @@ const SemanticProgramTypeMetadata *semanticProgramLookupTypeMetadata(
     const SemanticProgram &semanticProgram,
     std::string_view fullPath);
 std::vector<const SemanticProgramTypeMetadata *>
+semanticProgramTypeMetadataView(const SemanticProgram &semanticProgram);
+std::vector<const SemanticProgramTypeMetadata *>
 semanticProgramStructTypeMetadataView(const SemanticProgram &semanticProgram);
+std::vector<const SemanticProgramStructFieldMetadata *>
+semanticProgramStructFieldMetadataView(const SemanticProgram &semanticProgram);
 std::vector<const SemanticProgramStructFieldMetadata *>
 semanticProgramStructFieldMetadataView(const SemanticProgram &semanticProgram,
                                        std::string_view structPath);
@@ -475,6 +479,10 @@ const SemanticProgramSumVariantMetadata *semanticProgramLookupPublishedSumVarian
     const SemanticProgram &semanticProgram,
     std::string_view sumPath,
     std::string_view variantName);
+std::vector<const SemanticProgramSumTypeMetadata *>
+semanticProgramSumTypeMetadataView(const SemanticProgram &semanticProgram);
+std::vector<const SemanticProgramSumVariantMetadata *>
+semanticProgramSumVariantMetadataView(const SemanticProgram &semanticProgram);
 std::vector<const SemanticProgramCollectionSpecialization *>
 semanticProgramCollectionSpecializationView(const SemanticProgram &semanticProgram);
 std::vector<const SemanticProgramBindingFact *>

@@ -6,6 +6,29 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 1, 2026)**
+- [x] TODO-4298: Use metadata views in dumps
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-01
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 metadata formatter authority slice that makes
+    semantic-product dumps enumerate type, struct-field, sum-type, and
+    sum-variant metadata through published maps after freeze.
+  - acceptance:
+    - Frozen semantic-product formatting no longer recovers raw type,
+      struct-field, sum-type, or sum-variant metadata when published metadata
+      maps are missing.
+    - Published metadata maps still produce deterministic storage-order dump
+      output for the same metadata families.
+    - Mutable hand-built semantic products keep their fixture-only raw
+      metadata view fallback before freeze.
+  - stop_rule: Stop once metadata dump sections require published metadata
+    maps after freeze and docs record the remaining TODO-4298 work.
+  - evidence: Added published metadata views for type, struct-field,
+    sum-type, and sum-variant metadata, routed `formatSemanticProgram` through
+    those views, added focused frozen-raw and mapped dump coverage, and
+    skipped local test execution per the lite workflow.
+
 - [x] TODO-4298: Require callable summary maps
   - owner: ai
   - created_at: 2026-04-28

@@ -156,6 +156,87 @@ makeSemanticProgramPublishedDefinitionView(const SemanticProgram &semanticProgra
   return entries;
 }
 
+template <typename EntryT, typename PublishedIndicesT>
+std::vector<const EntryT *> makeSemanticProgramPublishedIndexView(
+    const std::vector<EntryT> &storage,
+    const PublishedIndicesT &publishedIndices,
+    bool publishedStorageFrozen) {
+  std::vector<const EntryT *> entries;
+  if (!publishedIndices.empty()) {
+    std::vector<std::size_t> storageIndices;
+    storageIndices.reserve(publishedIndices.size());
+    for (const auto &[key, entryIndex] : publishedIndices) {
+      (void)key;
+      if (entryIndex < storage.size()) {
+        storageIndices.push_back(entryIndex);
+      }
+    }
+    std::sort(storageIndices.begin(), storageIndices.end());
+    storageIndices.erase(std::unique(storageIndices.begin(), storageIndices.end()),
+                         storageIndices.end());
+    entries.reserve(storageIndices.size());
+    for (const std::size_t entryIndex : storageIndices) {
+      entries.push_back(&storage[entryIndex]);
+    }
+    if (!entries.empty() || storage.empty() || publishedStorageFrozen) {
+      return entries;
+    }
+  }
+  if (publishedStorageFrozen) {
+    return entries;
+  }
+
+  entries.reserve(storage.size());
+  for (const auto &entry : storage) {
+    entries.push_back(&entry);
+  }
+  return entries;
+}
+
+template <typename EntryT, typename PublishedIndexGroupsT>
+std::vector<const EntryT *> makeSemanticProgramPublishedIndexGroupView(
+    const std::vector<EntryT> &storage,
+    const PublishedIndexGroupsT &publishedIndexGroups,
+    bool publishedStorageFrozen) {
+  std::vector<const EntryT *> entries;
+  if (!publishedIndexGroups.empty()) {
+    std::size_t publishedEntryCount = 0;
+    for (const auto &[key, entryIndices] : publishedIndexGroups) {
+      (void)key;
+      publishedEntryCount += entryIndices.size();
+    }
+    std::vector<std::size_t> storageIndices;
+    storageIndices.reserve(publishedEntryCount);
+    for (const auto &[key, entryIndices] : publishedIndexGroups) {
+      (void)key;
+      for (const std::size_t entryIndex : entryIndices) {
+        if (entryIndex < storage.size()) {
+          storageIndices.push_back(entryIndex);
+        }
+      }
+    }
+    std::sort(storageIndices.begin(), storageIndices.end());
+    storageIndices.erase(std::unique(storageIndices.begin(), storageIndices.end()),
+                         storageIndices.end());
+    entries.reserve(storageIndices.size());
+    for (const std::size_t entryIndex : storageIndices) {
+      entries.push_back(&storage[entryIndex]);
+    }
+    if (!entries.empty() || storage.empty() || publishedStorageFrozen) {
+      return entries;
+    }
+  }
+  if (publishedStorageFrozen) {
+    return entries;
+  }
+
+  entries.reserve(storage.size());
+  for (const auto &entry : storage) {
+    entries.push_back(&entry);
+  }
+  return entries;
+}
+
 uint64_t makeLocalAutoInitPathBindingNameKey(SymbolId initializerPathId, SymbolId bindingNameId) {
   return (static_cast<uint64_t>(initializerPathId) << 32) |
          static_cast<uint64_t>(bindingNameId);
@@ -721,41 +802,33 @@ const SemanticProgramTypeMetadata *semanticProgramLookupTypeMetadata(
 }
 
 std::vector<const SemanticProgramTypeMetadata *>
+semanticProgramTypeMetadataView(const SemanticProgram &semanticProgram) {
+  return makeSemanticProgramPublishedIndexView(
+      semanticProgram.typeMetadata,
+      semanticProgram.publishedRoutingLookups.typeMetadataIndicesByPathId,
+      semanticProgram.publishedStorageFrozen);
+}
+
+std::vector<const SemanticProgramTypeMetadata *>
 semanticProgramStructTypeMetadataView(const SemanticProgram &semanticProgram) {
   std::vector<const SemanticProgramTypeMetadata *> view;
-  auto appendStructLike = [&](std::size_t entryIndex) {
-    if (entryIndex >= semanticProgram.typeMetadata.size()) {
-      return;
+  const auto typeMetadata = semanticProgramTypeMetadataView(semanticProgram);
+  view.reserve(typeMetadata.size());
+  for (const auto *entry : typeMetadata) {
+    if (entry->category == "struct" || entry->category == "pod" ||
+        entry->category == "handle" || entry->category == "gpu_lane") {
+      view.push_back(entry);
     }
-    const auto &entry = semanticProgram.typeMetadata[entryIndex];
-    if (entry.category == "struct" || entry.category == "pod" || entry.category == "handle" ||
-        entry.category == "gpu_lane") {
-      view.push_back(&entry);
-    }
-  };
-  if (semanticProgram.publishedStorageFrozen) {
-    std::vector<std::size_t> indices;
-    indices.reserve(semanticProgram.publishedRoutingLookups.typeMetadataIndicesByPathId.size());
-    for (const auto &[pathId, entryIndex] :
-         semanticProgram.publishedRoutingLookups.typeMetadataIndicesByPathId) {
-      (void)pathId;
-      indices.push_back(entryIndex);
-    }
-    std::sort(indices.begin(), indices.end());
-    indices.erase(std::unique(indices.begin(), indices.end()), indices.end());
-    view.reserve(indices.size());
-    for (const std::size_t entryIndex : indices) {
-      appendStructLike(entryIndex);
-    }
-    return view;
-  }
-
-  view.reserve(semanticProgram.typeMetadata.size());
-  for (std::size_t entryIndex = 0; entryIndex < semanticProgram.typeMetadata.size();
-       ++entryIndex) {
-    appendStructLike(entryIndex);
   }
   return view;
+}
+
+std::vector<const SemanticProgramStructFieldMetadata *>
+semanticProgramStructFieldMetadataView(const SemanticProgram &semanticProgram) {
+  return makeSemanticProgramPublishedIndexGroupView(
+      semanticProgram.structFieldMetadata,
+      semanticProgram.publishedRoutingLookups.structFieldMetadataIndicesByStructPathId,
+      semanticProgram.publishedStorageFrozen);
 }
 
 std::vector<const SemanticProgramStructFieldMetadata *>
@@ -827,6 +900,14 @@ const SemanticProgramSumTypeMetadata *semanticProgramLookupPublishedSumTypeMetad
   return nullptr;
 }
 
+std::vector<const SemanticProgramSumTypeMetadata *>
+semanticProgramSumTypeMetadataView(const SemanticProgram &semanticProgram) {
+  return makeSemanticProgramPublishedIndexView(
+      semanticProgram.sumTypeMetadata,
+      semanticProgram.publishedRoutingLookups.sumTypeMetadataIndicesByPathId,
+      semanticProgram.publishedStorageFrozen);
+}
+
 const SemanticProgramSumVariantMetadata *semanticProgramLookupPublishedSumVariantMetadata(
     const SemanticProgram &semanticProgram,
     std::string_view sumPath,
@@ -856,6 +937,14 @@ const SemanticProgramSumVariantMetadata *semanticProgramLookupPublishedSumVarian
     }
   }
   return nullptr;
+}
+
+std::vector<const SemanticProgramSumVariantMetadata *>
+semanticProgramSumVariantMetadataView(const SemanticProgram &semanticProgram) {
+  return makeSemanticProgramPublishedIndexView(
+      semanticProgram.sumVariantMetadata,
+      semanticProgram.publishedRoutingLookups.sumVariantMetadataIndicesBySumPathAndVariantNameId,
+      semanticProgram.publishedStorageFrozen);
 }
 
 std::string_view semanticProgramDirectCallTargetResolvedPath(
@@ -1240,8 +1329,9 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   std::to_string(entry.onErrorBoundArgCount) + " provenance_handle=" +
                                   std::to_string(entry.provenanceHandle));
   }
-  for (size_t i = 0; i < semanticProgram.typeMetadata.size(); ++i) {
-    const auto &entry = semanticProgram.typeMetadata[i];
+  const auto typeMetadata = semanticProgramTypeMetadataView(semanticProgram);
+  for (size_t i = 0; i < typeMetadata.size(); ++i) {
+    const auto &entry = *typeMetadata[i];
     appendSemanticIndexedLine(out,
                               "type_metadata",
                               i,
@@ -1257,8 +1347,9 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }
-  for (size_t i = 0; i < semanticProgram.structFieldMetadata.size(); ++i) {
-    const auto &entry = semanticProgram.structFieldMetadata[i];
+  const auto structFieldMetadata = semanticProgramStructFieldMetadataView(semanticProgram);
+  for (size_t i = 0; i < structFieldMetadata.size(); ++i) {
+    const auto &entry = *structFieldMetadata[i];
     appendSemanticIndexedLine(out,
                               "struct_field_metadata",
                               i,
@@ -1269,8 +1360,9 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }
-  for (size_t i = 0; i < semanticProgram.sumTypeMetadata.size(); ++i) {
-    const auto &entry = semanticProgram.sumTypeMetadata[i];
+  const auto sumTypeMetadata = semanticProgramSumTypeMetadataView(semanticProgram);
+  for (size_t i = 0; i < sumTypeMetadata.size(); ++i) {
+    const auto &entry = *sumTypeMetadata[i];
     appendSemanticIndexedLine(out,
                               "sum_type_metadata",
                               i,
@@ -1282,8 +1374,9 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }
-  for (size_t i = 0; i < semanticProgram.sumVariantMetadata.size(); ++i) {
-    const auto &entry = semanticProgram.sumVariantMetadata[i];
+  const auto sumVariantMetadata = semanticProgramSumVariantMetadataView(semanticProgram);
+  for (size_t i = 0; i < sumVariantMetadata.size(); ++i) {
+    const auto &entry = *sumVariantMetadata[i];
     appendSemanticIndexedLine(out,
                               "sum_variant_metadata",
                               i,

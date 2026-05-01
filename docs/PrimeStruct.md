@@ -868,6 +868,10 @@ Compile-pipeline publication contract:
   sum type and variant metadata lookup instead of recovering by scanning raw `sumTypeMetadata` or
   `sumVariantMetadata` storage. Mutable hand-built products may still use the raw scan before
   `freezeSemanticProgramPublishedStorage(...)`.
+- Metadata views and semantic-product formatting follow the same rule once the semantic product is frozen by the
+  publication path: type, struct-field, sum-type, and sum-variant dump sections enumerate through published metadata
+  maps in deterministic storage order instead of recovering by scanning raw metadata storage. Mutable hand-built
+  products may still use the raw scan before `freezeSemanticProgramPublishedStorage(...)`.
 - Collection-specialization lookup follows the same published-map authority rule for semantic-node ids: public
   published collection-specialization lookup helpers and the lowerer semantic-product adapter require
   `collectionSpecializationIndicesByExpr` for expression-scoped collection facts instead of recovering by scanning

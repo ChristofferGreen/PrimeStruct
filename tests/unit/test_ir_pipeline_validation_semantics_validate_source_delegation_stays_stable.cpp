@@ -169,9 +169,18 @@ void checkParticleTypeMetadataVisible(const primec::SemanticProgram &semanticPro
   REQUIRE(typeMetadata != nullptr);
   CHECK(typeMetadata == &semanticProgram.typeMetadata.front());
 
+  const auto allTypes = primec::semanticProgramTypeMetadataView(semanticProgram);
+  REQUIRE(allTypes.size() == 1);
+  CHECK(allTypes.front() == &semanticProgram.typeMetadata.front());
+
   const auto structTypes = primec::semanticProgramStructTypeMetadataView(semanticProgram);
   REQUIRE(structTypes.size() == 1);
   CHECK(structTypes.front() == &semanticProgram.typeMetadata.front());
+
+  const auto allFields = primec::semanticProgramStructFieldMetadataView(semanticProgram);
+  REQUIRE(allFields.size() == 2);
+  CHECK(allFields[0] == &semanticProgram.structFieldMetadata[0]);
+  CHECK(allFields[1] == &semanticProgram.structFieldMetadata[1]);
 
   const auto fields =
       primec::semanticProgramStructFieldMetadataView(semanticProgram, "/Particle");
@@ -219,6 +228,15 @@ void checkResultSumMetadataVisible(const primec::SemanticProgram &semanticProgra
       primec::semanticProgramLookupPublishedSumTypeMetadata(semanticProgram, "/Result");
   REQUIRE(sumMetadata != nullptr);
   CHECK(sumMetadata == &semanticProgram.sumTypeMetadata.front());
+
+  const auto sumTypes = primec::semanticProgramSumTypeMetadataView(semanticProgram);
+  REQUIRE(sumTypes.size() == 1);
+  CHECK(sumTypes.front() == &semanticProgram.sumTypeMetadata.front());
+
+  const auto sumVariants = primec::semanticProgramSumVariantMetadataView(semanticProgram);
+  REQUIRE(sumVariants.size() == 2);
+  CHECK(sumVariants[0] == &semanticProgram.sumVariantMetadata[0]);
+  CHECK(sumVariants[1] == &semanticProgram.sumVariantMetadata[1]);
 
   const auto *okVariant = primec::semanticProgramLookupPublishedSumVariantMetadata(
       semanticProgram, "/Result", "ok");
@@ -314,8 +332,13 @@ TEST_CASE("semantic product type metadata requires published maps after freeze")
 
   CHECK(primec::semanticProgramLookupTypeMetadata(rawFrozenSemanticProgram, "/Particle") ==
         nullptr);
+  CHECK(primec::semanticProgramTypeMetadataView(rawFrozenSemanticProgram).empty());
   CHECK(primec::semanticProgramStructTypeMetadataView(rawFrozenSemanticProgram).empty());
+  CHECK(primec::semanticProgramStructFieldMetadataView(rawFrozenSemanticProgram).empty());
   CHECK(primec::semanticProgramStructFieldMetadataView(rawFrozenSemanticProgram, "/Particle").empty());
+  const std::string rawFrozenDump = primec::formatSemanticProgram(rawFrozenSemanticProgram);
+  CHECK(rawFrozenDump.find("type_metadata[0]") == std::string::npos);
+  CHECK(rawFrozenDump.find("struct_field_metadata[0]") == std::string::npos);
 
   primec::SemanticProgram mappedSemanticProgram;
   populateParticleTypeMetadata(mappedSemanticProgram);
@@ -328,6 +351,15 @@ TEST_CASE("semantic product type metadata requires published maps after freeze")
   primec::freezeSemanticProgramPublishedStorage(mappedSemanticProgram);
 
   checkParticleTypeMetadataVisible(mappedSemanticProgram);
+  const std::string mappedDump = primec::formatSemanticProgram(mappedSemanticProgram);
+  CHECK(mappedDump.find("type_metadata[0]: full_path=\"/Particle\"") != std::string::npos);
+  const std::size_t rightPos =
+      mappedDump.find("struct_field_metadata[0]: struct_path=\"/Particle\" field_name=\"right\"");
+  const std::size_t leftPos =
+      mappedDump.find("struct_field_metadata[1]: struct_path=\"/Particle\" field_name=\"left\"");
+  CHECK(rightPos != std::string::npos);
+  CHECK(leftPos != std::string::npos);
+  CHECK(rightPos < leftPos);
 }
 
 TEST_CASE("semantic product sum metadata requires published maps after freeze") {
@@ -344,6 +376,11 @@ TEST_CASE("semantic product sum metadata requires published maps after freeze") 
             rawFrozenSemanticProgram, "/Result") == nullptr);
   CHECK(primec::semanticProgramLookupPublishedSumVariantMetadata(
             rawFrozenSemanticProgram, "/Result", "ok") == nullptr);
+  CHECK(primec::semanticProgramSumTypeMetadataView(rawFrozenSemanticProgram).empty());
+  CHECK(primec::semanticProgramSumVariantMetadataView(rawFrozenSemanticProgram).empty());
+  const std::string rawFrozenDump = primec::formatSemanticProgram(rawFrozenSemanticProgram);
+  CHECK(rawFrozenDump.find("sum_type_metadata[0]") == std::string::npos);
+  CHECK(rawFrozenDump.find("sum_variant_metadata[0]") == std::string::npos);
 
   primec::SemanticProgram mappedSemanticProgram;
   populateResultSumMetadata(mappedSemanticProgram);
@@ -364,6 +401,16 @@ TEST_CASE("semantic product sum metadata requires published maps after freeze") 
   primec::freezeSemanticProgramPublishedStorage(mappedSemanticProgram);
 
   checkResultSumMetadataVisible(mappedSemanticProgram);
+  const std::string mappedDump = primec::formatSemanticProgram(mappedSemanticProgram);
+  CHECK(mappedDump.find("sum_type_metadata[0]: full_path=\"/Result\"") !=
+        std::string::npos);
+  const std::size_t errorPos =
+      mappedDump.find("sum_variant_metadata[0]: sum_path=\"/Result\" variant_name=\"error\"");
+  const std::size_t okPos =
+      mappedDump.find("sum_variant_metadata[1]: sum_path=\"/Result\" variant_name=\"ok\"");
+  CHECK(errorPos != std::string::npos);
+  CHECK(okPos != std::string::npos);
+  CHECK(errorPos < okPos);
 }
 
 TEST_CASE("semantics validate publishes allowlisted pilot routing artifacts") {
