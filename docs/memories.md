@@ -94,6 +94,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: `SoaColumn`, generated `SoaColumnsN`, and `SoaVector` temporary copies need native disarm logic for nested `ownsData` fields so copied heap buffers are not freed through the source temporary.
 - Evidence: `stdlib/std/collections/internal_soa_storage.prime` stores `ownsData` inside each `SoaColumn`, and `IrLowererFlowControlHelpers.cpp` now disarms `SoaColumn`, `SoaColumnsN`, and `SoaVector` temporary copies at their computed `ownsData` slot offsets.
 
+### stdlib-vector-capacity-direct-calls-keep-helper
+- Updated: 2026-05-01
+- Tags: semantics, collections, emitters
+- Fact: Explicit `/std/collections/vector/capacity(...)` direct calls with a declared same-path helper must remain non-builtin semantic targets so C++ emission calls the helper instead of falling through to `ps_vector_capacity`.
+- Evidence: The saved release log showed a same-path helper returning `15` still producing runtime capacity `3`; `SemanticsValidatorExprCollectionCountCapacity.cpp` now keeps declared canonical capacity helpers as non-builtin targets, with focused semantics coverage beside the stdlib vector count cases.
+
 ### struct-brace-constructors-recover-callees-by-type
 - Updated: 2026-05-01
 - Tags: ir, structs, lowering

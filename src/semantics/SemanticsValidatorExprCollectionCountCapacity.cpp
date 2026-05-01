@@ -738,6 +738,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 const bool hasVisibleCapacityHelperMethodTarget =
                     resolveVisiblePreferredVectorHelperMethodTarget(
                         receiver, "capacity", methodResolved);
+                const bool hasDeclaredStdlibVectorCapacityHelperTarget =
+                    hasDeclaredDefinitionPath(stdlibVectorCapacityTargetPath) ||
+                    defMap_.find(stdlibVectorCapacityTargetPath) != defMap_.end();
                 const bool needsDirectCapacityMethodTargetResolution =
                     !usesStdNamespacedCapacityCompatibilityHelper &&
                     !hasVisibleCapacityHelperMethodTarget;
@@ -749,7 +752,11 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 const bool failsCapacityMethodTargetResolution =
                     needsDirectCapacityMethodTargetResolution &&
                     !resolvedCapacityMethodTargetDirectly;
-                if (usesStdNamespacedCapacityCompatibilityHelper) {
+                if (usesStdNamespacedCapacityCompatibilityHelper &&
+                    hasDeclaredStdlibVectorCapacityHelperTarget) {
+                  methodResolved = stdlibVectorCapacityTargetPath;
+                  isBuiltinMethod = false;
+                } else if (usesStdNamespacedCapacityCompatibilityHelper) {
                   assignStdlibVectorCapacityCompatibilityTarget();
                 } else if (failsCapacityMethodTargetResolution) {
                   (void)validateExpr(params, locals, receiver);
