@@ -108,6 +108,143 @@ TEST_CASE("ir lowerer inline param helper rejects variadic pointer packs without
   CHECK(instructions.empty());
 }
 
+TEST_CASE("ir lowerer inline param helper materializes pointer packs from borrowed pack access") {
+  primec::Expr valuesParam;
+  valuesParam.kind = primec::Expr::Kind::Name;
+  valuesParam.isBinding = true;
+  valuesParam.name = "values";
+
+  primec::Expr sourceName;
+  sourceName.kind = primec::Expr::Kind::Name;
+  sourceName.name = "source";
+
+  primec::Expr indexZero;
+  indexZero.kind = primec::Expr::Kind::Literal;
+  indexZero.literalValue = 0;
+  primec::Expr indexOne;
+  indexOne.kind = primec::Expr::Kind::Literal;
+  indexOne.literalValue = 1;
+  primec::Expr indexTwo;
+  indexTwo.kind = primec::Expr::Kind::Literal;
+  indexTwo.literalValue = 2;
+
+  primec::Expr firstAccess;
+  firstAccess.kind = primec::Expr::Kind::Call;
+  firstAccess.name = "at";
+  firstAccess.args = {sourceName, indexZero};
+  primec::Expr secondAccess;
+  secondAccess.kind = primec::Expr::Kind::Call;
+  secondAccess.name = "at";
+  secondAccess.isMethodCall = true;
+  secondAccess.args = {sourceName, indexOne};
+  primec::Expr thirdAccess;
+  thirdAccess.kind = primec::Expr::Kind::Call;
+  thirdAccess.name = "at_unsafe";
+  thirdAccess.isMethodCall = true;
+  thirdAccess.args = {sourceName, indexTwo};
+
+  primec::Expr firstArg;
+  firstArg.kind = primec::Expr::Kind::Call;
+  firstArg.name = "location";
+  firstArg.args = {firstAccess};
+  primec::Expr secondArg;
+  secondArg.kind = primec::Expr::Kind::Call;
+  secondArg.name = "location";
+  secondArg.args = {secondAccess};
+  primec::Expr thirdArg;
+  thirdArg.kind = primec::Expr::Kind::Call;
+  thirdArg.name = "location";
+  thirdArg.args = {thirdAccess};
+
+  primec::ir_lowerer::LocalMap callerLocals;
+  primec::ir_lowerer::LocalInfo sourceInfo;
+  sourceInfo.index = 33;
+  sourceInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  sourceInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  sourceInfo.isArgsPack = true;
+  sourceInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  sourceInfo.argsPackElementCount = 3;
+  callerLocals.emplace("source", sourceInfo);
+
+  int32_t nextLocal = 4;
+  primec::ir_lowerer::LocalMap calleeLocals;
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+
+  REQUIRE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
+      {valuesParam},
+      {nullptr},
+      {&firstArg, &secondArg, &thirdArg},
+      0,
+      callerLocals,
+      nextLocal,
+      calleeLocals,
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
+        infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+        infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+        infoOut.isArgsPack = true;
+        infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+        return true;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &,
+         const primec::ir_lowerer::LocalMap &,
+         primec::ir_lowerer::LocalInfo::StringSource &,
+         int32_t &,
+         bool &) { return true; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
+      [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &) {
+        if (arg.args.empty()) {
+          return false;
+        }
+        const primec::Expr &access = arg.args.front();
+        const uint64_t marker = access.name == "at_unsafe" ? 92u :
+                                access.isMethodCall ? 91u : 90u;
+        instructions.push_back({primec::IrOpcode::LoadLocal, marker});
+        return true;
+      },
+      [](int32_t, int32_t, int32_t) { return true; },
+      []() { return 0; },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [](int32_t) {},
+      error,
+      [](const primec::Expr &argExpr,
+         const primec::ir_lowerer::LocalMap &,
+         primec::ir_lowerer::LocalInfo &infoOut,
+         std::string &infoError) {
+        infoOut = {};
+        if (argExpr.kind != primec::Expr::Kind::Call ||
+            (argExpr.name != "at" && argExpr.name != "at_unsafe")) {
+          infoError = "expected borrowed pack access";
+          return false;
+        }
+        infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+        infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+        infoError.clear();
+        return true;
+      }));
+
+  CHECK(error.empty());
+  CHECK(nextLocal == 9);
+  REQUIRE(calleeLocals.count("values") == 1u);
+  CHECK(calleeLocals.at("values").argsPackElementKind ==
+        primec::ir_lowerer::LocalInfo::Kind::Pointer);
+  CHECK(calleeLocals.at("values").argsPackElementCount == 3);
+  REQUIRE(instructions.size() == 10u);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[0].imm == 3u);
+  CHECK(instructions[2].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[2].imm == 90u);
+  CHECK(instructions[4].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[4].imm == 91u);
+  CHECK(instructions[6].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[6].imm == 92u);
+}
+
 TEST_CASE("ir lowerer inline param helper materializes mixed variadic forwarding") {
   primec::Expr valuesParam;
   valuesParam.kind = primec::Expr::Kind::Name;
