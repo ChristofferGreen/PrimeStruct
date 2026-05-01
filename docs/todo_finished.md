@@ -6,6 +6,35 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 1, 2026)**
+- [x] TODO-4298: Use try result ID facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes
+    semantic-product-backed try result setup resolve interned value/error type
+    IDs before copied try fact text.
+  - implementation_notes:
+    - Keep operand query metadata, Result sum lowering, `on_error` propagation,
+      and syntax-only try fallback behavior unchanged.
+    - Preserve copied try fact text only as compatibility fallback when interned
+      IDs are absent.
+  - acceptance:
+    - Try expression emission resolves `valueTypeId` and `errorTypeId` before
+      copied `valueType` / `errorType`.
+    - Try expression-kind inference resolves `valueTypeId` before copied
+      `valueType`.
+    - Try completeness validation accepts valid interned value/error metadata
+      even when copied try fact text is stale.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once semantic-product-backed try result setup consumes
+    interned value/error metadata before copied compatibility text.
+  - finished_at: 2026-05-01
+  - evidence: Routed try result setup through interned value/error type IDs in
+    expression emission, expression-kind inference, and completeness
+    validation, added stale-text/source-contract coverage, and documented the
+    remaining TODO-4298 work. Local test execution was skipped per the lite
+    workflow.
+
 - [x] TODO-4298: Use on_error ID facts
   - owner: ai
   - created_at: 2026-04-28

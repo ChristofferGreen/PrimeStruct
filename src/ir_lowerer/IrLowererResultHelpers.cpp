@@ -388,7 +388,9 @@ bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *se
       error = "missing semantic-product try operand resolved path id: try";
       return false;
     }
-    if (trimTemplateTypeText(tryFact->valueType).empty()) {
+    const std::string tryValueTypeText =
+        resolveSemanticResultFactText(*semanticProgram, tryFact->valueType, tryFact->valueTypeId);
+    if (tryValueTypeText.empty()) {
       error = "incomplete semantic-product try fact: try";
       return false;
     }

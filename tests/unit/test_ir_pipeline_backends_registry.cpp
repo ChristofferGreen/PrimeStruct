@@ -1811,6 +1811,65 @@ TEST_CASE("native try operand result metadata resolves interned query ids") {
         std::string::npos);
 }
 
+TEST_CASE("native try fact result metadata resolves interned ids") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path tryHelpersPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTryHelpers.h";
+  if (!std::filesystem::exists(tryHelpersPath)) {
+    tryHelpersPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTryHelpers.h";
+  }
+  REQUIRE(std::filesystem::exists(tryHelpersPath));
+
+  const std::string trySource = readTextFile(tryHelpersPath);
+  const size_t resolverPos = trySource.find("auto resolveTryFactTypeText");
+  const size_t semanticResolvePos =
+      trySource.find("semanticProgramResolveCallTargetString(", resolverPos);
+  const size_t errorTypePos =
+      trySource.find("resolveTryFactTypeText(tryFact->errorType,", semanticResolvePos);
+  const size_t errorIdPos = trySource.find("tryFact->errorTypeId", errorTypePos);
+  const size_t valueTypePos =
+      trySource.find("resolveTryFactTypeText(tryFact->valueType,", errorIdPos);
+  const size_t valueIdPos = trySource.find("tryFact->valueTypeId", valueTypePos);
+  REQUIRE(resolverPos != std::string::npos);
+  REQUIRE(semanticResolvePos != std::string::npos);
+  REQUIRE(errorTypePos != std::string::npos);
+  REQUIRE(errorIdPos != std::string::npos);
+  REQUIRE(valueTypePos != std::string::npos);
+  REQUIRE(valueIdPos != std::string::npos);
+  CHECK(resolverPos < semanticResolvePos);
+  CHECK(semanticResolvePos < errorTypePos);
+  CHECK(errorTypePos < errorIdPos);
+  CHECK(errorIdPos < valueTypePos);
+  CHECK(valueTypePos < valueIdPos);
+  CHECK(trySource.find("resultInfo.errorType = tryFact->errorType;") ==
+        std::string::npos);
+  CHECK(trySource.find("applySemanticTryValueType(tryFact->valueType") ==
+        std::string::npos);
+
+  std::filesystem::path inferencePath =
+      cwd / "src" / "ir_lowerer" / "IrLowererLowerInferenceDispatchSetup.cpp";
+  if (!std::filesystem::exists(inferencePath)) {
+    inferencePath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerInferenceDispatchSetup.cpp";
+  }
+  REQUIRE(std::filesystem::exists(inferencePath));
+
+  const std::string inferenceSource = readTextFile(inferencePath);
+  const size_t valueResolverPos = inferenceSource.find("auto resolveTryFactValueTypeText");
+  const size_t valueSemanticResolvePos =
+      inferenceSource.find("semanticProgramResolveCallTargetString(", valueResolverPos);
+  const size_t valueKindPos =
+      inferenceSource.find("valueKindFromTypeName(valueTypeText)", valueSemanticResolvePos);
+  REQUIRE(valueResolverPos != std::string::npos);
+  REQUIRE(valueSemanticResolvePos != std::string::npos);
+  REQUIRE(valueKindPos != std::string::npos);
+  CHECK(valueResolverPos < valueSemanticResolvePos);
+  CHECK(valueSemanticResolvePos < valueKindPos);
+  CHECK(inferenceSource.find("valueKindFromTypeName(tryFact->valueType)") ==
+        std::string::npos);
+}
+
 TEST_CASE("for-condition auto bindings use semantic-product binding facts") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path loopsPath =
@@ -5504,6 +5563,13 @@ TEST_CASE("ir lowerer rejects stale semantic-product try result metadata") {
   });
 
   std::string error;
+  CHECK(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
+      &semanticProgram, error));
+  CHECK(error.empty());
+
+  semanticProgram.tryFacts.back().valueType = "i64";
+  semanticProgram.tryFacts.back().errorType = "OtherError";
+  error.clear();
   CHECK(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
       &semanticProgram, error));
   CHECK(error.empty());

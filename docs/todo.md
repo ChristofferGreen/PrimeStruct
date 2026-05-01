@@ -463,6 +463,8 @@ Task template:
     `Result.ok(...)` payload-emission ID-order correction is complete for
     stale copied payload type text. The lowerer `on_error` ID consumer slice is
     complete for semantic-product-backed error-type and bound-arg text facts.
+    The lowerer try result ID consumer slice is complete for
+    semantic-product-backed value/error type facts.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -560,6 +562,10 @@ Task template:
       rejects missing or stale interned operand binding type, receiver binding
       type, and query type metadata before lowerer consumers can read
       inconsistent try fact text fields.
+    - Completed slice: semantic-product-addressed try result setup now resolves
+      interned value/error type IDs before consulting copied try fact text in
+      try expression emission, expression-kind inference, and completeness
+      validation.
     - Completed slice: semantic-product return completeness validation now
       rejects stale interned return-kind metadata that contradicts the
       published callable summary before lowering can consume the inconsistent

@@ -89,12 +89,23 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
     auto resolveTryValueKind = [&](const Expr &tryExpr, LocalInfo::ValueKind &kindOut) -> bool {
       kindOut = LocalInfo::ValueKind::Unknown;
       std::string semanticTryFactError;
+      auto resolveTryFactValueTypeText = [&](const SemanticProgramTryFact &tryFact) {
+        if (semanticProgram != nullptr && tryFact.valueTypeId != InvalidSymbolId) {
+          std::string resolvedTypeText = std::string(
+              semanticProgramResolveCallTargetString(*semanticProgram, tryFact.valueTypeId));
+          if (!resolvedTypeText.empty()) {
+            return trimTemplateTypeText(resolvedTypeText);
+          }
+        }
+        return trimTemplateTypeText(tryFact.valueType);
+      };
       if (semanticProgram != nullptr && semanticIndex != nullptr && tryExpr.semanticNodeId != 0) {
         const auto *tryFact =
             findSemanticProductTryFactBySemanticId(*semanticIndex, tryExpr);
         if (tryFact != nullptr) {
-          kindOut = valueKindFromTypeName(tryFact->valueType);
-          if (kindOut == LocalInfo::ValueKind::Unknown && !tryFact->valueType.empty()) {
+          const std::string valueTypeText = resolveTryFactValueTypeText(*tryFact);
+          kindOut = valueKindFromTypeName(valueTypeText);
+          if (kindOut == LocalInfo::ValueKind::Unknown && !valueTypeText.empty()) {
             kindOut = LocalInfo::ValueKind::Int64;
           }
           if (kindOut != LocalInfo::ValueKind::Unknown) {

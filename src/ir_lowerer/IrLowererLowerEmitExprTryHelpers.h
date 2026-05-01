@@ -13,6 +13,21 @@
           }
           ResultExprInfo resultInfo;
           std::string semanticTryFactError;
+          auto resolveTryFactTypeText = [&](const std::string &typeText,
+                                            SymbolId typeTextId) {
+            const auto &semanticTargets =
+                callResolutionAdapters.semanticProductTargets;
+            if (semanticTargets.semanticProgram != nullptr &&
+                typeTextId != InvalidSymbolId) {
+              std::string resolvedTypeText = std::string(
+                  semanticProgramResolveCallTargetString(
+                      *semanticTargets.semanticProgram, typeTextId));
+              if (!resolvedTypeText.empty()) {
+                return trimTemplateTypeText(resolvedTypeText);
+              }
+            }
+            return trimTemplateTypeText(typeText);
+          };
           auto applySemanticTryValueType = [&](const std::string &valueTypeText,
                                                ResultExprInfo &resultInfoOut) {
             const std::string trimmedValueType = trimTemplateTypeText(valueTypeText);
@@ -260,8 +275,11 @@
             if (tryFact != nullptr) {
               resultInfo.isResult = true;
               resultInfo.hasValue = true;
-              resultInfo.errorType = tryFact->errorType;
-              if (!applySemanticTryValueType(tryFact->valueType, resultInfo)) {
+              resultInfo.errorType =
+                  resolveTryFactTypeText(tryFact->errorType, tryFact->errorTypeId);
+              if (!applySemanticTryValueType(
+                      resolveTryFactTypeText(tryFact->valueType, tryFact->valueTypeId),
+                      resultInfo)) {
                 semanticTryFactError = "incomplete semantic-product try fact: try";
                 resultInfo = ResultExprInfo{};
               }
