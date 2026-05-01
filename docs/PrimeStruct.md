@@ -904,6 +904,10 @@ Compile-pipeline publication contract:
   args-pack parameter metadata resolve binding type text through interned IDs after publication freezes the semantic
   product. Mutable hand-built products may still use copied-text fallbacks before
   `freezeSemanticProgramPublishedStorage(...)`.
+- Native `Result.ok(...)` emission uses the same frozen-product rule for semantic payload type text: direct payload
+  query/binding facts resolve through interned IDs after publication freezes the semantic product, and copied
+  query/binding type text is not a recovery path for deciding the packed payload shape. Mutable hand-built products
+  may still use copied-text fallbacks before `freezeSemanticProgramPublishedStorage(...)`.
 - Callable-summary lookup follows the same published-map authority rule once the semantic product is frozen by the
   publication path: `callableSummaryIndicesByPathId` is the authority, while raw `callableSummaries` scanning remains
   limited to mutable hand-built products before `freezeSemanticProgramPublishedStorage(...)`. Lowerer return-info

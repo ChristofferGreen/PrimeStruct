@@ -519,7 +519,9 @@ Task template:
     collection element/key/value text. The frozen statement-binding setup text
     authority slice is complete for statement binding type-info, local-auto
     declaration synthesis, final local-info fallback, `for(...)` condition
-    binding declarations, and args-pack parameter metadata.
+    binding declarations, and args-pack parameter metadata. The frozen native
+    `Result.ok(...)` payload-emission text authority slice is complete for
+    query/binding payload type facts.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -668,6 +670,12 @@ Task template:
       those setup paths after publication freezes the semantic product, while
       mutable hand-built products keep their fixture-only copied-text
       fallback before freeze.
+    - Completed slice: frozen semantic-product native `Result.ok(...)`
+      payload emission now uses `semanticProgramResolvePublishedText(...)`
+      for query/binding payload type facts. Copied query and binding fact text
+      no longer recovers packed payload shape decisions after publication
+      freezes the semantic product, while mutable hand-built products keep
+      their fixture-only copied-text fallback before freeze.
     - Completed slice: semantic-product-addressed Result-combinator metadata
       now requires published query facts when direct lambda payload analysis
       cannot infer the resulting value kind, covering `Result.map`,
