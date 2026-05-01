@@ -144,6 +144,9 @@ TEST_CASE("ir lowerer inference get-return-info step treats semantic-product sum
   });
   semanticProgram.sumTypeMetadata.push_back(primec::SemanticProgramSumTypeMetadata{
       .fullPath = sumDefinition.fullPath,
+      .isPublic = false,
+      .activeTagTypeText = "u32",
+      .payloadStorageText = "array",
       .variantCount = 2,
       .semanticNodeId = sumDefinition.semanticNodeId,
   });

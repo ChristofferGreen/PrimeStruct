@@ -59,14 +59,14 @@ main() {
 TEST_CASE("ir lowers struct brace constructor binding") {
   const std::string source = R"(
 [struct]
-thing() {
+Thing() {
   [i32] value{1i32}
   [i32] count{2i32}
 }
 
 [return<int>]
 main() {
-  [thing] item{thing{[count] 3i32}}
+  [Thing] item{Thing{[count] 3i32}}
   return(item.count)
 }
 )";

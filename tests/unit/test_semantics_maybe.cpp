@@ -122,10 +122,10 @@ const primec::SemanticProgramMethodCallTarget *findMaybeMethodTarget(
   const auto it = std::find_if(
       targets.begin(),
       targets.end(),
-      [methodName](const primec::SemanticProgramMethodCallTarget &entry) {
-        return entry.scopePath == "/main" && entry.methodName == methodName;
+      [methodName](const primec::SemanticProgramMethodCallTarget *entry) {
+        return entry != nullptr && entry->scopePath == "/main" && entry->methodName == methodName;
       });
-  return it == targets.end() ? nullptr : &*it;
+  return it == targets.end() ? nullptr : *it;
 }
 } // namespace
 

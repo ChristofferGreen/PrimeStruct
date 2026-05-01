@@ -524,14 +524,23 @@ bool isStructHelperDefinition(const Definition &def,
                               const std::unordered_set<std::string> &structNames,
                               std::string &parentStructPathOut) {
   parentStructPathOut.clear();
-  if (!def.isNested) {
-    return false;
-  }
   if (structNames.count(def.fullPath) > 0) {
     return false;
   }
   const size_t slash = def.fullPath.find_last_of('/');
   if (slash == std::string::npos || slash == 0) {
+    return false;
+  }
+  const std::string helperName = def.fullPath.substr(slash + 1);
+  const bool isLifecycleHelper = helperName == "Create" || helperName == "Destroy" ||
+                                 helperName == "Copy" || helperName == "Move" ||
+                                 helperName == "CreateStack" ||
+                                 helperName == "DestroyStack" ||
+                                 helperName == "CreateHeap" ||
+                                 helperName == "DestroyHeap" ||
+                                 helperName == "CreateBuffer" ||
+                                 helperName == "DestroyBuffer";
+  if (!def.isNested && !isLifecycleHelper) {
     return false;
   }
   const std::string parent = def.fullPath.substr(0, slash);

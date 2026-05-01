@@ -279,6 +279,9 @@ TEST_CASE("ir lowerer on_error helpers skip semantic-product sum definitions") {
   });
   semanticProgram.sumTypeMetadata.push_back(primec::SemanticProgramSumTypeMetadata{
       .fullPath = generatedResultDef.fullPath,
+      .isPublic = false,
+      .activeTagTypeText = "u32",
+      .payloadStorageText = "array",
       .variantCount = 2,
       .semanticNodeId = generatedResultDef.semanticNodeId,
   });

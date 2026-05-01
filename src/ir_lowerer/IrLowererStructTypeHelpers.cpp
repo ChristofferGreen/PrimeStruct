@@ -217,7 +217,9 @@ void buildDefinitionMapAndStructNames(
         structNamesOut.insert(typeMetadata->fullPath);
       }
     }
-    return;
+    if (!structNamesOut.empty()) {
+      return;
+    }
   }
 
   structNamesOut.reserve(definitions.size());
