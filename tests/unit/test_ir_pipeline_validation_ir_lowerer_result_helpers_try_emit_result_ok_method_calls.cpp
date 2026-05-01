@@ -1497,4 +1497,80 @@ TEST_CASE("ir lowerer result helpers resolve Result.map struct payload metadata"
   CHECK(out.valueStructType == "/pkg/Label");
 }
 
+TEST_CASE("ir lowerer result metadata resolves Result.ok payload query type ids") {
+  primec::Expr resultName;
+  resultName.kind = primec::Expr::Kind::Name;
+  resultName.name = "Result";
+
+  primec::Expr payloadExpr;
+  payloadExpr.kind = primec::Expr::Kind::Call;
+  payloadExpr.name = "plus";
+  payloadExpr.semanticNodeId = 971;
+
+  primec::Expr okExpr;
+  okExpr.kind = primec::Expr::Kind::Call;
+  okExpr.isMethodCall = true;
+  okExpr.name = "ok";
+  okExpr.args = {resultName, payloadExpr};
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      .scopePath = "/main",
+      .callName = "plus",
+      .queryTypeText = "",
+      .bindingTypeText = "",
+      .receiverBindingTypeText = "",
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .sourceLine = 4,
+      .sourceColumn = 9,
+      .semanticNodeId = 971,
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/plus"),
+      .queryTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+      .bindingTypeTextId = primec::InvalidSymbolId,
+  });
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  bool inferCalled = false;
+  bool resolveDefinitionCalled = false;
+  auto resolveMethodCall =
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+    return nullptr;
+  };
+  auto resolveDefinitionCall = [&](const primec::Expr &) -> const primec::Definition * {
+    resolveDefinitionCalled = true;
+    return nullptr;
+  };
+  auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
+    return false;
+  };
+  auto inferExprKind = [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    inferCalled = true;
+    return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  };
+
+  primec::ir_lowerer::ResultExprInfo out;
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(okExpr,
+                                                            {},
+                                                            resolveMethodCall,
+                                                            resolveDefinitionCall,
+                                                            lookupReturnInfo,
+                                                            inferExprKind,
+                                                            out,
+                                                            &semanticProgram,
+                                                            &semanticIndex));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(out.valueCollectionKind == primec::ir_lowerer::LocalInfo::Kind::Value);
+  CHECK(out.valueStructType.empty());
+  CHECK_FALSE(inferCalled);
+  CHECK_FALSE(resolveDefinitionCalled);
+}
+
 TEST_SUITE_END();

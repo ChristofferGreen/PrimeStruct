@@ -552,10 +552,16 @@ bool applySemanticDirectValueMetadataFact(const Expr &valueExpr,
   }
   if (const auto *queryFact = findSemanticProductQueryFactBySemanticId(*semanticIndex, valueExpr);
       queryFact != nullptr) {
-    const std::string bindingTypeText =
+    std::string bindingTypeText =
         resolveSemanticDirectValueTypeText(semanticProgram,
                                            queryFact->bindingTypeText,
                                            queryFact->bindingTypeTextId);
+    if (bindingTypeText.empty()) {
+      bindingTypeText =
+          resolveSemanticDirectValueTypeText(semanticProgram,
+                                             queryFact->queryTypeText,
+                                             queryFact->queryTypeTextId);
+    }
     if (!bindingTypeText.empty() && applySemanticDirectValueTypeText(bindingTypeText, out)) {
       return true;
     }
