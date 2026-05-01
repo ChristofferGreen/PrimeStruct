@@ -5305,6 +5305,7 @@ TEST_CASE("ir lowerer rejects incomplete semantic-product query facts") {
       .semanticNodeId = 83,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
   });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(83, 0);
   primec::SemanticProgramCallableSummary callableSummary;
   callableSummary.semanticNodeId = 83020;
   callableSummary.fullPathId =
@@ -5375,6 +5376,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product query resolved path id") 
       .semanticNodeId = 8301,
       .resolvedPathId = primec::InvalidSymbolId,
   });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(8301, 0);
   primec::SemanticProgramCallableSummary callableSummary;
   callableSummary.fullPathId =
       primec::semanticProgramInternCallTargetString(semanticProgram, "/main");
@@ -5457,6 +5459,7 @@ TEST_CASE("ir lowerer rejects stale semantic-product query facts") {
       .semanticNodeId = 8302,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/stale_lookup"),
   });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(8302, 0);
   primec::SemanticProgramCallableSummary callableSummary;
   callableSummary.semanticNodeId = 83020;
   callableSummary.fullPathId =
@@ -5523,6 +5526,7 @@ TEST_CASE("ir lowerer accepts query-owned builtin count target metadata") {
         .receiverBindingTypeTextId =
             primec::semanticProgramInternCallTargetString(semanticProgram, ""),
     });
+    semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(8303, 0);
 
     std::string error;
     CHECK(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
@@ -5566,6 +5570,7 @@ TEST_CASE("ir lowerer rejects stale semantic-product query type metadata") {
       .receiverBindingTypeTextId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "Map<string, i32>"),
   });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(8304, 0);
 
   std::string error;
   CHECK(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
@@ -5639,6 +5644,7 @@ TEST_CASE("ir lowerer rejects stale semantic-product query result metadata") {
       .resultErrorTypeId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
   });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(8303, 0);
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
       .returnKind = "i32",
       .isCompute = false,

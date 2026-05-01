@@ -588,11 +588,6 @@ const SemanticProgramQueryFact *semanticProgramLookupPublishedQueryFactBySemanti
       it != semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.end()) {
     return lookupPublishedSemanticEntryByIndex(semanticProgram.queryFacts, it->second);
   }
-  for (const auto &entry : semanticProgram.queryFacts) {
-    if (entry.semanticNodeId == semanticNodeId) {
-      return &entry;
-    }
-  }
   return nullptr;
 }
 
@@ -609,11 +604,6 @@ const SemanticProgramQueryFact *semanticProgramLookupPublishedQueryFactByResolve
               compositeKey);
       it != semanticProgram.publishedRoutingLookups.queryFactIndicesByResolvedPathAndCallNameId.end()) {
     return lookupPublishedSemanticEntryByIndex(semanticProgram.queryFacts, it->second);
-  }
-  for (const auto &entry : semanticProgram.queryFacts) {
-    if (entry.resolvedPathId == resolvedPathId && entry.callNameId == callNameId) {
-      return &entry;
-    }
   }
   return nullptr;
 }

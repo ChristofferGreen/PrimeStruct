@@ -477,7 +477,8 @@ Task template:
     semantic-product-addressed `Result.ok(...)`, `Result.error(...)`, and
     `Result.why(...)` calls. The lowerer call-target adapter published-map
     authority slice is complete for direct-call, method-call, and bridge-path
-    target and stdlib-surface lookups.
+    target and stdlib-surface lookups. The query fact published-map authority
+    slice is complete for semantic-node-id lookups.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -698,6 +699,10 @@ Task template:
       direct-call, method-call, and bridge-path target paths and stdlib surface
       ids only from published routing lookup maps. Raw semantic-product target
       vectors no longer recover missing published maps by semantic-node scan.
+    - Completed slice: semantic-product published query lookup helpers and
+      lowerer query adapter indexes now require `queryFactIndicesByExpr` for
+      semantic-node-id query facts. Raw `queryFacts` storage no longer recovers
+      missing published query maps for expression-scoped query consumers.
     - Completed slice: native `pick(value)` lowering now uses the published
       binding fact plus published sum metadata to resolve named pick targets,
       instead of letting local-map shape reconstruction own that decision on

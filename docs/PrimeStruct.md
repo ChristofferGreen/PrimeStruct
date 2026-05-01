@@ -834,6 +834,9 @@ Compile-pipeline publication contract:
 - The lowerer semantic-product adapter no longer builds local-auto initializer-path, query resolved-path/call-name, or
   `try(...)` operand-path/source composite recovery indexes. Those composite lookup maps remain publication and
   inspection metadata rather than production lowerer lookup surfaces.
+- Query fact lookup now follows the same published-map authority rule for semantic-node ids: public published query
+  lookup helpers and the lowerer semantic-product adapter require `queryFactIndicesByExpr` for expression-scoped
+  query facts instead of recovering by scanning raw `queryFacts` storage.
 - The same adapter quarantine now applies to `on_error` definition-path indexes: lowerer handler setup resolves
   `on_error` facts by definition semantic id, while definition-path lookup remains a published inspection surface.
 - Return facts follow the same adapter-cache rule for direct definition lookup: the semantic-product adapter no longer

@@ -641,6 +641,7 @@ TEST_CASE("ir lowerer Result.error direct calls prefer semantic-product query fa
       .sourceColumn = 9,
       .semanticNodeId = 91,
   });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(91, 0);
   const auto semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
 

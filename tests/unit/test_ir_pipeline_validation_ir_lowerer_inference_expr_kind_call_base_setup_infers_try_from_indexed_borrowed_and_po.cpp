@@ -101,6 +101,7 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic query fa
       .queryTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "bool"),
       .bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "bool"),
   });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(501, 0);
   const auto semanticIndex = primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
 
   primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
@@ -170,6 +171,7 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic Result.o
       .queryTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "bool"),
       .bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "bool"),
   });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(801, 0);
   semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
       .scopePath = "/main",
       .siteKind = "local",

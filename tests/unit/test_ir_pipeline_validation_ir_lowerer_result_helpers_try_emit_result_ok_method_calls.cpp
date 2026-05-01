@@ -572,6 +572,7 @@ TEST_CASE("ir lowerer result helpers require semantic query facts for generic ca
       .resultErrorTypeId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
   });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(63, 0);
   const auto semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
 
@@ -661,6 +662,7 @@ TEST_CASE("ir lowerer result helpers use semantic query facts for direct Result 
       .queryTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
       .bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
   });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(263, 0);
   const auto semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
 
@@ -1437,6 +1439,7 @@ TEST_CASE("ir lowerer result helpers emit Result.ok payloads from semantic query
       .queryTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
       .bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
   });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(913, 0);
   const auto semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
 
@@ -1500,6 +1503,7 @@ TEST_CASE("ir lowerer result helpers emit Result.ok payloads from semantic query
           primec::semanticProgramInternCallTargetString(queryTypeSemanticProgram, "i32"),
       .bindingTypeTextId = primec::InvalidSymbolId,
   });
+  queryTypeSemanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(913, 0);
   const auto queryTypeSemanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&queryTypeSemanticProgram);
   resolveDefinitionCalls = 0;
@@ -1668,6 +1672,7 @@ TEST_CASE("ir lowerer result metadata resolves Result.ok payload query type ids"
           primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
       .bindingTypeTextId = primec::InvalidSymbolId,
   });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(971, 0);
   const auto semanticIndex =
       primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
 

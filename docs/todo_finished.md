@@ -6,6 +6,29 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 1, 2026)**
+- [x] TODO-4298: Use published query maps
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-01
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 query fact authority slice that makes
+    expression-scoped query fact lookup consume only published
+    `queryFactIndicesByExpr` maps.
+  - acceptance:
+    - Public published query lookup by semantic node id ignores raw
+      `queryFacts` entries when `queryFactIndicesByExpr` is missing.
+    - The lowerer semantic-product adapter builds query fact indexes only
+      from `queryFactIndicesByExpr`.
+    - Focused coverage proves raw query facts without the published expr map
+      stay unresolved while mapped query facts still resolve.
+  - stop_rule: Stop once expression-scoped query consumers require the
+    published query map and docs record the remaining TODO-4298 work.
+  - evidence: Removed raw query fact scans from published query lookup
+    helpers and lowerer query adapter index construction, updated hand-built
+    fixtures to publish query maps explicitly, expanded adapter coverage for
+    raw query facts without maps, and skipped local test execution per the
+    lite workflow.
+
 - [x] TODO-4298: Use published call-target maps
   - owner: ai
   - created_at: 2026-04-28
