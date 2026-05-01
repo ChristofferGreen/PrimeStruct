@@ -84,7 +84,7 @@ main() {
   CHECK(readFile(errPath) == "array index out of bounds\n");
 }
 
-TEST_CASE("vm experimental vector at_unsafe checks positive out-of-range index") {
+TEST_CASE("vm experimental vector at_unsafe skips positive out-of-range index checks") {
   const std::string source = R"(
 import /std/collections/experimental_vector/*
 
@@ -98,11 +98,11 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_vm_experimental_vector_at_unsafe_oob_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath) == "array index out of bounds\n");
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(errPath).empty());
 }
 
-TEST_CASE("vm experimental vector method at_unsafe checks positive out-of-range index") {
+TEST_CASE("vm experimental vector method at_unsafe skips positive out-of-range index checks") {
   const std::string source = R"(
 import /std/collections/experimental_vector/*
 
@@ -116,8 +116,8 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_vm_experimental_vector_method_at_unsafe_oob_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath) == "array index out of bounds\n");
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("vm experimental vector at checks positive out-of-range index") {
