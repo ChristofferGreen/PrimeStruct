@@ -438,7 +438,7 @@ main() {
   CHECK(err.find("unknown method: /vector/at") != std::string::npos);
 }
 
-TEST_CASE("rejects vector unsafe method alias access field expression with struct receiver diagnostics in C++ emitter") {
+TEST_CASE("accepts vector unsafe method alias access field expression with struct receiver in C++ emitter") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -467,11 +467,15 @@ main() {
       (testScratchPath("") /
        "primec_cpp_vector_method_alias_access_unsafe_field_expression_struct_receiver_diag.err")
           .string();
+  const std::string exePath =
+      (testScratchPath("") /
+       "primec_cpp_vector_method_alias_access_unsafe_field_expression_struct_receiver_diag_exe")
+          .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("field access requires struct receiver") != std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
 }
 
 TEST_CASE("rejects vector unsafe method alias access receiver fallback without helper in C++ emitter") {
