@@ -2816,6 +2816,53 @@ TEST_CASE("ir lowerer effects unit prefers semantic product callable summaries")
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer effects unit skips semantic callable summaries for sum types") {
+  primec::Program program;
+  primec::Definition sumDef;
+  sumDef.fullPath = "/Choice";
+  sumDef.transforms.push_back(primec::Transform{.name = "sum"});
+  sumDef.sumVariants.push_back(primec::SumVariant{
+      .name = "left",
+      .hasPayload = true,
+      .payloadType = "i32",
+      .payloadTypeText = "i32",
+      .variantIndex = 0,
+  });
+  program.definitions.push_back(sumDef);
+
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+  program.definitions.push_back(entryDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .isExecution = false,
+      .returnKind = "i32",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 0,
+      .provenanceHandle = 0,
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .returnKindId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+      .activeEffectIds = {},
+      .activeCapabilityIds = {},
+  });
+
+  std::string error;
+  CHECK(primec::ir_lowerer::validateNativeProgramEffects(program, &semanticProgram, "/main", {}, {}, error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer entry setup uses vm effects surface when requested") {
   primec::Program program;
   primec::Definition entryDef;

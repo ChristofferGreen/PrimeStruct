@@ -13,6 +13,10 @@ void expandEffectImplications(std::unordered_set<std::string> &effects) {
   }
 }
 
+bool isDefinitionCallableForEffectMetadata(const Definition &def) {
+  return !definitionHasTransform(def, "sum");
+}
+
 } // namespace
 
 bool findEntryDefinition(const Program &program,
@@ -249,7 +253,8 @@ bool validateProgramEffectsForBackendSurface(const Program &program,
   };
 
   for (const auto &def : program.definitions) {
-    if (!validateCallableEffects(def.fullPath, def.transforms, def.fullPath == entryPath, def.fullPath)) {
+    if (isDefinitionCallableForEffectMetadata(def) &&
+        !validateCallableEffects(def.fullPath, def.transforms, def.fullPath == entryPath, def.fullPath)) {
       return false;
     }
     for (const auto &param : def.parameters) {
