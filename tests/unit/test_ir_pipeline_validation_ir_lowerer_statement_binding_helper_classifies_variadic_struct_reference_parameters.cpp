@@ -1490,7 +1490,7 @@ TEST_CASE(
   init.semanticNodeId = 9202;
 
   primec::SemanticProgram semanticProgram;
-  addSemanticBindingFact(semanticProgram, init.semanticNodeId, "Pointer<Pair>");
+  addSemanticBindingFact(semanticProgram, init.semanticNodeId, "Pointer</pkg/Pair>");
   const auto semanticIndex =
       primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
 
