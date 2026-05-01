@@ -193,6 +193,92 @@ TEST_CASE("ir lowerer on_error helpers prefer semantic-product metadata") {
   CHECK(onErrorByDef.at("/main")->boundArgs.front().literalValue == 2);
 }
 
+TEST_CASE("ir lowerer on_error helpers skip semantic-product sum definitions") {
+  primec::Program program;
+
+  primec::Definition handlerDef;
+  handlerDef.fullPath = "/handler";
+  handlerDef.namespacePrefix = "";
+  handlerDef.semanticNodeId = 21;
+  program.definitions.push_back(handlerDef);
+
+  primec::Definition choiceDef;
+  choiceDef.fullPath = "/Choice";
+  choiceDef.namespacePrefix = "";
+  choiceDef.semanticNodeId = 22;
+  primec::Transform sumTransform;
+  sumTransform.name = "sum";
+  choiceDef.transforms.push_back(sumTransform);
+  program.definitions.push_back(choiceDef);
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.namespacePrefix = "";
+  mainDef.semanticNodeId = 23;
+  program.definitions.push_back(mainDef);
+
+  auto resolveExprPath = [](const primec::Expr &expr) {
+    if (!expr.name.empty() && expr.name[0] == '/') {
+      return expr.name;
+    }
+    return std::string("/") + expr.name;
+  };
+  auto definitionExists = [](const std::string &path) {
+    return path == "/handler" || path == "/Choice" || path == "/main";
+  };
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .isExecution = false,
+      .returnKind = "void",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 21,
+      .provenanceHandle = 0,
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
+  });
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .isExecution = false,
+      .returnKind = "void",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 23,
+      .provenanceHandle = 0,
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+  });
+
+  primec::ir_lowerer::OnErrorByDefinition onErrorByDef;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::buildOnErrorByDefinition(
+      program, &semanticProgram, resolveExprPath, definitionExists, onErrorByDef, error));
+  CHECK(error.empty());
+  CHECK(onErrorByDef.count("/Choice") == 0);
+  REQUIRE(onErrorByDef.count("/handler") == 1);
+  CHECK_FALSE(onErrorByDef.at("/handler").has_value());
+  REQUIRE(onErrorByDef.count("/main") == 1);
+  CHECK_FALSE(onErrorByDef.at("/main").has_value());
+}
+
 TEST_CASE("ir lowerer on_error helpers reject missing semantic bound arg ids") {
   primec::Program program;
 

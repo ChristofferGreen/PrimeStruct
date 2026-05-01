@@ -58,6 +58,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: `tests/unit/test_compile_run_examples_docs_locks.cpp` source-locks both the skipped-debt queue shape in `docs/todo*.md` and the current active `vm_math` and `vm_maps` surfaces, so resolving skipped-doctest lanes requires updating the queue docs and that lock file together.
 - Evidence: Refreshing the `examples_docs_locks` shard after landing the VM math/map skip cleanups required retiring `TODO-4110`, `TODO-4117`, and `TODO-4118` from `docs/todo.md`, archiving them in `docs/todo_finished.md`, and updating the queue/surface assertions in `tests/unit/test_compile_run_examples_docs_locks.cpp` before the focused release rerun passed.
 
+### semantic-product-sums-omit-callable-summaries
+- Updated: 2026-05-01
+- Tags: semantics, ir, sums
+- Fact: Semantic-product sum definitions publish type metadata but not callable summaries, so lowerer setup code must skip sums when requiring callable-summary facts.
+- Evidence: The saved release log showed `missing semantic-product callable summary: /Choice`; `SemanticsValidatorSnapshots.cpp` skips sum definitions when collecting callable summaries and `IrLowererOnErrorHelpers.cpp` now skips sums when building `on_error` handler metadata.
+
 ### soa-storage-temporaries-own-nested-buffers
 - Updated: 2026-04-28
 - Tags: ir, native, collections

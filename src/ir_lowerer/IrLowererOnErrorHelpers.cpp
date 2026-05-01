@@ -27,6 +27,10 @@ bool validateSemanticProductCallableSummaryPathIds(const SemanticProgram &semant
   return true;
 }
 
+bool definitionCanCarryOnErrorHandler(const Definition &def) {
+  return !definitionHasTransform(def, "sum");
+}
+
 bool buildOnErrorHandlerFromSemanticFact(const Definition &def,
                                          const SemanticProgram &semanticProgram,
                                          const SemanticProgramOnErrorFact &fact,
@@ -174,6 +178,9 @@ bool buildOnErrorByDefinition(const Program &program,
   out.clear();
   out.reserve(program.definitions.size());
   for (const auto &def : program.definitions) {
+    if (!definitionCanCarryOnErrorHandler(def)) {
+      continue;
+    }
     std::optional<OnErrorHandler> handler;
     if (semanticProgram != nullptr) {
       const auto *callableSummary = findSemanticProductCallableSummary(semanticProgram, def.fullPath);
