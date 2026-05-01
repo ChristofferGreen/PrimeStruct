@@ -5747,6 +5747,7 @@ TEST_CASE("ir lowerer rejects incomplete semantic-product try facts") {
       .semanticNodeId = 84,
       .operandResolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
   });
+  semanticProgram.publishedRoutingLookups.tryFactIndicesByExpr.insert_or_assign(84, 0);
   primec::SemanticProgramCallableSummary callableSummary;
   callableSummary.fullPathId =
       primec::semanticProgramInternCallTargetString(semanticProgram, "/main");
@@ -5806,6 +5807,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product try operand resolved path
       .semanticNodeId = 8401,
       .operandResolvedPathId = primec::InvalidSymbolId,
   });
+  semanticProgram.publishedRoutingLookups.tryFactIndicesByExpr.insert_or_assign(8401, 0);
   primec::SemanticProgramCallableSummary callableSummary;
   callableSummary.fullPathId =
       primec::semanticProgramInternCallTargetString(semanticProgram, "/main");
@@ -6016,6 +6018,7 @@ TEST_CASE("ir lowerer rejects stale semantic-product try context return kind") {
       .operandResolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
       .contextReturnKindId = primec::semanticProgramInternCallTargetString(semanticProgram, "return"),
   });
+  semanticProgram.publishedRoutingLookups.tryFactIndicesByExpr.insert_or_assign(8403, 0);
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
       .returnKind = "i32",
       .isCompute = false,
@@ -6097,6 +6100,7 @@ TEST_CASE("ir lowerer rejects stale semantic-product try on_error facts") {
       .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
       .operandResolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
   });
+  semanticProgram.publishedRoutingLookups.tryFactIndicesByExpr.insert_or_assign(8402, 0);
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
       .returnKind = "i32",
       .isCompute = false,

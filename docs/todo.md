@@ -478,7 +478,8 @@ Task template:
     `Result.why(...)` calls. The lowerer call-target adapter published-map
     authority slice is complete for direct-call, method-call, and bridge-path
     target and stdlib-surface lookups. The query fact published-map authority
-    slice is complete for semantic-node-id lookups.
+    slice is complete for semantic-node-id lookups. The try fact
+    published-map authority slice is complete for semantic-node-id lookups.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -501,6 +502,10 @@ Task template:
       callable-result, map-helper, or file-helper fallback can infer the value
       kind; missing or incomplete try facts stay unresolved with the existing
       semantic-product try diagnostic.
+    - Completed slice: semantic-product published try lookup helpers and
+      lowerer try adapter indexes now require `tryFactIndicesByExpr` for
+      semantic-node-id try facts. Raw `tryFacts` storage no longer recovers
+      missing published try maps for expression-scoped try consumers.
     - Completed slice: semantic-product-addressed Result-combinator metadata
       now requires published query facts when direct lambda payload analysis
       cannot infer the resulting value kind, covering `Result.map`,

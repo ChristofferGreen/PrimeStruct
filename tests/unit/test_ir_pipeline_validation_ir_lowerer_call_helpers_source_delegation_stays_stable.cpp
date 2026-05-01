@@ -2164,6 +2164,7 @@ TEST_CASE("ir lowerer semantic-product adapter joins facts by semantic id withou
       .semanticNodeId = 64,
       .operandResolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
   });
+  semanticProgram.publishedRoutingLookups.tryFactIndicesByExpr.insert_or_assign(64, 0);
 
   const auto semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
@@ -3170,7 +3171,7 @@ TEST_CASE("ir lowerer semantic-product adapter uses try semantic-id matches with
   CHECK(tryFact->valueType == "i32");
 }
 
-TEST_CASE("ir lowerer semantic-product index does not expose try operand-path fallback") {
+TEST_CASE("ir lowerer semantic-product adapter ignores raw try facts without maps") {
   primec::Expr operandExpr;
   operandExpr.kind = primec::Expr::Kind::Call;
   operandExpr.name = "lookup";
@@ -3180,7 +3181,7 @@ TEST_CASE("ir lowerer semantic-product index does not expose try operand-path fa
   tryExpr.kind = primec::Expr::Kind::Call;
   tryExpr.name = "try";
   tryExpr.args = {operandExpr};
-  tryExpr.semanticNodeId = 0;
+  tryExpr.semanticNodeId = 9303;
   tryExpr.sourceLine = 33;
   tryExpr.sourceColumn = 9;
 
@@ -3209,9 +3210,20 @@ TEST_CASE("ir lowerer semantic-product index does not expose try operand-path fa
       .onErrorBoundArgCount = 1,
       .sourceLine = 33,
       .sourceColumn = 9,
-      .semanticNodeId = 0,
+      .semanticNodeId = 9303,
       .operandResolvedPathId = operandResolvedPathId,
   });
+  const uint64_t tryKey =
+      (static_cast<uint64_t>(operandResolvedPathId) << 32) ^
+      (static_cast<uint64_t>(static_cast<uint32_t>(tryExpr.sourceLine)) * 1315423911ULL) ^
+      static_cast<uint64_t>(static_cast<uint32_t>(tryExpr.sourceColumn));
+  semanticProgram.publishedRoutingLookups.tryFactIndicesByOperandPathAndSource.insert_or_assign(
+      tryKey, 0);
+
+  CHECK(primec::semanticProgramLookupPublishedTryFactBySemanticId(semanticProgram, 9303) ==
+        nullptr);
+  CHECK(primec::semanticProgramLookupPublishedTryFactByOperandPathAndSource(
+            semanticProgram, operandResolvedPathId, 33, 9) == &semanticProgram.tryFacts[0]);
 
   const auto semanticIndex =
       primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);

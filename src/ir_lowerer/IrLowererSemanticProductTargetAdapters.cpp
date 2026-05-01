@@ -126,21 +126,9 @@ struct SemanticProductIndexBuilder {
   }
 
   void buildTryIndex(SemanticProductIndex &index) const {
-    if (!semanticProgram->publishedRoutingLookups.tryFactIndicesByExpr.empty()) {
-      populateSemanticFactIndex(index.tryFactsByExpr,
-                                semanticProgram->publishedRoutingLookups.tryFactIndicesByExpr,
-                                semanticProgram->tryFacts);
-    }
-    const auto tryFacts = semanticProgramTryFactView(*semanticProgram);
-    index.tryFactsByExpr.reserve(index.tryFactsByExpr.size() + tryFacts.size());
-    for (const auto *entry : tryFacts) {
-      if (entry == nullptr) {
-        continue;
-      }
-      if (entry->semanticNodeId != 0) {
-        index.tryFactsByExpr.try_emplace(entry->semanticNodeId, entry);
-      }
-    }
+    populateSemanticFactIndex(index.tryFactsByExpr,
+                              semanticProgram->publishedRoutingLookups.tryFactIndicesByExpr,
+                              semanticProgram->tryFacts);
   }
 
   void buildBindingIndex(SemanticProductIndex &index) const {

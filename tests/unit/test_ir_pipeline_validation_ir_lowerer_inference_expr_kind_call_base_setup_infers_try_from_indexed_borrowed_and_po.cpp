@@ -477,6 +477,7 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic try fact
       .valueTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "i64"),
       .errorTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
   });
+  semanticProgram.publishedRoutingLookups.tryFactIndicesByExpr.insert_or_assign(901, 0);
   const auto semanticIndex = primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
 
   primec::ir_lowerer::LowerInferenceSetupBootstrapState state;

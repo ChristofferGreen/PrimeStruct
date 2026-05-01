@@ -6,6 +6,28 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 1, 2026)**
+- [x] TODO-4298: Use published try maps
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-01
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 try fact authority slice that makes
+    expression-scoped try fact lookup consume only published
+    `tryFactIndicesByExpr` maps.
+  - acceptance:
+    - Public published try lookup by semantic node id ignores raw `tryFacts`
+      entries when `tryFactIndicesByExpr` is missing.
+    - The lowerer semantic-product adapter builds try fact indexes only from
+      `tryFactIndicesByExpr`.
+    - Focused coverage proves raw try facts without the published expr map
+      stay unresolved while mapped try facts still resolve.
+  - stop_rule: Stop once expression-scoped try consumers require the published
+    try map and docs record the remaining TODO-4298 work.
+  - evidence: Removed raw try fact scans from published try lookup helpers and
+    lowerer try adapter index construction, updated hand-built fixtures to
+    publish try maps explicitly, expanded adapter coverage for raw try facts
+    without maps, and skipped local test execution per the lite workflow.
+
 - [x] TODO-4298: Use published query maps
   - owner: ai
   - created_at: 2026-04-28
