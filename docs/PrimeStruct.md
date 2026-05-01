@@ -913,6 +913,10 @@ Compile-pipeline publication contract:
   freezes the semantic product, and copied query error type text is not a recovery path for deciding whether a
   status-only direct call matches the consumer error domain. Mutable hand-built products may still use copied-text
   fallbacks before `freezeSemanticProgramPublishedStorage(...)`.
+- `on_error` lowerer setup uses the same frozen-product rule for semantic handler text: handler error type and bound
+  argument expressions resolve through interned IDs after publication freezes the semantic product, and copied
+  `on_error` fact text is not a recovery path for constructing the handler metadata. Mutable hand-built products may
+  still use copied-text fallbacks before `freezeSemanticProgramPublishedStorage(...)`.
 - Callable-summary lookup follows the same published-map authority rule once the semantic product is frozen by the
   publication path: `callableSummaryIndicesByPathId` is the authority, while raw `callableSummaries` scanning remains
   limited to mutable hand-built products before `freezeSemanticProgramPublishedStorage(...)`. Lowerer return-info

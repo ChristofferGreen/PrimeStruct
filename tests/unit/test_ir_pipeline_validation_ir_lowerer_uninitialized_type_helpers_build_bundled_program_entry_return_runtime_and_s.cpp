@@ -261,6 +261,153 @@ TEST_CASE("ir lowerer on_error helpers reject unknown handler") {
   CHECK(error == "unknown on_error handler: /missing");
 }
 
+TEST_CASE("ir lowerer on_error helpers require interned text after freeze") {
+  primec::Program program;
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 9101;
+  program.definitions.push_back(mainDef);
+  primec::Definition handlerDef;
+  handlerDef.fullPath = "/handler";
+  program.definitions.push_back(handlerDef);
+
+  auto addCallableSummary =
+      [](primec::SemanticProgram &semanticProgram,
+         const std::string &fullPath,
+         bool hasOnError,
+         std::size_t index) {
+        const primec::SymbolId fullPathId =
+            primec::semanticProgramInternCallTargetString(semanticProgram, fullPath);
+        semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+            .isExecution = false,
+            .returnKind = "return",
+            .isCompute = false,
+            .isUnsafe = false,
+            .activeEffects = {},
+            .activeCapabilities = {},
+            .hasResultType = false,
+            .resultTypeHasValue = false,
+            .resultValueType = "",
+            .resultErrorType = "",
+            .hasOnError = hasOnError,
+            .onErrorHandlerPath = hasOnError ? "/handler" : "",
+            .onErrorErrorType = hasOnError ? "FileError" : "",
+            .onErrorBoundArgCount = hasOnError ? 1u : 0u,
+            .semanticNodeId = hasOnError ? 9101u : 9102u,
+            .provenanceHandle = 0,
+            .fullPathId = fullPathId,
+            .returnKindId =
+                primec::semanticProgramInternCallTargetString(semanticProgram, "return"),
+            .onErrorHandlerPathId =
+                hasOnError ? primec::semanticProgramInternCallTargetString(semanticProgram,
+                                                                           "/handler")
+                           : primec::InvalidSymbolId,
+            .onErrorErrorTypeId =
+                hasOnError ? primec::semanticProgramInternCallTargetString(semanticProgram,
+                                                                           "FileError")
+                           : primec::InvalidSymbolId,
+        });
+        semanticProgram.publishedRoutingLookups.callableSummaryIndicesByPathId
+            .insert_or_assign(fullPathId, index);
+      };
+
+  auto makeSemanticProgram = [&](bool includeErrorTypeId,
+                                 bool includeBoundArgTextIds,
+                                 std::string rawErrorType,
+                                 std::string rawBoundArgText) {
+    primec::SemanticProgram semanticProgram;
+    addCallableSummary(semanticProgram, "/main", true, 0);
+    addCallableSummary(semanticProgram, "/handler", false, 1);
+    const primec::SymbolId mainPathId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, "/main");
+    primec::SemanticProgramOnErrorFact fact{
+        .definitionPath = "/main",
+        .returnKind = "return",
+        .errorType = std::move(rawErrorType),
+        .boundArgCount = 1,
+        .boundArgTexts = {std::move(rawBoundArgText)},
+        .returnResultHasValue = false,
+        .returnResultValueType = "",
+        .returnResultErrorType = "",
+        .semanticNodeId = 9101,
+        .definitionPathId = mainPathId,
+        .returnKindId =
+            primec::semanticProgramInternCallTargetString(semanticProgram, "return"),
+        .handlerPathId =
+            primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
+        .errorTypeId =
+            includeErrorTypeId
+                ? primec::semanticProgramInternCallTargetString(semanticProgram,
+                                                                "FileError")
+                : primec::InvalidSymbolId,
+    };
+    if (includeBoundArgTextIds) {
+      fact.boundArgTextIds = {
+          primec::semanticProgramInternCallTargetString(semanticProgram, "value"),
+      };
+    }
+    semanticProgram.onErrorFacts.push_back(std::move(fact));
+    semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionId
+        .insert_or_assign(9101, 0);
+    return semanticProgram;
+  };
+
+  auto buildHandlers = [&](primec::SemanticProgram &semanticProgram,
+                           primec::ir_lowerer::OnErrorByDefinition &out,
+                           std::string &error) {
+    return primec::ir_lowerer::buildOnErrorByDefinition(
+        program,
+        &semanticProgram,
+        [](const primec::Expr &) { return std::string{}; },
+        [](const std::string &) { return false; },
+        out,
+        error);
+  };
+
+  primec::SemanticProgram mutableRawSemanticProgram =
+      makeSemanticProgram(false, false, "FileError", "value");
+  primec::ir_lowerer::OnErrorByDefinition handlers;
+  std::string error;
+  CHECK(buildHandlers(mutableRawSemanticProgram, handlers, error));
+  REQUIRE(handlers.count("/main") == 1u);
+  REQUIRE(handlers.at("/main").has_value());
+  CHECK(handlers.at("/main")->errorType == "FileError");
+  REQUIRE(handlers.at("/main")->boundArgs.size() == 1u);
+  CHECK(handlers.at("/main")->boundArgs.front().kind == primec::Expr::Kind::Name);
+  CHECK(handlers.at("/main")->boundArgs.front().name == "value");
+
+  primec::SemanticProgram missingErrorTypeIdSemanticProgram =
+      makeSemanticProgram(false, true, "FileError", "value");
+  primec::freezeSemanticProgramPublishedStorage(missingErrorTypeIdSemanticProgram);
+  handlers.clear();
+  error.clear();
+  CHECK_FALSE(buildHandlers(missingErrorTypeIdSemanticProgram, handlers, error));
+  CHECK(error == "missing semantic-product on_error error type id: /main");
+
+  primec::SemanticProgram missingBoundArgIdsSemanticProgram =
+      makeSemanticProgram(true, false, "FileError", "value");
+  primec::freezeSemanticProgramPublishedStorage(missingBoundArgIdsSemanticProgram);
+  handlers.clear();
+  error.clear();
+  CHECK_FALSE(buildHandlers(missingBoundArgIdsSemanticProgram, handlers, error));
+  CHECK(error == "semantic-product on_error bound arg id mismatch on /main");
+
+  primec::SemanticProgram mappedFrozenSemanticProgram =
+      makeSemanticProgram(true, true, "OtherError", "stale");
+  primec::freezeSemanticProgramPublishedStorage(mappedFrozenSemanticProgram);
+  handlers.clear();
+  error.clear();
+  CHECK(buildHandlers(mappedFrozenSemanticProgram, handlers, error));
+  CHECK(error.empty());
+  REQUIRE(handlers.count("/main") == 1u);
+  REQUIRE(handlers.at("/main").has_value());
+  CHECK(handlers.at("/main")->errorType == "FileError");
+  CHECK(handlers.at("/main")->handlerPath == "/handler");
+  REQUIRE(handlers.at("/main")->boundArgs.size() == 1u);
+  CHECK(handlers.at("/main")->boundArgs.front().kind == primec::Expr::Kind::Name);
+  CHECK(handlers.at("/main")->boundArgs.front().name == "value");
+}
+
 TEST_CASE("ir lowerer setup type helper maps primitive aliases") {
   CHECK(primec::ir_lowerer::valueKindFromTypeName("int") == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(primec::ir_lowerer::valueKindFromTypeName("i32") == primec::ir_lowerer::LocalInfo::ValueKind::Int32);

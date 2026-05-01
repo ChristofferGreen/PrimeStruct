@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 1, 2026)**
+- [x] TODO-4298: Require on_error setup text IDs
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-01
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 `on_error` setup text authority slice that
+    makes frozen handler error type and bound argument expression facts
+    resolve through interned IDs instead of copied raw text.
+  - acceptance:
+    - Frozen `on_error` setup no longer recovers copied error type text when
+      the interned error type ID is missing.
+    - Frozen `on_error` setup no longer recovers copied bound argument text
+      when interned bound argument text IDs are missing.
+    - Published interned error type and bound argument text IDs still produce
+      the same handler metadata even when copied text is stale.
+    - Mutable hand-built semantic products keep their fixture-only copied-text
+      fallback before freeze.
+  - stop_rule: Stop once `on_error` setup requires interned handler text after
+    freeze and docs record the remaining TODO-4298 work.
+  - evidence: Routed `on_error` handler error type and bound argument text
+    through `semanticProgramResolvePublishedText(...)`, added focused mutable
+    raw, frozen-raw failure, and mapped frozen success coverage, and skipped
+    local test execution per the lite workflow.
+
 - [x] TODO-4298: Require status Result source text IDs
   - owner: ai
   - created_at: 2026-04-28
