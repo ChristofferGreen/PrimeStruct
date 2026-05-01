@@ -757,7 +757,7 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_root_soa_vector_to_aos_forms_exe_err.txt").string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown struct type for layout: SoaColumn") !=
         std::string::npos);
