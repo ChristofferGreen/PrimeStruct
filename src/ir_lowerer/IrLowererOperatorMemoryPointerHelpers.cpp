@@ -15,7 +15,9 @@ namespace {
 std::string inferPointerStructTypePath(
     const Expr &expr,
     const LocalMap &localsIn,
-    const ResolveConversionsAndCallsStructTypeNameFn &resolveStructTypeName) {
+    const InferConversionsAndCallsStructExprPathFn &inferStructExprPath,
+    const ResolveConversionsAndCallsStructTypeNameFn &resolveStructTypeName,
+    const ResolveConversionsAndCallsStructFieldInfoFn &resolveStructFieldInfo) {
   if (expr.kind == Expr::Kind::Name) {
     auto it = localsIn.find(expr.name);
     if (it == localsIn.end()) {
@@ -30,6 +32,47 @@ std::string inferPointerStructTypePath(
     return "";
   }
 
+  if (expr.isFieldAccess && expr.args.size() == 1) {
+    auto inferArgsPackReceiverStruct = [&](const Expr &candidate) {
+      std::string accessName;
+      const Expr *receiver = nullptr;
+      if (getBuiltinArrayAccessName(candidate, accessName) &&
+          candidate.args.size() == 2 &&
+          (accessName == "at" || accessName == "at_unsafe")) {
+        receiver = &candidate.args.front();
+      }
+      if (receiver == nullptr || receiver->kind != Expr::Kind::Name) {
+        return std::string{};
+      }
+      auto it = localsIn.find(receiver->name);
+      if (it == localsIn.end() || !it->second.isArgsPack) {
+        return std::string{};
+      }
+      return it->second.structTypeName;
+    };
+
+    std::string receiverStruct;
+    if (inferStructExprPath) {
+      receiverStruct = inferStructExprPath(expr.args.front(), localsIn);
+    }
+    if (receiverStruct.empty()) {
+      receiverStruct = inferArgsPackReceiverStruct(expr.args.front());
+    }
+    if (receiverStruct.empty()) {
+      return "";
+    }
+
+    int32_t slotOffset = 0;
+    int32_t slotCount = 0;
+    std::string fieldStructPath;
+    if (resolveStructFieldInfo &&
+        resolveStructFieldInfo(receiverStruct, expr.name, slotOffset, slotCount, fieldStructPath) &&
+        !fieldStructPath.empty()) {
+      return fieldStructPath;
+    }
+    return "";
+  }
+
   std::string memoryBuiltin;
   if (getBuiltinMemoryName(expr, memoryBuiltin)) {
     if (memoryBuiltin == "alloc" && expr.templateArgs.size() == 1) {
@@ -41,13 +84,16 @@ std::string inferPointerStructTypePath(
       return "";
     }
     if (memoryBuiltin == "realloc" && expr.args.size() == 2) {
-      return inferPointerStructTypePath(expr.args.front(), localsIn, resolveStructTypeName);
+      return inferPointerStructTypePath(
+          expr.args.front(), localsIn, inferStructExprPath, resolveStructTypeName, resolveStructFieldInfo);
     }
     if (memoryBuiltin == "at" && expr.args.size() == 3) {
-      return inferPointerStructTypePath(expr.args.front(), localsIn, resolveStructTypeName);
+      return inferPointerStructTypePath(
+          expr.args.front(), localsIn, inferStructExprPath, resolveStructTypeName, resolveStructFieldInfo);
     }
     if (memoryBuiltin == "at_unsafe" && expr.args.size() == 2) {
-      return inferPointerStructTypePath(expr.args.front(), localsIn, resolveStructTypeName);
+      return inferPointerStructTypePath(
+          expr.args.front(), localsIn, inferStructExprPath, resolveStructTypeName, resolveStructFieldInfo);
     }
     if (memoryBuiltin == "reinterpret" && expr.args.size() == 1) {
       return "";
@@ -58,11 +104,13 @@ std::string inferPointerStructTypePath(
   if (getBuiltinOperatorName(expr, builtinName) &&
       (builtinName == "plus" || builtinName == "minus") &&
       expr.args.size() == 2) {
-    return inferPointerStructTypePath(expr.args.front(), localsIn, resolveStructTypeName);
+    return inferPointerStructTypePath(
+        expr.args.front(), localsIn, inferStructExprPath, resolveStructTypeName, resolveStructFieldInfo);
   }
 
   if (isSimpleCallName(expr, "location") && expr.args.size() == 1) {
-    return inferPointerStructTypePath(expr.args.front(), localsIn, resolveStructTypeName);
+    return inferPointerStructTypePath(
+        expr.args.front(), localsIn, inferStructExprPath, resolveStructTypeName, resolveStructFieldInfo);
   }
 
   return "";
@@ -337,7 +385,8 @@ bool emitConversionsAndCallsMemoryAndPointerExpr(
       }
 
       int32_t slotCountMultiplier = 1;
-      const std::string structTypeName = inferPointerStructTypePath(expr.args[0], localsIn, resolveStructTypeName);
+      const std::string structTypeName = inferPointerStructTypePath(
+          expr.args[0], localsIn, inferStructExprPath, resolveStructTypeName, resolveStructFieldInfo);
       if (!structTypeName.empty()) {
         if (!resolveStructSlotCount(structTypeName, slotCountMultiplier)) {
           return false;
@@ -427,7 +476,8 @@ bool emitConversionsAndCallsMemoryAndPointerExpr(
       instructions[jumpIndexInRange].imm = static_cast<int32_t>(instructions.size());
 
       int32_t slotCountMultiplier = 1;
-      const std::string structTypeName = inferPointerStructTypePath(expr.args[0], localsIn, resolveStructTypeName);
+      const std::string structTypeName = inferPointerStructTypePath(
+          expr.args[0], localsIn, inferStructExprPath, resolveStructTypeName, resolveStructFieldInfo);
       if (!structTypeName.empty()) {
         if (!resolveStructSlotCount(structTypeName, slotCountMultiplier)) {
           return false;
@@ -464,7 +514,8 @@ bool emitConversionsAndCallsMemoryAndPointerExpr(
       }
 
       int32_t slotCountMultiplier = 1;
-      const std::string structTypeName = inferPointerStructTypePath(expr.args[0], localsIn, resolveStructTypeName);
+      const std::string structTypeName = inferPointerStructTypePath(
+          expr.args[0], localsIn, inferStructExprPath, resolveStructTypeName, resolveStructFieldInfo);
       if (!structTypeName.empty()) {
         if (!resolveStructSlotCount(structTypeName, slotCountMultiplier)) {
           return false;
