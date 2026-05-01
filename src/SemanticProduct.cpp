@@ -1202,18 +1202,18 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
   for (size_t i = 0; i < directCallTargets.size(); ++i) {
     const auto &entry = *directCallTargets[i];
     const std::string_view scopePath =
-        semanticProgramResolveCallTargetString(semanticProgram, entry.scopePathId);
+        formatSemanticStringFromId(semanticProgram, entry.scopePathId, entry.scopePath);
     const std::string_view callName =
-        semanticProgramResolveCallTargetString(semanticProgram, entry.callNameId);
+        formatSemanticStringFromId(semanticProgram, entry.callNameId, entry.callName);
     const std::string_view resolvedPath =
         semanticProgramResolveCallTargetString(semanticProgram, entry.resolvedPathId);
     appendSemanticIndexedLine(out,
                               "direct_call_targets",
                               i,
                               "scope_path=" +
-                                  quoteSemanticString(scopePath.empty() ? entry.scopePath : scopePath) +
+                                  quoteSemanticString(scopePath) +
                                   " call_name=" +
-                                  quoteSemanticString(callName.empty() ? entry.callName : callName) +
+                                  quoteSemanticString(callName) +
                                   " resolved_path=" +
                                   quoteSemanticString(resolvedPath) +
                                   (entry.stdlibSurfaceId.has_value()
@@ -1229,24 +1229,24 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
   for (size_t i = 0; i < methodCallTargets.size(); ++i) {
     const auto &entry = *methodCallTargets[i];
     const std::string_view scopePath =
-        semanticProgramResolveCallTargetString(semanticProgram, entry.scopePathId);
+        formatSemanticStringFromId(semanticProgram, entry.scopePathId, entry.scopePath);
     const std::string_view methodName =
-        semanticProgramResolveCallTargetString(semanticProgram, entry.methodNameId);
+        formatSemanticStringFromId(semanticProgram, entry.methodNameId, entry.methodName);
     const std::string_view receiverTypeText =
-        semanticProgramResolveCallTargetString(semanticProgram, entry.receiverTypeTextId);
+        formatSemanticStringFromId(semanticProgram,
+                                   entry.receiverTypeTextId,
+                                   entry.receiverTypeText);
     const std::string_view resolvedPath =
         semanticProgramMethodCallTargetResolvedPath(semanticProgram, entry);
     appendSemanticIndexedLine(out,
                               "method_call_targets",
                               i,
                               "scope_path=" +
-                                  quoteSemanticString(scopePath.empty() ? entry.scopePath : scopePath) +
+                                  quoteSemanticString(scopePath) +
                                   " method_name=" +
-                                  quoteSemanticString(methodName.empty() ? entry.methodName : methodName) +
+                                  quoteSemanticString(methodName) +
                                   " receiver_type_text=" +
-                                  quoteSemanticString(receiverTypeText.empty()
-                                                          ? entry.receiverTypeText
-                                                          : receiverTypeText) +
+                                  quoteSemanticString(receiverTypeText) +
                                   " resolved_path=" +
                                   quoteSemanticString(resolvedPath) +
                                   (entry.stdlibSurfaceId.has_value()
@@ -1262,9 +1262,11 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
   for (size_t i = 0; i < bridgePathChoices.size(); ++i) {
     const auto &entry = *bridgePathChoices[i];
     const std::string_view scopePath =
-        semanticProgramResolveCallTargetString(semanticProgram, entry.scopePathId);
+        formatSemanticStringFromId(semanticProgram, entry.scopePathId, entry.scopePath);
     const std::string_view collectionFamily =
-        semanticProgramResolveCallTargetString(semanticProgram, entry.collectionFamilyId);
+        formatSemanticStringFromId(semanticProgram,
+                                   entry.collectionFamilyId,
+                                   entry.collectionFamily);
     const std::string_view helperName =
         semanticProgramBridgePathChoiceHelperName(semanticProgram, entry);
     const std::string_view chosenPath =
@@ -1273,11 +1275,9 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                               "bridge_path_choices",
                               i,
                               "scope_path=" +
-                                  quoteSemanticString(scopePath.empty() ? entry.scopePath : scopePath) +
+                                  quoteSemanticString(scopePath) +
                                   " collection_family=" +
-                                  quoteSemanticString(collectionFamily.empty()
-                                                          ? entry.collectionFamily
-                                                          : collectionFamily) +
+                                  quoteSemanticString(collectionFamily) +
                                   " helper_name=" +
                                   quoteSemanticString(helperName) +
                                   " chosen_path=" +
@@ -1297,19 +1297,23 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
     const std::string_view fullPath =
         semanticProgramCallableSummaryFullPath(semanticProgram, entry);
     const std::string_view returnKind =
-        semanticProgramResolveCallTargetString(semanticProgram, entry.returnKindId);
+        formatSemanticStringFromId(semanticProgram, entry.returnKindId, entry.returnKind);
     const std::string formattedActiveEffects =
         formatSemanticStringListFromIds(semanticProgram, entry.activeEffectIds, entry.activeEffects);
     const std::string formattedActiveCapabilities =
         formatSemanticStringListFromIds(semanticProgram, entry.activeCapabilityIds, entry.activeCapabilities);
     const std::string_view resultValueType =
-        semanticProgramResolveCallTargetString(semanticProgram, entry.resultValueTypeId);
+        formatSemanticStringFromId(semanticProgram, entry.resultValueTypeId, entry.resultValueType);
     const std::string_view resultErrorType =
-        semanticProgramResolveCallTargetString(semanticProgram, entry.resultErrorTypeId);
+        formatSemanticStringFromId(semanticProgram, entry.resultErrorTypeId, entry.resultErrorType);
     const std::string_view onErrorHandlerPath =
-        semanticProgramResolveCallTargetString(semanticProgram, entry.onErrorHandlerPathId);
+        formatSemanticStringFromId(semanticProgram,
+                                   entry.onErrorHandlerPathId,
+                                   entry.onErrorHandlerPath);
     const std::string_view onErrorErrorType =
-        semanticProgramResolveCallTargetString(semanticProgram, entry.onErrorErrorTypeId);
+        formatSemanticStringFromId(semanticProgram,
+                                   entry.onErrorErrorTypeId,
+                                   entry.onErrorErrorType);
     appendSemanticIndexedLine(out,
                               "callable_summaries",
                               i,
@@ -1317,7 +1321,7 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   quoteSemanticString(fullPath) +
                                   " is_execution=" +
                                   formatSemanticBool(entry.isExecution) + " return_kind=" +
-                                  quoteSemanticString(returnKind.empty() ? entry.returnKind : returnKind) +
+                                  quoteSemanticString(returnKind) +
                                   " is_compute=" +
                                   formatSemanticBool(entry.isCompute) + " is_unsafe=" +
                                   formatSemanticBool(entry.isUnsafe) + " active_effects=" +
@@ -1325,22 +1329,14 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   formattedActiveCapabilities + " has_result_type=" +
                                   formatSemanticBool(entry.hasResultType) + " result_type_has_value=" +
                                   formatSemanticBool(entry.resultTypeHasValue) + " result_value_type=" +
-                                  quoteSemanticString(resultValueType.empty()
-                                                          ? entry.resultValueType
-                                                          : resultValueType) +
+                                  quoteSemanticString(resultValueType) +
                                   " result_error_type=" +
-                                  quoteSemanticString(resultErrorType.empty()
-                                                          ? entry.resultErrorType
-                                                          : resultErrorType) +
+                                  quoteSemanticString(resultErrorType) +
                                   " has_on_error=" +
                                   formatSemanticBool(entry.hasOnError) + " on_error_handler_path=" +
-                                  quoteSemanticString(onErrorHandlerPath.empty()
-                                                          ? entry.onErrorHandlerPath
-                                                          : onErrorHandlerPath) +
+                                  quoteSemanticString(onErrorHandlerPath) +
                                   " on_error_error_type=" +
-                                  quoteSemanticString(onErrorErrorType.empty()
-                                                          ? entry.onErrorErrorType
-                                                          : onErrorErrorType) +
+                                  quoteSemanticString(onErrorErrorType) +
                                   " on_error_bound_arg_count=" +
                                   std::to_string(entry.onErrorBoundArgCount) + " provenance_handle=" +
                                   std::to_string(entry.provenanceHandle));
@@ -1409,8 +1405,7 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
   for (size_t i = 0; i < collectionSpecializations.size(); ++i) {
     const auto &entry = *collectionSpecializations[i];
     const auto specializationText = [&](SymbolId id, const std::string &fallback) -> std::string_view {
-      const std::string_view resolved = semanticProgramResolveCallTargetString(semanticProgram, id);
-      return resolved.empty() ? std::string_view(fallback) : resolved;
+      return formatSemanticStringFromId(semanticProgram, id, fallback);
     };
     appendSemanticIndexedLine(out,
                               "collection_specializations",
@@ -1457,36 +1452,34 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
   for (size_t i = 0; i < bindingFacts.size(); ++i) {
     const auto &entry = *bindingFacts[i];
     const std::string_view scopePath =
-        semanticProgramResolveCallTargetString(semanticProgram, entry.scopePathId);
+        formatSemanticStringFromId(semanticProgram, entry.scopePathId, entry.scopePath);
     const std::string_view siteKind =
-        semanticProgramResolveCallTargetString(semanticProgram, entry.siteKindId);
+        formatSemanticStringFromId(semanticProgram, entry.siteKindId, entry.siteKind);
     const std::string_view name =
-        semanticProgramResolveCallTargetString(semanticProgram, entry.nameId);
+        formatSemanticStringFromId(semanticProgram, entry.nameId, entry.name);
     const std::string_view resolvedPath =
         semanticProgramResolveCallTargetString(semanticProgram, entry.resolvedPathId);
     const std::string_view bindingTypeText =
-        semanticProgramResolveCallTargetString(semanticProgram, entry.bindingTypeTextId);
+        formatSemanticStringFromId(semanticProgram, entry.bindingTypeTextId, entry.bindingTypeText);
     const std::string_view referenceRoot =
-        semanticProgramResolveCallTargetString(semanticProgram, entry.referenceRootId);
+        formatSemanticStringFromId(semanticProgram, entry.referenceRootId, entry.referenceRoot);
     appendSemanticIndexedLine(out,
                               "binding_facts",
                               i,
                               "scope_path=" +
-                                  quoteSemanticString(scopePath.empty() ? entry.scopePath : scopePath) +
+                                  quoteSemanticString(scopePath) +
                                   " site_kind=" +
-                                  quoteSemanticString(siteKind.empty() ? entry.siteKind : siteKind) +
-                                  " name=" + quoteSemanticString(name.empty() ? entry.name : name) +
+                                  quoteSemanticString(siteKind) +
+                                  " name=" + quoteSemanticString(name) +
                                   " resolved_path=" +
                                   quoteSemanticString(resolvedPath) +
                                   " binding_type_text=" +
-                                  quoteSemanticString(bindingTypeText.empty()
-                                                          ? entry.bindingTypeText
-                                                          : bindingTypeText) +
+                                  quoteSemanticString(bindingTypeText) +
                                   " is_mutable=" +
                                   formatSemanticBool(entry.isMutable) + " is_entry_arg_string=" +
                                   formatSemanticBool(entry.isEntryArgString) + " is_unsafe_reference=" +
                                   formatSemanticBool(entry.isUnsafeReference) + " reference_root=" +
-                                  quoteSemanticString(referenceRoot.empty() ? entry.referenceRoot : referenceRoot) +
+                                  quoteSemanticString(referenceRoot) +
                                   " provenance_handle=" +
                                   std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
@@ -1497,31 +1490,29 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
     const std::string_view definitionPath =
         semanticProgramReturnFactDefinitionPath(semanticProgram, entry);
     const std::string_view returnKind =
-        semanticProgramResolveCallTargetString(semanticProgram, entry.returnKindId);
+        formatSemanticStringFromId(semanticProgram, entry.returnKindId, entry.returnKind);
     const std::string_view structPath =
-        semanticProgramResolveCallTargetString(semanticProgram, entry.structPathId);
+        formatSemanticStringFromId(semanticProgram, entry.structPathId, entry.structPath);
     const std::string_view bindingTypeText =
-        semanticProgramResolveCallTargetString(semanticProgram, entry.bindingTypeTextId);
+        formatSemanticStringFromId(semanticProgram, entry.bindingTypeTextId, entry.bindingTypeText);
     const std::string_view referenceRoot =
-        semanticProgramResolveCallTargetString(semanticProgram, entry.referenceRootId);
+        formatSemanticStringFromId(semanticProgram, entry.referenceRootId, entry.referenceRoot);
     appendSemanticIndexedLine(out,
                               "return_facts",
                               i,
                               "definition_path=" +
                                   quoteSemanticString(definitionPath) +
                                   " return_kind=" +
-                                  quoteSemanticString(returnKind.empty() ? entry.returnKind : returnKind) +
+                                  quoteSemanticString(returnKind) +
                                   " struct_path=" +
-                                  quoteSemanticString(structPath.empty() ? entry.structPath : structPath) +
+                                  quoteSemanticString(structPath) +
                                   " binding_type_text=" +
-                                  quoteSemanticString(bindingTypeText.empty() ? entry.bindingTypeText
-                                                                              : bindingTypeText) +
+                                  quoteSemanticString(bindingTypeText) +
                                   " is_mutable=" +
                                   formatSemanticBool(entry.isMutable) + " is_entry_arg_string=" +
                                   formatSemanticBool(entry.isEntryArgString) + " is_unsafe_reference=" +
                                   formatSemanticBool(entry.isUnsafeReference) + " reference_root=" +
-                                  quoteSemanticString(referenceRoot.empty() ? entry.referenceRoot
-                                                                            : referenceRoot) +
+                                  quoteSemanticString(referenceRoot) +
                                   " provenance_handle=" +
                                   std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));

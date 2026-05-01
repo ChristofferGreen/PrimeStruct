@@ -507,7 +507,10 @@ Task template:
     formatter view authority slice is complete for semantic-product dumps
     across type, struct-field, sum-type, and sum-variant metadata views. The
     frozen graph-fact formatter text authority slice is complete for
-    local-auto, query, try, and `on_error` dump fields.
+    local-auto, query, try, and `on_error` dump fields. The frozen published
+    fact formatter text authority slice is complete for direct-call,
+    method-call, bridge-path, callable-summary, collection-specialization,
+    binding, and return dump fields.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -618,6 +621,12 @@ Task template:
       mutable hand-built products keep their fixture-only scan before freeze.
     - Completed slice: frozen semantic-product graph fact formatting now
       resolves local-auto, query, try, and `on_error` text through interned
+      IDs. Copied raw text no longer recovers formatter output after
+      publication freezes the semantic product, while mutable hand-built
+      products keep their fixture-only copied-text fallback before freeze.
+    - Completed slice: frozen semantic-product published fact formatting now
+      resolves direct-call, method-call, bridge-path, callable-summary,
+      collection-specialization, binding, and return text through interned
       IDs. Copied raw text no longer recovers formatter output after
       publication freezes the semantic product, while mutable hand-built
       products keep their fixture-only copied-text fallback before freeze.

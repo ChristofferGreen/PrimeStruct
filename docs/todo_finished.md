@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 1, 2026)**
+- [x] TODO-4298: Require published fact dump IDs
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-01
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 published fact formatter authority slice that
+    makes frozen direct-call, method-call, bridge-path, callable-summary,
+    collection-specialization, binding, and return dump fields resolve through
+    interned text IDs instead of copied raw text.
+  - acceptance:
+    - Frozen semantic-product formatting no longer recovers copied published
+      fact text when interned text IDs are missing.
+    - Published interned text IDs still produce deterministic dump output for
+      the same fact families.
+    - Mutable hand-built semantic products keep their fixture-only copied-text
+      fallback before freeze.
+  - stop_rule: Stop once published fact dump fields require interned text IDs
+    after freeze and docs record the remaining TODO-4298 work.
+  - evidence: Routed direct-call, method-call, bridge-path,
+    callable-summary, collection-specialization, binding, and return dump
+    fields through the frozen ID-authority helper, added focused frozen-raw
+    and mapped dump coverage, and skipped local test execution per the lite
+    workflow.
+
 - [x] TODO-4298: Require graph fact dump IDs
   - owner: ai
   - created_at: 2026-04-28
