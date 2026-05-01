@@ -492,11 +492,21 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
          explicitHelperName == "at_unsafe" ||
          explicitHelperName == "at_unsafe_ref");
     const auto isMapArgsPackAccessReceiver = [&](const Expr &receiver) {
-      const auto accessTargetInfo = resolveArrayVectorAccessTargetInfo(
-          receiver, localsIn, resolveCallArrayVectorAccessTargetInfo);
-      return accessTargetInfo.isArgsPackTarget &&
-             (accessTargetInfo.isMapTarget ||
-              accessTargetInfo.isWrappedMapTarget);
+      const auto isMapArgsPackAccessReceiverImpl =
+          [&](const Expr &candidate, const auto &self) -> bool {
+        if (candidate.kind == Expr::Kind::Call &&
+            isSimpleCallName(candidate, "dereference") &&
+            candidate.args.size() == 1) {
+          return self(candidate.args.front(), self);
+        }
+        const auto accessTargetInfo = resolveArrayVectorAccessTargetInfo(
+            candidate, localsIn, resolveCallArrayVectorAccessTargetInfo);
+        return accessTargetInfo.isArgsPackTarget &&
+               (accessTargetInfo.isMapTarget ||
+                accessTargetInfo.isWrappedMapTarget);
+      };
+      return isMapArgsPackAccessReceiverImpl(receiver,
+                                             isMapArgsPackAccessReceiverImpl);
     };
     if (isExplicitMapAccessCall && !expr.args.empty() &&
         expr.args.front().kind == Expr::Kind::Call) {

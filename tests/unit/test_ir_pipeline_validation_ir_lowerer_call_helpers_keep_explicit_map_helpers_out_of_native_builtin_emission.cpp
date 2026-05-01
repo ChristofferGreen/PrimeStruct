@@ -424,6 +424,13 @@ TEST_CASE("ir lowerer call helpers lower explicit map access for args-pack recei
     receiver.args = {targetName, indexName};
     return receiver;
   };
+  auto makeDereferencedIndexedReceiver = [&](const primec::Expr &targetName) {
+    primec::Expr receiver;
+    receiver.kind = primec::Expr::Kind::Call;
+    receiver.name = "dereference";
+    receiver.args = {makeIndexedReceiver(targetName)};
+    return receiver;
+  };
 
   std::vector<primec::IrInstruction> instructions;
   auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
@@ -502,6 +509,8 @@ TEST_CASE("ir lowerer call helpers lower explicit map access for args-pack recei
   expectDispatch(makeIndexedReceiver(valuesName), Result::Emitted, true);
   expectDispatch(makeIndexedReceiver(pointerValuesName), Result::Emitted, true);
   expectDispatch(makeIndexedReceiver(referenceValuesName), Result::Emitted, true);
+  expectDispatch(makeDereferencedIndexedReceiver(pointerValuesName), Result::Emitted, true);
+  expectDispatch(makeDereferencedIndexedReceiver(referenceValuesName), Result::Emitted, true);
 }
 
 TEST_CASE("ir lowerer call helpers emit explicit vector count while deferring bare count") {
