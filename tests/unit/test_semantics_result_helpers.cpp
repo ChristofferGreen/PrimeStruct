@@ -136,6 +136,45 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib Result explicit constructors keep template arguments") {
+  const std::string source = R"(
+import /std/result/*
+
+[struct]
+MyError() {
+  [i32] code{0i32}
+}
+
+[return<Result<i32, MyError>>]
+make_value_ok() {
+  return(Result<i32, MyError>{[ok] 7i32})
+}
+
+[return<Result<i32, MyError>>]
+make_value_error() {
+  return(Result<i32, MyError>{[error] MyError{[code] 4i32}})
+}
+
+[return<Result<MyError>>]
+make_status_ok() {
+  return(Result<MyError>{})
+}
+
+[return<Result<MyError>>]
+make_status_error() {
+  return(Result<MyError>{[error] MyError{[code] 5i32}})
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib result value sum participates in Result.error") {
   const std::string source = R"(
 import /std/result/*

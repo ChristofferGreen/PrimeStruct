@@ -120,6 +120,13 @@ std::string templateSpecializationSuffixForSum(
   return out.str();
 }
 
+std::string explicitSumConstructorTypeText(const Expr &expr) {
+  if (expr.templateArgs.empty()) {
+    return expr.name;
+  }
+  return expr.name + "<" + joinTemplateArgs(expr.templateArgs) + ">";
+}
+
 bool splitGenericSumInternalPath(const std::string &path,
                                  std::string &familyPathOut,
                                  size_t &arityOut,
@@ -245,7 +252,7 @@ const Definition *SemanticsValidator::resolveSumDefinitionForTypeText(
             path + templateSpecializationSuffixForSum(templateArgs))) {
       return directSpecialized;
     }
-    return definitionForPath(path);
+    return nullptr;
   };
 
   if (!normalized.empty() && normalized.front() == '/') {
@@ -322,7 +329,7 @@ bool SemanticsValidator::inferExplicitSumConstructorBinding(
     return false;
   }
   const Definition *sumDef =
-      resolveSumDefinitionForTypeText(initializer.name,
+      resolveSumDefinitionForTypeText(explicitSumConstructorTypeText(initializer),
                                       initializer.namespacePrefix);
   if (sumDef == nullptr) {
     return false;
@@ -747,7 +754,8 @@ bool SemanticsValidator::validateExplicitSumConstructorExpr(
     return true;
   }
   const Definition *sumDef =
-      resolveSumDefinitionForTypeText(expr.name, expr.namespacePrefix);
+      resolveSumDefinitionForTypeText(explicitSumConstructorTypeText(expr),
+                                      expr.namespacePrefix);
   if (sumDef == nullptr) {
     return true;
   }
@@ -759,8 +767,7 @@ bool SemanticsValidator::validateExplicitSumConstructorExpr(
     return failSumConstructorDiagnostic(
         "sum construction requires braces: " + sumDef->fullPath);
   }
-  if (!expr.templateArgs.empty() || expr.hasBodyArguments ||
-      !expr.bodyArguments.empty()) {
+  if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
     return failSumConstructorDiagnostic(
         "sum construction requires exactly one explicit variant for " +
         sumDef->fullPath);
