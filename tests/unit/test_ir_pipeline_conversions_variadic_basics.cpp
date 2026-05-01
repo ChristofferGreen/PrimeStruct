@@ -257,7 +257,7 @@ main() {
   CHECK(result == 5);
 }
 
-TEST_CASE("ir lowerer rejects direct struct variadic args packs for count") {
+TEST_CASE("ir lowerer materializes direct struct variadic args packs for count") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -276,11 +276,17 @@ main() {
   )";
   std::string error;
   primec::IrModule module;
-  CHECK_FALSE(parseValidateAndLower(source, module, error));
-  CHECK(error == "variadic parameter type mismatch");
+  REQUIRE(parseValidateAndLower(source, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 2);
 }
 
-TEST_CASE("ir lowerer rejects pure spread struct variadic packs for count") {
+TEST_CASE("ir lowerer materializes pure spread struct variadic packs for count") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -304,11 +310,17 @@ main() {
   )";
   std::string error;
   primec::IrModule module;
-  CHECK_FALSE(parseValidateAndLower(source, module, error));
-  CHECK(error == "variadic parameter type mismatch");
+  REQUIRE(parseValidateAndLower(source, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 2);
 }
 
-TEST_CASE("ir lowerer rejects mixed struct spread variadic forwarding for count") {
+TEST_CASE("ir lowerer materializes mixed struct spread variadic forwarding for count") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -332,11 +344,17 @@ main() {
   )";
   std::string error;
   primec::IrModule module;
-  CHECK_FALSE(parseValidateAndLower(source, module, error));
-  CHECK(error == "variadic parameter type mismatch");
+  REQUIRE(parseValidateAndLower(source, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 3);
 }
 
-TEST_CASE("ir lowerer rejects direct struct variadic pack indexing and method access") {
+TEST_CASE("ir lowerer materializes direct struct variadic pack indexing and method access") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -362,11 +380,17 @@ main() {
   )";
   std::string error;
   primec::IrModule module;
-  CHECK_FALSE(parseValidateAndLower(source, module, error));
-  CHECK(error == "variadic parameter type mismatch");
+  REQUIRE(parseValidateAndLower(source, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 17);
 }
 
-TEST_CASE("ir lowerer rejects pure spread struct pack indexing and method access") {
+TEST_CASE("ir lowerer materializes pure spread struct pack indexing and method access") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -395,11 +419,17 @@ main() {
   )";
   std::string error;
   primec::IrModule module;
-  CHECK_FALSE(parseValidateAndLower(source, module, error));
-  CHECK(error == "variadic parameter type mismatch");
+  REQUIRE(parseValidateAndLower(source, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 17);
 }
 
-TEST_CASE("ir lowerer rejects mixed struct pack indexing and method access") {
+TEST_CASE("ir lowerer materializes mixed struct pack indexing and method access") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -428,8 +458,14 @@ main() {
   )";
   std::string error;
   primec::IrModule module;
-  CHECK_FALSE(parseValidateAndLower(source, module, error));
-  CHECK(error == "variadic parameter type mismatch");
+  REQUIRE(parseValidateAndLower(source, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 15);
 }
 
 TEST_SUITE_END();

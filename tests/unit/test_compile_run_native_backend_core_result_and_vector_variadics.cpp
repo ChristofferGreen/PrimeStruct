@@ -5,7 +5,7 @@
 #if PRIMESTRUCT_NATIVE_CORE_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.core");
 
-TEST_CASE("native rejects pure spread struct pack indexing and method access") {
+TEST_CASE("native materializes pure spread struct pack indexing and method access") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -35,17 +35,14 @@ main() {
   const std::string srcPath = writeTemp("compile_native_variadic_args_struct_access_spread.prime", source);
   const std::string exePath =
       (testScratchPath("") / "primec_native_variadic_args_struct_access_spread").string();
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_variadic_args_struct_access_spread.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("Native lowering error: variadic parameter type mismatch") !=
-        std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 17);
 }
 
-TEST_CASE("native rejects mixed struct pack indexing and method access") {
+TEST_CASE("native materializes mixed struct pack indexing and method access") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -75,14 +72,11 @@ main() {
   const std::string srcPath = writeTemp("compile_native_variadic_args_struct_access_mixed.prime", source);
   const std::string exePath =
       (testScratchPath("") / "primec_native_variadic_args_struct_access_mixed").string();
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_variadic_args_struct_access_mixed.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("Native lowering error: variadic parameter type mismatch") !=
-        std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 15);
 }
 
 TEST_CASE("native rejects variadic Result packs with indexed why and try access") {
