@@ -1107,7 +1107,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(buildInitializerInferenceCallsSource.find(
             "    if (hasGraphPreferredMethodResolvedInitializer) {\n"
-            "      if (inferResolvedDirectCallBindingType(graphPreferredMethodResolvedInitializer, bindingOut)) {\n"
+            "      if (inferResolvedCallBinding(graphPreferredMethodResolvedInitializer, bindingOut)) {\n"
             "        return true;\n"
             "      }\n"
             "      if (inferDeclaredDirectCallBinding(graphPreferredMethodResolvedInitializer)) {\n"
