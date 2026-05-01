@@ -14,7 +14,7 @@ namespace std {
 
   [public return<Maybe<T>>]
   none<T>() {
-    [Maybe<T>] result{none}
+    [Maybe<T>] result{}
     return(result)
   }
 

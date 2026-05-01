@@ -3603,7 +3603,7 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to brace
 
   [return<Maybe<T>>]
   none<T>() {
-    [Maybe<T>] result{none}
+    [Maybe<T>] result{}
     return(result)
   }
 
