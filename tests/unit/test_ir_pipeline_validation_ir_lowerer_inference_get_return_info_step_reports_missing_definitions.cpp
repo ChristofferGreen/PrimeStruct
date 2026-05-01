@@ -100,6 +100,73 @@ TEST_CASE("ir lowerer inference get-return-info step treats sums as type returns
   CHECK(returnInfoCache.count("/Choice") == 1);
 }
 
+TEST_CASE("ir lowerer inference get-return-info step treats semantic-product sums as type returns") {
+  primec::Definition sumDefinition;
+  sumDefinition.fullPath = "/std/result/Result__arity2__tabc";
+  sumDefinition.semanticNodeId = 37;
+
+  std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {sumDefinition.fullPath, &sumDefinition},
+  };
+  std::unordered_map<std::string, primec::ir_lowerer::ReturnInfo> returnInfoCache;
+  std::unordered_set<std::string> returnInferenceStack;
+  const primec::ir_lowerer::LowerInferenceReturnInfoSetupInput returnInfoSetupInput = {
+      .resolveStructTypeName = [](const std::string &, const std::string &, std::string &) { return false; },
+      .resolveStructArrayInfoFromPath =
+          [](const std::string &, primec::ir_lowerer::StructArrayTypeInfo &) { return false; },
+      .isBindingMutable = [](const primec::Expr &) { return false; },
+      .bindingKind = [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+      .hasExplicitBindingTypeTransform = [](const primec::Expr &) { return true; },
+      .bindingValueKind = [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      .inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      .isFileErrorBinding = [](const primec::Expr &) { return false; },
+      .setReferenceArrayInfo = [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      .applyStructArrayInfo = [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      .applyStructValueInfo = [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      .inferStructExprPath = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return std::string{};
+      },
+      .isStringBinding = [](const primec::Expr &) { return false; },
+      .inferArrayElementKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      .lowerMatchToIf = [](const primec::Expr &, primec::Expr &, std::string &) { return true; },
+  };
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.typeMetadata.push_back(primec::SemanticProgramTypeMetadata{
+      .fullPath = sumDefinition.fullPath,
+      .category = "sum",
+      .semanticNodeId = sumDefinition.semanticNodeId,
+  });
+  semanticProgram.sumTypeMetadata.push_back(primec::SemanticProgramSumTypeMetadata{
+      .fullPath = sumDefinition.fullPath,
+      .variantCount = 2,
+      .semanticNodeId = sumDefinition.semanticNodeId,
+  });
+  const auto semanticIndex = primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+  const primec::ir_lowerer::LowerInferenceGetReturnInfoStepInput input = {
+      .defMap = &defMap,
+      .returnInfoCache = &returnInfoCache,
+      .returnInferenceStack = &returnInferenceStack,
+      .returnInfoSetupInput = &returnInfoSetupInput,
+      .semanticProgram = &semanticProgram,
+      .semanticIndex = &semanticIndex,
+  };
+
+  primec::ir_lowerer::ReturnInfo outInfo;
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceGetReturnInfoStep(
+      input, sumDefinition.fullPath, outInfo, error));
+  CHECK(error.empty());
+  CHECK(outInfo.returnsArray);
+  CHECK(outInfo.kind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(returnInfoCache.count(sumDefinition.fullPath) == 1);
+}
+
 TEST_CASE("ir lowerer inference get-return-info step rejects recursive lookup") {
   primec::Definition definition;
   definition.fullPath = "/callee";

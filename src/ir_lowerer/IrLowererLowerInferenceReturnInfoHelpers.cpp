@@ -35,9 +35,31 @@ bool isSumDefinitionForReturnInfo(const Definition &definition) {
   return false;
 }
 
+bool isSumDefinitionForReturnInfo(const Definition &definition,
+                                  const SemanticProgram *semanticProgram) {
+  if (isSumDefinitionForReturnInfo(definition)) {
+    return true;
+  }
+  if (semanticProgram == nullptr) {
+    return false;
+  }
+  if (const auto *typeMetadata =
+          semanticProgramLookupTypeMetadata(*semanticProgram, definition.fullPath);
+      typeMetadata != nullptr && typeMetadata->category == "sum") {
+    return true;
+  }
+  for (const auto &sumMetadata : semanticProgram->sumTypeMetadata) {
+    if (sumMetadata.fullPath == definition.fullPath) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool assignTypeDefinitionReturnInfo(const Definition &definition,
+                                    const SemanticProgram *semanticProgram,
                                     ReturnInfo &infoOut) {
-  if (!isSumDefinitionForReturnInfo(definition)) {
+  if (!isSumDefinitionForReturnInfo(definition, semanticProgram)) {
     return false;
   }
   infoOut = {};
@@ -158,7 +180,7 @@ bool buildSemanticProductReturnInfo(const LowerInferenceReturnInfoSetupInput &in
                                     const Definition &definition,
                                     ReturnInfo &infoOut,
                                     std::string &errorOut) {
-  if (assignTypeDefinitionReturnInfo(definition, infoOut)) {
+  if (assignTypeDefinitionReturnInfo(definition, &semanticProgram, infoOut)) {
     return true;
   }
   if (!input.resolveStructTypeName) {
@@ -717,7 +739,7 @@ bool runLowerInferenceGetReturnInfoStep(const LowerInferenceGetReturnInfoStepInp
     errorOut = "native backend cannot resolve definition: " + path;
     return false;
   }
-  if (assignTypeDefinitionReturnInfo(*defIt->second, outInfo)) {
+  if (assignTypeDefinitionReturnInfo(*defIt->second, input.semanticProgram, outInfo)) {
     returnInfoCache.insert_or_assign(path, outInfo);
     return true;
   }

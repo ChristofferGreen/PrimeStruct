@@ -61,8 +61,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
 ### semantic-product-sums-omit-callable-summaries
 - Updated: 2026-05-01
 - Tags: semantics, ir, sums
-- Fact: Semantic-product sum definitions publish type metadata but not callable summaries, so lowerer setup code must skip sums when requiring callable-summary facts.
-- Evidence: The saved release log showed `missing semantic-product callable summary: /Choice`; `SemanticsValidatorSnapshots.cpp` skips sum definitions when collecting callable summaries, and `IrLowererOnErrorHelpers.cpp` plus `IrLowererLowerEffects.cpp` now skip semantic-product sum metadata before requiring callable summaries.
+- Fact: Semantic-product sum definitions publish type metadata but not callable summaries, so lowerer setup code must treat sums as type metadata instead of requiring callable-summary facts.
+- Evidence: The saved release log showed `missing semantic-product callable summary: /Choice`; `SemanticsValidatorSnapshots.cpp` skips sum definitions when collecting callable summaries, and `IrLowererOnErrorHelpers.cpp`, `IrLowererLowerEffects.cpp`, and `IrLowererLowerInferenceReturnInfoHelpers.cpp` now skip or short-circuit semantic-product sum metadata before requiring callable summaries.
 
 ### soa-storage-temporaries-own-nested-buffers
 - Updated: 2026-04-28
