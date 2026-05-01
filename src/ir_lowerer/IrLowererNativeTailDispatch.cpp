@@ -491,16 +491,34 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
         (explicitHelperName == "at" || explicitHelperName == "at_ref" ||
          explicitHelperName == "at_unsafe" ||
          explicitHelperName == "at_unsafe_ref");
+    const auto isValueMapArgsPackAccessReceiver = [&](const Expr &receiver) {
+      const auto accessTargetInfo = resolveArrayVectorAccessTargetInfo(
+          receiver, localsIn, resolveCallArrayVectorAccessTargetInfo);
+      return accessTargetInfo.isArgsPackTarget &&
+             accessTargetInfo.isMapTarget &&
+             !accessTargetInfo.isWrappedMapTarget;
+    };
     if (isExplicitMapAccessCall && !expr.args.empty() &&
         expr.args.front().kind == Expr::Kind::Call) {
-      return NativeCallTailDispatchResult::NotHandled;
+      const auto mapTargetInfo = resolveMapAccessTargetInfo(
+          expr.args.front(), localsIn, resolveCallMapAccessTargetInfo);
+      if (!mapTargetInfo.isMapTarget || mapTargetInfo.isWrappedMapTarget ||
+          !isValueMapArgsPackAccessReceiver(expr.args.front())) {
+        return NativeCallTailDispatchResult::NotHandled;
+      }
     }
     const bool isExperimentalMapAccessImplementationCall =
         isDirectExperimentalMapAccessImplementationCall(semanticProgram, expr);
     if (isExplicitMapAccessCall && !expr.args.empty() &&
-        !isExperimentalMapAccessImplementationCall &&
-        resolveMapAccessTargetInfo(expr.args.front(), localsIn, resolveCallMapAccessTargetInfo).isMapTarget) {
-      return NativeCallTailDispatchResult::NotHandled;
+        !isExperimentalMapAccessImplementationCall) {
+      const auto mapTargetInfo = resolveMapAccessTargetInfo(
+          expr.args.front(), localsIn, resolveCallMapAccessTargetInfo);
+      if (mapTargetInfo.isMapTarget &&
+          (expr.args.front().kind != Expr::Kind::Call ||
+           !isValueMapArgsPackAccessReceiver(expr.args.front()) ||
+           mapTargetInfo.isWrappedMapTarget)) {
+        return NativeCallTailDispatchResult::NotHandled;
+      }
     }
     if (expr.args.size() != 2) {
       error = accessName + " requires exactly two arguments";

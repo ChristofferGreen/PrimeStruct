@@ -352,6 +352,144 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
   CHECK(instructions.empty());
 }
 
+TEST_CASE("ir lowerer call helpers lower explicit map access for value args-pack receivers") {
+  using Result = primec::ir_lowerer::NativeCallTailDispatchResult;
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+  using MapAccessTargetInfo = primec::ir_lowerer::MapAccessTargetInfo;
+  using ArrayVectorAccessTargetInfo = primec::ir_lowerer::ArrayVectorAccessTargetInfo;
+
+  primec::ir_lowerer::LocalMap locals;
+  LocalInfo valuesInfo;
+  valuesInfo.index = 5;
+  valuesInfo.isArgsPack = true;
+  valuesInfo.argsPackElementKind = LocalInfo::Kind::Map;
+  valuesInfo.mapKeyKind = LocalInfo::ValueKind::Int32;
+  valuesInfo.mapValueKind = LocalInfo::ValueKind::Int64;
+  locals.emplace("values", valuesInfo);
+
+  LocalInfo pointerValuesInfo;
+  pointerValuesInfo.index = 7;
+  pointerValuesInfo.isArgsPack = true;
+  pointerValuesInfo.argsPackElementKind = LocalInfo::Kind::Pointer;
+  pointerValuesInfo.pointerToMap = true;
+  pointerValuesInfo.mapKeyKind = LocalInfo::ValueKind::Int32;
+  pointerValuesInfo.mapValueKind = LocalInfo::ValueKind::Int64;
+  locals.emplace("pointerValues", pointerValuesInfo);
+
+  LocalInfo indexInfo;
+  indexInfo.kind = LocalInfo::Kind::Value;
+  indexInfo.index = 9;
+  indexInfo.valueKind = LocalInfo::ValueKind::Int32;
+  locals.emplace("index", indexInfo);
+
+  LocalInfo keyInfo;
+  keyInfo.kind = LocalInfo::Kind::Value;
+  keyInfo.index = 11;
+  keyInfo.valueKind = LocalInfo::ValueKind::Int32;
+  locals.emplace("key", keyInfo);
+
+  primec::Expr valuesName;
+  valuesName.kind = primec::Expr::Kind::Name;
+  valuesName.name = "values";
+
+  primec::Expr pointerValuesName;
+  pointerValuesName.kind = primec::Expr::Kind::Name;
+  pointerValuesName.name = "pointerValues";
+
+  primec::Expr indexName;
+  indexName.kind = primec::Expr::Kind::Name;
+  indexName.name = "index";
+
+  primec::Expr keyName;
+  keyName.kind = primec::Expr::Kind::Name;
+  keyName.name = "key";
+
+  auto makeIndexedReceiver = [&](const primec::Expr &targetName) {
+    primec::Expr receiver;
+    receiver.kind = primec::Expr::Kind::Call;
+    receiver.name = "at";
+    receiver.args = {targetName, indexName};
+    return receiver;
+  };
+
+  std::vector<primec::IrInstruction> instructions;
+  auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
+    instructions.push_back({op, imm});
+  };
+  auto instructionCount = [&]() { return instructions.size(); };
+  auto patchInstructionImm = [&](size_t index, uint64_t imm) { instructions.at(index).imm = imm; };
+
+  int nextLocal = 20;
+  auto emitExpr = [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &emitLocals) {
+    if (expr.kind == primec::Expr::Kind::Call) {
+      emitInstruction(primec::IrOpcode::PushI64, 1);
+      return true;
+    }
+    if (expr.kind != primec::Expr::Kind::Name) {
+      return false;
+    }
+    auto it = emitLocals.find(expr.name);
+    if (it == emitLocals.end()) {
+      return false;
+    }
+    emitInstruction(primec::IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
+    return true;
+  };
+  auto inferExprKind = [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &inferLocals) {
+    if (expr.kind != primec::Expr::Kind::Name) {
+      return LocalInfo::ValueKind::Unknown;
+    }
+    auto it = inferLocals.find(expr.name);
+    return it == inferLocals.end() ? LocalInfo::ValueKind::Unknown : it->second.valueKind;
+  };
+  auto resolveMapAccessTargetInfo = [](const primec::Expr &, MapAccessTargetInfo &) {
+    return false;
+  };
+  auto resolveArrayVectorAccessTargetInfo =
+      [](const primec::Expr &, ArrayVectorAccessTargetInfo &) { return false; };
+  auto expectDispatch = [&](const primec::Expr &receiver,
+                            Result expectedResult,
+                            bool expectInstructions) {
+    primec::Expr callExpr;
+    callExpr.kind = primec::Expr::Kind::Call;
+    callExpr.name = "/std/collections/map/at_unsafe";
+    callExpr.args = {receiver, keyName};
+
+    instructions.clear();
+    std::string error = "stale";
+    CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatch(
+              callExpr,
+              locals,
+              [](const primec::Expr &, std::string &) { return false; },
+              [](const std::string &) { return true; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+                return false;
+              },
+              emitExpr,
+              resolveMapAccessTargetInfo,
+              resolveArrayVectorAccessTargetInfo,
+              [](const primec::Expr &, std::string &) { return false; },
+              inferExprKind,
+              [&]() { return nextLocal++; },
+              []() {},
+              []() {},
+              []() {},
+              instructionCount,
+              emitInstruction,
+              patchInstructionImm,
+              error) == expectedResult);
+    CHECK(error == "stale");
+    CHECK(instructions.empty() != expectInstructions);
+  };
+
+  expectDispatch(makeIndexedReceiver(valuesName), Result::Emitted, true);
+  expectDispatch(makeIndexedReceiver(pointerValuesName), Result::NotHandled, false);
+}
+
 TEST_CASE("ir lowerer call helpers emit explicit vector count while deferring bare count") {
   using Result = primec::ir_lowerer::NativeCallTailDispatchResult;
   using LocalInfo = primec::ir_lowerer::LocalInfo;
