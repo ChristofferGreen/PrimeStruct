@@ -157,8 +157,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
 ### variadic-borrowed-pointer-packs-are-supported
 - Updated: 2026-05-01
 - Tags: tests, ir, native, variadic
-- Fact: Direct struct and Result packs plus borrowed and pointer variadic arg-pack access for scalar, array, struct, uninitialized, Result, and FileError surfaces are supported materialized behavior, so regression tests should assert direct value results instead of older rejection diagnostics or raw-pointer-shaped numeric results.
-- Evidence: Saved release logs showed current IR/native lowering accepting these pack forms and returning direct sums such as `2`, `3`, `15`, `17`, `23`, `24`, `27`, `36`, `39`, `65`, `72`, and `75` while older tests still expected `variadic parameter type mismatch`, `unknown struct field: value`, or stale large numeric constants.
+- Fact: Direct struct and Result packs plus borrowed and pointer variadic arg-pack access for scalar, array, struct, nested struct-field, uninitialized, Result, and FileError surfaces are supported materialized behavior, so regression tests should assert direct value results instead of older rejection diagnostics or raw-pointer-shaped numeric results.
+- Evidence: Saved release logs showed current IR/native lowering accepting these pack forms and returning direct sums such as `2`, `3`, `15`, `17`, `23`, `24`, `27`, `36`, `39`, `65`, `72`, and `75` while older tests still expected `variadic parameter type mismatch`, `struct field type mismatch`, `unknown struct field: value`, or stale large numeric constants.
 
 ### vector-args-pack-elements-are-handles
 - Updated: 2026-04-28

@@ -470,7 +470,7 @@ main() {
   CHECK(result == 23);
 }
 
-TEST_CASE("ir lowerer rejects variadic struct pointer packs from borrowed pack field access") {
+TEST_CASE("ir lowerer materializes variadic struct pointer packs from borrowed pack field access") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -546,9 +546,14 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("struct field type mismatch") != std::string::npos);
-  CHECK(error.find("/Holder::pair") != std::string::npos);
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 75);
 }
 
 TEST_CASE("ir lowerer materializes variadic scalar pointer packs from borrowed pack reference fields") {
