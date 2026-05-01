@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 1, 2026)**
+- [x] TODO-4298: Require return lowerer text IDs
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-01
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 return/result lowerer text authority slice that
+    makes frozen return inference, return-info precompute, and result metadata
+    validation resolve return and callable-result metadata through interned
+    text IDs instead of copied raw text.
+  - acceptance:
+    - Frozen return/result lowerer consumers no longer recover copied return
+      binding or callable-result text when interned text IDs are missing.
+    - Published interned text IDs still produce the same lowerer return and
+      result metadata.
+    - Mutable hand-built semantic products keep their fixture-only
+      copied-text fallback before freeze.
+  - stop_rule: Stop once return/result lowerer text consumers require
+    interned text IDs after freeze and docs record the remaining TODO-4298
+    work.
+  - evidence: Added `semanticProgramResolvePublishedText(...)`, routed
+    return inference, return-info precompute, and result metadata validation
+    text resolution through it, added focused frozen-raw and mapped coverage,
+    and skipped local test execution per the lite workflow.
+
 - [x] TODO-4298: Require published fact dump IDs
   - owner: ai
   - created_at: 2026-04-28

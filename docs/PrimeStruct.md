@@ -886,6 +886,11 @@ Compile-pipeline publication contract:
   collection-specialization, binding, and return dump fields: frozen products resolve interned text IDs and do not
   recover copied text when those IDs are absent or unresolved. Mutable hand-built products may still use copied-text
   fallbacks before `freezeSemanticProgramPublishedStorage(...)`.
+- Return/result lowerer text consumers use the same frozen-product rule through
+  `semanticProgramResolvePublishedText(...)`: return inference, return-info precompute, and result metadata
+  validation resolve interned text IDs for callable-result and return binding fields, and do not recover copied text
+  after publication freezes the semantic product. Mutable hand-built products may still use copied-text fallbacks
+  before `freezeSemanticProgramPublishedStorage(...)`.
 - Callable-summary lookup follows the same published-map authority rule once the semantic product is frozen by the
   publication path: `callableSummaryIndicesByPathId` is the authority, while raw `callableSummaries` scanning remains
   limited to mutable hand-built products before `freezeSemanticProgramPublishedStorage(...)`. Lowerer return-info

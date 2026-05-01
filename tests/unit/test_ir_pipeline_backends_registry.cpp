@@ -5267,6 +5267,108 @@ TEST_CASE("ir lowerer rejects stale semantic-product return facts") {
   CHECK(error == "stale semantic-product return fact: /main");
 }
 
+TEST_CASE("ir lowerer result metadata validation requires interned text after freeze") {
+  primec::SemanticProgram rawFrozenSemanticProgram;
+  rawFrozenSemanticProgram.entryPath = "/main";
+  const primec::SymbolId rawMainPathId =
+      primec::semanticProgramInternCallTargetString(rawFrozenSemanticProgram, "/main");
+  rawFrozenSemanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .isExecution = false,
+      .returnKind = "return",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 9201,
+      .provenanceHandle = 0,
+      .fullPathId = rawMainPathId,
+  });
+  rawFrozenSemanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
+      .returnKind = "return",
+      .structPath = "",
+      .bindingTypeText = "i32",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 9201,
+      .definitionPathId = rawMainPathId,
+  });
+  primec::SemanticProgramModuleResolvedArtifacts rawModule;
+  rawModule.identity.moduleKey = "/";
+  rawModule.callableSummaryIndices.push_back(0);
+  rawModule.returnFactIndices.push_back(0);
+  rawFrozenSemanticProgram.moduleResolvedArtifacts.push_back(std::move(rawModule));
+  primec::freezeSemanticProgramPublishedStorage(rawFrozenSemanticProgram);
+
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
+      &rawFrozenSemanticProgram, error));
+  CHECK(error == "missing semantic-product return binding type: /main");
+
+  primec::SemanticProgram mappedFrozenSemanticProgram;
+  mappedFrozenSemanticProgram.entryPath = "/main";
+  const primec::SymbolId mappedMainPathId =
+      primec::semanticProgramInternCallTargetString(mappedFrozenSemanticProgram, "/main");
+  mappedFrozenSemanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .isExecution = false,
+      .returnKind = "return",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 9201,
+      .provenanceHandle = 0,
+      .fullPathId = mappedMainPathId,
+      .returnKindId =
+          primec::semanticProgramInternCallTargetString(mappedFrozenSemanticProgram, "return"),
+  });
+  mappedFrozenSemanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
+      .returnKind = "return",
+      .structPath = "",
+      .bindingTypeText = "i32",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 9201,
+      .definitionPathId = mappedMainPathId,
+      .bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(mappedFrozenSemanticProgram, "i32"),
+  });
+  primec::SemanticProgramModuleResolvedArtifacts mappedModule;
+  mappedModule.identity.moduleKey = "/";
+  mappedModule.callableSummaryIndices.push_back(0);
+  mappedModule.returnFactIndices.push_back(0);
+  mappedFrozenSemanticProgram.moduleResolvedArtifacts.push_back(std::move(mappedModule));
+  primec::freezeSemanticProgramPublishedStorage(mappedFrozenSemanticProgram);
+
+  error.clear();
+  CHECK(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
+      &mappedFrozenSemanticProgram, error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer rejects incomplete semantic-product query facts") {
   primec::Program program;
 

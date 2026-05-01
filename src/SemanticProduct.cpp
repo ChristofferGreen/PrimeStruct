@@ -424,6 +424,19 @@ std::string_view semanticProgramResolveCallTargetString(const SemanticProgram &s
   return semanticProgram.callTargetStringTable[id - 1];
 }
 
+std::string_view semanticProgramResolvePublishedText(const SemanticProgram &semanticProgram,
+                                                     SymbolId id,
+                                                     std::string_view fallback) {
+  const std::string_view resolved = semanticProgramResolveCallTargetString(semanticProgram, id);
+  if (!resolved.empty()) {
+    return resolved;
+  }
+  if (semanticProgram.publishedStorageFrozen) {
+    return {};
+  }
+  return fallback;
+}
+
 const SemanticProgramDefinition *semanticProgramLookupPublishedDefinitionByPathId(
     const SemanticProgram &semanticProgram,
     SymbolId fullPathId) {
@@ -1016,14 +1029,7 @@ std::string_view semanticProgramOnErrorFactHandlerPath(
 std::string_view formatSemanticStringFromId(const SemanticProgram &semanticProgram,
                                             SymbolId id,
                                             const std::string &fallback) {
-  const std::string_view resolved = semanticProgramResolveCallTargetString(semanticProgram, id);
-  if (!resolved.empty()) {
-    return resolved;
-  }
-  if (semanticProgram.publishedStorageFrozen) {
-    return {};
-  }
-  return fallback;
+  return semanticProgramResolvePublishedText(semanticProgram, id, fallback);
 }
 
 std::string formatSemanticStringListFromIds(const SemanticProgram &semanticProgram,

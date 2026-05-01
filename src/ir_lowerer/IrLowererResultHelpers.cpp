@@ -79,14 +79,8 @@ bool applySemanticResultValueTypeText(const std::string &valueTypeText, ResultEx
 std::string resolveSemanticResultFactText(const SemanticProgram &semanticProgram,
                                           const std::string &text,
                                           SymbolId textId) {
-  if (textId != InvalidSymbolId) {
-    std::string resolvedText = std::string(
-        semanticProgramResolveCallTargetString(semanticProgram, textId));
-    if (!resolvedText.empty()) {
-      return trimTemplateTypeText(resolvedText);
-    }
-  }
-  return trimTemplateTypeText(text);
+  return trimTemplateTypeText(
+      std::string(semanticProgramResolvePublishedText(semanticProgram, textId, text)));
 }
 
 std::string resolveSemanticQueryResultValueTypeText(

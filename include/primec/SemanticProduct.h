@@ -505,6 +505,9 @@ std::optional<SymbolId> semanticProgramLookupCallTargetStringId(const SemanticPr
                                                                 std::string_view text);
 void releaseSemanticProgramLookupMap(SemanticProgram &semanticProgram);
 std::string_view semanticProgramResolveCallTargetString(const SemanticProgram &semanticProgram, SymbolId id);
+std::string_view semanticProgramResolvePublishedText(const SemanticProgram &semanticProgram,
+                                                     SymbolId id,
+                                                     std::string_view fallback);
 const SemanticProgramDefinition *semanticProgramLookupPublishedDefinitionByPathId(
     const SemanticProgram &semanticProgram,
     SymbolId fullPathId);

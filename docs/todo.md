@@ -510,7 +510,9 @@ Task template:
     local-auto, query, try, and `on_error` dump fields. The frozen published
     fact formatter text authority slice is complete for direct-call,
     method-call, bridge-path, callable-summary, collection-specialization,
-    binding, and return dump fields.
+    binding, and return dump fields. The frozen return/result lowerer text
+    authority slice is complete for return inference, return-info precompute,
+    and result metadata validation.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -630,6 +632,13 @@ Task template:
       IDs. Copied raw text no longer recovers formatter output after
       publication freezes the semantic product, while mutable hand-built
       products keep their fixture-only copied-text fallback before freeze.
+    - Completed slice: frozen semantic-product return/result lowerer text
+      resolution now uses `semanticProgramResolvePublishedText(...)` for
+      return inference, return-info precompute, and result metadata
+      validation. Copied return binding/callable result text no longer
+      recovers lowerer metadata after publication freezes the semantic
+      product, while mutable hand-built products keep their fixture-only
+      copied-text fallback before freeze.
     - Completed slice: semantic-product-addressed Result-combinator metadata
       now requires published query facts when direct lambda payload analysis
       cannot infer the resulting value kind, covering `Result.map`,
