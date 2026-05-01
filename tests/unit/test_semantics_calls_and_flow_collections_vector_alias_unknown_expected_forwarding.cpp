@@ -58,7 +58,7 @@ main() {
   CHECK(error.find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced unknown expected primitive binding keeps builtin count diagnostics") {
+TEST_CASE("vector namespaced unknown expected primitive binding keeps alias diagnostics") {
   const std::string source = R"(
 Marker() {}
 
@@ -81,7 +81,8 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /vector/count parameter marker") !=
+        std::string::npos);
 }
 
 TEST_CASE("vector namespaced alias rejects compatibility template forwarding when unknown expected meets vector envelope binding") {
@@ -159,7 +160,7 @@ main() {
   CHECK(error.find("argument count mismatch") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced non-bool mismatch fallback keeps builtin count diagnostics") {
+TEST_CASE("vector namespaced non-bool mismatch fallback keeps alias diagnostics") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values, [string] marker) {
@@ -179,7 +180,8 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /vector/count parameter marker") !=
+        std::string::npos);
 }
 
 TEST_CASE("vector namespaced bool mismatch fallback keeps builtin count diagnostics") {
@@ -229,7 +231,7 @@ main() {
   CHECK(error.find("unknown named argument: marker") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced count alias named arguments reject builtin named-argument calls first") {
+TEST_CASE("vector namespaced count alias named arguments keep alias diagnostics") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values) {
@@ -249,7 +251,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+  CHECK(error.find("unknown named argument: marker") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced capacity alias arity mismatch rejects compatibility template forwarding") {
