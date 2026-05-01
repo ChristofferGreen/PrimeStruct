@@ -73,6 +73,12 @@ bool resolveSemanticProductResultOkPayloadInfo(
           *semanticProductTargets,
           queryFact->bindingTypeText,
           queryFact->bindingTypeTextId);
+      if (bindingTypeText.empty()) {
+        bindingTypeText = resolveSemanticProductPayloadTypeText(
+            *semanticProductTargets,
+            queryFact->queryTypeText,
+            queryFact->queryTypeTextId);
+      }
     }
   }
   if (bindingTypeText.empty()) {

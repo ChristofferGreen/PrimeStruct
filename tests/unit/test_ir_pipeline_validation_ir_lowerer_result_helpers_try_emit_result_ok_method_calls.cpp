@@ -1345,6 +1345,66 @@ TEST_CASE("ir lowerer result helpers emit Result.ok payloads from semantic query
   CHECK_FALSE(inferCalled);
   CHECK(resolveDefinitionCalls == 0);
 
+  primec::SemanticProgram queryTypeSemanticProgram;
+  queryTypeSemanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      .scopePath = "/main",
+      .callName = "lookup",
+      .queryTypeText = "",
+      .bindingTypeText = "",
+      .receiverBindingTypeText = "",
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .sourceLine = 9,
+      .sourceColumn = 11,
+      .semanticNodeId = 913,
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(queryTypeSemanticProgram, "/lookup"),
+      .queryTypeTextId =
+          primec::semanticProgramInternCallTargetString(queryTypeSemanticProgram, "i32"),
+      .bindingTypeTextId = primec::InvalidSymbolId,
+  });
+  const auto queryTypeSemanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&queryTypeSemanticProgram);
+  resolveDefinitionCalls = 0;
+  inferCalled = false;
+  emitCalled = false;
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitResultOkCall(
+            okExpr,
+            {},
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              inferCalled = true;
+              return ValueKind::Unknown;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return std::string{};
+            },
+            [&](const primec::Expr &valueExpr) -> const primec::Definition * {
+              ++resolveDefinitionCalls;
+              CHECK(valueExpr.semanticNodeId == 913);
+              return &staleCallee;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &valueExpr, const primec::ir_lowerer::LocalMap &) {
+              emitCalled = true;
+              CHECK(valueExpr.semanticNodeId == 913);
+              return true;
+            },
+            []() { return 17; },
+            [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) {
+              return false;
+            },
+            [&](primec::IrOpcode, uint64_t) {},
+            error,
+            &queryTypeSemanticTargets) ==
+        EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(emitCalled);
+  CHECK_FALSE(inferCalled);
+  CHECK(resolveDefinitionCalls == 0);
+
   primec::SemanticProgram missingSemanticProgram;
   const auto missingSemanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&missingSemanticProgram);
