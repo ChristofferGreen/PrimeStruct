@@ -430,13 +430,39 @@ bool inferBuiltinAccessReceiverResultKind(const Expr &receiverCallExpr,
 }
 
 bool isSoaVectorReceiverExpr(const Expr &receiverExpr, const LocalMap &localsIn) {
+  auto isWrappedSoaVectorLocal = [&](const Expr &candidate, bool fromArgsPack) {
+    if (candidate.kind != Expr::Kind::Name) {
+      return false;
+    }
+    auto it = localsIn.find(candidate.name);
+    if (it == localsIn.end() || !it->second.isSoaVector) {
+      return false;
+    }
+    const LocalInfo::Kind kind = fromArgsPack ? it->second.argsPackElementKind : it->second.kind;
+    return (kind == LocalInfo::Kind::Reference && it->second.referenceToVector) ||
+           (kind == LocalInfo::Kind::Pointer && it->second.pointerToVector);
+  };
   if (receiverExpr.kind == Expr::Kind::Name) {
     auto it = localsIn.find(receiverExpr.name);
     return it != localsIn.end() && it->second.isSoaVector;
   }
   if (receiverExpr.kind == Expr::Kind::Call) {
     std::string collection;
-    return getBuiltinCollectionName(receiverExpr, collection) && collection == "soa_vector";
+    if (getBuiltinCollectionName(receiverExpr, collection) && collection == "soa_vector") {
+      return true;
+    }
+    if (isSimpleCallName(receiverExpr, "dereference") && receiverExpr.args.size() == 1) {
+      const Expr &derefTarget = receiverExpr.args.front();
+      if (isWrappedSoaVectorLocal(derefTarget, false)) {
+        return true;
+      }
+      std::string accessName;
+      if (getBuiltinArrayAccessName(derefTarget, accessName) &&
+          derefTarget.args.size() == 2 &&
+          isWrappedSoaVectorLocal(derefTarget.args.front(), true)) {
+        return true;
+      }
+    }
   }
   return false;
 }

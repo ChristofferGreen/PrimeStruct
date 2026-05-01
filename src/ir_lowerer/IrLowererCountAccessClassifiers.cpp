@@ -45,6 +45,18 @@ bool isExplicitRemovedCountLikeAliasCall(const Expr &expr,
 }
 
 bool isSoaVectorTargetImpl(const Expr &target, const LocalMap &localsIn) {
+  auto isWrappedSoaVectorLocal = [&](const Expr &candidate, bool fromArgsPack) {
+    if (candidate.kind != Expr::Kind::Name) {
+      return false;
+    }
+    auto it = localsIn.find(candidate.name);
+    if (it == localsIn.end() || !it->second.isSoaVector) {
+      return false;
+    }
+    const LocalInfo::Kind kind = fromArgsPack ? it->second.argsPackElementKind : it->second.kind;
+    return (kind == LocalInfo::Kind::Reference && it->second.referenceToVector) ||
+           (kind == LocalInfo::Kind::Pointer && it->second.pointerToVector);
+  };
   if (target.kind == Expr::Kind::Name) {
     auto it = localsIn.find(target.name);
     return it != localsIn.end() && it->second.isSoaVector;
@@ -56,6 +68,18 @@ bool isSoaVectorTargetImpl(const Expr &target, const LocalMap &localsIn) {
     }
     if (!target.isMethodCall && isSimpleCallName(target, "to_soa") && target.args.size() == 1) {
       return isVectorTargetImpl(target.args.front(), localsIn);
+    }
+    if (isSimpleCallName(target, "dereference") && target.args.size() == 1) {
+      const Expr &derefTarget = target.args.front();
+      if (isWrappedSoaVectorLocal(derefTarget, false)) {
+        return true;
+      }
+      std::string accessName;
+      if (getBuiltinArrayAccessName(derefTarget, accessName) &&
+          derefTarget.args.size() == 2 &&
+          isWrappedSoaVectorLocal(derefTarget.args.front(), true)) {
+        return true;
+      }
     }
   }
   return false;
