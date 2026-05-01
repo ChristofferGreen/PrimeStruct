@@ -239,7 +239,7 @@ main() {
   CHECK(result == 9);
 }
 
-TEST_CASE("ir lowerer rejects variadic soa_vector packs with indexed count methods") {
+TEST_CASE("ir lowerer materializes variadic soa_vector packs with indexed count methods") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -283,25 +283,23 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program,
-                            &semanticProgram,
-                            "/main",
-                            {},
-                            {},
-                            module,
-                            error,
-                            nullptr,
-                            primec::IrValidationTarget::Vm));
-  CHECK(error == "variadic parameter type mismatch");
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 9);
 }
 
-TEST_CASE("ir lowerer rejects variadic map packs with indexed count methods") {
+TEST_CASE("ir lowerer materializes variadic map packs with indexed count methods") {
   const std::string source = R"(
 import /std/collections/*
 
 [return<int>]
 score_maps([args<map<i32, i32>>] values) {
-  return(plus(values[0i32].count(), values[2i32].count()))
+  return(plus(count(at(values, 0i32)), count(at(values, 2i32))))
 }
 
 [return<int>]
@@ -334,19 +332,17 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program,
-                            &semanticProgram,
-                            "/main",
-                            {},
-                            {},
-                            module,
-                            error,
-                            nullptr,
-                            primec::IrValidationTarget::Vm));
-  CHECK(error == "variadic parameter type mismatch");
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 12);
 }
 
-TEST_CASE("ir lowerer rejects variadic map packs with indexed tryAt inference") {
+TEST_CASE("ir lowerer materializes variadic map packs with indexed tryAt inference") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -389,11 +385,17 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error == "variadic parameter type mismatch");
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 60);
 }
 
-TEST_CASE("ir lowerer rejects variadic experimental map packs with indexed canonical count calls") {
+TEST_CASE("ir lowerer materializes variadic experimental map packs with indexed canonical count calls") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
@@ -436,16 +438,14 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program,
-                            &semanticProgram,
-                            "/main",
-                            {},
-                            {},
-                            module,
-                            error,
-                            nullptr,
-                            primec::IrValidationTarget::Vm));
-  CHECK(error == "variadic parameter type mismatch");
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 11);
 }
 
 TEST_SUITE_END();
