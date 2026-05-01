@@ -638,8 +638,6 @@ TEST_CASE("ir lowerer binding type adapters resolve interned binding type ids be
       .siteKind = "temporary",
       .name = "makeVec",
       .bindingTypeText = "i32",
-      .bindingTypeTextId =
-          primec::semanticProgramInternCallTargetString(semanticProgram, "vector<i64>"),
       .isMutable = false,
       .isEntryArgString = false,
       .isUnsafeReference = false,
@@ -649,14 +647,14 @@ TEST_CASE("ir lowerer binding type adapters resolve interned binding type ids be
       .semanticNodeId = 31,
       .resolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/makeVec"),
+      .bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "vector<i64>"),
   });
   semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
       .scopePath = "/main",
       .siteKind = "temporary",
       .name = "loadArrayRef",
       .bindingTypeText = "Reference<array<i32>>",
-      .bindingTypeTextId = primec::semanticProgramInternCallTargetString(
-          semanticProgram, "Reference<array<i64>>"),
       .isMutable = false,
       .isEntryArgString = false,
       .isUnsafeReference = false,
@@ -666,14 +664,14 @@ TEST_CASE("ir lowerer binding type adapters resolve interned binding type ids be
       .semanticNodeId = 37,
       .resolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/loadArrayRef"),
+      .bindingTypeTextId = primec::semanticProgramInternCallTargetString(
+          semanticProgram, "Reference<array<i64>>"),
   });
   semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
       .scopePath = "/main",
       .siteKind = "temporary",
       .name = "loadString",
       .bindingTypeText = "i32",
-      .bindingTypeTextId =
-          primec::semanticProgramInternCallTargetString(semanticProgram, "string"),
       .isMutable = false,
       .isEntryArgString = false,
       .isUnsafeReference = false,
@@ -683,14 +681,14 @@ TEST_CASE("ir lowerer binding type adapters resolve interned binding type ids be
       .semanticNodeId = 41,
       .resolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/loadString"),
+      .bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "string"),
   });
   semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
       .scopePath = "/main",
       .siteKind = "temporary",
       .name = "loadFileError",
       .bindingTypeText = "i32",
-      .bindingTypeTextId =
-          primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
       .isMutable = false,
       .isEntryArgString = false,
       .isUnsafeReference = false,
@@ -700,6 +698,8 @@ TEST_CASE("ir lowerer binding type adapters resolve interned binding type ids be
       .semanticNodeId = 43,
       .resolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/loadFileError"),
+      .bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
   });
 
   auto adapters = primec::ir_lowerer::makeBindingTypeAdapters(&semanticProgram);

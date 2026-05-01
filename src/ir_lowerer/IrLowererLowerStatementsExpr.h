@@ -526,6 +526,44 @@
                    "/std/collections/internal_soa_storage/SoaColumn", 0) == 0 ||
                directCallee->fullPath.rfind(
                    "/std/collections/internal_soa_storage/SoaFieldView", 0) == 0);
+          auto internalSoaMetadataHelperLeaf =
+              [](const Definition &definition) -> std::string {
+            if (definition.fullPath.rfind(
+                    "/std/collections/internal_soa_storage/SoaColumn", 0) != 0 &&
+                definition.fullPath.rfind(
+                    "/std/collections/internal_soa_storage/SoaFieldView", 0) != 0) {
+              return {};
+            }
+            const size_t leafStart = definition.fullPath.find_last_of('/');
+            std::string leaf =
+                leafStart == std::string::npos
+                    ? definition.fullPath
+                    : definition.fullPath.substr(leafStart + 1);
+            const size_t generatedSuffix = leaf.find("__");
+            if (generatedSuffix != std::string::npos) {
+              leaf.erase(generatedSuffix);
+            }
+            if (leaf == "field_count" || leaf == "field_capacity") {
+              return leaf;
+            }
+            return {};
+          };
+          if (directCallee != nullptr && expr.args.size() == 1) {
+            const std::string metadataLeaf =
+                internalSoaMetadataHelperLeaf(*directCallee);
+            if (!metadataLeaf.empty() &&
+                isInternalSoaMetadataReceiver(expr.args.front())) {
+              if (!emitExpr(expr.args.front(), localsIn)) {
+                return false;
+              }
+              const uint64_t slotOffset =
+                  metadataLeaf == "field_capacity" ? IrSlotBytes * 2 : IrSlotBytes;
+              function.instructions.push_back({IrOpcode::PushI64, slotOffset});
+              function.instructions.push_back({IrOpcode::AddI64, 0});
+              function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+              return true;
+            }
+          }
           if (isInternalSoaMetadataMethod &&
               (isInternalSoaMetadataReceiver(expr.args.front()) ||
                hasInternalSoaMetadataCallee)) {
@@ -908,10 +946,10 @@
             if (!emitInternalSoaMetadataBase(expr.args.front())) {
               return false;
             }
-            if (isSimpleCallName(expr, "field_capacity")) {
-              function.instructions.push_back({IrOpcode::PushI64, IrSlotBytes});
-              function.instructions.push_back({IrOpcode::AddI64, 0});
-            }
+            const uint64_t slotOffset =
+                isSimpleCallName(expr, "field_capacity") ? IrSlotBytes * 2 : IrSlotBytes;
+            function.instructions.push_back({IrOpcode::PushI64, slotOffset});
+            function.instructions.push_back({IrOpcode::AddI64, 0});
             function.instructions.push_back({IrOpcode::LoadIndirect, 0});
             return true;
           }
@@ -931,10 +969,10 @@
             if (!emitInternalSoaMetadataBase(expr.args.front())) {
               return false;
             }
-            if (isSimpleCallName(expr, "field_capacity")) {
-              function.instructions.push_back({IrOpcode::PushI64, IrSlotBytes});
-              function.instructions.push_back({IrOpcode::AddI64, 0});
-            }
+            const uint64_t slotOffset =
+                isSimpleCallName(expr, "field_capacity") ? IrSlotBytes * 2 : IrSlotBytes;
+            function.instructions.push_back({IrOpcode::PushI64, slotOffset});
+            function.instructions.push_back({IrOpcode::AddI64, 0});
             function.instructions.push_back({IrOpcode::LoadIndirect, 0});
             error = priorError;
             return true;

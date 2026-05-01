@@ -449,6 +449,107 @@
                 inlineDispatchExpr, rewrittenInlineExplicitMapHelperExpr)) {
           inlineDispatchExpr = rewrittenInlineExplicitMapHelperExpr;
         }
+        auto emitInternalSoaMetadataBeforeInline = [&]() -> std::optional<bool> {
+          auto metadataLeaf = [](const Expr &callExpr) {
+            std::string path = callExpr.name;
+            if (path.find('/') == std::string::npos &&
+                !callExpr.namespacePrefix.empty()) {
+              path = callExpr.namespacePrefix == "/"
+                         ? "/" + path
+                         : callExpr.namespacePrefix + "/" + path;
+            }
+            const size_t leafStart = path.find_last_of('/');
+            std::string leaf =
+                leafStart == std::string::npos ? path : path.substr(leafStart + 1);
+            const size_t generatedSuffix = leaf.find("__");
+            if (generatedSuffix != std::string::npos) {
+              leaf.erase(generatedSuffix);
+            }
+            if (leaf == "field_count" || leaf == "field_capacity") {
+              return leaf;
+            }
+            return std::string{};
+          }(inlineDispatchExpr);
+          if (metadataLeaf.empty() || inlineDispatchExpr.args.size() != 1) {
+            return std::nullopt;
+          }
+          auto normalizeInternalSoaType = [](std::string typeText) {
+            typeText = ir_lowerer::trimTemplateTypeText(typeText);
+            for (std::string_view wrapper : {"Reference<", "Pointer<"}) {
+              if (typeText.rfind(wrapper, 0) == 0 &&
+                  typeText.size() > wrapper.size() &&
+                  typeText.back() == '>') {
+                typeText = ir_lowerer::trimTemplateTypeText(
+                    typeText.substr(wrapper.size(),
+                                    typeText.size() - wrapper.size() - 1));
+                break;
+              }
+            }
+            const size_t templateStart = typeText.find('<');
+            if (templateStart != std::string::npos) {
+              typeText.erase(templateStart);
+            }
+            const size_t leafStart = typeText.find_last_of('/');
+            const size_t suffixStart =
+                typeText.find("__", leafStart == std::string::npos ? 0 : leafStart + 1);
+            if (suffixStart != std::string::npos) {
+              typeText.erase(suffixStart);
+            }
+            return typeText;
+          };
+          auto isInternalSoaType = [&](const std::string &typeText) {
+            const std::string normalized = normalizeInternalSoaType(typeText);
+            return normalized == "/std/collections/internal_soa_storage/SoaColumn" ||
+                   normalized == "/std/collections/internal_soa_storage/SoaFieldView";
+          };
+          const Expr &receiverExpr = inlineDispatchExpr.args.front();
+          bool hasInternalReceiver = false;
+          if (receiverExpr.kind == Expr::Kind::Name) {
+            auto localIt = localsIn.find(receiverExpr.name);
+            hasInternalReceiver =
+                localIt != localsIn.end() &&
+                isInternalSoaType(localIt->second.structTypeName);
+          }
+          if (!hasInternalReceiver && semanticProgram != nullptr) {
+            const SemanticProductIndex semanticIndex =
+                ir_lowerer::buildSemanticProductIndex(semanticProgram);
+            if (const auto *queryFact = ir_lowerer::findSemanticProductQueryFact(
+                    semanticProgram, semanticIndex, inlineDispatchExpr);
+                queryFact != nullptr) {
+              auto resolveReceiverTypeText =
+                  [&](const std::string &typeText, SymbolId typeTextId) {
+                if (typeTextId != InvalidSymbolId) {
+                  std::string resolvedTypeText = std::string(
+                      semanticProgramResolveCallTargetString(*semanticProgram, typeTextId));
+                  if (!resolvedTypeText.empty()) {
+                    return ir_lowerer::trimTemplateTypeText(resolvedTypeText);
+                  }
+                }
+                return ir_lowerer::trimTemplateTypeText(typeText);
+              };
+              hasInternalReceiver = isInternalSoaType(resolveReceiverTypeText(
+                  queryFact->receiverBindingTypeText,
+                  queryFact->receiverBindingTypeTextId));
+            }
+          }
+          if (!hasInternalReceiver) {
+            return std::nullopt;
+          }
+          if (!emitExpr(receiverExpr, localsIn)) {
+            return false;
+          }
+          const uint64_t slotOffset =
+              metadataLeaf == "field_capacity" ? IrSlotBytes * 2 : IrSlotBytes;
+          function.instructions.push_back({IrOpcode::PushI64, slotOffset});
+          function.instructions.push_back({IrOpcode::AddI64, 0});
+          function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+          return true;
+        };
+        if (const std::optional<bool> metadataResult =
+                emitInternalSoaMetadataBeforeInline();
+            metadataResult.has_value()) {
+          return *metadataResult;
+        }
         const auto inlineDispatchResult = ir_lowerer::tryEmitInlineCallDispatchWithLocals(
             inlineDispatchExpr,
             localsIn,
@@ -581,6 +682,112 @@
               }
               return bindingType;
             };
+        auto normalizeInternalSoaMetadataType = [](std::string typeText) {
+          typeText = ir_lowerer::trimTemplateTypeText(typeText);
+          for (std::string_view wrapper : {"Reference<", "Pointer<"}) {
+            if (typeText.rfind(wrapper, 0) == 0 &&
+                typeText.size() > wrapper.size() &&
+                typeText.back() == '>') {
+              typeText = ir_lowerer::trimTemplateTypeText(
+                  typeText.substr(wrapper.size(),
+                                  typeText.size() - wrapper.size() - 1));
+              break;
+            }
+          }
+          const size_t templateStart = typeText.find('<');
+          if (templateStart != std::string::npos) {
+            typeText.erase(templateStart);
+          }
+          const size_t leafStart = typeText.find_last_of('/');
+          const size_t suffixStart =
+              typeText.find("__", leafStart == std::string::npos ? 0 : leafStart + 1);
+          if (suffixStart != std::string::npos) {
+            typeText.erase(suffixStart);
+          }
+          return typeText;
+        };
+        auto internalSoaMetadataCallLeaf = [](const Expr &callExpr) {
+          std::string path = callExpr.name;
+          if (path.find('/') == std::string::npos && !callExpr.namespacePrefix.empty()) {
+            path = callExpr.namespacePrefix == "/" ? "/" + path
+                                                   : callExpr.namespacePrefix + "/" + path;
+          }
+          const size_t leafStart = path.find_last_of('/');
+          std::string leaf =
+              leafStart == std::string::npos ? path : path.substr(leafStart + 1);
+          const size_t generatedSuffix = leaf.find("__");
+          if (generatedSuffix != std::string::npos) {
+            leaf.erase(generatedSuffix);
+          }
+          if (leaf == "field_count" || leaf == "field_capacity") {
+            return leaf;
+          }
+          return std::string{};
+        };
+        auto isInternalSoaMetadataReceiver = [&](const Expr &receiverExpr,
+                                                 const Expr &callExpr) {
+          auto isInternalSoaType = [&](const std::string &typeText) {
+            const std::string normalized =
+                normalizeInternalSoaMetadataType(typeText);
+            return normalized == "/std/collections/internal_soa_storage/SoaColumn" ||
+                   normalized == "/std/collections/internal_soa_storage/SoaFieldView";
+          };
+          if (receiverExpr.kind == Expr::Kind::Name) {
+            auto localIt = localsIn.find(receiverExpr.name);
+            if (localIt != localsIn.end() &&
+                isInternalSoaType(localIt->second.structTypeName)) {
+              return true;
+            }
+          }
+          if (semanticProgram == nullptr) {
+            return false;
+          }
+          const SemanticProductIndex semanticIndex =
+              ir_lowerer::buildSemanticProductIndex(semanticProgram);
+          const auto *queryFact =
+              ir_lowerer::findSemanticProductQueryFact(semanticProgram, semanticIndex, callExpr);
+          if (queryFact == nullptr) {
+            return false;
+          }
+          auto resolveReceiverTypeText =
+              [&](const std::string &typeText, SymbolId typeTextId) {
+            if (semanticProgram != nullptr && typeTextId != InvalidSymbolId) {
+              std::string resolvedTypeText = std::string(
+                  semanticProgramResolveCallTargetString(*semanticProgram, typeTextId));
+              if (!resolvedTypeText.empty()) {
+                return ir_lowerer::trimTemplateTypeText(resolvedTypeText);
+              }
+            }
+            return ir_lowerer::trimTemplateTypeText(typeText);
+          };
+          const std::string receiverType = resolveReceiverTypeText(
+              queryFact->receiverBindingTypeText,
+              queryFact->receiverBindingTypeTextId);
+          return isInternalSoaType(receiverType);
+        };
+        auto emitInternalSoaMetadataCall = [&]() -> std::optional<bool> {
+          const std::string metadataLeaf =
+              internalSoaMetadataCallLeaf(nativeTailExpr);
+          if (metadataLeaf.empty() || nativeTailExpr.args.size() != 1 ||
+              !isInternalSoaMetadataReceiver(nativeTailExpr.args.front(),
+                                             nativeTailExpr)) {
+            return std::nullopt;
+          }
+          if (!emitExpr(nativeTailExpr.args.front(), localsIn)) {
+            return false;
+          }
+          const uint64_t slotOffset =
+              metadataLeaf == "field_capacity" ? IrSlotBytes * 2 : IrSlotBytes;
+          function.instructions.push_back({IrOpcode::PushI64, slotOffset});
+          function.instructions.push_back({IrOpcode::AddI64, 0});
+          function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+          return true;
+        };
+        if (const std::optional<bool> metadataResult =
+                emitInternalSoaMetadataCall();
+            metadataResult.has_value()) {
+          return *metadataResult;
+        }
 
         const auto nativeTailResult = ir_lowerer::tryEmitNativeCallTailDispatchWithLocals(
             nativeTailExpr,

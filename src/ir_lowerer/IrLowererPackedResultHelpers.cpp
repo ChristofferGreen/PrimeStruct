@@ -438,11 +438,10 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
       semanticProductTargets != nullptr &&
       semanticProductTargets->hasSemanticProduct &&
       expr.args[1].semanticNodeId != 0 &&
-      (expr.args[1].kind == Expr::Kind::Name ||
-       (expr.args[1].kind == Expr::Kind::Call &&
-        !expr.args[1].isMethodCall &&
-        !expr.args[1].isFieldAccess &&
-        !isSyntaxOwnedComparisonPayload));
+      expr.args[1].kind == Expr::Kind::Call &&
+      !expr.args[1].isMethodCall &&
+      !expr.args[1].isFieldAccess &&
+      !isSyntaxOwnedComparisonPayload;
   const bool hasSemanticPayloadInfo =
       resolveSemanticProductResultOkPayloadInfo(expr.args[1], semanticProductTargets, semanticPayload);
   if (requiresSemanticPayloadInfo && !hasSemanticPayloadInfo) {

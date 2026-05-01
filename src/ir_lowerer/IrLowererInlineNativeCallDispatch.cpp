@@ -511,6 +511,21 @@ bool isInternalSoaMetadataTarget(const Expr &expr, const LocalMap &localsIn) {
          structPath == "/std/collections/internal_soa_storage/SoaFieldView";
 }
 
+bool isInternalSoaMetadataHelperPath(std::string_view path) {
+  if (path.rfind("/std/collections/internal_soa_storage/SoaColumn", 0) != 0 &&
+      path.rfind("/std/collections/internal_soa_storage/SoaFieldView", 0) != 0) {
+    return false;
+  }
+  std::string leaf(path.substr(path.find_last_of('/') == std::string_view::npos
+                                   ? 0
+                                   : path.find_last_of('/') + 1));
+  const size_t generatedSuffix = leaf.find("__");
+  if (generatedSuffix != std::string::npos) {
+    leaf.erase(generatedSuffix);
+  }
+  return leaf == "field_count" || leaf == "field_capacity";
+}
+
 bool isExperimentalVectorTarget(const Expr &expr, const LocalMap &localsIn) {
   if (expr.kind != Expr::Kind::Name) {
     return false;
@@ -718,10 +733,7 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
     const Definition *callee = resolveMethodCallDefinition(expr);
     if (callee != nullptr) {
       if (expr.args.size() == 1 &&
-          (isSimpleCallName(expr, "field_count") ||
-           isSimpleCallName(expr, "field_capacity")) &&
-          (callee->fullPath.rfind("/std/collections/internal_soa_storage/SoaColumn", 0) == 0 ||
-           callee->fullPath.rfind("/std/collections/internal_soa_storage/SoaFieldView", 0) == 0)) {
+          isInternalSoaMetadataHelperPath(callee->fullPath)) {
         return InlineCallDispatchResult::NotHandled;
       }
       if (isCollectionAccessReceiverExpr && !expr.args.empty() &&
@@ -743,6 +755,10 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
 
   if (const Definition *callee =
           directCallee != nullptr ? directCallee : resolveDefinitionCall(expr)) {
+    if (expr.args.size() == 1 &&
+        isInternalSoaMetadataHelperPath(callee->fullPath)) {
+      return InlineCallDispatchResult::NotHandled;
+    }
     if (isCollectionAccessReceiverExpr && !expr.args.empty() &&
         isCollectionAccessReceiverExpr(expr.args.front()) &&
         isMapBuiltinInlinePath(expr, *callee)) {
@@ -991,10 +1007,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
         continue;
       }
       if (methodExpr.args.size() == 1 &&
-          (isSimpleCallName(methodExpr, "field_count") ||
-           isSimpleCallName(methodExpr, "field_capacity")) &&
-          (callee->fullPath.rfind("/std/collections/internal_soa_storage/SoaColumn", 0) == 0 ||
-           callee->fullPath.rfind("/std/collections/internal_soa_storage/SoaFieldView", 0) == 0)) {
+          isInternalSoaMetadataHelperPath(callee->fullPath)) {
         error = priorError;
         return InlineCallDispatchResult::NotHandled;
       }
@@ -1141,10 +1154,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       [&](const Expr &callExpr) {
         const Definition *callee = resolveMethodCallDefinitionFn(callExpr, localsIn);
         if (callee != nullptr && callExpr.isMethodCall && callExpr.args.size() == 1 &&
-            (isSimpleCallName(callExpr, "field_count") ||
-             isSimpleCallName(callExpr, "field_capacity")) &&
-            (callee->fullPath.rfind("/std/collections/internal_soa_storage/SoaColumn", 0) == 0 ||
-             callee->fullPath.rfind("/std/collections/internal_soa_storage/SoaFieldView", 0) == 0)) {
+            isInternalSoaMetadataHelperPath(callee->fullPath)) {
           return static_cast<const Definition *>(nullptr);
         }
         return callee;

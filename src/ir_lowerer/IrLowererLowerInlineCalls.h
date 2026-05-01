@@ -2,11 +2,58 @@
                                  const Definition &callee,
                                  const LocalMap &callerLocals,
                                  bool requireValue) -> bool {
-    if (callExpr.isMethodCall && callExpr.args.size() == 1 &&
-        (isSimpleCallName(callExpr, "field_count") ||
-         isSimpleCallName(callExpr, "field_capacity")) &&
-        (callee.fullPath.rfind("/std/collections/internal_soa_storage/SoaColumn", 0) == 0 ||
-         callee.fullPath.rfind("/std/collections/internal_soa_storage/SoaFieldView", 0) == 0)) {
+    const auto isInternalSoaMetadataInlineHelper =
+        [](std::string_view path, std::string_view fieldName) {
+          if (path.rfind("/std/collections/internal_soa_storage/SoaColumn", 0) != 0 &&
+              path.rfind("/std/collections/internal_soa_storage/SoaFieldView", 0) != 0) {
+            return false;
+          }
+          std::string leaf(path.substr(path.find_last_of('/') == std::string_view::npos
+                                           ? 0
+                                           : path.find_last_of('/') + 1));
+          const size_t generatedSuffix = leaf.find("__");
+          if (generatedSuffix != std::string::npos) {
+            leaf.erase(generatedSuffix);
+          }
+          return leaf == fieldName;
+        };
+    const auto isInternalSoaMetadataOwner =
+        [](std::string_view path) {
+          if (path.rfind("/std/collections/internal_soa_storage/SoaColumn", 0) != 0 &&
+              path.rfind("/std/collections/internal_soa_storage/SoaFieldView", 0) != 0) {
+            return false;
+          }
+          const size_t leafStart = path.find_last_of('/');
+          std::string leaf(path.substr(leafStart == std::string_view::npos
+                                           ? 0
+                                           : leafStart + 1));
+          const size_t generatedSuffix = leaf.find("__");
+          if (generatedSuffix != std::string::npos) {
+            leaf.erase(generatedSuffix);
+          }
+          return leaf == "SoaColumn" || leaf == "SoaFieldView";
+        };
+    const auto callLeafName = [](const Expr &expr) {
+      std::string path = expr.name;
+      if (path.find('/') == std::string::npos && !expr.namespacePrefix.empty()) {
+        path = expr.namespacePrefix == "/" ? "/" + path
+                                           : expr.namespacePrefix + "/" + path;
+      }
+      const size_t leafStart = path.find_last_of('/');
+      std::string leaf =
+          leafStart == std::string::npos ? path : path.substr(leafStart + 1);
+      const size_t generatedSuffix = leaf.find("__");
+      if (generatedSuffix != std::string::npos) {
+        leaf.erase(generatedSuffix);
+      }
+      return leaf;
+    };
+    if (callExpr.args.size() == 1 &&
+        (isInternalSoaMetadataInlineHelper(callee.fullPath, "field_count") ||
+         isInternalSoaMetadataInlineHelper(callee.fullPath, "field_capacity") ||
+         (isInternalSoaMetadataOwner(callee.fullPath) &&
+          (callLeafName(callExpr) == "field_count" ||
+           callLeafName(callExpr) == "field_capacity")))) {
       const Expr &receiver = callExpr.args.front();
       if (receiver.kind == Expr::Kind::Name) {
         auto localIt = callerLocals.find(receiver.name);
@@ -19,11 +66,96 @@
       } else if (!emitExpr(receiver, callerLocals)) {
         return false;
       }
-      if (isSimpleCallName(callExpr, "field_capacity")) {
-        function.instructions.push_back({IrOpcode::PushI64, IrSlotBytes});
-        function.instructions.push_back({IrOpcode::AddI64, 0});
-      }
+      const uint64_t fieldOffset =
+          (isInternalSoaMetadataInlineHelper(callee.fullPath, "field_capacity") ||
+           callLeafName(callExpr) == "field_capacity")
+              ? IrSlotBytes * 2
+              : IrSlotBytes;
+      function.instructions.push_back({IrOpcode::PushI64, fieldOffset});
+      function.instructions.push_back({IrOpcode::AddI64, 0});
       function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+      return true;
+    }
+    if (callExpr.args.size() == 2 &&
+        (isInternalSoaMetadataInlineHelper(callee.fullPath, "set_field_count") ||
+         isInternalSoaMetadataInlineHelper(callee.fullPath, "set_field_capacity") ||
+         (isInternalSoaMetadataOwner(callee.fullPath) &&
+          (callLeafName(callExpr) == "set_field_count" ||
+           callLeafName(callExpr) == "set_field_capacity")))) {
+      const Expr &receiver = callExpr.args.front();
+      const Expr &value = callExpr.args[1];
+      auto emitBoundsTrapIfStackTrue = [&]() {
+        const size_t okJump = function.instructions.size();
+        function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+        emitArrayIndexOutOfBounds();
+        function.instructions[okJump].imm = function.instructions.size();
+      };
+      auto emitReceiverAddress = [&](uint64_t slotOffset) {
+        if (receiver.kind == Expr::Kind::Name) {
+          auto localIt = callerLocals.find(receiver.name);
+          if (localIt != callerLocals.end()) {
+            function.instructions.push_back(
+                {IrOpcode::LoadLocal, static_cast<uint64_t>(localIt->second.index)});
+          } else if (!emitExpr(receiver, callerLocals)) {
+            return false;
+          }
+        } else if (!emitExpr(receiver, callerLocals)) {
+          return false;
+        }
+        function.instructions.push_back({IrOpcode::PushI64, slotOffset});
+        function.instructions.push_back({IrOpcode::AddI64, 0});
+        return true;
+      };
+      auto emitReceiverLoad = [&](uint64_t slotOffset) {
+        if (!emitReceiverAddress(slotOffset)) {
+          return false;
+        }
+        function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+        return true;
+      };
+
+      if (!emitExpr(value, callerLocals)) {
+        return false;
+      }
+      function.instructions.push_back({IrOpcode::PushI32, 0});
+      function.instructions.push_back({IrOpcode::CmpLtI32, 0});
+      emitBoundsTrapIfStackTrue();
+
+      if (isInternalSoaMetadataInlineHelper(callee.fullPath, "set_field_count") ||
+          callLeafName(callExpr) == "set_field_count") {
+        if (!emitExpr(value, callerLocals) ||
+            !emitReceiverLoad(IrSlotBytes * 2)) {
+          return false;
+        }
+        function.instructions.push_back({IrOpcode::CmpGtI32, 0});
+        emitBoundsTrapIfStackTrue();
+        if (!emitReceiverAddress(IrSlotBytes) ||
+            !emitExpr(value, callerLocals)) {
+          return false;
+        }
+      } else {
+        if (!emitReceiverLoad(IrSlotBytes) ||
+            !emitExpr(value, callerLocals)) {
+          return false;
+        }
+        function.instructions.push_back({IrOpcode::CmpGtI32, 0});
+        emitBoundsTrapIfStackTrue();
+        if (!emitExpr(value, callerLocals)) {
+          return false;
+        }
+        function.instructions.push_back({IrOpcode::PushI32, 1073741823});
+        function.instructions.push_back({IrOpcode::CmpGtI32, 0});
+        emitBoundsTrapIfStackTrue();
+        if (!emitReceiverAddress(IrSlotBytes * 2) ||
+            !emitExpr(value, callerLocals)) {
+          return false;
+        }
+      }
+      function.instructions.push_back({IrOpcode::StoreIndirect, 0});
+      function.instructions.push_back({IrOpcode::Pop, 0});
+      if (requireValue) {
+        function.instructions.push_back({IrOpcode::PushI32, 0});
+      }
       return true;
     }
     ir_lowerer::InlineDefinitionCallContextSetup callSetup;

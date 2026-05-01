@@ -299,10 +299,13 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
             error) == Result::Emitted);
   CHECK(soaFieldCountEmitExprCalls == 0);
-  REQUIRE(instructions.size() == 2);
+  REQUIRE(instructions.size() == 4);
   CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
   CHECK(instructions[0].imm == 4);
-  CHECK(instructions[1].op == primec::IrOpcode::LoadIndirect);
+  CHECK(instructions[1].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[1].imm == primec::IrSlotBytes);
+  CHECK(instructions[2].op == primec::IrOpcode::AddI64);
+  CHECK(instructions[3].op == primec::IrOpcode::LoadIndirect);
 
   instructions.clear();
   error.clear();
@@ -336,7 +339,7 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
   CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
   CHECK(instructions[0].imm == 4);
   CHECK(instructions[1].op == primec::IrOpcode::PushI64);
-  CHECK(instructions[1].imm == primec::IrSlotBytes);
+  CHECK(instructions[1].imm == primec::IrSlotBytes * 2);
   CHECK(instructions[2].op == primec::IrOpcode::AddI64);
   CHECK(instructions[3].op == primec::IrOpcode::LoadIndirect);
 
@@ -375,10 +378,50 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
             error) == Result::Emitted);
   CHECK(genericSoaFieldCountEmitExprCalls == 0);
-  REQUIRE(instructions.size() == 2);
+  REQUIRE(instructions.size() == 4);
   CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
   CHECK(instructions[0].imm == 5);
-  CHECK(instructions[1].op == primec::IrOpcode::LoadIndirect);
+  CHECK(instructions[1].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[1].imm == primec::IrSlotBytes);
+  CHECK(instructions[2].op == primec::IrOpcode::AddI64);
+  CHECK(instructions[3].op == primec::IrOpcode::LoadIndirect);
+
+  instructions.clear();
+  error.clear();
+  callExpr.isMethodCall = false;
+  callExpr.name = "/std/collections/internal_soa_storage/SoaColumn/field_capacity";
+  int scopedSoaFieldCapacityEmitExprCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitCountAccessCall(
+            callExpr,
+            genericSoaStorageLocals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++scopedSoaFieldCapacityEmitExprCalls;
+              instructions.push_back({primec::IrOpcode::PushI64, 55});
+              return true;
+            },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            error) == Result::Emitted);
+  CHECK(scopedSoaFieldCapacityEmitExprCalls == 0);
+  REQUIRE(instructions.size() == 4);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 5);
+  CHECK(instructions[1].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[1].imm == primec::IrSlotBytes * 2);
+  CHECK(instructions[2].op == primec::IrOpcode::AddI64);
+  CHECK(instructions[3].op == primec::IrOpcode::LoadIndirect);
 
   callExpr.isMethodCall = false;
   instructions.clear();

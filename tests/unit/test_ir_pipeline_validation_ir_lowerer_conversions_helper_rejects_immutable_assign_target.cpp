@@ -1181,6 +1181,10 @@ TEST_CASE("ir lowerer conversions helper dereferences direct aggregate pointer c
       .returnKind = "Int64",
       .structPath = "/Pair",
       .bindingTypeText = "Reference<Pair>",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
       .definitionPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/makePairRef"),
   });
@@ -1327,6 +1331,10 @@ TEST_CASE("ir lowerer conversions helper locations direct reference calls from s
       .returnKind = "Int64",
       .structPath = "/Pair",
       .bindingTypeText = "Reference<Pair>",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
       .definitionPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/makePairRef"),
   });

@@ -44,6 +44,26 @@ std::string resolveScopedCallPath(const Expr &expr) {
   return expr.namespacePrefix + "/" + expr.name;
 }
 
+std::string resolveCallLeafName(const Expr &expr) {
+  std::string path = resolveScopedCallPath(expr);
+  const size_t leafStart = path.find_last_of('/');
+  if (leafStart != std::string::npos) {
+    path.erase(0, leafStart + 1);
+  }
+  const size_t generatedSuffix = path.find("__");
+  if (generatedSuffix != std::string::npos) {
+    path.erase(generatedSuffix);
+  }
+  return path;
+}
+
+bool isInternalSoaStorageMetadataCall(const Expr &expr,
+                                      std::string_view fieldName) {
+  return expr.kind == Expr::Kind::Call &&
+         expr.args.size() == 1 &&
+         resolveCallLeafName(expr) == fieldName;
+}
+
 bool isExplicitVectorCountMethodCall(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || !expr.isMethodCall) {
     return false;
@@ -172,10 +192,10 @@ bool emitInternalSoaStorageMetadataBase(const Expr &target,
 void emitInternalSoaStorageMetadataLoad(
     std::string_view fieldName,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction) {
-  if (fieldName == "field_capacity") {
-    emitInstruction(IrOpcode::PushI64, IrSlotBytes);
-    emitInstruction(IrOpcode::AddI64, 0);
-  }
+  const uint64_t fieldOffset =
+      fieldName == "field_capacity" ? IrSlotBytes * 2 : IrSlotBytes;
+  emitInstruction(IrOpcode::PushI64, fieldOffset);
+  emitInstruction(IrOpcode::AddI64, 0);
   emitInstruction(IrOpcode::LoadIndirect, 0);
 }
 
@@ -647,7 +667,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     emitInstruction(IrOpcode::LoadIndirect, 0);
     return true;
   };
-  if (expr.isMethodCall && expr.name == "field_count" && expr.args.size() == 1 &&
+  if (isInternalSoaStorageMetadataCall(expr, "field_count") &&
       isDynamicVectorCountTargetFn != nullptr &&
       isDynamicVectorCountTargetFn(expr.args.front(), localsIn)) {
     if (!emitDynamicVectorCount(expr.args.front())) {
@@ -655,16 +675,16 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     }
     return CountAccessCallEmitResult::Emitted;
   }
-  if (expr.isMethodCall && expr.name == "field_count" && expr.args.size() == 1 &&
+  if (isInternalSoaStorageMetadataCall(expr, "field_count") &&
       isInternalSoaStorageMetadataTarget(expr.args.front(), localsIn)) {
     if (!emitInternalSoaStorageMetadataBase(
             expr.args.front(), localsIn, emitInstruction, emitExpr)) {
       return CountAccessCallEmitResult::Error;
     }
-    emitInternalSoaStorageMetadataLoad(expr.name, emitInstruction);
+    emitInternalSoaStorageMetadataLoad("field_count", emitInstruction);
     return CountAccessCallEmitResult::Emitted;
   }
-  if (expr.isMethodCall && expr.name == "field_capacity" && expr.args.size() == 1 &&
+  if (isInternalSoaStorageMetadataCall(expr, "field_capacity") &&
       isDynamicVectorCapacityTargetFn != nullptr &&
       isDynamicVectorCapacityTargetFn(expr.args.front(), localsIn)) {
     if (!emitDynamicVectorCapacity(expr.args.front())) {
@@ -672,13 +692,13 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     }
     return CountAccessCallEmitResult::Emitted;
   }
-  if (expr.isMethodCall && expr.name == "field_capacity" && expr.args.size() == 1 &&
+  if (isInternalSoaStorageMetadataCall(expr, "field_capacity") &&
       isInternalSoaStorageMetadataTarget(expr.args.front(), localsIn)) {
     if (!emitInternalSoaStorageMetadataBase(
             expr.args.front(), localsIn, emitInstruction, emitExpr)) {
       return CountAccessCallEmitResult::Error;
     }
-    emitInternalSoaStorageMetadataLoad(expr.name, emitInstruction);
+    emitInternalSoaStorageMetadataLoad("field_capacity", emitInstruction);
     return CountAccessCallEmitResult::Emitted;
   }
   const bool namedArgVectorTemporaryCountTarget =

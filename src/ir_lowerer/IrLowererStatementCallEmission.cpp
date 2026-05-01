@@ -1280,6 +1280,59 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     return DirectCallStatementEmitResult::Emitted;
   }
 
+  if (!directStmt.isMethodCall && directStmt.args.size() == 2) {
+    if (const Definition *callee = resolveDefinitionCall(directStmt);
+        callee != nullptr &&
+        (isSimpleCallName(directStmt, "set_field_count") ||
+         isSimpleCallName(directStmt, "set_field_capacity")) &&
+        (callee->fullPath.rfind(
+             "/std/collections/internal_soa_storage/SoaColumn", 0) == 0 ||
+         callee->fullPath.rfind(
+             "/std/collections/internal_soa_storage/SoaFieldView", 0) == 0)) {
+      const Expr &receiver = directStmt.args.front();
+      const Expr &value = directStmt.args[1];
+      if (!emitExpr(value, localsIn)) {
+        return DirectCallStatementEmitResult::Error;
+      }
+      instructions.push_back({IrOpcode::PushI32, 0});
+      instructions.push_back({IrOpcode::CmpLtI32, 0});
+      emitBoundsTrapIfStackTrue();
+
+      if (isSimpleCallName(directStmt, "set_field_count")) {
+        if (!emitExpr(value, localsIn) ||
+            !emitVectorHeaderFieldLoad(receiver, 2)) {
+          return DirectCallStatementEmitResult::Error;
+        }
+        instructions.push_back({IrOpcode::CmpGtI32, 0});
+        emitBoundsTrapIfStackTrue();
+        if (!emitVectorHeaderFieldAddress(receiver, 1) ||
+            !emitExpr(value, localsIn)) {
+          return DirectCallStatementEmitResult::Error;
+        }
+      } else {
+        if (!emitVectorHeaderFieldLoad(receiver, 1) ||
+            !emitExpr(value, localsIn)) {
+          return DirectCallStatementEmitResult::Error;
+        }
+        instructions.push_back({IrOpcode::CmpGtI32, 0});
+        emitBoundsTrapIfStackTrue();
+        if (!emitExpr(value, localsIn)) {
+          return DirectCallStatementEmitResult::Error;
+        }
+        instructions.push_back({IrOpcode::PushI32, 1073741823});
+        instructions.push_back({IrOpcode::CmpGtI32, 0});
+        emitBoundsTrapIfStackTrue();
+        if (!emitVectorHeaderFieldAddress(receiver, 2) ||
+            !emitExpr(value, localsIn)) {
+          return DirectCallStatementEmitResult::Error;
+        }
+      }
+      instructions.push_back({IrOpcode::StoreIndirect, 0});
+      instructions.push_back({IrOpcode::Pop, 0});
+      return DirectCallStatementEmitResult::Emitted;
+    }
+  }
+
   if (!explicitVectorMutatorHelperCall &&
       !directStmt.isMethodCall &&
       directStmt.args.size() == 1 &&
@@ -1311,6 +1364,62 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
       return DirectCallStatementEmitResult::Error;
     }
     if (callee) {
+      const bool isInternalSoaMetadataSetter =
+          directStmt.args.size() == 2 &&
+          (isSimpleCallName(directStmt, "set_field_count") ||
+           isSimpleCallName(directStmt, "set_field_capacity")) &&
+          (callee->fullPath.rfind(
+               "/std/collections/internal_soa_storage/SoaColumn", 0) == 0 ||
+           callee->fullPath.rfind(
+               "/std/collections/internal_soa_storage/SoaFieldView", 0) == 0);
+      if (isInternalSoaMetadataSetter) {
+        const Expr &receiver = directStmt.args.front();
+        const Expr &value = directStmt.args[1];
+        if (!emitExpr(value, localsIn)) {
+          return DirectCallStatementEmitResult::Error;
+        }
+        instructions.push_back({IrOpcode::PushI32, 0});
+        instructions.push_back({IrOpcode::CmpLtI32, 0});
+        emitBoundsTrapIfStackTrue();
+
+        if (isSimpleCallName(directStmt, "set_field_count")) {
+          if (!emitExpr(value, localsIn) ||
+              !emitVectorHeaderFieldLoad(receiver, 2)) {
+            return DirectCallStatementEmitResult::Error;
+          }
+          instructions.push_back({IrOpcode::CmpGtI32, 0});
+          emitBoundsTrapIfStackTrue();
+          if (!emitVectorHeaderFieldAddress(receiver, 1) ||
+              !emitExpr(value, localsIn)) {
+            return DirectCallStatementEmitResult::Error;
+          }
+          instructions.push_back({IrOpcode::StoreIndirect, 0});
+          instructions.push_back({IrOpcode::Pop, 0});
+          error = priorError;
+          return DirectCallStatementEmitResult::Emitted;
+        }
+
+        if (!emitVectorHeaderFieldLoad(receiver, 1) ||
+            !emitExpr(value, localsIn)) {
+          return DirectCallStatementEmitResult::Error;
+        }
+        instructions.push_back({IrOpcode::CmpGtI32, 0});
+        emitBoundsTrapIfStackTrue();
+        if (!emitExpr(value, localsIn)) {
+          return DirectCallStatementEmitResult::Error;
+        }
+        instructions.push_back({IrOpcode::PushI32, 1073741823});
+        instructions.push_back({IrOpcode::CmpGtI32, 0});
+        emitBoundsTrapIfStackTrue();
+        if (!emitVectorHeaderFieldAddress(receiver, 2) ||
+            !emitExpr(value, localsIn)) {
+          return DirectCallStatementEmitResult::Error;
+        }
+        instructions.push_back({IrOpcode::StoreIndirect, 0});
+        instructions.push_back({IrOpcode::Pop, 0});
+        error = priorError;
+        return DirectCallStatementEmitResult::Emitted;
+      }
       if (directStmt.hasBodyArguments || !directStmt.bodyArguments.empty()) {
         error = "native backend does not support block arguments on calls";
         return DirectCallStatementEmitResult::Error;
