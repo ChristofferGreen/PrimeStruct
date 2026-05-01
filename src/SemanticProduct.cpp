@@ -1070,8 +1070,9 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
   for (size_t i = 0; i < semanticProgram.imports.size(); ++i) {
     appendSemanticIndexedLine(out, "imports", i, quoteSemanticString(semanticProgram.imports[i]));
   }
-  for (size_t i = 0; i < semanticProgram.definitions.size(); ++i) {
-    const auto &entry = semanticProgram.definitions[i];
+  const auto definitions = semanticProgramDefinitionView(semanticProgram);
+  for (size_t i = 0; i < definitions.size(); ++i) {
+    const auto &entry = *definitions[i];
     appendSemanticIndexedLine(out,
                               "definitions",
                               i,

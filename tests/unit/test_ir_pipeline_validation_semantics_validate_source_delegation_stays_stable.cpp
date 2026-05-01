@@ -278,6 +278,8 @@ TEST_CASE("semantic product definition view requires published maps after freeze
   CHECK(primec::semanticProgramDefinitionView(rawFrozenSemanticProgram).empty());
   CHECK(primec::semanticProgramLookupPublishedDefinition(rawFrozenSemanticProgram, "/later") ==
         nullptr);
+  CHECK(primec::formatSemanticProgram(rawFrozenSemanticProgram)
+            .find("definitions[0]") == std::string::npos);
 
   primec::SemanticProgram mappedSemanticProgram;
   populateDefinitionMetadata(mappedSemanticProgram);
@@ -292,6 +294,12 @@ TEST_CASE("semantic product definition view requires published maps after freeze
   primec::freezeSemanticProgramPublishedStorage(mappedSemanticProgram);
 
   checkDefinitionMetadataVisible(mappedSemanticProgram);
+  const std::string mappedDump = primec::formatSemanticProgram(mappedSemanticProgram);
+  const std::size_t laterPos = mappedDump.find("definitions[0]: full_path=\"/later\"");
+  const std::size_t earlierPos = mappedDump.find("definitions[1]: full_path=\"/earlier\"");
+  CHECK(laterPos != std::string::npos);
+  CHECK(earlierPos != std::string::npos);
+  CHECK(laterPos < earlierPos);
 }
 
 TEST_CASE("semantic product type metadata requires published maps after freeze") {

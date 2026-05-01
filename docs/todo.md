@@ -492,7 +492,9 @@ Task template:
     authority slice is complete for path-id lookups. The frozen definition
     view authority slice is complete for callable orchestration through
     deterministic `definitionIndicesByPathId` storage-order enumeration. The
-    frozen fact-family view authority slice is complete for module artifact indexes across
+    frozen definition formatter view authority slice is complete for
+    semantic-product dumps through the same view. The frozen fact-family view
+    authority slice is complete for module artifact indexes across
     direct-call, method-call, bridge-path, callable-summary, binding, return,
     collection-specialization, local-auto, query, try, and `on_error` views.
     The frozen type-shape metadata published-map authority slice is complete
@@ -566,6 +568,10 @@ Task template:
       Callable orchestration no longer lowers raw `definitions` entries when a
       frozen semantic product is missing published definition indexes, while
       mutable hand-built products keep their fixture-only scan before freeze.
+    - Completed slice: frozen semantic-product definition formatting now uses
+      `semanticProgramDefinitionView(...)`, so dumps no longer recover raw
+      `definitions` entries when a frozen semantic product is missing
+      published definition indexes.
     - Completed slice: frozen semantic-product fact-family views now require
       `moduleResolvedArtifacts` indexes. Raw flat storage no longer recovers
       missing module artifacts after publication freezes the semantic product,

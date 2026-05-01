@@ -6,6 +6,27 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 1, 2026)**
+- [x] TODO-4298: Use definition view in dumps
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-01
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 definition formatter authority slice that makes
+    semantic-product dumps enumerate definitions through
+    `semanticProgramDefinitionView(...)`.
+  - acceptance:
+    - Frozen semantic-product dumps ignore raw `definitions` entries when
+      `definitionIndicesByPathId` is missing.
+    - Frozen mapped semantic-product dumps still emit definitions in
+      deterministic storage order.
+    - Mutable hand-built semantic products keep their fixture-only raw
+      definition view before `freezeSemanticProgramPublishedStorage(...)`.
+  - stop_rule: Stop once definition formatting uses the public definition view
+    and docs record the remaining TODO-4298 work.
+  - evidence: Rewired `formatSemanticProgram` to use
+    `semanticProgramDefinitionView(...)`, expanded focused frozen dump
+    coverage, and skipped local test execution per the lite workflow.
+
 - [x] TODO-4298: Use published definition views
   - owner: ai
   - created_at: 2026-04-28
