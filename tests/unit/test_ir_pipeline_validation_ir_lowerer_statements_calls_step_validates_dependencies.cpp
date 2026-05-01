@@ -42,10 +42,17 @@ TEST_CASE("ir lowerer statements/calls step validates dependencies") {
           .inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
             return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
           },
+          .inferStructExprPath = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+            return std::string();
+          },
           .emitExpr = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
           .allocTempLocal = []() { return 0; },
           .resolveExprPath = [](const primec::Expr &) { return std::string(); },
           .findDefinitionByPath = [](const std::string &) { return static_cast<const primec::Definition *>(nullptr); },
+          .resolveDestroyHelperForStruct =
+              [](const std::string &) { return static_cast<const primec::Definition *>(nullptr); },
+          .resolveMoveHelperForStruct =
+              [](const std::string &) { return static_cast<const primec::Definition *>(nullptr); },
           .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
           .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
           .isVectorCapacityCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
@@ -59,6 +66,12 @@ TEST_CASE("ir lowerer statements/calls step validates dependencies") {
               [](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool) {
                 return false;
               },
+          .emitArrayIndexOutOfBounds = []() {},
+          .emitVectorCapacityExceeded = []() {},
+          .emitVectorPopOnEmpty = []() {},
+          .emitVectorIndexOutOfBounds = []() {},
+          .emitVectorReserveNegative = []() {},
+          .emitVectorReserveExceeded = []() {},
           .instructions = nullptr,
       },
       stmt,

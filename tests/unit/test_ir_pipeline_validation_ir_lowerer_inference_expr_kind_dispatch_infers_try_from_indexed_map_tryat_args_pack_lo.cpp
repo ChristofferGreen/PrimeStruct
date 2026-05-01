@@ -576,6 +576,9 @@ TEST_CASE("ir lowerer statements/calls step emits assign-or-expr fallback") {
           .inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
             return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
           },
+          .inferStructExprPath = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+            return std::string();
+          },
           .emitExpr =
               [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &localsIn) {
                 ++emitExprCalls;
@@ -589,6 +592,10 @@ TEST_CASE("ir lowerer statements/calls step emits assign-or-expr fallback") {
           .allocTempLocal = [&]() { return allocTempCalls++; },
           .resolveExprPath = [](const primec::Expr &) { return std::string(); },
           .findDefinitionByPath = [](const std::string &) { return static_cast<const primec::Definition *>(nullptr); },
+          .resolveDestroyHelperForStruct =
+              [](const std::string &) { return static_cast<const primec::Definition *>(nullptr); },
+          .resolveMoveHelperForStruct =
+              [](const std::string &) { return static_cast<const primec::Definition *>(nullptr); },
           .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
           .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
           .isVectorCapacityCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
@@ -602,6 +609,12 @@ TEST_CASE("ir lowerer statements/calls step emits assign-or-expr fallback") {
               [](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool) {
                 return false;
               },
+          .emitArrayIndexOutOfBounds = []() {},
+          .emitVectorCapacityExceeded = []() {},
+          .emitVectorPopOnEmpty = []() {},
+          .emitVectorIndexOutOfBounds = []() {},
+          .emitVectorReserveNegative = []() {},
+          .emitVectorReserveExceeded = []() {},
           .instructions = &instructions,
       },
       stmt,
