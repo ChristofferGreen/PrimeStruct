@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 
+#include <algorithm>
 #include <functional>
 #include <string_view>
 
@@ -78,6 +79,30 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/map/").size());
     }
     return normalizedMethodName;
+  };
+  auto receiverHelperFamilyLeaf = [](std::string_view resolvedType) -> std::string {
+    if (resolvedType.empty()) {
+      return {};
+    }
+    const size_t slash = resolvedType.find_last_of('/');
+    const size_t nameStart = slash == std::string_view::npos ? 0 : slash + 1;
+    size_t nameEnd = resolvedType.size();
+    const size_t specialization = resolvedType.find("__t", nameStart);
+    const size_t overload = resolvedType.find("__ov", nameStart);
+    const size_t templateStart = resolvedType.find('<', nameStart);
+    if (specialization != std::string_view::npos) {
+      nameEnd = std::min(nameEnd, specialization);
+    }
+    if (overload != std::string_view::npos) {
+      nameEnd = std::min(nameEnd, overload);
+    }
+    if (templateStart != std::string_view::npos) {
+      nameEnd = std::min(nameEnd, templateStart);
+    }
+    if (nameEnd <= nameStart) {
+      return {};
+    }
+    return std::string(resolvedType.substr(nameStart, nameEnd - nameStart));
   };
   auto normalizedTypeLeafName = [](std::string value) {
     value = normalizeBindingTypeName(value);
@@ -1215,6 +1240,16 @@ bool SemanticsValidator::resolveInferMethodCallPath(
   }
   if (redirectConcreteExperimentalSoaMethodTarget(resolvedType)) {
     return returnWithMethodTargetMemo(true);
+  }
+  const std::string receiverHelperLeaf = receiverHelperFamilyLeaf(resolvedType);
+  if (!receiverHelperLeaf.empty()) {
+    const std::string samePathHelper = joinMethodTarget(resolvedType, normalizedMethodName);
+    const std::string rootedHelper = "/" + receiverHelperLeaf + "/" + normalizedMethodName;
+    if (samePathHelper != rootedHelper && !hasDefinitionFamilyPath(samePathHelper) &&
+        hasDefinitionFamilyPath(rootedHelper)) {
+      resolvedOut = rootedHelper;
+      return returnWithMethodTargetMemo(true);
+    }
   }
   resolvedOut = joinMethodTarget(resolvedType, normalizedMethodName);
   return returnWithMethodTargetMemo(true);

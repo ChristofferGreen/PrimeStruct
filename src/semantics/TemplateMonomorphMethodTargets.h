@@ -165,6 +165,26 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     }
     return false;
   };
+  auto receiverHelperFamilyLeaf = [](std::string_view resolvedType) -> std::string {
+    if (resolvedType.empty()) {
+      return {};
+    }
+    const size_t slash = resolvedType.find_last_of('/');
+    const size_t nameStart = slash == std::string_view::npos ? 0 : slash + 1;
+    size_t nameEnd = resolvedType.size();
+    auto limitNameEnd = [&](size_t candidate) {
+      if (candidate != std::string_view::npos && candidate < nameEnd) {
+        nameEnd = candidate;
+      }
+    };
+    limitNameEnd(resolvedType.find("__t", nameStart));
+    limitNameEnd(resolvedType.find("__ov", nameStart));
+    limitNameEnd(resolvedType.find('<', nameStart));
+    if (nameEnd <= nameStart) {
+      return {};
+    }
+    return std::string(resolvedType.substr(nameStart, nameEnd - nameStart));
+  };
   auto soaCanonicalMethodPath = [](const std::string &helperNameString) {
     return "/std/collections/soa_vector/" + helperNameString;
   };
@@ -475,6 +495,17 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     pathOut = selectHelperOverloadPath(
         expr, preferredSamePathSoaToAosMethodTarget(normalizedMethodName), ctx);
     return true;
+  }
+  const std::string samePathMethodTarget = resolvedType + "/" + normalizedMethodName;
+  const std::string receiverHelperLeaf = receiverHelperFamilyLeaf(resolvedType);
+  if (!receiverHelperLeaf.empty()) {
+    const std::string rootedHelperTarget = "/" + receiverHelperLeaf + "/" + normalizedMethodName;
+    if (samePathMethodTarget != rootedHelperTarget &&
+        !hasDefinitionFamilyPath(samePathMethodTarget) &&
+        hasDefinitionFamilyPath(rootedHelperTarget)) {
+      pathOut = selectHelperOverloadPath(expr, rootedHelperTarget, ctx);
+      return true;
+    }
   }
   pathOut = preferVectorStdlibHelperPath(resolvedType + "/" + normalizedMethodName, ctx.sourceDefs);
   pathOut = selectHelperOverloadPath(expr, pathOut, ctx);

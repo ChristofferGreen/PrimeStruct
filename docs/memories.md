@@ -40,6 +40,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: Removed map aliases such as `/map/count` should count as available only when an explicit source definition family exists, not when template monomorphization has generated a `__...` specialization.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated map helper specializations could mask missing `/map/count` aliases unless removed-alias checks ignored generated-only definition paths.
 
+### maybe-method-helpers-use-rooted-families
+- Updated: 2026-05-01
+- Tags: semantics, stdlib, sums
+- Fact: Imported stdlib `Maybe<T>` method calls resolve through rooted helper families such as `/Maybe/is_empty` and `/Maybe/isSome` even when the receiver type is monomorphized under `/std/maybe/Maybe__...`.
+- Evidence: The saved release log rejected `empty.is_empty()` and `value.isSome()` with unknown call targets until semantic validation and template monomorphization fell back from missing same-path helpers to the rooted `Maybe` helper family.
+
 ### native-vector-auto-inference-expression-blockers
 - Updated: 2026-04-20
 - Tags: tests, native, collections

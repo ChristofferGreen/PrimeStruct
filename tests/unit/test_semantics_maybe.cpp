@@ -1,5 +1,10 @@
 #include "third_party/doctest.h"
 
+#include <algorithm>
+#include <string_view>
+
+#include "primec/SemanticProduct.h"
+
 #include "test_semantics_helpers.h"
 
 TEST_SUITE_BEGIN("primestruct.semantics.maybe");
@@ -72,6 +77,56 @@ none<T>() {
   })
 }
 )";
+
+bool captureStdlibMaybeSemanticProduct(const std::string &source,
+                                       primec::CompilePipelineOutput &output,
+                                       std::string &error) {
+  const std::filesystem::path tempPath = makeTempSemanticSourcePath();
+  {
+    std::ofstream file(tempPath);
+    if (!file) {
+      error = "failed to write semantic test source";
+      return false;
+    }
+    file << source;
+  }
+
+  primec::Options options;
+  options.inputPath = tempPath.string();
+  options.entryPath = "/main";
+  options.emitKind = "native";
+  options.wasmProfile = "wasi";
+  options.defaultEffects = {"io_out", "io_err"};
+  options.entryDefaultEffects = {"io_out", "io_err"};
+  options.dumpStage = "semantic_product";
+  applySemanticsCompilePipelineSemanticProductIntentForTesting(
+      options, SemanticsCompilePipelineSemanticProductIntentForTesting::Require);
+  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+  primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+  const bool ok = primec::runCompilePipeline(options, output, errorStage, error, nullptr);
+
+  std::error_code ec;
+  std::filesystem::remove(tempPath, ec);
+  if (ok && !output.hasSemanticProgram) {
+    error = "compile pipeline did not publish semantic product";
+    return false;
+  }
+  return ok;
+}
+
+const primec::SemanticProgramMethodCallTarget *findMaybeMethodTarget(
+    const primec::SemanticProgram &semanticProgram,
+    std::string_view methodName) {
+  const auto targets = primec::semanticProgramMethodCallTargetView(semanticProgram);
+  const auto it = std::find_if(
+      targets.begin(),
+      targets.end(),
+      [methodName](const primec::SemanticProgramMethodCallTarget &entry) {
+        return entry.scopePath == "/main" && entry.methodName == methodName;
+      });
+  return it == targets.end() ? nullptr : &*it;
+}
 } // namespace
 
 TEST_CASE("maybe some constructs present sum value") {
@@ -346,6 +401,40 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("stdlib maybe helper methods publish rooted semantic-product targets") {
+  const std::string source = R"(
+import /std/maybe/*
+
+[return<int>]
+main() {
+  [Maybe<i32>] empty{none<i32>()}
+  [Maybe<i32>] value{some<i32>(1i32)}
+  if(not(empty.is_empty())) {
+    return(0i32)
+  }
+  if(not(value.isSome())) {
+    return(0i32)
+  }
+  return(1i32)
+}
+)";
+
+  primec::CompilePipelineOutput output;
+  std::string error;
+  REQUIRE(captureStdlibMaybeSemanticProduct(source, output, error));
+  CHECK(error.empty());
+
+  const auto *snakeTarget = findMaybeMethodTarget(output.semanticProgram, "is_empty");
+  REQUIRE(snakeTarget != nullptr);
+  CHECK(primec::semanticProgramMethodCallTargetResolvedPath(
+            output.semanticProgram, *snakeTarget) == "/Maybe/is_empty");
+
+  const auto *camelTarget = findMaybeMethodTarget(output.semanticProgram, "isSome");
+  REQUIRE(camelTarget != nullptr);
+  CHECK(primec::semanticProgramMethodCallTargetResolvedPath(
+            output.semanticProgram, *camelTarget) == "/Maybe/isSome");
 }
 
 TEST_CASE("imported stdlib maybe helpers validate namespaced sum bodies") {
