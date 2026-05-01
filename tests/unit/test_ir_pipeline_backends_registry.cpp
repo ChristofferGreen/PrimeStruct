@@ -5041,6 +5041,11 @@ TEST_CASE("ir lowerer rejects stale semantic-product return facts") {
   CHECK(error == "missing semantic-product return binding type id: /main");
 
   semanticProgram.returnFacts.back().bindingTypeText = "i32";
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
+      &semanticProgram, error));
+  CHECK(error == "missing semantic-product return binding type id: /main");
+
   semanticProgram.returnFacts.back().bindingTypeTextId =
       primec::semanticProgramInternCallTargetString(semanticProgram, "i64");
   error.clear();

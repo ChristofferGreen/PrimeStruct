@@ -230,12 +230,6 @@ bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *se
       error = "missing semantic-product return definition path id";
       return false;
     }
-    const std::string returnBindingType = resolveSemanticResultFactText(
-        *semanticProgram, returnFact->bindingTypeText, returnFact->bindingTypeTextId);
-    if (returnBindingType.empty()) {
-      error = "missing semantic-product return binding type: " + returnDefinitionPath;
-      return false;
-    }
     if (!validateInternedSemanticTextMetadata(*semanticProgram,
                                               returnFact->bindingTypeTextId,
                                               returnFact->bindingTypeText,
@@ -257,6 +251,12 @@ bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *se
                                               "reference root",
                                               returnDefinitionPath,
                                               error)) {
+      return false;
+    }
+    const std::string returnBindingType = resolveSemanticResultFactText(
+        *semanticProgram, returnFact->bindingTypeText, returnFact->bindingTypeTextId);
+    if (returnBindingType.empty()) {
+      error = "missing semantic-product return binding type: " + returnDefinitionPath;
       return false;
     }
     if (returnFact->returnKindId != InvalidSymbolId) {
