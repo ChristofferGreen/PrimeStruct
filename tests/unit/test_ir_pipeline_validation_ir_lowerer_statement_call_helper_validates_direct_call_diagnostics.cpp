@@ -513,15 +513,24 @@ TEST_CASE("ir lowerer statement call helper prefers semantic callable inventory"
   entry.fullPath = "/main/entry";
   primec::Definition skipped;
   skipped.fullPath = "/main/skipped";
+  primec::Definition sum;
+  sum.fullPath = "/main/Maybe__ti32";
   primec::Definition target;
   target.fullPath = "/main/target";
-  program.definitions = {entry, skipped, target};
+  program.definitions = {entry, skipped, sum, target};
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.definitions.push_back(
       {.name = "entry", .fullPath = "/main/entry", .namespacePrefix = "/main"});
   semanticProgram.definitions.push_back(
+      {.name = "Maybe__ti32", .fullPath = "/main/Maybe__ti32", .namespacePrefix = "/main"});
+  semanticProgram.definitions.push_back(
       {.name = "target", .fullPath = "/main/target", .namespacePrefix = "/main"});
+  semanticProgram.typeMetadata.push_back(primec::SemanticProgramTypeMetadata{
+      .fullPath = "/main/Maybe__ti32",
+      .category = "sum",
+      .isPublic = true,
+  });
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
       .isExecution = false,
       .returnKind = "void",
@@ -542,7 +551,11 @@ TEST_CASE("ir lowerer statement call helper prefers semantic callable inventory"
       .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main/target"),
   });
 
-  std::unordered_set<std::string> loweredCallTargets = {"/main/skipped", "/main/target"};
+  std::unordered_set<std::string> loweredCallTargets = {
+      "/main/skipped",
+      "/main/Maybe__ti32",
+      "/main/target",
+  };
   primec::IrFunction function;
   int32_t nextLocal = 0;
   std::vector<primec::IrFunction> outFunctions;

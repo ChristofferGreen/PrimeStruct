@@ -23,6 +23,27 @@ std::unordered_map<std::string, const Definition *> buildDefinitionBodyLookup(co
   return definitionsByPath;
 }
 
+bool isSumDefinitionForCallableOrchestration(const Definition &def,
+                                             const SemanticProgram *semanticProgram) {
+  if (definitionHasTransform(def, "sum")) {
+    return true;
+  }
+  if (semanticProgram == nullptr) {
+    return false;
+  }
+  if (const auto *typeMetadata =
+          semanticProgramLookupTypeMetadata(*semanticProgram, def.fullPath);
+      typeMetadata != nullptr) {
+    return typeMetadata->category == "sum";
+  }
+  for (const auto &sumMetadata : semanticProgram->sumTypeMetadata) {
+    if (sumMetadata.fullPath == def.fullPath) {
+      return true;
+    }
+  }
+  return false;
+}
+
 } // namespace
 
 bool buildCallableDefinitionCallContext(
@@ -185,6 +206,7 @@ CallableDefinitionOrchestrationResult lowerCallableDefinitionOrchestration(
   const auto definitionsByPath = buildDefinitionBodyLookup(program);
   auto lowerDefinition = [&](const Definition &def) -> CallableDefinitionOrchestrationResult {
     if (def.fullPath == entryDef.fullPath || isStructDefinition(def) ||
+        isSumDefinitionForCallableOrchestration(def, semanticProgram) ||
         loweredCallTargets.find(def.fullPath) == loweredCallTargets.end()) {
       return CallableDefinitionOrchestrationResult::Emitted;
     }
