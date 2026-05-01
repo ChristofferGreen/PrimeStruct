@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 1, 2026)**
+- [x] TODO-4298: Use published call-target maps
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-01
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes direct-call,
+    method-call, and bridge-path adapter helpers consume only published
+    routing lookup maps for target paths and stdlib surface ids.
+  - acceptance:
+    - Lowerer adapter target helpers resolve direct-call, method-call, and
+      bridge-path paths only from published routing lookup maps.
+    - Lowerer adapter stdlib-surface helpers resolve the same families only
+      from published routing lookup maps.
+    - Raw semantic-product target vectors without published maps stay
+      unresolved for adapter consumers, while published maps still resolve.
+  - stop_rule: Stop once lowerer adapter target and surface lookup helpers
+    treat published routing maps as the authority and docs record the
+    remaining TODO-4298 work.
+  - evidence: Removed the raw semantic-id scans from lowerer adapter
+    direct-call, method-call, and bridge-path lookups, expanded focused
+    adapter coverage for raw-fact-only and published-map cases, updated
+    hand-built fixtures to publish routing maps explicitly, and skipped local
+    test execution per the lite workflow.
+
 - [x] TODO-4298: Use semantic ids for pick bindings
   - owner: ai
   - created_at: 2026-04-28

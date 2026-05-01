@@ -414,6 +414,10 @@ Planned non-template inference migration contract:
   metadata before lowerer bridge-routing consumers can dispatch through bridge-path choice facts.
   Missing or contradictory present ids fail closed with deterministic bridge-path metadata
   diagnostics.
+- Completed lowerer call-target adapter lookup slice: direct-call, method-call, and bridge-path
+  target and stdlib-surface helpers now resolve only through published routing lookup maps. Raw
+  semantic-product target vectors remain stored facts, but missing published maps no longer recover
+  targets by scanning those vectors by semantic node id.
 - Completed native pick target sum slice: semantic-product-addressed `pick(value)` lowering now
   resolves named targets from the published binding fact and confirms the sum layout through
   published sum metadata before local-map shape reconstruction can answer. Missing sum metadata or

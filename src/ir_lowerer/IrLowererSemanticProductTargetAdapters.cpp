@@ -189,51 +189,6 @@ struct SemanticProductIndexBuilder {
   }
 };
 
-const SemanticProgramDirectCallTarget *findDirectCallTargetBySemanticId(
-    const SemanticProgram &semanticProgram,
-    uint64_t semanticNodeId) {
-  if (semanticNodeId == 0) {
-    return nullptr;
-  }
-  const auto directCallTargets = semanticProgramDirectCallTargetView(semanticProgram);
-  for (const auto *entry : directCallTargets) {
-    if (entry != nullptr && entry->semanticNodeId == semanticNodeId) {
-      return entry;
-    }
-  }
-  return nullptr;
-}
-
-const SemanticProgramMethodCallTarget *findMethodCallTargetBySemanticId(
-    const SemanticProgram &semanticProgram,
-    uint64_t semanticNodeId) {
-  if (semanticNodeId == 0) {
-    return nullptr;
-  }
-  const auto methodCallTargets = semanticProgramMethodCallTargetView(semanticProgram);
-  for (const auto *entry : methodCallTargets) {
-    if (entry != nullptr && entry->semanticNodeId == semanticNodeId) {
-      return entry;
-    }
-  }
-  return nullptr;
-}
-
-const SemanticProgramBridgePathChoice *findBridgePathChoiceBySemanticId(
-    const SemanticProgram &semanticProgram,
-    uint64_t semanticNodeId) {
-  if (semanticNodeId == 0) {
-    return nullptr;
-  }
-  const auto bridgePathChoices = semanticProgramBridgePathChoiceView(semanticProgram);
-  for (const auto *entry : bridgePathChoices) {
-    if (entry != nullptr && entry->semanticNodeId == semanticNodeId) {
-      return entry;
-    }
-  }
-  return nullptr;
-}
-
 } // namespace
 
 SemanticProductIndex buildSemanticProductIndex(const SemanticProgram *semanticProgram) {
@@ -274,10 +229,6 @@ std::string findSemanticProductDirectCallTarget(const SemanticProgram *semanticP
         pathId.has_value()) {
       return resolvePathId(*pathId);
     }
-    if (const auto *entry = findDirectCallTargetBySemanticId(*semanticProgram, expr.semanticNodeId);
-        entry != nullptr) {
-      return resolvePathId(entry->resolvedPathId);
-    }
   }
   return {};
 }
@@ -297,10 +248,6 @@ std::optional<StdlibSurfaceId> findSemanticProductDirectCallStdlibSurfaceId(
             *semanticProgram, expr.semanticNodeId);
         surfaceId.has_value()) {
       return surfaceId;
-    }
-    if (const auto *entry = findDirectCallTargetBySemanticId(*semanticProgram, expr.semanticNodeId);
-        entry != nullptr) {
-      return semanticProgramDirectCallTargetStdlibSurfaceId(*entry);
     }
   }
   return std::nullopt;
@@ -333,10 +280,6 @@ std::string findSemanticProductMethodCallTarget(const SemanticProgram *semanticP
         pathId.has_value()) {
       return resolvePathId(*pathId);
     }
-    if (const auto *entry = findMethodCallTargetBySemanticId(*semanticProgram, expr.semanticNodeId);
-        entry != nullptr) {
-      return resolvePathId(entry->resolvedPathId);
-    }
   }
   return {};
 }
@@ -356,10 +299,6 @@ std::optional<StdlibSurfaceId> findSemanticProductMethodCallStdlibSurfaceId(
             *semanticProgram, expr.semanticNodeId);
         surfaceId.has_value()) {
       return surfaceId;
-    }
-    if (const auto *entry = findMethodCallTargetBySemanticId(*semanticProgram, expr.semanticNodeId);
-        entry != nullptr) {
-      return semanticProgramMethodCallTargetStdlibSurfaceId(*entry);
     }
   }
   return std::nullopt;
@@ -384,20 +323,6 @@ std::string findSemanticProductBridgePathChoice(const SemanticProgram *semanticP
       return std::string(chosenPath);
     }
   }
-  if (const auto *entry = findBridgePathChoiceBySemanticId(*semanticProgram, expr.semanticNodeId);
-      entry != nullptr && entry->chosenPathId != InvalidSymbolId &&
-      entry->helperNameId != InvalidSymbolId) {
-    const std::string_view helperName =
-        semanticProgramBridgePathChoiceHelperName(*semanticProgram, *entry);
-    if (helperName.empty()) {
-      return {};
-    }
-    const std::string_view chosenPath =
-        semanticProgramResolveCallTargetString(*semanticProgram, entry->chosenPathId);
-    if (!chosenPath.empty()) {
-      return std::string(chosenPath);
-    }
-  }
   return {};
 }
 
@@ -415,10 +340,6 @@ std::optional<StdlibSurfaceId> findSemanticProductBridgePathChoiceStdlibSurfaceI
           *semanticProgram, expr.semanticNodeId);
       surfaceId.has_value()) {
     return surfaceId;
-  }
-  if (const auto *entry = findBridgePathChoiceBySemanticId(*semanticProgram, expr.semanticNodeId);
-      entry != nullptr) {
-    return semanticProgramBridgePathChoiceStdlibSurfaceId(*entry);
   }
   return std::nullopt;
 }

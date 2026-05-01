@@ -475,7 +475,9 @@ Task template:
     base call-kind `try(...)` fact authority slice is complete. The lowerer
     base call-kind Result method fact-authority slice is complete for
     semantic-product-addressed `Result.ok(...)`, `Result.error(...)`, and
-    `Result.why(...)` calls.
+    `Result.why(...)` calls. The lowerer call-target adapter published-map
+    authority slice is complete for direct-call, method-call, and bridge-path
+    target and stdlib-surface lookups.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -692,6 +694,10 @@ Task template:
       now rejects missing or stale interned scope, collection family, chosen
       path, and published lookup metadata before lowerer routing consumers can
       dispatch through inconsistent bridge-path choice facts.
+    - Completed slice: lowerer call-target adapter helpers now resolve
+      direct-call, method-call, and bridge-path target paths and stdlib surface
+      ids only from published routing lookup maps. Raw semantic-product target
+      vectors no longer recover missing published maps by semantic-node scan.
     - Completed slice: native `pick(value)` lowering now uses the published
       binding fact plus published sum metadata to resolve named pick targets,
       instead of letting local-map shape reconstruction own that decision on

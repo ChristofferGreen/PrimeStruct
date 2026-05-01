@@ -654,6 +654,42 @@ TEST_CASE("published target lookups ignore raw routing facts without maps") {
                   semanticProgram, 13)
                   .has_value());
 
+  primec::Expr directExpr;
+  directExpr.kind = primec::Expr::Kind::Call;
+  directExpr.name = "helper";
+  directExpr.semanticNodeId = 11;
+  primec::Expr methodExpr;
+  methodExpr.kind = primec::Expr::Kind::Call;
+  methodExpr.isMethodCall = true;
+  methodExpr.name = "count";
+  methodExpr.semanticNodeId = 12;
+  primec::Expr bridgeExpr;
+  bridgeExpr.kind = primec::Expr::Kind::Call;
+  bridgeExpr.name = "count";
+  bridgeExpr.semanticNodeId = 13;
+
+  const auto rawFactOnlyAdapter =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  CHECK(primec::ir_lowerer::findSemanticProductDirectCallTarget(
+            rawFactOnlyAdapter, directExpr)
+            .empty());
+  CHECK_FALSE(primec::ir_lowerer::findSemanticProductDirectCallStdlibSurfaceId(
+                  rawFactOnlyAdapter, directExpr)
+                  .has_value());
+  CHECK(primec::ir_lowerer::findSemanticProductMethodCallTarget(
+            rawFactOnlyAdapter, methodExpr)
+            .empty());
+  CHECK_FALSE(primec::ir_lowerer::findSemanticProductMethodCallStdlibSurfaceId(
+                  rawFactOnlyAdapter, methodExpr)
+                  .has_value());
+  CHECK(primec::ir_lowerer::findSemanticProductBridgePathChoice(
+            rawFactOnlyAdapter, bridgeExpr)
+            .empty());
+  CHECK_FALSE(
+      primec::ir_lowerer::findSemanticProductBridgePathChoiceStdlibSurfaceId(
+          rawFactOnlyAdapter, bridgeExpr)
+          .has_value());
+
   semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr
       .insert_or_assign(11, directPathId);
   semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr
@@ -684,6 +720,24 @@ TEST_CASE("published target lookups ignore raw routing facts without maps") {
         primec::StdlibSurfaceId::CollectionsVectorHelpers);
   CHECK(primec::semanticProgramLookupPublishedBridgePathChoiceStdlibSurfaceId(
             semanticProgram, 13) ==
+        primec::StdlibSurfaceId::CollectionsVectorHelpers);
+
+  const auto publishedLookupAdapter =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  CHECK(primec::ir_lowerer::findSemanticProductDirectCallTarget(
+            publishedLookupAdapter, directExpr) == "/helper");
+  CHECK(primec::ir_lowerer::findSemanticProductDirectCallStdlibSurfaceId(
+            publishedLookupAdapter, directExpr) ==
+        primec::StdlibSurfaceId::CollectionsMapHelpers);
+  CHECK(primec::ir_lowerer::findSemanticProductMethodCallTarget(
+            publishedLookupAdapter, methodExpr) == "/vector/count");
+  CHECK(primec::ir_lowerer::findSemanticProductMethodCallStdlibSurfaceId(
+            publishedLookupAdapter, methodExpr) ==
+        primec::StdlibSurfaceId::CollectionsVectorHelpers);
+  CHECK(primec::ir_lowerer::findSemanticProductBridgePathChoice(
+            publishedLookupAdapter, bridgeExpr) == "/vector/count");
+  CHECK(primec::ir_lowerer::findSemanticProductBridgePathChoiceStdlibSurfaceId(
+            publishedLookupAdapter, bridgeExpr) ==
         primec::StdlibSurfaceId::CollectionsVectorHelpers);
 }
 
