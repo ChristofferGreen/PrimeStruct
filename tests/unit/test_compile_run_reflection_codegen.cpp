@@ -46,7 +46,7 @@ TEST_CASE("reflection codegen ir dump keeps generated helper call sites") {
   const std::string ir = readFile(outPath);
 
   const size_t equalPos = ir.find("/Pair/Equal(copy, baseline)");
-  const size_t notEqualPos = ir.find("/Pair/NotEqual(copy, Pair{[x] 9, [y] 2})");
+  const size_t notEqualPos = ir.find("/Pair/NotEqual(copy, Pair{[x] 9i32, [y] 2i32})");
   const size_t defaultPos = ir.find("/Pair/Default()");
   const size_t isDefaultPos = ir.find("/Pair/IsDefault(baseline)");
   const size_t clonePos = ir.find("/Pair/Clone(baseline)");
