@@ -398,6 +398,57 @@ void SemanticsValidator::ensureQuerySnapshotFactCaches() {
     queryFactSnapshotCache_.push_back(std::move(factEntry));
   });
 
+  auto hasQueryFactSnapshot = [&](const QueryFactSnapshotEntry &candidate) {
+    return std::any_of(queryFactSnapshotCache_.begin(),
+                       queryFactSnapshotCache_.end(),
+                       [&](const QueryFactSnapshotEntry &entry) {
+                         return entry.scopePath == candidate.scopePath &&
+                                entry.callName == candidate.callName &&
+                                entry.sourceLine == candidate.sourceLine &&
+                                entry.sourceColumn == candidate.sourceColumn &&
+                                entry.resolvedPath == candidate.resolvedPath &&
+                                entry.semanticNodeId == candidate.semanticNodeId;
+                       });
+  };
+  auto appendQueryFactSnapshotIfMissing = [&](QueryFactSnapshotEntry factEntry) {
+    if (!hasQueryFactSnapshot(factEntry)) {
+      queryFactSnapshotCache_.push_back(std::move(factEntry));
+    }
+  };
+
+  forEachLocalAwareSnapshotCall([&](const Definition &def,
+                                    const std::vector<ParameterInfo> &defParams,
+                                    const Expr &expr,
+                                    const std::unordered_map<std::string, BindingInfo> &activeLocals) {
+    if (!isSimpleCallName(expr, "pick") || expr.args.size() != 1 ||
+        (!expr.hasBodyArguments && expr.bodyArguments.empty())) {
+      return;
+    }
+    const Expr &target = expr.args.front();
+    if (target.kind != Expr::Kind::Call) {
+      return;
+    }
+    QuerySnapshotData queryData;
+    if (!inferQuerySnapshotData(defParams, activeLocals, target, queryData)) {
+      return;
+    }
+    appendQueryFactSnapshotIfMissing(QueryFactSnapshotEntry{
+        def.fullPath,
+        target.name,
+        queryData.resolvedPath,
+        target.sourceLine,
+        target.sourceColumn,
+        queryData.typeText,
+        queryData.binding,
+        queryData.receiverBinding,
+        queryData.resultInfo.isResult,
+        queryData.resultInfo.isResult && queryData.resultInfo.hasValue,
+        queryData.resultInfo.valueType,
+        queryData.resultInfo.errorType,
+        target.semanticNodeId,
+    });
+  });
+
   std::stable_sort(queryFactSnapshotCache_.begin(),
                    queryFactSnapshotCache_.end(),
                    [](const auto &left, const auto &right) {

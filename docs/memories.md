@@ -58,6 +58,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: Direct `Result.ok(...)` arithmetic payload calls such as `multiply(...)` are syntax-owned builtin payloads and must not require semantic-product query metadata before normal expression-kind inference can classify them.
 - Evidence: The saved release log showed `missing semantic-product Result.ok payload metadata: multiply`; `IrLowererPackedResultHelpers.cpp` now exempts builtin operators from the semantic payload metadata requirement alongside builtin comparisons.
 
+### semantic-product-pick-target-query-facts
+- Updated: 2026-05-01
+- Tags: semantics, ir, sums
+- Fact: Sum `pick(...)` targets that are direct or method calls must publish semantic-product query facts because native/VM pick lowering resolves the target sum type from those facts.
+- Evidence: The saved release log failed `native pick call target sum resolution uses query facts` and its method-target companion; `SemanticsValidatorSnapshotLocals.cpp` now adds a deduped recovery pass for `pick` target calls, with regression coverage in `test_semantics_type_resolution_graph_snapshots.cpp`.
+
 ### semantic-product-routing-completeness-gates-lowering
 - Updated: 2026-05-01
 - Tags: semantics, ir, routing

@@ -2804,6 +2804,85 @@ TEST_CASE("semantic product query facts prefer local bindings over math constant
   CHECK(queryEntry->bindingTypeText == "f32");
 }
 
+TEST_CASE("semantic product query facts include sum pick call targets") {
+  const std::string source = R"(
+[sum]
+Choice {
+  [i32] left
+  [i32] right
+}
+
+[struct]
+Picker {
+  [i32] seed
+}
+
+[return<Choice>]
+makeChoice() {
+  [Choice] choice{[right] 41i32}
+  return(choice)
+}
+
+[return<Choice>]
+/Picker/makeChoice([Picker] self) {
+  [Choice] choice{[right] self.seed}
+  return(choice)
+}
+
+[return<int>]
+main() {
+  [Picker] picker{Picker{7i32}}
+  [i32] first{pick(makeChoice()) {
+    left(value) {
+      plus(value, 1i32)
+    }
+    right(value) {
+      plus(value, 2i32)
+    }
+  }}
+  return(pick(picker.makeChoice()) {
+    left(value) {
+      plus(first, value)
+    }
+    right(value) {
+      plus(first, value)
+    }
+  })
+}
+)";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  const auto queryFacts = primec::semanticProgramQueryFactView(semanticProgram);
+  const auto *directPickTarget = findSemanticEntry(
+      queryFacts,
+      [&semanticProgram](const primec::SemanticProgramQueryFact &entry) {
+        return entry.scopePath == "/main" &&
+               entry.callName == "makeChoice" &&
+               primec::semanticProgramQueryFactResolvedPath(
+                   semanticProgram, entry) == "/makeChoice";
+      });
+  REQUIRE(directPickTarget != nullptr);
+  CHECK(directPickTarget->bindingTypeText == "Choice");
+
+  const auto *methodPickTarget = findSemanticEntry(
+      queryFacts,
+      [&semanticProgram](const primec::SemanticProgramQueryFact &entry) {
+        return entry.scopePath == "/main" &&
+               entry.callName == "makeChoice" &&
+               primec::semanticProgramQueryFactResolvedPath(
+                   semanticProgram, entry) == "/Picker/makeChoice";
+      });
+  REQUIRE(methodPickTarget != nullptr);
+  CHECK(methodPickTarget->bindingTypeText == "Choice");
+}
+
 TEST_CASE("semantic product query facts carry interned text ids") {
   const std::string source =
       "[return<i32>]\n"
