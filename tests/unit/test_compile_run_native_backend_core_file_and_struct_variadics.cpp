@@ -506,7 +506,7 @@ main() {
   CHECK(runCommand(exePath) == 101);
 }
 
-TEST_CASE("native rejects direct struct variadic args packs for count") {
+TEST_CASE("native materializes direct struct variadic args packs for count") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -526,17 +526,14 @@ main() {
   const std::string srcPath = writeTemp("compile_native_variadic_args_struct_count.prime", source);
   const std::string exePath =
       (testScratchPath("") / "primec_native_variadic_args_struct_count").string();
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_variadic_args_struct_count.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("Native lowering error: variadic parameter type mismatch") !=
-        std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("native rejects pure spread struct variadic packs for count") {
+TEST_CASE("native materializes pure spread struct variadic packs for count") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -561,17 +558,14 @@ main() {
   const std::string srcPath = writeTemp("compile_native_variadic_args_struct_spread.prime", source);
   const std::string exePath =
       (testScratchPath("") / "primec_native_variadic_args_struct_spread").string();
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_variadic_args_struct_spread.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("Native lowering error: variadic parameter type mismatch") !=
-        std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("native rejects mixed struct spread variadic forwarding for count") {
+TEST_CASE("native materializes mixed struct spread variadic forwarding for count") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -596,17 +590,14 @@ main() {
   const std::string srcPath = writeTemp("compile_native_variadic_args_struct_mixed.prime", source);
   const std::string exePath =
       (testScratchPath("") / "primec_native_variadic_args_struct_mixed").string();
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_variadic_args_struct_mixed.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("Native lowering error: variadic parameter type mismatch") !=
-        std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("native rejects direct struct variadic pack indexing and method access") {
+TEST_CASE("native materializes direct struct variadic pack indexing and method access") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -633,14 +624,11 @@ main() {
   const std::string srcPath = writeTemp("compile_native_variadic_args_struct_index.prime", source);
   const std::string exePath =
       (testScratchPath("") / "primec_native_variadic_args_struct_index").string();
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_variadic_args_struct_index.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("Native lowering error: variadic parameter type mismatch") !=
-        std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 17);
 }
 
 
