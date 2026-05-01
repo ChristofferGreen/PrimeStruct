@@ -84,6 +84,39 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("imported canonical map count validates borrowed args pack indexed receivers") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+score_refs([args<Reference</std/collections/map<i32, i32>>>] values) {
+  return(plus(values[0i32].count(),
+              dereference(at(values, 1i32)).count()))
+}
+
+[return<int>]
+score_ptrs([args<Pointer</std/collections/map<i32, i32>>>] values) {
+  return(plus(values[0i32].count(),
+              dereference(at(values, 1i32)).count()))
+}
+
+[return<int>]
+main() {
+  [/std/collections/map<i32, i32>] left{map<i32, i32>(1i32, 2i32)}
+  [/std/collections/map<i32, i32>] right{map<i32, i32>(3i32, 4i32, 5i32, 6i32)}
+  [Reference</std/collections/map<i32, i32>>] left_ref{location(left)}
+  [Reference</std/collections/map<i32, i32>>] right_ref{location(right)}
+  [Pointer</std/collections/map<i32, i32>>] left_ptr{location(left)}
+  [Pointer</std/collections/map<i32, i32>>] right_ptr{location(right)}
+  return(plus(score_refs(left_ref, right_ref),
+              score_ptrs(left_ptr, right_ptr)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("bare map count call still validates when only compatibility alias is present") {
   const std::string source = R"(
 [return<int>]

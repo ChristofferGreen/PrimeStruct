@@ -346,21 +346,16 @@ bool SemanticsValidator::validateExprMethodCallTarget(
           !resolveMapTarget(expr.args.front())) {
         return false;
       }
-      const std::string canonicalMapMethodTarget =
-          "/std/collections/map/" + helperName;
-      const std::string aliasMapMethodTarget =
-          "/map/" + helperName;
-      if (hasDeclaredDefinitionPath(canonicalMapMethodTarget) ||
-          hasImportedDefinitionPath(canonicalMapMethodTarget)) {
-        resolved = canonicalMapMethodTarget;
-      } else if (hasDeclaredDefinitionPath(aliasMapMethodTarget) ||
-                 hasImportedDefinitionPath(aliasMapMethodTarget)) {
-        resolved = aliasMapMethodTarget;
-      } else {
-        resolved = canonicalMapMethodTarget;
+      resolved = preferredMapMethodTargetForCall(params, locals, expr.args.front(),
+                                                helperName);
+      std::string resolvedHelperName = helperName;
+      const size_t helperSeparator = resolved.find_last_of('/');
+      if (helperSeparator != std::string::npos &&
+          helperSeparator + 1 < resolved.size()) {
+        resolvedHelperName = resolved.substr(helperSeparator + 1);
       }
       if (resolved.rfind("/std/collections/map/", 0) == 0 &&
-          (shouldBuiltinValidateCurrentMapWrapperHelper(helperName) ||
+          (shouldBuiltinValidateCurrentMapWrapperHelper(resolvedHelperName) ||
            hasImportedDefinitionPath(resolved))) {
         isBuiltinMethod = true;
       } else {

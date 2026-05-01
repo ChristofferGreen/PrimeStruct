@@ -430,17 +430,115 @@ std::string SemanticsValidator::preferredMapMethodTargetForCall(
     const std::unordered_map<std::string, BindingInfo> &locals,
     const Expr &receiverExpr,
     const std::string &helperName) {
+  auto bindingTypeText = [](const BindingInfo &binding) {
+    if (binding.typeTemplateArg.empty()) {
+      return binding.typeName;
+    }
+    return binding.typeName + "<" + binding.typeTemplateArg + ">";
+  };
+  auto isWrappedMapTypeText = [](const std::string &typeText) {
+    std::string base;
+    std::string argText;
+    if (!splitTemplateTypeName(normalizeBindingTypeName(typeText), base,
+                               argText)) {
+      return false;
+    }
+    base = normalizeBindingTypeName(base);
+    if (base != "Reference" && base != "Pointer") {
+      return false;
+    }
+    std::vector<std::string> args;
+    if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+      return false;
+    }
+    std::string keyType;
+    std::string valueType;
+    return extractMapKeyValueTypesFromTypeText(args.front(), keyType, valueType);
+  };
+  auto isWrappedMapBinding = [&](const BindingInfo &binding) {
+    return isWrappedMapTypeText(bindingTypeText(binding));
+  };
+  auto isWrappedArgsPackAccess = [&](const Expr &candidate) {
+    if (candidate.kind != Expr::Kind::Call || candidate.isBinding ||
+        candidate.args.size() != 2) {
+      return false;
+    }
+    std::string accessName;
+    if (!getBuiltinArrayAccessName(candidate, accessName)) {
+      return false;
+    }
+    const Expr *accessReceiver = resolveBuiltinAccessReceiverExpr(candidate);
+    if (accessReceiver == nullptr || accessReceiver->kind != Expr::Kind::Name) {
+      return false;
+    }
+    std::string elemType;
+    if (const BindingInfo *paramBinding =
+            findParamBinding(params, accessReceiver->name)) {
+      return getArgsPackElementType(*paramBinding, elemType) &&
+             isWrappedMapTypeText(elemType);
+    }
+    auto localIt = locals.find(accessReceiver->name);
+    return localIt != locals.end() &&
+           getArgsPackElementType(localIt->second, elemType) &&
+           isWrappedMapTypeText(elemType);
+  };
+  auto isWrappedMapReceiver = [&](const Expr &candidate) {
+    if (candidate.kind == Expr::Kind::Name) {
+      if (const BindingInfo *paramBinding =
+              findParamBinding(params, candidate.name)) {
+        return isWrappedMapBinding(*paramBinding);
+      }
+      auto localIt = locals.find(candidate.name);
+      return localIt != locals.end() && isWrappedMapBinding(localIt->second);
+    }
+    if (isWrappedArgsPackAccess(candidate)) {
+      return true;
+    }
+    const std::string previousError = error_;
+    error_.clear();
+    std::string inferredTypeText;
+    const bool inferred =
+        inferQueryExprTypeText(candidate, params, locals, inferredTypeText);
+    error_.clear();
+    error_ = previousError;
+    return inferred && isWrappedMapTypeText(inferredTypeText);
+  };
+  auto borrowedHelperNameForReceiver = [&](std::string selectedHelperName) {
+    if (!isWrappedMapReceiver(receiverExpr)) {
+      return selectedHelperName;
+    }
+    if (selectedHelperName == "count") {
+      return std::string("count_ref");
+    }
+    if (selectedHelperName == "contains") {
+      return std::string("contains_ref");
+    }
+    if (selectedHelperName == "tryAt") {
+      return std::string("tryAt_ref");
+    }
+    if (selectedHelperName == "at") {
+      return std::string("at_ref");
+    }
+    if (selectedHelperName == "at_unsafe") {
+      return std::string("at_unsafe_ref");
+    }
+    if (selectedHelperName == "insert") {
+      return std::string("insert_ref");
+    }
+    return selectedHelperName;
+  };
+  const std::string selectedHelperName = borrowedHelperNameForReceiver(helperName);
   std::string keyType;
   std::string valueType;
   if (resolveInferExperimentalMapTarget(params, locals, receiverExpr, keyType, valueType)) {
-    const std::string canonical = "/std/collections/map/" + helperName;
+    const std::string canonical = "/std/collections/map/" + selectedHelperName;
     if (hasDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
       return canonical;
     }
-    return preferredCanonicalExperimentalMapHelperTarget(helperName);
+    return preferredCanonicalExperimentalMapHelperTarget(selectedHelperName);
   }
-  const std::string canonical = "/std/collections/map/" + helperName;
-  const std::string alias = "/map/" + helperName;
+  const std::string canonical = "/std/collections/map/" + selectedHelperName;
+  const std::string alias = "/map/" + selectedHelperName;
   if (hasDefinitionPath(alias)) {
     return alias;
   }
