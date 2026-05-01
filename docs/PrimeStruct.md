@@ -832,6 +832,10 @@ Compile-pipeline publication contract:
 - Local-auto fact lookup follows the same published-map authority rule for semantic-node ids: public published
   local-auto lookup helpers and the lowerer semantic-product adapter require `localAutoFactIndicesByExpr` for
   expression-scoped local-auto facts instead of recovering by scanning raw `localAutoFacts` storage.
+- Collection-specialization lookup follows the same published-map authority rule for semantic-node ids: public
+  published collection-specialization lookup helpers and the lowerer semantic-product adapter require
+  `collectionSpecializationIndicesByExpr` for expression-scoped collection facts instead of recovering by scanning
+  raw `collectionSpecializations` storage.
 - Query, `try(...)`, and `on_error` lowering/completeness checks follow the same rule: semantic-node-id facts are the
   production authority, while resolved-path/source/path-id indexes remain inspection metadata only.
 - The lowerer semantic-product adapter no longer builds local-auto initializer-path, query resolved-path/call-name, or

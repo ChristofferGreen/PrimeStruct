@@ -3822,6 +3822,8 @@ TEST_CASE("ir lowerer rejects stale semantic-product collection metadata") {
           .helperSurfaceId = std::nullopt,
           .constructorSurfaceId = std::nullopt,
       });
+  semanticProgram.publishedRoutingLookups.collectionSpecializationIndicesByExpr.insert_or_assign(
+      43, 0);
 
   auto refreshCollectionIds = [&]() {
     auto &collectionFact = semanticProgram.collectionSpecializations.back();

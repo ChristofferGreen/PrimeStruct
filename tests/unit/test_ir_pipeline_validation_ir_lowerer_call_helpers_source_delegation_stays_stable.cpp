@@ -2672,6 +2672,115 @@ TEST_CASE("ir lowerer semantic-product adapter uses local-auto semantic-id match
   CHECK(localAutoFact->bindingTypeText == "i32");
 }
 
+TEST_CASE("ir lowerer semantic-product adapter ignores raw collection specializations without maps") {
+  primec::Expr collectionExpr;
+  collectionExpr.kind = primec::Expr::Kind::Name;
+  collectionExpr.name = "values";
+  collectionExpr.semanticNodeId = 7701;
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.collectionSpecializations.push_back(
+      primec::SemanticProgramCollectionSpecialization{
+          .scopePath = "/main",
+          .siteKind = "local",
+          .name = "values",
+          .collectionFamily = "vector",
+          .bindingTypeText = "vector<i32>",
+          .elementTypeText = "i32",
+          .keyTypeText = "",
+          .valueTypeText = "",
+          .isReference = false,
+          .isPointer = false,
+          .sourceLine = 15,
+          .sourceColumn = 7,
+          .semanticNodeId = 7701,
+          .provenanceHandle = 0,
+          .scopePathId =
+              primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+          .siteKindId =
+              primec::semanticProgramInternCallTargetString(semanticProgram, "local"),
+          .nameId = primec::semanticProgramInternCallTargetString(semanticProgram, "values"),
+          .collectionFamilyId =
+              primec::semanticProgramInternCallTargetString(semanticProgram, "vector"),
+          .bindingTypeTextId =
+              primec::semanticProgramInternCallTargetString(semanticProgram, "vector<i32>"),
+          .elementTypeTextId =
+              primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+          .keyTypeTextId = primec::InvalidSymbolId,
+          .valueTypeTextId = primec::InvalidSymbolId,
+          .helperSurfaceId = std::nullopt,
+          .constructorSurfaceId = std::nullopt,
+      });
+
+  CHECK(primec::semanticProgramLookupPublishedCollectionSpecializationBySemanticId(
+            semanticProgram, 7701) == nullptr);
+
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+  CHECK(semanticIndex.collectionSpecializationsByExpr.empty());
+  const auto *collectionFact =
+      primec::ir_lowerer::findSemanticProductCollectionSpecialization(
+          semanticIndex, collectionExpr);
+  CHECK(collectionFact == nullptr);
+}
+
+TEST_CASE("ir lowerer semantic-product adapter uses collection specialization semantic-id maps") {
+  primec::Expr collectionExpr;
+  collectionExpr.kind = primec::Expr::Kind::Name;
+  collectionExpr.name = "values";
+  collectionExpr.semanticNodeId = 7702;
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.collectionSpecializations.push_back(
+      primec::SemanticProgramCollectionSpecialization{
+          .scopePath = "/main",
+          .siteKind = "local",
+          .name = "values",
+          .collectionFamily = "vector",
+          .bindingTypeText = "vector<i32>",
+          .elementTypeText = "i32",
+          .keyTypeText = "",
+          .valueTypeText = "",
+          .isReference = false,
+          .isPointer = false,
+          .sourceLine = 16,
+          .sourceColumn = 7,
+          .semanticNodeId = 7702,
+          .provenanceHandle = 0,
+          .scopePathId =
+              primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+          .siteKindId =
+              primec::semanticProgramInternCallTargetString(semanticProgram, "local"),
+          .nameId = primec::semanticProgramInternCallTargetString(semanticProgram, "values"),
+          .collectionFamilyId =
+              primec::semanticProgramInternCallTargetString(semanticProgram, "vector"),
+          .bindingTypeTextId =
+              primec::semanticProgramInternCallTargetString(semanticProgram, "vector<i32>"),
+          .elementTypeTextId =
+              primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+          .keyTypeTextId = primec::InvalidSymbolId,
+          .valueTypeTextId = primec::InvalidSymbolId,
+          .helperSurfaceId = std::nullopt,
+          .constructorSurfaceId = std::nullopt,
+      });
+  semanticProgram.publishedRoutingLookups.collectionSpecializationIndicesByExpr
+      .insert_or_assign(7702, 0);
+
+  CHECK(primec::semanticProgramLookupPublishedCollectionSpecializationBySemanticId(
+            semanticProgram, 7702) == &semanticProgram.collectionSpecializations[0]);
+
+  const auto adapter =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  const auto *collectionFact =
+      primec::ir_lowerer::findSemanticProductCollectionSpecialization(
+          adapter, collectionExpr);
+  REQUIRE(collectionFact != nullptr);
+  CHECK(collectionFact->semanticNodeId == 7702);
+  CHECK(collectionFact->collectionFamily == "vector");
+  CHECK(collectionFact->bindingTypeText == "vector<i32>");
+  CHECK(collectionFact->elementTypeText == "i32");
+}
+
 TEST_CASE("ir lowerer semantic-product index resolves binding facts by semantic id") {
   primec::SemanticProgram semanticProgram;
   semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{

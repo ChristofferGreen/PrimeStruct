@@ -517,11 +517,6 @@ semanticProgramLookupPublishedCollectionSpecializationBySemanticId(
     return lookupPublishedSemanticEntryByIndex(semanticProgram.collectionSpecializations,
                                                it->second);
   }
-  for (const auto &entry : semanticProgram.collectionSpecializations) {
-    if (entry.semanticNodeId == semanticNodeId) {
-      return &entry;
-    }
-  }
   return nullptr;
 }
 

@@ -121,23 +121,10 @@ struct SemanticProductIndexBuilder {
   }
 
   void buildCollectionSpecializationIndex(SemanticProductIndex &index) const {
-    if (!semanticProgram->publishedRoutingLookups.collectionSpecializationIndicesByExpr.empty()) {
-      populateSemanticFactIndex(
-          index.collectionSpecializationsByExpr,
-          semanticProgram->publishedRoutingLookups.collectionSpecializationIndicesByExpr,
-          semanticProgram->collectionSpecializations);
-    }
-    const auto collectionSpecializations = semanticProgramCollectionSpecializationView(*semanticProgram);
-    index.collectionSpecializationsByExpr.reserve(
-        index.collectionSpecializationsByExpr.size() + collectionSpecializations.size());
-    for (const auto *entry : collectionSpecializations) {
-      if (entry == nullptr) {
-        continue;
-      }
-      if (entry->semanticNodeId != 0) {
-        index.collectionSpecializationsByExpr.try_emplace(entry->semanticNodeId, entry);
-      }
-    }
+    populateSemanticFactIndex(
+        index.collectionSpecializationsByExpr,
+        semanticProgram->publishedRoutingLookups.collectionSpecializationIndicesByExpr,
+        semanticProgram->collectionSpecializations);
   }
 };
 

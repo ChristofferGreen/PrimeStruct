@@ -482,7 +482,9 @@ Task template:
     published-map authority slice is complete for semantic-node-id lookups.
     The `on_error` fact published-map authority slice is complete for
     definition semantic-node-id lookups. The local-auto fact published-map
-    authority slice is complete for semantic-node-id lookups.
+    authority slice is complete for semantic-node-id lookups. The collection
+    specialization published-map authority slice is complete for
+    semantic-node-id lookups.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -519,6 +521,12 @@ Task template:
       `localAutoFactIndicesByExpr` for semantic-node-id local-auto facts. Raw
       `localAutoFacts` storage no longer recovers missing published local-auto
       maps for expression-scoped consumers.
+    - Completed slice: semantic-product published collection-specialization
+      lookup helpers and lowerer collection-specialization adapter indexes now
+      require `collectionSpecializationIndicesByExpr` for semantic-node-id
+      collection facts. Raw `collectionSpecializations` storage no longer
+      recovers missing published collection maps for expression-scoped
+      consumers.
     - Completed slice: semantic-product-addressed Result-combinator metadata
       now requires published query facts when direct lambda payload analysis
       cannot infer the resulting value kind, covering `Result.map`,
