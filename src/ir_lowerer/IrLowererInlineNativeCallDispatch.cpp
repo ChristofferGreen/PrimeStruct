@@ -806,6 +806,11 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     }
     return emitInlineDefinitionCallFn(callExpr, callee, localsIn);
   };
+  if (isArrayCountCallFn(expr, localsIn) ||
+      isStringCountCallFn(expr, localsIn) ||
+      isVectorCapacityCallFn(expr, localsIn)) {
+    return InlineCallDispatchResult::NotHandled;
+  }
   if (!expr.isMethodCall) {
     std::string mapHelperName;
     const std::string rawPath = resolveInlineCallPathWithoutFallbackProbes(expr);
