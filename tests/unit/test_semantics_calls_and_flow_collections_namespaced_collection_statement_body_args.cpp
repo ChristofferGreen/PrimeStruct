@@ -128,8 +128,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target") != std::string::npos ||
-        error.find("return type mismatch") != std::string::npos);
+  const bool hasExpectedDiagnostic =
+      error.find("block arguments require a definition target") != std::string::npos ||
+      error.find("return type mismatch") != std::string::npos;
+  CHECK(hasExpectedDiagnostic);
 }
 
 TEST_CASE("stdlib canonical vector helper namespace body arguments keep unknown target") {

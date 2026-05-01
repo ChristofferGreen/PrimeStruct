@@ -1,5 +1,6 @@
 #include "IrLowererLowerEffects.h"
 
+#include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererSemanticProductTargetAdapters.h"
 #include "primec/Ir.h"

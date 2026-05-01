@@ -2825,6 +2825,7 @@ TEST_CASE("ir lowerer effects unit skips semantic callable summaries for sum typ
       .name = "left",
       .hasPayload = true,
       .payloadType = "i32",
+      .payloadTemplateArgs = {},
       .payloadTypeText = "i32",
       .variantIndex = 0,
   });

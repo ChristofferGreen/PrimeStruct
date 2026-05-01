@@ -218,15 +218,41 @@ TEST_CASE("ir lowerer on_error helpers reject missing semantic bound arg ids") {
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .isExecution = false,
+      .returnKind = "void",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
       .semanticNodeId = 21,
+      .provenanceHandle = 0,
       .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
   });
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .isExecution = false,
+      .returnKind = "void",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
       .hasOnError = true,
       .onErrorHandlerPath = "/handler",
       .onErrorErrorType = "FileError",
       .onErrorBoundArgCount = 1,
       .semanticNodeId = 22,
+      .provenanceHandle = 0,
       .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
   });
   semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
