@@ -514,7 +514,9 @@ Task template:
     authority slice is complete for return inference, return-info precompute,
     and result metadata validation. The frozen entry-args count-access binding
     text authority slice is complete for entry parameter scope, site-kind,
-    name, and binding type.
+    name, and binding type. The frozen binding/local-auto/collection coverage
+    text authority slice is complete for binding type, collection family, and
+    collection element/key/value text.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -647,6 +649,14 @@ Task template:
       longer recovers entry-args setup after publication freezes the semantic
       product, while mutable hand-built products keep their fixture-only
       copied-text fallback before freeze.
+    - Completed slice: frozen semantic-product binding, local-auto, and
+      collection-specialization coverage now use
+      `semanticProgramResolvePublishedText(...)` for binding type,
+      collection family, and collection element/key/value text. Copied
+      binding and collection fact text no longer recovers coverage
+      validation after publication freezes the semantic product, while
+      mutable hand-built products keep their fixture-only copied-text
+      fallback before freeze.
     - Completed slice: semantic-product-addressed Result-combinator metadata
       now requires published query facts when direct lambda payload analysis
       cannot infer the resulting value kind, covering `Result.map`,

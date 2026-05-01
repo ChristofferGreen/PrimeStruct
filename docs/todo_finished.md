@@ -6,6 +6,35 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 1, 2026)**
+- [x] TODO-4298: Require binding coverage text IDs
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-01
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 binding/local-auto/collection coverage text
+    authority slice that makes frozen binding type, collection family, and
+    collection element/key/value facts resolve through interned text IDs
+    instead of copied raw text.
+  - acceptance:
+    - Frozen binding coverage no longer recovers copied binding fact text
+      when interned binding-type IDs are missing.
+    - Frozen local-auto coverage no longer recovers copied local-auto
+      binding type text when interned binding-type IDs are missing.
+    - Frozen collection-specialization coverage no longer recovers copied
+      collection family or element/key/value text when interned IDs are
+      missing.
+    - Published interned text IDs still produce the same coverage results.
+    - Mutable hand-built semantic products keep their fixture-only
+      copied-text fallback before freeze.
+  - stop_rule: Stop once binding/local-auto/collection coverage requires
+    interned text IDs after freeze and docs record the remaining TODO-4298
+    work.
+  - evidence: Routed binding/local-auto/collection coverage text resolution
+    through `semanticProgramResolvePublishedText(...)`, made collection
+    specialization matching compare resolved text, added focused frozen-raw
+    and mapped coverage, and skipped local test execution per the lite
+    workflow.
+
 - [x] TODO-4298: Require entry args text IDs
   - owner: ai
   - created_at: 2026-04-28

@@ -895,6 +895,10 @@ Compile-pipeline publication contract:
   scope, site-kind, name, and binding-type text must resolve through interned IDs after publication freezes the
   semantic product. Mutable hand-built products may still use copied-text fallbacks before
   `freezeSemanticProgramPublishedStorage(...)`.
+- Binding, local-auto, and collection-specialization coverage use the same frozen-product rule for published type
+  text: frozen products resolve binding type, collection family, and collection element/key/value text through
+  interned IDs and do not recover copied text when those IDs are absent or unresolved. Mutable hand-built products
+  may still use copied-text fallbacks before `freezeSemanticProgramPublishedStorage(...)`.
 - Callable-summary lookup follows the same published-map authority rule once the semantic product is frozen by the
   publication path: `callableSummaryIndicesByPathId` is the authority, while raw `callableSummaries` scanning remains
   limited to mutable hand-built products before `freezeSemanticProgramPublishedStorage(...)`. Lowerer return-info

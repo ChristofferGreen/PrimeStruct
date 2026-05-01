@@ -3909,6 +3909,134 @@ TEST_CASE("ir lowerer rejects stale semantic-product collection metadata") {
   CHECK(diagnosticInfo.message == error);
 }
 
+TEST_CASE("ir lowerer binding text validation requires interned text after freeze") {
+  constexpr uint64_t BindingSemanticId = 9301;
+
+  primec::Program program;
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+
+  primec::Expr initializerExpr;
+  initializerExpr.kind = primec::Expr::Kind::Literal;
+  initializerExpr.literalValue = 1;
+  initializerExpr.intWidth = 32;
+
+  primec::Expr bindingExpr;
+  bindingExpr.isBinding = true;
+  bindingExpr.name = "values";
+  bindingExpr.semanticNodeId = BindingSemanticId;
+  bindingExpr.args.push_back(initializerExpr);
+  mainDef.statements.push_back(bindingExpr);
+  program.definitions.push_back(mainDef);
+
+  auto addBindingFact = [&](primec::SemanticProgram &semanticProgram,
+                            bool includeBindingTypeId) {
+    primec::SemanticProgramBindingFact fact;
+    fact.scopePath = "/main";
+    fact.siteKind = "local";
+    fact.name = "values";
+    fact.bindingTypeText = "vector<i32>";
+    fact.semanticNodeId = BindingSemanticId;
+    fact.resolvedPathId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, "/main/values");
+    if (includeBindingTypeId) {
+      fact.bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "vector<i32>");
+    }
+    semanticProgram.bindingFacts.push_back(std::move(fact));
+    semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(
+        BindingSemanticId, 0);
+  };
+
+  auto addLocalAutoFact = [&](primec::SemanticProgram &semanticProgram,
+                              bool includeBindingTypeId) {
+    primec::SemanticProgramLocalAutoFact fact;
+    fact.scopePath = "/main";
+    fact.bindingName = "values";
+    fact.bindingTypeText = "vector<i32>";
+    fact.semanticNodeId = BindingSemanticId;
+    if (includeBindingTypeId) {
+      fact.bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "vector<i32>");
+    }
+    semanticProgram.localAutoFacts.push_back(std::move(fact));
+    semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr.insert_or_assign(
+        BindingSemanticId, 0);
+  };
+
+  auto addCollectionFact = [&](primec::SemanticProgram &semanticProgram,
+                               bool includeTypeIds) {
+    primec::SemanticProgramCollectionSpecialization fact;
+    fact.scopePath = "/main";
+    fact.siteKind = "local";
+    fact.name = "values";
+    fact.collectionFamily = "vector";
+    fact.bindingTypeText = "vector<i32>";
+    fact.elementTypeText = "i32";
+    fact.semanticNodeId = BindingSemanticId;
+    if (includeTypeIds) {
+      fact.collectionFamilyId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "vector");
+      fact.bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "vector<i32>");
+      fact.elementTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "i32");
+    }
+    semanticProgram.collectionSpecializations.push_back(std::move(fact));
+    semanticProgram.publishedRoutingLookups.collectionSpecializationIndicesByExpr
+        .insert_or_assign(BindingSemanticId, 0);
+  };
+
+  primec::SemanticProgram rawFrozenSemanticProgram;
+  rawFrozenSemanticProgram.entryPath = "/main";
+  addBindingFact(rawFrozenSemanticProgram, false);
+  addLocalAutoFact(rawFrozenSemanticProgram, false);
+  addCollectionFact(rawFrozenSemanticProgram, false);
+  primec::freezeSemanticProgramPublishedStorage(rawFrozenSemanticProgram);
+
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductBindingCoverage(
+      program, &rawFrozenSemanticProgram, error));
+  CHECK(error == "missing semantic-product binding fact: /main -> local values");
+
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductLocalAutoCoverage(
+      program, &rawFrozenSemanticProgram, error));
+  CHECK(error == "missing semantic-product local-auto fact: /main -> local values");
+
+  primec::SemanticProgram rawCollectionFrozenSemanticProgram;
+  rawCollectionFrozenSemanticProgram.entryPath = "/main";
+  addBindingFact(rawCollectionFrozenSemanticProgram, true);
+  addCollectionFact(rawCollectionFrozenSemanticProgram, false);
+  primec::freezeSemanticProgramPublishedStorage(rawCollectionFrozenSemanticProgram);
+
+  error.clear();
+  CHECK_FALSE(
+      primec::ir_lowerer::validateSemanticProductCollectionSpecializationCoverage(
+          program, &rawCollectionFrozenSemanticProgram, error));
+  CHECK(error == "stale semantic-product collection specialization: /main -> local values");
+
+  primec::SemanticProgram mappedFrozenSemanticProgram;
+  mappedFrozenSemanticProgram.entryPath = "/main";
+  addBindingFact(mappedFrozenSemanticProgram, true);
+  addLocalAutoFact(mappedFrozenSemanticProgram, true);
+  addCollectionFact(mappedFrozenSemanticProgram, true);
+  primec::freezeSemanticProgramPublishedStorage(mappedFrozenSemanticProgram);
+
+  error.clear();
+  CHECK(primec::ir_lowerer::validateSemanticProductBindingCoverage(
+      program, &mappedFrozenSemanticProgram, error));
+  CHECK(error.empty());
+
+  CHECK(primec::ir_lowerer::validateSemanticProductLocalAutoCoverage(
+      program, &mappedFrozenSemanticProgram, error));
+  CHECK(error.empty());
+
+  CHECK(primec::ir_lowerer::validateSemanticProductCollectionSpecializationCoverage(
+      program, &mappedFrozenSemanticProgram, error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer rejects missing semantic-product local binding facts") {
   primec::Program program;
 
