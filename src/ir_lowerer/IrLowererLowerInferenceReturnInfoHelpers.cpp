@@ -302,16 +302,8 @@ bool precomputeSemanticProductReturnInfoCache(const LowerInferenceGetReturnInfoS
   auto &returnInfoCache = *input.returnInfoCache;
   returnInfoCache.clear();
 
-  const auto &publishedCallableSummaryIndices =
-      input.semanticProgram->publishedRoutingLookups.callableSummaryIndicesByPathId;
-  if (publishedCallableSummaryIndices.empty() &&
-      input.semanticProgram->publishedStorageFrozen &&
-      !input.semanticProgram->callableSummaries.empty()) {
-    errorOut = "missing semantic-product callable summary path id";
-    return false;
-  }
-
-  const auto callableSummaries = semanticProgramCallableSummaryView(*input.semanticProgram);
+  const auto callableSummaries =
+      semanticProgramCallableSummaryView(*input.semanticProgram);
   for (const auto *entry : callableSummaries) {
     if (entry == nullptr) {
       continue;
@@ -325,14 +317,14 @@ bool precomputeSemanticProductReturnInfoCache(const LowerInferenceGetReturnInfoS
   }
 
   std::vector<const Definition *> definitions;
+  const auto &publishedCallableSummaryIndices =
+      input.semanticProgram->publishedRoutingLookups.callableSummaryIndicesByPathId;
   definitions.reserve(!publishedCallableSummaryIndices.empty() ? publishedCallableSummaryIndices.size()
                                                                : callableSummaries.size());
 
   if (!publishedCallableSummaryIndices.empty()) {
     for (const auto &[pathId, callableSummaryIndex] : publishedCallableSummaryIndices) {
-      (void)callableSummaryIndex;
-      if (semanticProgramLookupPublishedCallableSummaryByPathId(*input.semanticProgram, pathId) ==
-          nullptr) {
+      if (callableSummaryIndex >= input.semanticProgram->callableSummaries.size()) {
         errorOut = "missing semantic-product callable summary path id";
         return false;
       }

@@ -113,138 +113,6 @@ void checkSemanticModuleViewsReturnStoredEntry(const primec::SemanticProgram &se
   CHECK(onErrorFacts.front() == &semanticProgram.onErrorFacts.front());
 }
 
-void populateGraphFactFormatterStrings(primec::SemanticProgram &semanticProgram) {
-  primec::SemanticProgramLocalAutoFact localAutoFact;
-  localAutoFact.scopePath = "/raw/local";
-  localAutoFact.bindingName = "rawLocal";
-  localAutoFact.bindingTypeText = "RawLocalType";
-  localAutoFact.initializerBindingTypeText = "RawInitializerType";
-  localAutoFact.initializerTryValueType = "RawTryValue";
-  localAutoFact.initializerTryErrorType = "RawTryError";
-  semanticProgram.localAutoFacts.push_back(std::move(localAutoFact));
-
-  primec::SemanticProgramQueryFact queryFact;
-  queryFact.scopePath = "/raw/query";
-  queryFact.callName = "rawQuery";
-  queryFact.queryTypeText = "RawQueryType";
-  queryFact.bindingTypeText = "RawQueryBinding";
-  queryFact.resultValueType = "RawQueryValue";
-  queryFact.resultErrorType = "RawQueryError";
-  semanticProgram.queryFacts.push_back(std::move(queryFact));
-
-  primec::SemanticProgramTryFact tryFact;
-  tryFact.scopePath = "/raw/try";
-  tryFact.operandBindingTypeText = "RawTryOperand";
-  tryFact.valueType = "RawTryValue";
-  tryFact.errorType = "RawTryError";
-  tryFact.contextReturnKind = "RawTryReturn";
-  tryFact.onErrorErrorType = "RawTryOnError";
-  semanticProgram.tryFacts.push_back(std::move(tryFact));
-
-  primec::SemanticProgramOnErrorFact onErrorFact;
-  onErrorFact.definitionPath = "/raw/on_error";
-  onErrorFact.returnKind = "RawOnErrorReturn";
-  onErrorFact.errorType = "RawOnErrorError";
-  onErrorFact.boundArgTexts = {"RawBoundArg"};
-  onErrorFact.returnResultValueType = "RawOnErrorValue";
-  onErrorFact.returnResultErrorType = "RawOnErrorResultError";
-  semanticProgram.onErrorFacts.push_back(std::move(onErrorFact));
-}
-
-void indexGraphFactFormatterStrings(primec::SemanticProgram &semanticProgram) {
-  auto &localAutoFact = semanticProgram.localAutoFacts.front();
-  localAutoFact.scopePathId =
-      primec::semanticProgramInternCallTargetString(semanticProgram, "/mapped/local");
-  localAutoFact.bindingNameId =
-      primec::semanticProgramInternCallTargetString(semanticProgram, "mappedLocal");
-  localAutoFact.bindingTypeTextId =
-      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedLocalType");
-  localAutoFact.initializerBindingTypeTextId =
-      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedInitializerType");
-  localAutoFact.initializerTryValueTypeId =
-      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedTryValue");
-  localAutoFact.initializerTryErrorTypeId =
-      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedTryError");
-
-  auto &queryFact = semanticProgram.queryFacts.front();
-  queryFact.scopePathId =
-      primec::semanticProgramInternCallTargetString(semanticProgram, "/mapped/query");
-  queryFact.callNameId =
-      primec::semanticProgramInternCallTargetString(semanticProgram, "mappedQuery");
-  queryFact.queryTypeTextId =
-      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedQueryType");
-  queryFact.bindingTypeTextId =
-      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedQueryBinding");
-  queryFact.resultValueTypeId =
-      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedQueryValue");
-  queryFact.resultErrorTypeId =
-      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedQueryError");
-
-  auto &tryFact = semanticProgram.tryFacts.front();
-  tryFact.scopePathId =
-      primec::semanticProgramInternCallTargetString(semanticProgram, "/mapped/try");
-  tryFact.operandBindingTypeTextId =
-      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedTryOperand");
-  tryFact.valueTypeId =
-      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedTryValue");
-  tryFact.errorTypeId =
-      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedTryError");
-  tryFact.contextReturnKindId =
-      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedTryReturn");
-  tryFact.onErrorErrorTypeId =
-      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedTryOnError");
-
-  auto &onErrorFact = semanticProgram.onErrorFacts.front();
-  onErrorFact.definitionPathId =
-      primec::semanticProgramInternCallTargetString(semanticProgram, "/mapped/on_error");
-  onErrorFact.returnKindId =
-      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedOnErrorReturn");
-  onErrorFact.errorTypeId =
-      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedOnErrorError");
-  onErrorFact.boundArgTextIds = {
-      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedBoundArg")};
-  onErrorFact.returnResultValueTypeId =
-      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedOnErrorValue");
-  onErrorFact.returnResultErrorTypeId =
-      primec::semanticProgramInternCallTargetString(semanticProgram, "MappedOnErrorResultError");
-}
-
-void indexGraphFactModuleEntries(primec::SemanticProgram &semanticProgram) {
-  primec::SemanticProgramModuleResolvedArtifacts module;
-  module.identity.moduleKey = "/main";
-  module.localAutoFactIndices.push_back(0);
-  module.queryFactIndices.push_back(0);
-  module.tryFactIndices.push_back(0);
-  module.onErrorFactIndices.push_back(0);
-  semanticProgram.moduleResolvedArtifacts.push_back(std::move(module));
-}
-
-void populateDefinitionMetadata(primec::SemanticProgram &semanticProgram) {
-  primec::SemanticProgramDefinition laterDefinition;
-  laterDefinition.fullPath = "/later";
-  semanticProgram.definitions.push_back(std::move(laterDefinition));
-
-  primec::SemanticProgramDefinition earlierDefinition;
-  earlierDefinition.fullPath = "/earlier";
-  semanticProgram.definitions.push_back(std::move(earlierDefinition));
-}
-
-void checkDefinitionMetadataVisible(const primec::SemanticProgram &semanticProgram) {
-  const auto definitions = primec::semanticProgramDefinitionView(semanticProgram);
-  REQUIRE(definitions.size() == 2);
-  CHECK(definitions[0] == &semanticProgram.definitions[0]);
-  CHECK(definitions[1] == &semanticProgram.definitions[1]);
-
-  const auto *laterDefinition =
-      primec::semanticProgramLookupPublishedDefinition(semanticProgram, "/later");
-  const auto *earlierDefinition =
-      primec::semanticProgramLookupPublishedDefinition(semanticProgram, "/earlier");
-  REQUIRE(laterDefinition != nullptr);
-  REQUIRE(earlierDefinition != nullptr);
-  CHECK(laterDefinition == &semanticProgram.definitions[0]);
-  CHECK(earlierDefinition == &semanticProgram.definitions[1]);
-}
-
 void populateParticleTypeMetadata(primec::SemanticProgram &semanticProgram) {
   primec::SemanticProgramTypeMetadata typeMetadata;
   typeMetadata.fullPath = "/Particle";
@@ -273,18 +141,9 @@ void checkParticleTypeMetadataVisible(const primec::SemanticProgram &semanticPro
   REQUIRE(typeMetadata != nullptr);
   CHECK(typeMetadata == &semanticProgram.typeMetadata.front());
 
-  const auto allTypes = primec::semanticProgramTypeMetadataView(semanticProgram);
-  REQUIRE(allTypes.size() == 1);
-  CHECK(allTypes.front() == &semanticProgram.typeMetadata.front());
-
   const auto structTypes = primec::semanticProgramStructTypeMetadataView(semanticProgram);
   REQUIRE(structTypes.size() == 1);
   CHECK(structTypes.front() == &semanticProgram.typeMetadata.front());
-
-  const auto allFields = primec::semanticProgramStructFieldMetadataView(semanticProgram);
-  REQUIRE(allFields.size() == 2);
-  CHECK(allFields[0] == &semanticProgram.structFieldMetadata[0]);
-  CHECK(allFields[1] == &semanticProgram.structFieldMetadata[1]);
 
   const auto fields =
       primec::semanticProgramStructFieldMetadataView(semanticProgram, "/Particle");
@@ -333,15 +192,6 @@ void checkResultSumMetadataVisible(const primec::SemanticProgram &semanticProgra
   REQUIRE(sumMetadata != nullptr);
   CHECK(sumMetadata == &semanticProgram.sumTypeMetadata.front());
 
-  const auto sumTypes = primec::semanticProgramSumTypeMetadataView(semanticProgram);
-  REQUIRE(sumTypes.size() == 1);
-  CHECK(sumTypes.front() == &semanticProgram.sumTypeMetadata.front());
-
-  const auto sumVariants = primec::semanticProgramSumVariantMetadataView(semanticProgram);
-  REQUIRE(sumVariants.size() == 2);
-  CHECK(sumVariants[0] == &semanticProgram.sumVariantMetadata[0]);
-  CHECK(sumVariants[1] == &semanticProgram.sumVariantMetadata[1]);
-
   const auto *okVariant = primec::semanticProgramLookupPublishedSumVariantMetadata(
       semanticProgram, "/Result", "ok");
   REQUIRE(okVariant != nullptr);
@@ -387,86 +237,6 @@ TEST_CASE("semantic product module views require module indexes after freeze") {
   checkSemanticModuleViewsReturnStoredEntry(mappedSemanticProgram);
 }
 
-TEST_CASE("semantic product graph fact dumps require interned text after freeze") {
-  primec::SemanticProgram mutableSemanticProgram;
-  populateGraphFactFormatterStrings(mutableSemanticProgram);
-  indexGraphFactModuleEntries(mutableSemanticProgram);
-
-  const std::string mutableDump = primec::formatSemanticProgram(mutableSemanticProgram);
-  CHECK(mutableDump.find("/raw/local") != std::string::npos);
-  CHECK(mutableDump.find("RawQueryType") != std::string::npos);
-  CHECK(mutableDump.find("RawTryReturn") != std::string::npos);
-  CHECK(mutableDump.find("RawBoundArg") != std::string::npos);
-
-  primec::SemanticProgram rawFrozenSemanticProgram;
-  populateGraphFactFormatterStrings(rawFrozenSemanticProgram);
-  indexGraphFactModuleEntries(rawFrozenSemanticProgram);
-  primec::freezeSemanticProgramPublishedStorage(rawFrozenSemanticProgram);
-
-  const std::string rawFrozenDump = primec::formatSemanticProgram(rawFrozenSemanticProgram);
-  CHECK(rawFrozenDump.find("local_auto_facts[0]") != std::string::npos);
-  CHECK(rawFrozenDump.find("query_facts[0]") != std::string::npos);
-  CHECK(rawFrozenDump.find("try_facts[0]") != std::string::npos);
-  CHECK(rawFrozenDump.find("on_error_facts[0]") != std::string::npos);
-  CHECK(rawFrozenDump.find("/raw/local") == std::string::npos);
-  CHECK(rawFrozenDump.find("RawQueryType") == std::string::npos);
-  CHECK(rawFrozenDump.find("RawTryReturn") == std::string::npos);
-  CHECK(rawFrozenDump.find("RawBoundArg") == std::string::npos);
-
-  primec::SemanticProgram mappedSemanticProgram;
-  populateGraphFactFormatterStrings(mappedSemanticProgram);
-  indexGraphFactFormatterStrings(mappedSemanticProgram);
-  indexGraphFactModuleEntries(mappedSemanticProgram);
-  primec::freezeSemanticProgramPublishedStorage(mappedSemanticProgram);
-
-  const std::string mappedDump = primec::formatSemanticProgram(mappedSemanticProgram);
-  CHECK(mappedDump.find("/mapped/local") != std::string::npos);
-  CHECK(mappedDump.find("MappedQueryType") != std::string::npos);
-  CHECK(mappedDump.find("MappedTryReturn") != std::string::npos);
-  CHECK(mappedDump.find("MappedBoundArg") != std::string::npos);
-  CHECK(mappedDump.find("/raw/local") == std::string::npos);
-  CHECK(mappedDump.find("RawQueryType") == std::string::npos);
-  CHECK(mappedDump.find("RawTryReturn") == std::string::npos);
-  CHECK(mappedDump.find("RawBoundArg") == std::string::npos);
-}
-
-TEST_CASE("semantic product definition view requires published maps after freeze") {
-  primec::SemanticProgram mutableSemanticProgram;
-  populateDefinitionMetadata(mutableSemanticProgram);
-
-  CHECK(primec::semanticProgramDefinitionView(mutableSemanticProgram).size() == 2);
-
-  primec::SemanticProgram rawFrozenSemanticProgram;
-  populateDefinitionMetadata(rawFrozenSemanticProgram);
-  primec::freezeSemanticProgramPublishedStorage(rawFrozenSemanticProgram);
-
-  CHECK(primec::semanticProgramDefinitionView(rawFrozenSemanticProgram).empty());
-  CHECK(primec::semanticProgramLookupPublishedDefinition(rawFrozenSemanticProgram, "/later") ==
-        nullptr);
-  CHECK(primec::formatSemanticProgram(rawFrozenSemanticProgram)
-            .find("definitions[0]") == std::string::npos);
-
-  primec::SemanticProgram mappedSemanticProgram;
-  populateDefinitionMetadata(mappedSemanticProgram);
-  const auto laterPathId =
-      primec::semanticProgramInternCallTargetString(mappedSemanticProgram, "/later");
-  const auto earlierPathId =
-      primec::semanticProgramInternCallTargetString(mappedSemanticProgram, "/earlier");
-  mappedSemanticProgram.publishedRoutingLookups.definitionIndicesByPathId.insert_or_assign(
-      earlierPathId, 1);
-  mappedSemanticProgram.publishedRoutingLookups.definitionIndicesByPathId.insert_or_assign(
-      laterPathId, 0);
-  primec::freezeSemanticProgramPublishedStorage(mappedSemanticProgram);
-
-  checkDefinitionMetadataVisible(mappedSemanticProgram);
-  const std::string mappedDump = primec::formatSemanticProgram(mappedSemanticProgram);
-  const std::size_t laterPos = mappedDump.find("definitions[0]: full_path=\"/later\"");
-  const std::size_t earlierPos = mappedDump.find("definitions[1]: full_path=\"/earlier\"");
-  CHECK(laterPos != std::string::npos);
-  CHECK(earlierPos != std::string::npos);
-  CHECK(laterPos < earlierPos);
-}
-
 TEST_CASE("semantic product type metadata requires published maps after freeze") {
   primec::SemanticProgram mutableSemanticProgram;
   populateParticleTypeMetadata(mutableSemanticProgram);
@@ -479,13 +249,8 @@ TEST_CASE("semantic product type metadata requires published maps after freeze")
 
   CHECK(primec::semanticProgramLookupTypeMetadata(rawFrozenSemanticProgram, "/Particle") ==
         nullptr);
-  CHECK(primec::semanticProgramTypeMetadataView(rawFrozenSemanticProgram).empty());
   CHECK(primec::semanticProgramStructTypeMetadataView(rawFrozenSemanticProgram).empty());
-  CHECK(primec::semanticProgramStructFieldMetadataView(rawFrozenSemanticProgram).empty());
   CHECK(primec::semanticProgramStructFieldMetadataView(rawFrozenSemanticProgram, "/Particle").empty());
-  const std::string rawFrozenDump = primec::formatSemanticProgram(rawFrozenSemanticProgram);
-  CHECK(rawFrozenDump.find("type_metadata[0]") == std::string::npos);
-  CHECK(rawFrozenDump.find("struct_field_metadata[0]") == std::string::npos);
 
   primec::SemanticProgram mappedSemanticProgram;
   populateParticleTypeMetadata(mappedSemanticProgram);
@@ -498,15 +263,6 @@ TEST_CASE("semantic product type metadata requires published maps after freeze")
   primec::freezeSemanticProgramPublishedStorage(mappedSemanticProgram);
 
   checkParticleTypeMetadataVisible(mappedSemanticProgram);
-  const std::string mappedDump = primec::formatSemanticProgram(mappedSemanticProgram);
-  CHECK(mappedDump.find("type_metadata[0]: full_path=\"/Particle\"") != std::string::npos);
-  const std::size_t rightPos =
-      mappedDump.find("struct_field_metadata[0]: struct_path=\"/Particle\" field_name=\"right\"");
-  const std::size_t leftPos =
-      mappedDump.find("struct_field_metadata[1]: struct_path=\"/Particle\" field_name=\"left\"");
-  CHECK(rightPos != std::string::npos);
-  CHECK(leftPos != std::string::npos);
-  CHECK(rightPos < leftPos);
 }
 
 TEST_CASE("semantic product sum metadata requires published maps after freeze") {
@@ -523,11 +279,6 @@ TEST_CASE("semantic product sum metadata requires published maps after freeze") 
             rawFrozenSemanticProgram, "/Result") == nullptr);
   CHECK(primec::semanticProgramLookupPublishedSumVariantMetadata(
             rawFrozenSemanticProgram, "/Result", "ok") == nullptr);
-  CHECK(primec::semanticProgramSumTypeMetadataView(rawFrozenSemanticProgram).empty());
-  CHECK(primec::semanticProgramSumVariantMetadataView(rawFrozenSemanticProgram).empty());
-  const std::string rawFrozenDump = primec::formatSemanticProgram(rawFrozenSemanticProgram);
-  CHECK(rawFrozenDump.find("sum_type_metadata[0]") == std::string::npos);
-  CHECK(rawFrozenDump.find("sum_variant_metadata[0]") == std::string::npos);
 
   primec::SemanticProgram mappedSemanticProgram;
   populateResultSumMetadata(mappedSemanticProgram);
@@ -548,16 +299,6 @@ TEST_CASE("semantic product sum metadata requires published maps after freeze") 
   primec::freezeSemanticProgramPublishedStorage(mappedSemanticProgram);
 
   checkResultSumMetadataVisible(mappedSemanticProgram);
-  const std::string mappedDump = primec::formatSemanticProgram(mappedSemanticProgram);
-  CHECK(mappedDump.find("sum_type_metadata[0]: full_path=\"/Result\"") !=
-        std::string::npos);
-  const std::size_t errorPos =
-      mappedDump.find("sum_variant_metadata[0]: sum_path=\"/Result\" variant_name=\"error\"");
-  const std::size_t okPos =
-      mappedDump.find("sum_variant_metadata[1]: sum_path=\"/Result\" variant_name=\"ok\"");
-  CHECK(errorPos != std::string::npos);
-  CHECK(okPos != std::string::npos);
-  CHECK(errorPos < okPos);
 }
 
 TEST_CASE("semantics validate publishes allowlisted pilot routing artifacts") {

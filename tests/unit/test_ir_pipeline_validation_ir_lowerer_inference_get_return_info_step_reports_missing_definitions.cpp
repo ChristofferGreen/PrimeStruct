@@ -422,66 +422,6 @@ TEST_CASE("ir lowerer inference get-return-info setup wires callback") {
   CHECK(returnInfoCache.count("/callee") == 1);
 }
 
-TEST_CASE("ir lowerer inference get-return-info setup requires published callable-summary maps after freeze") {
-  primec::Program program;
-  primec::Definition definition;
-  definition.fullPath = "/callee";
-  definition.semanticNodeId = 73;
-  program.definitions.push_back(definition);
-
-  std::unordered_map<std::string, const primec::Definition *> defMap = {
-      {"/callee", &program.definitions.front()},
-  };
-  std::unordered_map<std::string, primec::ir_lowerer::ReturnInfo> returnInfoCache;
-  std::unordered_set<std::string> returnInferenceStack;
-
-  primec::SemanticProgram semanticProgram;
-  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      .isExecution = false,
-      .returnKind = "return",
-      .isCompute = false,
-      .isUnsafe = false,
-      .activeEffects = {},
-      .activeCapabilities = {},
-      .hasResultType = false,
-      .resultTypeHasValue = false,
-      .resultValueType = "",
-      .resultErrorType = "",
-      .hasOnError = false,
-      .onErrorHandlerPath = "",
-      .onErrorErrorType = "",
-      .onErrorBoundArgCount = 0,
-      .semanticNodeId = 73,
-      .provenanceHandle = 0,
-      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/callee"),
-      .returnKindId = primec::semanticProgramInternCallTargetString(semanticProgram, "return"),
-  });
-  primec::SemanticProgramModuleResolvedArtifacts moduleArtifacts;
-  moduleArtifacts.identity.moduleKey = "/";
-  moduleArtifacts.callableSummaryIndices.push_back(0);
-  semanticProgram.moduleResolvedArtifacts.push_back(moduleArtifacts);
-  primec::freezeSemanticProgramPublishedStorage(semanticProgram);
-  const auto semanticIndex = primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
-
-  std::function<bool(const std::string &, primec::ir_lowerer::ReturnInfo &)> getReturnInfo;
-  std::string inferenceError;
-  std::string error;
-  CHECK_FALSE(primec::ir_lowerer::runLowerInferenceGetReturnInfoSetup(
-      {
-          .program = &program,
-          .defMap = &defMap,
-          .returnInfoCache = &returnInfoCache,
-          .returnInferenceStack = &returnInferenceStack,
-          .semanticProgram = &semanticProgram,
-          .semanticIndex = &semanticIndex,
-          .error = &inferenceError,
-      },
-      getReturnInfo,
-      error));
-  CHECK(error == "missing semantic-product callable summary path id");
-  CHECK(returnInfoCache.empty());
-}
-
 TEST_CASE("ir lowerer inference get-return-info setup validates dependencies") {
   primec::Program program;
   std::function<bool(const std::string &, primec::ir_lowerer::ReturnInfo &)> getReturnInfo;

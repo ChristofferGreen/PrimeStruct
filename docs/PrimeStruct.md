@@ -844,16 +844,6 @@ Compile-pipeline publication contract:
   publication path: public definition lookup helpers require `definitionIndicesByPathId` for path-id lookups instead
   of recovering by scanning raw `definitions` storage. Mutable hand-built products may still use the raw scan before
   `freezeSemanticProgramPublishedStorage(...)`.
-- Definition views follow the same published-map authority rule once the semantic product is frozen by the
-  publication path: callable orchestration and semantic-product formatting consume
-  `semanticProgramDefinitionView(...)`, which enumerates through `definitionIndicesByPathId` in deterministic
-  storage order instead of recovering by scanning raw `definitions` storage. Mutable hand-built products may still use
-  the raw scan before
-  `freezeSemanticProgramPublishedStorage(...)`.
-- Direct-call coverage treats definition-family matching as a published path-id decision: when the semantic product is
-  present, `definitionIndicesByPathId` keys must resolve through the string table before the lowerer can classify an
-  otherwise untracked call as targeting a published definition family. Raw definition text is not a recovery path for
-  malformed or missing published path ids.
 - Published fact-family views follow the same rule once the semantic product is frozen by the publication path:
   per-module `moduleResolvedArtifacts` indexes are the authority for direct-call, method-call, bridge-path,
   callable-summary, binding, return, collection-specialization, local-auto, query, try, and `on_error` views. Mutable
@@ -868,25 +858,15 @@ Compile-pipeline publication contract:
   sum type and variant metadata lookup instead of recovering by scanning raw `sumTypeMetadata` or
   `sumVariantMetadata` storage. Mutable hand-built products may still use the raw scan before
   `freezeSemanticProgramPublishedStorage(...)`.
-- Metadata views and semantic-product formatting follow the same rule once the semantic product is frozen by the
-  publication path: type, struct-field, sum-type, and sum-variant dump sections enumerate through published metadata
-  maps in deterministic storage order instead of recovering by scanning raw metadata storage. Mutable hand-built
-  products may still use the raw scan before `freezeSemanticProgramPublishedStorage(...)`.
 - Collection-specialization lookup follows the same published-map authority rule for semantic-node ids: public
   published collection-specialization lookup helpers and the lowerer semantic-product adapter require
   `collectionSpecializationIndicesByExpr` for expression-scoped collection facts instead of recovering by scanning
   raw `collectionSpecializations` storage.
 - Query, `try(...)`, and `on_error` lowering/completeness checks follow the same rule: semantic-node-id facts are the
   production authority, while resolved-path/source/path-id indexes remain inspection metadata only.
-- Graph fact formatting follows the same rule once the semantic product is frozen by the publication path: local-auto,
-  query, `try(...)`, and `on_error` dump fields resolve interned text IDs and no longer recover copied text when those
-  IDs are absent or unresolved. Mutable hand-built products may still use copied-text fallbacks before
-  `freezeSemanticProgramPublishedStorage(...)`.
 - Callable-summary lookup follows the same published-map authority rule once the semantic product is frozen by the
   publication path: `callableSummaryIndicesByPathId` is the authority, while raw `callableSummaries` scanning remains
-  limited to mutable hand-built products before `freezeSemanticProgramPublishedStorage(...)`. Lowerer return-info
-  precompute follows the same rule and requires frozen callable summaries to be addressable through
-  `callableSummaryIndicesByPathId`, even when module artifact indexes could otherwise enumerate raw summary storage.
+  limited to mutable hand-built products before `freezeSemanticProgramPublishedStorage(...)`.
 - The lowerer semantic-product adapter no longer builds local-auto initializer-path, query resolved-path/call-name, or
   `try(...)` operand-path/source composite recovery indexes. Those composite lookup maps remain publication and
   inspection metadata rather than production lowerer lookup surfaces.

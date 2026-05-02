@@ -43,9 +43,15 @@ bool resolvesToPublishedDefinitionFamilyTarget(const SemanticProgram *semanticPr
            publishedPath.starts_with(asStringView(specializedPrefix)) ||
            publishedPath.starts_with(asStringView(overloadPrefix));
   };
-  for (const auto &publishedDefinitionIndex :
+  for (const auto &[pathId, definitionIndex] :
        semanticProgram->publishedRoutingLookups.definitionIndicesByPathId) {
-    const SymbolId pathId = publishedDefinitionIndex.first;
+    if (definitionIndex >= semanticProgram->definitions.size()) {
+      continue;
+    }
+    const auto &entry = semanticProgram->definitions[definitionIndex];
+    if (matchesResolvedFamily(asStringView(entry.fullPath))) {
+      return true;
+    }
     const std::string_view publishedPath =
         semanticProgramResolveCallTargetString(*semanticProgram, pathId);
     if (!publishedPath.empty() && matchesResolvedFamily(publishedPath)) {

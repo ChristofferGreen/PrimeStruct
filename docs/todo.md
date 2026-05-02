@@ -489,25 +489,14 @@ Task template:
     published-map authority slice is complete for semantic-node-id lookups.
     The frozen return-fact published-map authority slice is complete for
     definition semantic-node-id lookups. The frozen definition published-map
-    authority slice is complete for path-id lookups. The frozen definition
-    view authority slice is complete for callable orchestration through
-    deterministic `definitionIndicesByPathId` storage-order enumeration. The
-    frozen definition formatter view authority slice is complete for
-    semantic-product dumps through the same view. The direct-call coverage
-    definition-family authority slice is complete for resolvable published
-    definition path IDs. The frozen return-info callable-summary authority
-    slice is complete for `callableSummaryIndicesByPathId` precompute. The frozen fact-family view
-    authority slice is complete for module artifact indexes across
+    authority slice is complete for path-id lookups. The frozen fact-family
+    view authority slice is complete for module artifact indexes across
     direct-call, method-call, bridge-path, callable-summary, binding, return,
     collection-specialization, local-auto, query, try, and `on_error` views.
     The frozen type-shape metadata published-map authority slice is complete
     for type path, struct-like type views, and struct-field struct-path
     lookups. The frozen sum metadata published-map authority slice is complete
-    for sum type path and sum variant path/name lookups. The frozen metadata
-    formatter view authority slice is complete for semantic-product dumps
-    across type, struct-field, sum-type, and sum-variant metadata views. The
-    frozen graph-fact formatter text authority slice is complete for
-    local-auto, query, try, and `on_error` dump fields.
+    for sum type path and sum variant path/name lookups.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -570,25 +559,6 @@ Task template:
       no longer recovers missing definition maps after publication freezes the
       semantic product, while mutable hand-built products keep their
       fixture-only scan before freeze.
-    - Completed slice: frozen semantic-product definition views now enumerate
-      through `definitionIndicesByPathId` in deterministic storage order.
-      Callable orchestration no longer lowers raw `definitions` entries when a
-      frozen semantic product is missing published definition indexes, while
-      mutable hand-built products keep their fixture-only scan before freeze.
-    - Completed slice: frozen semantic-product definition formatting now uses
-      `semanticProgramDefinitionView(...)`, so dumps no longer recover raw
-      `definitions` entries when a frozen semantic product is missing
-      published definition indexes.
-    - Completed slice: lowerer direct-call coverage now treats definition
-      family matching as a published path-id decision. Raw definition text no
-      longer recovers malformed or unresolved `definitionIndicesByPathId`
-      entries when deciding whether an otherwise untracked call should require
-      a published direct-call target.
-    - Completed slice: lowerer return-info precompute now requires frozen
-      callable summaries to be addressable through
-      `callableSummaryIndicesByPathId`. Module artifact callable-summary
-      indexes no longer recover missing published path maps after publication
-      freezes the semantic product.
     - Completed slice: frozen semantic-product fact-family views now require
       `moduleResolvedArtifacts` indexes. Raw flat storage no longer recovers
       missing module artifacts after publication freezes the semantic product,
@@ -611,16 +581,6 @@ Task template:
       missing metadata maps after publication freezes the semantic product,
       while mutable hand-built products keep their fixture-only scan before
       freeze.
-    - Completed slice: frozen semantic-product metadata formatting now uses
-      published metadata views for type, struct-field, sum-type, and
-      sum-variant dump sections. Raw metadata storage no longer recovers
-      formatter output after publication freezes the semantic product, while
-      mutable hand-built products keep their fixture-only scan before freeze.
-    - Completed slice: frozen semantic-product graph fact formatting now
-      resolves local-auto, query, try, and `on_error` text through interned
-      IDs. Copied raw text no longer recovers formatter output after
-      publication freezes the semantic product, while mutable hand-built
-      products keep their fixture-only copied-text fallback before freeze.
     - Completed slice: semantic-product-addressed Result-combinator metadata
       now requires published query facts when direct lambda payload analysis
       cannot infer the resulting value kind, covering `Result.map`,
