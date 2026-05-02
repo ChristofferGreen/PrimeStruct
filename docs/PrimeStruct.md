@@ -882,46 +882,6 @@ Compile-pipeline publication contract:
   query, `try(...)`, and `on_error` dump fields resolve interned text IDs and no longer recover copied text when those
   IDs are absent or unresolved. Mutable hand-built products may still use copied-text fallbacks before
   `freezeSemanticProgramPublishedStorage(...)`.
-- Published fact formatting follows the same rule for direct-call, method-call, bridge-path, callable-summary,
-  collection-specialization, binding, and return dump fields: frozen products resolve interned text IDs and do not
-  recover copied text when those IDs are absent or unresolved. Mutable hand-built products may still use copied-text
-  fallbacks before `freezeSemanticProgramPublishedStorage(...)`.
-- Return/result lowerer text consumers use the same frozen-product rule through
-  `semanticProgramResolvePublishedText(...)`: return inference, return-info precompute, and result metadata
-  validation resolve interned text IDs for callable-result and return binding fields, and do not recover copied text
-  after publication freezes the semantic product. Mutable hand-built products may still use copied-text fallbacks
-  before `freezeSemanticProgramPublishedStorage(...)`.
-- Entry-argument count-access setup uses the same frozen-product rule for published binding facts: entry parameter
-  scope, site-kind, name, and binding-type text must resolve through interned IDs after publication freezes the
-  semantic product. Mutable hand-built products may still use copied-text fallbacks before
-  `freezeSemanticProgramPublishedStorage(...)`.
-- Binding, local-auto, and collection-specialization coverage use the same frozen-product rule for published type
-  text: frozen products resolve binding type, collection family, and collection element/key/value text through
-  interned IDs and do not recover copied text when those IDs are absent or unresolved. Mutable hand-built products
-  may still use copied-text fallbacks before `freezeSemanticProgramPublishedStorage(...)`.
-- Statement-binding setup uses the same frozen-product rule for published binding text: statement binding type-info,
-  local-auto declaration synthesis, final local-info fallback, `for(...)` condition binding declarations, and
-  args-pack parameter metadata resolve binding type text through interned IDs after publication freezes the semantic
-  product. Mutable hand-built products may still use copied-text fallbacks before
-  `freezeSemanticProgramPublishedStorage(...)`.
-- Native `Result.ok(...)` emission uses the same frozen-product rule for semantic payload type text: direct payload
-  query/binding facts resolve through interned IDs after publication freezes the semantic product, and copied
-  query/binding type text is not a recovery path for deciding the packed payload shape. Mutable hand-built products
-  may still use copied-text fallbacks before `freezeSemanticProgramPublishedStorage(...)`.
-- Native `Result.error(...)` and `Result.why(...)` status-source checks use the same frozen-product rule for semantic
-  Result error type text: direct source query facts resolve through interned `resultErrorTypeId` after publication
-  freezes the semantic product, and copied query error type text is not a recovery path for deciding whether a
-  status-only direct call matches the consumer error domain. Mutable hand-built products may still use copied-text
-  fallbacks before `freezeSemanticProgramPublishedStorage(...)`.
-- `on_error` lowerer setup uses the same frozen-product rule for semantic handler text: handler error type and bound
-  argument expressions resolve through interned IDs after publication freezes the semantic product, and copied
-  `on_error` fact text is not a recovery path for constructing the handler metadata. Mutable hand-built products may
-  still use copied-text fallbacks before `freezeSemanticProgramPublishedStorage(...)`.
-- Native pointer/location return classification uses the same frozen-product rule for semantic return binding text:
-  direct-call `dereference(...)` aggregate-pointer classification and `location(...)` reference-return classification
-  resolve return binding type text through interned IDs after publication freezes the semantic product, and copied
-  return fact text is not a recovery path for those pointer decisions. Mutable hand-built products may still use
-  copied-text fallbacks before `freezeSemanticProgramPublishedStorage(...)`.
 - Callable-summary lookup follows the same published-map authority rule once the semantic product is frozen by the
   publication path: `callableSummaryIndicesByPathId` is the authority, while raw `callableSummaries` scanning remains
   limited to mutable hand-built products before `freezeSemanticProgramPublishedStorage(...)`. Lowerer return-info

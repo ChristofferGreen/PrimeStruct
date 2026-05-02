@@ -507,27 +507,7 @@ Task template:
     formatter view authority slice is complete for semantic-product dumps
     across type, struct-field, sum-type, and sum-variant metadata views. The
     frozen graph-fact formatter text authority slice is complete for
-    local-auto, query, try, and `on_error` dump fields. The frozen published
-    fact formatter text authority slice is complete for direct-call,
-    method-call, bridge-path, callable-summary, collection-specialization,
-    binding, and return dump fields. The frozen return/result lowerer text
-    authority slice is complete for return inference, return-info precompute,
-    and result metadata validation. The frozen entry-args count-access binding
-    text authority slice is complete for entry parameter scope, site-kind,
-    name, and binding type. The frozen binding/local-auto/collection coverage
-    text authority slice is complete for binding type, collection family, and
-    collection element/key/value text. The frozen statement-binding setup text
-    authority slice is complete for statement binding type-info, local-auto
-    declaration synthesis, final local-info fallback, `for(...)` condition
-    binding declarations, and args-pack parameter metadata. The frozen native
-    `Result.ok(...)` payload-emission text authority slice is complete for
-    query/binding payload type facts. The frozen status Result source text
-    authority slice is complete for native `Result.error(...)` /
-    `Result.why(...)` query result error facts. The frozen `on_error` setup
-    text authority slice is complete for handler error type and bound
-    argument expression facts. The frozen native pointer/location return
-    text authority slice is complete for aggregate-pointer `dereference(...)`
-    and reference-return `location(...)` classification.
+    local-auto, query, try, and `on_error` dump fields.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -641,67 +621,6 @@ Task template:
       IDs. Copied raw text no longer recovers formatter output after
       publication freezes the semantic product, while mutable hand-built
       products keep their fixture-only copied-text fallback before freeze.
-    - Completed slice: frozen semantic-product published fact formatting now
-      resolves direct-call, method-call, bridge-path, callable-summary,
-      collection-specialization, binding, and return text through interned
-      IDs. Copied raw text no longer recovers formatter output after
-      publication freezes the semantic product, while mutable hand-built
-      products keep their fixture-only copied-text fallback before freeze.
-    - Completed slice: frozen semantic-product return/result lowerer text
-      resolution now uses `semanticProgramResolvePublishedText(...)` for
-      return inference, return-info precompute, and result metadata
-      validation. Copied return binding/callable result text no longer
-      recovers lowerer metadata after publication freezes the semantic
-      product, while mutable hand-built products keep their fixture-only
-      copied-text fallback before freeze.
-    - Completed slice: frozen semantic-product entry-args count-access setup
-      now uses `semanticProgramResolvePublishedText(...)` for entry parameter
-      scope, site-kind, name, and binding type. Copied binding-fact text no
-      longer recovers entry-args setup after publication freezes the semantic
-      product, while mutable hand-built products keep their fixture-only
-      copied-text fallback before freeze.
-    - Completed slice: frozen semantic-product binding, local-auto, and
-      collection-specialization coverage now use
-      `semanticProgramResolvePublishedText(...)` for binding type,
-      collection family, and collection element/key/value text. Copied
-      binding and collection fact text no longer recovers coverage
-      validation after publication freezes the semantic product, while
-      mutable hand-built products keep their fixture-only copied-text
-      fallback before freeze.
-    - Completed slice: frozen semantic-product statement-binding setup now
-      uses `semanticProgramResolvePublishedText(...)` for statement binding
-      type-info, local-auto declaration synthesis, final local-info fallback,
-      `for(...)` condition binding declarations, and args-pack parameter
-      metadata. Copied binding and local-auto fact text no longer recovers
-      those setup paths after publication freezes the semantic product, while
-      mutable hand-built products keep their fixture-only copied-text
-      fallback before freeze.
-    - Completed slice: frozen semantic-product native `Result.ok(...)`
-      payload emission now uses `semanticProgramResolvePublishedText(...)`
-      for query/binding payload type facts. Copied query and binding fact text
-      no longer recovers packed payload shape decisions after publication
-      freezes the semantic product, while mutable hand-built products keep
-      their fixture-only copied-text fallback before freeze.
-    - Completed slice: frozen semantic-product native `Result.error(...)`
-      and `Result.why(...)` source checks now use
-      `semanticProgramResolvePublishedText(...)` for query result error type
-      facts. Copied query error type text no longer recovers status-source
-      error-domain matching after publication freezes the semantic product,
-      while mutable hand-built products keep their fixture-only copied-text
-      fallback before freeze.
-    - Completed slice: frozen semantic-product `on_error` lowerer setup now
-      uses `semanticProgramResolvePublishedText(...)` for handler error type
-      and bound argument expression facts. Copied `on_error` fact text no
-      longer recovers handler metadata after publication freezes the semantic
-      product, while mutable hand-built products keep their fixture-only
-      copied-text fallback before freeze.
-    - Completed slice: frozen semantic-product native pointer/location return
-      classification now uses `semanticProgramResolvePublishedText(...)` for
-      return binding type facts. Copied return fact text no longer recovers
-      aggregate-pointer `dereference(...)` or reference-return `location(...)`
-      classification after publication freezes the semantic product, while
-      mutable hand-built products keep their fixture-only copied-text fallback
-      before freeze.
     - Completed slice: semantic-product-addressed Result-combinator metadata
       now requires published query facts when direct lambda payload analysis
       cannot infer the resulting value kind, covering `Result.map`,

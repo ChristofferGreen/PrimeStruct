@@ -32,9 +32,15 @@ std::string resolveSemanticProductPayloadTypeText(
     const SemanticProductTargetAdapter &semanticProductTargets,
     const std::string &text,
     SymbolId textId) {
-  if (semanticProductTargets.semanticProgram != nullptr) {
-    return trimTemplateTypeText(std::string(semanticProgramResolvePublishedText(
-        *semanticProductTargets.semanticProgram, textId, text)));
+  if (semanticProductTargets.semanticProgram != nullptr &&
+      textId != InvalidSymbolId) {
+    const std::string resolvedText = std::string(
+        semanticProgramResolveCallTargetString(
+            *semanticProductTargets.semanticProgram,
+            textId));
+    if (!resolvedText.empty()) {
+      return trimTemplateTypeText(resolvedText);
+    }
   }
   return trimTemplateTypeText(text);
 }
@@ -642,11 +648,15 @@ ResultErrorMethodCallEmitResult tryEmitResultErrorCall(
   auto resolveSemanticQueryResultErrorTypeText =
       [&](const SemanticProgramQueryFact &queryFact) {
     if (semanticProductTargets != nullptr &&
-        semanticProductTargets->semanticProgram != nullptr) {
-      return trimTemplateTypeText(std::string(semanticProgramResolvePublishedText(
-          *semanticProductTargets->semanticProgram,
-          queryFact.resultErrorTypeId,
-          queryFact.resultErrorType)));
+        semanticProductTargets->semanticProgram != nullptr &&
+        queryFact.resultErrorTypeId != InvalidSymbolId) {
+      std::string resolvedErrorType = std::string(
+          semanticProgramResolveCallTargetString(
+              *semanticProductTargets->semanticProgram,
+              queryFact.resultErrorTypeId));
+      if (!resolvedErrorType.empty()) {
+        return trimTemplateTypeText(resolvedErrorType);
+      }
     }
     return trimTemplateTypeText(queryFact.resultErrorType);
   };

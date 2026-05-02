@@ -206,9 +206,13 @@ bool isReferenceReturnType(const std::string &returnType) {
 std::string resolveSemanticReturnFactBindingType(
     const SemanticProgram *semanticProgram,
     const SemanticProgramReturnFact &returnFact) {
-  if (semanticProgram != nullptr) {
-    return trimTemplateTypeText(std::string(semanticProgramResolvePublishedText(
-        *semanticProgram, returnFact.bindingTypeTextId, returnFact.bindingTypeText)));
+  if (semanticProgram != nullptr && returnFact.bindingTypeTextId != InvalidSymbolId) {
+    std::string resolvedTypeText = std::string(
+        semanticProgramResolveCallTargetString(*semanticProgram,
+                                               returnFact.bindingTypeTextId));
+    if (!resolvedTypeText.empty()) {
+      return trimTemplateTypeText(resolvedTypeText);
+    }
   }
   return trimTemplateTypeText(returnFact.bindingTypeText);
 }

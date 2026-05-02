@@ -71,9 +71,12 @@ bool requiresSemanticBindingFact(const SemanticProgram *semanticProgram,
 std::string resolveSemanticProductTypeText(const SemanticProgram *semanticProgram,
                                            const std::string &text,
                                            SymbolId textId) {
-  if (semanticProgram != nullptr) {
-    return trimTemplateTypeText(std::string(
-        semanticProgramResolvePublishedText(*semanticProgram, textId, text)));
+  if (semanticProgram != nullptr && textId != InvalidSymbolId) {
+    std::string resolvedTypeText = std::string(
+        semanticProgramResolveCallTargetString(*semanticProgram, textId));
+    if (!resolvedTypeText.empty()) {
+      return trimTemplateTypeText(resolvedTypeText);
+    }
   }
   return trimTemplateTypeText(text);
 }
@@ -193,27 +196,18 @@ bool extractExpectedCollectionSpecialization(std::string typeText,
 }
 
 bool collectionSpecializationMatchesExpected(
-    const SemanticProgram *semanticProgram,
     const SemanticProgramCollectionSpecialization &entry,
     const ExpectedCollectionSpecialization &expected) {
-  const std::string collectionFamily = resolveSemanticCollectionSpecializationText(
-      semanticProgram, entry.collectionFamily, entry.collectionFamilyId);
-  if (collectionFamily != expected.family) {
+  if (entry.collectionFamily != expected.family) {
     return false;
   }
-  if ((collectionFamily == "vector" || collectionFamily == "soa_vector") &&
+  if ((expected.family == "vector" || expected.family == "soa_vector") &&
       !expected.templateArgs.empty()) {
-    return resolveSemanticCollectionSpecializationText(
-               semanticProgram, entry.elementTypeText, entry.elementTypeTextId) ==
-           expected.templateArgs.front();
+    return entry.elementTypeText == expected.templateArgs.front();
   }
-  if (collectionFamily == "map" && expected.templateArgs.size() == 2) {
-    return resolveSemanticCollectionSpecializationText(
-               semanticProgram, entry.keyTypeText, entry.keyTypeTextId) ==
-               expected.templateArgs[0] &&
-           resolveSemanticCollectionSpecializationText(
-               semanticProgram, entry.valueTypeText, entry.valueTypeTextId) ==
-               expected.templateArgs[1];
+  if (expected.family == "map" && expected.templateArgs.size() == 2) {
+    return entry.keyTypeText == expected.templateArgs[0] &&
+           entry.valueTypeText == expected.templateArgs[1];
   }
   return true;
 }
@@ -874,8 +868,7 @@ bool validateSemanticProductCollectionSpecializationCoverage(
                                               false)) {
       return false;
     }
-    if (!collectionSpecializationMatchesExpected(
-            semanticProgram, *collectionFact, expected)) {
+    if (!collectionSpecializationMatchesExpected(*collectionFact, expected)) {
       error = "stale semantic-product collection specialization: " +
               siteDescription;
       return false;

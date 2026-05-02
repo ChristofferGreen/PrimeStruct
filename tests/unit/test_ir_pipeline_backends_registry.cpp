@@ -1545,8 +1545,8 @@ TEST_CASE("native Result why direct-call sources use semantic-product query fact
   const std::string source = readTextFile(resultWhyHelpersPath);
   const size_t resolverPos =
       source.find("resolveSemanticQueryResultErrorTypeText");
-  const size_t publishedTextPos =
-      source.find("semanticProgramResolvePublishedText(", resolverPos);
+  const size_t semanticResolvePos =
+      source.find("semanticProgramResolveCallTargetString(", resolverPos);
   const size_t errorTypeIdPos =
       source.find("queryFact.resultErrorTypeId", resolverPos);
   const size_t directCallResolverPos =
@@ -1568,20 +1568,15 @@ TEST_CASE("native Result why direct-call sources use semantic-product query fact
   REQUIRE(staleDiagnosticPos != std::string::npos);
   REQUIRE(fallbackTransformScanPos != std::string::npos);
   REQUIRE(resolverPos != std::string::npos);
-  REQUIRE(publishedTextPos != std::string::npos);
+  REQUIRE(semanticResolvePos != std::string::npos);
   REQUIRE(errorTypeIdPos != std::string::npos);
   CHECK(resolverPos < directCallResolverPos);
-  CHECK(resolverPos < publishedTextPos);
-  CHECK(publishedTextPos < errorTypeIdPos);
   CHECK(resolverPos < errorTypeIdPos);
+  CHECK(errorTypeIdPos < semanticResolvePos);
   CHECK(queryFactPos < fallbackTransformScanPos);
   CHECK(staleDiagnosticPos < fallbackTransformScanPos);
   CHECK(source.find("trimTemplateTypeText(queryFact->resultErrorType)") ==
         std::string::npos);
-  const size_t rawStringResolverPos =
-      source.find("semanticProgramResolveCallTargetString(", resolverPos);
-  CHECK((rawStringResolverPos == std::string::npos ||
-         rawStringResolverPos > directCallResolverPos));
 }
 
 TEST_CASE("native Result error direct-call sources use semantic-product query facts") {
@@ -1597,8 +1592,8 @@ TEST_CASE("native Result error direct-call sources use semantic-product query fa
   const std::string source = readTextFile(packedResultHelpersPath);
   const size_t resolverPos =
       source.find("resolveSemanticQueryResultErrorTypeText");
-  const size_t publishedTextPos =
-      source.find("semanticProgramResolvePublishedText(", resolverPos);
+  const size_t semanticResolvePos =
+      source.find("semanticProgramResolveCallTargetString(", resolverPos);
   const size_t errorTypeIdPos =
       source.find("queryFact.resultErrorTypeId", resolverPos);
   const size_t directCallResolverPos =
@@ -1620,20 +1615,15 @@ TEST_CASE("native Result error direct-call sources use semantic-product query fa
   REQUIRE(staleDiagnosticPos != std::string::npos);
   REQUIRE(fallbackTransformScanPos != std::string::npos);
   REQUIRE(resolverPos != std::string::npos);
-  REQUIRE(publishedTextPos != std::string::npos);
+  REQUIRE(semanticResolvePos != std::string::npos);
   REQUIRE(errorTypeIdPos != std::string::npos);
   CHECK(resolverPos < directCallResolverPos);
-  CHECK(resolverPos < publishedTextPos);
-  CHECK(publishedTextPos < errorTypeIdPos);
   CHECK(resolverPos < errorTypeIdPos);
+  CHECK(errorTypeIdPos < semanticResolvePos);
   CHECK(queryFactPos < fallbackTransformScanPos);
   CHECK(staleDiagnosticPos < fallbackTransformScanPos);
   CHECK(source.find("trimTemplateTypeText(queryFact->resultErrorType)") ==
         std::string::npos);
-  const size_t rawStringResolverPos =
-      source.find("semanticProgramResolveCallTargetString(", resolverPos);
-  CHECK((rawStringResolverPos == std::string::npos ||
-         rawStringResolverPos > directCallResolverPos));
 }
 
 TEST_CASE("native aggregate pointer dereference calls use semantic-product return facts") {
@@ -1650,21 +1640,16 @@ TEST_CASE("native aggregate pointer dereference calls use semantic-product retur
   const size_t helperPos = source.find("resolveSemanticReturnFactBindingType");
   REQUIRE(helperPos != std::string::npos);
   const size_t idPos = source.find("returnFact.bindingTypeTextId", helperPos);
-  const size_t publishedTextPos =
-      source.find("semanticProgramResolvePublishedText(", helperPos);
+  const size_t semanticResolvePos =
+      source.find("semanticProgramResolveCallTargetString(", idPos);
   const size_t fallbackTextPos =
-      source.find("return trimTemplateTypeText(returnFact.bindingTypeText)", helperPos);
+      source.find("return trimTemplateTypeText(returnFact.bindingTypeText)", semanticResolvePos);
   REQUIRE(idPos != std::string::npos);
-  REQUIRE(publishedTextPos != std::string::npos);
+  REQUIRE(semanticResolvePos != std::string::npos);
   REQUIRE(fallbackTextPos != std::string::npos);
   CHECK(helperPos < idPos);
-  CHECK(helperPos < publishedTextPos);
-  CHECK(publishedTextPos < idPos);
-  CHECK(publishedTextPos < fallbackTextPos);
-  const size_t rawStringResolverPos =
-      source.find("semanticProgramResolveCallTargetString(", helperPos);
-  CHECK((rawStringResolverPos == std::string::npos ||
-         rawStringResolverPos > fallbackTextPos));
+  CHECK(idPos < semanticResolvePos);
+  CHECK(semanticResolvePos < fallbackTextPos);
 
   const size_t resolverPos = source.find("resolveAggregatePointerLikeCallExpr");
   REQUIRE(resolverPos != std::string::npos);
@@ -1702,21 +1687,16 @@ TEST_CASE("native location direct reference calls use semantic-product return fa
   const size_t helperPos = source.find("resolveSemanticReturnFactBindingType");
   REQUIRE(helperPos != std::string::npos);
   const size_t idPos = source.find("returnFact.bindingTypeTextId", helperPos);
-  const size_t publishedTextPos =
-      source.find("semanticProgramResolvePublishedText(", helperPos);
+  const size_t semanticResolvePos =
+      source.find("semanticProgramResolveCallTargetString(", idPos);
   const size_t fallbackTextPos =
-      source.find("return trimTemplateTypeText(returnFact.bindingTypeText)", helperPos);
+      source.find("return trimTemplateTypeText(returnFact.bindingTypeText)", semanticResolvePos);
   REQUIRE(idPos != std::string::npos);
-  REQUIRE(publishedTextPos != std::string::npos);
+  REQUIRE(semanticResolvePos != std::string::npos);
   REQUIRE(fallbackTextPos != std::string::npos);
   CHECK(helperPos < idPos);
-  CHECK(helperPos < publishedTextPos);
-  CHECK(publishedTextPos < idPos);
-  CHECK(publishedTextPos < fallbackTextPos);
-  const size_t rawStringResolverPos =
-      source.find("semanticProgramResolveCallTargetString(", helperPos);
-  CHECK((rawStringResolverPos == std::string::npos ||
-         rawStringResolverPos > fallbackTextPos));
+  CHECK(idPos < semanticResolvePos);
+  CHECK(semanticResolvePos < fallbackTextPos);
 
   const size_t resolverPos = source.find("resolveReferenceReturnCallExpr");
   REQUIRE(resolverPos != std::string::npos);
@@ -1933,12 +1913,12 @@ TEST_CASE("native Result ok emission uses semantic-product payload facts") {
   REQUIRE(emitPos != std::string::npos);
   const size_t resolverPos =
       source.find("std::string resolveSemanticProductPayloadTypeText");
-  const size_t resolverEndPos =
-      source.find("bool resolveSemanticProductResultOkPayloadInfo", resolverPos);
-  const size_t publishedTextPos =
-      source.find("semanticProgramResolvePublishedText(", resolverPos);
+  const size_t idCheckPos =
+      source.find("textId != InvalidSymbolId", resolverPos);
+  const size_t internedTypeTextPos =
+      source.find("semanticProgramResolveCallTargetString", idCheckPos);
   const size_t copiedTextFallbackPos =
-      source.find("return trimTemplateTypeText(text);", publishedTextPos);
+      source.find("return trimTemplateTypeText(text);", internedTypeTextPos);
   const size_t semanticPayloadPos =
       source.find("resolveSemanticProductResultOkPayloadInfo", emitPos);
   const size_t rewriteFallbackPos =
@@ -1952,8 +1932,8 @@ TEST_CASE("native Result ok emission uses semantic-product payload facts") {
   const size_t structFallbackPos =
       source.find("inferPackedResultStructType", emitPos);
   REQUIRE(resolverPos != std::string::npos);
-  REQUIRE(resolverEndPos != std::string::npos);
-  REQUIRE(publishedTextPos != std::string::npos);
+  REQUIRE(idCheckPos != std::string::npos);
+  REQUIRE(internedTypeTextPos != std::string::npos);
   REQUIRE(copiedTextFallbackPos != std::string::npos);
   REQUIRE(semanticPayloadPos != std::string::npos);
   REQUIRE(rewriteFallbackPos != std::string::npos);
@@ -1961,7 +1941,8 @@ TEST_CASE("native Result ok emission uses semantic-product payload facts") {
   REQUIRE(inferKindPos != std::string::npos);
   REQUIRE(collectionFallbackPos != std::string::npos);
   REQUIRE(structFallbackPos != std::string::npos);
-  CHECK(publishedTextPos < copiedTextFallbackPos);
+  CHECK(idCheckPos < internedTypeTextPos);
+  CHECK(internedTypeTextPos < copiedTextFallbackPos);
   CHECK(semanticPayloadPos < rewriteFallbackPos);
   CHECK(rewriteFallbackPos < missingDiagnosticPos);
   CHECK(semanticPayloadPos < inferKindPos);
@@ -1972,10 +1953,6 @@ TEST_CASE("native Result ok emission uses semantic-product payload facts") {
   CHECK(missingDiagnosticPos < structFallbackPos);
   CHECK(source.find("std::string resolvedText = text;", resolverPos) ==
         std::string::npos);
-  const size_t rawStringResolverPos =
-      source.find("semanticProgramResolveCallTargetString", resolverPos);
-  CHECK((rawStringResolverPos == std::string::npos ||
-         rawStringResolverPos > resolverEndPos));
 }
 
 TEST_CASE("native try Result lowering uses semantic-product variant metadata") {
@@ -2119,14 +2096,13 @@ TEST_CASE("for-condition auto bindings use semantic-product binding facts") {
   CHECK(source.find("isSemanticForConditionBindingCandidate") != std::string::npos);
   CHECK(source.find("findSemanticProductBindingFact(") != std::string::npos);
   CHECK(source.find("bindingFact->bindingTypeTextId") != std::string::npos);
-  CHECK(source.find("semanticProgramResolvePublishedText(") != std::string::npos);
+  CHECK(source.find("semanticProgramResolveCallTargetString(") != std::string::npos);
   CHECK(source.find("missing semantic-product for-condition binding fact") != std::string::npos);
   CHECK(source.find("semanticForConditionBindingExpr.semanticNodeId = 0;") != std::string::npos);
   CHECK(source.find("*conditionBindingForDeclaration") != std::string::npos);
   CHECK(source.find(
             "bindingFact != nullptr ? trimTemplateTypeText(bindingFact->bindingTypeText)") ==
         std::string::npos);
-  CHECK(source.find("bindingTypeText = bindingFact->bindingTypeText") == std::string::npos);
   CHECK(source.find("declareForConditionBinding(\n                cond,") == std::string::npos);
 }
 
@@ -2147,18 +2123,20 @@ TEST_CASE("local-auto statement bindings resolve interned binding ids") {
       source.find("findSemanticProductLocalAutoFactBySemanticId", candidatePos);
   const size_t idPos = source.find("localAutoFact->bindingTypeTextId", factPos);
   const size_t resolverPos =
-      source.find("semanticProgramResolvePublishedText(", idPos);
+      source.find("semanticProgramResolveCallTargetString(", idPos);
+  const size_t fallbackTextPos =
+      source.find("bindingTypeText = localAutoFact->bindingTypeText", resolverPos);
   const size_t transformPos =
-      source.find("semanticLocalAutoBindingExpr.transforms.push_back", resolverPos);
+      source.find("semanticLocalAutoBindingExpr.transforms.push_back", fallbackTextPos);
   REQUIRE(factPos != std::string::npos);
   REQUIRE(idPos != std::string::npos);
   REQUIRE(resolverPos != std::string::npos);
+  REQUIRE(fallbackTextPos != std::string::npos);
   REQUIRE(transformPos != std::string::npos);
   CHECK(factPos < idPos);
   CHECK(idPos < resolverPos);
-  CHECK(resolverPos < transformPos);
-  CHECK(source.find("bindingTypeText = localAutoFact->bindingTypeText") ==
-        std::string::npos);
+  CHECK(resolverPos < fallbackTextPos);
+  CHECK(fallbackTextPos < transformPos);
   CHECK(source.find(
             "localAutoFact != nullptr ? trimTemplateTypeText(localAutoFact->bindingTypeText)") ==
         std::string::npos);
@@ -2182,17 +2160,19 @@ TEST_CASE("statement binding local info resolves interned binding ids") {
   const size_t factPos = source.find("findSemanticProductBindingFact(", fallbackPos);
   const size_t idPos = source.find("bindingFact->bindingTypeTextId", factPos);
   const size_t resolverPos =
-      source.find("semanticProgramResolvePublishedText(", idPos);
-  const size_t valueKindPos = source.find("valueKindFromTypeName(semanticTypeText)", resolverPos);
+      source.find("semanticProgramResolveCallTargetString(", idPos);
+  const size_t fallbackTextPos =
+      source.find("semanticTypeText = bindingFact->bindingTypeText", resolverPos);
+  const size_t valueKindPos = source.find("valueKindFromTypeName(semanticTypeText)", fallbackTextPos);
   REQUIRE(factPos != std::string::npos);
   REQUIRE(idPos != std::string::npos);
   REQUIRE(resolverPos != std::string::npos);
+  REQUIRE(fallbackTextPos != std::string::npos);
   REQUIRE(valueKindPos != std::string::npos);
   CHECK(factPos < idPos);
   CHECK(idPos < resolverPos);
-  CHECK(resolverPos < valueKindPos);
-  CHECK(source.find("semanticTypeText = bindingFact->bindingTypeText") ==
-        std::string::npos);
+  CHECK(resolverPos < fallbackTextPos);
+  CHECK(fallbackTextPos < valueKindPos);
   CHECK(source.find("bindingFact != nullptr && !bindingFact->bindingTypeText.empty()") ==
         std::string::npos);
 }
@@ -3929,134 +3909,6 @@ TEST_CASE("ir lowerer rejects stale semantic-product collection metadata") {
   CHECK(diagnosticInfo.message == error);
 }
 
-TEST_CASE("ir lowerer binding text validation requires interned text after freeze") {
-  constexpr uint64_t BindingSemanticId = 9301;
-
-  primec::Program program;
-  primec::Definition mainDef;
-  mainDef.fullPath = "/main";
-
-  primec::Expr initializerExpr;
-  initializerExpr.kind = primec::Expr::Kind::Literal;
-  initializerExpr.literalValue = 1;
-  initializerExpr.intWidth = 32;
-
-  primec::Expr bindingExpr;
-  bindingExpr.isBinding = true;
-  bindingExpr.name = "values";
-  bindingExpr.semanticNodeId = BindingSemanticId;
-  bindingExpr.args.push_back(initializerExpr);
-  mainDef.statements.push_back(bindingExpr);
-  program.definitions.push_back(mainDef);
-
-  auto addBindingFact = [&](primec::SemanticProgram &semanticProgram,
-                            bool includeBindingTypeId) {
-    primec::SemanticProgramBindingFact fact;
-    fact.scopePath = "/main";
-    fact.siteKind = "local";
-    fact.name = "values";
-    fact.bindingTypeText = "vector<i32>";
-    fact.semanticNodeId = BindingSemanticId;
-    fact.resolvedPathId =
-        primec::semanticProgramInternCallTargetString(semanticProgram, "/main/values");
-    if (includeBindingTypeId) {
-      fact.bindingTypeTextId =
-          primec::semanticProgramInternCallTargetString(semanticProgram, "vector<i32>");
-    }
-    semanticProgram.bindingFacts.push_back(std::move(fact));
-    semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(
-        BindingSemanticId, 0);
-  };
-
-  auto addLocalAutoFact = [&](primec::SemanticProgram &semanticProgram,
-                              bool includeBindingTypeId) {
-    primec::SemanticProgramLocalAutoFact fact;
-    fact.scopePath = "/main";
-    fact.bindingName = "values";
-    fact.bindingTypeText = "vector<i32>";
-    fact.semanticNodeId = BindingSemanticId;
-    if (includeBindingTypeId) {
-      fact.bindingTypeTextId =
-          primec::semanticProgramInternCallTargetString(semanticProgram, "vector<i32>");
-    }
-    semanticProgram.localAutoFacts.push_back(std::move(fact));
-    semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr.insert_or_assign(
-        BindingSemanticId, 0);
-  };
-
-  auto addCollectionFact = [&](primec::SemanticProgram &semanticProgram,
-                               bool includeTypeIds) {
-    primec::SemanticProgramCollectionSpecialization fact;
-    fact.scopePath = "/main";
-    fact.siteKind = "local";
-    fact.name = "values";
-    fact.collectionFamily = "vector";
-    fact.bindingTypeText = "vector<i32>";
-    fact.elementTypeText = "i32";
-    fact.semanticNodeId = BindingSemanticId;
-    if (includeTypeIds) {
-      fact.collectionFamilyId =
-          primec::semanticProgramInternCallTargetString(semanticProgram, "vector");
-      fact.bindingTypeTextId =
-          primec::semanticProgramInternCallTargetString(semanticProgram, "vector<i32>");
-      fact.elementTypeTextId =
-          primec::semanticProgramInternCallTargetString(semanticProgram, "i32");
-    }
-    semanticProgram.collectionSpecializations.push_back(std::move(fact));
-    semanticProgram.publishedRoutingLookups.collectionSpecializationIndicesByExpr
-        .insert_or_assign(BindingSemanticId, 0);
-  };
-
-  primec::SemanticProgram rawFrozenSemanticProgram;
-  rawFrozenSemanticProgram.entryPath = "/main";
-  addBindingFact(rawFrozenSemanticProgram, false);
-  addLocalAutoFact(rawFrozenSemanticProgram, false);
-  addCollectionFact(rawFrozenSemanticProgram, false);
-  primec::freezeSemanticProgramPublishedStorage(rawFrozenSemanticProgram);
-
-  std::string error;
-  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductBindingCoverage(
-      program, &rawFrozenSemanticProgram, error));
-  CHECK(error == "missing semantic-product binding fact: /main -> local values");
-
-  error.clear();
-  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductLocalAutoCoverage(
-      program, &rawFrozenSemanticProgram, error));
-  CHECK(error == "missing semantic-product local-auto fact: /main -> local values");
-
-  primec::SemanticProgram rawCollectionFrozenSemanticProgram;
-  rawCollectionFrozenSemanticProgram.entryPath = "/main";
-  addBindingFact(rawCollectionFrozenSemanticProgram, true);
-  addCollectionFact(rawCollectionFrozenSemanticProgram, false);
-  primec::freezeSemanticProgramPublishedStorage(rawCollectionFrozenSemanticProgram);
-
-  error.clear();
-  CHECK_FALSE(
-      primec::ir_lowerer::validateSemanticProductCollectionSpecializationCoverage(
-          program, &rawCollectionFrozenSemanticProgram, error));
-  CHECK(error == "stale semantic-product collection specialization: /main -> local values");
-
-  primec::SemanticProgram mappedFrozenSemanticProgram;
-  mappedFrozenSemanticProgram.entryPath = "/main";
-  addBindingFact(mappedFrozenSemanticProgram, true);
-  addLocalAutoFact(mappedFrozenSemanticProgram, true);
-  addCollectionFact(mappedFrozenSemanticProgram, true);
-  primec::freezeSemanticProgramPublishedStorage(mappedFrozenSemanticProgram);
-
-  error.clear();
-  CHECK(primec::ir_lowerer::validateSemanticProductBindingCoverage(
-      program, &mappedFrozenSemanticProgram, error));
-  CHECK(error.empty());
-
-  CHECK(primec::ir_lowerer::validateSemanticProductLocalAutoCoverage(
-      program, &mappedFrozenSemanticProgram, error));
-  CHECK(error.empty());
-
-  CHECK(primec::ir_lowerer::validateSemanticProductCollectionSpecializationCoverage(
-      program, &mappedFrozenSemanticProgram, error));
-  CHECK(error.empty());
-}
-
 TEST_CASE("ir lowerer rejects missing semantic-product local binding facts") {
   primec::Program program;
 
@@ -5413,108 +5265,6 @@ TEST_CASE("ir lowerer rejects stale semantic-product return facts") {
   CHECK_FALSE(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
       &semanticProgram, error));
   CHECK(error == "stale semantic-product return fact: /main");
-}
-
-TEST_CASE("ir lowerer result metadata validation requires interned text after freeze") {
-  primec::SemanticProgram rawFrozenSemanticProgram;
-  rawFrozenSemanticProgram.entryPath = "/main";
-  const primec::SymbolId rawMainPathId =
-      primec::semanticProgramInternCallTargetString(rawFrozenSemanticProgram, "/main");
-  rawFrozenSemanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      .isExecution = false,
-      .returnKind = "return",
-      .isCompute = false,
-      .isUnsafe = false,
-      .activeEffects = {},
-      .activeCapabilities = {},
-      .hasResultType = false,
-      .resultTypeHasValue = false,
-      .resultValueType = "",
-      .resultErrorType = "",
-      .hasOnError = false,
-      .onErrorHandlerPath = "",
-      .onErrorErrorType = "",
-      .onErrorBoundArgCount = 0,
-      .semanticNodeId = 9201,
-      .provenanceHandle = 0,
-      .fullPathId = rawMainPathId,
-  });
-  rawFrozenSemanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
-      .returnKind = "return",
-      .structPath = "",
-      .bindingTypeText = "i32",
-      .isMutable = false,
-      .isEntryArgString = false,
-      .isUnsafeReference = false,
-      .referenceRoot = "",
-      .sourceLine = 0,
-      .sourceColumn = 0,
-      .semanticNodeId = 9201,
-      .definitionPathId = rawMainPathId,
-  });
-  primec::SemanticProgramModuleResolvedArtifacts rawModule;
-  rawModule.identity.moduleKey = "/";
-  rawModule.callableSummaryIndices.push_back(0);
-  rawModule.returnFactIndices.push_back(0);
-  rawFrozenSemanticProgram.moduleResolvedArtifacts.push_back(std::move(rawModule));
-  primec::freezeSemanticProgramPublishedStorage(rawFrozenSemanticProgram);
-
-  std::string error;
-  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
-      &rawFrozenSemanticProgram, error));
-  CHECK(error == "missing semantic-product return binding type: /main");
-
-  primec::SemanticProgram mappedFrozenSemanticProgram;
-  mappedFrozenSemanticProgram.entryPath = "/main";
-  const primec::SymbolId mappedMainPathId =
-      primec::semanticProgramInternCallTargetString(mappedFrozenSemanticProgram, "/main");
-  mappedFrozenSemanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      .isExecution = false,
-      .returnKind = "return",
-      .isCompute = false,
-      .isUnsafe = false,
-      .activeEffects = {},
-      .activeCapabilities = {},
-      .hasResultType = false,
-      .resultTypeHasValue = false,
-      .resultValueType = "",
-      .resultErrorType = "",
-      .hasOnError = false,
-      .onErrorHandlerPath = "",
-      .onErrorErrorType = "",
-      .onErrorBoundArgCount = 0,
-      .semanticNodeId = 9201,
-      .provenanceHandle = 0,
-      .fullPathId = mappedMainPathId,
-      .returnKindId =
-          primec::semanticProgramInternCallTargetString(mappedFrozenSemanticProgram, "return"),
-  });
-  mappedFrozenSemanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
-      .returnKind = "return",
-      .structPath = "",
-      .bindingTypeText = "i32",
-      .isMutable = false,
-      .isEntryArgString = false,
-      .isUnsafeReference = false,
-      .referenceRoot = "",
-      .sourceLine = 0,
-      .sourceColumn = 0,
-      .semanticNodeId = 9201,
-      .definitionPathId = mappedMainPathId,
-      .bindingTypeTextId =
-          primec::semanticProgramInternCallTargetString(mappedFrozenSemanticProgram, "i32"),
-  });
-  primec::SemanticProgramModuleResolvedArtifacts mappedModule;
-  mappedModule.identity.moduleKey = "/";
-  mappedModule.callableSummaryIndices.push_back(0);
-  mappedModule.returnFactIndices.push_back(0);
-  mappedFrozenSemanticProgram.moduleResolvedArtifacts.push_back(std::move(mappedModule));
-  primec::freezeSemanticProgramPublishedStorage(mappedFrozenSemanticProgram);
-
-  error.clear();
-  CHECK(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
-      &mappedFrozenSemanticProgram, error));
-  CHECK(error.empty());
 }
 
 TEST_CASE("ir lowerer rejects incomplete semantic-product query facts") {

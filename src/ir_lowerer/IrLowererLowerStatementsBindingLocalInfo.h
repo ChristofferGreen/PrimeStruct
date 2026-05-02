@@ -169,11 +169,16 @@
         if (const SemanticProgramBindingFact *bindingFact =
                 findSemanticProductBindingFact(callResolutionAdapters.semanticProductTargets.semanticIndex, stmt);
             bindingFact != nullptr) {
-          std::string semanticTypeText = trimTemplateTypeText(std::string(
-              semanticProgramResolvePublishedText(
-                  *callResolutionAdapters.semanticProgram,
-                  bindingFact->bindingTypeTextId,
-                  bindingFact->bindingTypeText)));
+          std::string semanticTypeText;
+          if (bindingFact->bindingTypeTextId != InvalidSymbolId) {
+            semanticTypeText = std::string(semanticProgramResolveCallTargetString(
+                *callResolutionAdapters.semanticProgram,
+                bindingFact->bindingTypeTextId));
+          }
+          if (semanticTypeText.empty()) {
+            semanticTypeText = bindingFact->bindingTypeText;
+          }
+          semanticTypeText = trimTemplateTypeText(semanticTypeText);
           if (!semanticTypeText.empty() &&
               valueKindFromTypeName(semanticTypeText) == LocalInfo::ValueKind::Unknown) {
             std::string base;
