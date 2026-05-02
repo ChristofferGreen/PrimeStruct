@@ -45,8 +45,10 @@ bool definitionCanCarryOnErrorHandler(const Definition &def,
       typeMetadata != nullptr && typeMetadata->category == "sum") {
     return false;
   }
-  if (semanticProgramLookupPublishedSumTypeMetadata(*semanticProgram, def.fullPath) != nullptr) {
-    return false;
+  for (const auto &sumMetadata : semanticProgram->sumTypeMetadata) {
+    if (sumMetadata.fullPath == def.fullPath) {
+      return false;
+    }
   }
   return true;
 }

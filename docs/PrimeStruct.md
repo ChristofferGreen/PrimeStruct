@@ -840,24 +840,6 @@ Compile-pipeline publication contract:
   publication path: the lowerer semantic-product adapter requires `returnFactIndicesByDefinitionId` for
   definition-scoped return facts instead of recovering by scanning raw `returnFacts` storage. Mutable hand-built
   products may still use the raw scan before `freezeSemanticProgramPublishedStorage(...)`.
-- Definition lookup follows the same published-map authority rule once the semantic product is frozen by the
-  publication path: public definition lookup helpers require `definitionIndicesByPathId` for path-id lookups instead
-  of recovering by scanning raw `definitions` storage. Mutable hand-built products may still use the raw scan before
-  `freezeSemanticProgramPublishedStorage(...)`.
-- Published fact-family views follow the same rule once the semantic product is frozen by the publication path:
-  per-module `moduleResolvedArtifacts` indexes are the authority for direct-call, method-call, bridge-path,
-  callable-summary, binding, return, collection-specialization, local-auto, query, try, and `on_error` views. Mutable
-  hand-built products may still use the raw flat-storage scan before `freezeSemanticProgramPublishedStorage(...)`.
-- Type-shape metadata lookup follows the same rule once the semantic product is frozen by the publication path:
-  `typeMetadataIndicesByPathId` and `structFieldMetadataIndicesByStructPathId` are the authorities for type and
-  struct-field metadata lookup instead of recovering by scanning raw `typeMetadata` or `structFieldMetadata` storage.
-  Struct-like type metadata views also enumerate through `typeMetadataIndicesByPathId` in deterministic storage order.
-  Mutable hand-built products may still use the raw scan before `freezeSemanticProgramPublishedStorage(...)`.
-- Sum metadata lookup follows the same rule once the semantic product is frozen by the publication path:
-  `sumTypeMetadataIndicesByPathId` and `sumVariantMetadataIndicesBySumPathAndVariantNameId` are the authorities for
-  sum type and variant metadata lookup instead of recovering by scanning raw `sumTypeMetadata` or
-  `sumVariantMetadata` storage. Mutable hand-built products may still use the raw scan before
-  `freezeSemanticProgramPublishedStorage(...)`.
 - Collection-specialization lookup follows the same published-map authority rule for semantic-node ids: public
   published collection-specialization lookup helpers and the lowerer semantic-product adapter require
   `collectionSpecializationIndicesByExpr` for expression-scoped collection facts instead of recovering by scanning

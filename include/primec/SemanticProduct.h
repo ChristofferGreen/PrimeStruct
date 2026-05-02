@@ -394,10 +394,6 @@ struct SemanticProgramPublishedRoutingLookups {
   std::unordered_map<uint64_t, StdlibSurfaceId> methodCallStdlibSurfaceIdsByExpr;
   std::unordered_map<uint64_t, StdlibSurfaceId> bridgePathChoiceStdlibSurfaceIdsByExpr;
   std::unordered_map<SymbolId, std::size_t> callableSummaryIndicesByPathId;
-  std::unordered_map<SymbolId, std::size_t> typeMetadataIndicesByPathId;
-  std::unordered_map<SymbolId, std::vector<std::size_t>> structFieldMetadataIndicesByStructPathId;
-  std::unordered_map<SymbolId, std::size_t> sumTypeMetadataIndicesByPathId;
-  std::unordered_map<uint64_t, std::size_t> sumVariantMetadataIndicesBySumPathAndVariantNameId;
   std::unordered_map<uint64_t, std::size_t> bindingFactIndicesByExpr;
   std::unordered_map<uint64_t, std::size_t> returnFactIndicesByDefinitionId;
   std::unordered_map<uint64_t, std::size_t> collectionSpecializationIndicesByExpr;
@@ -466,13 +462,6 @@ semanticProgramStructTypeMetadataView(const SemanticProgram &semanticProgram);
 std::vector<const SemanticProgramStructFieldMetadata *>
 semanticProgramStructFieldMetadataView(const SemanticProgram &semanticProgram,
                                        std::string_view structPath);
-const SemanticProgramSumTypeMetadata *semanticProgramLookupPublishedSumTypeMetadata(
-    const SemanticProgram &semanticProgram,
-    std::string_view fullPath);
-const SemanticProgramSumVariantMetadata *semanticProgramLookupPublishedSumVariantMetadata(
-    const SemanticProgram &semanticProgram,
-    std::string_view sumPath,
-    std::string_view variantName);
 std::vector<const SemanticProgramCollectionSpecialization *>
 semanticProgramCollectionSpecializationView(const SemanticProgram &semanticProgram);
 std::vector<const SemanticProgramBindingFact *>

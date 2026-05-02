@@ -4181,49 +4181,6 @@ TEST_CASE("ir lowerer direct-call coverage uses published definition and import-
         std::string::npos);
 }
 
-TEST_CASE("semantic product definition lookup requires published maps after freeze") {
-  primec::SemanticProgram semanticProgram;
-  const auto helperPathId =
-      primec::semanticProgramInternCallTargetString(semanticProgram, "/pkg/foo");
-  semanticProgram.definitions.push_back(primec::SemanticProgramDefinition{
-      .name = "foo",
-      .fullPath = "/pkg/foo",
-      .namespacePrefix = "/pkg",
-  });
-
-  CHECK(primec::semanticProgramLookupPublishedDefinitionByPathId(
-            semanticProgram, helperPathId) == &semanticProgram.definitions.front());
-  CHECK(primec::semanticProgramLookupPublishedDefinition(
-            semanticProgram, "/pkg/foo") == &semanticProgram.definitions.front());
-
-  primec::freezeSemanticProgramPublishedStorage(semanticProgram);
-
-  CHECK(primec::semanticProgramLookupPublishedDefinitionByPathId(
-            semanticProgram, helperPathId) == nullptr);
-  CHECK(primec::semanticProgramLookupPublishedDefinition(
-            semanticProgram, "/pkg/foo") == nullptr);
-
-  primec::SemanticProgram mappedSemanticProgram;
-  const auto mappedHelperPathId =
-      primec::semanticProgramInternCallTargetString(mappedSemanticProgram, "/pkg/foo");
-  mappedSemanticProgram.definitions.push_back(primec::SemanticProgramDefinition{
-      .name = "foo",
-      .fullPath = "/pkg/foo",
-      .namespacePrefix = "/pkg",
-  });
-  mappedSemanticProgram.publishedRoutingLookups.definitionIndicesByPathId.insert_or_assign(
-      mappedHelperPathId, 0);
-
-  primec::freezeSemanticProgramPublishedStorage(mappedSemanticProgram);
-
-  CHECK(primec::semanticProgramLookupPublishedDefinitionByPathId(
-            mappedSemanticProgram, mappedHelperPathId) ==
-        &mappedSemanticProgram.definitions.front());
-  CHECK(primec::semanticProgramLookupPublishedDefinition(
-            mappedSemanticProgram, "/pkg/foo") ==
-        &mappedSemanticProgram.definitions.front());
-}
-
 TEST_CASE("ir lowerer call helpers keep semantic direct-call targets authoritative over rooted rewritten helper paths") {
   primec::Definition quatMultiplyDef;
   quatMultiplyDef.fullPath = "/std/math/quat_multiply_internal";

@@ -488,15 +488,7 @@ Task template:
     authority slice is complete for path-id lookups. The frozen binding-fact
     published-map authority slice is complete for semantic-node-id lookups.
     The frozen return-fact published-map authority slice is complete for
-    definition semantic-node-id lookups. The frozen definition published-map
-    authority slice is complete for path-id lookups. The frozen fact-family
-    view authority slice is complete for module artifact indexes across
-    direct-call, method-call, bridge-path, callable-summary, binding, return,
-    collection-specialization, local-auto, query, try, and `on_error` views.
-    The frozen type-shape metadata published-map authority slice is complete
-    for type path, struct-like type views, and struct-field struct-path
-    lookups. The frozen sum metadata published-map authority slice is complete
-    for sum type path and sum variant path/name lookups.
+    definition semantic-node-id lookups.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -554,33 +546,6 @@ Task template:
       facts. Raw `returnFacts` storage no longer recovers missing return maps
       after publication freezes the semantic product, while mutable hand-built
       products keep their fixture-only scan before freeze.
-    - Completed slice: frozen semantic-product definition lookup now requires
-      `definitionIndicesByPathId` for path-id facts. Raw `definitions` storage
-      no longer recovers missing definition maps after publication freezes the
-      semantic product, while mutable hand-built products keep their
-      fixture-only scan before freeze.
-    - Completed slice: frozen semantic-product fact-family views now require
-      `moduleResolvedArtifacts` indexes. Raw flat storage no longer recovers
-      missing module artifacts after publication freezes the semantic product,
-      while mutable hand-built products keep their fixture-only scan before
-      freeze.
-    - Completed slice: frozen semantic-product type-shape metadata lookup now
-      requires `typeMetadataIndicesByPathId` and
-      `structFieldMetadataIndicesByStructPathId`. Raw `typeMetadata` and
-      `structFieldMetadata` storage no longer recover missing metadata maps
-      after publication freezes the semantic product, while mutable
-      hand-built products keep their fixture-only scan before freeze.
-    - Completed slice: frozen semantic-product struct-like type metadata
-      views now enumerate through `typeMetadataIndicesByPathId` in
-      deterministic storage order instead of raw-scanning `typeMetadata`
-      storage after publication freezes the semantic product.
-    - Completed slice: frozen semantic-product sum metadata lookup now
-      requires `sumTypeMetadataIndicesByPathId` and
-      `sumVariantMetadataIndicesBySumPathAndVariantNameId`. Raw
-      `sumTypeMetadata` and `sumVariantMetadata` storage no longer recover
-      missing metadata maps after publication freezes the semantic product,
-      while mutable hand-built products keep their fixture-only scan before
-      freeze.
     - Completed slice: semantic-product-addressed Result-combinator metadata
       now requires published query facts when direct lambda payload analysis
       cannot infer the resulting value kind, covering `Result.map`,
