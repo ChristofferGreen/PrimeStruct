@@ -123,6 +123,26 @@
             return tryEmitLoweredSumConstructorExpr(expr, localsIn);
           }
         }
+        auto appendSemanticProductTypeTextCandidate =
+            [&](std::vector<std::string> &candidateTypeTexts,
+                const std::string &typeText,
+                SymbolId typeTextId) {
+          const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
+          if (semanticTargets.semanticProgram != nullptr &&
+              typeTextId != InvalidSymbolId) {
+            std::string resolvedTypeText = std::string(
+                semanticProgramResolveCallTargetString(
+                    *semanticTargets.semanticProgram, typeTextId));
+            if (!resolvedTypeText.empty()) {
+              candidateTypeTexts.push_back(trimTemplateTypeText(resolvedTypeText));
+              return;
+            }
+          }
+          const std::string fallbackTypeText = trimTemplateTypeText(typeText);
+          if (!fallbackTypeText.empty()) {
+            candidateTypeTexts.push_back(fallbackTypeText);
+          }
+        };
         if (expr.isFieldAccess) {
           if (expr.args.size() != 1) {
             error = "field access requires a receiver";
@@ -177,36 +197,25 @@
               return std::nullopt;
             }
             std::vector<std::string> candidateTypeTexts;
-            auto addCandidateTypeText = [&](const std::string &typeText,
-                                            SymbolId typeTextId) {
-              if (semanticTargets.semanticProgram != nullptr &&
-                  typeTextId != InvalidSymbolId) {
-                std::string resolvedTypeText = std::string(
-                    semanticProgramResolveCallTargetString(
-                        *semanticTargets.semanticProgram, typeTextId));
-                if (!resolvedTypeText.empty()) {
-                  candidateTypeTexts.push_back(trimTemplateTypeText(resolvedTypeText));
-                  return;
-                }
-              }
-              const std::string fallbackTypeText = trimTemplateTypeText(typeText);
-              if (!fallbackTypeText.empty()) {
-                candidateTypeTexts.push_back(fallbackTypeText);
-              }
-            };
             if (const SemanticProgramBindingFact *bindingFact =
                     findSemanticProductBindingFact(semanticTargets, receiverExpr);
                 bindingFact != nullptr) {
-              addCandidateTypeText(bindingFact->bindingTypeText,
-                                   bindingFact->bindingTypeTextId);
+              appendSemanticProductTypeTextCandidate(
+                  candidateTypeTexts,
+                  bindingFact->bindingTypeText,
+                  bindingFact->bindingTypeTextId);
             }
             if (const SemanticProgramQueryFact *queryFact =
                     findSemanticProductQueryFact(semanticTargets, receiverExpr);
                 queryFact != nullptr) {
-              addCandidateTypeText(queryFact->bindingTypeText,
-                                   queryFact->bindingTypeTextId);
-              addCandidateTypeText(queryFact->queryTypeText,
-                                   queryFact->queryTypeTextId);
+              appendSemanticProductTypeTextCandidate(
+                  candidateTypeTexts,
+                  queryFact->bindingTypeText,
+                  queryFact->bindingTypeTextId);
+              appendSemanticProductTypeTextCandidate(
+                  candidateTypeTexts,
+                  queryFact->queryTypeText,
+                  queryFact->queryTypeTextId);
             }
             if (candidateTypeTexts.empty()) {
               return std::nullopt;
@@ -589,36 +598,25 @@
               return std::nullopt;
             }
             std::vector<std::string> candidateTypeTexts;
-            auto addCandidateTypeText = [&](const std::string &typeText,
-                                            SymbolId typeTextId) {
-              if (semanticTargets.semanticProgram != nullptr &&
-                  typeTextId != InvalidSymbolId) {
-                std::string resolvedTypeText = std::string(
-                    semanticProgramResolveCallTargetString(
-                        *semanticTargets.semanticProgram, typeTextId));
-                if (!resolvedTypeText.empty()) {
-                  candidateTypeTexts.push_back(trimTemplateTypeText(resolvedTypeText));
-                  return;
-                }
-              }
-              const std::string fallbackTypeText = trimTemplateTypeText(typeText);
-              if (!fallbackTypeText.empty()) {
-                candidateTypeTexts.push_back(fallbackTypeText);
-              }
-            };
             if (const SemanticProgramBindingFact *bindingFact =
                     findSemanticProductBindingFact(semanticTargets, valueExpr);
                 bindingFact != nullptr) {
-              addCandidateTypeText(bindingFact->bindingTypeText,
-                                   bindingFact->bindingTypeTextId);
+              appendSemanticProductTypeTextCandidate(
+                  candidateTypeTexts,
+                  bindingFact->bindingTypeText,
+                  bindingFact->bindingTypeTextId);
             }
             if (const SemanticProgramQueryFact *queryFact =
                     findSemanticProductQueryFact(semanticTargets, valueExpr);
                 queryFact != nullptr) {
-              addCandidateTypeText(queryFact->bindingTypeText,
-                                   queryFact->bindingTypeTextId);
-              addCandidateTypeText(queryFact->queryTypeText,
-                                   queryFact->queryTypeTextId);
+              appendSemanticProductTypeTextCandidate(
+                  candidateTypeTexts,
+                  queryFact->bindingTypeText,
+                  queryFact->bindingTypeTextId);
+              appendSemanticProductTypeTextCandidate(
+                  candidateTypeTexts,
+                  queryFact->queryTypeText,
+                  queryFact->queryTypeTextId);
             }
             if (candidateTypeTexts.empty()) {
               return std::nullopt;

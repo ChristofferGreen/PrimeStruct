@@ -1733,8 +1733,11 @@ TEST_CASE("native field receivers use semantic-product type facts") {
   REQUIRE(std::filesystem::exists(lowerEmitExprPath));
 
   const std::string source = readTextFile(lowerEmitExprPath);
+  const size_t sharedTypeResolverPos =
+      source.find("auto appendSemanticProductTypeTextCandidate");
   const size_t semanticResolverPos =
       source.find("resolveSemanticProductFieldReceiverStructPath");
+  REQUIRE(sharedTypeResolverPos != std::string::npos);
   REQUIRE(semanticResolverPos != std::string::npos);
   const size_t bindingFactPos =
       source.find("findSemanticProductBindingFact(semanticTargets, receiverExpr)",
@@ -1750,29 +1753,38 @@ TEST_CASE("native field receivers use semantic-product type facts") {
                   semanticResolverPos);
   const size_t internedTypeResolverPos =
       source.find("semanticProgramResolveCallTargetString(",
-                  semanticResolverPos);
+                  sharedTypeResolverPos);
   REQUIRE(bindingFactPos != std::string::npos);
   REQUIRE(queryFactPos != std::string::npos);
   REQUIRE(internedTypeResolverPos != std::string::npos);
   REQUIRE(staleDiagnosticPos != std::string::npos);
   REQUIRE(fallbackStructPathPos != std::string::npos);
-  CHECK(source.find("addCandidateTypeText(bindingFact->bindingTypeText",
+  CHECK(source.find("appendSemanticProductTypeTextCandidate(\n"
+                    "                  candidateTypeTexts,\n"
+                    "                  bindingFact->bindingTypeText,",
                     semanticResolverPos) != std::string::npos);
   CHECK(source.find("bindingFact->bindingTypeTextId",
                     semanticResolverPos) != std::string::npos);
-  CHECK(source.find("addCandidateTypeText(queryFact->bindingTypeText",
+  CHECK(source.find("appendSemanticProductTypeTextCandidate(\n"
+                    "                  candidateTypeTexts,\n"
+                    "                  queryFact->bindingTypeText,",
                     semanticResolverPos) != std::string::npos);
   CHECK(source.find("queryFact->bindingTypeTextId",
                     semanticResolverPos) != std::string::npos);
-  CHECK(source.find("addCandidateTypeText(queryFact->queryTypeText",
+  CHECK(source.find("appendSemanticProductTypeTextCandidate(\n"
+                    "                  candidateTypeTexts,\n"
+                    "                  queryFact->queryTypeText,",
                     semanticResolverPos) != std::string::npos);
   CHECK(source.find("queryFact->queryTypeTextId",
                     semanticResolverPos) != std::string::npos);
   CHECK(source.find("splitTemplateTypeName(normalizedTypeText, wrapperBase, wrapperArgs)",
                     semanticResolverPos) != std::string::npos);
   CHECK(internedTypeResolverPos < fallbackStructPathPos);
+  CHECK(sharedTypeResolverPos < semanticResolverPos);
   CHECK(bindingFactPos < fallbackStructPathPos);
   CHECK(queryFactPos < fallbackStructPathPos);
+  CHECK(source.find("auto addCandidateTypeText", semanticResolverPos) ==
+        std::string::npos);
   CHECK(source.find("if (!resolvedFieldReceiverBySemanticProduct.has_value())",
                     semanticResolverPos) != std::string::npos);
 }
@@ -1788,8 +1800,11 @@ TEST_CASE("native packed Result payloads use semantic-product type facts") {
   REQUIRE(std::filesystem::exists(lowerEmitExprPath));
 
   const std::string source = readTextFile(lowerEmitExprPath);
+  const size_t sharedTypeResolverPos =
+      source.find("auto appendSemanticProductTypeTextCandidate");
   const size_t semanticResolverPos =
       source.find("resolveSemanticProductPackedResultPayload");
+  REQUIRE(sharedTypeResolverPos != std::string::npos);
   REQUIRE(semanticResolverPos != std::string::npos);
   const size_t bindingFactPos =
       source.find("findSemanticProductBindingFact(semanticTargets, valueExpr)",
@@ -1814,7 +1829,7 @@ TEST_CASE("native packed Result payloads use semantic-product type facts") {
                   semanticResolverPos);
   const size_t internedTypeResolverPos =
       source.find("semanticProgramResolveCallTargetString(",
-                  semanticResolverPos);
+                  sharedTypeResolverPos);
   REQUIRE(bindingFactPos != std::string::npos);
   REQUIRE(queryFactPos != std::string::npos);
   REQUIRE(internedTypeResolverPos != std::string::npos);
@@ -1823,24 +1838,33 @@ TEST_CASE("native packed Result payloads use semantic-product type facts") {
   REQUIRE(fallbackKindPos != std::string::npos);
   REQUIRE(fallbackStructPos != std::string::npos);
   REQUIRE(collectionFallbackPos != std::string::npos);
-  CHECK(source.find("addCandidateTypeText(bindingFact->bindingTypeText",
+  CHECK(source.find("appendSemanticProductTypeTextCandidate(\n"
+                    "                  candidateTypeTexts,\n"
+                    "                  bindingFact->bindingTypeText,",
                     semanticResolverPos) != std::string::npos);
   CHECK(source.find("bindingFact->bindingTypeTextId",
                     semanticResolverPos) != std::string::npos);
-  CHECK(source.find("addCandidateTypeText(queryFact->bindingTypeText",
+  CHECK(source.find("appendSemanticProductTypeTextCandidate(\n"
+                    "                  candidateTypeTexts,\n"
+                    "                  queryFact->bindingTypeText,",
                     semanticResolverPos) != std::string::npos);
   CHECK(source.find("queryFact->bindingTypeTextId",
                     semanticResolverPos) != std::string::npos);
-  CHECK(source.find("addCandidateTypeText(queryFact->queryTypeText",
+  CHECK(source.find("appendSemanticProductTypeTextCandidate(\n"
+                    "                  candidateTypeTexts,\n"
+                    "                  queryFact->queryTypeText,",
                     semanticResolverPos) != std::string::npos);
   CHECK(source.find("queryFact->queryTypeTextId",
                     semanticResolverPos) != std::string::npos);
   CHECK(internedTypeResolverPos < collectionFallbackPos);
   CHECK(internedTypeResolverPos < fallbackKindPos);
+  CHECK(sharedTypeResolverPos < semanticResolverPos);
   CHECK(bindingFactPos < collectionFallbackPos);
   CHECK(queryFactPos < collectionFallbackPos);
   CHECK(bindingFactPos < fallbackKindPos);
   CHECK(queryFactPos < fallbackKindPos);
+  CHECK(source.find("auto addCandidateTypeText", semanticResolverPos) ==
+        std::string::npos);
   CHECK(source.find("if (!resolvedPackedResultPayloadBySemanticProduct.has_value())",
                     semanticResolverPos) != std::string::npos);
 }

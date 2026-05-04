@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 4, 2026)**
+- [x] TODO-4298: Lock field payload type IDs
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-04
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer field/packed payload candidate type ID-order
+    contract slice by sharing one semantic-product binding/query type
+    resolver across field receiver and packed Result payload classification.
+  - acceptance:
+    - Native field receiver classification compares interned binding/query
+      type IDs before copied semantic-product fact text.
+    - Native packed Result payload classification uses the same ID-first
+      binding/query type candidate resolver.
+    - The old duplicate inline candidate type resolvers stay absent from the
+      lowerer emit helper.
+  - stop_rule: Stop once field receiver and packed Result payload
+    classification have source-contract coverage for one shared interned
+    binding/query type resolver.
+  - evidence: Replaced duplicate field receiver and packed Result payload
+    candidate type resolver lambdas with one
+    `appendSemanticProductTypeTextCandidate` resolver and updated
+    source-contract coverage for both consumers. Local validation was skipped
+    under the lite workflow.
+
 - [x] TODO-4298: Lock SoA metadata receiver IDs
   - owner: ai
   - created_at: 2026-04-28
