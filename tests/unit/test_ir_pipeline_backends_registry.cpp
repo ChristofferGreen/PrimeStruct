@@ -4537,6 +4537,45 @@ TEST_CASE("semantic-product local-auto call paths accept specialized direct call
         "stale semantic-product local-auto direct-call fact: /main -> local selected");
 }
 
+TEST_CASE("semantic-product local-auto call paths accept overloaded specialized direct calls") {
+  primec::Program program;
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  primec::Expr selected;
+  selected.isBinding = true;
+  selected.name = "selected";
+  selected.semanticNodeId = 47;
+  primec::Expr initializer;
+  initializer.kind = primec::Expr::Kind::Call;
+  initializer.name = "wrapValues";
+  selected.args.push_back(initializer);
+  mainDef.statements.push_back(selected);
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  primec::SemanticProgramLocalAutoFact localAutoFact;
+  localAutoFact.scopePath = "/main";
+  localAutoFact.bindingName = "selected";
+  localAutoFact.bindingTypeText = "vector<i32>";
+  localAutoFact.initializerDirectCallResolvedPath =
+      "/wrapValues__ov2__t9b7bdbb33f7d43aa";
+  localAutoFact.semanticNodeId = 47;
+  localAutoFact.bindingTypeTextId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "vector<i32>");
+  localAutoFact.initializerResolvedPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/wrapValues__ov2");
+  localAutoFact.initializerDirectCallResolvedPathId =
+      primec::semanticProgramInternCallTargetString(
+          semanticProgram, "/wrapValues__ov2__t9b7bdbb33f7d43aa");
+  semanticProgram.localAutoFacts.push_back(localAutoFact);
+  semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr.insert_or_assign(47, 0);
+
+  std::string error;
+  CHECK(primec::ir_lowerer::validateSemanticProductLocalAutoCoverage(
+      program, &semanticProgram, error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir preparation rejects semantic-product local-auto path fallback in production mode") {
   primec::Program program;
 

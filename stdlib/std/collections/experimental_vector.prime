@@ -46,11 +46,20 @@ namespace std {
     }
 
     [mut]
+    Copy([Reference<Self>] other) {
+      assign(this.count, other.count)
+      assign(this.capacity, other.capacity)
+      assign(this.data, other.data)
+      assign(this.ownsData, false)
+    }
+
+    [mut]
     Move([Reference<Self>] other) {
       assign(this.count, other.count)
       assign(this.capacity, other.capacity)
       assign(this.data, other.data)
       assign(this.ownsData, other.ownsData)
+      assign(other.ownsData, false)
     }
 
     [mut effects(heap_alloc)]

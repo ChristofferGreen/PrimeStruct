@@ -130,22 +130,27 @@ bool semanticTypeTextsMatchForLocalAuto(const std::string &localAutoTypeText,
 
 std::string_view stripResolvedPathSpecializationSuffix(std::string_view path) {
   const std::size_t lastSlash = path.rfind('/');
-  const std::size_t specializationMarker = path.rfind("__t");
-  const std::size_t overloadMarker = path.rfind("__ov");
-  std::size_t marker = std::string_view::npos;
-  if (specializationMarker != std::string_view::npos &&
-      (overloadMarker == std::string_view::npos ||
-       specializationMarker > overloadMarker)) {
-    marker = specializationMarker;
-  } else if (overloadMarker != std::string_view::npos) {
-    marker = overloadMarker;
-  }
-  if (marker == std::string_view::npos ||
-      lastSlash == std::string_view::npos ||
-      marker <= lastSlash) {
+  if (lastSlash == std::string_view::npos) {
     return path;
   }
-  return path.substr(0, marker);
+  std::size_t marker = path.size();
+  while (marker > lastSlash) {
+    const std::size_t specializationMarker = path.rfind("__t", marker - 1);
+    const std::size_t overloadMarker = path.rfind("__ov", marker - 1);
+    const bool specializationInLeaf =
+        specializationMarker != std::string_view::npos && specializationMarker > lastSlash;
+    const bool overloadInLeaf =
+        overloadMarker != std::string_view::npos && overloadMarker > lastSlash;
+    if (!specializationInLeaf && !overloadInLeaf) {
+      break;
+    }
+    if (specializationInLeaf && (!overloadInLeaf || specializationMarker > overloadMarker)) {
+      marker = specializationMarker;
+      continue;
+    }
+    marker = overloadMarker;
+  }
+  return marker == path.size() ? path : path.substr(0, marker);
 }
 
 struct ExpectedCollectionSpecialization {

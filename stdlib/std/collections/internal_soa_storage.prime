@@ -60,6 +60,7 @@ namespace std {
       assign(this.capacity, other.capacity)
       assign(this.data, other.data)
       assign(this.ownsData, other.ownsData)
+      assign(other.ownsData, false)
     }
 
     [mut effects(heap_alloc)]
