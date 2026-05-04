@@ -732,6 +732,22 @@ This model intentionally keeps ordinary templates source-compatible while
 letting future generic code express type computation as a sequence of named
 compile-time facts.
 
+A returnable pair helper should use a caller-visible generic shape:
+
+```prime
+[struct] Pair<LeftT, RightT> {
+  [LeftT] first
+  [RightT] second
+}
+
+make_pair(left, right) {
+  [type] LeftT { typeof<left> }
+  [type] RightT { typeof<right> }
+
+  return(Pair<LeftT, RightT>{[first] left, [second] right})
+}
+```
+
 Planned requirement transforms extend that model with readable compile-time
 predicates:
 
@@ -750,14 +766,100 @@ Requirement rules:
   canonicalization, readable type predicates rewrite into builtin compile-time
   predicates; for example `typeof<left> == i32` rewrites to a form such as
   `equals<left, i32>` before semantic validation.
+- The v1 predicate grammar is deliberately narrow: equality, inequality,
+  comma-separated conjunction through `require(...)`, builtin predicate calls,
+  user-defined compile-time predicates, and simple comparisons over
+  compile-time values such as `N > 0`. General boolean expression algebra is
+  deferred until the semantic-product fact model is stable.
+- Builtin predicates should cover the practical generic toolbox first: type
+  equality, kind checks, constructibility, lifecycle availability,
+  operation/trait support, field/member presence, and compile-time
+  integer/value relations. User-defined predicates use the same compile-time
+  execution model and must return a requirement fact.
 - Failed requirements on a direct call are diagnostics. During overload
   selection, failed requirements make a candidate non-viable; if no candidate
   remains, diagnostics summarize the relevant failed requirements rather than
   silently behaving like C++ substitution failure.
+- Requirement-constrained overloads are selected automatically only when one
+  candidate is viable. PrimeStruct does not rank viable candidates by
+  requirement specificity; ambiguous viable candidates require clearer names or
+  import choices.
 - Compile-time requirement evaluation is pure by default. Definitions that need
   compile-time IO or other side effects must opt in through explicit
-  effect/capability transforms on the definition, and those capabilities become
-  part of the semantic inputs used for caching and diagnostics.
+  `effects(...)` transforms on the definition, and those effects become part
+  of the semantic inputs used for caching and diagnostics.
+
+Diagnostic style examples:
+
+```text
+error: requirement failed for call to `add_i32`
+  --> main.prime:7:10
+
+failed requirement:
+  --> main.prime:1:31
+   |
+1  | [require(typeof<left> == i32, typeof<right> == i32)]
+   |                               ^^^^^^^^^^^^^^^^^^^^
+
+facts:
+  typeof<left>  = i32
+  typeof<right> = f32
+
+help: pass an `i32` value for `right`
+```
+
+```text
+error: call to `format` is ambiguous
+  --> main.prime:11:10
+
+viable candidates:
+  /format_number(value)
+    requirement passed: is_numeric<typeof<value>>
+  /format_integer(value)
+    requirement passed: is_integral<typeof<value>>
+
+note: PrimeStruct does not rank candidates by requirement specificity
+help: call a more specific name, or expose only one candidate as `format`
+```
+
+```text
+error: local generated type `PairT` cannot escape `make_pair`
+  --> main.prime:10:10
+
+`PairT` is local to this specialization of `make_pair`.
+Callers cannot name it as a return type.
+
+help: return a caller-visible generic type such as `Pair<LeftT, RightT>`
+```
+
+```text
+error: compile-time operation requires effect `file_read`
+  --> main.prime:1:10
+
+`file_exists<...>` reads from the host filesystem during compile-time
+evaluation.
+
+help: declare the effect on the definition:
+      [effects(file_read)]
+      [require(file_exists<"schema.prime">)]
+      load_schema() { ... }
+```
+
+```text
+error: requirement failed for `make_buffer<0>`
+  --> main.prime:6:10
+
+failed requirement:
+  --> main.prime:1:10
+   |
+1  | [require(N > 0)]
+   |          ^^^^^
+
+facts:
+  N = 0
+
+help: choose a positive compile-time length
+```
 
 ### 6.4 Unsafe Scopes
 

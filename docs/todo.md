@@ -102,7 +102,7 @@ Task template:
   -> TODO-4338 -> TODO-4339 -> TODO-4340
 - Generic constraint and compile-time flow alignment: TODO-4341
   -> TODO-4342 -> TODO-4343 -> TODO-4344 -> TODO-4345 -> TODO-4346
-  -> TODO-4347 -> TODO-4348 -> TODO-4349 -> TODO-4350
+  -> TODO-4347 -> TODO-4351 -> TODO-4348 -> TODO-4349 -> TODO-4350
 
 ### Execution Queue (Recommended)
 
@@ -157,6 +157,7 @@ Task template:
 - TODO-4345: Add compile-time `if` over type facts
 - TODO-4346: Add compile-time flow effect and termination policy
 - TODO-4347: Integrate requirements with overload selection
+- TODO-4351: Add value-level compile-time requirement facts
 - TODO-4348: Publish requirement diagnostics with provenance
 - TODO-4349: Add generic constraint conformance matrix
 - TODO-4350: Add high-level generic design examples
@@ -188,7 +189,7 @@ Task template:
 | Stdlib ADT migration for `Maybe` and `Result` | TODO-4266, TODO-4267, TODO-4291 |
 | Generic type packs and tuple stdlib surface | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity and local type facts | TODO-4331, TODO-4332, TODO-4333, TODO-4334, TODO-4335, TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
-| Generic constraints and compile-time flow control | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4345, TODO-4346, TODO-4347, TODO-4348, TODO-4349, TODO-4350 |
+| Generic constraints and compile-time flow control | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4345, TODO-4346, TODO-4347, TODO-4351, TODO-4348, TODO-4349, TODO-4350 |
 
 ### Validation Coverage Snapshot
 
@@ -215,7 +216,7 @@ Task template:
 | Maybe/Result sum migration conformance | TODO-4266, TODO-4267, TODO-4291 |
 | Generic type-pack and tuple conformance | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity conformance | TODO-4331, TODO-4332, TODO-4333, TODO-4334, TODO-4335, TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
-| Generic constraint and compile-time flow conformance | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4345, TODO-4346, TODO-4347, TODO-4348, TODO-4349, TODO-4350 |
+| Generic constraint and compile-time flow conformance | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4345, TODO-4346, TODO-4347, TODO-4351, TODO-4348, TODO-4349, TODO-4350 |
 
 ### Vector/Map Bridge Contract Summary
 
@@ -1699,8 +1700,12 @@ Task template:
     - Treat `require(...)` as a single transform with a comma-separated
       predicate list; repeated `[require(...)]` transforms are not the planned
       source style.
+    - Keep v1 predicate expressions intentionally small: equality,
+      inequality, comma-separated conjunction, builtin/user-defined predicate
+      calls, and simple compile-time value comparisons such as `N > 0`.
     - Include the initial predicate family names for equality, trait/capability
-      support, construction, copy/move availability, and field/member queries.
+      support, construction, copy/move availability, field/member queries, and
+      compile-time integer/value relations.
   - acceptance:
     - The docs define a minimal generic requirement syntax with examples for
       same-type checks and capability/trait checks.
@@ -1709,6 +1714,8 @@ Task template:
       transforms are rejected or canonicalized with a stable diagnostic.
     - The docs specify when requirements run, whether they can produce runtime
       values, and how they interact with ordinary function bodies.
+    - The docs define how user-authored compile-time predicate helpers return
+      requirement facts and how they compose with builtin predicates.
     - The surface explicitly rejects C++-style SFINAE-by-accident; failed
       requirements are diagnostics, not silent candidate erasure unless a
       later overload-selection task says so.
@@ -1787,6 +1794,10 @@ Task template:
     - Start from transform-style trait constraints, lifecycle helper
       validation, helper/call resolution, struct constructor validation, and
       `meta.has_trait<...>` documentation.
+    - Use C++'s practical generic toolbox as inspiration for the initial
+      builtin surface while keeping PrimeStruct facts typed and deterministic:
+      constructible, copyable, movable, comparable, callable, field/member
+      presence, and operation/trait support.
     - Define the exact bridge from legacy trait transforms to requirement
       facts so old code stays compatible while new generic code has one
       canonical predicate vocabulary.
@@ -1846,22 +1857,22 @@ Task template:
       and any constant-evaluation helpers.
     - Compile-time flow is pure by default and must not perform runtime side
       effects, read ambient process state, or make backend-dependent decisions
-      without explicit effect/capability opt-in on the enclosing definition.
+      without explicit `effects(...)` opt-in on the enclosing definition.
     - Caching keys must include all semantic inputs that affect compile-time
       results while remaining stable across import order.
   - acceptance:
     - Docs specify which operations are legal during compile-time generic
-      execution by default, which require explicit effect/capability opt-in,
+      execution by default, which require explicit `effects(...)` opt-in,
       and which are always rejected.
     - Definitions with compile-time IO or other effectful compile-time work
-      require capabilities in their transform list, and those capabilities are
-      included in semantic cache keys and diagnostics.
+      require the matching effects in their transform list, and those effects
+      are included in semantic cache keys and diagnostics.
     - Recursive compile-time evaluation has a deterministic depth/budget
       diagnostic instead of unbounded compiler recursion.
     - Repeated specializations reuse cached facts where safe and produce
       identical diagnostics/IR when caching is disabled.
-    - Tests cover side-effect rejection, recursion-limit failure, and stable
-      repeated evaluation.
+    - Tests cover missing `effects(...)` opt-in rejection, recursion-limit
+      failure, and stable repeated evaluation.
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once compile-time generic flow has enforceable
     determinism and termination rules.
@@ -1880,13 +1891,14 @@ Task template:
     - Prefer explicit candidate rejection with related diagnostics over
       silent C++-style substitution failure unless TODO-4341 chose a specific
       overload-filtering contract.
-    - Make equal-quality candidates with different passing requirements an
-      ambiguity unless the docs define a clear ordering rule.
+    - Do not rank candidates by requirement specificity. If more than one
+      candidate remains viable after requirement filtering, reject as
+      ambiguous and require clearer names or imports.
   - acceptance:
     - A constrained generic candidate is callable only when its requirements
       pass for the inferred compile-time facts.
-    - A more specific constrained overload is selected only under documented
-      ordering rules; otherwise ambiguous calls reject deterministically.
+    - Multiple viable constrained overloads reject deterministically instead
+      of being automatically ranked by specificity.
     - Failing candidates contribute concise related diagnostics when no
       overload is viable.
     - Existing unconstrained calls and explicit template calls preserve their
@@ -1895,11 +1907,47 @@ Task template:
   - stop_rule: Stop once requirements participate in call resolution without
     backend-local or order-dependent candidate behavior.
 
+- [ ] TODO-4351: Add value-level compile-time requirement facts
+  - owner: ai
+  - created_at: 2026-05-04
+  - phase: Generic constraint and compile-time flow alignment
+  - depends_on: TODO-4342, TODO-4270
+  - scope: Extend requirement predicates from type facts to typed
+    compile-time value facts such as integer template arguments, tuple
+    indexes, array extents, SIMD widths, and GPU/workgroup dimensions.
+  - implementation_notes:
+    - Start from the compile-time integer argument representation in
+      TODO-4270, requirement fact publication from TODO-4342, parser support
+      for readable predicate expressions, and diagnostics for constant
+      expression evaluation.
+    - Keep v1 value predicates narrow: equality, inequality, ordered integer
+      comparisons, range checks, divisibility/alignment checks, and named
+      builtin predicates where the operand type is already a compile-time
+      value fact.
+    - Avoid a separate value-metaprogramming language; value facts should use
+      the same compile-time argument channel and semantic-product provenance
+      as type facts.
+  - acceptance:
+    - A generic helper can require a compile-time integer argument to satisfy
+      a predicate such as `N > 0` and reject a failing specialization before
+      lowering.
+    - Value predicate facts publish operand values, predicate names, pass/fail
+      results, and source provenance through the semantic product.
+    - Invalid value predicates, unsupported operand types, and non-constant
+      operands produce stable diagnostics.
+    - Tests cover array/tuple-style lengths or indexes, one GPU/SIMD-style
+      dimension predicate if that surface exists, and at least one negative
+      range/alignment diagnostic.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once compile-time value facts can participate in
+    requirements with the same provenance and determinism guarantees as type
+    facts.
+
 - [ ] TODO-4348: Publish requirement diagnostics with provenance
   - owner: ai
   - created_at: 2026-05-04
   - phase: Generic constraint and compile-time flow alignment
-  - depends_on: TODO-4347
+  - depends_on: TODO-4347, TODO-4351
   - scope: Add stable, user-facing diagnostics for failed requirements,
     ambiguous requirement-driven overloads, and invalid compile-time flow.
   - implementation_notes:
@@ -1908,6 +1956,10 @@ Task template:
       golden diagnostic tests.
     - Diagnostics should show the requirement site, the call site, the
       relevant inferred type facts, and the missing/failed predicate.
+    - Use the diagnostic style examples in
+      `docs/PrimeStruct_SyntaxSpec.md` as the target shape: call site first,
+      failed requirement second, concrete facts third, then a short actionable
+      hint.
     - Keep output deterministic across import order and repeated builds.
   - acceptance:
     - Failed requirement diagnostics point at both the generic requirement and
@@ -1916,6 +1968,9 @@ Task template:
       without dumping every internal predicate detail by default.
     - Compile-time branch and termination diagnostics include enough
       provenance to debug generated types and type-local facts.
+    - Golden diagnostics cover failed type requirements, ambiguous constrained
+      calls, local generated type escape, missing compile-time effects, and
+      value-level predicates such as `N > 0`.
     - Golden diagnostic tests pin representative success and failure output.
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once requirement failures are explainable from user code
@@ -1939,9 +1994,11 @@ Task template:
       runtime effects, and non-selected compile-time branches.
   - acceptance:
     - Positive tests cover same-type requirements, capability requirements,
-      compile-time branching, generated types, and constrained overloads.
+      compile-time value requirements, compile-time branching, generated
+      types, and constrained overloads.
     - Negative tests cover failed requirements, ambiguous candidates,
-      side-effect rejection, recursion-limit rejection, and provenance output.
+      effect opt-in rejection, recursion-limit rejection, value predicate
+      failure, and provenance output.
     - IR/semantic-product tests prove unresolved requirement or type facts do
       not reach backend lowering.
     - Source-lock/example-lock tests are updated for any user-facing examples
@@ -1961,16 +2018,18 @@ Task template:
     - Start from `docs/PrimeStruct.md`, `docs/PrimeStruct_SyntaxSpec.md`,
       `docs/CodeExamples.md`, `examples/`, and any conformance examples from
       TODO-4349.
-    - Include examples such as identity, non-escaping local generated struct
-      use, same-type add, optional type-directed branch, and a constrained
-      overload pair.
+    - Include examples such as identity, caller-visible `Pair<LeftT, RightT>`
+      construction, non-escaping local generated struct use, same-type add,
+      value-level length requirements, optional type-directed branch, and a
+      constrained overload pair.
     - Keep the examples procedural and readable: type work should look like a
       left-to-right program over named facts, not a template metaprogramming
       puzzle.
   - acceptance:
     - Docs include a short "generic coding style" section that explains when
-      to use plain inference, requirements, compile-time branching, generated
-      types, and explicit template arguments.
+      to use plain inference, requirements, compile-time value facts,
+      compile-time branching, generated types, and explicit template
+      arguments.
     - At least one runnable example compares unconstrained failure with a
       requirement-based diagnostic.
     - Examples compile under the supported backends for the feature or carry a

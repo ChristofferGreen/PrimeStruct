@@ -675,9 +675,25 @@ Planned procedural compile-time genericity contract:
   `[require(typeof<left> == i32, typeof<right> == i32)]`. The readable
   expression form rewrites into builtin compile-time predicates, such as
   `equals<left, i32>`, before semantic validation publishes requirement facts.
+- The v1 requirement expression grammar should stay intentionally small:
+  equality, inequality, comma-separated conjunction through `require(...)`,
+  builtin predicates, user-defined compile-time predicates, and simple
+  comparisons over compile-time values such as `N > 0`. Avoid arbitrary
+  boolean algebra until the semantic-product representation is proven stable.
+- Requirement and compile-time helper defaults should take inspiration from
+  C++'s practical generic toolbox while keeping PrimeStruct facts typed and
+  deterministic: type equality, kind checks, constructibility, lifecycle
+  availability, operation/trait support, field/member presence, and
+  compile-time integer/value relations are the expected starting set.
 - Compile-time execution is pure by default. Definitions may opt into
-  compile-time side effects only through explicit effect/capability transforms;
-  those capabilities become part of the semantic input and cache key.
+  compile-time side effects only through explicit `effects(...)` transforms;
+  those effects become part of the semantic input and cache key.
+- Requirement-constrained overloads are only automatically selected when
+  exactly one candidate is viable. Requirements should not rank candidates by
+  specificity; ambiguous viable candidates require clearer names or imports.
+- Diagnostics for this feature should lead with the concrete call site, show
+  the failed requirement site, list the relevant compile-time facts, and end
+  with a short actionable hint.
 - The implementation path should first document and parse the compile-time
   argument channel, then add bare zero-argument name resolution, then add type
   locals and `typeof<symbol>`, and only then lower local generated types through
