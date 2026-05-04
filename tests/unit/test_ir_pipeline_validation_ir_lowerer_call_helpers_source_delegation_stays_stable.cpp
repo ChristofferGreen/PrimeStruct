@@ -2051,7 +2051,7 @@ TEST_CASE("ir lowerer call helpers require semantic-product bridge-path choices"
       18, primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"));
   auto semanticResolveExprPath =
       primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases, &semanticProgram);
-  CHECK(semanticResolveExprPath(callExpr) == "/vector/count");
+  CHECK(semanticResolveExprPath(callExpr) == "/count");
 
   semanticProgram.bridgePathChoices.push_back(primec::SemanticProgramBridgePathChoice{
       .scopePath = "/main",
@@ -2066,6 +2066,8 @@ TEST_CASE("ir lowerer call helpers require semantic-product bridge-path choices"
       .chosenPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"),
       .stdlibSurfaceId = std::nullopt,
   });
+  semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr.insert_or_assign(
+      18, primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"));
   semanticResolveExprPath =
       primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases, &semanticProgram);
   CHECK(semanticResolveExprPath(callExpr) == "/vector/count");
