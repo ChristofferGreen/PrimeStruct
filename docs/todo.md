@@ -101,9 +101,10 @@ Task template:
   -> TODO-4333 -> TODO-4334 -> TODO-4335 -> TODO-4336 -> TODO-4337
   -> TODO-4338 -> TODO-4339 -> TODO-4340
 - Generic constraint and compile-time flow alignment: TODO-4341
-  -> TODO-4342 -> TODO-4343 -> TODO-4344 -> TODO-4352 -> TODO-4345
-  -> TODO-4346 -> TODO-4347 -> TODO-4351 -> TODO-4348 -> TODO-4349
-  -> TODO-4350
+  -> TODO-4342 -> TODO-4343 -> TODO-4344 -> TODO-4352 -> TODO-4353
+  -> TODO-4354 -> TODO-4355 -> TODO-4356 -> TODO-4357 -> TODO-4345
+  -> TODO-4346 -> TODO-4358 -> TODO-4347 -> TODO-4351 -> TODO-4348
+  -> TODO-4359 -> TODO-4349 -> TODO-4350
 
 ### Execution Queue (Recommended)
 
@@ -156,11 +157,18 @@ Task template:
 - TODO-4343: Add builtin type relation predicates
 - TODO-4344: Add capability and trait support predicates
 - TODO-4352: Add compile-time VM facade and host
+- TODO-4353: Add typed compile-time value model
+- TODO-4354: Factor reusable VM interpreter kernel
+- TODO-4355: Add compile-time host and meta intrinsics
+- TODO-4356: Add restricted compile-time callable lowering
+- TODO-4357: Evaluate pure user predicates at compile time
 - TODO-4345: Add compile-time `if` over type facts
 - TODO-4346: Add compile-time flow effect and termination policy
+- TODO-4358: Enforce compile-time cache, budget, and effects
 - TODO-4347: Integrate requirements with overload selection
 - TODO-4351: Add value-level compile-time requirement facts
 - TODO-4348: Publish requirement diagnostics with provenance
+- TODO-4359: Add compile-time VM conformance coverage
 - TODO-4349: Add generic constraint conformance matrix
 - TODO-4350: Add high-level generic design examples
 
@@ -191,7 +199,7 @@ Task template:
 | Stdlib ADT migration for `Maybe` and `Result` | TODO-4266, TODO-4267, TODO-4291 |
 | Generic type packs and tuple stdlib surface | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity and local type facts | TODO-4331, TODO-4332, TODO-4333, TODO-4334, TODO-4335, TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
-| Generic constraints and compile-time flow control | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4345, TODO-4346, TODO-4347, TODO-4351, TODO-4348, TODO-4349, TODO-4350 |
+| Generic constraints and compile-time flow control | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
 ### Validation Coverage Snapshot
 
@@ -218,7 +226,7 @@ Task template:
 | Maybe/Result sum migration conformance | TODO-4266, TODO-4267, TODO-4291 |
 | Generic type-pack and tuple conformance | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity conformance | TODO-4331, TODO-4332, TODO-4333, TODO-4334, TODO-4335, TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
-| Generic constraint and compile-time flow conformance | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4345, TODO-4346, TODO-4347, TODO-4351, TODO-4348, TODO-4349, TODO-4350 |
+| Generic constraint and compile-time flow conformance | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
 ### Vector/Map Bridge Contract Summary
 
@@ -1851,51 +1859,175 @@ Task template:
   - created_at: 2026-05-04
   - phase: Generic constraint and compile-time flow alignment
   - depends_on: TODO-4342, TODO-4339
-  - scope: Introduce a compiler-hosted compile-time VM facade for requirement
-    predicates and future compile-time helper execution, sharing runtime VM
-    execution semantics where valid without invoking the normal runtime VM
-    entrypoint from semantic validation.
+  - scope: Define and add the public compiler-internal facade boundary for
+    compile-time evaluation, without yet executing arbitrary user predicates.
   - implementation_notes:
     - Start from `include/primec/Vm.h`, `src/VmExecution.cpp`,
       `src/VmExecution.h`, `src/VmControlFlowOpcodeShared.*`,
       `src/VmNumericOpcodeShared.*`, semantic-product publication, and the
       compile-time value representation from TODO-4342.
-    - Factor reusable interpreter pieces for arithmetic, calls, branching,
-      frame mechanics, and deterministic fault reporting behind a
-      compile-time facade instead of calling `Vm::execute(...)` directly.
-    - Add a `CompileTimeHost` concept that owns typed compile-time values,
-      semantic facts, `/std/meta/*` intrinsics, provenance, budgets, caches,
-      and active `effects<compiletime>(...)`.
+    - Define the facade API, result/fault categories, provenance inputs, and
+      host interface expected by later CT value, VM-kernel, and host tasks.
     - Requirement evaluation runs before final backend lowering is complete,
-      so the facade must use a restricted compile-time lowering path or a
-      small CT bytecode/fact evaluator rather than depending on final backend
+      so the facade contract must explicitly forbid depending on final backend
       IR or launching `primevm`.
-    - Stage behavior conservatively: builtin `/std/meta/*` facts first, then
-      pure user-defined predicate execution, then effectful compile-time
-      execution after TODO-4346 defines policy.
   - acceptance:
-    - A pure user-defined predicate returning ordinary `bool` can be evaluated
-      through the compile-time facade and published as a satisfied or
-      unsatisfied requirement fact.
-    - Invalid predicate execution produces a hard semantic diagnostic with
-      provenance instead of a `false` requirement result.
-    - The facade exposes typed compile-time results rather than only the
-      runtime VM's raw `uint64_t` result slot.
-    - The implementation does not call `primevm` or require final backend IR
-      to evaluate a requirement during semantic validation.
-    - Shared VM execution code remains reusable by runtime `Vm::execute(...)`
-      and compile-time evaluation without introducing runtime-only host state
-      into the compile-time path.
+    - A compile-time evaluation facade type/API exists and can be included by
+      semantics code without depending on runtime CLI entrypoints.
+    - The facade result model distinguishes success, unsatisfied predicate,
+      invalid evaluation, denied effect, budget exhaustion, and internal
+      compiler errors.
+    - The facade contract documents that final backend IR and `primevm` are
+      unavailable during semantic requirement evaluation.
+    - Stubbed facade tests verify result/fault formatting and provenance
+      plumbing without running arbitrary user code.
     - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once pure compile-time predicate execution has a dedicated
-    compiler-hosted facade with typed results and deterministic diagnostics;
-    leave broad compile-time effects to TODO-4346.
+  - stop_rule: Stop once the compiler has a stable compile-time evaluation
+    boundary that later tasks can implement behind.
+
+- [ ] TODO-4353: Add typed compile-time value model
+  - owner: ai
+  - created_at: 2026-05-04
+  - phase: Generic constraint and compile-time flow alignment
+  - depends_on: TODO-4352, TODO-4342
+  - scope: Add the typed compile-time value and result representation used by
+    requirement predicates, `/std/meta/*` intrinsics, and future CT helpers.
+  - implementation_notes:
+    - Start from semantic-product type facts, compile-time integer arguments
+      from TODO-4270, string-literal/string-table handling, and requirement
+      result representation from TODO-4342.
+    - Model at least `bool`, signed/unsigned integer constants, string
+      literals, type facts, symbols, and requirement outcomes.
+    - Keep values deterministic and printable; no backend/runtime slot layout
+      should leak into this layer.
+  - acceptance:
+    - CT values have stable equality, hashing, debug formatting, and
+      provenance handles suitable for cache keys and diagnostics.
+    - `true`/`false` source predicate results can be wrapped as satisfied or
+      unsatisfied requirement facts.
+    - Unsupported runtime-only values reject with a stable invalid-evaluation
+      result instead of being represented as raw VM slots.
+    - Unit tests cover value equality, formatting, provenance preservation,
+      and unsupported value rejection.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once compile-time values can represent predicate inputs
+    and outputs independently of runtime VM `uint64_t` slots.
+
+- [ ] TODO-4354: Factor reusable VM interpreter kernel
+  - owner: ai
+  - created_at: 2026-05-04
+  - phase: Generic constraint and compile-time flow alignment
+  - depends_on: TODO-4352
+  - scope: Factor runtime VM execution so arithmetic, branching, calls, frame
+    mechanics, and deterministic faults can be reused by compile-time
+    evaluation without sharing runtime-only host state.
+  - implementation_notes:
+    - Start from `src/VmExecution.cpp`, `src/VmExecution.h`,
+      `src/VmExecutionNumeric.*`, `src/VmControlFlowOpcodeShared.*`,
+      `src/VmNumericOpcodeShared.*`, `src/VmHeapHelpers.*`, and
+      `src/VmIoHelpers.*`.
+    - Keep `Vm::execute(...)` behavior and public ABI stable while extracting
+      narrow reusable helpers or a kernel interface.
+    - Do not introduce compile-time dependencies into runtime-only debug,
+      argv, heap, or IO paths.
+  - acceptance:
+    - Runtime `Vm::execute(...)` continues to pass existing VM tests with no
+      behavior changes.
+    - Shared interpreter code has an explicit host boundary for operations
+      that differ between runtime and compile time.
+    - Compile-time code can include the shared kernel without pulling in
+      `primevm_main.cpp`, debug adapter state, argv ownership, or runtime IO
+      helpers.
+    - Source-lock or unit coverage protects the new kernel boundary from
+      collapsing back into one runtime-only execution loop.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once VM execution has a reusable kernel boundary while
+    preserving runtime VM behavior.
+
+- [ ] TODO-4355: Add compile-time host and meta intrinsics
+  - owner: ai
+  - created_at: 2026-05-04
+  - phase: Generic constraint and compile-time flow alignment
+  - depends_on: TODO-4353, TODO-4354, TODO-4343, TODO-4344
+  - scope: Implement `CompileTimeHost` support for semantic facts,
+    `/std/meta/*` builtin predicates, provenance, and pure compile-time
+    intrinsic dispatch.
+  - implementation_notes:
+    - Start from builtin predicate tasks TODO-4343/TODO-4344, semantic-product
+      facts, visibility metadata, import resolution, and the CT value model.
+    - Include relation predicates, capability/trait predicates, and
+      field/member queries that obey normal visibility.
+    - Keep `/std/meta/*` dispatch typed and deterministic; readable source
+      predicates may lower to host intrinsics or explicit stdlib helper calls.
+  - acceptance:
+    - The CT host can answer builtin `/std/meta/*` predicates using published
+      semantic facts without backend source reconstruction.
+    - Reflection-style predicates cannot observe private fields outside their
+      visibility boundary.
+    - Unknown, ambiguous, or unsupported meta predicates return invalid
+      evaluation with deterministic diagnostics.
+    - Unit tests cover type equality, kind/capability checks, field visibility,
+      and canonical `/std/meta/*` names.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once builtin meta predicates are executable through the
+    compile-time host.
+
+- [ ] TODO-4356: Add restricted compile-time callable lowering
+  - owner: ai
+  - created_at: 2026-05-04
+  - phase: Generic constraint and compile-time flow alignment
+  - depends_on: TODO-4354, TODO-4355, TODO-4339
+  - scope: Add the restricted lowering or CT bytecode/fact-evaluator path
+    needed to run compile-time callables before final backend IR exists.
+  - implementation_notes:
+    - Start from template monomorphization, semantic-product publication,
+      IR-preparation/lowering boundaries, and the VM kernel facade.
+    - Only allow operations supported by the compile-time host and CT value
+      layer; reject runtime-only expressions before execution.
+    - Avoid final backend IR dependencies and avoid launching `primevm`.
+  - acceptance:
+    - A pure compile-time callable can be prepared for CT execution during
+      semantic validation.
+    - Runtime-only operations, unsupported value shapes, and missing semantic
+      facts fail before execution with deterministic diagnostics.
+    - Prepared CT callables preserve source provenance for call sites,
+      predicate bodies, and failed operations.
+    - Tests prove CT callable preparation does not require final VM/native/C++
+      lowering artifacts.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once pure CT callables can be prepared independently of
+    final backend lowering.
+
+- [ ] TODO-4357: Evaluate pure user predicates at compile time
+  - owner: ai
+  - created_at: 2026-05-04
+  - phase: Generic constraint and compile-time flow alignment
+  - depends_on: TODO-4356
+  - scope: Execute pure user-defined requirement predicates that return source
+    `bool`, then publish satisfied/unsatisfied/invalid requirement facts for
+    semantic validation and overload filtering.
+  - implementation_notes:
+    - Start from the compile-time facade, CT callable preparation, requirement
+      fact publication, and diagnostics for invalid predicate evaluation.
+    - Keep ordinary `false` separate from VM/evaluator faults.
+    - Do not enable compile-time IO or other effects in this slice.
+  - acceptance:
+    - A user-defined pure predicate returning `true` satisfies a requirement.
+    - A user-defined pure predicate returning `false` makes the requirement
+      unsatisfied and reports that fact at the requirement/call site.
+    - Invalid predicate bodies, denied effects, unsupported operations, and
+      missing facts are hard diagnostics, not non-viable candidates.
+    - The semantic product records predicate identity, CT arguments, result
+      category, and provenance.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once pure user predicates can drive requirement facts
+    through semantic validation.
 
 - [ ] TODO-4345: Add compile-time `if` over type facts
   - owner: ai
   - created_at: 2026-05-04
   - phase: Generic constraint and compile-time flow alignment
-  - depends_on: TODO-4343, TODO-4344, TODO-4352
+  - depends_on: TODO-4343, TODO-4344, TODO-4357
   - scope: Add a compile-time branching form that selects code paths from
     evaluated requirement/type facts before IR lowering.
   - implementation_notes:
@@ -1960,11 +2092,41 @@ Task template:
   - stop_rule: Stop once compile-time generic flow has enforceable
     determinism and termination rules.
 
+- [ ] TODO-4358: Enforce compile-time cache, budget, and effects
+  - owner: ai
+  - created_at: 2026-05-04
+  - phase: Generic constraint and compile-time flow alignment
+  - depends_on: TODO-4346, TODO-4357
+  - scope: Implement deterministic compile-time evaluation cache keys,
+    recursion/instruction budgets, phase-qualified effect enforcement, and
+    related diagnostics for the compile-time VM facade.
+  - implementation_notes:
+    - Start from the CT facade, `CompileTimeHost`, semantic-product versioning,
+      import/fact publication, and effect metadata.
+    - Cache keys must include predicate/helper identity, compile-time
+      arguments, visible imports and semantic facts, active
+      `effects<compiletime>(...)`, and the language/semantic-product version.
+    - Effect checks must distinguish runtime `effects(...)` from
+      compile-time `effects<compiletime>(...)`.
+  - acceptance:
+    - Repeated pure CT evaluations reuse cached results while preserving
+      identical diagnostics when cache reuse is disabled.
+    - Recursive or runaway CT evaluation stops with a deterministic
+      budget-exhaustion diagnostic and provenance.
+    - Compile-time IO or other effectful host operations reject without the
+      matching `effects<compiletime>(...)` transform.
+    - Cache-key tests prove that changing imports, semantic facts, CT
+      arguments, active CT effects, or semantic-product version invalidates
+      stale results.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once compile-time evaluation is deterministic, bounded,
+    effect-gated, and cache-safe for semantic validation.
+
 - [ ] TODO-4347: Integrate requirements with overload selection
   - owner: ai
   - created_at: 2026-05-04
   - phase: Generic constraint and compile-time flow alignment
-  - depends_on: TODO-4344, TODO-4346
+  - depends_on: TODO-4344, TODO-4357, TODO-4358
   - scope: Route requirement facts into call and overload resolution so
     constrained generic candidates are selected or rejected deterministically.
   - implementation_notes:
