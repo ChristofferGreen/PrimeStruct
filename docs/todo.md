@@ -485,6 +485,19 @@ Task template:
       continue with the retained
       `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_1_10`
       failure from the saved release log.
+    - 2026-05-04 lite slice: rewritten bare map count calls on indexed
+      variadic map-pack receivers now validate through the canonical
+      `/std/collections/map/count` path instead of falling through to generic
+      unknown-call handling, while visible helper arity diagnostics remain
+      declared-helper diagnostics. Focused lite validation passed for
+      `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_borrowed_vectors`,
+      `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_field_refs_and_maps`,
+      `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_maps`,
+      `semantics validator expr source delegation stays stable`, and
+      `PrimeStruct_primestruct_semantics_bindings_struct_defaults_bindings_struct_defaults_21_28`;
+      continue with the retained
+      `PrimeStruct_primestruct_ir_pipeline_validation_cases_41_50` failure
+      from the current release log.
 
 - [ ] TODO-4298: Promote graph-backed non-template inference authority
   - owner: ai

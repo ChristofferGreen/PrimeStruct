@@ -6,6 +6,34 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 4, 2026)**
+- [x] TODO-4360: Route indexed variadic map count
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-04
+  - phase: Release-gate stabilization
+  - scope: Land the retained variadic map-pack count slice by letting
+    rewritten bare `count(at(values, index))` calls on indexed map-pack
+    receivers validate through the canonical map-count path instead of
+    falling through to generic unknown-call handling.
+  - acceptance:
+    - Bare count calls on indexed variadic map-pack receivers validate as
+      canonical `/std/collections/map/count` builtin calls.
+    - Visible canonical map-count helper arity mismatches still report the
+      declared-helper diagnostic.
+    - Existing semantic source-delegation locks stay stable.
+    - The retained variadic map-pack conversion release shards pass focused
+      validation.
+  - stop_rule: Stop once indexed variadic map-pack count calls pass without
+    weakening visible canonical map-count helper diagnostics.
+  - evidence: Direct canonical map-count calls now enter the map-count
+    validation path even when they were produced by a bare-map helper rewrite,
+    indexed args-pack map receivers bypass the missing-source-helper unknown
+    target guard, and focused release validation passed for
+    `ctest -R 'PrimeStruct_primestruct_ir_pipeline_conversions_variadic_borrowed_vectors|PrimeStruct_primestruct_ir_pipeline_conversions_variadic_field_refs_and_maps|PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_maps' --output-on-failure`,
+    `./PrimeStruct_backend_ir_tests --test-case="semantics validator expr source delegation stays stable"`,
+    and
+    `ctest -R PrimeStruct_primestruct_semantics_bindings_struct_defaults_bindings_struct_defaults_21_28 --output-on-failure`.
+
 - [x] TODO-4360: Route canonical map count fallbacks
   - owner: ai
   - created_at: 2026-05-04

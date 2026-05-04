@@ -675,6 +675,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                     (isBuiltinMethod &&
                      methodResolved == stdlibMapCountTargetPath &&
                      lacksVisibleStdlibMapCountDefinition &&
+                     !resolvesIndexedArgsPackMapCountReceiver &&
                      !context.shouldBuiltinValidateBareMapCountCall);
                 if (failsCountUnknownTargetValidation) {
                   return failUnknownCallTarget(methodResolved == "/vector/count"

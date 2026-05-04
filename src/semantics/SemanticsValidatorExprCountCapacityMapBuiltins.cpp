@@ -232,6 +232,13 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
       logicalResolvedMethod = canonicalExperimentalMapHelperResolved;
     }
   }
+  const bool isExplicitCanonicalMapCountCall =
+      !expr.isMethodCall &&
+      (logicalResolvedMethod == "/std/collections/map/count" ||
+       logicalResolvedMethod == "/std/collections/map/count_ref" ||
+       expr.name.rfind("/std/collections/map/count", 0) == 0 ||
+       expr.namespacePrefix == "/std/collections/map" ||
+       expr.namespacePrefix == "std/collections/map");
   auto hasDeclaredCallableArity = [&](const std::string &path) {
     if ((path == "/std/collections/map/count" ||
          path == "/std/collections/map/count_ref") &&
@@ -268,7 +275,7 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
            hasDeclaredDefinitionPath(path) ||
            defMap_.find(path) != defMap_.end();
   };
-  if (resolvedMethod &&
+  if ((resolvedMethod || isExplicitCanonicalMapCountCall) &&
       (logicalResolvedMethod == "/std/collections/map/count" ||
        logicalResolvedMethod == "/std/collections/map/count_ref") &&
       hasVisibleCallableDefinition(logicalResolvedMethod) &&
@@ -341,14 +348,6 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     }
     return validateVectorCountBuiltinCall();
   };
-  const bool isExplicitCanonicalMapCountCall =
-      !expr.isMethodCall &&
-      (logicalResolvedMethod == "/std/collections/map/count" ||
-       logicalResolvedMethod == "/std/collections/map/count_ref" ||
-       expr.name.rfind("/std/collections/map/count", 0) == 0 ||
-       expr.namespacePrefix == "/std/collections/map" ||
-       expr.namespacePrefix == "std/collections/map");
-
   const bool shouldValidateVectorCountBuiltinFallback =
       !resolvedMethod && isVectorBuiltinName(expr, "count") &&
       !isArrayNamespacedVectorCountCompatibilityCall(expr, *dispatchResolvers) &&
@@ -375,17 +374,21 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     return *validatedVectorCountBuiltinPath;
   }
 
-  if (resolvedMethod && (logicalResolvedMethod == "/array/count" ||
-                         isLegacyOrCanonicalSoaHelperPath(
-                             logicalSoaCountCanonical,
-                             "count") ||
-                         isLegacyOrCanonicalSoaHelperPath(
-                             logicalSoaCountCanonical,
-                             "count_ref") ||
-                         logicalResolvedMethod == "/string/count" ||
-                         logicalResolvedMethod == "/map/count" ||
-                         logicalResolvedMethod == "/std/collections/map/count" ||
-                         logicalResolvedMethod == "/std/collections/map/count_ref")) {
+  const bool routesThroughCanonicalMapCountValidation =
+      logicalResolvedMethod == "/std/collections/map/count" ||
+      logicalResolvedMethod == "/std/collections/map/count_ref";
+  if ((resolvedMethod && (logicalResolvedMethod == "/array/count" ||
+                          isLegacyOrCanonicalSoaHelperPath(
+                              logicalSoaCountCanonical,
+                              "count") ||
+                          isLegacyOrCanonicalSoaHelperPath(
+                              logicalSoaCountCanonical,
+                              "count_ref") ||
+                          logicalResolvedMethod == "/string/count" ||
+                          logicalResolvedMethod == "/map/count" ||
+                          routesThroughCanonicalMapCountValidation)) ||
+      (!resolvedMethod && isExplicitCanonicalMapCountCall &&
+       routesThroughCanonicalMapCountValidation)) {
     handledOut = true;
     if ((logicalResolvedMethod == "/std/collections/map/count" ||
          logicalResolvedMethod == "/std/collections/map/count_ref") &&
