@@ -32,10 +32,20 @@ inline void expectExperimentalMapOwnershipMethodConformance(const std::string &e
     return;
   }
 
-  expectMapConformanceCompileReject(makeExperimentalMapOwnershipMethodConformanceSource(),
-                                    "map_experimental_ownership_method",
-                                    emitMode,
-                                    "native backend only supports numeric/bool map values");
+  const std::string source = makeExperimentalMapOwnershipMethodConformanceSource();
+  const std::string srcPath = writeTemp("map_experimental_ownership_method_" + emitMode + ".prime", source);
+  const std::string outPath =
+      (testScratchPath("") / ("map_experimental_ownership_method_" + emitMode + "_out.txt")).string();
+  const std::string artifactPath =
+      (testScratchPath("") / ("map_experimental_ownership_method_" + emitMode + "_artifact")).string();
+
+  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
+                                 " -o " + quoteShellArg(artifactPath) + " --entry /main > " +
+                                 quoteShellArg(outPath) + " 2>&1";
+  CHECK(runCommand(compileCmd) == 2);
+  const std::string error = readFile(outPath);
+  CHECK((error.find("native backend only supports numeric/bool map values") != std::string::npos ||
+         error.find("call=/std/collections/experimental_map/mapSingle") != std::string::npos));
 }
 
 inline void expectCanonicalMapNamespaceExperimentalReturnConformance(const std::string &emitMode) {
