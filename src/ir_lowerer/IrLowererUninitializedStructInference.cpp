@@ -638,6 +638,18 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
         return inferUninitializedTargetStructPath(
             exprIn.templateArgs.front(), exprIn.namespacePrefix, resolveStructTypeName);
       }
+      if (!exprIn.isMethodCall && !exprIn.isFieldAccess && exprIn.isBraceConstructor &&
+          !exprIn.name.empty()) {
+        std::string constructorType = trimTemplateTypeText(exprIn.name);
+        if (!exprIn.templateArgs.empty()) {
+          constructorType += "<" + joinTemplateArgsText(exprIn.templateArgs) + ">";
+        }
+        const std::string constructorStruct = inferUninitializedTargetStructPath(
+            constructorType, exprIn.namespacePrefix, resolveStructTypeName);
+        if (!constructorStruct.empty()) {
+          return constructorStruct;
+        }
+      }
       if (!exprIn.isMethodCall && isBareOrInternalSoaHelper("location") && exprIn.args.size() == 1) {
         return inferStructExprPath(exprIn.args.front(), localsInExpr);
       }
