@@ -476,6 +476,15 @@ Task template:
       continue with the retained
       `PrimeStruct_primestruct_semantics_bindings_struct_defaults_bindings_struct_defaults_21_28`
       failure from the saved release log.
+    - 2026-05-04 lite slice: wrapper-returned canonical map count helpers
+      now route declared `/std/collections/map/count` definitions through
+      normal helper argument validation for direct and method-sugar calls,
+      preserving the omitted-initializer effect-free `Create` diagnostic only
+      after valid fallback calls. Focused lite validation passed for
+      `PrimeStruct_primestruct_semantics_bindings_struct_defaults_bindings_struct_defaults_21_28`;
+      continue with the retained
+      `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_1_10`
+      failure from the saved release log.
 
 - [ ] TODO-4298: Promote graph-backed non-template inference authority
   - owner: ai

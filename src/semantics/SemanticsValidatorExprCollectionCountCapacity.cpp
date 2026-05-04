@@ -367,12 +367,24 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
        resolvedMapCountMethodPath == "/std/collections/map/count_ref" ||
        resolvedMapCountMethodPath == "/map/count" ||
        resolvedMapCountMethodPath == "/map/count_ref");
+  const std::string normalizedCountMethodName =
+      normalizeCollectionMethodName(expr.name);
+  const bool routesThroughMapReceiverCountMethodSurface =
+      expr.isMethodCall &&
+      !expr.args.empty() &&
+      (normalizedCountMethodName == "count" ||
+       normalizedCountMethodName == "count_ref") &&
+      ((context.resolveMapTarget != nullptr &&
+        context.resolveMapTarget(expr.args.front())) ||
+       (context.isIndexedArgsPackMapReceiverTarget != nullptr &&
+        context.isIndexedArgsPackMapReceiverTarget(expr.args.front())));
   const bool routesThroughMapCountCallSurface =
       routesThroughStdNamespacedMapCountSurface ||
       routesThroughNamespacedMapCountSurface ||
       routesThroughUnnamespacedMapCountFallbackSurface ||
       routesThroughResolvedMapCountSurface ||
-      routesThroughResolvedMapCountMethodSurface;
+      routesThroughResolvedMapCountMethodSurface ||
+      routesThroughMapReceiverCountMethodSurface;
   const std::string countHelperName =
       [&]() -> std::string {
         const std::string resolvedPath = resolveCalleePath(expr);
@@ -523,7 +535,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         (resolvesMapCountReceiver ||
          resolvesIndexedArgsPackMapCountReceiver);
     const bool routesThroughStdlibMapCountFallback =
-        routesThroughUnnamespacedMapCountFallbackSurface &&
+        (routesThroughUnnamespacedMapCountFallbackSurface ||
+         routesThroughMapReceiverCountMethodSurface) &&
         allowsStdlibMapCountFallbackRoute;
     const bool countResolveMissLacksBodyArguments =
         !(expr.hasBodyArguments || !expr.bodyArguments.empty()) ||
@@ -533,7 +546,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     {
                 if (routesThroughStdlibMapCountFallback) {
                   methodResolved = stdlibMapCountTargetPath;
-                  isBuiltinMethod = true;
+                  isBuiltinMethod = !hasVisibleStdlibMapCountDefinition;
                 } else {
                   const bool hasVisibleCountHelperMethodTarget =
                       resolveVisiblePreferredVectorHelperMethodTarget(

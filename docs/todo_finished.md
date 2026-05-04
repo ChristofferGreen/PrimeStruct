@@ -6,6 +6,32 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 4, 2026)**
+- [x] TODO-4360: Route canonical map count fallbacks
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-04
+  - phase: Release-gate stabilization
+  - scope: Land the retained struct-defaults map-count diagnostics slice by
+    routing visible `/std/collections/map/count` helpers as declared calls for
+    wrapper-returned map count surfaces instead of treating them as builtin
+    fallbacks.
+  - acceptance:
+    - Direct `count(wrapItems())` with a visible canonical map count helper
+      validates against the declared helper signature.
+    - Method-sugar `wrapItems().count()` with a visible canonical map count
+      helper validates against the declared helper signature.
+    - Valid non-effect-free constructor fallback calls still report the
+      omitted-initializer effect-free `Create` diagnostic.
+    - The retained `bindings_struct_defaults_21_28` release shard passes
+      focused validation.
+  - stop_rule: Stop once visible canonical map count fallbacks preserve helper
+    diagnostics without hiding valid non-effect-free constructor diagnostics.
+  - evidence: Routed wrapper-returned map count method surfaces into the
+    canonical map count fallback path, kept declared canonical helpers
+    non-builtin for argument validation, skipped bare-map builtin count when a
+    visible canonical helper exists, and focused release validation passed for
+    `ctest -R PrimeStruct_primestruct_semantics_bindings_struct_defaults_bindings_struct_defaults_21_28 --output-on-failure`.
+
 - [x] TODO-4360: Accept typed lower-case constructors
   - owner: ai
   - created_at: 2026-05-04

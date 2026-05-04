@@ -30,7 +30,10 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
   };
 
   if (!expr.isMethodCall && expr.name == "count" && expr.namespacePrefix.empty() &&
-      expr.args.size() == 1 && context.resolveMapTarget(expr.args.front())) {
+      expr.args.size() == 1 && context.resolveMapTarget(expr.args.front()) &&
+      defMap_.find("/std/collections/map/count") == defMap_.end() &&
+      !hasImportedDefinitionPath("/std/collections/map/count") &&
+      !hasDeclaredDefinitionPath("/std/collections/map/count")) {
     handledOut = true;
     if (!expr.templateArgs.empty()) {
       return failCountCapacityMapBuiltin("count does not accept template arguments");

@@ -4,6 +4,17 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+### canonical-map-count-fallbacks-use-visible-helpers
+- Updated: 2026-05-04
+- Tags: semantics, collections, diagnostics
+- Fact: Visible canonical `/std/collections/map/count` helpers must be routed
+  as declared helpers for wrapper-returned map direct and method count calls so
+  arity diagnostics outrank omitted-initializer effect-free fallback checks.
+- Evidence: The retained `bindings_struct_defaults_21_28` shard failed until
+  semantic map-count routing skipped builtin fallback when a visible canonical
+  helper exists and treated wrapper-returned map method receivers as canonical
+  map count fallback surfaces.
+
 ### compile-run-tests-shell-out-to-build-binaries
 - Updated: 2026-04-28
 - Tags: tests, build, tooling
