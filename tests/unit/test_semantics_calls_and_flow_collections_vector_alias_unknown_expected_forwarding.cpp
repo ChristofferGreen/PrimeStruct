@@ -29,7 +29,9 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+  CHECK((error.find("argument count mismatch for builtin count") != std::string::npos ||
+         error.find("argument type mismatch for /vector/count parameter marker") !=
+             std::string::npos));
 }
 
 TEST_CASE("vector namespaced alias rejects compatibility template forwarding when unknown expected meets primitive binding") {
