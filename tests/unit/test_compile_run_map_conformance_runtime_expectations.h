@@ -1,5 +1,37 @@
 #pragma once
 
+inline void expectNativeMapConformanceProgramRunsOrCompileRejectWithOutput(
+    const std::string &source,
+    const std::string &nameStem,
+    int expectedExitCode,
+    const std::string &expectedOutput,
+    const std::string &expectedCompileRejectFragment) {
+  const std::string emitMode = "native";
+  const std::string srcPath = writeTemp(nameStem + "_" + emitMode + ".prime", source);
+  const std::string outPath =
+      (testScratchPath("") / (nameStem + "_" + emitMode + "_out.txt")).string();
+  const std::string exePath =
+      (testScratchPath("") / (nameStem + "_" + emitMode + "_exe")).string();
+  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
+                                 quoteShellArg(exePath) + " --entry /main > " + quoteShellArg(outPath) +
+                                 " 2>&1";
+  const int compileStatus = runCommand(compileCmd);
+  if (compileStatus == 0) {
+    const std::string runCmd = quoteShellArg(exePath) + " > " + quoteShellArg(outPath);
+    CHECK(runCommand(runCmd) == expectedExitCode);
+    CHECK(readFile(outPath) == expectedOutput);
+    return;
+  }
+
+  CHECK(compileStatus != 0);
+  const std::string output = readFile(outPath);
+  if (output.empty()) {
+    CHECK(compileStatus == -1);
+  } else {
+    CHECK(output.find(expectedCompileRejectFragment) != std::string::npos);
+  }
+}
+
 inline void expectCanonicalMapNamespaceExperimentalValueConformance(const std::string &emitMode) {
   const std::string expectedOutput =
       (emitMode == "exe" || emitMode == "native") ? "4\ncontainer missing key\n2\n4\n7\n1\n2\n"
@@ -57,6 +89,16 @@ inline void expectCanonicalMapNamespaceExperimentalReturnConformance(const std::
 }
 
 inline void expectCanonicalMapNamespaceExperimentalParameterConformance(const std::string &emitMode) {
+  if (emitMode == "native") {
+    expectNativeMapConformanceProgramRunsOrCompileRejectWithOutput(
+        makeCanonicalMapNamespaceExperimentalParameterConformanceSource(),
+        "map_namespace_canonical_experimental_parameter",
+        18,
+        "2\n4\n4\n7\n1\n",
+        "call=/std/collections/experimental_map/mapAt");
+    return;
+  }
+
   expectMapConformanceProgramRunsWithOutput(makeCanonicalMapNamespaceExperimentalParameterConformanceSource(),
                                             "map_namespace_canonical_experimental_parameter",
                                             emitMode,
@@ -84,6 +126,16 @@ inline void expectWrapperMapConstructorExperimentalReturnConformance(const std::
 }
 
 inline void expectWrapperMapConstructorExperimentalParameterConformance(const std::string &emitMode) {
+  if (emitMode == "native") {
+    expectNativeMapConformanceProgramRunsOrCompileRejectWithOutput(
+        makeWrapperMapConstructorExperimentalParameterConformanceSource(),
+        "map_wrapper_constructor_experimental_parameter",
+        18,
+        "2\n4\n4\n7\n1\n",
+        "call=/std/collections/experimental_map/mapAt");
+    return;
+  }
+
   expectMapConformanceProgramRunsWithOutput(makeWrapperMapConstructorExperimentalParameterConformanceSource(),
                                             "map_wrapper_constructor_experimental_parameter",
                                             emitMode,
@@ -92,6 +144,16 @@ inline void expectWrapperMapConstructorExperimentalParameterConformance(const st
 }
 
 inline void expectWrappedExperimentalMapParameterConformance(const std::string &emitMode) {
+  if (emitMode == "native") {
+    expectNativeMapConformanceProgramRunsOrCompileRejectWithOutput(
+        makeWrappedExperimentalMapParameterConformanceSource(),
+        "map_wrapped_experimental_parameter",
+        19,
+        "3\n4\n3\n9\n",
+        "call=/std/collections/experimental_map/mapPair");
+    return;
+  }
+
   expectMapConformanceProgramRunsWithOutput(makeWrappedExperimentalMapParameterConformanceSource(),
                                             "map_wrapped_experimental_parameter",
                                             emitMode,
@@ -108,6 +170,16 @@ inline void expectWrappedExperimentalMapBindingConformance(const std::string &em
 }
 
 inline void expectWrappedExperimentalMapAssignConformance(const std::string &emitMode) {
+  if (emitMode == "native") {
+    expectNativeMapConformanceProgramRunsOrCompileRejectWithOutput(
+        makeWrappedExperimentalMapAssignConformanceSource(),
+        "map_wrapped_experimental_assign",
+        13,
+        "4\n9\n",
+        "call=/std/collections/experimental_map/mapPair");
+    return;
+  }
+
   expectMapConformanceProgramRunsWithOutput(makeWrappedExperimentalMapAssignConformanceSource(),
                                             "map_wrapped_experimental_assign_" + emitMode,
                                             emitMode,
