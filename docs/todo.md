@@ -430,6 +430,13 @@ Task template:
       `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_borrowed_vectors`;
       continue release-gate stabilization with the next retained
       Result/Maybe/map/SoA conformance failure visible in the last release log.
+    - 2026-05-04 lite slice: unfrozen semantic-product query and try facts are
+      now indexed by semantic node id when the published routing lookup maps
+      are absent, matching the existing return/binding fact fallback for
+      focused helper tests. Focused lite validation passed for
+      `PrimeStruct_primestruct_ir_pipeline_validation_cases_331_340`;
+      continue release-gate stabilization with the next retained failure from
+      the saved release log.
 
 - [ ] TODO-4298: Promote graph-backed non-template inference authority
   - owner: ai

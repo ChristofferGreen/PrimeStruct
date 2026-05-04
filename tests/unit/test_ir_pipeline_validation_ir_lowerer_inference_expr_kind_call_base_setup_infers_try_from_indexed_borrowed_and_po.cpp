@@ -579,6 +579,60 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup does not infer missing
   CHECK(kindOut == ValueKind::Unknown);
 }
 
+TEST_CASE("ir lowerer semantic-product index backfills unfrozen query and try fact ids") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      .scopePath = "/main",
+      .callName = "lookup",
+      .queryTypeText = "bool",
+      .bindingTypeText = "bool",
+      .receiverBindingTypeText = "",
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 9301,
+      .provenanceHandle = 0,
+  });
+  semanticProgram.tryFacts.push_back(primec::SemanticProgramTryFact{
+      .scopePath = "/main",
+      .operandBindingTypeText = "Result<i64, FileError>",
+      .operandReceiverBindingTypeText = "",
+      .operandQueryTypeText = "",
+      .valueType = "i64",
+      .errorType = "FileError",
+      .contextReturnKind = "return",
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 9302,
+  });
+
+  const auto semanticIndex = primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  primec::Expr queryExpr;
+  queryExpr.kind = primec::Expr::Kind::Call;
+  queryExpr.name = "lookup";
+  queryExpr.semanticNodeId = 9301;
+  const auto *queryFact =
+      primec::ir_lowerer::findSemanticProductQueryFactBySemanticId(semanticIndex, queryExpr);
+  REQUIRE(queryFact != nullptr);
+  CHECK(queryFact->semanticNodeId == 9301);
+
+  primec::Expr tryExpr;
+  tryExpr.kind = primec::Expr::Kind::Call;
+  tryExpr.name = "try";
+  tryExpr.semanticNodeId = 9302;
+  const auto *tryFact =
+      primec::ir_lowerer::findSemanticProductTryFactBySemanticId(semanticIndex, tryExpr);
+  REQUIRE(tryFact != nullptr);
+  CHECK(tryFact->semanticNodeId == 9302);
+}
+
 TEST_CASE("ir lowerer inference expr-kind call-base setup leaves builtin comparison kind unresolved without semantic facts") {
   primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
   std::string error;

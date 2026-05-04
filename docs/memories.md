@@ -70,6 +70,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: Sum `pick(...)` targets that are direct or method calls must publish semantic-product query facts because native/VM pick lowering resolves the target sum type from those facts.
 - Evidence: The saved release log failed `native pick call target sum resolution uses query facts` and its method-target companion; `SemanticsValidatorSnapshotLocals.cpp` now adds a deduped recovery pass for `pick` target calls, with regression coverage in `test_semantics_type_resolution_graph_snapshots.cpp`.
 
+### semantic-product-index-backfills-unfrozen-facts
+- Updated: 2026-05-04
+- Tags: semantics, ir, tests
+- Fact: `buildSemanticProductIndex(...)` backfills unfrozen query, try, return, and binding facts by semantic node id, but frozen semantic products rely on published routing lookup maps.
+- Evidence: The retained `PrimeStruct_primestruct_ir_pipeline_validation_cases_331_340` shard failed until unfrozen query and try facts were indexed the same way as return and binding facts.
+
 ### semantic-product-routing-completeness-gates-lowering
 - Updated: 2026-05-01
 - Tags: semantics, ir, routing

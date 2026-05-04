@@ -6,6 +6,32 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 4, 2026)**
+- [x] TODO-4360: Backfill unfrozen query and try fact ids
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-04
+  - phase: Release-gate stabilization
+  - scope: Land the retained IR validation slice by making
+    `buildSemanticProductIndex(...)` index unfrozen semantic-product query and
+    try facts by semantic node id when tests or bootstrap paths have not filled
+    the published routing lookup maps yet.
+  - acceptance:
+    - Unfrozen query facts with semantic node ids are visible through
+      `findSemanticProductQueryFactBySemanticId`.
+    - Unfrozen try facts with semantic node ids are visible through
+      `findSemanticProductTryFactBySemanticId`.
+    - Path-only query and try fallback indexes remain unavailable.
+    - The retained `ir_pipeline_validation_cases_331_340` shard passes focused
+      release-mode validation.
+  - stop_rule: Stop once call-base inference can consume semantic query and
+    try facts from unfrozen helper-built semantic programs without reviving
+    path-based fallback lookup.
+  - evidence: Added unfrozen semantic-id scans for query and try fact indexes,
+    added adapter coverage for those backfilled fact ids, confirmed the stale
+    VM bounds failure now passes, and focused release validation passed for
+    `ctest -R PrimeStruct_primestruct_ir_pipeline_validation_cases_331_340 --output-on-failure`
+    plus the new direct `PrimeStruct_backend_ir_tests` doctest case.
+
 - [x] TODO-4360: Stabilize variadic SoA pack counts
   - owner: ai
   - created_at: 2026-05-04
