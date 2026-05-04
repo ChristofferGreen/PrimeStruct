@@ -9,6 +9,27 @@
 
 namespace primec::ir_lowerer {
 
+namespace {
+
+std::string resolveSemanticQueryResultErrorTypeText(
+    const SemanticProductTargetAdapter *semanticProductTargets,
+    const SemanticProgramQueryFact &queryFact) {
+  if (semanticProductTargets != nullptr &&
+      semanticProductTargets->semanticProgram != nullptr &&
+      queryFact.resultErrorTypeId != InvalidSymbolId) {
+    std::string resolvedErrorType = std::string(
+        semanticProgramResolveCallTargetString(
+            *semanticProductTargets->semanticProgram,
+            queryFact.resultErrorTypeId));
+    if (!resolvedErrorType.empty()) {
+      return trimTemplateTypeText(resolvedErrorType);
+    }
+  }
+  return trimTemplateTypeText(queryFact.resultErrorType);
+}
+
+} // namespace
+
 ResultWhyMethodCallEmitResult tryEmitResultWhyCall(
     const Expr &expr,
     const LocalMap &localsIn,
@@ -45,22 +66,6 @@ ResultWhyMethodCallEmitResult tryEmitResultWhyCall(
     return defMap.find("/std/result/Result") != defMap.end();
   };
 
-  auto resolveSemanticQueryResultErrorTypeText =
-      [&](const SemanticProgramQueryFact &queryFact) {
-    if (semanticProductTargets != nullptr &&
-        semanticProductTargets->semanticProgram != nullptr &&
-        queryFact.resultErrorTypeId != InvalidSymbolId) {
-      std::string resolvedErrorType = std::string(
-          semanticProgramResolveCallTargetString(
-              *semanticProductTargets->semanticProgram,
-              queryFact.resultErrorTypeId));
-      if (!resolvedErrorType.empty()) {
-        return trimTemplateTypeText(resolvedErrorType);
-      }
-    }
-    return trimTemplateTypeText(queryFact.resultErrorType);
-  };
-
   auto directCallReturnsImportedStdlibResultSum =
       [&](const Expr &valueExpr, bool &returnsResultOut) {
     returnsResultOut = false;
@@ -79,7 +84,9 @@ ResultWhyMethodCallEmitResult tryEmitResultWhyCall(
         return false;
       }
       if (!queryFact->hasResultType || queryFact->resultTypeHasValue ||
-          resolveSemanticQueryResultErrorTypeText(*queryFact) !=
+          resolveSemanticQueryResultErrorTypeText(
+              semanticProductTargets,
+              *queryFact) !=
               trimTemplateTypeText(resultInfo.errorType)) {
         error = "stale semantic-product Result.why source query metadata: " +
                 valueExpr.name;

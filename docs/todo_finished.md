@@ -6,6 +6,28 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 4, 2026)**
+- [x] TODO-4298: Lock Result.why query IDs
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-04
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer `Result.why(...)` source-query ID-order
+    contract slice by making the direct-call source check name the
+    semantic-product error-type resolver and by covering stale copied
+    query-text cases.
+  - acceptance:
+    - `Result.why(makeStatus())` direct-call sources compare interned query
+      result-error IDs before copied `SemanticProgramQueryFact` text.
+    - Stale copied result-error text cannot override a matching interned
+      query result-error ID.
+    - A stale interned result-error ID fails with the existing deterministic
+      stale source-query metadata diagnostic even when copied text matches.
+  - stop_rule: Stop once the `Result.why(...)` direct-call source path has a
+    focused helper contract for interned result-error ID precedence.
+  - evidence: Extracted the `Result.why(...)` semantic query error-type
+    resolver and added helper coverage for stale copied query text and stale
+    interned error IDs. Local validation was skipped under the lite workflow.
+
 - [x] TODO-4360: Refresh safe vector-at dispatch lock
   - owner: ai
   - created_at: 2026-05-04

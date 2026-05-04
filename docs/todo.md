@@ -661,7 +661,8 @@ Task template:
     base call-kind `try(...)` fact authority slice is complete. The lowerer
     base call-kind Result method fact-authority slice is complete for
     semantic-product-addressed `Result.ok(...)`, `Result.error(...)`, and
-    `Result.why(...)` calls.
+    `Result.why(...)` calls. The lowerer `Result.why(...)` source-query
+    ID-order contract slice is complete for stale copied result-error text.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -679,6 +680,10 @@ Task template:
       payloads and base-kind `try(Result.ok(query()))` inference now consume
       published binding/query facts and leave the value kind unresolved when
       the fact is absent, rather than consulting recursive fallback inference.
+    - Completed slice: semantic-product-addressed native `Result.why(...)`
+      direct-call sources now resolve interned query result-error IDs before
+      copied query text, so stale duplicated error text cannot override the
+      graph-owned source metadata.
     - Completed slice: semantic-product-addressed `try(...)` dispatch
       inference now consumes published try facts before local-result,
       callable-result, map-helper, or file-helper fallback can infer the value

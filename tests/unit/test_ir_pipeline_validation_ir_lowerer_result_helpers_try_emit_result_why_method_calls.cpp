@@ -154,6 +154,170 @@ TEST_CASE("ir lowerer result helpers try emit Result.why method calls") {
   CHECK(error == "Result.why requires exactly one argument");
 }
 
+TEST_CASE("ir lowerer Result.why source queries prefer interned error ids") {
+  using EmitResult = primec::ir_lowerer::ResultWhyMethodCallEmitResult;
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.isMethodCall = true;
+  expr.name = "why";
+  expr.namespacePrefix = "/pkg";
+  primec::Expr resultType;
+  resultType.kind = primec::Expr::Kind::Name;
+  resultType.name = "Result";
+  primec::Expr valueExpr;
+  valueExpr.kind = primec::Expr::Kind::Call;
+  valueExpr.name = "makeStatus";
+  valueExpr.namespacePrefix = "/pkg";
+  valueExpr.semanticNodeId = 9001;
+  expr.args = {resultType, valueExpr};
+
+  primec::Definition stdResultDef;
+  stdResultDef.fullPath = "/std/result/Result";
+  std::unordered_map<std::string, const primec::Definition *> defMap{
+      {"/std/result/Result", &stdResultDef},
+  };
+
+  auto emitWithQueryErrorId =
+      [&](const std::string &publishedErrorType,
+          const std::string &copiedErrorType,
+          std::vector<primec::IrInstruction> &instructions,
+          std::string &error,
+          bool &resolveDefinitionCalled,
+          bool &fileErrorCalled) {
+        primec::SemanticProgram semanticProgram;
+        primec::SemanticProgramQueryFact queryFact;
+        queryFact.scopePath = "/pkg";
+        queryFact.callName = "makeStatus";
+        queryFact.queryTypeText = "Result<Unit, " + copiedErrorType + ">";
+        queryFact.bindingTypeText = queryFact.queryTypeText;
+        queryFact.hasResultType = true;
+        queryFact.resultTypeHasValue = false;
+        queryFact.resultErrorType = copiedErrorType;
+        queryFact.semanticNodeId = valueExpr.semanticNodeId;
+        queryFact.resolvedPathId =
+            primec::semanticProgramInternCallTargetString(
+                semanticProgram,
+                "/pkg/makeStatus");
+        queryFact.queryTypeTextId =
+            primec::semanticProgramInternCallTargetString(
+                semanticProgram,
+                queryFact.queryTypeText);
+        queryFact.bindingTypeTextId =
+            primec::semanticProgramInternCallTargetString(
+                semanticProgram,
+                queryFact.bindingTypeText);
+        queryFact.resultErrorTypeId =
+            primec::semanticProgramInternCallTargetString(
+                semanticProgram,
+                publishedErrorType);
+        semanticProgram.queryFacts.push_back(queryFact);
+        semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr
+            .insert_or_assign(valueExpr.semanticNodeId, 0);
+        const primec::ir_lowerer::SemanticProductTargetAdapter targets =
+            primec::ir_lowerer::buildSemanticProductTargetAdapter(
+                &semanticProgram);
+
+        primec::ir_lowerer::LocalMap locals;
+        int32_t tempCounter = 0;
+        int32_t nextTempLocal = 40;
+        instructions.clear();
+        error.clear();
+        resolveDefinitionCalled = false;
+        fileErrorCalled = false;
+
+        return primec::ir_lowerer::tryEmitResultWhyCall(
+            expr,
+            locals,
+            defMap,
+            tempCounter,
+            [](const primec::Expr &,
+               const primec::ir_lowerer::LocalMap &,
+               primec::ir_lowerer::ResultExprInfo &out) {
+              out = primec::ir_lowerer::ResultExprInfo{};
+              out.isResult = true;
+              out.hasValue = false;
+              out.errorType = "FileError";
+              return true;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              resolveDefinitionCalled = true;
+              return nullptr;
+            },
+            [&](const primec::Expr &candidate,
+                const primec::ir_lowerer::LocalMap &) {
+              CHECK(candidate.name == "makeStatus");
+              instructions.push_back({primec::IrOpcode::PushI64, 99});
+              return true;
+            },
+            [&]() {
+              ++nextTempLocal;
+              return nextTempLocal;
+            },
+            [&](primec::IrOpcode op, uint64_t imm) {
+              instructions.push_back({op, imm});
+            },
+            [](const std::string &) { return 77; },
+            [](const std::string &, const std::string &, std::string &) {
+              return false;
+            },
+            [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
+              return false;
+            },
+            [](const primec::Expr &) {
+              return primec::ir_lowerer::LocalInfo::Kind::Value;
+            },
+            [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) {
+              return false;
+            },
+            [](const std::string &typeName) {
+              if (typeName == "FileError") {
+                return ValueKind::Int32;
+              }
+              return ValueKind::Unknown;
+            },
+            [](const primec::Expr &,
+               const primec::Definition &,
+               const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](int32_t) {
+              fileErrorCalled = true;
+              return true;
+            },
+            &targets,
+            &instructions,
+            error);
+      };
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  bool resolveDefinitionCalled = false;
+  bool fileErrorCalled = false;
+  CHECK(emitWithQueryErrorId(
+            "FileError",
+            "CopiedStaleError",
+            instructions,
+            error,
+            resolveDefinitionCalled,
+            fileErrorCalled) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK_FALSE(resolveDefinitionCalled);
+  CHECK(fileErrorCalled);
+  CHECK_FALSE(instructions.empty());
+
+  CHECK(emitWithQueryErrorId(
+            "OtherError",
+            "FileError",
+            instructions,
+            error,
+            resolveDefinitionCalled,
+            fileErrorCalled) == EmitResult::Error);
+  CHECK(error == "stale semantic-product Result.why source query metadata: "
+                 "makeStatus");
+  CHECK_FALSE(resolveDefinitionCalled);
+  CHECK_FALSE(fileErrorCalled);
+}
+
 TEST_CASE("ir lowerer result helpers dispatch Result.why and FileError.why") {
   using EmitResult = primec::ir_lowerer::ResultWhyDispatchEmitResult;
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
