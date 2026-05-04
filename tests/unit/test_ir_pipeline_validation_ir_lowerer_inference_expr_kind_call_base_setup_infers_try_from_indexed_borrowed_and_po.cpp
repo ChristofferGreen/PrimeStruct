@@ -101,6 +101,26 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic query fa
       .queryTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "bool"),
       .bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "bool"),
   });
+  semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      .scopePath = "/Holder/check",
+      .callName = "is_ready",
+      .queryTypeText = "UnknownScalar",
+      .bindingTypeText = "i64",
+      .receiverBindingTypeText = "",
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 502,
+      .provenanceHandle = 0,
+      .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/Holder/check"),
+      .callNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "is_ready"),
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/Holder"),
+      .queryTypeTextId = primec::InvalidSymbolId,
+      .bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "bool"),
+  });
   const auto semanticIndex = primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
 
   primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
@@ -143,6 +163,15 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic query fa
 
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(state.inferCallExprBaseKind(comparisonExpr, primec::ir_lowerer::LocalMap{}, kindOut));
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+
+  primec::Expr readyExpr;
+  readyExpr.kind = primec::Expr::Kind::Call;
+  readyExpr.name = "is_ready";
+  readyExpr.semanticNodeId = 502;
+
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprBaseKind(readyExpr, primec::ir_lowerer::LocalMap{}, kindOut));
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
 }
 

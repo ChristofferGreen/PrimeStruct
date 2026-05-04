@@ -6,6 +6,27 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 4, 2026)**
+- [x] TODO-4298: Lock scalar query base-kind IDs
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-04
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer scalar query base-kind ID-order contract slice by
+    naming the semantic-product query type resolver and by covering stale
+    copied query and binding type text.
+  - acceptance:
+    - Scalar call base-kind inference compares interned query type IDs before
+      copied `SemanticProgramQueryFact` query type text.
+    - Scalar call base-kind inference compares interned binding type IDs
+      before copied `SemanticProgramQueryFact` binding type text when query
+      type metadata is not scalar.
+    - Non-scalar query facts still leave base-kind inference unresolved.
+  - stop_rule: Stop once the scalar query base-kind path has a focused helper
+    contract for interned query and binding type ID precedence.
+  - evidence: Extracted the base-kind semantic fact type resolver and added
+    helper coverage for stale copied query and binding type text. Local
+    validation was skipped under the lite workflow.
+
 - [x] TODO-4298: Lock try base-kind value IDs
   - owner: ai
   - created_at: 2026-04-28

@@ -62,6 +62,20 @@ LocalInfo::ValueKind inferBaseSetupSimpleExprKind(const Expr &expr,
                                                   const SemanticProductIndex *semanticIndex,
                                                   const InferExprKindWithLocalsFn *fallbackInferExprKind);
 
+std::string resolveBaseSetupSemanticFactTypeText(
+    const SemanticProgram &semanticProgram,
+    const std::string &typeText,
+    SymbolId typeTextId) {
+  if (typeTextId != InvalidSymbolId) {
+    std::string resolvedTypeText = std::string(
+        semanticProgramResolveCallTargetString(semanticProgram, typeTextId));
+    if (!resolvedTypeText.empty()) {
+      return trimTemplateTypeText(resolvedTypeText);
+    }
+  }
+  return trimTemplateTypeText(typeText);
+}
+
 bool inferBaseSetupSemanticQueryFactValueKind(const Expr &expr,
                                               const SemanticProgram *semanticProgram,
                                               const SemanticProductIndex *semanticIndex,
@@ -74,26 +88,22 @@ bool inferBaseSetupSemanticQueryFactValueKind(const Expr &expr,
   if (queryFact == nullptr) {
     return false;
   }
-  auto resolveFactTypeText = [semanticProgram](const std::string &typeText, SymbolId typeTextId) {
-    if (typeTextId != InvalidSymbolId) {
-      std::string resolvedTypeText = std::string(
-          semanticProgramResolveCallTargetString(*semanticProgram, typeTextId));
-      if (!resolvedTypeText.empty()) {
-        return trimTemplateTypeText(resolvedTypeText);
-      }
-    }
-    return trimTemplateTypeText(typeText);
-  };
   const LocalInfo::ValueKind queryKind =
       valueKindFromTypeName(
-          resolveFactTypeText(queryFact->queryTypeText, queryFact->queryTypeTextId));
+          resolveBaseSetupSemanticFactTypeText(
+              *semanticProgram,
+              queryFact->queryTypeText,
+              queryFact->queryTypeTextId));
   if (queryKind != LocalInfo::ValueKind::Unknown) {
     kindOut = queryKind;
     return true;
   }
   const LocalInfo::ValueKind bindingKind =
       valueKindFromTypeName(
-          resolveFactTypeText(queryFact->bindingTypeText, queryFact->bindingTypeTextId));
+          resolveBaseSetupSemanticFactTypeText(
+              *semanticProgram,
+              queryFact->bindingTypeText,
+              queryFact->bindingTypeTextId));
   if (bindingKind != LocalInfo::ValueKind::Unknown) {
     kindOut = bindingKind;
     return true;

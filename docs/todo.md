@@ -666,7 +666,9 @@ Task template:
     The lowerer `Result.error(...)` source-query ID-order contract slice is
     complete for stale copied result-error text. The lowerer try base-kind
     value-type ID-order contract slice is complete for stale copied
-    `try(...)` value-type text.
+    `try(...)` value-type text. The lowerer scalar query base-kind
+    type-ID-order contract slice is complete for stale copied query and
+    binding type text.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -696,6 +698,10 @@ Task template:
       inference now resolves interned try value-type IDs before copied try
       fact text, so stale duplicated value text cannot override the
       graph-owned try metadata.
+    - Completed slice: semantic-product-addressed scalar call base-kind
+      inference now resolves interned query and binding type IDs before copied
+      query fact text, so stale duplicated scalar type text cannot override
+      graph-owned query metadata.
     - Completed slice: semantic-product-addressed `try(...)` dispatch
       inference now consumes published try facts before local-result,
       callable-result, map-helper, or file-helper fallback can infer the value
