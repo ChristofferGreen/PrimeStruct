@@ -125,6 +125,11 @@ bool isExperimentalVectorStructValueLocal(const LocalInfo &info) {
           info.structTypeName.rfind("/std/collections/experimental_vector/Vector__", 0) == 0);
 }
 
+bool isExperimentalSoaVectorStructLocal(const LocalInfo &info) {
+  return info.structTypeName == "/std/collections/experimental_soa_vector/SoaVector" ||
+         info.structTypeName.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+}
+
 std::string normalizedInternalSoaStorageMetadataLeaf(std::string structPath) {
   auto trimTypeText = [](std::string text) {
     while (!text.empty() && std::isspace(static_cast<unsigned char>(text.front()))) {
@@ -656,6 +661,19 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     return emitExpr(target, localsIn);
   };
   const auto emitDynamicVectorCount = [&](const Expr &target) {
+    if (target.kind == Expr::Kind::Name) {
+      auto it = localsIn.find(target.name);
+      if (it != localsIn.end() &&
+          !it->second.isArgsPack &&
+          (isExperimentalSoaVectorStructLocal(it->second) ||
+           (it->second.isSoaVector && !it->second.usesBuiltinCollectionLayout))) {
+        emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
+        emitInstruction(IrOpcode::PushI64, 2ull * IrSlotBytes);
+        emitInstruction(IrOpcode::AddI64, 0);
+        emitInstruction(IrOpcode::LoadIndirect, 0);
+        return true;
+      }
+    }
     if (!emitDynamicVectorHeaderBase(target)) {
       return false;
     }
@@ -750,6 +768,16 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     if ((isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) && expr.args.size() == 1 &&
         expr.args.front().kind == Expr::Kind::Name) {
       auto it = localsIn.find(expr.args.front().name);
+      if (it != localsIn.end() &&
+          !it->second.isArgsPack &&
+          (isExperimentalSoaVectorStructLocal(it->second) ||
+           (it->second.isSoaVector && !it->second.usesBuiltinCollectionLayout))) {
+        emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
+        emitInstruction(IrOpcode::PushI64, 2ull * IrSlotBytes);
+        emitInstruction(IrOpcode::AddI64, 0);
+        emitInstruction(IrOpcode::LoadIndirect, 0);
+        return CountAccessCallEmitResult::Emitted;
+      }
       if (it != localsIn.end() && it->second.isArgsPack) {
         emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
         emitInstruction(IrOpcode::LoadIndirect, 0);

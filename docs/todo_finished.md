@@ -6,6 +6,35 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 4, 2026)**
+- [x] TODO-4360: Stabilize variadic SoA pack counts
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-04
+  - phase: Release-gate stabilization
+  - scope: Land the retained variadic SoA args-pack forwarding slice by
+    keeping `args<SoaVector<T>>` pack counts separate from nested SoA storage
+    counts and by routing SoA push/reserve/count helper aliases through the
+    release-mode IR lowering paths used by the failing variadic shard.
+  - acceptance:
+    - `count(values)` on variadic SoA args packs reads the pack count instead
+      of nested SoA storage metadata.
+    - Experimental and canonical SoA `count`, `count_ref`, `push`, and
+      `reserve` aliases resolve through the matching IR lowerer collection
+      paths.
+    - Referenced SoA metadata receiver updates use the stored reference
+      pointer instead of evaluating the receiver as a value.
+    - The retained `variadic_borrowed_vectors` SoA cases assert their fully
+      materialized count totals.
+  - stop_rule: Stop once the retained variadic SoA args-pack forwarding shard
+    passes focused release-mode validation without weakening non-SoA vector
+    lowering.
+  - evidence: Added SoA count/mutator alias handling, receiver-address
+    coverage, field-access disarm coverage, and updated variadic SoA pack
+    expectations; focused release validation passed for
+    `cmake --build build-release --target primec PrimeStruct_compile_run_tests PrimeStruct_backend_ir_tests`,
+    `ctest -R PrimeStruct_primestruct_ir_pipeline_conversions_variadic_borrowed_vectors --output-on-failure`,
+    and the affected `PrimeStruct_backend_ir_tests` helper cases.
+
 - [x] TODO-4360: Accept brace nested struct fields
   - owner: ai
   - created_at: 2026-05-04

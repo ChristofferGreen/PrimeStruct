@@ -306,6 +306,8 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   const std::string arrayPrefix = "array/";
   const std::string stdVectorPrefix = "std/collections/vector/";
   const std::string stdSoaVectorPrefix = "std/collections/soa_vector/";
+  const std::string internalSoaVectorPrefix = "std/collections/internal_soa_vector/";
+  const std::string experimentalSoaVectorPrefix = "std/collections/experimental_soa_vector/";
   const std::string experimentalVectorPrefix = "std/collections/experimental_vector/";
   if (normalized.rfind(arrayPrefix, 0) == 0) {
     helperNameOut = stripGeneratedHelperSuffix(normalized.substr(arrayPrefix.size()));
@@ -321,11 +323,43 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   if (normalized.rfind(stdSoaVectorPrefix, 0) == 0) {
     helperNameOut = stripGeneratedHelperSuffix(
         normalized.substr(stdSoaVectorPrefix.size()));
+    if (helperNameOut == "soaVectorCount") {
+      helperNameOut = "count";
+    } else if (helperNameOut == "soaVectorCountRef") {
+      helperNameOut = "count_ref";
+    }
     return helperNameOut == "count" ||
+           helperNameOut == "count_ref" ||
            helperNameOut == "get" ||
            helperNameOut == "get_ref" ||
            helperNameOut == "ref" ||
            helperNameOut == "ref_ref";
+  }
+  if (normalized.rfind(experimentalSoaVectorPrefix, 0) == 0) {
+    helperNameOut = stripGeneratedHelperSuffix(
+        normalized.substr(experimentalSoaVectorPrefix.size()));
+    if (helperNameOut == "soaVectorCount") {
+      helperNameOut = "count";
+      return true;
+    }
+    if (helperNameOut == "soaVectorCountRef") {
+      helperNameOut = "count_ref";
+      return true;
+    }
+    return false;
+  }
+  if (normalized.rfind(internalSoaVectorPrefix, 0) == 0) {
+    helperNameOut = stripGeneratedHelperSuffix(
+        normalized.substr(internalSoaVectorPrefix.size()));
+    if (helperNameOut == "soaVectorCount") {
+      helperNameOut = "count";
+      return true;
+    }
+    if (helperNameOut == "soaVectorCountRef") {
+      helperNameOut = "count_ref";
+      return true;
+    }
+    return false;
   }
   if (normalized.rfind(experimentalVectorPrefix, 0) == 0) {
     return resolvePublishedStdlibSurfaceExprMemberName(

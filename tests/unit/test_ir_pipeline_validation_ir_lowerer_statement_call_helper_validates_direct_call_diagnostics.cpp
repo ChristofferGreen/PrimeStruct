@@ -141,6 +141,73 @@ TEST_CASE("ir lowerer statement call helper validates direct-call diagnostics") 
   CHECK(definitionResolutionCalls == 1);
 }
 
+TEST_CASE("ir lowerer statement call helper updates referenced soa metadata receivers") {
+  using EmitResult = primec::ir_lowerer::DirectCallStatementEmitResult;
+
+  primec::Expr receiver;
+  receiver.kind = primec::Expr::Kind::Name;
+  receiver.name = "values";
+  primec::Expr value;
+  value.kind = primec::Expr::Kind::Literal;
+  value.literalValue = 1;
+
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.name = "set_field_count";
+  stmt.isMethodCall = true;
+  stmt.args = {receiver, value};
+
+  primec::ir_lowerer::LocalInfo valuesInfo;
+  valuesInfo.index = 4;
+  valuesInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  valuesInfo.structTypeName =
+      "/std/collections/internal_soa_storage/SoaColumn__Particle";
+  primec::ir_lowerer::LocalMap locals;
+  locals.emplace("values", valuesInfo);
+
+  primec::Definition callee;
+  callee.fullPath =
+      "/std/collections/internal_soa_storage/SoaColumn/set_field_count";
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+            stmt,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+              if (expr.kind == primec::Expr::Kind::Name) {
+                instructions.push_back({primec::IrOpcode::PushI64, 9999});
+                return true;
+              }
+              instructions.push_back({primec::IrOpcode::PushI32, expr.literalValue});
+              return true;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return &callee;
+            },
+            [](const primec::Expr &) -> const primec::Definition * { return nullptr; },
+            [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return true; },
+            [&](const primec::Expr &, const primec::Definition &,
+                const primec::ir_lowerer::LocalMap &, bool) { return true; },
+            instructions,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+
+  bool loadedReferencePointer = false;
+  bool emittedReceiverValueFallback = false;
+  for (const auto &instruction : instructions) {
+    loadedReferencePointer |=
+        instruction.op == primec::IrOpcode::LoadLocal && instruction.imm == 4;
+    emittedReceiverValueFallback |=
+        instruction.op == primec::IrOpcode::PushI64 && instruction.imm == 9999;
+  }
+  CHECK(loadedReferencePointer);
+  CHECK_FALSE(emittedReceiverValueFallback);
+}
+
 TEST_CASE("ir lowerer statement call helper emits assign and expression pops") {
   using EmitResult = primec::ir_lowerer::AssignOrExprStatementEmitResult;
 

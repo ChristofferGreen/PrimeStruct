@@ -244,6 +244,9 @@ bool shouldDisarmStructCopySourceExpr(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call) {
     return false;
   }
+  if (expr.isFieldAccess) {
+    return false;
+  }
   if (isSimpleCallName(expr, "dereference") || isSimpleCallName(expr, "location")) {
     return false;
   }

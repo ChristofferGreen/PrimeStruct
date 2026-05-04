@@ -860,10 +860,13 @@
               const bool isExperimentalMapTarget =
                   structPath == "/std/collections/experimental_map/Map" ||
                   structPath.rfind("/std/collections/experimental_map/Map__", 0) == 0;
+              const bool isExperimentalSoaVectorTarget =
+                  structPath == "/std/collections/experimental_soa_vector/SoaVector" ||
+                  structPath.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
               return targetInfo.isArrayOrVectorTarget || structPath == "/array" ||
                      structPath == "/vector" || structPath == "/Buffer" || structPath == "/map" ||
                      structPath == "/soa_vector" || isExperimentalVectorTarget ||
-                     isExperimentalMapTarget;
+                     isExperimentalMapTarget || isExperimentalSoaVectorTarget;
             },
             [&](const Expr &targetExpr, const LocalMap &targetLocals) {
               const auto targetInfo =

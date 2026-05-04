@@ -423,6 +423,13 @@ Task template:
       emitted for brace construction. Focused lite validation passed for
       `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_refs`;
       continue with the retained variadic SoA args-pack forwarding failures.
+    - 2026-05-04 lite slice: variadic SoA args-pack forwarding now keeps
+      args-pack counts distinct from SoA storage counts and routes SoA
+      push/reserve/count metadata through the experimental/canonical SoA
+      helper aliases. Focused lite validation passed for
+      `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_borrowed_vectors`;
+      continue release-gate stabilization with the next retained
+      Result/Maybe/map/SoA conformance failure visible in the last release log.
 
 - [ ] TODO-4298: Promote graph-backed non-template inference authority
   - owner: ai

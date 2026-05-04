@@ -1130,7 +1130,17 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
                 "/std/collections/experimental_vector/Vector__", 0) == 0);
   };
   auto emitVectorHeaderFieldAddress = [&](const Expr &receiver, int32_t slotOffset) {
-    if (!emitExpr(receiver, localsIn)) {
+    if (receiver.kind == Expr::Kind::Name) {
+      auto localIt = localsIn.find(receiver.name);
+      if (localIt != localsIn.end() &&
+          (localIt->second.kind == LocalInfo::Kind::Reference ||
+           localIt->second.kind == LocalInfo::Kind::Pointer) &&
+          !localIt->second.structTypeName.empty()) {
+        instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(localIt->second.index)});
+      } else if (!emitExpr(receiver, localsIn)) {
+        return false;
+      }
+    } else if (!emitExpr(receiver, localsIn)) {
       return false;
     }
     if (slotOffset != 0) {

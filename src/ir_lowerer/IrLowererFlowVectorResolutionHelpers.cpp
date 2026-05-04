@@ -126,14 +126,10 @@ bool resolveVectorMutatorAliasName(const Expr &expr, std::string &helperNameOut)
   const std::string soaVectorPrefix = "soa_vector/";
   const std::string stdSoaVectorPrefix = "std/collections/soa_vector/";
   const std::string experimentalVectorPrefix = "std/collections/experimental_vector/";
+  const std::string experimentalSoaVectorPrefix = "std/collections/experimental_soa_vector/";
   if (normalized.rfind(stdVectorPrefix, 0) == 0) {
     helperNameOut = stripGeneratedHelperSuffix(normalized.substr(stdVectorPrefix.size()));
     return true;
-  }
-  const std::string stdCollectionsPrefix = "std/collections/";
-  if (normalized.rfind(stdCollectionsPrefix, 0) == 0) {
-    return resolveExperimentalVectorMutatorAliasName(
-        normalized.substr(stdCollectionsPrefix.size()), helperNameOut);
   }
   if (normalized.rfind(soaVectorPrefix, 0) == 0) {
     const std::string helperName = stripGeneratedHelperSuffix(normalized.substr(soaVectorPrefix.size()));
@@ -145,8 +141,11 @@ bool resolveVectorMutatorAliasName(const Expr &expr, std::string &helperNameOut)
   }
   if (normalized.rfind(stdSoaVectorPrefix, 0) == 0) {
     const std::string helperName = stripGeneratedHelperSuffix(normalized.substr(stdSoaVectorPrefix.size()));
-    if (helperName == "push" || helperName == "reserve") {
-      helperNameOut = helperName;
+    if (helperName == "push" || helperName == "reserve" ||
+        helperName == "soaVectorPush" || helperName == "soaVectorReserve") {
+      helperNameOut =
+          helperName == "soaVectorPush" ? "push" :
+          helperName == "soaVectorReserve" ? "reserve" : helperName;
       return true;
     }
     return false;
@@ -154,6 +153,23 @@ bool resolveVectorMutatorAliasName(const Expr &expr, std::string &helperNameOut)
   if (normalized.rfind(experimentalVectorPrefix, 0) == 0) {
     return resolveExperimentalVectorMutatorAliasName(
         normalized.substr(experimentalVectorPrefix.size()), helperNameOut);
+  }
+  if (normalized.rfind(experimentalSoaVectorPrefix, 0) == 0) {
+    const std::string helperName =
+        stripGeneratedHelperSuffix(normalized.substr(experimentalSoaVectorPrefix.size()));
+    if (helperName == "push" || helperName == "reserve" ||
+        helperName == "soaVectorPush" || helperName == "soaVectorReserve") {
+      helperNameOut =
+          helperName == "soaVectorPush" ? "push" :
+          helperName == "soaVectorReserve" ? "reserve" : helperName;
+      return true;
+    }
+    return false;
+  }
+  const std::string stdCollectionsPrefix = "std/collections/";
+  if (normalized.rfind(stdCollectionsPrefix, 0) == 0) {
+    return resolveExperimentalVectorMutatorAliasName(
+        normalized.substr(stdCollectionsPrefix.size()), helperNameOut);
   }
   return false;
 }
@@ -357,14 +373,18 @@ bool isSoaVectorMutatorTargetExpr(
     const LocalMap &localsIn,
     const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath) {
   auto localIsSoaVector = [](const LocalInfo &info) {
-    return info.isSoaVector;
+    return info.isSoaVector ||
+           info.structTypeName == "/std/collections/experimental_soa_vector/SoaVector" ||
+           info.structTypeName.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
   };
 
   if (expr.kind == Expr::Kind::Name) {
     auto it = localsIn.find(expr.name);
-    return it != localsIn.end() && localIsSoaVector(it->second);
+    if (it != localsIn.end() && localIsSoaVector(it->second)) {
+      return true;
+    }
   }
-  if (expr.kind == Expr::Kind::Call) {
+  else if (expr.kind == Expr::Kind::Call) {
     std::string accessName;
     if (getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2 &&
         expr.args.front().kind == Expr::Kind::Name) {
@@ -647,7 +667,25 @@ VectorStatementHelperPrepareResult prepareVectorStatementHelperCall(
   }
 
   const Expr &callStmt = *activeStmt;
-  if (!useBuiltinCompatibilityStmt && isUserDefinedVectorHelperCall(stmt)) {
+  const bool explicitSoaVectorHelperPath =
+      !callStmt.isMethodCall &&
+      (qualifiedHelperName.rfind("std/collections/soa_vector/soaVectorPush", 0) == 0 ||
+       qualifiedHelperName.rfind("std/collections/soa_vector/soaVectorReserve", 0) == 0 ||
+       qualifiedHelperName.rfind("std/collections/soa_vector/push", 0) == 0 ||
+       qualifiedHelperName.rfind("std/collections/soa_vector/reserve", 0) == 0 ||
+       qualifiedHelperName.rfind("std/collections/experimental_soa_vector/soaVectorPush", 0) == 0 ||
+       qualifiedHelperName.rfind("std/collections/experimental_soa_vector/soaVectorReserve", 0) == 0 ||
+       qualifiedHelperName.rfind("std/collections/experimental_soa_vector/push", 0) == 0 ||
+       qualifiedHelperName.rfind("std/collections/experimental_soa_vector/reserve", 0) == 0);
+  const bool isSoaVectorMutatorTarget =
+      (vectorHelper == "push" || vectorHelper == "reserve") &&
+      !callStmt.args.empty() &&
+      (explicitSoaVectorHelperPath ||
+       isSoaVectorMutatorTargetExpr(callStmt.args.front(),
+                                    localsIn,
+                                    inferStructExprPath));
+  if (!useBuiltinCompatibilityStmt && !isSoaVectorMutatorTarget &&
+      isUserDefinedVectorHelperCall(stmt)) {
     return VectorStatementHelperPrepareResult::NotMatched;
   }
   if (!callStmt.templateArgs.empty()) {
@@ -671,11 +709,10 @@ VectorStatementHelperPrepareResult prepareVectorStatementHelperCall(
             " parameter values: expected /std/collections/experimental_soa_vector/SoaVector__ specialization";
     return VectorStatementHelperPrepareResult::Error;
   }
-  if ((vectorHelper == "push" || vectorHelper == "reserve") &&
-      isSoaVectorMutatorTargetExpr(callStmt.args.front(),
-                                   localsIn,
-                                   inferStructExprPath)) {
-    return VectorStatementHelperPrepareResult::NotMatched;
+  if (isSoaVectorMutatorTarget) {
+    out.vectorHelper = std::move(vectorHelper);
+    out.callStmt = callStmt;
+    return VectorStatementHelperPrepareResult::Ready;
   }
 
   if (!validateVectorStatementHelperTarget(callStmt.args.front(),

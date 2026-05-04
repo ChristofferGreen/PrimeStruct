@@ -501,6 +501,13 @@ TEST_CASE("ir lowerer flow helpers classify borrowed struct copy sources") {
   accessCall.args.push_back(localName);
   accessCall.args.push_back(indexLiteral);
   CHECK_FALSE(primec::ir_lowerer::shouldDisarmStructCopySourceExpr(accessCall));
+
+  primec::Expr fieldAccessCall;
+  fieldAccessCall.kind = primec::Expr::Kind::Call;
+  fieldAccessCall.name = "storage";
+  fieldAccessCall.isFieldAccess = true;
+  fieldAccessCall.args.push_back(localName);
+  CHECK_FALSE(primec::ir_lowerer::shouldDisarmStructCopySourceExpr(fieldAccessCall));
 }
 
 TEST_CASE("ir lowerer flow helpers emit destroy helper calls from ptr locals") {

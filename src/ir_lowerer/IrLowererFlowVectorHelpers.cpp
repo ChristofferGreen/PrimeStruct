@@ -7,6 +7,30 @@
 
 namespace primec::ir_lowerer {
 
+namespace {
+
+bool isSoaVectorStructPath(const std::string &structPath) {
+  return structPath == "/soa_vector" ||
+         structPath == "/std/collections/soa_vector" ||
+         structPath == "/std/collections/experimental_soa_vector/SoaVector" ||
+         structPath.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+}
+
+bool isSoaVectorStatementTarget(
+    const Expr &target,
+    const LocalMap &localsIn,
+    const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath) {
+  if (target.kind == Expr::Kind::Name) {
+    auto it = localsIn.find(target.name);
+    return it != localsIn.end() &&
+           (it->second.isSoaVector ||
+            isSoaVectorStructPath(it->second.structTypeName));
+  }
+  return isSoaVectorStructPath(inferStructExprPath(target, localsIn));
+}
+
+} // namespace
+
 bool emitVectorDestroySlot(
     std::vector<IrInstruction> &instructions,
     int32_t dataPtrLocal,
@@ -233,6 +257,25 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
   const std::string &vectorHelper = preparedCall.vectorHelper;
   const Expr &callStmt = preparedCall.callStmt;
   const Expr &target = callStmt.args.front();
+  const bool callUsesSoaVectorHelper =
+      !callStmt.isMethodCall &&
+      (callStmt.name.rfind("/std/collections/soa_vector/soaVectorPush", 0) == 0 ||
+       callStmt.name.rfind("/std/collections/soa_vector/soaVectorReserve", 0) == 0 ||
+       callStmt.name.rfind("/std/collections/soa_vector/push", 0) == 0 ||
+       callStmt.name.rfind("/std/collections/soa_vector/reserve", 0) == 0 ||
+       callStmt.name.rfind("/std/collections/experimental_soa_vector/soaVectorPush", 0) == 0 ||
+       callStmt.name.rfind("/std/collections/experimental_soa_vector/soaVectorReserve", 0) == 0 ||
+       callStmt.name.rfind("/std/collections/experimental_soa_vector/push", 0) == 0 ||
+       callStmt.name.rfind("/std/collections/experimental_soa_vector/reserve", 0) == 0);
+  const bool targetIsSoaVector =
+      callUsesSoaVectorHelper ||
+      isSoaVectorStatementTarget(target, localsIn, inferStructExprPath);
+  if (targetIsSoaVector && vectorHelper != "push" && vectorHelper != "reserve") {
+    return VectorStatementHelperEmitResult::NotMatched;
+  }
+  const uint64_t countOffsetBytes = targetIsSoaVector ? 2 * IrSlotBytes : 0;
+  const uint64_t capacityOffsetBytes = targetIsSoaVector ? 3 * IrSlotBytes : IrSlotBytes;
+  const uint64_t dataPtrOffsetBytes = targetIsSoaVector ? 4 * IrSlotBytes : 2 * IrSlotBytes;
 
   auto pushIndexConst = [&](LocalInfo::ValueKind kind, int32_t value) {
     if (kind == LocalInfo::ValueKind::Int32) {
@@ -243,17 +286,29 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
   };
 
   const int32_t ptrLocal = allocTempLocal();
-  constexpr uint64_t kVectorDataPtrOffsetBytes = 2 * IrSlotBytes;
   if (!emitExpr(target, localsIn)) {
     return VectorStatementHelperEmitResult::Error;
   }
   instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
   auto emitLoadVectorDataPtr = [&](int32_t dataPtrLocal) {
     instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
-    instructions.push_back({IrOpcode::PushI64, kVectorDataPtrOffsetBytes});
-    instructions.push_back({IrOpcode::AddI64, 0});
+    if (dataPtrOffsetBytes != 0) {
+      instructions.push_back({IrOpcode::PushI64, dataPtrOffsetBytes});
+      instructions.push_back({IrOpcode::AddI64, 0});
+    }
     instructions.push_back({IrOpcode::LoadIndirect, 0});
     instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(dataPtrLocal)});
+  };
+  auto emitDisarmSoaVectorStorageOwner = [&]() {
+    if (!targetIsSoaVector) {
+      return;
+    }
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+    instructions.push_back({IrOpcode::PushI64, 5 * IrSlotBytes});
+    instructions.push_back({IrOpcode::AddI64, 0});
+    instructions.push_back({IrOpcode::PushI32, 0});
+    instructions.push_back({IrOpcode::StoreIndirect, 0});
+    instructions.push_back({IrOpcode::Pop, 0});
   };
 
   if (vectorHelper == "clear") {
@@ -266,6 +321,10 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
 
   const int32_t countLocal = allocTempLocal();
   instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+  if (countOffsetBytes != 0) {
+    instructions.push_back({IrOpcode::PushI64, countOffsetBytes});
+    instructions.push_back({IrOpcode::AddI64, 0});
+  }
   instructions.push_back({IrOpcode::LoadIndirect, 0});
   instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
 
@@ -273,8 +332,10 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
   if (vectorHelper == "push" || vectorHelper == "reserve") {
     capacityLocal = allocTempLocal();
     instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
-    instructions.push_back({IrOpcode::PushI64, IrSlotBytes});
-    instructions.push_back({IrOpcode::AddI64, 0});
+    if (capacityOffsetBytes != 0) {
+      instructions.push_back({IrOpcode::PushI64, capacityOffsetBytes});
+      instructions.push_back({IrOpcode::AddI64, 0});
+    }
     instructions.push_back({IrOpcode::LoadIndirect, 0});
     instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(capacityLocal)});
   }
@@ -346,15 +407,19 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
         instructions[jumpCopyDone].imm = static_cast<int32_t>(copyDoneIndex);
 
         instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
-        instructions.push_back({IrOpcode::PushI64, kVectorDataPtrOffsetBytes});
-        instructions.push_back({IrOpcode::AddI64, 0});
+        if (dataPtrOffsetBytes != 0) {
+          instructions.push_back({IrOpcode::PushI64, dataPtrOffsetBytes});
+          instructions.push_back({IrOpcode::AddI64, 0});
+        }
         instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(newDataPtrLocal)});
         instructions.push_back({IrOpcode::StoreIndirect, 0});
         instructions.push_back({IrOpcode::Pop, 0});
 
         instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
-        instructions.push_back({IrOpcode::PushI64, IrSlotBytes});
-        instructions.push_back({IrOpcode::AddI64, 0});
+        if (capacityOffsetBytes != 0) {
+          instructions.push_back({IrOpcode::PushI64, capacityOffsetBytes});
+          instructions.push_back({IrOpcode::AddI64, 0});
+        }
         instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(desiredLocal)});
         instructions.push_back({IrOpcode::StoreIndirect, 0});
         instructions.push_back({IrOpcode::Pop, 0});
@@ -458,6 +523,7 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
 
     const size_t reserveEndIndex = instructions.size();
     instructions[jumpReserveEnd].imm = static_cast<int32_t>(reserveEndIndex);
+    emitDisarmSoaVectorStorageOwner();
     return VectorStatementHelperEmitResult::Emitted;
   }
 
@@ -496,6 +562,10 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
 
     instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+    if (countOffsetBytes != 0) {
+      instructions.push_back({IrOpcode::PushI64, countOffsetBytes});
+      instructions.push_back({IrOpcode::AddI64, 0});
+    }
     instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
     instructions.push_back({IrOpcode::StoreIndirect, 0});
     instructions.push_back({IrOpcode::Pop, 0});
@@ -527,6 +597,7 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
     emitVectorCapacityExceeded();
     const size_t endIndex = instructions.size();
     instructions[jumpEnd].imm = static_cast<int32_t>(endIndex);
+    emitDisarmSoaVectorStorageOwner();
     return VectorStatementHelperEmitResult::Emitted;
   }
 

@@ -884,6 +884,11 @@
               [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
               srcPtrLocal,
               structTypeName);
+        } else if (!info.isMutable) {
+          ir_lowerer::emitDisarmTemporaryStructAfterCopy(
+              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+              info.index,
+              structTypeName);
         }
         localsIn.emplace(stmt.name, info);
         return true;

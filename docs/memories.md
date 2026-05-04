@@ -94,6 +94,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: `SoaColumn`, generated `SoaColumnsN`, and `SoaVector` temporary copies need native disarm logic for nested `ownsData` fields so copied heap buffers are not freed through the source temporary.
 - Evidence: `stdlib/std/collections/internal_soa_storage.prime` stores `ownsData` inside each `SoaColumn`, and `IrLowererFlowControlHelpers.cpp` now disarms `SoaColumn`, `SoaColumnsN`, and `SoaVector` temporary copies at their computed `ownsData` slot offsets.
 
+### soa-vector-metadata-offsets
+- Updated: 2026-05-04
+- Tags: ir, collections, soa
+- Fact: IR lowering treats `SoaVector` metadata as nested storage where count, capacity, data pointer, and storage-owner flag live at slot offsets 2, 3, 4, and 5 respectively.
+- Evidence: Stabilizing `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_borrowed_vectors` required SoA count/push/reserve lowering to use those offsets while leaving variadic args-pack counts on the pack header.
+
 ### stdlib-vector-capacity-direct-calls-keep-helper
 - Updated: 2026-05-01
 - Tags: semantics, collections, emitters

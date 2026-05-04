@@ -185,7 +185,7 @@ main() {
   INFO(error);
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
-  CHECK(result == 9);
+  CHECK(result == 27);
 }
 
 TEST_CASE("ir lowerer materializes variadic pointer soa_vector packs with indexed count methods") {
@@ -281,7 +281,7 @@ main() {
   INFO(error);
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
-  CHECK(result == 9);
+  CHECK(result == 27);
 }
 
 TEST_CASE("ir lowerer materializes variadic soa_vector packs with indexed count methods") {
@@ -368,7 +368,7 @@ main() {
   INFO(error);
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
-  CHECK(result == 9);
+  CHECK(result == 27);
 }
 
 TEST_CASE("ir lowerer materializes variadic map packs with indexed count methods") {
