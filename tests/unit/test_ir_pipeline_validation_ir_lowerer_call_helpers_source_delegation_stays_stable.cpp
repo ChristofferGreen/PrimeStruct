@@ -1475,6 +1475,8 @@ TEST_CASE("ir lowerer call helpers fail closed when semantic-product direct-call
       .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/imported/callee"),
       .stdlibSurfaceId = std::nullopt,
   });
+  semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.insert_or_assign(
+      17, primec::semanticProgramInternCallTargetString(semanticProgram, "/imported/callee"));
   const auto populatedResolveExprPath =
       primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases, &semanticProgram);
   CHECK(populatedResolveExprPath(callExpr) == "/imported/callee");
@@ -1505,6 +1507,8 @@ TEST_CASE("ir lowerer call helpers keep unresolved rooted semantic operator targ
       .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/multiply"),
       .stdlibSurfaceId = std::nullopt,
   });
+  semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.insert_or_assign(
+      71, primec::semanticProgramInternCallTargetString(semanticProgram, "/multiply"));
   const auto resolveExprPath =
       primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases, &semanticProgram);
   const auto resolveDefinitionCall =
@@ -1537,6 +1541,8 @@ TEST_CASE("ir lowerer call helpers keep semantic-product direct-call targets aut
       .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/semantic/target"),
       .stdlibSurfaceId = std::nullopt,
   });
+  semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.insert_or_assign(
+      19, primec::semanticProgramInternCallTargetString(semanticProgram, "/semantic/target"));
   const auto resolveExprPath =
       primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases, &semanticProgram);
 
@@ -1605,6 +1611,10 @@ TEST_CASE("ir lowerer call helpers keep source-shaped method paths when semantic
                                                         "/std/collections/map/contains"),
       .stdlibSurfaceId = std::nullopt,
   });
+  semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr.insert_or_assign(
+      44,
+      primec::semanticProgramInternCallTargetString(
+          semanticProgram, "/std/collections/map/contains"));
   resolveExprPath =
       primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases, &semanticProgram);
   CHECK(resolveExprPath(methodExpr) == "/std/collections/map/contains");
