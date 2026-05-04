@@ -73,8 +73,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
 ### semantic-product-index-backfills-unfrozen-facts
 - Updated: 2026-05-04
 - Tags: semantics, ir, tests
-- Fact: `buildSemanticProductIndex(...)` backfills unfrozen query, try, return, and binding facts by semantic node id, but frozen semantic products rely on published routing lookup maps.
-- Evidence: The retained `PrimeStruct_primestruct_ir_pipeline_validation_cases_331_340` shard failed until unfrozen query and try facts were indexed the same way as return and binding facts.
+- Fact: `buildSemanticProductIndex(...)` backfills unfrozen on_error, query, try, return, and binding facts by semantic node id, but frozen semantic products rely on published routing lookup maps.
+- Evidence: The retained `PrimeStruct_primestruct_ir_pipeline_validation_cases_331_340` and `PrimeStruct_primestruct_ir_pipeline_validation_cases_511_520` shards failed until unfrozen query, try, and on_error facts were indexed the same way as return and binding facts.
 
 ### semantic-product-routing-completeness-gates-lowering
 - Updated: 2026-05-01

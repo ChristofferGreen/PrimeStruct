@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 4, 2026)**
+- [x] TODO-4360: Backfill unfrozen on_error fact ids
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-04
+  - phase: Release-gate stabilization
+  - scope: Land the retained IR validation slice by making
+    `buildSemanticProductIndex(...)` index unfrozen semantic-product
+    `on_error` facts by definition semantic node id when tests or bootstrap
+    paths have not filled the published routing lookup map yet.
+  - acceptance:
+    - Unfrozen `on_error` facts with definition semantic node ids are visible
+      through `findSemanticProductOnErrorFact`.
+    - Definition-path-only `on_error` fallback indexes remain unavailable.
+    - The retained `ir_pipeline_validation_cases_511_520` shard passes focused
+      release-mode validation.
+  - stop_rule: Stop once on_error helper setup can consume semantic-id
+    `on_error` facts from unfrozen helper-built semantic programs without
+    reviving definition-path fallback lookup.
+  - evidence: Added an unfrozen semantic-id scan for the on_error fact index,
+    added direct on_error helper coverage for backfilled fact ids, and focused
+    release validation passed for
+    `ctest -R PrimeStruct_primestruct_ir_pipeline_validation_cases_511_520 --output-on-failure`
+    plus the new direct `PrimeStruct_backend_ir_tests` doctest case.
+
 - [x] TODO-4360: Backfill unfrozen query and try fact ids
   - owner: ai
   - created_at: 2026-05-04

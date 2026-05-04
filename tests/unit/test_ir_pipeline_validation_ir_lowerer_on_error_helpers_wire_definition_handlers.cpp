@@ -671,6 +671,33 @@ TEST_CASE("ir lowerer on_error helpers use semantic-id facts without definition-
   CHECK(onErrorByDef.at("/main")->boundArgs.front().literalValue == 2);
 }
 
+TEST_CASE("ir lowerer on_error helpers index unfrozen semantic-id facts") {
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 3301;
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
+      .definitionPath = "/semantic/main",
+      .returnKind = "void",
+      .errorType = "FileError",
+      .boundArgCount = 1,
+      .boundArgTexts = {"2i32"},
+      .returnResultHasValue = false,
+      .returnResultValueType = "",
+      .returnResultErrorType = "",
+      .semanticNodeId = 3301,
+      .handlerPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
+  });
+
+  const auto semanticIndex = primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+  const auto *onErrorFact =
+      primec::ir_lowerer::findSemanticProductOnErrorFact(&semanticProgram, semanticIndex, mainDef);
+  REQUIRE(onErrorFact != nullptr);
+  CHECK(onErrorFact->semanticNodeId == 3301);
+  CHECK(onErrorFact->handlerPathId != primec::InvalidSymbolId);
+}
+
 TEST_CASE("ir lowerer on_error helpers build bundled entry call and on_error setup") {
   primec::Program program;
 

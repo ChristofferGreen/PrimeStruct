@@ -437,6 +437,14 @@ Task template:
       `PrimeStruct_primestruct_ir_pipeline_validation_cases_331_340`;
       continue release-gate stabilization with the next retained failure from
       the saved release log.
+    - 2026-05-04 lite slice: unfrozen semantic-product `on_error` facts are
+      now indexed by definition semantic node id when the published routing
+      lookup map is absent, matching the return/binding/query/try unfrozen
+      helper-test contract while preserving no path fallback. Focused lite
+      validation passed for
+      `PrimeStruct_primestruct_ir_pipeline_validation_cases_511_520`;
+      continue release-gate stabilization with the next retained failure from
+      the saved release log.
 
 - [ ] TODO-4298: Promote graph-backed non-template inference authority
   - owner: ai
