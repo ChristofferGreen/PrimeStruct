@@ -2156,7 +2156,7 @@ Task template:
   - owner: ai
   - created_at: 2026-05-04
   - phase: Generic constraint and compile-time flow alignment
-  - depends_on: TODO-4342, TODO-4270
+  - depends_on: TODO-4353, TODO-4342, TODO-4270
   - scope: Extend requirement predicates from type facts to typed
     compile-time value facts such as integer template arguments, tuple
     indexes, array extents, SIMD widths, and GPU/workgroup dimensions.
@@ -2225,11 +2225,39 @@ Task template:
   - stop_rule: Stop once requirement failures are explainable from user code
     without inspecting compiler internals.
 
+- [ ] TODO-4359: Add compile-time VM conformance coverage
+  - owner: ai
+  - created_at: 2026-05-04
+  - phase: Generic constraint and compile-time flow alignment
+  - depends_on: TODO-4348, TODO-4358
+  - scope: Add focused conformance coverage for the compile-time VM facade,
+    host, typed values, pure user predicates, cache/budget behavior, and
+    phase-qualified effects.
+  - implementation_notes:
+    - Start from CT facade unit tests, semantic-product snapshot tests,
+      parser/semantic diagnostics tests, and compile-pipeline golden tests.
+    - Prefer narrow tests that prove CT execution uses the compiler-hosted
+      facade and not final backend IR or `primevm`.
+    - Include source-lock coverage only where it protects an intentional
+      architecture boundary such as shared VM kernel extraction.
+  - acceptance:
+    - Tests cover builtin `/std/meta/*` predicates, pure user predicates,
+      `true` versus `false`, invalid evaluation, and typed CT value formatting.
+    - Tests cover missing `effects<compiletime>(...)`, allowed
+      compile-time effects, cache-key invalidation, and budget exhaustion.
+    - Tests prove requirement evaluation does not require final VM/native/C++
+      lowering artifacts or `primevm`.
+    - Diagnostics coverage distinguishes unsatisfied predicates from invalid
+      predicate evaluation.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once compile-time VM behavior has targeted regression
+    coverage independent of the broader generic conformance matrix.
+
 - [ ] TODO-4349: Add generic constraint conformance matrix
   - owner: ai
   - created_at: 2026-05-04
   - phase: Generic constraint and compile-time flow alignment
-  - depends_on: TODO-4348
+  - depends_on: TODO-4348, TODO-4359
   - scope: Add parser, semantic, IR-preparation, compile-run, and diagnostic
     conformance coverage for the generic requirement and compile-time flow
     model.
@@ -2239,8 +2267,8 @@ Task template:
       coverage.
     - Cover both the high-level language surface and the semantic-product
       facts consumed by IR lowering.
-    - Include negative tests for ambiguity, unsupported predicates, invalid
-      runtime effects, and non-selected compile-time branches.
+    - Include negative tests for ambiguity, unsupported predicates, missing
+      compile-time effect opt-ins, and non-selected compile-time branches.
   - acceptance:
     - Positive tests cover same-type requirements, capability requirements,
       compile-time value requirements, compile-time branching, generated
