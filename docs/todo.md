@@ -1477,6 +1477,9 @@ Task template:
       stable related-path diagnostics.
     - A unique local binding still reads as a value; a unique zero-arg
       callable still executes.
+    - Runtime locals, compile-time type locals, generated type names, and
+      visible zero-arg definitions share one bare-name namespace; duplicate
+      names in that namespace reject deterministically.
     - Diagnostics are deterministic across import order and repeated builds.
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once bare-name ambiguity is rejected consistently across
@@ -1573,17 +1576,23 @@ Task template:
     - Generated structs are nominal per enclosing definition specialization,
       not structural aliases.
   - acceptance:
-    - A local generated struct can be constructed and returned from the
-      enclosing definition.
+    - A local generated struct can be constructed and used inside the
+      enclosing definition specialization.
     - The struct's fields may use type locals that resolve from parameters or
       earlier compile-time facts.
+    - Directly returning a local generated type rejects unless a later feature
+      has defined an explicit caller-visible naming/export mechanism.
+    - Tests or docs show that a returnable pair-like API must use a
+      caller-visible generic type such as `Pair<LeftT, RightT>`, not a
+      function-local generated struct.
     - Name shadowing, recursive generated storage, invalid field envelopes,
       and escaping unsupported type locals reject deterministically.
     - Struct metadata and field metadata are published for lowering without
       source-text reconstruction.
     - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once local generated structs are validated and usable in
-    the enclosing specialization; leave path/mangling hardening to TODO-4338.
+  - stop_rule: Stop once local generated structs are validated, usable inside
+    the enclosing specialization, and rejected when they escape without an
+    explicit caller-visible name; leave path/mangling hardening to TODO-4338.
 
 - [ ] TODO-4338: Stabilize generated type identity and mangling
   - owner: ai
@@ -1631,7 +1640,8 @@ Task template:
     - IR lowering consumes published semantic facts for generated type layout
       and constructor use.
     - VM/native/C++ compile-run coverage executes at least one procedural
-      generic helper such as `make_pair(left, right)`.
+      generic helper that uses a local generated type internally and returns a
+      caller-known value.
     - Missing semantic-product facts fail closed with deterministic
       diagnostics instead of syntax-only fallback.
     - `./scripts/compile.sh --release` passes.
@@ -1652,11 +1662,13 @@ Task template:
     - Keep examples style-aligned: the feature should read like ordinary
       left-to-right PrimeStruct code, not like C++ template metaprogramming.
   - acceptance:
-    - Docs include a minimal `make_pair(left, right)` example using
-      `[type]`, `typeof<...>`, local `[struct]`, and brace construction.
+    - Docs include a minimal local generated-type example using `[type]`,
+      `typeof<...>`, local `[struct]`, brace construction, and a non-escaping
+      caller-known return value.
     - Examples compile and run under at least VM and native where supported.
     - Negative conformance covers ambiguous bare names, bad `typeof` targets,
-      invalid type-local use, and generated-type identity diagnostics.
+      invalid type-local use, generated-type escape rejection, and
+      generated-type identity diagnostics.
     - Source-lock/example-lock tests are updated if the docs/examples surface
       changes.
     - `./scripts/compile.sh --release` passes.
@@ -1679,18 +1691,22 @@ Task template:
     - Decide whether requirements are expressed as a statement, transform,
       compile-time command, or another surface form; document why the chosen
       form fits the `<...>` compile-time argument channel.
-    - Specifically evaluate definition-transform syntax such as
-      `[require(typeof<left> == i32)] add(left, right) { ... }` as the
-      readability target, and document why `typeof<left>` is the compile-time
-      type query while `typeof(left)` remains an ordinary runtime call shape.
+    - Use definition-transform syntax such as
+      `[require(typeof<left> == i32, typeof<right> == i32)] add(left, right)
+      { ... }` as the readability target, and document why `typeof<left>` is
+      the compile-time type query while `typeof(left)` remains an ordinary
+      runtime call shape.
+    - Treat `require(...)` as a single transform with a comma-separated
+      predicate list; repeated `[require(...)]` transforms are not the planned
+      source style.
     - Include the initial predicate family names for equality, trait/capability
       support, construction, copy/move availability, and field/member queries.
   - acceptance:
     - The docs define a minimal generic requirement syntax with examples for
       same-type checks and capability/trait checks.
-    - The selected syntax includes, rejects, or replaces the bracketed
-      `[require(...)]` transform form explicitly; the docs do not leave that
-      spelling ambiguous.
+    - The selected syntax uses a single bracketed `[require(...)]` transform
+      form with multiple comma-separated predicates; repeated `require`
+      transforms are rejected or canonicalized with a stable diagnostic.
     - The docs specify when requirements run, whether they can produce runtime
       values, and how they interact with ordinary function bodies.
     - The surface explicitly rejects C++-style SFINAE-by-accident; failed
@@ -1741,11 +1757,14 @@ Task template:
     - Start with equality and kind checks such as same-type, is-type,
       is-struct, is-sum, and type-argument/element extraction only if the
       extraction result is already representable as a typed fact.
+    - Canonicalize readable source predicates such as `typeof<left> == i32`
+      into builtin compile-time predicate calls such as `equals<left, i32>`
+      before requirement facts are published.
     - Reuse `typeof<symbol>` and type-local facts from the procedural
       genericity lane rather than adding a second inference path.
     - Keep relation evaluation deterministic and independent of import order.
   - acceptance:
-    - A generic helper can require two inferred type locals to be the same
+    - A generic helper can require an inferred type or symbol to equal a
       concrete type and reject a mismatched call before lowering.
     - Type-kind predicates work on generated nominal structs and ordinary
       named types with stable results.
@@ -1825,13 +1844,18 @@ Task template:
     - Start from docs for deterministic semantics, semantic validation pass
       ordering, template monomorphization recursion guards, import handling,
       and any constant-evaluation helpers.
-    - Compile-time flow must not perform runtime side effects, read ambient
-      process state, or make backend-dependent decisions.
+    - Compile-time flow is pure by default and must not perform runtime side
+      effects, read ambient process state, or make backend-dependent decisions
+      without explicit effect/capability opt-in on the enclosing definition.
     - Caching keys must include all semantic inputs that affect compile-time
       results while remaining stable across import order.
   - acceptance:
     - Docs specify which operations are legal during compile-time generic
-      execution and which are rejected.
+      execution by default, which require explicit effect/capability opt-in,
+      and which are always rejected.
+    - Definitions with compile-time IO or other effectful compile-time work
+      require capabilities in their transform list, and those capabilities are
+      included in semantic cache keys and diagnostics.
     - Recursive compile-time evaluation has a deterministic depth/budget
       diagnostic instead of unbounded compiler recursion.
     - Repeated specializations reuse cached facts where safe and produce
@@ -1937,9 +1961,9 @@ Task template:
     - Start from `docs/PrimeStruct.md`, `docs/PrimeStruct_SyntaxSpec.md`,
       `docs/CodeExamples.md`, `examples/`, and any conformance examples from
       TODO-4349.
-    - Include examples such as identity, make-pair, same-type add, optional
-      type-directed branch, generated local struct, and a constrained overload
-      pair.
+    - Include examples such as identity, non-escaping local generated struct
+      use, same-type add, optional type-directed branch, and a constrained
+      overload pair.
     - Keep the examples procedural and readable: type work should look like a
       left-to-right program over named facts, not a template metaprogramming
       puzzle.

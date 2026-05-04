@@ -674,10 +674,10 @@ This section records the intended direction for making type-level programming
 feel like ordinary PrimeStruct execution. It is not fully implemented yet; open
 TODOs track the parser, semantic-product, monomorphization, and lowering work.
 
-The planned source model is:
+The planned source model for local generated types is:
 
 ```prime
-make_pair(left, right) {
+left_from_pair(left, right) {
   [type] LeftT { typeof<left> }
   [type] RightT { typeof<right> }
 
@@ -686,7 +686,8 @@ make_pair(left, right) {
     [RightT] second
   }
 
-  return(PairT{[first] left, [second] right})
+  [PairT] pair { PairT{[first] left, [second] right} }
+  return(pair.first)
 }
 ```
 
@@ -701,6 +702,10 @@ Rules:
   zero-argument definition, the form executes it and uses its result. If both a
   stack value and callable are visible under the same name, or if no unique
   entity can be selected, semantic validation rejects the source.
+- Compile-time type locals, runtime locals, and visible zero-argument
+  definitions share the same local namespace for bare-name resolution. A
+  function, stack value, type local, or generated type cannot reuse a name that
+  is already visible in that namespace.
 - `[type] Name { expr }` is a planned compile-time local binding whose value is
   a type fact. Type locals may be used in later type-envelope positions in the
   same scope, including fields of generated local struct definitions.
@@ -711,6 +716,14 @@ Rules:
   nominal types scoped to the enclosing definition specialization. Their
   generated paths must be deterministic so diagnostics, semantic-product dumps,
   and IR names stay stable across repeated builds and import order.
+- Local generated types cannot escape as the public return or parameter type of
+  the enclosing function because callers cannot name them. A function may
+  construct and use a local generated type internally, then return a value whose
+  type is known through ordinary inference or an explicit return envelope.
+- A returnable `make_pair(left, right)`-style helper must construct a
+  caller-visible generic type such as `Pair<LeftT, RightT>`, or use a future
+  explicit export/name mechanism. It cannot return a function-local
+  `[struct] PairT` directly.
 - Procedural compile-time genericity must desugar before IR lowering so the
   canonical lowering-facing program still contains no `auto`, unresolved
   compile-time type locals, or unspecialized generated types.
@@ -718,6 +731,33 @@ Rules:
 This model intentionally keeps ordinary templates source-compatible while
 letting future generic code express type computation as a sequence of named
 compile-time facts.
+
+Planned requirement transforms extend that model with readable compile-time
+predicates:
+
+```prime
+[require(typeof<left> == i32, typeof<right> == i32)]
+add(left, right) {
+  return(left + right)
+}
+```
+
+Requirement rules:
+- A definition has at most one `require(...)` transform. Multiple requirements
+  are written as comma-separated predicates inside that transform, not as
+  repeated `[require(...)]` transforms.
+- The source predicate language favors readable expressions. During
+  canonicalization, readable type predicates rewrite into builtin compile-time
+  predicates; for example `typeof<left> == i32` rewrites to a form such as
+  `equals<left, i32>` before semantic validation.
+- Failed requirements on a direct call are diagnostics. During overload
+  selection, failed requirements make a candidate non-viable; if no candidate
+  remains, diagnostics summarize the relevant failed requirements rather than
+  silently behaving like C++ substitution failure.
+- Compile-time requirement evaluation is pure by default. Definitions that need
+  compile-time IO or other side effects must opt in through explicit
+  effect/capability transforms on the definition, and those capabilities become
+  part of the semantic inputs used for caching and diagnostics.
 
 ### 6.4 Unsafe Scopes
 

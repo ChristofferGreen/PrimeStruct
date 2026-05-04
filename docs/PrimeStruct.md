@@ -65,8 +65,11 @@ the lowering contract: `<...>` becomes the compile-time argument channel,
 written as ordinary left-to-right commands over named compile-time facts. For
 example, a generic pair helper can bind `[type] LeftT { typeof<left> }`, bind
 `[type] RightT { typeof<right> }`, define a local `[struct] PairT { ... }`,
-and return `PairT{...}`. These forms must still canonicalize before IR
-lowering so backends see only concrete definitions, calls, and types.
+use `PairT` as internal temporary storage, and return a caller-known value such
+as `pair.first`. Returning the local generated type itself is rejected because
+the caller has no stable source name for that type. These forms must still
+canonicalize before IR lowering so backends see only concrete definitions,
+calls, and types.
 
 ### Compilation model (v1)
 - **Whole-program by default:** `import` expansion produces a single compilation unit, and semantic resolution runs over
@@ -654,12 +657,27 @@ Planned procedural compile-time genericity contract:
   and local generated type definitions must all reuse ordinary name resolution
   and produce deterministic ambiguity diagnostics instead of inventing a second
   lookup model.
+- Compile-time locals, runtime locals, and visible definitions share the same
+  local namespace for bare names; duplicate or ambiguous names are errors.
 - `[type]` locals are semantic compile-time facts. They may be consumed by
   later type-envelope positions and generated type declarations, but they must
   not survive into backend-facing IR.
 - Local generated types are nominal per enclosing definition specialization.
   Their generated paths, semantic-product provenance, and IR names must be
-  stable across repeated builds and import order.
+  stable across repeated builds and import order, but the types cannot escape
+  as externally named return or parameter types unless a later feature defines
+  an explicit export/name mechanism.
+- A returnable pair helper should instead return a caller-visible generic type
+  such as `Pair<LeftT, RightT>` or another explicitly named public shape.
+  Function-local generated types are for implementation-local storage.
+- Requirement transforms should use a single readable transform with a
+  comma-separated predicate list, for example
+  `[require(typeof<left> == i32, typeof<right> == i32)]`. The readable
+  expression form rewrites into builtin compile-time predicates, such as
+  `equals<left, i32>`, before semantic validation publishes requirement facts.
+- Compile-time execution is pure by default. Definitions may opt into
+  compile-time side effects only through explicit effect/capability transforms;
+  those capabilities become part of the semantic input and cache key.
 - The implementation path should first document and parse the compile-time
   argument channel, then add bare zero-argument name resolution, then add type
   locals and `typeof<symbol>`, and only then lower local generated types through
