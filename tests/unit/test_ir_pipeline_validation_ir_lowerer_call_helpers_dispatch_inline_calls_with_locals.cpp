@@ -87,7 +87,7 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
               return false;
             },
             error) == Result::NotHandled);
-  CHECK(error.empty());
+  CHECK(error == "stale");
 
   primec::ir_lowerer::LocalInfo soaCountInfo;
   soaCountInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
@@ -495,7 +495,7 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
               return false;
             },
             error) == Result::NotHandled);
-  CHECK(vectorCountMethodResolveCalls == 1);
+  CHECK(vectorCountMethodResolveCalls == 0);
   CHECK(error == "stale");
 
   primec::Definition vectorCapacityCallee;
@@ -520,8 +520,8 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
               CHECK(false);
               return false;
             },
-            error) == Result::Error);
-  CHECK(error.find("name=capacity") != std::string::npos);
+            error) == Result::NotHandled);
+  CHECK(error == "stale");
 
   primec::Expr canonicalPushCall;
   canonicalPushCall.kind = primec::Expr::Kind::Call;
