@@ -408,6 +408,16 @@ ReturnStatementEmitResult tryEmitReturnStatement(
     if (isExplicitPackedResultReturnExpr(valueExpr)) {
       return false;
     }
+    if (valueExpr.kind == Expr::Kind::Call &&
+        (valueExpr.name == "ok" || valueExpr.name == "/result/ok" ||
+         valueExpr.name == "/std/result/ok" ||
+         isSimpleCallName(valueExpr, "Result.ok"))) {
+      return false;
+    }
+    if (valueExpr.kind == Expr::Kind::Call && valueExpr.args.size() == 1 &&
+        inferExprKind(valueExpr, localsIn) == LocalInfo::ValueKind::Int64) {
+      return false;
+    }
     if (!resolveResultExprInfo) {
       return true;
     }

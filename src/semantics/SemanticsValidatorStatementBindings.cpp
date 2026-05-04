@@ -351,6 +351,11 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
   };
 
   auto isTargetTypedSumInitializerSyntax = [&]() {
+    if (initializer.kind == Expr::Kind::Name) {
+      return hasExplicitType && !explicitAutoType &&
+             resolveSumDefinitionForTypeText(expectedBindingTypeText(info),
+                                             namespacePrefix) != nullptr;
+    }
     if (initializer.kind != Expr::Kind::Call) {
       return false;
     }

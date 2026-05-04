@@ -296,7 +296,23 @@
         if (normalizeCollectionBindingTypeName(transform.name) == "File") {
           info.isFileHandle = true;
           info.valueKind = LocalInfo::ValueKind::Int64;
-        } else if (isResultTemplateTypeBaseName(transform.name)) {
+        } else if (transform.name == "ContainerError" ||
+                   transform.name == "/std/collections/ContainerError") {
+          info.structTypeName = "/std/collections/ContainerError";
+          info.valueKind = LocalInfo::ValueKind::Int64;
+        } else if (transform.name == "ImageError" ||
+                   transform.name == "/std/image/ImageError") {
+          info.structTypeName = "/std/image/ImageError";
+          info.valueKind = LocalInfo::ValueKind::Int64;
+        } else if (transform.name == "GfxError" ||
+                   transform.name == "/std/gfx/GfxError" ||
+                   transform.name == "/std/gfx/experimental/GfxError") {
+          info.structTypeName = transform.name == "/std/gfx/experimental/GfxError"
+                                    ? "/std/gfx/experimental/GfxError"
+                                    : "/std/gfx/GfxError";
+          info.valueKind = LocalInfo::ValueKind::Int64;
+        } else if (isResultTemplateTypeBaseName(transform.name) ||
+                   normalizeCollectionBindingTypeName(transform.name) == "Result") {
           info.isResult = true;
           info.resultHasValue = (transform.templateArgs.size() == 2);
           info.resultValueKind = LocalInfo::ValueKind::Unknown;

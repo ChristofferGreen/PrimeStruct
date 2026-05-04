@@ -354,6 +354,30 @@ bool populateBindingTypeInfoFromTypeText(
   std::string base;
   std::string argText;
   if (!splitTemplateTypeName(normalizedTypeText, base, argText)) {
+    if (normalizedTypeText == "ContainerError" ||
+        normalizedTypeText == "/std/collections/ContainerError") {
+      infoOut.kind = LocalInfo::Kind::Value;
+      infoOut.valueKind = LocalInfo::ValueKind::Int64;
+      infoOut.structTypeName = "/std/collections/ContainerError";
+      return true;
+    }
+    if (normalizedTypeText == "ImageError" ||
+        normalizedTypeText == "/std/image/ImageError") {
+      infoOut.kind = LocalInfo::Kind::Value;
+      infoOut.valueKind = LocalInfo::ValueKind::Int64;
+      infoOut.structTypeName = "/std/image/ImageError";
+      return true;
+    }
+    if (normalizedTypeText == "GfxError" ||
+        normalizedTypeText == "/std/gfx/GfxError" ||
+        normalizedTypeText == "/std/gfx/experimental/GfxError") {
+      infoOut.kind = LocalInfo::Kind::Value;
+      infoOut.valueKind = LocalInfo::ValueKind::Int64;
+      infoOut.structTypeName = normalizedTypeText == "/std/gfx/experimental/GfxError"
+                                   ? "/std/gfx/experimental/GfxError"
+                                   : "/std/gfx/GfxError";
+      return true;
+    }
     const LocalInfo::ValueKind scalarKind =
         valueKindFromTypeName(normalizeCollectionBindingTypeName(normalizedTypeText));
     if (scalarKind != LocalInfo::ValueKind::Unknown) {
@@ -1285,6 +1309,7 @@ bool inferCallParameterLocalInfo(const Expr &param,
       infoOut.resultValueKind = LocalInfo::ValueKind::Unknown;
       infoOut.resultValueCollectionKind = LocalInfo::Kind::Value;
       infoOut.resultValueMapKeyKind = LocalInfo::ValueKind::Unknown;
+      infoOut.resultValueStructType.clear();
       if (infoOut.resultHasValue && !transform.templateArgs.empty()) {
         resolveSupportedResultCollectionType(
             transform.templateArgs.front(),
@@ -1300,7 +1325,14 @@ bool inferCallParameterLocalInfo(const Expr &param,
                 infoOut.resultValueKind)) {
           infoOut.resultValueCollectionKind = LocalInfo::Kind::Map;
         } else if (infoOut.resultValueCollectionKind == LocalInfo::Kind::Value) {
-          infoOut.resultValueKind = valueKindFromTypeName(transform.templateArgs.front());
+          LocalInfo resultValueInfo;
+          if (applyErrorTypeMetadata(transform.templateArgs.front(), resultValueInfo) &&
+              !resultValueInfo.structTypeName.empty()) {
+            infoOut.resultValueStructType = resultValueInfo.structTypeName;
+            infoOut.resultValueKind = LocalInfo::ValueKind::Unknown;
+          } else {
+            infoOut.resultValueKind = valueKindFromTypeName(transform.templateArgs.front());
+          }
         }
       }
       infoOut.resultValueIsFileHandle =

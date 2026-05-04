@@ -317,6 +317,7 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
     std::string resultValueType;
     infoOut.resultValueCollectionKind = LocalInfo::Kind::Value;
     infoOut.resultValueMapKeyKind = LocalInfo::ValueKind::Unknown;
+    infoOut.resultValueStructType.clear();
     infoOut.resultValueIsFileHandle =
         resultHasValue && extractResultValueTypeText(typeText, resultValueType) &&
         isFileHandleTypeText(resultValueType);
@@ -326,11 +327,21 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
           infoOut.resultValueCollectionKind,
           infoOut.resultValueKind,
           &infoOut.resultValueMapKeyKind);
+      if (infoOut.resultValueCollectionKind == LocalInfo::Kind::Value) {
+        LocalInfo resultValueInfo;
+        if (applyErrorTypeMetadata(resultValueType, resultValueInfo) &&
+            !resultValueInfo.structTypeName.empty()) {
+          infoOut.resultValueStructType = resultValueInfo.structTypeName;
+          infoOut.resultValueKind = LocalInfo::ValueKind::Unknown;
+        }
+      }
     }
     if (infoOut.resultValueIsFileHandle) {
       infoOut.resultValueKind = LocalInfo::ValueKind::Int64;
     } else if (infoOut.resultValueCollectionKind == LocalInfo::Kind::Value) {
-      infoOut.resultValueKind = resultValueKind;
+      if (infoOut.resultValueStructType.empty()) {
+        infoOut.resultValueKind = resultValueKind;
+      }
     }
     infoOut.resultErrorType = resultErrorType;
     infoOut.valueKind = resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
@@ -438,6 +449,7 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
       std::string resultValueType;
       infoOut.resultValueCollectionKind = LocalInfo::Kind::Value;
       infoOut.resultValueMapKeyKind = LocalInfo::ValueKind::Unknown;
+      infoOut.resultValueStructType.clear();
       infoOut.resultValueIsFileHandle =
           pointerResultHasValue && extractResultValueTypeText(pointerTargetType, resultValueType) &&
           isFileHandleTypeText(resultValueType);
@@ -447,11 +459,21 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
             infoOut.resultValueCollectionKind,
             infoOut.resultValueKind,
             &infoOut.resultValueMapKeyKind);
+        if (infoOut.resultValueCollectionKind == LocalInfo::Kind::Value) {
+          LocalInfo resultValueInfo;
+          if (applyErrorTypeMetadata(resultValueType, resultValueInfo) &&
+              !resultValueInfo.structTypeName.empty()) {
+            infoOut.resultValueStructType = resultValueInfo.structTypeName;
+            infoOut.resultValueKind = LocalInfo::ValueKind::Unknown;
+          }
+        }
       }
       if (infoOut.resultValueIsFileHandle) {
         infoOut.resultValueKind = LocalInfo::ValueKind::Int64;
       } else if (infoOut.resultValueCollectionKind == LocalInfo::Kind::Value) {
-        infoOut.resultValueKind = pointerResultValueKind;
+        if (infoOut.resultValueStructType.empty()) {
+          infoOut.resultValueKind = pointerResultValueKind;
+        }
       }
       infoOut.resultErrorType = pointerResultErrorType;
       infoOut.valueKind = pointerResultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
@@ -492,6 +514,7 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
       std::string resultValueType;
       infoOut.resultValueCollectionKind = LocalInfo::Kind::Value;
       infoOut.resultValueMapKeyKind = LocalInfo::ValueKind::Unknown;
+      infoOut.resultValueStructType.clear();
       infoOut.resultValueIsFileHandle =
           refResultHasValue && extractResultValueTypeText(refTargetType, resultValueType) &&
           isFileHandleTypeText(resultValueType);
@@ -501,11 +524,21 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
             infoOut.resultValueCollectionKind,
             infoOut.resultValueKind,
             &infoOut.resultValueMapKeyKind);
+        if (infoOut.resultValueCollectionKind == LocalInfo::Kind::Value) {
+          LocalInfo resultValueInfo;
+          if (applyErrorTypeMetadata(resultValueType, resultValueInfo) &&
+              !resultValueInfo.structTypeName.empty()) {
+            infoOut.resultValueStructType = resultValueInfo.structTypeName;
+            infoOut.resultValueKind = LocalInfo::ValueKind::Unknown;
+          }
+        }
       }
       if (infoOut.resultValueIsFileHandle) {
         infoOut.resultValueKind = LocalInfo::ValueKind::Int64;
       } else if (infoOut.resultValueCollectionKind == LocalInfo::Kind::Value) {
-        infoOut.resultValueKind = refResultValueKind;
+        if (infoOut.resultValueStructType.empty()) {
+          infoOut.resultValueKind = refResultValueKind;
+        }
       }
       infoOut.resultErrorType = refResultErrorType;
       infoOut.valueKind = refResultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;

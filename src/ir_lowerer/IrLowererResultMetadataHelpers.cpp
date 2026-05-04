@@ -509,6 +509,24 @@ bool applySemanticDirectValueTypeText(const std::string &typeText, ResultExprInf
     out.valueIsFileHandle = true;
     return true;
   }
+  if (trimmedType == "ContainerError" ||
+      trimmedType == "/std/collections/ContainerError") {
+    out.valueStructType = "/std/collections/ContainerError";
+    return true;
+  }
+  if (trimmedType == "ImageError" ||
+      trimmedType == "/std/image/ImageError") {
+    out.valueStructType = "/std/image/ImageError";
+    return true;
+  }
+  if (trimmedType == "GfxError" ||
+      trimmedType == "/std/gfx/GfxError" ||
+      trimmedType == "/std/gfx/experimental/GfxError") {
+    out.valueStructType = trimmedType == "/std/gfx/experimental/GfxError"
+                              ? "/std/gfx/experimental/GfxError"
+                              : "/std/gfx/GfxError";
+    return true;
+  }
   out.valueKind = valueKindFromTypeName(trimmedType);
   if (out.valueKind != LocalInfo::ValueKind::Unknown) {
     return true;
@@ -908,6 +926,19 @@ void applyDirectResultValueMetadata(const Expr &valueExpr,
       valueExpr.semanticNodeId != 0;
   if (hasSemanticProductValueFactContext) {
     if (applySemanticDirectValueMetadataFact(valueExpr, semanticProgram, semanticIndex, out)) {
+      if (valueExpr.kind == Expr::Kind::Call && out.valueStructType.empty()) {
+        std::string semanticCallStructType;
+        if (inferDirectResultValueStructType(
+                valueExpr,
+                localsIn,
+                resolveDefinitionCall,
+                semanticCallStructType,
+                true)) {
+          out.valueStructType = std::move(semanticCallStructType);
+          out.valueKind = LocalInfo::ValueKind::Unknown;
+          out.valueIsFileHandle = false;
+        }
+      }
       return;
     }
   }

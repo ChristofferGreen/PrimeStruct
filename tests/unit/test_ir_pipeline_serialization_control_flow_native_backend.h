@@ -421,6 +421,21 @@ TEST_CASE("native backend cache mode regression matrix covers branches and call 
   {
     primec::IrModule module;
     module.entryIndex = 0;
+    primec::IrFunction mainFn;
+    mainFn.name = "/main";
+    mainFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+    mainFn.instructions.push_back({primec::IrOpcode::JumpIfZero, 4});
+    mainFn.instructions.push_back({primec::IrOpcode::PushI32, 42});
+    mainFn.instructions.push_back({primec::IrOpcode::Jump, 5});
+    mainFn.instructions.push_back({primec::IrOpcode::PushI32, 7});
+    mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+    module.functions.push_back(std::move(mainFn));
+    cases.push_back({"jump_carries_cached_value_over_branch_arm", std::move(module)});
+  }
+
+  {
+    primec::IrModule module;
+    module.entryIndex = 0;
 
     primec::IrFunction mainFn;
     mainFn.name = "/main";
@@ -661,4 +676,3 @@ TEST_CASE("native backend optimization conformance perf gates enforce parity and
   CHECK(totalReloadReduction >= 2u);
 }
 #endif
-

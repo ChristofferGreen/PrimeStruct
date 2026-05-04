@@ -402,12 +402,29 @@
         return true;
       };
       auto assignDeclaredResultStructType = [&](const std::string &typeText) {
-        if (!info.resultHasValue || info.resultValueKind != LocalInfo::ValueKind::Unknown) {
+        if (!info.resultHasValue || info.resultValueCollectionKind != LocalInfo::Kind::Value) {
           return;
         }
         std::string structPath;
-        if (resolveStructTypeName(trimTemplateTypeText(typeText), stmt.namespacePrefix, structPath)) {
+        const std::string normalizedTypeText = trimTemplateTypeText(typeText);
+        if (resolveStructTypeName(normalizedTypeText, stmt.namespacePrefix, structPath)) {
           info.resultValueStructType = std::move(structPath);
+          info.resultValueKind = LocalInfo::ValueKind::Unknown;
+        } else if (normalizedTypeText == "ContainerError" ||
+                   normalizedTypeText == "/std/collections/ContainerError") {
+          info.resultValueStructType = "/std/collections/ContainerError";
+          info.resultValueKind = LocalInfo::ValueKind::Unknown;
+        } else if (normalizedTypeText == "ImageError" ||
+                   normalizedTypeText == "/std/image/ImageError") {
+          info.resultValueStructType = "/std/image/ImageError";
+          info.resultValueKind = LocalInfo::ValueKind::Unknown;
+        } else if (normalizedTypeText == "GfxError" ||
+                   normalizedTypeText == "/std/gfx/GfxError" ||
+                   normalizedTypeText == "/std/gfx/experimental/GfxError") {
+          info.resultValueStructType = normalizedTypeText == "/std/gfx/experimental/GfxError"
+                                           ? "/std/gfx/experimental/GfxError"
+                                           : "/std/gfx/GfxError";
+          info.resultValueKind = LocalInfo::ValueKind::Unknown;
         }
       };
       auto assignDeclaredResultFileHandle = [&](const std::string &typeText) {
@@ -450,6 +467,22 @@
                 resolveSumDefinitionForTypeText(info.structTypeName, stmt.namespacePrefix)) {
           return sumDef;
         }
+        auto resolveSemanticSumTypeText =
+            [&](const std::string &typeText, SymbolId typeTextId) -> const Definition * {
+          std::string resolvedTypeText;
+          const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
+          if (semanticTargets.semanticProgram != nullptr &&
+              typeTextId != InvalidSymbolId) {
+            resolvedTypeText = std::string(semanticProgramResolveCallTargetString(
+                *semanticTargets.semanticProgram,
+                typeTextId));
+          }
+          if (resolvedTypeText.empty()) {
+            resolvedTypeText = typeText;
+          }
+          return resolveSumDefinitionForTypeText(trimTemplateTypeText(resolvedTypeText),
+                                                 stmt.namespacePrefix);
+        };
         for (const auto &transform : bindingTypeExprRef.transforms) {
           if (transform.name == "effects" || transform.name == "capabilities" ||
               isBindingQualifierName(transform.name) || !transform.arguments.empty()) {
@@ -464,6 +497,47 @@
             return sumDef;
           }
           break;
+        }
+        const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
+        if (semanticTargets.hasSemanticProduct) {
+          const SemanticProgramBindingFact *bindingFact = nullptr;
+          if (stmt.semanticNodeId != 0) {
+            bindingFact = findSemanticProductBindingFact(semanticTargets, stmt);
+          }
+          if (bindingFact == nullptr) {
+            bindingFact = findSemanticProductBindingFactByScopeAndName(
+                semanticTargets, function.name, stmt.name);
+          }
+          if (bindingFact != nullptr) {
+            if (const Definition *sumDef = resolveSemanticSumTypeText(
+                    bindingFact->bindingTypeText,
+                    bindingFact->bindingTypeTextId)) {
+              return sumDef;
+            }
+          }
+          if (const SemanticProgramBindingFact *initBindingFact =
+                  findSemanticProductBindingFact(semanticTargets, init);
+              initBindingFact != nullptr) {
+            if (const Definition *sumDef = resolveSemanticSumTypeText(
+                    initBindingFact->bindingTypeText,
+                    initBindingFact->bindingTypeTextId)) {
+              return sumDef;
+            }
+          }
+          if (const SemanticProgramQueryFact *initQueryFact =
+                  findSemanticProductQueryFact(semanticTargets, init);
+              initQueryFact != nullptr) {
+            if (const Definition *sumDef = resolveSemanticSumTypeText(
+                    initQueryFact->bindingTypeText,
+                    initQueryFact->bindingTypeTextId)) {
+              return sumDef;
+            }
+            if (const Definition *sumDef = resolveSemanticSumTypeText(
+                    initQueryFact->queryTypeText,
+                    initQueryFact->queryTypeTextId)) {
+              return sumDef;
+            }
+          }
         }
         return nullptr;
       };
@@ -495,6 +569,7 @@
         info.valueKind = LocalInfo::ValueKind::Int64;
         info.structTypeName = sumDef->fullPath;
         info.structSlotCount = totalSlots;
+        applyStdlibResultSumInfoToLocal(*sumDef, info);
         info.index = nextLocal++;
         emitLoweredSumHeader(baseLocal, totalSlots);
         function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
@@ -741,15 +816,44 @@
         if (!emittedStructArgsPackAccessInit && !emitExpr(init, localsIn)) {
           return false;
         }
+        bool shouldMaterializePackedTryScalar = false;
         if (!emittedStructArgsPackAccessInit &&
             init.kind == Expr::Kind::Call &&
             !init.isMethodCall &&
             isSimpleCallName(init, "try") &&
-            init.args.size() == 1 &&
-            init.args.front().kind == Expr::Kind::Call &&
-            (init.args.front().name == "map" ||
-             init.args.front().name == "and_then" ||
-             init.args.front().name == "map2")) {
+            init.args.size() == 1) {
+          if (init.args.front().kind == Expr::Kind::Call &&
+              (init.args.front().name == "map" ||
+               init.args.front().name == "and_then" ||
+               init.args.front().name == "map2")) {
+            shouldMaterializePackedTryScalar = true;
+          } else {
+            ResultExprInfo tryResultInfo;
+            if (ir_lowerer::resolveResultExprInfoFromLocals(
+                    init.args.front(),
+                    localsIn,
+                    [&](const Expr &callExpr, const LocalMap &callLocals) {
+                      return resolveMethodCallDefinition(callExpr, callLocals);
+                    },
+                    [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
+                    [&](const std::string &definitionPath, ReturnInfo &returnInfo) {
+                      return getReturnInfo(definitionPath, returnInfo);
+                    },
+                    [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+                      return inferExprKind(valueExpr, valueLocals);
+                    },
+                    tryResultInfo,
+                    callResolutionAdapters.semanticProgram,
+                    &callResolutionAdapters.semanticProductTargets.semanticIndex,
+                    &error) &&
+                tryResultInfo.isResult &&
+                tryResultInfo.hasValue &&
+                tryResultInfo.valueStructType.empty()) {
+              shouldMaterializePackedTryScalar = true;
+            }
+          }
+        }
+        if (shouldMaterializePackedTryScalar) {
           ir_lowerer::PackedResultStructPayloadInfo payloadInfo;
           if (ir_lowerer::resolvePackedResultStructPayloadInfo(
                   info.structTypeName,
@@ -964,7 +1068,10 @@
       if (const Definition *returnSumDef = extractDeclaredSumReturnDefinition();
           returnSumDef != nullptr &&
           isStdlibResultSumDefinition(*returnSumDef) &&
-          (isLegacyResultOkCall(returnValueExpr) || isLegacyResultMapCall(returnValueExpr) ||
+          (isLegacyResultOkCall(returnValueExpr) ||
+           isStdlibResultVariantHelperCall(returnValueExpr, "ok") ||
+           isStdlibResultVariantHelperCall(returnValueExpr, "error") ||
+           isLegacyResultMapCall(returnValueExpr) ||
            isLegacyResultAndThenCall(returnValueExpr) || isLegacyResultMap2Call(returnValueExpr))) {
         int32_t totalSlots = 0;
         if (!loweredSumSlotCount(*returnSumDef, totalSlots)) {
@@ -988,10 +1095,65 @@
         LocalInfo returnInfo;
         returnInfo.kind = LocalInfo::Kind::Value;
         returnInfo.valueKind = LocalInfo::ValueKind::Int64;
-        returnInfo.structTypeName = returnSumDef->fullPath;
-        returnInfo.structSlotCount = totalSlots;
-        returnInfo.index = ptrLocal;
-        const std::string tempReturnName = "__native_return_sum_" + std::to_string(ptrLocal);
+        const SumVariant *okVariant = findSumVariantByName(*returnSumDef, "ok");
+        const SumVariant *errorVariant = findSumVariantByName(*returnSumDef, "error");
+        bool emittedPackedResultReturn = false;
+        if (okVariant != nullptr && errorVariant != nullptr) {
+          LoweredSumPayloadStorageInfo okPayload;
+          LoweredSumPayloadStorageInfo errorPayload;
+          int32_t okTag = 0;
+          int32_t errorTag = 0;
+          if (!resolveSemanticProductSumPayloadStorageInfo(
+                  *returnSumDef, *okVariant, "packed Result return ok payload", okPayload) ||
+              !resolveSemanticProductSumPayloadStorageInfo(
+                  *returnSumDef, *errorVariant, "packed Result return error payload", errorPayload) ||
+              !resolveSemanticProductSumVariantTag(
+                  *returnSumDef, *okVariant, "packed Result return ok tag", okTag) ||
+              !resolveSemanticProductSumVariantTag(
+                  *returnSumDef, *errorVariant, "packed Result return error tag", errorTag)) {
+            return false;
+          }
+          if (!okPayload.isAggregate && !errorPayload.isAggregate) {
+            const int32_t packedLocal = nextLocal++;
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(baseLocal + 1)});
+            function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(okTag)});
+            function.instructions.push_back({IrOpcode::CmpEqI32, 0});
+            const size_t jumpToError = function.instructions.size();
+            function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+            if (okVariant->hasPayload) {
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(baseLocal + 2)});
+            } else {
+              function.instructions.push_back({IrOpcode::PushI64, 0});
+            }
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(packedLocal)});
+            const size_t jumpToEnd = function.instructions.size();
+            function.instructions.push_back({IrOpcode::Jump, 0});
+            function.instructions[jumpToError].imm =
+                static_cast<uint64_t>(function.instructions.size());
+            if (errorVariant->hasPayload) {
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(baseLocal + 2)});
+            } else {
+              function.instructions.push_back({IrOpcode::PushI64, 1});
+            }
+            function.instructions.push_back({IrOpcode::PushI64, 4294967296ull});
+            function.instructions.push_back({IrOpcode::MulI64, 0});
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(packedLocal)});
+            function.instructions[jumpToEnd].imm =
+                static_cast<uint64_t>(function.instructions.size());
+            returnInfo.index = packedLocal;
+            applyStdlibResultSumInfoToLocal(*returnSumDef, returnInfo);
+            emittedPackedResultReturn = true;
+          }
+        }
+        if (!emittedPackedResultReturn) {
+          returnInfo.structTypeName = returnSumDef->fullPath;
+          returnInfo.structSlotCount = totalSlots;
+          returnInfo.index = ptrLocal;
+        }
+        const std::string tempReturnName =
+            emittedPackedResultReturn
+                ? "__native_return_packed_result_" + std::to_string(returnInfo.index)
+                : "__native_return_sum_" + std::to_string(ptrLocal);
         rewrittenReturnLocals.emplace(tempReturnName, returnInfo);
         rewrittenReturnStmt = *emittedReturnStmt;
         Expr stableReturnValueExpr;
@@ -1002,13 +1164,21 @@
         emittedReturnLocals = &rewrittenReturnLocals;
       }
       const Expr &stableReturnValueExpr = emittedReturnStmt->args.front();
+      const bool stableReturnValueIsPackedResult =
+          stableReturnValueExpr.kind == Expr::Kind::Name &&
+          [&]() {
+            auto localIt = emittedReturnLocals->find(stableReturnValueExpr.name);
+            return localIt != emittedReturnLocals->end() &&
+                   localIt->second.isResult &&
+                   localIt->second.structTypeName.empty();
+          }();
       StructSlotLayout layout;
       std::string aggregateStructPath;
       const std::string inferredStructPath = inferStructExprPath(stableReturnValueExpr, *emittedReturnLocals);
       if (!inferredStructPath.empty() && resolveStructSlotLayout(inferredStructPath, layout)) {
         aggregateStructPath = inferredStructPath;
       }
-      if (aggregateStructPath.empty()) {
+      if (aggregateStructPath.empty() && !stableReturnValueIsPackedResult) {
         const std::string declaredStructPath = extractDeclaredStructReturnPath();
         if (!declaredStructPath.empty() && resolveStructSlotLayout(declaredStructPath, layout)) {
           aggregateStructPath = declaredStructPath;

@@ -65,6 +65,24 @@ bool applySemanticResultValueTypeText(const std::string &valueTypeText, ResultEx
     out.valueIsFileHandle = true;
     return true;
   }
+  if (trimmedValueType == "ContainerError" ||
+      trimmedValueType == "/std/collections/ContainerError") {
+    out.valueStructType = "/std/collections/ContainerError";
+    return true;
+  }
+  if (trimmedValueType == "ImageError" ||
+      trimmedValueType == "/std/image/ImageError") {
+    out.valueStructType = "/std/image/ImageError";
+    return true;
+  }
+  if (trimmedValueType == "GfxError" ||
+      trimmedValueType == "/std/gfx/GfxError" ||
+      trimmedValueType == "/std/gfx/experimental/GfxError") {
+    out.valueStructType = trimmedValueType == "/std/gfx/experimental/GfxError"
+                              ? "/std/gfx/experimental/GfxError"
+                              : "/std/gfx/GfxError";
+    return true;
+  }
   out.valueKind = valueKindFromTypeName(trimmedValueType);
   if (out.valueKind != LocalInfo::ValueKind::Unknown) {
     return true;

@@ -54,6 +54,25 @@
               resultInfoOut.valueIsFileHandle = true;
               return true;
             }
+            if (trimmedValueType == "ContainerError" ||
+                trimmedValueType == "/std/collections/ContainerError") {
+              resultInfoOut.valueStructType = "/std/collections/ContainerError";
+              return true;
+            }
+            if (trimmedValueType == "ImageError" ||
+                trimmedValueType == "/std/image/ImageError") {
+              resultInfoOut.valueStructType = "/std/image/ImageError";
+              return true;
+            }
+            if (trimmedValueType == "GfxError" ||
+                trimmedValueType == "/std/gfx/GfxError" ||
+                trimmedValueType == "/std/gfx/experimental/GfxError") {
+              resultInfoOut.valueStructType =
+                  trimmedValueType == "/std/gfx/experimental/GfxError"
+                      ? "/std/gfx/experimental/GfxError"
+                      : "/std/gfx/GfxError";
+              return true;
+            }
             resultInfoOut.valueKind = valueKindFromTypeName(trimmedValueType);
             if (resultInfoOut.valueKind != LocalInfo::ValueKind::Unknown) {
               return true;

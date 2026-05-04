@@ -373,7 +373,34 @@ bool parseBindingInfo(const Expr &expr,
       return {};
     }
     if (candidate.front() == '/') {
-      return additionalNominalTypes->count(candidate) > 0 ? candidate : std::string{};
+      if (additionalNominalTypes->count(candidate) > 0) {
+        return candidate;
+      }
+      const size_t specializationMarker = candidate.rfind("__t");
+      if (specializationMarker != std::string::npos &&
+          specializationMarker + 3 < candidate.size()) {
+        bool hasHexSuffix = true;
+        for (size_t i = specializationMarker + 3; i < candidate.size(); ++i) {
+          if (std::isxdigit(static_cast<unsigned char>(candidate[i])) == 0) {
+            hasHexSuffix = false;
+            break;
+          }
+        }
+        if (hasHexSuffix) {
+          const std::string unspecialized = candidate.substr(0, specializationMarker);
+          if (additionalNominalTypes->count(unspecialized) > 0) {
+            return unspecialized;
+          }
+          const size_t arityMarker = unspecialized.rfind("__arity");
+          if (arityMarker != std::string::npos) {
+            const std::string family = unspecialized.substr(0, arityMarker);
+            if (additionalNominalTypes->count(family) > 0) {
+              return family;
+            }
+          }
+        }
+      }
+      return {};
     }
     if (!namespacePrefix.empty()) {
       const size_t lastSlash = namespacePrefix.find_last_of('/');
@@ -419,7 +446,20 @@ bool parseBindingInfo(const Expr &expr,
       resolved = resolveAdditionalNominalTypePath(typeName);
     }
     if (resolved.empty()) {
-      if (typeName != "FileError") {
+      auto isGeneratedNominalSpecialization = [](const std::string &candidate) {
+        const size_t specializationMarker = candidate.rfind("__t");
+        if (specializationMarker == std::string::npos ||
+            specializationMarker + 3 >= candidate.size()) {
+          return false;
+        }
+        for (size_t i = specializationMarker + 3; i < candidate.size(); ++i) {
+          if (std::isxdigit(static_cast<unsigned char>(candidate[i])) == 0) {
+            return false;
+          }
+        }
+        return candidate.find('/') != std::string::npos;
+      };
+      if (typeName != "FileError" && !isGeneratedNominalSpecialization(typeName)) {
         error = "unsupported binding type: " + typeName;
         return false;
       }

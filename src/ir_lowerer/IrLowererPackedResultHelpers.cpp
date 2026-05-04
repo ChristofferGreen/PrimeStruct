@@ -97,6 +97,24 @@ bool resolveSemanticProductResultOkPayloadInfo(
     out.isFileHandle = true;
     return true;
   }
+  if (bindingTypeText == "ContainerError" ||
+      bindingTypeText == "/std/collections/ContainerError") {
+    out.structType = "/std/collections/ContainerError";
+    return true;
+  }
+  if (bindingTypeText == "ImageError" ||
+      bindingTypeText == "/std/image/ImageError") {
+    out.structType = "/std/image/ImageError";
+    return true;
+  }
+  if (bindingTypeText == "GfxError" ||
+      bindingTypeText == "/std/gfx/GfxError" ||
+      bindingTypeText == "/std/gfx/experimental/GfxError") {
+    out.structType = bindingTypeText == "/std/gfx/experimental/GfxError"
+                         ? "/std/gfx/experimental/GfxError"
+                         : "/std/gfx/GfxError";
+    return true;
+  }
   out.valueKind = valueKindFromTypeName(bindingTypeText);
   if (out.valueKind != LocalInfo::ValueKind::Unknown) {
     return true;
@@ -424,44 +442,56 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     std::string &error,
     const SemanticProductTargetAdapter *semanticProductTargets) {
-  if (!(expr.kind == Expr::Kind::Call && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
-        expr.args.front().name == "Result" && expr.name == "ok")) {
+  const bool semanticResultOkTarget =
+      semanticProductTargets != nullptr &&
+      semanticProductTargets->hasSemanticProduct &&
+      findSemanticProductMethodCallTarget(*semanticProductTargets, expr) ==
+          "/result/ok";
+  if (expr.kind != Expr::Kind::Call ||
+      (expr.name != "ok" && expr.name != "/result/ok" &&
+       expr.name != "/std/result/ok" && !isSimpleCallName(expr, "Result.ok") &&
+       !semanticResultOkTarget)) {
     return ResultOkMethodCallEmitResult::NotHandled;
   }
-  if (expr.args.size() == 1) {
+  const bool hasResultReceiver =
+      !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
+      expr.args.front().name == "Result";
+  const size_t payloadIndex = hasResultReceiver ? 1u : 0u;
+  if (expr.args.size() == payloadIndex) {
     emitInstruction(IrOpcode::PushI32, 0);
     return ResultOkMethodCallEmitResult::Emitted;
   }
-  if (expr.args.size() != 2) {
+  if (expr.args.size() != payloadIndex + 1) {
     error = "Result.ok accepts at most one argument";
     return ResultOkMethodCallEmitResult::Error;
   }
+  const Expr &payloadExpr = expr.args[payloadIndex];
   ResultOkPayloadSemanticInfo semanticPayload;
   std::string builtinOperator;
   std::string builtinComparison;
   const bool isSyntaxOwnedOperatorPayload =
-      getBuiltinOperatorName(expr.args[1], builtinOperator);
+      getBuiltinOperatorName(payloadExpr, builtinOperator);
   const bool isSyntaxOwnedComparisonPayload =
-      getBuiltinComparisonName(expr.args[1], builtinComparison);
+      getBuiltinComparisonName(payloadExpr, builtinComparison);
   const bool requiresSemanticPayloadInfo =
       semanticProductTargets != nullptr &&
       semanticProductTargets->hasSemanticProduct &&
-      expr.args[1].semanticNodeId != 0 &&
-      expr.args[1].kind == Expr::Kind::Call &&
-      !expr.args[1].isMethodCall &&
-      !expr.args[1].isFieldAccess &&
+      payloadExpr.semanticNodeId != 0 &&
+      payloadExpr.kind == Expr::Kind::Call &&
+      !payloadExpr.isMethodCall &&
+      !payloadExpr.isFieldAccess &&
       !isSyntaxOwnedOperatorPayload &&
       !isSyntaxOwnedComparisonPayload;
   const bool hasSemanticPayloadInfo =
-      resolveSemanticProductResultOkPayloadInfo(expr.args[1], semanticProductTargets, semanticPayload);
+      resolveSemanticProductResultOkPayloadInfo(payloadExpr, semanticProductTargets, semanticPayload);
   if (requiresSemanticPayloadInfo && !hasSemanticPayloadInfo) {
     error = "missing semantic-product Result.ok payload metadata: " +
-            expr.args[1].name;
+            payloadExpr.name;
     return ResultOkMethodCallEmitResult::Error;
   }
   Expr rewrittenDirectMapExpr;
   if (!hasSemanticPayloadInfo &&
-      rewritePackedResultMapConstructorExpr(expr.args[1],
+      rewritePackedResultMapConstructorExpr(payloadExpr,
                                            LocalInfo::ValueKind::Unknown,
                                            LocalInfo::ValueKind::Unknown,
                                            resolveDefinitionCall,
@@ -473,7 +503,7 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
   }
   LocalInfo::ValueKind argKind = hasSemanticPayloadInfo
                                      ? semanticPayload.valueKind
-                                     : inferExprKind(expr.args[1], localsIn);
+                                     : inferExprKind(payloadExpr, localsIn);
   if (argKind == LocalInfo::ValueKind::Unknown) {
     if (isSyntaxOwnedComparisonPayload) {
       argKind = LocalInfo::ValueKind::Bool;
@@ -481,8 +511,8 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
   }
   if ((hasSemanticPayloadInfo && semanticPayload.isFileHandle) ||
       (isFileHandleExpr && argKind == LocalInfo::ValueKind::Int64 &&
-       isFileHandleExpr(expr.args[1], localsIn))) {
-    if (!emitExpr(expr.args[1], localsIn)) {
+       isFileHandleExpr(payloadExpr, localsIn))) {
+    if (!emitExpr(payloadExpr, localsIn)) {
       return ResultOkMethodCallEmitResult::Error;
     }
     return ResultOkMethodCallEmitResult::Emitted;
@@ -495,7 +525,7 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
       hasSemanticPayloadInfo ? semanticPayload.collectionMapKeyKind : LocalInfo::ValueKind::Unknown;
   const bool hasCollectionPayload =
       hasSemanticPayloadInfo ? isSupportedPackedResultCollectionKind(collectionKind)
-                             : inferDirectResultValueCollectionInfo(expr.args[1],
+                             : inferDirectResultValueCollectionInfo(payloadExpr,
                                                                     localsIn,
                                                                     resolveDefinitionCall,
                                                                     collectionKind,
@@ -503,18 +533,18 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
                                                                     collectionMapKeyKind);
   if (hasCollectionPayload &&
       isSupportedPackedResultCollectionKind(collectionKind)) {
-    const Expr *payloadExpr = &expr.args[1];
+    const Expr *collectionPayloadExpr = &payloadExpr;
     Expr rewrittenMapExpr;
     if (collectionKind == LocalInfo::Kind::Map &&
         rewritePackedResultMapConstructorExpr(
-            expr.args[1],
+            *collectionPayloadExpr,
             collectionMapKeyKind,
             collectionValueKind,
             resolveDefinitionCall,
             rewrittenMapExpr)) {
-      payloadExpr = &rewrittenMapExpr;
+      collectionPayloadExpr = &rewrittenMapExpr;
     }
-    if (!emitExpr(*payloadExpr, localsIn)) {
+    if (!emitExpr(*collectionPayloadExpr, localsIn)) {
       return ResultOkMethodCallEmitResult::Error;
     }
     return ResultOkMethodCallEmitResult::Emitted;
@@ -524,7 +554,7 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
   if (hasSemanticPayloadInfo) {
     structType = semanticPayload.structType;
   } else if (!inferPackedResultStructType(
-                 expr.args[1], localsIn, resolveDefinitionCall, inferStructExprPath, structType)) {
+                 payloadExpr, localsIn, resolveDefinitionCall, inferStructExprPath, structType)) {
     structType.clear();
   }
   PackedResultStructPayloadInfo payloadInfo;
@@ -533,19 +563,19 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
       error = unsupportedPackedResultValueKindError("Result.ok");
       return ResultOkMethodCallEmitResult::Error;
     }
-    if (!emitExpr(expr.args[1], localsIn)) {
+    if (!emitExpr(payloadExpr, localsIn)) {
       return ResultOkMethodCallEmitResult::Error;
     }
     return ResultOkMethodCallEmitResult::Emitted;
   }
-  if (payloadInfo.isPackedSingleSlot && expr.args[1].kind == Expr::Kind::Call && !expr.args[1].isMethodCall &&
-      expr.args[1].args.size() == 1) {
-    if (!emitExpr(expr.args[1].args.front(), localsIn)) {
+  if (payloadInfo.isPackedSingleSlot && payloadExpr.kind == Expr::Kind::Call && !payloadExpr.isMethodCall &&
+      payloadExpr.args.size() == 1) {
+    if (!emitExpr(payloadExpr.args.front(), localsIn)) {
       return ResultOkMethodCallEmitResult::Error;
     }
     return ResultOkMethodCallEmitResult::Emitted;
   }
-  if (!emitExpr(expr.args[1], localsIn)) {
+  if (!emitExpr(payloadExpr, localsIn)) {
     return ResultOkMethodCallEmitResult::Error;
   }
   if (!payloadInfo.isPackedSingleSlot) {

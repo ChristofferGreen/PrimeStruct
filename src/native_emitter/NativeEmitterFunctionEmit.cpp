@@ -305,6 +305,7 @@ bool emitNativeFunctions(const IrModule &module,
         break;
       }
       case IrOpcode::Jump: {
+        emitter.flushValueStackCachePublic();
         NativeEmitterBranchFixup fixup;
         fixup.codeIndex = emitter.emitJumpPlaceholder();
         fixup.functionIndex = functionIndex;

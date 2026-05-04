@@ -274,7 +274,19 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
           stmtIndex + 1);
     }
     if (def.returnExpr.has_value()) {
-      if (!validateExpr(defParams, definitionContext.locals, *def.returnExpr)) {
+      bool handledTargetTypedSumReturn = false;
+      auto returnStructIt = returnStructs_.find(def.fullPath);
+      if (returnStructIt != returnStructs_.end() &&
+          !validateTargetTypedSumInitializer(returnStructIt->second,
+                                             *def.returnExpr,
+                                             defParams,
+                                             definitionContext.locals,
+                                             def.namespacePrefix,
+                                             handledTargetTypedSumReturn)) {
+        return false;
+      }
+      if (!handledTargetTypedSumReturn &&
+          !validateExpr(defParams, definitionContext.locals, *def.returnExpr)) {
         if (error_.empty()) {
           return failPassesDefinitionsDiagnostic(
               &*def.returnExpr,

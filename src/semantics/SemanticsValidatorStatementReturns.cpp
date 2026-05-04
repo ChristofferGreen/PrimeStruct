@@ -108,6 +108,73 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       }
       return false;
     }
+    auto bindingTypeText = [](const BindingInfo &binding) {
+      if (binding.typeTemplateArg.empty()) {
+        return binding.typeName;
+      }
+      return binding.typeName + "<" + binding.typeTemplateArg + ">";
+    };
+    auto resultOkPayloadIndex = [&](const Expr &expr) -> std::optional<size_t> {
+      if (expr.kind != Expr::Kind::Call || expr.hasBodyArguments ||
+          !expr.bodyArguments.empty() || !expr.templateArgs.empty()) {
+        return std::nullopt;
+      }
+      const std::string resolved = resolveCalleePath(expr);
+      if (resolved != "/result/ok" && resolved != "/Result/ok" &&
+          !isSimpleCallName(expr, "Result.ok") &&
+          !(expr.isMethodCall && expr.name == "ok")) {
+        return std::nullopt;
+      }
+      if (expr.isMethodCall && !expr.args.empty() &&
+          expr.args.front().kind == Expr::Kind::Name &&
+          normalizeBindingTypeName(expr.args.front().name) == "Result") {
+        return size_t{1};
+      }
+      return size_t{0};
+    };
+    auto validateResultOkReturnPayload = [&]() -> bool {
+      if (!currentValidationState_.context.resultType.has_value() ||
+          !currentValidationState_.context.resultType->isResult) {
+        return true;
+      }
+      const Expr &returnExpr = stmt.args.front();
+      const std::optional<size_t> payloadIndex = resultOkPayloadIndex(returnExpr);
+      if (!payloadIndex.has_value()) {
+        return true;
+      }
+      const ResultTypeInfo &resultType = *currentValidationState_.context.resultType;
+      const bool hasPayload = *payloadIndex < returnExpr.args.size();
+      if (!resultType.hasValue) {
+        if (!hasPayload) {
+          return true;
+        }
+        return failReturnDiagnostic(
+            "no inferred sum variant for Result accepts payload; candidates: ok, error");
+      }
+      if (!hasPayload || returnExpr.args.size() != *payloadIndex + 1) {
+        return failReturnDiagnostic(
+            "no inferred sum variant for Result accepts payload; candidates: ok, error");
+      }
+      const Expr &payload = returnExpr.args[*payloadIndex];
+      BindingInfo payloadBinding;
+      if (inferBindingTypeFromInitializer(payload, params, locals, payloadBinding) &&
+          errorTypesMatch(bindingTypeText(payloadBinding),
+                          resultType.valueType,
+                          namespacePrefix)) {
+        return true;
+      }
+      const ReturnKind expectedKind =
+          returnKindForTypeName(normalizeBindingTypeName(resultType.valueType));
+      const ReturnKind actualKind = inferExprReturnKind(payload, params, locals);
+      if (expectedKind != ReturnKind::Unknown && actualKind == expectedKind) {
+        return true;
+      }
+      return failReturnDiagnostic(
+          "no inferred sum variant for Result accepts payload; candidates: ok, error");
+    };
+    if (!validateResultOkReturnPayload()) {
+      return false;
+    }
     auto isStandaloneSoaRefCall = [&](const Expr &expr,
                                       const Expr *&receiverOut) -> bool {
       receiverOut = nullptr;

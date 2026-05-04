@@ -49,6 +49,34 @@
              expr.bodyArguments.empty() && !hasNamedArguments(expr.argNames);
     };
 
+    auto stripGeneratedResultHelperSuffix = [](std::string helperPath) {
+      const size_t specializationMarker = helperPath.rfind("__t");
+      if (specializationMarker != std::string::npos) {
+        helperPath.erase(specializationMarker);
+      }
+      const size_t overloadMarker = helperPath.rfind("__ov");
+      if (overloadMarker != std::string::npos) {
+        helperPath.erase(overloadMarker);
+      }
+      return helperPath;
+    };
+
+    auto isStdlibResultVariantHelperCall =
+        [&](const Expr &expr, const std::string &variantName) {
+      if (expr.kind != Expr::Kind::Call || expr.isMethodCall ||
+          expr.isFieldAccess || expr.hasBodyArguments ||
+          !expr.bodyArguments.empty() || hasNamedArguments(expr.argNames)) {
+        return false;
+      }
+      const Definition *callee = resolveDefinitionCall(expr);
+      if (callee == nullptr) {
+        return false;
+      }
+      const std::string calleePath =
+          stripGeneratedResultHelperSuffix(callee->fullPath);
+      return calleePath == "/std/result/" + variantName;
+    };
+
     auto isLegacyResultMapCall = [](const Expr &expr) {
       return expr.kind == Expr::Kind::Call && !expr.isFieldAccess && expr.name == "map" &&
              expr.args.size() == 3 && expr.args.front().kind == Expr::Kind::Name &&
@@ -89,6 +117,38 @@
 
     auto sumPayloadKind = [&](const SumVariant &variant) {
       return valueKindFromTypeName(sumPayloadTypeText(variant));
+    };
+
+    auto applyStdlibResultSumInfoToLocal =
+        [&](const Definition &sumDef, LocalInfo &info) {
+      if (!isStdlibResultSumDefinition(sumDef)) {
+        return;
+      }
+      const SumVariant *okVariant = findSumVariantByName(sumDef, "ok");
+      const SumVariant *errorVariant = findSumVariantByName(sumDef, "error");
+      info.isResult = true;
+      info.resultHasValue = okVariant != nullptr && okVariant->hasPayload;
+      info.resultValueKind = LocalInfo::ValueKind::Unknown;
+      info.resultValueCollectionKind = LocalInfo::Kind::Value;
+      info.resultValueMapKeyKind = LocalInfo::ValueKind::Unknown;
+      info.resultValueIsFileHandle = false;
+      info.resultValueStructType.clear();
+      info.resultErrorType.clear();
+      if (okVariant != nullptr && okVariant->hasPayload) {
+        const std::string valueTypeText = sumPayloadTypeText(*okVariant);
+        info.resultValueKind = valueKindFromTypeName(valueTypeText);
+        if (info.resultValueKind == LocalInfo::ValueKind::Unknown) {
+          std::string valueStructPath;
+          if (resolveStructTypeName(valueTypeText,
+                                    sumDef.namespacePrefix,
+                                    valueStructPath)) {
+            info.resultValueStructType = std::move(valueStructPath);
+          }
+        }
+      }
+      if (errorVariant != nullptr && errorVariant->hasPayload) {
+        info.resultErrorType = sumPayloadTypeText(*errorVariant);
+      }
     };
 
     auto resolveSumPayloadStorageInfo =
@@ -340,6 +400,25 @@
       return unitVariantForNameExpr(sumDef, arg.bodyArguments.front());
     };
 
+    auto payloadVariantForConstructorArg =
+        [&](const Definition &sumDef, const Expr &arg) -> const SumVariant * {
+      const SumVariant *matchedVariant = nullptr;
+      for (const auto &transform : arg.transforms) {
+        if (!transform.arguments.empty()) {
+          continue;
+        }
+        const SumVariant *variant = findSumVariantByName(sumDef, transform.name);
+        if (variant == nullptr || !variant->hasPayload) {
+          continue;
+        }
+        if (matchedVariant != nullptr) {
+          return nullptr;
+        }
+        matchedVariant = variant;
+      }
+      return matchedVariant;
+    };
+
     auto firstUnsupportedSumPayloadVariant = [&](const Definition &sumDef) -> const SumVariant * {
       for (const auto &variant : sumDef.sumVariants) {
         LoweredSumPayloadStorageInfo payloadInfo;
@@ -359,9 +438,28 @@
           initializer.isFieldAccess) {
         return false;
       }
+      auto constructorNameMatchesTargetSum = [&]() {
+        std::string targetPath = targetSum.fullPath;
+        if (const size_t arityMarker = targetPath.rfind("__arity");
+            arityMarker != std::string::npos) {
+          targetPath.erase(arityMarker);
+        }
+        if (const size_t specializationMarker = targetPath.rfind("__t");
+            specializationMarker != std::string::npos) {
+          targetPath.erase(specializationMarker);
+        }
+        const size_t slash = targetPath.find_last_of('/');
+        const std::string targetName =
+            slash == std::string::npos ? targetPath : targetPath.substr(slash + 1);
+        return initializer.name == targetName ||
+               initializer.name == targetPath ||
+               (!targetPath.empty() && targetPath.front() == '/' &&
+                initializer.name == targetPath.substr(1));
+      };
       const Definition *constructorSum =
           resolveSumDefinitionForTypeText(initializer.name, initializer.namespacePrefix);
-      if (constructorSum == nullptr || constructorSum->fullPath != targetSum.fullPath) {
+      if ((constructorSum == nullptr || constructorSum->fullPath != targetSum.fullPath) &&
+          !constructorNameMatchesTargetSum()) {
         return false;
       }
       const std::vector<Expr> *constructorArgs = &initializer.args;
@@ -385,6 +483,9 @@
       } else if (constructorArgs->size() == 1 && constructorArgNames->size() == 1 &&
                  !constructorArgNames->front().has_value()) {
         variant = unitVariantForConstructorArg(targetSum, constructorArgs->front());
+        if (variant == nullptr) {
+          variant = payloadVariantForConstructorArg(targetSum, constructorArgs->front());
+        }
       } else if (constructorArgs->size() == 1 && constructorArgNames->size() == 1 &&
                  constructorArgNames->front().has_value()) {
         variant = findSumVariantByName(targetSum, *constructorArgNames->front());
@@ -412,6 +513,34 @@
             const Definition &targetSum,
             const LocalMap &valueLocals,
             LoweredSumVariantSelection &selectionOut) -> bool {
+      if (isStdlibResultSumDefinition(targetSum)) {
+        for (const char *variantName : {"ok", "error"}) {
+          if (!isStdlibResultVariantHelperCall(initializer, variantName)) {
+            continue;
+          }
+          const SumVariant *variant = findSumVariantByName(targetSum, variantName);
+          if (variant == nullptr) {
+            return false;
+          }
+          if (variant->hasPayload != (initializer.args.size() == 1)) {
+            return false;
+          }
+          LoweredSumPayloadStorageInfo payloadInfo;
+          if (!resolveSemanticProductSumPayloadStorageInfo(
+                  targetSum, *variant, "Result helper selection", payloadInfo)) {
+            return false;
+          }
+          selectionOut.sumDef = &targetSum;
+          selectionOut.variant = variant;
+          selectionOut.payloadExpr =
+              variant->hasPayload ? &initializer.args.front() : nullptr;
+          selectionOut.payloadKind = payloadInfo.valueKind;
+          selectionOut.payloadStructPath = std::move(payloadInfo.structPath);
+          selectionOut.payloadSlotCount = payloadInfo.slotCount;
+          selectionOut.payloadIsAggregate = payloadInfo.isAggregate;
+          return true;
+        }
+      }
       if (isStdlibResultSumDefinition(targetSum) && isLegacyResultOkCall(initializer)) {
         if (initializer.args.size() != 2 && initializer.args.size() != 1) {
           return false;
@@ -652,6 +781,13 @@
         }
         return nullptr;
       };
+      auto resultLambdaParameterName = [](const Expr &parameterExpr) {
+        if ((parameterExpr.kind == Expr::Kind::Name || parameterExpr.isBinding) &&
+            !parameterExpr.name.empty()) {
+          return parameterExpr.name;
+        }
+        return std::string{};
+      };
       auto emitResultLambdaPrefixStatements =
           [&](const Expr &lambdaExpr, const Expr *valueExpr, LocalMap &lambdaLocals) -> bool {
         for (const Expr &bodyExpr : lambdaExpr.bodyArguments) {
@@ -753,6 +889,233 @@
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(targetBaseLocal + 2)});
         return true;
       };
+      auto initializerResolvesToTargetSum = [&](const Expr &valueExpr) {
+        if (isStdlibResultSumDefinition(sumDef) &&
+            (isLegacyResultOkCall(valueExpr) ||
+             isStdlibResultVariantHelperCall(valueExpr, "ok") ||
+             isStdlibResultVariantHelperCall(valueExpr, "error"))) {
+          return false;
+        }
+        auto constructorNameMatchesTargetSum = [&]() {
+          if (valueExpr.kind != Expr::Kind::Call || valueExpr.isMethodCall ||
+              valueExpr.isFieldAccess) {
+            return false;
+          }
+          std::string targetPath = sumDef.fullPath;
+          if (const size_t arityMarker = targetPath.rfind("__arity");
+              arityMarker != std::string::npos) {
+            targetPath.erase(arityMarker);
+          }
+          if (const size_t specializationMarker = targetPath.rfind("__t");
+              specializationMarker != std::string::npos) {
+            targetPath.erase(specializationMarker);
+          }
+          const size_t slash = targetPath.find_last_of('/');
+          const std::string targetName =
+              slash == std::string::npos ? targetPath : targetPath.substr(slash + 1);
+          return valueExpr.name == targetName ||
+                 valueExpr.name == targetPath ||
+                 (!targetPath.empty() && targetPath.front() == '/' &&
+                  valueExpr.name == targetPath.substr(1));
+        };
+        if (constructorNameMatchesTargetSum()) {
+          return false;
+        }
+        if (valueExpr.kind == Expr::Kind::Call && !valueExpr.isMethodCall &&
+            !valueExpr.isFieldAccess) {
+          if (const Definition *constructorSum =
+                  resolveSumDefinitionForTypeText(valueExpr.name,
+                                                  valueExpr.namespacePrefix);
+              constructorSum != nullptr &&
+              constructorSum->fullPath == sumDef.fullPath) {
+            return false;
+          }
+        }
+        auto typeTextResolvesToTargetSum =
+            [&](const std::string &typeText, auto typeTextId) {
+          std::string resolvedTypeText;
+          const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
+          if (semanticTargets.semanticProgram != nullptr &&
+              typeTextId != InvalidSymbolId) {
+            resolvedTypeText = std::string(semanticProgramResolveCallTargetString(
+                *semanticTargets.semanticProgram,
+                typeTextId));
+          }
+          if (resolvedTypeText.empty()) {
+            resolvedTypeText = typeText;
+          }
+          resolvedTypeText = trimTemplateTypeText(resolvedTypeText);
+          if (resolvedTypeText.empty()) {
+            return false;
+          }
+          const Definition *candidateSum =
+              resolveSumDefinitionForTypeText(resolvedTypeText,
+                                             valueExpr.namespacePrefix);
+          if (candidateSum == nullptr) {
+            candidateSum = resolveSumDefinitionForTypeText(resolvedTypeText,
+                                                          function.name);
+          }
+          return candidateSum != nullptr &&
+                 candidateSum->fullPath == sumDef.fullPath;
+        };
+        if (valueExpr.kind == Expr::Kind::Name) {
+          auto localIt = valueLocals.find(valueExpr.name);
+          if (localIt != valueLocals.end() &&
+              localIt->second.structTypeName == sumDef.fullPath) {
+            return true;
+          }
+        }
+        const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
+        if (semanticTargets.hasSemanticProduct && valueExpr.semanticNodeId != 0) {
+          if (const SemanticProgramBindingFact *bindingFact =
+                  findSemanticProductBindingFact(semanticTargets, valueExpr);
+              bindingFact != nullptr &&
+              typeTextResolvesToTargetSum(bindingFact->bindingTypeText,
+                                          bindingFact->bindingTypeTextId)) {
+            return true;
+          }
+          if (const SemanticProgramQueryFact *queryFact =
+                  findSemanticProductQueryFact(semanticTargets, valueExpr);
+              queryFact != nullptr &&
+              (typeTextResolvesToTargetSum(queryFact->bindingTypeText,
+                                           queryFact->bindingTypeTextId) ||
+               typeTextResolvesToTargetSum(queryFact->queryTypeText,
+                                           queryFact->queryTypeTextId))) {
+            return true;
+          }
+        }
+        return false;
+      };
+      auto emitExistingSumValueIntoLocal = [&]() -> std::optional<bool> {
+        if (!initializerResolvesToTargetSum(initializer)) {
+          return std::nullopt;
+        }
+        auto initializerIsExistingSumLocal = [&]() {
+          if (initializer.kind != Expr::Kind::Name) {
+            return false;
+          }
+          auto localIt = valueLocals.find(initializer.name);
+          return localIt != valueLocals.end() &&
+                 localIt->second.structTypeName == sumDef.fullPath;
+        };
+        auto emitPackedResultValueIntoLocal = [&]() -> std::optional<bool> {
+          if (!isStdlibResultSumDefinition(sumDef)) {
+            return std::nullopt;
+          }
+          const SumVariant *okVariant = findSumVariantByName(sumDef, "ok");
+          const SumVariant *errorVariant = findSumVariantByName(sumDef, "error");
+          if (okVariant == nullptr || errorVariant == nullptr) {
+            return std::nullopt;
+          }
+          LoweredSumPayloadStorageInfo okPayload;
+          LoweredSumPayloadStorageInfo errorPayload;
+          if (!resolveSemanticProductSumPayloadStorageInfo(
+                  sumDef, *okVariant, "packed Result ok decode", okPayload) ||
+              !resolveSemanticProductSumPayloadStorageInfo(
+                  sumDef, *errorVariant, "packed Result error decode", errorPayload)) {
+            return false;
+          }
+          if (okPayload.isAggregate || errorPayload.isAggregate) {
+            return std::nullopt;
+          }
+          int32_t okTag = 0;
+          int32_t errorTag = 0;
+          if (!resolveSemanticProductSumVariantTag(
+                  sumDef, *okVariant, "packed Result ok decode", okTag) ||
+              !resolveSemanticProductSumVariantTag(
+                  sumDef, *errorVariant, "packed Result error decode", errorTag)) {
+            return false;
+          }
+          if (!emitExpr(initializer, valueLocals)) {
+            return false;
+          }
+          const int32_t packedLocal = allocTempLocal();
+          const int32_t upperLocal = allocTempLocal();
+          function.instructions.push_back(
+              {IrOpcode::StoreLocal, static_cast<uint64_t>(packedLocal)});
+          function.instructions.push_back(
+              {IrOpcode::LoadLocal, static_cast<uint64_t>(packedLocal)});
+          function.instructions.push_back({IrOpcode::PushI64, 4294967296ull});
+          function.instructions.push_back({IrOpcode::DivI64, 0});
+          function.instructions.push_back(
+              {IrOpcode::StoreLocal, static_cast<uint64_t>(upperLocal)});
+          function.instructions.push_back(
+              {IrOpcode::LoadLocal, static_cast<uint64_t>(upperLocal)});
+          function.instructions.push_back({IrOpcode::PushI64, 0});
+          function.instructions.push_back({IrOpcode::CmpEqI64, 0});
+          const size_t jumpToError = function.instructions.size();
+          function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+          function.instructions.push_back(
+              {IrOpcode::PushI32, static_cast<uint64_t>(okTag)});
+          function.instructions.push_back(
+              {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
+          if (okVariant->hasPayload) {
+            function.instructions.push_back(
+                {IrOpcode::LoadLocal, static_cast<uint64_t>(packedLocal)});
+            function.instructions.push_back(
+                {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 2)});
+          }
+          const size_t jumpToEnd = function.instructions.size();
+          function.instructions.push_back({IrOpcode::Jump, 0});
+          function.instructions[jumpToError].imm =
+              static_cast<uint64_t>(function.instructions.size());
+          function.instructions.push_back(
+              {IrOpcode::PushI32, static_cast<uint64_t>(errorTag)});
+          function.instructions.push_back(
+              {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
+          if (errorVariant->hasPayload) {
+            function.instructions.push_back(
+                {IrOpcode::LoadLocal, static_cast<uint64_t>(upperLocal)});
+            function.instructions.push_back(
+                {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 2)});
+          }
+          function.instructions[jumpToEnd].imm =
+              static_cast<uint64_t>(function.instructions.size());
+          return true;
+        };
+        if (!initializerIsExistingSumLocal()) {
+          return emitPackedResultValueIntoLocal();
+        }
+        if (!emitExpr(initializer, valueLocals)) {
+          return false;
+        }
+        const int32_t sourceSumPtrLocal = allocTempLocal();
+        function.instructions.push_back(
+            {IrOpcode::StoreLocal, static_cast<uint64_t>(sourceSumPtrLocal)});
+        emitLoadSumSlotIndirectForConstruction(sourceSumPtrLocal, 1);
+        function.instructions.push_back(
+            {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
+        std::vector<size_t> endJumps;
+        for (const auto &variant : sumDef.sumVariants) {
+          int32_t tagValue = 0;
+          if (!resolveSemanticProductSumVariantTag(
+                  sumDef, variant, "sum value copy", tagValue)) {
+            return false;
+          }
+          emitSumTagComparisonForConstruction(sourceSumPtrLocal, tagValue);
+          const size_t nextVariantJump = function.instructions.size();
+          function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+          if (variant.hasPayload &&
+              !emitCopySumPayload(sumDef,
+                                  variant,
+                                  variant,
+                                  sourceSumPtrLocal,
+                                  baseLocal,
+                                  "sum value copy",
+                                  variant.name)) {
+            return false;
+          }
+          endJumps.push_back(function.instructions.size());
+          function.instructions.push_back({IrOpcode::Jump, 0});
+          function.instructions[nextVariantJump].imm =
+              static_cast<uint64_t>(function.instructions.size());
+        }
+        for (size_t jumpIndex : endJumps) {
+          function.instructions[jumpIndex].imm =
+              static_cast<uint64_t>(function.instructions.size());
+        }
+        return true;
+      };
       auto emitSelectedSumPayloadIntoLocal =
           [&](const LoweredSumVariantSelection &selection,
               const LocalMap &selectedLocals,
@@ -847,6 +1210,51 @@
           [&](const Expr &resultExpr,
               const LocalMap &resultLocals,
               int32_t targetBaseLocal) -> bool {
+        if (resultExpr.kind == Expr::Kind::Name) {
+          auto localIt = resultLocals.find(resultExpr.name);
+          if (localIt != resultLocals.end() &&
+              localIt->second.structTypeName == sumDef.fullPath) {
+            if (!emitExpr(resultExpr, resultLocals)) {
+              return false;
+            }
+            const int32_t sourceSumPtrLocal = allocTempLocal();
+            function.instructions.push_back(
+                {IrOpcode::StoreLocal, static_cast<uint64_t>(sourceSumPtrLocal)});
+            emitLoadSumSlotIndirectForConstruction(sourceSumPtrLocal, 1);
+            function.instructions.push_back(
+                {IrOpcode::StoreLocal, static_cast<uint64_t>(targetBaseLocal + 1)});
+            std::vector<size_t> endJumps;
+            for (const auto &variant : sumDef.sumVariants) {
+              int32_t tagValue = 0;
+              if (!resolveSemanticProductSumVariantTag(
+                      sumDef, variant, "Result.and_then local result copy", tagValue)) {
+                return false;
+              }
+              emitSumTagComparisonForConstruction(sourceSumPtrLocal, tagValue);
+              const size_t nextVariantJump = function.instructions.size();
+              function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+              if (variant.hasPayload &&
+                  !emitCopySumPayload(sumDef,
+                                      variant,
+                                      variant,
+                                      sourceSumPtrLocal,
+                                      targetBaseLocal,
+                                      "Result.and_then",
+                                      variant.name)) {
+                return false;
+              }
+              endJumps.push_back(function.instructions.size());
+              function.instructions.push_back({IrOpcode::Jump, 0});
+              function.instructions[nextVariantJump].imm =
+                  static_cast<uint64_t>(function.instructions.size());
+            }
+            for (size_t jumpIndex : endJumps) {
+              function.instructions[jumpIndex].imm =
+                  static_cast<uint64_t>(function.instructions.size());
+            }
+            return true;
+          }
+        }
         LoweredSumVariantSelection selection;
         if (!selectSumVariantForInitializer(resultExpr, sumDef, resultLocals, selection)) {
           if (error.empty()) {
@@ -968,6 +1376,123 @@
                   sourceLabel + " requires local or direct stdlib Result sum";
           return false;
         }
+        if (isLegacyResultOkCall(sourceExpr) ||
+            isStdlibResultVariantHelperCall(sourceExpr, "ok") ||
+            isStdlibResultVariantHelperCall(sourceExpr, "error")) {
+          int32_t totalSlots = 0;
+          if (!loweredSumSlotCount(*sourceSumDef, totalSlots)) {
+            return false;
+          }
+          const int32_t baseLocal = nextLocal;
+          nextLocal += totalSlots;
+          emitLoweredSumHeader(baseLocal, totalSlots);
+          LoweredSumVariantSelection selection;
+          if (!selectSumVariantForInitializer(
+                  sourceExpr, *sourceSumDef, sourceLocals, selection) ||
+              selection.variant == nullptr) {
+            if (error.empty()) {
+              error = "native backend could not select Result source variant";
+            }
+            return false;
+          }
+          if (!emitSelectedSumPayloadIntoLocal(selection, sourceLocals, baseLocal)) {
+            return false;
+          }
+          sourceOut.sumDef = sourceSumDef;
+          sourceOut.sumPtrLocal = allocTempLocal();
+          function.instructions.push_back(
+              {IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
+          function.instructions.push_back(
+              {IrOpcode::StoreLocal, static_cast<uint64_t>(sourceOut.sumPtrLocal)});
+          return true;
+        }
+        auto tryMaterializePackedResultCallSource = [&]() -> std::optional<bool> {
+          const SumVariant *okVariant = findSumVariantByName(*sourceSumDef, "ok");
+          const SumVariant *errorVariant = findSumVariantByName(*sourceSumDef, "error");
+          if (okVariant == nullptr || errorVariant == nullptr) {
+            return std::nullopt;
+          }
+          LoweredSumPayloadStorageInfo okPayload;
+          LoweredSumPayloadStorageInfo errorPayload;
+          if (!resolveSemanticProductSumPayloadStorageInfo(
+                  *sourceSumDef, *okVariant, "packed Result source ok payload", okPayload) ||
+              !resolveSemanticProductSumPayloadStorageInfo(
+                  *sourceSumDef, *errorVariant, "packed Result source error payload", errorPayload)) {
+            return false;
+          }
+          if (okPayload.isAggregate || errorPayload.isAggregate) {
+            return std::nullopt;
+          }
+          int32_t okTag = 0;
+          int32_t errorTag = 0;
+          int32_t totalSlots = 0;
+          if (!resolveSemanticProductSumVariantTag(
+                  *sourceSumDef, *okVariant, "packed Result source ok tag", okTag) ||
+              !resolveSemanticProductSumVariantTag(
+                  *sourceSumDef, *errorVariant, "packed Result source error tag", errorTag) ||
+              !loweredSumSlotCount(*sourceSumDef, totalSlots)) {
+            return false;
+          }
+          if (!emitExpr(sourceExpr, sourceLocals)) {
+            return false;
+          }
+          const int32_t baseLocal = nextLocal;
+          nextLocal += totalSlots;
+          const int32_t packedLocal = allocTempLocal();
+          const int32_t upperLocal = allocTempLocal();
+          sourceOut.sumPtrLocal = allocTempLocal();
+          emitLoweredSumHeader(baseLocal, totalSlots);
+          function.instructions.push_back(
+              {IrOpcode::StoreLocal, static_cast<uint64_t>(packedLocal)});
+          function.instructions.push_back(
+              {IrOpcode::LoadLocal, static_cast<uint64_t>(packedLocal)});
+          function.instructions.push_back({IrOpcode::PushI64, 4294967296ull});
+          function.instructions.push_back({IrOpcode::DivI64, 0});
+          function.instructions.push_back(
+              {IrOpcode::StoreLocal, static_cast<uint64_t>(upperLocal)});
+          function.instructions.push_back(
+              {IrOpcode::LoadLocal, static_cast<uint64_t>(upperLocal)});
+          function.instructions.push_back({IrOpcode::PushI64, 0});
+          function.instructions.push_back({IrOpcode::CmpEqI64, 0});
+          const size_t jumpToError = function.instructions.size();
+          function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+          function.instructions.push_back(
+              {IrOpcode::PushI32, static_cast<uint64_t>(okTag)});
+          function.instructions.push_back(
+              {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
+          if (okVariant->hasPayload) {
+            function.instructions.push_back(
+                {IrOpcode::LoadLocal, static_cast<uint64_t>(packedLocal)});
+            function.instructions.push_back(
+                {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 2)});
+          }
+          const size_t jumpToEnd = function.instructions.size();
+          function.instructions.push_back({IrOpcode::Jump, 0});
+          function.instructions[jumpToError].imm =
+              static_cast<uint64_t>(function.instructions.size());
+          function.instructions.push_back(
+              {IrOpcode::PushI32, static_cast<uint64_t>(errorTag)});
+          function.instructions.push_back(
+              {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
+          if (errorVariant->hasPayload) {
+            function.instructions.push_back(
+                {IrOpcode::LoadLocal, static_cast<uint64_t>(upperLocal)});
+            function.instructions.push_back(
+                {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 2)});
+          }
+          function.instructions[jumpToEnd].imm =
+              static_cast<uint64_t>(function.instructions.size());
+          function.instructions.push_back(
+              {IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
+          function.instructions.push_back(
+              {IrOpcode::StoreLocal, static_cast<uint64_t>(sourceOut.sumPtrLocal)});
+          sourceOut.sumDef = sourceSumDef;
+          return true;
+        };
+        if (const auto packedSourceResult = tryMaterializePackedResultCallSource();
+            packedSourceResult.has_value()) {
+          return *packedSourceResult;
+        }
         if (!emitExpr(sourceExpr, sourceLocals)) {
           return false;
         }
@@ -1001,7 +1526,9 @@
           error = "Result.map requires a lambda argument";
           return false;
         }
-        if (lambdaExpr.args.size() != 1 || lambdaExpr.args.front().kind != Expr::Kind::Name) {
+        const std::string lambdaParameterName =
+            lambdaExpr.args.size() == 1 ? resultLambdaParameterName(lambdaExpr.args.front()) : std::string{};
+        if (lambdaParameterName.empty()) {
           error = "Result.map requires a single-parameter lambda";
           return false;
         }
@@ -1033,7 +1560,7 @@
         if (!bindSumPayloadLocal(*source.sumDef,
                                  *sourceOkVariant,
                                  source.sumPtrLocal,
-                                 lambdaExpr.args.front().name,
+                                 lambdaParameterName,
                                  "Result.map source ok payload",
                                  lambdaLocals)) {
           return false;
@@ -1093,7 +1620,9 @@
           error = "Result.and_then requires a lambda argument";
           return false;
         }
-        if (lambdaExpr.args.size() != 1 || lambdaExpr.args.front().kind != Expr::Kind::Name) {
+        const std::string lambdaParameterName =
+            lambdaExpr.args.size() == 1 ? resultLambdaParameterName(lambdaExpr.args.front()) : std::string{};
+        if (lambdaParameterName.empty()) {
           error = "Result.and_then requires a single-parameter lambda";
           return false;
         }
@@ -1120,7 +1649,7 @@
         if (!bindSumPayloadLocal(*source.sumDef,
                                  *sourceOkVariant,
                                  source.sumPtrLocal,
-                                 lambdaExpr.args.front().name,
+                                 lambdaParameterName,
                                  "Result.and_then source ok payload",
                                  lambdaLocals)) {
           return false;
@@ -1188,9 +1717,11 @@
           error = "Result.map2 requires a lambda argument";
           return false;
         }
-        if (lambdaExpr.args.size() != 2 ||
-            lambdaExpr.args[0].kind != Expr::Kind::Name ||
-            lambdaExpr.args[1].kind != Expr::Kind::Name) {
+        const std::string leftParameterName =
+            lambdaExpr.args.size() == 2 ? resultLambdaParameterName(lambdaExpr.args[0]) : std::string{};
+        const std::string rightParameterName =
+            lambdaExpr.args.size() == 2 ? resultLambdaParameterName(lambdaExpr.args[1]) : std::string{};
+        if (leftParameterName.empty() || rightParameterName.empty()) {
           error = "Result.map2 requires a two-parameter lambda";
           return false;
         }
@@ -1229,7 +1760,7 @@
         if (!bindSumPayloadLocal(*left.sumDef,
                                  *leftOkVariant,
                                  left.sumPtrLocal,
-                                 lambdaExpr.args[0].name,
+                                 leftParameterName,
                                  "Result.map2 left ok payload",
                                  lambdaLocals)) {
           return false;
@@ -1237,7 +1768,7 @@
         if (!bindSumPayloadLocal(*right.sumDef,
                                  *rightOkVariant,
                                  right.sumPtrLocal,
-                                 lambdaExpr.args[1].name,
+                                 rightParameterName,
                                  "Result.map2 right ok payload",
                                  lambdaLocals)) {
           return false;
@@ -1291,6 +1822,10 @@
           resultMap2EmitResult.has_value()) {
         return *resultMap2EmitResult;
       }
+      if (const auto existingSumEmitResult = emitExistingSumValueIntoLocal();
+          existingSumEmitResult.has_value()) {
+        return *existingSumEmitResult;
+      }
       LoweredSumVariantSelection selection;
       if (!selectSumVariantForInitializer(initializer, sumDef, valueLocals, selection)) {
         if (error.empty()) {
@@ -1307,6 +1842,44 @@
 
     auto tryEmitLoweredSumConstructorExpr = [&](const Expr &expr, const LocalMap &valueLocals) -> bool {
       const Definition *sumDef = resolveSumDefinitionForTypeText(expr.name, expr.namespacePrefix);
+      if (sumDef == nullptr && callResolutionAdapters.semanticProductTargets.hasSemanticProduct &&
+          expr.semanticNodeId != 0) {
+        auto resolveSemanticTypeText = [&](const std::string &typeText,
+                                           SymbolId typeTextId) -> const Definition * {
+          std::string resolvedTypeText;
+          const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
+          if (semanticTargets.semanticProgram != nullptr &&
+              typeTextId != InvalidSymbolId) {
+            resolvedTypeText = std::string(semanticProgramResolveCallTargetString(
+                *semanticTargets.semanticProgram,
+                typeTextId));
+          }
+          if (resolvedTypeText.empty()) {
+            resolvedTypeText = typeText;
+          }
+          return resolveSumDefinitionForTypeText(trimTemplateTypeText(resolvedTypeText),
+                                                 expr.namespacePrefix);
+        };
+        const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
+        if (const SemanticProgramBindingFact *bindingFact =
+                findSemanticProductBindingFact(semanticTargets, expr);
+            bindingFact != nullptr) {
+          sumDef = resolveSemanticTypeText(bindingFact->bindingTypeText,
+                                           bindingFact->bindingTypeTextId);
+        }
+        if (sumDef == nullptr) {
+          if (const SemanticProgramQueryFact *queryFact =
+                  findSemanticProductQueryFact(semanticTargets, expr);
+              queryFact != nullptr) {
+            sumDef = resolveSemanticTypeText(queryFact->bindingTypeText,
+                                             queryFact->bindingTypeTextId);
+            if (sumDef == nullptr) {
+              sumDef = resolveSemanticTypeText(queryFact->queryTypeText,
+                                               queryFact->queryTypeTextId);
+            }
+          }
+        }
+      }
       if (sumDef == nullptr) {
         return false;
       }

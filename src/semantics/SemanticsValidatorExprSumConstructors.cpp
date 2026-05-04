@@ -2,6 +2,7 @@
 
 #include <cctype>
 #include <cstdint>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <unordered_set>
@@ -76,6 +77,30 @@ const SumVariant *unitVariantForNameInitializer(const Definition &sumDef,
     return nullptr;
   }
   return variant;
+}
+
+std::string stripGeneratedTypeSuffix(std::string path) {
+  const size_t specializationMarker = path.rfind("__t");
+  if (specializationMarker != std::string::npos) {
+    path.erase(specializationMarker);
+  }
+  return path;
+}
+
+bool pathEndsWith(const std::string &path, const std::string &suffix) {
+  return path.size() >= suffix.size() &&
+         path.compare(path.size() - suffix.size(), suffix.size(), suffix) == 0;
+}
+
+bool isPackedResultBridgeDefinitionPath(const std::string &definitionPath) {
+  const std::string basePath = stripGeneratedTypeSuffix(definitionPath);
+  const bool knownErrorFamily =
+      basePath.find("FileError") != std::string::npos ||
+      basePath.find("ContainerError") != std::string::npos ||
+      basePath.find("ImageError") != std::string::npos ||
+      basePath.find("GfxError") != std::string::npos;
+  return knownErrorFamily &&
+         (pathEndsWith(basePath, "/status") || pathEndsWith(basePath, "/result"));
 }
 
 const SumVariant *unitVariantForConstructorArgument(const Definition &sumDef,
@@ -467,26 +492,6 @@ bool SemanticsValidator::validateTargetTypedSumInitializer(
   if (unitVariantForNameInitializer(*sumDef, initializer) != nullptr) {
     return true;
   }
-  auto resolvesToTargetSum = [&](const std::string &typeText,
-                                 const std::string &typeNamespace) -> bool {
-    const Definition *actualSum =
-        resolveSumDefinitionForTypeText(typeText, typeNamespace);
-    return actualSum != nullptr && actualSum->fullPath == sumDef->fullPath;
-  };
-  BindingInfo directBinding;
-  if (inferBindingTypeFromInitializer(initializer,
-                                      params,
-                                      locals,
-                                      directBinding) &&
-      resolvesToTargetSum(bindingTypeText(directBinding),
-                          initializer.namespacePrefix)) {
-    return validateExpr(params, locals, initializer);
-  }
-  std::string directTypeText;
-  if (inferQueryExprTypeText(initializer, params, locals, directTypeText) &&
-      resolvesToTargetSum(directTypeText, initializer.namespacePrefix)) {
-    return validateExpr(params, locals, initializer);
-  }
 
   auto payloadTypeText = [](const SumVariant &variant) {
     if (!variant.payloadTypeText.empty()) {
@@ -498,6 +503,70 @@ bool SemanticsValidator::validateTargetTypedSumInitializer(
     return variant.payloadType + "<" +
            joinTemplateArgs(variant.payloadTemplateArgs) + ">";
   };
+
+  auto directResultOkPayloadIndex = [&]() -> std::optional<size_t> {
+    const std::string normalizedSumPath = normalizeBindingTypeName(sumDef->fullPath);
+    const size_t sumLeafOffset = normalizedSumPath.find_last_of('/');
+    const std::string sumLeaf = sumLeafOffset == std::string::npos
+                                    ? normalizedSumPath
+                                    : normalizedSumPath.substr(sumLeafOffset + 1);
+    if (sumLeaf.rfind("Result", 0) != 0) {
+      return std::nullopt;
+    }
+    if (initializer.kind != Expr::Kind::Call || !initializer.templateArgs.empty() ||
+        initializer.hasBodyArguments || !initializer.bodyArguments.empty()) {
+      return std::nullopt;
+    }
+    if (initializer.isMethodCall && initializer.name == "ok" &&
+        !initializer.args.empty()) {
+      const Expr &receiver = initializer.args.front();
+      if (receiver.kind == Expr::Kind::Name &&
+          normalizeBindingTypeName(receiver.name) == "Result") {
+        return size_t{1};
+      }
+    }
+    if (initializer.isMethodCall && initializer.name == "ok" &&
+        (resolveCalleePath(initializer) == "/result/ok" ||
+         resolveCalleePath(initializer) == "/Result/ok")) {
+      return size_t{0};
+    }
+    if (!initializer.isMethodCall &&
+        (isSimpleCallName(initializer, "Result.ok") ||
+         resolveCalleePath(initializer) == "/Result/ok" ||
+         resolveCalleePath(initializer) == "/result/ok")) {
+      return size_t{0};
+    }
+    return std::nullopt;
+  };
+
+  auto resolvesToTargetSum = [&](const std::string &typeText,
+                                 const std::string &typeNamespace) -> bool {
+    const Definition *actualSum =
+        resolveSumDefinitionForTypeText(typeText, typeNamespace);
+    return actualSum != nullptr && actualSum->fullPath == sumDef->fullPath;
+  };
+  BindingInfo directBinding;
+  const std::optional<size_t> resultOkPayloadIndex = directResultOkPayloadIndex();
+  const bool directResultOkInitializer = resultOkPayloadIndex.has_value();
+  if (!directResultOkInitializer && isPackedResultBridgeDefinitionPath(
+                                       currentValidationState_.context.definitionPath)) {
+    return validateExpr(params, locals, initializer);
+  }
+  if (!directResultOkInitializer &&
+      inferBindingTypeFromInitializer(initializer,
+                                      params,
+                                      locals,
+                                      directBinding) &&
+      resolvesToTargetSum(bindingTypeText(directBinding),
+                          initializer.namespacePrefix)) {
+    return validateExpr(params, locals, initializer);
+  }
+  std::string directTypeText;
+  if (!directResultOkInitializer &&
+      inferQueryExprTypeText(initializer, params, locals, directTypeText) &&
+      resolvesToTargetSum(directTypeText, initializer.namespacePrefix)) {
+    return validateExpr(params, locals, initializer);
+  }
 
   auto bindingMatchesExpected =
       [&](const BindingInfo &actualBinding,
@@ -616,38 +685,19 @@ bool SemanticsValidator::validateTargetTypedSumInitializer(
                                          *selectedVariant);
   }
 
-  auto isDirectResultOkInitializer = [&]() {
-    const std::string normalizedSumPath = normalizeBindingTypeName(sumDef->fullPath);
-    const size_t sumLeafOffset = normalizedSumPath.find_last_of('/');
-    const std::string sumLeaf = sumLeafOffset == std::string::npos
-                                    ? normalizedSumPath
-                                    : normalizedSumPath.substr(sumLeafOffset + 1);
-    if (sumLeaf.rfind("Result", 0) != 0) {
-      return false;
-    }
-    if (initializer.kind != Expr::Kind::Call || !initializer.isMethodCall ||
-        initializer.name != "ok" || !initializer.templateArgs.empty() ||
-        initializer.hasBodyArguments || !initializer.bodyArguments.empty() ||
-        initializer.args.empty()) {
-      return false;
-    }
-    const Expr &receiver = initializer.args.front();
-    return receiver.kind == Expr::Kind::Name &&
-           normalizeBindingTypeName(receiver.name) == "Result";
-  };
-
-  if (isDirectResultOkInitializer()) {
-    if (initializer.args.size() > 2) {
+  if (directResultOkInitializer) {
+    if (*resultOkPayloadIndex >= initializer.args.size() ||
+        initializer.args.size() > *resultOkPayloadIndex + 1) {
       return validateExpr(params, locals, initializer);
     }
     const SumVariant *okVariant = findVariantByName(*sumDef, "ok");
     if (okVariant != nullptr) {
-      if (!okVariant->hasPayload && initializer.args.size() == 1) {
+      if (!okVariant->hasPayload && initializer.args.size() == *resultOkPayloadIndex) {
         return validateExpr(params, locals, initializer);
       }
-      if (okVariant->hasPayload && initializer.args.size() == 2) {
+      if (okVariant->hasPayload && initializer.args.size() == *resultOkPayloadIndex + 1) {
         BindingInfo payloadBinding;
-        if (inferBindingTypeFromInitializer(initializer.args[1],
+        if (inferBindingTypeFromInitializer(initializer.args[*resultOkPayloadIndex],
                                             params,
                                             locals,
                                             payloadBinding) &&

@@ -671,11 +671,6 @@
               !*resolvedPackedResultPayloadBySemanticProduct) {
             return false;
           }
-          if (resolvedPackedResultPayloadBySemanticProduct.has_value() &&
-              inferredValueKind != LocalInfo::ValueKind::Unknown && inferredStructType.empty()) {
-            packedKindOut = inferredValueKind;
-            return true;
-          }
           if (!resolvedPackedResultPayloadBySemanticProduct.has_value()) {
             LocalInfo::Kind collectionKind = LocalInfo::Kind::Value;
             LocalInfo::ValueKind collectionValueKind = LocalInfo::ValueKind::Unknown;
@@ -698,7 +693,7 @@
             packedKindOut = inferredValueKind;
             return true;
           }
-          if (!resolvedPackedResultPayloadBySemanticProduct.has_value()) {
+          if (inferredStructType.empty()) {
             ir_lowerer::inferPackedResultStructType(
                 valueExpr,
                 valueLocals,
