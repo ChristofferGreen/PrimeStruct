@@ -459,6 +459,17 @@
           rewrittenExpr.templateArgs.clear();
           return true;
         };
+        auto resolveSemanticReceiverTypeText =
+            [&](const std::string &typeText, SymbolId typeTextId) {
+          if (semanticProgram != nullptr && typeTextId != InvalidSymbolId) {
+            std::string resolvedTypeText = std::string(
+                semanticProgramResolveCallTargetString(*semanticProgram, typeTextId));
+            if (!resolvedTypeText.empty()) {
+              return ir_lowerer::trimTemplateTypeText(resolvedTypeText);
+            }
+          }
+          return ir_lowerer::trimTemplateTypeText(typeText);
+        };
         Expr inlineDispatchExpr = expr;
         Expr rewrittenBuiltinMapInsertBuiltinExpr;
         if (rewriteBuiltinMapInsertBuiltinExpr(expr, rewrittenBuiltinMapInsertBuiltinExpr)) {
@@ -541,18 +552,7 @@
             if (const auto *queryFact = ir_lowerer::findSemanticProductQueryFact(
                     semanticProgram, semanticIndex, inlineDispatchExpr);
                 queryFact != nullptr) {
-              auto resolveReceiverTypeText =
-                  [&](const std::string &typeText, SymbolId typeTextId) {
-                if (typeTextId != InvalidSymbolId) {
-                  std::string resolvedTypeText = std::string(
-                      semanticProgramResolveCallTargetString(*semanticProgram, typeTextId));
-                  if (!resolvedTypeText.empty()) {
-                    return ir_lowerer::trimTemplateTypeText(resolvedTypeText);
-                  }
-                }
-                return ir_lowerer::trimTemplateTypeText(typeText);
-              };
-              hasInternalReceiver = isInternalSoaType(resolveReceiverTypeText(
+              hasInternalReceiver = isInternalSoaType(resolveSemanticReceiverTypeText(
                   queryFact->receiverBindingTypeText,
                   queryFact->receiverBindingTypeTextId));
             }
@@ -776,18 +776,7 @@
           if (queryFact == nullptr) {
             return false;
           }
-          auto resolveReceiverTypeText =
-              [&](const std::string &typeText, SymbolId typeTextId) {
-            if (semanticProgram != nullptr && typeTextId != InvalidSymbolId) {
-              std::string resolvedTypeText = std::string(
-                  semanticProgramResolveCallTargetString(*semanticProgram, typeTextId));
-              if (!resolvedTypeText.empty()) {
-                return ir_lowerer::trimTemplateTypeText(resolvedTypeText);
-              }
-            }
-            return ir_lowerer::trimTemplateTypeText(typeText);
-          };
-          const std::string receiverType = resolveReceiverTypeText(
+          const std::string receiverType = resolveSemanticReceiverTypeText(
               queryFact->receiverBindingTypeText,
               queryFact->receiverBindingTypeTextId);
           return isInternalSoaType(receiverType);

@@ -672,6 +672,8 @@ Task template:
     ID-order contract slice is complete for stale copied return binding text.
     The lowerer try emit result ID-order contract slice is complete for
     shared semantic-product try and operand-query result type resolution.
+    The lowerer internal SoA metadata receiver ID-order contract slice is
+    complete for semantic-product-backed tail-dispatch receiver facts.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -713,6 +715,10 @@ Task template:
       metadata now uses one shared ID-first resolver for try fact and operand
       query result value/error type text, so copied fact text cannot diverge
       from graph-owned IDs between those paths.
+    - Completed slice: semantic-product-addressed internal SoA metadata
+      receiver classification now uses one shared ID-first resolver for both
+      pre-inline and native-tail metadata dispatch, so stale copied receiver
+      text cannot override graph-owned query receiver type IDs.
     - Completed slice: semantic-product-addressed `try(...)` dispatch
       inference now consumes published try facts before local-result,
       callable-result, map-helper, or file-helper fallback can infer the value

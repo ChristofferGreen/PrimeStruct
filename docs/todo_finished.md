@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 4, 2026)**
+- [x] TODO-4298: Lock SoA metadata receiver IDs
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-04
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer internal SoA metadata receiver ID-order contract
+    slice by sharing one semantic-product receiver type resolver across
+    pre-inline and native-tail metadata dispatch.
+  - acceptance:
+    - Internal SoA `field_count` / `field_capacity` pre-inline dispatch
+      compares interned query receiver type IDs before copied
+      `SemanticProgramQueryFact` receiver text.
+    - Internal SoA native-tail metadata dispatch uses the same ID-first
+      receiver resolver.
+    - The old duplicate inline receiver type resolvers stay absent from the
+      tail-dispatch helper.
+  - stop_rule: Stop once internal SoA metadata receiver classification has
+    focused source-contract coverage for one shared interned receiver type
+    resolver.
+  - evidence: Replaced duplicate internal SoA metadata receiver type
+    resolver lambdas with one `resolveSemanticReceiverTypeText` resolver and
+    added source-contract coverage for both metadata dispatch paths. Local
+    validation was skipped under the lite workflow.
+
 - [x] TODO-4298: Lock try emit result IDs
   - owner: ai
   - created_at: 2026-04-28

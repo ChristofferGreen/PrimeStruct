@@ -633,6 +633,65 @@ TEST_CASE("ir lowerer tail dispatch semantic query targets resolve interned type
         std::string::npos);
 }
 
+TEST_CASE("ir lowerer internal soa metadata receivers resolve interned ids") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path tailDispatchPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h";
+
+  REQUIRE(std::filesystem::exists(tailDispatchPath));
+  const std::string source = readText(tailDispatchPath);
+
+  const size_t resolverPos =
+      source.find("auto resolveSemanticReceiverTypeText =");
+  const size_t idCheckPos =
+      source.find("typeTextId != InvalidSymbolId", resolverPos);
+  const size_t internedResolvePos =
+      source.find("semanticProgramResolveCallTargetString(*semanticProgram, typeTextId)",
+                  idCheckPos);
+  const size_t beforeInlinePos =
+      source.find("auto emitInternalSoaMetadataBeforeInline", internedResolvePos);
+  const size_t beforeInlineReceiverPos =
+      source.find("resolveSemanticReceiverTypeText(\n"
+                  "                  queryFact->receiverBindingTypeText,\n"
+                  "                  queryFact->receiverBindingTypeTextId)",
+                  beforeInlinePos);
+  const size_t nativeReceiverPos =
+      source.find("auto isInternalSoaMetadataReceiver", beforeInlineReceiverPos);
+  const size_t nativeReceiverResolvePos =
+      source.find("resolveSemanticReceiverTypeText(\n"
+                  "              queryFact->receiverBindingTypeText,\n"
+                  "              queryFact->receiverBindingTypeTextId)",
+                  nativeReceiverPos);
+
+  REQUIRE(resolverPos != std::string::npos);
+  REQUIRE(idCheckPos != std::string::npos);
+  REQUIRE(internedResolvePos != std::string::npos);
+  REQUIRE(beforeInlinePos != std::string::npos);
+  REQUIRE(beforeInlineReceiverPos != std::string::npos);
+  REQUIRE(nativeReceiverPos != std::string::npos);
+  REQUIRE(nativeReceiverResolvePos != std::string::npos);
+  CHECK(resolverPos < idCheckPos);
+  CHECK(idCheckPos < internedResolvePos);
+  CHECK(internedResolvePos < beforeInlinePos);
+  CHECK(beforeInlinePos < beforeInlineReceiverPos);
+  CHECK(beforeInlineReceiverPos < nativeReceiverPos);
+  CHECK(nativeReceiverPos < nativeReceiverResolvePos);
+  CHECK(source.find("auto resolveReceiverTypeText") == std::string::npos);
+}
+
 TEST_CASE("ir lowerer statement expr guards inline builtin map insert family") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
