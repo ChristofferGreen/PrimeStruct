@@ -776,6 +776,16 @@ Requirement rules:
   operation/trait support, field/member presence, and compile-time
   integer/value relations. User-defined predicates use the same compile-time
   execution model and must return a requirement fact.
+- Builtin predicates live under `/std/meta/*`. Readable requirement syntax may
+  canonicalize to those helpers or compiler-recognized facts, but user code
+  should not define public helpers that collide with `/std/meta/*` names.
+- Reflection predicates obey normal visibility. A requirement outside a type's
+  visibility boundary cannot observe private fields or members unless a future
+  privileged reflection mode explicitly authorizes that access.
+- User-defined predicates distinguish `false` from invalid evaluation. A
+  predicate that returns `false` makes the requirement fail; a predicate that
+  cannot be evaluated because its body is invalid, unsupported, effectful
+  without permission, or missing a compile-time fact is a hard diagnostic.
 - Failed requirements on a direct call are diagnostics. During overload
   selection, failed requirements make a candidate non-viable; if no candidate
   remains, diagnostics summarize the relevant failed requirements rather than
@@ -786,8 +796,15 @@ Requirement rules:
   import choices.
 - Compile-time requirement evaluation is pure by default. Definitions that need
   compile-time IO or other side effects must opt in through explicit
-  `effects(...)` transforms on the definition, and those effects become part
-  of the semantic inputs used for caching and diagnostics.
+  phase-qualified `effects<compiletime>(...)` transforms on the definition.
+  Runtime `effects(...)` and compile-time effects use the same effect
+  vocabulary but are interpreted by their own phase; a runtime effect
+  annotation does not automatically authorize compile-time IO. Compile-time
+  cache keys include predicate/helper identity, compile-time arguments, visible
+  imports and semantic facts, active compile-time effects, and the
+  language/semantic-product version.
+- Generic public examples should use consistent type-parameter names such as
+  `T`, `ElemT`, `LeftT`, and `RightT`, plus value-level names such as `N`.
 
 Diagnostic style examples:
 
@@ -840,7 +857,7 @@ error: compile-time operation requires effect `file_read`
 evaluation.
 
 help: declare the effect on the definition:
-      [effects(file_read)]
+      [effects<compiletime>(file_read)]
       [require(file_exists<"schema.prime">)]
       load_schema() { ... }
 ```

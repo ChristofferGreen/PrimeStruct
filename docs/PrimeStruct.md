@@ -685,15 +685,33 @@ Planned procedural compile-time genericity contract:
   deterministic: type equality, kind checks, constructibility, lifecycle
   availability, operation/trait support, field/member presence, and
   compile-time integer/value relations are the expected starting set.
+- Builtin requirement predicates live under `/std/meta/*`; readable predicate
+  syntax may rewrite to these builtin helpers or compiler-recognized facts, but
+  user helpers should not collide with the builtin namespace.
+- Reflection predicates such as field/member queries obey normal visibility by
+  default. Private fields are not visible to external requirements unless a
+  future privileged reflection mode explicitly says otherwise.
+- User-defined predicates distinguish an ordinary `false` result from an
+  invalid predicate evaluation. `false` means the requirement is not satisfied;
+  an invalid predicate body, unsupported operation, or missing compile-time fact
+  is a hard diagnostic, not a non-viable candidate.
 - Compile-time execution is pure by default. Definitions may opt into
-  compile-time side effects only through explicit `effects(...)` transforms;
-  those effects become part of the semantic input and cache key.
+  compile-time side effects only through phase-qualified
+  `effects<compiletime>(...)` transforms. Runtime `effects(...)` and
+  compile-time effects use the same effect vocabulary but are interpreted by
+  their own phase; a runtime effect annotation does not automatically authorize
+  compile-time IO.
+- Compile-time cache keys include the predicate/helper identity, compile-time
+  arguments, visible imports and semantic facts, active compile-time effects,
+  and the language/semantic-product version.
 - Requirement-constrained overloads are only automatically selected when
   exactly one candidate is viable. Requirements should not rank candidates by
   specificity; ambiguous viable candidates require clearer names or imports.
 - Diagnostics for this feature should lead with the concrete call site, show
   the failed requirement site, list the relevant compile-time facts, and end
   with a short actionable hint.
+- Generic public examples should use consistent parameter names such as `T`,
+  `ElemT`, `LeftT`, `RightT`, and value-level names such as `N`.
 - The implementation path should first document and parse the compile-time
   argument channel, then add bare zero-argument name resolution, then add type
   locals and `typeof<symbol>`, and only then lower local generated types through

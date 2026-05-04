@@ -1703,6 +1703,9 @@ Task template:
     - Keep v1 predicate expressions intentionally small: equality,
       inequality, comma-separated conjunction, builtin/user-defined predicate
       calls, and simple compile-time value comparisons such as `N > 0`.
+    - Put builtin predicates under `/std/meta/*`; readable requirement syntax
+      may rewrite to those helpers or compiler-recognized facts, but public
+      user helpers should not collide with that namespace.
     - Include the initial predicate family names for equality, trait/capability
       support, construction, copy/move availability, field/member queries, and
       compile-time integer/value relations.
@@ -1716,6 +1719,9 @@ Task template:
       values, and how they interact with ordinary function bodies.
     - The docs define how user-authored compile-time predicate helpers return
       requirement facts and how they compose with builtin predicates.
+    - The docs distinguish a predicate returning `false` from an invalid
+      predicate evaluation; invalid predicate evaluation is a hard diagnostic,
+      not a failed requirement or silent overload-filtering event.
     - The surface explicitly rejects C++-style SFINAE-by-accident; failed
       requirements are diagnostics, not silent candidate erasure unless a
       later overload-selection task says so.
@@ -1738,6 +1744,8 @@ Task template:
       graph-backed fact authority from TODO-4298.
     - Preserve source provenance for every predicate, operand, inferred type
       fact, and final pass/fail result.
+    - Represent predicate evaluation outcomes distinctly: satisfied,
+      unsatisfied, and invalid evaluation.
     - Keep predicates typed; do not lower them into strings or backend-local
       source reconstruction.
   - acceptance:
@@ -1748,6 +1756,9 @@ Task template:
       expressions.
     - Semantic validation publishes requirement facts before IR lowering and
       fails closed when a required fact is missing.
+    - Invalid predicate evaluation is represented separately from a failed
+      requirement so overload resolution and diagnostics cannot treat compiler
+      or predicate-body errors as non-viable candidates.
     - Existing template and procedural-generic tests remain source-compatible.
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once requirements have a typed semantic representation
@@ -1767,6 +1778,8 @@ Task template:
     - Canonicalize readable source predicates such as `typeof<left> == i32`
       into builtin compile-time predicate calls such as `equals<left, i32>`
       before requirement facts are published.
+    - Place builtin relation predicates under `/std/meta/*` or a compiler
+      fact namespace that is surfaced through `/std/meta/*` docs.
     - Reuse `typeof<symbol>` and type-local facts from the procedural
       genericity lane rather than adding a second inference path.
     - Keep relation evaluation deterministic and independent of import order.
@@ -1775,6 +1788,8 @@ Task template:
       concrete type and reject a mismatched call before lowering.
     - Type-kind predicates work on generated nominal structs and ordinary
       named types with stable results.
+    - Builtin predicate names and user predicate names cannot collide
+      ambiguously with `/std/meta/*`.
     - Unsupported operands and unknown relation names produce stable
       diagnostics that name the requirement predicate.
     - Semantic-product tests cover positive, negative, and generated-type
@@ -1798,6 +1813,9 @@ Task template:
       builtin surface while keeping PrimeStruct facts typed and deterministic:
       constructible, copyable, movable, comparable, callable, field/member
       presence, and operation/trait support.
+    - Reflection-style predicates must obey normal visibility: private fields
+      and helpers are invisible outside their visibility boundary unless a
+      later privileged reflection feature explicitly authorizes access.
     - Define the exact bridge from legacy trait transforms to requirement
       facts so old code stays compatible while new generic code has one
       canonical predicate vocabulary.
@@ -1810,6 +1828,8 @@ Task template:
       include the call-site type facts that caused the failure.
     - Overloaded helpers, imported traits, and generated types produce
       deterministic support results.
+    - Field/member predicates cannot observe private fields from outside the
+      declaring type's visible API.
     - Compatibility behavior for existing transform-style traits is covered by
       tests or documented as still pending with a narrower follow-up TODO.
     - `./scripts/compile.sh --release` passes.
@@ -1855,24 +1875,32 @@ Task template:
     - Start from docs for deterministic semantics, semantic validation pass
       ordering, template monomorphization recursion guards, import handling,
       and any constant-evaluation helpers.
-    - Compile-time flow is pure by default and must not perform runtime side
-      effects, read ambient process state, or make backend-dependent decisions
-      without explicit `effects(...)` opt-in on the enclosing definition.
-    - Caching keys must include all semantic inputs that affect compile-time
-      results while remaining stable across import order.
+    - Compile-time flow is pure by default and must not perform side effects,
+      read ambient process state, or make backend-dependent decisions without
+      explicit phase-qualified `effects<compiletime>(...)` opt-in on the
+      enclosing definition.
+    - Runtime `effects(...)` and compile-time effects use the same effect
+      vocabulary but are interpreted by their own phase; runtime effects do
+      not automatically authorize compile-time IO.
+    - Caching keys must include the predicate/helper identity, compile-time
+      arguments, visible imports and semantic facts, active compile-time
+      effects, and the language/semantic-product version, while remaining
+      stable across import order.
   - acceptance:
     - Docs specify which operations are legal during compile-time generic
-      execution by default, which require explicit `effects(...)` opt-in,
-      and which are always rejected.
+      execution by default, which require explicit
+      `effects<compiletime>(...)` opt-in, and which are always rejected.
     - Definitions with compile-time IO or other effectful compile-time work
-      require the matching effects in their transform list, and those effects
-      are included in semantic cache keys and diagnostics.
+      require the matching phase-qualified compile-time effects in their
+      transform list, and those effects are included in semantic cache keys and
+      diagnostics.
     - Recursive compile-time evaluation has a deterministic depth/budget
       diagnostic instead of unbounded compiler recursion.
     - Repeated specializations reuse cached facts where safe and produce
       identical diagnostics/IR when caching is disabled.
-    - Tests cover missing `effects(...)` opt-in rejection, recursion-limit
-      failure, and stable repeated evaluation.
+    - Tests cover missing `effects<compiletime>(...)` opt-in rejection,
+      recursion-limit failure, cache-key discrimination, and stable repeated
+      evaluation.
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once compile-time generic flow has enforceable
     determinism and termination rules.
@@ -1960,6 +1988,8 @@ Task template:
       `docs/PrimeStruct_SyntaxSpec.md` as the target shape: call site first,
       failed requirement second, concrete facts third, then a short actionable
       hint.
+    - Emit different diagnostic categories for unsatisfied predicates versus
+      predicates that cannot be evaluated.
     - Keep output deterministic across import order and repeated builds.
   - acceptance:
     - Failed requirement diagnostics point at both the generic requirement and
@@ -1971,6 +2001,8 @@ Task template:
     - Golden diagnostics cover failed type requirements, ambiguous constrained
       calls, local generated type escape, missing compile-time effects, and
       value-level predicates such as `N > 0`.
+    - Golden diagnostics cover at least one invalid user-defined predicate
+      body and make clear that it is not merely a failed requirement.
     - Golden diagnostic tests pin representative success and failure output.
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once requirement failures are explainable from user code
@@ -2022,6 +2054,8 @@ Task template:
       construction, non-escaping local generated struct use, same-type add,
       value-level length requirements, optional type-directed branch, and a
       constrained overload pair.
+    - Align generic naming conventions in examples: use `T`, `ElemT`,
+      `LeftT`, `RightT`, and value-level names such as `N` consistently.
     - Keep the examples procedural and readable: type work should look like a
       left-to-right program over named facts, not a template metaprogramming
       puzzle.
