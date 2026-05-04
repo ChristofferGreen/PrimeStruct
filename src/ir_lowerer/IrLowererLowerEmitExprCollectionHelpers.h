@@ -360,61 +360,7 @@
           if (!hasSpreadArg) {
             return false;
           }
-          const Definition *callee = resolveDefinitionCall(callExpr);
-          if (callee == nullptr || callee->parameters.size() != 1) {
-            return false;
-          }
-          auto extractSingleParameterTypeName = [](const Expr &paramExpr) {
-            for (const auto &transform : paramExpr.transforms) {
-              if (transform.name == "mut" || transform.name == "public" || transform.name == "private" ||
-                  transform.name == "static" || transform.name == "shared" || transform.name == "placement" ||
-                  transform.name == "align" || transform.name == "packed" || transform.name == "reflection" ||
-                  transform.name == "effects" || transform.name == "capabilities") {
-                continue;
-              }
-              if (!transform.arguments.empty()) {
-                continue;
-              }
-              std::string typeName = transform.name;
-              if (!transform.templateArgs.empty()) {
-                typeName += "<";
-                for (size_t index = 0; index < transform.templateArgs.size(); ++index) {
-                  if (index != 0) {
-                    typeName += ", ";
-                  }
-                  typeName += trimTemplateTypeText(transform.templateArgs[index]);
-                }
-                typeName += ">";
-              }
-              return typeName;
-            }
-            return std::string{};
-          };
-          std::string argsBase;
-          std::string argsTemplateArgText;
-          const std::string paramTypeName = extractSingleParameterTypeName(callee->parameters.front());
-          if (!splitTemplateTypeName(paramTypeName, argsBase, argsTemplateArgText) ||
-              trimTemplateTypeText(argsBase) != "args") {
-            return false;
-          }
-          std::vector<std::string> argsTemplateArgs;
-          if (!splitTemplateArgs(argsTemplateArgText, argsTemplateArgs) ||
-              argsTemplateArgs.size() != 1) {
-            return false;
-          }
-          std::string entryBase;
-          std::string entryTemplateArgText;
-          const std::string entryTypeName = trimTemplateTypeText(argsTemplateArgs.front());
-          if (!splitTemplateTypeName(entryTypeName, entryBase, entryTemplateArgText)) {
-            return false;
-          }
-          std::string normalizedEntryBase = trimTemplateTypeText(entryBase);
-          if (!normalizedEntryBase.empty() && normalizedEntryBase.front() == '/') {
-            normalizedEntryBase.erase(normalizedEntryBase.begin());
-          }
-          return normalizedEntryBase == "Entry" ||
-                 normalizedEntryBase == "std/collections/experimental_map/Entry" ||
-                 normalizedEntryBase.rfind("std/collections/experimental_map/Entry__", 0) == 0;
+          return true;
         };
         Expr rewrittenBuiltinMapConstructorExpr;
         if (isEntryArgsPackMapConstructorExpr(expr)) {

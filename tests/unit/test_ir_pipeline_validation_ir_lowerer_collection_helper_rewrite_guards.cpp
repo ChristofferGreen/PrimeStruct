@@ -52,6 +52,15 @@ TEST_CASE("ir lowerer collection helper rewrite guards explicit map defs") {
         std::string::npos);
   CHECK(source.find("if (resolveDefinitionCall(callExpr) != nullptr)") != std::string::npos);
   CHECK(source.find("rewrittenExpr.name = helperName;") != std::string::npos);
+  CHECK(source.find("auto isEntryArgsPackMapConstructorExpr =") !=
+        std::string::npos);
+  CHECK(source.find(
+            "if (!hasSpreadArg) {\n"
+            "            return false;\n"
+            "          }\n"
+            "          return true;") != std::string::npos);
+  CHECK(source.find("native backend does not support variadic entry map constructors") !=
+        std::string::npos);
 }
 
 TEST_CASE("ir lowerer materialized collection receivers use published helper queries") {
