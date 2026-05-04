@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 4, 2026)**
+- [x] TODO-4298: Lock try emit result IDs
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-04
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer `try(...)` emit result ID-order contract slice
+    by sharing one semantic-product type resolver between try facts and
+    operand query result facts.
+  - acceptance:
+    - `try(...)` emit-time result metadata compares interned try value/error
+      type IDs before copied `SemanticProgramTryFact` text.
+    - `try(query())` operand result metadata compares interned query
+      value/error type IDs before copied `SemanticProgramQueryFact` text.
+    - The try emit path keeps one shared ID-first resolver so the two
+      graph-backed result metadata consumers cannot drift independently.
+  - stop_rule: Stop once the `try(...)` emit path has source-contract
+    coverage for a shared interned type-ID resolver across try facts and
+    operand query result facts.
+  - evidence: Replaced the duplicate try/query result type resolver lambdas
+    with a single `resolveSemanticTryProductTypeText` resolver and updated
+    source-contract coverage to require both try facts and operand query
+    result facts to use it. Local validation was skipped under the lite
+    workflow.
+
 - [x] TODO-4298: Lock pointer return binding IDs
   - owner: ai
   - created_at: 2026-04-28

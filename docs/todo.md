@@ -670,6 +670,8 @@ Task template:
     type-ID-order contract slice is complete for stale copied query and
     binding type text. The lowerer pointer/location return binding
     ID-order contract slice is complete for stale copied return binding text.
+    The lowerer try emit result ID-order contract slice is complete for
+    shared semantic-product try and operand-query result type resolution.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -707,6 +709,10 @@ Task template:
       classification now resolves interned return binding type IDs before
       copied return fact text, so stale duplicated return binding text cannot
       override graph-owned return metadata.
+    - Completed slice: semantic-product-addressed `try(...)` emit result
+      metadata now uses one shared ID-first resolver for try fact and operand
+      query result value/error type text, so copied fact text cannot diverge
+      from graph-owned IDs between those paths.
     - Completed slice: semantic-product-addressed `try(...)` dispatch
       inference now consumes published try facts before local-result,
       callable-result, map-helper, or file-helper fallback can infer the value

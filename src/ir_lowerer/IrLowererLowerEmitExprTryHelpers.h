@@ -13,8 +13,8 @@
           }
           ResultExprInfo resultInfo;
           std::string semanticTryFactError;
-          auto resolveTryFactTypeText = [&](const std::string &typeText,
-                                            SymbolId typeTextId) {
+          auto resolveSemanticTryProductTypeText = [&](const std::string &typeText,
+                                                       SymbolId typeTextId) {
             const auto &semanticTargets =
                 callResolutionAdapters.semanticProductTargets;
             if (semanticTargets.semanticProgram != nullptr &&
@@ -101,32 +101,17 @@
             if (queryFact == nullptr || !queryFact->hasResultType) {
               return false;
             }
-            auto resolveQueryResultTypeText = [&](const std::string &typeText,
-                                                  SymbolId typeTextId) {
-              const auto &semanticTargets =
-                  callResolutionAdapters.semanticProductTargets;
-              if (semanticTargets.semanticProgram != nullptr &&
-                  typeTextId != InvalidSymbolId) {
-                std::string resolvedTypeText = std::string(
-                    semanticProgramResolveCallTargetString(
-                        *semanticTargets.semanticProgram, typeTextId));
-                if (!resolvedTypeText.empty()) {
-                  return trimTemplateTypeText(resolvedTypeText);
-                }
-              }
-              return trimTemplateTypeText(typeText);
-            };
             resultInfoOut.isResult = true;
             resultInfoOut.hasValue = queryFact->resultTypeHasValue;
             resultInfoOut.errorType =
-                resolveQueryResultTypeText(queryFact->resultErrorType,
-                                           queryFact->resultErrorTypeId);
+                resolveSemanticTryProductTypeText(queryFact->resultErrorType,
+                                                  queryFact->resultErrorTypeId);
             if (!resultInfoOut.hasValue) {
               return true;
             }
             return applySemanticTryValueType(
-                resolveQueryResultTypeText(queryFact->resultValueType,
-                                           queryFact->resultValueTypeId),
+                resolveSemanticTryProductTypeText(queryFact->resultValueType,
+                                                  queryFact->resultValueTypeId),
                 resultInfoOut);
           };
           auto resolveLambdaReturnedValueExpr = [&](const Expr &lambdaExpr,
@@ -295,9 +280,11 @@
               resultInfo.isResult = true;
               resultInfo.hasValue = true;
               resultInfo.errorType =
-                  resolveTryFactTypeText(tryFact->errorType, tryFact->errorTypeId);
+                  resolveSemanticTryProductTypeText(tryFact->errorType,
+                                                    tryFact->errorTypeId);
               if (!applySemanticTryValueType(
-                      resolveTryFactTypeText(tryFact->valueType, tryFact->valueTypeId),
+                      resolveSemanticTryProductTypeText(tryFact->valueType,
+                                                        tryFact->valueTypeId),
                       resultInfo)) {
                 semanticTryFactError = "incomplete semantic-product try fact: try";
                 resultInfo = ResultExprInfo{};

@@ -1994,27 +1994,35 @@ TEST_CASE("native try operand result metadata resolves interned query ids") {
   REQUIRE(std::filesystem::exists(tryHelpersPath));
 
   const std::string source = readTextFile(tryHelpersPath);
-  const size_t applyPos = source.find("auto applySemanticOperandResultType");
-  REQUIRE(applyPos != std::string::npos);
-  const size_t resolverPos = source.find("resolveQueryResultTypeText", applyPos);
+  const size_t resolverPos =
+      source.find("auto resolveSemanticTryProductTypeText");
   const size_t semanticResolvePos =
       source.find("semanticProgramResolveCallTargetString(", resolverPos);
+  const size_t applyPos = source.find("auto applySemanticOperandResultType",
+                                      semanticResolvePos);
   const size_t errorTypePos =
-      source.find("resolveQueryResultTypeText(queryFact->resultErrorType,", resolverPos);
-  const size_t errorIdPos = source.find("queryFact->resultErrorTypeId", errorTypePos);
+      source.find("resolveSemanticTryProductTypeText(queryFact->resultErrorType,",
+                  applyPos);
+  const size_t errorIdPos =
+      source.find("queryFact->resultErrorTypeId", errorTypePos);
   const size_t valueTypePos =
-      source.find("resolveQueryResultTypeText(queryFact->resultValueType,", errorIdPos);
-  const size_t valueIdPos = source.find("queryFact->resultValueTypeId", valueTypePos);
-  const size_t fallbackPos = source.find("auto resolveLambdaReturnedValueExpr", valueIdPos);
+      source.find("resolveSemanticTryProductTypeText(queryFact->resultValueType,",
+                  errorIdPos);
+  const size_t valueIdPos =
+      source.find("queryFact->resultValueTypeId", valueTypePos);
+  const size_t fallbackPos =
+      source.find("auto resolveLambdaReturnedValueExpr", valueIdPos);
   REQUIRE(resolverPos != std::string::npos);
   REQUIRE(semanticResolvePos != std::string::npos);
+  REQUIRE(applyPos != std::string::npos);
   REQUIRE(errorTypePos != std::string::npos);
   REQUIRE(errorIdPos != std::string::npos);
   REQUIRE(valueTypePos != std::string::npos);
   REQUIRE(valueIdPos != std::string::npos);
   REQUIRE(fallbackPos != std::string::npos);
   CHECK(resolverPos < semanticResolvePos);
-  CHECK(semanticResolvePos < errorTypePos);
+  CHECK(semanticResolvePos < applyPos);
+  CHECK(applyPos < errorTypePos);
   CHECK(errorTypePos < errorIdPos);
   CHECK(errorIdPos < valueTypePos);
   CHECK(valueTypePos < valueIdPos);
@@ -2023,6 +2031,7 @@ TEST_CASE("native try operand result metadata resolves interned query ids") {
         std::string::npos);
   CHECK(source.find("return applySemanticTryValueType(queryFact->resultValueType,") ==
         std::string::npos);
+  CHECK(source.find("auto resolveQueryResultTypeText") == std::string::npos);
 }
 
 TEST_CASE("native try fact result metadata resolves interned ids") {
@@ -2036,14 +2045,17 @@ TEST_CASE("native try fact result metadata resolves interned ids") {
   REQUIRE(std::filesystem::exists(tryHelpersPath));
 
   const std::string trySource = readTextFile(tryHelpersPath);
-  const size_t resolverPos = trySource.find("auto resolveTryFactTypeText");
+  const size_t resolverPos =
+      trySource.find("auto resolveSemanticTryProductTypeText");
   const size_t semanticResolvePos =
       trySource.find("semanticProgramResolveCallTargetString(", resolverPos);
   const size_t errorTypePos =
-      trySource.find("resolveTryFactTypeText(tryFact->errorType,", semanticResolvePos);
+      trySource.find("resolveSemanticTryProductTypeText(tryFact->errorType,",
+                     semanticResolvePos);
   const size_t errorIdPos = trySource.find("tryFact->errorTypeId", errorTypePos);
   const size_t valueTypePos =
-      trySource.find("resolveTryFactTypeText(tryFact->valueType,", errorIdPos);
+      trySource.find("resolveSemanticTryProductTypeText(tryFact->valueType,",
+                     errorIdPos);
   const size_t valueIdPos = trySource.find("tryFact->valueTypeId", valueTypePos);
   REQUIRE(resolverPos != std::string::npos);
   REQUIRE(semanticResolvePos != std::string::npos);
@@ -2060,6 +2072,7 @@ TEST_CASE("native try fact result metadata resolves interned ids") {
         std::string::npos);
   CHECK(trySource.find("applySemanticTryValueType(tryFact->valueType") ==
         std::string::npos);
+  CHECK(trySource.find("auto resolveTryFactTypeText") == std::string::npos);
 
   std::filesystem::path inferencePath =
       cwd / "src" / "ir_lowerer" / "IrLowererLowerInferenceDispatchSetup.cpp";
