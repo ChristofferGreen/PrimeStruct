@@ -315,6 +315,27 @@ main() {
   CHECK(error.find("unknown method: /vector/push") != std::string::npos);
 }
 
+TEST_CASE("lambda vector namespaced mutator slash method ignores canonical-only helper") {
+  const std::string source = R"(
+[effects(heap_alloc)]
+/std/collections/vector/push([vector<i32> mut] values, [i32] value) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  holder{[]([i32] seed) {
+    [vector<i32> mut] values{vector<i32>(1i32, 2i32, seed)}
+    values./vector/push(3i32)
+    return(0i32)
+  }}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/push") != std::string::npos);
+}
+
 TEST_CASE("vector namespaced mutator slash method on builtin vector receiver accepts same-path helper") {
   const std::string source = R"(
 [effects(heap_alloc)]

@@ -299,7 +299,7 @@ main() {
       "cpp",
       "compile_cpp_lambda_cross_path_vector_mutator_method_same_path_reject",
       source,
-      {"unknown method:"});
+      {"unknown method: /vector/push"});
 }
 
 TEST_CASE("C++ emitter lambda mutator mismatch rejects user helper signatures") {

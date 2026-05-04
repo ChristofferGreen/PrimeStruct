@@ -533,6 +533,59 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
       }
     }
+    if (expr.isMethodCall && !expr.args.empty()) {
+      auto isVectorMutatorMethodName = [](std::string_view helperName) {
+        return helperName == "push" || helperName == "pop" ||
+               helperName == "reserve" || helperName == "clear" ||
+               helperName == "remove_at" || helperName == "remove_swap";
+      };
+      auto explicitVectorMutatorMethodPath = [&]() -> std::string {
+        std::string normalizedPrefix = expr.namespacePrefix;
+        if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
+          normalizedPrefix.erase(normalizedPrefix.begin());
+        }
+        std::string normalizedName = expr.name;
+        if (!normalizedName.empty() && normalizedName.front() == '/') {
+          normalizedName.erase(normalizedName.begin());
+        }
+        if ((normalizedPrefix == "vector" ||
+             normalizedPrefix == "std/collections/vector") &&
+            isVectorMutatorMethodName(normalizedName)) {
+          return "/" + normalizedPrefix + "/" + normalizedName;
+        }
+        constexpr std::string_view RootPrefix = "vector/";
+        constexpr std::string_view CanonicalPrefix = "std/collections/vector/";
+        if (normalizedName.rfind(RootPrefix, 0) == 0) {
+          const std::string helperName =
+              normalizedName.substr(RootPrefix.size());
+          if (isVectorMutatorMethodName(helperName)) {
+            return "/" + normalizedName;
+          }
+        }
+        if (normalizedName.rfind(CanonicalPrefix, 0) == 0) {
+          const std::string helperName =
+              normalizedName.substr(CanonicalPrefix.size());
+          if (isVectorMutatorMethodName(helperName)) {
+            return "/" + normalizedName;
+          }
+        }
+        return {};
+      }();
+      if (!explicitVectorMutatorMethodPath.empty()) {
+        std::string receiverTypeText;
+        const bool receiverIsVector =
+            inferQueryExprTypeText(expr.args.front(), params, locals,
+                                   receiverTypeText) &&
+            inferMethodCollectionTypePathFromTypeText(receiverTypeText) ==
+                "/vector";
+        if (receiverIsVector &&
+            !hasDeclaredDefinitionPath(explicitVectorMutatorMethodPath) &&
+            !hasImportedDefinitionPath(explicitVectorMutatorMethodPath)) {
+          return failExprRootDiagnostic("unknown method: " +
+                                        explicitVectorMutatorMethodPath);
+        }
+      }
+    }
     if (!expr.isMethodCall &&
         (expr.namespacePrefix == "vector" ||
          expr.namespacePrefix == "/vector" ||
