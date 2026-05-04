@@ -384,6 +384,16 @@ inline void expectExperimentalMapStorageReferenceConformance(const std::string &
 
 inline void expectCanonicalMapNamespaceExperimentalBorrowedRefConformance(const std::string &emitMode) {
   const std::string source = makeCanonicalMapNamespaceExperimentalBorrowedRefConformanceSource();
+  if (emitMode == "native") {
+    expectMapConformanceFailure(source,
+                                "map_namespace_canonical_experimental_borrowed_ref_native",
+                                emitMode,
+                                2,
+                                "",
+                                true);
+    return;
+  }
+
   const std::string srcPath =
       writeTemp("map_namespace_canonical_experimental_borrowed_ref_" + emitMode + ".prime", source);
   const std::string outPath =

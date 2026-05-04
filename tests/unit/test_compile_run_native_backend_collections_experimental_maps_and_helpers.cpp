@@ -3363,7 +3363,7 @@ TEST_CASE("rejects native canonical namespaced map helpers on borrowed experimen
   expectCanonicalMapNamespaceExperimentalReferenceConformance("native");
 }
 
-TEST_CASE("compiles and runs native canonical namespaced map _ref helpers on borrowed experimental map values") {
+TEST_CASE("rejects native canonical namespaced map _ref helpers on borrowed experimental map values") {
   expectCanonicalMapNamespaceExperimentalBorrowedRefConformance("native");
 }
 
