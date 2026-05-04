@@ -3443,7 +3443,7 @@ TEST_CASE("compiles and runs native experimental map bracket access") {
   expectExperimentalMapIndexConformance("native");
 }
 
-TEST_CASE("compiles and runs native experimental map custom comparable struct keys") {
+TEST_CASE("rejects native experimental map custom comparable struct keys") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
@@ -3475,14 +3475,10 @@ main() {
   return(total)
 }
 )";
-  const std::string srcPath = writeTemp("compile_native_experimental_map_custom_comparable_key.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_map_custom_comparable_key_exe").string();
-
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 21);
+  expectMapConformanceCompileReject(source,
+                                    "compile_native_experimental_map_custom_comparable_key",
+                                    "native",
+                                    "native backend only supports numeric/bool map values");
 }
 
 TEST_CASE("covers native shared vector harness contracts") {
