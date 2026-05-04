@@ -97,6 +97,9 @@ Task template:
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
   -> TODO-4275 -> TODO-4276 -> TODO-4271 -> TODO-4272 -> TODO-4274
   -> TODO-4273 -> TODO-4277 -> TODO-4278
+- Procedural compile-time genericity: TODO-4331 -> TODO-4332
+  -> TODO-4333 -> TODO-4334 -> TODO-4335 -> TODO-4336 -> TODO-4337
+  -> TODO-4338 -> TODO-4339 -> TODO-4340
 
 ### Execution Queue (Recommended)
 
@@ -134,6 +137,16 @@ Task template:
 - TODO-4273: Add heterogeneous value-pack inference
 - TODO-4277: Add tuple destructuring sugar
 - TODO-4278: Integrate multi-wait with stdlib tuple
+- TODO-4331: Implement compile-time argument channel model
+- TODO-4332: Add bare zero-arg execution syntax
+- TODO-4333: Reject ambiguous value/execution names
+- TODO-4334: Add compile-time `[type]` local bindings
+- TODO-4335: Add `typeof<symbol>` compile-time primitive
+- TODO-4336: Allow type locals in envelope positions
+- TODO-4337: Add local generated nominal structs
+- TODO-4338: Stabilize generated type identity and mangling
+- TODO-4339: Lower procedural generic facts through semantics
+- TODO-4340: Add procedural generic examples and conformance
 
 ### PrimeStruct Coverage Snapshot
 
@@ -161,6 +174,7 @@ Task template:
 | Algebraic sum types and brace-only construction | none |
 | Stdlib ADT migration for `Maybe` and `Result` | TODO-4266, TODO-4267, TODO-4291 |
 | Generic type packs and tuple stdlib surface | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
+| Procedural compile-time genericity and local type facts | TODO-4331, TODO-4332, TODO-4333, TODO-4334, TODO-4335, TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
 
 ### Validation Coverage Snapshot
 
@@ -186,6 +200,7 @@ Task template:
 | Sum-type and brace-construction conformance | none |
 | Maybe/Result sum migration conformance | TODO-4266, TODO-4267, TODO-4291 |
 | Generic type-pack and tuple conformance | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
+| Procedural compile-time genericity conformance | TODO-4331, TODO-4332, TODO-4333, TODO-4334, TODO-4335, TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
 
 ### Vector/Map Bridge Contract Summary
 
@@ -1371,6 +1386,267 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
+
+- [ ] TODO-4331: Implement compile-time argument channel model
+  - owner: ai
+  - created_at: 2026-05-04
+  - phase: Procedural compile-time genericity
+  - depends_on: TODO-4298, TODO-4270
+  - scope: Rework parser, AST, AST printer, and semantic diagnostics so
+    `<...>` is represented as a typed compile-time argument channel while
+    preserving existing explicit-template source compatibility.
+  - implementation_notes:
+    - Start from `docs/PrimeStruct.md`,
+      `docs/PrimeStruct_SyntaxSpec.md`, `include/primec/Ast.h`,
+      `src/parser/ParserListsSignatures.cpp`, `src/AstPrinter.cpp`, and
+      `src/semantics/TemplateMonomorph*.h`.
+    - Build on the typed non-type argument representation from TODO-4270
+      rather than adding another string channel.
+    - Keep existing `name<T>(value)`, `array<i32>`, `return<T>`, and
+      transform template-argument behavior source-compatible.
+  - acceptance:
+    - The AST distinguishes type, integer, symbol, and future compile-time
+      argument categories without changing accepted existing template sources.
+    - AST/semantic dumps continue to print current template forms
+      deterministically.
+    - Invalid compile-time argument shapes produce stable diagnostics that
+      name the compile-time argument channel.
+    - Docs state that traditional templates are one use of `<...>`.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once `<...>` has a typed internal representation and all
+    existing template tests still pass; leave bare zero-arg execution to
+    TODO-4332.
+
+- [ ] TODO-4332: Add bare zero-arg execution syntax
+  - owner: ai
+  - created_at: 2026-05-04
+  - phase: Procedural compile-time genericity
+  - depends_on: TODO-4331
+  - scope: Allow a bare form such as `name` to execute a visible zero-argument
+    definition in command and value position when resolution is unique.
+  - implementation_notes:
+    - Start from parser expression/name handling under `src/parser/`,
+      semantic call resolution, return-expression validation, and existing
+      tests that distinguish names from calls.
+    - Preserve current binding reads and field-access behavior; do not make
+      every name eagerly callable before semantic resolution.
+  - acceptance:
+    - `foo { return(1) }` and `bar { return(foo) }` execute `foo` and return
+      its result after transforms/literal inference.
+    - Statement-position `foo` executes a zero-arg definition exactly as
+      `foo()` would.
+    - Runtime argument calls and explicit `foo()` continue to work unchanged.
+    - Unknown bare names and non-zero-arg callable bare names produce stable
+      diagnostics.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once unique zero-arg definitions can be executed by bare
+    name; leave ambiguous-name rejection to TODO-4333.
+
+- [ ] TODO-4333: Reject ambiguous value/execution names
+  - owner: ai
+  - created_at: 2026-05-04
+  - phase: Procedural compile-time genericity
+  - depends_on: TODO-4332
+  - scope: Add deterministic diagnostics for scopes where a bare name could
+    mean both a stack value and a visible zero-argument callable, or where
+    multiple callable/import candidates make the name non-unique.
+  - implementation_notes:
+    - Start from semantic name resolution, import alias resolution, local
+      binding maps, and helper/call target diagnostics.
+    - Prefer fail-closed behavior: if the compiler cannot prove one entity,
+      reject instead of guessing.
+  - acceptance:
+    - A local binding and visible zero-arg definition with the same bare name
+      reject before lowering.
+    - Import aliases that make a bare zero-arg execution ambiguous reject with
+      stable related-path diagnostics.
+    - A unique local binding still reads as a value; a unique zero-arg
+      callable still executes.
+    - Diagnostics are deterministic across import order and repeated builds.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once bare-name ambiguity is rejected consistently across
+    local, definition, and import-alias scopes.
+
+- [ ] TODO-4334: Add compile-time `[type]` local bindings
+  - owner: ai
+  - created_at: 2026-05-04
+  - phase: Procedural compile-time genericity
+  - depends_on: TODO-4333
+  - scope: Parse and validate compile-time local type bindings such as
+    `[type] LeftT { ... }` without yet allowing those locals in every
+    envelope position.
+  - implementation_notes:
+    - Start from binding transform parsing, semantic binding validation,
+      semantic-product binding facts, and local-auto/type inference code.
+    - `[type]` bindings are compile-time facts, not runtime stack slots.
+  - acceptance:
+    - `[type] Name { expr }` parses in definition bodies and is rejected at
+      top level or in unsupported scopes with stable diagnostics.
+    - Type locals do not allocate runtime storage and do not appear as ordinary
+      value bindings in IR.
+    - Invalid initializers, duplicate local names, mutation qualifiers, and
+      runtime-only expressions reject deterministically.
+    - Semantic-product dumps can expose type-local provenance or explicitly
+      document the temporary adapter boundary.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once type locals are represented and validated as
+    compile-time facts; leave `typeof<symbol>` to TODO-4335.
+
+- [ ] TODO-4335: Add `typeof<symbol>` compile-time primitive
+  - owner: ai
+  - created_at: 2026-05-04
+  - phase: Procedural compile-time genericity
+  - depends_on: TODO-4334
+  - scope: Add the compile-time primitive `typeof<symbol>` so type locals can
+    bind the concrete type of a parameter, local value, or other supported
+    visible entity.
+  - implementation_notes:
+    - Reuse the compile-time argument channel from TODO-4331 and the
+      ambiguity diagnostics from TODO-4333.
+    - Do not accept `typeof(value)` as this primitive; parentheses remain the
+      runtime argument channel.
+  - acceptance:
+    - `[type] T { typeof<value> }` binds the concrete type of an unambiguous
+      value or parameter.
+    - `typeof<missing>`, ambiguous symbols, unsupported symbol kinds, and
+      runtime-argument forms reject with stable diagnostics.
+    - The primitive works in generic definitions after monomorphization and
+      produces deterministic facts for repeated call sites.
+    - Docs and tests show why `typeof<value>` differs from a runtime call.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once `typeof<symbol>` can feed `[type]` locals; leave
+    later envelope consumption to TODO-4336.
+
+- [ ] TODO-4336: Allow type locals in envelope positions
+  - owner: ai
+  - created_at: 2026-05-04
+  - phase: Procedural compile-time genericity
+  - depends_on: TODO-4335
+  - scope: Let compile-time type locals appear in binding, parameter, return,
+    struct-field, and constructor envelope positions where concrete types are
+    required.
+  - implementation_notes:
+    - Start from template type resolution, binding transform validation,
+      struct layout validation, and semantic-product type metadata.
+    - Type locals must resolve before layout and lowering; unresolved type
+      locals must fail before IR.
+  - acceptance:
+    - A type local produced by `typeof<value>` can annotate a later local or
+      struct field in the same definition specialization.
+    - Type locals cannot escape their valid scope except through generated
+      concrete types or ordinary return values.
+    - Cycles, forward references where unsupported, and runtime value use of a
+      type local reject deterministically.
+    - Semantic-product/lowering tests verify no backend re-derives type-local
+      facts from source text.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once type locals are usable as concrete envelope names;
+    leave generated local structs to TODO-4337.
+
+- [ ] TODO-4337: Add local generated nominal structs
+  - owner: ai
+  - created_at: 2026-05-04
+  - phase: Procedural compile-time genericity
+  - depends_on: TODO-4336
+  - scope: Support function-local generated struct definitions such as
+    `[struct] PairT { [LeftT] first [RightT] second }` whose fields can use
+    type locals.
+  - implementation_notes:
+    - Start from nested definition parsing, AST ordering rules, struct layout
+      validation, template monomorphization family cloning, and semantic
+      product type/field metadata.
+    - Generated structs are nominal per enclosing definition specialization,
+      not structural aliases.
+  - acceptance:
+    - A local generated struct can be constructed and returned from the
+      enclosing definition.
+    - The struct's fields may use type locals that resolve from parameters or
+      earlier compile-time facts.
+    - Name shadowing, recursive generated storage, invalid field envelopes,
+      and escaping unsupported type locals reject deterministically.
+    - Struct metadata and field metadata are published for lowering without
+      source-text reconstruction.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once local generated structs are validated and usable in
+    the enclosing specialization; leave path/mangling hardening to TODO-4338.
+
+- [ ] TODO-4338: Stabilize generated type identity and mangling
+  - owner: ai
+  - created_at: 2026-05-04
+  - phase: Procedural compile-time genericity
+  - depends_on: TODO-4337
+  - scope: Define and implement deterministic paths, names, provenance, and
+    diagnostics for local generated nominal types across repeated builds and
+    import order.
+  - implementation_notes:
+    - Start from template specialization mangling, semantic node ids,
+      semantic-product provenance handles, AST/IR printers, and diagnostics
+      that mention generated type paths.
+    - Avoid path schemes that depend on unordered map iteration or incidental
+      clone order.
+  - acceptance:
+    - Generated type paths include the enclosing definition specialization and
+      local type name in a deterministic form.
+    - Repeated builds and import-order variations produce identical
+      semantic-product and IR names for the same source.
+    - Diagnostics for generated type errors point at the local type definition
+      and the relevant type-local facts.
+    - Golden/snapshot tests pin the generated identity surface.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once generated type identity is deterministic and covered;
+    leave full lowering integration to TODO-4339.
+
+- [ ] TODO-4339: Lower procedural generic facts through semantics
+  - owner: ai
+  - created_at: 2026-05-04
+  - phase: Procedural compile-time genericity
+  - depends_on: TODO-4338, TODO-4269
+  - scope: Route type locals, `typeof<symbol>` facts, and local generated
+    types through template monomorphization, semantic-product publication, and
+    IR lowering without backend-specific source reconstruction.
+  - implementation_notes:
+    - Start from `TemplateMonomorph*.h`, `SemanticProduct.h`,
+      `SemanticsValidatorSnapshots.cpp`, `IrPreparation.cpp`, and lowerer
+      setup/struct layout code.
+    - This is the semantic/lowering handoff slice for the procedural generic
+      model, not a new template solver.
+  - acceptance:
+    - The post-semantics AST and semantic-product dump contain concrete
+      generated types and no unresolved type locals.
+    - IR lowering consumes published semantic facts for generated type layout
+      and constructor use.
+    - VM/native/C++ compile-run coverage executes at least one procedural
+      generic helper such as `make_pair(left, right)`.
+    - Missing semantic-product facts fail closed with deterministic
+      diagnostics instead of syntax-only fallback.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once procedural generic facts lower through the ordinary
+    semantic-product boundary; leave examples/docs polish to TODO-4340.
+
+- [ ] TODO-4340: Add procedural generic examples and conformance
+  - owner: ai
+  - created_at: 2026-05-04
+  - phase: Procedural compile-time genericity
+  - depends_on: TODO-4339
+  - scope: Add user-facing examples, syntax docs, and conformance coverage for
+    procedural compile-time genericity.
+  - implementation_notes:
+    - Start from `docs/PrimeStruct_SyntaxSpec.md`, `docs/CodeExamples.md`,
+      `examples/`, parser/semantic diagnostics tests, compile-pipeline dumps,
+      and compile-run suites.
+    - Keep examples style-aligned: the feature should read like ordinary
+      left-to-right PrimeStruct code, not like C++ template metaprogramming.
+  - acceptance:
+    - Docs include a minimal `make_pair(left, right)` example using
+      `[type]`, `typeof<...>`, local `[struct]`, and brace construction.
+    - Examples compile and run under at least VM and native where supported.
+    - Negative conformance covers ambiguous bare names, bad `typeof` targets,
+      invalid type-local use, and generated-type identity diagnostics.
+    - Source-lock/example-lock tests are updated if the docs/examples surface
+      changes.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once the procedural genericity surface is documented,
+    example-backed, and covered by positive and negative conformance tests.
 
 - [ ] TODO-4292: Promote and style canonical `.prime` vector implementation
   - owner: ai
