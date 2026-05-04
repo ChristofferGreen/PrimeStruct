@@ -6,6 +6,27 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 4, 2026)**
+- [x] TODO-4360: Refresh at_unsafe access lock
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-04
+  - phase: Release-gate stabilization
+  - scope: Land the retained builtin array access helper lock by updating the
+    `at_unsafe` vector access instruction-count expectation to match the
+    current direct vector-data load path.
+  - acceptance:
+    - The helper lock still asserts that `at_unsafe` vector access does not
+      emit array-index-out-of-bounds callbacks.
+    - The retained `validation_cases_91_100` release shard passes focused
+      validation.
+  - stop_rule: Stop once the retained array-access helper shard passes without
+    weakening the direct vector-data load assertions.
+  - evidence: Updated the expected `at_unsafe` vector access instruction count
+    in
+    `test_ir_pipeline_validation_ir_lowerer_call_helpers_emit_builtin_array_access.cpp`;
+    focused release validation passed for
+    `ctest -R PrimeStruct_primestruct_ir_pipeline_validation_cases_91_100 --output-on-failure`.
+
 - [x] TODO-4360: Refresh SoA source-delegation lock
   - owner: ai
   - created_at: 2026-05-04

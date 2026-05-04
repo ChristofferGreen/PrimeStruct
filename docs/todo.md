@@ -506,6 +506,14 @@ Task template:
       with the retained
       `PrimeStruct_primestruct_ir_pipeline_validation_cases_91_100` failure
       from the current release log.
+    - 2026-05-04 lite slice: the retained builtin array access helper lock
+      now matches the current `at_unsafe` vector access emission count while
+      preserving the no-bounds-check callback assertion. Focused lite
+      validation passed for
+      `PrimeStruct_primestruct_ir_pipeline_validation_cases_91_100`;
+      continue with the retained
+      `PrimeStruct_primestruct_ir_pipeline_validation_cases_111_120` failure
+      from the current release log.
 
 - [ ] TODO-4298: Promote graph-backed non-template inference authority
   - owner: ai
