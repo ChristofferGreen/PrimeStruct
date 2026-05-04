@@ -661,6 +661,7 @@ TEST_CASE("ir lowerer result helpers use semantic query facts for direct Result 
       .queryTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
       .bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
   });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(263, 0);
   const auto semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
 
@@ -1010,6 +1011,7 @@ TEST_CASE("ir lowerer inference dispatch requires semantic try facts") {
       .semanticNodeId = 64,
       .operandResolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
   });
+  semanticProgram.publishedRoutingLookups.tryFactIndicesByExpr.insert_or_assign(64, 0);
   const auto semanticIndex =
       primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
   state.semanticProgram = &semanticProgram;
@@ -1074,6 +1076,8 @@ TEST_CASE("ir lowerer inference dispatch requires semantic try facts") {
       .semanticNodeId = 64,
       .operandResolvedPathId = primec::semanticProgramInternCallTargetString(incompleteSemanticProgram, "/lookup"),
   });
+  incompleteSemanticProgram.publishedRoutingLookups.tryFactIndicesByExpr.insert_or_assign(
+      64, 0);
   const auto incompleteSemanticIndex =
       primec::ir_lowerer::buildSemanticProductIndex(&incompleteSemanticProgram);
   state.semanticProgram = &incompleteSemanticProgram;

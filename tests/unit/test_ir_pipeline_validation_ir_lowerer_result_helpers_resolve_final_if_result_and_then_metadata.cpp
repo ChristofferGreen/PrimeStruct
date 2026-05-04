@@ -186,6 +186,7 @@ TEST_CASE("ir lowerer result helpers require semantic query facts for unresolved
       .resultValueTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "i64"),
       .resultErrorTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
   });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(771, 0);
   const auto semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
 
@@ -238,6 +239,8 @@ TEST_CASE("ir lowerer result helpers require semantic query facts for unresolved
       .semanticNodeId = 771,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(incompleteSemanticProgram, "/Result/map"),
   });
+  incompleteSemanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(
+      771, 0);
   const auto incompleteTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&incompleteSemanticProgram);
   out = {};
