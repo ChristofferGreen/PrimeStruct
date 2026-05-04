@@ -7,6 +7,22 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.imports");
 
+static void expect_soa_vector_helper_return_shadow_compile_reject(const std::string &source,
+                                                                  const std::string &nameStem,
+                                                                  const std::string &emitMode) {
+  const std::string srcPath = writeTemp(nameStem + ".prime", source);
+  const std::string outPath =
+      (testScratchPath("") / (nameStem + "_" + emitMode + "_out.txt")).string();
+  const std::string artifactPath =
+      (testScratchPath("") / (nameStem + "_" + emitMode + "_artifact")).string();
+
+  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
+                                 " -o " + quoteShellArg(artifactPath) + " --entry /main > " +
+                                 quoteShellArg(outPath) + " 2>&1";
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(outPath).find("call=/std/collections/soa_vector/ref") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs collection literals in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
@@ -1016,7 +1032,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs global helper-return soa_vector method shadows in C++ emitter") {
+TEST_CASE("rejects global helper-return soa_vector method shadows in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -1068,20 +1084,13 @@ main() {
                              cloneValues().reserve(37i32))))))
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_experimental_soa_vector_method_shadow_global_helper_return_exe.prime",
-                source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_experimental_soa_vector_method_shadow_global_helper_return_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 131);
+  expect_soa_vector_helper_return_shadow_compile_reject(
+      source,
+      "compile_experimental_soa_vector_method_shadow_global_helper_return_exe",
+      "exe");
 }
 
-TEST_CASE("compiles and runs method-like helper-return soa_vector method shadows in C++ emitter") {
+TEST_CASE("rejects method-like helper-return soa_vector method shadows in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -1135,17 +1144,10 @@ main() {
                              holder.cloneValues().reserve(37i32))))))
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_experimental_soa_vector_method_shadow_method_like_helper_return_exe.prime",
-                source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_experimental_soa_vector_method_shadow_method_like_helper_return_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 131);
+  expect_soa_vector_helper_return_shadow_compile_reject(
+      source,
+      "compile_experimental_soa_vector_method_shadow_method_like_helper_return_exe",
+      "exe");
 }
 
 TEST_CASE("compiles and runs vector-target old-explicit soa mutator shadows in C++ emitter") {

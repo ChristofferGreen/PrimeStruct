@@ -9,6 +9,21 @@
 #if PRIMESTRUCT_NATIVE_COLLECTIONS_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
+static void expect_soa_vector_helper_return_shadow_compile_reject(const std::string &source,
+                                                                  const std::string &nameStem) {
+  const std::string srcPath = writeTemp(nameStem + ".prime", source);
+  const std::string outPath =
+      (testScratchPath("") / (nameStem + "_native_out.txt")).string();
+  const std::string artifactPath =
+      (testScratchPath("") / (nameStem + "_native_artifact")).string();
+
+  const std::string compileCmd = "./primec --emit=native " + quoteShellArg(srcPath) + " -o " +
+                                 quoteShellArg(artifactPath) + " --entry /main > " +
+                                 quoteShellArg(outPath) + " 2>&1";
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(outPath).find("call=/std/collections/soa_vector/ref") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs native templated stdlib return wrapper temporaries in expressions") {
   const std::string source = R"(
 import /std/collections/*
@@ -929,7 +944,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("native runs global helper-return soa_vector method shadows") {
+TEST_CASE("native rejects global helper-return soa_vector method shadows") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -981,20 +996,12 @@ main() {
                              cloneValues().reserve(37i32))))))
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_native_experimental_soa_vector_method_shadow_global_helper_return.prime",
-                source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_native_experimental_soa_vector_method_shadow_global_helper_return")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 131);
+  expect_soa_vector_helper_return_shadow_compile_reject(
+      source,
+      "compile_native_experimental_soa_vector_method_shadow_global_helper_return");
 }
 
-TEST_CASE("native runs method-like helper-return soa_vector method shadows") {
+TEST_CASE("native rejects method-like helper-return soa_vector method shadows") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -1048,17 +1055,9 @@ main() {
                              holder.cloneValues().reserve(37i32))))))
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_native_experimental_soa_vector_method_shadow_method_like_helper_return.prime",
-                source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_native_experimental_soa_vector_method_shadow_method_like_helper_return")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 131);
+  expect_soa_vector_helper_return_shadow_compile_reject(
+      source,
+      "compile_native_experimental_soa_vector_method_shadow_method_like_helper_return");
 }
 
 TEST_CASE("native runs vector-target old-explicit soa mutator shadows") {
