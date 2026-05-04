@@ -695,6 +695,24 @@ Planned procedural compile-time genericity contract:
   invalid predicate evaluation. `false` means the requirement is not satisfied;
   an invalid predicate body, unsupported operation, or missing compile-time fact
   is a hard diagnostic, not a non-viable candidate.
+- User-defined requirement predicates return ordinary `bool` at the source
+  level. The compile-time evaluation layer wraps `true` and `false` into typed
+  requirement facts; evaluation faults remain hard diagnostics.
+- Compile-time predicate and helper execution should run through a
+  compiler-hosted compile-time VM facade. That facade may share the runtime VM
+  interpreter core for arithmetic, calls, branching, and frame mechanics, but
+  it has a separate `CompileTimeHost` with typed compile-time values, semantic
+  facts, `/std/meta/*` intrinsics, provenance, budgets, caches, and
+  phase-qualified compile-time effects.
+- The compiler must not depend on launching the normal runtime VM or final
+  backend IR to evaluate requirements. Requirements run during semantic
+  validation, before final lowering is complete, so the CT evaluator needs a
+  restricted compile-time lowering path or a small CT bytecode/fact evaluator
+  that shares VM pieces without coupling semantics to `primevm`.
+- Implementation should stage the evaluator conservatively: builtin
+  `/std/meta/*` facts first, then a typed compile-time value layer, then pure
+  user-defined predicate execution, and only then effectful compile-time
+  execution gated by `effects<compiletime>(...)`.
 - Compile-time execution is pure by default. Definitions may opt into
   compile-time side effects only through phase-qualified
   `effects<compiletime>(...)` transforms. Runtime `effects(...)` and

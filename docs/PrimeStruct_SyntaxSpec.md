@@ -774,8 +774,9 @@ Requirement rules:
 - Builtin predicates should cover the practical generic toolbox first: type
   equality, kind checks, constructibility, lifecycle availability,
   operation/trait support, field/member presence, and compile-time
-  integer/value relations. User-defined predicates use the same compile-time
-  execution model and must return a requirement fact.
+  integer/value relations. User-defined requirement predicates use the same
+  compile-time execution model and return ordinary `bool` at the source level;
+  semantic validation wraps `true` and `false` into typed requirement facts.
 - Builtin predicates live under `/std/meta/*`. Readable requirement syntax may
   canonicalize to those helpers or compiler-recognized facts, but user code
   should not define public helpers that collide with `/std/meta/*` names.
@@ -786,6 +787,18 @@ Requirement rules:
   predicate that returns `false` makes the requirement fail; a predicate that
   cannot be evaluated because its body is invalid, unsupported, effectful
   without permission, or missing a compile-time fact is a hard diagnostic.
+- Requirement and predicate execution runs in a compiler-hosted compile-time VM
+  facade. It may share the runtime VM interpreter core for arithmetic, calls,
+  branching, and frame mechanics, but it uses a separate `CompileTimeHost` with
+  typed compile-time values, semantic facts, `/std/meta/*` intrinsics,
+  provenance, budgets, caches, and phase-qualified compile-time effects.
+  Requirement evaluation must not depend on launching `primevm` or on final
+  backend IR, because requirements run during semantic validation before final
+  lowering is complete. The implementation may use a restricted compile-time
+  lowering path or a small CT bytecode/fact evaluator that shares VM pieces.
+- Compile-time value results are typed facts, not raw runtime slots. The
+  initial value set should include `bool`, integer constants, string literals,
+  type facts, symbols, and requirement results.
 - Failed requirements on a direct call are diagnostics. During overload
   selection, failed requirements make a candidate non-viable; if no candidate
   remains, diagnostics summarize the relevant failed requirements rather than
