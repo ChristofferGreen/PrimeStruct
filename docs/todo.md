@@ -409,6 +409,14 @@ Task template:
   - stop_rule: Stop once the release gate no longer blocks TODO execution, or
     once the first still-reproducible failure is fixed and the next blocker is
     documented for a follow-up stabilization commit.
+  - notes:
+    - 2026-05-04 lite slice: safe experimental-vector `vectorAt`/`.at`
+      return-tail lowering now emits builtin indexed-access bounds guards
+      instead of deferring to helper fallback; `vectorAtUnsafe` remains
+      deferred so its capacity-only contract is preserved. Local validation was
+      skipped under `$implement-todo-lite`; next non-lite stabilization should
+      rerun the retained VM bounds shard or move to the retained variadic SoA
+      args-pack forwarding failure if the bounds log is stale.
 
 - [ ] TODO-4298: Promote graph-backed non-template inference authority
   - owner: ai

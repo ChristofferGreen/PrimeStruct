@@ -80,12 +80,6 @@ bool isExplicitDirectVectorCountCall(const SemanticProgram *semanticProgram,
   return true;
 }
 
-bool isExperimentalVectorAccessTarget(const ArrayVectorAccessTargetInfo &targetInfo) {
-  return targetInfo.isVectorTarget &&
-         (targetInfo.structTypeName == "/std/collections/experimental_vector/Vector" ||
-          targetInfo.structTypeName.rfind("/std/collections/experimental_vector/Vector__", 0) == 0);
-}
-
 bool isNamedArgumentVectorTemporary(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || !hasNamedArguments(expr.argNames)) {
     return false;
@@ -498,11 +492,6 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
         (explicitHelperName == "at" || explicitHelperName == "at_unsafe");
     if (isExplicitVectorAccessCall && arrayVectorTargetInfo.isVectorTarget &&
         explicitHelperName == "at_unsafe") {
-      return NativeCallTailDispatchResult::NotHandled;
-    }
-    if (isExperimentalVectorAccessTarget(arrayVectorTargetInfo) &&
-        ((isExplicitVectorAccessCall && explicitHelperName == "at") ||
-         (expr.isMethodCall && accessName == "at"))) {
       return NativeCallTailDispatchResult::NotHandled;
     }
     if ((isExplicitDirectSoaAccessCall(expr) ||

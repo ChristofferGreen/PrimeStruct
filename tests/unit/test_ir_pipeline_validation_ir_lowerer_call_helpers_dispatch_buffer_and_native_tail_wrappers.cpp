@@ -260,9 +260,9 @@ TEST_CASE("ir lowerer call helpers dispatch buffer and native tail wrappers") {
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            error) == NativeResult::NotHandled);
+            error) == NativeResult::Emitted);
   CHECK(error.empty());
-  CHECK(instructions.empty());
+  CHECK_FALSE(instructions.empty());
 
   primec::Expr experimentalVectorMethodAtExpr;
   experimentalVectorMethodAtExpr.kind = primec::Expr::Kind::Call;
@@ -274,6 +274,39 @@ TEST_CASE("ir lowerer call helpers dispatch buffer and native tail wrappers") {
   error.clear();
   CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatchWithLocals(
             experimentalVectorMethodAtExpr,
+            locals,
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const std::string &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return LocalInfo::ValueKind::Int32;
+            },
+            [&]() { return nextTempLocal++; },
+            []() {},
+            []() {},
+            []() {},
+            instructionCount,
+            emitInstruction,
+            patchInstructionImm,
+            error) == NativeResult::Emitted);
+  CHECK(error.empty());
+  CHECK_FALSE(instructions.empty());
+
+  primec::Expr experimentalVectorAtUnsafeExpr = experimentalVectorAtExpr;
+  experimentalVectorAtUnsafeExpr.name =
+      "/std/collections/experimental_vector/vectorAtUnsafe__t25a78a513414c3bf";
+  instructions.clear();
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatchWithLocals(
+            experimentalVectorAtUnsafeExpr,
             locals,
             [](const primec::Expr &, std::string &) { return false; },
             [](const std::string &) { return true; },

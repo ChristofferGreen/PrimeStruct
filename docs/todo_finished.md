@@ -5,6 +5,31 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Completion (May 4, 2026)**
+- [x] TODO-4360: Emit safe vector-at tail bounds
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-04
+  - phase: Release-gate stabilization
+  - scope: Land the retained VM experimental-vector bounds slice by making
+    safe `vectorAt` and method `.at` return-position lowering use builtin
+    indexed access on experimental `Vector<T>` receivers instead of deferring
+    to helper fallback.
+  - acceptance:
+    - Explicit experimental-vector `vectorAt` native-tail dispatch emits
+      builtin access lowering for direct experimental `Vector<T>` locals.
+    - Method-form experimental-vector `.at` native-tail dispatch emits the
+      same builtin access lowering.
+    - Explicit `vectorAtUnsafe` remains deferred so its capacity-only helper
+      contract is preserved.
+  - stop_rule: Stop once return-position safe experimental-vector `at`
+    lowering takes the bounds-emitting builtin path and focused dispatch
+    coverage pins safe versus unsafe behavior.
+  - evidence: Removed the return-tail safe experimental-vector `at` deferral,
+    updated native-tail dispatch coverage to expect emitted safe `at` access
+    for explicit and method forms, added an unsafe `vectorAtUnsafe` regression
+    guard, and skipped local test execution per the lite workflow.
+
 **Todo Completion (May 1, 2026)**
 - [x] TODO-4298: Use semantic ids for pick bindings
   - owner: ai
