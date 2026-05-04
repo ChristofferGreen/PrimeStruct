@@ -174,7 +174,7 @@ TEST_CASE("maybe default and explicit none are equivalent") {
 [return<int>]
 main() {
   [Maybe<i32>] implicit{}
-  [Maybe<i32>] explicit{none}
+  [Maybe<i32>] explicitValue{none}
   [i32] left{pick(implicit) {
     none {
       1i32
@@ -183,7 +183,7 @@ main() {
       0i32
     }
   }}
-  [i32] right{pick(explicit) {
+  [i32] right{pick(explicitValue) {
     none {
       1i32
     }
