@@ -490,7 +490,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
          findSemanticProductDirectCallStdlibSurfaceId(semanticProgram, expr) ==
              StdlibSurfaceId::CollectionsVectorHelpers) &&
         (explicitHelperName == "at" || explicitHelperName == "at_unsafe");
-    if (isExplicitVectorAccessCall && arrayVectorTargetInfo.isVectorTarget) {
+    if (isExplicitVectorAccessCall && arrayVectorTargetInfo.isVectorTarget &&
+        explicitHelperName == "at_unsafe") {
       return NativeCallTailDispatchResult::NotHandled;
     }
     if ((isExplicitDirectSoaAccessCall(expr) ||

@@ -754,6 +754,9 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
         isBuiltinCountName || isBuiltinCapacityName || isArrayCountCall(expr) || isStringCountCall(expr) ||
         isVectorCapacityCall(expr) || isBuiltinAccessMethod || isBuiltinMapContainsName ||
         isBuiltinMapTryAtName || isBuiltinMapInsertName;
+    if (isBuiltinAccessMethod && accessName == "at" && isVectorTarget(expr.args.front(), localsIn)) {
+      return InlineCallDispatchResult::NotHandled;
+    }
     const Definition *callee = resolveMethodCallDefinition(expr);
     if (callee != nullptr) {
       if (expr.args.size() == 1 &&
@@ -860,6 +863,32 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
                                : callee->fullPath.substr(leafStart + 1);
         leaf = stripGeneratedInlineHelperSuffix(std::move(leaf));
         if (leaf == "vectorCount" || leaf == "vectorCapacity") {
+          return InlineCallDispatchResult::NotHandled;
+        }
+      }
+    }
+    if (expr.args.size() == 2 && isVectorTarget(expr.args.front(), localsIn)) {
+      std::string vectorHelperName;
+      if (resolveVectorHelperAliasName(expr, vectorHelperName) &&
+          vectorHelperName == "at") {
+        return InlineCallDispatchResult::NotHandled;
+      }
+      const size_t rawLeafStart = rawPath.find_last_of('/');
+      std::string rawLeaf = rawLeafStart == std::string::npos
+                                ? rawPath
+                                : rawPath.substr(rawLeafStart + 1);
+      rawLeaf = stripGeneratedInlineHelperSuffix(std::move(rawLeaf));
+      if (rawLeaf == "vectorAt" || rawLeaf == "at") {
+        return InlineCallDispatchResult::NotHandled;
+      }
+      if (const Definition *callee = resolveDefinitionCallFn(expr);
+          callee != nullptr) {
+        const size_t leafStart = callee->fullPath.find_last_of('/');
+        std::string leaf = leafStart == std::string::npos
+                               ? callee->fullPath
+                               : callee->fullPath.substr(leafStart + 1);
+        leaf = stripGeneratedInlineHelperSuffix(std::move(leaf));
+        if (leaf == "vectorAt" || leaf == "at") {
           return InlineCallDispatchResult::NotHandled;
         }
       }
