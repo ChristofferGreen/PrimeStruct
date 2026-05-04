@@ -1781,13 +1781,13 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(exprCountCapacityMapBuiltinsSource.find(
             "isLegacyOrCanonicalSoaHelperPath(\n"
-             "                             logicalSoaCountCanonical,\n"
-             "                             \"count\")") !=
+            "                              logicalSoaCountCanonical,\n"
+            "                              \"count\")") !=
         std::string::npos);
   CHECK(exprCountCapacityMapBuiltinsSource.find(
             "isLegacyOrCanonicalSoaHelperPath(\n"
-             "                             logicalSoaCountCanonical,\n"
-             "                             \"count_ref\")") !=
+            "                              logicalSoaCountCanonical,\n"
+            "                              \"count_ref\")") !=
         std::string::npos);
   CHECK(exprCountCapacityMapBuiltinsSource.find(
             "!hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/\" +\n"

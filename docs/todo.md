@@ -498,6 +498,14 @@ Task template:
       continue with the retained
       `PrimeStruct_primestruct_ir_pipeline_validation_cases_41_50` failure
       from the current release log.
+    - 2026-05-04 lite slice: the retained SoA source-delegation lock now
+      matches the current shared `isLegacyOrCanonicalSoaHelperPath(...)`
+      formatting after the canonical map-count validation refactor. Focused
+      lite validation passed for
+      `PrimeStruct_primestruct_ir_pipeline_validation_cases_41_50`; continue
+      with the retained
+      `PrimeStruct_primestruct_ir_pipeline_validation_cases_91_100` failure
+      from the current release log.
 
 - [ ] TODO-4298: Promote graph-backed non-template inference authority
   - owner: ai

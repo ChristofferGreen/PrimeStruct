@@ -6,6 +6,26 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 4, 2026)**
+- [x] TODO-4360: Refresh SoA source-delegation lock
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-04
+  - phase: Release-gate stabilization
+  - scope: Land the retained IR validation source-lock slice by updating the
+    SoA pending diagnostics delegation check to match the current shared
+    `isLegacyOrCanonicalSoaHelperPath(...)` formatting.
+  - acceptance:
+    - The source-delegation lock still asserts that SoA count and count_ref
+      diagnostics route through shared helper predicates.
+    - The retained `validation_cases_41_50` release shard passes focused
+      validation.
+  - stop_rule: Stop once the retained source-lock shard passes without
+    weakening the shared SoA diagnostic-helper assertions.
+  - evidence: Updated only the expected source snippets in
+    `test_ir_pipeline_validation_emitter_expr_control_if_branch_emit_step_composes_value_and_handlers.cpp`;
+    focused release validation passed for
+    `ctest -R PrimeStruct_primestruct_ir_pipeline_validation_cases_41_50 --output-on-failure`.
+
 - [x] TODO-4360: Route indexed variadic map count
   - owner: ai
   - created_at: 2026-05-04
