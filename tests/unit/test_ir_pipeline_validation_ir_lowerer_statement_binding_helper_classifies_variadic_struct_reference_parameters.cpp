@@ -1283,6 +1283,66 @@ main([array<string>] args) {
   CHECK(info.structTypeName.empty());
 }
 
+TEST_CASE(
+    "ir lowerer statement binding helper preserves explicit specialized "
+    "vector local element kinds") {
+  const std::string source = R"(
+import /std/collections/experimental_vector/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<i32>] values{vectorPair<i32>(4i32, 9i32)}
+  return(vectorAt<i32>(values, 0i32))
+}
+)";
+
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.empty());
+
+  const primec::Definition *mainDef = findDefinitionByPath(program, "/main");
+  REQUIRE(mainDef != nullptr);
+  const primec::Expr *binding = findBindingStatementByName(*mainDef, "values");
+  REQUIRE(binding != nullptr);
+  REQUIRE(binding->args.size() == 1);
+
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::unordered_set<std::string> structNames;
+  primec::ir_lowerer::buildDefinitionMapAndStructNames(
+      program.definitions, defMap, structNames, &semanticProgram);
+  const auto importAliases = primec::ir_lowerer::buildImportAliasesFromProgram(
+      program.imports, program.definitions, defMap);
+  const auto callResolutionAdapters =
+      primec::ir_lowerer::makeCallResolutionAdapters(defMap, importAliases, &semanticProgram);
+  const auto resolveDefinitionCall =
+      primec::ir_lowerer::makeResolveDefinitionCall(
+          defMap, callResolutionAdapters.resolveExprPath, &semanticProgram);
+  auto bindingTypeAdapters = primec::ir_lowerer::makeBindingTypeAdapters(&semanticProgram);
+  const auto semanticProductTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+
+  const primec::ir_lowerer::StatementBindingTypeInfo info =
+      primec::ir_lowerer::inferStatementBindingTypeInfo(
+          *binding,
+          binding->args.front(),
+          {},
+          bindingTypeAdapters.hasExplicitBindingTypeTransform,
+          bindingTypeAdapters.bindingKind,
+          bindingTypeAdapters.bindingValueKind,
+          [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+            return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+          },
+          resolveDefinitionCall,
+          &semanticProductTargets);
+
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Vector);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(info.structTypeName.rfind(
+            "/std/collections/experimental_vector/Vector__", 0) == 0);
+}
+
 TEST_CASE("ir lowerer statement binding helper leaves explicit bare struct locals unresolved") {
   primec::Expr stmt;
   stmt.kind = primec::Expr::Kind::Call;

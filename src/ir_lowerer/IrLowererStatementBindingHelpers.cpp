@@ -1023,7 +1023,10 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
       }
       mergeStatementBindingAuxTypeInfo(semanticInfo, info);
     }
-    info.valueKind = bindingValueKind(stmt, info.kind);
+    const LocalInfo::ValueKind declaredValueKind = bindingValueKind(stmt, info.kind);
+    if (declaredValueKind != LocalInfo::ValueKind::Unknown) {
+      info.valueKind = declaredValueKind;
+    }
     if (info.valueKind == LocalInfo::ValueKind::Unknown &&
         info.kind == LocalInfo::Kind::Map) {
       info.valueKind = info.mapValueKind;
