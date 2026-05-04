@@ -870,6 +870,52 @@ main() {
   CHECK(summary->returnKind == "i32");
 }
 
+TEST_CASE("ir lowerer call helpers publish root soa_vector constructor bridge choices") {
+  const std::string source = R"(
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>(Particle(7i32), Particle(9i32))}
+  return(count(values))
+}
+)";
+
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error, {"io_out", "io_err"}));
+  CHECK(error.empty());
+
+  const auto *bridgeEntry = findLowererSemanticEntry(
+      primec::semanticProgramBridgePathChoiceView(semanticProgram),
+      [&semanticProgram](const primec::SemanticProgramBridgePathChoice &entry) {
+        return entry.scopePath == "/main" && entry.collectionFamily == "soa_vector" &&
+               primec::semanticProgramBridgePathChoiceHelperName(semanticProgram, entry) ==
+                   "soa_vector";
+      });
+  REQUIRE(bridgeEntry != nullptr);
+
+  const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  primec::Definition *mainDef = findLowererDefinitionByPathMutable(program, "/main");
+  REQUIRE(mainDef != nullptr);
+  primec::Expr *constructorExpr = findLowererExprInDefinitionMutable(
+      *mainDef,
+      [](const primec::Expr &expr) {
+        return expr.kind == primec::Expr::Kind::Call && !expr.isMethodCall &&
+               expr.name == "soa_vector";
+      });
+  REQUIRE(constructorExpr != nullptr);
+  CHECK(constructorExpr->semanticNodeId == bridgeEntry->semanticNodeId);
+  CHECK(semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr.count(
+            constructorExpr->semanticNodeId) == 1);
+  CHECK_FALSE(primec::ir_lowerer::findSemanticProductBridgePathChoice(adapter, *constructorExpr)
+                  .empty());
+}
+
 TEST_CASE("ir lowerer call helpers keep exact-import vector and map bridge parity") {
   const std::string source = R"(
 import /std/collections/vector

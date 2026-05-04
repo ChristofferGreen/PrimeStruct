@@ -105,17 +105,26 @@ std::string snapshotKey(std::string_view first,
 
 std::optional<std::pair<std::string, std::string>>
 collectionBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
+  auto stripSpecializationSuffix = [](std::string_view path) {
+    const std::size_t lastSlash = path.rfind('/');
+    const std::size_t marker = path.rfind("__t");
+    if (marker == std::string_view::npos || lastSlash == std::string_view::npos ||
+        marker <= lastSlash) {
+      return path;
+    }
+    return path.substr(0, marker);
+  };
+  const std::string_view normalizedResolvedPath =
+      stripSpecializationSuffix(resolvedPath);
+  if (normalizedResolvedPath == "/soa_vector" ||
+      normalizedResolvedPath == "soa_vector" ||
+      normalizedResolvedPath == "/std/collections/soa_vector" ||
+      normalizedResolvedPath == "std/collections/soa_vector") {
+    return std::pair<std::string, std::string>("soa_vector", "soa_vector");
+  }
+
   const StdlibSurfaceMetadata *metadata = findStdlibSurfaceMetadataByResolvedPath(resolvedPath);
   if (metadata == nullptr) {
-    auto stripSpecializationSuffix = [](std::string_view path) {
-      const std::size_t lastSlash = path.rfind('/');
-      const std::size_t marker = path.rfind("__t");
-      if (marker == std::string_view::npos || lastSlash == std::string_view::npos ||
-          marker <= lastSlash) {
-        return path;
-      }
-      return path.substr(0, marker);
-    };
     auto resolveSoaHelperName = [&](std::string_view path) -> std::string_view {
       const std::string_view normalizedPath = stripSpecializationSuffix(path);
       auto matchCanonicalPrefix = [&](std::string_view prefix) -> std::string_view {
