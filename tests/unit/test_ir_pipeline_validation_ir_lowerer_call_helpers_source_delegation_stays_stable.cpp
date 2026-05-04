@@ -439,6 +439,10 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(lowerStatementsExprSource.find("path == \"/soa_vector/count_ref\"") !=
         std::string::npos);
+  CHECK(lowerStatementsExprSource.find("path == \"/soa_vector/reserve\"") !=
+        std::string::npos);
+  CHECK(lowerStatementsExprSource.find("path == \"/soa_vector/push\"") !=
+        std::string::npos);
   CHECK(lowerStatementsExprSource.find("isSamePathSoaHelperPath(rawPath)") !=
         std::string::npos);
   CHECK(uninitializedStructInferenceSource.find(
@@ -1680,6 +1684,12 @@ TEST_CASE("ir lowerer semantic-product adapter rejects call-target source lookup
           primec::semanticProgramInternCallTargetString(semanticProgram, "/std/file/FileError/status"),
       .stdlibSurfaceId = primec::StdlibSurfaceId::FileErrorHelpers,
   });
+  semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.insert_or_assign(
+      155,
+      primec::semanticProgramInternCallTargetString(
+          semanticProgram, "/std/file/FileError/status"));
+  semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr
+      .insert_or_assign(155, primec::StdlibSurfaceId::FileErrorHelpers);
   semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
       .scopePath = "/main",
       .methodName = "at",
@@ -1966,6 +1976,8 @@ TEST_CASE("ir lowerer call helpers require semantic-product bridge-path choices"
       .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"),
       .stdlibSurfaceId = std::nullopt,
   });
+  semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.insert_or_assign(
+      18, primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"));
   auto semanticResolveExprPath =
       primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases, &semanticProgram);
   CHECK(semanticResolveExprPath(callExpr) == "/vector/count");
@@ -2126,6 +2138,7 @@ TEST_CASE("ir lowerer semantic-product adapter joins facts by semantic id withou
       .initializerResolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/id"),
   });
+  semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr.insert_or_assign(62, 0);
   semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
       .scopePath = "/main",
       .callName = "lookup",
@@ -2141,6 +2154,7 @@ TEST_CASE("ir lowerer semantic-product adapter joins facts by semantic id withou
       .semanticNodeId = 63,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
   });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(63, 0);
   semanticProgram.tryFacts.push_back(primec::SemanticProgramTryFact{
       .scopePath = "/main",
       .operandBindingTypeText = "Result<i32, FileError>",
@@ -2157,6 +2171,7 @@ TEST_CASE("ir lowerer semantic-product adapter joins facts by semantic id withou
       .semanticNodeId = 64,
       .operandResolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
   });
+  semanticProgram.publishedRoutingLookups.tryFactIndicesByExpr.insert_or_assign(64, 0);
 
   const auto semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
@@ -3871,6 +3886,8 @@ TEST_CASE("ir lowerer call helpers keep semantic direct-call targets authoritati
       .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/multiply"),
       .stdlibSurfaceId = std::nullopt,
   });
+  semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.insert_or_assign(
+      42, primec::semanticProgramInternCallTargetString(semanticProgram, "/multiply"));
 
   const auto resolveExprPath =
       primec::ir_lowerer::makeResolveCallPathFromScope(

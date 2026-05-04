@@ -209,6 +209,12 @@
             if (path == "/soa_vector/ref_ref") {
               return std::string("/std/collections/soa_vector/ref_ref");
             }
+            if (path == "/soa_vector/reserve") {
+              return std::string("/std/collections/soa_vector/reserve");
+            }
+            if (path == "/soa_vector/push") {
+              return std::string("/std/collections/soa_vector/push");
+            }
             if (path == "/to_aos") {
               return std::string("/std/collections/soa_vector/to_aos");
             }
