@@ -107,8 +107,8 @@ score_refs([args<Reference<SoaVector<Particle>>>] values) {
   [SoaVector<Particle>] head{dereference(at(values, 0i32))}
   [SoaVector<Particle>] tail{dereference(at(values, 2i32))}
   return(plus(count(values),
-              plus(/std/collections/vector/count(/std/collections/soa_vector/to_aos<Particle>(head)),
-                   /std/collections/vector/count(/std/collections/soa_vector/to_aos<Particle>(tail)))))
+              plus(/std/collections/soa_vector/count<Particle>(head),
+                   /std/collections/soa_vector/count<Particle>(tail))))
 }
 
 [return<int>]
@@ -185,8 +185,8 @@ score_ptrs([args<Pointer<SoaVector<Particle>>>] values) {
   [SoaVector<Particle>] head{dereference(at(values, 0i32))}
   [SoaVector<Particle>] tail{dereference(at(values, 2i32))}
   return(plus(count(values),
-              plus(/std/collections/vector/count(/std/collections/soa_vector/to_aos<Particle>(head)),
-                   /std/collections/vector/count(/std/collections/soa_vector/to_aos<Particle>(tail)))))
+              plus(/std/collections/soa_vector/count<Particle>(head),
+                   /std/collections/soa_vector/count<Particle>(tail))))
 }
 
 [return<int>]
@@ -263,8 +263,8 @@ score_soas([args<SoaVector<Particle>>] values) {
   [SoaVector<Particle>] head{values[0i32]}
   [SoaVector<Particle>] tail{values[2i32]}
   return(plus(count(values),
-              plus(/std/collections/vector/count(/std/collections/soa_vector/to_aos<Particle>(head)),
-                   /std/collections/vector/count(/std/collections/soa_vector/to_aos<Particle>(tail)))))
+              plus(/std/collections/soa_vector/count<Particle>(head),
+                   /std/collections/soa_vector/count<Particle>(tail))))
 }
 
 [return<int>]
