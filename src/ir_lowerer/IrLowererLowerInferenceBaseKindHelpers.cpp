@@ -101,6 +101,21 @@ bool inferBaseSetupSemanticQueryFactValueKind(const Expr &expr,
   return false;
 }
 
+std::string resolveBaseSetupSemanticTryValueTypeText(
+    const SemanticProgram &semanticProgram,
+    const SemanticProgramTryFact &tryFact) {
+  if (tryFact.valueTypeId != InvalidSymbolId) {
+    const std::string resolvedTypeText =
+        std::string(semanticProgramResolveCallTargetString(
+            semanticProgram,
+            tryFact.valueTypeId));
+    if (!resolvedTypeText.empty()) {
+      return trimTemplateTypeText(resolvedTypeText);
+    }
+  }
+  return trimTemplateTypeText(tryFact.valueType);
+}
+
 bool inferBaseSetupSemanticTryFactValueKind(const Expr &expr,
                                             const SemanticProgram *semanticProgram,
                                             const SemanticProductIndex *semanticIndex,
@@ -117,14 +132,8 @@ bool inferBaseSetupSemanticTryFactValueKind(const Expr &expr,
   if (tryFact == nullptr) {
     return false;
   }
-  std::string valueTypeText = trimTemplateTypeText(tryFact->valueType);
-  if (tryFact->valueTypeId != InvalidSymbolId) {
-    const std::string resolvedTypeText =
-        std::string(semanticProgramResolveCallTargetString(*semanticProgram, tryFact->valueTypeId));
-    if (!resolvedTypeText.empty()) {
-      valueTypeText = trimTemplateTypeText(resolvedTypeText);
-    }
-  }
+  const std::string valueTypeText =
+      resolveBaseSetupSemanticTryValueTypeText(*semanticProgram, *tryFact);
   kindOut = valueKindFromTypeName(valueTypeText);
   if (kindOut == LocalInfo::ValueKind::Unknown && !valueTypeText.empty()) {
     kindOut = LocalInfo::ValueKind::Int64;

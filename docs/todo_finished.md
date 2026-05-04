@@ -6,6 +6,27 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 4, 2026)**
+- [x] TODO-4298: Lock try base-kind value IDs
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-04
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer `try(...)` base-kind value-type ID-order
+    contract slice by naming the semantic-product try value resolver and by
+    covering stale copied value-type text.
+  - acceptance:
+    - `try(...)` base-kind inference compares interned try value-type IDs
+      before copied `SemanticProgramTryFact` text.
+    - Stale copied try value-type text cannot override a matching interned
+      try value-type ID.
+    - Missing try facts still fail closed with the existing semantic-product
+      try diagnostic on semantic-product-addressed sites.
+  - stop_rule: Stop once the `try(...)` base-kind path has a focused helper
+    contract for interned value-type ID precedence.
+  - evidence: Extracted the base-kind semantic try value-type resolver and
+    added helper coverage for stale copied try value text. Local validation
+    was skipped under the lite workflow.
+
 - [x] TODO-4298: Lock Result.error query IDs
   - owner: ai
   - created_at: 2026-04-28

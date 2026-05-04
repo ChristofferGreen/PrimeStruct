@@ -1029,6 +1029,50 @@ TEST_CASE("ir lowerer inference dispatch requires semantic try facts") {
   CHECK(state.inferExprKind(tryExpr, {}) == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
   CHECK(error.empty());
 
+  primec::SemanticProgram staleValueTextSemanticProgram;
+  staleValueTextSemanticProgram.tryFacts.push_back(primec::SemanticProgramTryFact{
+      .scopePath = "/main",
+      .operandBindingTypeText = "Result<bool, FileError>",
+      .operandReceiverBindingTypeText = "",
+      .operandQueryTypeText = "Result<bool, FileError>",
+      .valueType = "string",
+      .errorType = "FileError",
+      .contextReturnKind = "return",
+      .onErrorHandlerPath = "/handler",
+      .onErrorErrorType = "FileError",
+      .onErrorBoundArgCount = 1,
+      .sourceLine = 12,
+      .sourceColumn = 9,
+      .semanticNodeId = 64,
+      .operandResolvedPathId =
+          primec::semanticProgramInternCallTargetString(
+              staleValueTextSemanticProgram,
+              "/lookup"),
+      .valueTypeId =
+          primec::semanticProgramInternCallTargetString(
+              staleValueTextSemanticProgram,
+              "bool"),
+  });
+  staleValueTextSemanticProgram.publishedRoutingLookups.tryFactIndicesByExpr
+      .insert_or_assign(64, 0);
+  const auto staleValueTextSemanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(
+          &staleValueTextSemanticProgram);
+  state.semanticProgram = &staleValueTextSemanticProgram;
+  state.semanticIndex = &staleValueTextSemanticIndex;
+  error.clear();
+  CHECK(primec::ir_lowerer::runLowerInferenceExprKindDispatchSetup(
+      {
+          .defMap = &defMap,
+          .resolveExprPath = [](const primec::Expr &) { return std::string{}; },
+          .error = &error,
+      },
+      state,
+      error));
+  CHECK(state.inferExprKind(tryExpr, {}) ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+  CHECK(error.empty());
+
   primec::SemanticProgram missingSemanticProgram;
   const auto missingSemanticIndex =
       primec::ir_lowerer::buildSemanticProductIndex(&missingSemanticProgram);
