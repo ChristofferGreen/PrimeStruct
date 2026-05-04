@@ -1809,8 +1809,15 @@ TEST_CASE("ir lowerer semantic-product adapter exposes published stdlib surface 
   });
   semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr.insert_or_assign(
       52, primec::StdlibSurfaceId::FileErrorHelpers);
+  semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.insert_or_assign(
+      52,
+      primec::semanticProgramInternCallTargetString(
+          semanticProgram, "/std/file/FileError/status"));
   semanticProgram.publishedRoutingLookups.methodCallStdlibSurfaceIdsByExpr.insert_or_assign(
       53, primec::StdlibSurfaceId::FileErrorHelpers);
+  semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr.insert_or_assign(
+      53,
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/FileError/status"));
   semanticProgram.publishedRoutingLookups.bridgePathChoiceStdlibSurfaceIdsByExpr.insert_or_assign(
       54, primec::StdlibSurfaceId::CollectionsMapHelpers);
 
@@ -1819,6 +1826,8 @@ TEST_CASE("ir lowerer semantic-product adapter exposes published stdlib surface 
   CHECK(adapter.publishedRoutingLookups->directCallStdlibSurfaceIdsByExpr.count(52) == 1);
   CHECK(adapter.publishedRoutingLookups->methodCallStdlibSurfaceIdsByExpr.count(53) == 1);
   CHECK(adapter.publishedRoutingLookups->bridgePathChoiceStdlibSurfaceIdsByExpr.count(54) == 1);
+  CHECK(adapter.publishedRoutingLookups->directCallTargetIdsByExpr.count(52) == 1);
+  CHECK(adapter.publishedRoutingLookups->methodCallTargetIdsByExpr.count(53) == 1);
 
   primec::Expr directExpr;
   directExpr.kind = primec::Expr::Kind::Call;
