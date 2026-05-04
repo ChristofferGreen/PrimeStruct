@@ -187,6 +187,8 @@ TEST_CASE("ir lowerer setup type helper requires semantic-product method targets
                                                         "/std/collections/soa_vector/push"),
       .stdlibSurfaceId = std::nullopt,
   });
+  semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr
+      .insert_or_assign(17, semanticProgram.methodCallTargets.back().resolvedPathId);
 
   error.clear();
   resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
@@ -310,6 +312,8 @@ TEST_CASE("ir lowerer setup type helper keeps semantic direct user collection fa
                                                         "/i32/count"),
       .stdlibSurfaceId = std::nullopt,
   });
+  semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr
+      .insert_or_assign(61, semanticProgram.directCallTargets.back().resolvedPathId);
 
   std::string error;
   const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
@@ -354,6 +358,8 @@ TEST_CASE("ir lowerer setup type helper keeps semantic direct user collection fa
                                                         "/array/capacity"),
       .stdlibSurfaceId = std::nullopt,
   });
+  semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr
+      .insert_or_assign(62, semanticProgram.directCallTargets.back().resolvedPathId);
 
   error.clear();
   resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
@@ -404,6 +410,9 @@ TEST_CASE("ir lowerer setup type helper keeps semantic direct user collection fa
                                                               resolvedPath),
             .stdlibSurfaceId = std::nullopt,
         });
+        semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr
+            .insert_or_assign(
+                semanticNodeId, semanticProgram.directCallTargets.back().resolvedPathId);
 
         error.clear();
         const primec::Definition *accessResolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
@@ -463,6 +472,8 @@ TEST_CASE("ir lowerer setup type helper rejects semantic-product method targets 
                                                         "/std/collections/map/contains"),
       .stdlibSurfaceId = std::nullopt,
   });
+  semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr
+      .insert_or_assign(91, semanticProgram.methodCallTargets.back().resolvedPathId);
 
   std::string error;
   const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
@@ -522,6 +533,8 @@ TEST_CASE("ir lowerer setup type helper does not reconstruct method targets from
                                                         "/semantic/method/contains"),
       .stdlibSurfaceId = std::nullopt,
   });
+  semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr
+      .insert_or_assign(133, semanticProgram.methodCallTargets.back().resolvedPathId);
 
   std::string error;
   const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
