@@ -28,6 +28,15 @@ foo()
 foo(arg1, arg2)
 ```
 
+Planned procedural compile-time genericity broadens the meaning of `<...>` from
+"template argument list" to a general compile-time argument channel while
+preserving existing template syntax as the first supported use of that channel.
+Under that model, `name<T>(value)` is an execution with compile-time argument
+`T` and runtime argument `value`, and `name<T>` is an execution with
+compile-time arguments and no runtime arguments. The current implementation
+still treats these forms as template syntax unless a feature section below says
+otherwise.
+
 Surface definitions also accept a post-parameter transform placement:
 
 ```
@@ -108,6 +117,12 @@ Language levels (0.Concrete → 3.Surface) follow the same ordering as the compi
 - **2.Inference:** canonical envelopes plus `auto`/omitted envelopes (implicit template inference).
 - **3.Surface:** surface syntax + text transforms that rewrite into canonical forms, including `name(...) [transforms] {
   ... }` definition sugar.
+
+Planned compile-time procedural forms sit above the current Template and
+Inference levels: they should desugar to the same fully concrete post-semantic
+core, but their source spelling makes type-level work look like ordinary
+left-to-right commands over named facts rather than like a separate template
+sub-language.
 
 Import expansion runs before type checking and template inference. All definitions/executions live in a single
 compilation unit after imports are expanded, so implicit-template inference may use call sites anywhere in the
@@ -653,7 +668,58 @@ execute_task([count] 2i32)
 - Executions may be prefixed with a transform list (e.g., `[effects(io_out)] log()`).
 - Executions are parsed and validated but not emitted by the current C++ emitter.
 
-### 6.3 Unsafe Scopes
+### 6.3 Planned Procedural Compile-Time Genericity
+
+This section records the intended direction for making type-level programming
+feel like ordinary PrimeStruct execution. It is not fully implemented yet; open
+TODOs track the parser, semantic-product, monomorphization, and lowering work.
+
+The planned source model is:
+
+```prime
+make_pair(left, right) {
+  [type] LeftT { typeof<left> }
+  [type] RightT { typeof<right> }
+
+  [struct] PairT {
+    [LeftT] first
+    [RightT] second
+  }
+
+  return(PairT{[first] left, [second] right})
+}
+```
+
+Rules:
+- `<...>` is the compile-time argument channel. Existing explicit templates are
+  compile-time arguments to definitions and calls; future compile-time
+  primitives such as `typeof<left>` use the same channel.
+- `(...)` is the runtime argument channel. A form may have compile-time
+  arguments, runtime arguments, both, or neither.
+- A bare `name` in command or value position resolves to exactly one visible
+  entity. If that entity is a local stack value, the form reads it. If it is a
+  zero-argument definition, the form executes it and uses its result. If both a
+  stack value and callable are visible under the same name, or if no unique
+  entity can be selected, semantic validation rejects the source.
+- `[type] Name { expr }` is a planned compile-time local binding whose value is
+  a type fact. Type locals may be used in later type-envelope positions in the
+  same scope, including fields of generated local struct definitions.
+- `typeof<symbol>` is a planned compile-time primitive that resolves `symbol`
+  through the same lexical/semantic name-resolution rules as ordinary forms
+  and produces the concrete type of the selected value or parameter.
+- Local generated type definitions such as `[struct] PairT { ... }` are planned
+  nominal types scoped to the enclosing definition specialization. Their
+  generated paths must be deterministic so diagnostics, semantic-product dumps,
+  and IR names stay stable across repeated builds and import order.
+- Procedural compile-time genericity must desugar before IR lowering so the
+  canonical lowering-facing program still contains no `auto`, unresolved
+  compile-time type locals, or unspecialized generated types.
+
+This model intentionally keeps ordinary templates source-compatible while
+letting future generic code express type computation as a sequence of named
+compile-time facts.
+
+### 6.4 Unsafe Scopes
 
 ```
 [unsafe] block {

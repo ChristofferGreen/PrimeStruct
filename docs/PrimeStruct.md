@@ -59,6 +59,15 @@ PrimeStruct is organized into four language levels. Each higher level desugars i
 - **3.Surface:** surface syntax and text transforms (operator sugar, collection literals, indexing sugar, `if(...) {}`
   blocks, and `name() [transforms] { ... }` definition sugar) that rewrite into canonical forms.
 
+Planned procedural compile-time genericity extends this ladder without changing
+the lowering contract: `<...>` becomes the compile-time argument channel,
+`(...)` remains the runtime argument channel, and type-level work can be
+written as ordinary left-to-right commands over named compile-time facts. For
+example, a generic pair helper can bind `[type] LeftT { typeof<left> }`, bind
+`[type] RightT { typeof<right> }`, define a local `[struct] PairT { ... }`,
+and return `PairT{...}`. These forms must still canonicalize before IR
+lowering so backends see only concrete definitions, calls, and types.
+
 ### Compilation model (v1)
 - **Whole-program by default:** `import` expansion produces a single compilation unit, and semantic resolution runs over
   that full unit; implicit-template inference may use call sites anywhere in the expanded source. The v1 toolchain
@@ -636,6 +645,29 @@ Planned omitted-envelope and local-`auto` expansion contract:
   - unchanged unresolved/contradictory diagnostics are pinned in coverage
 - This work remains downstream of template migration because widening local/omitted inference before template
   dependencies are graph-backed would create new pilot-only islands around template-dependent call routing.
+
+Planned procedural compile-time genericity contract:
+- Existing template syntax remains source-compatible, but its architectural
+  interpretation should move toward "`<...>` is the compile-time argument
+  channel" rather than "templates are a separate language inside the language."
+- Bare zero-argument execution, compile-time type locals, `typeof<symbol>`,
+  and local generated type definitions must all reuse ordinary name resolution
+  and produce deterministic ambiguity diagnostics instead of inventing a second
+  lookup model.
+- `[type]` locals are semantic compile-time facts. They may be consumed by
+  later type-envelope positions and generated type declarations, but they must
+  not survive into backend-facing IR.
+- Local generated types are nominal per enclosing definition specialization.
+  Their generated paths, semantic-product provenance, and IR names must be
+  stable across repeated builds and import order.
+- The implementation path should first document and parse the compile-time
+  argument channel, then add bare zero-argument name resolution, then add type
+  locals and `typeof<symbol>`, and only then lower local generated types through
+  the existing monomorphization/semantic-product boundary.
+- These features are blocked on the same graph-backed ownership discipline as
+  template migration: compile-time generic facts must be published or adapted at
+  an explicit semantic-product boundary, not reconstructed independently by
+  lowerers or CT-eval helpers.
 
 ### Planned semantics-to-lowering boundary
 PrimeStruct is migrating toward an explicit post-semantics product that sits between the syntax-faithful AST and IR
@@ -1667,16 +1699,20 @@ explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rej
   one concrete envelope; unresolved or ambiguous inference is a diagnostic. Struct field envelopes must be concrete
   before layout manifest emission. Parameters that omit an explicit envelope are treated as `auto` and become implicit
   template parameters inferred per call site. Lists recursively reuse whitespace-separated tokens.
-  - Syntax markers: `[]` compile-time transforms, `<>` templates, `()` runtime parameters/calls, `{}` runtime code
-    (definition bodies, binding initializers).
+  - Syntax markers: `[]` compile-time transforms, `<>` compile-time arguments/templates, `()` runtime
+    parameters/calls, `{}` runtime code (definition bodies, binding initializers).
   - `[...]` enumerates metafunction transforms applied in order (see “Built-in transforms”).
   - **Bracket-list name binding rule:** `[...]` is contextual. Entries already known in the current syntactic position
     keep their transform, type-envelope, modifier, or label meaning. When the grammar expects a binding pattern, fresh
     identifiers inside the bracket list introduce new names. This preserves existing forms such as `[i32] count{0i32}`
     and `[mut] value{0i32}` while allowing future destructuring forms such as `[left right] pair`; mixed or ambiguous
     lists must be diagnosed deterministically rather than silently reinterpreted.
-  - `<...>` supplies compile-time envelopes/templates—primarily for transforms or when inference must be overridden.
-  - `(...)` lists runtime parameters; calls always include `()` (even with no args), and `()` never appears on bindings.
+  - `<...>` supplies compile-time envelopes/templates today and is the planned general compile-time argument channel.
+    Future compile-time primitives such as `typeof<value>` use this same channel rather than pretending to be runtime
+    calls.
+  - `(...)` lists runtime parameters; current calls always include `()` (even with no args), and `()` never appears on
+    bindings. Planned bare zero-argument execution will allow `name` to execute a unique visible zero-argument
+    definition in command/value position when no stack value or other visible entity makes the name ambiguous.
   - **Parameters:** use the same binding envelope as locals: `main([array<string>] args, [i32] limit{10i32})`.
     Qualifiers like `mut`/`copy` apply here as well; defaults are optional and currently limited to literal/pure forms
     (no name references).
