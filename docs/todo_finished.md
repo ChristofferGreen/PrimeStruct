@@ -6,6 +6,32 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 4, 2026)**
+- [x] TODO-4360: Preserve variadic pointer struct metadata
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-04
+  - phase: Release-gate stabilization
+  - scope: Land the retained statement-binding metadata slice by preserving
+    `Reference<T>` and `Pointer<T>` wrapper transforms when variadic args-pack
+    parameters probe struct pointee metadata.
+  - acceptance:
+    - Variadic `args<Reference<Pair>>` parameters keep `/pkg/Pair` in
+      `LocalInfo::structTypeName`.
+    - Variadic `args<Pointer<Pair>>` parameters keep `/pkg/Pair` in
+      `LocalInfo::structTypeName`.
+    - Existing scalar, map, vector, and SoA args-pack metadata classification
+      remains routed through the same focused backend IR shard.
+    - The retained `ir_pipeline_validation_cases_851_860` shard passes focused
+      release-mode validation.
+  - stop_rule: Stop once pointer-like variadic struct parameters retain their
+    pointee struct metadata without weakening collection args-pack metadata.
+  - evidence: Preserved pointer-like wrapper transforms for synthetic
+    args-pack struct metadata probes, rebuilt `PrimeStruct_backend_ir_tests`,
+    and focused release validation passed for
+    `ctest -R PrimeStruct_primestruct_ir_pipeline_validation_cases_851_860 --output-on-failure`
+    plus direct doctest reruns for the reference, pointer, and semantic-product
+    args-pack metadata cases.
+
 - [x] TODO-4360: Seed method-call routing fixture lookup
   - owner: ai
   - created_at: 2026-05-04

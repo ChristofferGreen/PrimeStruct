@@ -90,6 +90,17 @@ This file stores durable session-derived facts that are useful in later work. Ke
   semantic-product completeness manifest, and `published target lookups ignore
   raw routing facts without maps` locks the no-raw-routing-fallback contract.
 
+### variadic-pointer-struct-metadata-keeps-wrapper
+- Updated: 2026-05-04
+- Tags: ir, metadata, variadic
+- Fact: Variadic `args<Reference<T>>` and `args<Pointer<T>>` parameter metadata
+  must preserve the wrapper transform when probing struct pointee metadata, even
+  though the resulting args-pack element kind is pointer-like.
+- Evidence: The retained `PrimeStruct_primestruct_ir_pipeline_validation_cases_851_860`
+  shard failed because `args<Reference<Pair>>` and `args<Pointer<Pair>>` lost
+  `/pkg/Pair` as `LocalInfo::structTypeName`; preserving the wrapper transform
+  lets the existing struct binding callbacks resolve the pointee.
+
 ### semantic-product-sums-omit-callable-summaries
 - Updated: 2026-05-01
 - Tags: semantics, ir, sums

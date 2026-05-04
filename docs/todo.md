@@ -456,6 +456,15 @@ Task template:
       stale, then passed
       `PrimeStruct_primestruct_ir_pipeline_validation_cases_701_710`;
       continue with the next retained failure from the saved release log.
+    - 2026-05-04 lite slice: variadic `args<Reference<T>>` and
+      `args<Pointer<T>>` parameter metadata now preserves the wrapper
+      transform shape when probing struct pointee metadata, so struct
+      pointees such as `Pair` keep their `structTypeName`. Focused lite
+      validation passed for
+      `PrimeStruct_primestruct_ir_pipeline_validation_cases_851_860`;
+      continue with the retained
+      `PrimeStruct_primestruct_semantics_struct_transforms_struct_transforms_11_20`
+      failure from the saved release log.
 
 - [ ] TODO-4298: Promote graph-backed non-template inference authority
   - owner: ai
