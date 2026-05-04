@@ -67,11 +67,14 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
+- TODO-4360: Stabilize retained release failures before TODO execution
 - TODO-4298: Promote graph-backed non-template inference authority
 - TODO-4266: Rewire `?` to the `Result` sum contract
 
 ### Immediate Next 10 (After Ready Now)
 
+- TODO-4298: Promote graph-backed non-template inference authority
+- TODO-4266: Rewire `?` to the `Result` sum contract
 - TODO-4267: Retire legacy Maybe/Result representations
 - TODO-4291: Decide sum-backed mutable `Maybe<T>` helpers
 - TODO-4292: Promote and style canonical `.prime` vector implementation
@@ -80,11 +83,10 @@ Task template:
 - TODO-4281: Lift vector dynamic capacity limit
 - TODO-4295: Move collection surface metadata out of C++
 - TODO-4296: Delete vector compatibility seams
-- TODO-4297: Add zero C++ vector-surface audit
-- TODO-4299: Promote and style canonical `.prime` map implementation
 
 ### Priority Lanes (Current)
 
+- Release-gate stabilization: TODO-4360
 - Semantic ownership authority: TODO-4298
 - Deferred stdlib ADT migration: TODO-4266 -> TODO-4267
   -> TODO-4291
@@ -108,6 +110,7 @@ Task template:
 
 ### Execution Queue (Recommended)
 
+- TODO-4360: Stabilize retained release failures before TODO execution
 - TODO-4298: Promote graph-backed non-template inference authority
 - TODO-4266: Rewire `?` to the `Result` sum contract
 - TODO-4267: Retire legacy Maybe/Result representations
@@ -194,7 +197,7 @@ Task template:
 | Debugger/source-map provenance parity | none |
 | Debug trace replay robustness | none |
 | VM/runtime debug stateful opcode parity | none |
-| Test-suite audit follow-up and release-gate stability | none |
+| Test-suite audit follow-up and release-gate stability | TODO-4360 |
 | Algebraic sum types and brace-only construction | none |
 | Stdlib ADT migration for `Maybe` and `Result` | TODO-4266, TODO-4267, TODO-4291 |
 | Generic type packs and tuple stdlib surface | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
@@ -376,6 +379,36 @@ Task template:
   skipped coverage is not a stable end state.
 
 ### Task Blocks
+
+- [ ] TODO-4360: Stabilize retained release failures before TODO execution
+  - owner: ai
+  - created_at: 2026-05-04
+  - phase: Release-gate stabilization
+  - scope: Triage and reduce the retained release-mode failures that blocked
+    TODO-lite execution after the interrupted release gate. Start from
+    `build-release/Testing/Temporary/LastTest.log` and the current checkout,
+    discard stale failures already fixed by later commits, then fix the first
+    still-reproducible failure with the smallest release-mode rerun allowed by
+    the normal workflow. Representative retained failures include variadic SoA
+    args-pack forwarding returning `3` with `array index out of bounds` logs,
+    VM experimental-vector bounds checks returning success instead of the
+    expected runtime error, and remaining Result/Maybe/map/SoA conformance
+    failures that may already be stale relative to recent stabilization commits.
+  - implementation_notes: Under `$implement-todo-lite`, do not run tests; use
+    this item to keep stabilization ahead of feature TODOs until a non-lite
+    workflow can validate the retained failures. Under the normal workflow,
+    rerun the smallest matching release shard before editing so stale log
+    entries do not drive unnecessary changes.
+  - acceptance:
+    - Stale retained failures are separated from still-reproducible failures
+      with concrete release-mode evidence.
+    - At least one still-reproducible release failure is fixed without relaxing
+      an intended runtime or diagnostic contract.
+    - The full `./scripts/compile.sh --release` gate is rerun after the fix, or
+      any remaining failures are documented with the next focused target.
+  - stop_rule: Stop once the release gate no longer blocks TODO execution, or
+    once the first still-reproducible failure is fixed and the next blocker is
+    documented for a follow-up stabilization commit.
 
 - [ ] TODO-4298: Promote graph-backed non-template inference authority
   - owner: ai
