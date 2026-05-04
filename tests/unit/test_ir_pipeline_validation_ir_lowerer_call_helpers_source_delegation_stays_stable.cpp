@@ -1715,6 +1715,12 @@ TEST_CASE("ir lowerer semantic-product adapter rejects call-target source lookup
           primec::semanticProgramInternCallTargetString(semanticProgram, "/std/collections/vector/at"),
       .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelpers,
   });
+  semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr.insert_or_assign(
+      244,
+      primec::semanticProgramInternCallTargetString(
+          semanticProgram, "/std/collections/vector/at"));
+  semanticProgram.publishedRoutingLookups.methodCallStdlibSurfaceIdsByExpr
+      .insert_or_assign(244, primec::StdlibSurfaceId::CollectionsVectorHelpers);
 
   const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
 
@@ -2942,7 +2948,7 @@ TEST_CASE("ir lowerer semantic-product adapter uses query semantic-id matches wi
   CHECK(queryFact->queryTypeText == "Result<i32, FileError>");
 }
 
-TEST_CASE("ir lowerer semantic-product adapter uses raw query semantic-id without path fallback") {
+TEST_CASE("ir lowerer semantic-product adapter uses published query semantic-id without path fallback") {
   primec::Expr queryExpr;
   queryExpr.kind = primec::Expr::Kind::Call;
   queryExpr.name = "lookup";
@@ -2980,6 +2986,7 @@ TEST_CASE("ir lowerer semantic-product adapter uses raw query semantic-id withou
       .callNameId = callNameId,
       .resolvedPathId = resolvedPathId,
   });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(8303, 0);
   semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
       .scopePath = "/main",
       .callName = "lookup",
