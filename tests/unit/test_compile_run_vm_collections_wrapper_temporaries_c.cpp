@@ -104,7 +104,7 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " +
                              quoteShellArg(errPath) + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/mapAt__") !=
+  CHECK(readFile(errPath).find("at requires string map key") !=
         std::string::npos);
 }
 
@@ -151,7 +151,7 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " +
                              quoteShellArg(errPath) + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/mapAtUnsafe__") !=
+  CHECK(readFile(errPath).find("at_unsafe requires string map key") !=
         std::string::npos);
 }
 

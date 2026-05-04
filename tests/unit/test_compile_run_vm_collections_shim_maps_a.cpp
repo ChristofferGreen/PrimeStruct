@@ -377,9 +377,7 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.find("argument type mismatch for /std/collections/mapAt__") != std::string::npos);
-  CHECK(error.find("parameter values: expected map<bool, i32> got map<i32, i32>") !=
-        std::string::npos);
+  CHECK(error.find("at requires map key type i32") != std::string::npos);
 }
 
 TEST_CASE("rejects vm stdlib collection shim map at string key type mismatch") {
@@ -400,8 +398,7 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.find("argument type mismatch for /std/collections/mapAt__") != std::string::npos);
-  CHECK(error.find("parameter key: expected string") != std::string::npos);
+  CHECK(error.find("at requires string map key") != std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim map at unsafe") {
@@ -452,9 +449,7 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.find("argument type mismatch for /std/collections/mapAtUnsafe__") !=
-        std::string::npos);
-  CHECK(error.find("parameter values: expected map<bool, i32> got map<i32, i32>") !=
+  CHECK(error.find("at_unsafe requires map key type i32") !=
         std::string::npos);
 }
 
@@ -476,9 +471,7 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.find("argument type mismatch for /std/collections/mapAtUnsafe__") !=
-        std::string::npos);
-  CHECK(error.find("parameter key: expected string") != std::string::npos);
+  CHECK(error.find("at_unsafe requires string map key") != std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim map method access string keys") {
@@ -580,8 +573,7 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.find("argument type mismatch for /std/collections/mapAt__") != std::string::npos);
-  CHECK(error.find("parameter key: expected string") != std::string::npos);
+  CHECK(error.find("at requires string map key") != std::string::npos);
 }
 
 TEST_CASE("rejects vm stdlib collection shim map method call parity unsafe key type mismatch") {
@@ -603,9 +595,8 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.find("argument type mismatch for /std/collections/mapAtUnsafe__") !=
+  CHECK(error.find("at_unsafe requires string map key") !=
         std::string::npos);
-  CHECK(error.find("parameter key: expected string") != std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim map single standalone string keys") {
