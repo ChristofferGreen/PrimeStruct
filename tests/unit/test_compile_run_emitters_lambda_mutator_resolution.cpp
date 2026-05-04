@@ -11,14 +11,17 @@ void expectCollectDiagnosticsFailure(const std::string& emitKind,
                                      const std::string& source,
                                      std::initializer_list<const char*> messages) {
   const std::string srcPath = writeTemp(std::string(fileStem) + ".prime", source);
-  const std::string errPath = (testScratchPath("") / (std::string(fileStem) + ".json")).string();
+  const std::string diagnosticsPath =
+      (testScratchPath("") / (std::string(fileStem) + ".diagnostics.txt")).string();
   const std::string cmd = "./primec --emit=" + emitKind + " " + quoteShellArg(srcPath) +
-                          " --entry /main --emit-diagnostics --collect-diagnostics 2> " +
-                          quoteShellArg(errPath);
+                          " --entry /main --emit-diagnostics --collect-diagnostics > " +
+                          quoteShellArg(diagnosticsPath) + " 2>&1";
 
   CHECK(runCommand(cmd) == 2);
 
-  const std::string diagnostics = readFile(errPath);
+  const std::string diagnostics = readFile(diagnosticsPath);
+  INFO(diagnostics);
+  CHECK_FALSE(diagnostics.empty());
   CHECK((diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos ||
          diagnostics.find("[PSC1005]") != std::string::npos));
   CHECK((diagnostics.find("\"label\":\"definition: /main\"") != std::string::npos ||
@@ -314,12 +317,11 @@ main() {
   return(0i32)
 }
 )";
-  const std::string srcPath = writeTemp("compile_cpp_lambda_vector_mutator_shadow_mismatch.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_lambda_vector_mutator_shadow_mismatch_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+  expectCollectDiagnosticsFailure(
+      "exe",
+      "compile_cpp_lambda_vector_mutator_shadow_mismatch",
+      source,
+      {"unknown call target: /std/collections/vector/push"});
 }
 
 TEST_CASE("C++ emitter lambda mutator mismatch rejects call-form helper") {
@@ -336,12 +338,11 @@ main() {
   return(0i32)
 }
 )";
-  const std::string srcPath = writeTemp("compile_cpp_lambda_vector_mutator_call_mismatch.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_lambda_vector_mutator_call_mismatch_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+  expectCollectDiagnosticsFailure(
+      "exe",
+      "compile_cpp_lambda_vector_mutator_call_mismatch",
+      source,
+      {"unknown call target: /std/collections/vector/push"});
 }
 
 TEST_CASE("compiles and runs import alias in C++ emitter") {
