@@ -186,6 +186,42 @@
                                                  const std::string &rawPath)
             -> const Definition * {
           const std::string normalizedRawPath = stripGeneratedHelperSuffix(rawPath);
+          if (const Definition *directSoaWrapper =
+                  findDirectHelperDefinition(rawPath)) {
+            return directSoaWrapper;
+          }
+          auto canonicalSamePathSoaWrapper = [](const std::string &path) {
+            if (path == "/soa_vector/count") {
+              return std::string("/std/collections/soa_vector/count");
+            }
+            if (path == "/soa_vector/count_ref") {
+              return std::string("/std/collections/soa_vector/count_ref");
+            }
+            if (path == "/soa_vector/get") {
+              return std::string("/std/collections/soa_vector/get");
+            }
+            if (path == "/soa_vector/get_ref") {
+              return std::string("/std/collections/soa_vector/get_ref");
+            }
+            if (path == "/soa_vector/ref") {
+              return std::string("/std/collections/soa_vector/ref");
+            }
+            if (path == "/soa_vector/ref_ref") {
+              return std::string("/std/collections/soa_vector/ref_ref");
+            }
+            if (path == "/to_aos") {
+              return std::string("/std/collections/soa_vector/to_aos");
+            }
+            if (path == "/to_aos_ref") {
+              return std::string("/std/collections/soa_vector/to_aos_ref");
+            }
+            return std::string{};
+          };
+          if (const std::string canonicalPath =
+                  canonicalSamePathSoaWrapper(normalizedRawPath);
+              !canonicalPath.empty()) {
+            return findDirectHelperDefinition(canonicalPath);
+          }
           const bool isExperimentalSoaToAosCall =
               normalizedRawPath ==
               "/std/collections/experimental_soa_vector_conversions/soaVectorToAos";
@@ -199,7 +235,7 @@
               }
             }
           }
-          return findDirectHelperDefinition(rawPath);
+          return nullptr;
         };
         auto findDirectEntryMapConstructorDefinition = [&](const Expr &callExpr)
             -> const Definition * {
@@ -397,7 +433,8 @@
             directCallee = findDirectStructDefinition(expr);
           }
           if (directCallee == nullptr &&
-              isSoaWrapperHelperFamilyPath(rawPath)) {
+              (isSoaWrapperHelperFamilyPath(rawPath) ||
+               isSamePathSoaHelperPath(rawPath))) {
             directCallee = findDirectSoaWrapperDefinition(expr, rawPath);
           }
           const std::string resolvedExprPath = resolveExprPath(expr);

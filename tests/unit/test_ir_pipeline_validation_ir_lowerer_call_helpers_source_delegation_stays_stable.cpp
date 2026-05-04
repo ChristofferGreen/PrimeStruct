@@ -41,6 +41,8 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
       repoRoot / "src" / "ir_lowerer" / "IrLowererNativeTailDispatch.cpp";
   const std::filesystem::path tailDispatchPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h";
+  const std::filesystem::path lowerStatementsExprPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsExpr.h";
   const std::filesystem::path operatorCollectionMutationHelpersPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererOperatorCollectionMutationHelpers.cpp";
   const std::filesystem::path operatorMemoryPointerHelpersPath =
@@ -60,6 +62,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   REQUIRE(std::filesystem::exists(countAccessHelpersPath));
   REQUIRE(std::filesystem::exists(nativeTailDispatchPath));
   REQUIRE(std::filesystem::exists(tailDispatchPath));
+  REQUIRE(std::filesystem::exists(lowerStatementsExprPath));
   REQUIRE(std::filesystem::exists(operatorCollectionMutationHelpersPath));
   REQUIRE(std::filesystem::exists(operatorMemoryPointerHelpersPath));
   REQUIRE(std::filesystem::exists(astCallPathHelpersPath));
@@ -78,6 +81,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   const std::string countAccessHelpersSource = readText(countAccessHelpersPath);
   const std::string nativeTailDispatchSource = readText(nativeTailDispatchPath);
   const std::string tailDispatchSource = readText(tailDispatchPath);
+  const std::string lowerStatementsExprSource = readText(lowerStatementsExprPath);
   const std::string operatorCollectionMutationHelpersSource =
       readText(operatorCollectionMutationHelpersPath);
   const std::string operatorMemoryPointerHelpersSource =
@@ -428,6 +432,14 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(inlineParamHelpersSource.find("matchesPath(\"/soa_vector/to_aos\")") ==
         std::string::npos);
   CHECK(inlineParamHelpersSource.find("matchesPath(\"/soa_vector/to_aos_ref\")") ==
+        std::string::npos);
+  CHECK(lowerStatementsExprSource.find("canonicalSamePathSoaWrapper") !=
+        std::string::npos);
+  CHECK(lowerStatementsExprSource.find("path == \"/soa_vector/ref\"") !=
+        std::string::npos);
+  CHECK(lowerStatementsExprSource.find("path == \"/soa_vector/count_ref\"") !=
+        std::string::npos);
+  CHECK(lowerStatementsExprSource.find("isSamePathSoaHelperPath(rawPath)") !=
         std::string::npos);
   CHECK(uninitializedStructInferenceSource.find(
             "soa_paths::isExperimentalSoaVectorSpecializedTypePath(normalizedReceiverStruct)") !=
