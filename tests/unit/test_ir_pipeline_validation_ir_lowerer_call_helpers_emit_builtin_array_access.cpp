@@ -182,6 +182,14 @@ TEST_CASE("ir lowerer call helpers emit builtin array access") {
   locals.emplace("v", vectorInfo);
   int arrayIndexOutOfBoundsCalls = 0;
   int nextLocal = 20;
+  auto emitVectorAccessExpr = [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+    if (expr.kind == primec::Expr::Kind::Name && expr.name == "v") {
+      instructions.push_back({primec::IrOpcode::PushI64, 100});
+      return true;
+    }
+    instructions.push_back({primec::IrOpcode::PushI32, 2});
+    return true;
+  };
   CHECK(primec::ir_lowerer::emitBuiltinArrayAccess(
       "at",
       vectorTarget,
@@ -191,10 +199,7 @@ TEST_CASE("ir lowerer call helpers emit builtin array access") {
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return Kind::Int32; },
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
       [&]() { return nextLocal++; },
-      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        instructions.push_back({primec::IrOpcode::PushI32, 2});
-        return true;
-      },
+      emitVectorAccessExpr,
       []() {},
       []() {},
       [&]() { ++arrayIndexOutOfBoundsCalls; },
@@ -204,7 +209,82 @@ TEST_CASE("ir lowerer call helpers emit builtin array access") {
       error));
   CHECK(error.empty());
   CHECK(arrayIndexOutOfBoundsCalls == 2);
-  REQUIRE(instructions.size() >= 6);
+  REQUIRE(instructions.size() == 26);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[0].imm == 100);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 20);
+  CHECK(instructions[2].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[2].imm == 2);
+  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[3].imm == 21);
+  CHECK(instructions[4].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[4].imm == 20);
+  CHECK(instructions[5].op == primec::IrOpcode::LoadIndirect);
+  CHECK(instructions[6].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[6].imm == 22);
+  CHECK(instructions[7].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[7].imm == 21);
+  CHECK(instructions[8].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[8].imm == 0);
+  CHECK(instructions[9].op == primec::IrOpcode::CmpLtI32);
+  CHECK(instructions[11].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[11].imm == 21);
+  CHECK(instructions[12].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[12].imm == 22);
+  CHECK(instructions[13].op == primec::IrOpcode::CmpGeI32);
+  CHECK(instructions[15].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[15].imm == 20);
+  CHECK(instructions[16].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[16].imm == 32);
+  CHECK(instructions[17].op == primec::IrOpcode::AddI64);
+  CHECK(instructions[18].op == primec::IrOpcode::LoadIndirect);
+  CHECK(instructions[19].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[19].imm == 23);
+  CHECK(instructions[20].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[20].imm == 23);
+  CHECK(instructions[21].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[21].imm == 21);
+  CHECK(instructions[22].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[22].imm == primec::IrSlotBytesI32);
+  CHECK(instructions[23].op == primec::IrOpcode::MulI32);
+  CHECK(instructions[24].op == primec::IrOpcode::AddI64);
+  CHECK(instructions.back().op == primec::IrOpcode::LoadIndirect);
+
+  instructions.clear();
+  error.clear();
+  arrayIndexOutOfBoundsCalls = 0;
+  nextLocal = 20;
+  CHECK(primec::ir_lowerer::emitBuiltinArrayAccess(
+      "at_unsafe",
+      vectorTarget,
+      indexExpr,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return Kind::Int32; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [&]() { return nextLocal++; },
+      emitVectorAccessExpr,
+      []() {},
+      []() {},
+      [&]() { ++arrayIndexOutOfBoundsCalls; },
+      [&]() { return instructions.size(); },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
+      error));
+  CHECK(error.empty());
+  CHECK(arrayIndexOutOfBoundsCalls == 0);
+  REQUIRE(instructions.size() == 16);
+  CHECK(instructions[4].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[4].imm == 20);
+  CHECK(instructions[5].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[5].imm == 32);
+  CHECK(instructions[6].op == primec::IrOpcode::AddI64);
+  CHECK(instructions[7].op == primec::IrOpcode::LoadIndirect);
+  CHECK(instructions[8].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[8].imm == 22);
+  CHECK(instructions[9].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[9].imm == 22);
   CHECK(instructions.back().op == primec::IrOpcode::LoadIndirect);
 
   instructions.clear();
