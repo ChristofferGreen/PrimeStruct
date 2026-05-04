@@ -20,6 +20,14 @@ TEST_CASE("ir lowerer call helpers dispatch buffer and native tail wrappers") {
   vectorInfo.valueKind = LocalInfo::ValueKind::Unknown;
   locals.emplace("vec", vectorInfo);
 
+  LocalInfo experimentalVectorInfo{};
+  experimentalVectorInfo.kind = LocalInfo::Kind::Value;
+  experimentalVectorInfo.index = 13;
+  experimentalVectorInfo.valueKind = LocalInfo::ValueKind::Int32;
+  experimentalVectorInfo.structTypeName =
+      "/std/collections/experimental_vector/Vector__t25a78a513414c3bf";
+  locals.emplace("experimentalVec", experimentalVectorInfo);
+
   LocalInfo soaInfo;
   soaInfo.kind = LocalInfo::Kind::Value;
   soaInfo.index = 12;
@@ -34,6 +42,10 @@ TEST_CASE("ir lowerer call helpers dispatch buffer and native tail wrappers") {
   primec::Expr vecName;
   vecName.kind = primec::Expr::Kind::Name;
   vecName.name = "vec";
+
+  primec::Expr experimentalVecName;
+  experimentalVecName.kind = primec::Expr::Kind::Name;
+  experimentalVecName.name = "experimentalVec";
 
   primec::Expr soaName;
   soaName.kind = primec::Expr::Kind::Name;
@@ -216,6 +228,77 @@ TEST_CASE("ir lowerer call helpers dispatch buffer and native tail wrappers") {
             patchInstructionImm,
             error) == NativeResult::NotHandled);
   CHECK(error.empty());
+
+  primec::Expr experimentalVectorAtExpr;
+  experimentalVectorAtExpr.kind = primec::Expr::Kind::Call;
+  experimentalVectorAtExpr.name = "/std/collections/experimental_vector/vectorAt__t25a78a513414c3bf";
+  experimentalVectorAtExpr.args = {experimentalVecName, twoLiteral};
+
+  instructions.clear();
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatchWithLocals(
+            experimentalVectorAtExpr,
+            locals,
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const std::string &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return LocalInfo::ValueKind::Int32;
+            },
+            [&]() { return nextTempLocal++; },
+            []() {},
+            []() {},
+            []() {},
+            instructionCount,
+            emitInstruction,
+            patchInstructionImm,
+            error) == NativeResult::NotHandled);
+  CHECK(error.empty());
+  CHECK(instructions.empty());
+
+  primec::Expr experimentalVectorMethodAtExpr;
+  experimentalVectorMethodAtExpr.kind = primec::Expr::Kind::Call;
+  experimentalVectorMethodAtExpr.name = "at";
+  experimentalVectorMethodAtExpr.isMethodCall = true;
+  experimentalVectorMethodAtExpr.args = {experimentalVecName, twoLiteral};
+
+  instructions.clear();
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatchWithLocals(
+            experimentalVectorMethodAtExpr,
+            locals,
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const std::string &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return LocalInfo::ValueKind::Int32;
+            },
+            [&]() { return nextTempLocal++; },
+            []() {},
+            []() {},
+            []() {},
+            instructionCount,
+            emitInstruction,
+            patchInstructionImm,
+            error) == NativeResult::NotHandled);
+  CHECK(error.empty());
+  CHECK(instructions.empty());
 
   primec::Expr tempReceiverCall;
   tempReceiverCall.kind = primec::Expr::Kind::Call;
