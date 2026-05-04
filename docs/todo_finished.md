@@ -6,6 +6,35 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 4, 2026)**
+- [x] TODO-4360: Accept typed lower-case constructors
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-04
+  - phase: Release-gate stabilization
+  - scope: Land the retained struct-transform lifecycle slice by preserving
+    `Copy(other)` shorthand as `Reference<Self>` and by making typed binding
+    initializers treat a matching lower-case `Type{...}` value as a brace
+    constructor instead of a final block binding.
+  - acceptance:
+    - `Copy(other)` lifecycle shorthand builds the same reference parameter
+      shape accepted by explicit `Reference<Self>` and resolved
+      `Reference</thing>` helpers.
+    - `[thing] item{thing{}}` parses and validates as a lower-case struct
+      brace constructor inside an explicitly typed binding initializer.
+    - Final ordinary block bindings remain rejected outside the explicit
+      typed-constructor recovery path.
+    - The retained `struct_transforms_11_20` and `struct_transforms_21_30`
+      release shards pass focused validation.
+  - stop_rule: Stop once the retained lifecycle struct-transform shards pass
+    without weakening the generic block-expression final-value diagnostic.
+  - evidence: Normalized Copy shorthand parameters in semantic parameter
+    building, reinterpreted matching lower-case constructor initializers in
+    parser binding finalization, added parser and semantic regression tests,
+    and focused release validation passed for
+    `ctest -R PrimeStruct_primestruct_semantics_struct_transforms_struct_transforms_11_20 --output-on-failure`
+    and
+    `ctest -R PrimeStruct_primestruct_semantics_struct_transforms_struct_transforms_21_30 --output-on-failure`.
+
 - [x] TODO-4360: Preserve variadic pointer struct metadata
   - owner: ai
   - created_at: 2026-05-04

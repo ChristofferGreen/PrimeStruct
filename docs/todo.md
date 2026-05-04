@@ -465,6 +465,17 @@ Task template:
       continue with the retained
       `PrimeStruct_primestruct_semantics_struct_transforms_struct_transforms_11_20`
       failure from the saved release log.
+    - 2026-05-04 lite slice: typed binding initializer finalization now
+      reinterprets a single lower-case binding-shaped `Type{...}` initializer
+      that matches the explicit binding type as a brace constructor before
+      semantic block validation, and Copy helper shorthand parameters now
+      normalize to `Reference<Self>`. Focused lite validation passed for
+      `PrimeStruct_primestruct_semantics_struct_transforms_struct_transforms_11_20`
+      and
+      `PrimeStruct_primestruct_semantics_struct_transforms_struct_transforms_21_30`;
+      continue with the retained
+      `PrimeStruct_primestruct_semantics_bindings_struct_defaults_bindings_struct_defaults_21_28`
+      failure from the saved release log.
 
 - [ ] TODO-4298: Promote graph-backed non-template inference authority
   - owner: ai

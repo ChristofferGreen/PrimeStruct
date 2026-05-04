@@ -711,6 +711,24 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("typed binding accepts empty lower-case constructor") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value{1i32}
+}
+
+[return<int>]
+main() {
+  [thing] item{thing{}}
+  return(item.value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("struct brace constructor accepts named arguments") {
   const std::string source = R"(
 [struct]

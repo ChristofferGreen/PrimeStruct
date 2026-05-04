@@ -430,6 +430,40 @@ main() {
   CHECK(blockArg.bodyArguments[0].kind == primec::Expr::Kind::Literal);
 }
 
+TEST_CASE("parses lower-case constructor in typed binding initializer") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value{1i32}
+}
+
+[return<int>]
+main() {
+  [thing] item{thing{}}
+  return(0i32)
+}
+)";
+
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 2);
+  const auto &mainDef = program.definitions[1];
+  REQUIRE(mainDef.statements.size() == 2);
+  const auto &binding = mainDef.statements[0];
+  REQUIRE(binding.isBinding);
+  REQUIRE(binding.args.size() == 1);
+  const auto &constructor = binding.args[0];
+  REQUIRE(constructor.kind == primec::Expr::Kind::Call);
+  CHECK(constructor.name == "thing");
+  CHECK(constructor.isBraceConstructor);
+  CHECK_FALSE(constructor.isBinding);
+  REQUIRE(constructor.args.size() == 1);
+  const auto &blockArg = constructor.args[0];
+  REQUIRE(blockArg.kind == primec::Expr::Kind::Call);
+  CHECK(blockArg.name == "block");
+  CHECK(blockArg.hasBodyArguments);
+  CHECK(blockArg.bodyArguments.empty());
+}
+
 TEST_CASE("parses brace constructor argument lists") {
   const std::string source = R"(
 [return<int>]

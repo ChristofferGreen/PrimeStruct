@@ -614,6 +614,42 @@ bool Parser::finalizeBindingInitializer(Expr &binding) {
     templateArgs = transform.templateArgs;
     break;
   }
+  auto matchesBindingTypeName = [](std::string candidate, std::string typeName) {
+    auto stripLeadingSlash = [](std::string &value) {
+      if (!value.empty() && value.front() == '/') {
+        value.erase(value.begin());
+      }
+    };
+    auto leafName = [](const std::string &value) {
+      const size_t slash = value.find_last_of('/');
+      return slash == std::string::npos ? value : value.substr(slash + 1);
+    };
+    stripLeadingSlash(candidate);
+    stripLeadingSlash(typeName);
+    return candidate == typeName || candidate == leafName(typeName);
+  };
+  auto reinterpretSingleBlockBindingAsConstructor = [&]() -> bool {
+    if (!hasSingleInitializer || !hasBlockInitializer || typeName.empty() ||
+        isVectorBindingTypeName(typeName)) {
+      return false;
+    }
+    Expr &block = binding.args.front();
+    if (block.bodyArguments.size() != 1) {
+      return false;
+    }
+    Expr &candidate = block.bodyArguments.front();
+    if (!candidate.isBinding || !candidate.transforms.empty() ||
+        !candidate.templateArgs.empty() ||
+        !matchesBindingTypeName(candidate.name, typeName)) {
+      return false;
+    }
+    candidate.isBinding = false;
+    candidate.isBraceConstructor = true;
+    binding.args.front() = std::move(candidate);
+    binding.argNames.assign(1, std::nullopt);
+    return true;
+  };
+  (void)reinterpretSingleBlockBindingAsConstructor();
   if (hasSingleInitializer && (!hasBlockInitializer || typeName.empty() ||
                                !isVectorBindingTypeName(typeName))) {
     return true;

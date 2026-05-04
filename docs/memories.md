@@ -34,6 +34,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: Native `FileError.why` and `Result.why(FileError)` lowering must forward the FileError why emitter as a possibly-empty callback instead of wrapping it in an unconditional lambda.
 - Evidence: Known native image compile-run failures aborted with `std::bad_function_call`; `IrLowererLowerEmitExpr.h`, `IrLowererResultWhyHelpers.cpp`, and `IrLowererRuntimeErrorHelpers.cpp` now preserve empty callbacks and report `FileError.why emitter is unavailable` through focused helper tests.
 
+### lower-case-constructors-in-typed-initializers
+- Updated: 2026-05-04
+- Tags: parser, semantics, structs
+- Fact: A single lower-case `Type{...}` value inside an explicitly typed binding initializer must be reinterpreted from binding-shaped parser output to a brace constructor when its name matches the binding type.
+- Evidence: The retained `struct_transforms_11_20` shard failed because `[thing] a{thing{}}` reached block validation as a final binding; `Parser::finalizeBindingInitializer` now rewrites that matching shape and focused parser/semantic regressions cover it.
+
 ### map-compatibility-aliases-require-source-definitions
 - Updated: 2026-05-01
 - Tags: semantics, collections, compatibility

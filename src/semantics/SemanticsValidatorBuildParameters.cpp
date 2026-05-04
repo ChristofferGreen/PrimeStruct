@@ -155,6 +155,18 @@ bool SemanticsValidator::buildParameters() {
     auto bindingCarriesExperimentalMapValue = [&](const BindingInfo &binding) {
       return typeTextCarriesExperimentalMapValue(bindingTypeText(binding));
     };
+    std::string parentPath;
+    std::string placement;
+    std::string helperParent;
+    const bool isLifecycle = isLifecycleHelper(def.fullPath, parentPath, placement);
+    if (!isLifecycle) {
+      (void)isStructHelperDefinition(def, helperParent);
+      if (!helperParent.empty()) {
+        parentPath = helperParent;
+      }
+    }
+    const bool isStructHelper = isLifecycle || !helperParent.empty();
+    const bool isStaticHelper = isStructHelper && !isLifecycle && hasStaticTransform(def);
     auto isResolvedExperimentalMapConstructorPath = [](const std::string &resolvedPath) {
       std::string normalizedPath = resolvedPath;
       const size_t specializationSuffix = normalizedPath.find("__t");
@@ -266,6 +278,11 @@ bool SemanticsValidator::buildParameters() {
           (void)tryInferBindingTypeFromInitializer(param.args.front(), {}, {}, binding, hasAnyMathImport());
         }
       }
+      if (isLifecycle && isCopyHelperName(def.fullPath) &&
+          !hasExplicitBindingTypeTransform(param) && param.args.empty()) {
+        binding.typeName = "Reference";
+        binding.typeTemplateArg = parentPath;
+      }
       if (!validateBuiltinMapKeyType(binding, &def.templateArgs, error_)) {
         return failExprDiagnostic(param, error_);
       }
@@ -301,18 +318,6 @@ bool SemanticsValidator::buildParameters() {
       }
       params.push_back(std::move(info));
     }
-    std::string parentPath;
-    std::string placement;
-    std::string helperParent;
-    const bool isLifecycle = isLifecycleHelper(def.fullPath, parentPath, placement);
-    if (!isLifecycle) {
-      (void)isStructHelperDefinition(def, helperParent);
-      if (!helperParent.empty()) {
-        parentPath = helperParent;
-      }
-    }
-    const bool isStructHelper = isLifecycle || !helperParent.empty();
-    const bool isStaticHelper = isStructHelper && !isLifecycle && hasStaticTransform(def);
     bool sawMut = false;
     auto failBuildParameterDefinitionDiagnostic = [&](std::string message) -> bool {
       return failDefinitionDiagnostic(def, std::move(message));
