@@ -655,7 +655,21 @@ std::string inferStructPathFromFieldAccessCall(
     return "";
   }
 
-  const std::string receiverStruct = inferStructExprPath(expr.args.front(), localsIn);
+  std::string receiverStruct = inferStructExprPath(expr.args.front(), localsIn);
+  if (receiverStruct.empty()) {
+    std::string accessName;
+    const Expr &receiver = expr.args.front();
+    if (receiver.kind == Expr::Kind::Call &&
+        getBuiltinArrayAccessName(receiver, accessName) &&
+        receiver.args.size() == 2 &&
+        receiver.args.front().kind == Expr::Kind::Name) {
+      const auto localIt = localsIn.find(receiver.args.front().name);
+      if (localIt != localsIn.end() && localIt->second.isArgsPack &&
+          !localIt->second.structTypeName.empty()) {
+        receiverStruct = localIt->second.structTypeName;
+      }
+    }
+  }
   if (receiverStruct.empty()) {
     return "";
   }

@@ -230,6 +230,48 @@ TEST_CASE("ir lowerer struct type helpers infer field-access struct paths") {
             notFieldAccess, locals, inferStructExprPath, resolveStructFieldSlot).empty());
 }
 
+TEST_CASE("ir lowerer struct type helpers infer args-pack indexed field-access paths") {
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo valuesInfo;
+  valuesInfo.isArgsPack = true;
+  valuesInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  valuesInfo.structTypeName = "/pkg/Container";
+  locals.emplace("values", valuesInfo);
+
+  auto inferStructExprPath = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    return std::string();
+  };
+  auto resolveStructFieldSlot =
+      [](const std::string &structPath, const std::string &fieldName, primec::ir_lowerer::StructSlotFieldInfo &out) {
+        if (structPath == "/pkg/Container" && fieldName == "nested") {
+          out.structPath = "/pkg/Nested";
+          return true;
+        }
+        return false;
+      };
+
+  primec::Expr valuesExpr;
+  valuesExpr.kind = primec::Expr::Kind::Name;
+  valuesExpr.name = "values";
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.literalValue = 0;
+
+  primec::Expr indexedReceiver;
+  indexedReceiver.kind = primec::Expr::Kind::Call;
+  indexedReceiver.isMethodCall = true;
+  indexedReceiver.name = "at";
+  indexedReceiver.args = {valuesExpr, indexExpr};
+
+  primec::Expr fieldAccess;
+  fieldAccess.kind = primec::Expr::Kind::Call;
+  fieldAccess.isFieldAccess = true;
+  fieldAccess.name = "nested";
+  fieldAccess.args = {indexedReceiver};
+  CHECK(primec::ir_lowerer::inferStructPathFromFieldAccessCall(
+            fieldAccess, locals, inferStructExprPath, resolveStructFieldSlot) == "/pkg/Nested");
+}
+
 TEST_CASE("ir lowerer struct type helpers build layout field index and collect fields") {
   const primec::ir_lowerer::StructLayoutFieldIndex fieldIndex =
       primec::ir_lowerer::buildStructLayoutFieldIndex(
