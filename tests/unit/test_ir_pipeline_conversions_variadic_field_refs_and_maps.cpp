@@ -450,7 +450,7 @@ main() {
   CHECK(result == 48);
 }
 
-TEST_CASE("ir lowerer rejects variadic borrowed map packs with indexed tryAt inference") {
+TEST_CASE("ir lowerer rejects variadic borrowed map packs with indexed helper inference") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -513,5 +513,5 @@ main() {
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.find("native backend only supports arithmetic/comparison") !=
         std::string::npos);
-  CHECK(error.find("call=/std/collections/map/tryAt") != std::string::npos);
+  CHECK(error.find("call=/std/collections/map/at_unsafe") != std::string::npos);
 }

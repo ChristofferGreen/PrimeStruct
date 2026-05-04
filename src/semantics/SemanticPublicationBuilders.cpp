@@ -1097,6 +1097,9 @@ void publishBindingFacts(
     return;
   }
   state.semanticProgram.bindingFacts.reserve(bindingFacts.size());
+  state.semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.reserve(
+      state.semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.size() +
+      bindingFacts.size());
   state.semanticProgram.collectionSpecializations.reserve(
       state.semanticProgram.collectionSpecializations.size() + bindingFacts.size());
   state.semanticProgram.publishedRoutingLookups.collectionSpecializationIndicesByExpr.reserve(
@@ -1141,6 +1144,11 @@ void publishBindingFacts(
     state.semanticProgram.bindingFacts.push_back(std::move(entry));
     const std::size_t entryIndex = state.semanticProgram.bindingFacts.size() - 1;
     module.bindingFactIndices.push_back(entryIndex);
+    if (state.semanticProgram.bindingFacts.back().semanticNodeId != 0) {
+      state.semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(
+          state.semanticProgram.bindingFacts.back().semanticNodeId,
+          entryIndex);
+    }
   }
 }
 
@@ -1151,6 +1159,9 @@ void publishReturnFacts(
     return;
   }
   state.semanticProgram.returnFacts.reserve(returnFacts.size());
+  state.semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId.reserve(
+      state.semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId.size() +
+      returnFacts.size());
   for (const auto &snapshotEntry : returnFacts) {
     SemanticProgramReturnFact entry;
     entry.returnKind = returnKindSnapshotName(snapshotEntry.kind);
@@ -1176,6 +1187,11 @@ void publishReturnFacts(
     const std::size_t entryIndex = state.semanticProgram.returnFacts.size() - 1;
     state.ensureModuleResolvedArtifacts(snapshotEntry.definitionPath).returnFactIndices.push_back(
         entryIndex);
+    if (state.semanticProgram.returnFacts.back().semanticNodeId != 0) {
+      state.semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId
+          .insert_or_assign(state.semanticProgram.returnFacts.back().semanticNodeId,
+                            entryIndex);
+    }
   }
 }
 

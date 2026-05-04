@@ -654,6 +654,42 @@ TEST_CASE("published target lookups ignore raw routing facts without maps") {
                   semanticProgram, 13)
                   .has_value());
 
+  primec::Expr directExpr;
+  directExpr.kind = primec::Expr::Kind::Call;
+  directExpr.name = "helper";
+  directExpr.semanticNodeId = 11;
+  primec::Expr methodExpr;
+  methodExpr.kind = primec::Expr::Kind::Call;
+  methodExpr.isMethodCall = true;
+  methodExpr.name = "count";
+  methodExpr.semanticNodeId = 12;
+  primec::Expr bridgeExpr;
+  bridgeExpr.kind = primec::Expr::Kind::Call;
+  bridgeExpr.name = "count";
+  bridgeExpr.semanticNodeId = 13;
+
+  const auto rawFactOnlyAdapter =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  CHECK(primec::ir_lowerer::findSemanticProductDirectCallTarget(
+            rawFactOnlyAdapter, directExpr)
+            .empty());
+  CHECK_FALSE(primec::ir_lowerer::findSemanticProductDirectCallStdlibSurfaceId(
+                  rawFactOnlyAdapter, directExpr)
+                  .has_value());
+  CHECK(primec::ir_lowerer::findSemanticProductMethodCallTarget(
+            rawFactOnlyAdapter, methodExpr)
+            .empty());
+  CHECK_FALSE(primec::ir_lowerer::findSemanticProductMethodCallStdlibSurfaceId(
+                  rawFactOnlyAdapter, methodExpr)
+                  .has_value());
+  CHECK(primec::ir_lowerer::findSemanticProductBridgePathChoice(
+            rawFactOnlyAdapter, bridgeExpr)
+            .empty());
+  CHECK_FALSE(
+      primec::ir_lowerer::findSemanticProductBridgePathChoiceStdlibSurfaceId(
+          rawFactOnlyAdapter, bridgeExpr)
+          .has_value());
+
   semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr
       .insert_or_assign(11, directPathId);
   semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr
@@ -684,6 +720,24 @@ TEST_CASE("published target lookups ignore raw routing facts without maps") {
         primec::StdlibSurfaceId::CollectionsVectorHelpers);
   CHECK(primec::semanticProgramLookupPublishedBridgePathChoiceStdlibSurfaceId(
             semanticProgram, 13) ==
+        primec::StdlibSurfaceId::CollectionsVectorHelpers);
+
+  const auto publishedLookupAdapter =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  CHECK(primec::ir_lowerer::findSemanticProductDirectCallTarget(
+            publishedLookupAdapter, directExpr) == "/helper");
+  CHECK(primec::ir_lowerer::findSemanticProductDirectCallStdlibSurfaceId(
+            publishedLookupAdapter, directExpr) ==
+        primec::StdlibSurfaceId::CollectionsMapHelpers);
+  CHECK(primec::ir_lowerer::findSemanticProductMethodCallTarget(
+            publishedLookupAdapter, methodExpr) == "/vector/count");
+  CHECK(primec::ir_lowerer::findSemanticProductMethodCallStdlibSurfaceId(
+            publishedLookupAdapter, methodExpr) ==
+        primec::StdlibSurfaceId::CollectionsVectorHelpers);
+  CHECK(primec::ir_lowerer::findSemanticProductBridgePathChoice(
+            publishedLookupAdapter, bridgeExpr) == "/vector/count");
+  CHECK(primec::ir_lowerer::findSemanticProductBridgePathChoiceStdlibSurfaceId(
+            publishedLookupAdapter, bridgeExpr) ==
         primec::StdlibSurfaceId::CollectionsVectorHelpers);
 }
 
@@ -738,8 +792,8 @@ main() {
   REQUIRE(choiceTarget.kind == primec::Expr::Kind::Name);
   REQUIRE(choiceTarget.name == "choice");
   const auto *choiceFact =
-      primec::ir_lowerer::findSemanticProductBindingFact(
-          semanticProductTargets, choiceTarget);
+      primec::ir_lowerer::findSemanticProductBindingFactByScopeAndName(
+          semanticProductTargets, mainDefinition->fullPath, choiceTarget.name);
   REQUIRE(choiceFact != nullptr);
   CHECK(choiceFact->bindingTypeText == "Choice");
   REQUIRE(primec::ir_lowerer::findSemanticProductSumTypeMetadata(
@@ -996,6 +1050,8 @@ TEST_CASE("native pick target sum resolution resolves interned type ids") {
   const size_t bindingFactPos =
       source.find("findSemanticProductBindingFact(semanticTargets, targetExpr)",
                   typeResolverPos);
+  const size_t bindingScopePos =
+      source.find("findSemanticProductBindingFactByScopeAndName", bindingFactPos);
   const size_t bindingIdPos =
       source.find("bindingFact->bindingTypeTextId", typeResolverPos);
   const size_t queryBindingIdPos =
@@ -1010,6 +1066,7 @@ TEST_CASE("native pick target sum resolution resolves interned type ids") {
   REQUIRE(typeResolverPos != std::string::npos);
   REQUIRE(semanticResolvePos != std::string::npos);
   REQUIRE(bindingFactPos != std::string::npos);
+  REQUIRE(bindingScopePos != std::string::npos);
   REQUIRE(bindingIdPos != std::string::npos);
   REQUIRE(queryBindingIdPos != std::string::npos);
   REQUIRE(queryTypeIdPos != std::string::npos);
@@ -1017,13 +1074,12 @@ TEST_CASE("native pick target sum resolution resolves interned type ids") {
   REQUIRE(metadataPos != std::string::npos);
   CHECK(typeResolverPos < semanticResolvePos);
   CHECK(semanticResolvePos < bindingFactPos);
-  CHECK(bindingFactPos < bindingIdPos);
+  CHECK(bindingFactPos < bindingScopePos);
+  CHECK(bindingScopePos < bindingIdPos);
   CHECK(bindingIdPos < queryBindingIdPos);
   CHECK(queryBindingIdPos < queryTypeIdPos);
   CHECK(queryTypeIdPos < returnIdPos);
   CHECK(returnIdPos < metadataPos);
-  CHECK(source.find("findSemanticProductBindingFactByScopeAndName") ==
-        std::string::npos);
 }
 
 TEST_CASE("native sum construction uses semantic-product variant tags") {
@@ -3768,6 +3824,8 @@ TEST_CASE("ir lowerer rejects stale semantic-product collection metadata") {
           .helperSurfaceId = std::nullopt,
           .constructorSurfaceId = std::nullopt,
       });
+  semanticProgram.publishedRoutingLookups.collectionSpecializationIndicesByExpr.insert_or_assign(
+      43, 0);
 
   auto refreshCollectionIds = [&]() {
     auto &collectionFact = semanticProgram.collectionSpecializations.back();
@@ -4255,6 +4313,7 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
   localAutoFact.initializerResolvedPathId =
       static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size() + 1u);
   semanticProgram.localAutoFacts.push_back(std::move(localAutoFact));
+  semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr.insert_or_assign(47, 0);
   error.clear();
   diagnosticInfo = {};
   CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
@@ -4410,6 +4469,7 @@ TEST_CASE("semantic-product local-auto call paths accept stdlib surface equivale
   localAutoFact.initializerDirectCallReturnKindId =
       primec::semanticProgramInternCallTargetString(semanticProgram, "i32");
   semanticProgram.localAutoFacts.push_back(localAutoFact);
+  semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr.insert_or_assign(47, 0);
 
   std::string error;
   CHECK(primec::ir_lowerer::validateSemanticProductLocalAutoCoverage(
@@ -4459,6 +4519,7 @@ TEST_CASE("semantic-product local-auto call paths accept specialized direct call
       primec::semanticProgramInternCallTargetString(
           semanticProgram, "/wrapValues__t9b7bdbb33f7d43aa");
   semanticProgram.localAutoFacts.push_back(localAutoFact);
+  semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr.insert_or_assign(47, 0);
 
   std::string error;
   CHECK(primec::ir_lowerer::validateSemanticProductLocalAutoCoverage(
@@ -5251,6 +5312,7 @@ TEST_CASE("ir lowerer rejects incomplete semantic-product query facts") {
       .semanticNodeId = 83,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
   });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(83, 0);
   primec::SemanticProgramCallableSummary callableSummary;
   callableSummary.semanticNodeId = 83020;
   callableSummary.fullPathId =
@@ -5321,6 +5383,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product query resolved path id") 
       .semanticNodeId = 8301,
       .resolvedPathId = primec::InvalidSymbolId,
   });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(8301, 0);
   primec::SemanticProgramCallableSummary callableSummary;
   callableSummary.fullPathId =
       primec::semanticProgramInternCallTargetString(semanticProgram, "/main");
@@ -5403,6 +5466,7 @@ TEST_CASE("ir lowerer rejects stale semantic-product query facts") {
       .semanticNodeId = 8302,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/stale_lookup"),
   });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(8302, 0);
   primec::SemanticProgramCallableSummary callableSummary;
   callableSummary.semanticNodeId = 83020;
   callableSummary.fullPathId =
@@ -5469,6 +5533,7 @@ TEST_CASE("ir lowerer accepts query-owned builtin count target metadata") {
         .receiverBindingTypeTextId =
             primec::semanticProgramInternCallTargetString(semanticProgram, ""),
     });
+    semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(8303, 0);
 
     std::string error;
     CHECK(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
@@ -5512,6 +5577,7 @@ TEST_CASE("ir lowerer rejects stale semantic-product query type metadata") {
       .receiverBindingTypeTextId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "Map<string, i32>"),
   });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(8304, 0);
 
   std::string error;
   CHECK(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
@@ -5585,6 +5651,7 @@ TEST_CASE("ir lowerer rejects stale semantic-product query result metadata") {
       .resultErrorTypeId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
   });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(8303, 0);
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
       .returnKind = "i32",
       .isCompute = false,
@@ -5687,6 +5754,7 @@ TEST_CASE("ir lowerer rejects incomplete semantic-product try facts") {
       .semanticNodeId = 84,
       .operandResolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
   });
+  semanticProgram.publishedRoutingLookups.tryFactIndicesByExpr.insert_or_assign(84, 0);
   primec::SemanticProgramCallableSummary callableSummary;
   callableSummary.fullPathId =
       primec::semanticProgramInternCallTargetString(semanticProgram, "/main");
@@ -5746,6 +5814,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product try operand resolved path
       .semanticNodeId = 8401,
       .operandResolvedPathId = primec::InvalidSymbolId,
   });
+  semanticProgram.publishedRoutingLookups.tryFactIndicesByExpr.insert_or_assign(8401, 0);
   primec::SemanticProgramCallableSummary callableSummary;
   callableSummary.fullPathId =
       primec::semanticProgramInternCallTargetString(semanticProgram, "/main");
@@ -5956,6 +6025,7 @@ TEST_CASE("ir lowerer rejects stale semantic-product try context return kind") {
       .operandResolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
       .contextReturnKindId = primec::semanticProgramInternCallTargetString(semanticProgram, "return"),
   });
+  semanticProgram.publishedRoutingLookups.tryFactIndicesByExpr.insert_or_assign(8403, 0);
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
       .returnKind = "i32",
       .isCompute = false,
@@ -6037,6 +6107,7 @@ TEST_CASE("ir lowerer rejects stale semantic-product try on_error facts") {
       .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
       .operandResolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
   });
+  semanticProgram.publishedRoutingLookups.tryFactIndicesByExpr.insert_or_assign(8402, 0);
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
       .returnKind = "i32",
       .isCompute = false,
@@ -6087,6 +6158,8 @@ TEST_CASE("ir lowerer rejects stale semantic-product try on_error facts") {
       .returnResultValueTypeId = primec::InvalidSymbolId,
       .returnResultErrorTypeId = primec::InvalidSymbolId,
   });
+  semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionId
+      .insert_or_assign(8401, 0);
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
@@ -6204,6 +6277,8 @@ TEST_CASE("ir lowerer rejects missing semantic-product on_error handler path id"
       .errorTypeId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
   });
+  semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionId
+      .insert_or_assign(9201, 0);
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
@@ -6378,6 +6453,8 @@ TEST_CASE("ir lowerer rejects stale semantic-product on_error facts") {
       .errorTypeId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "ContainerError"),
   });
+  semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionId
+      .insert_or_assign(95, 0);
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
@@ -6485,6 +6562,8 @@ TEST_CASE("ir lowerer rejects stale semantic-product on_error result metadata") 
       .returnResultErrorTypeId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
   });
+  semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionId
+      .insert_or_assign(9601, 0);
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
@@ -6588,6 +6667,8 @@ TEST_CASE("ir lowerer rejects mismatched semantic-product on_error bound args") 
       .semanticNodeId = 93,
       .handlerPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
   });
+  semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionId
+      .insert_or_assign(93, 0);
 
   primec::IrLowerer lowerer;
   primec::IrModule module;

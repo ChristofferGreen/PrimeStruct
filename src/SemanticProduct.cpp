@@ -453,6 +453,9 @@ const SemanticProgramCallableSummary *semanticProgramLookupPublishedCallableSumm
     }
     return nullptr;
   }
+  if (semanticProgram.publishedStorageFrozen) {
+    return nullptr;
+  }
   for (const auto &entry : semanticProgram.callableSummaries) {
     if (entry.fullPathId != fullPathId) {
       continue;
@@ -485,11 +488,6 @@ const SemanticProgramOnErrorFact *semanticProgramLookupPublishedOnErrorFactByDef
       it != semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionId.end()) {
     return lookupPublishedSemanticEntryByIndex(semanticProgram.onErrorFacts, it->second);
   }
-  for (const auto &entry : semanticProgram.onErrorFacts) {
-    if (entry.semanticNodeId == semanticNodeId) {
-      return &entry;
-    }
-  }
   return nullptr;
 }
 
@@ -504,11 +502,6 @@ const SemanticProgramOnErrorFact *semanticProgramLookupPublishedOnErrorFactByDef
               definitionPathId);
       it != semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionPathId.end()) {
     return lookupPublishedSemanticEntryByIndex(semanticProgram.onErrorFacts, it->second);
-  }
-  for (const auto &entry : semanticProgram.onErrorFacts) {
-    if (entry.definitionPathId == definitionPathId) {
-      return &entry;
-    }
   }
   return nullptr;
 }
@@ -527,11 +520,6 @@ semanticProgramLookupPublishedCollectionSpecializationBySemanticId(
     return lookupPublishedSemanticEntryByIndex(semanticProgram.collectionSpecializations,
                                                it->second);
   }
-  for (const auto &entry : semanticProgram.collectionSpecializations) {
-    if (entry.semanticNodeId == semanticNodeId) {
-      return &entry;
-    }
-  }
   return nullptr;
 }
 
@@ -545,11 +533,6 @@ const SemanticProgramLocalAutoFact *semanticProgramLookupPublishedLocalAutoFactB
           semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr.find(semanticNodeId);
       it != semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr.end()) {
     return lookupPublishedSemanticEntryByIndex(semanticProgram.localAutoFacts, it->second);
-  }
-  for (const auto &entry : semanticProgram.localAutoFacts) {
-    if (entry.semanticNodeId == semanticNodeId) {
-      return &entry;
-    }
   }
   return nullptr;
 }
@@ -569,12 +552,6 @@ const SemanticProgramLocalAutoFact *semanticProgramLookupPublishedLocalAutoFactB
       it != semanticProgram.publishedRoutingLookups.localAutoFactIndicesByInitPathAndBindingNameId.end()) {
     return lookupPublishedSemanticEntryByIndex(semanticProgram.localAutoFacts, it->second);
   }
-  for (const auto &entry : semanticProgram.localAutoFacts) {
-    if (entry.initializerResolvedPathId == initializerPathId &&
-        entry.bindingNameId == bindingNameId) {
-      return &entry;
-    }
-  }
   return nullptr;
 }
 
@@ -587,11 +564,6 @@ const SemanticProgramQueryFact *semanticProgramLookupPublishedQueryFactBySemanti
   if (const auto it = semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.find(semanticNodeId);
       it != semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.end()) {
     return lookupPublishedSemanticEntryByIndex(semanticProgram.queryFacts, it->second);
-  }
-  for (const auto &entry : semanticProgram.queryFacts) {
-    if (entry.semanticNodeId == semanticNodeId) {
-      return &entry;
-    }
   }
   return nullptr;
 }
@@ -610,11 +582,6 @@ const SemanticProgramQueryFact *semanticProgramLookupPublishedQueryFactByResolve
       it != semanticProgram.publishedRoutingLookups.queryFactIndicesByResolvedPathAndCallNameId.end()) {
     return lookupPublishedSemanticEntryByIndex(semanticProgram.queryFacts, it->second);
   }
-  for (const auto &entry : semanticProgram.queryFacts) {
-    if (entry.resolvedPathId == resolvedPathId && entry.callNameId == callNameId) {
-      return &entry;
-    }
-  }
   return nullptr;
 }
 
@@ -627,11 +594,6 @@ const SemanticProgramTryFact *semanticProgramLookupPublishedTryFactBySemanticId(
   if (const auto it = semanticProgram.publishedRoutingLookups.tryFactIndicesByExpr.find(semanticNodeId);
       it != semanticProgram.publishedRoutingLookups.tryFactIndicesByExpr.end()) {
     return lookupPublishedSemanticEntryByIndex(semanticProgram.tryFacts, it->second);
-  }
-  for (const auto &entry : semanticProgram.tryFacts) {
-    if (entry.semanticNodeId == semanticNodeId) {
-      return &entry;
-    }
   }
   return nullptr;
 }
@@ -651,12 +613,6 @@ const SemanticProgramTryFact *semanticProgramLookupPublishedTryFactByOperandPath
               compositeKey);
       it != semanticProgram.publishedRoutingLookups.tryFactIndicesByOperandPathAndSource.end()) {
     return lookupPublishedSemanticEntryByIndex(semanticProgram.tryFacts, it->second);
-  }
-  for (const auto &entry : semanticProgram.tryFacts) {
-    if (entry.operandResolvedPathId == operandPathId && entry.sourceLine == sourceLine &&
-        entry.sourceColumn == sourceColumn) {
-      return &entry;
-    }
   }
   return nullptr;
 }

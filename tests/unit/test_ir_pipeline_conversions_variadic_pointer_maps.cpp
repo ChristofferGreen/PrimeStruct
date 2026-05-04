@@ -422,7 +422,7 @@ main() {
   CHECK(result == 48);
 }
 
-TEST_CASE("ir lowerer rejects variadic pointer map packs with indexed tryAt inference") {
+TEST_CASE("ir lowerer rejects variadic pointer map packs with indexed helper inference") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -487,5 +487,5 @@ main() {
             "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/"
             "saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
         std::string::npos);
-  CHECK(error.find("call=/std/collections/map/tryAt") != std::string::npos);
+  CHECK(error.find("call=/std/collections/map/at_unsafe") != std::string::npos);
 }
