@@ -311,6 +311,92 @@ TEST_CASE("ir lowerer inline struct arg helper accepts std ui struct aliases") {
   }
 }
 
+TEST_CASE("ir lowerer inline struct arg helper accepts expected brace field constructors") {
+  primec::Expr arg;
+  arg.kind = primec::Expr::Kind::Call;
+  arg.name = "Pair";
+  arg.isBraceConstructor = true;
+  const std::vector<const primec::Expr *> orderedArgs = {&arg};
+
+  primec::ir_lowerer::StructSlotLayoutInfo layout;
+  layout.structPath = "/pkg/Holder";
+  layout.totalSlots = 4;
+  primec::ir_lowerer::StructSlotFieldInfo field;
+  field.name = "pair";
+  field.slotOffset = 1;
+  field.slotCount = 3;
+  field.structPath = "/pkg/Pair";
+  layout.fields.push_back(field);
+
+  int32_t nextLocal = 20;
+  int32_t nextTempLocal = 90;
+  int copyCalls = 0;
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+
+  REQUIRE(primec::ir_lowerer::emitInlineStructDefinitionArguments(
+      "/pkg/Holder",
+      orderedArgs,
+      {},
+      false,
+      nextLocal,
+      [&](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &layoutOut) {
+        layoutOut = layout;
+        return true;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return std::string{};
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return true;
+      },
+      [&](int32_t, int32_t, int32_t) {
+        ++copyCalls;
+        return true;
+      },
+      [&]() { return nextTempLocal++; },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      error));
+
+  CHECK(error.empty());
+  CHECK(copyCalls == 1);
+  CHECK(nextLocal == 25);
+
+  primec::Expr callArg = arg;
+  callArg.isBraceConstructor = false;
+  const std::vector<const primec::Expr *> callOrderedArgs = {&callArg};
+  nextLocal = 20;
+  nextTempLocal = 90;
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::emitInlineStructDefinitionArguments(
+      "/pkg/Holder",
+      callOrderedArgs,
+      {},
+      false,
+      nextLocal,
+      [&](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &layoutOut) {
+        layoutOut = layout;
+        return true;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return std::string{};
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return true;
+      },
+      [](int32_t, int32_t, int32_t) { return true; },
+      [&]() { return nextTempLocal++; },
+      [](primec::IrOpcode, uint64_t) {},
+      error));
+  CHECK(error.find("struct field type mismatch") != std::string::npos);
+}
+
 TEST_CASE("ir lowerer inline struct arg helper rejects incompatible internal soa storage aliases") {
   primec::Expr arg;
   arg.kind = primec::Expr::Kind::Name;

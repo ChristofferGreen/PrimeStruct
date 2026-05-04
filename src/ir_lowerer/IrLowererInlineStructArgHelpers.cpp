@@ -107,6 +107,38 @@ bool isCompatibleInlineStructFieldPath(const std::string &expectedStructPath,
          stripGeneratedStructSuffix(actualStructPath);
 }
 
+std::string pathLeaf(std::string_view path) {
+  const size_t slash = path.find_last_of('/');
+  if (slash == std::string_view::npos) {
+    return std::string(path);
+  }
+  return std::string(path.substr(slash + 1));
+}
+
+bool isExpectedStructBraceConstructor(const Expr &arg,
+                                      const std::string &expectedStructPath) {
+  if (arg.kind != Expr::Kind::Call ||
+      !arg.isBraceConstructor ||
+      arg.isMethodCall ||
+      arg.isFieldAccess ||
+      arg.name.empty()) {
+    return false;
+  }
+
+  std::string candidatePath = arg.name;
+  if (candidatePath.find('/') == std::string::npos && !arg.namespacePrefix.empty()) {
+    candidatePath = arg.namespacePrefix == "/" ? "/" + candidatePath
+                                               : arg.namespacePrefix + "/" + candidatePath;
+  }
+  if (isCompatibleInlineStructFieldPath(expectedStructPath, candidatePath)) {
+    return true;
+  }
+
+  return arg.namespacePrefix.empty() &&
+         arg.name.find('/') == std::string::npos &&
+         pathLeaf(expectedStructPath) == arg.name;
+}
+
 void materializeInlineStructFieldLocal(const StructSlotFieldInfo &field,
                                        int32_t baseLocal,
                                        int32_t &nextLocal,
@@ -220,6 +252,9 @@ bool emitInlineStructDefinitionArguments(const std::string &calleePath,
     }
 
     std::string argStruct = inferStructExprPath(*arg, argLocals);
+    if (argStruct.empty() && isExpectedStructBraceConstructor(*arg, field.structPath)) {
+      argStruct = field.structPath;
+    }
     if (argStruct.empty() ||
         !isCompatibleInlineStructFieldPath(field.structPath, argStruct)) {
       error = "struct field type mismatch: expected " + field.structPath + ", got " +

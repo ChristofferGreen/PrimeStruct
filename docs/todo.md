@@ -417,6 +417,13 @@ Task template:
       skipped under `$implement-todo-lite`; next non-lite stabilization should
       rerun the retained VM bounds shard or move to the retained variadic SoA
       args-pack forwarding failure if the bounds log is stale.
+    - 2026-05-04 lite slice: nested struct field brace constructors now keep
+      the destination field's struct type when general struct-expression
+      inference returns unknown. Local validation was skipped under
+      `$implement-todo-lite`; next non-lite stabilization should rerun
+      `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_refs`
+      first, then continue with the retained variadic SoA args-pack forwarding
+      failures if that shard is clear.
 
 - [ ] TODO-4298: Promote graph-backed non-template inference authority
   - owner: ai

@@ -6,6 +6,26 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 4, 2026)**
+- [x] TODO-4360: Accept brace nested struct fields
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-04
+  - phase: Release-gate stabilization
+  - scope: Land the retained variadic pointer-reference slice by letting
+    inline struct field materialization accept an expected brace constructor
+    such as `Holder{Pair{...}}` when the destination field already pins the
+    nested struct type and general struct-expression inference returns unknown.
+  - acceptance:
+    - Inline struct argument lowering preserves the destination field struct
+      path for matching brace constructors whose inferred struct path is empty.
+    - Call-shaped constructor expressions do not get the same fallback.
+    - The retained `variadic_pointer_refs` failure has a focused regression
+      test for the helper path that rejected `/Holder::pair`.
+  - stop_rule: Stop once the nested brace-constructor field path is accepted
+    without relaxing ordinary call-shaped construction.
+  - evidence: Added a narrow inline-struct helper fallback and regression
+    coverage; skipped local test execution per the lite workflow.
+
 - [x] TODO-4360: Emit safe vector-at tail bounds
   - owner: ai
   - created_at: 2026-05-04
