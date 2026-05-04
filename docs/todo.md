@@ -514,6 +514,13 @@ Task template:
       continue with the retained
       `PrimeStruct_primestruct_ir_pipeline_validation_cases_111_120` failure
       from the current release log.
+    - 2026-05-04 lite slice: the retained native-tail vector helper lock now
+      models the current safe canonical `/std/collections/vector/at` builtin
+      dispatch by inferring the local index kind, while rooted `/vector/at`
+      and unsafe access remain deferred. Focused lite validation passed for
+      `PrimeStruct_primestruct_ir_pipeline_validation_cases_111_120`;
+      continue with the next retained release failure from the saved release
+      log.
 
 - [ ] TODO-4298: Promote graph-backed non-template inference authority
   - owner: ai

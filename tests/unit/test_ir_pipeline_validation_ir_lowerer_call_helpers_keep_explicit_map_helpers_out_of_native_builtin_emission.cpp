@@ -513,7 +513,7 @@ TEST_CASE("ir lowerer call helpers lower explicit map access for args-pack recei
   expectDispatch(makeDereferencedIndexedReceiver(referenceValuesName), Result::Emitted, true);
 }
 
-TEST_CASE("ir lowerer call helpers emit explicit vector count while deferring bare count") {
+TEST_CASE("ir lowerer call helpers emit explicit vector count and safe at while deferring bare count") {
   using Result = primec::ir_lowerer::NativeCallTailDispatchResult;
   using LocalInfo = primec::ir_lowerer::LocalInfo;
   using MapAccessTargetInfo = primec::ir_lowerer::MapAccessTargetInfo;
@@ -597,8 +597,12 @@ TEST_CASE("ir lowerer call helpers emit explicit vector count while deferring ba
               resolveMapAccessTargetInfo,
               resolveArrayVectorAccessTargetInfo,
               [](const primec::Expr &, std::string &) { return false; },
-              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-                return LocalInfo::ValueKind::Unknown;
+              [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &inferLocals) {
+                if (expr.kind != primec::Expr::Kind::Name) {
+                  return LocalInfo::ValueKind::Unknown;
+                }
+                auto it = inferLocals.find(expr.name);
+                return it == inferLocals.end() ? LocalInfo::ValueKind::Unknown : it->second.valueKind;
               },
               []() { return 0; },
               []() {},
@@ -640,9 +644,9 @@ TEST_CASE("ir lowerer call helpers emit explicit vector count while deferring ba
                  false);
   expectDispatch("/std/collections/vector/at",
                  {valuesName, indexName},
-                 Result::NotHandled,
+                 Result::Emitted,
                  "stale",
-                 false);
+                 true);
   expectDispatch("/vector/at_unsafe",
                  {valuesName, indexName},
                  Result::NotHandled,

@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 4, 2026)**
+- [x] TODO-4360: Refresh safe vector-at dispatch lock
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-04
+  - phase: Release-gate stabilization
+  - scope: Land the retained native-tail vector helper lock by updating the
+    explicit vector helper fixture to model current safe canonical
+    `/std/collections/vector/at` builtin dispatch with local index-kind
+    inference.
+  - acceptance:
+    - Canonical `/std/collections/vector/at` emits through native-tail builtin
+      dispatch when its receiver and index local metadata are available.
+    - Rooted `/vector/at`, rooted `/vector/at_unsafe`, and canonical
+      `/std/collections/vector/at_unsafe` remain deferred in the focused lock.
+    - The retained `validation_cases_111_120` release shard passes focused
+      validation.
+  - stop_rule: Stop once the retained native-tail vector helper shard passes
+    without weakening rooted or unsafe access deferral.
+  - evidence: Updated
+    `test_ir_pipeline_validation_ir_lowerer_call_helpers_keep_explicit_map_helpers_out_of_native_builtin_emission.cpp`
+    to infer local index kinds and expect canonical safe vector `at` emission;
+    focused release validation passed for
+    `ctest -R PrimeStruct_primestruct_ir_pipeline_validation_cases_111_120 --output-on-failure`.
+
 - [x] TODO-4360: Refresh at_unsafe access lock
   - owner: ai
   - created_at: 2026-05-04
