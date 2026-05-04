@@ -25,7 +25,7 @@ some<T>([T] value) {
 
 [public return<Maybe<T>>]
 none<T>() {
-  [Maybe<T>] result{none}
+  [Maybe<T>] result{}
   return(result)
 }
 
@@ -173,9 +173,9 @@ TEST_CASE("maybe default and explicit none are equivalent") {
   const std::string source = kMaybePrelude + R"(
 [return<int>]
 main() {
-  [Maybe<i32>] implicit{}
-  [Maybe<i32>] explicitValue{none}
-  [i32] left{pick(implicit) {
+  [Maybe<i32>] defaultValue{}
+  [Maybe<i32>] explicitValue{none<i32>()}
+  [i32] left{pick(defaultValue) {
     none {
       1i32
     }
@@ -358,11 +358,11 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("maybe direct constructor accepts unique inferred payload") {
+TEST_CASE("maybe target-typed initializer accepts unique inferred payload") {
   const std::string source = kMaybePrelude + R"(
 [return<int>]
 main() {
-  [Maybe<i32>] value{Maybe<i32>{1i32}}
+  [Maybe<i32>] value{1i32}
   return(pick(value) {
     none {
       return(0i32)

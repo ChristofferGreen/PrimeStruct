@@ -1697,7 +1697,7 @@ TEST_CASE("constructor-shaped compatibility inventory stays source locked") {
         std::string::npos);
   CHECK(maybeSemantics.find("TEST_CASE(\"maybe helpers report empty and some\")") !=
         std::string::npos);
-  CHECK(maybeSemantics.find("TEST_CASE(\"maybe direct constructor accepts "
+  CHECK(maybeSemantics.find("TEST_CASE(\"maybe target-typed initializer accepts "
                             "unique inferred payload\")") !=
         std::string::npos);
   CHECK(maybeSemantics.find("TEST_CASE(\"maybe mutable struct helpers are "

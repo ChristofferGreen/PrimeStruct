@@ -103,6 +103,15 @@ std::string normalizeBindingTypeName(const std::string &name) {
   if (name.rfind("/std/collections/map<", 0) == 0) {
     return "map" + name.substr(std::string("/std/collections/map").size());
   }
+  if (name == "std/maybe/Maybe" || name == "/std/maybe/Maybe") {
+    return "Maybe";
+  }
+  if (name.rfind("std/maybe/Maybe<", 0) == 0) {
+    return "Maybe" + name.substr(std::string("std/maybe/Maybe").size());
+  }
+  if (name.rfind("/std/maybe/Maybe<", 0) == 0) {
+    return "Maybe" + name.substr(std::string("/std/maybe/Maybe").size());
+  }
   return name;
 }
 

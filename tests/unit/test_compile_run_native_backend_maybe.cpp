@@ -9,7 +9,7 @@ import /std/maybe/*
 
 [return<int>]
 main() {
-  [Maybe<i32>] value{some<i32>(2i32)}
+  [Maybe<i32>] value{[some] 2i32}
   return(pick(value) {
     none {
       return(0i32)
@@ -36,8 +36,8 @@ import /std/maybe/*
 
 [return<int>]
 main() {
-  [Maybe<i32>] empty{none<i32>()}
-  [Maybe<i32>] value{some<i32>(7i32)}
+  [Maybe<i32>] empty{}
+  [Maybe<i32>] value{[some] 7i32}
   if(not(empty.isEmpty())) {
     return(0i32)
   }
