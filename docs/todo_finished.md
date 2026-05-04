@@ -24,7 +24,10 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
   - stop_rule: Stop once the nested brace-constructor field path is accepted
     without relaxing ordinary call-shaped construction.
   - evidence: Added a narrow inline-struct helper fallback and regression
-    coverage; skipped local test execution per the lite workflow.
+    coverage; focused release validation passed for
+    `cmake --build build-release --target PrimeStruct_backend_ir_tests`,
+    `ctest -R PrimeStruct_primestruct_ir_pipeline_conversions_variadic_pointer_refs --output-on-failure`,
+    and the single new helper test case.
 
 - [x] TODO-4360: Emit safe vector-at tail bounds
   - owner: ai

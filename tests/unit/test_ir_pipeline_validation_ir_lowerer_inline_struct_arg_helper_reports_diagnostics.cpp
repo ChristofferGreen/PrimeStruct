@@ -314,8 +314,19 @@ TEST_CASE("ir lowerer inline struct arg helper accepts std ui struct aliases") {
 TEST_CASE("ir lowerer inline struct arg helper accepts expected brace field constructors") {
   primec::Expr arg;
   arg.kind = primec::Expr::Kind::Call;
-  arg.name = "Pair";
-  arg.isBraceConstructor = true;
+  arg.name = "block";
+  primec::Expr pairCtor;
+  pairCtor.kind = primec::Expr::Kind::Call;
+  pairCtor.name = "Pair";
+  primec::Expr blockArg;
+  blockArg.kind = primec::Expr::Kind::Call;
+  blockArg.name = "block";
+  primec::Expr valueArg;
+  valueArg.kind = primec::Expr::Kind::Literal;
+  valueArg.literalValue = 7;
+  blockArg.bodyArguments.push_back(valueArg);
+  pairCtor.args.push_back(blockArg);
+  arg.bodyArguments.push_back(pairCtor);
   const std::vector<const primec::Expr *> orderedArgs = {&arg};
 
   primec::ir_lowerer::StructSlotLayoutInfo layout;
@@ -365,8 +376,10 @@ TEST_CASE("ir lowerer inline struct arg helper accepts expected brace field cons
   CHECK(copyCalls == 1);
   CHECK(nextLocal == 25);
 
-  primec::Expr callArg = arg;
-  callArg.isBraceConstructor = false;
+  primec::Expr callArg;
+  callArg.kind = primec::Expr::Kind::Call;
+  callArg.name = "Pair";
+  callArg.args.push_back(valueArg);
   const std::vector<const primec::Expr *> callOrderedArgs = {&callArg};
   nextLocal = 20;
   nextTempLocal = 90;

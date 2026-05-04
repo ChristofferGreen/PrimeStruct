@@ -115,13 +115,29 @@ std::string pathLeaf(std::string_view path) {
   return std::string(path.substr(slash + 1));
 }
 
+bool isCanonicalBraceBlock(const Expr &expr) {
+  return expr.kind == Expr::Kind::Call &&
+         expr.name == "block" &&
+         expr.args.empty() &&
+         expr.bodyArguments.size() == 1;
+}
+
 bool isExpectedStructBraceConstructor(const Expr &arg,
                                       const std::string &expectedStructPath) {
+  if (isCanonicalBraceBlock(arg)) {
+    return isExpectedStructBraceConstructor(arg.bodyArguments.front(),
+                                            expectedStructPath);
+  }
   if (arg.kind != Expr::Kind::Call ||
-      !arg.isBraceConstructor ||
       arg.isMethodCall ||
       arg.isFieldAccess ||
       arg.name.empty()) {
+    return false;
+  }
+  const bool canonicalBraceBlock =
+      arg.args.size() == 1 &&
+      isCanonicalBraceBlock(arg.args.front());
+  if (!arg.isBraceConstructor && !canonicalBraceBlock) {
     return false;
   }
 
