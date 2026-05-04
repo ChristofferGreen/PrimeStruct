@@ -178,7 +178,6 @@ TEST_CASE("ir lowerer on_error helpers prefer semantic-product metadata") {
       .errorTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
       .boundArgTextIds = {primec::semanticProgramInternCallTargetString(semanticProgram, "2i32")},
   });
-  semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionId.insert_or_assign(22, 0);
 
   primec::ir_lowerer::OnErrorByDefinition onErrorByDef;
   std::string error;
@@ -376,7 +375,6 @@ TEST_CASE("ir lowerer on_error helpers reject missing semantic bound arg ids") {
       .errorTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
       .boundArgTextIds = {primec::InvalidSymbolId},
   });
-  semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionId.insert_or_assign(22, 0);
 
   primec::ir_lowerer::OnErrorByDefinition onErrorByDef;
   std::string error;
@@ -645,7 +643,6 @@ TEST_CASE("ir lowerer on_error helpers use semantic-id facts without definition-
       .semanticNodeId = 222,
       .handlerPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler_semantic"),
   });
-  semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionId.insert_or_assign(222, 0);
   semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
       .definitionPath = "/legacy/main",
       .returnKind = "void",
@@ -659,8 +656,6 @@ TEST_CASE("ir lowerer on_error helpers use semantic-id facts without definition-
       .definitionPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
       .handlerPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler_fallback"),
   });
-  semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionPathId.insert_or_assign(
-      primec::semanticProgramInternCallTargetString(semanticProgram, "/main"), 1);
 
   primec::ir_lowerer::OnErrorByDefinition onErrorByDef;
   std::string error;
@@ -812,7 +807,6 @@ TEST_CASE("ir lowerer on_error entry setup validates semantic bound arg counts")
       .semanticNodeId = 32,
       .handlerPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
   });
-  semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionId.insert_or_assign(32, 0);
 
   primec::ir_lowerer::EntryCallOnErrorSetup setup;
   std::string error;

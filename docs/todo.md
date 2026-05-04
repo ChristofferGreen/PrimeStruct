@@ -475,20 +475,7 @@ Task template:
     base call-kind `try(...)` fact authority slice is complete. The lowerer
     base call-kind Result method fact-authority slice is complete for
     semantic-product-addressed `Result.ok(...)`, `Result.error(...)`, and
-    `Result.why(...)` calls. The lowerer call-target adapter published-map
-    authority slice is complete for direct-call, method-call, and bridge-path
-    target and stdlib-surface lookups. The query fact published-map authority
-    slice is complete for semantic-node-id lookups. The try fact
-    published-map authority slice is complete for semantic-node-id lookups.
-    The `on_error` fact published-map authority slice is complete for
-    definition semantic-node-id lookups. The local-auto fact published-map
-    authority slice is complete for semantic-node-id lookups. The collection
-    specialization published-map authority slice is complete for
-    semantic-node-id lookups. The frozen callable-summary published-map
-    authority slice is complete for path-id lookups. The frozen binding-fact
-    published-map authority slice is complete for semantic-node-id lookups.
-    The frozen return-fact published-map authority slice is complete for
-    definition semantic-node-id lookups.
+    `Result.why(...)` calls.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -511,41 +498,6 @@ Task template:
       callable-result, map-helper, or file-helper fallback can infer the value
       kind; missing or incomplete try facts stay unresolved with the existing
       semantic-product try diagnostic.
-    - Completed slice: semantic-product published try lookup helpers and
-      lowerer try adapter indexes now require `tryFactIndicesByExpr` for
-      semantic-node-id try facts. Raw `tryFacts` storage no longer recovers
-      missing published try maps for expression-scoped try consumers.
-    - Completed slice: semantic-product published `on_error` lookup helpers
-      and lowerer `on_error` adapter indexes now require
-      `onErrorFactIndicesByDefinitionId` for definition semantic-node-id
-      facts. Raw `onErrorFacts` storage no longer recovers missing published
-      `on_error` maps for definition-scoped consumers.
-    - Completed slice: semantic-product published local-auto lookup helpers
-      and lowerer local-auto adapter indexes now require
-      `localAutoFactIndicesByExpr` for semantic-node-id local-auto facts. Raw
-      `localAutoFacts` storage no longer recovers missing published local-auto
-      maps for expression-scoped consumers.
-    - Completed slice: semantic-product published collection-specialization
-      lookup helpers and lowerer collection-specialization adapter indexes now
-      require `collectionSpecializationIndicesByExpr` for semantic-node-id
-      collection facts. Raw `collectionSpecializations` storage no longer
-      recovers missing published collection maps for expression-scoped
-      consumers.
-    - Completed slice: frozen semantic-product callable-summary lookup now
-      requires `callableSummaryIndicesByPathId` for path-id facts. Raw
-      `callableSummaries` storage no longer recovers missing callable-summary
-      maps after publication freezes the semantic product, while mutable
-      hand-built products keep their fixture-only scan before freeze.
-    - Completed slice: frozen semantic-product binding-fact indexes now
-      require `bindingFactIndicesByExpr` for semantic-node-id facts. Raw
-      `bindingFacts` storage no longer recovers missing binding maps after
-      publication freezes the semantic product, while mutable hand-built
-      products keep their fixture-only scan before freeze.
-    - Completed slice: frozen semantic-product return-fact indexes now
-      require `returnFactIndicesByDefinitionId` for definition semantic-node-id
-      facts. Raw `returnFacts` storage no longer recovers missing return maps
-      after publication freezes the semantic product, while mutable hand-built
-      products keep their fixture-only scan before freeze.
     - Completed slice: semantic-product-addressed Result-combinator metadata
       now requires published query facts when direct lambda payload analysis
       cannot infer the resulting value kind, covering `Result.map`,
@@ -740,14 +692,6 @@ Task template:
       now rejects missing or stale interned scope, collection family, chosen
       path, and published lookup metadata before lowerer routing consumers can
       dispatch through inconsistent bridge-path choice facts.
-    - Completed slice: lowerer call-target adapter helpers now resolve
-      direct-call, method-call, and bridge-path target paths and stdlib surface
-      ids only from published routing lookup maps. Raw semantic-product target
-      vectors no longer recover missing published maps by semantic-node scan.
-    - Completed slice: semantic-product published query lookup helpers and
-      lowerer query adapter indexes now require `queryFactIndicesByExpr` for
-      semantic-node-id query facts. Raw `queryFacts` storage no longer recovers
-      missing published query maps for expression-scoped query consumers.
     - Completed slice: native `pick(value)` lowering now uses the published
       binding fact plus published sum metadata to resolve named pick targets,
       instead of letting local-map shape reconstruction own that decision on

@@ -945,7 +945,6 @@ TEST_CASE("ir lowerer binding type helpers treat semantic local-auto facts as no
       .initializerResolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/id"),
   });
-  semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr.insert_or_assign(114, 0);
   auto adapters = primec::ir_lowerer::makeBindingTypeAdapters(&semanticProgram);
 
   primec::Expr localAutoBinding;

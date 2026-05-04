@@ -414,10 +414,6 @@ Planned non-template inference migration contract:
   metadata before lowerer bridge-routing consumers can dispatch through bridge-path choice facts.
   Missing or contradictory present ids fail closed with deterministic bridge-path metadata
   diagnostics.
-- Completed lowerer call-target adapter lookup slice: direct-call, method-call, and bridge-path
-  target and stdlib-surface helpers now resolve only through published routing lookup maps. Raw
-  semantic-product target vectors remain stored facts, but missing published maps no longer recover
-  targets by scanning those vectors by semantic node id.
 - Completed native pick target sum slice: semantic-product-addressed `pick(value)` lowering now
   resolves named targets from the published binding fact and confirms the sum layout through
   published sum metadata before local-map shape reconstruction can answer. Missing sum metadata or
@@ -829,39 +825,11 @@ Compile-pipeline publication contract:
   cleanup/removal passes; add a concrete TODO before changing any of those seams.
 - Local-auto lowering consumes semantic-node-id facts only. Initializer-path plus binding-name indexes may remain as
   published metadata for inspection, but production lowering must fail closed instead of using them as a recovery path.
-- Local-auto fact lookup follows the same published-map authority rule for semantic-node ids: public published
-  local-auto lookup helpers and the lowerer semantic-product adapter require `localAutoFactIndicesByExpr` for
-  expression-scoped local-auto facts instead of recovering by scanning raw `localAutoFacts` storage.
-- Binding fact lookup follows the same published-map authority rule once the semantic product is frozen by the
-  publication path: the lowerer semantic-product adapter requires `bindingFactIndicesByExpr` for expression-scoped
-  binding facts instead of recovering by scanning raw `bindingFacts` storage. Mutable hand-built products may still
-  use the raw scan before `freezeSemanticProgramPublishedStorage(...)`.
-- Return fact lookup follows the same published-map authority rule once the semantic product is frozen by the
-  publication path: the lowerer semantic-product adapter requires `returnFactIndicesByDefinitionId` for
-  definition-scoped return facts instead of recovering by scanning raw `returnFacts` storage. Mutable hand-built
-  products may still use the raw scan before `freezeSemanticProgramPublishedStorage(...)`.
-- Collection-specialization lookup follows the same published-map authority rule for semantic-node ids: public
-  published collection-specialization lookup helpers and the lowerer semantic-product adapter require
-  `collectionSpecializationIndicesByExpr` for expression-scoped collection facts instead of recovering by scanning
-  raw `collectionSpecializations` storage.
 - Query, `try(...)`, and `on_error` lowering/completeness checks follow the same rule: semantic-node-id facts are the
   production authority, while resolved-path/source/path-id indexes remain inspection metadata only.
-- Callable-summary lookup follows the same published-map authority rule once the semantic product is frozen by the
-  publication path: `callableSummaryIndicesByPathId` is the authority, while raw `callableSummaries` scanning remains
-  limited to mutable hand-built products before `freezeSemanticProgramPublishedStorage(...)`.
 - The lowerer semantic-product adapter no longer builds local-auto initializer-path, query resolved-path/call-name, or
   `try(...)` operand-path/source composite recovery indexes. Those composite lookup maps remain publication and
   inspection metadata rather than production lowerer lookup surfaces.
-- Query fact lookup now follows the same published-map authority rule for semantic-node ids: public published query
-  lookup helpers and the lowerer semantic-product adapter require `queryFactIndicesByExpr` for expression-scoped
-  query facts instead of recovering by scanning raw `queryFacts` storage.
-- Try fact lookup follows the same published-map authority rule for semantic-node ids: public published try lookup
-  helpers and the lowerer semantic-product adapter require `tryFactIndicesByExpr` for expression-scoped try facts
-  instead of recovering by scanning raw `tryFacts` storage.
-- `on_error` fact lookup follows the same published-map authority rule for definition semantic-node ids: public
-  published `on_error` lookup helpers and the lowerer semantic-product adapter require
-  `onErrorFactIndicesByDefinitionId` for definition-scoped handler facts instead of recovering by scanning raw
-  `onErrorFacts` storage.
 - The same adapter quarantine now applies to `on_error` definition-path indexes: lowerer handler setup resolves
   `on_error` facts by definition semantic id, while definition-path lookup remains a published inspection surface.
 - Return facts follow the same adapter-cache rule for direct definition lookup: the semantic-product adapter no longer

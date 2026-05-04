@@ -904,7 +904,6 @@ TEST_CASE("ir lowerer statement binding helper uses semantic query facts for def
       .semanticNodeId = 313,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/loadValue"),
   });
-  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(313, 0);
   const auto semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
 
