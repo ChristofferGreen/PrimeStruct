@@ -119,6 +119,9 @@ forward([args<Reference<SoaVector<Particle>>>] values) {
 [return<int>]
 forward_mixed([args<Reference<SoaVector<Particle>>>] values) {
   [SoaVector<Particle>] extra{soaVectorNew<Particle>()}
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(extra, Particle(1i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(extra, Particle(2i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(extra, Particle(3i32))
   [Reference<SoaVector<Particle>>] extra_ref{location(extra)}
   return(score_refs(extra_ref, [spread] values))
 }
@@ -128,6 +131,12 @@ main() {
   [SoaVector<Particle>] a0{soaVectorNew<Particle>()}
   [SoaVector<Particle>] a1{soaVectorNew<Particle>()}
   [SoaVector<Particle>] a2{soaVectorNew<Particle>()}
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(a0, Particle(1i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(a0, Particle(2i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(a0, Particle(3i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(a2, Particle(4i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(a2, Particle(5i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(a2, Particle(6i32))
   [Reference<SoaVector<Particle>>] r0{location(a0)}
   [Reference<SoaVector<Particle>>] r1{location(a1)}
   [Reference<SoaVector<Particle>>] r2{location(a2)}
@@ -135,12 +144,21 @@ main() {
   [SoaVector<Particle>] b0{soaVectorNew<Particle>()}
   [SoaVector<Particle>] b1{soaVectorNew<Particle>()}
   [SoaVector<Particle>] b2{soaVectorNew<Particle>()}
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(b0, Particle(1i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(b0, Particle(2i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(b0, Particle(3i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(b2, Particle(4i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(b2, Particle(5i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(b2, Particle(6i32))
   [Reference<SoaVector<Particle>>] s0{location(b0)}
   [Reference<SoaVector<Particle>>] s1{location(b1)}
   [Reference<SoaVector<Particle>>] s2{location(b2)}
 
   [SoaVector<Particle>] c0{soaVectorNew<Particle>()}
   [SoaVector<Particle>] c1{soaVectorNew<Particle>()}
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(c1, Particle(4i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(c1, Particle(5i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(c1, Particle(6i32))
   [Reference<SoaVector<Particle>>] t0{location(c0)}
   [Reference<SoaVector<Particle>>] t1{location(c1)}
 
@@ -197,6 +215,9 @@ forward([args<Pointer<SoaVector<Particle>>>] values) {
 [return<int>]
 forward_mixed([args<Pointer<SoaVector<Particle>>>] values) {
   [SoaVector<Particle>] extra{soaVectorNew<Particle>()}
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(extra, Particle(1i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(extra, Particle(2i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(extra, Particle(3i32))
   [Pointer<SoaVector<Particle>>] extra_ptr{location(extra)}
   return(score_ptrs(extra_ptr, [spread] values))
 }
@@ -206,6 +227,12 @@ main() {
   [SoaVector<Particle>] a0{soaVectorNew<Particle>()}
   [SoaVector<Particle>] a1{soaVectorNew<Particle>()}
   [SoaVector<Particle>] a2{soaVectorNew<Particle>()}
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(a0, Particle(1i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(a0, Particle(2i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(a0, Particle(3i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(a2, Particle(4i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(a2, Particle(5i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(a2, Particle(6i32))
   [Pointer<SoaVector<Particle>>] r0{location(a0)}
   [Pointer<SoaVector<Particle>>] r1{location(a1)}
   [Pointer<SoaVector<Particle>>] r2{location(a2)}
@@ -213,12 +240,21 @@ main() {
   [SoaVector<Particle>] b0{soaVectorNew<Particle>()}
   [SoaVector<Particle>] b1{soaVectorNew<Particle>()}
   [SoaVector<Particle>] b2{soaVectorNew<Particle>()}
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(b0, Particle(1i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(b0, Particle(2i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(b0, Particle(3i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(b2, Particle(4i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(b2, Particle(5i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(b2, Particle(6i32))
   [Pointer<SoaVector<Particle>>] s0{location(b0)}
   [Pointer<SoaVector<Particle>>] s1{location(b1)}
   [Pointer<SoaVector<Particle>>] s2{location(b2)}
 
   [SoaVector<Particle>] c0{soaVectorNew<Particle>()}
   [SoaVector<Particle>] c1{soaVectorNew<Particle>()}
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(c1, Particle(4i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(c1, Particle(5i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(c1, Particle(6i32))
   [Pointer<SoaVector<Particle>>] t0{location(c0)}
   [Pointer<SoaVector<Particle>>] t1{location(c1)}
 
@@ -274,14 +310,44 @@ forward([args<SoaVector<Particle>>] values) {
 
 [return<int>]
 forward_mixed([args<SoaVector<Particle>>] values) {
-  return(score_soas(soaVectorNew<Particle>(), [spread] values))
+  [SoaVector<Particle>] extra{soaVectorNew<Particle>()}
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(extra, Particle(1i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(extra, Particle(2i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(extra, Particle(3i32))
+  return(score_soas(extra, [spread] values))
 }
 
 [return<int>]
 main() {
-  return(plus(score_soas(soaVectorNew<Particle>(), soaVectorNew<Particle>(), soaVectorNew<Particle>()),
-              plus(forward(soaVectorNew<Particle>(), soaVectorNew<Particle>(), soaVectorNew<Particle>()),
-                   forward_mixed(soaVectorNew<Particle>(), soaVectorNew<Particle>()))))
+  [SoaVector<Particle>] a0{soaVectorNew<Particle>()}
+  [SoaVector<Particle>] a1{soaVectorNew<Particle>()}
+  [SoaVector<Particle>] a2{soaVectorNew<Particle>()}
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(a0, Particle(1i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(a0, Particle(2i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(a0, Particle(3i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(a2, Particle(4i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(a2, Particle(5i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(a2, Particle(6i32))
+
+  [SoaVector<Particle>] b0{soaVectorNew<Particle>()}
+  [SoaVector<Particle>] b1{soaVectorNew<Particle>()}
+  [SoaVector<Particle>] b2{soaVectorNew<Particle>()}
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(b0, Particle(1i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(b0, Particle(2i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(b0, Particle(3i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(b2, Particle(4i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(b2, Particle(5i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(b2, Particle(6i32))
+
+  [SoaVector<Particle>] c0{soaVectorNew<Particle>()}
+  [SoaVector<Particle>] c1{soaVectorNew<Particle>()}
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(c1, Particle(4i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(c1, Particle(5i32))
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(c1, Particle(6i32))
+
+  return(plus(score_soas(a0, a1, a2),
+              plus(forward(b0, b1, b2),
+                   forward_mixed(c0, c1))))
 }
 )";
   primec::Program program;
