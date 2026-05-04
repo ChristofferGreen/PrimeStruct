@@ -962,6 +962,56 @@ TEST_CASE("ir lowerer inline native dispatch prefers published canonical map acc
         std::string::npos);
 }
 
+TEST_CASE("ir lowerer synthetic method probes clear direct helper semantic targets") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path callHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererCallHelpers.cpp";
+  const std::filesystem::path inlineDispatchPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererInlineNativeCallDispatch.cpp";
+  const std::filesystem::path returnKindHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererSetupTypeReturnKindHelpers.cpp";
+  const std::filesystem::path collectionHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererSetupTypeCollectionHelpers.cpp";
+
+  REQUIRE(std::filesystem::exists(callHelpersPath));
+  REQUIRE(std::filesystem::exists(inlineDispatchPath));
+  REQUIRE(std::filesystem::exists(returnKindHelpersPath));
+  REQUIRE(std::filesystem::exists(collectionHelpersPath));
+
+  const std::string callHelpersSource = readText(callHelpersPath);
+  const std::string inlineDispatchSource = readText(inlineDispatchPath);
+  const std::string returnKindHelpersSource = readText(returnKindHelpersPath);
+  const std::string collectionHelpersSource = readText(collectionHelpersPath);
+
+  CHECK(callHelpersSource.find("methodExpr.semanticNodeId = 0;") !=
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("methodExpr.semanticNodeId = 0;") !=
+        std::string::npos);
+  CHECK(returnKindHelpersSource.find("methodExpr.semanticNodeId = 0;") !=
+        std::string::npos);
+  CHECK(collectionHelpersSource.find("helperNameOut == \"get\"") !=
+        std::string::npos);
+  CHECK(collectionHelpersSource.find("helperNameOut == \"get_ref\"") !=
+        std::string::npos);
+  CHECK(collectionHelpersSource.find("helperNameOut == \"ref\"") !=
+        std::string::npos);
+  CHECK(collectionHelpersSource.find("helperNameOut == \"ref_ref\"") !=
+        std::string::npos);
+}
+
 TEST_CASE("ir lowerer binding normalization guards explicit map helper defs") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);

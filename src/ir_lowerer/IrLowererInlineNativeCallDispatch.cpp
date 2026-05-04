@@ -1040,6 +1040,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     for (size_t receiverIndex : receiverIndices) {
       Expr methodExpr = expr;
       methodExpr.isMethodCall = true;
+      methodExpr.semanticNodeId = 0;
       std::string normalizedHelperName;
       if (resolveVectorHelperAliasName(methodExpr, normalizedHelperName)) {
         methodExpr.name = normalizedHelperName;

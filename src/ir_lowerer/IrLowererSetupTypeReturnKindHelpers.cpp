@@ -492,6 +492,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   auto buildMethodExprForReceiverIndex = [&](size_t receiverIndex) {
     Expr methodExpr = callExpr;
     methodExpr.isMethodCall = true;
+    methodExpr.semanticNodeId = 0;
     std::string normalizedHelperName;
     if (resolveVectorHelperAliasName(methodExpr, normalizedHelperName)) {
       methodExpr.name = normalizedHelperName;

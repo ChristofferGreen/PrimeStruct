@@ -182,6 +182,7 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
   auto buildMethodExprForReceiverIndex = [&](size_t receiverIndex) {
     Expr methodExpr = expr;
     methodExpr.isMethodCall = true;
+    methodExpr.semanticNodeId = 0;
     if (hasVectorHelperAlias) {
       methodExpr.name = normalizedVectorHelperName;
     } else if (std::string borrowedMapHelperName; resolveBorrowedMapHelperAliasName(methodExpr, borrowedMapHelperName)) {

@@ -321,7 +321,11 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   if (normalized.rfind(stdSoaVectorPrefix, 0) == 0) {
     helperNameOut = stripGeneratedHelperSuffix(
         normalized.substr(stdSoaVectorPrefix.size()));
-    return helperNameOut == "count";
+    return helperNameOut == "count" ||
+           helperNameOut == "get" ||
+           helperNameOut == "get_ref" ||
+           helperNameOut == "ref" ||
+           helperNameOut == "ref_ref";
   }
   if (normalized.rfind(experimentalVectorPrefix, 0) == 0) {
     return resolvePublishedStdlibSurfaceExprMemberName(
