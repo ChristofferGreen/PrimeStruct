@@ -1008,6 +1008,60 @@ TEST_CASE("ir lowerer call helpers dispatch bare semantic map sugar inline") {
   expectEmitted(atUnsafeCall, canonicalAtUnsafe);
 }
 
+TEST_CASE("ir lowerer call helpers keep vector at methods on builtin path") {
+  using Result = primec::ir_lowerer::InlineCallDispatchResult;
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+
+  primec::ir_lowerer::LocalMap locals;
+  LocalInfo vectorInfo;
+  vectorInfo.kind = LocalInfo::Kind::Vector;
+  vectorInfo.valueKind = LocalInfo::ValueKind::Int32;
+  locals.emplace("values", vectorInfo);
+
+  primec::Expr valuesName;
+  valuesName.kind = primec::Expr::Kind::Name;
+  valuesName.name = "values";
+
+  primec::Expr keyLiteral;
+  keyLiteral.kind = primec::Expr::Kind::Literal;
+  keyLiteral.intWidth = 32;
+  keyLiteral.literalValue = 1;
+
+  primec::Expr atMethod;
+  atMethod.kind = primec::Expr::Kind::Call;
+  atMethod.name = "at";
+  atMethod.isMethodCall = true;
+  atMethod.args = {valuesName, keyLiteral};
+
+  int resolveMethodCalls = 0;
+  int resolveDefinitionCalls = 0;
+  int emitCalls = 0;
+  std::string error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+            atMethod,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              ++resolveMethodCalls;
+              return nullptr;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              ++resolveDefinitionCalls;
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
+              ++emitCalls;
+              return true;
+            },
+            error) == Result::NotHandled);
+  CHECK(error == "stale");
+  CHECK(resolveMethodCalls == 0);
+  CHECK(resolveDefinitionCalls == 0);
+  CHECK(emitCalls == 0);
+}
+
 TEST_CASE("ir lowerer call helpers preserve direct wrapper map access defs") {
   using Result = primec::ir_lowerer::InlineCallDispatchResult;
 

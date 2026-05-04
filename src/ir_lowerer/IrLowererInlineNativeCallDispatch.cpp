@@ -754,9 +754,6 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
         isBuiltinCountName || isBuiltinCapacityName || isArrayCountCall(expr) || isStringCountCall(expr) ||
         isVectorCapacityCall(expr) || isBuiltinAccessMethod || isBuiltinMapContainsName ||
         isBuiltinMapTryAtName || isBuiltinMapInsertName;
-    if (isBuiltinAccessMethod && accessName == "at" && isVectorTarget(expr.args.front(), localsIn)) {
-      return InlineCallDispatchResult::NotHandled;
-    }
     const Definition *callee = resolveMethodCallDefinition(expr);
     if (callee != nullptr) {
       if (expr.args.size() == 1 &&
@@ -1113,6 +1110,13 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       isVectorReturningCallTarget(expr.args.front()) &&
       (isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_unsafe"))) {
     return InlineCallDispatchResult::NotHandled;
+  }
+  if (expr.isMethodCall && expr.args.size() == 2) {
+    std::string accessName;
+    if (getBuiltinArrayAccessName(expr, accessName) && accessName == "at" &&
+        isVectorTarget(expr.args.front(), localsIn)) {
+      return InlineCallDispatchResult::NotHandled;
+    }
   }
   if (expr.isMethodCall && !expr.args.empty() &&
       isVectorReturningCallTarget(expr.args.front()) &&
