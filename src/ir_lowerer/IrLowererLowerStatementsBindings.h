@@ -469,19 +469,12 @@
         }
         auto resolveSemanticSumTypeText =
             [&](const std::string &typeText, SymbolId typeTextId) -> const Definition * {
-          std::string resolvedTypeText;
           const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
-          if (semanticTargets.semanticProgram != nullptr &&
-              typeTextId != InvalidSymbolId) {
-            resolvedTypeText = std::string(semanticProgramResolveCallTargetString(
-                *semanticTargets.semanticProgram,
-                typeTextId));
-          }
-          if (resolvedTypeText.empty()) {
-            resolvedTypeText = typeText;
-          }
-          return resolveSumDefinitionForTypeText(trimTemplateTypeText(resolvedTypeText),
-                                                 stmt.namespacePrefix);
+          return resolveSumDefinitionForTypeText(
+              resolveSemanticProductTypeText(semanticTargets.semanticProgram,
+                                             typeText,
+                                             typeTextId),
+              stmt.namespacePrefix);
         };
         for (const auto &transform : bindingTypeExprRef.transforms) {
           if (transform.name == "effects" || transform.name == "capabilities" ||

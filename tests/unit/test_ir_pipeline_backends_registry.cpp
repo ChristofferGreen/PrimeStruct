@@ -2216,6 +2216,49 @@ TEST_CASE("statement binding local info resolves interned binding ids") {
         std::string::npos);
 }
 
+TEST_CASE("statement binding sum lookup uses shared semantic type resolver") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path bindingsPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererLowerStatementsBindings.h";
+  if (!std::filesystem::exists(bindingsPath)) {
+    bindingsPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerStatementsBindings.h";
+  }
+  REQUIRE(std::filesystem::exists(bindingsPath));
+
+  const std::string source = readTextFile(bindingsPath);
+  const size_t sumLookupPos = source.find("auto resolveBindingSumDefinition");
+  const size_t sharedResolverPos =
+      source.find("resolveSemanticProductTypeText(semanticTargets.semanticProgram",
+                  sumLookupPos);
+  const size_t bindingIdPos =
+      source.find("bindingFact->bindingTypeTextId", sharedResolverPos);
+  const size_t initBindingIdPos =
+      source.find("initBindingFact->bindingTypeTextId", bindingIdPos);
+  const size_t queryBindingIdPos =
+      source.find("initQueryFact->bindingTypeTextId", initBindingIdPos);
+  const size_t queryTypeIdPos =
+      source.find("initQueryFact->queryTypeTextId", queryBindingIdPos);
+  const size_t sumLoweringPos =
+      source.find("if (const Definition *sumDef = resolveBindingSumDefinition())",
+                  queryTypeIdPos);
+  REQUIRE(sumLookupPos != std::string::npos);
+  REQUIRE(sharedResolverPos != std::string::npos);
+  REQUIRE(bindingIdPos != std::string::npos);
+  REQUIRE(initBindingIdPos != std::string::npos);
+  REQUIRE(queryBindingIdPos != std::string::npos);
+  REQUIRE(queryTypeIdPos != std::string::npos);
+  REQUIRE(sumLoweringPos != std::string::npos);
+  CHECK(sumLookupPos < sharedResolverPos);
+  CHECK(sharedResolverPos < bindingIdPos);
+  CHECK(bindingIdPos < initBindingIdPos);
+  CHECK(initBindingIdPos < queryBindingIdPos);
+  CHECK(queryBindingIdPos < queryTypeIdPos);
+  CHECK(queryTypeIdPos < sumLoweringPos);
+  CHECK(source.find("resolvedTypeText = std::string(semanticProgramResolveCallTargetString",
+                    sumLookupPos) == std::string::npos);
+}
+
 TEST_CASE("native sum active payload helpers use semantic-product variant tags") {
   const auto rewriteChoiceLeftVariantTag =
       [](primec::SemanticProgram &semanticProduct, uint32_t tagValue) {

@@ -38,6 +38,9 @@ bool validateSemanticProductCollectionSpecializationCoverage(
     std::string &error);
 BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgram = nullptr);
 
+std::string resolveSemanticProductTypeText(const SemanticProgram *semanticProgram,
+                                           const std::string &text,
+                                           SymbolId textId);
 std::string normalizeCollectionBindingTypeName(const std::string &name);
 bool typeTextUsesRawBuiltinSoaVectorLayout(const std::string &typeText);
 bool exprUsesRawBuiltinSoaVectorLayout(const Expr &expr);

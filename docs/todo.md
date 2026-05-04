@@ -676,6 +676,8 @@ Task template:
     complete for semantic-product-backed tail-dispatch receiver facts.
     The lowerer field/packed payload candidate type ID-order contract slice is
     complete for shared semantic-product binding/query type resolution.
+    The lowerer statement binding sum lookup ID-order contract slice is
+    complete for shared semantic-product binding/query type resolution.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -725,6 +727,10 @@ Task template:
       Result payload classification now share one ID-first binding/query type
       candidate resolver, so copied fact text cannot diverge between those
       two native emit consumers.
+    - Completed slice: semantic-product-addressed statement binding sum
+      lookup now uses the shared ID-first binding/query type resolver before
+      resolving sum definitions, so local binding and initializer fact text
+      cannot diverge from graph-owned type IDs.
     - Completed slice: semantic-product-addressed `try(...)` dispatch
       inference now consumes published try facts before local-result,
       callable-result, map-helper, or file-helper fallback can infer the value
