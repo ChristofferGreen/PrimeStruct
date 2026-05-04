@@ -1180,13 +1180,15 @@ TEST_CASE("ir lowerer conversions helper dereferences direct aggregate pointer c
   semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
       .returnKind = "Int64",
       .structPath = "/Pair",
-      .bindingTypeText = "Reference<Pair>",
+      .bindingTypeText = "StaleScalar",
       .isMutable = false,
       .isEntryArgString = false,
       .isUnsafeReference = false,
       .referenceRoot = "",
       .definitionPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/makePairRef"),
+      .bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "Reference<Pair>"),
   });
   const auto semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
@@ -1330,13 +1332,15 @@ TEST_CASE("ir lowerer conversions helper locations direct reference calls from s
   semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
       .returnKind = "Int64",
       .structPath = "/Pair",
-      .bindingTypeText = "Reference<Pair>",
+      .bindingTypeText = "StaleScalar",
       .isMutable = false,
       .isEntryArgString = false,
       .isUnsafeReference = false,
       .referenceRoot = "",
       .definitionPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/makePairRef"),
+      .bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "Reference<Pair>"),
   });
   const auto semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);

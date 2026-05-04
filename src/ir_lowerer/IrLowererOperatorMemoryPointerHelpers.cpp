@@ -203,7 +203,7 @@ bool isReferenceReturnType(const std::string &returnType) {
   return normalizeCollectionBindingTypeName(base) == "Reference";
 }
 
-std::string resolveSemanticReturnFactBindingType(
+std::string resolveSemanticReturnFactBindingTypeText(
     const SemanticProgram *semanticProgram,
     const SemanticProgramReturnFact &returnFact) {
   if (semanticProgram != nullptr && returnFact.bindingTypeTextId != InvalidSymbolId) {
@@ -241,7 +241,7 @@ bool resolveAggregatePointerLikeCallExpr(
         findSemanticProductReturnFactByPath(*semanticProductTargets, callee->fullPath);
     std::string returnBindingType;
     if (returnFact != nullptr) {
-      returnBindingType = resolveSemanticReturnFactBindingType(
+      returnBindingType = resolveSemanticReturnFactBindingTypeText(
           semanticProductTargets->semanticProgram, *returnFact);
     }
     if (returnFact == nullptr || returnBindingType.empty()) {
@@ -292,7 +292,7 @@ bool resolveReferenceReturnCallExpr(
         findSemanticProductReturnFactByPath(*semanticProductTargets, callee->fullPath);
     std::string returnBindingType;
     if (returnFact != nullptr) {
-      returnBindingType = resolveSemanticReturnFactBindingType(
+      returnBindingType = resolveSemanticReturnFactBindingTypeText(
           semanticProductTargets->semanticProgram, *returnFact);
     }
     if (returnFact == nullptr || returnBindingType.empty()) {

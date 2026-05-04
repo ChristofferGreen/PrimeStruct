@@ -6,6 +6,29 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 4, 2026)**
+- [x] TODO-4298: Lock pointer return binding IDs
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-04
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer pointer/location return binding ID-order contract
+    slice by naming the semantic-product return binding type resolver and by
+    covering stale copied return binding text.
+  - acceptance:
+    - `dereference(makeRef())` aggregate-pointer classification compares
+      interned return binding type IDs before copied
+      `SemanticProgramReturnFact` binding text.
+    - `location(makeRef())` reference-return classification compares interned
+      return binding type IDs before copied return fact binding text.
+    - Missing return facts still fail closed with the existing
+      semantic-product return metadata diagnostics.
+  - stop_rule: Stop once the pointer/location return path has focused helper
+    coverage for interned return binding type ID precedence.
+  - evidence: Renamed the semantic return binding type resolver and updated
+    dereference/location helper coverage to use stale copied binding text with
+    a correct interned `Reference<Pair>` binding type ID. Local validation was
+    skipped under the lite workflow.
+
 - [x] TODO-4298: Lock scalar query base-kind IDs
   - owner: ai
   - created_at: 2026-04-28
