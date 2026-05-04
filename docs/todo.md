@@ -445,6 +445,17 @@ Task template:
       `PrimeStruct_primestruct_ir_pipeline_validation_cases_511_520`;
       continue release-gate stabilization with the next retained failure from
       the saved release log.
+    - 2026-05-04 lite slice: the retained setup-type vector-count fixture now
+      seeds the published semantic-product method-call target lookup instead
+      of relying on raw routing facts, preserving the routing completeness
+      contract while covering scalar builtin target fallback. Focused lite
+      validation confirmed
+      `PrimeStruct_primestruct_ir_pipeline_validation_cases_581_590`,
+      `PrimeStruct_primestruct_ir_pipeline_validation_cases_591_600`, and
+      `PrimeStruct_primestruct_ir_pipeline_validation_cases_601_610` were
+      stale, then passed
+      `PrimeStruct_primestruct_ir_pipeline_validation_cases_701_710`;
+      continue with the next retained failure from the saved release log.
 
 - [ ] TODO-4298: Promote graph-backed non-template inference authority
   - owner: ai

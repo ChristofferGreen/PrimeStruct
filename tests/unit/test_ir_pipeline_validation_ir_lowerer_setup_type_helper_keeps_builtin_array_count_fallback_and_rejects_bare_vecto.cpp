@@ -278,6 +278,8 @@ TEST_CASE("ir lowerer setup type helper keeps semantic explicit vector count hel
       .resolvedPathId = stringCountId,
       .stdlibSurfaceId = std::nullopt,
   });
+  semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr.insert_or_assign(
+      methodCall.semanticNodeId, stringCountId);
 
   primec::Definition vectorCountDef;
   vectorCountDef.fullPath = "/vector/count";

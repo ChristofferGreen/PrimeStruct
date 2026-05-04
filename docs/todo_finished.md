@@ -6,6 +6,32 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 4, 2026)**
+- [x] TODO-4360: Seed method-call routing fixture lookup
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-04
+  - phase: Release-gate stabilization
+  - scope: Land the retained setup-type vector-count fixture slice by making
+    the helper-built semantic product seed the published method-call target
+    lookup map used by routing-aware IR lowering.
+  - acceptance:
+    - The explicit vector-count method fixture still covers scalar builtin
+      semantic targets choosing the lowered vector helper when it exists.
+    - The missing-lowered-definition diagnostic still reports the published
+      scalar target when the vector helper definition is absent.
+    - Raw method-call routing facts remain unavailable without published
+      lookup maps.
+    - The retained `ir_pipeline_validation_cases_701_710` shard passes focused
+      release-mode validation.
+  - stop_rule: Stop once the retained setup-type vector-count shard passes
+    without weakening semantic-product routing completeness.
+  - evidence: Seeded
+    `publishedRoutingLookups.methodCallTargetIdsByExpr` in the focused fixture,
+    confirmed the previous retained Result helper shards were stale, and
+    focused release validation passed for
+    `ctest -R PrimeStruct_primestruct_ir_pipeline_validation_cases_701_710 --output-on-failure`
+    plus the direct `PrimeStruct_backend_ir_tests` doctest case.
+
 - [x] TODO-4360: Backfill unfrozen on_error fact ids
   - owner: ai
   - created_at: 2026-05-04
