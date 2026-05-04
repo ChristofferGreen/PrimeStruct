@@ -96,6 +96,8 @@ bool SemanticsValidator::validateExprMethodCallTarget(
         "/std/collections/vector/" + normalizedMethodName;
     if (isVectorReceiver &&
         (hasDefinitionFamilyPath(canonicalVectorHelperPath) ||
+         hasDefinitionPath(canonicalVectorHelperPath) ||
+         hasDeclaredDefinitionPath(canonicalVectorHelperPath) ||
          hasImportedDefinitionPath(canonicalVectorHelperPath))) {
       if (normalizedMethodName == "count" && expr.args.size() != 1) {
         return failMethodResolutionDiagnostic("argument count mismatch for builtin count");
