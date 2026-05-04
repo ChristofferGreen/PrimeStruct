@@ -572,6 +572,8 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("if (!emitBuiltinArrayAccess(accessName,") !=
         std::string::npos);
+  CHECK(tailDispatchSource.find("return resolveTailDispatchDirectHelperDefinition(callExpr);") !=
+        std::string::npos);
   CHECK(operatorMemoryPointerHelpersSource.find("getBuiltinArrayAccessName(candidate, accessName)") !=
         std::string::npos);
   CHECK(operatorMemoryPointerHelpersSource.find("candidate.name == \"at\" || candidate.name == \"at_unsafe\"") ==

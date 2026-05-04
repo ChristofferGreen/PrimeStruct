@@ -590,7 +590,9 @@
             [&](const Expr &callExpr, const ir_lowerer::LocalMap &localMap) {
               return resolveMethodCallDefinition(callExpr, localMap);
             },
-            [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
+            [&](const Expr &callExpr) {
+              return resolveTailDispatchDirectHelperDefinition(callExpr);
+            },
             [&](const Expr &callExpr, const Definition &callee, const ir_lowerer::LocalMap &localMap) {
               return emitInlineDefinitionCall(callExpr, callee, localMap, true);
             },
