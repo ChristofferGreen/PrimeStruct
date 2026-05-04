@@ -1551,17 +1551,21 @@ Task template:
   - created_at: 2026-05-04
   - phase: Procedural compile-time genericity
   - depends_on: TODO-4335
-  - scope: Let compile-time type locals appear in binding, parameter, return,
-    struct-field, and constructor envelope positions where concrete types are
-    required.
+  - scope: Let compile-time type locals appear in local binding and
+    struct-field envelope positions where concrete types are required.
   - implementation_notes:
     - Start from template type resolution, binding transform validation,
       struct layout validation, and semantic-product type metadata.
+    - Leave public parameter/return envelope use of type locals to a later
+      task once generated-type escape and caller-visible naming are settled.
     - Type locals must resolve before layout and lowering; unresolved type
       locals must fail before IR.
   - acceptance:
     - A type local produced by `typeof<value>` can annotate a later local or
       struct field in the same definition specialization.
+    - Type locals in public parameter or return envelopes reject with a stable
+      diagnostic unless another completed task has defined their
+      caller-visible naming/export behavior.
     - Type locals cannot escape their valid scope except through generated
       concrete types or ordinary return values.
     - Cycles, forward references where unsupported, and runtime value use of a
@@ -1569,8 +1573,9 @@ Task template:
     - Semantic-product/lowering tests verify no backend re-derives type-local
       facts from source text.
     - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once type locals are usable as concrete envelope names;
-    leave generated local structs to TODO-4337.
+  - stop_rule: Stop once type locals are usable in later local-binding and
+    struct-field envelopes; leave generated local structs to TODO-4337 and
+    public parameter/return envelopes to a future caller-visible naming task.
 
 - [ ] TODO-4337: Add local generated nominal structs
   - owner: ai
@@ -1758,9 +1763,6 @@ Task template:
       fact, and final pass/fail result.
     - Represent predicate evaluation outcomes distinctly: satisfied,
       unsatisfied, and invalid evaluation.
-    - Define the typed compile-time value layer needed by the evaluator,
-      including `bool`, integer constants, string literals, type facts,
-      symbols, and requirement results.
     - Keep predicates typed; do not lower them into strings or backend-local
       source reconstruction.
   - acceptance:
@@ -1769,9 +1771,9 @@ Task template:
     - Predicate operands distinguish type facts, values, compile-time
       symbols, literal compile-time arguments, and unsupported runtime-only
       expressions.
-    - User predicates can publish ordinary source-level `bool` results that
-      semantics wraps as requirement facts without exposing a special
-      requirement-result type in user code.
+    - Predicate facts can reference future typed compile-time values by stable
+      handles without requiring the CT value model to be implemented in this
+      task.
     - Semantic validation publishes requirement facts before IR lowering and
       fails closed when a required fact is missing.
     - Invalid predicate evaluation is represented separately from a failed
@@ -1788,11 +1790,12 @@ Task template:
   - phase: Generic constraint and compile-time flow alignment
   - depends_on: TODO-4342, TODO-4335
   - scope: Implement the initial builtin predicates for relations between
-    compile-time type facts.
+    compile-time type facts, limited to equality and type-kind checks.
   - implementation_notes:
     - Start with equality and kind checks such as same-type, is-type,
-      is-struct, is-sum, and type-argument/element extraction only if the
-      extraction result is already representable as a typed fact.
+      is-struct, and is-sum.
+    - Do not add type-argument or element extraction in this slice; split that
+      into a later TODO once tuple/collection type-pack facts are stable.
     - Canonicalize readable source predicates such as `typeof<left> == i32`
       into builtin compile-time predicate calls such as `equals<left, i32>`
       before requirement facts are published.
@@ -1806,6 +1809,8 @@ Task template:
       concrete type and reject a mismatched call before lowering.
     - Type-kind predicates work on generated nominal structs and ordinary
       named types with stable results.
+    - Unsupported extraction-style predicates produce stable diagnostics or
+      are documented as deferred rather than partially implemented.
     - Builtin predicate names and user predicate names cannot collide
       ambiguously with `/std/meta/*`.
     - Unsupported operands and unknown relation names produce stable
@@ -1821,8 +1826,9 @@ Task template:
   - created_at: 2026-05-04
   - phase: Generic constraint and compile-time flow alignment
   - depends_on: TODO-4342
-  - scope: Implement predicates that ask whether a type supports a named
-    operation, trait, lifecycle helper, or construction form.
+  - scope: Implement the first capability/trait predicate slice for named
+    operation support, construction availability, and one lifecycle
+    availability query.
   - implementation_notes:
     - Start from transform-style trait constraints, lifecycle helper
       validation, helper/call resolution, struct constructor validation, and
@@ -1830,7 +1836,8 @@ Task template:
     - Use C++'s practical generic toolbox as inspiration for the initial
       builtin surface while keeping PrimeStruct facts typed and deterministic:
       constructible, copyable, movable, comparable, callable, field/member
-      presence, and operation/trait support.
+      presence, and operation/trait support, but implement only the minimal
+      subset needed for this leaf.
     - Reflection-style predicates must obey normal visibility: private fields
       and helpers are invisible outside their visibility boundary unless a
       later privileged reflection feature explicitly authorizes access.
@@ -1842,6 +1849,8 @@ Task template:
   - acceptance:
     - Requirement predicates can check at least one arithmetic/comparison
       trait, one constructor shape, and one lifecycle capability.
+    - Other planned capability names are listed as deferred or split into
+      follow-up TODOs if they are not implemented in this slice.
     - Failed capability checks produce diagnostics at the requirement site and
       include the call-site type facts that caused the failure.
     - Overloaded helpers, imported traits, and generated types produce
@@ -1865,7 +1874,9 @@ Task template:
     - Start from `include/primec/Vm.h`, `src/VmExecution.cpp`,
       `src/VmExecution.h`, `src/VmControlFlowOpcodeShared.*`,
       `src/VmNumericOpcodeShared.*`, semantic-product publication, and the
-      compile-time value representation from TODO-4342.
+      requirement predicate representation from TODO-4342.
+    - Leave the concrete typed compile-time value model to TODO-4353; this
+      task only defines the facade boundary and result categories.
     - Define the facade API, result/fault categories, provenance inputs, and
       host interface expected by later CT value, VM-kernel, and host tasks.
     - Requirement evaluation runs before final backend lowering is complete,
@@ -2056,8 +2067,9 @@ Task template:
   - created_at: 2026-05-04
   - phase: Generic constraint and compile-time flow alignment
   - depends_on: TODO-4345
-  - scope: Define and enforce the purity, effect, recursion, caching, and
-    termination rules for compile-time generic execution.
+  - scope: Define the purity, effect, recursion, caching, and termination
+    policy for compile-time generic execution, leaving full enforcement to
+    TODO-4358.
   - implementation_notes:
     - Start from docs for deterministic semantics, semantic validation pass
       ordering, template monomorphization recursion guards, import handling,
@@ -2077,20 +2089,13 @@ Task template:
     - Docs specify which operations are legal during compile-time generic
       execution by default, which require explicit
       `effects<compiletime>(...)` opt-in, and which are always rejected.
-    - Definitions with compile-time IO or other effectful compile-time work
-      require the matching phase-qualified compile-time effects in their
-      transform list, and those effects are included in semantic cache keys and
-      diagnostics.
-    - Recursive compile-time evaluation has a deterministic depth/budget
-      diagnostic instead of unbounded compiler recursion.
-    - Repeated specializations reuse cached facts where safe and produce
-      identical diagnostics/IR when caching is disabled.
-    - Tests cover missing `effects<compiletime>(...)` opt-in rejection,
-      recursion-limit failure, cache-key discrimination, and stable repeated
-      evaluation.
+    - Docs define recursion/instruction budget categories, cache-key fields,
+      and the diagnostic categories that TODO-4358 must enforce.
+    - Existing compile-time execution tests, if any, are updated only to match
+      the documented policy; broad enforcement tests remain in TODO-4358.
     - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once compile-time generic flow has enforceable
-    determinism and termination rules.
+  - stop_rule: Stop once the compile-time flow policy is precise enough for
+    TODO-4358 to implement without making new language-design decisions.
 
 - [ ] TODO-4358: Enforce compile-time cache, budget, and effects
   - owner: ai
