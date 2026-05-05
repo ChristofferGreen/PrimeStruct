@@ -5,6 +5,31 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Completion (May 5, 2026)**
+- [x] TODO-4360: Stabilize SoA mutator methods
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-05
+  - phase: Release-gate stabilization
+  - scope: Land the retained imported builtin `soa_vector` method mutator
+    slice by keeping canonical SoA helper classification in sync after
+    receiver probing rewrites method calls to `/std/collections/soa_vector/*`.
+  - acceptance:
+    - Imported builtin `values.reserve(...)` and `values.push(...)` route
+      through the same canonical SoA helper fallback as bare and explicit
+      mutator forms.
+    - Canonical `/std/collections/soa_vector/*` method targets remain in the
+      vector-family compatibility path instead of falling through to unknown
+      method diagnostics.
+    - The retained `calls_flow_collections_241_250` release shard passes
+      focused validation.
+  - stop_rule: Stop once the retained SoA mutator method shard passes without
+    weakening canonical helper visibility or receiver validation.
+  - evidence: Recomputed canonical statement-helper classification after
+    receiver probing, accepted canonical SoA mutators in method-target fallback
+    paths, and focused release validation passed for
+    `ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_241_250$'`.
+
 **Todo Completion (May 4, 2026)**
 - [x] TODO-4298: Lock field payload type IDs
   - owner: ai

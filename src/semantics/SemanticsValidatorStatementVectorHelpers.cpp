@@ -376,22 +376,28 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     }
     return canonicalPath;
   };
-  const std::string vectorHelperResolvedCanonical =
-      canonicalizeSoaMutatorHelperPath(vectorHelperResolved);
-  const bool isStdNamespacedSoaCanonicalMutatorHelperCall =
-      !stmt.isMethodCall &&
-      vectorHelperResolvedCanonical.rfind("/std/collections/soa_vector/", 0) == 0 &&
-      (isLegacyOrCanonicalSoaHelperPath(vectorHelperResolvedCanonical, "push") ||
-       isLegacyOrCanonicalSoaHelperPath(vectorHelperResolvedCanonical, "reserve"));
   const bool isStdNamespacedVectorCanonicalHelperCall =
       !stmt.isMethodCall && vectorHelperResolved.rfind("/std/collections/vector/", 0) == 0 &&
       (namespacedHelper == "count" || namespacedHelper == "capacity" || namespacedHelper == "at" ||
        namespacedHelper == "at_unsafe" || namespacedHelper == "push" || namespacedHelper == "pop" ||
        namespacedHelper == "reserve" || namespacedHelper == "clear" || namespacedHelper == "remove_at" ||
        namespacedHelper == "remove_swap");
-  const bool isStdNamespacedCanonicalBuiltinHelperCall =
-      isStdNamespacedVectorCanonicalHelperCall ||
-      isStdNamespacedSoaCanonicalMutatorHelperCall;
+  std::string vectorHelperResolvedCanonical =
+      canonicalizeSoaMutatorHelperPath(vectorHelperResolved);
+  bool isStdNamespacedSoaCanonicalMutatorHelperCall = false;
+  bool isStdNamespacedCanonicalBuiltinHelperCall = false;
+  auto recomputeCanonicalBuiltinHelperClassification = [&]() {
+    vectorHelperResolvedCanonical =
+        canonicalizeSoaMutatorHelperPath(vectorHelperResolved);
+    isStdNamespacedSoaCanonicalMutatorHelperCall =
+        vectorHelperResolvedCanonical.rfind("/std/collections/soa_vector/", 0) == 0 &&
+        (isLegacyOrCanonicalSoaHelperPath(vectorHelperResolvedCanonical, "push") ||
+         isLegacyOrCanonicalSoaHelperPath(vectorHelperResolvedCanonical, "reserve"));
+    isStdNamespacedCanonicalBuiltinHelperCall =
+        isStdNamespacedVectorCanonicalHelperCall ||
+        isStdNamespacedSoaCanonicalMutatorHelperCall;
+  };
+  recomputeCanonicalBuiltinHelperClassification();
   const std::string normalizedStatementNamespacePrefix =
       std::string(trimLeadingSlash(stmt.namespacePrefix));
   const std::string normalizedStatementName =
@@ -679,6 +685,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       vectorHelperResolved = methodTarget;
       hasResolvedReceiverIndex = true;
       resolvedReceiverIndex = receiverIndex;
+      recomputeCanonicalBuiltinHelperClassification();
       return true;
     };
     if (hasNamedStatementArgs) {

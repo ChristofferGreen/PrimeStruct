@@ -609,6 +609,15 @@ Task template:
       `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_161_170`;
       continue with the next retained release failure,
       `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_241_250`.
+    - 2026-05-05 lite slice: imported builtin `soa_vector` method mutators
+      now recompute canonical helper classification after receiver probing
+      rewrites `values.reserve(...)` / `values.push(...)` onto
+      `/std/collections/soa_vector/*`, preserving canonical helper fallback
+      parity with bare and explicit mutator forms. Focused release validation
+      passed for
+      `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_241_250`;
+      continue with the next retained release failure,
+      `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_261_270`.
 
 - [ ] TODO-4298: Promote graph-backed non-template inference authority
   - owner: ai

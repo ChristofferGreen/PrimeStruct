@@ -698,6 +698,37 @@ bool SemanticsValidator::getVectorStatementHelperName(const Expr &candidate,
     helperNameOut = oldExplicitSoaPath.substr(oldExplicitSoaPath.find_last_of('/') + 1);
     return true;
   }
+  auto canonicalSoaMutatorHelperName = [&]() -> std::string {
+    std::string normalizedCanonicalName = normalizedName;
+    std::string normalizedCanonicalPrefix =
+        std::string(trimLeadingSlash(candidate.namespacePrefix));
+    if (const size_t specializationSuffix = normalizedCanonicalName.find("__");
+        specializationSuffix != std::string::npos) {
+      normalizedCanonicalName.erase(specializationSuffix);
+    }
+    if (const size_t specializationSuffix = normalizedCanonicalPrefix.find("__");
+        specializationSuffix != std::string::npos) {
+      normalizedCanonicalPrefix.erase(specializationSuffix);
+    }
+    constexpr std::string_view kCanonicalSoaPrefix = "std/collections/soa_vector/";
+    if (normalizedCanonicalPrefix == "std/collections/soa_vector" &&
+        (normalizedCanonicalName == "push" || normalizedCanonicalName == "reserve")) {
+      return normalizedCanonicalName;
+    }
+    if (normalizedCanonicalName.rfind(kCanonicalSoaPrefix, 0) != 0) {
+      return {};
+    }
+    std::string helperName =
+        normalizedCanonicalName.substr(kCanonicalSoaPrefix.size());
+    if (helperName == "push" || helperName == "reserve") {
+      return helperName;
+    }
+    return {};
+  }();
+  if (!canonicalSoaMutatorHelperName.empty()) {
+    helperNameOut = canonicalSoaMutatorHelperName;
+    return true;
+  }
 
   std::string removedPath = explicitRemovedCollectionMethodPath(candidate.name, candidate.namespacePrefix);
   if (removedPath.empty()) {

@@ -657,6 +657,15 @@ bool SemanticsValidator::validateExprMethodCallTarget(
         isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get_ref")) {
       isBuiltinMethod = true;
     }
+    std::string canonicalSoaMutatorPath = resolved;
+    if (const size_t specializationSuffix = canonicalSoaMutatorPath.find("__");
+        specializationSuffix != std::string::npos) {
+      canonicalSoaMutatorPath.erase(specializationSuffix);
+    }
+    if (isLegacyOrCanonicalSoaHelperPath(canonicalSoaMutatorPath, "push") ||
+        isLegacyOrCanonicalSoaHelperPath(canonicalSoaMutatorPath, "reserve")) {
+      isBuiltinMethod = true;
+    }
   }
   if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end() &&
       !hasImportedDefinitionPath(resolved) && !hasBlockArgs) {
