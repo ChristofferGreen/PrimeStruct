@@ -1001,6 +1001,11 @@ Task template:
       local map value kinds no longer override a graph-backed `string` access
       result; local/literal map reconstruction remains compatibility fallback
       for syntax-only/no-fact paths.
+    - Completed slice: native count emission for `count(map[key])` now uses the
+      indexed access expression's graph-backed value kind before local map
+      metadata can choose string-length emission. Known non-string graph facts
+      suppress stale local string metadata; local/literal map reconstruction
+      remains compatibility fallback for syntax-only/no-fact paths.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.

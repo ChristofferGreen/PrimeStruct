@@ -877,6 +877,19 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     std::string accessName;
     const Expr &target = expr.args.front();
     if (getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) {
+      if (inferExprKind) {
+        const LocalInfo::ValueKind targetKind = inferExprKind(target, localsIn);
+        if (targetKind == LocalInfo::ValueKind::String) {
+          if (!emitExpr(target, localsIn)) {
+            return CountAccessCallEmitResult::Error;
+          }
+          emitInstruction(IrOpcode::LoadStringLength, 0);
+          return CountAccessCallEmitResult::Emitted;
+        }
+        if (targetKind != LocalInfo::ValueKind::Unknown) {
+          return CountAccessCallEmitResult::NotHandled;
+        }
+      }
       const Expr &accessTarget = target.args.front();
       bool stringMapAccess = false;
       if (accessTarget.kind == Expr::Kind::Name) {

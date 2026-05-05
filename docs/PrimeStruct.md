@@ -597,6 +597,12 @@ Planned non-template inference migration contract:
   local map value kinds can no longer override a graph-backed `string` access
   result; local and literal map reconstruction remains the explicit
   syntax-only/no-fact compatibility fallback.
+- Completed native count-of-map-access emission slice: native count emission
+  for `count(map[key])` now uses the indexed access expression's inferred
+  graph-backed value kind before local map metadata can select string-length
+  emission. Known non-string graph facts suppress stale local string metadata;
+  the local/literal map branch remains the compatibility fallback when no
+  published access fact is available.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph
