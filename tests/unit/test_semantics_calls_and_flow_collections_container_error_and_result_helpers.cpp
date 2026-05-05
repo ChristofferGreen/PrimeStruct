@@ -1883,7 +1883,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector stdlib field-view method reports return escape diagnostic") {
+TEST_CASE("experimental soa_vector stdlib field-view method reports pending diagnostic") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -1897,13 +1897,14 @@ main() {
   [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
   return(values.x())
 }
-)";
+  )";
   std::string error;
   CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("field-view escapes via return") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") !=
+        std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector borrowed local field-view method reports return escape diagnostic") {
+TEST_CASE("experimental soa_vector borrowed local field-view method reports pending diagnostic") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -1918,10 +1919,11 @@ main() {
   [Reference<SoaVector<Particle>>] borrowed{location(values)}
   return(borrowed.x())
 }
-)";
+  )";
   std::string error;
   CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("field-view escapes via return") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") !=
+        std::string::npos);
 }
 
 TEST_CASE("experimental soa_vector borrowed local field-view call-form reports pending diagnostic") {
