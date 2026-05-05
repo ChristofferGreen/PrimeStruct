@@ -591,6 +591,15 @@ Task template:
       `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_141_150`;
       continue with the next retained release failure,
       `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_151_160`.
+    - 2026-05-05 lite slice: retained experimental SoA mutating field-view
+      argument fixtures now match the pending experimental helper contract:
+      mutating method/call-form field-view expressions through `SoaVector`
+      report the unresolved canonical field-view helper instead of the
+      canonical `soa_vector` argument-escape diagnostic. Focused release
+      validation passed for
+      `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_151_160`;
+      continue with the next retained release failure,
+      `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_161_170`.
 
 - [ ] TODO-4298: Promote graph-backed non-template inference authority
   - owner: ai
