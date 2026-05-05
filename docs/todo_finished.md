@@ -6,6 +6,27 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 5, 2026)**
+- [x] TODO-4360: Stabilize backend registry locks
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-05
+  - phase: Release-gate stabilization
+  - scope: Stabilize the retained backend-registry release shard by retargeting
+    stale semantic-product Result source locks to the current helper names and
+    fallback ordering.
+  - acceptance:
+    - The retained `PrimeStruct_primestruct_ir_pipeline_backends_registry`
+      release shard passes focused validation.
+    - Result error direct-call source locks still require semantic-product query
+      error type ids before text fallback.
+    - Result.ok metadata and emission locks still require semantic-product
+      payload facts before legacy collection, struct, or kind inference.
+  - stop_rule: Stop once the retained backend-registry shard passes and the next
+    retained release failure is documented.
+  - evidence: Retargeted stale source-lock needles in
+    `test_ir_pipeline_backends_registry.cpp`, then focused validation passed for
+    `ctest --output-on-failure -R '^PrimeStruct_primestruct_ir_pipeline_backends_registry$'`.
+
 - [x] TODO-4360: Retarget Result constructor checks
   - owner: ai
   - created_at: 2026-05-04

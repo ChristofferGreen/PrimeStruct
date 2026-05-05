@@ -657,6 +657,13 @@ Task template:
       `PrimeStruct_primestruct_compile_run_emitters_cpp_collection_access_and_alias_forwarding_74_75`;
       continue with the next retained release failure,
       `PrimeStruct_primestruct_ir_pipeline_backends_registry`.
+    - 2026-05-05 lite slice: retained backend-registry source locks now
+      match the current semantic-product Result helper names and fallback
+      ordering while preserving the interned semantic-product type-id checks
+      ahead of legacy inference. Focused release validation passed for
+      `PrimeStruct_primestruct_ir_pipeline_backends_registry`; continue with
+      the next retained release failure,
+      `PrimeStruct_primestruct_compile_run_imports_operations_and_collections_35_36`.
 
 - [ ] TODO-4298: Promote graph-backed non-template inference authority
   - owner: ai

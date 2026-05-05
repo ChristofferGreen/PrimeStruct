@@ -1593,7 +1593,7 @@ TEST_CASE("native Result error direct-call sources use semantic-product query fa
 
   const std::string source = readTextFile(packedResultHelpersPath);
   const size_t resolverPos =
-      source.find("resolveSemanticQueryResultErrorTypeText");
+      source.find("resolveSemanticProductQueryErrorTypeText");
   const size_t semanticResolvePos =
       source.find("semanticProgramResolveCallTargetString(", resolverPos);
   const size_t errorTypeIdPos =
@@ -1895,15 +1895,15 @@ TEST_CASE("direct Result ok payload metadata uses semantic-product type facts fi
       source.find("semanticProgramResolveCallTargetString", idCheckPos);
   const size_t copiedTextFallbackPos =
       source.find("return trimTemplateTypeText(typeText);", internedTypeTextPos);
-  const size_t collectionFallbackPos =
-      source.find("inferDirectResultValueCollectionInfo(",
-                  metadataPos);
-  const size_t structFallbackPos =
-      source.find("inferDirectResultValueStructType(",
-                  metadataPos);
   const size_t suppressFallbackPos =
       source.find("suppressSemanticCallDefinitionFallback",
                   metadataPos);
+  const size_t collectionFallbackPos =
+      source.find("inferDirectResultValueCollectionInfo(",
+                  suppressFallbackPos);
+  const size_t structFallbackPos =
+      source.find("inferDirectResultValueStructType(",
+                  suppressFallbackPos);
   REQUIRE(semanticFactPos != std::string::npos);
   REQUIRE(resolverPos != std::string::npos);
   REQUIRE(idCheckPos != std::string::npos);
@@ -1952,7 +1952,8 @@ TEST_CASE("native Result ok emission uses semantic-product payload facts") {
   const size_t missingDiagnosticPos =
       source.find("missing semantic-product Result.ok payload metadata",
                   emitPos);
-  const size_t inferKindPos = source.find("inferExprKind(expr.args[1], localsIn)", emitPos);
+  const size_t inferKindPos =
+      source.find("inferExprKind(payloadExpr, localsIn)", emitPos);
   const size_t collectionFallbackPos =
       source.find("inferDirectResultValueCollectionInfo", emitPos);
   const size_t structFallbackPos =
