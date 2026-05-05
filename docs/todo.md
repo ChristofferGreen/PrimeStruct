@@ -1062,6 +1062,13 @@ Task template:
       `i32` receivers. Known non-string graph facts suppress stale local
       string receivers; no-fact local metadata remains compatibility fallback
       for syntax-only paths.
+    - Completed slice: lowerer setup-type return-kind inference for reordered
+      `at(index, values)` calls now asks graph-backed value-kind inference
+      before local string metadata can decide whether a named positional
+      argument is already the collection receiver. Known non-string graph
+      facts let the reordered receiver probe continue; no-fact local metadata
+      preserves the existing syntax-only leading-receiver compatibility
+      behavior.
     - Completed slice: native string-key map lookup emission now asks
       graph-backed value-kind inference before literal-backed string metadata
       can choose the static string-table key path for string-key maps. Known

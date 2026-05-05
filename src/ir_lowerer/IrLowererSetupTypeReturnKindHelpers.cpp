@@ -460,6 +460,14 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     if (candidate.kind != Expr::Kind::Name) {
       return false;
     }
+    const LocalInfo::ValueKind inferredKind =
+        inferExprKind ? inferExprKind(candidate, localsIn) : LocalInfo::ValueKind::Unknown;
+    if (inferredKind == LocalInfo::ValueKind::String) {
+      return true;
+    }
+    if (inferredKind != LocalInfo::ValueKind::Unknown) {
+      return false;
+    }
     auto it = localsIn.find(candidate.name);
     return it != localsIn.end() && it->second.kind == LocalInfo::Kind::Value &&
            it->second.valueKind == LocalInfo::ValueKind::String;

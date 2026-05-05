@@ -6,6 +6,31 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 5, 2026)**
+- [x] TODO-4298: Prefer graph facts for return access
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-05
+  - phase: Semantic ownership authority
+  - scope: Move setup-type return-kind inference for reordered access calls
+    onto graph-backed value-kind inference before stale local string metadata
+    can decide whether a named positional argument is already the collection
+    receiver.
+  - acceptance:
+    - Graph-backed non-string facts suppress stale local string metadata and
+      let reordered access receiver probing continue.
+    - Graph-backed string facts still classify the named positional argument
+      as the string receiver.
+    - Syntax-only/no-fact local string metadata still preserves the existing
+      leading-receiver compatibility behavior.
+  - stop_rule: Stop once setup-type return-kind inference prefers
+    graph-backed receiver value kinds before local string metadata for
+    reordered access calls and tests cover graph-string, graph-non-string,
+    and no-fact fallback paths.
+  - evidence: `resolveCountMethodCallReturnKind` now checks the existing
+    graph-backed expression-kind callback before local string metadata in its
+    collection receiver classifier, and setup-type tests pin reordered access
+    return-kind behavior.
+
 - [x] TODO-4298: Prefer graph facts for receiver methods
   - owner: ai
   - created_at: 2026-04-28

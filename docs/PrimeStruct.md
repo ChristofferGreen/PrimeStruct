@@ -661,6 +661,13 @@ Planned non-template inference migration contract:
   indexed named targets as `i32` receivers. Known non-string graph facts
   suppress stale local string receiver metadata; no-fact local metadata
   remains the syntax-only compatibility fallback.
+- Completed lowerer setup reordered access return-kind slice: setup-type
+  return-kind inference for reordered `at(index, values)` calls now asks
+  graph-backed value-kind inference before local string metadata can decide
+  whether a named positional argument is already the collection receiver.
+  Known non-string graph facts let the reordered receiver probe continue;
+  no-fact local metadata preserves the existing syntax-only leading-receiver
+  compatibility behavior.
 - Completed native string-key map lookup slice: native map lookup key emission
   now asks graph-backed value-kind inference before literal-backed string
   metadata can select the static string-table key path for string-key maps.

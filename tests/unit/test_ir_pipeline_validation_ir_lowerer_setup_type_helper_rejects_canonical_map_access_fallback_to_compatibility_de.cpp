@@ -250,6 +250,128 @@ TEST_CASE("ir lowerer setup type helper resolves reordered positional access cal
   CHECK(resolveCalls == 1);
 }
 
+TEST_CASE("ir lowerer setup type helper prefers graph facts for reordered access return kinds") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Definition atUnsafeDef;
+  atUnsafeDef.fullPath = "/map/at_unsafe";
+
+  std::unordered_map<std::string, primec::ir_lowerer::ReturnInfo> infoByPath;
+  primec::ir_lowerer::ReturnInfo scalarInfo;
+  scalarInfo.returnsVoid = false;
+  scalarInfo.returnsArray = false;
+  scalarInfo.kind = ValueKind::Int64;
+  infoByPath.emplace("/map/at_unsafe", scalarInfo);
+
+  auto getReturnInfo = [&infoByPath](const std::string &path, primec::ir_lowerer::ReturnInfo &out) {
+    auto it = infoByPath.find(path);
+    if (it == infoByPath.end()) {
+      return false;
+    }
+    out = it->second;
+    return true;
+  };
+
+  primec::Expr keyExpr;
+  keyExpr.kind = primec::Expr::Kind::Name;
+  keyExpr.name = "key";
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "items";
+
+  primec::Expr atUnsafeCall;
+  atUnsafeCall.kind = primec::Expr::Kind::Call;
+  atUnsafeCall.name = "at_unsafe";
+  atUnsafeCall.args = {keyExpr, receiverExpr};
+
+  primec::ir_lowerer::LocalMap staleLocals;
+  primec::ir_lowerer::LocalInfo staleStringInfo;
+  staleStringInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  staleStringInfo.valueKind = ValueKind::String;
+  staleLocals.emplace("key", staleStringInfo);
+  primec::ir_lowerer::LocalInfo mapLocal;
+  mapLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  staleLocals.emplace("items", mapLocal);
+
+  const auto noCountClassifier = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    return false;
+  };
+
+  int resolveCalls = 0;
+  ValueKind kindOut = ValueKind::Unknown;
+  bool methodResolved = false;
+  CHECK(primec::ir_lowerer::resolveCountMethodCallReturnKind(
+      atUnsafeCall,
+      staleLocals,
+      noCountClassifier,
+      noCountClassifier,
+      [&](const primec::Expr &methodExpr, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+        ++resolveCalls;
+        if (!methodExpr.isMethodCall || methodExpr.args.empty()) {
+          return nullptr;
+        }
+        if (methodExpr.args.front().kind == primec::Expr::Kind::Name &&
+            methodExpr.args.front().name == "items") {
+          return &atUnsafeDef;
+        }
+        return nullptr;
+      },
+      getReturnInfo,
+      false,
+      kindOut,
+      &methodResolved,
+      [](const primec::Expr &candidate, const primec::ir_lowerer::LocalMap &) {
+        return candidate.kind == primec::Expr::Kind::Name && candidate.name == "key"
+                   ? ValueKind::Int64
+                   : ValueKind::Unknown;
+      }));
+  CHECK(methodResolved);
+  CHECK(kindOut == ValueKind::Int64);
+  CHECK(resolveCalls == 1);
+
+  kindOut = ValueKind::Unknown;
+  methodResolved = false;
+  CHECK(primec::ir_lowerer::resolveCountMethodCallReturnKind(
+      atUnsafeCall,
+      staleLocals,
+      noCountClassifier,
+      noCountClassifier,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+        return nullptr;
+      },
+      getReturnInfo,
+      false,
+      kindOut,
+      &methodResolved,
+      [](const primec::Expr &candidate, const primec::ir_lowerer::LocalMap &) {
+        return candidate.kind == primec::Expr::Kind::Name && candidate.name == "key"
+                   ? ValueKind::String
+                   : ValueKind::Unknown;
+      }));
+  CHECK_FALSE(methodResolved);
+  CHECK(kindOut == ValueKind::Int32);
+
+  kindOut = ValueKind::Unknown;
+  methodResolved = false;
+  CHECK_FALSE(primec::ir_lowerer::resolveCountMethodCallReturnKind(
+      atUnsafeCall,
+      staleLocals,
+      noCountClassifier,
+      noCountClassifier,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+        return nullptr;
+      },
+      getReturnInfo,
+      false,
+      kindOut,
+      &methodResolved,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return ValueKind::Unknown;
+      }));
+  CHECK_FALSE(methodResolved);
+  CHECK(kindOut == ValueKind::Unknown);
+}
+
 TEST_CASE("ir lowerer setup type helper keeps leading collection receiver for positional access calls") {
   primec::Definition atDef;
   atDef.fullPath = "/map/at";
