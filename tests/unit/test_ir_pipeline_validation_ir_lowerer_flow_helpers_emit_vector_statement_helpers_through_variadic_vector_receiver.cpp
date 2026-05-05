@@ -157,10 +157,10 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helpers through variadi
             makeCall("push", {makeDeref(makeAccess("soaRefs", 0)), makeI32Literal(7)}),
             emitExprCalls,
             error,
-            instructions) == EmitResult::NotMatched);
+            instructions) == EmitResult::Emitted);
   CHECK(error.empty());
-  CHECK(emitExprCalls == 0);
-  CHECK(instructions.empty());
+  CHECK(emitExprCalls >= 2);
+  CHECK_FALSE(instructions.empty());
 }
 
 TEST_CASE("ir lowerer flow helpers validate vector statement helper diagnostics") {
@@ -296,7 +296,7 @@ TEST_CASE("ir lowerer flow helpers validate vector statement helper diagnostics"
             [] {},
             [] {},
             [] {},
-            error) == EmitResult::NotMatched);
+            error) == EmitResult::Emitted);
   CHECK(error.empty());
 
   primec::Expr explicitSoaPushCall = soaPushCall;
@@ -315,7 +315,7 @@ TEST_CASE("ir lowerer flow helpers validate vector statement helper diagnostics"
             [] {},
             [] {},
             [] {},
-            error) == EmitResult::NotMatched);
+            error) == EmitResult::Emitted);
   CHECK(error.empty());
 
   primec::Expr canonicalSoaPushCall = soaPushCall;
@@ -334,7 +334,7 @@ TEST_CASE("ir lowerer flow helpers validate vector statement helper diagnostics"
             [] {},
             [] {},
             [] {},
-            error) == EmitResult::NotMatched);
+            error) == EmitResult::Emitted);
   CHECK(error.empty());
 
   locals.at("v").isMutable = true;

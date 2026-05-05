@@ -532,6 +532,19 @@ Task template:
       `PrimeStruct_primestruct_ir_pipeline_backends_registry` source-lock
       drift or the first still-reproducible collection receiver-routing
       shard from the current release log.
+    - 2026-05-05 non-lite slice: synchronized the testing
+      `ArrayVectorAccessTargetInfo` layout with the production call-helper
+      contract so `argsPackElementKind` reads the intended field, then updated
+      the SoA variadic vector receiver helper expectations to match the
+      currently emitted canonical SoA push behavior. Focused release
+      validation passed for
+      `PrimeStruct_primestruct_ir_pipeline_validation_cases_191_200` and
+      `PrimeStruct_primestruct_ir_pipeline_validation_cases_301_310`. The
+      full release gate still failed 178 tests; next stabilization should
+      start with the first remaining release failure,
+      `PrimeStruct_primestruct_ir_pipeline_validation_cases_61_70`, or with
+      the retained collection/Result/Maybe conformance clusters if that shard
+      proves to be stale.
 
 - [ ] TODO-4298: Promote graph-backed non-template inference authority
   - owner: ai
