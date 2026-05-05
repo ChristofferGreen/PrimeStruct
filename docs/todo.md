@@ -672,6 +672,14 @@ Task template:
       `PrimeStruct_primestruct_compile_run_imports_operations_and_collections_35_36`;
       continue with the next retained release failure,
       `PrimeStruct_primestruct_compile_run_native_backend_collections_stdlib_collection_shims_accessors_229_238`.
+    - 2026-05-05 lite slice: retained native map conformance fallback locks
+      now match the current native lowering diagnostic prefix for unsupported
+      experimental map constructor/access expression lowering, while still
+      accepting successful runtime conformance where the native path runs.
+      Focused release validation passed for
+      `PrimeStruct_primestruct_compile_run_native_backend_collections_stdlib_collection_shims_accessors_229_238`;
+      continue with the next retained release failure,
+      `PrimeStruct_primestruct_compile_run_imports_operations_and_collections_55_56`.
 
 - [ ] TODO-4298: Promote graph-backed non-template inference authority
   - owner: ai

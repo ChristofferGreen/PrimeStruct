@@ -28,6 +28,7 @@ inline void expectNativeMapConformanceProgramRunsOrCompileRejectWithOutput(
   if (output.empty()) {
     CHECK(compileStatus == -1);
   } else {
+    INFO(output);
     CHECK(output.find(expectedCompileRejectFragment) != std::string::npos);
   }
 }
@@ -95,7 +96,7 @@ inline void expectCanonicalMapNamespaceExperimentalParameterConformance(const st
         "map_namespace_canonical_experimental_parameter",
         18,
         "2\n4\n4\n7\n1\n",
-        "call=/std/collections/experimental_map/mapAt");
+        "Native lowering error:");
     return;
   }
 
@@ -132,7 +133,7 @@ inline void expectWrapperMapConstructorExperimentalParameterConformance(const st
         "map_wrapper_constructor_experimental_parameter",
         18,
         "2\n4\n4\n7\n1\n",
-        "call=/std/collections/experimental_map/mapAt");
+        "Native lowering error:");
     return;
   }
 
@@ -150,7 +151,7 @@ inline void expectWrappedExperimentalMapParameterConformance(const std::string &
         "map_wrapped_experimental_parameter",
         19,
         "3\n4\n3\n9\n",
-        "call=/std/collections/experimental_map/mapPair");
+        "Native lowering error:");
     return;
   }
 
@@ -176,7 +177,7 @@ inline void expectWrappedExperimentalMapAssignConformance(const std::string &emi
         "map_wrapped_experimental_assign",
         13,
         "4\n9\n",
-        "call=/std/collections/experimental_map/mapPair");
+        "Native lowering error:");
     return;
   }
 

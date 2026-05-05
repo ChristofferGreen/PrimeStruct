@@ -6,6 +6,31 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 5, 2026)**
+- [x] TODO-4360: Stabilize native map fallback locks
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-05
+  - phase: Release-gate stabilization
+  - scope: Stabilize the retained native map conformance shard by replacing
+    stale helper-specific compile-reject fragments with the current native
+    lowering diagnostic prefix for unsupported experimental map expression
+    lowering.
+  - acceptance:
+    - The retained
+      `PrimeStruct_primestruct_compile_run_native_backend_collections_stdlib_collection_shims_accessors_229_238`
+      release shard passes focused validation.
+    - Native map parameter, assignment, and constructor-parameter conformance
+      cases still accept successful runtime output when supported.
+    - Native fallback compile rejects are locked to the stable
+      `Native lowering error:` diagnostic prefix and print the compiler output
+      on future expectation failures.
+  - stop_rule: Stop once the retained native map shard passes and the next
+    retained release failure is documented.
+  - evidence: Retargeted stale native map fallback fragments in
+    `test_compile_run_map_conformance_runtime_expectations.h`, rebuilt
+    `PrimeStruct_compile_run_tests`, and focused validation passed for
+    `ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_native_backend_collections_stdlib_collection_shims_accessors_229_238$'`.
+
 - [x] TODO-4360: Run C++ SoA method shadows
   - owner: ai
   - created_at: 2026-05-04
