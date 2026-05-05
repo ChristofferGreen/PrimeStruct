@@ -576,6 +576,13 @@ Task template:
       `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_21_30`;
       continue with the next retained release failure,
       `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_121_130`.
+    - 2026-05-05 lite slice: retained alias-only SoA borrowed helper-return
+      coverage now expects bare `count(...)` to infer through the canonical
+      `/std/collections/soa_vector/count` helper when both the experimental and
+      canonical SoA surfaces are imported. Focused release validation passed for
+      `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_121_130`;
+      continue with the next retained release failure,
+      `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_141_150`.
 
 - [ ] TODO-4298: Promote graph-backed non-template inference authority
   - owner: ai
