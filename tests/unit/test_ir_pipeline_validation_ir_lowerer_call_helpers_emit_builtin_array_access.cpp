@@ -355,6 +355,7 @@ TEST_CASE("ir lowerer call helpers validate non literal string access target") {
   CHECK(primec::ir_lowerer::validateNonLiteralStringAccessTarget(
             stringLiteralTarget,
             locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return Kind::Unknown; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             error) == Result::Stop);
   CHECK(error == "stale");
@@ -369,6 +370,25 @@ TEST_CASE("ir lowerer call helpers validate non literal string access target") {
   CHECK(primec::ir_lowerer::validateNonLiteralStringAccessTarget(
             stringNameTarget,
             locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return Kind::Unknown; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            error) == Result::Error);
+  CHECK(error == "native backend only supports indexing into string literals or string bindings");
+
+  error = "unchanged";
+  CHECK(primec::ir_lowerer::validateNonLiteralStringAccessTarget(
+            stringNameTarget,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return Kind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            error) == Result::Continue);
+  CHECK(error == "unchanged");
+
+  error.clear();
+  CHECK(primec::ir_lowerer::validateNonLiteralStringAccessTarget(
+            stringNameTarget,
+            primec::ir_lowerer::LocalMap{},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return Kind::String; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             error) == Result::Error);
   CHECK(error == "native backend only supports indexing into string literals or string bindings");
@@ -380,6 +400,7 @@ TEST_CASE("ir lowerer call helpers validate non literal string access target") {
   CHECK(primec::ir_lowerer::validateNonLiteralStringAccessTarget(
             entryArgsTarget,
             locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return Kind::Unknown; },
             [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) { return expr.name == "argv"; },
             error) == Result::Error);
   CHECK(error == "native backend only supports entry argument indexing in print calls or string bindings");
@@ -391,6 +412,7 @@ TEST_CASE("ir lowerer call helpers validate non literal string access target") {
   CHECK(primec::ir_lowerer::validateNonLiteralStringAccessTarget(
             otherTarget,
             locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return Kind::Unknown; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             error) == Result::Continue);
   CHECK(error == "unchanged");

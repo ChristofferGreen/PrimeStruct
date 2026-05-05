@@ -577,7 +577,7 @@ bool emitBuiltinArrayAccess(
   }
 
   const auto nonLiteralStringTargetResult =
-      validateNonLiteralStringAccessTarget(targetExpr, localsIn, isEntryArgsName, error);
+      validateNonLiteralStringAccessTarget(targetExpr, localsIn, inferExprKind, isEntryArgsName, error);
   if (nonLiteralStringTargetResult == NonLiteralStringAccessTargetResult::Stop) {
     return false;
   }

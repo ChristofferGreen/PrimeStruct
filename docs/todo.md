@@ -1041,6 +1041,11 @@ Task template:
       non-string graph facts suppress stale string-table metadata; no-fact
       literal-backed key metadata remains compatibility fallback for
       syntax-only paths.
+    - Completed slice: native non-literal string access validation now asks
+      graph-backed value-kind inference before local string metadata can reject
+      a named indexed-access target. Known non-string graph facts continue to
+      ordinary array/vector access; graph-known strings and no-fact local
+      string bindings keep the unsupported string-index diagnostic.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.

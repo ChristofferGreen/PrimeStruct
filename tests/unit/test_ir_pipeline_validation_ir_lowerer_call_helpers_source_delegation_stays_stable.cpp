@@ -198,6 +198,23 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(accessTargetResolutionSource.find("bool emitBuiltinArrayAccess(") ==
         std::string::npos);
+  const size_t nonLiteralStringAccessPos = accessTargetResolutionSource.find(
+      "NonLiteralStringAccessTargetResult validateNonLiteralStringAccessTarget(");
+  REQUIRE(nonLiteralStringAccessPos != std::string::npos);
+  const size_t nonLiteralStringGraphKindPos = accessTargetResolutionSource.find(
+      "const LocalInfo::ValueKind targetKind = inferExprKind(targetExpr, localsIn);",
+      nonLiteralStringAccessPos);
+  const size_t nonLiteralStringLocalLookupPos =
+      accessTargetResolutionSource.find("localsIn.find(targetExpr.name)", nonLiteralStringAccessPos);
+  REQUIRE(nonLiteralStringGraphKindPos != std::string::npos);
+  REQUIRE(nonLiteralStringLocalLookupPos != std::string::npos);
+  CHECK(nonLiteralStringGraphKindPos < nonLiteralStringLocalLookupPos);
+  CHECK(accessTargetResolutionSource.find("targetKind != LocalInfo::ValueKind::Unknown",
+                                          nonLiteralStringGraphKindPos) != std::string::npos);
+  CHECK(accessTargetResolutionSource.find("targetKind != LocalInfo::ValueKind::String",
+                                          nonLiteralStringGraphKindPos) != std::string::npos);
+  CHECK(accessTargetResolutionSource.find("targetKind == LocalInfo::ValueKind::String",
+                                          nonLiteralStringGraphKindPos) != std::string::npos);
 
   CHECK(accessLoadHelpersSource.find("IrOpcode mapKeyCompareOpcode(") !=
         std::string::npos);

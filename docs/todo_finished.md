@@ -6,6 +6,31 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 5, 2026)**
+- [x] TODO-4298: Prefer graph facts for access guards
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-05
+  - phase: Semantic ownership authority
+  - scope: Move native non-literal string indexed-access validation onto
+    graph-backed value-kind inference before local string metadata can reject
+    named targets.
+  - acceptance:
+    - Graph-backed non-string facts suppress stale local string metadata and
+      allow ordinary indexed-access lowering to continue.
+    - Graph-backed string facts still produce the unsupported non-literal
+      string-index diagnostic when earlier string paths did not emit.
+    - Syntax-only/no-fact local string metadata remains a compatibility
+      fallback.
+  - stop_rule: Stop once non-literal string access validation prefers
+    graph-backed value kinds before local string metadata and helper/source
+    contract coverage pins stale metadata suppression plus graph-known string
+    diagnostics.
+  - evidence: Reordered `validateNonLiteralStringAccessTarget` so named
+    targets infer graph-backed value kind before consulting local string
+    metadata. Helper coverage now proves stale local string metadata is
+    ignored for graph-backed non-string facts, graph-backed strings still
+    diagnose, and the lowerer source-contract test locks graph-first ordering.
+
 - [x] TODO-4298: Prefer graph facts for map keys
   - owner: ai
   - created_at: 2026-04-28

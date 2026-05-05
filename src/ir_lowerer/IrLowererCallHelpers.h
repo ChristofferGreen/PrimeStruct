@@ -498,6 +498,7 @@ bool emitBuiltinArrayAccess(
 NonLiteralStringAccessTargetResult validateNonLiteralStringAccessTarget(
     const Expr &targetExpr,
     const LocalMap &localsIn,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
     std::string &error);
 bool resolveValidatedAccessIndexKind(

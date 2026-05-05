@@ -636,6 +636,12 @@ Planned non-template inference migration contract:
   metadata can select the static string-table key path for string-key maps.
   Known non-string graph facts suppress stale string-table metadata; no-fact
   literal-backed key metadata remains the syntax-only compatibility fallback.
+- Completed native non-literal string access guard slice: native indexed
+  access validation now asks graph-backed value-kind inference before local
+  string metadata can reject a named non-literal target. Known non-string
+  graph facts continue to ordinary array/vector access; graph-known strings
+  and no-fact local string bindings keep the unsupported string-index
+  diagnostic.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

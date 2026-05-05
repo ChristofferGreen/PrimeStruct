@@ -567,12 +567,22 @@ bool validateMapAccessTargetInfo(const MapAccessTargetInfo &targetInfo,
 NonLiteralStringAccessTargetResult validateNonLiteralStringAccessTarget(
     const Expr &targetExpr,
     const LocalMap &localsIn,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
     std::string &error) {
   if (targetExpr.kind == Expr::Kind::StringLiteral) {
     return NonLiteralStringAccessTargetResult::Stop;
   }
   if (targetExpr.kind == Expr::Kind::Name) {
+    const LocalInfo::ValueKind targetKind = inferExprKind(targetExpr, localsIn);
+    if (targetKind != LocalInfo::ValueKind::Unknown &&
+        targetKind != LocalInfo::ValueKind::String) {
+      return NonLiteralStringAccessTargetResult::Continue;
+    }
+    if (targetKind == LocalInfo::ValueKind::String) {
+      error = "native backend only supports indexing into string literals or string bindings";
+      return NonLiteralStringAccessTargetResult::Error;
+    }
     auto it = localsIn.find(targetExpr.name);
     if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Value &&
         it->second.valueKind == LocalInfo::ValueKind::String) {
