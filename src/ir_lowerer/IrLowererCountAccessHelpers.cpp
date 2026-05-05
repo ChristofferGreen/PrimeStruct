@@ -755,14 +755,22 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       return false;
     }
     const Expr &target = expr.args.front();
+    if (inferExprKind) {
+      const LocalInfo::ValueKind targetKind = inferExprKind(target, localsIn);
+      if (targetKind == LocalInfo::ValueKind::String) {
+        return true;
+      }
+      if (targetKind != LocalInfo::ValueKind::Unknown) {
+        return false;
+      }
+    }
     if (target.kind == Expr::Kind::Name) {
       auto it = localsIn.find(target.name);
       if (it != localsIn.end() && it->second.valueKind == LocalInfo::ValueKind::String) {
         return true;
       }
     }
-    return inferExprKind &&
-           inferExprKind(target, localsIn) == LocalInfo::ValueKind::String;
+    return false;
   };
   if (isArrayCountCallFn(expr, localsIn)) {
     if ((isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) && expr.args.size() == 1 &&

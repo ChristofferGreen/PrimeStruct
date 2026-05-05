@@ -1006,6 +1006,11 @@ Task template:
       metadata can choose string-length emission. Known non-string graph facts
       suppress stale local string metadata; local/literal map reconstruction
       remains compatibility fallback for syntax-only/no-fact paths.
+    - Completed slice: native runtime-string count emission for `count(name)`
+      now asks graph-backed value-kind inference before local string metadata
+      can choose string-length emission. Known non-string graph facts suppress
+      stale local string metadata; local string metadata remains compatibility
+      fallback for syntax-only/no-fact paths.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.

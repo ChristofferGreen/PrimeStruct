@@ -603,6 +603,11 @@ Planned non-template inference migration contract:
   emission. Known non-string graph facts suppress stale local string metadata;
   the local/literal map branch remains the compatibility fallback when no
   published access fact is available.
+- Completed native runtime-string count emission slice: native count emission
+  for `count(name)` now asks graph-backed value-kind inference before local
+  string metadata can select string-length emission. Known non-string graph
+  facts suppress stale local string metadata; local string metadata remains the
+  syntax-only/no-fact compatibility fallback.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph
