@@ -42,7 +42,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("bare map helper expression body arguments require canonical helper resolution") {
+TEST_CASE("bare map helper expression body arguments accept explicit alias helper") {
   const std::string source = R"(
 [return<int>]
 /map/count([map<i32, i32>] values, [bool] marker) {
@@ -54,10 +54,10 @@ main() {
   [map<i32, i32>] values{map<i32, i32>(5i32, 6i32)}
   return(values.count(true) { 1i32 })
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("bare map call form expression body arguments fall back to canonical helper target") {

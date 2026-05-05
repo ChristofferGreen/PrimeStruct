@@ -552,6 +552,13 @@ Task template:
       `PrimeStruct_primestruct_ir_pipeline_validation_cases_61_70`; continue
       with the next retained release failure,
       `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_1_10`.
+    - 2026-05-05 lite slice: the retained bare map helper expression-body
+      alias case now accepts an explicit `/map/count` source definition as a
+      real compatibility alias instead of requiring a canonical helper
+      definition. Focused release validation passed for
+      `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_1_10`;
+      continue with the next retained release failure,
+      `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_11_20`.
 
 - [ ] TODO-4298: Promote graph-backed non-template inference authority
   - owner: ai
