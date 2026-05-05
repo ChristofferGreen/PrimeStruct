@@ -6,6 +6,29 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 5, 2026)**
+- [x] TODO-4360: Run C++ SoA method shadows
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-05
+  - phase: Release-gate stabilization
+  - scope: Stabilize the retained C++ compile-run helper-return SoA
+    method-shadow shard by retargeting stale rejection expectations to
+    runtime same-path helper-shadow precedence checks.
+  - acceptance:
+    - The retained
+      `PrimeStruct_primestruct_compile_run_imports_operations_and_collections_35_36`
+      release shard passes focused validation.
+    - Global helper-return SoA receivers compile and run through the
+      `/soa_vector/count|get|ref|push|reserve` user shadows.
+    - Method-like helper-return SoA receivers compile and run through the same
+      shadow set without requiring obsolete pending diagnostics.
+  - stop_rule: Stop once the retained compile-run shard passes and the next
+    retained release failure is documented.
+  - evidence: Retargeted stale C++ emitter rejection tests in
+    `test_compile_run_imports_operations.cpp`, then focused validation passed
+    for
+    `ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_imports_operations_and_collections_35_36$'`.
+
 - [x] TODO-4360: Stabilize backend registry locks
   - owner: ai
   - created_at: 2026-05-04

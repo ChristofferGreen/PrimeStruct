@@ -7,9 +7,10 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.imports");
 
-static void expect_soa_vector_helper_return_shadow_compile_reject(const std::string &source,
-                                                                  const std::string &nameStem,
-                                                                  const std::string &emitMode) {
+static void expect_soa_vector_helper_return_shadow_compile_run(const std::string &source,
+                                                               const std::string &nameStem,
+                                                               const std::string &emitMode,
+                                                               int expectedExitCode) {
   const std::string srcPath = writeTemp(nameStem + ".prime", source);
   const std::string outPath =
       (testScratchPath("") / (nameStem + "_" + emitMode + "_out.txt")).string();
@@ -19,8 +20,10 @@ static void expect_soa_vector_helper_return_shadow_compile_reject(const std::str
   const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
                                  " -o " + quoteShellArg(artifactPath) + " --entry /main > " +
                                  quoteShellArg(outPath) + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("call=/std/collections/soa_vector/ref") != std::string::npos);
+  const int compileResult = runCommand(compileCmd);
+  INFO(readFile(outPath));
+  REQUIRE(compileResult == 0);
+  CHECK(runCommand(quoteShellArg(artifactPath)) == expectedExitCode);
 }
 
 TEST_CASE("compiles and runs collection literals in C++ emitter") {
@@ -1032,7 +1035,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("rejects global helper-return soa_vector method shadows in C++ emitter") {
+TEST_CASE("runs global helper-return soa_vector method shadows in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -1084,13 +1087,14 @@ main() {
                              cloneValues().reserve(37i32))))))
 }
 )";
-  expect_soa_vector_helper_return_shadow_compile_reject(
+  expect_soa_vector_helper_return_shadow_compile_run(
       source,
       "compile_experimental_soa_vector_method_shadow_global_helper_return_exe",
-      "exe");
+      "exe",
+      131);
 }
 
-TEST_CASE("rejects method-like helper-return soa_vector method shadows in C++ emitter") {
+TEST_CASE("runs method-like helper-return soa_vector method shadows in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -1105,7 +1109,9 @@ Holder() {}
 
 [return<SoaVector<Particle>>]
 /Holder/cloneValues([Holder] self) {
-  return(soaVectorSingle<Particle>(Particle(7i32)))
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  /std/collections/experimental_soa_vector/soaVectorPush<Particle>(values, Particle(7i32))
+  return(values)
 }
 
 [return<int>]
@@ -1144,10 +1150,11 @@ main() {
                              holder.cloneValues().reserve(37i32))))))
 }
 )";
-  expect_soa_vector_helper_return_shadow_compile_reject(
+  expect_soa_vector_helper_return_shadow_compile_run(
       source,
       "compile_experimental_soa_vector_method_shadow_method_like_helper_return_exe",
-      "exe");
+      "exe",
+      131);
 }
 
 TEST_CASE("compiles and runs vector-target old-explicit soa mutator shadows in C++ emitter") {
