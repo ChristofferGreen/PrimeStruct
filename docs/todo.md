@@ -959,6 +959,12 @@ Task template:
       shape. Interned receiver type IDs win over copied text, and the old
       parameter-transform scan remains only as syntax-only/no-fact
       compatibility.
+    - Completed slice: native inline canonical map insert lowering now reads
+      semantic-product collection, query, binding, and local-auto receiver
+      facts before copying caller-local map shape or scanning helper
+      parameter transforms. Interned receiver type IDs win over copied text;
+      caller-local and helper-transform inference remain compatibility
+      fallbacks for syntax-only/no-fact paths.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.

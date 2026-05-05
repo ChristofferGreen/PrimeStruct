@@ -2649,6 +2649,39 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
     coverage, and documented the remaining TODO-4298 work. Local test
     execution was skipped per the lite workflow.
 
+- [x] TODO-4298: Use inline map insert facts
+  - owner: ai
+  - created_at: 2026-05-05
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes native inline
+    canonical map insert lowering read semantic-product receiver facts before
+    falling back to caller-local or helper parameter transform reconstruction.
+  - implementation_notes:
+    - Resolve collection specialization key/value IDs and query, binding, and
+      local-auto receiver type IDs before copied type text for inline map
+      insert receiver classification.
+    - Prefer graph-backed receiver map shape before copying caller-local
+      map metadata into callee locals.
+    - Keep caller-local map shape and helper parameter transform scanning as
+      compatibility fallback for syntax-only or no-semantic-product contexts.
+  - acceptance:
+    - Inline canonical map insert lowering consumes graph-backed receiver
+      facts before local-map or helper-transform reconstruction.
+    - Interned semantic-product type IDs override copied text for receiver
+      map classification.
+    - Lowerer source-contract coverage locks the graph-backed consumer order.
+    - The remaining TODO-4298 block records the completed slice and remaining
+      adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once inline map insert receiver classification prefers
+    published semantic-product facts and keeps local/transform inference only
+    as compatibility fallback.
+  - finished_at: 2026-05-05
+  - evidence: Promoted inline canonical map insert receiver classification in
+    `IrLowererLowerInlineCalls.h`, expanded lowerer source-contract coverage,
+    and documented the remaining TODO-4298 work. Local test execution was
+    skipped per the lite workflow.
+
 - [x] TODO-4330: Pack source Result ok struct payloads
   - owner: ai
   - created_at: 2026-04-28

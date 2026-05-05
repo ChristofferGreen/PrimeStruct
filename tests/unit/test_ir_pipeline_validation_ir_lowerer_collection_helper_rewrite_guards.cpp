@@ -724,7 +724,7 @@ TEST_CASE("ir lowerer statement expr guards inline builtin map insert family") {
         std::string::npos);
 }
 
-TEST_CASE("ir lowerer inline map insert builtin recovers typed bindings from caller and helper params") {
+TEST_CASE("ir lowerer inline map insert builtin prefers semantic receiver facts") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
     CHECK(file.is_open());
@@ -747,6 +747,28 @@ TEST_CASE("ir lowerer inline map insert builtin recovers typed bindings from cal
 
   CHECK(source.find("auto inferValueKindFromTypeText = [&](std::string typeText,") !=
         std::string::npos);
+  CHECK(source.find("std::function<bool(const std::string &,") !=
+        std::string::npos);
+  CHECK(source.find("auto tryPopulateMapKindsFromSemanticReceiver =") !=
+        std::string::npos);
+  CHECK(source.find("semanticProgramResolveCallTargetString(") !=
+        std::string::npos);
+  CHECK(source.find("findSemanticProductCollectionSpecialization(semanticTargets.semanticIndex,") !=
+        std::string::npos);
+  CHECK(source.find("collectionFact->keyTypeTextId") !=
+        std::string::npos);
+  CHECK(source.find("collectionFact->valueTypeTextId") !=
+        std::string::npos);
+  CHECK(source.find("findSemanticProductQueryFact(callResolutionAdapters.semanticProgram,") !=
+        std::string::npos);
+  CHECK(source.find("tryApplySemanticMapTypeText(queryFact->bindingTypeTextId,") !=
+        std::string::npos);
+  CHECK(source.find("tryApplySemanticMapTypeText(queryFact->queryTypeTextId,") !=
+        std::string::npos);
+  CHECK(source.find("tryPopulateMapKindsFromSemanticReceiver(*originalValuesArg, valuesIt->second)") <
+        source.find("callerValuesIt->second.mapKeyKind != LocalInfo::ValueKind::Unknown"));
+  CHECK(source.find("valuesIt->second.mapKeyKind == LocalInfo::ValueKind::Unknown &&") <
+        source.find("callerValuesIt->second.mapKeyKind != LocalInfo::ValueKind::Unknown"));
   CHECK(source.find("callerValuesIt->second.mapKeyKind != LocalInfo::ValueKind::Unknown") !=
         std::string::npos);
   CHECK(source.find("callee.parameters.size() >= 3") !=
@@ -755,6 +777,8 @@ TEST_CASE("ir lowerer inline map insert builtin recovers typed bindings from cal
         std::string::npos);
   CHECK(source.find("extractParameterTypeName(callee.parameters[2])") !=
         std::string::npos);
+  CHECK(source.find("tryPopulateMapKindsFromSemanticReceiver(*originalValuesArg, valuesIt->second)") <
+        source.find("extractParameterTypeName(callee.parameters[1])"));
   CHECK(source.find("info.kind == LocalInfo::Kind::Value &&\n"
                     "                info.mapKeyKind != LocalInfo::ValueKind::Unknown &&\n"
                     "                info.mapValueKind != LocalInfo::ValueKind::Unknown") !=

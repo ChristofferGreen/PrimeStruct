@@ -431,6 +431,156 @@
         }
         return false;
       };
+      std::function<bool(const std::string &,
+                         LocalInfo::ValueKind &,
+                         LocalInfo::ValueKind &)> inferMapKindsFromTypeText;
+      inferMapKindsFromTypeText = [&](const std::string &typeText,
+                                      LocalInfo::ValueKind &keyKindOut,
+                                      LocalInfo::ValueKind &valueKindOut) {
+        keyKindOut = LocalInfo::ValueKind::Unknown;
+        valueKindOut = LocalInfo::ValueKind::Unknown;
+
+        std::string base;
+        std::string argText;
+        if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argText)) {
+          return false;
+        }
+
+        const std::string normalizedBase = trimTemplateTypeText(base);
+        if (normalizedBase == "Reference" || normalizedBase == "Pointer") {
+          return inferMapKindsFromTypeText(argText, keyKindOut, valueKindOut);
+        }
+        const bool isMapBase =
+            normalizedBase == "map" || normalizedBase == "/map" ||
+            normalizedBase == "std/collections/map" ||
+            normalizedBase == "/std/collections/map" ||
+            normalizedBase == "Map" || normalizedBase == "/Map" ||
+            normalizedBase == "std/collections/experimental_map/Map" ||
+            normalizedBase == "/std/collections/experimental_map/Map";
+        if (!isMapBase) {
+          return false;
+        }
+
+        std::vector<std::string> mapArgs;
+        if (!splitTemplateArgs(argText, mapArgs) || mapArgs.size() != 2) {
+          return false;
+        }
+        keyKindOut = valueKindFromTypeName(trimTemplateTypeText(mapArgs.front()));
+        valueKindOut = valueKindFromTypeName(trimTemplateTypeText(mapArgs.back()));
+        return keyKindOut != LocalInfo::ValueKind::Unknown &&
+               valueKindOut != LocalInfo::ValueKind::Unknown;
+      };
+      auto resolveSemanticTypeText = [&](SymbolId typeTextId,
+                                         const std::string &typeText) {
+        if (callResolutionAdapters.semanticProgram != nullptr &&
+            typeTextId != InvalidSymbolId) {
+          const std::string resolvedText =
+              std::string(semanticProgramResolveCallTargetString(
+                  *callResolutionAdapters.semanticProgram,
+                  typeTextId));
+          if (!resolvedText.empty()) {
+            return trimTemplateTypeText(resolvedText);
+          }
+        }
+        return trimTemplateTypeText(typeText);
+      };
+      auto tryApplySemanticMapTypeText = [&](SymbolId typeTextId,
+                                             const std::string &typeText,
+                                             LocalInfo &infoOut) {
+        LocalInfo::ValueKind keyKind = LocalInfo::ValueKind::Unknown;
+        LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
+        if (!inferMapKindsFromTypeText(resolveSemanticTypeText(typeTextId, typeText),
+                                       keyKind,
+                                       valueKind)) {
+          return false;
+        }
+        infoOut.mapKeyKind = keyKind;
+        infoOut.mapValueKind = valueKind;
+        return true;
+      };
+      auto tryApplySemanticCollectionSpecialization = [&](const Expr &receiverExpr,
+                                                         LocalInfo &infoOut) {
+        const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
+        if (!semanticTargets.hasSemanticProduct || receiverExpr.semanticNodeId == 0) {
+          return false;
+        }
+        const auto *collectionFact =
+            findSemanticProductCollectionSpecialization(semanticTargets.semanticIndex,
+                                                        receiverExpr);
+        if (collectionFact == nullptr) {
+          return false;
+        }
+        const std::string collectionFamily =
+            resolveSemanticTypeText(collectionFact->collectionFamilyId,
+                                    collectionFact->collectionFamily);
+        if (collectionFamily != "map" && collectionFamily != "/map" &&
+            collectionFamily != "std/collections/map" &&
+            collectionFamily != "/std/collections/map") {
+          return false;
+        }
+        const LocalInfo::ValueKind keyKind = valueKindFromTypeName(
+            resolveSemanticTypeText(collectionFact->keyTypeTextId,
+                                    collectionFact->keyTypeText));
+        const LocalInfo::ValueKind valueKind = valueKindFromTypeName(
+            resolveSemanticTypeText(collectionFact->valueTypeTextId,
+                                    collectionFact->valueTypeText));
+        if (keyKind == LocalInfo::ValueKind::Unknown ||
+            valueKind == LocalInfo::ValueKind::Unknown) {
+          return false;
+        }
+        infoOut.mapKeyKind = keyKind;
+        infoOut.mapValueKind = valueKind;
+        return true;
+      };
+      auto tryPopulateMapKindsFromSemanticReceiver = [&](const Expr &receiverExpr,
+                                                        LocalInfo &infoOut) {
+        const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
+        if (!semanticTargets.hasSemanticProduct ||
+            callResolutionAdapters.semanticProgram == nullptr ||
+            receiverExpr.semanticNodeId == 0) {
+          return false;
+        }
+        if (tryApplySemanticCollectionSpecialization(receiverExpr, infoOut)) {
+          return true;
+        }
+        if (const auto *queryFact =
+                findSemanticProductQueryFact(callResolutionAdapters.semanticProgram,
+                                             semanticTargets.semanticIndex,
+                                             receiverExpr);
+            queryFact != nullptr) {
+          if (tryApplySemanticMapTypeText(queryFact->bindingTypeTextId,
+                                          queryFact->bindingTypeText,
+                                          infoOut) ||
+              tryApplySemanticMapTypeText(queryFact->queryTypeTextId,
+                                          queryFact->queryTypeText,
+                                          infoOut) ||
+              tryApplySemanticMapTypeText(queryFact->receiverBindingTypeTextId,
+                                          queryFact->receiverBindingTypeText,
+                                          infoOut)) {
+            return true;
+          }
+        }
+        if (const auto *bindingFact =
+                findSemanticProductBindingFact(semanticTargets.semanticIndex,
+                                               receiverExpr);
+            bindingFact != nullptr &&
+            tryApplySemanticMapTypeText(bindingFact->bindingTypeTextId,
+                                        bindingFact->bindingTypeText,
+                                        infoOut)) {
+          return true;
+        }
+        if (const auto *localAutoFact =
+                findSemanticProductLocalAutoFact(callResolutionAdapters.semanticProgram,
+                                                 semanticTargets.semanticIndex,
+                                                 receiverExpr);
+            localAutoFact != nullptr &&
+            tryApplySemanticMapTypeText(localAutoFact->bindingTypeTextId,
+                                        localAutoFact->bindingTypeText,
+                                        infoOut)) {
+          return true;
+        }
+        return false;
+      };
       auto valuesIt = calleeLocals.find("values");
       if (valuesIt == calleeLocals.end()) {
         valuesIt = calleeLocals.find("entries");
@@ -451,9 +601,11 @@
             originalValuesArg->args.front().kind == Expr::Kind::Name) {
           originalValuesArg = &originalValuesArg->args.front();
         }
+        tryPopulateMapKindsFromSemanticReceiver(*originalValuesArg, valuesIt->second);
         if (originalValuesArg->kind == Expr::Kind::Name) {
           auto callerValuesIt = callerLocals.find(originalValuesArg->name);
           if (callerValuesIt != callerLocals.end() &&
+              valuesIt->second.mapKeyKind == LocalInfo::ValueKind::Unknown &&
               callerValuesIt->second.mapKeyKind != LocalInfo::ValueKind::Unknown &&
               callerValuesIt->second.mapValueKind != LocalInfo::ValueKind::Unknown) {
             valuesIt->second.mapKeyKind = callerValuesIt->second.mapKeyKind;
