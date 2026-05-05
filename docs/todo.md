@@ -545,6 +545,13 @@ Task template:
       `PrimeStruct_primestruct_ir_pipeline_validation_cases_61_70`, or with
       the retained collection/Result/Maybe conformance clusters if that shard
       proves to be stale.
+    - 2026-05-05 lite slice: the retained array/vector access target shard
+      now matches current variadic metadata: `args<Struct>` access preserves
+      element slot counts, and `args<vector<T>>` access preserves vector
+      element-kind metadata. Focused release validation passed for
+      `PrimeStruct_primestruct_ir_pipeline_validation_cases_61_70`; continue
+      with the next retained release failure,
+      `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_1_10`.
 
 - [ ] TODO-4298: Promote graph-backed non-template inference authority
   - owner: ai

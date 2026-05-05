@@ -795,7 +795,7 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   CHECK(resolved.isArgsPackTarget);
   CHECK(resolved.argsPackElementKind == LocalInfo::Kind::Value);
   CHECK(resolved.structTypeName == "/pkg/Pair");
-  CHECK(resolved.elemSlotCount == 0);
+  CHECK(resolved.elemSlotCount == 2);
   error.clear();
   CHECK(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(resolved, error));
   CHECK(error.empty());
@@ -808,7 +808,7 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   CHECK(resolved.elemKind == Kind::Unknown);
   CHECK_FALSE(resolved.isVectorTarget);
   CHECK(resolved.isArgsPackTarget);
-  CHECK(resolved.argsPackElementKind == LocalInfo::Kind::Value);
+  CHECK(resolved.argsPackElementKind == LocalInfo::Kind::Vector);
   error.clear();
   CHECK(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(resolved, error));
   CHECK(error.empty());
