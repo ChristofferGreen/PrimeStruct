@@ -111,7 +111,8 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
     const IsSetupInferenceEntryArgsNameFn &isEntryArgsName,
     LocalInfo::ValueKind &kindOut,
     const ResolveSetupInferenceCallCollectionAccessValueKindFn &resolveCallCollectionAccessValueKind =
-        ResolveSetupInferenceCallCollectionAccessValueKindFn{});
+        ResolveSetupInferenceCallCollectionAccessValueKindFn{},
+    const InferSetupInferenceValueKindFn &inferExprKind = InferSetupInferenceValueKindFn{});
 LocalInfo::ValueKind inferBodyValueKindWithLocalsScaffolding(
     const std::vector<Expr> &bodyExpressions,
     const LocalMap &localsBase,

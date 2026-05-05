@@ -191,6 +191,77 @@ TEST_CASE("ir lowerer setup inference helper handles invalid and templated acces
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
 }
 
+TEST_CASE("ir lowerer setup inference helper prefers graph facts for string access receivers") {
+  using Resolution = primec::ir_lowerer::ArrayMapAccessElementKindResolution;
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo staleStringInfo;
+  staleStringInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  staleStringInfo.valueKind = ValueKind::String;
+  locals.emplace("text", staleStringInfo);
+
+  primec::Expr textExpr;
+  textExpr.kind = primec::Expr::Kind::Name;
+  textExpr.name = "text";
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.literalValue = 1;
+  primec::Expr accessExpr;
+  accessExpr.kind = primec::Expr::Kind::Call;
+  accessExpr.name = "at";
+  accessExpr.args = {textExpr, indexExpr};
+
+  const auto noEntryArgs = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    return false;
+  };
+  const auto noCallCollectionAccess =
+      [](const primec::Expr &,
+         const primec::ir_lowerer::LocalMap &,
+         primec::ir_lowerer::LocalInfo::ValueKind &) {
+        return false;
+      };
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = ValueKind::Int32;
+  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+            accessExpr,
+            locals,
+            noEntryArgs,
+            kindOut,
+            noCallCollectionAccess,
+            [](const primec::Expr &candidate, const primec::ir_lowerer::LocalMap &) {
+              return candidate.kind == primec::Expr::Kind::Name && candidate.name == "text"
+                         ? ValueKind::Int32
+                         : ValueKind::Unknown;
+            }) == Resolution::Resolved);
+  CHECK(kindOut == ValueKind::Unknown);
+
+  kindOut = ValueKind::Unknown;
+  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+            accessExpr,
+            {},
+            noEntryArgs,
+            kindOut,
+            noCallCollectionAccess,
+            [](const primec::Expr &candidate, const primec::ir_lowerer::LocalMap &) {
+              return candidate.kind == primec::Expr::Kind::Name && candidate.name == "text"
+                         ? ValueKind::String
+                         : ValueKind::Unknown;
+            }) == Resolution::Resolved);
+  CHECK(kindOut == ValueKind::Int32);
+
+  kindOut = ValueKind::Unknown;
+  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+            accessExpr,
+            locals,
+            noEntryArgs,
+            kindOut,
+            noCallCollectionAccess,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return ValueKind::Unknown;
+            }) == Resolution::Resolved);
+  CHECK(kindOut == ValueKind::Int32);
+}
+
 TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned canonical map access string kinds") {
   using Resolution = primec::ir_lowerer::ArrayMapAccessElementKindResolution;
 

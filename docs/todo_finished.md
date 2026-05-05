@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 5, 2026)**
+- [x] TODO-4298: Prefer graph facts for access kinds
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-05
+  - phase: Semantic ownership authority
+  - scope: Move setup access element-kind inference for named string
+    receivers onto graph-backed value-kind inference before local string
+    metadata can classify indexed-access results as byte elements.
+  - acceptance:
+    - Graph-backed non-string facts suppress stale local string receiver
+      metadata during access element-kind inference.
+    - Graph-backed string facts still classify named access receivers as
+      `i32` byte elements, even without local string metadata.
+    - Syntax-only/no-fact local string metadata remains a compatibility
+      fallback.
+  - stop_rule: Stop once array/map/string access element-kind inference
+    prefers graph-backed receiver value kinds before local string metadata and
+    helper tests cover graph-string, graph-non-string, and no-fact fallback
+    paths.
+  - evidence: `resolveArrayMapAccessElementKind` now accepts the graph-backed
+    expression-kind callback, uses it before local string receiver metadata,
+    and the production fallback setup threads the existing lowerer inference
+    callback into count/access element-kind classification.
+
 - [x] TODO-4298: Prefer graph facts for print args
   - owner: ai
   - created_at: 2026-04-28

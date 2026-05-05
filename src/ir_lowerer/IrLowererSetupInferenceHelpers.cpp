@@ -315,12 +315,27 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
     const LocalMap &localsIn,
     const IsSetupInferenceEntryArgsNameFn &isEntryArgsName,
     LocalInfo::ValueKind &kindOut,
-    const ResolveSetupInferenceCallCollectionAccessValueKindFn &resolveCallCollectionAccessValueKind) {
+    const ResolveSetupInferenceCallCollectionAccessValueKindFn &resolveCallCollectionAccessValueKind,
+    const InferSetupInferenceValueKindFn &inferExprKind) {
   kindOut = LocalInfo::ValueKind::Unknown;
   const IsSetupInferenceEntryArgsNameFn noopIsEntryArgsName =
       [](const Expr &, const LocalMap &) { return false; };
   const IsSetupInferenceEntryArgsNameFn &isEntryArgsNameFn =
       isEntryArgsName ? isEntryArgsName : noopIsEntryArgsName;
+  const auto inferExprKindOrUnknown = [&](const Expr &candidate) {
+    return inferExprKind ? inferExprKind(candidate, localsIn) : LocalInfo::ValueKind::Unknown;
+  };
+  auto isGraphOrFallbackStringReceiver = [&](const Expr &candidate, const LocalInfo *info) {
+    const LocalInfo::ValueKind inferredKind = inferExprKindOrUnknown(candidate);
+    if (inferredKind == LocalInfo::ValueKind::String) {
+      return true;
+    }
+    if (inferredKind != LocalInfo::ValueKind::Unknown) {
+      return false;
+    }
+    return info != nullptr && info->kind == LocalInfo::Kind::Value &&
+           info->valueKind == LocalInfo::ValueKind::String;
+  };
 
   std::string accessName;
   if (!getBuiltinArrayAccessName(expr, accessName)) {
@@ -342,6 +357,9 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
     if (candidate.kind != Expr::Kind::Name) {
       return false;
     }
+    if (isGraphOrFallbackStringReceiver(candidate, nullptr)) {
+      return true;
+    }
     auto it = localsIn.find(candidate.name);
     if (it == localsIn.end()) {
       return false;
@@ -354,7 +372,7 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
            (info.kind == LocalInfo::Kind::Pointer && info.pointerToVector) ||
            (info.kind == LocalInfo::Kind::Pointer && info.pointerToMap) ||
            info.isSoaVector ||
-           (info.kind == LocalInfo::Kind::Value && info.valueKind == LocalInfo::ValueKind::String);
+           isGraphOrFallbackStringReceiver(candidate, &info);
   };
 
   std::vector<size_t> receiverIndices;
@@ -418,8 +436,8 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
     }
     if (target.kind == Expr::Kind::Name) {
       auto it = localsIn.find(target.name);
-      if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Value &&
-          it->second.valueKind == LocalInfo::ValueKind::String) {
+      const LocalInfo *info = it != localsIn.end() ? &it->second : nullptr;
+      if (isGraphOrFallbackStringReceiver(target, info)) {
         kindOut = LocalInfo::ValueKind::Int32;
         return ArrayMapAccessElementKindResolution::Resolved;
       }

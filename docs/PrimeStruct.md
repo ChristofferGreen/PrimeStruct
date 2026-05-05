@@ -649,6 +649,12 @@ Planned non-template inference migration contract:
   name targets. Known non-string graph facts suppress stale local string
   metadata; runtime local metadata remains the syntax-only/no-fact
   compatibility fallback.
+- Completed lowerer setup access element-kind slice: array/map/string access
+  element-kind inference now asks graph-backed value-kind inference before
+  local string receiver metadata can classify named indexed targets as byte
+  elements. Known non-string graph facts suppress stale local string receiver
+  metadata; no-fact local metadata remains the syntax-only compatibility
+  fallback.
 - Completed native string-key map lookup slice: native map lookup key emission
   now asks graph-backed value-kind inference before literal-backed string
   metadata can select the static string-table key path for string-key maps.

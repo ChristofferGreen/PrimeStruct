@@ -1051,6 +1051,11 @@ Task template:
       non-string graph facts suppress stale local string metadata; runtime
       local metadata remains compatibility fallback for syntax-only/no-fact
       paths.
+    - Completed slice: lowerer setup access element-kind inference now asks
+      graph-backed value-kind inference before local string receiver metadata
+      can classify named indexed-access targets as byte elements. Known
+      non-string graph facts suppress stale local string receivers; no-fact
+      local metadata remains compatibility fallback for syntax-only paths.
     - Completed slice: native string-key map lookup emission now asks
       graph-backed value-kind inference before literal-backed string metadata
       can choose the static string-table key path for string-key maps. Known

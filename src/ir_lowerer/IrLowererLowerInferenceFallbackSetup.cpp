@@ -260,6 +260,12 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
        &stateInOut](
           const Expr &expr, const LocalMap &localsIn, LocalInfo::ValueKind &kindOut) {
         kindOut = LocalInfo::ValueKind::Unknown;
+        const auto inferExprKindOrUnknown = [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+          if (!stateInOut.inferExprKind) {
+            return LocalInfo::ValueKind::Unknown;
+          }
+          return stateInOut.inferExprKind(candidateExpr, candidateLocals);
+        };
 
         auto isBuiltinCountLikeCall = [](const Expr &candidate) {
           if (candidate.kind != Expr::Kind::Call) {
@@ -284,6 +290,9 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
                   accessElementKind,
                   [&](const Expr &candidate, const LocalMap &candidateLocals, LocalInfo::ValueKind &candidateKindOut) {
                     return resolveCallCollectionAccessValueKind(candidate, candidateLocals, candidateKindOut);
+                  },
+                  [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+                    return inferExprKindOrUnknown(candidateExpr, candidateLocals);
                   }) == ArrayMapAccessElementKindResolution::Resolved &&
               accessElementKind == LocalInfo::ValueKind::String) {
             kindOut = LocalInfo::ValueKind::Int32;
@@ -360,6 +369,9 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
                 accessElementKind,
                 [&](const Expr &candidate, const LocalMap &candidateLocals, LocalInfo::ValueKind &candidateKindOut) {
                   return resolveCallCollectionAccessValueKind(candidate, candidateLocals, candidateKindOut);
+                },
+                [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+                  return inferExprKindOrUnknown(candidateExpr, candidateLocals);
                 }) == ArrayMapAccessElementKindResolution::Resolved) {
           kindOut = accessElementKind;
           return true;
