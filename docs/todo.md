@@ -618,6 +618,17 @@ Task template:
       `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_241_250`;
       continue with the next retained release failure,
       `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_261_270`.
+    - 2026-05-05 lite slice: canonical SoA `to_aos<T>` template inference now
+      derives `T` from nested `to_soa(vector<T>)` receivers and from
+      dereferenced indexed args-pack receivers such as
+      `dereference(values[0])` where the pack element is
+      `Reference<soa_vector<T>>`. The retained borrowed-indexed conversion
+      fixture now marks its element struct as reflect-enabled to match the
+      current canonical conversion contract. Focused release validation passed
+      for
+      `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_261_270`;
+      continue with the next retained release failure,
+      `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_301_310`.
 
 - [ ] TODO-4298: Promote graph-backed non-template inference authority
   - owner: ai

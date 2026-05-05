@@ -121,23 +121,124 @@ bool inferImplicitTemplateArgs(const Definition &def,
       return false;
     }
   };
+  auto extractBuiltinVectorElementTypeText = [&](std::string typeText,
+                                                 std::string &elemTypeOut) {
+    typeText = normalizeBindingTypeName(typeText);
+    if (typeText.empty()) {
+      return false;
+    }
+    while (true) {
+      std::string base;
+      std::string argText;
+      if (!splitTemplateTypeName(typeText, base, argText) || base.empty()) {
+        return false;
+      }
+      const std::string normalizedBase = normalizeBindingTypeName(base);
+      if (normalizeCollectionReceiverTypeName(normalizedBase) == "vector") {
+        elemTypeOut = normalizeBindingTypeName(argText);
+        return !elemTypeOut.empty();
+      }
+      if ((normalizedBase == "Reference" || normalizedBase == "Pointer") &&
+          !argText.empty()) {
+        std::vector<std::string> wrappedArgs;
+        if (!splitTopLevelTemplateArgs(argText, wrappedArgs) ||
+            wrappedArgs.size() != 1) {
+          return false;
+        }
+        typeText = normalizeBindingTypeName(wrappedArgs.front());
+        continue;
+      }
+      return false;
+    }
+  };
+  auto inferTemplatedFallbackTypeText = [&](const Expr &candidate) {
+    return inferExprTypeTextForTemplatedVectorFallback(
+        candidate, locals, namespacePrefix, ctx, allowMathBare);
+  };
+  auto inferBindingTypeTextForExpr = [&](const Expr &candidate,
+                                         std::string &typeTextOut) {
+    BindingInfo inferredInfo;
+    if (inferBindingTypeForMonomorph(candidate, params, locals, allowMathBare,
+                                     ctx, inferredInfo)) {
+      typeTextOut = bindingTypeToString(inferredInfo);
+      return !typeTextOut.empty();
+    }
+    typeTextOut = inferTemplatedFallbackTypeText(candidate);
+    return !typeTextOut.empty();
+  };
+  auto inferIndexedArgsPackElementTypeText = [&](const Expr &candidate,
+                                                 std::string &elemTypeOut) {
+    elemTypeOut.clear();
+    std::string accessName;
+    if (candidate.kind != Expr::Kind::Call ||
+        !getBuiltinArrayAccessName(candidate, accessName) ||
+        candidate.args.size() != 2 ||
+        candidate.args.front().kind != Expr::Kind::Name) {
+      return false;
+    }
+    const std::string &receiverName = candidate.args.front().name;
+    const BindingInfo *binding = nullptr;
+    for (const auto &param : params) {
+      if (param.name == receiverName) {
+        binding = &param.binding;
+        break;
+      }
+    }
+    if (binding == nullptr) {
+      const auto localIt = locals.find(receiverName);
+      if (localIt != locals.end()) {
+        binding = &localIt->second;
+      }
+    }
+    return binding != nullptr && getArgsPackElementType(*binding, elemTypeOut);
+  };
+  auto inferBuiltinVectorTemplateArgFromExpr = [&](const Expr &receiverExpr,
+                                                  std::string &elemTypeOut) {
+    std::string receiverTypeText;
+    if (inferBindingTypeTextForExpr(receiverExpr, receiverTypeText) &&
+        extractBuiltinVectorElementTypeText(receiverTypeText, elemTypeOut)) {
+      return true;
+    }
+    std::string indexedElemType;
+    if (inferIndexedArgsPackElementTypeText(receiverExpr, indexedElemType) &&
+        extractBuiltinVectorElementTypeText(indexedElemType, elemTypeOut)) {
+      return true;
+    }
+    return false;
+  };
   auto inferBuiltinSoaTemplateArgFromReceiverExpr = [&](const Expr *receiverExpr,
                                                         std::string &elemTypeOut) {
     if (receiverExpr == nullptr) {
       return false;
     }
-    BindingInfo receiverInfo;
-    if (inferBindingTypeForMonomorph(*receiverExpr, params, locals, allowMathBare,
-                                     ctx, receiverInfo) &&
-        extractBuiltinSoaElementTypeText(bindingTypeToString(receiverInfo),
-                                         elemTypeOut)) {
+    if (receiverExpr->kind == Expr::Kind::Call) {
+      const std::string resolvedReceiverPath =
+          receiverExpr->isMethodCall ? std::string{}
+                                     : resolveCalleePath(*receiverExpr, namespacePrefix, ctx);
+      if (((!receiverExpr->isMethodCall &&
+            isSimpleCallName(*receiverExpr, "to_soa")) ||
+           resolvedReceiverPath == "/to_soa") &&
+          receiverExpr->args.size() == 1 &&
+          inferBuiltinVectorTemplateArgFromExpr(receiverExpr->args.front(),
+                                                elemTypeOut)) {
+        return true;
+      }
+      if (isSimpleCallName(*receiverExpr, "dereference") &&
+          receiverExpr->args.size() == 1) {
+        std::string indexedElemType;
+        if (inferIndexedArgsPackElementTypeText(receiverExpr->args.front(),
+                                                indexedElemType) &&
+            extractBuiltinSoaElementTypeText(indexedElemType, elemTypeOut)) {
+          return true;
+        }
+      }
+    }
+    std::string receiverTypeText;
+    if (inferBindingTypeTextForExpr(*receiverExpr, receiverTypeText) &&
+        extractBuiltinSoaElementTypeText(receiverTypeText, elemTypeOut)) {
       return true;
     }
-    return extractBuiltinSoaElementTypeText(
-        inferExprTypeTextForTemplatedVectorFallback(*receiverExpr, locals,
-                                                    namespacePrefix, ctx,
-                                                    allowMathBare),
-        elemTypeOut);
+    return false;
   };
   if (def.fullPath.rfind("/std/collections/soa_vector/", 0) == 0 &&
       !def.templateArgs.empty() &&

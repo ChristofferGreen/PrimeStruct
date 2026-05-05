@@ -4958,6 +4958,7 @@ TEST_CASE("to_aos validates on borrowed indexed soa_vector receiver") {
   const std::string source = R"(
 import /std/collections/*
 
+[struct reflect]
 Particle() {
   [i32] x{1i32}
 }

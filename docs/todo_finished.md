@@ -6,6 +6,31 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 5, 2026)**
+- [x] TODO-4360: Infer nested SoA conversion types
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-05
+  - phase: Release-gate stabilization
+  - scope: Land the retained SoA conversion inference slice by letting
+    canonical `to_aos<T>` infer `T` from nested `to_soa(vector<T>)` receivers
+    and dereferenced indexed args-pack receivers.
+  - acceptance:
+    - `to_aos(to_soa(values))` infers the element type without requiring an
+      explicit `<T>` on the canonical conversion helper.
+    - `to_aos(dereference(values[0]))` infers through
+      `args<Reference<soa_vector<T>>>` element metadata.
+    - The borrowed indexed conversion fixture uses a reflect-enabled element
+      struct, matching the canonical conversion contract.
+    - The retained `calls_flow_collections_261_270` release shard passes
+      focused validation.
+  - stop_rule: Stop once the retained SoA conversion shard passes without
+    weakening canonical conversion template inference or reflection-backed
+    element constraints.
+  - evidence: Added monomorph-time inference for nested `to_soa(...)` and
+    dereferenced indexed args-pack receiver shapes, refreshed the retained
+    borrowed conversion fixture, and focused release validation passed for
+    `ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_261_270$'`.
+
 - [x] TODO-4360: Stabilize SoA mutator methods
   - owner: ai
   - created_at: 2026-05-04
