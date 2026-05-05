@@ -415,7 +415,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/experimental_map/mapCount") !=
+  CHECK(error.find("unknown call target: /std/collections/map/count") !=
         std::string::npos);
 }
 

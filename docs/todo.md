@@ -629,6 +629,17 @@ Task template:
       `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_261_270`;
       continue with the next retained release failure,
       `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_301_310`.
+    - 2026-05-05 lite slice: retained experimental map validation now infers
+      ownership-sensitive `Result.ok(...)` payloads from direct
+      `vectorAt`/`vectorAtUnsafe` helper calls over experimental `Vector<T>`
+      storage, and result payload matching accepts specialized root-relative
+      user types such as `/Owned` against retained `Owned` type text. The
+      missing borrowed count-helper diagnostic now expects the canonical
+      `/std/collections/map/count` target. Focused release validation passed
+      for
+      `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_301_310`;
+      continue with the next retained release failure,
+      `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_311_320`.
 
 - [ ] TODO-4298: Promote graph-backed non-template inference authority
   - owner: ai

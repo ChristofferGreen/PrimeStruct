@@ -915,7 +915,33 @@ bool SemanticsValidator::errorTypesMatch(const std::string &left,
     }
     return stripInnerWhitespace(resolveTypePath(trimmed, namespacePrefix));
   };
-  return normalizeType(left) == normalizeType(right);
+  const std::string normalizedLeft = normalizeType(left);
+  const std::string normalizedRight = normalizeType(right);
+  if (normalizedLeft == normalizedRight) {
+    return true;
+  }
+  auto isUnresolvedRelativeRootMatch = [&](const std::string &rawRelative,
+                                           const std::string &normalizedRelative,
+                                           const std::string &normalizedAbsolute) {
+    const std::string trimmed = stripInnerWhitespace(trimText(rawRelative));
+    return normalizedRelative.empty() &&
+           !trimmed.empty() &&
+           trimmed.front() != '/' &&
+           normalizedAbsolute == "/" + trimmed;
+  };
+  auto rawRootMatch = [&](const std::string &rawAbsolute, const std::string &rawRelative) {
+    const std::string absolute = stripInnerWhitespace(trimText(rawAbsolute));
+    const std::string relative = stripInnerWhitespace(trimText(rawRelative));
+    return !absolute.empty() &&
+           absolute.front() == '/' &&
+           !relative.empty() &&
+           relative.front() != '/' &&
+           absolute == "/" + relative;
+  };
+  return isUnresolvedRelativeRootMatch(left, normalizedLeft, normalizedRight) ||
+         isUnresolvedRelativeRootMatch(right, normalizedRight, normalizedLeft) ||
+         rawRootMatch(left, right) ||
+         rawRootMatch(right, left);
 }
 
 bool SemanticsValidator::parseOnErrorTransform(const std::vector<Transform> &transforms,

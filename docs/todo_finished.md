@@ -6,6 +6,32 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 5, 2026)**
+- [x] TODO-4360: Stabilize experimental map results
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-05
+  - phase: Release-gate stabilization
+  - scope: Land the retained experimental map result-validation slice by
+    teaching initializer inference to recover element types from direct
+    `vectorAt`/`vectorAtUnsafe` calls over experimental `Vector<T>` storage
+    and by matching specialized root-relative payload types in Result returns.
+  - acceptance:
+    - Ownership-sensitive `mapTryAt` and borrowed `mapTryAtRef` helpers can
+      validate `Result.ok(vectorAtUnsafe<V>(...))` payloads for retained
+      user-defined map values.
+    - Specialized result payload matching accepts `/Owned` versus retained
+      `Owned` text without weakening canonical result error matching.
+    - The retained missing borrowed count-helper fixture expects the canonical
+      `/std/collections/map/count` diagnostic target.
+    - The retained `calls_flow_collections_301_310` release shard passes
+      focused validation.
+  - stop_rule: Stop once the retained experimental map result shard passes
+    without adding stdlib import dependencies or broadening release validation.
+  - evidence: Added direct vector-access element-type inference, tightened
+    result type matching for root-relative specialized payload names, refreshed
+    the retained diagnostic expectation, and focused release validation passed
+    for `ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_301_310$'`.
+
 - [x] TODO-4360: Infer nested SoA conversion types
   - owner: ai
   - created_at: 2026-05-04

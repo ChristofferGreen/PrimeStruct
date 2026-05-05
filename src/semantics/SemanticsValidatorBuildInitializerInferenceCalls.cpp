@@ -153,8 +153,18 @@ bool SemanticsValidator::inferBuiltinCollectionValueBinding(const Expr &expr,
                                                             BindingInfo &bindingOut) {
   auto inferArrayElementType = [&](const BindingInfo &binding, std::string &elemTypeOut) {
     elemTypeOut.clear();
-    if ((binding.typeName == "array" || binding.typeName == "vector" || binding.typeName == "soa_vector") &&
-        !binding.typeTemplateArg.empty()) {
+    if (extractExperimentalVectorElementType(binding, elemTypeOut)) {
+      return true;
+    }
+    const std::string normalizedTypeName = normalizeBindingTypeName(binding.typeName);
+    const bool isBuiltinOrExperimentalVector =
+        normalizedTypeName == "array" ||
+        normalizedTypeName == "vector" ||
+        normalizedTypeName == "soa_vector" ||
+        normalizedTypeName == "Vector" ||
+        normalizedTypeName == "std/collections/experimental_vector/Vector" ||
+        normalizedTypeName == "/std/collections/experimental_vector/Vector";
+    if (isBuiltinOrExperimentalVector && !binding.typeTemplateArg.empty()) {
       elemTypeOut = binding.typeTemplateArg;
       return true;
     }
@@ -166,7 +176,14 @@ bool SemanticsValidator::inferBuiltinCollectionValueBinding(const Expr &expr,
         return false;
       }
       base = normalizeBindingTypeName(base);
-      if ((base == "array" || base == "vector" || base == "soa_vector") && !argText.empty()) {
+      const bool isWrappedBuiltinOrExperimentalVector =
+          base == "array" ||
+          base == "vector" ||
+          base == "soa_vector" ||
+          base == "Vector" ||
+          base == "std/collections/experimental_vector/Vector" ||
+          base == "/std/collections/experimental_vector/Vector";
+      if (isWrappedBuiltinOrExperimentalVector && !argText.empty()) {
         elemTypeOut = argText;
         return true;
       }
@@ -206,6 +223,43 @@ bool SemanticsValidator::inferBuiltinCollectionValueBinding(const Expr &expr,
     if (!concreteResolvedCallPath.empty()) {
       resolvedCallPath = concreteResolvedCallPath;
     }
+  }
+  auto canonicalizeResolvedPath = [](std::string path) {
+    const size_t suffix = path.find("__t");
+    if (suffix != std::string::npos) {
+      path.erase(suffix);
+    }
+    return path;
+  };
+  const std::string canonicalResolvedCallPath =
+      canonicalizeResolvedPath(resolvedCallPath);
+  const bool isVectorAccessLike =
+      expr.args.size() == 2 &&
+      (isSimpleCallName(expr, "at") ||
+       isSimpleCallName(expr, "at_unsafe") ||
+       canonicalResolvedCallPath == "/std/collections/vector/at" ||
+       canonicalResolvedCallPath == "/std/collections/vector/at_unsafe" ||
+       canonicalResolvedCallPath == "/std/collections/experimental_vector/vectorAt" ||
+       canonicalResolvedCallPath == "/std/collections/experimental_vector/vectorAtUnsafe");
+  if (isVectorAccessLike) {
+    BindingInfo collectionBinding;
+    if (!inferCollectionBindingFromExpr(expr.args.front(), params, locals, collectionBinding)) {
+      return false;
+    }
+    std::string keyType;
+    std::string valueType;
+    if (extractMapKeyValueTypes(collectionBinding, keyType, valueType)) {
+      bindingOut.typeName = normalizeBindingTypeName(valueType);
+      bindingOut.typeTemplateArg.clear();
+      return true;
+    }
+    std::string elemType;
+    if (inferArrayElementType(collectionBinding, elemType)) {
+      bindingOut.typeName = normalizeBindingTypeName(elemType);
+      bindingOut.typeTemplateArg.clear();
+      return true;
+    }
+    return false;
   }
   const bool isCountLike =
       expr.args.size() == 1 &&
