@@ -572,6 +572,57 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(operatorCollectionMutationHelpersSource.find(
             "methodPath.rfind(\"/std/collections/soa_vector/\", 0) == 0") !=
         std::string::npos);
+  const size_t collectionStringLiteralPos =
+      operatorCollectionMutationHelpersSource.find("if (elemKind == LocalInfo::ValueKind::String) {");
+  REQUIRE(collectionStringLiteralPos != std::string::npos);
+  const size_t collectionStringGraphKindPos = operatorCollectionMutationHelpersSource.find(
+      "const LocalInfo::ValueKind argKind = inferExprKind(arg, localsIn);",
+      collectionStringLiteralPos);
+  const size_t collectionStringTablePos =
+      operatorCollectionMutationHelpersSource.find("resolveStringTableTarget(arg, localsIn",
+                                                   collectionStringLiteralPos);
+  REQUIRE(collectionStringGraphKindPos != std::string::npos);
+  REQUIRE(collectionStringTablePos != std::string::npos);
+  CHECK(collectionStringGraphKindPos < collectionStringTablePos);
+
+  const size_t experimentalVectorElementStorePos =
+      operatorCollectionMutationHelpersSource.find("auto emitExperimentalVectorElementStore =");
+  REQUIRE(experimentalVectorElementStorePos != std::string::npos);
+  const size_t experimentalVectorStringGraphKindPos =
+      operatorCollectionMutationHelpersSource.find("argKind = inferExprKind(valueExpr, localsIn);",
+                                                  experimentalVectorElementStorePos);
+  const size_t experimentalVectorStringTablePos =
+      operatorCollectionMutationHelpersSource.find("resolveStringTableTarget(valueExpr, localsIn",
+                                                  experimentalVectorElementStorePos);
+  REQUIRE(experimentalVectorStringGraphKindPos != std::string::npos);
+  REQUIRE(experimentalVectorStringTablePos != std::string::npos);
+  CHECK(experimentalVectorStringGraphKindPos < experimentalVectorStringTablePos);
+
+  const size_t mapLiteralStringKeyPos = operatorCollectionMutationHelpersSource.find(
+      "if (i % 2 == 0 && keyKind == LocalInfo::ValueKind::String) {");
+  REQUIRE(mapLiteralStringKeyPos != std::string::npos);
+  const size_t mapLiteralStringKeyGraphKindPos = operatorCollectionMutationHelpersSource.find(
+      "const LocalInfo::ValueKind keyArgKind = inferExprKind(arg, localsIn);",
+      mapLiteralStringKeyPos);
+  const size_t mapLiteralStringKeyTablePos =
+      operatorCollectionMutationHelpersSource.find("resolveStringTableTarget(arg, localsIn",
+                                                   mapLiteralStringKeyPos);
+  REQUIRE(mapLiteralStringKeyGraphKindPos != std::string::npos);
+  REQUIRE(mapLiteralStringKeyTablePos != std::string::npos);
+  CHECK(mapLiteralStringKeyGraphKindPos < mapLiteralStringKeyTablePos);
+
+  const size_t mapLiteralStringValuePos = operatorCollectionMutationHelpersSource.find(
+      "if (i % 2 == 1 && valueKind == LocalInfo::ValueKind::String) {");
+  REQUIRE(mapLiteralStringValuePos != std::string::npos);
+  const size_t mapLiteralStringValueGraphKindPos = operatorCollectionMutationHelpersSource.find(
+      "const LocalInfo::ValueKind valueArgKind = inferExprKind(arg, localsIn);",
+      mapLiteralStringValuePos);
+  const size_t mapLiteralStringValueTablePos =
+      operatorCollectionMutationHelpersSource.find("resolveStringTableTarget(arg, localsIn",
+                                                   mapLiteralStringValuePos);
+  REQUIRE(mapLiteralStringValueGraphKindPos != std::string::npos);
+  REQUIRE(mapLiteralStringValueTablePos != std::string::npos);
+  CHECK(mapLiteralStringValueGraphKindPos < mapLiteralStringValueTablePos);
   CHECK(inlineDispatchSource.find("ResolvedInlineCallResult emitResolvedInlineDefinitionCall(") !=
         std::string::npos);
   CHECK(inlineDispatchSource.find("InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(") !=

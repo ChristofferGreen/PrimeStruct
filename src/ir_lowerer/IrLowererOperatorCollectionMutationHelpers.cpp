@@ -190,27 +190,35 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
           continue;
         }
         if (elemKind == LocalInfo::ValueKind::String) {
+          const LocalInfo::ValueKind argKind = inferExprKind(arg, localsIn);
           int32_t stringIndex = -1;
           size_t length = 0;
-          if (!resolveStringTableTarget(arg, localsIn, stringIndex, length)) {
+          if ((argKind == LocalInfo::ValueKind::Unknown ||
+               argKind == LocalInfo::ValueKind::String) &&
+              resolveStringTableTarget(arg, localsIn, stringIndex, length)) {
+            if (isVectorLike) {
+              instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(baseLocal + 2)});
+              const uint64_t offsetBytes = static_cast<uint64_t>(i) * IrSlotBytes;
+              if (offsetBytes != 0) {
+                instructions.push_back({IrOpcode::PushI32, offsetBytes});
+                instructions.push_back({IrOpcode::AddI32, 0});
+              }
+              instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(stringIndex)});
+              instructions.push_back({IrOpcode::StoreIndirect, 0});
+            } else {
+              instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(stringIndex)});
+              instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(dataBaseLocal + static_cast<int32_t>(i))});
+            }
+            continue;
+          }
+          if (argKind != LocalInfo::ValueKind::String) {
             error = "native backend requires " + builtin +
                     " literal string elements to be string literals or literal-backed bindings";
             return false;
           }
-          if (isVectorLike) {
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(baseLocal + 2)});
-            const uint64_t offsetBytes = static_cast<uint64_t>(i) * IrSlotBytes;
-            if (offsetBytes != 0) {
-              instructions.push_back({IrOpcode::PushI32, offsetBytes});
-              instructions.push_back({IrOpcode::AddI32, 0});
-            }
-            instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(stringIndex)});
-            instructions.push_back({IrOpcode::StoreIndirect, 0});
-          } else {
-            instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(stringIndex)});
-            instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(dataBaseLocal + static_cast<int32_t>(i))});
-          }
-          continue;
+          error = "native backend requires " + builtin +
+                  " literal string elements to be string literals or literal-backed bindings";
+          return false;
         }
         LocalInfo::ValueKind argKind = inferExprKind(arg, localsIn);
         if (argKind == LocalInfo::ValueKind::Unknown || argKind == LocalInfo::ValueKind::String) {
@@ -333,10 +341,14 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
                                                       const Expr &valueExpr,
                                                       LocalInfo::ValueKind expectedKind,
                                                       const char *typeMismatchError) -> bool {
+          LocalInfo::ValueKind argKind = LocalInfo::ValueKind::Unknown;
           if (expectedKind == LocalInfo::ValueKind::String) {
+            argKind = inferExprKind(valueExpr, localsIn);
             int32_t stringIndex = -1;
             size_t length = 0;
-            if (resolveStringTableTarget(valueExpr, localsIn, stringIndex, length)) {
+            if ((argKind == LocalInfo::ValueKind::Unknown ||
+                 argKind == LocalInfo::ValueKind::String) &&
+                resolveStringTableTarget(valueExpr, localsIn, stringIndex, length)) {
               instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(dataPtrLocal)});
               const uint64_t offsetBytes = static_cast<uint64_t>(elementIndex) * IrSlotBytes;
               if (offsetBytes != 0) {
@@ -348,9 +360,10 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
               instructions.push_back({IrOpcode::Pop, 0});
               return true;
             }
+          } else {
+            argKind = inferExprKind(valueExpr, localsIn);
           }
 
-          LocalInfo::ValueKind argKind = inferExprKind(valueExpr, localsIn);
           if (argKind == LocalInfo::ValueKind::Unknown ||
               (expectedKind != LocalInfo::ValueKind::String && argKind == LocalInfo::ValueKind::String)) {
             error = "native backend requires map literal arguments to be numeric/bool values";
@@ -411,14 +424,16 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         const Expr &arg = expr.args[i];
         const int32_t slot = baseLocal + 1 + static_cast<int32_t>(i);
         if (i % 2 == 0 && keyKind == LocalInfo::ValueKind::String) {
+          const LocalInfo::ValueKind keyArgKind = inferExprKind(arg, localsIn);
           int32_t stringIndex = -1;
           size_t length = 0;
-          if (resolveStringTableTarget(arg, localsIn, stringIndex, length)) {
+          if ((keyArgKind == LocalInfo::ValueKind::Unknown ||
+               keyArgKind == LocalInfo::ValueKind::String) &&
+              resolveStringTableTarget(arg, localsIn, stringIndex, length)) {
             instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(stringIndex)});
             instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(slot)});
             continue;
           }
-          const LocalInfo::ValueKind keyArgKind = inferExprKind(arg, localsIn);
           if (keyArgKind != LocalInfo::ValueKind::String) {
             error = "map literal key type mismatch";
             return false;
@@ -431,14 +446,16 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         }
 
         if (i % 2 == 1 && valueKind == LocalInfo::ValueKind::String) {
+          const LocalInfo::ValueKind valueArgKind = inferExprKind(arg, localsIn);
           int32_t stringIndex = -1;
           size_t length = 0;
-          if (resolveStringTableTarget(arg, localsIn, stringIndex, length)) {
+          if ((valueArgKind == LocalInfo::ValueKind::Unknown ||
+               valueArgKind == LocalInfo::ValueKind::String) &&
+              resolveStringTableTarget(arg, localsIn, stringIndex, length)) {
             instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(stringIndex)});
             instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(slot)});
             continue;
           }
-          const LocalInfo::ValueKind valueArgKind = inferExprKind(arg, localsIn);
           if (valueArgKind != LocalInfo::ValueKind::String) {
             error = "map literal value type mismatch";
             return false;

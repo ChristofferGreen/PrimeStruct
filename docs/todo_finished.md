@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 5, 2026)**
+- [x] TODO-4298: Prefer graph facts for collection literals
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-05
+  - phase: Semantic ownership authority
+  - scope: Move native array/vector and map literal string-element emission
+    onto graph-backed value-kind inference before literal-backed string
+    metadata can select string-table storage.
+  - acceptance:
+    - Graph-backed non-string facts suppress stale string-table metadata for
+      array/vector literal elements and map literal keys/values.
+    - Graph-backed string facts still allow string-table storage when the
+      argument is literal-backed.
+    - Syntax-only/no-fact literal-backed metadata remains a compatibility
+      fallback.
+  - stop_rule: Stop once collection literal string paths prefer graph-backed
+    value kinds before string-table metadata and source-contract coverage pins
+    graph-first ordering for array/vector and map literal storage.
+  - evidence: Reordered collection literal string paths in
+    `emitConversionsAndCallsCollectionAndMutationExpr` so argument value-kind
+    inference runs before string-table target resolution. Source-contract
+    coverage now locks graph-first ordering for array/vector string elements,
+    experimental map storage, and legacy map key/value slots.
+
 - [x] TODO-4298: Prefer graph facts for access guards
   - owner: ai
   - created_at: 2026-04-28

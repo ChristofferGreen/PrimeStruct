@@ -642,6 +642,12 @@ Planned non-template inference migration contract:
   graph facts continue to ordinary array/vector access; graph-known strings
   and no-fact local string bindings keep the unsupported string-index
   diagnostic.
+- Completed native collection literal string slice: native array/vector and
+  map literal string-element emission now asks graph-backed value-kind
+  inference before literal-backed string metadata can select string-table
+  storage. Known non-string graph facts suppress stale string-table metadata;
+  no-fact literal-backed metadata remains the syntax-only compatibility
+  fallback.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

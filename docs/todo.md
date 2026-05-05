@@ -1046,6 +1046,12 @@ Task template:
       a named indexed-access target. Known non-string graph facts continue to
       ordinary array/vector access; graph-known strings and no-fact local
       string bindings keep the unsupported string-index diagnostic.
+    - Completed slice: native array/vector and map literal string-element
+      emission now asks graph-backed value-kind inference before
+      literal-backed string metadata can choose string-table storage. Known
+      non-string graph facts suppress stale string-table metadata; no-fact
+      literal-backed metadata remains compatibility fallback for syntax-only
+      paths.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.
