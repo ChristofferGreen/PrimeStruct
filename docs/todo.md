@@ -559,6 +559,14 @@ Task template:
       `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_1_10`;
       continue with the next retained release failure,
       `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_11_20`.
+    - 2026-05-05 lite slice: retained map access alias chained-method
+      expectations now match canonical helper forwarding for `/map/at` and
+      `/map/at_unsafe`: visible canonical definitions satisfy the alias, and
+      invalid chains report downstream method diagnostics. Focused release
+      validation passed for
+      `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_11_20`;
+      continue with the next retained release failure,
+      `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_21_30`.
 
 - [ ] TODO-4298: Promote graph-backed non-template inference authority
   - owner: ai

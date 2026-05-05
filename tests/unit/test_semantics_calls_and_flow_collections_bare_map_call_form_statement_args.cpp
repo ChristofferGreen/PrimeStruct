@@ -361,7 +361,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map namespaced access alias chained method requires explicit alias definition") {
+TEST_CASE("map namespaced access alias chained method uses canonical helper definition") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -384,11 +384,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/at") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("map namespaced access alias chained method rejects before downstream tag diagnostics") {
+TEST_CASE("map namespaced access alias chained method keeps downstream tag diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -412,10 +412,11 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/at") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /Marker/tag parameter marker") !=
+        std::string::npos);
 }
 
-TEST_CASE("map namespaced unsafe access alias chained method requires explicit alias definition") {
+TEST_CASE("map namespaced unsafe access alias chained method uses canonical helper definition") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -438,11 +439,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/at_unsafe") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("map namespaced unsafe access alias chained method rejects before downstream tag diagnostics") {
+TEST_CASE("map namespaced unsafe access alias chained method keeps downstream tag diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -466,7 +467,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/at_unsafe") != std::string::npos);
+  CHECK(error.find("unknown method: /Marker/tag") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced access alias field expression keeps removed-alias diagnostics") {
