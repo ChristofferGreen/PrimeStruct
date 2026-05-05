@@ -427,6 +427,70 @@ TEST_CASE("ir lowerer file write helpers emit write steps") {
   CHECK(error.empty());
 
   instructions.clear();
+  error.clear();
+  emitExprCalled = false;
+  int resolveStringCalls = 0;
+  CHECK(primec::ir_lowerer::emitFileWriteStep(
+      arg,
+      7,
+      13,
+      [&](const primec::Expr &, int32_t &stringIndex, size_t &length) {
+        ++resolveStringCalls;
+        stringIndex = 29;
+        length = 5;
+        return true;
+      },
+      [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::ValueKind::Int64; },
+      [&](const primec::Expr &) {
+        emitExprCalled = true;
+        emitInstruction(primec::IrOpcode::PushI64, 88);
+        return true;
+      },
+      emitInstruction,
+      error));
+  CHECK(resolveStringCalls == 0);
+  CHECK(emitExprCalled);
+  REQUIRE(instructions.size() == 4);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 7);
+  CHECK(instructions[1].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[1].imm == 88);
+  CHECK(instructions[2].op == primec::IrOpcode::FileWriteI64);
+  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[3].imm == 13);
+
+  instructions.clear();
+  error.clear();
+  emitExprCalled = false;
+  resolveStringCalls = 0;
+  CHECK(primec::ir_lowerer::emitFileWriteStep(
+      arg,
+      7,
+      13,
+      [&](const primec::Expr &, int32_t &stringIndex, size_t &length) {
+        ++resolveStringCalls;
+        stringIndex = 31;
+        length = 5;
+        return true;
+      },
+      [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::ValueKind::String; },
+      [&](const primec::Expr &) {
+        emitExprCalled = true;
+        return true;
+      },
+      emitInstruction,
+      error));
+  CHECK(resolveStringCalls == 1);
+  CHECK_FALSE(emitExprCalled);
+  REQUIRE(instructions.size() == 3);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 7);
+  CHECK(instructions[1].op == primec::IrOpcode::FileWriteString);
+  CHECK(instructions[1].imm == 31);
+  CHECK(instructions[2].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[2].imm == 13);
+
+  instructions.clear();
   emitExprCalled = false;
   CHECK(primec::ir_lowerer::emitFileWriteStep(
       arg,

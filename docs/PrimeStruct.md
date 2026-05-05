@@ -619,6 +619,12 @@ Planned non-template inference migration contract:
   name paths. Known non-string graph facts suppress stale table-backed local
   metadata; literal-backed local metadata remains the syntax-only/no-fact
   compatibility fallback, and string literals keep the direct static path.
+- Completed native file-write literal-backed argument slice: native
+  `file.write(value)` emission now asks graph-backed value-kind inference
+  before literal-backed string metadata can select static string-write
+  emission for non-literal arguments. Known numeric graph facts suppress stale
+  table-backed string metadata; string literals and no-fact literal-backed
+  bindings keep the direct static string-write path.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

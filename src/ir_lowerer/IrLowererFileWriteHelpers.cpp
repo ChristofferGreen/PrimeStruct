@@ -193,16 +193,29 @@ bool emitFileWriteStep(const Expr &arg,
                        const EmitExprForWriteFn &emitExpr,
                        const EmitInstructionForWriteFn &emitInstruction,
                        std::string &error) {
-  int32_t stringIndex = -1;
-  size_t length = 0;
-  if (resolveStringTableTarget(arg, stringIndex, length)) {
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex));
-    emitInstruction(IrOpcode::FileWriteString, static_cast<uint64_t>(stringIndex));
-    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal));
-    return true;
+  if (arg.kind == Expr::Kind::StringLiteral) {
+    int32_t stringIndex = -1;
+    size_t length = 0;
+    if (resolveStringTableTarget(arg, stringIndex, length)) {
+      emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex));
+      emitInstruction(IrOpcode::FileWriteString, static_cast<uint64_t>(stringIndex));
+      emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal));
+      return true;
+    }
   }
 
   const LocalInfo::ValueKind kind = inferExprKind(arg);
+  if (kind == LocalInfo::ValueKind::String || kind == LocalInfo::ValueKind::Unknown) {
+    int32_t stringIndex = -1;
+    size_t length = 0;
+    if (resolveStringTableTarget(arg, stringIndex, length)) {
+      emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex));
+      emitInstruction(IrOpcode::FileWriteString, static_cast<uint64_t>(stringIndex));
+      emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal));
+      return true;
+    }
+  }
+
   if (kind == LocalInfo::ValueKind::String) {
     emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex));
     if (!emitExpr(arg)) {

@@ -6,6 +6,29 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 5, 2026)**
+- [x] TODO-4298: Prefer graph facts for file writes
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-05
+  - phase: Semantic ownership authority
+  - scope: Move native `file.write(value)` literal-backed string argument
+    selection onto graph-backed value-kind inference before string-table local
+    metadata can select static string-write emission.
+  - acceptance:
+    - Graph-backed numeric facts suppress stale string-table target metadata.
+    - Graph-backed string facts still use static string-write emission when a
+      string-table target is available.
+    - String literals and syntax-only/no-fact literal-backed bindings keep the
+      direct static string-write path.
+  - stop_rule: Stop once file-write argument emission prefers graph-backed
+    value kinds for non-literal arguments and helper coverage pins stale
+    string-table suppression plus graph-backed string behavior.
+  - evidence: Reordered `emitFileWriteStep` so non-literal arguments infer the
+    graph-backed value kind before querying string-table targets. File-write
+    helper coverage now proves stale string-table targets are not queried when
+    graph facts say numeric, while graph-backed strings still use static
+    string-write emission when the string-table target is available.
+
 - [x] TODO-4298: Prefer graph facts for File literals
   - owner: ai
   - created_at: 2026-04-28

@@ -1023,6 +1023,12 @@ Task template:
       literal-backed local metadata remains compatibility fallback for
       syntax-only/no-fact paths, and string literals keep the direct static
       path.
+    - Completed slice: native `file.write(value)` literal-backed argument
+      emission now asks graph-backed value-kind inference before
+      literal-backed string metadata can choose static string-write emission
+      for non-literal arguments. Known numeric graph facts suppress stale
+      table-backed string metadata; string literals and no-fact literal-backed
+      bindings keep the direct static string-write path.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.
