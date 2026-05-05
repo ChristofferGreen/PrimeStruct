@@ -521,6 +521,17 @@ Task template:
       `PrimeStruct_primestruct_ir_pipeline_validation_cases_111_120`;
       continue with the next retained release failure from the saved release
       log.
+    - 2026-05-04 non-lite baseline: a pre-existing shared statement-binding
+      resolver slice first failed to compile because
+      `resolveSemanticProductTypeText(...)` was declared in the helper header
+      but still defined inside the `.cpp` anonymous namespace. Moving that
+      definition to namespace scope restored the release build. The following
+      full release gate still failed 179 tests, concentrated in retained
+      collection/Result/Maybe semantic and runtime conformance shards; next
+      stabilization should start with
+      `PrimeStruct_primestruct_ir_pipeline_backends_registry` source-lock
+      drift or the first still-reproducible collection receiver-routing
+      shard from the current release log.
 
 - [ ] TODO-4298: Promote graph-backed non-template inference authority
   - owner: ai

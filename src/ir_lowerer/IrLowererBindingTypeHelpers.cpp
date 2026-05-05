@@ -68,6 +68,8 @@ bool requiresSemanticBindingFact(const SemanticProgram *semanticProgram,
   return semanticProgram != nullptr && expr.semanticNodeId != 0;
 }
 
+} // namespace
+
 std::string resolveSemanticProductTypeText(const SemanticProgram *semanticProgram,
                                            const std::string &text,
                                            SymbolId textId) {
@@ -80,6 +82,8 @@ std::string resolveSemanticProductTypeText(const SemanticProgram *semanticProgra
   }
   return trimTemplateTypeText(text);
 }
+
+namespace {
 
 std::string resolveSemanticBindingFactTypeText(
     const SemanticProgram *semanticProgram,
