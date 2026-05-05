@@ -567,6 +567,15 @@ Task template:
       `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_11_20`;
       continue with the next retained release failure,
       `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_21_30`.
+    - 2026-05-05 lite slice: retained canonical vector constructor
+      auto-binding fixtures now define their templated helper-return structs
+      in the same namespace as the canonical vector helper, matching current
+      constructor lookup while preserving the same-path helper inference
+      contract and experimental-vector shadow guard. Focused release validation
+      passed for
+      `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_21_30`;
+      continue with the next retained release failure,
+      `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_121_130`.
 
 - [ ] TODO-4298: Promote graph-backed non-template inference authority
   - owner: ai

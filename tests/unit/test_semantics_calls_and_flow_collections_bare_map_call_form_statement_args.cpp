@@ -535,11 +535,11 @@ main() {
 
 TEST_CASE("canonical vector constructor auto binding infers same-path helper return kind") {
   const std::string source = R"(
-Box<T>() {
+/std/collections/vector/Box<T>() {
   [T] value{0i32}
 }
 
-[return<Box<T>>]
+[return</std/collections/vector/Box<T>>]
 /std/collections/vector/vector<T>([T] seed) {
   return(Box<T>(seed))
 }
@@ -557,20 +557,20 @@ main() {
 
 TEST_CASE("canonical vector constructor auto binding ignores experimental constructor rewrite") {
   const std::string source = R"(
-Box<T>() {
+/std/collections/vector/Box<T>() {
   [T] value{0i32}
 }
 
-Other() {
+/std/collections/experimental_vector/Other() {
   [i32] alt{0i32}
 }
 
-[return<Box<T>>]
+[return</std/collections/vector/Box<T>>]
 /std/collections/vector/vector<T>([T] seed) {
   return(Box<T>(seed))
 }
 
-[return<Other>]
+[return</std/collections/experimental_vector/Other>]
 /std/collections/experimental_vector/vector<T>([T] seed) {
   return(Other(7i32))
 }
