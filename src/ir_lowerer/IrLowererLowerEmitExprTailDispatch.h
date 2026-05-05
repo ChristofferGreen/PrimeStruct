@@ -1045,43 +1045,6 @@
             },
             [&](const Expr &targetCallExpr, ir_lowerer::MapAccessTargetInfo &targetInfoOut) {
               targetInfoOut = {};
-              auto tryPopulateMapFromSemanticQueryFact = [&]() {
-                if (semanticProgram == nullptr) {
-                  return false;
-                }
-                const SemanticProductIndex semanticIndex =
-                    ir_lowerer::buildSemanticProductIndex(semanticProgram);
-                const auto *queryFact =
-                    ir_lowerer::findSemanticProductQueryFact(semanticProgram, semanticIndex, targetCallExpr);
-                if (queryFact == nullptr) {
-                  return false;
-                }
-                const std::string bindingType = resolveSemanticQueryFactTypeText(*queryFact);
-                std::string base;
-                std::string argText;
-                if (!splitTemplateTypeName(bindingType, base, argText) ||
-                    ir_lowerer::normalizeCollectionBindingTypeName(
-                        ir_lowerer::trimTemplateTypeText(base)) != "map") {
-                  return false;
-                }
-                std::vector<std::string> args;
-                if (!splitTemplateArgs(argText, args) || args.size() != 2) {
-                  return false;
-                }
-                targetInfoOut.mapKeyKind =
-                    ir_lowerer::valueKindFromTypeName(ir_lowerer::trimTemplateTypeText(args.front()));
-                targetInfoOut.mapValueKind =
-                    ir_lowerer::valueKindFromTypeName(ir_lowerer::trimTemplateTypeText(args.back()));
-                if (targetInfoOut.mapKeyKind == ir_lowerer::LocalInfo::ValueKind::Unknown ||
-                    targetInfoOut.mapValueKind == ir_lowerer::LocalInfo::ValueKind::Unknown) {
-                  return false;
-                }
-                targetInfoOut.isMapTarget = true;
-                return true;
-              };
-              if (tryPopulateMapFromSemanticQueryFact()) {
-                return true;
-              }
               auto inferExperimentalMapStructPathFromTypeTexts =
                   [](const std::string &keyTypeText, const std::string &valueTypeText) {
                     std::string canonicalArgs;
@@ -1120,6 +1083,157 @@
                     }
                     return structPath;
                   };
+              std::function<bool(const std::string &,
+                                 ir_lowerer::MapAccessTargetInfo &)>
+                  inferNativeTailMapKindsFromTypeText;
+              inferNativeTailMapKindsFromTypeText =
+                  [&](const std::string &typeText,
+                      ir_lowerer::MapAccessTargetInfo &targetInfo) {
+                    std::string base;
+                    std::string argText;
+                    if (!splitTemplateTypeName(
+                            ir_lowerer::trimTemplateTypeText(typeText),
+                            base,
+                            argText)) {
+                      return false;
+                    }
+                    const std::string normalizedBase =
+                        ir_lowerer::trimTemplateTypeText(base);
+                    if (normalizedBase == "Reference" ||
+                        normalizedBase == "Pointer") {
+                      return inferNativeTailMapKindsFromTypeText(argText,
+                                                                 targetInfo);
+                    }
+                    if (ir_lowerer::normalizeCollectionBindingTypeName(
+                            normalizedBase) != "map" &&
+                        normalizedBase != "Map" && normalizedBase != "/Map" &&
+                        normalizedBase != "std/collections/experimental_map/Map" &&
+                        normalizedBase != "/std/collections/experimental_map/Map") {
+                      return false;
+                    }
+                    std::vector<std::string> args;
+                    if (!splitTemplateArgs(argText, args) || args.size() != 2) {
+                      return false;
+                    }
+                    targetInfo.mapKeyKind = ir_lowerer::valueKindFromTypeName(
+                        ir_lowerer::trimTemplateTypeText(args.front()));
+                    targetInfo.mapValueKind = ir_lowerer::valueKindFromTypeName(
+                        ir_lowerer::trimTemplateTypeText(args.back()));
+                    if (targetInfo.mapKeyKind ==
+                            ir_lowerer::LocalInfo::ValueKind::Unknown ||
+                        targetInfo.mapValueKind ==
+                            ir_lowerer::LocalInfo::ValueKind::Unknown) {
+                      return false;
+                    }
+                    targetInfo.isMapTarget = true;
+                    targetInfo.structTypeName =
+                        inferExperimentalMapStructPathFromTypeTexts(
+                            args.front(), args.back());
+                    return true;
+                  };
+              auto tryPopulateNativeTailMapKindsFromSemanticTypeText =
+                  [&](const std::string &typeText,
+                      SymbolId typeTextId,
+                      ir_lowerer::MapAccessTargetInfo &targetInfo) {
+                    return inferNativeTailMapKindsFromTypeText(
+                        resolveSemanticReceiverTypeText(typeText, typeTextId),
+                        targetInfo);
+                  };
+              auto tryPopulateNativeTailMapKindsFromSemanticCollection =
+                  [&](const SemanticProductIndex &semanticIndex) {
+                    const auto *collectionFact =
+                        ir_lowerer::findSemanticProductCollectionSpecialization(
+                            semanticIndex, targetCallExpr);
+                    if (collectionFact == nullptr) {
+                      return false;
+                    }
+                    const std::string collectionFamily =
+                        resolveSemanticReceiverTypeText(
+                            collectionFact->collectionFamily,
+                            collectionFact->collectionFamilyId);
+                    if (collectionFamily != "map" &&
+                        collectionFamily != "/map" &&
+                        collectionFamily != "std/collections/map" &&
+                        collectionFamily != "/std/collections/map") {
+                      return false;
+                    }
+                    const std::string keyTypeText =
+                        resolveSemanticReceiverTypeText(
+                            collectionFact->keyTypeText,
+                            collectionFact->keyTypeTextId);
+                    const std::string valueTypeText =
+                        resolveSemanticReceiverTypeText(
+                            collectionFact->valueTypeText,
+                            collectionFact->valueTypeTextId);
+                    targetInfoOut.mapKeyKind =
+                        ir_lowerer::valueKindFromTypeName(keyTypeText);
+                    targetInfoOut.mapValueKind =
+                        ir_lowerer::valueKindFromTypeName(valueTypeText);
+                    if (targetInfoOut.mapKeyKind ==
+                            ir_lowerer::LocalInfo::ValueKind::Unknown ||
+                        targetInfoOut.mapValueKind ==
+                            ir_lowerer::LocalInfo::ValueKind::Unknown) {
+                      return false;
+                    }
+                    targetInfoOut.isMapTarget = true;
+                    targetInfoOut.structTypeName =
+                        inferExperimentalMapStructPathFromTypeTexts(
+                            keyTypeText, valueTypeText);
+                    return true;
+                  };
+              auto tryPopulateMapFromSemanticReceiverFacts = [&]() {
+                if (semanticProgram == nullptr) {
+                  return false;
+                }
+                const SemanticProductIndex semanticIndex =
+                    ir_lowerer::buildSemanticProductIndex(semanticProgram);
+                if (tryPopulateNativeTailMapKindsFromSemanticCollection(
+                        semanticIndex)) {
+                  return true;
+                }
+                const auto *queryFact =
+                    ir_lowerer::findSemanticProductQueryFact(semanticProgram, semanticIndex, targetCallExpr);
+                if (queryFact != nullptr) {
+                  if (tryPopulateNativeTailMapKindsFromSemanticTypeText(
+                          queryFact->bindingTypeText,
+                          queryFact->bindingTypeTextId,
+                          targetInfoOut) ||
+                      tryPopulateNativeTailMapKindsFromSemanticTypeText(
+                          queryFact->queryTypeText,
+                          queryFact->queryTypeTextId,
+                          targetInfoOut) ||
+                      tryPopulateNativeTailMapKindsFromSemanticTypeText(
+                          queryFact->receiverBindingTypeText,
+                          queryFact->receiverBindingTypeTextId,
+                          targetInfoOut)) {
+                    return true;
+                  }
+                }
+                if (const auto *bindingFact =
+                        ir_lowerer::findSemanticProductBindingFact(
+                            semanticIndex, targetCallExpr);
+                    bindingFact != nullptr &&
+                    tryPopulateNativeTailMapKindsFromSemanticTypeText(
+                        bindingFact->bindingTypeText,
+                        bindingFact->bindingTypeTextId,
+                        targetInfoOut)) {
+                  return true;
+                }
+                if (const auto *localAutoFact =
+                        ir_lowerer::findSemanticProductLocalAutoFact(
+                            semanticProgram, semanticIndex, targetCallExpr);
+                    localAutoFact != nullptr &&
+                    tryPopulateNativeTailMapKindsFromSemanticTypeText(
+                        localAutoFact->bindingTypeText,
+                        localAutoFact->bindingTypeTextId,
+                        targetInfoOut)) {
+                  return true;
+                }
+                return false;
+              };
+              if (tryPopulateMapFromSemanticReceiverFacts()) {
+                return true;
+              }
               const Definition *callee =
                   resolveTailDispatchDirectHelperDefinition(targetCallExpr);
               if (callee == nullptr) {
