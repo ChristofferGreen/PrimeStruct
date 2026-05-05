@@ -648,6 +648,15 @@ Task template:
       `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_311_320`;
       continue with the next retained release failure from the saved release
       log.
+    - 2026-05-05 lite slice: retained C++ emitter Result-constructor checks
+      now exercise the current IR-backed `cpp`/`exe` path by compiling and
+      running explicit Result constructors, single-field error payloads, and
+      single-field `Result.ok(...)` payloads through `pick(...)` instead of
+      source-locking obsolete bridge-helper spellings. Focused release
+      validation passed for
+      `PrimeStruct_primestruct_compile_run_emitters_cpp_collection_access_and_alias_forwarding_74_75`;
+      continue with the next retained release failure,
+      `PrimeStruct_primestruct_ir_pipeline_backends_registry`.
 
 - [ ] TODO-4298: Promote graph-backed non-template inference authority
   - owner: ai

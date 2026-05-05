@@ -38,54 +38,49 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("C++ emitter lowers explicit Result sum constructors through bridge helpers") {
+TEST_CASE("C++ emitter preserves explicit Result constructor payloads") {
   const std::string source = R"(
 import /std/result/*
 
-[return<Result<i32, i32>>]
-make_value_ok() {
-  return(Result<i32, i32>{[ok] 7i32})
-}
-
-[return<Result<i32, i32>>]
-make_value_error() {
-  return(Result<i32, i32>{[error] 4i32})
-}
-
-[return<Result<i32>>]
-make_status_ok() {
-  return(Result<i32>{ok})
-}
-
-[return<Result<i32>>]
-make_status_default() {
-  return(Result<i32>{})
-}
-
-[return<Result<i32>>]
-make_status_error() {
-  return(Result<i32>{[error] 5i32})
-}
-
 [return<int>]
 main() {
-  return(0i32)
+  [Result<i32, i32>] valueOk{[ok] 7i32}
+  [Result<i32, i32>] valueError{[error] 4i32}
+  [Result<i32>] statusOk{ok}
+  [Result<i32>] statusDefault{}
+  [Result<i32>] statusError{[error] 5i32}
+  [i32] okValue{pick(valueOk) {
+    ok(value) { value }
+    error(err) { err }
+  }}
+  [i32] errorValue{pick(valueError) {
+    ok(value) { value }
+    error(err) { err }
+  }}
+  [i32] statusOkValue{pick(statusOk) {
+    ok { 1i32 }
+    error(err) { err }
+  }}
+  [i32] statusDefaultValue{pick(statusDefault) {
+    ok { 2i32 }
+    error(err) { err }
+  }}
+  [i32] statusErrorValue{pick(statusError) {
+    ok { 0i32 }
+    error(err) { err }
+  }}
+  return(plus(plus(okValue, errorValue),
+              plus(plus(statusOkValue, statusDefaultValue), statusErrorValue)))
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_explicit_result_sum_constructors.prime", source);
-  const std::string outPath =
-      (testScratchPath("") / "primec_explicit_result_sum_constructors.cpp").string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_explicit_result_sum_constructors_exe").string();
 
   const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_result_value_ok(static_cast<uint32_t>(") != std::string::npos);
-  CHECK(output.find("ps_result_value_error(static_cast<uint32_t>(") != std::string::npos);
-  CHECK(output.find("ps_result_status_error(static_cast<uint32_t>(") != std::string::npos);
-  CHECK(output.find("return ps_result_status_ok();") != std::string::npos);
-  CHECK(output.find("return Result<") == std::string::npos);
-  CHECK(output.find("{[error]") == std::string::npos);
+  CHECK(runCommand(exePath) == 19);
 }
 
 TEST_CASE("C++ emitter guards Result.why on ok bridge values") {
@@ -145,32 +140,28 @@ MyError() {
   [i32] code{0i32}
 }
 
-[return<Result<MyError>>]
-make_status_error() {
-  return(Result<MyError>{[error] MyError{[code] 7i32}})
-}
-
-[return<Result<i32, MyError>>]
-make_value_error() {
-  [MyError] err{MyError{[code] 9i32}}
-  return(Result<i32, MyError>{[error] err})
-}
-
 [return<int>]
 main() {
-  return(0i32)
+  [MyError] err{MyError{[code] 9i32}}
+  [Result<MyError>] status{[error] MyError{[code] 7i32}}
+  [Result<i32, MyError>] value{error<i32, MyError>(err)}
+  [i32] statusCode{pick(status) {
+    ok { 0i32 }
+    error(payload) { payload.code }
+  }}
+  [i32] valueCode{pick(value) {
+    ok(payload) { payload }
+    error(payload) { payload.code }
+  }}
+  return(plus(statusCode, valueCode))
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_result_error_struct_constructor.prime", source);
-  const std::string outPath = (testScratchPath("") / "primec_result_error_struct_constructor.cpp").string();
+  const std::string exePath = (testScratchPath("") / "primec_result_error_struct_constructor_exe").string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_result_status_error(static_cast<uint32_t>((") != std::string::npos);
-  CHECK(output.find(".code))") != std::string::npos);
-  CHECK(output.find("ps_result_value_error(static_cast<uint32_t>((err).code))") != std::string::npos);
-  CHECK(output.find("static_cast<uint32_t>(err)") == std::string::npos);
+  CHECK(runCommand(exePath) == 16);
 }
 
 TEST_CASE("C++ emitter packs single-field Result.ok payloads") {
@@ -182,31 +173,28 @@ Token() {
   [i32] code{0i32}
 }
 
-[return<Result<Token, i32>>]
-make_local_ok() {
-  [Token] token{Token{[code] 11i32}}
-  return(Result.ok(token))
-}
-
-[return<Result<Token, i32>>]
-make_direct_ok() {
-  return(Result.ok(Token{[code] 13i32}))
-}
-
 [return<int>]
 main() {
-  return(0i32)
+  [Token] token{Token{[code] 11i32}}
+  [Result<Token, i32>] local{Result.ok(token)}
+  [Result<Token, i32>] direct{Result.ok(Token{[code] 13i32})}
+  [i32] localCode{pick(local) {
+    ok(value) { value.code }
+    error(err) { err }
+  }}
+  [i32] directCode{pick(direct) {
+    ok(value) { value.code }
+    error(err) { err }
+  }}
+  return(plus(localCode, directCode))
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_result_ok_struct_payload.prime", source);
-  const std::string outPath = (testScratchPath("") / "primec_result_ok_struct_payload.cpp").string();
+  const std::string exePath = (testScratchPath("") / "primec_result_ok_struct_payload_exe").string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("ps_result_value_ok(static_cast<uint32_t>((token).code))") != std::string::npos);
-  CHECK(output.find("ps_result_value_ok(static_cast<uint32_t>((ps_Token") != std::string::npos);
-  CHECK(output.find("static_cast<uint32_t>(token)") == std::string::npos);
+  CHECK(runCommand(exePath) == 24);
 }
 
 TEST_CASE("C++ emitter rejects experimental map custom comparable struct keys") {

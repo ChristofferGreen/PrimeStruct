@@ -6,6 +6,32 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 5, 2026)**
+- [x] TODO-4360: Retarget Result constructor checks
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-05
+  - phase: Release-gate stabilization
+  - scope: Stabilize the retained C++ emitter Result-constructor shard by
+    replacing obsolete source bridge-helper string checks with executable
+    IR-backed coverage for explicit Result constructors and single-field
+    ok/error payloads.
+  - acceptance:
+    - The retained
+      `compile_run_emitters_cpp_collection_access_and_alias_forwarding_74_75`
+      release shard passes focused validation.
+    - Single-field error payloads and `Result.ok(...)` payloads are observed
+      through `pick(...)` results instead of dead, unreachable helper bodies.
+    - Adjacent explicit Result constructor coverage verifies runtime payload
+      behavior on the current `--emit=exe` path.
+  - stop_rule: Stop once the first retained emitter shard passes and the next
+    retained release failure is documented.
+  - evidence: Retargeted the stale C++ bridge source-lock checks in
+    `test_compile_run_emitters_core_behaviors.cpp` to executable Result
+    constructor/payload checks, then focused validation passed for
+    `ctest --output-on-failure -R '^PrimeStruct_primestruct_compile_run_emitters_cpp_collection_access_and_alias_forwarding_74_75$'`
+    and
+    `./PrimeStruct_compile_run_tests --test-case="C++ emitter preserves explicit Result constructor payloads"`.
+
 - [x] TODO-4298: Promote buffer store index facts
   - owner: ai
   - created_at: 2026-04-28
