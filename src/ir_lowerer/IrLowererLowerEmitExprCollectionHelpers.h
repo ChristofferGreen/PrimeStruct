@@ -885,6 +885,194 @@
             materializedReceiverResult.has_value()) {
           return *materializedReceiverResult;
         }
+        auto normalizeLateArrayVectorCollectionName =
+            [&](const std::string &collectionName) {
+              const std::string normalized =
+                  ir_lowerer::trimTemplateTypeText(collectionName);
+              if (normalized == "array" || normalized == "/array" ||
+                  normalized == "args") {
+                return std::string("array");
+              }
+              return ir_lowerer::normalizeCollectionBindingTypeName(normalized);
+            };
+        auto populateLateArrayVectorTargetFromElementType =
+            [&](const std::string &collectionName,
+                const std::string &elementTypeText,
+                ir_lowerer::ArrayVectorAccessTargetInfo &targetInfoOut,
+                std::vector<std::string> *collectionArgsOut) {
+              const std::string normalizedCollectionName =
+                  normalizeLateArrayVectorCollectionName(collectionName);
+              if (normalizedCollectionName != "array" &&
+                  normalizedCollectionName != "vector") {
+                return false;
+              }
+              const std::string normalizedElementType =
+                  ir_lowerer::trimTemplateTypeText(elementTypeText);
+              if (normalizedElementType.empty()) {
+                return false;
+              }
+              ir_lowerer::ArrayVectorAccessTargetInfo candidate;
+              candidate.isArrayOrVectorTarget = true;
+              candidate.isVectorTarget = (normalizedCollectionName == "vector");
+              candidate.elemKind =
+                  ir_lowerer::valueKindFromTypeName(normalizedElementType);
+              if (candidate.isVectorTarget) {
+                candidate.structTypeName =
+                    ir_lowerer::specializedExperimentalVectorStructPathForElementType(
+                        normalizedElementType);
+              }
+              targetInfoOut = candidate;
+              if (collectionArgsOut != nullptr) {
+                *collectionArgsOut = {normalizedElementType};
+              }
+              return true;
+            };
+        auto tryPopulateLateArrayVectorTargetFromTypeText =
+            [&](SymbolId typeTextId,
+                const std::string &typeText,
+                ir_lowerer::ArrayVectorAccessTargetInfo &targetInfoOut,
+                std::vector<std::string> *collectionArgsOut) {
+              std::string resolvedTypeText =
+                  ir_lowerer::resolveSemanticProductTypeText(
+                      callResolutionAdapters.semanticProgram,
+                      typeText,
+                      typeTextId);
+              while (true) {
+                std::string base;
+                std::string argText;
+                if (!splitTemplateTypeName(
+                        ir_lowerer::trimTemplateTypeText(resolvedTypeText),
+                        base,
+                        argText)) {
+                  return false;
+                }
+                const std::string normalizedBase =
+                    ir_lowerer::trimTemplateTypeText(base);
+                if (normalizedBase == "Reference" ||
+                    normalizedBase == "/Reference" ||
+                    normalizedBase == "Pointer" ||
+                    normalizedBase == "/Pointer") {
+                  std::vector<std::string> wrappedArgs;
+                  if (!splitTemplateArgs(argText, wrappedArgs) ||
+                      wrappedArgs.size() != 1) {
+                    return false;
+                  }
+                  resolvedTypeText = wrappedArgs.front();
+                  continue;
+                }
+                std::vector<std::string> collectionArgs;
+                if (!splitTemplateArgs(argText, collectionArgs) ||
+                    collectionArgs.size() != 1) {
+                  return false;
+                }
+                return populateLateArrayVectorTargetFromElementType(
+                    normalizedBase,
+                    collectionArgs.front(),
+                    targetInfoOut,
+                    collectionArgsOut);
+              }
+            };
+        auto tryPopulateLateArrayVectorTargetFromSemanticCollection =
+            [&](const Expr &targetExpr,
+                ir_lowerer::ArrayVectorAccessTargetInfo &targetInfoOut,
+                std::vector<std::string> *collectionArgsOut) {
+              if (callResolutionAdapters.semanticProgram == nullptr ||
+                  targetExpr.semanticNodeId == 0) {
+                return false;
+              }
+              const auto *collectionFact =
+                  ir_lowerer::findSemanticProductCollectionSpecialization(
+                      callResolutionAdapters.semanticProductTargets.semanticIndex,
+                      targetExpr);
+              if (collectionFact == nullptr) {
+                return false;
+              }
+              const std::string collectionName =
+                  ir_lowerer::resolveSemanticProductTypeText(
+                      callResolutionAdapters.semanticProgram,
+                      collectionFact->collectionFamily,
+                      collectionFact->collectionFamilyId);
+              std::string elementType =
+                  ir_lowerer::resolveSemanticProductTypeText(
+                      callResolutionAdapters.semanticProgram,
+                      collectionFact->elementTypeText,
+                      collectionFact->elementTypeTextId);
+              if (elementType.empty()) {
+                elementType = ir_lowerer::resolveSemanticProductTypeText(
+                    callResolutionAdapters.semanticProgram,
+                    collectionFact->valueTypeText,
+                    collectionFact->valueTypeTextId);
+              }
+              return populateLateArrayVectorTargetFromElementType(
+                  collectionName,
+                  elementType,
+                  targetInfoOut,
+                  collectionArgsOut);
+            };
+        auto tryPopulateLateArrayVectorTargetFromSemanticFacts =
+            [&](const Expr &targetExpr,
+                ir_lowerer::ArrayVectorAccessTargetInfo &targetInfoOut,
+                std::vector<std::string> *collectionArgsOut) {
+              if (callResolutionAdapters.semanticProgram == nullptr ||
+                  targetExpr.semanticNodeId == 0) {
+                return false;
+              }
+              if (tryPopulateLateArrayVectorTargetFromSemanticCollection(
+                      targetExpr, targetInfoOut, collectionArgsOut)) {
+                return true;
+              }
+              const auto &semanticIndex =
+                  callResolutionAdapters.semanticProductTargets.semanticIndex;
+              if (const auto *queryFact =
+                      ir_lowerer::findSemanticProductQueryFact(
+                          callResolutionAdapters.semanticProgram,
+                          semanticIndex,
+                          targetExpr);
+                  queryFact != nullptr) {
+                if (tryPopulateLateArrayVectorTargetFromTypeText(
+                        queryFact->bindingTypeTextId,
+                        queryFact->bindingTypeText,
+                        targetInfoOut,
+                        collectionArgsOut) ||
+                    tryPopulateLateArrayVectorTargetFromTypeText(
+                        queryFact->queryTypeTextId,
+                        queryFact->queryTypeText,
+                        targetInfoOut,
+                        collectionArgsOut) ||
+                    tryPopulateLateArrayVectorTargetFromTypeText(
+                        queryFact->receiverBindingTypeTextId,
+                        queryFact->receiverBindingTypeText,
+                        targetInfoOut,
+                        collectionArgsOut)) {
+                  return true;
+                }
+              }
+              if (const auto *bindingFact =
+                      ir_lowerer::findSemanticProductBindingFact(
+                          semanticIndex, targetExpr);
+                  bindingFact != nullptr &&
+                  tryPopulateLateArrayVectorTargetFromTypeText(
+                      bindingFact->bindingTypeTextId,
+                      bindingFact->bindingTypeText,
+                      targetInfoOut,
+                      collectionArgsOut)) {
+                return true;
+              }
+              if (const auto *localAutoFact =
+                      ir_lowerer::findSemanticProductLocalAutoFact(
+                          callResolutionAdapters.semanticProgram,
+                          semanticIndex,
+                          targetExpr);
+                  localAutoFact != nullptr &&
+                  tryPopulateLateArrayVectorTargetFromTypeText(
+                      localAutoFact->bindingTypeTextId,
+                      localAutoFact->bindingTypeText,
+                      targetInfoOut,
+                      collectionArgsOut)) {
+                return true;
+              }
+              return false;
+            };
         auto rewriteBareVectorHelperExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
           if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall || callExpr.args.empty() ||
               !callExpr.namespacePrefix.empty() || callExpr.name.find('/') != std::string::npos) {
@@ -900,6 +1088,10 @@
               localsIn,
               [&](const Expr &targetCallExpr, ir_lowerer::ArrayVectorAccessTargetInfo &targetInfoOut) {
                 targetInfoOut = {};
+                if (tryPopulateLateArrayVectorTargetFromSemanticFacts(
+                        targetCallExpr, targetInfoOut, nullptr)) {
+                  return true;
+                }
                 const Definition *callee =
                     resolveCollectionExprDirectDefinition(targetCallExpr);
                 if (callee == nullptr) {
@@ -923,20 +1115,35 @@
           }
           std::string elemTypeName;
           if (callExpr.args.front().kind == Expr::Kind::Call) {
+            ir_lowerer::ArrayVectorAccessTargetInfo semanticTargetInfo;
+            std::vector<std::string> semanticCollectionArgs;
+            if (tryPopulateLateArrayVectorTargetFromSemanticFacts(
+                    callExpr.args.front(),
+                    semanticTargetInfo,
+                    &semanticCollectionArgs) &&
+                semanticTargetInfo.isVectorTarget &&
+                semanticCollectionArgs.size() == 1) {
+              elemTypeName = semanticCollectionArgs.front();
+            }
             std::string receiverCollectionName;
-            if (getBuiltinCollectionName(callExpr.args.front(), receiverCollectionName) &&
+            if (elemTypeName.empty() &&
+                getBuiltinCollectionName(callExpr.args.front(), receiverCollectionName) &&
                 (receiverCollectionName == "array" || receiverCollectionName == "vector") &&
                 callExpr.args.front().templateArgs.size() == 1) {
               elemTypeName = callExpr.args.front().templateArgs.front();
-            } else if (const Definition *receiverDef =
-                           resolveCollectionExprDirectDefinition(callExpr.args.front())) {
-              std::string receiverCollectionNameFromDef;
-              std::vector<std::string> receiverCollectionArgs;
-              if (ir_lowerer::inferDeclaredReturnCollection(
-                      *receiverDef, receiverCollectionNameFromDef, receiverCollectionArgs) &&
-                  (receiverCollectionNameFromDef == "array" || receiverCollectionNameFromDef == "vector") &&
-                  receiverCollectionArgs.size() == 1) {
-                elemTypeName = receiverCollectionArgs.front();
+            }
+            if (elemTypeName.empty()) {
+              if (const Definition *receiverDef =
+                      resolveCollectionExprDirectDefinition(callExpr.args.front())) {
+                std::string receiverCollectionNameFromDef;
+                std::vector<std::string> receiverCollectionArgs;
+                if (ir_lowerer::inferDeclaredReturnCollection(
+                        *receiverDef, receiverCollectionNameFromDef, receiverCollectionArgs) &&
+                    (receiverCollectionNameFromDef == "array" ||
+                     receiverCollectionNameFromDef == "vector") &&
+                    receiverCollectionArgs.size() == 1) {
+                  elemTypeName = receiverCollectionArgs.front();
+                }
               }
             }
           }
@@ -981,23 +1188,36 @@
           bool knownVectorCallReceiver = false;
           if (callExpr.args.front().kind == Expr::Kind::Call) {
             const Expr &receiverCallExpr = callExpr.args.front();
-            knownVectorCallReceiver =
-                receiverCallExpr.name.rfind("/std/collections/vector/vector", 0) == 0 ||
-                receiverCallExpr.name.rfind("/std/collections/experimental_vector/vector", 0) == 0;
+            ir_lowerer::ArrayVectorAccessTargetInfo semanticTargetInfo;
+            if (tryPopulateLateArrayVectorTargetFromSemanticFacts(
+                    receiverCallExpr, semanticTargetInfo, &receiverCollectionArgs) &&
+                semanticTargetInfo.isVectorTarget &&
+                receiverCollectionArgs.size() == 1) {
+              knownVectorCallReceiver = true;
+            }
+            if (!knownVectorCallReceiver) {
+              knownVectorCallReceiver =
+                  receiverCallExpr.name.rfind("/std/collections/vector/vector", 0) == 0 ||
+                  receiverCallExpr.name.rfind("/std/collections/experimental_vector/vector", 0) == 0;
+            }
             std::string receiverCollectionName;
-            if (getBuiltinCollectionName(receiverCallExpr, receiverCollectionName) &&
+            if (!knownVectorCallReceiver &&
+                getBuiltinCollectionName(receiverCallExpr, receiverCollectionName) &&
                 receiverCollectionName == "vector" &&
                 receiverCallExpr.templateArgs.size() == 1) {
               receiverCollectionArgs = receiverCallExpr.templateArgs;
               knownVectorCallReceiver = true;
-            } else if (const Definition *receiverDef =
-                           resolveCollectionExprDirectDefinition(receiverCallExpr)) {
-              if (!ir_lowerer::inferDeclaredReturnCollection(
-                      *receiverDef, receiverCollectionName, receiverCollectionArgs) ||
-                  receiverCollectionName != "vector" || receiverCollectionArgs.size() != 1) {
-                receiverCollectionArgs.clear();
-              } else {
-                knownVectorCallReceiver = true;
+            } else if (!knownVectorCallReceiver) {
+              if (const Definition *receiverDef =
+                      resolveCollectionExprDirectDefinition(receiverCallExpr)) {
+                if (!ir_lowerer::inferDeclaredReturnCollection(
+                        *receiverDef, receiverCollectionName, receiverCollectionArgs) ||
+                    receiverCollectionName != "vector" ||
+                    receiverCollectionArgs.size() != 1) {
+                  receiverCollectionArgs.clear();
+                } else {
+                  knownVectorCallReceiver = true;
+                }
               }
             }
           }
@@ -1006,6 +1226,10 @@
               localsIn,
               [&](const Expr &targetCallExpr, ir_lowerer::ArrayVectorAccessTargetInfo &targetInfoOut) {
                 targetInfoOut = {};
+                if (tryPopulateLateArrayVectorTargetFromSemanticFacts(
+                        targetCallExpr, targetInfoOut, nullptr)) {
+                  return true;
+                }
                 const Definition *callee =
                     resolveCollectionExprDirectDefinition(targetCallExpr);
                 if (callee == nullptr) {

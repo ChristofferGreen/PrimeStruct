@@ -386,6 +386,70 @@ TEST_CASE("ir lowerer prefers explicit experimental vector helper before struct 
         std::string::npos);
 }
 
+TEST_CASE("ir lowerer bare vector helper rewrites prefer semantic receiver facts") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path collectionHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.h";
+
+  REQUIRE(std::filesystem::exists(collectionHelpersPath));
+  const std::string source = readText(collectionHelpersPath);
+
+  CHECK(source.find("auto tryPopulateLateArrayVectorTargetFromSemanticFacts =") !=
+        std::string::npos);
+  CHECK(source.find("findSemanticProductCollectionSpecialization(\n"
+                    "                      callResolutionAdapters.semanticProductTargets.semanticIndex,") !=
+        std::string::npos);
+  CHECK(source.find("collectionFact->elementTypeTextId") !=
+        std::string::npos);
+  CHECK(source.find("findSemanticProductQueryFact(\n"
+                    "                          callResolutionAdapters.semanticProgram,") !=
+        std::string::npos);
+  CHECK(source.find("queryFact->bindingTypeTextId") !=
+        std::string::npos);
+  CHECK(source.find("queryFact->receiverBindingTypeTextId") !=
+        std::string::npos);
+  CHECK(source.find("findSemanticProductBindingFact(\n"
+                    "                          semanticIndex, targetExpr)") !=
+        std::string::npos);
+  CHECK(source.find("findSemanticProductLocalAutoFact(\n"
+                    "                          callResolutionAdapters.semanticProgram,") !=
+        std::string::npos);
+
+  const size_t callbackSemanticFactUse =
+      source.find("if (tryPopulateLateArrayVectorTargetFromSemanticFacts(\n"
+                  "                        targetCallExpr, targetInfoOut, nullptr)) {");
+  REQUIRE(callbackSemanticFactUse != std::string::npos);
+  const size_t callbackDirectReturnInference =
+      source.find("const Definition *callee =\n"
+                  "                    resolveCollectionExprDirectDefinition(targetCallExpr);",
+                  callbackSemanticFactUse);
+  REQUIRE(callbackDirectReturnInference != std::string::npos);
+  CHECK(callbackSemanticFactUse < callbackDirectReturnInference);
+
+  const size_t methodSemanticFactUse =
+      source.find("tryPopulateLateArrayVectorTargetFromSemanticFacts(\n"
+                  "                    receiverCallExpr, semanticTargetInfo, &receiverCollectionArgs)");
+  REQUIRE(methodSemanticFactUse != std::string::npos);
+  const size_t methodDirectReturnInference =
+      source.find("resolveCollectionExprDirectDefinition(receiverCallExpr)",
+                  methodSemanticFactUse);
+  REQUIRE(methodDirectReturnInference != std::string::npos);
+  CHECK(methodSemanticFactUse < methodDirectReturnInference);
+}
+
 TEST_CASE("ir lowerer map constructor rewrite checks constructor surface before resolving defs") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);

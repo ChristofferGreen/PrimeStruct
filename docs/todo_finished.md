@@ -2815,6 +2815,39 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
     coverage, and documented the remaining TODO-4298 work. Local test
     execution was skipped per the lite workflow.
 
+- [x] TODO-4298: Use bare vector helper facts
+  - owner: ai
+  - created_at: 2026-05-05
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes late bare
+    vector-helper rewriting read semantic-product receiver facts before
+    direct helper return reconstruction.
+  - implementation_notes:
+    - Resolve collection specialization element IDs and query, binding,
+      and local-auto receiver type IDs before copied type text.
+    - Prefer graph-backed receiver vector shape before direct helper return
+      reconstruction classifies receiver calls or recovers helper template
+      arguments.
+    - Keep direct-return inference as compatibility fallback for syntax-only
+      or no-semantic-product contexts.
+  - acceptance:
+    - Late bare vector-helper rewriting consumes graph-backed receiver facts
+      before direct-return reconstruction.
+    - Interned semantic-product type IDs override copied text for receiver
+      vector classification and helper template argument recovery.
+    - Lowerer source-contract coverage locks the graph-backed consumer order.
+    - The remaining TODO-4298 block records the completed slice and remaining
+      adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once late bare vector-helper rewriting prefers published
+    semantic-product facts and keeps direct-return inference only as
+    compatibility fallback.
+  - finished_at: 2026-05-05
+  - evidence: Promoted late bare vector-helper receiver inference in
+    `IrLowererLowerEmitExprCollectionHelpers.h`, expanded lowerer
+    source-contract coverage, and documented the remaining TODO-4298 work.
+    Local test execution was skipped per the lite workflow.
+
 - [x] TODO-4330: Pack source Result ok struct payloads
   - owner: ai
   - created_at: 2026-04-28
