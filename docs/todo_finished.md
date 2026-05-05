@@ -6,6 +6,31 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 5, 2026)**
+- [x] TODO-4360: Stabilize retained SoA field pushes
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-05
+  - phase: Release-gate stabilization
+  - scope: Stabilize the retained C++ compile-run SoA shards that failed on
+    borrowed local and borrowed helper-return reflected field syntax after
+    struct-valued SoA pushes allocated only one IR slot per element.
+  - acceptance:
+    - The retained
+      `PrimeStruct_primestruct_compile_run_imports_operations_and_collections_13_14`
+      release shard passes focused validation.
+    - The retained
+      `PrimeStruct_primestruct_compile_run_imports_operations_and_collections_55_56`
+      release shard passes focused validation.
+    - Struct-valued SoA pushes no longer use the one-slot native mutator fast
+      path that leaves reflected field reads beyond the live heap allocation.
+  - stop_rule: Stop once the known retained SoA compile-run failures pass
+    focused release validation and TODO execution can move to TODO-4298.
+  - evidence: Kept field-access initializers from being reinterpreted as
+    struct constructors, then routed struct-valued SoA `push` calls through
+    the typed stdlib path instead of the single-slot native fast path. Focused
+    validation passed for
+    `ctest --output-on-failure -R '^(PrimeStruct_primestruct_compile_run_imports_operations_and_collections_55_56|PrimeStruct_primestruct_compile_run_imports_operations_and_collections_13_14)$'`.
+
 - [x] TODO-4360: Stabilize native map fallback locks
   - owner: ai
   - created_at: 2026-05-04

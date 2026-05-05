@@ -653,6 +653,7 @@
           }
         }
         if (initCallee == nullptr && init.kind == Expr::Kind::Call &&
+            !init.isFieldAccess &&
             !initStruct.empty()) {
           const auto initDefIt = defMap.find(initStruct);
           if (initDefIt != defMap.end() && initDefIt->second != nullptr &&
@@ -678,6 +679,7 @@
         function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(info.index)});
         if (init.kind == Expr::Kind::Call &&
+            !init.isFieldAccess &&
             initCallee != nullptr &&
             ir_lowerer::isStructDefinition(*initCallee) &&
             initCallee->fullPath == info.structTypeName) {
