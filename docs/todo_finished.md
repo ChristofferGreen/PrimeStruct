@@ -6,6 +6,29 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 5, 2026)**
+- [x] TODO-4298: Prefer graph facts for string access
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-05
+  - phase: Semantic ownership authority
+  - scope: Move native `text[index]` dynamic string access target
+    classification onto graph-backed value-kind inference before
+    runtime-string local metadata can select dynamic string-byte dispatch.
+  - acceptance:
+    - Graph-backed non-string facts suppress stale runtime-string local
+      metadata for named access targets.
+    - Graph-backed string facts still select dynamic string-byte dispatch.
+    - Syntax-only/no-fact runtime-string local metadata remains a
+      compatibility fallback.
+  - stop_rule: Stop once dynamic string indexed access prefers graph-backed
+    value kinds for name targets and source-contract coverage pins stale local
+    suppression plus graph-backed string behavior.
+  - evidence: Reordered `tryEmitDynamicStringAccessLoad` so named string
+    targets infer graph-backed value kind before consulting local runtime
+    string metadata. Lowerer source-contract coverage now locks the
+    graph-first ordering, the known-non-string guard, and the graph-backed
+    string dispatch branch.
+
 - [x] TODO-4298: Prefer graph facts for file writes
   - owner: ai
   - created_at: 2026-04-28

@@ -248,6 +248,23 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(indexedAccessEmitSource.find("bool emitMapLookupAccess(") ==
         std::string::npos);
+  const size_t dynamicStringAccessPos =
+      indexedAccessEmitSource.find("DynamicStringAccessEmitResult tryEmitDynamicStringAccessLoad(");
+  REQUIRE(dynamicStringAccessPos != std::string::npos);
+  const size_t dynamicStringGraphKindPos = indexedAccessEmitSource.find(
+      "const LocalInfo::ValueKind targetKind = inferExprKind(targetExpr, localsIn);",
+      dynamicStringAccessPos);
+  const size_t dynamicStringLocalLookupPos =
+      indexedAccessEmitSource.find("localsIn.find(targetExpr.name)", dynamicStringAccessPos);
+  REQUIRE(dynamicStringGraphKindPos != std::string::npos);
+  REQUIRE(dynamicStringLocalLookupPos != std::string::npos);
+  CHECK(dynamicStringGraphKindPos < dynamicStringLocalLookupPos);
+  CHECK(indexedAccessEmitSource.find("targetKind != LocalInfo::ValueKind::Unknown",
+                                     dynamicStringGraphKindPos) != std::string::npos);
+  CHECK(indexedAccessEmitSource.find("targetKind != LocalInfo::ValueKind::String",
+                                     dynamicStringGraphKindPos) != std::string::npos);
+  CHECK(indexedAccessEmitSource.find("} else if (targetKind == LocalInfo::ValueKind::String) {",
+                                     dynamicStringLocalLookupPos) != std::string::npos);
 
   CHECK(callResolutionSource.find("const Definition *resolveDefinitionCall(const Expr &callExpr,") !=
         std::string::npos);

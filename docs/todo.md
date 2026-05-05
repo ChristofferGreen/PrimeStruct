@@ -1029,6 +1029,12 @@ Task template:
       for non-literal arguments. Known numeric graph facts suppress stale
       table-backed string metadata; string literals and no-fact literal-backed
       bindings keep the direct static string-write path.
+    - Completed slice: native `text[index]` dynamic string access now asks
+      graph-backed value-kind inference before runtime-string local metadata
+      can choose dynamic string-byte dispatch for name targets. Known
+      non-string graph facts suppress stale local string metadata; runtime
+      local metadata remains compatibility fallback for syntax-only/no-fact
+      paths.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.

@@ -625,6 +625,12 @@ Planned non-template inference migration contract:
   emission for non-literal arguments. Known numeric graph facts suppress stale
   table-backed string metadata; string literals and no-fact literal-backed
   bindings keep the direct static string-write path.
+- Completed native dynamic string access target slice: native `text[index]`
+  dynamic string access now asks graph-backed value-kind inference before
+  runtime-string local metadata can select dynamic string-byte dispatch for
+  name targets. Known non-string graph facts suppress stale local string
+  metadata; runtime local metadata remains the syntax-only/no-fact
+  compatibility fallback.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

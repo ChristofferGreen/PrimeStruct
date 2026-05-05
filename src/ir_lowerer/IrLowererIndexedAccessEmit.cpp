@@ -216,6 +216,11 @@ DynamicStringAccessEmitResult tryEmitDynamicStringAccessLoad(
     const SemanticProductIndex *semanticIndex) {
   bool isRuntimeStringTarget = false;
   if (targetExpr.kind == Expr::Kind::Name) {
+    const LocalInfo::ValueKind targetKind = inferExprKind(targetExpr, localsIn);
+    if (targetKind != LocalInfo::ValueKind::Unknown &&
+        targetKind != LocalInfo::ValueKind::String) {
+      return DynamicStringAccessEmitResult::NotHandled;
+    }
     auto it = localsIn.find(targetExpr.name);
     if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Value &&
         it->second.valueKind == LocalInfo::ValueKind::String) {
@@ -224,6 +229,8 @@ DynamicStringAccessEmitResult tryEmitDynamicStringAccessLoad(
         return DynamicStringAccessEmitResult::Error;
       }
       isRuntimeStringTarget = (it->second.stringSource == LocalInfo::StringSource::RuntimeIndex);
+    } else if (targetKind == LocalInfo::ValueKind::String) {
+      isRuntimeStringTarget = true;
     }
   } else {
     if (isEntryArgsName(targetExpr, localsIn)) {
