@@ -283,10 +283,16 @@ MapLookupStringKeyResult tryResolveMapLookupStringKey(
     const Expr &lookupKeyExpr,
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     int32_t &stringIndexOut,
     std::string &error) {
   (void)error;
   if (mapKeyKind != LocalInfo::ValueKind::String) {
+    return MapLookupStringKeyResult::NotHandled;
+  }
+  const LocalInfo::ValueKind lookupKeyKind = inferExprKind(lookupKeyExpr, localsIn);
+  if (lookupKeyKind != LocalInfo::ValueKind::Unknown &&
+      lookupKeyKind != LocalInfo::ValueKind::String) {
     return MapLookupStringKeyResult::NotHandled;
   }
   size_t length = 0;
@@ -301,13 +307,14 @@ MapLookupKeyLocalEmitResult tryEmitMapLookupStringKeyLocal(
     const Expr &lookupKeyExpr,
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<void(int32_t)> &emitPushI32,
     const std::function<void(int32_t)> &emitStoreLocal,
     int32_t keyLocal,
     std::string &error) {
   int32_t stringIndex = -1;
   const auto resolveResult = tryResolveMapLookupStringKey(
-      mapKeyKind, lookupKeyExpr, localsIn, resolveStringTableTarget, stringIndex, error);
+      mapKeyKind, lookupKeyExpr, localsIn, resolveStringTableTarget, inferExprKind, stringIndex, error);
   if (resolveResult == MapLookupStringKeyResult::NotHandled) {
     return MapLookupKeyLocalEmitResult::NotHandled;
   }
@@ -357,6 +364,7 @@ bool emitMapLookupKeyLocal(
       lookupKeyExpr,
       localsIn,
       resolveStringTableTarget,
+      inferExprKind,
       emitPushI32,
       emitStoreLocal,
       keyLocalOut,

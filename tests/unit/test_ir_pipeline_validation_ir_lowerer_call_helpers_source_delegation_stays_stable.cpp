@@ -231,6 +231,22 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(accessLoadHelpersSource.find("CountMethodFallbackResult tryEmitNonMethodCountFallback(") ==
         std::string::npos);
+  const size_t mapLookupStringKeyPos =
+      accessLoadHelpersSource.find("MapLookupStringKeyResult tryResolveMapLookupStringKey(");
+  REQUIRE(mapLookupStringKeyPos != std::string::npos);
+  const size_t mapLookupGraphKindPos = accessLoadHelpersSource.find(
+      "const LocalInfo::ValueKind lookupKeyKind = inferExprKind(lookupKeyExpr, localsIn);",
+      mapLookupStringKeyPos);
+  const size_t mapLookupStringTablePos =
+      accessLoadHelpersSource.find("resolveStringTableTarget(lookupKeyExpr, localsIn",
+                                   mapLookupStringKeyPos);
+  REQUIRE(mapLookupGraphKindPos != std::string::npos);
+  REQUIRE(mapLookupStringTablePos != std::string::npos);
+  CHECK(mapLookupGraphKindPos < mapLookupStringTablePos);
+  CHECK(accessLoadHelpersSource.find("lookupKeyKind != LocalInfo::ValueKind::Unknown",
+                                     mapLookupGraphKindPos) != std::string::npos);
+  CHECK(accessLoadHelpersSource.find("lookupKeyKind != LocalInfo::ValueKind::String",
+                                     mapLookupGraphKindPos) != std::string::npos);
 
   CHECK(indexedAccessEmitSource.find("MapAccessLookupEmitResult tryEmitMapAccessLookup(") !=
         std::string::npos);

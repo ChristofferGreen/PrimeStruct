@@ -6,6 +6,29 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 5, 2026)**
+- [x] TODO-4298: Prefer graph facts for map keys
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-05
+  - phase: Semantic ownership authority
+  - scope: Move native string-key map lookup key emission onto
+    graph-backed value-kind inference before literal-backed string metadata
+    can select the static string-table key path.
+  - acceptance:
+    - Graph-backed non-string key facts suppress stale string-table metadata.
+    - Graph-backed string key facts still allow static string-table key
+      emission when a string-table target is available.
+    - Syntax-only/no-fact literal-backed key metadata remains a compatibility
+      fallback.
+  - stop_rule: Stop once map lookup key emission prefers graph-backed value
+    kinds before string-table key metadata and helper/source-contract coverage
+    pins stale metadata suppression plus static key behavior.
+  - evidence: Reordered `tryResolveMapLookupStringKey` so string-key map
+    lookups infer the lookup key value kind before consulting string-table
+    targets. Helper coverage now proves graph-backed non-string facts suppress
+    stale table-backed keys, graph-backed strings still emit static keys, and
+    the lowerer source-contract test locks graph-first ordering.
+
 - [x] TODO-4298: Prefer graph facts for string access
   - owner: ai
   - created_at: 2026-04-28

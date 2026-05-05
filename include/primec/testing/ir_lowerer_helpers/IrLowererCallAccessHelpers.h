@@ -198,6 +198,7 @@ MapLookupStringKeyResult tryResolveMapLookupStringKey(
     const Expr &lookupKeyExpr,
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     int32_t &stringIndexOut,
     std::string &error);
 MapLookupKeyLocalEmitResult tryEmitMapLookupStringKeyLocal(
@@ -205,6 +206,7 @@ MapLookupKeyLocalEmitResult tryEmitMapLookupStringKeyLocal(
     const Expr &lookupKeyExpr,
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<void(int32_t)> &emitPushI32,
     const std::function<void(int32_t)> &emitStoreLocal,
     int32_t keyLocal,

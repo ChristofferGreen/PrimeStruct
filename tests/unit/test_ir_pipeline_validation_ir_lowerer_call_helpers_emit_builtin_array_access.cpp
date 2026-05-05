@@ -424,6 +424,7 @@ TEST_CASE("ir lowerer call helpers resolve map lookup string keys") {
             keyExpr,
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return Kind::String; },
             stringIndex,
             error) == Result::NotHandled);
 
@@ -432,8 +433,42 @@ TEST_CASE("ir lowerer call helpers resolve map lookup string keys") {
             keyExpr,
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return Kind::String; },
             stringIndex,
             error) == Result::NotHandled);
+  CHECK(error.empty());
+
+  error.clear();
+  stringIndex = -1;
+  CHECK(primec::ir_lowerer::tryResolveMapLookupStringKey(
+            Kind::String,
+            keyExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &indexOut, size_t &lengthOut) {
+              indexOut = 99;
+              lengthOut = 4;
+              return true;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return Kind::Int32; },
+            stringIndex,
+            error) == Result::NotHandled);
+  CHECK(stringIndex == -1);
+  CHECK(error.empty());
+
+  error.clear();
+  CHECK(primec::ir_lowerer::tryResolveMapLookupStringKey(
+            Kind::String,
+            keyExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &indexOut, size_t &lengthOut) {
+              indexOut = 12;
+              lengthOut = 6;
+              return true;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return Kind::Unknown; },
+            stringIndex,
+            error) == Result::Resolved);
+  CHECK(stringIndex == 12);
   CHECK(error.empty());
 
   error.clear();
@@ -446,6 +481,7 @@ TEST_CASE("ir lowerer call helpers resolve map lookup string keys") {
               lengthOut = 3;
               return true;
             },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return Kind::String; },
             stringIndex,
             error) == Result::Resolved);
   CHECK(stringIndex == 17);
@@ -469,6 +505,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup string key locals") {
             keyExpr,
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return Kind::String; },
             [&](int32_t imm) { pushed = imm; },
             [&](int32_t local) { stored = local; },
             4,
@@ -479,6 +516,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup string key locals") {
             keyExpr,
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return Kind::String; },
             [&](int32_t imm) { pushed = imm; },
             [&](int32_t local) { stored = local; },
             4,
@@ -495,6 +533,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup string key locals") {
               lengthOut = 8;
               return true;
             },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return Kind::String; },
             [&](int32_t imm) { pushed = imm; },
             [&](int32_t local) { stored = local; },
             9,
@@ -649,7 +688,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup key local") {
       },
       [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
         inferCalled = true;
-        return Kind::Int32;
+        return Kind::String;
       },
       [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
         emitCalled = true;
@@ -662,9 +701,43 @@ TEST_CASE("ir lowerer call helpers emit map lookup key local") {
   CHECK(keyLocal == 50);
   CHECK(pushed == 13);
   CHECK(stored == 50);
-  CHECK_FALSE(inferCalled);
+  CHECK(inferCalled);
   CHECK_FALSE(emitCalled);
   CHECK(error.empty());
+
+  pushed = -1;
+  stored = -1;
+  inferCalled = false;
+  emitCalled = false;
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::emitMapLookupKeyLocal(
+      Kind::String,
+      keyExpr,
+      locals,
+      [&]() { return nextLocal++; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &stringIndexOut, size_t &lengthOut) {
+        stringIndexOut = 21;
+        lengthOut = 5;
+        return true;
+      },
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        inferCalled = true;
+        return Kind::Int32;
+      },
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        emitCalled = true;
+        return true;
+      },
+      [&](int32_t imm) { pushed = imm; },
+      [&](int32_t local) { stored = local; },
+      keyLocal,
+      error));
+  CHECK(keyLocal == 51);
+  CHECK(pushed == -1);
+  CHECK(stored == -1);
+  CHECK(inferCalled);
+  CHECK_FALSE(emitCalled);
+  CHECK(error == "native backend requires map lookup key type to match map key type");
 
   pushed = -1;
   stored = -1;
@@ -689,9 +762,9 @@ TEST_CASE("ir lowerer call helpers emit map lookup key local") {
       [&](int32_t local) { stored = local; },
       keyLocal,
       error));
-  CHECK(keyLocal == 51);
+  CHECK(keyLocal == 52);
   CHECK(pushed == -1);
-  CHECK(stored == 51);
+  CHECK(stored == 52);
   CHECK(inferCalled);
   CHECK(emitCalled);
   CHECK(error.empty());
@@ -719,7 +792,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup key local") {
       [&](int32_t local) { stored = local; },
       keyLocal,
       error));
-  CHECK(keyLocal == 52);
+  CHECK(keyLocal == 53);
   CHECK(pushed == -1);
   CHECK(stored == -1);
   CHECK(inferCalled);

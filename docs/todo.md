@@ -1035,6 +1035,12 @@ Task template:
       non-string graph facts suppress stale local string metadata; runtime
       local metadata remains compatibility fallback for syntax-only/no-fact
       paths.
+    - Completed slice: native string-key map lookup emission now asks
+      graph-backed value-kind inference before literal-backed string metadata
+      can choose the static string-table key path for string-key maps. Known
+      non-string graph facts suppress stale string-table metadata; no-fact
+      literal-backed key metadata remains compatibility fallback for
+      syntax-only paths.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.
