@@ -655,6 +655,12 @@ Planned non-template inference migration contract:
   elements. Known non-string graph facts suppress stale local string receiver
   metadata; no-fact local metadata remains the syntax-only compatibility
   fallback.
+- Completed lowerer setup indexed receiver-method slice: setup-type method
+  receiver inference for `text[index].method()` now asks graph-backed
+  value-kind inference before local string receiver metadata can classify
+  indexed named targets as `i32` receivers. Known non-string graph facts
+  suppress stale local string receiver metadata; no-fact local metadata
+  remains the syntax-only compatibility fallback.
 - Completed native string-key map lookup slice: native map lookup key emission
   now asks graph-backed value-kind inference before literal-backed string
   metadata can select the static string-table key path for string-key maps.

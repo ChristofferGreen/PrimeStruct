@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 5, 2026)**
+- [x] TODO-4298: Prefer graph facts for receiver methods
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-05
+  - phase: Semantic ownership authority
+  - scope: Move setup-type method receiver inference for indexed named string
+    receivers onto graph-backed value-kind inference before local string
+    metadata can classify `text[index].method()` receivers as `i32`.
+  - acceptance:
+    - Graph-backed non-string facts suppress stale local string receiver
+      metadata when resolving methods on indexed named receivers.
+    - Graph-backed string facts still classify indexed named receivers as
+      `i32` byte receivers, even without local string metadata.
+    - Syntax-only/no-fact local string metadata remains a compatibility
+      fallback.
+  - stop_rule: Stop once setup-type receiver inference prefers graph-backed
+    value kinds before local string metadata for indexed named receiver
+    method resolution and tests cover graph-string, graph-non-string, and
+    no-fact fallback paths.
+  - evidence: `inferBuiltinAccessReceiverResultKind` now checks the existing
+    graph-backed expression-kind callback before local string receiver
+    metadata, and setup-type receiver tests pin stale-local suppression plus
+    the no-fact compatibility fallback.
+
 - [x] TODO-4298: Prefer graph facts for access kinds
   - owner: ai
   - created_at: 2026-04-28

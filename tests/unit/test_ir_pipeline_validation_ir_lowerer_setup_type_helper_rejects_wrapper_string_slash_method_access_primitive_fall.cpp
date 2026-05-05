@@ -81,6 +81,109 @@ TEST_CASE("ir lowerer setup type helper rejects wrapper string slash-method acce
   CHECK_FALSE(error.empty());
 }
 
+TEST_CASE("ir lowerer setup type helper prefers graph facts for indexed string receivers") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Definition i32TagDef;
+  i32TagDef.fullPath = "/i32/tag";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {i32TagDef.fullPath, &i32TagDef},
+  };
+
+  primec::Expr textExpr;
+  textExpr.kind = primec::Expr::Kind::Name;
+  textExpr.name = "text";
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 1;
+
+  primec::Expr receiverCall;
+  receiverCall.kind = primec::Expr::Kind::Call;
+  receiverCall.name = "at";
+  receiverCall.args = {textExpr, indexExpr};
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.name = "tag";
+  methodCall.isMethodCall = true;
+  methodCall.args = {receiverCall};
+
+  primec::ir_lowerer::LocalMap staleLocals;
+  primec::ir_lowerer::LocalInfo staleStringInfo;
+  staleStringInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  staleStringInfo.valueKind = ValueKind::String;
+  staleLocals.emplace("text", staleStringInfo);
+
+  const auto noMethodClassifier = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    return false;
+  };
+  const auto resolveExprPath = [](const primec::Expr &expr) {
+    return expr.name;
+  };
+
+  std::string error;
+  const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      methodCall,
+      staleLocals,
+      noMethodClassifier,
+      noMethodClassifier,
+      noMethodClassifier,
+      {},
+      {},
+      [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+        return expr.kind == primec::Expr::Kind::Name && expr.name == "text"
+                   ? ValueKind::Int64
+                   : ValueKind::Unknown;
+      },
+      resolveExprPath,
+      {},
+      defMap,
+      error);
+  CHECK(resolved == nullptr);
+  CHECK_FALSE(error.empty());
+
+  error.clear();
+  resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      methodCall,
+      {},
+      noMethodClassifier,
+      noMethodClassifier,
+      noMethodClassifier,
+      {},
+      {},
+      [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+        return expr.kind == primec::Expr::Kind::Name && expr.name == "text"
+                   ? ValueKind::String
+                   : ValueKind::Unknown;
+      },
+      resolveExprPath,
+      {},
+      defMap,
+      error);
+  CHECK(resolved == &i32TagDef);
+  CHECK(error.empty());
+
+  error.clear();
+  resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      methodCall,
+      staleLocals,
+      noMethodClassifier,
+      noMethodClassifier,
+      noMethodClassifier,
+      {},
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return ValueKind::Unknown;
+      },
+      resolveExprPath,
+      {},
+      defMap,
+      error);
+  CHECK(resolved == &i32TagDef);
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer setup type helper keeps parser-shaped canonical vector receiver routed diagnostics") {
   primec::Definition i32TagDef;
   i32TagDef.fullPath = "/i32/tag";

@@ -361,6 +361,11 @@ bool inferBuiltinAccessReceiverResultKind(const Expr &receiverCallExpr,
   };
 
   if (accessReceiver.kind == Expr::Kind::Name) {
+    const LocalInfo::ValueKind inferredReceiverKind =
+        inferExprKind ? inferExprKind(accessReceiver, localsIn) : LocalInfo::ValueKind::Unknown;
+    if (inferredReceiverKind == LocalInfo::ValueKind::String) {
+      return assignKind(LocalInfo::ValueKind::Int32);
+    }
     auto localIt = localsIn.find(accessReceiver.name);
     if (localIt == localsIn.end()) {
       return false;
@@ -379,6 +384,9 @@ bool inferBuiltinAccessReceiverResultKind(const Expr &receiverCallExpr,
       return assignKind(receiverInfo.mapValueKind);
     }
     if (receiverInfo.kind == LocalInfo::Kind::Value && receiverInfo.valueKind == LocalInfo::ValueKind::String) {
+      if (inferredReceiverKind != LocalInfo::ValueKind::Unknown) {
+        return false;
+      }
       return assignKind(LocalInfo::ValueKind::Int32);
     }
     return false;

@@ -1056,6 +1056,12 @@ Task template:
       can classify named indexed-access targets as byte elements. Known
       non-string graph facts suppress stale local string receivers; no-fact
       local metadata remains compatibility fallback for syntax-only paths.
+    - Completed slice: lowerer setup-type method receiver inference for
+      `text[index].method()` now asks graph-backed value-kind inference before
+      local string receiver metadata can classify indexed named targets as
+      `i32` receivers. Known non-string graph facts suppress stale local
+      string receivers; no-fact local metadata remains compatibility fallback
+      for syntax-only paths.
     - Completed slice: native string-key map lookup emission now asks
       graph-backed value-kind inference before literal-backed string metadata
       can choose the static string-table key path for string-key maps. Known
