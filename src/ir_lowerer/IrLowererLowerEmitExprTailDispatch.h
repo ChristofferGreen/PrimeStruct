@@ -596,7 +596,8 @@
             [&](const Expr &callExpr, const Definition &callee, const ir_lowerer::LocalMap &localMap) {
               return emitInlineDefinitionCall(callExpr, callee, localMap, true);
             },
-            error);
+            error,
+            semanticProgram);
         if (inlineDispatchResult == ir_lowerer::InlineCallDispatchResult::Emitted) {
           return true;
         }

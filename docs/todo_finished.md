@@ -2682,6 +2682,40 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
     and documented the remaining TODO-4298 work. Local test execution was
     skipped per the lite workflow.
 
+- [x] TODO-4298: Use inline dispatch map facts
+  - owner: ai
+  - created_at: 2026-05-05
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes inline native
+    map-helper dispatch deferral read semantic-product receiver facts before
+    declared-return or forwarded map-target reconstruction.
+  - implementation_notes:
+    - Thread optional semantic-product context through inline native call
+      dispatch from native tail dispatch.
+    - Resolve collection specialization key/value IDs and query, binding,
+      and local-auto receiver type IDs before copied type text.
+    - Keep declared-return and forwarded map-target inference as
+      compatibility fallback for syntax-only or no-semantic-product contexts.
+  - acceptance:
+    - Inline native map-helper dispatch consumes graph-backed receiver facts
+      before return-transform or forwarded-target reconstruction.
+    - Interned semantic-product type IDs override copied text for receiver
+      map classification.
+    - Lowerer source-contract coverage locks the graph-backed consumer order
+      and semantic-program threading.
+    - The remaining TODO-4298 block records the completed slice and remaining
+      adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once inline map-helper dispatch deferral prefers
+    published semantic-product facts and keeps return/forwarded inference
+    only as compatibility fallback.
+  - finished_at: 2026-05-05
+  - evidence: Promoted inline native map-helper dispatch deferral in
+    `IrLowererInlineNativeCallDispatch.cpp`, threaded semantic-product
+    context from native tail dispatch, expanded lowerer source-contract
+    coverage, and documented the remaining TODO-4298 work. Local test
+    execution was skipped per the lite workflow.
+
 - [x] TODO-4330: Pack source Result ok struct payloads
   - owner: ai
   - created_at: 2026-04-28

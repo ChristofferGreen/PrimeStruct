@@ -7,6 +7,7 @@
 #include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
 #include "primec/AstCallPathHelpers.h"
 #include "primec/StdlibSurfaceRegistry.h"
 
@@ -822,7 +823,11 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinitionFn,
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCallFn,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCallFn,
-    std::string &error) {
+    std::string &error,
+    const SemanticProgram *semanticProgram) {
+  const SemanticProductIndex semanticIndex = buildSemanticProductIndex(semanticProgram);
+  const SemanticProductIndex *const semanticIndexPtr =
+      semanticProgram == nullptr ? nullptr : &semanticIndex;
   auto emitCanonicalInlineDefinitionCall = [&](const Expr &callExpr, const Definition &callee) {
     if (isTypeNamespaceMethodCallForInlineEmit(callExpr, callee, localsIn)) {
       const Expr directCallExpr = makeInlineEmitDirectTypeNamespaceCall(callExpr, callee);
@@ -909,9 +914,155 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     const bool isCanonicalStdMapHelperCall =
         rawPath.rfind("/std/collections/map/", 0) == 0 ||
         rawPath.rfind("std/collections/map/", 0) == 0;
+    auto resolveInlineSemanticTypeText = [&](SymbolId typeTextId,
+                                             const std::string &typeText) {
+      if (semanticProgram != nullptr && typeTextId != InvalidSymbolId) {
+        const std::string resolvedText =
+            std::string(semanticProgramResolveCallTargetString(*semanticProgram,
+                                                               typeTextId));
+        if (!resolvedText.empty()) {
+          return trimTemplateTypeText(resolvedText);
+        }
+      }
+      return trimTemplateTypeText(typeText);
+    };
+    std::function<bool(const std::string &,
+                       LocalInfo::ValueKind &,
+                       LocalInfo::ValueKind &)> inferMapKindsFromTypeText;
+    inferMapKindsFromTypeText = [&](const std::string &typeText,
+                                    LocalInfo::ValueKind &keyKindOut,
+                                    LocalInfo::ValueKind &valueKindOut) {
+      keyKindOut = LocalInfo::ValueKind::Unknown;
+      valueKindOut = LocalInfo::ValueKind::Unknown;
+
+      std::string base;
+      std::string argText;
+      if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argText)) {
+        return false;
+      }
+
+      const std::string normalizedBase = trimTemplateTypeText(base);
+      if (normalizedBase == "Reference" || normalizedBase == "Pointer") {
+        return inferMapKindsFromTypeText(argText, keyKindOut, valueKindOut);
+      }
+      const bool isMapBase =
+          normalizedBase == "map" || normalizedBase == "/map" ||
+          normalizedBase == "std/collections/map" ||
+          normalizedBase == "/std/collections/map" ||
+          normalizedBase == "Map" || normalizedBase == "/Map" ||
+          normalizedBase == "std/collections/experimental_map/Map" ||
+          normalizedBase == "/std/collections/experimental_map/Map";
+      if (!isMapBase) {
+        return false;
+      }
+
+      std::vector<std::string> mapArgs;
+      if (!splitTemplateArgs(argText, mapArgs) || mapArgs.size() != 2) {
+        return false;
+      }
+      keyKindOut = valueKindFromTypeName(trimTemplateTypeText(mapArgs.front()));
+      valueKindOut = valueKindFromTypeName(trimTemplateTypeText(mapArgs.back()));
+      return keyKindOut != LocalInfo::ValueKind::Unknown &&
+             valueKindOut != LocalInfo::ValueKind::Unknown;
+    };
+    auto tryPopulateMapKindsFromSemanticTypeText =
+        [&](SymbolId typeTextId,
+            const std::string &typeText,
+            MapAccessTargetInfo &targetInfoOut) {
+      LocalInfo::ValueKind keyKind = LocalInfo::ValueKind::Unknown;
+      LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
+      if (!inferMapKindsFromTypeText(resolveInlineSemanticTypeText(typeTextId, typeText),
+                                     keyKind,
+                                     valueKind)) {
+        return false;
+      }
+      targetInfoOut.isMapTarget = true;
+      targetInfoOut.mapKeyKind = keyKind;
+      targetInfoOut.mapValueKind = valueKind;
+      return true;
+    };
+    auto tryPopulateMapKindsFromSemanticCollection =
+        [&](const Expr &targetExpr, MapAccessTargetInfo &targetInfoOut) {
+      if (semanticIndexPtr == nullptr || targetExpr.semanticNodeId == 0) {
+        return false;
+      }
+      const auto *collectionFact =
+          findSemanticProductCollectionSpecialization(*semanticIndexPtr, targetExpr);
+      if (collectionFact == nullptr) {
+        return false;
+      }
+      const std::string collectionFamily =
+          resolveInlineSemanticTypeText(collectionFact->collectionFamilyId,
+                                        collectionFact->collectionFamily);
+      if (collectionFamily != "map" && collectionFamily != "/map" &&
+          collectionFamily != "std/collections/map" &&
+          collectionFamily != "/std/collections/map") {
+        return false;
+      }
+      const LocalInfo::ValueKind keyKind = valueKindFromTypeName(
+          resolveInlineSemanticTypeText(collectionFact->keyTypeTextId,
+                                        collectionFact->keyTypeText));
+      const LocalInfo::ValueKind valueKind = valueKindFromTypeName(
+          resolveInlineSemanticTypeText(collectionFact->valueTypeTextId,
+                                        collectionFact->valueTypeText));
+      if (keyKind == LocalInfo::ValueKind::Unknown ||
+          valueKind == LocalInfo::ValueKind::Unknown) {
+        return false;
+      }
+      targetInfoOut.isMapTarget = true;
+      targetInfoOut.mapKeyKind = keyKind;
+      targetInfoOut.mapValueKind = valueKind;
+      return true;
+    };
+    auto tryPopulateMapTargetInfoFromSemanticFacts =
+        [&](const Expr &targetExpr, MapAccessTargetInfo &targetInfoOut) {
+      if (semanticProgram == nullptr ||
+          semanticIndexPtr == nullptr ||
+          targetExpr.semanticNodeId == 0) {
+        return false;
+      }
+      if (tryPopulateMapKindsFromSemanticCollection(targetExpr, targetInfoOut)) {
+        return true;
+      }
+      if (const auto *queryFact =
+              findSemanticProductQueryFact(semanticProgram, *semanticIndexPtr, targetExpr);
+          queryFact != nullptr) {
+        if (tryPopulateMapKindsFromSemanticTypeText(queryFact->bindingTypeTextId,
+                                                    queryFact->bindingTypeText,
+                                                    targetInfoOut) ||
+            tryPopulateMapKindsFromSemanticTypeText(queryFact->queryTypeTextId,
+                                                    queryFact->queryTypeText,
+                                                    targetInfoOut) ||
+            tryPopulateMapKindsFromSemanticTypeText(queryFact->receiverBindingTypeTextId,
+                                                    queryFact->receiverBindingTypeText,
+                                                    targetInfoOut)) {
+          return true;
+        }
+      }
+      if (const auto *bindingFact =
+              findSemanticProductBindingFact(*semanticIndexPtr, targetExpr);
+          bindingFact != nullptr &&
+          tryPopulateMapKindsFromSemanticTypeText(bindingFact->bindingTypeTextId,
+                                                  bindingFact->bindingTypeText,
+                                                  targetInfoOut)) {
+        return true;
+      }
+      if (const auto *localAutoFact =
+              findSemanticProductLocalAutoFact(semanticProgram, *semanticIndexPtr, targetExpr);
+          localAutoFact != nullptr &&
+          tryPopulateMapKindsFromSemanticTypeText(localAutoFact->bindingTypeTextId,
+                                                  localAutoFact->bindingTypeText,
+                                                  targetInfoOut)) {
+        return true;
+      }
+      return false;
+    };
     const auto inferCallMapTargetInfo = [&](const Expr &targetExpr,
                                             MapAccessTargetInfo &targetInfoOut) {
       targetInfoOut = {};
+      if (tryPopulateMapTargetInfoFromSemanticFacts(targetExpr, targetInfoOut)) {
+        return true;
+      }
       const Definition *callee = resolveDefinitionCallFn(targetExpr);
       if (callee == nullptr) {
         return false;

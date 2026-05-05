@@ -965,6 +965,12 @@ Task template:
       parameter transforms. Interned receiver type IDs win over copied text;
       caller-local and helper-transform inference remain compatibility
       fallbacks for syntax-only/no-fact paths.
+    - Completed slice: inline native map-helper dispatch deferral now reads
+      semantic-product collection, query, binding, and local-auto receiver
+      facts before inferring map targets from callee return transforms or
+      forwarded-return reconstruction. Interned receiver type IDs win over
+      copied text while the old callee-shape path remains compatibility
+      fallback for syntax-only/no-fact paths.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.

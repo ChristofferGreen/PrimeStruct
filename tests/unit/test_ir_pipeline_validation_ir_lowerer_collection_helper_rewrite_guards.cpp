@@ -886,6 +886,54 @@ TEST_CASE("ir lowerer statement map insert rewrite uses semantic product receive
         std::string::npos);
 }
 
+TEST_CASE("ir lowerer inline dispatch map helper deferral uses semantic receiver facts first") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path inlineDispatchPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererInlineNativeCallDispatch.cpp";
+  const std::filesystem::path tailDispatchPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h";
+
+  REQUIRE(std::filesystem::exists(inlineDispatchPath));
+  REQUIRE(std::filesystem::exists(tailDispatchPath));
+  const std::string inlineDispatchSource = readText(inlineDispatchPath);
+  const std::string tailDispatchSource = readText(tailDispatchPath);
+
+  CHECK(inlineDispatchSource.find("const SemanticProductIndex semanticIndex = buildSemanticProductIndex(semanticProgram);") !=
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("auto resolveInlineSemanticTypeText =") !=
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("semanticProgramResolveCallTargetString(*semanticProgram,") !=
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("findSemanticProductCollectionSpecialization(*semanticIndexPtr, targetExpr)") !=
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("collectionFact->keyTypeTextId") !=
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("collectionFact->valueTypeTextId") !=
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("findSemanticProductQueryFact(semanticProgram, *semanticIndexPtr, targetExpr)") !=
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("tryPopulateMapKindsFromSemanticTypeText(queryFact->bindingTypeTextId,") !=
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("tryPopulateMapTargetInfoFromSemanticFacts(targetExpr, targetInfoOut)") <
+        inlineDispatchSource.find("const Definition *callee = resolveDefinitionCallFn(targetExpr);"));
+  CHECK(tailDispatchSource.find("error,\n"
+                                "            semanticProgram);") !=
+        std::string::npos);
+}
+
 TEST_CASE("ir lowerer direct expr and inference rewrites guard explicit map defs") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
