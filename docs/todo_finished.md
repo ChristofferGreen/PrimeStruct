@@ -6,6 +6,28 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 5, 2026)**
+- [x] TODO-4298: Prefer graph facts for File paths
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-05
+  - phase: Semantic ownership authority
+  - scope: Move the native `File<Mode>(path)` dynamic-string path decision
+    onto graph-backed value-kind inference before runtime-string local
+    metadata can select dynamic file-open emission.
+  - acceptance:
+    - Graph-backed string facts emit dynamic file-open instructions.
+    - Graph-backed non-string facts suppress stale runtime-string local
+      metadata.
+    - Syntax-only/no-fact runtime-string local metadata remains a compatibility
+      fallback.
+  - stop_rule: Stop once File constructor path classification prefers the
+    graph-backed value kind and helper coverage pins graph-backed,
+    stale-local, and no-fact fallback behavior.
+  - evidence: Updated `tryEmitFileConstructorCall` to query the path value
+    kind before runtime-string local fallback and extended file-write helper
+    coverage for graph-backed string, graph-backed non-string, and no-fact
+    runtime-local paths.
+
 - [x] TODO-4360: Stabilize retained SoA field pushes
   - owner: ai
   - created_at: 2026-05-04

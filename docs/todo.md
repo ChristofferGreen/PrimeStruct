@@ -1011,6 +1011,11 @@ Task template:
       can choose string-length emission. Known non-string graph facts suppress
       stale local string metadata; local string metadata remains compatibility
       fallback for syntax-only/no-fact paths.
+    - Completed slice: native `File<Mode>(path)` dynamic-path emission now asks
+      graph-backed value-kind inference before runtime-string local metadata can
+      choose dynamic file-open emission. Known non-string graph facts suppress
+      stale local string metadata; runtime local metadata remains compatibility
+      fallback for syntax-only/no-fact paths.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.

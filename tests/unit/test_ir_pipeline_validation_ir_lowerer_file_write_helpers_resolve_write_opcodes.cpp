@@ -184,6 +184,110 @@ TEST_CASE("ir lowerer file write helpers dispatch File constructor calls") {
   CHECK(error == "File requires Read, Write, or Append mode");
 }
 
+TEST_CASE("ir lowerer file write helpers prefer graph facts for dynamic File paths") {
+  using Result = primec::ir_lowerer::FileConstructorCallEmitResult;
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr pathArg;
+  pathArg.kind = primec::Expr::Kind::Name;
+  pathArg.name = "path";
+
+  primec::Expr fileCallExpr;
+  fileCallExpr.kind = primec::Expr::Kind::Call;
+  fileCallExpr.name = "File";
+  fileCallExpr.templateArgs = {"Append"};
+  fileCallExpr.args = {pathArg};
+
+  primec::ir_lowerer::LocalMap staleStringLocals;
+  primec::ir_lowerer::LocalInfo stalePathInfo;
+  stalePathInfo.index = 12;
+  stalePathInfo.valueKind = ValueKind::String;
+  stalePathInfo.stringSource = primec::ir_lowerer::LocalInfo::StringSource::RuntimeIndex;
+  staleStringLocals.emplace("path", stalePathInfo);
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  int emitExprCalls = 0;
+  auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
+    instructions.push_back({op, imm});
+  };
+
+  CHECK(primec::ir_lowerer::tryEmitFileConstructorCall(
+            fileCallExpr,
+            staleStringLocals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return ValueKind::Int32;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++emitExprCalls;
+              return true;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            emitInstruction,
+            error) == Result::Error);
+  CHECK(error == "native backend only supports File() with string literals or literal-backed bindings");
+  CHECK(emitExprCalls == 0);
+  CHECK(instructions.empty());
+
+  instructions.clear();
+  error.clear();
+  emitExprCalls = 0;
+  fileCallExpr.templateArgs = {"Write"};
+  CHECK(primec::ir_lowerer::tryEmitFileConstructorCall(
+            fileCallExpr,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return ValueKind::String;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++emitExprCalls;
+              emitInstruction(primec::IrOpcode::LoadLocal, 33);
+              return true;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            emitInstruction,
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(emitExprCalls == 1);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 33);
+  CHECK(instructions[1].op == primec::IrOpcode::FileOpenWriteDynamic);
+
+  instructions.clear();
+  error.clear();
+  emitExprCalls = 0;
+  fileCallExpr.templateArgs = {"Append"};
+  CHECK(primec::ir_lowerer::tryEmitFileConstructorCall(
+            fileCallExpr,
+            staleStringLocals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return ValueKind::Unknown;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++emitExprCalls;
+              return true;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            emitInstruction,
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(emitExprCalls == 0);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 12);
+  CHECK(instructions[1].op == primec::IrOpcode::FileOpenAppendDynamic);
+}
+
 TEST_CASE("parseAndValidate rewrites imported File constructor entry points through stdlib open helpers") {
   const std::string source = R"(
 import /std/file/*

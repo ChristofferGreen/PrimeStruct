@@ -608,6 +608,11 @@ Planned non-template inference migration contract:
   string metadata can select string-length emission. Known non-string graph
   facts suppress stale local string metadata; local string metadata remains the
   syntax-only/no-fact compatibility fallback.
+- Completed native File constructor dynamic-path slice: native
+  `File<Mode>(path)` emission now asks graph-backed value-kind inference before
+  runtime-string local metadata can select dynamic file-open emission. Known
+  non-string graph facts suppress stale local string metadata; runtime local
+  metadata remains the syntax-only/no-fact compatibility fallback.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph
