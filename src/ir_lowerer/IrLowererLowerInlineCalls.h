@@ -48,6 +48,160 @@
       }
       return leaf;
     };
+    const auto isFixedArityExperimentalVectorConstructor =
+        [](std::string_view path) {
+          constexpr std::string_view Prefix =
+              "/std/collections/experimental_vector/";
+          if (path.rfind(Prefix, 0) != 0) {
+            return false;
+          }
+          std::string leaf(path.substr(Prefix.size()));
+          const size_t generatedSuffix = leaf.find("__");
+          if (generatedSuffix != std::string::npos) {
+            leaf.erase(generatedSuffix);
+          }
+          return leaf == "vectorNew" || leaf == "vectorSingle" ||
+                 leaf == "vectorPair" || leaf == "vectorTriple" ||
+                 leaf == "vectorQuad" || leaf == "vectorQuint" ||
+                 leaf == "vectorSext" || leaf == "vectorSept" ||
+                 leaf == "vectorOct";
+        };
+    if (inlineStack.count(callee.fullPath) != 0 &&
+        isFixedArityExperimentalVectorConstructor(callee.fullPath)) {
+      auto extractVectorParameterTypeName = [](const Expr &paramExpr) {
+        for (const auto &transform : paramExpr.transforms) {
+          if (transform.name == "mut" || transform.name == "public" ||
+              transform.name == "private" || transform.name == "static" ||
+              transform.name == "shared" || transform.name == "placement" ||
+              transform.name == "align" || transform.name == "packed" ||
+              transform.name == "reflection" || transform.name == "effects" ||
+              transform.name == "capabilities") {
+            continue;
+          }
+          if (!transform.arguments.empty()) {
+            continue;
+          }
+          std::string typeName = transform.name;
+          if (!transform.templateArgs.empty()) {
+            typeName += "<";
+            for (size_t index = 0; index < transform.templateArgs.size();
+                 ++index) {
+              if (index != 0) {
+                typeName += ", ";
+              }
+              typeName += trimTemplateTypeText(transform.templateArgs[index]);
+            }
+            typeName += ">";
+          }
+          return typeName;
+        }
+        return std::string{};
+      };
+      Expr vectorLiteralExpr = callExpr;
+      vectorLiteralExpr.name = "vector";
+      vectorLiteralExpr.namespacePrefix.clear();
+      vectorLiteralExpr.isMethodCall = false;
+      vectorLiteralExpr.semanticNodeId = 0;
+      if (vectorLiteralExpr.templateArgs.empty() && !callee.parameters.empty()) {
+        const std::string elementType =
+            extractVectorParameterTypeName(callee.parameters.front());
+        if (!elementType.empty()) {
+          vectorLiteralExpr.templateArgs = {elementType};
+        }
+      }
+      std::string collectionName;
+      if (getBuiltinCollectionName(vectorLiteralExpr, collectionName) &&
+          collectionName == "vector") {
+        if (vectorLiteralExpr.templateArgs.size() != 1) {
+          error = "vector literal requires exactly one template argument";
+          return false;
+        }
+        const LocalInfo::ValueKind elemKind =
+            valueKindFromTypeName(vectorLiteralExpr.templateArgs.front());
+        if (elemKind == LocalInfo::ValueKind::Unknown) {
+          error =
+              "native backend only supports numeric/bool/string vector literals";
+          return false;
+        }
+        if (vectorLiteralExpr.args.size() >
+            static_cast<size_t>(std::numeric_limits<int32_t>::max())) {
+          error = "vector literal too large for native backend";
+          return false;
+        }
+        const int32_t literalCount =
+            static_cast<int32_t>(vectorLiteralExpr.args.size());
+        const int32_t baseLocal = nextLocal;
+        nextLocal += 4;
+        function.instructions.push_back(
+            {IrOpcode::PushI32, static_cast<uint64_t>(literalCount)});
+        function.instructions.push_back(
+            {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
+        function.instructions.push_back(
+            {IrOpcode::PushI32, static_cast<uint64_t>(literalCount)});
+        function.instructions.push_back(
+            {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
+        if (literalCount == 0) {
+          function.instructions.push_back({IrOpcode::PushI64, 0});
+        } else {
+          function.instructions.push_back(
+              {IrOpcode::PushI32, static_cast<uint64_t>(literalCount)});
+          function.instructions.push_back({IrOpcode::HeapAlloc, 0});
+        }
+        function.instructions.push_back(
+            {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 2)});
+        function.instructions.push_back({IrOpcode::PushI32, 0});
+        function.instructions.push_back(
+            {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 3)});
+
+        for (size_t argIndex = 0; argIndex < vectorLiteralExpr.args.size();
+             ++argIndex) {
+          const Expr &argExpr = vectorLiteralExpr.args[argIndex];
+          function.instructions.push_back(
+              {IrOpcode::LoadLocal, static_cast<uint64_t>(baseLocal + 2)});
+          const uint64_t offsetBytes =
+              static_cast<uint64_t>(argIndex) * IrSlotBytes;
+          if (offsetBytes != 0) {
+            function.instructions.push_back({IrOpcode::PushI64, offsetBytes});
+            function.instructions.push_back({IrOpcode::AddI64, 0});
+          }
+          if (elemKind == LocalInfo::ValueKind::String) {
+            int32_t stringIndex = -1;
+            size_t length = 0;
+            if (!resolveStringTableTarget(
+                    argExpr, callerLocals, stringIndex, length)) {
+              error =
+                  "native backend requires vector literal string elements to "
+                  "be string literals or literal-backed bindings";
+              return false;
+            }
+            function.instructions.push_back(
+                {IrOpcode::PushI32, static_cast<uint64_t>(stringIndex)});
+          } else {
+            const LocalInfo::ValueKind argKind =
+                inferExprKind(argExpr, callerLocals);
+            if (argKind == LocalInfo::ValueKind::Unknown ||
+                argKind == LocalInfo::ValueKind::String) {
+              error =
+                  "native backend requires vector literal elements to be "
+                  "numeric/bool values";
+              return false;
+            }
+            if (argKind != elemKind) {
+              error = "vector literal element type mismatch";
+              return false;
+            }
+            if (!emitExpr(argExpr, callerLocals)) {
+              return false;
+            }
+          }
+          function.instructions.push_back({IrOpcode::StoreIndirect, 0});
+          function.instructions.push_back({IrOpcode::Pop, 0});
+        }
+        function.instructions.push_back(
+            {IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
+        return true;
+      }
+    }
     if (callExpr.args.size() == 1 &&
         (isInternalSoaMetadataInlineHelper(callee.fullPath, "field_count") ||
          isInternalSoaMetadataInlineHelper(callee.fullPath, "field_capacity") ||
