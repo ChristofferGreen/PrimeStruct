@@ -331,6 +331,9 @@ TEST_CASE("ir lowerer count access helpers emit string count calls") {
             countCall,
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
             [&](int32_t) {},
             error) == Result::NotHandled);
@@ -340,6 +343,9 @@ TEST_CASE("ir lowerer count access helpers emit string count calls") {
             countCall,
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return true; },
             [&](int32_t) {},
             error) == Result::Error);
@@ -351,16 +357,40 @@ TEST_CASE("ir lowerer count access helpers emit string count calls") {
             countCall,
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
             [&](int32_t) {},
             error) == Result::Error);
   CHECK(error == "native backend only supports count() on string literals or string bindings");
 
   error.clear();
+  bool resolvedStringTableTarget = false;
   CHECK(primec::ir_lowerer::tryEmitStringCountCall(
             countCall,
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              resolvedStringTableTarget = true;
+              return true;
+            },
+            [&](int32_t) {},
+            error) == Result::NotHandled);
+  CHECK_FALSE(resolvedStringTableTarget);
+  CHECK(error.empty());
+
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitStringCountCall(
+            countCall,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &stringIndex, size_t &length) {
               stringIndex = 7;
               length = static_cast<size_t>(std::numeric_limits<int32_t>::max()) + 1;
@@ -375,6 +405,9 @@ TEST_CASE("ir lowerer count access helpers emit string count calls") {
             countCall,
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::String;
+            },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &stringIndex, size_t &length) {
               stringIndex = 3;
               length = 42;

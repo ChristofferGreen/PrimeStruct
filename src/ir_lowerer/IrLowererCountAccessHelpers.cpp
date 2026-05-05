@@ -560,6 +560,7 @@ StringCountCallEmitResult tryEmitStringCountCall(
     const Expr &expr,
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCallFn,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
     const std::function<void(int32_t)> &emitPushI32,
     std::string &error) {
@@ -570,9 +571,17 @@ StringCountCallEmitResult tryEmitStringCountCall(
     error = "count requires exactly one argument";
     return StringCountCallEmitResult::Error;
   }
+  const Expr &target = expr.args.front();
+  if (inferExprKind) {
+    const LocalInfo::ValueKind targetKind = inferExprKind(target, localsIn);
+    if (targetKind != LocalInfo::ValueKind::Unknown &&
+        targetKind != LocalInfo::ValueKind::String) {
+      return StringCountCallEmitResult::NotHandled;
+    }
+  }
   int32_t stringIndex = -1;
   size_t length = 0;
-  if (!resolveStringTableTarget(expr.args.front(), localsIn, stringIndex, length)) {
+  if (!resolveStringTableTarget(target, localsIn, stringIndex, length)) {
     error = "native backend only supports count() on string literals or string bindings";
     return StringCountCallEmitResult::Error;
   }
@@ -870,6 +879,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       expr,
       localsIn,
       isStringCountCallFn,
+      inferExprKind,
       resolveStringTableTarget,
       [&](int32_t length) { emitInstruction(IrOpcode::PushI32, static_cast<uint64_t>(length)); },
       error);

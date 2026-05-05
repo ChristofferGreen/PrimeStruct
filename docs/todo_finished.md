@@ -6,6 +6,29 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 5, 2026)**
+- [x] TODO-4298: Prefer graph facts for string counts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-05
+  - phase: Semantic ownership authority
+  - scope: Move native `count(value)` static string count emission onto
+    graph-backed value-kind inference before literal-backed string metadata can
+    select string-table length emission.
+  - acceptance:
+    - Graph-backed non-string facts suppress stale string-table metadata for
+      static string count targets.
+    - Graph-backed string facts still allow static string-table length emission
+      when the argument is literal-backed.
+    - Syntax-only/no-fact literal-backed metadata remains a compatibility
+      fallback.
+  - stop_rule: Stop once static string count emission prefers graph-backed
+    value kinds before string-table metadata and source-contract coverage pins
+    graph-first ordering.
+  - evidence: `tryEmitStringCountCall` now infers the target value kind before
+    resolving a string-table target, returns `NotHandled` for known non-string
+    facts, and keeps literal-backed no-fact/string facts on the static length
+    path.
+
 - [x] TODO-4298: Prefer graph facts for collection literals
   - owner: ai
   - created_at: 2026-04-28

@@ -67,6 +67,7 @@ StringCountCallEmitResult tryEmitStringCountCall(
     const Expr &expr,
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
     const std::function<void(int32_t)> &emitPushI32,
     std::string &error);

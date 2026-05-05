@@ -664,6 +664,22 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(countAccessHelpersSource.find("isVectorCountTarget(expr.args.front(), localsIn)") !=
         std::string::npos);
+  const size_t staticStringCountPos =
+      countAccessHelpersSource.find("StringCountCallEmitResult tryEmitStringCountCall(");
+  REQUIRE(staticStringCountPos != std::string::npos);
+  const size_t staticStringCountGraphKindPos = countAccessHelpersSource.find(
+      "const LocalInfo::ValueKind targetKind = inferExprKind(target, localsIn);",
+      staticStringCountPos);
+  const size_t staticStringCountTablePos =
+      countAccessHelpersSource.find("resolveStringTableTarget(target, localsIn",
+                                    staticStringCountPos);
+  REQUIRE(staticStringCountGraphKindPos != std::string::npos);
+  REQUIRE(staticStringCountTablePos != std::string::npos);
+  CHECK(staticStringCountGraphKindPos < staticStringCountTablePos);
+  CHECK(countAccessHelpersSource.find("targetKind != LocalInfo::ValueKind::Unknown",
+                                      staticStringCountGraphKindPos) != std::string::npos);
+  CHECK(countAccessHelpersSource.find("targetKind != LocalInfo::ValueKind::String",
+                                      staticStringCountGraphKindPos) != std::string::npos);
   CHECK(nativeTailDispatchSource.find("bool isExplicitDirectVectorCountCall(") !=
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("!isExplicitDirectVectorCountCall(semanticProgram, expr) &&") !=

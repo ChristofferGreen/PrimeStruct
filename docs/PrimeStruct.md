@@ -608,6 +608,12 @@ Planned non-template inference migration contract:
   string metadata can select string-length emission. Known non-string graph
   facts suppress stale local string metadata; local string metadata remains the
   syntax-only/no-fact compatibility fallback.
+- Completed native literal-backed string count slice: native `count(value)`
+  static string count emission now asks graph-backed value-kind inference
+  before literal-backed string metadata can select string-table length
+  emission. Known non-string graph facts suppress stale string-table metadata;
+  no-fact literal-backed metadata remains the syntax-only compatibility
+  fallback.
 - Completed native File constructor dynamic-path slice: native
   `File<Mode>(path)` emission now asks graph-backed value-kind inference before
   runtime-string local metadata can select dynamic file-open emission. Known
