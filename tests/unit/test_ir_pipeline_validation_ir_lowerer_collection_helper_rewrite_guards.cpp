@@ -1032,6 +1032,56 @@ TEST_CASE("ir lowerer native tail map access inference uses semantic receiver fa
                                 "                  resolveTailDispatchDirectHelperDefinition(targetCallExpr);"));
 }
 
+TEST_CASE("ir lowerer native tail vector access inference uses semantic receiver facts first") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path tailDispatchPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h";
+
+  REQUIRE(std::filesystem::exists(tailDispatchPath));
+  const std::string tailDispatchSource = readText(tailDispatchPath);
+
+  CHECK(tailDispatchSource.find("inferNativeTailArrayVectorTargetFromTypeText =") !=
+        std::string::npos);
+  CHECK(tailDispatchSource.find("tryPopulateArrayVectorFromSemanticReceiverFacts") !=
+        std::string::npos);
+  CHECK(tailDispatchSource.find("tryPopulateNativeTailArrayVectorTargetFromSemanticCollection") !=
+        std::string::npos);
+  CHECK(tailDispatchSource.find("findSemanticProductCollectionSpecialization(\n"
+                                "                            semanticIndex, targetCallExpr)") !=
+        std::string::npos);
+  CHECK(tailDispatchSource.find("collectionFact->elementTypeTextId") !=
+        std::string::npos);
+  CHECK(tailDispatchSource.find("findSemanticProductQueryFact(semanticProgram, semanticIndex, targetCallExpr)") !=
+        std::string::npos);
+  CHECK(tailDispatchSource.find("queryFact->bindingTypeTextId") !=
+        std::string::npos);
+  CHECK(tailDispatchSource.find("queryFact->receiverBindingTypeTextId") !=
+        std::string::npos);
+  CHECK(tailDispatchSource.find("findSemanticProductBindingFact(\n"
+                                "                            semanticIndex, targetCallExpr)") !=
+        std::string::npos);
+  CHECK(tailDispatchSource.find("findSemanticProductLocalAutoFact(\n"
+                                "                            semanticProgram, semanticIndex, targetCallExpr)") !=
+        std::string::npos);
+  CHECK(tailDispatchSource.find("if (tryPopulateArrayVectorFromSemanticReceiverFacts()) {\n"
+                                "                return true;\n"
+                                "              }") <
+        tailDispatchSource.find("if (targetCallExpr.isFieldAccess && targetCallExpr.args.size() == 1)"));
+}
+
 TEST_CASE("ir lowerer direct expr and inference rewrites guard explicit map defs") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);

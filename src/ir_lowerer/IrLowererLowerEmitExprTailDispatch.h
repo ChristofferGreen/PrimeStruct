@@ -1334,60 +1334,216 @@
                 }
                 return false;
               };
-              auto tryPopulateFromSemanticQueryFact = [&]() {
+              auto populateNativeTailArrayVectorTargetFromElementType =
+                  [&](const std::string &collectionName,
+                      const std::string &elementTypeText,
+                      ir_lowerer::ArrayVectorAccessTargetInfo &targetInfo) {
+                    const std::string normalizedElementType =
+                        ir_lowerer::trimTemplateTypeText(elementTypeText);
+                    if (normalizedElementType.empty()) {
+                      return false;
+                    }
+                    ir_lowerer::ArrayVectorAccessTargetInfo candidate;
+                    candidate.isArrayOrVectorTarget = true;
+                    candidate.isVectorTarget = (collectionName == "vector");
+                    candidate.isSoaVector = (collectionName == "soa_vector");
+                    candidate.elemKind =
+                        ir_lowerer::valueKindFromTypeName(normalizedElementType);
+                    if (candidate.elemKind ==
+                            ir_lowerer::LocalInfo::ValueKind::Unknown &&
+                        !candidate.isSoaVector) {
+                      return false;
+                    }
+                    if (candidate.isVectorTarget) {
+                      candidate.structTypeName =
+                          specializedExperimentalVectorStructPathForElementType(
+                              normalizedElementType);
+                    } else if (candidate.isSoaVector) {
+                      candidate.structTypeName =
+                          specializedExperimentalSoaVectorStructPathForElementType(
+                              normalizedElementType);
+                    }
+                    targetInfo = candidate;
+                    return true;
+                  };
+              std::function<bool(const std::string &,
+                                 ir_lowerer::ArrayVectorAccessTargetInfo &)>
+                  inferNativeTailArrayVectorTargetFromTypeText;
+              inferNativeTailArrayVectorTargetFromTypeText =
+                  [&](const std::string &typeText,
+                      ir_lowerer::ArrayVectorAccessTargetInfo &targetInfo) {
+                    const std::string normalized =
+                        ir_lowerer::trimTemplateTypeText(typeText);
+                    if (normalized.empty()) {
+                      return false;
+                    }
+                    std::string normalizedPath = normalized;
+                    if (!normalizedPath.empty() && normalizedPath.front() != '/') {
+                      normalizedPath.insert(normalizedPath.begin(), '/');
+                    }
+                    if (normalizedPath.rfind(
+                            "/std/collections/experimental_vector/Vector__", 0) == 0) {
+                      ir_lowerer::LocalInfo::ValueKind elemKind;
+                      if (!resolveSpecializedVectorElementKind(normalizedPath,
+                                                              elemKind)) {
+                        return false;
+                      }
+                      ir_lowerer::ArrayVectorAccessTargetInfo candidate;
+                      candidate.isArrayOrVectorTarget = true;
+                      candidate.isVectorTarget = true;
+                      candidate.elemKind = elemKind;
+                      candidate.structTypeName = normalizedPath;
+                      targetInfo = candidate;
+                      return true;
+                    }
+                    if (normalizedPath.rfind(
+                            "/std/collections/experimental_soa_vector/SoaVector__",
+                            0) == 0) {
+                      ir_lowerer::ArrayVectorAccessTargetInfo candidate;
+                      candidate.isArrayOrVectorTarget = true;
+                      candidate.isVectorTarget = false;
+                      candidate.isSoaVector = true;
+                      candidate.structTypeName = normalizedPath;
+                      targetInfo = candidate;
+                      return true;
+                    }
+                    std::string base;
+                    std::string argText;
+                    if (!splitTemplateTypeName(normalized, base, argText)) {
+                      return false;
+                    }
+                    const std::string normalizedBase =
+                        ir_lowerer::trimTemplateTypeText(base);
+                    if (normalizedBase == "Reference" ||
+                        normalizedBase == "/Reference" ||
+                        normalizedBase == "Pointer" ||
+                        normalizedBase == "/Pointer") {
+                      std::vector<std::string> wrappedArgs;
+                      if (!splitTemplateArgs(argText, wrappedArgs) ||
+                          wrappedArgs.size() != 1) {
+                        return false;
+                      }
+                      return inferNativeTailArrayVectorTargetFromTypeText(
+                          wrappedArgs.front(), targetInfo);
+                    }
+                    const std::string collectionName =
+                        normalizedBase == "/array"
+                            ? "array"
+                            : ir_lowerer::normalizeCollectionBindingTypeName(
+                                  normalizedBase);
+                    if (collectionName != "array" &&
+                        collectionName != "vector" &&
+                        collectionName != "soa_vector") {
+                      return false;
+                    }
+                    std::vector<std::string> args;
+                    if (!splitTemplateArgs(argText, args) || args.size() != 1) {
+                      return false;
+                    }
+                    return populateNativeTailArrayVectorTargetFromElementType(
+                        collectionName, args.front(), targetInfo);
+                  };
+              auto tryPopulateNativeTailArrayVectorTargetFromSemanticTypeText =
+                  [&](const std::string &typeText,
+                      SymbolId typeTextId,
+                      ir_lowerer::ArrayVectorAccessTargetInfo &targetInfo) {
+                    return inferNativeTailArrayVectorTargetFromTypeText(
+                        resolveSemanticReceiverTypeText(typeText, typeTextId),
+                        targetInfo);
+                  };
+              auto tryPopulateNativeTailArrayVectorTargetFromSemanticCollection =
+                  [&](const SemanticProductIndex &semanticIndex) {
+                    const auto *collectionFact =
+                        ir_lowerer::findSemanticProductCollectionSpecialization(
+                            semanticIndex, targetCallExpr);
+                    if (collectionFact == nullptr) {
+                      return false;
+                    }
+                    const std::string collectionFamily =
+                        resolveSemanticReceiverTypeText(
+                            collectionFact->collectionFamily,
+                            collectionFact->collectionFamilyId);
+                    const std::string collectionName =
+                        collectionFamily == "/array"
+                            ? "array"
+                            : ir_lowerer::normalizeCollectionBindingTypeName(
+                                  collectionFamily);
+                    if (collectionName != "array" &&
+                        collectionName != "vector" &&
+                        collectionName != "soa_vector") {
+                      return false;
+                    }
+                    std::string elementTypeText =
+                        resolveSemanticReceiverTypeText(
+                            collectionFact->elementTypeText,
+                            collectionFact->elementTypeTextId);
+                    if (elementTypeText.empty()) {
+                      elementTypeText =
+                          resolveSemanticReceiverTypeText(
+                              collectionFact->valueTypeText,
+                              collectionFact->valueTypeTextId);
+                    }
+                    return populateNativeTailArrayVectorTargetFromElementType(
+                        collectionName, elementTypeText, targetInfoOut);
+                  };
+              auto tryPopulateArrayVectorFromSemanticReceiverFacts = [&]() {
                 if (semanticProgram == nullptr) {
                   return false;
                 }
                 const SemanticProductIndex semanticIndex =
                     ir_lowerer::buildSemanticProductIndex(semanticProgram);
-                const auto *queryFact =
-                    ir_lowerer::findSemanticProductQueryFact(semanticProgram, semanticIndex, targetCallExpr);
-                if (queryFact == nullptr) {
-                  return false;
-                }
-                std::string bindingType = resolveSemanticQueryFactTypeText(*queryFact);
-                if (bindingType.empty()) {
-                  return false;
-                }
-                if (!bindingType.empty() && bindingType.front() != '/') {
-                  bindingType.insert(bindingType.begin(), '/');
-                }
-                if (bindingType.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) {
-                  ir_lowerer::LocalInfo::ValueKind elemKind;
-                  if (!resolveSpecializedVectorElementKind(bindingType, elemKind)) {
-                    return false;
-                  }
-                  targetInfoOut.isArrayOrVectorTarget = true;
-                  targetInfoOut.isVectorTarget = true;
-                  targetInfoOut.elemKind = elemKind;
-                  targetInfoOut.structTypeName = bindingType;
+                if (tryPopulateNativeTailArrayVectorTargetFromSemanticCollection(
+                        semanticIndex)) {
                   return true;
                 }
-                std::string base;
-                std::string argText;
-                if (splitTemplateTypeName(bindingType, base, argText) &&
-                    ir_lowerer::normalizeCollectionBindingTypeName(
-                        ir_lowerer::trimTemplateTypeText(base)) == "vector") {
-                  std::vector<std::string> args;
-                  if (!splitTemplateArgs(argText, args) || args.size() != 1) {
-                    return false;
+                const auto *queryFact =
+                    ir_lowerer::findSemanticProductQueryFact(semanticProgram, semanticIndex, targetCallExpr);
+                if (queryFact != nullptr) {
+                  if (tryPopulateNativeTailArrayVectorTargetFromSemanticTypeText(
+                          queryFact->bindingTypeText,
+                          queryFact->bindingTypeTextId,
+                          targetInfoOut) ||
+                      tryPopulateNativeTailArrayVectorTargetFromSemanticTypeText(
+                          queryFact->queryTypeText,
+                          queryFact->queryTypeTextId,
+                          targetInfoOut) ||
+                      tryPopulateNativeTailArrayVectorTargetFromSemanticTypeText(
+                          queryFact->receiverBindingTypeText,
+                          queryFact->receiverBindingTypeTextId,
+                          targetInfoOut)) {
+                    return true;
                   }
-                  targetInfoOut.isArrayOrVectorTarget = true;
-                  targetInfoOut.isVectorTarget = true;
-                  targetInfoOut.elemKind =
-                      ir_lowerer::valueKindFromTypeName(ir_lowerer::trimTemplateTypeText(args.front()));
-                  return targetInfoOut.elemKind != ir_lowerer::LocalInfo::ValueKind::Unknown;
+                  const std::string bindingType = resolveSemanticQueryFactTypeText(*queryFact);
+                  if (tryPopulateNativeTailArrayVectorTargetFromSemanticTypeText(
+                          bindingType,
+                          InvalidSymbolId,
+                          targetInfoOut)) {
+                    return true;
+                  }
                 }
-                if (bindingType.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0) {
-                  targetInfoOut.isArrayOrVectorTarget = true;
-                  targetInfoOut.isVectorTarget = false;
-                  targetInfoOut.isSoaVector = true;
-                  targetInfoOut.structTypeName = bindingType;
+                if (const auto *bindingFact =
+                        ir_lowerer::findSemanticProductBindingFact(
+                            semanticIndex, targetCallExpr);
+                    bindingFact != nullptr &&
+                    tryPopulateNativeTailArrayVectorTargetFromSemanticTypeText(
+                        bindingFact->bindingTypeText,
+                        bindingFact->bindingTypeTextId,
+                        targetInfoOut)) {
+                  return true;
+                }
+                if (const auto *localAutoFact =
+                        ir_lowerer::findSemanticProductLocalAutoFact(
+                            semanticProgram, semanticIndex, targetCallExpr);
+                    localAutoFact != nullptr &&
+                    tryPopulateNativeTailArrayVectorTargetFromSemanticTypeText(
+                        localAutoFact->bindingTypeText,
+                        localAutoFact->bindingTypeTextId,
+                        targetInfoOut)) {
                   return true;
                 }
                 return false;
               };
-              if (tryPopulateFromSemanticQueryFact()) {
+              if (tryPopulateArrayVectorFromSemanticReceiverFacts()) {
                 return true;
               }
               if (targetCallExpr.isFieldAccess && targetCallExpr.args.size() == 1) {

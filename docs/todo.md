@@ -983,6 +983,12 @@ Task template:
       classify map access targets. Interned receiver type IDs win over copied
       text, while callee-shape inference remains compatibility fallback for
       syntax-only/no-fact paths.
+    - Completed slice: native tail-dispatch vector access inference now reads
+      semantic-product collection, query, binding, and local-auto receiver
+      facts before field-slot, local-struct, or direct helper return
+      reconstruction can classify array/vector/SoA access targets. Interned
+      receiver type IDs win over copied text, while the old local/callee-shape
+      inference remains compatibility fallback for syntax-only/no-fact paths.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.
