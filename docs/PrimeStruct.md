@@ -591,6 +591,12 @@ Planned non-template inference migration contract:
   use the same graph-backed semantic-product index facts before legacy
   expression inference, preserving the existing integer-index diagnostic for
   syntax-only compatibility.
+- Completed lowerer-side count-of-map-access slice: native count-kind
+  inference for `count(map[key])` now asks the indexed access expression for
+  its published query value kind before consulting local map metadata. Stale
+  local map value kinds can no longer override a graph-backed `string` access
+  result; local and literal map reconstruction remains the explicit
+  syntax-only/no-fact compatibility fallback.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

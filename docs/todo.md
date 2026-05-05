@@ -995,6 +995,12 @@ Task template:
       receiver calls or recover helper template arguments. Interned receiver
       type IDs win over copied text, while direct-return inference remains
       compatibility fallback for syntax-only/no-fact paths.
+    - Completed slice: native count-kind inference for `count(map[key])` now
+      asks the indexed access expression for its semantic-product query value
+      kind before local map metadata can classify the access result. Stale
+      local map value kinds no longer override a graph-backed `string` access
+      result; local/literal map reconstruction remains compatibility fallback
+      for syntax-only/no-fact paths.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.

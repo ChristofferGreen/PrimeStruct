@@ -142,6 +142,139 @@ TEST_CASE("ir lowerer inference expr-kind dispatch infers try from indexed map t
         primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 }
 
+TEST_CASE("ir lowerer inference expr-kind dispatch prefers graph-backed indexed map value facts") {
+  using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::SemanticProgram semanticProgram;
+  primec::SemanticProgramQueryFact queryFact;
+  queryFact.semanticNodeId = 7301;
+  queryFact.callName = "at";
+  queryFact.callNameId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "at");
+  queryFact.resolvedPath = "/std/collections/map/at";
+  queryFact.resolvedPathId = primec::semanticProgramInternCallTargetString(
+      semanticProgram, queryFact.resolvedPath);
+  queryFact.queryTypeText = "string";
+  queryFact.queryTypeTextId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "string");
+  queryFact.bindingTypeText = "string";
+  queryFact.bindingTypeTextId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "string");
+  semanticProgram.queryFacts.push_back(std::move(queryFact));
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  state.semanticProgram = &semanticProgram;
+  state.semanticIndex = &semanticIndex;
+  state.inferLiteralOrNameExprKind = [](const primec::Expr &,
+                                        const primec::ir_lowerer::LocalMap &,
+                                        Kind &kindOut) {
+    kindOut = Kind::Unknown;
+    return false;
+  };
+  state.inferCallExprDirectReturnKind = [](const primec::Expr &,
+                                           const primec::ir_lowerer::LocalMap &,
+                                           Kind &kindOut) {
+    kindOut = Kind::Unknown;
+    return primec::ir_lowerer::CallExpressionReturnKindResolution::NotResolved;
+  };
+  state.inferCallExprCountAccessGpuFallbackKind = [](const primec::Expr &,
+                                                     const primec::ir_lowerer::LocalMap &,
+                                                     Kind &kindOut) {
+    kindOut = Kind::Unknown;
+    return false;
+  };
+  state.inferCallExprOperatorFallbackKind = [](const primec::Expr &,
+                                               const primec::ir_lowerer::LocalMap &,
+                                               Kind &kindOut) {
+    kindOut = Kind::Unknown;
+    return false;
+  };
+  state.inferCallExprControlFlowFallbackKind = [](const primec::Expr &,
+                                                  const primec::ir_lowerer::LocalMap &,
+                                                  std::string &,
+                                                  Kind &kindOut) {
+    kindOut = Kind::Unknown;
+    return false;
+  };
+  state.inferCallExprPointerFallbackKind = [](const primec::Expr &,
+                                              const primec::ir_lowerer::LocalMap &,
+                                              Kind &kindOut) {
+    kindOut = Kind::Unknown;
+    return false;
+  };
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallBaseSetup(
+      {
+          .inferStructExprPath =
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                return std::string{};
+              },
+          .resolveStructFieldSlot =
+              [](const std::string &, const std::string &,
+                 primec::ir_lowerer::StructSlotFieldInfo &) { return false; },
+          .resolveUninitializedStorage =
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &,
+                 primec::ir_lowerer::UninitializedStorageAccessInfo &,
+                 bool &resolved) {
+                resolved = false;
+                return true;
+              },
+      },
+      state,
+      error));
+  CHECK(error.empty());
+
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::string inferenceError;
+  CHECK(primec::ir_lowerer::runLowerInferenceExprKindDispatchSetup(
+      {
+          .defMap = &defMap,
+          .resolveExprPath = [](const primec::Expr &expr) {
+            return "/" + expr.name;
+          },
+          .error = &inferenceError,
+      },
+      state,
+      error));
+  CHECK(error.empty());
+  CHECK(static_cast<bool>(state.inferExprKind));
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo staleMapInfo;
+  staleMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  staleMapInfo.mapKeyKind = Kind::Int32;
+  staleMapInfo.mapValueKind = Kind::Int32;
+  locals.emplace("values", staleMapInfo);
+
+  primec::Expr valuesName;
+  valuesName.kind = primec::Expr::Kind::Name;
+  valuesName.name = "values";
+
+  primec::Expr keyExpr;
+  keyExpr.kind = primec::Expr::Kind::Literal;
+  keyExpr.intWidth = 32;
+  keyExpr.literalValue = 0;
+
+  primec::Expr accessExpr;
+  accessExpr.kind = primec::Expr::Kind::Call;
+  accessExpr.name = "at";
+  accessExpr.semanticNodeId = 7301;
+  accessExpr.args = {valuesName, keyExpr};
+
+  primec::Expr countExpr;
+  countExpr.kind = primec::Expr::Kind::Call;
+  countExpr.name = "count";
+  countExpr.args = {accessExpr};
+
+  CHECK(state.inferExprKind(countExpr, locals) == Kind::Int32);
+
+  accessExpr.semanticNodeId = 0;
+  countExpr.args = {accessExpr};
+  CHECK(state.inferExprKind(countExpr, locals) == Kind::Unknown);
+}
+
 TEST_CASE("ir lowerer inference expr-kind dispatch setup validates dependencies") {
   primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
   std::string inferenceError;

@@ -449,6 +449,10 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
           std::string accessName;
           const Expr &accessExpr = expr.args.front();
           if (getBuiltinArrayAccessName(accessExpr, accessName) && accessExpr.args.size() == 2) {
+            if (stateInOut.inferExprKind &&
+                stateInOut.inferExprKind(accessExpr, localsIn) == LocalInfo::ValueKind::String) {
+              return LocalInfo::ValueKind::Int32;
+            }
             const Expr &accessTarget = accessExpr.args.front();
             if (accessTarget.kind == Expr::Kind::Name) {
               auto it = localsIn.find(accessTarget.name);
