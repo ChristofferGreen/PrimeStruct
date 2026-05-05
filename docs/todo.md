@@ -971,6 +971,12 @@ Task template:
       forwarded-return reconstruction. Interned receiver type IDs win over
       copied text while the old callee-shape path remains compatibility
       fallback for syntax-only/no-fact paths.
+    - Completed slice: native tail-dispatch map insert builtin rewriting now
+      reads semantic-product collection, query, binding, and local-auto
+      receiver facts before inferring map targets from direct helper returns
+      or forwarded-return reconstruction. Interned receiver type IDs win over
+      copied text, while callee-shape inference remains compatibility
+      fallback for syntax-only/no-fact paths.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.
