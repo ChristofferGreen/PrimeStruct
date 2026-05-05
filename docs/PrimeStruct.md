@@ -614,6 +614,12 @@ Planned non-template inference migration contract:
   emission. Known non-string graph facts suppress stale string-table metadata;
   no-fact literal-backed metadata remains the syntax-only compatibility
   fallback.
+- Completed native string-call binding slice: shared native string argument
+  emission now asks graph-backed value-kind inference before local string
+  binding metadata can select table/runtime/argv string dispatch for named
+  arguments. Known non-string graph facts suppress stale string bindings;
+  no-fact local string metadata remains the syntax-only compatibility
+  fallback.
 - Completed native File constructor dynamic-path slice: native
   `File<Mode>(path)` emission now asks graph-backed value-kind inference before
   runtime-string local metadata can select dynamic file-open emission. Known

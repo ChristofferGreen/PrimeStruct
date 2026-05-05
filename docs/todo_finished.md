@@ -6,6 +6,29 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 5, 2026)**
+- [x] TODO-4298: Prefer graph facts for string args
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-05
+  - phase: Semantic ownership authority
+  - scope: Move shared native string argument emission for named bindings onto
+    graph-backed value-kind inference before local string binding metadata can
+    select table/runtime/argv string dispatch.
+  - acceptance:
+    - Graph-backed non-string facts suppress stale local string binding
+      metadata for named string arguments.
+    - Graph-backed string facts still allow existing table/runtime/argv
+      string dispatch for local bindings.
+    - Syntax-only/no-fact local string metadata remains a compatibility
+      fallback.
+  - stop_rule: Stop once shared string call binding emission prefers
+    graph-backed value kinds before local string metadata and source-contract
+    coverage pins graph-first ordering.
+  - evidence: `emitStringValueForCallFromLocals` now has a graph-aware overload
+    that stores the inferred binding kind before copying local string metadata,
+    and `emitLiteralOrBindingStringCallValue` rejects known non-string graph
+    facts before local string dispatch can run.
+
 - [x] TODO-4298: Prefer graph facts for string counts
   - owner: ai
   - created_at: 2026-04-28

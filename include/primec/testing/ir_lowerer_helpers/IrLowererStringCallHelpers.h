@@ -7,6 +7,7 @@ enum class StringCallSource { None, TableIndex, ArgvIndex, RuntimeIndex };
 struct StringBindingInfo {
   bool found = false;
   bool isString = false;
+  LocalInfo::ValueKind inferredKind = LocalInfo::ValueKind::Unknown;
   int32_t localIndex = 0;
   StringCallSource source = StringCallSource::None;
   int32_t stringIndex = -1;
@@ -30,6 +31,7 @@ using IsStringCallEntryArgsNameFn = std::function<bool(const Expr &)>;
 using ResolveStringIndexOpsFn = std::function<bool(const Expr &, const std::string &, StringIndexOps &, std::string &)>;
 using EmitExprFn = std::function<bool(const Expr &)>;
 using InferCallReturnsStringFn = std::function<bool(const Expr &)>;
+using InferCallValueKindFn = std::function<LocalInfo::ValueKind(const Expr &)>;
 using AllocTempLocalFn = std::function<int32_t()>;
 using EmitArrayIndexOutOfBoundsFn = std::function<void()>;
 using GetInstructionCountFn = std::function<size_t()>;
@@ -67,6 +69,7 @@ bool emitStringValueForCallFromLocals(const Expr &arg,
                                       const ResolveStringIndexOpsFn &resolveStringIndexOps,
                                       const EmitExprFn &emitExpr,
                                       const InferCallReturnsStringFn &inferCallReturnsString,
+                                      const InferCallValueKindFn &inferCallValueKind,
                                       const AllocTempLocalFn &allocTempLocal,
                                       const GetInstructionCountFn &getInstructionCount,
                                       const PatchInstructionImmFn &patchInstructionImm,
@@ -75,4 +78,20 @@ bool emitStringValueForCallFromLocals(const Expr &arg,
                                       int32_t &stringIndexOut,
                                       bool &argvCheckedOut,
                                       std::string &error);
-
+bool emitStringValueForCallFromLocals(const Expr &arg,
+                                      const LocalMap &callerLocals,
+                                      const InternStringFn &internString,
+                                      const EmitInstructionFn &emitInstruction,
+                                      const ResolveArrayAccessNameFn &resolveArrayAccessName,
+                                      const IsStringCallEntryArgsNameFn &isEntryArgsName,
+                                      const ResolveStringIndexOpsFn &resolveStringIndexOps,
+                                      const EmitExprFn &emitExpr,
+                                      const InferCallReturnsStringFn &inferCallReturnsString,
+                                      const AllocTempLocalFn &allocTempLocal,
+                                      const GetInstructionCountFn &getInstructionCount,
+                                      const PatchInstructionImmFn &patchInstructionImm,
+                                      const EmitArrayIndexOutOfBoundsFn &emitArrayIndexOutOfBounds,
+                                      LocalInfo::StringSource &sourceOut,
+                                      int32_t &stringIndexOut,
+                                      bool &argvCheckedOut,
+                                      std::string &error);

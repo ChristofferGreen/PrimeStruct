@@ -447,6 +447,9 @@ TEST_CASE("ir lowerer string call helpers emit values from locals") {
                                                               resolveStringIndexOps,
                                                               emitExpr,
                                                               inferCallReturnsString,
+                                                              [](const primec::Expr &) {
+                                                                return primec::ir_lowerer::LocalInfo::ValueKind::String;
+                                                              },
                                                               allocTempLocal,
                                                               getInstructionCount,
                                                               patchInstructionImm,
@@ -464,8 +467,39 @@ TEST_CASE("ir lowerer string call helpers emit values from locals") {
   CHECK(instructions.front().imm == 42);
 
   instructions.clear();
+  error.clear();
+  sourceOut = primec::ir_lowerer::LocalInfo::StringSource::None;
+  stringIndexOut = -1;
+  argvCheckedOut = false;
+  CHECK_FALSE(primec::ir_lowerer::emitStringValueForCallFromLocals(
+      nameArg,
+      locals,
+      internString,
+      emitInstruction,
+      resolveArrayAccessName,
+      isEntryArgsName,
+      resolveStringIndexOps,
+      emitExpr,
+      inferCallReturnsString,
+      [](const primec::Expr &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+      },
+      allocTempLocal,
+      getInstructionCount,
+      patchInstructionImm,
+      emitArrayIndexOutOfBounds,
+      sourceOut,
+      stringIndexOut,
+      argvCheckedOut,
+      error));
+  CHECK(error == "native backend requires string arguments to use string literals, bindings, or entry args");
+  CHECK(instructions.empty());
+  CHECK(sourceOut == primec::ir_lowerer::LocalInfo::StringSource::None);
+  CHECK(stringIndexOut == -1);
+
   primec::Expr badName = nameArg;
   badName.name = "missing";
+  error.clear();
   CHECK_FALSE(primec::ir_lowerer::emitStringValueForCallFromLocals(badName,
                                                                     locals,
                                                                     internString,

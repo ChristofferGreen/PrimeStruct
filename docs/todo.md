@@ -1016,6 +1016,11 @@ Task template:
       metadata can choose string-table length emission. Known non-string graph
       facts suppress stale string-table metadata; literal-backed metadata
       remains compatibility fallback for syntax-only/no-fact paths.
+    - Completed slice: shared native string argument emission now asks
+      graph-backed value-kind inference before local string binding metadata
+      can choose table/runtime/argv string dispatch for named arguments.
+      Known non-string graph facts suppress stale string bindings; local string
+      metadata remains compatibility fallback for syntax-only/no-fact paths.
     - Completed slice: native `File<Mode>(path)` dynamic-path emission now asks
       graph-backed value-kind inference before runtime-string local metadata can
       choose dynamic file-open emission. Known non-string graph facts suppress

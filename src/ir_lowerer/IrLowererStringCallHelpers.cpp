@@ -40,6 +40,11 @@ StringCallEmitResult emitLiteralOrBindingStringCallValue(const Expr &arg,
       error = "native backend does not know identifier: " + arg.name;
       return StringCallEmitResult::Error;
     }
+    if (binding.inferredKind != LocalInfo::ValueKind::Unknown &&
+        binding.inferredKind != LocalInfo::ValueKind::String) {
+      error = "native backend requires string arguments to use string literals, bindings, or entry args";
+      return StringCallEmitResult::Error;
+    }
     if (!binding.isString || binding.source == StringCallSource::None) {
       error = "native backend requires string arguments to use string literals, bindings, or entry args";
       return StringCallEmitResult::Error;
@@ -149,6 +154,7 @@ bool emitStringValueForCallFromLocals(const Expr &arg,
                                       const ResolveStringIndexOpsFn &resolveStringIndexOps,
                                       const EmitExprFn &emitExpr,
                                       const InferCallReturnsStringFn &inferCallReturnsString,
+                                      const InferCallValueKindFn &inferCallValueKind,
                                       const AllocTempLocalFn &allocTempLocal,
                                       const GetInstructionCountFn &getInstructionCount,
                                       const PatchInstructionImmFn &patchInstructionImm,
@@ -198,6 +204,12 @@ bool emitStringValueForCallFromLocals(const Expr &arg,
           return binding;
         }
         binding.found = true;
+        Expr nameExpr;
+        nameExpr.kind = Expr::Kind::Name;
+        nameExpr.name = name;
+        if (inferCallValueKind) {
+          binding.inferredKind = inferCallValueKind(nameExpr);
+        }
         binding.isString = (it->second.valueKind == LocalInfo::ValueKind::String);
         binding.localIndex = it->second.index;
         binding.source = toHelperSource(it->second.stringSource);
@@ -241,6 +253,44 @@ bool emitStringValueForCallFromLocals(const Expr &arg,
   }
   error = "native backend requires string arguments to use string literals, bindings, or entry args";
   return false;
+}
+
+bool emitStringValueForCallFromLocals(const Expr &arg,
+                                      const LocalMap &callerLocals,
+                                      const InternStringFn &internString,
+                                      const EmitInstructionFn &emitInstruction,
+                                      const ResolveArrayAccessNameFn &resolveArrayAccessName,
+                                      const IsStringCallEntryArgsNameFn &isEntryArgsName,
+                                      const ResolveStringIndexOpsFn &resolveStringIndexOps,
+                                      const EmitExprFn &emitExpr,
+                                      const InferCallReturnsStringFn &inferCallReturnsString,
+                                      const AllocTempLocalFn &allocTempLocal,
+                                      const GetInstructionCountFn &getInstructionCount,
+                                      const PatchInstructionImmFn &patchInstructionImm,
+                                      const EmitArrayIndexOutOfBoundsFn &emitArrayIndexOutOfBounds,
+                                      LocalInfo::StringSource &sourceOut,
+                                      int32_t &stringIndexOut,
+                                      bool &argvCheckedOut,
+                                      std::string &error) {
+  return emitStringValueForCallFromLocals(
+      arg,
+      callerLocals,
+      internString,
+      emitInstruction,
+      resolveArrayAccessName,
+      isEntryArgsName,
+      resolveStringIndexOps,
+      emitExpr,
+      inferCallReturnsString,
+      [](const Expr &) { return LocalInfo::ValueKind::Unknown; },
+      allocTempLocal,
+      getInstructionCount,
+      patchInstructionImm,
+      emitArrayIndexOutOfBounds,
+      sourceOut,
+      stringIndexOut,
+      argvCheckedOut,
+      error);
 }
 
 } // namespace primec::ir_lowerer

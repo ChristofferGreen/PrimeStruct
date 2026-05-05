@@ -94,6 +94,7 @@
         },
         [&](const Expr &exprToEmit) { return emitExpr(exprToEmit, callerLocals); },
         [&](const Expr &callExpr) { return inferExprKind(callExpr, callerLocals) == LocalInfo::ValueKind::String; },
+        [&](const Expr &valueExpr) { return inferExprKind(valueExpr, callerLocals); },
         [&]() { return allocTempLocal(); },
         [&]() { return function.instructions.size(); },
         [&](size_t index, int32_t imm) { function.instructions.at(index).imm = imm; },

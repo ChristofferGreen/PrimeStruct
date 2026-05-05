@@ -47,6 +47,8 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
       repoRoot / "src" / "ir_lowerer" / "IrLowererOperatorCollectionMutationHelpers.cpp";
   const std::filesystem::path operatorMemoryPointerHelpersPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererOperatorMemoryPointerHelpers.cpp";
+  const std::filesystem::path stringCallHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererStringCallHelpers.cpp";
   const std::filesystem::path astCallPathHelpersPath =
       repoRoot / "include" / "primec" / "AstCallPathHelpers.h";
   REQUIRE(std::filesystem::exists(callHelpersPath));
@@ -65,6 +67,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   REQUIRE(std::filesystem::exists(lowerStatementsExprPath));
   REQUIRE(std::filesystem::exists(operatorCollectionMutationHelpersPath));
   REQUIRE(std::filesystem::exists(operatorMemoryPointerHelpersPath));
+  REQUIRE(std::filesystem::exists(stringCallHelpersPath));
   REQUIRE(std::filesystem::exists(astCallPathHelpersPath));
   const std::string callHelpersSource = readText(callHelpersPath);
   const std::string accessTargetResolutionSource = readText(accessTargetResolutionPath);
@@ -86,6 +89,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
       readText(operatorCollectionMutationHelpersPath);
   const std::string operatorMemoryPointerHelpersSource =
       readText(operatorMemoryPointerHelpersPath);
+  const std::string stringCallHelpersSource = readText(stringCallHelpersPath);
   const std::string astCallPathHelpersSource = readText(astCallPathHelpersPath);
 
   CHECK(callHelpersSource.find("const Definition *resolveDefinitionCall(const Expr &callExpr,") ==
@@ -680,6 +684,20 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
                                       staticStringCountGraphKindPos) != std::string::npos);
   CHECK(countAccessHelpersSource.find("targetKind != LocalInfo::ValueKind::String",
                                       staticStringCountGraphKindPos) != std::string::npos);
+  const size_t stringCallBindingGuardPos =
+      stringCallHelpersSource.find("binding.inferredKind != LocalInfo::ValueKind::Unknown");
+  const size_t stringCallBindingStringCheckPos =
+      stringCallHelpersSource.find("if (!binding.isString || binding.source == StringCallSource::None)");
+  REQUIRE(stringCallBindingGuardPos != std::string::npos);
+  REQUIRE(stringCallBindingStringCheckPos != std::string::npos);
+  CHECK(stringCallBindingGuardPos < stringCallBindingStringCheckPos);
+  const size_t stringCallLookupInferencePos =
+      stringCallHelpersSource.find("binding.inferredKind = inferCallValueKind(nameExpr);");
+  const size_t stringCallLookupLocalKindPos =
+      stringCallHelpersSource.find("binding.isString = (it->second.valueKind == LocalInfo::ValueKind::String)");
+  REQUIRE(stringCallLookupInferencePos != std::string::npos);
+  REQUIRE(stringCallLookupLocalKindPos != std::string::npos);
+  CHECK(stringCallLookupInferencePos < stringCallLookupLocalKindPos);
   CHECK(nativeTailDispatchSource.find("bool isExplicitDirectVectorCountCall(") !=
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("!isExplicitDirectVectorCountCall(semanticProgram, expr) &&") !=
