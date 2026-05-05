@@ -5,6 +5,8 @@
 #include "IrLowererStructFieldBindingHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
+#include <string_view>
+
 namespace primec::ir_lowerer {
 
 namespace {
@@ -18,6 +20,26 @@ bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
 bool isRemovedMapCompatibilityHelper(const std::string &suffix) {
   return suffix == "count" || suffix == "contains" || suffix == "tryAt" ||
          suffix == "at" || suffix == "at_unsafe" || suffix == "insert";
+}
+
+bool isExperimentalVectorConstructorPath(std::string path) {
+  if (!path.empty() && path.front() != '/') {
+    path.insert(path.begin(), '/');
+  }
+  constexpr std::string_view Prefix = "/std/collections/experimental_vector/";
+  if (path.rfind(Prefix, 0) != 0) {
+    return false;
+  }
+  std::string leaf = path.substr(Prefix.size());
+  const size_t generatedSuffix = leaf.find("__");
+  if (generatedSuffix != std::string::npos) {
+    leaf.erase(generatedSuffix);
+  }
+  return leaf == "vector" || leaf == "vectorNew" ||
+         leaf == "vectorSingle" || leaf == "vectorPair" ||
+         leaf == "vectorTriple" || leaf == "vectorQuad" ||
+         leaf == "vectorQuint" || leaf == "vectorSext" ||
+         leaf == "vectorSept" || leaf == "vectorOct";
 }
 
 std::string resolveSpecializedExperimentalVectorReturnPath(
@@ -542,6 +564,17 @@ std::string inferStructReturnPathFromExprInternal(
       }
     }
     return "";
+  }
+
+  const std::string resolvedExprPath = resolveStructLayoutExprPath(expr);
+  if (isExperimentalVectorConstructorPath(resolvedExprPath) &&
+      expr.templateArgs.size() == 1) {
+    const std::string specializedVector =
+        resolveSpecializedExperimentalVectorReturnPath(
+            "Vector<" + trimTemplateTypeText(expr.templateArgs.front()) + ">");
+    if (structNames.count(specializedVector) > 0) {
+      return specializedVector;
+    }
   }
 
   auto resolvedCandidates = collectionHelperPathCandidates(resolveStructLayoutExprPath(expr));

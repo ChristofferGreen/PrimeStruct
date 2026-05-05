@@ -33,6 +33,35 @@
           }
           return leaf == "SoaColumn" || leaf == "SoaFieldView";
         };
+    const auto isExperimentalVectorMetadataInlineHelper =
+        [](std::string_view path, std::string_view fieldName) {
+          if (path.rfind("/std/collections/experimental_vector/Vector", 0) != 0) {
+            return false;
+          }
+          std::string leaf(path.substr(path.find_last_of('/') == std::string_view::npos
+                                           ? 0
+                                           : path.find_last_of('/') + 1));
+          const size_t generatedSuffix = leaf.find("__");
+          if (generatedSuffix != std::string::npos) {
+            leaf.erase(generatedSuffix);
+          }
+          return leaf == fieldName;
+        };
+    const auto isExperimentalVectorMetadataOwner =
+        [](std::string_view path) {
+          if (path.rfind("/std/collections/experimental_vector/Vector", 0) != 0) {
+            return false;
+          }
+          const size_t leafStart = path.find_last_of('/');
+          std::string leaf(path.substr(leafStart == std::string_view::npos
+                                           ? 0
+                                           : leafStart + 1));
+          const size_t generatedSuffix = leaf.find("__");
+          if (generatedSuffix != std::string::npos) {
+            leaf.erase(generatedSuffix);
+          }
+          return leaf == "Vector";
+        };
     const auto callLeafName = [](const Expr &expr) {
       std::string path = expr.name;
       if (path.find('/') == std::string::npos && !expr.namespacePrefix.empty()) {
@@ -48,7 +77,7 @@
       }
       return leaf;
     };
-    const auto isFixedArityExperimentalVectorConstructor =
+    const auto isExperimentalVectorConstructor =
         [](std::string_view path) {
           constexpr std::string_view Prefix =
               "/std/collections/experimental_vector/";
@@ -60,14 +89,14 @@
           if (generatedSuffix != std::string::npos) {
             leaf.erase(generatedSuffix);
           }
-          return leaf == "vectorNew" || leaf == "vectorSingle" ||
-                 leaf == "vectorPair" || leaf == "vectorTriple" ||
+          return leaf == "vector" || leaf == "vectorNew" ||
+                 leaf == "vectorSingle" || leaf == "vectorPair" ||
+                 leaf == "vectorTriple" ||
                  leaf == "vectorQuad" || leaf == "vectorQuint" ||
                  leaf == "vectorSext" || leaf == "vectorSept" ||
                  leaf == "vectorOct";
         };
-    if (inlineStack.count(callee.fullPath) != 0 &&
-        isFixedArityExperimentalVectorConstructor(callee.fullPath)) {
+    if (isExperimentalVectorConstructor(callee.fullPath)) {
       auto extractVectorParameterTypeName = [](const Expr &paramExpr) {
         for (const auto &transform : paramExpr.transforms) {
           if (transform.name == "mut" || transform.name == "public" ||
@@ -80,6 +109,9 @@
           }
           if (!transform.arguments.empty()) {
             continue;
+          }
+          if (transform.name == "args" && transform.templateArgs.size() == 1) {
+            return trimTemplateTypeText(transform.templateArgs.front());
           }
           std::string typeName = transform.name;
           if (!transform.templateArgs.empty()) {
@@ -97,6 +129,29 @@
         }
         return std::string{};
       };
+      auto extractVectorReturnTypeName = [](
+          const Definition &definition) {
+        for (const auto &transform : definition.transforms) {
+          if (transform.name != "return" || transform.templateArgs.size() != 1) {
+            continue;
+          }
+          std::string base;
+          std::string argText;
+          if (!splitTemplateTypeName(
+                  trimTemplateTypeText(transform.templateArgs.front()),
+                  base,
+                  argText) ||
+              normalizeCollectionBindingTypeName(base) != "vector") {
+            continue;
+          }
+          std::vector<std::string> args;
+          if (!splitTemplateArgs(argText, args) || args.size() != 1) {
+            continue;
+          }
+          return trimTemplateTypeText(args.front());
+        }
+        return std::string{};
+      };
       Expr vectorLiteralExpr = callExpr;
       vectorLiteralExpr.name = "vector";
       vectorLiteralExpr.namespacePrefix.clear();
@@ -109,16 +164,26 @@
           vectorLiteralExpr.templateArgs = {elementType};
         }
       }
+      if (vectorLiteralExpr.templateArgs.empty()) {
+        const std::string elementType = extractVectorReturnTypeName(callee);
+        if (!elementType.empty()) {
+          vectorLiteralExpr.templateArgs = {elementType};
+        }
+      }
       std::string collectionName;
       if (getBuiltinCollectionName(vectorLiteralExpr, collectionName) &&
           collectionName == "vector") {
-        if (vectorLiteralExpr.templateArgs.size() != 1) {
+        if (vectorLiteralExpr.templateArgs.size() != 1 &&
+            !vectorLiteralExpr.args.empty()) {
           error = "vector literal requires exactly one template argument";
           return false;
         }
         const LocalInfo::ValueKind elemKind =
-            valueKindFromTypeName(vectorLiteralExpr.templateArgs.front());
-        if (elemKind == LocalInfo::ValueKind::Unknown) {
+            vectorLiteralExpr.templateArgs.size() == 1
+                ? valueKindFromTypeName(vectorLiteralExpr.templateArgs.front())
+                : LocalInfo::ValueKind::Unknown;
+        if (elemKind == LocalInfo::ValueKind::Unknown &&
+            !vectorLiteralExpr.args.empty()) {
           error =
               "native backend only supports numeric/bool/string vector literals";
           return false;
@@ -201,6 +266,120 @@
             {IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
         return true;
       }
+    }
+    if (callExpr.args.size() == 1 &&
+        (isExperimentalVectorMetadataInlineHelper(callee.fullPath, "field_count") ||
+         isExperimentalVectorMetadataInlineHelper(callee.fullPath, "field_capacity") ||
+         (isExperimentalVectorMetadataOwner(callee.fullPath) &&
+          (callLeafName(callExpr) == "field_count" ||
+           callLeafName(callExpr) == "field_capacity")))) {
+      const Expr &receiver = callExpr.args.front();
+      if (receiver.kind == Expr::Kind::Name) {
+        auto localIt = callerLocals.find(receiver.name);
+        if (localIt != callerLocals.end()) {
+          function.instructions.push_back(
+              {IrOpcode::LoadLocal, static_cast<uint64_t>(localIt->second.index)});
+        } else if (!emitExpr(receiver, callerLocals)) {
+          return false;
+        }
+      } else if (!emitExpr(receiver, callerLocals)) {
+        return false;
+      }
+      const uint64_t fieldOffset =
+          (isExperimentalVectorMetadataInlineHelper(callee.fullPath, "field_capacity") ||
+           callLeafName(callExpr) == "field_capacity")
+              ? IrSlotBytes
+              : 0;
+      if (fieldOffset != 0) {
+        function.instructions.push_back({IrOpcode::PushI64, fieldOffset});
+        function.instructions.push_back({IrOpcode::AddI64, 0});
+      }
+      function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+      return true;
+    }
+    if (callExpr.args.size() == 2 &&
+        (isExperimentalVectorMetadataInlineHelper(callee.fullPath, "set_field_count") ||
+         isExperimentalVectorMetadataInlineHelper(callee.fullPath, "set_field_capacity") ||
+         (isExperimentalVectorMetadataOwner(callee.fullPath) &&
+          (callLeafName(callExpr) == "set_field_count" ||
+           callLeafName(callExpr) == "set_field_capacity")))) {
+      const Expr &receiver = callExpr.args.front();
+      const Expr &value = callExpr.args[1];
+      auto emitBoundsTrapIfStackTrue = [&]() {
+        const size_t okJump = function.instructions.size();
+        function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+        emitArrayIndexOutOfBounds();
+        function.instructions[okJump].imm = function.instructions.size();
+      };
+      auto emitReceiverAddress = [&](uint64_t slotOffset) {
+        if (receiver.kind == Expr::Kind::Name) {
+          auto localIt = callerLocals.find(receiver.name);
+          if (localIt != callerLocals.end()) {
+            function.instructions.push_back(
+                {IrOpcode::LoadLocal, static_cast<uint64_t>(localIt->second.index)});
+          } else if (!emitExpr(receiver, callerLocals)) {
+            return false;
+          }
+        } else if (!emitExpr(receiver, callerLocals)) {
+          return false;
+        }
+        if (slotOffset != 0) {
+          function.instructions.push_back({IrOpcode::PushI64, slotOffset});
+          function.instructions.push_back({IrOpcode::AddI64, 0});
+        }
+        return true;
+      };
+      auto emitReceiverLoad = [&](uint64_t slotOffset) {
+        if (!emitReceiverAddress(slotOffset)) {
+          return false;
+        }
+        function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+        return true;
+      };
+
+      if (!emitExpr(value, callerLocals)) {
+        return false;
+      }
+      function.instructions.push_back({IrOpcode::PushI32, 0});
+      function.instructions.push_back({IrOpcode::CmpLtI32, 0});
+      emitBoundsTrapIfStackTrue();
+
+      if (isExperimentalVectorMetadataInlineHelper(callee.fullPath, "set_field_count") ||
+          callLeafName(callExpr) == "set_field_count") {
+        if (!emitExpr(value, callerLocals) ||
+            !emitReceiverLoad(IrSlotBytes)) {
+          return false;
+        }
+        function.instructions.push_back({IrOpcode::CmpGtI32, 0});
+        emitBoundsTrapIfStackTrue();
+        if (!emitReceiverAddress(0) ||
+            !emitExpr(value, callerLocals)) {
+          return false;
+        }
+      } else {
+        if (!emitReceiverLoad(0) ||
+            !emitExpr(value, callerLocals)) {
+          return false;
+        }
+        function.instructions.push_back({IrOpcode::CmpGtI32, 0});
+        emitBoundsTrapIfStackTrue();
+        if (!emitExpr(value, callerLocals)) {
+          return false;
+        }
+        function.instructions.push_back({IrOpcode::PushI32, 1073741823});
+        function.instructions.push_back({IrOpcode::CmpGtI32, 0});
+        emitBoundsTrapIfStackTrue();
+        if (!emitReceiverAddress(IrSlotBytes) ||
+            !emitExpr(value, callerLocals)) {
+          return false;
+        }
+      }
+      function.instructions.push_back({IrOpcode::StoreIndirect, 0});
+      function.instructions.push_back({IrOpcode::Pop, 0});
+      if (requireValue) {
+        function.instructions.push_back({IrOpcode::PushI32, 0});
+      }
+      return true;
     }
     if (callExpr.args.size() == 1 &&
         (isInternalSoaMetadataInlineHelper(callee.fullPath, "field_count") ||

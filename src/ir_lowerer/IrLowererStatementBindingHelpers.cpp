@@ -62,6 +62,15 @@ bool isSpecializedExperimentalVectorTypeText(const std::string &typeText) {
   return normalized.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
 }
 
+bool isExperimentalVectorSurfaceBase(const std::string &typeText) {
+  std::string normalized = trimTemplateTypeText(typeText);
+  if (!normalized.empty() && normalized.front() != '/') {
+    normalized.insert(normalized.begin(), '/');
+  }
+  return trimTemplateTypeText(typeText) == "Vector" ||
+         normalized == "/std/collections/experimental_vector/Vector";
+}
+
 bool isSpecializedExperimentalSoaVectorStructPathText(const std::string &typeText) {
   std::string normalized = trimTemplateTypeText(typeText);
   if (!normalized.empty() && normalized.front() != '/') {
@@ -339,15 +348,9 @@ bool populateBindingTypeInfoFromTypeText(
     return true;
   }
   if (isSpecializedExperimentalVectorTypeText(normalizedTypeText)) {
-    infoOut.kind = LocalInfo::Kind::Vector;
+    infoOut.kind = LocalInfo::Kind::Value;
     infoOut.structTypeName = normalizedTypeText;
-    infoOut.valueKind = LocalInfo::ValueKind::Unknown;
-    LocalInfo::ValueKind elementKind = LocalInfo::ValueKind::Unknown;
-    if (resolveSpecializedExperimentalVectorElementKind(normalizedTypeText,
-                                                        resolveDefinitionCall,
-                                                        elementKind)) {
-      infoOut.valueKind = elementKind;
-    }
+    infoOut.valueKind = LocalInfo::ValueKind::Int64;
     return true;
   }
 
@@ -405,8 +408,15 @@ bool populateBindingTypeInfoFromTypeText(
     return true;
   }
   if (normalizedBase == "array" || normalizedBase == "vector" || normalizedBase == "soa_vector") {
-    infoOut.kind = normalizedBase == "array" ? LocalInfo::Kind::Array : LocalInfo::Kind::Vector;
     const std::string elementType = trimTemplateTypeText(argText);
+    if (normalizedBase == "vector" && isExperimentalVectorSurfaceBase(base)) {
+      infoOut.kind = LocalInfo::Kind::Value;
+      infoOut.valueKind = LocalInfo::ValueKind::Int64;
+      infoOut.structTypeName =
+          specializedExperimentalVectorStructPathForElementType(elementType);
+      return true;
+    }
+    infoOut.kind = normalizedBase == "array" ? LocalInfo::Kind::Array : LocalInfo::Kind::Vector;
     infoOut.valueKind = valueKindFromTypeName(elementType);
     if (normalizedBase == "soa_vector") {
       infoOut.isSoaVector = true;
@@ -987,7 +997,9 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
       if (populateBindingTypeInfoFromTypeText(
               explicitTypeText, safeResolveDefinitionCall, explicitTypeInfo)) {
         deferSurfaceStructTypeName(explicitTypeInfo);
-        if (info.kind == LocalInfo::Kind::Value) {
+        if (info.kind == LocalInfo::Kind::Value ||
+            (explicitTypeInfo.kind == LocalInfo::Kind::Value &&
+             !explicitTypeInfo.structTypeName.empty())) {
           info.kind = explicitTypeInfo.kind;
         }
         if (info.valueKind == LocalInfo::ValueKind::Unknown) {
@@ -1006,7 +1018,9 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
       }
     }
     if (hasSemanticBindingInfo) {
-      if (info.kind == LocalInfo::Kind::Value) {
+      if (info.kind == LocalInfo::Kind::Value ||
+          (semanticInfo.kind == LocalInfo::Kind::Value &&
+           !semanticInfo.structTypeName.empty())) {
         info.kind = semanticInfo.kind;
       }
       if (info.valueKind == LocalInfo::ValueKind::Unknown) {
@@ -1304,6 +1318,13 @@ bool inferCallParameterLocalInfo(const Expr &param,
     if (normalizeCollectionBindingTypeName(transform.name) == "File") {
       infoOut.isFileHandle = true;
       infoOut.valueKind = LocalInfo::ValueKind::Int64;
+    } else if (isExperimentalVectorSurfaceBase(transform.name) &&
+               transform.templateArgs.size() == 1) {
+      infoOut.kind = LocalInfo::Kind::Value;
+      infoOut.valueKind = LocalInfo::ValueKind::Int64;
+      infoOut.structTypeName =
+          specializedExperimentalVectorStructPathForElementType(
+              trimTemplateTypeText(transform.templateArgs.front()));
     } else if (applyErrorTypeMetadata(transform.name, infoOut)) {
       continue;
     } else if (transform.name == "Result") {
@@ -1372,11 +1393,27 @@ bool inferCallParameterLocalInfo(const Expr &param,
           normalizeCollectionBindingTypeName(wrappedBase) == "vector") {
         infoOut.pointerToVector = true;
         const std::string elementType = trimTemplateTypeText(wrappedArg);
-        infoOut.valueKind = valueKindFromTypeName(elementType);
-        if (infoOut.valueKind == LocalInfo::ValueKind::Unknown && infoOut.structTypeName.empty()) {
+        if (isExperimentalVectorSurfaceBase(wrappedBase)) {
+          infoOut.valueKind = LocalInfo::ValueKind::Int64;
           infoOut.structTypeName =
               specializedExperimentalVectorStructPathForElementType(elementType);
+        } else {
+          infoOut.valueKind = valueKindFromTypeName(elementType);
+          if (infoOut.valueKind == LocalInfo::ValueKind::Unknown && infoOut.structTypeName.empty()) {
+            infoOut.structTypeName =
+                specializedExperimentalVectorStructPathForElementType(elementType);
+          }
         }
+      }
+      if (transform.name == "Reference" &&
+          splitTemplateTypeName(targetType, wrappedBase, wrappedArg) &&
+          normalizeCollectionBindingTypeName(wrappedBase) == "vector" &&
+          isExperimentalVectorSurfaceBase(wrappedBase)) {
+        infoOut.referenceToVector = true;
+        infoOut.valueKind = LocalInfo::ValueKind::Int64;
+        infoOut.structTypeName =
+            specializedExperimentalVectorStructPathForElementType(
+                trimTemplateTypeText(wrappedArg));
       }
       if (transform.name == "Pointer" &&
           splitTemplateTypeName(targetType, wrappedBase, wrappedArg) &&

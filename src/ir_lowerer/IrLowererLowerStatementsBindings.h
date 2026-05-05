@@ -662,6 +662,36 @@
             adoptStructInitializerCallee(*initCallee);
           }
         }
+        auto isExperimentalVectorConstructorCallee = [](const Definition *callee) {
+          if (callee == nullptr) {
+            return false;
+          }
+          constexpr std::string_view Prefix =
+              "/std/collections/experimental_vector/";
+          if (callee->fullPath.rfind(Prefix, 0) != 0) {
+            return false;
+          }
+          std::string leaf = callee->fullPath.substr(Prefix.size());
+          const size_t generatedSuffix = leaf.find("__");
+          if (generatedSuffix != std::string::npos) {
+            leaf.erase(generatedSuffix);
+          }
+          return leaf == "vector" || leaf == "vectorNew" ||
+                 leaf == "vectorSingle" || leaf == "vectorPair" ||
+                 leaf == "vectorTriple" || leaf == "vectorQuad" ||
+                 leaf == "vectorQuint" || leaf == "vectorSext" ||
+                 leaf == "vectorSept" || leaf == "vectorOct";
+        };
+        if (!info.structTypeName.empty() &&
+            info.structTypeName.rfind("/std/collections/experimental_vector/Vector", 0) == 0 &&
+            (isExperimentalVectorConstructorCallee(initCallee) ||
+             [&]() {
+               std::string collectionName;
+               return getBuiltinCollectionName(init, collectionName) &&
+                      collectionName == "vector";
+             }())) {
+          initStruct = info.structTypeName;
+        }
         if (!initStruct.empty() && initStruct != info.structTypeName) {
           error = "struct binding initializer type mismatch on " + stmt.name;
           return false;
