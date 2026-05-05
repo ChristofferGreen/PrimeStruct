@@ -620,6 +620,12 @@ Planned non-template inference migration contract:
   arguments. Known non-string graph facts suppress stale string bindings;
   no-fact local string metadata remains the syntax-only compatibility
   fallback.
+- Completed native print string binding slice: native `print(name)` and
+  `print_line(name)` emission now asks graph-backed value-kind inference before
+  local string binding metadata can select static, argv, or dynamic string
+  printing for named arguments. Known non-string graph facts fall through to
+  ordinary numeric/bool printing; no-fact local string metadata remains the
+  syntax-only compatibility fallback.
 - Completed native File constructor dynamic-path slice: native
   `File<Mode>(path)` emission now asks graph-backed value-kind inference before
   runtime-string local metadata can select dynamic file-open emission. Known

@@ -6,6 +6,28 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 5, 2026)**
+- [x] TODO-4298: Prefer graph facts for print args
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-05
+  - phase: Semantic ownership authority
+  - scope: Move native `print(name)` and `print_line(name)` named string
+    emission onto graph-backed value-kind inference before local string
+    binding metadata can select static, argv, or dynamic string printing.
+  - acceptance:
+    - Graph-backed non-string facts suppress stale local string binding
+      metadata for named print arguments.
+    - Graph-backed string facts still allow existing static, argv, and dynamic
+      string print emission for local bindings.
+    - Syntax-only/no-fact local string metadata remains a compatibility
+      fallback.
+  - stop_rule: Stop once named print argument emission prefers graph-backed
+    value kinds before local string metadata and source-contract coverage pins
+    graph-first ordering.
+  - evidence: Native print lowering now computes `printNameKind` before local
+    string metadata can select string print opcodes; known non-string facts
+    fall through to the ordinary emitted-value print path.
+
 - [x] TODO-4298: Prefer graph facts for string args
   - owner: ai
   - created_at: 2026-04-28

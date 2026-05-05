@@ -698,6 +698,18 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   REQUIRE(stringCallLookupInferencePos != std::string::npos);
   REQUIRE(stringCallLookupLocalKindPos != std::string::npos);
   CHECK(stringCallLookupInferencePos < stringCallLookupLocalKindPos);
+  const size_t printNameGraphKindPos = lowerStatementsExprSource.find(
+      "const LocalInfo::ValueKind printNameKind = inferExprKind(arg, localsIn);");
+  const size_t printNameLocalStringPos = lowerStatementsExprSource.find(
+      "it->second.valueKind == LocalInfo::ValueKind::String",
+      printNameGraphKindPos);
+  REQUIRE(printNameGraphKindPos != std::string::npos);
+  REQUIRE(printNameLocalStringPos != std::string::npos);
+  CHECK(printNameGraphKindPos < printNameLocalStringPos);
+  CHECK(lowerStatementsExprSource.find("printNameKind == LocalInfo::ValueKind::Unknown",
+                                       printNameGraphKindPos) != std::string::npos);
+  CHECK(lowerStatementsExprSource.find("printNameKind == LocalInfo::ValueKind::String",
+                                       printNameGraphKindPos) != std::string::npos);
   CHECK(nativeTailDispatchSource.find("bool isExplicitDirectVectorCountCall(") !=
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("!isExplicitDirectVectorCountCall(semanticProgram, expr) &&") !=

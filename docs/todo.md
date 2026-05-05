@@ -1021,6 +1021,12 @@ Task template:
       can choose table/runtime/argv string dispatch for named arguments.
       Known non-string graph facts suppress stale string bindings; local string
       metadata remains compatibility fallback for syntax-only/no-fact paths.
+    - Completed slice: native `print(name)` and `print_line(name)` emission
+      now asks graph-backed value-kind inference before local string binding
+      metadata can choose static, argv, or dynamic string printing. Known
+      non-string graph facts fall through to ordinary numeric/bool printing;
+      local string metadata remains compatibility fallback for
+      syntax-only/no-fact paths.
     - Completed slice: native `File<Mode>(path)` dynamic-path emission now asks
       graph-backed value-kind inference before runtime-string local metadata can
       choose dynamic file-open emission. Known non-string graph facts suppress

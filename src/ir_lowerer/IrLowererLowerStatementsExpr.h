@@ -1156,7 +1156,10 @@
         error = "native backend does not know identifier: " + arg.name;
         return false;
       }
-      if (it->second.valueKind == LocalInfo::ValueKind::String) {
+      const LocalInfo::ValueKind printNameKind = inferExprKind(arg, localsIn);
+      if ((printNameKind == LocalInfo::ValueKind::Unknown ||
+           printNameKind == LocalInfo::ValueKind::String) &&
+          it->second.valueKind == LocalInfo::ValueKind::String) {
         if (it->second.stringSource == LocalInfo::StringSource::TableIndex) {
           if (it->second.stringIndex < 0) {
             error = "native backend missing string data for: " + arg.name;
