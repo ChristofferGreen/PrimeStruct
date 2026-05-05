@@ -28,6 +28,11 @@ std::string explicitCallPathForCandidate(const Expr &candidate) {
   return namespacePrefix + "/" + candidate.name;
 }
 
+bool isBareMapAccessHelperName(std::string_view helperName) {
+  return helperName == "at" || helperName == "at_ref" ||
+         helperName == "at_unsafe" || helperName == "at_unsafe_ref";
+}
+
 } // namespace
 
 size_t SemanticsValidator::mapHelperReceiverIndex(
@@ -259,6 +264,9 @@ bool SemanticsValidator::tryRewriteBareMapHelperCall(
   rewrittenOut = candidate;
   if (dispatchResolvers.resolveExperimentalMapTarget != nullptr &&
       dispatchResolvers.resolveExperimentalMapTarget(candidate.args[receiverIndex], keyType, valueType)) {
+    if (isBareMapAccessHelperName(helperName)) {
+      return false;
+    }
     rewrittenOut.name = specializedExperimentalMapHelperTarget(helperName, keyType, valueType);
     if (rewrittenOut.name.find("__t") != std::string::npos) {
       rewrittenOut.templateArgs.clear();
@@ -527,6 +535,7 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalMapHelperCall(
   std::string canonicalPath;
   std::string helperName;
   Expr canonicalCandidate = candidate;
+  bool directExperimentalMapHelperSpelling = false;
   if (candidate.isMethodCall) {
     std::string normalizedMethod = candidate.name;
     if (!normalizedMethod.empty() && normalizedMethod.front() == '/') {
@@ -537,6 +546,10 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalMapHelperCall(
             StdlibSurfaceId::CollectionsMapHelpers,
             helperName) ||
         !isPublishedMapBaseHelperName(helperName)) {
+      return false;
+    }
+    if (isBareMapAccessHelperName(helperName) &&
+        candidate.args.front().kind == Expr::Kind::Call) {
       return false;
     }
     if (helperName == "insert") {
@@ -576,16 +589,23 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalMapHelperCall(
     canonicalCandidate.namespacePrefix =
         lastSlash == std::string::npos ? std::string() : canonicalPath.substr(0, lastSlash);
   } else {
+    const std::string explicitTarget = explicitCallPathForCandidate(candidate);
     const std::string resolvedOrExplicitPath = [&]() {
       const std::string resolvedPath = resolveCalleePath(candidate);
       if (!resolvedPath.empty()) {
         return resolvedPath;
       }
-      return explicitCallPathForCandidate(candidate);
+      return explicitTarget;
     }();
+    directExperimentalMapHelperSpelling =
+        explicitTarget.rfind("/std/collections/experimental_map/", 0) == 0;
     if (!canonicalExperimentalMapHelperPath(resolvedOrExplicitPath, canonicalPath, helperName)) {
       return false;
     }
+  }
+  if (!candidate.isMethodCall && !directExperimentalMapHelperSpelling &&
+      isBareMapAccessHelperName(helperName)) {
+    return false;
   }
 
   const size_t receiverIndex =

@@ -6,6 +6,29 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 5, 2026)**
+- [x] TODO-4360: Stabilize map access temporaries
+  - owner: ai
+  - created_at: 2026-05-04
+  - finished_at: 2026-05-05
+  - phase: Release-gate stabilization
+  - scope: Land the retained wrapper-returned experimental map access slice by
+    preventing canonical `at` / `at_unsafe` compatibility forms on temporary
+    `Map<K, V>` receivers from lowering directly to experimental `mapAt`
+    helpers.
+  - acceptance:
+    - Wrapper-returned experimental map bracket access remains unsupported and
+      reports a semantic failure instead of validating through print/string
+      inference.
+    - Direct experimental map helper spellings and named receiver method sugar
+      remain covered by the existing retained shard.
+    - The retained `calls_flow_collections_311_320` release shard passes
+      focused validation.
+  - stop_rule: Stop once the retained wrapper-temporary map access shard passes
+    without broad release discovery.
+  - evidence: Gated experimental map access helper rewrites and string/type
+    inference paths for canonical access forms, then focused release validation
+    passed for `ctest --output-on-failure -R '^PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_311_320$'`.
+
 - [x] TODO-4360: Stabilize experimental map results
   - owner: ai
   - created_at: 2026-05-04

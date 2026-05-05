@@ -1388,16 +1388,26 @@ bool rewriteExpr(Expr &expr,
       return false;
     }
     const std::string experimentalMapPath = experimentalMapHelperPathForCanonicalHelper(resolvedPath);
+    const Expr *experimentalMapReceiverExpr = mapHelperReceiverExpr(expr);
+    const bool rejectsWrapperReturnedExperimentalMapAccess =
+        experimentalMapReceiverExpr != nullptr &&
+        experimentalMapReceiverExpr->kind == Expr::Kind::Call &&
+        (borrowedCanonicalMapUnknownTarget == "/std/collections/map/at" ||
+         borrowedCanonicalMapUnknownTarget == "/std/collections/map/at_unsafe");
     if (!experimentalMapPath.empty() && ctx.sourceDefs.count(experimentalMapPath) > 0 &&
         resolvesExperimentalMapValueReceiver(
-            mapHelperReceiverExpr(expr), params, locals, allowMathBare, mapping, allowedParams, namespacePrefix, ctx)) {
+            experimentalMapReceiverExpr, params, locals, allowMathBare, mapping, allowedParams, namespacePrefix, ctx)) {
+      if (rejectsWrapperReturnedExperimentalMapAccess) {
+        error = "unknown call target: " + borrowedCanonicalMapUnknownTarget;
+        return false;
+      }
       resolvedPath = experimentalMapPath;
       expr.name = experimentalMapPath;
       expr.namespacePrefix.clear();
       if (expr.templateArgs.empty()) {
         std::vector<std::string> receiverTemplateArgs;
         if (resolveExperimentalMapValueReceiverTemplateArgs(
-                mapHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx, receiverTemplateArgs)) {
+                experimentalMapReceiverExpr, params, locals, allowMathBare, namespacePrefix, ctx, receiverTemplateArgs)) {
           expr.templateArgs = std::move(receiverTemplateArgs);
         }
       }

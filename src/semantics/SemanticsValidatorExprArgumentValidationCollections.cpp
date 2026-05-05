@@ -113,6 +113,14 @@ bool SemanticsValidator::isStringExprForArgumentValidation(
         getCanonicalMapAccessBuiltinName(arg, accessName) &&
         arg.args.size() == 2) {
       std::string mapValueType;
+      std::string experimentalMapKeyType;
+      std::string experimentalMapValueType;
+      if (dispatchResolvers.resolveExperimentalMapTarget != nullptr &&
+          dispatchResolvers.resolveExperimentalMapTarget(arg.args.front(),
+                                                         experimentalMapKeyType,
+                                                         experimentalMapValueType)) {
+        return false;
+      }
       if (resolveMapValueType(arg.args.front(), dispatchResolvers, mapValueType) &&
           normalizeBindingTypeName(mapValueType) == "string") {
         return true;

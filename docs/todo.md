@@ -640,6 +640,14 @@ Task template:
       `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_301_310`;
       continue with the next retained release failure,
       `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_311_320`.
+    - 2026-05-05 lite slice: wrapper-returned experimental map access now
+      keeps canonical `at` / `at_unsafe` compatibility calls from silently
+      lowering to experimental `mapAt` helpers, preserving the unsupported
+      bracket-access diagnostic for temporary `Map<K, V>` receivers. Focused
+      release validation passed for
+      `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_311_320`;
+      continue with the next retained release failure from the saved release
+      log.
 
 - [ ] TODO-4298: Promote graph-backed non-template inference authority
   - owner: ai

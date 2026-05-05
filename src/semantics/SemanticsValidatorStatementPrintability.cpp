@@ -127,7 +127,13 @@ bool SemanticsValidator::isStringStatementExpr(const Expr &arg,
             if (!splitTemplateTypeName(normalizedType, base, arg)) {
               return false;
             }
-            if (isMapCollectionTypeName(base)) {
+            const std::string normalizedBase = normalizeBindingTypeName(base);
+            if (normalizedBase == "Map" ||
+                normalizedBase == "std/collections/experimental_map/Map" ||
+                normalizedBase == "/std/collections/experimental_map/Map") {
+              return false;
+            }
+            if (isMapCollectionTypeName(normalizedBase)) {
               std::vector<std::string> args;
               if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 2) {
                 return false;

@@ -5164,6 +5164,10 @@ void rewriteBorrowedExperimentalMapMethodExpr(
   }
   std::optional<semantics::BindingInfo> receiverBinding;
   const Expr &receiver = expr.args.front();
+  if ((helperName == "mapAtRef" || helperName == "mapAtUnsafeRef") &&
+      receiver.kind == Expr::Kind::Call) {
+    return;
+  }
   if (receiver.kind == Expr::Kind::Name) {
     auto bindingIt = bindings.find(receiver.name);
     if (bindingIt != bindings.end() && isBorrowedExperimentalMapBinding(bindingIt->second)) {
@@ -5290,6 +5294,10 @@ void rewriteExperimentalMapValueMethodExpr(
   }
   std::optional<semantics::BindingInfo> receiverBinding;
   const Expr &receiver = expr.args.front();
+  if ((helperName == "mapAt" || helperName == "mapAtUnsafe") &&
+      receiver.kind == Expr::Kind::Call) {
+    return;
+  }
   if (receiver.kind == Expr::Kind::Name) {
     auto bindingIt = bindings.find(receiver.name);
     if (bindingIt != bindings.end() && isExperimentalMapValueBinding(bindingIt->second)) {

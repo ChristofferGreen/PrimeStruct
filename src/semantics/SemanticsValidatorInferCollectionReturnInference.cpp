@@ -716,8 +716,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
         }
       }
       if (!isExplicitAccessAlias &&
-          (builtinCollectionDispatchResolvers.resolveMapTarget(receiver, keyType, valueType) ||
-           builtinCollectionDispatchResolvers.resolveExperimentalMapTarget(receiver, keyType, valueType))) {
+          builtinCollectionDispatchResolvers.resolveMapTarget(receiver, keyType, valueType)) {
         currentTypeTextOut = normalizeBindingTypeName(valueType);
         return !currentTypeTextOut.empty();
       }

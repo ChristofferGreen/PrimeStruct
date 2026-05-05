@@ -52,6 +52,13 @@ bool getCanonicalMapAccessBuiltinName(const Expr &candidate,
 bool isExperimentalMapTypeText(const std::string &typeText) {
   std::string normalizedType = normalizeBindingTypeName(typeText);
   while (true) {
+    std::string normalizedPath = normalizedType;
+    if (!normalizedPath.empty() && normalizedPath.front() == '/') {
+      normalizedPath.erase(normalizedPath.begin());
+    }
+    if (normalizedPath.rfind("std/collections/experimental_map/Map__", 0) == 0) {
+      return true;
+    }
     std::string base;
     std::string arg;
     if (!splitTemplateTypeName(normalizedType, base, arg)) {
@@ -176,6 +183,22 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
   }
 
   std::string builtinName;
+  auto isExperimentalMapReceiver = [&](const Expr &receiverExpr) {
+    std::string receiverTypeText;
+    return inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText) &&
+           isExperimentalMapTypeText(receiverTypeText);
+  };
+
+  if (!expr.isMethodCall &&
+      getBuiltinArrayAccessName(expr, builtinName) &&
+      expr.args.size() == 2 && !hasNamedArguments(expr.argNames)) {
+    const Expr &receiverExpr = expr.args.front();
+    if (isExperimentalMapReceiver(receiverExpr)) {
+      return failLateMapAccessBuiltinDiagnostic(
+          "unknown call target: /std/collections/map/" + builtinName);
+    }
+  }
+
   if (!expr.isMethodCall &&
       getCanonicalMapAccessBuiltinName(expr, builtinName) &&
       expr.args.size() == 2 && !hasNamedArguments(expr.argNames)) {
