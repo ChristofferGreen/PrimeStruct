@@ -84,44 +84,57 @@ FileConstructorCallEmitResult tryEmitFileConstructorCall(
     return FileConstructorCallEmitResult::Error;
   }
 
+  const Expr &pathExpr = expr.args.front();
+  if (pathExpr.kind == Expr::Kind::StringLiteral) {
+    int32_t stringIndex = -1;
+    size_t length = 0;
+    if (resolveStringTableTarget(pathExpr, localsIn, stringIndex, length)) {
+      if (!emitFileOpenCall(expr.templateArgs.front(), stringIndex, emitInstruction, error)) {
+        return FileConstructorCallEmitResult::Error;
+      }
+      return FileConstructorCallEmitResult::Emitted;
+    }
+  }
+
+  if (pathExpr.kind == Expr::Kind::Call) {
+    std::string accessName;
+    if (getBuiltinArrayAccessName(pathExpr, accessName) && !pathExpr.args.empty() &&
+        isEntryArgsName(pathExpr.args.front(), localsIn)) {
+      error = "native backend only supports File() with string literals or literal-backed bindings";
+      return FileConstructorCallEmitResult::Error;
+    }
+  }
+
+  const LocalInfo::ValueKind pathKind = inferExprKind(pathExpr, localsIn);
+  if (pathKind != LocalInfo::ValueKind::String && pathKind != LocalInfo::ValueKind::Unknown) {
+    error = "native backend only supports File() with string literals or literal-backed bindings";
+    return FileConstructorCallEmitResult::Error;
+  }
+
   int32_t stringIndex = -1;
   size_t length = 0;
-  if (resolveStringTableTarget(expr.args.front(), localsIn, stringIndex, length)) {
+  if (resolveStringTableTarget(pathExpr, localsIn, stringIndex, length)) {
     if (!emitFileOpenCall(expr.templateArgs.front(), stringIndex, emitInstruction, error)) {
       return FileConstructorCallEmitResult::Error;
     }
     return FileConstructorCallEmitResult::Emitted;
   }
 
-  if (expr.args.front().kind == Expr::Kind::Call) {
-    std::string accessName;
-    if (getBuiltinArrayAccessName(expr.args.front(), accessName) && !expr.args.front().args.empty() &&
-        isEntryArgsName(expr.args.front().args.front(), localsIn)) {
-      error = "native backend only supports File() with string literals or literal-backed bindings";
-      return FileConstructorCallEmitResult::Error;
-    }
-  }
-
-  const LocalInfo::ValueKind pathKind = inferExprKind(expr.args.front(), localsIn);
   if (pathKind == LocalInfo::ValueKind::String) {
     IrOpcode dynamicOp = IrOpcode::FileOpenReadDynamic;
     if (!resolveDynamicFileOpenModeOpcode(expr.templateArgs.front(), dynamicOp)) {
       error = "File requires Read, Write, or Append mode";
       return FileConstructorCallEmitResult::Error;
     }
-    if (!emitExpr(expr.args.front(), localsIn)) {
+    if (!emitExpr(pathExpr, localsIn)) {
       return FileConstructorCallEmitResult::Error;
     }
     emitInstruction(dynamicOp, 0);
     return FileConstructorCallEmitResult::Emitted;
   }
-  if (pathKind != LocalInfo::ValueKind::Unknown) {
-    error = "native backend only supports File() with string literals or literal-backed bindings";
-    return FileConstructorCallEmitResult::Error;
-  }
 
-  if (expr.args.front().kind == Expr::Kind::Name) {
-    auto it = localsIn.find(expr.args.front().name);
+  if (pathExpr.kind == Expr::Kind::Name) {
+    auto it = localsIn.find(pathExpr.name);
     if (it != localsIn.end() && it->second.valueKind == LocalInfo::ValueKind::String &&
         it->second.stringSource == LocalInfo::StringSource::RuntimeIndex) {
       IrOpcode dynamicOp = IrOpcode::FileOpenReadDynamic;

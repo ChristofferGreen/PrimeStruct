@@ -184,7 +184,7 @@ TEST_CASE("ir lowerer file write helpers dispatch File constructor calls") {
   CHECK(error == "File requires Read, Write, or Append mode");
 }
 
-TEST_CASE("ir lowerer file write helpers prefer graph facts for dynamic File paths") {
+TEST_CASE("ir lowerer file write helpers prefer graph facts for File paths") {
   using Result = primec::ir_lowerer::FileConstructorCallEmitResult;
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
 
@@ -232,6 +232,41 @@ TEST_CASE("ir lowerer file write helpers prefer graph facts for dynamic File pat
   CHECK(emitExprCalls == 0);
   CHECK(instructions.empty());
 
+  primec::ir_lowerer::LocalMap staleTableLocals;
+  primec::ir_lowerer::LocalInfo staleTableInfo;
+  staleTableInfo.valueKind = ValueKind::String;
+  staleTableInfo.stringSource = primec::ir_lowerer::LocalInfo::StringSource::TableIndex;
+  staleTableInfo.stringIndex = 91;
+  staleTableLocals.emplace("path", staleTableInfo);
+
+  instructions.clear();
+  error.clear();
+  emitExprCalls = 0;
+  int resolveStringCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitFileConstructorCall(
+            fileCallExpr,
+            staleTableLocals,
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &stringIndexOut, size_t &lengthOut) {
+              ++resolveStringCalls;
+              stringIndexOut = 91;
+              lengthOut = 5;
+              return true;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return ValueKind::Int32;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++emitExprCalls;
+              return true;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            emitInstruction,
+            error) == Result::Error);
+  CHECK(error == "native backend only supports File() with string literals or literal-backed bindings");
+  CHECK(resolveStringCalls == 0);
+  CHECK(emitExprCalls == 0);
+  CHECK(instructions.empty());
+
   instructions.clear();
   error.clear();
   emitExprCalls = 0;
@@ -259,6 +294,37 @@ TEST_CASE("ir lowerer file write helpers prefer graph facts for dynamic File pat
   CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
   CHECK(instructions[0].imm == 33);
   CHECK(instructions[1].op == primec::IrOpcode::FileOpenWriteDynamic);
+
+  instructions.clear();
+  error.clear();
+  emitExprCalls = 0;
+  resolveStringCalls = 0;
+  fileCallExpr.templateArgs = {"Read"};
+  CHECK(primec::ir_lowerer::tryEmitFileConstructorCall(
+            fileCallExpr,
+            staleTableLocals,
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &stringIndexOut, size_t &lengthOut) {
+              ++resolveStringCalls;
+              stringIndexOut = 91;
+              lengthOut = 5;
+              return true;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return ValueKind::Unknown;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++emitExprCalls;
+              return true;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            emitInstruction,
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(resolveStringCalls == 1);
+  CHECK(emitExprCalls == 0);
+  REQUIRE(instructions.size() == 1);
+  CHECK(instructions[0].op == primec::IrOpcode::FileOpenRead);
+  CHECK(instructions[0].imm == 91);
 
   instructions.clear();
   error.clear();

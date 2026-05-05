@@ -1016,6 +1016,13 @@ Task template:
       choose dynamic file-open emission. Known non-string graph facts suppress
       stale local string metadata; runtime local metadata remains compatibility
       fallback for syntax-only/no-fact paths.
+    - Completed slice: native `File<Mode>(path)` literal-backed path emission
+      now asks graph-backed value-kind inference before literal-backed local
+      string metadata can choose static file-open emission for name paths.
+      Known non-string graph facts suppress stale table-backed local metadata;
+      literal-backed local metadata remains compatibility fallback for
+      syntax-only/no-fact paths, and string literals keep the direct static
+      path.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.

@@ -6,6 +6,31 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 5, 2026)**
+- [x] TODO-4298: Prefer graph facts for File literals
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-05
+  - phase: Semantic ownership authority
+  - scope: Move native `File<Mode>(path)` literal-backed name-path selection
+    onto graph-backed value-kind inference before table-backed local metadata
+    can select static file-open emission.
+  - acceptance:
+    - Graph-backed non-string facts suppress stale table-backed local string
+      metadata.
+    - Graph-backed string facts still allow literal-backed static file-open
+      emission when a string-table target is available.
+    - Syntax-only/no-fact literal-backed local metadata remains a compatibility
+      fallback, and string literals keep the direct static path.
+  - stop_rule: Stop once File constructor static path classification prefers
+    graph-backed value kinds for name paths and helper coverage pins stale
+    table-backed suppression plus no-fact fallback behavior.
+  - evidence: Reordered `tryEmitFileConstructorCall` so non-literal path
+    expressions query the graph-backed value kind before resolving string-table
+    locals, while string literals still use direct string-table resolution.
+    File constructor helper coverage now proves stale table-backed locals are
+    not queried when graph facts say non-string and no-fact table-backed locals
+    still emit static file-open instructions.
+
 - [x] TODO-4298: Prefer graph facts for File paths
   - owner: ai
   - created_at: 2026-04-28
