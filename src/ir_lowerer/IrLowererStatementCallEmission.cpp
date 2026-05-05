@@ -4,6 +4,7 @@
 #include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererIndexKindHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
@@ -166,6 +167,19 @@ bool isFreeMemoryIntrinsicCall(const Expr &expr) {
   return expr.kind == Expr::Kind::Call && getBuiltinMemoryName(expr, builtinName) && builtinName == "free";
 }
 
+std::string resolveStatementCallSemanticTypeText(const SemanticProgram *semanticProgram,
+                                                 SymbolId typeTextId,
+                                                 const std::string &typeText) {
+  if (semanticProgram != nullptr && typeTextId != InvalidSymbolId) {
+    const std::string resolvedTypeText =
+        std::string(semanticProgramResolveCallTargetString(*semanticProgram, typeTextId));
+    if (!resolvedTypeText.empty()) {
+      return trimTemplateTypeText(resolvedTypeText);
+    }
+  }
+  return trimTemplateTypeText(typeText);
+}
+
 static bool resolveStatementVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) {
   if (expr.name.empty()) {
     return false;
@@ -273,6 +287,8 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
     const LocalMap &localsIn,
     const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinition,
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex,
     Expr &rewrittenStmt) {
   if (stmt.kind != Expr::Kind::Call || stmt.args.size() != 3) {
     return false;
@@ -410,6 +426,25 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
       return keyKindOut != LocalInfo::ValueKind::Unknown &&
              valueKindOut != LocalInfo::ValueKind::Unknown;
     };
+    std::function<std::string(const std::string &)> inferMapStructPathFromTypeText;
+    inferMapStructPathFromTypeText = [&](const std::string &typeText) {
+      std::string base;
+      std::string argText;
+      if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argText)) {
+        return std::string{};
+      }
+
+      const std::string normalizedBase = trimTemplateTypeText(base);
+      if (normalizedBase == "Reference" || normalizedBase == "Pointer") {
+        return inferMapStructPathFromTypeText(argText);
+      }
+
+      if (normalizedBase == "std/collections/experimental_map/Map" ||
+          normalizedBase == "/std/collections/experimental_map/Map") {
+        return std::string{"/std/collections/experimental_map/Map"};
+      }
+      return std::string{};
+    };
     auto inferMapKindsFromArgsPackTypeText = [&](const std::string &typeText,
                                                  LocalInfo::ValueKind &keyKindOut,
                                                  LocalInfo::ValueKind &valueKindOut) {
@@ -456,6 +491,103 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
         return typeName;
       }
       return std::string{};
+    };
+    auto tryPopulateFromSemanticTypeText = [&](SymbolId typeTextId,
+                                               const std::string &typeText,
+                                               MapAccessTargetInfo &targetInfoOut) {
+      const std::string resolvedTypeText =
+          resolveStatementCallSemanticTypeText(semanticProgram, typeTextId, typeText);
+      if (resolvedTypeText.empty()) {
+        return false;
+      }
+      if (!inferMapKindsFromTypeText(resolvedTypeText,
+                                     targetInfoOut.mapKeyKind,
+                                     targetInfoOut.mapValueKind)) {
+        return false;
+      }
+      targetInfoOut.isMapTarget = true;
+      targetInfoOut.structTypeName = inferMapStructPathFromTypeText(resolvedTypeText);
+      return true;
+    };
+    auto tryPopulateFromSemanticCollectionSpecialization =
+        [&](const Expr &receiverExpr, MapAccessTargetInfo &targetInfoOut) {
+      if (semanticIndex == nullptr || receiverExpr.semanticNodeId == 0) {
+        return false;
+      }
+      const auto *collectionFact =
+          findSemanticProductCollectionSpecialization(*semanticIndex, receiverExpr);
+      if (collectionFact == nullptr) {
+        return false;
+      }
+      const std::string collectionFamily = resolveStatementCallSemanticTypeText(
+          semanticProgram,
+          collectionFact->collectionFamilyId,
+          collectionFact->collectionFamily);
+      if (collectionFamily != "map" &&
+          collectionFamily != "/map" &&
+          collectionFamily != "std/collections/map" &&
+          collectionFamily != "/std/collections/map") {
+        return false;
+      }
+      const LocalInfo::ValueKind keyKind = valueKindFromTypeName(
+          resolveStatementCallSemanticTypeText(semanticProgram,
+                                               collectionFact->keyTypeTextId,
+                                               collectionFact->keyTypeText));
+      const LocalInfo::ValueKind valueKind = valueKindFromTypeName(
+          resolveStatementCallSemanticTypeText(semanticProgram,
+                                               collectionFact->valueTypeTextId,
+                                               collectionFact->valueTypeText));
+      if (keyKind == LocalInfo::ValueKind::Unknown ||
+          valueKind == LocalInfo::ValueKind::Unknown) {
+        return false;
+      }
+      targetInfoOut.isMapTarget = true;
+      targetInfoOut.mapKeyKind = keyKind;
+      targetInfoOut.mapValueKind = valueKind;
+      return true;
+    };
+    auto tryPopulateFromSemanticReceiverFact =
+        [&](const Expr &receiverExpr, MapAccessTargetInfo &targetInfoOut) {
+      if (semanticProgram == nullptr ||
+          semanticIndex == nullptr ||
+          receiverExpr.semanticNodeId == 0) {
+        return false;
+      }
+      if (tryPopulateFromSemanticCollectionSpecialization(receiverExpr, targetInfoOut)) {
+        return true;
+      }
+      if (const auto *queryFact =
+              findSemanticProductQueryFact(semanticProgram, *semanticIndex, receiverExpr);
+          queryFact != nullptr) {
+        if (tryPopulateFromSemanticTypeText(queryFact->bindingTypeTextId,
+                                            queryFact->bindingTypeText,
+                                            targetInfoOut) ||
+            tryPopulateFromSemanticTypeText(queryFact->queryTypeTextId,
+                                            queryFact->queryTypeText,
+                                            targetInfoOut) ||
+            tryPopulateFromSemanticTypeText(queryFact->receiverBindingTypeTextId,
+                                            queryFact->receiverBindingTypeText,
+                                            targetInfoOut)) {
+          return true;
+        }
+      }
+      if (const auto *bindingFact =
+              findSemanticProductBindingFact(*semanticIndex, receiverExpr);
+          bindingFact != nullptr &&
+          tryPopulateFromSemanticTypeText(bindingFact->bindingTypeTextId,
+                                          bindingFact->bindingTypeText,
+                                          targetInfoOut)) {
+        return true;
+      }
+      if (const auto *localAutoFact =
+              findSemanticProductLocalAutoFact(semanticProgram, *semanticIndex, receiverExpr);
+          localAutoFact != nullptr &&
+          tryPopulateFromSemanticTypeText(localAutoFact->bindingTypeTextId,
+                                          localAutoFact->bindingTypeText,
+                                          targetInfoOut)) {
+        return true;
+      }
+      return false;
     };
 
     auto peelLocationWrappers = [&](const Expr &expr) {
@@ -598,6 +730,10 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
           }
         }
       }
+    }
+
+    if (tryPopulateFromSemanticReceiverFact(*canonicalReceiverExpr, targetInfoOut)) {
+      return true;
     }
 
     auto tryPopulateFromResolvedCallee = [&](const Definition *resolvedCallee) {
@@ -1100,7 +1236,9 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
     const std::function<void()> &emitArrayIndexOutOfBounds,
     std::vector<IrInstruction> &instructions,
-    std::string &error) {
+    std::string &error,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
   if (stmt.kind != Expr::Kind::Call) {
     return DirectCallStatementEmitResult::NotMatched;
   }
@@ -1256,7 +1394,13 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
   Expr directStmt = stmt;
   Expr rewrittenMapInsertStmt;
   if (rewriteMapInsertHelperStatementToBuiltin(
-          stmt, localsIn, resolveMethodCallDefinition, resolveDefinitionCall, rewrittenMapInsertStmt)) {
+          stmt,
+          localsIn,
+          resolveMethodCallDefinition,
+          resolveDefinitionCall,
+          semanticProgram,
+          semanticIndex,
+          rewrittenMapInsertStmt)) {
     directStmt = rewrittenMapInsertStmt;
   }
   bool rewrittenExplicitVectorMutatorToBuiltinCall = false;
@@ -1498,7 +1642,9 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
     std::vector<IrInstruction> &instructions,
-    std::string &error) {
+    std::string &error,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
   return tryEmitDirectCallStatement(stmt,
                                     localsIn,
                                     isArrayCountCall,
@@ -1511,7 +1657,9 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
                                     emitInlineDefinitionCall,
                                     []() {},
                                     instructions,
-                                    error);
+                                    error,
+                                    semanticProgram,
+                                    semanticIndex);
 }
 
 AssignOrExprStatementEmitResult emitAssignOrExprStatementWithPop(

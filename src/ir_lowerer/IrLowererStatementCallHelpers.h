@@ -84,7 +84,9 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
     const std::function<void()> &emitArrayIndexOutOfBounds,
     std::vector<IrInstruction> &instructions,
-    std::string &error);
+    std::string &error,
+    const SemanticProgram *semanticProgram = nullptr,
+    const SemanticProductIndex *semanticIndex = nullptr);
 AssignOrExprStatementEmitResult emitAssignOrExprStatementWithPop(
     const Expr &stmt,
     const LocalMap &localsIn,

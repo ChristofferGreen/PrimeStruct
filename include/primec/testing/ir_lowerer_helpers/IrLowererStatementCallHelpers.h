@@ -73,7 +73,9 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
     std::vector<IrInstruction> &instructions,
-    std::string &error);
+    std::string &error,
+    const SemanticProgram *semanticProgram = nullptr,
+    const SemanticProductIndex *semanticIndex = nullptr);
 inline DirectCallStatementEmitResult tryEmitDirectCallStatement(
     const Expr &stmt,
     const LocalMap &localsIn,
@@ -85,7 +87,9 @@ inline DirectCallStatementEmitResult tryEmitDirectCallStatement(
     const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
     std::vector<IrInstruction> &instructions,
-    std::string &error) {
+    std::string &error,
+    const SemanticProgram *semanticProgram = nullptr,
+    const SemanticProductIndex *semanticIndex = nullptr) {
   return tryEmitDirectCallStatement(
       stmt,
       localsIn,
@@ -98,7 +102,9 @@ inline DirectCallStatementEmitResult tryEmitDirectCallStatement(
       getReturnInfo,
       emitInlineDefinitionCall,
       instructions,
-      error);
+      error,
+      semanticProgram,
+      semanticIndex);
 }
 AssignOrExprStatementEmitResult emitAssignOrExprStatementWithPop(
     const Expr &stmt,

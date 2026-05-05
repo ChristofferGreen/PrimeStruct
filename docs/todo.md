@@ -953,6 +953,12 @@ Task template:
       copied payload type text before scalar, collection, or struct payload
       classification. Copied text remains only the compatibility fallback
       when the interned ID is absent or unresolved.
+    - Completed slice: native statement-call map insert rewrites now consume
+      semantic-product collection, query, binding, and local-auto receiver
+      facts before scanning callee parameter transforms for map key/value
+      shape. Interned receiver type IDs win over copied text, and the old
+      parameter-transform scan remains only as syntax-only/no-fact
+      compatibility.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.

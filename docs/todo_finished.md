@@ -2613,6 +2613,42 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
     and documented the remaining TODO-4298 work. Local test execution was
     skipped per the lite workflow.
 
+- [x] TODO-4298: Use receiver facts for map inserts
+  - owner: ai
+  - created_at: 2026-05-05
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes native
+    statement-call map insert rewrites read semantic-product receiver facts
+    before falling back to callee parameter transform reconstruction.
+  - implementation_notes:
+    - Thread the statement-call semantic product and index into direct-call
+      statement emission so map insert rewriting can inspect graph-owned
+      receiver facts.
+    - Resolve collection specialization key/value type IDs and query,
+      binding, and local-auto receiver type IDs before copied type text when
+      classifying map key/value shape.
+    - Keep the existing callee parameter-transform scan as the compatibility
+      path for syntax-only or no-semantic-product contexts.
+  - acceptance:
+    - Native statement-call map insert rewriting consumes graph-backed
+      receiver facts before duplicated callee transform text.
+    - Interned semantic-product type IDs override copied text for receiver
+      map classification.
+    - Lowerer source-contract coverage locks the graph-backed consumer and
+      the statement-step semantic-product threading.
+    - The remaining TODO-4298 block records the completed slice and remaining
+      adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once statement-call map insert receiver classification
+    prefers published semantic-product facts and keeps transform scanning only
+    as compatibility fallback.
+  - finished_at: 2026-05-05
+  - evidence: Promoted statement-call map insert receiver classification in
+    `IrLowererStatementCallEmission.cpp`, threaded semantic-product context
+    through `IrLowererLowerStatementsCallsStep.cpp`, added source-contract
+    coverage, and documented the remaining TODO-4298 work. Local test
+    execution was skipped per the lite workflow.
+
 - [x] TODO-4330: Pack source Result ok struct payloads
   - owner: ai
   - created_at: 2026-04-28

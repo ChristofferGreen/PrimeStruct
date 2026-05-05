@@ -212,7 +212,9 @@ bool runLowerStatementsCallsStep(const LowerStatementsCallsStepInput &input,
       },
       [&]() { input.emitArrayIndexOutOfBounds(); },
       instructions,
-      errorOut);
+      errorOut,
+      input.semanticProgram,
+      input.semanticIndex);
   if (directCallResult == DirectCallStatementEmitResult::Error) {
     return false;
   }

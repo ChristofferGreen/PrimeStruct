@@ -814,6 +814,54 @@ TEST_CASE("ir lowerer skips builtin map insert rewrite for direct experimental m
         std::string::npos);
 }
 
+TEST_CASE("ir lowerer statement map insert rewrite uses semantic product receiver ids first") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path statementCallPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererStatementCallEmission.cpp";
+  const std::filesystem::path callsStepPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsCallsStep.cpp";
+
+  REQUIRE(std::filesystem::exists(statementCallPath));
+  REQUIRE(std::filesystem::exists(callsStepPath));
+  const std::string statementSource = readText(statementCallPath);
+  const std::string callsStepSource = readText(callsStepPath);
+
+  CHECK(statementSource.find("resolveStatementCallSemanticTypeText(") !=
+        std::string::npos);
+  CHECK(statementSource.find("semanticProgramResolveCallTargetString(*semanticProgram, typeTextId)") !=
+        std::string::npos);
+  CHECK(statementSource.find("findSemanticProductCollectionSpecialization(*semanticIndex, receiverExpr)") !=
+        std::string::npos);
+  CHECK(statementSource.find("collectionFact->keyTypeTextId") !=
+        std::string::npos);
+  CHECK(statementSource.find("collectionFact->valueTypeTextId") !=
+        std::string::npos);
+  CHECK(statementSource.find("findSemanticProductQueryFact(semanticProgram, *semanticIndex, receiverExpr)") !=
+        std::string::npos);
+  CHECK(statementSource.find("queryFact->bindingTypeTextId") <
+        statementSource.find("queryFact->bindingTypeText,"));
+  CHECK(statementSource.find("queryFact->queryTypeTextId") <
+        statementSource.find("queryFact->queryTypeText,"));
+  CHECK(statementSource.find("tryPopulateFromSemanticReceiverFact(*canonicalReceiverExpr, targetInfoOut)") !=
+        std::string::npos);
+  CHECK(callsStepSource.find("input.semanticProgram,\n"
+                             "      input.semanticIndex);") !=
+        std::string::npos);
+}
+
 TEST_CASE("ir lowerer direct expr and inference rewrites guard explicit map defs") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
