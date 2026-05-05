@@ -219,6 +219,8 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
 #include "IrLowererLowerStatementsLoops.h"
     return ir_lowerer::runLowerStatementsCallsStep(
         {
+            .semanticProgram = semanticProgram,
+            .semanticIndex = &callResolutionAdapters.semanticProductTargets.semanticIndex,
             .inferExprKind =
                 [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferExprKind(valueExpr, valueLocals); },
             .inferStructExprPath =

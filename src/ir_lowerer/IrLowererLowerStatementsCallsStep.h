@@ -9,7 +9,12 @@
 
 namespace primec::ir_lowerer {
 
+struct SemanticProductIndex;
+
 struct LowerStatementsCallsStepInput {
+  const SemanticProgram *semanticProgram = nullptr;
+  const SemanticProductIndex *semanticIndex = nullptr;
+
   std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferExprKind;
   std::function<std::string(const Expr &, const LocalMap &)> inferStructExprPath;
   std::function<bool(const Expr &, const LocalMap &)> emitExpr;

@@ -66,6 +66,35 @@ TEST_CASE("ir lowerer statement call helper validates buffer_store diagnostics")
             error) == EmitResult::Error);
   CHECK(error == "buffer_store requires integer index");
 
+  primec::SemanticProgram semanticProgram;
+  primec::SemanticProgramQueryFact queryFact;
+  queryFact.semanticNodeId = 7101;
+  queryFact.queryTypeText = "u64";
+  queryFact.bindingTypeText = "f32";
+  semanticProgram.queryFacts.push_back(queryFact);
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  stmt.args[1].semanticNodeId = 7101;
+  int inferCalls = 0;
+  instructions.clear();
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitBufferStoreStatement(
+            stmt,
+            locals,
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++inferCalls;
+              return ValueKind::Float32;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            []() { return 0; },
+            instructions,
+            error,
+            &semanticProgram,
+            &semanticIndex) == EmitResult::Emitted);
+  CHECK(inferCalls == 0);
+  CHECK(error.empty());
+
   primec::Expr otherStmt;
   otherStmt.kind = primec::Expr::Kind::Call;
   otherStmt.name = "notify";

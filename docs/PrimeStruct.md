@@ -587,6 +587,10 @@ Planned non-template inference migration contract:
 - Completed lowerer-side indexed-access index-kind slice: native/string/array
   access validation now prefers semantic-product query, binding, and local-auto
   type facts for index expressions before using legacy expression inference.
+- Completed lowerer-side `buffer_store` index-kind slice: GPU buffer stores now
+  use the same graph-backed semantic-product index facts before legacy
+  expression inference, preserving the existing integer-index diagnostic for
+  syntax-only compatibility.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph
@@ -945,6 +949,9 @@ Compile-pipeline publication contract:
 - Native indexed-access validation now follows the graph-backed rule for index
   expressions: query, binding, and local-auto type facts provide the index kind
   before legacy expression inference is consulted.
+- GPU `buffer_store(...)` validation follows the same graph-backed index rule:
+  semantic-product query, binding, and local-auto type facts provide the index
+  kind before legacy expression inference is consulted.
 - Dump-stage handling should be able to read either the syntax-facing canonical AST dump or the future semantic-product
   dump from the same compile-pipeline success result without re-running semantics.
 - Backend/runtime entrypoints should consume the semantic product from compile-pipeline output once available rather

@@ -105,7 +105,9 @@ bool runLowerStatementsCallsStep(const LowerStatementsCallsStepInput &input,
       [&](const Expr &valueExpr, const LocalMap &valueLocals) { return input.emitExpr(valueExpr, valueLocals); },
       [&]() { return input.allocTempLocal(); },
       instructions,
-      errorOut);
+      errorOut,
+      input.semanticProgram,
+      input.semanticIndex);
   if (bufferStoreResult == BufferStoreStatementEmitResult::Error) {
     return false;
   }

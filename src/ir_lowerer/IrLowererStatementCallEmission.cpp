@@ -856,7 +856,9 @@ BufferStoreStatementEmitResult tryEmitBufferStoreStatement(
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<int32_t()> &allocTempLocal,
     std::vector<IrInstruction> &instructions,
-    std::string &error) {
+    std::string &error,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
   if (stmt.kind != Expr::Kind::Call || !isSimpleCallName(stmt, "buffer_store")) {
     return BufferStoreStatementEmitResult::NotMatched;
   }
@@ -874,8 +876,16 @@ BufferStoreStatementEmitResult tryEmitBufferStoreStatement(
     return BufferStoreStatementEmitResult::Error;
   }
 
-  const LocalInfo::ValueKind indexKind = normalizeIndexKind(inferExprKind(stmt.args[1], localsIn));
-  if (!isSupportedIndexKind(indexKind)) {
+  LocalInfo::ValueKind indexKind = LocalInfo::ValueKind::Unknown;
+  if (!resolveValidatedAccessIndexKind(
+          stmt.args[1],
+          localsIn,
+          "buffer_store",
+          inferExprKind,
+          indexKind,
+          error,
+          semanticProgram,
+          semanticIndex)) {
     error = "buffer_store requires integer index";
     return BufferStoreStatementEmitResult::Error;
   }

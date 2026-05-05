@@ -6,6 +6,28 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 5, 2026)**
+- [x] TODO-4298: Promote buffer store index facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-05
+  - phase: Semantic ownership authority
+  - scope: Promote native `buffer_store` index-kind validation to prefer
+    semantic-product query, binding, and local-auto type facts before legacy
+    expression-kind inference.
+  - acceptance:
+    - `buffer_store` index validation can consume graph-backed index
+      expression type facts.
+    - Stale fallback inference cannot override a concrete semantic-product
+      integer index fact.
+    - Focused backend IR validation covers the promoted helper path.
+  - stop_rule: Stop once the focused backend IR helper test passes without
+    broad release discovery.
+  - evidence: Threaded semantic-product index facts into
+    `tryEmitBufferStoreStatement(...)`, kept the existing
+    `buffer_store requires integer index` diagnostic on invalid indexes, and
+    focused validation passed for
+    `./PrimeStruct_backend_ir_tests --test-case="ir lowerer statement call helper validates buffer_store diagnostics"`.
+
 - [x] TODO-4298: Promote indexed access kind facts
   - owner: ai
   - created_at: 2026-04-28

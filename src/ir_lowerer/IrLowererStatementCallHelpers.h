@@ -15,6 +15,7 @@
 
 namespace primec::ir_lowerer {
 
+struct SemanticProductIndex;
 struct StructSlotLayoutInfo;
 
 enum class BufferStoreStatementEmitResult {
@@ -56,7 +57,9 @@ BufferStoreStatementEmitResult tryEmitBufferStoreStatement(
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<int32_t()> &allocTempLocal,
     std::vector<IrInstruction> &instructions,
-    std::string &error);
+    std::string &error,
+    const SemanticProgram *semanticProgram = nullptr,
+    const SemanticProductIndex *semanticIndex = nullptr);
 DispatchStatementEmitResult tryEmitDispatchStatement(
     const Expr &stmt,
     const LocalMap &localsIn,

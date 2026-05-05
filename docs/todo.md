@@ -706,7 +706,9 @@ Task template:
     complete for semantic-product-backed inferred initializer type matching.
     The native indexed-access index-kind slice is complete for
     semantic-product-backed query, binding, and local-auto type facts before
-    legacy expression-kind inference.
+    legacy expression-kind inference. The native `buffer_store` index-kind
+    slice is complete for the same semantic-product-backed index fact
+    authority before legacy expression-kind inference.
     The native active sum payload tag slice is complete for semantic-product
     move/drop helper dispatch. The native active sum payload-storage slice is
     complete for semantic-product-backed move/drop helper selection and
