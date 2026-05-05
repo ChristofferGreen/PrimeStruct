@@ -584,6 +584,9 @@ Planned non-template inference migration contract:
   binding/query type IDs override stale copied payload text before scalar,
   collection, or struct payload classification. Copied text remains only the
   compatibility fallback when no usable interned ID is present.
+- Completed lowerer-side indexed-access index-kind slice: native/string/array
+  access validation now prefers semantic-product query, binding, and local-auto
+  type facts for index expressions before using legacy expression inference.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph
@@ -939,6 +942,9 @@ Compile-pipeline publication contract:
   available for call-site consumers that already resolved a callee path.
 - Base call-kind inference now applies the same graph-backed rule for `try(...)`: semantic-product `try` facts provide
   the value kind before local `Result` state can infer it, and missing facts leave the semantic-product path unresolved.
+- Native indexed-access validation now follows the graph-backed rule for index
+  expressions: query, binding, and local-auto type facts provide the index kind
+  before legacy expression inference is consulted.
 - Dump-stage handling should be able to read either the syntax-facing canonical AST dump or the future semantic-product
   dump from the same compile-pipeline success result without re-running semantics.
 - Backend/runtime entrypoints should consume the semantic product from compile-pipeline output once available rather

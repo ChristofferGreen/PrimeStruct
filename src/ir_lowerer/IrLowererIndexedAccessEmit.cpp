@@ -149,7 +149,9 @@ StringTableAccessEmitResult tryEmitStringTableAccessLoad(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error) {
+    std::string &error,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
   int32_t stringIndex = -1;
   size_t stringLength = 0;
   if (!resolveStringTableTarget(targetExpr, localsIn, stringIndex, stringLength)) {
@@ -157,7 +159,8 @@ StringTableAccessEmitResult tryEmitStringTableAccessLoad(
   }
 
   LocalInfo::ValueKind indexKind = LocalInfo::ValueKind::Unknown;
-  if (!resolveValidatedAccessIndexKind(indexExpr, localsIn, accessName, inferExprKind, indexKind, error)) {
+  if (!resolveValidatedAccessIndexKind(
+          indexExpr, localsIn, accessName, inferExprKind, indexKind, error, semanticProgram, semanticIndex)) {
     return StringTableAccessEmitResult::Error;
   }
   if (stringLength > static_cast<size_t>(std::numeric_limits<int32_t>::max())) {
@@ -208,7 +211,9 @@ DynamicStringAccessEmitResult tryEmitDynamicStringAccessLoad(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error) {
+    std::string &error,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
   bool isRuntimeStringTarget = false;
   if (targetExpr.kind == Expr::Kind::Name) {
     auto it = localsIn.find(targetExpr.name);
@@ -241,7 +246,8 @@ DynamicStringAccessEmitResult tryEmitDynamicStringAccessLoad(
   }
 
   LocalInfo::ValueKind indexKind = LocalInfo::ValueKind::Unknown;
-  if (!resolveValidatedAccessIndexKind(indexExpr, localsIn, accessName, inferExprKind, indexKind, error)) {
+  if (!resolveValidatedAccessIndexKind(
+          indexExpr, localsIn, accessName, inferExprKind, indexKind, error, semanticProgram, semanticIndex)) {
     return DynamicStringAccessEmitResult::Error;
   }
 
@@ -339,7 +345,9 @@ bool emitArrayVectorIndexedAccess(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error) {
+    std::string &error,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
   const auto arrayVectorTargetInfo = resolveArrayVectorAccessTargetInfo(
       targetExpr, localsIn, resolveCallArrayVectorAccessTargetInfo);
   if (!validateArrayVectorAccessTargetInfo(arrayVectorTargetInfo, error)) {
@@ -347,7 +355,8 @@ bool emitArrayVectorIndexedAccess(
   }
 
   LocalInfo::ValueKind indexKind = LocalInfo::ValueKind::Unknown;
-  if (!resolveValidatedAccessIndexKind(indexExpr, localsIn, accessName, inferExprKind, indexKind, error)) {
+  if (!resolveValidatedAccessIndexKind(
+          indexExpr, localsIn, accessName, inferExprKind, indexKind, error, semanticProgram, semanticIndex)) {
     return false;
   }
 
@@ -458,7 +467,9 @@ bool emitBuiltinArrayAccess(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error) {
+    std::string &error,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
   const auto stringTableAccessResult = tryEmitStringTableAccessLoad(
       accessName,
       targetExpr,
@@ -472,7 +483,9 @@ bool emitBuiltinArrayAccess(
       instructionCount,
       emitInstruction,
       patchInstructionImm,
-      error);
+      error,
+      semanticProgram,
+      semanticIndex);
   if (stringTableAccessResult == StringTableAccessEmitResult::Error) {
     return false;
   }
@@ -505,7 +518,9 @@ bool emitBuiltinArrayAccess(
         instructionCount,
         emitInstruction,
         patchInstructionImm,
-        error);
+        error,
+        semanticProgram,
+        semanticIndex);
   }
 
   const auto mapLookupResult = tryEmitMapAccessLookup(
@@ -544,7 +559,9 @@ bool emitBuiltinArrayAccess(
       instructionCount,
       emitInstruction,
       patchInstructionImm,
-      error);
+      error,
+      semanticProgram,
+      semanticIndex);
   if (dynamicStringAccessResult == DynamicStringAccessEmitResult::Error) {
     return false;
   }
@@ -574,7 +591,9 @@ bool emitBuiltinArrayAccess(
       instructionCount,
       emitInstruction,
       patchInstructionImm,
-      error);
+      error,
+      semanticProgram,
+      semanticIndex);
 }
 
 bool emitBuiltinArrayAccess(
@@ -615,7 +634,9 @@ bool emitBuiltinArrayAccess(
       instructionCount,
       emitInstruction,
       patchInstructionImm,
-      error);
+      error,
+      nullptr,
+      nullptr);
 }
 
 bool emitBuiltinArrayAccess(
@@ -655,7 +676,9 @@ bool emitBuiltinArrayAccess(
       instructionCount,
       emitInstruction,
       patchInstructionImm,
-      error);
+      error,
+      nullptr,
+      nullptr);
 }
 
 bool emitBuiltinArrayAccess(
@@ -682,6 +705,8 @@ bool emitBuiltinArrayAccess(
       localsIn,
       resolveStringTableTarget,
       0,
+      {},
+      {},
       inferExprKind,
       isEntryArgsName,
       allocTempLocal,
@@ -692,7 +717,9 @@ bool emitBuiltinArrayAccess(
       instructionCount,
       emitInstruction,
       patchInstructionImm,
-      error);
+      error,
+      nullptr,
+      nullptr);
 }
 
 } // namespace primec::ir_lowerer

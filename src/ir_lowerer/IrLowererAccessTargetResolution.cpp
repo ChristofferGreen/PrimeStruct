@@ -5,8 +5,10 @@
 
 #include "IrLowererHelpers.h"
 #include "IrLowererIndexKindHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -94,6 +96,61 @@ std::string inferExperimentalMapStructPathFromKinds(LocalInfo::ValueKind keyKind
   std::ostringstream specializedPath;
   specializedPath << "/std/collections/experimental_map/Map__t" << std::hex << hash;
   return specializedPath.str();
+}
+
+std::string resolveAccessSemanticTypeText(const SemanticProgram *semanticProgram,
+                                          const std::string &typeText,
+                                          SymbolId typeTextId) {
+  if (semanticProgram != nullptr && typeTextId != InvalidSymbolId) {
+    const std::string resolvedTypeText =
+        std::string(semanticProgramResolveCallTargetString(*semanticProgram, typeTextId));
+    if (!resolvedTypeText.empty()) {
+      return trimTemplateTypeText(resolvedTypeText);
+    }
+  }
+  return trimTemplateTypeText(typeText);
+}
+
+LocalInfo::ValueKind resolveAccessIndexSemanticKind(
+    const Expr &indexExpr,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
+  if (semanticProgram == nullptr || semanticIndex == nullptr || indexExpr.semanticNodeId == 0) {
+    return LocalInfo::ValueKind::Unknown;
+  }
+  if (const auto *queryFact =
+          findSemanticProductQueryFact(semanticProgram, *semanticIndex, indexExpr);
+      queryFact != nullptr) {
+    LocalInfo::ValueKind kind = valueKindFromTypeName(resolveAccessSemanticTypeText(
+        semanticProgram, queryFact->queryTypeText, queryFact->queryTypeTextId));
+    if (kind != LocalInfo::ValueKind::Unknown) {
+      return kind;
+    }
+    kind = valueKindFromTypeName(resolveAccessSemanticTypeText(
+        semanticProgram, queryFact->bindingTypeText, queryFact->bindingTypeTextId));
+    if (kind != LocalInfo::ValueKind::Unknown) {
+      return kind;
+    }
+  }
+  if (const auto *bindingFact =
+          findSemanticProductBindingFact(*semanticIndex, indexExpr);
+      bindingFact != nullptr) {
+    const LocalInfo::ValueKind kind = valueKindFromTypeName(resolveAccessSemanticTypeText(
+        semanticProgram, bindingFact->bindingTypeText, bindingFact->bindingTypeTextId));
+    if (kind != LocalInfo::ValueKind::Unknown) {
+      return kind;
+    }
+  }
+  if (const auto *localAutoFact =
+          findSemanticProductLocalAutoFactBySemanticId(*semanticIndex, indexExpr);
+      localAutoFact != nullptr) {
+    const LocalInfo::ValueKind kind = valueKindFromTypeName(resolveAccessSemanticTypeText(
+        semanticProgram, localAutoFact->bindingTypeText, localAutoFact->bindingTypeTextId));
+    if (kind != LocalInfo::ValueKind::Unknown) {
+      return kind;
+    }
+  }
+  return LocalInfo::ValueKind::Unknown;
 }
 
 const Expr *findForwardedReturnValueExpr(const Definition &definition) {
@@ -536,13 +593,29 @@ bool resolveValidatedAccessIndexKind(
     const std::string &accessName,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     LocalInfo::ValueKind &indexKindOut,
-    std::string &error) {
-  indexKindOut = normalizeIndexKind(inferExprKind(indexExpr, localsIn));
+    std::string &error,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
+  indexKindOut = normalizeIndexKind(resolveAccessIndexSemanticKind(indexExpr, semanticProgram, semanticIndex));
+  if (indexKindOut == LocalInfo::ValueKind::Unknown) {
+    indexKindOut = normalizeIndexKind(inferExprKind(indexExpr, localsIn));
+  }
   if (!isSupportedIndexKind(indexKindOut)) {
     error = "native backend requires integer indices for " + accessName;
     return false;
   }
   return true;
+}
+
+bool resolveValidatedAccessIndexKind(
+    const Expr &indexExpr,
+    const LocalMap &localsIn,
+    const std::string &accessName,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    LocalInfo::ValueKind &indexKindOut,
+    std::string &error) {
+  return resolveValidatedAccessIndexKind(
+      indexExpr, localsIn, accessName, inferExprKind, indexKindOut, error, nullptr, nullptr);
 }
 
 ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(

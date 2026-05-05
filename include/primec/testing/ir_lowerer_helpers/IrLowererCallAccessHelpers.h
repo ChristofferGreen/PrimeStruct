@@ -1,3 +1,4 @@
+struct SemanticProductIndex;
 struct SemanticProductTargetAdapter;
 
 MapAccessTargetInfo resolveMapAccessTargetInfo(const Expr &target,
@@ -62,7 +63,9 @@ StringTableAccessEmitResult tryEmitStringTableAccessLoad(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error);
+    std::string &error,
+    const SemanticProgram *semanticProgram = nullptr,
+    const SemanticProductIndex *semanticIndex = nullptr);
 bool emitArrayVectorIndexedAccess(
     const std::string &accessName,
     const Expr &targetExpr,
@@ -76,7 +79,9 @@ bool emitArrayVectorIndexedAccess(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error);
+    std::string &error,
+    const SemanticProgram *semanticProgram = nullptr,
+    const SemanticProductIndex *semanticIndex = nullptr);
 bool emitArrayVectorIndexedAccess(
     const std::string &accessName,
     const Expr &targetExpr,
@@ -109,7 +114,9 @@ bool emitBuiltinArrayAccess(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error);
+    std::string &error,
+    const SemanticProgram *semanticProgram = nullptr,
+    const SemanticProductIndex *semanticIndex = nullptr);
 bool emitBuiltinArrayAccess(
     const std::string &accessName,
     const Expr &targetExpr,
@@ -176,6 +183,15 @@ bool resolveValidatedAccessIndexKind(
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     LocalInfo::ValueKind &indexKindOut,
     std::string &error);
+bool resolveValidatedAccessIndexKind(
+    const Expr &indexExpr,
+    const LocalMap &localsIn,
+    const std::string &accessName,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    LocalInfo::ValueKind &indexKindOut,
+    std::string &error,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex);
 IrOpcode mapKeyCompareOpcode(LocalInfo::ValueKind mapKeyKind);
 MapLookupStringKeyResult tryResolveMapLookupStringKey(
     LocalInfo::ValueKind mapKeyKind,

@@ -704,6 +704,9 @@ Task template:
     semantic-product-backed constructor, `Result.ok`, and inferred initializer
     payload shape selection. The native sum initializer-source slice is
     complete for semantic-product-backed inferred initializer type matching.
+    The native indexed-access index-kind slice is complete for
+    semantic-product-backed query, binding, and local-auto type facts before
+    legacy expression-kind inference.
     The native active sum payload tag slice is complete for semantic-product
     move/drop helper dispatch. The native active sum payload-storage slice is
     complete for semantic-product-backed move/drop helper selection and

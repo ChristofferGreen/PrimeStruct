@@ -6,6 +6,26 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 5, 2026)**
+- [x] TODO-4298: Promote indexed access kind facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-05
+  - phase: Semantic ownership authority
+  - scope: Promote native indexed-access index-kind validation to prefer
+    semantic-product query, binding, and local-auto type facts before legacy
+    expression-kind inference.
+  - acceptance:
+    - Native string, array/vector, and entry-args index validation can consume
+      graph-backed index expression type facts.
+    - Stale fallback inference cannot override a concrete semantic-product
+      index type fact.
+    - Focused backend IR validation covers the promoted index-kind resolver.
+  - stop_rule: Stop once the focused backend IR helper test passes without
+    broad release discovery.
+  - evidence: Added semantic-product-backed index-kind resolution to native
+    access validation and focused validation passed for
+    `./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers resolve validated access index kind"`.
+
 - [x] TODO-4360: Stabilize map access temporaries
   - owner: ai
   - created_at: 2026-05-04

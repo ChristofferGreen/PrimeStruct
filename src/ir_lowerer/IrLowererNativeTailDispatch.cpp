@@ -249,6 +249,10 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error,
     const SemanticProgram *semanticProgram) {
+  const SemanticProductIndex semanticIndex = buildSemanticProductIndex(semanticProgram);
+  const SemanticProductIndex *const semanticIndexPtr =
+      semanticProgram == nullptr ? nullptr : &semanticIndex;
+
   std::string mathName;
   if (tryGetMathBuiltinName(expr, mathName) && !isSupportedMathBuiltinName(mathName)) {
     error = "native backend does not support math builtin: " + mathName;
@@ -570,7 +574,9 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
                                 instructionCount,
                                 emitInstruction,
                                 patchInstructionImm,
-                                error)) {
+                                error,
+                                semanticProgram,
+                                semanticIndexPtr)) {
       return NativeCallTailDispatchResult::Error;
     }
     return NativeCallTailDispatchResult::Emitted;

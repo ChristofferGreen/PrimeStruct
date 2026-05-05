@@ -815,6 +815,7 @@
                   expr.args[1],
                   localsIn,
                   resolveStringTableTarget,
+                  0,
                   {},
                   resolveHelperReturnedArrayVectorAccessTargetInfo,
                   inferExprKind,
@@ -833,7 +834,9 @@
                   [&](size_t instructionIndex, uint64_t imm) {
                     function.instructions[instructionIndex].imm = imm;
                   },
-                  error)) {
+                  error,
+                  semanticProgram,
+                  &callResolutionAdapters.semanticProductTargets.semanticIndex)) {
             return false;
           }
           return true;
@@ -1089,9 +1092,16 @@
           return false;
         }
         if (isEntryArgsName(arg.args.front(), localsIn)) {
-          LocalInfo::ValueKind indexKind = normalizeIndexKind(inferExprKind(arg.args[1], localsIn));
-          if (!isSupportedIndexKind(indexKind)) {
-            error = "native backend requires integer indices for " + accessName;
+          LocalInfo::ValueKind indexKind = LocalInfo::ValueKind::Unknown;
+          if (!resolveValidatedAccessIndexKind(
+                  arg.args[1],
+                  localsIn,
+                  accessName,
+                  inferExprKind,
+                  indexKind,
+                  error,
+                  semanticProgram,
+                  &callResolutionAdapters.semanticProductTargets.semanticIndex)) {
             return false;
           }
 

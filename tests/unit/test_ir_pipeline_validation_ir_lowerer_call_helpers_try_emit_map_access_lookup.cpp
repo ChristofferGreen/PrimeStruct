@@ -179,6 +179,34 @@ TEST_CASE("ir lowerer call helpers resolve validated access index kind") {
       error));
   CHECK(inferCalls == 1);
   CHECK(error == "native backend requires integer indices for at");
+
+  primec::SemanticProgram semanticProgram;
+  primec::SemanticProgramQueryFact queryFact;
+  queryFact.semanticNodeId = 9001;
+  queryFact.queryTypeText = "u64";
+  queryFact.bindingTypeText = "f32";
+  semanticProgram.queryFacts.push_back(queryFact);
+  const auto semanticIndex = primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  indexExpr.semanticNodeId = 9001;
+  inferCalls = 0;
+  error.clear();
+  indexKind = Kind::Unknown;
+  CHECK(primec::ir_lowerer::resolveValidatedAccessIndexKind(
+      indexExpr,
+      locals,
+      "at",
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        ++inferCalls;
+        return Kind::Float32;
+      },
+      indexKind,
+      error,
+      &semanticProgram,
+      &semanticIndex));
+  CHECK(inferCalls == 0);
+  CHECK(indexKind == Kind::UInt64);
+  CHECK(error.empty());
 }
 
 TEST_CASE("ir lowerer call helpers emit string table access load") {
