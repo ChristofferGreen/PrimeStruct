@@ -1002,17 +1002,16 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "  auto defIt = defMap_.find(resolveCalleePath(expr));") ==
         std::string::npos);
   CHECK(buildInitializerInferenceCallsSource.find(
-            "  std::string resolvedCallPath = preferredCollectionHelperResolvedPath(expr);\n"
-            "  if (resolvedCallPath.empty()) {\n"
-            "    resolvedCallPath = resolveCalleePath(expr);\n"
-            "  }\n"
-            "  if (!resolvedCallPath.empty()) {\n"
-            "    const std::string concreteResolvedCallPath =\n"
-            "        resolveExprConcreteCallPath(params, locals, expr, resolvedCallPath);\n"
-            "    if (!concreteResolvedCallPath.empty()) {\n"
-            "      resolvedCallPath = concreteResolvedCallPath;\n"
-            "    }\n"
-            "  }\n"
+            "  std::string resolvedCallPath = preferredCollectionHelperResolvedPath(expr);\n") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
+            "  const std::string canonicalResolvedCallPath =\n"
+            "      canonicalizeResolvedPath(resolvedCallPath);\n") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
+            "canonicalResolvedCallPath == \"/std/collections/vector/at\"") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
             "  const bool isCountLike =\n"
             "      expr.args.size() == 1 &&\n"
             "      (isSimpleCallName(expr, \"count\") ||\n"
