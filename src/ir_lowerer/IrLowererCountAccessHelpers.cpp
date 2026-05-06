@@ -1,11 +1,13 @@
 #include "IrLowererCountAccessHelpers.h"
 #include "IrLowererCountAccessClassifiers.h"
 
-#include <limits>
+#include <algorithm>
+#include <cctype>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <string_view>
-#include <cctype>
+#include <vector>
 
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererHelpers.h"
@@ -227,8 +229,22 @@ bool resolveEntryArgsParameterFromSemanticProduct(const Definition &entryDef,
 
   const SemanticProgramBindingFact *entryParamFact = nullptr;
   std::size_t entryParamCount = 0;
-  const auto bindingFacts = semanticProgramBindingFactView(*semanticProgram);
-  for (const auto *entry : bindingFacts) {
+  std::vector<std::size_t> publishedBindingFactIndices;
+  publishedBindingFactIndices.reserve(
+      semanticProgram->publishedRoutingLookups.bindingFactIndicesByExpr.size());
+  for (const auto &[semanticNodeId, entryIndex] :
+       semanticProgram->publishedRoutingLookups.bindingFactIndicesByExpr) {
+    (void)semanticNodeId;
+    if (entryIndex < semanticProgram->bindingFacts.size()) {
+      publishedBindingFactIndices.push_back(entryIndex);
+    }
+  }
+  std::sort(publishedBindingFactIndices.begin(), publishedBindingFactIndices.end());
+  publishedBindingFactIndices.erase(
+      std::unique(publishedBindingFactIndices.begin(), publishedBindingFactIndices.end()),
+      publishedBindingFactIndices.end());
+  for (const std::size_t entryIndex : publishedBindingFactIndices) {
+    const auto *entry = &semanticProgram->bindingFacts[entryIndex];
     const std::string_view scopePath =
         resolveSemanticProductText(*semanticProgram, entry->scopePathId, entry->scopePath);
     const std::string_view siteKind =

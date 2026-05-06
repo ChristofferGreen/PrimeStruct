@@ -6,6 +6,29 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 6, 2026)**
+- [x] TODO-4298: Require entry args binding maps
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-06
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes semantic-product entry
+    parameter detection enumerate only published `bindingFactIndicesByExpr`
+    entries instead of scanning raw binding facts by scope and site kind.
+  - acceptance:
+    - Entry-argument setup does not call `semanticProgramBindingFactView(...)`
+      to recover parameter binding facts.
+    - Hand-built entry parameter fact tests seed `bindingFactIndicesByExpr`
+      before expecting semantic-product entry args setup to succeed.
+    - Raw parameter binding facts without the published binding map are not
+      recovered by entry-argument setup.
+  - stop_rule: Stop once entry parameter detection requires the published
+    binding map and focused tests pin both mapped and raw-only behavior.
+  - evidence: Reworked `resolveEntryArgsParameterFromSemanticProduct(...)` to
+    enumerate deterministic published binding-map entries, refreshed
+    hand-built entry parameter fixtures to publish their binding map entries,
+    added a raw-only entry args regression, updated source locks and docs, and
+    skipped local test execution per the lite workflow.
+
 - [x] TODO-4298: Require return index maps
   - owner: ai
   - created_at: 2026-04-28

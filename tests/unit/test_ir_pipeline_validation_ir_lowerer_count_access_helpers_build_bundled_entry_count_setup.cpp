@@ -74,6 +74,7 @@ TEST_CASE("ir lowerer count access helpers prefer semantic product entry args fa
 
   primec::Expr staleParam;
   staleParam.name = "stale";
+  staleParam.semanticNodeId = 6201;
   primec::Transform staleTransform;
   staleTransform.name = "array";
   staleTransform.templateArgs = {"i64"};
@@ -92,12 +93,57 @@ TEST_CASE("ir lowerer count access helpers prefer semantic product entry args fa
       .referenceRoot = "",
       .sourceLine = 2,
       .sourceColumn = 3,
+      .semanticNodeId = 6201,
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/main/argv"),
+  });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(6201, 0);
+
+  primec::ir_lowerer::EntryCountAccessSetup setup;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::buildEntryCountAccessSetup(entryDef, &semanticProgram, setup, error));
+  CHECK(setup.hasEntryArgs);
+  CHECK(setup.entryArgsName == "argv");
+  CHECK(error.empty());
+}
+
+TEST_CASE("ir lowerer count access helpers require published entry args binding maps") {
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+
+  primec::Expr entryParam;
+  entryParam.name = "stale";
+  entryParam.semanticNodeId = 6301;
+  primec::Transform staleTransform;
+  staleTransform.name = "array";
+  staleTransform.templateArgs = {"i64"};
+  entryParam.transforms.push_back(staleTransform);
+  entryDef.parameters = {entryParam};
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "parameter",
+      .name = "argv",
+      .bindingTypeText = "array<string>",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 2,
+      .sourceColumn = 3,
+      .semanticNodeId = 6301,
       .resolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/main/argv"),
   });
 
   primec::ir_lowerer::EntryCountAccessSetup setup;
   std::string error;
+  CHECK_FALSE(primec::ir_lowerer::buildEntryCountAccessSetup(entryDef, &semanticProgram, setup, error));
+  CHECK(error == "missing semantic-product entry parameter fact: /main");
+
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(6301, 0);
+  error.clear();
   REQUIRE(primec::ir_lowerer::buildEntryCountAccessSetup(entryDef, &semanticProgram, setup, error));
   CHECK(setup.hasEntryArgs);
   CHECK(setup.entryArgsName == "argv");

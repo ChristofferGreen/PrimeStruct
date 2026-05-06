@@ -1022,9 +1022,11 @@ TEST_CASE("ir lowerer count access helpers classify entry args and count calls")
       .referenceRoot = "",
       .sourceLine = 3,
       .sourceColumn = 1,
+      .semanticNodeId = 6501,
       .resolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/main/semanticArgv"),
   });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(6501, 0);
   entryDef.fullPath = "/main";
   entryDef.parameters.clear();
   error.clear();
@@ -1038,6 +1040,7 @@ TEST_CASE("ir lowerer count access helpers classify entry args and count calls")
 
   primec::Expr staleParam;
   staleParam.name = "stale";
+  staleParam.semanticNodeId = 6501;
   primec::Transform staleTransform;
   staleTransform.name = "array";
   staleTransform.templateArgs = {"i64"};

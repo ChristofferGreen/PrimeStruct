@@ -527,7 +527,9 @@ Task template:
     is complete for sum type/variant lookup consumers. The lowerer callable
     summary adapter helper published-map slice is complete for resolved
     full-path consumers, and the public callable-summary lookup helper now
-    follows the same published-map authority rule. The lowerer routing
+    follows the same published-map authority rule. The lowerer entry-args
+    parameter setup binding-map slice is complete for semantic-product-backed
+    entry parameter detection. The lowerer routing
     coverage map-authority slice is complete for direct-call, method-call, and
     bridge-path validators. The lowerer return-info precompute
     callable-summary map-authority slice is complete for setup-stage

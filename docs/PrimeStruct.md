@@ -1060,6 +1060,8 @@ Compile-pipeline publication contract:
   from `tryFactIndicesByExpr` and do not backfill matching raw try facts by semantic node id.
 - Binding semantic-id indexing follows the same map authority: lowerer semantic-product indexes populate binding facts
   from `bindingFactIndicesByExpr` and do not backfill matching raw binding facts by semantic node id.
+- Entry-argument setup follows the binding map authority rule: semantic-product entry parameter detection enumerates
+  published `bindingFactIndicesByExpr` entries and does not scan raw binding facts by scope/site as a recovery path.
 - Base call-kind inference now applies the same graph-backed rule for `try(...)`: semantic-product `try` facts provide
   the value kind before local `Result` state can infer it, and missing facts leave the semantic-product path unresolved.
 - Native indexed-access validation now follows the graph-backed rule for index

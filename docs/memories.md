@@ -90,8 +90,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
 ### semantic-product-index-map-authority
 - Updated: 2026-05-06
 - Tags: semantics, ir, tests
-- Fact: `buildSemanticProductIndex(...)` populates query, try, binding, `on_error`, and return semantic-id lookups only from `queryFactIndicesByExpr`, `tryFactIndicesByExpr`, `bindingFactIndicesByExpr`, `onErrorFactIndicesByDefinitionId`, and `returnFactIndicesByDefinitionId`, so tests that manually create those facts must seed the published maps before expecting lowerer lookup to succeed.
-- Evidence: Raw query/try/binding/on_error/return fact backfills were removed from `SemanticProductIndexBuilder::buildQueryIndex(...)`, `buildTryIndex(...)`, `buildBindingIndex(...)`, `buildOnErrorIndex(...)`, and `buildReturnIndex(...)`, while call-helper and inference setup tests pin both raw-only failure and mapped success paths.
+- Fact: `buildSemanticProductIndex(...)` populates query, try, binding, `on_error`, and return semantic-id lookups only from `queryFactIndicesByExpr`, `tryFactIndicesByExpr`, `bindingFactIndicesByExpr`, `onErrorFactIndicesByDefinitionId`, and `returnFactIndicesByDefinitionId`, and entry-argument setup also enumerates only published `bindingFactIndicesByExpr` entries. Tests that manually create those facts must seed the published maps before expecting lowerer lookup to succeed.
+- Evidence: Raw query/try/binding/on_error/return fact backfills were removed from `SemanticProductIndexBuilder::buildQueryIndex(...)`, `buildTryIndex(...)`, `buildBindingIndex(...)`, `buildOnErrorIndex(...)`, and `buildReturnIndex(...)`; `resolveEntryArgsParameterFromSemanticProduct(...)` no longer calls `semanticProgramBindingFactView(...)`; call-helper, count-access, and inference setup tests pin both raw-only failure and mapped success paths.
 
 ### semantic-product-pick-target-query-facts
 - Updated: 2026-05-01
