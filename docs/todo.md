@@ -796,9 +796,10 @@ Task template:
       the semantic-product path. Missing/contradictory graph-owned facts fail
       closed with deterministic pick-target diagnostics; the old local-map
       reconstruction remains only for syntax-only compatibility.
-    - Completed slice: native `pick(value)` target binding lookup is now
-      keyed by the target expression semantic node id, removing the lowerer
-      adapter's scope/name binding-fact scan from production.
+    - Completed slice: native `pick(value)` target binding lookup and
+      statement binding sum lookup are now keyed by the expression semantic
+      node id, removing the lowerer adapter's scope/name binding-fact scan
+      from production and the public lowerer testing helper surface.
     - Completed slice: native `pick(makeValue())` lowering now uses the
       published query fact plus the callee's published return fact to resolve
       direct-call pick targets, instead of relying on target-name

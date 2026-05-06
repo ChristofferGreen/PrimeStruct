@@ -791,10 +791,12 @@ main() {
   const primec::Expr &choiceTarget = mainDefinition->returnExpr->args.front();
   REQUIRE(choiceTarget.kind == primec::Expr::Kind::Name);
   REQUIRE(choiceTarget.name == "choice");
+  REQUIRE(choiceTarget.semanticNodeId != 0);
   const auto *choiceFact =
-      primec::ir_lowerer::findSemanticProductBindingFactByScopeAndName(
-          semanticProductTargets, mainDefinition->fullPath, choiceTarget.name);
+      primec::ir_lowerer::findSemanticProductBindingFact(
+          semanticProductTargets, choiceTarget);
   REQUIRE(choiceFact != nullptr);
+  CHECK(choiceFact->semanticNodeId == choiceTarget.semanticNodeId);
   CHECK(choiceFact->bindingTypeText == "Choice");
   REQUIRE(primec::ir_lowerer::findSemanticProductSumTypeMetadata(
               semanticProductTargets, "/Choice") != nullptr);
@@ -1051,7 +1053,7 @@ TEST_CASE("native pick target sum resolution resolves interned type ids") {
       source.find("findSemanticProductBindingFact(semanticTargets, targetExpr)",
                   typeResolverPos);
   const size_t bindingScopePos =
-      source.find("findSemanticProductBindingFactByScopeAndName", bindingFactPos);
+      source.find("findSemanticProductBindingFactByScopeAndName", resolverPos);
   const size_t bindingIdPos =
       source.find("bindingFact->bindingTypeTextId", typeResolverPos);
   const size_t queryBindingIdPos =
@@ -1066,7 +1068,7 @@ TEST_CASE("native pick target sum resolution resolves interned type ids") {
   REQUIRE(typeResolverPos != std::string::npos);
   REQUIRE(semanticResolvePos != std::string::npos);
   REQUIRE(bindingFactPos != std::string::npos);
-  REQUIRE(bindingScopePos != std::string::npos);
+  REQUIRE(bindingScopePos == std::string::npos);
   REQUIRE(bindingIdPos != std::string::npos);
   REQUIRE(queryBindingIdPos != std::string::npos);
   REQUIRE(queryTypeIdPos != std::string::npos);
@@ -1074,8 +1076,7 @@ TEST_CASE("native pick target sum resolution resolves interned type ids") {
   REQUIRE(metadataPos != std::string::npos);
   CHECK(typeResolverPos < semanticResolvePos);
   CHECK(semanticResolvePos < bindingFactPos);
-  CHECK(bindingFactPos < bindingScopePos);
-  CHECK(bindingScopePos < bindingIdPos);
+  CHECK(bindingFactPos < bindingIdPos);
   CHECK(bindingIdPos < queryBindingIdPos);
   CHECK(queryBindingIdPos < queryTypeIdPos);
   CHECK(queryTypeIdPos < returnIdPos);

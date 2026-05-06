@@ -2918,6 +2918,37 @@ TEST_CASE("ir lowerer semantic-product index resolves binding facts by semantic 
   CHECK(bindingFact->bindingTypeText == "i32");
 }
 
+TEST_CASE("ir lowerer semantic-product adapter ignores binding scope-name fallback") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "local",
+      .name = "selected",
+      .bindingTypeText = "Choice",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 14,
+      .sourceColumn = 7,
+      .semanticNodeId = 7401,
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/selected"),
+  });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(7401, 0);
+
+  primec::Expr staleBindingExpr;
+  staleBindingExpr.kind = primec::Expr::Kind::Name;
+  staleBindingExpr.name = "selected";
+  staleBindingExpr.semanticNodeId = 7402;
+
+  const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  CHECK(adapter.semanticIndex.bindingFactsByExpr.count(7401) == 1);
+  const auto *bindingFact =
+      primec::ir_lowerer::findSemanticProductBindingFact(adapter, staleBindingExpr);
+  CHECK(bindingFact == nullptr);
+}
+
 TEST_CASE("ir lowerer statement binding helper consumes semantic-product index directly") {
   primec::SemanticProgram semanticProgram;
   semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{

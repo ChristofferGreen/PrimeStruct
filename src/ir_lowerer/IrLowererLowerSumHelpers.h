@@ -1959,10 +1959,6 @@
       if (targetExpr.kind == Expr::Kind::Name) {
         const SemanticProgramBindingFact *bindingFact =
             findSemanticProductBindingFact(semanticTargets, targetExpr);
-        if (bindingFact == nullptr && !targetExpr.name.empty()) {
-          bindingFact = findSemanticProductBindingFactByScopeAndName(
-              semanticTargets, function.name, targetExpr.name);
-        }
         const std::string bindingTypeText =
             bindingFact != nullptr
                 ? resolveSemanticProductTypeText(bindingFact->bindingTypeText,

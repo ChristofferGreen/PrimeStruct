@@ -5,6 +5,29 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Completion (May 6, 2026)**
+- [x] TODO-4298: Remove binding scope fallback
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-06
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that removes the remaining
+    scope/name binding-fact fallback from semantic-product statement sum
+    lookup and named `pick(value)` target classification.
+  - acceptance:
+    - Statement sum lookup and named pick target classification use published
+      binding facts addressed by expression semantic node id.
+    - The semantic-product target adapter and public testing helper surface no
+      longer expose a scope/name binding-fact scan.
+    - Source-lock and adapter coverage reject stale same-name facts that lack
+      the requested expression semantic id.
+  - stop_rule: Stop once production binding-fact consumers fail closed without
+    the lowerer adapter's scope/name scan and tests pin the helper surface.
+  - evidence: Removed `findSemanticProductBindingFactByScopeAndName` from the
+    lowerer adapter and testing mirror, rewired statement sum and native pick
+    binding lookup to rely on expression-id facts, updated source-lock and
+    adapter coverage, and skipped local test execution per the lite workflow.
+
 **Todo Completion (May 5, 2026)**
 - [x] TODO-4298: Prefer graph facts for return access
   - owner: ai

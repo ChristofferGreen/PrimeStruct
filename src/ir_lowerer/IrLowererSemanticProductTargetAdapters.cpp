@@ -531,39 +531,6 @@ const SemanticProgramBindingFact *findSemanticProductBindingFact(const SemanticP
   return findSemanticProductBindingFact(adapter.semanticIndex, expr);
 }
 
-const SemanticProgramBindingFact *findSemanticProductBindingFactByScopeAndName(
-    const SemanticProductTargetAdapter &adapter,
-    std::string_view scopePath,
-    std::string_view bindingName) {
-  if (adapter.semanticProgram == nullptr || scopePath.empty() || bindingName.empty()) {
-    return nullptr;
-  }
-
-  const auto bindingFacts = semanticProgramBindingFactView(*adapter.semanticProgram);
-  const SemanticProgramBindingFact *matchedFact = nullptr;
-  for (const auto *entry : bindingFacts) {
-    if (entry == nullptr) {
-      continue;
-    }
-    const std::string_view resolvedScope =
-        entry->scopePathId != InvalidSymbolId
-            ? semanticProgramResolveCallTargetString(*adapter.semanticProgram, entry->scopePathId)
-            : std::string_view(entry->scopePath);
-    const std::string_view resolvedName =
-        entry->nameId != InvalidSymbolId
-            ? semanticProgramResolveCallTargetString(*adapter.semanticProgram, entry->nameId)
-            : std::string_view(entry->name);
-    if (resolvedScope != scopePath || resolvedName != bindingName) {
-      continue;
-    }
-    if (matchedFact != nullptr && matchedFact != entry) {
-      return nullptr;
-    }
-    matchedFact = entry;
-  }
-  return matchedFact;
-}
-
 const SemanticProgramSumTypeMetadata *findSemanticProductSumTypeMetadata(
     const SemanticProductTargetAdapter &adapter,
     std::string_view fullPath) {

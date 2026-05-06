@@ -497,10 +497,6 @@
           if (stmt.semanticNodeId != 0) {
             bindingFact = findSemanticProductBindingFact(semanticTargets, stmt);
           }
-          if (bindingFact == nullptr) {
-            bindingFact = findSemanticProductBindingFactByScopeAndName(
-                semanticTargets, function.name, stmt.name);
-          }
           if (bindingFact != nullptr) {
             if (const Definition *sumDef = resolveSemanticSumTypeText(
                     bindingFact->bindingTypeText,
