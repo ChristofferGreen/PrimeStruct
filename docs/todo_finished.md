@@ -6,6 +6,33 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 6, 2026)**
+- [x] TODO-4298: Use take borrow query facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-06
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes lowerer call-base
+    inference classify `take(storage)` and `borrow(storage)` value kinds
+    from the calls' published query facts before local uninitialized-storage
+    metadata can answer.
+  - acceptance:
+    - `take(storage)` and `borrow(storage)` base-kind inference read
+      semantic-product query facts before stale uninitialized-storage
+      metadata.
+    - Published scalar query facts classify the base value kind.
+    - Published non-scalar and missing semantic query facts suppress stale
+      uninitialized-storage metadata.
+    - Syntax-only contexts without semantic-product query facts keep the
+      existing uninitialized-storage fallback.
+  - stop_rule: Stop once take/borrow base-kind consumers depend on
+    graph-owned query facts and focused tests pin graph-backed,
+    stale-local, and syntax-only behavior.
+  - evidence: Added semantic-product query fact handling for `take(...)`
+    and `borrow(...)` call-base inference, covered scalar query-backed,
+    non-scalar stale suppression, missing-fact stale suppression, and
+    syntax-only paths, and skipped broad baseline validation per the lite
+    workflow.
+
 - [x] TODO-4298: Use field receiver facts
   - owner: ai
   - created_at: 2026-04-28

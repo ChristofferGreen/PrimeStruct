@@ -379,6 +379,11 @@ Planned non-template inference migration contract:
   now reads the receiver's published binding, query, or local-auto fact before lowerer-local
   struct-path inference can classify the field value kind. Published non-struct receiver facts
   suppress stale local struct metadata; no-fact syntax-only contexts keep the old fallback.
+- Completed lowerer-side take/borrow query fact slice: base-kind inference for `take(storage)`
+  and `borrow(storage)` now reads the call's published query fact before lowerer-local
+  uninitialized-storage metadata can classify the value kind. Published non-scalar or missing
+  semantic call facts suppress stale storage metadata; no-fact syntax-only contexts keep the old
+  fallback.
 - Completed lowerer-side tail-dispatch collection query ID slice: native tail-dispatch map/vector
   target classification now resolves `bindingTypeTextId` and `queryTypeTextId` before copied
   query-fact text fields, so collection receiver classification consumes graph-owned query

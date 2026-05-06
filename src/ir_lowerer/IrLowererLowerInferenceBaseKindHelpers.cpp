@@ -359,11 +359,13 @@ bool inferBaseSetupSemanticTryOperandResultKind(const Expr &operand,
   return false;
 }
 
-bool inferBaseSetupSemanticQueryFactValueKind(const Expr &expr,
-                                              const SemanticProgram *semanticProgram,
-                                              const SemanticProductIndex *semanticIndex,
-                                              LocalInfo::ValueKind &kindOut) {
+bool inferBaseSetupSemanticQueryFactValueKindWithPresence(const Expr &expr,
+                                                          const SemanticProgram *semanticProgram,
+                                                          const SemanticProductIndex *semanticIndex,
+                                                          LocalInfo::ValueKind &kindOut,
+                                                          bool &hasSemanticQueryOut) {
   kindOut = LocalInfo::ValueKind::Unknown;
+  hasSemanticQueryOut = false;
   if (semanticProgram == nullptr || semanticIndex == nullptr || expr.semanticNodeId == 0) {
     return false;
   }
@@ -371,6 +373,7 @@ bool inferBaseSetupSemanticQueryFactValueKind(const Expr &expr,
   if (queryFact == nullptr) {
     return false;
   }
+  hasSemanticQueryOut = true;
   const LocalInfo::ValueKind queryKind =
       valueKindFromTypeName(
           resolveBaseSetupSemanticFactTypeText(
@@ -392,6 +395,15 @@ bool inferBaseSetupSemanticQueryFactValueKind(const Expr &expr,
     return true;
   }
   return false;
+}
+
+bool inferBaseSetupSemanticQueryFactValueKind(const Expr &expr,
+                                              const SemanticProgram *semanticProgram,
+                                              const SemanticProductIndex *semanticIndex,
+                                              LocalInfo::ValueKind &kindOut) {
+  bool hasSemanticQuery = false;
+  return inferBaseSetupSemanticQueryFactValueKindWithPresence(
+      expr, semanticProgram, semanticIndex, kindOut, hasSemanticQuery);
 }
 
 std::string resolveBaseSetupSemanticTryValueTypeText(
@@ -856,6 +868,19 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
   }
   if (!expr.isMethodCall && (isSimpleCallName(expr, "take") || isSimpleCallName(expr, "borrow")) &&
       expr.args.size() == 1) {
+    bool hasSemanticTakeBorrowQuery = false;
+    if (inferBaseSetupSemanticQueryFactValueKindWithPresence(
+            expr,
+            semanticProgram,
+            semanticIndex,
+            kindOut,
+            hasSemanticTakeBorrowQuery)) {
+      return true;
+    }
+    if (hasSemanticTakeBorrowQuery ||
+        hasSemanticProductBaseSetupSite(expr, semanticProgram, semanticIndex)) {
+      return true;
+    }
     UninitializedStorageAccessInfo access;
     bool resolved = false;
     if (!resolveUninitializedStorage(expr.args.front(), localsIn, access, resolved)) {

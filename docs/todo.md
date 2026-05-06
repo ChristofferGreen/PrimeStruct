@@ -585,6 +585,10 @@ Task template:
     The lowerer field receiver fact slice is complete for
     semantic-product-backed `receiver.field` base-kind inference before
     stale local struct-path metadata can classify field value kinds.
+    The lowerer take/borrow query fact slice is complete for
+    semantic-product-backed `take(storage)` and `borrow(storage)` base-kind
+    inference before stale local uninitialized-storage metadata can classify
+    value kinds.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -793,6 +797,12 @@ Task template:
       classify the field value kind. Published non-struct receiver facts
       suppress stale local metadata; syntax-only compatibility keeps the old
       fallback.
+    - Completed slice: semantic-product-addressed `take(storage)` and
+      `borrow(storage)` base-kind inference now consumes the call's published
+      query fact before lowerer-local uninitialized-storage fallback can
+      classify the value kind. Published non-scalar or missing semantic call
+      facts suppress stale local metadata; syntax-only compatibility keeps
+      the old fallback.
     - Completed slice: semantic-product-addressed native tail-dispatch
       map/vector receiver classification now resolves interned query/binding
       type IDs before consulting copied query text fields, so collection
