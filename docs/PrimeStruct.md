@@ -369,6 +369,11 @@ Planned non-template inference migration contract:
   `try(File<Mode>(...))` operands now reads the published query type before syntax-owned
   file-handle-call fallback can classify the call as `i64`. Published non-`File<Mode>` query
   facts suppress the constructor-shaped fallback; no-fact syntax-only contexts keep it.
+- Completed lowerer-side dispatch map receiver fact slice: dispatch inference for nested
+  `try(map.contains(...))` and `try(map.tryAt(...))` operands now reads published receiver
+  collection or binding facts before syntax, definition, or local-map fallback can classify the
+  helper result. Published non-map receiver facts suppress stale local map metadata; no-fact
+  syntax-only contexts keep the old fallback.
 - Completed lowerer-side try operand Result fact slice: base-kind inference for
   `try(operand)` now reads the operand's published binding, query, or local-auto Result fact
   before lowerer-local `isResult` and args-pack metadata can classify the value kind. Published

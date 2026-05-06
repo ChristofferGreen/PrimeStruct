@@ -6,6 +6,33 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 6, 2026)**
+- [x] TODO-4298: Use dispatch map receiver facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-06
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes lowerer dispatch
+    inference classify nested `try(map.contains(...))` and
+    `try(map.tryAt(...))` operands from published receiver collection or
+    binding facts before syntax, definition, or local-map fallback can
+    answer.
+  - acceptance:
+    - Nested map `tryAt` dispatch inference reads semantic-product
+      collection-specialization receiver facts before local fallback.
+    - Nested map `contains` dispatch inference reads semantic-product
+      binding receiver facts before local fallback.
+    - Published non-map receiver facts suppress stale local map metadata.
+    - Syntax-only contexts without semantic-product map receiver facts keep
+      the existing local map fallback.
+  - stop_rule: Stop once dispatch map helper consumers depend on graph-owned
+    receiver facts and focused tests pin graph-backed, stale-local, and
+    syntax-only behavior.
+  - evidence: Added semantic-product map receiver fact handling for dispatch
+    `try(...)` inference, covered collection-specialization-backed
+    `tryAt`, binding-backed `contains`, stale non-map suppression, and
+    syntax-only fallback paths, and skipped broad baseline validation per the
+    lite workflow.
+
 - [x] TODO-4298: Use dispatch File call facts
   - owner: ai
   - created_at: 2026-04-28

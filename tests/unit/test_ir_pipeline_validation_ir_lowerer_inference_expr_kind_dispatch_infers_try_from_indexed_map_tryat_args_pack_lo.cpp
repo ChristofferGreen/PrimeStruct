@@ -275,6 +275,201 @@ TEST_CASE("ir lowerer inference expr-kind dispatch prefers graph-backed indexed 
   CHECK(state.inferExprKind(countExpr, locals) == Kind::Unknown);
 }
 
+TEST_CASE("ir lowerer inference expr-kind dispatch uses semantic map receiver facts") {
+  using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  auto intern = [](primec::SemanticProgram &semanticProgram, const std::string &text) {
+    return primec::semanticProgramInternCallTargetString(semanticProgram, text);
+  };
+
+  auto addCollectionFact = [&](primec::SemanticProgram &semanticProgram,
+                               uint64_t semanticNodeId,
+                               const std::string &family,
+                               const std::string &keyType,
+                               const std::string &valueType) {
+    primec::SemanticProgramCollectionSpecialization fact;
+    fact.scopePath = "/main";
+    fact.siteKind = "local";
+    fact.name = "values";
+    fact.collectionFamily = family;
+    fact.bindingTypeText = family + "<" + keyType + ", " + valueType + ">";
+    fact.keyTypeText = keyType;
+    fact.valueTypeText = valueType;
+    fact.semanticNodeId = semanticNodeId;
+    fact.scopePathId = intern(semanticProgram, "/main");
+    fact.siteKindId = intern(semanticProgram, "local");
+    fact.nameId = intern(semanticProgram, "values");
+    fact.collectionFamilyId = intern(semanticProgram, family);
+    fact.bindingTypeTextId = intern(semanticProgram, fact.bindingTypeText);
+    fact.keyTypeTextId = intern(semanticProgram, keyType);
+    fact.valueTypeTextId = intern(semanticProgram, valueType);
+    const size_t index = semanticProgram.collectionSpecializations.size();
+    semanticProgram.collectionSpecializations.push_back(std::move(fact));
+    semanticProgram.publishedRoutingLookups.collectionSpecializationIndicesByExpr
+        .insert_or_assign(semanticNodeId, index);
+  };
+
+  auto addBindingFact = [&](primec::SemanticProgram &semanticProgram,
+                            uint64_t semanticNodeId,
+                            const std::string &bindingTypeText) {
+    primec::SemanticProgramBindingFact fact;
+    fact.scopePath = "/main";
+    fact.siteKind = "local";
+    fact.name = "values";
+    fact.bindingTypeText = bindingTypeText;
+    fact.semanticNodeId = semanticNodeId;
+    fact.scopePathId = intern(semanticProgram, "/main");
+    fact.siteKindId = intern(semanticProgram, "local");
+    fact.nameId = intern(semanticProgram, "values");
+    fact.bindingTypeTextId = intern(semanticProgram, bindingTypeText);
+    const size_t index = semanticProgram.bindingFacts.size();
+    semanticProgram.bindingFacts.push_back(std::move(fact));
+    semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr
+        .insert_or_assign(semanticNodeId, index);
+  };
+
+  auto installDispatchSetup =
+      [](primec::ir_lowerer::LowerInferenceSetupBootstrapState &state,
+         std::unordered_map<std::string, const primec::Definition *> &defMap,
+         std::string &inferenceError) {
+    state.inferLiteralOrNameExprKind = [](const primec::Expr &,
+                                          const primec::ir_lowerer::LocalMap &,
+                                          Kind &kindOut) {
+      kindOut = Kind::Unknown;
+      return false;
+    };
+    state.inferCallExprBaseKind = [](const primec::Expr &,
+                                     const primec::ir_lowerer::LocalMap &,
+                                     Kind &kindOut) {
+      kindOut = Kind::Unknown;
+      return false;
+    };
+    state.inferCallExprDirectReturnKind = [](const primec::Expr &,
+                                             const primec::ir_lowerer::LocalMap &,
+                                             Kind &kindOut) {
+      kindOut = Kind::Unknown;
+      return primec::ir_lowerer::CallExpressionReturnKindResolution::NotResolved;
+    };
+    state.inferCallExprCountAccessGpuFallbackKind = [](const primec::Expr &,
+                                                       const primec::ir_lowerer::LocalMap &,
+                                                       Kind &kindOut) {
+      kindOut = Kind::Unknown;
+      return false;
+    };
+    state.inferCallExprOperatorFallbackKind = [](const primec::Expr &,
+                                                 const primec::ir_lowerer::LocalMap &,
+                                                 Kind &kindOut) {
+      kindOut = Kind::Unknown;
+      return false;
+    };
+    state.inferCallExprControlFlowFallbackKind = [](const primec::Expr &,
+                                                    const primec::ir_lowerer::LocalMap &,
+                                                    std::string &,
+                                                    Kind &kindOut) {
+      kindOut = Kind::Unknown;
+      return false;
+    };
+    state.inferCallExprPointerFallbackKind = [](const primec::Expr &,
+                                                const primec::ir_lowerer::LocalMap &,
+                                                Kind &kindOut) {
+      kindOut = Kind::Unknown;
+      return false;
+    };
+    state.resolveMethodCallDefinition =
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+      return nullptr;
+    };
+    std::string setupError;
+    CHECK(primec::ir_lowerer::runLowerInferenceExprKindDispatchSetup(
+        {
+            .defMap = &defMap,
+            .resolveExprPath = [](const primec::Expr &expr) { return "/" + expr.name; },
+            .error = &inferenceError,
+        },
+        state,
+        setupError));
+    CHECK(setupError.empty());
+    REQUIRE(static_cast<bool>(state.inferExprKind));
+  };
+
+  auto makeNameExpr = [](const std::string &name, uint64_t semanticNodeId) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Name;
+    expr.name = name;
+    expr.semanticNodeId = semanticNodeId;
+    return expr;
+  };
+
+  auto makeLiteralExpr = [] {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Literal;
+    expr.intWidth = 32;
+    expr.literalValue = 7;
+    return expr;
+  };
+
+  auto makeMapCallExpr = [&](const std::string &name, primec::Expr receiver) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = name;
+    expr.args = {std::move(receiver), makeLiteralExpr()};
+    return expr;
+  };
+
+  auto makeTryExpr = [](primec::Expr operand) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = "try";
+    expr.args = {std::move(operand)};
+    return expr;
+  };
+
+  primec::SemanticProgram semanticProgram;
+  addCollectionFact(semanticProgram, 7311, "map", "i32", "string");
+  addBindingFact(semanticProgram, 7312, "/std/collections/map<i32, bool>");
+  addBindingFact(semanticProgram, 7313, "i32");
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  primec::ir_lowerer::LocalInfo staleMapInfo;
+  staleMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  staleMapInfo.mapKeyKind = Kind::Int32;
+  staleMapInfo.mapValueKind = Kind::Int32;
+
+  primec::ir_lowerer::LocalMap staleLocals;
+  staleLocals.emplace("values", staleMapInfo);
+
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::string inferenceError;
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  state.semanticProgram = &semanticProgram;
+  state.semanticIndex = &semanticIndex;
+  installDispatchSetup(state, defMap, inferenceError);
+
+  CHECK(state.inferExprKind(makeTryExpr(makeMapCallExpr("tryAt",
+                                                        makeNameExpr("values", 7311))),
+                            staleLocals) == Kind::String);
+  CHECK(state.inferExprKind(makeTryExpr(makeMapCallExpr("contains",
+                                                        makeNameExpr("values", 7312))),
+                            staleLocals) == Kind::Bool);
+  CHECK(state.inferExprKind(makeTryExpr(makeMapCallExpr("tryAt",
+                                                        makeNameExpr("values", 7313))),
+                            staleLocals) == Kind::Unknown);
+  CHECK(inferenceError.empty());
+
+  std::unordered_map<std::string, const primec::Definition *> syntaxDefMap;
+  std::string syntaxInferenceError;
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState syntaxState;
+  installDispatchSetup(syntaxState, syntaxDefMap, syntaxInferenceError);
+  CHECK(syntaxState.inferExprKind(makeTryExpr(makeMapCallExpr("tryAt",
+                                                              makeNameExpr("values", 0))),
+                                  staleLocals) == Kind::Int32);
+  CHECK(syntaxState.inferExprKind(makeTryExpr(makeMapCallExpr("contains",
+                                                              makeNameExpr("values", 0))),
+                                  staleLocals) == Kind::Bool);
+  CHECK(syntaxInferenceError.empty());
+}
+
 TEST_CASE("ir lowerer inference expr-kind dispatch uses semantic try operand Result facts") {
   using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
 

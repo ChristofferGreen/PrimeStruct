@@ -578,6 +578,10 @@ Task template:
     semantic-product-backed nested `try(File<Mode>(...))` dispatch inference
     before syntax-owned file-handle-call fallback can classify those calls as
     `i64`.
+    The lowerer dispatch map receiver fact slice is complete for
+    semantic-product-backed nested `try(map.contains(...))` and
+    `try(map.tryAt(...))` dispatch inference before stale local map metadata
+    can classify helper result kinds.
     The lowerer try operand Result fact slice is complete for
     semantic-product-backed `try(operand)` base-kind inference before
     stale local `isResult` or args-pack metadata can classify the operand's

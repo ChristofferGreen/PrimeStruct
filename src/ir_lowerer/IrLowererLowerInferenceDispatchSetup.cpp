@@ -112,6 +112,97 @@ bool isDispatchSetupFileHandleTypeText(const std::string &typeText) {
   return base == "File" || base == "std/file/File";
 }
 
+bool resolveDispatchSetupSemanticReceiverTypeText(const Expr &receiver,
+                                                  const SemanticProgram *semanticProgram,
+                                                  const SemanticProductIndex *semanticIndex,
+                                                  std::string &typeTextOut);
+
+bool isDispatchSetupMapFamilyText(const std::string &familyText) {
+  std::string normalized = trimTemplateTypeText(familyText);
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  return normalized == "map" || normalized == "std/collections/map" ||
+         normalized == "Map" ||
+         normalized == "std/collections/experimental_map/Map" ||
+         normalized.rfind("std/collections/experimental_map/Map__", 0) == 0;
+}
+
+bool inferDispatchSetupMapKindsFromTypeText(const std::string &typeText,
+                                            LocalInfo::ValueKind &keyKindOut,
+                                            LocalInfo::ValueKind &valueKindOut) {
+  keyKindOut = LocalInfo::ValueKind::Unknown;
+  valueKindOut = LocalInfo::ValueKind::Unknown;
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argText) ||
+      !isDispatchSetupMapFamilyText(base)) {
+    return false;
+  }
+  std::vector<std::string> args;
+  if (!splitTemplateArgs(argText, args) || args.size() != 2) {
+    return false;
+  }
+  keyKindOut = valueKindFromTypeName(trimTemplateTypeText(args.front()));
+  valueKindOut = valueKindFromTypeName(trimTemplateTypeText(args.back()));
+  return keyKindOut != LocalInfo::ValueKind::Unknown &&
+         valueKindOut != LocalInfo::ValueKind::Unknown;
+}
+
+bool inferDispatchSetupSemanticMapReceiverKind(const Expr &receiver,
+                                               bool containsResult,
+                                               const SemanticProgram *semanticProgram,
+                                               const SemanticProductIndex *semanticIndex,
+                                               LocalInfo::ValueKind &kindOut,
+                                               bool &hasSemanticReceiverOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  hasSemanticReceiverOut = false;
+  if (semanticProgram == nullptr || semanticIndex == nullptr ||
+      receiver.semanticNodeId == 0) {
+    return false;
+  }
+  if (const auto *collectionFact =
+          findSemanticProductCollectionSpecialization(*semanticIndex, receiver)) {
+    hasSemanticReceiverOut = true;
+    const std::string familyText = resolveDispatchSetupSemanticFactTypeText(
+        *semanticProgram,
+        collectionFact->collectionFamily,
+        collectionFact->collectionFamilyId);
+    if (!isDispatchSetupMapFamilyText(familyText)) {
+      return false;
+    }
+    const LocalInfo::ValueKind keyKind = valueKindFromTypeName(
+        resolveDispatchSetupSemanticFactTypeText(
+            *semanticProgram,
+            collectionFact->keyTypeText,
+            collectionFact->keyTypeTextId));
+    const LocalInfo::ValueKind valueKind = valueKindFromTypeName(
+        resolveDispatchSetupSemanticFactTypeText(
+            *semanticProgram,
+            collectionFact->valueTypeText,
+            collectionFact->valueTypeTextId));
+    if (keyKind == LocalInfo::ValueKind::Unknown ||
+        valueKind == LocalInfo::ValueKind::Unknown) {
+      return false;
+    }
+    kindOut = containsResult ? LocalInfo::ValueKind::Bool : valueKind;
+    return true;
+  }
+  std::string receiverType;
+  if (!resolveDispatchSetupSemanticReceiverTypeText(
+          receiver, semanticProgram, semanticIndex, receiverType)) {
+    return false;
+  }
+  hasSemanticReceiverOut = true;
+  LocalInfo::ValueKind keyKind = LocalInfo::ValueKind::Unknown;
+  LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
+  if (!inferDispatchSetupMapKindsFromTypeText(receiverType, keyKind, valueKind)) {
+    return false;
+  }
+  kindOut = containsResult ? LocalInfo::ValueKind::Bool : valueKind;
+  return true;
+}
+
 bool inferDispatchSetupSemanticFileHandleCallKind(const Expr &expr,
                                                   const SemanticProgram *semanticProgram,
                                                   const SemanticProductIndex *semanticIndex,
@@ -612,6 +703,23 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
           *inferenceError = semanticTryFactError;
         }
         return false;
+      }
+      const bool resultIsMapContainsCall = isMapContainsCallName(resultExpr);
+      const bool resultIsMapTryAtCall = isMapTryAtCallName(resultExpr);
+      if ((resultIsMapContainsCall || resultIsMapTryAtCall) &&
+          !resultExpr.args.empty()) {
+        bool hasSemanticMapReceiver = false;
+        if (inferDispatchSetupSemanticMapReceiverKind(resultExpr.args.front(),
+                                                     resultIsMapContainsCall,
+                                                     semanticProgram,
+                                                     semanticIndex,
+                                                     kindOut,
+                                                     hasSemanticMapReceiver)) {
+          return true;
+        }
+        if (hasSemanticMapReceiver) {
+          return true;
+        }
       }
       if (isMapContainsCallName(resultExpr) && !resultExpr.args.empty()) {
         LocalInfo::ValueKind receiverCollectionKind = LocalInfo::ValueKind::Unknown;
