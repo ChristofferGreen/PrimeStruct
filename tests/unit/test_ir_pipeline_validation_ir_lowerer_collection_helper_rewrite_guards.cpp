@@ -950,6 +950,64 @@ TEST_CASE("ir lowerer statement map insert rewrite uses semantic product receive
         std::string::npos);
 }
 
+TEST_CASE("ir lowerer statement vector method gate uses semantic receiver facts first") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path callsStepPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsCallsStep.cpp";
+
+  REQUIRE(std::filesystem::exists(callsStepPath));
+  const std::string source = readText(callsStepPath);
+
+  CHECK(source.find("#include \"IrLowererSemanticProductTargetAdapters.h\"") !=
+        std::string::npos);
+  CHECK(source.find("enum class CallsStepVectorHelperReceiverFact") !=
+        std::string::npos);
+  CHECK(source.find("findSemanticProductCollectionSpecialization(*semanticIndex, receiverExpr)") !=
+        std::string::npos);
+  CHECK(source.find("collectionFact->collectionFamilyId") !=
+        std::string::npos);
+  CHECK(source.find("findSemanticProductQueryFact(semanticProgram, *semanticIndex, receiverExpr)") !=
+        std::string::npos);
+  CHECK(source.find("queryFact->receiverBindingTypeTextId") !=
+        std::string::npos);
+  CHECK(source.find("findSemanticProductBindingFact(*semanticIndex, receiverExpr)") !=
+        std::string::npos);
+  CHECK(source.find("findSemanticProductLocalAutoFact(semanticProgram, *semanticIndex, receiverExpr)") !=
+        std::string::npos);
+
+  const size_t semanticFactUse =
+      source.find("const CallsStepVectorHelperReceiverFact receiverFact =\n"
+                  "              classifyCallsStepVectorHelperReceiverFromSemanticFacts(");
+  const size_t staleLocalFallback =
+      source.find("auto localIt = localsIn.find(candidate.args.front().name);");
+  REQUIRE(semanticFactUse != std::string::npos);
+  REQUIRE(staleLocalFallback != std::string::npos);
+  CHECK(semanticFactUse < staleLocalFallback);
+
+  const size_t nonVectorGate =
+      source.find("if (receiverFact == CallsStepVectorHelperReceiverFact::NonVector) {",
+                  semanticFactUse);
+  const size_t methodResolution =
+      source.find("return input.resolveMethodCallDefinition(candidate, localsIn) != nullptr;",
+                  nonVectorGate);
+  REQUIRE(nonVectorGate != std::string::npos);
+  REQUIRE(methodResolution != std::string::npos);
+  CHECK(nonVectorGate < methodResolution);
+}
+
 TEST_CASE("ir lowerer inline dispatch map helper deferral uses semantic receiver facts first") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);

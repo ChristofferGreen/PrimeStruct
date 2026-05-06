@@ -682,6 +682,11 @@ Task template:
     local-auto, and query experimental vector facts before stale local vector
     struct metadata can select direct `set_field_count`/`set_field_capacity`
     header stores.
+    The statement/calls vector method gate slice is complete for
+    semantic-product-backed collection-specialization, binding, local-auto,
+    and query vector receiver facts before stale local vector metadata can
+    decide whether builtin vector mutator rewriting should defer to ordinary
+    method resolution.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -825,6 +830,13 @@ Task template:
       `set_field_count`/`set_field_capacity` header stores. Published
       non-vector facts suppress stale local experimental-vector metadata while
       syntax-only compatibility keeps the legacy fallback.
+    - Completed slice: semantic-product-addressed statement/calls vector
+      method gate now consumes published collection-specialization, binding,
+      local-auto, and query vector receiver facts before local vector metadata
+      can decide whether builtin `push`/`reserve`/`pop`-style rewriting should
+      bypass ordinary method resolution. Published non-vector facts suppress
+      stale local vector metadata while syntax-only compatibility keeps the
+      legacy fallback.
     - Completed slice: semantic-product-addressed dispatch inference now
       consumes published method receiver binding, query, or local-auto facts
       for `FileError.why()` and nested `try(file.method())` file operations

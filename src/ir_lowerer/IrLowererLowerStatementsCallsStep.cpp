@@ -1,8 +1,146 @@
 #include "IrLowererLowerStatementsCallsStep.h"
 
+#include "IrLowererBindingTransformHelpers.h"
+#include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererFlowHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
 
 namespace primec::ir_lowerer {
+
+namespace {
+
+enum class CallsStepVectorHelperReceiverFact {
+  Unknown,
+  Vector,
+  NonVector,
+};
+
+bool isCallsStepVectorMutatorMethod(const Expr &candidate) {
+  return candidate.isMethodCall && candidate.namespacePrefix.empty() &&
+         !candidate.args.empty() &&
+         (candidate.name == "push" || candidate.name == "pop" ||
+          candidate.name == "reserve" || candidate.name == "clear" ||
+          candidate.name == "remove_at" || candidate.name == "remove_swap") &&
+         candidate.args.front().kind == Expr::Kind::Name;
+}
+
+bool isCallsStepExperimentalVectorTypeName(const std::string &typeName) {
+  const std::string normalized = trimTemplateTypeText(typeName);
+  return normalized == "Vector" ||
+         normalized == "std/collections/experimental_vector/Vector" ||
+         normalized == "/std/collections/experimental_vector/Vector" ||
+         normalized.rfind("std/collections/experimental_vector/Vector__", 0) == 0 ||
+         normalized.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+}
+
+bool isCallsStepVectorTypeText(const std::string &typeText) {
+  std::string base;
+  std::string argText;
+  const std::string normalizedTypeText =
+      unwrapTopLevelUninitializedTypeText(trimTemplateTypeText(typeText));
+  if (splitTemplateTypeName(normalizedTypeText, base, argText)) {
+    const std::string normalizedBase =
+        normalizeCollectionBindingTypeName(trimTemplateTypeText(base));
+    if (normalizedBase == "Reference" || normalizedBase == "/Reference" ||
+        normalizedBase == "Pointer" || normalizedBase == "/Pointer") {
+      return isCallsStepVectorTypeText(argText);
+    }
+    return normalizedBase == "vector" ||
+           isCallsStepExperimentalVectorTypeName(trimTemplateTypeText(base));
+  }
+  return normalizeCollectionBindingTypeName(normalizedTypeText) == "vector" ||
+         isCallsStepExperimentalVectorTypeName(normalizedTypeText);
+}
+
+CallsStepVectorHelperReceiverFact classifyCallsStepVectorHelperReceiverTypeText(
+    const SemanticProgram *semanticProgram,
+    SymbolId typeTextId,
+    const std::string &typeText) {
+  const std::string resolvedTypeText =
+      resolveSemanticProductTypeText(semanticProgram, typeText, typeTextId);
+  return isCallsStepVectorTypeText(resolvedTypeText)
+             ? CallsStepVectorHelperReceiverFact::Vector
+             : CallsStepVectorHelperReceiverFact::NonVector;
+}
+
+CallsStepVectorHelperReceiverFact combineCallsStepVectorHelperReceiverFacts(
+    CallsStepVectorHelperReceiverFact lhs,
+    CallsStepVectorHelperReceiverFact rhs) {
+  if (lhs == CallsStepVectorHelperReceiverFact::Vector ||
+      rhs == CallsStepVectorHelperReceiverFact::Vector) {
+    return CallsStepVectorHelperReceiverFact::Vector;
+  }
+  if (lhs == CallsStepVectorHelperReceiverFact::NonVector ||
+      rhs == CallsStepVectorHelperReceiverFact::NonVector) {
+    return CallsStepVectorHelperReceiverFact::NonVector;
+  }
+  return CallsStepVectorHelperReceiverFact::Unknown;
+}
+
+CallsStepVectorHelperReceiverFact classifyCallsStepVectorHelperReceiverFromSemanticFacts(
+    const Expr &receiverExpr,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
+  if (semanticProgram == nullptr || semanticIndex == nullptr ||
+      receiverExpr.semanticNodeId == 0) {
+    return CallsStepVectorHelperReceiverFact::Unknown;
+  }
+
+  if (const auto *collectionFact =
+          findSemanticProductCollectionSpecialization(*semanticIndex, receiverExpr);
+      collectionFact != nullptr) {
+    const std::string collectionFamily =
+        resolveSemanticProductTypeText(semanticProgram,
+                                       collectionFact->collectionFamily,
+                                       collectionFact->collectionFamilyId);
+    return normalizeCollectionBindingTypeName(collectionFamily) == "vector"
+               ? CallsStepVectorHelperReceiverFact::Vector
+               : CallsStepVectorHelperReceiverFact::NonVector;
+  }
+
+  if (const auto *queryFact =
+          findSemanticProductQueryFact(semanticProgram, *semanticIndex, receiverExpr);
+      queryFact != nullptr) {
+    CallsStepVectorHelperReceiverFact fact =
+        classifyCallsStepVectorHelperReceiverTypeText(semanticProgram,
+                                                      queryFact->bindingTypeTextId,
+                                                      queryFact->bindingTypeText);
+    fact = combineCallsStepVectorHelperReceiverFacts(
+        fact,
+        classifyCallsStepVectorHelperReceiverTypeText(semanticProgram,
+                                                      queryFact->queryTypeTextId,
+                                                      queryFact->queryTypeText));
+    return combineCallsStepVectorHelperReceiverFacts(
+        fact,
+        classifyCallsStepVectorHelperReceiverTypeText(
+            semanticProgram,
+            queryFact->receiverBindingTypeTextId,
+            queryFact->receiverBindingTypeText));
+  }
+
+  if (const auto *bindingFact =
+          findSemanticProductBindingFact(*semanticIndex, receiverExpr);
+      bindingFact != nullptr) {
+    return classifyCallsStepVectorHelperReceiverTypeText(
+        semanticProgram,
+        bindingFact->bindingTypeTextId,
+        bindingFact->bindingTypeText);
+  }
+
+  if (const auto *localAutoFact =
+          findSemanticProductLocalAutoFact(semanticProgram, *semanticIndex, receiverExpr);
+      localAutoFact != nullptr) {
+    return classifyCallsStepVectorHelperReceiverTypeText(
+        semanticProgram,
+        localAutoFact->bindingTypeTextId,
+        localAutoFact->bindingTypeText);
+  }
+
+  return CallsStepVectorHelperReceiverFact::Unknown;
+}
+
+} // namespace
 
 bool runLowerStatementsCallsStep(const LowerStatementsCallsStepInput &input,
                                  const Expr &stmt,
@@ -161,12 +299,19 @@ bool runLowerStatementsCallsStep(const LowerStatementsCallsStepInput &input,
         return input.emitInlineDefinitionCall(callExpr, callee, callLocals, requireValue);
       },
       [&](const Expr &candidate) {
-        if (candidate.isMethodCall && candidate.namespacePrefix.empty() &&
-            !candidate.args.empty() &&
-            (candidate.name == "push" || candidate.name == "pop" ||
-             candidate.name == "reserve" || candidate.name == "clear" ||
-             candidate.name == "remove_at" || candidate.name == "remove_swap") &&
-            candidate.args.front().kind == Expr::Kind::Name) {
+        if (isCallsStepVectorMutatorMethod(candidate)) {
+          const CallsStepVectorHelperReceiverFact receiverFact =
+              classifyCallsStepVectorHelperReceiverFromSemanticFacts(
+                  candidate.args.front(),
+                  input.semanticProgram,
+                  input.semanticIndex);
+          if (receiverFact == CallsStepVectorHelperReceiverFact::Vector) {
+            return false;
+          }
+          if (receiverFact == CallsStepVectorHelperReceiverFact::NonVector) {
+            return input.resolveMethodCallDefinition(candidate, localsIn) != nullptr;
+          }
+
           auto localIt = localsIn.find(candidate.args.front().name);
           if (localIt != localsIn.end() && !localIt->second.isSoaVector &&
               (localIt->second.kind == LocalInfo::Kind::Vector ||
