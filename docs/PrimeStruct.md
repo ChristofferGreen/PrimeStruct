@@ -425,6 +425,11 @@ Planned non-template inference migration contract:
   `dereference(at(args<Result>, i))` before args-pack Result metadata can classify downstream
   `Result.error(...)`, `Result.why(...)`, or combinator source values. Published non-Result
   target facts suppress stale args-pack metadata; syntax-only contexts keep the old fallback.
+- Completed lowerer-side local Result source metadata slice: generic Result metadata resolution
+  now reads published binding and local-auto Result facts for direct local Result sources plus
+  pointer/reference-backed `dereference(local)` sources before lowerer-local Result metadata can
+  classify downstream `Result.error(...)`, `Result.why(...)`, or combinator source values.
+  Published non-Result facts suppress stale local metadata; syntax-only contexts keep fallback.
 - Completed lowerer-side dispatch method receiver fact slice: dispatch inference for
   `FileError.why()` and nested `try(file.method())` file operations now reads the receiver's
   published binding, query, or local-auto fact before syntactic `FileError` spelling or

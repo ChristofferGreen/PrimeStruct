@@ -627,6 +627,10 @@ Task template:
     `dereference(at(args<Result>, i))` generic Result metadata resolution
     before stale args-pack Result metadata can classify downstream source
     values.
+    The lowerer local Result source metadata slice is complete for
+    semantic-product-backed direct local Result sources and pointer/reference
+    `dereference(local)` Result sources before stale local Result metadata
+    can classify downstream source values.
     The lowerer dispatch method receiver fact slice is complete for
     semantic-product-backed `FileError.why()` and nested `try(file.method())`
     inference before stale syntactic `FileError` spelling or local
@@ -728,6 +732,13 @@ Task template:
       `Result.why(...)`, or combinator source values. Published non-Result
       target facts suppress stale local metadata while syntax-only
       compatibility keeps the legacy fallback.
+    - Completed slice: semantic-product-addressed generic Result metadata
+      resolution now consumes published binding and local-auto facts for
+      direct local Result sources and pointer/reference `dereference(local)`
+      sources before local Result fallback can classify downstream
+      `Result.error(...)`, `Result.why(...)`, or combinator source values.
+      Published non-Result facts suppress stale local metadata while
+      syntax-only compatibility keeps the legacy fallback.
     - Completed slice: semantic-product-addressed dispatch inference now
       consumes published method receiver binding, query, or local-auto facts
       for `FileError.why()` and nested `try(file.method())` file operations

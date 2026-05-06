@@ -96,6 +96,48 @@ bool applySemanticResultValueTypeText(const std::string &valueTypeText, ResultEx
   return true;
 }
 
+bool applySemanticResultTypeText(const std::string &typeText,
+                                 ResultExprInfo &out,
+                                 bool allowPointerLikeResultTarget = false) {
+  const std::string trimmedType = trimTemplateTypeText(typeText);
+  bool resultHasValue = false;
+  LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
+  std::string resultErrorType;
+  if (!parseResultTypeName(trimmedType, resultHasValue, resultValueKind, resultErrorType)) {
+    if (!allowPointerLikeResultTarget) {
+      return false;
+    }
+    std::string pointerBase;
+    std::string pointerArgText;
+    if (!splitTemplateTypeName(trimmedType, pointerBase, pointerArgText)) {
+      return false;
+    }
+    pointerBase = trimTemplateTypeText(pointerBase);
+    if (pointerBase != "Reference" && pointerBase != "/Reference" &&
+        pointerBase != "Pointer" && pointerBase != "/Pointer") {
+      return false;
+    }
+    return applySemanticResultTypeText(pointerArgText, out, false);
+  }
+  out = ResultExprInfo{};
+  out.isResult = true;
+  out.hasValue = resultHasValue;
+  out.valueKind = resultValueKind;
+  out.errorType = resultErrorType;
+  if (!resultHasValue || resultValueKind != LocalInfo::ValueKind::Unknown) {
+    return true;
+  }
+
+  std::string base;
+  std::string argText;
+  std::vector<std::string> resultArgs;
+  if (!splitTemplateTypeName(trimmedType, base, argText) ||
+      !splitTemplateArgs(argText, resultArgs) || resultArgs.size() != 2) {
+    return true;
+  }
+  return applySemanticResultValueTypeText(resultArgs.front(), out);
+}
+
 std::string resolveSemanticResultFactText(const SemanticProgram &semanticProgram,
                                           const std::string &text,
                                           SymbolId textId) {
@@ -195,6 +237,40 @@ bool resolveSemanticQueryResultInfoWithPresence(const Expr &expr,
     return false;
   }
   return true;
+}
+
+bool resolveSemanticBindingResultInfoWithPresence(const Expr &expr,
+                                                  const SemanticProgram *semanticProgram,
+                                                  const SemanticProductIndex *semanticIndex,
+                                                  ResultExprInfo &out,
+                                                  bool &hasSemanticBindingOut,
+                                                  bool allowPointerLikeResultTarget = false) {
+  hasSemanticBindingOut = false;
+  if (semanticProgram == nullptr || semanticIndex == nullptr || expr.semanticNodeId == 0) {
+    return false;
+  }
+  if (const auto *bindingFact = findSemanticProductBindingFact(*semanticIndex, expr)) {
+    hasSemanticBindingOut = true;
+    return applySemanticResultTypeText(
+        resolveSemanticResultFactText(
+            *semanticProgram,
+            bindingFact->bindingTypeText,
+            bindingFact->bindingTypeTextId),
+        out,
+        allowPointerLikeResultTarget);
+  }
+  if (const auto *localAutoFact =
+          findSemanticProductLocalAutoFactBySemanticId(*semanticIndex, expr)) {
+    hasSemanticBindingOut = true;
+    return applySemanticResultTypeText(
+        resolveSemanticResultFactText(
+            *semanticProgram,
+            localAutoFact->bindingTypeText,
+            localAutoFact->bindingTypeTextId),
+        out,
+        allowPointerLikeResultTarget);
+  }
+  return false;
 }
 
 bool needsSemanticQueryResultValueMetadata(const Expr &expr,
@@ -920,6 +996,25 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
   if (isSimpleCallName(expr, "dereference") && expr.args.size() == 1) {
     const Expr &targetExpr = expr.args.front();
     if (targetExpr.kind == Expr::Kind::Name) {
+      bool hasSemanticTargetBinding = false;
+      if (resolveSemanticBindingResultInfoWithPresence(
+              targetExpr,
+              semanticProgram,
+              semanticIndex,
+              out,
+              hasSemanticTargetBinding,
+              true)) {
+        auto localIt = localsIn.find(targetExpr.name);
+        if (localIt != localsIn.end() &&
+            (localIt->second.kind == LocalInfo::Kind::Reference ||
+             localIt->second.kind == LocalInfo::Kind::Pointer)) {
+          return true;
+        }
+        return false;
+      }
+      if (hasSemanticTargetBinding) {
+        return false;
+      }
       auto localIt = localsIn.find(targetExpr.name);
       if (localIt != localsIn.end() &&
           (localIt->second.kind == LocalInfo::Kind::Reference ||
@@ -1277,6 +1372,16 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
       return false;
     }
     return true;
+  }
+  if (expr.kind == Expr::Kind::Name) {
+    bool hasSemanticBinding = false;
+    if (resolveSemanticBindingResultInfoWithPresence(
+            expr, semanticProgram, semanticIndex, out, hasSemanticBinding)) {
+      return true;
+    }
+    if (hasSemanticBinding) {
+      return false;
+    }
   }
   return resolveResultExprInfo(
       expr, lookupLocal, resolveMethod, resolveDefinitionCallFn, lookupDefinitionResult, out);
