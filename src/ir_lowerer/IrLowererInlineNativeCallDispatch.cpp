@@ -1,6 +1,7 @@
 #include "IrLowererCallHelpers.h"
 
 #include <cctype>
+#include <functional>
 #include <string>
 #include <string_view>
 
@@ -829,6 +830,141 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
   const SemanticProductIndex semanticIndex = buildSemanticProductIndex(semanticProgram);
   const SemanticProductIndex *const semanticIndexPtr =
       semanticProgram == nullptr ? nullptr : &semanticIndex;
+  auto resolveInlineSemanticTypeText = [&](SymbolId typeTextId,
+                                           const std::string &typeText) {
+    if (semanticProgram != nullptr && typeTextId != InvalidSymbolId) {
+      const std::string resolvedText =
+          std::string(semanticProgramResolveCallTargetString(*semanticProgram,
+                                                             typeTextId));
+      if (!resolvedText.empty()) {
+        return trimTemplateTypeText(resolvedText);
+      }
+    }
+    return trimTemplateTypeText(typeText);
+  };
+  enum class InlineVectorTargetFact {
+    Unknown,
+    Vector,
+    NonVector,
+  };
+  auto isInlineExperimentalVectorTypeName = [](std::string typeName) {
+    typeName = trimTemplateTypeText(typeName);
+    return typeName == "Vector" ||
+           typeName == "/Vector" ||
+           typeName == "std/collections/experimental_vector/Vector" ||
+           typeName == "/std/collections/experimental_vector/Vector" ||
+           typeName.rfind("std/collections/experimental_vector/Vector__", 0) == 0 ||
+           typeName.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+  };
+  std::function<bool(const std::string &)> isInlineVectorTypeText;
+  isInlineVectorTypeText = [&](const std::string &typeText) {
+    std::string base;
+    std::string argText;
+    if (splitTemplateTypeName(trimTemplateTypeText(typeText), base, argText)) {
+      const std::string normalizedBase = trimTemplateTypeText(base);
+      if (normalizedBase == "Reference" || normalizedBase == "/Reference" ||
+          normalizedBase == "Pointer" || normalizedBase == "/Pointer") {
+        return isInlineVectorTypeText(argText);
+      }
+      return normalizedBase == "vector" || normalizedBase == "/vector" ||
+             normalizedBase == "std/collections/vector" ||
+             normalizedBase == "/std/collections/vector" ||
+             isInlineExperimentalVectorTypeName(normalizedBase);
+    }
+    const std::string normalizedTypeText = trimTemplateTypeText(typeText);
+    return normalizedTypeText == "vector" || normalizedTypeText == "/vector" ||
+           normalizedTypeText == "std/collections/vector" ||
+           normalizedTypeText == "/std/collections/vector" ||
+           isInlineExperimentalVectorTypeName(normalizedTypeText);
+  };
+  auto classifyInlineVectorTypeText =
+      [&](SymbolId typeTextId, const std::string &typeText) {
+    return isInlineVectorTypeText(
+               resolveInlineSemanticTypeText(typeTextId, typeText))
+               ? InlineVectorTargetFact::Vector
+               : InlineVectorTargetFact::NonVector;
+  };
+  auto combineInlineVectorTargetFacts = [](InlineVectorTargetFact lhs,
+                                           InlineVectorTargetFact rhs) {
+    if (lhs == InlineVectorTargetFact::Vector ||
+        rhs == InlineVectorTargetFact::Vector) {
+      return InlineVectorTargetFact::Vector;
+    }
+    if (lhs == InlineVectorTargetFact::NonVector ||
+        rhs == InlineVectorTargetFact::NonVector) {
+      return InlineVectorTargetFact::NonVector;
+    }
+    return InlineVectorTargetFact::Unknown;
+  };
+  auto classifyInlineVectorTargetFromSemanticFacts =
+      [&](const Expr &targetExpr) {
+    if (semanticProgram == nullptr || semanticIndexPtr == nullptr ||
+        targetExpr.semanticNodeId == 0) {
+      return InlineVectorTargetFact::Unknown;
+    }
+    if (const auto *collectionFact =
+            findSemanticProductCollectionSpecialization(*semanticIndexPtr, targetExpr);
+        collectionFact != nullptr) {
+      const std::string collectionFamily =
+          resolveInlineSemanticTypeText(collectionFact->collectionFamilyId,
+                                        collectionFact->collectionFamily);
+      return collectionFamily == "vector" || collectionFamily == "/vector" ||
+             collectionFamily == "std/collections/vector" ||
+             collectionFamily == "/std/collections/vector"
+                 ? InlineVectorTargetFact::Vector
+                 : InlineVectorTargetFact::NonVector;
+    }
+    if (const auto *queryFact =
+            findSemanticProductQueryFact(semanticProgram, *semanticIndexPtr, targetExpr);
+        queryFact != nullptr) {
+      InlineVectorTargetFact fact =
+          classifyInlineVectorTypeText(queryFact->bindingTypeTextId,
+                                       queryFact->bindingTypeText);
+      fact = combineInlineVectorTargetFacts(
+          fact,
+          classifyInlineVectorTypeText(queryFact->queryTypeTextId,
+                                       queryFact->queryTypeText));
+      return combineInlineVectorTargetFacts(
+          fact,
+          classifyInlineVectorTypeText(queryFact->receiverBindingTypeTextId,
+                                       queryFact->receiverBindingTypeText));
+    }
+    if (const auto *bindingFact =
+            findSemanticProductBindingFact(*semanticIndexPtr, targetExpr);
+        bindingFact != nullptr) {
+      return classifyInlineVectorTypeText(bindingFact->bindingTypeTextId,
+                                          bindingFact->bindingTypeText);
+    }
+    if (const auto *localAutoFact =
+            findSemanticProductLocalAutoFact(semanticProgram, *semanticIndexPtr, targetExpr);
+        localAutoFact != nullptr) {
+      return classifyInlineVectorTypeText(localAutoFact->bindingTypeTextId,
+                                          localAutoFact->bindingTypeText);
+    }
+    return InlineVectorTargetFact::Unknown;
+  };
+  auto isSemanticOrLegacyVectorTarget = [&](const Expr &targetExpr) {
+    const InlineVectorTargetFact semanticFact =
+        classifyInlineVectorTargetFromSemanticFacts(targetExpr);
+    if (semanticFact == InlineVectorTargetFact::Vector) {
+      return true;
+    }
+    if (semanticFact == InlineVectorTargetFact::NonVector) {
+      return false;
+    }
+    return isVectorTarget(targetExpr, localsIn);
+  };
+  auto isSemanticOrLegacyExperimentalVectorTarget = [&](const Expr &targetExpr) {
+    const InlineVectorTargetFact semanticFact =
+        classifyInlineVectorTargetFromSemanticFacts(targetExpr);
+    if (semanticFact == InlineVectorTargetFact::Vector) {
+      return true;
+    }
+    if (semanticFact == InlineVectorTargetFact::NonVector) {
+      return false;
+    }
+    return isExperimentalVectorTarget(targetExpr, localsIn);
+  };
   auto emitCanonicalInlineDefinitionCall = [&](const Expr &callExpr, const Definition &callee) {
     if (isTypeNamespaceMethodCallForInlineEmit(callExpr, callee, localsIn)) {
       const Expr directCallExpr = makeInlineEmitDirectTypeNamespaceCall(callExpr, callee);
@@ -844,7 +980,8 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
   if (!expr.isMethodCall) {
     std::string mapHelperName;
     const std::string rawPath = resolveInlineCallPathWithoutFallbackProbes(expr);
-    if (expr.args.size() == 1 && isVectorTarget(expr.args.front(), localsIn)) {
+    if (expr.args.size() == 1 &&
+        isSemanticOrLegacyVectorTarget(expr.args.front())) {
       std::string vectorHelperName;
       if (resolveVectorHelperAliasName(expr, vectorHelperName) &&
           (vectorHelperName == "count" || vectorHelperName == "capacity")) {
@@ -870,7 +1007,8 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
         }
       }
     }
-    if (expr.args.size() == 2 && isVectorTarget(expr.args.front(), localsIn)) {
+    if (expr.args.size() == 2 &&
+        isSemanticOrLegacyVectorTarget(expr.args.front())) {
       std::string vectorHelperName;
       if (resolveVectorHelperAliasName(expr, vectorHelperName) &&
           vectorHelperName == "at") {
@@ -915,18 +1053,6 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     const bool isCanonicalStdMapHelperCall =
         rawPath.rfind("/std/collections/map/", 0) == 0 ||
         rawPath.rfind("std/collections/map/", 0) == 0;
-    auto resolveInlineSemanticTypeText = [&](SymbolId typeTextId,
-                                             const std::string &typeText) {
-      if (semanticProgram != nullptr && typeTextId != InvalidSymbolId) {
-        const std::string resolvedText =
-            std::string(semanticProgramResolveCallTargetString(*semanticProgram,
-                                                               typeTextId));
-        if (!resolvedText.empty()) {
-          return trimTemplateTypeText(resolvedText);
-        }
-      }
-      return trimTemplateTypeText(typeText);
-    };
     std::function<bool(const std::string &,
                        LocalInfo::ValueKind &,
                        LocalInfo::ValueKind &)> inferMapKindsFromTypeText;
@@ -1238,7 +1364,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
   }
   if (expr.isMethodCall && expr.args.size() == 1 &&
       (isSimpleCallName(expr, "field_count") || isSimpleCallName(expr, "field_capacity")) &&
-      isVectorTarget(expr.args.front(), localsIn)) {
+      isSemanticOrLegacyVectorTarget(expr.args.front())) {
     return InlineCallDispatchResult::NotHandled;
   }
   if (expr.isMethodCall && expr.args.size() == 1 &&
@@ -1267,7 +1393,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
   if (expr.isMethodCall && expr.args.size() == 2) {
     std::string accessName;
     if (getBuiltinArrayAccessName(expr, accessName) && accessName == "at" &&
-        isVectorTarget(expr.args.front(), localsIn)) {
+        isSemanticOrLegacyVectorTarget(expr.args.front())) {
       return InlineCallDispatchResult::NotHandled;
     }
   }
@@ -1278,14 +1404,14 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
   }
   if (expr.isMethodCall && expr.args.size() == 1 &&
       (isSimpleCallName(expr, "count") || isSimpleCallName(expr, "capacity")) &&
-      (isVectorTarget(expr.args.front(), localsIn) ||
+      (isSemanticOrLegacyVectorTarget(expr.args.front()) ||
        isVectorReturningCallTarget(expr.args.front()))) {
     const Definition *callee = resolveMethodCallDefinitionFn(expr, localsIn);
     if (callee != nullptr && callee->fullPath == "/vector/count") {
       return InlineCallDispatchResult::NotHandled;
     }
     if (callee != nullptr && callee->fullPath == "/vector/capacity") {
-      if (isExperimentalVectorTarget(expr.args.front(), localsIn) ||
+      if (isSemanticOrLegacyExperimentalVectorTarget(expr.args.front()) ||
           isVectorReturningCallTarget(expr.args.front())) {
         return InlineCallDispatchResult::NotHandled;
       }

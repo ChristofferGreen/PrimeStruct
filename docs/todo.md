@@ -687,6 +687,11 @@ Task template:
     and query vector receiver facts before stale local vector metadata can
     decide whether builtin vector mutator rewriting should defer to ordinary
     method resolution.
+    The inline native vector helper deferral slice is complete for
+    semantic-product-backed collection-specialization, binding, local-auto,
+    and query vector receiver facts before stale local vector metadata can
+    decide whether inline dispatch should defer to builtin vector helper
+    lowering.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -837,6 +842,13 @@ Task template:
       bypass ordinary method resolution. Published non-vector facts suppress
       stale local vector metadata while syntax-only compatibility keeps the
       legacy fallback.
+    - Completed slice: semantic-product-addressed inline native vector helper
+      deferral now consumes published collection-specialization, binding,
+      local-auto, and query vector receiver facts before local vector metadata
+      can decide whether `count`/`capacity`/`at`/`field_count`-style inline
+      dispatch should defer to builtin vector lowering. Published non-vector
+      facts suppress stale local vector metadata while syntax-only
+      compatibility keeps the legacy fallback.
     - Completed slice: semantic-product-addressed dispatch inference now
       consumes published method receiver binding, query, or local-auto facts
       for `FileError.why()` and nested `try(file.method())` file operations
