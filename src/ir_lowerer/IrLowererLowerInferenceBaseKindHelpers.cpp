@@ -218,6 +218,33 @@ bool inferBaseSetupSemanticFileHandleMethodKind(const Expr &receiver,
   return true;
 }
 
+bool inferBaseSetupSemanticDereferencedFileHandleMethodKind(
+    const Expr &receiver,
+    const std::string &methodName,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex,
+    LocalInfo::ValueKind &kindOut,
+    bool &hasSemanticTargetOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  hasSemanticTargetOut = false;
+  if (!isSimpleCallName(receiver, "dereference") || receiver.args.size() != 1) {
+    return false;
+  }
+
+  bool hasSemanticTarget = false;
+  if (inferBaseSetupSemanticFileHandleMethodKind(receiver.args.front(),
+                                                methodName,
+                                                semanticProgram,
+                                                semanticIndex,
+                                                kindOut,
+                                                hasSemanticTarget)) {
+    hasSemanticTargetOut = true;
+    return true;
+  }
+  hasSemanticTargetOut = hasSemanticTarget;
+  return false;
+}
+
 bool inferBaseSetupSemanticFileHandleCallKind(const Expr &expr,
                                               const SemanticProgram *semanticProgram,
                                               const SemanticProductIndex *semanticIndex,
@@ -1136,6 +1163,19 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
         return true;
       }
       if (hasSemanticFileHandleReceiver) {
+        return true;
+      }
+      bool hasSemanticFileHandleTarget = false;
+      if (inferBaseSetupSemanticDereferencedFileHandleMethodKind(
+              receiver,
+              expr.name,
+              semanticProgram,
+              semanticIndex,
+              kindOut,
+              hasSemanticFileHandleTarget)) {
+        return true;
+      }
+      if (hasSemanticFileHandleTarget) {
         return true;
       }
     }

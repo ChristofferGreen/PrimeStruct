@@ -574,6 +574,10 @@ Task template:
     for semantic-product-backed `dereference(at(args<FileError>, i)).why()`
     inference before stale borrowed/pointer args-pack metadata can classify
     the receiver path.
+    The lowerer base dereferenced file-handle receiver fact slice is complete
+    for semantic-product-backed `dereference(at(args<File<Mode>>, i)).flush()`
+    and sibling file-method inference before stale borrowed/pointer args-pack
+    metadata can classify the receiver path.
     The lowerer direct file-call query slice is complete for
     semantic-product-backed `File<Mode>(...)` and nested `try(File<Mode>(...))`
     base-kind inference before syntax-owned file-handle-call fallback can
@@ -695,6 +699,12 @@ Task template:
       args-pack fallback can infer the value kind. Published non-`FileError`
       target facts suppress stale local metadata while syntax-only
       compatibility keeps the legacy fallback.
+    - Completed slice: semantic-product-addressed base-kind inference now
+      consumes published inner indexed-access query facts for
+      `dereference(at(args<File<Mode>>, i)).flush()` and sibling file methods
+      before borrowed/pointer args-pack fallback can infer the value kind.
+      Published non-`File<Mode>` target facts suppress stale local metadata
+      while syntax-only compatibility keeps the legacy fallback.
     - Completed slice: semantic-product-addressed dispatch inference now
       consumes published payload binding or query facts for `Result.ok(...)`
       and nested `try(Result.ok(...))` before legacy Result method fallback
