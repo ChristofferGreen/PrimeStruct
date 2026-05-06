@@ -216,6 +216,102 @@ static bool populateStatementVectorTargetInfoFromTypeText(
   return true;
 }
 
+static bool isStatementExperimentalVectorTypeName(const std::string &typeName) {
+  const std::string normalized = trimTemplateTypeText(typeName);
+  return normalized == "Vector" ||
+         normalized == "std/collections/experimental_vector/Vector" ||
+         normalized == "/std/collections/experimental_vector/Vector" ||
+         normalized.rfind("std/collections/experimental_vector/Vector__", 0) == 0 ||
+         normalized.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+}
+
+static bool isStatementExperimentalVectorTypeText(const std::string &typeText) {
+  std::string base;
+  std::string argText;
+  const std::string normalizedTypeText =
+      unwrapTopLevelUninitializedTypeText(trimTemplateTypeText(typeText));
+  if (splitTemplateTypeName(normalizedTypeText, base, argText)) {
+    const std::string normalizedBase = trimTemplateTypeText(base);
+    const std::string collectionBase =
+        normalizeCollectionBindingTypeName(normalizedBase);
+    if (collectionBase == "Reference" || collectionBase == "/Reference" ||
+        collectionBase == "Pointer" || collectionBase == "/Pointer") {
+      return isStatementExperimentalVectorTypeText(argText);
+    }
+    return isStatementExperimentalVectorTypeName(normalizedBase);
+  }
+  return isStatementExperimentalVectorTypeName(normalizedTypeText);
+}
+
+static bool resolveStatementExperimentalVectorReceiverFromSemanticFacts(
+    const Expr &receiverExpr,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex,
+    bool &hasSemanticExperimentalVectorFactOut) {
+  hasSemanticExperimentalVectorFactOut = false;
+  if (semanticProgram == nullptr || semanticIndex == nullptr) {
+    return false;
+  }
+
+  auto tryResolveSemanticTypeText =
+      [&](SymbolId typeTextId, const std::string &typeText) {
+    const std::string resolvedTypeText =
+        resolveStatementCallSemanticTypeText(semanticProgram, typeTextId, typeText);
+    return !resolvedTypeText.empty() &&
+           isStatementExperimentalVectorTypeText(resolvedTypeText);
+  };
+
+  if (receiverExpr.semanticNodeId != 0) {
+    if (const auto *collectionFact =
+            findSemanticProductCollectionSpecialization(*semanticIndex, receiverExpr);
+        collectionFact != nullptr) {
+      hasSemanticExperimentalVectorFactOut = true;
+      return tryResolveSemanticTypeText(collectionFact->bindingTypeTextId,
+                                        collectionFact->bindingTypeText);
+    }
+
+    if (const auto *queryFact =
+            findSemanticProductQueryFact(semanticProgram, *semanticIndex, receiverExpr);
+        queryFact != nullptr) {
+      hasSemanticExperimentalVectorFactOut = true;
+      return tryResolveSemanticTypeText(queryFact->bindingTypeTextId,
+                                        queryFact->bindingTypeText) ||
+             tryResolveSemanticTypeText(queryFact->queryTypeTextId,
+                                        queryFact->queryTypeText) ||
+             tryResolveSemanticTypeText(queryFact->receiverBindingTypeTextId,
+                                        queryFact->receiverBindingTypeText);
+    }
+
+    if (const auto *bindingFact =
+            findSemanticProductBindingFact(*semanticIndex, receiverExpr);
+        bindingFact != nullptr) {
+      hasSemanticExperimentalVectorFactOut = true;
+      return tryResolveSemanticTypeText(bindingFact->bindingTypeTextId,
+                                        bindingFact->bindingTypeText);
+    }
+
+    if (const auto *localAutoFact =
+            findSemanticProductLocalAutoFact(semanticProgram, *semanticIndex, receiverExpr);
+        localAutoFact != nullptr) {
+      hasSemanticExperimentalVectorFactOut = true;
+      return tryResolveSemanticTypeText(localAutoFact->bindingTypeTextId,
+                                        localAutoFact->bindingTypeText);
+    }
+  }
+
+  if (receiverExpr.kind == Expr::Kind::Call && receiverExpr.args.size() == 1 &&
+      (isSimpleCallName(receiverExpr, "location") ||
+       isSimpleCallName(receiverExpr, "dereference"))) {
+    return resolveStatementExperimentalVectorReceiverFromSemanticFacts(
+        receiverExpr.args.front(),
+        semanticProgram,
+        semanticIndex,
+        hasSemanticExperimentalVectorFactOut);
+  }
+
+  return false;
+}
+
 static bool resolveStatementVectorReceiverTargetInfoFromSemanticFacts(
     const Expr &receiverExpr,
     const SemanticProgram *semanticProgram,
@@ -1718,6 +1814,17 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
                 "/std/collections/experimental_vector/Vector__", 0) == 0);
   };
   auto isExperimentalVectorReceiverExpr = [&](const Expr &candidate) {
+    bool hasSemanticExperimentalVectorFact = false;
+    if (resolveStatementExperimentalVectorReceiverFromSemanticFacts(
+            candidate,
+            semanticProgram,
+            semanticIndex,
+            hasSemanticExperimentalVectorFact)) {
+      return true;
+    }
+    if (hasSemanticExperimentalVectorFact) {
+      return false;
+    }
     if (candidate.kind != Expr::Kind::Name) {
       return false;
     }

@@ -970,6 +970,207 @@ TEST_CASE("ir lowerer vector mutator rewrite uses semantic receiver facts before
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer experimental vector setters use semantic receiver facts before stale locals") {
+  using EmitResult = primec::ir_lowerer::DirectCallStatementEmitResult;
+
+  primec::Expr valueArg;
+  valueArg.kind = primec::Expr::Kind::Literal;
+  valueArg.literalValue = 2;
+  valueArg.intWidth = 32;
+
+  auto makeReceiver = [](std::string name, uint64_t semanticNodeId) {
+    primec::Expr receiver;
+    receiver.kind = primec::Expr::Kind::Name;
+    receiver.name = name;
+    receiver.semanticNodeId = semanticNodeId;
+    return receiver;
+  };
+
+  auto makeSetCountStmt = [&](const primec::Expr &receiver) {
+    primec::Expr stmt;
+    stmt.kind = primec::Expr::Kind::Call;
+    stmt.name = "set_field_count";
+    stmt.isMethodCall = true;
+    stmt.args = {receiver, valueArg};
+    stmt.argNames = {std::nullopt, std::nullopt};
+    return stmt;
+  };
+
+  primec::SemanticProgram semanticProgram;
+  auto internType = [&](const std::string &typeText) {
+    return primec::semanticProgramInternCallTargetString(semanticProgram, typeText);
+  };
+  auto addCollectionFact =
+      [&](uint64_t semanticNodeId, std::string name, std::string typeText) {
+    const std::size_t factIndex = semanticProgram.collectionSpecializations.size();
+    semanticProgram.collectionSpecializations.push_back(primec::SemanticProgramCollectionSpecialization{
+        .name = name,
+        .collectionFamily = "vector",
+        .bindingTypeText = "vector<i32>",
+        .elementTypeText = "i32",
+        .semanticNodeId = semanticNodeId,
+        .collectionFamilyId = internType("vector"),
+        .bindingTypeTextId = internType(typeText),
+        .elementTypeTextId = internType("i32"),
+    });
+    semanticProgram.publishedRoutingLookups
+        .collectionSpecializationIndicesByExpr[semanticNodeId] = factIndex;
+  };
+  auto addBindingFact = [&](uint64_t semanticNodeId,
+                            std::string name,
+                            std::string staleTypeText,
+                            std::string typeText) {
+    const std::size_t factIndex = semanticProgram.bindingFacts.size();
+    semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+        .name = name,
+        .bindingTypeText = staleTypeText,
+        .semanticNodeId = semanticNodeId,
+        .bindingTypeTextId = internType(typeText),
+    });
+    semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr[semanticNodeId] = factIndex;
+  };
+  auto addLocalAutoFact = [&](uint64_t semanticNodeId, std::string name, std::string typeText) {
+    const std::size_t factIndex = semanticProgram.localAutoFacts.size();
+    semanticProgram.localAutoFacts.push_back(primec::SemanticProgramLocalAutoFact{
+        .bindingName = name,
+        .bindingTypeText = "i32",
+        .semanticNodeId = semanticNodeId,
+        .bindingTypeTextId = internType(typeText),
+    });
+    semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr[semanticNodeId] = factIndex;
+  };
+  auto addQueryFact = [&](uint64_t semanticNodeId, std::string typeText) {
+    const std::size_t factIndex = semanticProgram.queryFacts.size();
+    semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+        .callName = "values",
+        .queryTypeText = "i32",
+        .bindingTypeText = "i32",
+        .semanticNodeId = semanticNodeId,
+        .queryTypeTextId = internType(typeText),
+        .bindingTypeTextId = internType(typeText),
+    });
+    semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr[semanticNodeId] = factIndex;
+  };
+
+  const std::string experimentalVectorType =
+      "/std/collections/experimental_vector/Vector__t25a78a513414c3bf";
+  addCollectionFact(7701, "collectionValues", experimentalVectorType);
+  addBindingFact(7702, "bindingValues", "i32", experimentalVectorType);
+  addLocalAutoFact(7703, "autoValues", "Reference<" + experimentalVectorType + ">");
+  addQueryFact(7704, "Pointer<" + experimentalVectorType + ">");
+  addBindingFact(7705, "notAVector", experimentalVectorType, "i32");
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  primec::ir_lowerer::LocalMap locals;
+  auto addLocal = [&](const std::string &name, std::string structTypeName) {
+    primec::ir_lowerer::LocalInfo local;
+    local.structTypeName = structTypeName;
+    local.index = 13;
+    locals[name] = local;
+  };
+  addLocal("collectionValues", "/main/NotVector");
+  addLocal("bindingValues", "/main/NotVector");
+  addLocal("autoValues", "/main/NotVector");
+  addLocal("queryValues", "/main/NotVector");
+  addLocal("notAVector", experimentalVectorType);
+
+  primec::Definition fallbackSetterDef;
+  fallbackSetterDef.fullPath = "/main/Vector.set_field_count";
+
+  auto emitSetter = [&](const primec::Expr &stmt,
+                        int &inlineCalls,
+                        std::vector<primec::IrInstruction> &instructions,
+                        std::string &errorOut) {
+    instructions.clear();
+    inlineCalls = 0;
+    errorOut.clear();
+    return primec::ir_lowerer::tryEmitDirectCallStatement(
+        stmt,
+        locals,
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+        [&](const primec::Expr &callExpr,
+            const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+          return callExpr.isMethodCall && callExpr.name == "set_field_count"
+                     ? &fallbackSetterDef
+                     : nullptr;
+        },
+        [](const primec::Expr &) -> const primec::Definition * { return nullptr; },
+        [](const std::string &, primec::ir_lowerer::ReturnInfo &info) {
+          info.returnsVoid = true;
+          return true;
+        },
+        [&](const primec::Expr &callExpr,
+            const primec::Definition &callee,
+            const primec::ir_lowerer::LocalMap &,
+            bool expectValue) {
+          ++inlineCalls;
+          CHECK(callExpr.isMethodCall);
+          CHECK(callExpr.name == "set_field_count");
+          CHECK(callee.fullPath == "/main/Vector.set_field_count");
+          CHECK_FALSE(expectValue);
+          return true;
+        },
+        []() {},
+        instructions,
+        errorOut,
+        &semanticProgram,
+        &semanticIndex);
+  };
+
+  auto hasHeaderStore = [](const std::vector<primec::IrInstruction> &instructions) {
+    return std::any_of(instructions.begin(), instructions.end(), [](const auto &instruction) {
+      return instruction.op == primec::IrOpcode::StoreIndirect;
+    });
+  };
+
+  int inlineCalls = 0;
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  CHECK(emitSetter(makeSetCountStmt(makeReceiver("collectionValues", 7701)),
+                   inlineCalls,
+                   instructions,
+                   error) == EmitResult::Emitted);
+  CHECK(inlineCalls == 0);
+  CHECK(hasHeaderStore(instructions));
+  CHECK(error.empty());
+
+  CHECK(emitSetter(makeSetCountStmt(makeReceiver("bindingValues", 7702)),
+                   inlineCalls,
+                   instructions,
+                   error) == EmitResult::Emitted);
+  CHECK(inlineCalls == 0);
+  CHECK(hasHeaderStore(instructions));
+  CHECK(error.empty());
+
+  CHECK(emitSetter(makeSetCountStmt(makeReceiver("autoValues", 7703)),
+                   inlineCalls,
+                   instructions,
+                   error) == EmitResult::Emitted);
+  CHECK(inlineCalls == 0);
+  CHECK(hasHeaderStore(instructions));
+  CHECK(error.empty());
+
+  CHECK(emitSetter(makeSetCountStmt(makeReceiver("queryValues", 7704)),
+                   inlineCalls,
+                   instructions,
+                   error) == EmitResult::Emitted);
+  CHECK(inlineCalls == 0);
+  CHECK(hasHeaderStore(instructions));
+  CHECK(error.empty());
+
+  CHECK(emitSetter(makeSetCountStmt(makeReceiver("notAVector", 7705)),
+                   inlineCalls,
+                   instructions,
+                   error) == EmitResult::Emitted);
+  CHECK(inlineCalls == 1);
+  CHECK_FALSE(hasHeaderStore(instructions));
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer SoA helper dispatch uses semantic receiver facts before stale locals") {
   using EmitResult = primec::ir_lowerer::DirectCallStatementEmitResult;
 

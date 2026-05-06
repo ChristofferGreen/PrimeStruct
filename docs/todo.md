@@ -677,6 +677,11 @@ Task template:
     semantic-product-backed collection-specialization, binding, local-auto,
     and query SoA vector facts before stale local SoA metadata can select
     direct helper method dispatch.
+    The statement-call experimental vector header setter receiver slice is
+    complete for semantic-product-backed collection-specialization, binding,
+    local-auto, and query experimental vector facts before stale local vector
+    struct metadata can select direct `set_field_count`/`set_field_capacity`
+    header stores.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -812,6 +817,13 @@ Task template:
       local-auto, and query SoA vector receiver facts before local
       `isSoaVector` metadata can select direct helper method dispatch.
       Published non-SoA facts suppress stale local SoA metadata while
+      syntax-only compatibility keeps the legacy fallback.
+    - Completed slice: semantic-product-addressed statement-call
+      experimental vector header setters now consume published
+      collection-specialization, binding, local-auto, and query experimental
+      vector receiver facts before local struct metadata can select direct
+      `set_field_count`/`set_field_capacity` header stores. Published
+      non-vector facts suppress stale local experimental-vector metadata while
       syntax-only compatibility keeps the legacy fallback.
     - Completed slice: semantic-product-addressed dispatch inference now
       consumes published method receiver binding, query, or local-auto facts

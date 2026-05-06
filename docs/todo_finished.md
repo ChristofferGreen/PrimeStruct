@@ -12557,3 +12557,40 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     coverage for collection-specialization, binding, local-auto, query, and
     non-SoA receiver facts, and documented the remaining TODO-4298 work.
     Local test execution was skipped per the lite workflow.
+
+- [x] TODO-4298: Use vector setter receiver facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes statement-call
+    experimental vector header setters read semantic-product receiver facts
+    before stale local experimental-vector struct metadata.
+  - implementation_notes:
+    - Resolve collection-specialization binding type IDs plus binding,
+      local-auto, and query receiver type IDs before copied fact text.
+    - Treat `Reference<Vector__...>`, `Pointer<Vector__...>`, and
+      specialized experimental `Vector__` type text as experimental vector
+      receiver facts.
+    - Keep local experimental-vector struct metadata as compatibility
+      fallback for syntax-only or no-semantic-product contexts.
+  - acceptance:
+    - Statement-call `set_field_count`/`set_field_capacity` header setter
+      emission consumes graph-backed experimental vector receiver facts
+      before local metadata.
+    - Interned semantic-product type IDs override copied text for
+      experimental vector receiver classification.
+    - Published non-vector facts suppress stale local experimental-vector
+      metadata.
+    - The remaining TODO-4298 block records the completed slice and remaining
+      adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once statement-call experimental vector header setters
+    prefer published semantic-product facts and keep local struct-path
+    inference only as compatibility fallback.
+  - finished_at: 2026-05-06
+  - evidence: Promoted statement-call experimental vector header setter
+    receiver classification in `IrLowererStatementCallEmission.cpp`, added
+    targeted lowerer helper coverage for collection-specialization, binding,
+    local-auto, query, and non-vector receiver facts, and documented the
+    remaining TODO-4298 work. Local test execution was skipped per the lite
+    workflow.
