@@ -520,8 +520,10 @@ Task template:
     helper remains available for resolved callee-path consumers. The lowerer
     return-by-path helper published-map slice is complete for resolved
     callee-path consumers. The lowerer sum metadata helper published-map slice
-    is complete for sum type/variant lookup consumers. The lowerer base
-    call-kind `try(...)` fact authority slice is complete. The lowerer
+    is complete for sum type/variant lookup consumers. The lowerer callable
+    summary adapter helper published-map slice is complete for resolved
+    full-path consumers. The lowerer base call-kind `try(...)` fact authority
+    slice is complete. The lowerer
     base call-kind Result method fact-authority slice is complete for
     semantic-product-addressed `Result.ok(...)`, `Result.error(...)`, and
     `Result.why(...)` calls. The lowerer `Result.why(...)` source-query
@@ -939,6 +941,10 @@ Task template:
       sum-path/variant-name maps instead of scanning raw metadata vectors.
       Missing published metadata fails closed for resolved sum metadata
       lookups.
+    - Completed slice: semantic-product-addressed callable-summary consumers
+      that use the lowerer adapter now resolve through the published full-path
+      map instead of recovering matching raw summaries from the backing vector.
+      Missing published metadata fails closed for resolved callable paths.
     - Completed slice: semantic-product-addressed direct-call payloads for
       `Result.ok(...)` now resolve payload type metadata from published
       binding/query facts before direct callee collection or struct

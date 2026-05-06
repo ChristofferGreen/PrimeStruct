@@ -348,7 +348,18 @@ const SemanticProgramCallableSummary *findSemanticProductCallableSummary(const S
   if (fullPath.empty() || semanticProgram == nullptr) {
     return nullptr;
   }
-  return semanticProgramLookupPublishedCallableSummary(*semanticProgram, fullPath);
+  const auto fullPathId =
+      semanticProgramLookupCallTargetStringId(*semanticProgram, fullPath);
+  if (!fullPathId.has_value()) {
+    return nullptr;
+  }
+  const auto &indicesByPath =
+      semanticProgram->publishedRoutingLookups.callableSummaryIndicesByPathId;
+  if (const auto it = indicesByPath.find(*fullPathId);
+      it != indicesByPath.end() && it->second < semanticProgram->callableSummaries.size()) {
+    return &semanticProgram->callableSummaries[it->second];
+  }
+  return nullptr;
 }
 
 const SemanticProgramCallableSummary *findSemanticProductCallableSummary(const SemanticProductTargetAdapter &adapter,

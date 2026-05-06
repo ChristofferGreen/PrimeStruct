@@ -2175,6 +2175,35 @@ TEST_CASE("ir lowerer semantic-product adapter indexes callable summaries by ful
   CHECK(primec::ir_lowerer::findSemanticProductCallableSummary(adapter, "/missing") == nullptr);
 }
 
+TEST_CASE("ir lowerer callable summary helper ignores raw summaries without published lookup") {
+  primec::SemanticProgram semanticProgram;
+  const auto mainPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/main");
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .isExecution = false,
+      .returnKind = "i32",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 219,
+      .provenanceHandle = 0,
+      .fullPathId = mainPathId,
+  });
+
+  const auto adapter =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  CHECK(primec::ir_lowerer::findSemanticProductCallableSummary(adapter, "/main") == nullptr);
+}
+
 TEST_CASE("ir lowerer call helpers require semantic-product bridge-path choices") {
   const std::unordered_map<std::string, const primec::Definition *> defMap;
   const std::unordered_map<std::string, std::string> importAliases;

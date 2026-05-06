@@ -6,6 +6,28 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 6, 2026)**
+- [x] TODO-4298: Publish callable summary lookup
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-06
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes lowerer adapter
+    callable-summary consumers read the published full-path map instead of
+    recovering matching raw callable summaries from the backing vector.
+  - acceptance:
+    - Lowerer adapter callable-summary lookup resolves full paths through
+      `callableSummaryIndicesByPathId`.
+    - Matching raw callable summaries without a published lookup entry are not
+      recovered by lowerer adapter consumers.
+    - Existing published-map summary lookup behavior remains covered.
+  - stop_rule: Stop once adapter callable-summary consumers fail closed without
+    a published full-path map entry and tests pin the no-raw-summary fallback
+    contract.
+  - evidence: Rewired `findSemanticProductCallableSummary` to read the
+    published callable-summary path map directly, added a raw-summary
+    fail-closed regression, updated TODO/design docs, and skipped local test
+    execution per the lite workflow.
+
 - [x] TODO-4298: Publish sum metadata lookup
   - owner: ai
   - created_at: 2026-04-28
