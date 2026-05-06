@@ -574,6 +574,10 @@ Task template:
     semantic-product-backed `File<Mode>(...)` and nested `try(File<Mode>(...))`
     base-kind inference before syntax-owned file-handle-call fallback can
     classify those calls as `i64`.
+    The lowerer try operand Result fact slice is complete for
+    semantic-product-backed `try(operand)` base-kind inference before
+    stale local `isResult` or args-pack metadata can classify the operand's
+    value kind.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -764,6 +768,12 @@ Task template:
       fallback can classify the expression as `i64`. Published non-file query
       facts suppress the legacy constructor-shaped fallback; syntax-only
       compatibility keeps the old fallback.
+    - Completed slice: semantic-product-addressed `try(operand)` base-kind
+      inference now consumes the operand's published binding, query, or
+      local-auto Result fact before lowerer-local Result and args-pack
+      fallback can classify the value kind. Published non-Result operand
+      facts suppress stale local metadata; syntax-only compatibility keeps
+      the old fallback.
     - Completed slice: semantic-product-addressed native tail-dispatch
       map/vector receiver classification now resolves interned query/binding
       type IDs before consulting copied query text fields, so collection

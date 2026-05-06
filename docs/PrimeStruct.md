@@ -365,6 +365,11 @@ Planned non-template inference migration contract:
   type before syntax-owned file-handle-call fallback can classify the call as `i64`. Published
   non-`File<Mode>` query facts suppress the legacy constructor-shaped fallback; no-fact
   syntax-only contexts keep it.
+- Completed lowerer-side try operand Result fact slice: base-kind inference for
+  `try(operand)` now reads the operand's published binding, query, or local-auto Result fact
+  before lowerer-local `isResult` and args-pack metadata can classify the value kind. Published
+  non-Result operand facts suppress stale local Result metadata; no-fact syntax-only contexts
+  keep the old fallback.
 - Completed lowerer-side tail-dispatch collection query ID slice: native tail-dispatch map/vector
   target classification now resolves `bindingTypeTextId` and `queryTypeTextId` before copied
   query-fact text fields, so collection receiver classification consumes graph-owned query
