@@ -223,6 +223,40 @@ bool inferBaseSetupSemanticFileHandleCallKind(const Expr &expr,
   return true;
 }
 
+bool inferBaseSetupSemanticFieldAccessKind(const Expr &receiver,
+                                           const std::string &fieldName,
+                                           const ResolveStructFieldSlotFn &resolveStructFieldSlot,
+                                           const SemanticProgram *semanticProgram,
+                                           const SemanticProductIndex *semanticIndex,
+                                           LocalInfo::ValueKind &kindOut,
+                                           bool &hasSemanticReceiverOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  hasSemanticReceiverOut = false;
+  std::string receiverType;
+  if (!resolveBaseSetupSemanticReceiverTypeText(
+          receiver, semanticProgram, semanticIndex, receiverType)) {
+    return false;
+  }
+  hasSemanticReceiverOut = true;
+  std::vector<std::string> candidateStructPaths;
+  const std::string trimmedReceiverType = trimTemplateTypeText(receiverType);
+  if (!trimmedReceiverType.empty()) {
+    candidateStructPaths.push_back(trimmedReceiverType);
+    if (trimmedReceiverType.front() != '/') {
+      candidateStructPaths.push_back("/" + trimmedReceiverType);
+    }
+  }
+  for (const std::string &structPath : candidateStructPaths) {
+    StructSlotFieldInfo fieldInfo;
+    if (!resolveStructFieldSlot(structPath, fieldName, fieldInfo)) {
+      continue;
+    }
+    kindOut = fieldInfo.structPath.empty() ? fieldInfo.valueKind : LocalInfo::ValueKind::Unknown;
+    return true;
+  }
+  return false;
+}
+
 bool inferBaseSetupResultValueKindFromValueTypeText(const std::string &valueTypeText,
                                                     LocalInfo::ValueKind &kindOut) {
   const std::string trimmedValueType = trimTemplateTypeText(valueTypeText);
@@ -796,6 +830,19 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
       return true;
     }
     const Expr &receiver = expr.args.front();
+    bool hasSemanticFieldReceiver = false;
+    if (inferBaseSetupSemanticFieldAccessKind(receiver,
+                                             expr.name,
+                                             resolveStructFieldSlot,
+                                             semanticProgram,
+                                             semanticIndex,
+                                             kindOut,
+                                             hasSemanticFieldReceiver)) {
+      return true;
+    }
+    if (hasSemanticFieldReceiver) {
+      return true;
+    }
     std::string structPath = inferStructExprPath(receiver, localsIn);
     if (structPath.empty()) {
       return true;

@@ -375,6 +375,10 @@ Planned non-template inference migration contract:
   local-auto fact before lowerer-local `isFileHandle` metadata can classify file operations as
   status `i32` results. Published non-file receiver facts suppress stale local file-handle
   metadata; no-fact syntax-only contexts keep the old fallback.
+- Completed lowerer-side field receiver fact slice: base-kind inference for `receiver.field`
+  now reads the receiver's published binding, query, or local-auto fact before lowerer-local
+  struct-path inference can classify the field value kind. Published non-struct receiver facts
+  suppress stale local struct metadata; no-fact syntax-only contexts keep the old fallback.
 - Completed lowerer-side tail-dispatch collection query ID slice: native tail-dispatch map/vector
   target classification now resolves `bindingTypeTextId` and `queryTypeTextId` before copied
   query-fact text fields, so collection receiver classification consumes graph-owned query

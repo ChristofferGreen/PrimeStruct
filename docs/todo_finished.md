@@ -6,6 +6,32 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 6, 2026)**
+- [x] TODO-4298: Use field receiver facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-06
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes lowerer call-base
+    inference classify `receiver.field` value kinds from the receiver's
+    published binding, query, or local-auto facts before local struct-path
+    metadata can answer.
+  - acceptance:
+    - Field-access base-kind inference reads semantic-product binding facts
+      for the receiver before stale local struct-path metadata.
+    - Query-backed and local-auto-backed receiver facts classify field
+      value kinds through the published receiver type.
+    - Published non-struct receiver facts suppress stale local struct-path
+      metadata.
+    - Syntax-only contexts without semantic-product receiver facts keep the
+      existing local struct-path fallback.
+  - stop_rule: Stop once one field-access base-kind consumer depends on
+    graph-owned receiver facts and focused tests pin graph-backed,
+    stale-local, and syntax-only behavior.
+  - evidence: Added semantic-product receiver fact handling for
+    `receiver.field` call-base inference, covered binding-backed,
+    query-backed, local-auto-backed, stale-local, and syntax-only paths, and
+    skipped broad baseline validation per the lite workflow.
+
 - [x] TODO-4298: Use try file method facts
   - owner: ai
   - created_at: 2026-04-28

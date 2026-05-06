@@ -582,6 +582,9 @@ Task template:
     semantic-product-backed `try(file.method())` base-kind inference before
     stale local `isFileHandle` metadata can classify file operations as
     status `i32` results.
+    The lowerer field receiver fact slice is complete for
+    semantic-product-backed `receiver.field` base-kind inference before
+    stale local struct-path metadata can classify field value kinds.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -784,6 +787,12 @@ Task template:
       fallback can classify file operations as status `i32` results.
       Published non-file receiver facts suppress stale local metadata;
       syntax-only compatibility keeps the old fallback.
+    - Completed slice: semantic-product-addressed `receiver.field`
+      base-kind inference now consumes the receiver's published binding,
+      query, or local-auto fact before lowerer-local struct-path fallback can
+      classify the field value kind. Published non-struct receiver facts
+      suppress stale local metadata; syntax-only compatibility keeps the old
+      fallback.
     - Completed slice: semantic-product-addressed native tail-dispatch
       map/vector receiver classification now resolves interned query/binding
       type IDs before consulting copied query text fields, so collection
