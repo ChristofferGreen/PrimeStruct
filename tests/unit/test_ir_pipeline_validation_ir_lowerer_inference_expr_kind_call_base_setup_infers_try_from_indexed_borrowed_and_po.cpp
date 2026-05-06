@@ -457,11 +457,19 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic try oper
     return expr;
   };
 
+  auto makeDereferenceExpr = [](primec::Expr target) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = "dereference";
+    expr.args = {std::move(target)};
+    return expr;
+  };
+
   auto makeTryExpr = [](primec::Expr operand) {
     primec::Expr expr;
     expr.kind = primec::Expr::Kind::Call;
     expr.name = "try";
-    expr.args = {operand};
+    expr.args = {std::move(operand)};
     return expr;
   };
 
@@ -502,6 +510,8 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic try oper
   addQueryResultFact(semanticProgram, 972, "bool", "FileError");
   addQueryTypeFact(semanticProgram, 973, "i32");
   addLocalAutoFact(semanticProgram, 974, "Result<FileError>");
+  addQueryResultFact(semanticProgram, 975, "bool", "FileError");
+  addQueryTypeFact(semanticProgram, 976, "i32");
   const auto semanticIndex =
       primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
   auto state = makeState(&semanticProgram, &semanticIndex);
@@ -515,6 +525,7 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic try oper
   primec::ir_lowerer::LocalInfo staleResultPack;
   staleResultPack.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
   staleResultPack.isArgsPack = true;
+  staleResultPack.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
   staleResultPack.isResult = true;
   staleResultPack.resultHasValue = true;
   staleResultPack.resultValueKind = ValueKind::String;
@@ -544,11 +555,26 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic try oper
       makeTryExpr(makeAtExpr("results", 973)), staleLocals, kindOut));
   CHECK(kindOut == ValueKind::Unknown);
 
+  kindOut = ValueKind::Unknown;
+  CHECK(state.inferCallExprBaseKind(
+      makeTryExpr(makeDereferenceExpr(makeAtExpr("results", 975))), staleLocals, kindOut));
+  CHECK(kindOut == ValueKind::Bool);
+
+  kindOut = ValueKind::Unknown;
+  CHECK(state.inferCallExprBaseKind(
+      makeTryExpr(makeDereferenceExpr(makeAtExpr("results", 976))), staleLocals, kindOut));
+  CHECK(kindOut == ValueKind::Unknown);
+
   auto syntaxState = makeState(nullptr, nullptr);
   kindOut = ValueKind::Unknown;
   CHECK(syntaxState.inferCallExprBaseKind(
       makeTryExpr(makeNameExpr("result", 0)), staleLocals, kindOut));
   CHECK(kindOut == ValueKind::Int64);
+
+  kindOut = ValueKind::Unknown;
+  CHECK(syntaxState.inferCallExprBaseKind(
+      makeTryExpr(makeDereferenceExpr(makeAtExpr("results", 0))), staleLocals, kindOut));
+  CHECK(kindOut == ValueKind::String);
 }
 
 TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic try file method receiver facts") {

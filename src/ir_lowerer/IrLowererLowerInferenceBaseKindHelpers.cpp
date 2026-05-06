@@ -497,6 +497,31 @@ bool inferBaseSetupSemanticTryOperandResultKind(const Expr &operand,
   return false;
 }
 
+bool inferBaseSetupSemanticDereferencedTryOperandResultKind(
+    const Expr &operand,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex,
+    LocalInfo::ValueKind &kindOut,
+    bool &hasSemanticTargetOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  hasSemanticTargetOut = false;
+  if (!isSimpleCallName(operand, "dereference") || operand.args.size() != 1) {
+    return false;
+  }
+
+  bool hasSemanticTarget = false;
+  if (inferBaseSetupSemanticTryOperandResultKind(operand.args.front(),
+                                                semanticProgram,
+                                                semanticIndex,
+                                                kindOut,
+                                                hasSemanticTarget)) {
+    hasSemanticTargetOut = true;
+    return true;
+  }
+  hasSemanticTargetOut = hasSemanticTarget;
+  return false;
+}
+
 bool inferBaseSetupSemanticQueryFactValueKindWithPresence(const Expr &expr,
                                                           const SemanticProgram *semanticProgram,
                                                           const SemanticProductIndex *semanticIndex,
@@ -1242,6 +1267,18 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
       return true;
     }
     if (hasSemanticResultOperand) {
+      return true;
+    }
+    bool hasSemanticDereferencedResultOperand = false;
+    if (inferBaseSetupSemanticDereferencedTryOperandResultKind(
+            arg,
+            semanticProgram,
+            semanticIndex,
+            kindOut,
+            hasSemanticDereferencedResultOperand)) {
+      return true;
+    }
+    if (hasSemanticDereferencedResultOperand) {
       return true;
     }
     if (arg.kind == Expr::Kind::Call && arg.isMethodCall && !arg.args.empty()) {
