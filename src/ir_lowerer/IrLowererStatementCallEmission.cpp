@@ -180,6 +180,132 @@ std::string resolveStatementCallSemanticTypeText(const SemanticProgram *semantic
   return trimTemplateTypeText(typeText);
 }
 
+static bool populateStatementVectorTargetInfoFromTypeText(
+    const std::string &typeText,
+    ArrayVectorAccessTargetInfo &targetInfoOut) {
+  std::string base;
+  std::string argText;
+  const std::string normalizedTypeText =
+      unwrapTopLevelUninitializedTypeText(trimTemplateTypeText(typeText));
+  if (!splitTemplateTypeName(normalizedTypeText, base, argText)) {
+    return false;
+  }
+
+  const std::string normalizedBase =
+      normalizeCollectionBindingTypeName(trimTemplateTypeText(base));
+  if (normalizedBase == "Reference" || normalizedBase == "Pointer") {
+    return populateStatementVectorTargetInfoFromTypeText(argText, targetInfoOut);
+  }
+  if (normalizedBase != "vector") {
+    return false;
+  }
+
+  targetInfoOut = {};
+  targetInfoOut.isArrayOrVectorTarget = true;
+  targetInfoOut.isVectorTarget = true;
+  std::vector<std::string> args;
+  if (splitTemplateArgs(argText, args) && args.size() == 1) {
+    const std::string elementType = trimTemplateTypeText(args.front());
+    targetInfoOut.elemKind = valueKindFromTypeName(elementType);
+    if (targetInfoOut.elemKind == LocalInfo::ValueKind::Unknown &&
+        !elementType.empty()) {
+      targetInfoOut.structTypeName =
+          specializedExperimentalVectorStructPathForElementType(elementType);
+    }
+  }
+  return true;
+}
+
+static bool resolveStatementVectorReceiverTargetInfoFromSemanticFacts(
+    const Expr &receiverExpr,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex,
+    ArrayVectorAccessTargetInfo &targetInfoOut,
+    bool &hasSemanticVectorFactOut) {
+  hasSemanticVectorFactOut = false;
+  if (semanticProgram == nullptr || semanticIndex == nullptr) {
+    return false;
+  }
+
+  auto tryPopulateFromSemanticTypeText =
+      [&](SymbolId typeTextId, const std::string &typeText) {
+    const std::string resolvedTypeText =
+        resolveStatementCallSemanticTypeText(semanticProgram, typeTextId, typeText);
+    return !resolvedTypeText.empty() &&
+           populateStatementVectorTargetInfoFromTypeText(resolvedTypeText, targetInfoOut);
+  };
+
+  if (receiverExpr.semanticNodeId != 0) {
+    if (const auto *collectionFact =
+            findSemanticProductCollectionSpecialization(*semanticIndex, receiverExpr);
+        collectionFact != nullptr) {
+      hasSemanticVectorFactOut = true;
+      const std::string collectionFamily = resolveStatementCallSemanticTypeText(
+          semanticProgram,
+          collectionFact->collectionFamilyId,
+          collectionFact->collectionFamily);
+      if (normalizeCollectionBindingTypeName(collectionFamily) != "vector") {
+        return false;
+      }
+      targetInfoOut = {};
+      targetInfoOut.isArrayOrVectorTarget = true;
+      targetInfoOut.isVectorTarget = true;
+      const std::string elementType = resolveStatementCallSemanticTypeText(
+          semanticProgram,
+          collectionFact->elementTypeTextId,
+          collectionFact->elementTypeText);
+      targetInfoOut.elemKind = valueKindFromTypeName(elementType);
+      if (targetInfoOut.elemKind == LocalInfo::ValueKind::Unknown &&
+          !elementType.empty()) {
+        targetInfoOut.structTypeName =
+            specializedExperimentalVectorStructPathForElementType(elementType);
+      }
+      return true;
+    }
+
+    if (const auto *queryFact =
+            findSemanticProductQueryFact(semanticProgram, *semanticIndex, receiverExpr);
+        queryFact != nullptr) {
+      hasSemanticVectorFactOut = true;
+      return tryPopulateFromSemanticTypeText(queryFact->bindingTypeTextId,
+                                             queryFact->bindingTypeText) ||
+             tryPopulateFromSemanticTypeText(queryFact->queryTypeTextId,
+                                             queryFact->queryTypeText) ||
+             tryPopulateFromSemanticTypeText(queryFact->receiverBindingTypeTextId,
+                                             queryFact->receiverBindingTypeText);
+    }
+
+    if (const auto *bindingFact =
+            findSemanticProductBindingFact(*semanticIndex, receiverExpr);
+        bindingFact != nullptr) {
+      hasSemanticVectorFactOut = true;
+      return tryPopulateFromSemanticTypeText(bindingFact->bindingTypeTextId,
+                                             bindingFact->bindingTypeText);
+    }
+
+    if (const auto *localAutoFact =
+            findSemanticProductLocalAutoFact(semanticProgram, *semanticIndex, receiverExpr);
+        localAutoFact != nullptr) {
+      hasSemanticVectorFactOut = true;
+      return tryPopulateFromSemanticTypeText(localAutoFact->bindingTypeTextId,
+                                             localAutoFact->bindingTypeText);
+    }
+  }
+
+  if (receiverExpr.kind == Expr::Kind::Call && receiverExpr.args.size() == 1 &&
+      (isSimpleCallName(receiverExpr, "location") ||
+       isSimpleCallName(receiverExpr, "dereference"))) {
+    return resolveStatementVectorReceiverTargetInfoFromSemanticFacts(
+        receiverExpr.args.front(),
+        semanticProgram,
+        semanticIndex,
+        targetInfoOut,
+        hasSemanticVectorFactOut);
+  }
+
+  return false;
+}
+
 static bool resolveStatementVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) {
   if (expr.name.empty()) {
     return false;
@@ -1446,10 +1572,36 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
       return false;
     }
     const size_t receiverIndex = explicitVectorHelperReceiverIndex(callExpr);
+    ArrayVectorAccessTargetInfo semanticTargetInfo;
+    bool hasSemanticVectorFact = false;
+    if (receiverIndex < callExpr.args.size() &&
+        resolveStatementVectorReceiverTargetInfoFromSemanticFacts(
+            callExpr.args[receiverIndex],
+            semanticProgram,
+            semanticIndex,
+            semanticTargetInfo,
+            hasSemanticVectorFact)) {
+      return true;
+    }
+    if (hasSemanticVectorFact) {
+      return false;
+    }
     const auto targetInfo = resolveArrayVectorAccessTargetInfo(callExpr.args[receiverIndex], localsIn);
     return targetInfo.isVectorTarget;
   };
   auto isBuiltinVectorReceiverExpr = [&](const Expr &candidate) {
+    ArrayVectorAccessTargetInfo semanticTargetInfo;
+    bool hasSemanticVectorFact = false;
+    if (resolveStatementVectorReceiverTargetInfoFromSemanticFacts(candidate,
+                                                                 semanticProgram,
+                                                                 semanticIndex,
+                                                                 semanticTargetInfo,
+                                                                 hasSemanticVectorFact)) {
+      return true;
+    }
+    if (hasSemanticVectorFact) {
+      return false;
+    }
     const auto targetInfo = resolveArrayVectorAccessTargetInfo(candidate, localsIn);
     if (targetInfo.isVectorTarget) {
       return true;

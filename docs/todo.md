@@ -670,6 +670,9 @@ Task template:
     The statement-call `map.insert(...)` receiver slice is complete for
     semantic-product-backed binding, local-auto, and query map facts before
     stale local map metadata can classify receiver key/value kinds.
+    The statement-call vector mutator receiver slice is complete for
+    semantic-product-backed binding, local-auto, and query vector facts before
+    stale local vector metadata can select builtin mutator rewriting.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -794,6 +797,12 @@ Task template:
       classify receiver key/value kinds. Published non-map facts suppress
       stale local map metadata while syntax-only compatibility keeps the
       legacy fallback.
+    - Completed slice: semantic-product-addressed statement-call vector
+      mutator rewriting now consumes published binding, local-auto, and query
+      vector receiver facts before local vector metadata can select builtin
+      `push`/`reserve`/`pop`-style rewriting. Published non-vector facts
+      suppress stale local vector metadata while syntax-only compatibility
+      keeps the legacy fallback.
     - Completed slice: semantic-product-addressed dispatch inference now
       consumes published method receiver binding, query, or local-auto facts
       for `FileError.why()` and nested `try(file.method())` file operations

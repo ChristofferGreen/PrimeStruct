@@ -721,6 +721,12 @@ Planned non-template inference migration contract:
   binding, local-auto, and query map facts before local map metadata can
   supply key/value kinds. Published non-map facts suppress stale local map
   metadata while syntax-only compatibility keeps the old local fallback.
+- Completed statement-call vector mutator receiver slice: builtin
+  `vector.push(...)` / `receiver.push(...)` rewriting now classifies the
+  receiver from published binding, local-auto, and query vector facts before
+  local vector metadata can select the builtin path. Published non-vector
+  facts suppress stale local vector metadata while syntax-only compatibility
+  keeps the old local fallback.
 - Completed lowerer-side count-of-map-access slice: native count-kind
   inference for `count(map[key])` now asks the indexed access expression for
   its published query value kind before consulting local map metadata. Stale
@@ -1217,6 +1223,10 @@ Compile-pipeline publication contract:
 - Statement-call `map.insert(...)` builtin rewriting follows the same map
   authority rule: semantic-product binding, local-auto, and query map facts
   provide receiver key/value kinds before local map metadata is used.
+- Statement-call vector mutator rewriting follows the same graph-backed
+  collection rule: semantic-product binding, local-auto, and query vector
+  facts identify builtin vector receivers before local vector metadata is
+  used.
 - Dump-stage handling should be able to read either the syntax-facing canonical AST dump or the future semantic-product
   dump from the same compile-pipeline success result without re-running semantics.
 - Backend/runtime entrypoints should consume the semantic product from compile-pipeline output once available rather

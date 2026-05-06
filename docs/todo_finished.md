@@ -6,6 +6,32 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 6, 2026)**
+- [x] TODO-4298: Use vector facts for mutator receivers
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-06
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes statement-call vector
+    mutator rewriting classify builtin receivers from published binding,
+    local-auto, and query vector facts before stale local vector metadata can
+    answer.
+  - acceptance:
+    - Published binding type IDs classify vector mutator receivers before
+      local vector metadata.
+    - Published local-auto and query type IDs classify vector mutator
+      receivers before local vector metadata.
+    - Published non-vector facts suppress stale local vector fallback while
+      syntax-only vector receivers keep compatibility inference.
+  - stop_rule: Stop once statement-call `push`/`reserve`/`pop`-style vector
+    mutator rewriting depends on graph-owned binding/local-auto/query vector
+    facts and focused tests pin graph-backed, stale-local, and syntax-only
+    behavior.
+  - evidence: Added semantic-product vector receiver classification for
+    statement-call mutator rewriting, made published non-vector facts suppress
+    stale local vector metadata, covered binding/local-auto/query receivers
+    plus stale non-vector suppression, and skipped broad baseline validation
+    per the lite workflow.
+
 - [x] TODO-4298: Use map facts for insert receivers
   - owner: ai
   - created_at: 2026-04-28

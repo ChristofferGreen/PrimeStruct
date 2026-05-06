@@ -784,6 +784,192 @@ TEST_CASE("ir lowerer map insert rewrite uses semantic receiver facts before sta
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer vector mutator rewrite uses semantic receiver facts before stale locals") {
+  using EmitResult = primec::ir_lowerer::DirectCallStatementEmitResult;
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr valueArg;
+  valueArg.kind = primec::Expr::Kind::Literal;
+  valueArg.literalValue = 4;
+  valueArg.intWidth = 32;
+
+  auto makeReceiver = [](std::string name, uint64_t semanticNodeId) {
+    primec::Expr receiver;
+    receiver.kind = primec::Expr::Kind::Name;
+    receiver.name = name;
+    receiver.semanticNodeId = semanticNodeId;
+    return receiver;
+  };
+
+  auto makePushMethodStmt = [&](const primec::Expr &receiver) {
+    primec::Expr stmt;
+    stmt.kind = primec::Expr::Kind::Call;
+    stmt.name = "push";
+    stmt.isMethodCall = true;
+    stmt.args = {receiver, valueArg};
+    stmt.argNames = {std::nullopt, std::nullopt};
+    return stmt;
+  };
+
+  auto makeExplicitPushStmt = [&](const primec::Expr &receiver) {
+    primec::Expr stmt;
+    stmt.kind = primec::Expr::Kind::Call;
+    stmt.name = "/std/collections/vector/push";
+    stmt.args = {receiver, valueArg};
+    stmt.argNames = {std::nullopt, std::nullopt};
+    return stmt;
+  };
+
+  primec::SemanticProgram semanticProgram;
+  auto internType = [&](const std::string &typeText) {
+    return primec::semanticProgramInternCallTargetString(semanticProgram, typeText);
+  };
+  auto addBindingFact = [&](uint64_t semanticNodeId, std::string name, std::string typeText) {
+    const std::size_t factIndex = semanticProgram.bindingFacts.size();
+    semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+        .name = name,
+        .bindingTypeText = "i32",
+        .semanticNodeId = semanticNodeId,
+        .bindingTypeTextId = internType(typeText),
+    });
+    semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr[semanticNodeId] = factIndex;
+  };
+  auto addLocalAutoFact = [&](uint64_t semanticNodeId, std::string name, std::string typeText) {
+    const std::size_t factIndex = semanticProgram.localAutoFacts.size();
+    semanticProgram.localAutoFacts.push_back(primec::SemanticProgramLocalAutoFact{
+        .bindingName = name,
+        .bindingTypeText = "i32",
+        .semanticNodeId = semanticNodeId,
+        .bindingTypeTextId = internType(typeText),
+    });
+    semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr[semanticNodeId] = factIndex;
+  };
+  auto addQueryFact = [&](uint64_t semanticNodeId, std::string typeText) {
+    const std::size_t factIndex = semanticProgram.queryFacts.size();
+    semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+        .callName = "values",
+        .queryTypeText = "i32",
+        .bindingTypeText = "i32",
+        .semanticNodeId = semanticNodeId,
+        .queryTypeTextId = internType(typeText),
+        .bindingTypeTextId = internType(typeText),
+    });
+    semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr[semanticNodeId] = factIndex;
+  };
+  addBindingFact(7501, "bindingValues", "vector<i32>");
+  addLocalAutoFact(7502, "autoValues", "vector<i32>");
+  addQueryFact(7503, "vector<i32>");
+  addBindingFact(7504, "notAVector", "i32");
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  primec::ir_lowerer::LocalMap staleLocals;
+  auto addStaleLocalVector = [&](const std::string &name) {
+    primec::ir_lowerer::LocalInfo local;
+    local.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+    local.valueKind = ValueKind::Int64;
+    local.index = 9;
+    staleLocals[name] = local;
+  };
+  addStaleLocalVector("bindingValues");
+  addStaleLocalVector("autoValues");
+  addStaleLocalVector("queryValues");
+  addStaleLocalVector("notAVector");
+
+  primec::Definition fallbackPushDef;
+  fallbackPushDef.fullPath = "/main/Vector.push";
+
+  auto emitVectorPush = [&](const primec::Expr &stmt,
+                            std::string &forwardedName,
+                            bool &forwardedWasMethod,
+                            int &inlineCalls,
+                            std::string &errorOut) {
+    std::vector<primec::IrInstruction> instructions;
+    forwardedName.clear();
+    forwardedWasMethod = false;
+    inlineCalls = 0;
+    errorOut.clear();
+    return primec::ir_lowerer::tryEmitDirectCallStatement(
+        stmt,
+        staleLocals,
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [&](const primec::Expr &forwardedExpr, const primec::ir_lowerer::LocalMap &) {
+          forwardedName = forwardedExpr.name;
+          forwardedWasMethod = forwardedExpr.isMethodCall;
+          return true;
+        },
+        [&](const primec::Expr &callExpr,
+            const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+          return callExpr.isMethodCall && callExpr.name == "push" ? &fallbackPushDef : nullptr;
+        },
+        [](const primec::Expr &) -> const primec::Definition * { return nullptr; },
+        [](const std::string &, primec::ir_lowerer::ReturnInfo &info) {
+          info.returnsVoid = true;
+          return true;
+        },
+        [&](const primec::Expr &callExpr,
+            const primec::Definition &callee,
+            const primec::ir_lowerer::LocalMap &,
+            bool expectValue) {
+          ++inlineCalls;
+          CHECK(callExpr.isMethodCall);
+          CHECK(callExpr.name == "push");
+          CHECK(callee.fullPath == "/main/Vector.push");
+          CHECK_FALSE(expectValue);
+          return true;
+        },
+        instructions,
+        errorOut,
+        &semanticProgram,
+        &semanticIndex);
+  };
+
+  std::string forwardedName;
+  bool forwardedWasMethod = true;
+  int inlineCalls = 0;
+  std::string error;
+  CHECK(emitVectorPush(makePushMethodStmt(makeReceiver("bindingValues", 7501)),
+                       forwardedName,
+                       forwardedWasMethod,
+                       inlineCalls,
+                       error) == EmitResult::Emitted);
+  CHECK(forwardedName == "push");
+  CHECK_FALSE(forwardedWasMethod);
+  CHECK(inlineCalls == 0);
+  CHECK(error.empty());
+
+  CHECK(emitVectorPush(makePushMethodStmt(makeReceiver("autoValues", 7502)),
+                       forwardedName,
+                       forwardedWasMethod,
+                       inlineCalls,
+                       error) == EmitResult::Emitted);
+  CHECK(forwardedName == "push");
+  CHECK_FALSE(forwardedWasMethod);
+  CHECK(inlineCalls == 0);
+  CHECK(error.empty());
+
+  CHECK(emitVectorPush(makeExplicitPushStmt(makeReceiver("queryValues", 7503)),
+                       forwardedName,
+                       forwardedWasMethod,
+                       inlineCalls,
+                       error) == EmitResult::Emitted);
+  CHECK(forwardedName == "push");
+  CHECK_FALSE(forwardedWasMethod);
+  CHECK(inlineCalls == 0);
+  CHECK(error.empty());
+
+  CHECK(emitVectorPush(makePushMethodStmt(makeReceiver("notAVector", 7504)),
+                       forwardedName,
+                       forwardedWasMethod,
+                       inlineCalls,
+                       error) == EmitResult::Emitted);
+  CHECK(forwardedName.empty());
+  CHECK(inlineCalls == 1);
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer statement call helper emits direct calls") {
   using EmitResult = primec::ir_lowerer::DirectCallStatementEmitResult;
 
