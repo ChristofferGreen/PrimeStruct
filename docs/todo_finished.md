@@ -6,6 +6,31 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 6, 2026)**
+- [x] TODO-4298: Use map facts for insert receivers
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-06
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes statement-call
+    `map.insert(...)` builtin rewriting classify receiver key/value kinds
+    from published binding, local-auto, and query map facts before stale
+    local map metadata can answer.
+  - acceptance:
+    - Published binding type IDs classify map insert receivers before local
+      map key/value metadata.
+    - Published local-auto and query type IDs classify map insert receivers
+      before local map key/value metadata.
+    - Published non-map facts suppress stale local map fallback while
+      syntax-only map receivers keep compatibility inference.
+  - stop_rule: Stop once statement-call `map.insert(...)` builtin rewriting
+    depends on graph-owned binding/local-auto/query map facts and focused
+    tests pin graph-backed, stale-local, and syntax-only behavior.
+  - evidence: Moved statement-call map receiver fact resolution ahead of
+    local map shape reconstruction, treated published non-map facts as
+    authoritative no-rewrite results, covered binding/local-auto/query facts
+    plus stale non-map suppression, and skipped broad baseline validation per
+    the lite workflow.
+
 - [x] TODO-4298: Use scalar facts for dispatch dims
   - owner: ai
   - created_at: 2026-04-28

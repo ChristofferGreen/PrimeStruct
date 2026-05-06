@@ -611,6 +611,179 @@ TEST_CASE("ir lowerer statement call helper validates dispatch diagnostics") {
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer map insert rewrite uses semantic receiver facts before stale locals") {
+  using EmitResult = primec::ir_lowerer::DirectCallStatementEmitResult;
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr keyArg;
+  keyArg.kind = primec::Expr::Kind::Literal;
+  keyArg.literalValue = 1;
+  keyArg.intWidth = 32;
+  primec::Expr valueArg;
+  valueArg.kind = primec::Expr::Kind::Literal;
+  valueArg.literalValue = 4;
+  valueArg.intWidth = 32;
+
+  auto makeReceiver = [](std::string name, uint64_t semanticNodeId) {
+    primec::Expr receiver;
+    receiver.kind = primec::Expr::Kind::Name;
+    receiver.name = name;
+    receiver.semanticNodeId = semanticNodeId;
+    return receiver;
+  };
+
+  auto makeMapInsertStmt = [&](const primec::Expr &receiver) {
+    primec::Expr stmt;
+    stmt.kind = primec::Expr::Kind::Call;
+    stmt.name = "/std/collections/map/insert";
+    stmt.args = {receiver, keyArg, valueArg};
+    stmt.argNames = {std::nullopt, std::nullopt, std::nullopt};
+    return stmt;
+  };
+
+  primec::SemanticProgram semanticProgram;
+  auto internType = [&](const std::string &typeText) {
+    return primec::semanticProgramInternCallTargetString(semanticProgram, typeText);
+  };
+  auto addBindingFact = [&](uint64_t semanticNodeId, std::string name, std::string typeText) {
+    const std::size_t factIndex = semanticProgram.bindingFacts.size();
+    semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+        .name = name,
+        .bindingTypeText = "map<i64, i64>",
+        .semanticNodeId = semanticNodeId,
+        .bindingTypeTextId = internType(typeText),
+    });
+    semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr[semanticNodeId] = factIndex;
+  };
+  auto addLocalAutoFact = [&](uint64_t semanticNodeId, std::string name, std::string typeText) {
+    const std::size_t factIndex = semanticProgram.localAutoFacts.size();
+    semanticProgram.localAutoFacts.push_back(primec::SemanticProgramLocalAutoFact{
+        .bindingName = name,
+        .bindingTypeText = "map<i64, i64>",
+        .semanticNodeId = semanticNodeId,
+        .bindingTypeTextId = internType(typeText),
+    });
+    semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr[semanticNodeId] = factIndex;
+  };
+  auto addQueryFact = [&](uint64_t semanticNodeId, std::string typeText) {
+    const std::size_t factIndex = semanticProgram.queryFacts.size();
+    semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+        .callName = "values",
+        .queryTypeText = "map<i64, i64>",
+        .bindingTypeText = "map<i64, i64>",
+        .semanticNodeId = semanticNodeId,
+        .queryTypeTextId = internType(typeText),
+        .bindingTypeTextId = internType(typeText),
+    });
+    semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr[semanticNodeId] = factIndex;
+  };
+  addBindingFact(7401, "bindingValues", "map<i32, i32>");
+  addLocalAutoFact(7402, "autoValues", "map<i32, i32>");
+  addQueryFact(7403, "map<i32, i32>");
+  addBindingFact(7404, "notAMap", "i32");
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  primec::ir_lowerer::LocalMap staleLocals;
+  auto addStaleLocalMap = [&](const std::string &name) {
+    primec::ir_lowerer::LocalInfo local;
+    local.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+    local.mapKeyKind = ValueKind::Int64;
+    local.mapValueKind = ValueKind::Int64;
+    local.valueKind = ValueKind::Int64;
+    local.index = 7;
+    staleLocals[name] = local;
+  };
+  addStaleLocalMap("bindingValues");
+  addStaleLocalMap("autoValues");
+  addStaleLocalMap("queryValues");
+  addStaleLocalMap("notAMap");
+
+  primec::Definition mapInsertBuiltinDef;
+  mapInsertBuiltinDef.fullPath = "/std/collections/map/insert_builtin";
+
+  auto emitMapInsert = [&](const primec::Expr &stmt,
+                           std::vector<std::string> &templateArgsOut,
+                           int &inlineCalls,
+                           std::string &errorOut) {
+    std::vector<primec::IrInstruction> instructions;
+    inlineCalls = 0;
+    templateArgsOut.clear();
+    errorOut.clear();
+    return primec::ir_lowerer::tryEmitDirectCallStatement(
+        stmt,
+        staleLocals,
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+          return nullptr;
+        },
+        [&](const primec::Expr &callExpr) -> const primec::Definition * {
+          return callExpr.name == "/std/collections/map/insert_builtin" ? &mapInsertBuiltinDef : nullptr;
+        },
+        [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
+          if (path == "/std/collections/map/insert_builtin") {
+            info.returnsVoid = true;
+            return true;
+          }
+          return false;
+        },
+        [&](const primec::Expr &callExpr,
+            const primec::Definition &callee,
+            const primec::ir_lowerer::LocalMap &,
+            bool expectValue) {
+          ++inlineCalls;
+          CHECK(callExpr.name == "/std/collections/map/insert_builtin");
+          CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
+          CHECK_FALSE(expectValue);
+          templateArgsOut = callExpr.templateArgs;
+          return true;
+        },
+        instructions,
+        errorOut,
+        &semanticProgram,
+        &semanticIndex);
+  };
+
+  std::vector<std::string> templateArgs;
+  const std::vector<std::string> expectedMapTypes = {"i32", "i32"};
+  int inlineCalls = 0;
+  std::string error;
+  CHECK(emitMapInsert(makeMapInsertStmt(makeReceiver("bindingValues", 7401)),
+                      templateArgs,
+                      inlineCalls,
+                      error) == EmitResult::Emitted);
+  CHECK(templateArgs == expectedMapTypes);
+  CHECK(inlineCalls == 1);
+  CHECK(error.empty());
+
+  CHECK(emitMapInsert(makeMapInsertStmt(makeReceiver("autoValues", 7402)),
+                      templateArgs,
+                      inlineCalls,
+                      error) == EmitResult::Emitted);
+  CHECK(templateArgs == expectedMapTypes);
+  CHECK(inlineCalls == 1);
+  CHECK(error.empty());
+
+  CHECK(emitMapInsert(makeMapInsertStmt(makeReceiver("queryValues", 7403)),
+                      templateArgs,
+                      inlineCalls,
+                      error) == EmitResult::Emitted);
+  CHECK(templateArgs == expectedMapTypes);
+  CHECK(inlineCalls == 1);
+  CHECK(error.empty());
+
+  CHECK(emitMapInsert(makeMapInsertStmt(makeReceiver("notAMap", 7404)),
+                      templateArgs,
+                      inlineCalls,
+                      error) == EmitResult::NotMatched);
+  CHECK(templateArgs.empty());
+  CHECK(inlineCalls == 0);
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer statement call helper emits direct calls") {
   using EmitResult = primec::ir_lowerer::DirectCallStatementEmitResult;
 

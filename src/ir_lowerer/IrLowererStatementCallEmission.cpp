@@ -679,7 +679,7 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
       return true;
     };
     auto tryPopulateFromSemanticCollectionSpecialization =
-        [&](const Expr &receiverExpr, MapAccessTargetInfo &targetInfoOut) {
+        [&](const Expr &receiverExpr, MapAccessTargetInfo &targetInfoOut, bool &hasSemanticMapFactOut) {
       if (semanticIndex == nullptr || receiverExpr.semanticNodeId == 0) {
         return false;
       }
@@ -688,6 +688,7 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
       if (collectionFact == nullptr) {
         return false;
       }
+      hasSemanticMapFactOut = true;
       const std::string collectionFamily = resolveStatementCallSemanticTypeText(
           semanticProgram,
           collectionFact->collectionFamilyId,
@@ -716,18 +717,23 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
       return true;
     };
     auto tryPopulateFromSemanticReceiverFact =
-        [&](const Expr &receiverExpr, MapAccessTargetInfo &targetInfoOut) {
+        [&](const Expr &receiverExpr,
+            MapAccessTargetInfo &targetInfoOut,
+            bool &hasSemanticMapFactOut) {
+      hasSemanticMapFactOut = false;
       if (semanticProgram == nullptr ||
           semanticIndex == nullptr ||
           receiverExpr.semanticNodeId == 0) {
         return false;
       }
-      if (tryPopulateFromSemanticCollectionSpecialization(receiverExpr, targetInfoOut)) {
+      if (tryPopulateFromSemanticCollectionSpecialization(
+              receiverExpr, targetInfoOut, hasSemanticMapFactOut)) {
         return true;
       }
       if (const auto *queryFact =
               findSemanticProductQueryFact(semanticProgram, *semanticIndex, receiverExpr);
           queryFact != nullptr) {
+        hasSemanticMapFactOut = true;
         if (tryPopulateFromSemanticTypeText(queryFact->bindingTypeTextId,
                                             queryFact->bindingTypeText,
                                             targetInfoOut) ||
@@ -742,19 +748,23 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
       }
       if (const auto *bindingFact =
               findSemanticProductBindingFact(*semanticIndex, receiverExpr);
-          bindingFact != nullptr &&
-          tryPopulateFromSemanticTypeText(bindingFact->bindingTypeTextId,
-                                          bindingFact->bindingTypeText,
-                                          targetInfoOut)) {
-        return true;
+          bindingFact != nullptr) {
+        hasSemanticMapFactOut = true;
+        if (tryPopulateFromSemanticTypeText(bindingFact->bindingTypeTextId,
+                                            bindingFact->bindingTypeText,
+                                            targetInfoOut)) {
+          return true;
+        }
       }
       if (const auto *localAutoFact =
               findSemanticProductLocalAutoFact(semanticProgram, *semanticIndex, receiverExpr);
-          localAutoFact != nullptr &&
-          tryPopulateFromSemanticTypeText(localAutoFact->bindingTypeTextId,
-                                          localAutoFact->bindingTypeText,
-                                          targetInfoOut)) {
-        return true;
+          localAutoFact != nullptr) {
+        hasSemanticMapFactOut = true;
+        if (tryPopulateFromSemanticTypeText(localAutoFact->bindingTypeTextId,
+                                            localAutoFact->bindingTypeText,
+                                            targetInfoOut)) {
+          return true;
+        }
       }
       return false;
     };
@@ -853,6 +863,16 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
 
     const Expr *canonicalReceiverExpr = peelReceiverWrappers(targetExpr);
 
+    targetInfoOut = {};
+    bool hasSemanticMapReceiverFact = false;
+    if (tryPopulateFromSemanticReceiverFact(
+            *canonicalReceiverExpr, targetInfoOut, hasSemanticMapReceiverFact)) {
+      return true;
+    }
+    if (hasSemanticMapReceiverFact) {
+      return false;
+    }
+
     // Reuse the core access-target resolver on the peeled receiver shape so
     // wrapped args-pack map-access forms (for example stacked
     // location/dereference around /map/at(argsPack, ...)) can flow through the
@@ -899,10 +919,6 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
           }
         }
       }
-    }
-
-    if (tryPopulateFromSemanticReceiverFact(*canonicalReceiverExpr, targetInfoOut)) {
-      return true;
     }
 
     auto tryPopulateFromResolvedCallee = [&](const Definition *resolvedCallee) {

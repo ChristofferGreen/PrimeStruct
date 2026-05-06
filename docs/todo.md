@@ -667,6 +667,9 @@ Task template:
     The lowerer `dispatch(...)` dimension-kind slice is complete for
     semantic-product-backed binding, local-auto, and query scalar facts before
     legacy expression-kind inference can classify GPU dispatch dimensions.
+    The statement-call `map.insert(...)` receiver slice is complete for
+    semantic-product-backed binding, local-auto, and query map facts before
+    stale local map metadata can classify receiver key/value kinds.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -785,6 +788,12 @@ Task template:
       facts before legacy expression-kind inference can classify GPU dispatch
       dimensions. Published non-`i32` facts suppress stale expression
       inference while syntax-only compatibility keeps the legacy fallback.
+    - Completed slice: semantic-product-addressed statement-call
+      `map.insert(...)` builtin rewriting now consumes published binding,
+      local-auto, and query map receiver facts before local map metadata can
+      classify receiver key/value kinds. Published non-map facts suppress
+      stale local map metadata while syntax-only compatibility keeps the
+      legacy fallback.
     - Completed slice: semantic-product-addressed dispatch inference now
       consumes published method receiver binding, query, or local-auto facts
       for `FileError.why()` and nested `try(file.method())` file operations
