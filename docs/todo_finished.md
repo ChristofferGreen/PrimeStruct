@@ -12765,3 +12765,35 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     coverage for semantic-first ordering before resolved-callee return
     collection inference, and documented the remaining TODO-4298 work. Local
     test execution was skipped per the lite workflow.
+
+- [x] TODO-4298: Use tail SoA metadata facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes tail-dispatch
+    internal SoA metadata receiver classification read semantic-product query
+    receiver facts before local struct metadata decides `field_count` or
+    `field_capacity` metadata loads.
+  - implementation_notes:
+    - Resolve query receiver binding type IDs before copied fact text.
+    - Apply the semantic-first check to both before-inline and native-tail
+      internal SoA metadata emission paths.
+    - Keep local struct metadata as compatibility fallback for syntax-only or
+      no-semantic-product contexts.
+  - acceptance:
+    - Tail-dispatch internal SoA metadata receiver classification consumes
+      graph-backed query receiver facts before local struct metadata.
+    - Published non-internal-SoA receiver facts suppress stale local struct
+      metadata.
+    - The remaining TODO-4298 block records the completed slice and remaining
+      adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once tail-dispatch internal SoA metadata receiver
+    classification prefers published semantic-product facts and keeps local
+    struct metadata only as compatibility fallback.
+  - finished_at: 2026-05-06
+  - evidence: Promoted tail-dispatch internal SoA metadata receiver
+    classification in `IrLowererLowerEmitExprTailDispatch.h`, extended
+    source-contract coverage for semantic-first ordering before local struct
+    metadata fallback, and documented the remaining TODO-4298 work. Local
+    test execution was skipped per the lite workflow.

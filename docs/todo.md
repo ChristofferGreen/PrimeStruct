@@ -704,6 +704,9 @@ Task template:
     semantic-product-backed collection-specialization, binding, local-auto,
     and query vector facts before callee return-collection reconstruction can
     decide temporary vector helper deferral.
+    The tail-dispatch internal SoA metadata receiver slice is complete for
+    semantic-product-backed query receiver facts before stale local struct
+    metadata can decide `field_count`/`field_capacity` metadata loads.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -881,6 +884,12 @@ Task template:
       before resolved-callee return-collection reconstruction can select
       temporary vector helper deferral. Published non-vector facts suppress
       stale callee-return collection metadata while syntax-only compatibility
+      keeps the legacy fallback.
+    - Completed slice: semantic-product-addressed tail-dispatch internal SoA
+      metadata receiver classification now consumes published query receiver
+      facts before local struct metadata can select `field_count` or
+      `field_capacity` metadata loads. Published non-internal-SoA facts
+      suppress stale local struct metadata while syntax-only compatibility
       keeps the legacy fallback.
     - Completed slice: semantic-product-addressed dispatch inference now
       consumes published method receiver binding, query, or local-auto facts

@@ -745,23 +745,31 @@
                    normalized == "/std/collections/internal_soa_storage/SoaFieldView";
           };
           const Expr &receiverExpr = inlineDispatchExpr.args.front();
-          bool hasInternalReceiver = false;
-          if (receiverExpr.kind == Expr::Kind::Name) {
-            auto localIt = localsIn.find(receiverExpr.name);
-            hasInternalReceiver =
-                localIt != localsIn.end() &&
-                isInternalSoaType(localIt->second.structTypeName);
-          }
-          if (!hasInternalReceiver && semanticProgram != nullptr) {
+          auto classifyInternalReceiverFromSemanticFacts = [&]() -> std::optional<bool> {
+            if (semanticProgram == nullptr) {
+              return std::nullopt;
+            }
             const SemanticProductIndex semanticIndex =
                 ir_lowerer::buildSemanticProductIndex(semanticProgram);
             if (const auto *queryFact = ir_lowerer::findSemanticProductQueryFact(
                     semanticProgram, semanticIndex, inlineDispatchExpr);
                 queryFact != nullptr) {
-              hasInternalReceiver = isInternalSoaType(resolveSemanticReceiverTypeText(
+              return isInternalSoaType(resolveSemanticReceiverTypeText(
                   queryFact->receiverBindingTypeText,
                   queryFact->receiverBindingTypeTextId));
             }
+            return std::nullopt;
+          };
+          bool hasInternalReceiver = false;
+          if (const std::optional<bool> semanticInternalReceiver =
+                  classifyInternalReceiverFromSemanticFacts();
+              semanticInternalReceiver.has_value()) {
+            hasInternalReceiver = *semanticInternalReceiver;
+          } else if (receiverExpr.kind == Expr::Kind::Name) {
+            auto localIt = localsIn.find(receiverExpr.name);
+            hasInternalReceiver =
+                localIt != localsIn.end() &&
+                isInternalSoaType(localIt->second.structTypeName);
           }
           if (!hasInternalReceiver) {
             return std::nullopt;
@@ -969,27 +977,24 @@
             return normalized == "/std/collections/internal_soa_storage/SoaColumn" ||
                    normalized == "/std/collections/internal_soa_storage/SoaFieldView";
           };
-          if (receiverExpr.kind == Expr::Kind::Name) {
-            auto localIt = localsIn.find(receiverExpr.name);
-            if (localIt != localsIn.end() &&
-                isInternalSoaType(localIt->second.structTypeName)) {
-              return true;
+          if (semanticProgram != nullptr) {
+            const SemanticProductIndex semanticIndex =
+                ir_lowerer::buildSemanticProductIndex(semanticProgram);
+            const auto *queryFact =
+                ir_lowerer::findSemanticProductQueryFact(semanticProgram, semanticIndex, callExpr);
+            if (queryFact != nullptr) {
+              const std::string receiverType = resolveSemanticReceiverTypeText(
+                  queryFact->receiverBindingTypeText,
+                  queryFact->receiverBindingTypeTextId);
+              return isInternalSoaType(receiverType);
             }
           }
-          if (semanticProgram == nullptr) {
+          if (receiverExpr.kind != Expr::Kind::Name) {
             return false;
           }
-          const SemanticProductIndex semanticIndex =
-              ir_lowerer::buildSemanticProductIndex(semanticProgram);
-          const auto *queryFact =
-              ir_lowerer::findSemanticProductQueryFact(semanticProgram, semanticIndex, callExpr);
-          if (queryFact == nullptr) {
-            return false;
-          }
-          const std::string receiverType = resolveSemanticReceiverTypeText(
-              queryFact->receiverBindingTypeText,
-              queryFact->receiverBindingTypeTextId);
-          return isInternalSoaType(receiverType);
+          auto localIt = localsIn.find(receiverExpr.name);
+          return localIt != localsIn.end() &&
+                 isInternalSoaType(localIt->second.structTypeName);
         };
         auto emitInternalSoaMetadataCall = [&]() -> std::optional<bool> {
           const std::string metadataLeaf =

@@ -732,6 +732,9 @@ TEST_CASE("ir lowerer internal soa metadata receivers resolve interned ids") {
                   "                  queryFact->receiverBindingTypeText,\n"
                   "                  queryFact->receiverBindingTypeTextId)",
                   beforeInlinePos);
+  const size_t beforeInlineLocalFallbackPos =
+      source.find("auto localIt = localsIn.find(receiverExpr.name);",
+                  beforeInlineReceiverPos);
   const size_t nativeReceiverPos =
       source.find("auto isInternalSoaMetadataReceiver", beforeInlineReceiverPos);
   const size_t nativeReceiverResolvePos =
@@ -739,20 +742,31 @@ TEST_CASE("ir lowerer internal soa metadata receivers resolve interned ids") {
                   "              queryFact->receiverBindingTypeText,\n"
                   "              queryFact->receiverBindingTypeTextId)",
                   nativeReceiverPos);
+  const size_t nativeReceiverLocalFallbackPos =
+      source.find("auto localIt = localsIn.find(receiverExpr.name);",
+                  nativeReceiverResolvePos);
 
   REQUIRE(resolverPos != std::string::npos);
   REQUIRE(idCheckPos != std::string::npos);
   REQUIRE(internedResolvePos != std::string::npos);
   REQUIRE(beforeInlinePos != std::string::npos);
   REQUIRE(beforeInlineReceiverPos != std::string::npos);
+  REQUIRE(beforeInlineLocalFallbackPos != std::string::npos);
   REQUIRE(nativeReceiverPos != std::string::npos);
   REQUIRE(nativeReceiverResolvePos != std::string::npos);
+  REQUIRE(nativeReceiverLocalFallbackPos != std::string::npos);
   CHECK(resolverPos < idCheckPos);
   CHECK(idCheckPos < internedResolvePos);
   CHECK(internedResolvePos < beforeInlinePos);
   CHECK(beforeInlinePos < beforeInlineReceiverPos);
+  CHECK(beforeInlineReceiverPos < beforeInlineLocalFallbackPos);
   CHECK(beforeInlineReceiverPos < nativeReceiverPos);
   CHECK(nativeReceiverPos < nativeReceiverResolvePos);
+  CHECK(nativeReceiverResolvePos < nativeReceiverLocalFallbackPos);
+  CHECK(source.find("auto classifyInternalReceiverFromSemanticFacts =") !=
+        std::string::npos);
+  CHECK(source.find("semanticInternalReceiver.has_value()") !=
+        std::string::npos);
   CHECK(source.find("auto resolveReceiverTypeText") == std::string::npos);
 }
 
