@@ -410,6 +410,11 @@ Planned non-template inference migration contract:
   before lowerer-local `isResult` and args-pack metadata can classify the value kind. Published
   non-Result operand facts suppress stale local Result metadata; no-fact syntax-only contexts
   keep the old fallback.
+- Completed lowerer-side dispatch dereferenced Result operand slice: dispatch inference for
+  `try(dereference(at(args<Result>, i)))` now reads the indexed target's published query Result
+  fact before borrowed/pointer args-pack fallback can classify the value kind. Published
+  non-Result target facts suppress stale args-pack metadata; syntax-only contexts keep the old
+  fallback.
 - Completed lowerer-side dispatch method receiver fact slice: dispatch inference for
   `FileError.why()` and nested `try(file.method())` file operations now reads the receiver's
   published binding, query, or local-auto fact before syntactic `FileError` spelling or

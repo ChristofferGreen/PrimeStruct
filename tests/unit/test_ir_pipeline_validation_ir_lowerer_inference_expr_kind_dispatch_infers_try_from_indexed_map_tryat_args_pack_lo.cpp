@@ -678,6 +678,14 @@ TEST_CASE("ir lowerer inference expr-kind dispatch uses semantic try operand Res
     return expr;
   };
 
+  auto makeDereferenceExpr = [](primec::Expr target) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = "dereference";
+    expr.args = {std::move(target)};
+    return expr;
+  };
+
   auto makeTryExpr = [](primec::Expr operand) {
     primec::Expr expr;
     expr.kind = primec::Expr::Kind::Call;
@@ -691,6 +699,8 @@ TEST_CASE("ir lowerer inference expr-kind dispatch uses semantic try operand Res
   addQueryResultFact(semanticProgram, 7402, "lookup", "bool");
   addLocalAutoFact(semanticProgram, 7403, "status", "Result<FileError>");
   addQueryTypeFact(semanticProgram, 7404, "at", "i32");
+  addQueryResultFact(semanticProgram, 7405, "at", "bool");
+  addQueryTypeFact(semanticProgram, 7406, "at", "i32");
   const auto semanticIndex =
       primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
 
@@ -703,6 +713,7 @@ TEST_CASE("ir lowerer inference expr-kind dispatch uses semantic try operand Res
   primec::ir_lowerer::LocalInfo staleResultPack;
   staleResultPack.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
   staleResultPack.isArgsPack = true;
+  staleResultPack.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
   staleResultPack.isResult = true;
   staleResultPack.resultHasValue = true;
   staleResultPack.resultValueKind = Kind::String;
@@ -727,6 +738,12 @@ TEST_CASE("ir lowerer inference expr-kind dispatch uses semantic try operand Res
         Kind::Int32);
   CHECK(state.inferExprKind(makeTryExpr(makeAtExpr("results", 7404)), staleLocals) ==
         Kind::Unknown);
+  CHECK(state.inferExprKind(
+            makeTryExpr(makeDereferenceExpr(makeAtExpr("results", 7405))),
+            staleLocals) == Kind::Bool);
+  CHECK(state.inferExprKind(
+            makeTryExpr(makeDereferenceExpr(makeAtExpr("results", 7406))),
+            staleLocals) == Kind::Unknown);
   CHECK(inferenceError.empty());
 
   std::unordered_map<std::string, const primec::Definition *> syntaxDefMap;
@@ -735,6 +752,9 @@ TEST_CASE("ir lowerer inference expr-kind dispatch uses semantic try operand Res
   installDispatchSetup(syntaxState, syntaxDefMap, syntaxInferenceError);
   CHECK(syntaxState.inferExprKind(makeTryExpr(makeNameExpr("result", 0)), staleLocals) ==
         Kind::Int64);
+  CHECK(syntaxState.inferExprKind(
+            makeTryExpr(makeDereferenceExpr(makeAtExpr("results", 0))),
+            staleLocals) == Kind::String);
   CHECK(syntaxInferenceError.empty());
 }
 

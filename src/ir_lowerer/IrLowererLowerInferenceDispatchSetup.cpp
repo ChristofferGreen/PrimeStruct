@@ -431,6 +431,31 @@ bool inferDispatchSetupSemanticTryOperandResultKind(const Expr &operand,
   return false;
 }
 
+bool inferDispatchSetupSemanticDereferencedTryOperandResultKind(
+    const Expr &operand,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex,
+    LocalInfo::ValueKind &kindOut,
+    bool &hasSemanticTargetOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  hasSemanticTargetOut = false;
+  if (!isSimpleCallName(operand, "dereference") || operand.args.size() != 1) {
+    return false;
+  }
+
+  bool hasSemanticTarget = false;
+  if (inferDispatchSetupSemanticTryOperandResultKind(operand.args.front(),
+                                                    semanticProgram,
+                                                    semanticIndex,
+                                                    kindOut,
+                                                    hasSemanticTarget)) {
+    hasSemanticTargetOut = true;
+    return true;
+  }
+  hasSemanticTargetOut = hasSemanticTarget;
+  return false;
+}
+
 } // namespace
 
 bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatchSetupInput &input,
@@ -621,6 +646,18 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
         return true;
       }
       if (hasSemanticResultOperand) {
+        return true;
+      }
+      bool hasSemanticDereferencedResultOperand = false;
+      if (inferDispatchSetupSemanticDereferencedTryOperandResultKind(
+              resultExpr,
+              semanticProgram,
+              semanticIndex,
+              kindOut,
+              hasSemanticDereferencedResultOperand)) {
+        return true;
+      }
+      if (hasSemanticDereferencedResultOperand) {
         return true;
       }
       auto resolveCallReceiverCollectionValueKind = [&](const Expr &receiverExpr,
