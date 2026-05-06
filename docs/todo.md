@@ -527,7 +527,9 @@ Task template:
     coverage map-authority slice is complete for direct-call, method-call, and
     bridge-path validators. The lowerer return-info precompute
     callable-summary map-authority slice is complete for setup-stage
-    precomputed return metadata. The lowerer base call-kind
+    precomputed return metadata. The lowerer query semantic-index
+    map-authority slice is complete for semantic-id query fact lookup. The
+    lowerer base call-kind
     `try(...)` fact authority slice is complete. The lowerer
     base call-kind Result method fact-authority slice is complete for
     semantic-product-addressed `Result.ok(...)`, `Result.error(...)`, and

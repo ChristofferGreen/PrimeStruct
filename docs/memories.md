@@ -87,17 +87,17 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: Semantic-product return-info precomputation enumerates callable definitions only through `callableSummaryIndicesByPathId`, so tests that manually create callable summaries must seed that published map.
 - Evidence: `precomputeSemanticProductReturnInfoCache(...)` now fails closed for raw callable summaries without the map, and inference get-return-info setup tests pin both mapped and raw-only paths.
 
+### semantic-product-index-query-map-authority
+- Updated: 2026-05-06
+- Tags: semantics, ir, tests
+- Fact: `buildSemanticProductIndex(...)` populates query semantic-id lookups only from `queryFactIndicesByExpr`, so tests that manually create query facts must seed that published map before expecting lowerer query lookup to succeed.
+- Evidence: The raw query-fact backfill was removed from `SemanticProductIndexBuilder::buildQueryIndex(...)`, while the call-helper and inference setup tests now pin both raw-only failure and mapped success paths.
+
 ### semantic-product-pick-target-query-facts
 - Updated: 2026-05-01
 - Tags: semantics, ir, sums
 - Fact: Sum `pick(...)` targets that are direct or method calls must publish semantic-product query facts because native/VM pick lowering resolves the target sum type from those facts.
 - Evidence: The saved release log failed `native pick call target sum resolution uses query facts` and its method-target companion; `SemanticsValidatorSnapshotLocals.cpp` now adds a deduped recovery pass for `pick` target calls, with regression coverage in `test_semantics_type_resolution_graph_snapshots.cpp`.
-
-### semantic-product-index-backfills-unfrozen-facts
-- Updated: 2026-05-04
-- Tags: semantics, ir, tests
-- Fact: `buildSemanticProductIndex(...)` backfills unfrozen on_error, query, try, return, and binding facts by semantic node id, but frozen semantic products rely on published routing lookup maps.
-- Evidence: The retained `PrimeStruct_primestruct_ir_pipeline_validation_cases_331_340` and `PrimeStruct_primestruct_ir_pipeline_validation_cases_511_520` shards failed until unfrozen query, try, and on_error facts were indexed the same way as return and binding facts.
 
 ### semantic-product-routing-completeness-gates-lowering
 - Updated: 2026-05-06

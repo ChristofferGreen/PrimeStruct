@@ -101,6 +101,7 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic query fa
       .queryTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "bool"),
       .bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "bool"),
   });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(501, 0);
   semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
       .scopePath = "/Holder/check",
       .callName = "is_ready",
@@ -121,6 +122,7 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic query fa
       .queryTypeTextId = primec::InvalidSymbolId,
       .bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "bool"),
   });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(502, 1);
   const auto semanticIndex = primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
 
   primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
@@ -199,6 +201,7 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic Result.o
       .queryTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "bool"),
       .bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "bool"),
   });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(801, 0);
   semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
       .scopePath = "/main",
       .siteKind = "local",
@@ -608,7 +611,7 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup does not infer missing
   CHECK(kindOut == ValueKind::Unknown);
 }
 
-TEST_CASE("ir lowerer semantic-product index backfills unfrozen query and try fact ids") {
+TEST_CASE("ir lowerer semantic-product index requires published query semantic-id maps") {
   primec::SemanticProgram semanticProgram;
   semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
       .scopePath = "/main",
@@ -649,8 +652,14 @@ TEST_CASE("ir lowerer semantic-product index backfills unfrozen query and try fa
   queryExpr.semanticNodeId = 9301;
   const auto *queryFact =
       primec::ir_lowerer::findSemanticProductQueryFactBySemanticId(semanticIndex, queryExpr);
-  REQUIRE(queryFact != nullptr);
-  CHECK(queryFact->semanticNodeId == 9301);
+  CHECK(queryFact == nullptr);
+
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(9301, 0);
+  const auto mappedSemanticIndex = primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+  const auto *mappedQueryFact =
+      primec::ir_lowerer::findSemanticProductQueryFactBySemanticId(mappedSemanticIndex, queryExpr);
+  REQUIRE(mappedQueryFact != nullptr);
+  CHECK(mappedQueryFact->semanticNodeId == 9301);
 
   primec::Expr tryExpr;
   tryExpr.kind = primec::Expr::Kind::Call;

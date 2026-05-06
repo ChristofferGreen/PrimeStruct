@@ -72,6 +72,7 @@ TEST_CASE("ir lowerer statement call helper validates buffer_store diagnostics")
   queryFact.queryTypeText = "u64";
   queryFact.bindingTypeText = "f32";
   semanticProgram.queryFacts.push_back(queryFact);
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(7101, 0);
   const auto semanticIndex =
       primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
 

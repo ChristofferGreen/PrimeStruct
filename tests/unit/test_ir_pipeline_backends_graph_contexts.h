@@ -560,6 +560,15 @@ TEST_CASE("public lowerer testing headers stay in sync with semantic-product hel
   }
   REQUIRE(std::filesystem::exists(semanticTargetsPath));
   const std::string semanticTargets = readTextFile(semanticTargetsPath);
+  std::filesystem::path semanticTargetsSourcePath =
+      cwd / "src" / "ir_lowerer" / "IrLowererSemanticProductTargetAdapters.cpp";
+  if (!std::filesystem::exists(semanticTargetsSourcePath)) {
+    semanticTargetsSourcePath =
+        cwd.parent_path() / "src" / "ir_lowerer" /
+        "IrLowererSemanticProductTargetAdapters.cpp";
+  }
+  REQUIRE(std::filesystem::exists(semanticTargetsSourcePath));
+  const std::string semanticTargetsSource = readTextFile(semanticTargetsSourcePath);
   CHECK(semanticTargets.find("findSemanticProductReturnFactByPath") !=
         std::string::npos);
   CHECK(semanticTargets.find("findSemanticProductBindingFactByScopeAndName") ==
@@ -567,6 +576,10 @@ TEST_CASE("public lowerer testing headers stay in sync with semantic-product hel
   CHECK(semanticTargets.find("findSemanticProductSumTypeMetadata") !=
         std::string::npos);
   CHECK(semanticTargets.find("findSemanticProductSumVariantMetadata") !=
+        std::string::npos);
+  CHECK(semanticTargetsSource.find("populateSemanticFactIndex(index.queryFactsByExpr,") !=
+        std::string::npos);
+  CHECK(semanticTargetsSource.find("semanticProgramQueryFactView(*semanticProgram)") ==
         std::string::npos);
 }
 

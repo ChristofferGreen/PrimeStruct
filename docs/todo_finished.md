@@ -6,6 +6,29 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 6, 2026)**
+- [x] TODO-4298: Require query index maps
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-06
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes lowerer semantic-product
+    query semantic-id indexes populate only from `queryFactIndicesByExpr`
+    instead of backfilling raw query facts from the semantic-product vector.
+  - acceptance:
+    - `buildSemanticProductIndex(...)` no longer scans raw query facts to
+      populate `queryFactsByExpr`.
+    - Hand-built query fact tests seed `queryFactIndicesByExpr` before
+      expecting semantic-id query lookup to succeed.
+    - Raw query facts with matching semantic node ids are not recovered by the
+      lowerer semantic-product index or adapter path.
+  - stop_rule: Stop once semantic-id query fact lookup requires the published
+    query map and focused tests pin both mapped and raw-only behavior.
+  - evidence: Removed the raw query-fact backfill from
+    `buildSemanticProductIndex(...)`, refreshed hand-built semantic-product
+    query fixtures to publish their semantic-id map entries, added a raw-only
+    query semantic-id regression, updated source locks and docs, and skipped
+    local test execution per the lite workflow.
+
 - [x] TODO-4298: Require return-info callable maps
   - owner: ai
   - created_at: 2026-04-28

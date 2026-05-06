@@ -160,6 +160,7 @@ TEST_CASE("ir lowerer inference expr-kind dispatch prefers graph-backed indexed 
   queryFact.bindingTypeTextId =
       primec::semanticProgramInternCallTargetString(semanticProgram, "string");
   semanticProgram.queryFacts.push_back(std::move(queryFact));
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(7301, 0);
   const auto semanticIndex =
       primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
 

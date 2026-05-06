@@ -186,6 +186,7 @@ TEST_CASE("ir lowerer call helpers resolve validated access index kind") {
   queryFact.queryTypeText = "u64";
   queryFact.bindingTypeText = "f32";
   semanticProgram.queryFacts.push_back(queryFact);
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(9001, 0);
   const auto semanticIndex = primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
 
   indexExpr.semanticNodeId = 9001;
