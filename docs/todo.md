@@ -661,6 +661,9 @@ Task template:
     semantic-product-backed binding, local-auto, and query pointer target
     facts before stale local pointer struct metadata can size aggregate
     pointer arithmetic.
+    The lowerer `buffer_store(...)` target-kind slice is complete for
+    semantic-product-backed binding, local-auto, and query buffer facts before
+    stale local buffer metadata can classify target element kinds.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -768,6 +771,12 @@ Task template:
       `realloc(...)`, `at(...)`, or `at_unsafe(...)` slot scaling. Published
       scalar facts suppress stale aggregate scaling while syntax-only
       compatibility keeps the legacy fallback.
+    - Completed slice: semantic-product-addressed `buffer_store(...)` target
+      validation now consumes published binding, local-auto, and query buffer
+      facts before stale local buffer metadata can classify target element
+      kinds. Published non-buffer facts suppress stale local buffer fallback
+      while syntax-only compatibility keeps the legacy local and args-pack
+      inference path.
     - Completed slice: semantic-product-addressed dispatch inference now
       consumes published method receiver binding, query, or local-auto facts
       for `FileError.why()` and nested `try(file.method())` file operations

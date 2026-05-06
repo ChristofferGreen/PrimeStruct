@@ -111,6 +111,138 @@ TEST_CASE("ir lowerer statement call helper validates buffer_store diagnostics")
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer buffer_store target kind uses semantic facts before stale locals") {
+  using EmitResult = primec::ir_lowerer::BufferStoreStatementEmitResult;
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo staleStringBuffer;
+  staleStringBuffer.kind = primec::ir_lowerer::LocalInfo::Kind::Buffer;
+  staleStringBuffer.valueKind = ValueKind::String;
+  locals.emplace("bufferValue", staleStringBuffer);
+
+  primec::ir_lowerer::LocalInfo staleNumericBuffer;
+  staleNumericBuffer.kind = primec::ir_lowerer::LocalInfo::Kind::Buffer;
+  staleNumericBuffer.valueKind = ValueKind::Int32;
+  locals.emplace("notBuffer", staleNumericBuffer);
+  locals.emplace("wrappedBuffer", staleNumericBuffer);
+
+  primec::SemanticProgram semanticProgram;
+  auto internType = [&](const std::string &typeText) {
+    return primec::semanticProgramInternCallTargetString(semanticProgram, typeText);
+  };
+  auto addBindingFact = [&](uint64_t semanticNodeId, std::string name, std::string typeText) {
+    const std::size_t factIndex = semanticProgram.bindingFacts.size();
+    semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+        .name = name,
+        .bindingTypeText = "Buffer<string>",
+        .semanticNodeId = semanticNodeId,
+        .bindingTypeTextId = internType(typeText),
+    });
+    semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr[semanticNodeId] = factIndex;
+  };
+  auto addLocalAutoFact = [&](uint64_t semanticNodeId, std::string name, std::string typeText) {
+    const std::size_t factIndex = semanticProgram.localAutoFacts.size();
+    semanticProgram.localAutoFacts.push_back(primec::SemanticProgramLocalAutoFact{
+        .bindingName = name,
+        .bindingTypeText = "Buffer<string>",
+        .semanticNodeId = semanticNodeId,
+        .bindingTypeTextId = internType(typeText),
+    });
+    semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr[semanticNodeId] = factIndex;
+  };
+  auto addQueryFact = [&](uint64_t semanticNodeId, std::string typeText) {
+    const std::size_t factIndex = semanticProgram.queryFacts.size();
+    semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+        .callName = "makeBuffer",
+        .queryTypeText = "Buffer<string>",
+        .bindingTypeText = "Buffer<string>",
+        .semanticNodeId = semanticNodeId,
+        .queryTypeTextId = internType(typeText),
+        .bindingTypeTextId = internType(typeText),
+    });
+    semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr[semanticNodeId] = factIndex;
+  };
+  addBindingFact(7201, "bufferValue", "Buffer<f32>");
+  addBindingFact(7202, "notBuffer", "i32");
+  addBindingFact(7205, "wrappedBuffer", "Reference<Buffer<i32>>");
+  addLocalAutoFact(7203, "autoBuffer", "Reference<Buffer<i32>>");
+  addQueryFact(7204, "Pointer<Buffer<u64>>");
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 1;
+
+  primec::Expr valueExpr;
+  valueExpr.kind = primec::Expr::Kind::Literal;
+  valueExpr.intWidth = 32;
+  valueExpr.literalValue = 2;
+
+  auto makeName = [](std::string name, uint64_t semanticNodeId) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Name;
+    expr.name = name;
+    expr.semanticNodeId = semanticNodeId;
+    return expr;
+  };
+  auto makeDereference = [](primec::Expr target) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = "dereference";
+    expr.args = {target};
+    return expr;
+  };
+  auto makeQueryCall = [](uint64_t semanticNodeId) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = "makeBuffer";
+    expr.semanticNodeId = semanticNodeId;
+    return expr;
+  };
+  auto emitBufferStore = [&](primec::Expr bufferExpr, std::string &errorOut) {
+    primec::Expr stmt;
+    stmt.kind = primec::Expr::Kind::Call;
+    stmt.name = "buffer_store";
+    stmt.args = {bufferExpr, indexExpr, valueExpr};
+
+    std::vector<primec::IrInstruction> instructions;
+    int32_t nextLocal = 0;
+    errorOut.clear();
+    return primec::ir_lowerer::tryEmitBufferStoreStatement(
+        stmt,
+        locals,
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+        [&]() { return nextLocal++; },
+        instructions,
+        errorOut,
+        &semanticProgram,
+        &semanticIndex);
+  };
+
+  std::string error;
+  CHECK(emitBufferStore(makeName("bufferValue", 7201), error) == EmitResult::Emitted);
+  CHECK(error.empty());
+
+  CHECK(emitBufferStore(makeDereference(makeName("autoBuffer", 7203)), error) == EmitResult::Emitted);
+  CHECK(error.empty());
+
+  CHECK(emitBufferStore(makeDereference(makeQueryCall(7204)), error) == EmitResult::Emitted);
+  CHECK(error.empty());
+
+  CHECK(emitBufferStore(makeName("notBuffer", 7202), error) == EmitResult::Error);
+  CHECK(error == "buffer_store requires numeric/bool buffer");
+
+  CHECK(emitBufferStore(makeName("wrappedBuffer", 7205), error) == EmitResult::Error);
+  CHECK(error == "buffer_store requires numeric/bool buffer");
+
+  CHECK(emitBufferStore(makeName("notBuffer", 0), error) == EmitResult::Emitted);
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer statement call helper emits dispatch statements") {
   using EmitResult = primec::ir_lowerer::DispatchStatementEmitResult;
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;

@@ -706,6 +706,11 @@ Planned non-template inference migration contract:
   use the same graph-backed semantic-product index facts before legacy
   expression inference, preserving the existing integer-index diagnostic for
   syntax-only compatibility.
+- Completed lowerer-side `buffer_store` target-kind slice: GPU buffer stores
+  now classify the target buffer element kind from published binding,
+  local-auto, and query facts before stale local buffer metadata can answer.
+  Published non-buffer facts suppress stale buffer metadata while syntax-only
+  compatibility keeps the legacy local and args-pack fallback.
 - Completed lowerer-side count-of-map-access slice: native count-kind
   inference for `count(map[key])` now asks the indexed access expression for
   its published query value kind before consulting local map metadata. Stale
@@ -1192,6 +1197,10 @@ Compile-pipeline publication contract:
 - GPU `buffer_store(...)` validation follows the same graph-backed index rule:
   semantic-product query, binding, and local-auto type facts provide the index
   kind before legacy expression inference is consulted.
+- GPU `buffer_store(...)` target validation also follows graph-backed buffer
+  facts: semantic-product binding, local-auto, and query facts provide the
+  buffer element kind before local buffer metadata is consulted, and published
+  non-buffer facts suppress stale local fallback.
 - Dump-stage handling should be able to read either the syntax-facing canonical AST dump or the future semantic-product
   dump from the same compile-pipeline success result without re-running semantics.
 - Backend/runtime entrypoints should consume the semantic product from compile-pipeline output once available rather

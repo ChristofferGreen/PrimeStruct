@@ -6,6 +6,31 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 6, 2026)**
+- [x] TODO-4298: Use buffer facts for store targets
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-06
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes `buffer_store(...)` target
+    validation classify buffer element kinds from published binding,
+    local-auto, and query type facts before stale local buffer metadata can
+    answer.
+  - acceptance:
+    - Published binding type IDs classify direct buffer targets before local
+      buffer metadata.
+    - Published local-auto and query type IDs classify dereferenced
+      reference/pointer buffer targets before local or args-pack fallback.
+    - Published non-buffer facts suppress stale local buffer fallback while
+      syntax-only buffer expressions keep compatibility inference.
+  - stop_rule: Stop once `buffer_store(...)` target validation depends on
+    graph-owned binding/local-auto/query facts and focused tests pin
+    graph-backed, stale-local, and syntax-only behavior.
+  - evidence: Added a semantic-product buffer target resolver to statement
+    call emission, resolved binding/local-auto/query buffer type text by
+    interned IDs before copied text, covered direct, dereferenced,
+    scalar-suppression, and syntax-only target paths, and skipped broad
+    baseline validation per the lite workflow.
+
 - [x] TODO-4298: Use pointer facts for memory scaling
   - owner: ai
   - created_at: 2026-04-28

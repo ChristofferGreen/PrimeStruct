@@ -231,9 +231,125 @@ static bool isSoaVectorTargetExpr(const Expr &expr, const LocalMap &localsIn) {
   return false;
 }
 
+static std::optional<LocalInfo::ValueKind> resolveBufferElementKindFromTypeText(
+    const std::string &typeText,
+    bool allowWrappedBuffer) {
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argText)) {
+    return std::nullopt;
+  }
+
+  const std::string normalizedBase = trimTemplateTypeText(base);
+  if (normalizedBase == "Reference" || normalizedBase == "/Reference" ||
+      normalizedBase == "Pointer" || normalizedBase == "/Pointer") {
+    if (!allowWrappedBuffer) {
+      return std::nullopt;
+    }
+    std::vector<std::string> args;
+    if (!splitTemplateArgs(argText, args) || args.size() != 1) {
+      return std::nullopt;
+    }
+    return resolveBufferElementKindFromTypeText(args.front(), true);
+  }
+
+  const bool isBufferBase =
+      normalizedBase == "Buffer" || normalizedBase == "/Buffer" ||
+      normalizedBase == "std/gfx/Buffer" || normalizedBase == "/std/gfx/Buffer" ||
+      normalizedBase == "std/gfx/experimental/Buffer" ||
+      normalizedBase == "/std/gfx/experimental/Buffer";
+  if (!isBufferBase) {
+    return std::nullopt;
+  }
+
+  std::vector<std::string> args;
+  if (!splitTemplateArgs(argText, args) || args.size() != 1) {
+    return std::nullopt;
+  }
+  const LocalInfo::ValueKind elementKind =
+      valueKindFromTypeName(trimTemplateTypeText(args.front()));
+  if (elementKind == LocalInfo::ValueKind::Unknown) {
+    return std::nullopt;
+  }
+  return elementKind;
+}
+
+static std::optional<LocalInfo::ValueKind> resolveBufferTargetElementKindFromSemanticFacts(
+    const Expr &bufferExpr,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex,
+    bool allowWrappedBuffer,
+    bool &hasSemanticBufferFactOut) {
+  hasSemanticBufferFactOut = false;
+  if (semanticProgram == nullptr || semanticIndex == nullptr) {
+    return std::nullopt;
+  }
+
+  auto tryResolveSemanticTypeText =
+      [&](SymbolId typeTextId, const std::string &typeText) -> std::optional<LocalInfo::ValueKind> {
+    const std::string resolvedTypeText =
+        resolveStatementCallSemanticTypeText(semanticProgram, typeTextId, typeText);
+    if (resolvedTypeText.empty()) {
+      return std::nullopt;
+    }
+    return resolveBufferElementKindFromTypeText(resolvedTypeText, allowWrappedBuffer);
+  };
+
+  if (bufferExpr.semanticNodeId != 0) {
+    if (const auto *queryFact =
+            findSemanticProductQueryFact(semanticProgram, *semanticIndex, bufferExpr);
+        queryFact != nullptr) {
+      hasSemanticBufferFactOut = true;
+      if (auto resolvedKind =
+              tryResolveSemanticTypeText(queryFact->bindingTypeTextId, queryFact->bindingTypeText);
+          resolvedKind.has_value()) {
+        return resolvedKind;
+      }
+      if (auto resolvedKind =
+              tryResolveSemanticTypeText(queryFact->queryTypeTextId, queryFact->queryTypeText);
+          resolvedKind.has_value()) {
+        return resolvedKind;
+      }
+      return std::nullopt;
+    }
+
+    if (const auto *bindingFact = findSemanticProductBindingFact(*semanticIndex, bufferExpr);
+        bindingFact != nullptr) {
+      hasSemanticBufferFactOut = true;
+      return tryResolveSemanticTypeText(bindingFact->bindingTypeTextId,
+                                        bindingFact->bindingTypeText);
+    }
+
+    if (const auto *localAutoFact =
+            findSemanticProductLocalAutoFact(semanticProgram, *semanticIndex, bufferExpr);
+        localAutoFact != nullptr) {
+      hasSemanticBufferFactOut = true;
+      return tryResolveSemanticTypeText(localAutoFact->bindingTypeTextId,
+                                        localAutoFact->bindingTypeText);
+    }
+  }
+
+  if (bufferExpr.kind == Expr::Kind::Call && bufferExpr.args.size() == 1 &&
+      isSimpleCallName(bufferExpr, "dereference")) {
+    return resolveBufferTargetElementKindFromSemanticFacts(
+        bufferExpr.args.front(), semanticProgram, semanticIndex, true, hasSemanticBufferFactOut);
+  }
+
+  return std::nullopt;
+}
+
 static std::optional<LocalInfo::ValueKind> resolveBufferTargetElementKind(
     const Expr &bufferExpr,
-    const LocalMap &localsIn) {
+    const LocalMap &localsIn,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
+  bool hasSemanticBufferFact = false;
+  if (const auto semanticKind = resolveBufferTargetElementKindFromSemanticFacts(
+          bufferExpr, semanticProgram, semanticIndex, false, hasSemanticBufferFact);
+      semanticKind.has_value() || hasSemanticBufferFact) {
+    return semanticKind;
+  }
+
   if (bufferExpr.kind == Expr::Kind::Name) {
     auto it = localsIn.find(bufferExpr.name);
     if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Buffer) {
@@ -1004,7 +1120,9 @@ BufferStoreStatementEmitResult tryEmitBufferStoreStatement(
   }
 
   LocalInfo::ValueKind elemKind = LocalInfo::ValueKind::Unknown;
-  if (const auto resolvedKind = resolveBufferTargetElementKind(stmt.args[0], localsIn); resolvedKind.has_value()) {
+  if (const auto resolvedKind =
+          resolveBufferTargetElementKind(stmt.args[0], localsIn, semanticProgram, semanticIndex);
+      resolvedKind.has_value()) {
     elemKind = *resolvedKind;
   }
   if (elemKind == LocalInfo::ValueKind::Unknown || elemKind == LocalInfo::ValueKind::String) {
