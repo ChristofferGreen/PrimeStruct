@@ -696,6 +696,10 @@ Task template:
     semantic-product-backed collection-specialization, binding, local-auto,
     and query SoA receiver facts before stale local `isSoaVector` metadata
     can decide direct SoA conversion/count fallback routing.
+    The inline native collection-access fallback slice is complete for
+    semantic-product-backed collection-specialization, binding, local-auto,
+    and query collection receiver facts before stale local array/vector/map
+    or string metadata can decide count/access fallback routing.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -859,6 +863,13 @@ Task template:
       `isSoaVector` metadata can select canonical
       `soa_vector.to_aos`/count fallback behavior. Published non-SoA facts
       suppress stale local SoA metadata while syntax-only compatibility keeps
+      the legacy fallback.
+    - Completed slice: semantic-product-addressed inline native
+      collection-access fallback routing now consumes published
+      collection-specialization, binding, local-auto, and query array/vector,
+      map, or string receiver facts before local metadata can select generic
+      count/access fallback behavior. Published non-collection facts suppress
+      stale local collection metadata while syntax-only compatibility keeps
       the legacy fallback.
     - Completed slice: semantic-product-addressed dispatch inference now
       consumes published method receiver binding, query, or local-auto facts

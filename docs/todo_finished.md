@@ -12697,3 +12697,38 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     for collection-specialization, binding, local-auto, query, non-SoA, and
     stale-local fallback ordering, and documented the remaining TODO-4298
     work. Local test execution was skipped per the lite workflow.
+
+- [x] TODO-4298: Use inline collection fallback facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes inline native
+    collection-access fallback routing read semantic-product receiver facts
+    before stale local array/vector/map or string metadata decides generic
+    count/access fallback behavior.
+  - implementation_notes:
+    - Resolve collection-specialization family IDs plus binding, local-auto,
+      and query receiver type IDs before copied fact text.
+    - Treat references/pointers to array, vector, map, and string type text as
+      collection-access receiver facts.
+    - Keep local collection metadata as compatibility fallback for syntax-only
+      or no-semantic-product contexts.
+  - acceptance:
+    - Inline native collection-access fallback routing consumes graph-backed
+      collection receiver facts before local metadata.
+    - Interned semantic-product type IDs override copied text for collection
+      receiver classification.
+    - Published non-collection facts suppress stale local collection metadata.
+    - The remaining TODO-4298 block records the completed slice and remaining
+      adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once inline native collection-access fallback routing
+    prefers published semantic-product facts and keeps local collection
+    inference only as compatibility fallback.
+  - finished_at: 2026-05-06
+  - evidence: Promoted inline native collection-access fallback routing in
+    `IrLowererInlineNativeCallDispatch.cpp`, added source-contract coverage
+    for collection-specialization, binding, local-auto, query,
+    non-collection, and stale-local fallback ordering, and documented the
+    remaining TODO-4298 work. Local test execution was skipped per the lite
+    workflow.

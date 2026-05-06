@@ -1167,6 +1167,71 @@ TEST_CASE("ir lowerer inline dispatch SoA vector fallback uses semantic receiver
         std::string::npos);
 }
 
+TEST_CASE("ir lowerer inline dispatch collection access fallback uses semantic receiver facts first") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path inlineDispatchPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererInlineNativeCallDispatch.cpp";
+
+  REQUIRE(std::filesystem::exists(inlineDispatchPath));
+  const std::string source = readText(inlineDispatchPath);
+
+  CHECK(source.find("enum class InlineCollectionAccessTargetFact") !=
+        std::string::npos);
+  CHECK(source.find("auto isInlineExperimentalMapTypeName =") !=
+        std::string::npos);
+  CHECK(source.find("auto classifyInlineCollectionAccessTargetFromSemanticFacts =") !=
+        std::string::npos);
+  CHECK(source.find("findSemanticProductCollectionSpecialization(*semanticIndexPtr, targetExpr)") !=
+        std::string::npos);
+  CHECK(source.find("collectionFact->collectionFamilyId") !=
+        std::string::npos);
+  CHECK(source.find("findSemanticProductQueryFact(semanticProgram, *semanticIndexPtr, targetExpr)") !=
+        std::string::npos);
+  CHECK(source.find("queryFact->receiverBindingTypeTextId") !=
+        std::string::npos);
+  CHECK(source.find("findSemanticProductBindingFact(*semanticIndexPtr, targetExpr)") !=
+        std::string::npos);
+  CHECK(source.find("findSemanticProductLocalAutoFact(semanticProgram, *semanticIndexPtr, targetExpr)") !=
+        std::string::npos);
+
+  const size_t semanticFactUse =
+      source.find("const InlineCollectionAccessTargetFact semanticFact =\n"
+                  "              classifyInlineCollectionAccessTargetFromSemanticFacts(receiverExpr);");
+  const size_t staleLocalFallback =
+      source.find("auto it = localsIn.find(receiverExpr.name);");
+  const size_t legacyInferFallback =
+      source.find("const LocalInfo::ValueKind inferredReceiverKind =",
+                  semanticFactUse);
+  const size_t nonCollectionGate = source.find(
+      "if (semanticFact == InlineCollectionAccessTargetFact::NonCollectionAccess) {",
+      semanticFactUse);
+  REQUIRE(semanticFactUse != std::string::npos);
+  REQUIRE(nonCollectionGate != std::string::npos);
+  REQUIRE(staleLocalFallback != std::string::npos);
+  REQUIRE(legacyInferFallback != std::string::npos);
+  CHECK(semanticFactUse < legacyInferFallback);
+  CHECK(semanticFactUse < staleLocalFallback);
+  CHECK(nonCollectionGate < legacyInferFallback);
+  CHECK(nonCollectionGate < staleLocalFallback);
+  CHECK(source.find("isInlineExperimentalMapTypeName(collectionFamily)") !=
+        std::string::npos);
+  CHECK(source.find("resolveMapAccessTargetInfo(receiverExpr, localsIn, inferCallMapTargetInfo).isMapTarget") !=
+        std::string::npos);
+}
+
 TEST_CASE("ir lowerer tail map insert rewrite uses semantic receiver facts first") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
