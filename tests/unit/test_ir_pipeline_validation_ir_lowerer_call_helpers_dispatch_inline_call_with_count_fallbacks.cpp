@@ -1008,6 +1008,120 @@ TEST_CASE("ir lowerer call helpers dispatch bare semantic map sugar inline") {
   expectEmitted(atUnsafeCall, canonicalAtUnsafe);
 }
 
+TEST_CASE("ir lowerer call helpers prefer graph facts for inline map receiver probes") {
+  using Result = primec::ir_lowerer::InlineCallDispatchResult;
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+
+  primec::ir_lowerer::LocalMap locals;
+  LocalInfo keyInfo;
+  keyInfo.kind = LocalInfo::Kind::Value;
+  keyInfo.valueKind = LocalInfo::ValueKind::String;
+  locals.emplace("key", keyInfo);
+  LocalInfo mapInfo;
+  mapInfo.kind = LocalInfo::Kind::Map;
+  mapInfo.mapKeyKind = LocalInfo::ValueKind::Int32;
+  mapInfo.mapValueKind = LocalInfo::ValueKind::Int64;
+  locals.emplace("values", mapInfo);
+
+  primec::Definition canonicalAt;
+  canonicalAt.fullPath = "/std/collections/map/at";
+
+  primec::Expr keyName;
+  keyName.kind = primec::Expr::Kind::Name;
+  keyName.name = "key";
+  primec::Expr valuesName;
+  valuesName.kind = primec::Expr::Kind::Name;
+  valuesName.name = "values";
+
+  primec::Expr atCall;
+  atCall.kind = primec::Expr::Kind::Call;
+  atCall.name = "/std/collections/map/at";
+  atCall.args = {keyName, valuesName};
+
+  auto resolveMethodCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &)
+      -> const primec::Definition * {
+    CHECK(false);
+    return nullptr;
+  };
+  auto resolveDefinitionCall = [&](const primec::Expr &expr) -> const primec::Definition * {
+    return expr.name == "/std/collections/map/at" ? &canonicalAt : nullptr;
+  };
+  const auto noCountClassifier = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    return false;
+  };
+
+  int emitCalls = 0;
+  std::string error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+            atCall,
+            locals,
+            noCountClassifier,
+            noCountClassifier,
+            noCountClassifier,
+            resolveMethodCall,
+            resolveDefinitionCall,
+            [&](const primec::Expr &, const primec::Definition &resolvedCallee, const primec::ir_lowerer::LocalMap &) {
+              ++emitCalls;
+              CHECK(resolvedCallee.fullPath == canonicalAt.fullPath);
+              return true;
+            },
+            error,
+            nullptr,
+            [](const primec::Expr &candidate, const primec::ir_lowerer::LocalMap &) {
+              return candidate.kind == primec::Expr::Kind::Name && candidate.name == "key"
+                         ? LocalInfo::ValueKind::Int32
+                         : LocalInfo::ValueKind::Unknown;
+            }) == Result::Emitted);
+  CHECK(error == "stale");
+  CHECK(emitCalls == 1);
+
+  emitCalls = 0;
+  error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+            atCall,
+            locals,
+            noCountClassifier,
+            noCountClassifier,
+            noCountClassifier,
+            resolveMethodCall,
+            resolveDefinitionCall,
+            [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
+              ++emitCalls;
+              return true;
+            },
+            error,
+            nullptr,
+            [](const primec::Expr &candidate, const primec::ir_lowerer::LocalMap &) {
+              return candidate.kind == primec::Expr::Kind::Name && candidate.name == "key"
+                         ? LocalInfo::ValueKind::String
+                         : LocalInfo::ValueKind::Unknown;
+            }) == Result::NotHandled);
+  CHECK(error == "stale");
+  CHECK(emitCalls == 0);
+
+  emitCalls = 0;
+  error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+            atCall,
+            locals,
+            noCountClassifier,
+            noCountClassifier,
+            noCountClassifier,
+            resolveMethodCall,
+            resolveDefinitionCall,
+            [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
+              ++emitCalls;
+              return true;
+            },
+            error,
+            nullptr,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return LocalInfo::ValueKind::Unknown;
+            }) == Result::NotHandled);
+  CHECK(error == "stale");
+  CHECK(emitCalls == 0);
+}
+
 TEST_CASE("ir lowerer call helpers keep vector at methods on builtin path") {
   using Result = primec::ir_lowerer::InlineCallDispatchResult;
   using LocalInfo = primec::ir_lowerer::LocalInfo;

@@ -824,7 +824,8 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCallFn,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCallFn,
     std::string &error,
-    const SemanticProgram *semanticProgram) {
+    const SemanticProgram *semanticProgram,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind) {
   const SemanticProductIndex semanticIndex = buildSemanticProductIndex(semanticProgram);
   const SemanticProductIndex *const semanticIndexPtr =
       semanticProgram == nullptr ? nullptr : &semanticIndex;
@@ -1307,6 +1308,11 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
           return true;
         }
         if (receiverExpr.kind == Expr::Kind::Name) {
+          const LocalInfo::ValueKind inferredReceiverKind =
+              inferExprKind ? inferExprKind(receiverExpr, localsIn) : LocalInfo::ValueKind::Unknown;
+          if (inferredReceiverKind == LocalInfo::ValueKind::String) {
+            return true;
+          }
           auto it = localsIn.find(receiverExpr.name);
           if (it == localsIn.end()) {
             return false;
@@ -1329,6 +1335,9 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
               (info.pointerToArray || info.pointerToVector || info.pointerToMap ||
                info.pointerToBuffer)) {
             return true;
+          }
+          if (inferredReceiverKind != LocalInfo::ValueKind::Unknown) {
+            return false;
           }
           return info.valueKind == LocalInfo::ValueKind::String;
         }

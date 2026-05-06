@@ -803,7 +803,10 @@
               return emitInlineDefinitionCall(callExpr, callee, localMap, true);
             },
             error,
-            semanticProgram);
+            semanticProgram,
+            [&](const Expr &candidateExpr, const ir_lowerer::LocalMap &localMap) {
+              return inferExprKind(candidateExpr, localMap);
+            });
         if (inlineDispatchResult == ir_lowerer::InlineCallDispatchResult::Emitted) {
           return true;
         }
