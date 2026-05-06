@@ -587,6 +587,7 @@ TEST_CASE("ir lowerer binding type helpers prefer semantic product temporary fac
       .resolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/makeVec"),
   });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(17, 0);
   semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
       .scopePath = "/main",
       .siteKind = "temporary",
@@ -602,6 +603,7 @@ TEST_CASE("ir lowerer binding type helpers prefer semantic product temporary fac
       .resolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/loadArrayRef"),
   });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(23, 1);
 
   auto adapters = primec::ir_lowerer::makeBindingTypeAdapters(&semanticProgram);
 
@@ -650,6 +652,7 @@ TEST_CASE("ir lowerer binding type adapters resolve interned binding type ids be
       .bindingTypeTextId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "vector<i64>"),
   });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(31, 0);
   semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
       .scopePath = "/main",
       .siteKind = "temporary",
@@ -667,6 +670,7 @@ TEST_CASE("ir lowerer binding type adapters resolve interned binding type ids be
       .bindingTypeTextId = primec::semanticProgramInternCallTargetString(
           semanticProgram, "Reference<array<i64>>"),
   });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(37, 1);
   semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
       .scopePath = "/main",
       .siteKind = "temporary",
@@ -684,6 +688,7 @@ TEST_CASE("ir lowerer binding type adapters resolve interned binding type ids be
       .bindingTypeTextId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "string"),
   });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(41, 2);
   semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
       .scopePath = "/main",
       .siteKind = "temporary",
@@ -701,6 +706,7 @@ TEST_CASE("ir lowerer binding type adapters resolve interned binding type ids be
       .bindingTypeTextId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
   });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(43, 3);
 
   auto adapters = primec::ir_lowerer::makeBindingTypeAdapters(&semanticProgram);
 
@@ -910,6 +916,7 @@ TEST_CASE("ir lowerer binding type helpers treat semantic local-auto facts as no
       .resolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/id"),
   });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(114, 0);
   semanticProgram.localAutoFacts.push_back(primec::SemanticProgramLocalAutoFact{
       .scopePath = "/main",
       .bindingName = "selected",

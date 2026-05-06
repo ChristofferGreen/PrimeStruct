@@ -827,6 +827,7 @@ TEST_CASE("ir lowerer result helpers use semantic binding facts for direct Resul
       .bindingTypeTextId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
   });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(364, 0);
   const auto semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
 

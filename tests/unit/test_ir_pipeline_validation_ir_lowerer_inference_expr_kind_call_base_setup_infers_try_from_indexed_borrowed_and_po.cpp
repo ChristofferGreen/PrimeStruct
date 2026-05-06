@@ -217,6 +217,7 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic Result.o
       .resolvedPathId = primec::InvalidSymbolId,
       .bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "bool"),
   });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(803, 0);
   const auto semanticIndex = primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
 
   primec::ir_lowerer::LowerInferenceSetupBootstrapState state;

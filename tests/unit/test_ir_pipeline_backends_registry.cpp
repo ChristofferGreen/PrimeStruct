@@ -3919,6 +3919,7 @@ TEST_CASE("ir lowerer rejects semantic-product binding facts missing resolved pa
       .provenanceHandle = 0,
       .resolvedPathId = primec::InvalidSymbolId,
   });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(7, 0);
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
@@ -3971,6 +3972,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product collection specialization
       .resolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/main/values"),
   });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(43, 0);
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
@@ -4023,6 +4025,7 @@ TEST_CASE("ir lowerer rejects stale semantic-product collection metadata") {
       .resolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/main/pairs"),
   });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(43, 0);
   semanticProgram.collectionSpecializations.push_back(
       primec::SemanticProgramCollectionSpecialization{
           .scopePath = "/main",
@@ -4476,6 +4479,7 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
       .resolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/main/value"),
   });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(45, 0);
   semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
       .scopePath = "/main",
       .siteKind = "local",
@@ -4492,6 +4496,7 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
       .resolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/main/selected"),
   });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(47, 1);
 
   semanticProgram.bindingFacts.back().bindingTypeTextId =
       static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size() + 1u);
@@ -4927,6 +4932,7 @@ TEST_CASE("ir preparation rejects semantic-product local-auto path fallback in p
       .resolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/main/selected"),
   });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(184, 0);
   semanticProgram.localAutoFacts.push_back(primec::SemanticProgramLocalAutoFact{
       .scopePath = "/main",
       .bindingName = "selected",

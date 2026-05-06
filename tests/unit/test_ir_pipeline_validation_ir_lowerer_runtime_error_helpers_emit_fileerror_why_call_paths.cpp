@@ -674,6 +674,7 @@ TEST_CASE("ir lowerer setup math helpers keep semantic product FileError binding
       .resolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/readFile"),
   });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(33, 0);
 
   const auto adapters = primec::ir_lowerer::makeSetupMathAndBindingAdapters(true, &semanticProgram);
 

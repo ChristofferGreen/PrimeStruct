@@ -372,6 +372,7 @@ TEST_CASE("ir lowerer statement binding helper prefers semantic temporary facts"
       .resolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/makeVec"),
   });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(111, 0);
   const auto semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
 

@@ -743,6 +743,7 @@ TEST_CASE("ir lowerer setup inference helper prefers semantic binding facts for 
       .resolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/main/x"),
   });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(321, 0);
   const auto semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
 

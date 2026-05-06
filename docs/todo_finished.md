@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 6, 2026)**
+- [x] TODO-4298: Require binding index maps
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-06
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes lowerer semantic-product
+    binding semantic-id indexes populate only from `bindingFactIndicesByExpr`
+    instead of backfilling raw binding facts from the semantic-product vector.
+  - acceptance:
+    - `buildSemanticProductIndex(...)` no longer scans raw binding facts to
+      populate `bindingFactsByExpr`.
+    - Hand-built binding fact tests seed `bindingFactIndicesByExpr` before
+      expecting semantic-id binding lookup to succeed.
+    - Raw binding facts with matching semantic node ids are not recovered by
+      the lowerer semantic-product index or adapter path.
+  - stop_rule: Stop once semantic-id binding fact lookup requires the
+    published binding map and focused tests pin both mapped and raw-only
+    behavior.
+  - evidence: Removed the raw binding-fact backfill from
+    `buildSemanticProductIndex(...)`, refreshed hand-built semantic-product
+    binding fixtures to publish their semantic-id map entries, added a
+    raw-only binding semantic-id regression, updated source locks and docs,
+    and skipped local test execution per the lite workflow.
+
 - [x] TODO-4298: Require try index maps
   - owner: ai
   - created_at: 2026-04-28

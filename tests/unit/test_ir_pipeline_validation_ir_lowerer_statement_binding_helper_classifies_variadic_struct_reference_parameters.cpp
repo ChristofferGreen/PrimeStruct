@@ -32,6 +32,7 @@ const primec::Expr *findBindingStatementByName(const primec::Definition &definit
 void addSemanticBindingFact(primec::SemanticProgram &semanticProgram,
                             uint64_t semanticNodeId,
                             std::string bindingTypeText) {
+  const auto factIndex = semanticProgram.bindingFacts.size();
   semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
       .scopePath = "/main",
       .siteKind = "local",
@@ -46,6 +47,8 @@ void addSemanticBindingFact(primec::SemanticProgram &semanticProgram,
       .semanticNodeId = semanticNodeId,
       .resolvedPathId = primec::InvalidSymbolId,
   });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(
+      semanticNodeId, factIndex);
 }
 
 primec::ir_lowerer::LocalInfo::ValueKind inferValueKindFromLocals(
@@ -656,6 +659,7 @@ TEST_CASE("ir lowerer statement binding helper uses semantic-product args-pack b
           primec::semanticProgramInternCallTargetString(
               semanticProgram, "args<Reference<Pair>>"),
   });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(9101, 0);
   const auto semanticIndex =
       primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
 
@@ -773,6 +777,7 @@ TEST_CASE("ir lowerer statement binding helper rejects incomplete semantic args-
       .semanticNodeId = 9103,
       .resolvedPathId = primec::InvalidSymbolId,
   });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(9103, 0);
   const auto semanticIndex =
       primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
 

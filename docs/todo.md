@@ -530,7 +530,9 @@ Task template:
     precomputed return metadata. The lowerer query semantic-index
     map-authority slice is complete for semantic-id query fact lookup. The
     lowerer try semantic-index map-authority slice is complete for
-    semantic-id try fact lookup. The lowerer base call-kind
+    semantic-id try fact lookup. The lowerer binding semantic-index
+    map-authority slice is complete for semantic-id binding fact lookup. The
+    lowerer base call-kind
     `try(...)` fact authority slice is complete. The lowerer
     base call-kind Result method fact-authority slice is complete for
     semantic-product-addressed `Result.ok(...)`, `Result.error(...)`, and

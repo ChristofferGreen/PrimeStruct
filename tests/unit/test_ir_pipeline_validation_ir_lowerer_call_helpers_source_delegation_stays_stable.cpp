@@ -3088,7 +3088,7 @@ TEST_CASE("ir lowerer semantic-product adapter uses local-auto semantic-id match
   CHECK(localAutoFact->bindingTypeText == "i32");
 }
 
-TEST_CASE("ir lowerer semantic-product index resolves binding facts by semantic id") {
+TEST_CASE("ir lowerer semantic-product index requires published binding semantic-id maps") {
   primec::SemanticProgram semanticProgram;
   semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
       .scopePath = "/main",
@@ -3114,9 +3114,17 @@ TEST_CASE("ir lowerer semantic-product index resolves binding facts by semantic 
 
   const auto semanticIndex =
       primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
-  CHECK(semanticIndex.bindingFactsByExpr.count(7401) == 1);
-  const auto *bindingFact =
+  CHECK(semanticIndex.bindingFactsByExpr.empty());
+  const auto *rawOnlyBindingFact =
       primec::ir_lowerer::findSemanticProductBindingFact(semanticIndex, bindingExpr);
+  CHECK(rawOnlyBindingFact == nullptr);
+
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(7401, 0);
+  const auto mappedSemanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+  CHECK(mappedSemanticIndex.bindingFactsByExpr.count(7401) == 1);
+  const auto *bindingFact =
+      primec::ir_lowerer::findSemanticProductBindingFact(mappedSemanticIndex, bindingExpr);
   REQUIRE(bindingFact != nullptr);
   CHECK(bindingFact->bindingTypeText == "i32");
 }
@@ -3172,6 +3180,7 @@ TEST_CASE("ir lowerer statement binding helper consumes semantic-product index d
           primec::semanticProgramInternCallTargetString(
               semanticProgram, "map<i32, string>"),
   });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(7501, 0);
 
   primec::Expr bindingExpr;
   bindingExpr.kind = primec::Expr::Kind::Name;
@@ -3227,6 +3236,7 @@ TEST_CASE("ir lowerer statement binding helper prefers semantic initializer bind
           primec::semanticProgramInternCallTargetString(
               semanticProgram, "map<i32, string>"),
   });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(7601, 0);
 
   primec::Expr bindingExpr;
   bindingExpr.kind = primec::Expr::Kind::Name;
