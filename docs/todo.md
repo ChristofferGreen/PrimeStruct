@@ -521,7 +521,8 @@ Task template:
     cache quarantine slice is complete while the explicit return-by-path
     helper remains available for resolved callee-path consumers. The lowerer
     return semantic-index map-authority slice is complete for definition-id
-    fact lookup. The lowerer
+    fact lookup. The lowerer return result-metadata completeness map-authority
+    slice is complete for return fact validation. The lowerer
     return-by-path helper published-map slice is complete for resolved
     callee-path consumers. The lowerer sum metadata helper published-map slice
     is complete for sum type/variant lookup consumers. The lowerer callable

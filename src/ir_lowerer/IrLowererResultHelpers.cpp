@@ -7,8 +7,10 @@
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
+#include <algorithm>
 #include <optional>
 #include <string_view>
+#include <vector>
 
 namespace primec::ir_lowerer {
 
@@ -211,6 +213,29 @@ bool isQueryOwnedBuiltinCountTargetMatch(std::string_view queryCallName,
          isCoreBuiltinCountTargetPath(publishedTargetPath);
 }
 
+std::vector<const SemanticProgramReturnFact *>
+publishedReturnFactsByDefinitionMap(const SemanticProgram &semanticProgram) {
+  std::vector<std::size_t> factIndices;
+  factIndices.reserve(
+      semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId.size());
+  for (const auto &[definitionSemanticId, factIndex] :
+       semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId) {
+    (void)definitionSemanticId;
+    if (factIndex < semanticProgram.returnFacts.size()) {
+      factIndices.push_back(factIndex);
+    }
+  }
+  std::sort(factIndices.begin(), factIndices.end());
+  factIndices.erase(std::unique(factIndices.begin(), factIndices.end()), factIndices.end());
+
+  std::vector<const SemanticProgramReturnFact *> facts;
+  facts.reserve(factIndices.size());
+  for (const std::size_t factIndex : factIndices) {
+    facts.push_back(&semanticProgram.returnFacts[factIndex]);
+  }
+  return facts;
+}
+
 } // namespace
 
 bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *semanticProgram,
@@ -239,7 +264,7 @@ bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *se
     }
   }
 
-  const auto returnFacts = semanticProgramReturnFactView(*semanticProgram);
+  const auto returnFacts = publishedReturnFactsByDefinitionMap(*semanticProgram);
   for (const auto *returnFact : returnFacts) {
     const std::string_view definitionPath =
         semanticProgramReturnFactDefinitionPath(*semanticProgram, *returnFact);

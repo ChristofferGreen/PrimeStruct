@@ -577,6 +577,14 @@ TEST_CASE("public lowerer testing headers stay in sync with semantic-product hel
   }
   REQUIRE(std::filesystem::exists(countAccessSourcePath));
   const std::string countAccessSource = readTextFile(countAccessSourcePath);
+  std::filesystem::path resultHelpersSourcePath =
+      cwd / "src" / "ir_lowerer" / "IrLowererResultHelpers.cpp";
+  if (!std::filesystem::exists(resultHelpersSourcePath)) {
+    resultHelpersSourcePath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererResultHelpers.cpp";
+  }
+  REQUIRE(std::filesystem::exists(resultHelpersSourcePath));
+  const std::string resultHelpersSource = readTextFile(resultHelpersSourcePath);
   CHECK(semanticTargets.find("findSemanticProductReturnFactByPath") !=
         std::string::npos);
   CHECK(semanticTargets.find("findSemanticProductBindingFactByScopeAndName") ==
@@ -608,6 +616,10 @@ TEST_CASE("public lowerer testing headers stay in sync with semantic-product hel
   CHECK(countAccessSource.find("publishedRoutingLookups.bindingFactIndicesByExpr") !=
         std::string::npos);
   CHECK(countAccessSource.find("semanticProgramBindingFactView(*semanticProgram)") ==
+        std::string::npos);
+  CHECK(resultHelpersSource.find("publishedRoutingLookups.returnFactIndicesByDefinitionId") !=
+        std::string::npos);
+  CHECK(resultHelpersSource.find("semanticProgramReturnFactView(*semanticProgram)") ==
         std::string::npos);
 }
 

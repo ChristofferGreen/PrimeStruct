@@ -5425,6 +5425,55 @@ TEST_CASE("ir lowerer rejects missing semantic-product return binding types") {
   CHECK(diagnosticInfo.message == error);
 }
 
+TEST_CASE("ir lowerer result completeness requires published return maps") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .isExecution = false,
+      .returnKind = "return",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 9401,
+      .provenanceHandle = 0,
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+  });
+  semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
+      .returnKind = "return",
+      .structPath = "",
+      .bindingTypeText = "",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 9401,
+      .definitionPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+  });
+
+  std::string error;
+  CHECK(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
+      &semanticProgram, error));
+  CHECK(error.empty());
+
+  semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId
+      .insert_or_assign(9401, 0);
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
+      &semanticProgram, error));
+  CHECK(error == "missing semantic-product return binding type: /main");
+}
+
 TEST_CASE("ir lowerer rejects missing semantic-product return definition path id") {
   primec::Program program;
 

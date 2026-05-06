@@ -1048,6 +1048,8 @@ Compile-pipeline publication contract:
   return-fact map instead of scanning raw return facts.
 - Return definition-id indexing follows the same map authority: lowerer semantic-product indexes populate return facts
   from `returnFactIndicesByDefinitionId` and do not backfill matching raw return facts by definition semantic node id.
+- Return result-metadata completeness validation follows the same published-map rule: return fact checks enumerate
+  `returnFactIndicesByDefinitionId` entries and do not validate raw return facts that are absent from the map.
 - Sum type and variant metadata helpers follow the same publication-authority rule: resolved sum path/variant-name
   consumers read the published sum metadata maps instead of scanning raw metadata vectors.
 - Callable summary lookups read the published callable-summary path map and fail closed when a matching raw summary has
