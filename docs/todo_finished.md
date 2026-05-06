@@ -6,6 +6,34 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 6, 2026)**
+- [x] TODO-4298: Use dispatch try operand facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-06
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes lowerer dispatch
+    inference classify `try(operand)` value kinds from the operand's
+    published binding, query, or local-auto Result facts before local
+    `isResult` and args-pack metadata can answer.
+  - acceptance:
+    - `try(name)` dispatch inference reads semantic-product binding facts
+      before stale named-local Result metadata.
+    - `try(call())` dispatch inference reads semantic-product query Result
+      metadata before fallback Result reconstruction.
+    - Status-only local-auto Result operand facts classify `try(...)` as
+      the status value kind.
+    - Published non-Result operand facts suppress stale local args-pack
+      Result metadata.
+    - Syntax-only contexts without semantic-product operand facts keep the
+      existing local Result fallback.
+  - stop_rule: Stop once one `try(operand)` dispatch consumer depends on
+    graph-owned operand Result facts and focused tests pin graph-backed,
+    stale-local, and syntax-only behavior.
+  - evidence: Added semantic-product operand fact handling for `try(operand)`
+    dispatch inference, covered binding-backed, query-backed,
+    local-auto-backed, stale-local, and syntax-only paths, and skipped broad
+    baseline validation per the lite workflow.
+
 - [x] TODO-4298: Use take borrow query facts
   - owner: ai
   - created_at: 2026-04-28

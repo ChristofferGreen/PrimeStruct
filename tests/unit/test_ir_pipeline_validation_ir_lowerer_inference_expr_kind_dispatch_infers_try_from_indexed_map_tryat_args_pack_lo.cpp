@@ -275,6 +275,260 @@ TEST_CASE("ir lowerer inference expr-kind dispatch prefers graph-backed indexed 
   CHECK(state.inferExprKind(countExpr, locals) == Kind::Unknown);
 }
 
+TEST_CASE("ir lowerer inference expr-kind dispatch uses semantic try operand Result facts") {
+  using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  auto addBindingFact = [](primec::SemanticProgram &semanticProgram,
+                           uint64_t semanticNodeId,
+                           const std::string &name,
+                           const std::string &bindingTypeText) {
+    primec::SemanticProgramBindingFact fact;
+    fact.scopePath = "/main";
+    fact.siteKind = "local";
+    fact.name = name;
+    fact.bindingTypeText = bindingTypeText;
+    fact.semanticNodeId = semanticNodeId;
+    fact.scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main");
+    fact.siteKindId = primec::semanticProgramInternCallTargetString(semanticProgram, "local");
+    fact.nameId = primec::semanticProgramInternCallTargetString(semanticProgram, name);
+    fact.bindingTypeTextId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, bindingTypeText);
+    const size_t index = semanticProgram.bindingFacts.size();
+    semanticProgram.bindingFacts.push_back(std::move(fact));
+    semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(
+        semanticNodeId,
+        index);
+  };
+
+  auto addQueryResultFact = [](primec::SemanticProgram &semanticProgram,
+                               uint64_t semanticNodeId,
+                               const std::string &callName,
+                               const std::string &resultValueType) {
+    primec::SemanticProgramQueryFact fact;
+    fact.scopePath = "/main";
+    fact.callName = callName;
+    fact.hasResultType = true;
+    fact.resultTypeHasValue = true;
+    fact.resultValueType = resultValueType;
+    fact.resultErrorType = "FileError";
+    fact.semanticNodeId = semanticNodeId;
+    fact.scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main");
+    fact.callNameId = primec::semanticProgramInternCallTargetString(semanticProgram, callName);
+    fact.resolvedPathId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, "/main/" + callName);
+    fact.resultValueTypeId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, resultValueType);
+    fact.resultErrorTypeId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, "FileError");
+    const size_t index = semanticProgram.queryFacts.size();
+    semanticProgram.queryFacts.push_back(std::move(fact));
+    semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(
+        semanticNodeId,
+        index);
+  };
+
+  auto addQueryTypeFact = [](primec::SemanticProgram &semanticProgram,
+                             uint64_t semanticNodeId,
+                             const std::string &callName,
+                             const std::string &queryTypeText) {
+    primec::SemanticProgramQueryFact fact;
+    fact.scopePath = "/main";
+    fact.callName = callName;
+    fact.queryTypeText = queryTypeText;
+    fact.bindingTypeText = queryTypeText;
+    fact.semanticNodeId = semanticNodeId;
+    fact.scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main");
+    fact.callNameId = primec::semanticProgramInternCallTargetString(semanticProgram, callName);
+    fact.resolvedPathId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, "/main/" + callName);
+    fact.queryTypeTextId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, queryTypeText);
+    fact.bindingTypeTextId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, queryTypeText);
+    const size_t index = semanticProgram.queryFacts.size();
+    semanticProgram.queryFacts.push_back(std::move(fact));
+    semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(
+        semanticNodeId,
+        index);
+  };
+
+  auto addLocalAutoFact = [](primec::SemanticProgram &semanticProgram,
+                             uint64_t semanticNodeId,
+                             const std::string &name,
+                             const std::string &bindingTypeText) {
+    primec::SemanticProgramLocalAutoFact fact;
+    fact.scopePath = "/main";
+    fact.bindingName = name;
+    fact.bindingTypeText = bindingTypeText;
+    fact.initializerBindingTypeText = bindingTypeText;
+    fact.semanticNodeId = semanticNodeId;
+    fact.scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main");
+    fact.bindingNameId = primec::semanticProgramInternCallTargetString(semanticProgram, name);
+    fact.bindingTypeTextId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, bindingTypeText);
+    const size_t index = semanticProgram.localAutoFacts.size();
+    semanticProgram.localAutoFacts.push_back(std::move(fact));
+    semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr.insert_or_assign(
+        semanticNodeId,
+        index);
+  };
+
+  auto installDispatchSetup = [](primec::ir_lowerer::LowerInferenceSetupBootstrapState &state,
+                                 std::unordered_map<std::string, const primec::Definition *> &defMap,
+                                 std::string &inferenceError) {
+    state.inferLiteralOrNameExprKind = [](const primec::Expr &,
+                                          const primec::ir_lowerer::LocalMap &,
+                                          Kind &kindOut) {
+      kindOut = Kind::Unknown;
+      return false;
+    };
+    state.inferCallExprBaseKind = [](const primec::Expr &,
+                                     const primec::ir_lowerer::LocalMap &,
+                                     Kind &kindOut) {
+      kindOut = Kind::Unknown;
+      return false;
+    };
+    state.inferCallExprDirectReturnKind = [](const primec::Expr &,
+                                             const primec::ir_lowerer::LocalMap &,
+                                             Kind &kindOut) {
+      kindOut = Kind::Unknown;
+      return primec::ir_lowerer::CallExpressionReturnKindResolution::NotResolved;
+    };
+    state.inferCallExprCountAccessGpuFallbackKind = [](const primec::Expr &,
+                                                       const primec::ir_lowerer::LocalMap &,
+                                                       Kind &kindOut) {
+      kindOut = Kind::Unknown;
+      return false;
+    };
+    state.inferCallExprOperatorFallbackKind = [](const primec::Expr &,
+                                                 const primec::ir_lowerer::LocalMap &,
+                                                 Kind &kindOut) {
+      kindOut = Kind::Unknown;
+      return false;
+    };
+    state.inferCallExprControlFlowFallbackKind = [](const primec::Expr &,
+                                                    const primec::ir_lowerer::LocalMap &,
+                                                    std::string &,
+                                                    Kind &kindOut) {
+      kindOut = Kind::Unknown;
+      return false;
+    };
+    state.inferCallExprPointerFallbackKind = [](const primec::Expr &,
+                                                const primec::ir_lowerer::LocalMap &,
+                                                Kind &kindOut) {
+      kindOut = Kind::Unknown;
+      return false;
+    };
+    state.resolveMethodCallDefinition =
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+      return nullptr;
+    };
+    std::string setupError;
+    CHECK(primec::ir_lowerer::runLowerInferenceExprKindDispatchSetup(
+        {
+            .defMap = &defMap,
+            .resolveExprPath = [](const primec::Expr &expr) { return "/" + expr.name; },
+            .error = &inferenceError,
+        },
+        state,
+        setupError));
+    CHECK(setupError.empty());
+    REQUIRE(static_cast<bool>(state.inferExprKind));
+  };
+
+  auto makeNameExpr = [](const std::string &name, uint64_t semanticNodeId) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Name;
+    expr.name = name;
+    expr.semanticNodeId = semanticNodeId;
+    return expr;
+  };
+
+  auto makeLiteralExpr = [] {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Literal;
+    expr.intWidth = 32;
+    expr.literalValue = 0;
+    return expr;
+  };
+
+  auto makeCallExpr = [](const std::string &name, uint64_t semanticNodeId) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = name;
+    expr.semanticNodeId = semanticNodeId;
+    return expr;
+  };
+
+  auto makeAtExpr = [&](const std::string &name, uint64_t semanticNodeId) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = "at";
+    expr.args = {makeNameExpr(name, 0), makeLiteralExpr()};
+    expr.semanticNodeId = semanticNodeId;
+    return expr;
+  };
+
+  auto makeTryExpr = [](primec::Expr operand) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = "try";
+    expr.args = {std::move(operand)};
+    return expr;
+  };
+
+  primec::SemanticProgram semanticProgram;
+  addBindingFact(semanticProgram, 7401, "result", "Result<string, FileError>");
+  addQueryResultFact(semanticProgram, 7402, "lookup", "bool");
+  addLocalAutoFact(semanticProgram, 7403, "status", "Result<FileError>");
+  addQueryTypeFact(semanticProgram, 7404, "at", "i32");
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  primec::ir_lowerer::LocalInfo staleNamedResult;
+  staleNamedResult.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  staleNamedResult.isResult = true;
+  staleNamedResult.resultHasValue = true;
+  staleNamedResult.resultValueKind = Kind::Int64;
+
+  primec::ir_lowerer::LocalInfo staleResultPack;
+  staleResultPack.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  staleResultPack.isArgsPack = true;
+  staleResultPack.isResult = true;
+  staleResultPack.resultHasValue = true;
+  staleResultPack.resultValueKind = Kind::String;
+
+  primec::ir_lowerer::LocalMap staleLocals;
+  staleLocals.emplace("result", staleNamedResult);
+  staleLocals.emplace("status", staleNamedResult);
+  staleLocals.emplace("results", staleResultPack);
+
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::string inferenceError;
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  state.semanticProgram = &semanticProgram;
+  state.semanticIndex = &semanticIndex;
+  installDispatchSetup(state, defMap, inferenceError);
+
+  CHECK(state.inferExprKind(makeTryExpr(makeNameExpr("result", 7401)), staleLocals) ==
+        Kind::String);
+  CHECK(state.inferExprKind(makeTryExpr(makeCallExpr("lookup", 7402)), staleLocals) ==
+        Kind::Bool);
+  CHECK(state.inferExprKind(makeTryExpr(makeNameExpr("status", 7403)), staleLocals) ==
+        Kind::Int32);
+  CHECK(state.inferExprKind(makeTryExpr(makeAtExpr("results", 7404)), staleLocals) ==
+        Kind::Unknown);
+  CHECK(inferenceError.empty());
+
+  std::unordered_map<std::string, const primec::Definition *> syntaxDefMap;
+  std::string syntaxInferenceError;
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState syntaxState;
+  installDispatchSetup(syntaxState, syntaxDefMap, syntaxInferenceError);
+  CHECK(syntaxState.inferExprKind(makeTryExpr(makeNameExpr("result", 0)), staleLocals) ==
+        Kind::Int64);
+  CHECK(syntaxInferenceError.empty());
+}
+
 TEST_CASE("ir lowerer inference expr-kind dispatch setup validates dependencies") {
   primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
   std::string inferenceError;
