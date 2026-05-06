@@ -72,8 +72,6 @@ Task template:
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4298: Promote graph-backed non-template inference authority
-- TODO-4266: Rewire `?` to the `Result` sum contract
 - TODO-4267: Retire legacy Maybe/Result representations
 - TODO-4291: Decide sum-backed mutable `Maybe<T>` helpers
 - TODO-4292: Promote and style canonical `.prime` vector implementation
@@ -82,6 +80,8 @@ Task template:
 - TODO-4281: Lift vector dynamic capacity limit
 - TODO-4295: Move collection surface metadata out of C++
 - TODO-4296: Delete vector compatibility seams
+- TODO-4297: Add zero C++ vector-surface audit
+- TODO-4299: Promote and style canonical `.prime` map implementation
 
 ### Priority Lanes (Current)
 
@@ -560,6 +560,9 @@ Task template:
     complete for shared semantic-product binding/query type resolution.
     The lowerer statement binding sum lookup ID-order contract slice is
     complete for shared semantic-product binding/query type resolution.
+    The lowerer `FileError.why()` receiver fact slice is complete for
+    semantic-product-backed base-kind inference before stale local
+    `isFileError` metadata can classify `why()` as returning `string`.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -728,6 +731,11 @@ Task template:
       legacy Result method arity fallback can answer. Missing facts leave the
       value kind unresolved on the semantic-product path while syntax-only
       compatibility keeps the old fallback.
+    - Completed slice: semantic-product-addressed `FileError.why()`
+      base-kind inference now consumes the receiver's published binding fact
+      before lowerer-local `isFileError` metadata can answer. Published
+      non-`FileError` binding facts suppress stale local file-error metadata;
+      syntax-only compatibility keeps the old local fallback.
     - Completed slice: semantic-product-addressed native tail-dispatch
       map/vector receiver classification now resolves interned query/binding
       type IDs before consulting copied query text fields, so collection

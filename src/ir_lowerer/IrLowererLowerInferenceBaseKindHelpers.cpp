@@ -76,6 +76,43 @@ std::string resolveBaseSetupSemanticFactTypeText(
   return trimTemplateTypeText(typeText);
 }
 
+bool isBaseSetupFileErrorTypeText(const std::string &typeText) {
+  std::string normalized = trimTemplateTypeText(typeText);
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  return normalized == "FileError" || normalized == "std/file/FileError";
+}
+
+bool inferBaseSetupSemanticFileErrorWhyKind(const Expr &receiver,
+                                            const SemanticProgram *semanticProgram,
+                                            const SemanticProductIndex *semanticIndex,
+                                            LocalInfo::ValueKind &kindOut,
+                                            bool &hasSemanticReceiverOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  hasSemanticReceiverOut = false;
+  if (semanticProgram == nullptr || semanticIndex == nullptr ||
+      receiver.semanticNodeId == 0) {
+    return false;
+  }
+  const auto *bindingFact =
+      findSemanticProductBindingFact(*semanticIndex, receiver);
+  if (bindingFact == nullptr) {
+    return false;
+  }
+  hasSemanticReceiverOut = true;
+  const std::string bindingType =
+      resolveBaseSetupSemanticFactTypeText(
+          *semanticProgram,
+          bindingFact->bindingTypeText,
+          bindingFact->bindingTypeTextId);
+  if (!isBaseSetupFileErrorTypeText(bindingType)) {
+    return false;
+  }
+  kindOut = LocalInfo::ValueKind::String;
+  return true;
+}
+
 bool inferBaseSetupSemanticQueryFactValueKind(const Expr &expr,
                                               const SemanticProgram *semanticProgram,
                                               const SemanticProductIndex *semanticIndex,
@@ -629,6 +666,17 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
     }
     if (!expr.args.empty() && expr.name == "why") {
       const Expr &receiver = expr.args.front();
+      bool hasSemanticReceiver = false;
+      if (inferBaseSetupSemanticFileErrorWhyKind(receiver,
+                                                semanticProgram,
+                                                semanticIndex,
+                                                kindOut,
+                                                hasSemanticReceiver)) {
+        return true;
+      }
+      if (hasSemanticReceiver) {
+        return true;
+      }
       if (receiver.kind == Expr::Kind::Name) {
         const std::string receiverPath = resolveScopedExprPath(receiver);
         if (receiverPath == "FileError" || receiverPath == "/std/file/FileError") {

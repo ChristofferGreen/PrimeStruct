@@ -425,6 +425,110 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup keeps syntax Result me
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
 }
 
+TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic FileError receiver facts") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  auto addBindingFact = [](primec::SemanticProgram &semanticProgram,
+                           uint64_t semanticNodeId,
+                           const std::string &bindingTypeText) {
+    const size_t index = semanticProgram.bindingFacts.size();
+    semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+        .scopePath = "/main",
+        .siteKind = "local",
+        .name = "err",
+        .bindingTypeText = bindingTypeText,
+        .isMutable = false,
+        .isEntryArgString = false,
+        .isUnsafeReference = false,
+        .referenceRoot = "",
+        .sourceLine = 0,
+        .sourceColumn = 0,
+        .semanticNodeId = semanticNodeId,
+        .provenanceHandle = 0,
+        .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+        .siteKindId = primec::semanticProgramInternCallTargetString(semanticProgram, "local"),
+        .nameId = primec::semanticProgramInternCallTargetString(semanticProgram, "err"),
+        .resolvedPathId = primec::InvalidSymbolId,
+        .bindingTypeTextId =
+            primec::semanticProgramInternCallTargetString(semanticProgram, bindingTypeText),
+        .referenceRootId = primec::InvalidSymbolId,
+    });
+    semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(
+        semanticNodeId, index);
+  };
+
+  auto makeWhyExpr = [](uint64_t receiverSemanticNodeId) {
+    primec::Expr receiver;
+    receiver.kind = primec::Expr::Kind::Name;
+    receiver.name = "err";
+    receiver.semanticNodeId = receiverSemanticNodeId;
+
+    primec::Expr whyExpr;
+    whyExpr.kind = primec::Expr::Kind::Call;
+    whyExpr.isMethodCall = true;
+    whyExpr.name = "why";
+    whyExpr.args = {receiver};
+    return whyExpr;
+  };
+
+  auto makeState = [](const primec::SemanticProgram *semanticProgram,
+                      const primec::ir_lowerer::SemanticProductIndex *semanticIndex) {
+    primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+    state.semanticProgram = semanticProgram;
+    state.semanticIndex = semanticIndex;
+    std::string error;
+    CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallBaseSetup(
+        {
+            .inferStructExprPath =
+                [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                  return std::string();
+                },
+            .resolveStructFieldSlot =
+                [](const std::string &,
+                   const std::string &,
+                   primec::ir_lowerer::StructSlotFieldInfo &) { return false; },
+            .resolveUninitializedStorage =
+                [](const primec::Expr &,
+                   const primec::ir_lowerer::LocalMap &,
+                   primec::ir_lowerer::UninitializedStorageAccessInfo &,
+                   bool &resolved) {
+                  resolved = false;
+                  return true;
+                },
+        },
+        state,
+        error));
+    CHECK(error.empty());
+    REQUIRE(static_cast<bool>(state.inferCallExprBaseKind));
+    return state;
+  };
+
+  primec::SemanticProgram semanticProgram;
+  addBindingFact(semanticProgram, 901, "/std/file/FileError");
+  addBindingFact(semanticProgram, 902, "i32");
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+  auto state = makeState(&semanticProgram, &semanticIndex);
+
+  ValueKind kindOut = ValueKind::Unknown;
+  CHECK(state.inferCallExprBaseKind(
+      makeWhyExpr(901), primec::ir_lowerer::LocalMap{}, kindOut));
+  CHECK(kindOut == ValueKind::String);
+
+  primec::ir_lowerer::LocalInfo staleLocal;
+  staleLocal.isFileError = true;
+  primec::ir_lowerer::LocalMap staleLocals;
+  staleLocals.emplace("err", staleLocal);
+  kindOut = ValueKind::Unknown;
+  CHECK(state.inferCallExprBaseKind(makeWhyExpr(902), staleLocals, kindOut));
+  CHECK(kindOut == ValueKind::Unknown);
+
+  auto syntaxState = makeState(nullptr, nullptr);
+  kindOut = ValueKind::Unknown;
+  CHECK(syntaxState.inferCallExprBaseKind(makeWhyExpr(0), staleLocals, kindOut));
+  CHECK(kindOut == ValueKind::String);
+}
+
 TEST_CASE("ir lowerer inference expr-kind call-base setup does not infer missing query facts from fallback") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
 

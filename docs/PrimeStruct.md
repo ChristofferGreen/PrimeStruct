@@ -344,6 +344,11 @@ Planned non-template inference migration contract:
   published query/binding facts before the legacy Result method arity fallback. Missing facts keep
   the value unresolved on the semantic-product path while syntax-only compatibility keeps the old
   fallback.
+- Completed lowerer-side `FileError.why()` receiver slice: semantic-product-addressed
+  base-kind inference now reads the receiver's published binding fact before lowerer-local
+  `isFileError` metadata can classify `why()` as returning `string`. A published non-`FileError`
+  binding fact suppresses stale local file-error metadata; syntax-only compatibility keeps the old
+  local fallback.
 - Completed lowerer-side tail-dispatch collection query ID slice: native tail-dispatch map/vector
   target classification now resolves `bindingTypeTextId` and `queryTypeTextId` before copied
   query-fact text fields, so collection receiver classification consumes graph-owned query

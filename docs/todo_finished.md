@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 6, 2026)**
+- [x] TODO-4298: Use FileError receiver facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-06
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes lowerer call-base
+    inference classify `FileError.why()` from the receiver's published
+    binding fact before lowerer-local file-error metadata can answer.
+  - acceptance:
+    - `FileError.why()` base-kind inference reads semantic-product binding
+      facts for receiver expressions with semantic node ids.
+    - A published non-`FileError` receiver binding fact suppresses stale
+      local `isFileError` metadata.
+    - Syntax-only contexts without semantic-product receiver facts keep the
+      existing local file-error fallback.
+  - stop_rule: Stop once one `FileError.why()` base-kind consumer depends on
+    graph-owned binding facts and focused tests pin graph-backed, stale-local,
+    and syntax-only behavior.
+  - evidence: Added semantic-product receiver binding fact handling to
+    call-base inference for `FileError.why()`, added focused backend IR
+    coverage for published `FileError`, contradictory `i32`, and syntax-only
+    local metadata paths, updated TODO/docs notes, and skipped broad baseline
+    validation per the lite workflow.
+
 - [x] TODO-4298: Require return completeness maps
   - owner: ai
   - created_at: 2026-04-28
