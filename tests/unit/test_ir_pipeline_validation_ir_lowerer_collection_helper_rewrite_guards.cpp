@@ -1114,6 +1114,59 @@ TEST_CASE("ir lowerer inline dispatch vector helper deferral uses semantic recei
         std::string::npos);
 }
 
+TEST_CASE("ir lowerer inline dispatch SoA vector fallback uses semantic receiver facts first") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path inlineDispatchPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererInlineNativeCallDispatch.cpp";
+
+  REQUIRE(std::filesystem::exists(inlineDispatchPath));
+  const std::string source = readText(inlineDispatchPath);
+
+  CHECK(source.find("auto classifyInlineSoaVectorTargetFromSemanticFacts =") !=
+        std::string::npos);
+  CHECK(source.find("findSemanticProductCollectionSpecialization(*semanticIndexPtr, targetExpr)") !=
+        std::string::npos);
+  CHECK(source.find("collectionFact->collectionFamilyId") !=
+        std::string::npos);
+  CHECK(source.find("findSemanticProductQueryFact(semanticProgram, *semanticIndexPtr, targetExpr)") !=
+        std::string::npos);
+  CHECK(source.find("queryFact->receiverBindingTypeTextId") !=
+        std::string::npos);
+  CHECK(source.find("findSemanticProductBindingFact(*semanticIndexPtr, targetExpr)") !=
+        std::string::npos);
+  CHECK(source.find("findSemanticProductLocalAutoFact(semanticProgram, *semanticIndexPtr, targetExpr)") !=
+        std::string::npos);
+
+  const size_t semanticGate =
+      source.find("return isSoaVectorTarget(targetExpr, localsIn);");
+  const size_t fallbackCallback =
+      source.find("[&](const Expr &receiverExpr) { return isSemanticOrLegacySoaVectorTarget(receiverExpr); }");
+  REQUIRE(semanticGate != std::string::npos);
+  REQUIRE(fallbackCallback != std::string::npos);
+  CHECK(semanticGate < fallbackCallback);
+  CHECK(source.find("[&](const Expr &receiverExpr) { return isSoaVectorTarget(receiverExpr, localsIn); }") ==
+        std::string::npos);
+
+  CHECK(source.find("if (semanticFact == InlineVectorTargetFact::NonVector) {\n"
+                    "      return false;\n"
+                    "    }\n"
+                    "    return isSoaVectorTarget(targetExpr, localsIn);") !=
+        std::string::npos);
+}
+
 TEST_CASE("ir lowerer tail map insert rewrite uses semantic receiver facts first") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);

@@ -692,6 +692,10 @@ Task template:
     and query vector receiver facts before stale local vector metadata can
     decide whether inline dispatch should defer to builtin vector helper
     lowering.
+    The inline native SoA vector fallback slice is complete for
+    semantic-product-backed collection-specialization, binding, local-auto,
+    and query SoA receiver facts before stale local `isSoaVector` metadata
+    can decide direct SoA conversion/count fallback routing.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -849,6 +853,13 @@ Task template:
       dispatch should defer to builtin vector lowering. Published non-vector
       facts suppress stale local vector metadata while syntax-only
       compatibility keeps the legacy fallback.
+    - Completed slice: semantic-product-addressed inline native SoA vector
+      fallback routing now consumes published collection-specialization,
+      binding, local-auto, and query SoA receiver facts before local
+      `isSoaVector` metadata can select canonical
+      `soa_vector.to_aos`/count fallback behavior. Published non-SoA facts
+      suppress stale local SoA metadata while syntax-only compatibility keeps
+      the legacy fallback.
     - Completed slice: semantic-product-addressed dispatch inference now
       consumes published method receiver binding, query, or local-auto facts
       for `FileError.why()` and nested `try(file.method())` file operations
