@@ -2172,6 +2172,10 @@ TEST_CASE("ir lowerer semantic-product adapter indexes callable summaries by ful
   const auto *summary = primec::ir_lowerer::findSemanticProductCallableSummary(adapter, "/main");
   REQUIRE(summary != nullptr);
   CHECK(summary->semanticNodeId == 201);
+  CHECK(primec::semanticProgramLookupPublishedCallableSummaryByPathId(
+            semanticProgram, mainPathId) == summary);
+  CHECK(primec::semanticProgramLookupPublishedCallableSummary(
+            semanticProgram, "/main") == summary);
   CHECK(primec::ir_lowerer::findSemanticProductCallableSummary(adapter, "/missing") == nullptr);
 }
 
@@ -2202,6 +2206,10 @@ TEST_CASE("ir lowerer callable summary helper ignores raw summaries without publ
   const auto adapter =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
   CHECK(primec::ir_lowerer::findSemanticProductCallableSummary(adapter, "/main") == nullptr);
+  CHECK(primec::semanticProgramLookupPublishedCallableSummaryByPathId(
+            semanticProgram, mainPathId) == nullptr);
+  CHECK(primec::semanticProgramLookupPublishedCallableSummary(
+            semanticProgram, "/main") == nullptr);
 }
 
 TEST_CASE("ir lowerer call helpers require semantic-product bridge-path choices") {

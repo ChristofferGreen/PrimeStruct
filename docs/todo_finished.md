@@ -6,6 +6,29 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 6, 2026)**
+- [x] TODO-4298: Require callable summary maps
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-06
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes the public published
+    callable-summary lookup helpers require `callableSummaryIndicesByPathId`
+    instead of scanning raw callable summaries when storage is unfrozen.
+  - acceptance:
+    - `semanticProgramLookupPublishedCallableSummaryByPathId` resolves only
+      through the published full-path map.
+    - `semanticProgramLookupPublishedCallableSummary` inherits the same
+      published-map requirement.
+    - Matching raw callable summaries without a published lookup entry are not
+      recovered by the helper layer.
+  - stop_rule: Stop once callable-summary helper lookup fails closed without
+    a published full-path map entry and tests pin both by-id and by-path
+    helper behavior.
+  - evidence: Removed the unfrozen raw-vector scan from the published
+    callable-summary lookup helper, extended adapter coverage to assert both
+    helper-level positive and fail-closed paths, updated TODO/design docs, and
+    skipped local test execution per the lite workflow.
+
 - [x] TODO-4298: Publish callable summary lookup
   - owner: ai
   - created_at: 2026-04-28
