@@ -507,6 +507,7 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic try fact
       .valueTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "i64"),
       .errorTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
   });
+  semanticProgram.publishedRoutingLookups.tryFactIndicesByExpr.insert_or_assign(901, 0);
   const auto semanticIndex = primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
 
   primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
@@ -611,7 +612,7 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup does not infer missing
   CHECK(kindOut == ValueKind::Unknown);
 }
 
-TEST_CASE("ir lowerer semantic-product index requires published query semantic-id maps") {
+TEST_CASE("ir lowerer semantic-product index requires published query and try semantic-id maps") {
   primec::SemanticProgram semanticProgram;
   semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
       .scopePath = "/main",
@@ -667,8 +668,14 @@ TEST_CASE("ir lowerer semantic-product index requires published query semantic-i
   tryExpr.semanticNodeId = 9302;
   const auto *tryFact =
       primec::ir_lowerer::findSemanticProductTryFactBySemanticId(semanticIndex, tryExpr);
-  REQUIRE(tryFact != nullptr);
-  CHECK(tryFact->semanticNodeId == 9302);
+  CHECK(tryFact == nullptr);
+
+  semanticProgram.publishedRoutingLookups.tryFactIndicesByExpr.insert_or_assign(9302, 0);
+  const auto mappedTrySemanticIndex = primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+  const auto *mappedTryFact =
+      primec::ir_lowerer::findSemanticProductTryFactBySemanticId(mappedTrySemanticIndex, tryExpr);
+  REQUIRE(mappedTryFact != nullptr);
+  CHECK(mappedTryFact->semanticNodeId == 9302);
 }
 
 TEST_CASE("ir lowerer inference expr-kind call-base setup leaves builtin comparison kind unresolved without semantic facts") {

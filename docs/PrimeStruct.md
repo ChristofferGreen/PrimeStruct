@@ -1051,6 +1051,8 @@ Compile-pipeline publication contract:
   definitions through `callableSummaryIndicesByPathId` instead of using raw callable-summary vectors as a fallback.
 - Query semantic-id indexing follows the same map authority: lowerer semantic-product indexes populate query facts from
   `queryFactIndicesByExpr` and do not backfill matching raw query facts by semantic node id.
+- Try semantic-id indexing follows the same map authority: lowerer semantic-product indexes populate `try(...)` facts
+  from `tryFactIndicesByExpr` and do not backfill matching raw try facts by semantic node id.
 - Base call-kind inference now applies the same graph-backed rule for `try(...)`: semantic-product `try` facts provide
   the value kind before local `Result` state can infer it, and missing facts leave the semantic-product path unresolved.
 - Native indexed-access validation now follows the graph-backed rule for index

@@ -87,11 +87,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: Semantic-product return-info precomputation enumerates callable definitions only through `callableSummaryIndicesByPathId`, so tests that manually create callable summaries must seed that published map.
 - Evidence: `precomputeSemanticProductReturnInfoCache(...)` now fails closed for raw callable summaries without the map, and inference get-return-info setup tests pin both mapped and raw-only paths.
 
-### semantic-product-index-query-map-authority
+### semantic-product-index-map-authority
 - Updated: 2026-05-06
 - Tags: semantics, ir, tests
-- Fact: `buildSemanticProductIndex(...)` populates query semantic-id lookups only from `queryFactIndicesByExpr`, so tests that manually create query facts must seed that published map before expecting lowerer query lookup to succeed.
-- Evidence: The raw query-fact backfill was removed from `SemanticProductIndexBuilder::buildQueryIndex(...)`, while the call-helper and inference setup tests now pin both raw-only failure and mapped success paths.
+- Fact: `buildSemanticProductIndex(...)` populates query and try semantic-id lookups only from `queryFactIndicesByExpr` and `tryFactIndicesByExpr`, so tests that manually create those facts must seed the published maps before expecting lowerer lookup to succeed.
+- Evidence: Raw query/try-fact backfills were removed from `SemanticProductIndexBuilder::buildQueryIndex(...)` and `buildTryIndex(...)`, while call-helper and inference setup tests pin both raw-only failure and mapped success paths.
 
 ### semantic-product-pick-target-query-facts
 - Updated: 2026-05-01

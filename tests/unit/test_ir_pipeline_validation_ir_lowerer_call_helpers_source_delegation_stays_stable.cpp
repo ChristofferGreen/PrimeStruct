@@ -3660,6 +3660,40 @@ TEST_CASE("ir lowerer semantic-product adapter uses try semantic-id matches with
   CHECK(tryFact->valueType == "i32");
 }
 
+TEST_CASE("ir lowerer semantic-product index ignores raw try facts without published lookup") {
+  primec::Expr tryExpr;
+  tryExpr.kind = primec::Expr::Kind::Call;
+  tryExpr.name = "try";
+  tryExpr.semanticNodeId = 9203;
+  tryExpr.sourceLine = 42;
+  tryExpr.sourceColumn = 13;
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.tryFacts.push_back(primec::SemanticProgramTryFact{
+      .scopePath = "/main",
+      .operandBindingTypeText = "Result<i32, FileError>",
+      .operandReceiverBindingTypeText = "",
+      .operandQueryTypeText = "Result<i32, FileError>",
+      .valueType = "i32",
+      .errorType = "FileError",
+      .contextReturnKind = "return",
+      .onErrorHandlerPath = "/handler",
+      .onErrorErrorType = "FileError",
+      .onErrorBoundArgCount = 1,
+      .sourceLine = 42,
+      .sourceColumn = 13,
+      .semanticNodeId = 9203,
+      .operandResolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
+  });
+
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+  CHECK(semanticIndex.tryFactsByExpr.empty());
+  const auto *tryFact =
+      primec::ir_lowerer::findSemanticProductTryFact(&semanticProgram, semanticIndex, tryExpr);
+  CHECK(tryFact == nullptr);
+}
+
 TEST_CASE("ir lowerer semantic-product index does not expose try operand-path fallback") {
   primec::Expr operandExpr;
   operandExpr.kind = primec::Expr::Kind::Call;
