@@ -574,6 +574,10 @@ Task template:
     semantic-product-backed `File<Mode>(...)` and nested `try(File<Mode>(...))`
     base-kind inference before syntax-owned file-handle-call fallback can
     classify those calls as `i64`.
+    The lowerer dispatch direct file-call query slice is complete for
+    semantic-product-backed nested `try(File<Mode>(...))` dispatch inference
+    before syntax-owned file-handle-call fallback can classify those calls as
+    `i64`.
     The lowerer try operand Result fact slice is complete for
     semantic-product-backed `try(operand)` base-kind inference before
     stale local `isResult` or args-pack metadata can classify the operand's

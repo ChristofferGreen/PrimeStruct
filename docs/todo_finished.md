@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 6, 2026)**
+- [x] TODO-4298: Use dispatch File call facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-06
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes lowerer dispatch
+    inference classify nested `try(File<Mode>(...))` operands from
+    published query facts before syntax-owned file-handle-call fallback can
+    answer.
+  - acceptance:
+    - Nested `try(File<Mode>(...))` dispatch inference reads the File call's
+      semantic-product query fact before syntax fallback.
+    - Published non-`File<Mode>` query facts suppress stale
+      constructor-shaped file-handle fallback.
+    - Syntax-only contexts without semantic-product File call facts keep the
+      existing file-handle-call fallback.
+  - stop_rule: Stop once dispatch direct File-call consumers depend on
+    graph-owned query facts and focused tests pin graph-backed, stale-query,
+    and syntax-only behavior.
+  - evidence: Added semantic-product File call fact handling for dispatch
+    `try(...)` inference, covered graph-backed File calls, stale non-file
+    query suppression, and syntax-only fallback paths, and skipped broad
+    baseline validation per the lite workflow.
+
 - [x] TODO-4298: Use dispatch Result method facts
   - owner: ai
   - created_at: 2026-04-28

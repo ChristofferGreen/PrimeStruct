@@ -365,6 +365,10 @@ Planned non-template inference migration contract:
   type before syntax-owned file-handle-call fallback can classify the call as `i64`. Published
   non-`File<Mode>` query facts suppress the legacy constructor-shaped fallback; no-fact
   syntax-only contexts keep it.
+- Completed lowerer-side dispatch direct file-call query slice: dispatch inference for nested
+  `try(File<Mode>(...))` operands now reads the published query type before syntax-owned
+  file-handle-call fallback can classify the call as `i64`. Published non-`File<Mode>` query
+  facts suppress the constructor-shaped fallback; no-fact syntax-only contexts keep it.
 - Completed lowerer-side try operand Result fact slice: base-kind inference for
   `try(operand)` now reads the operand's published binding, query, or local-auto Result fact
   before lowerer-local `isResult` and args-pack metadata can classify the value kind. Published

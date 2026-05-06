@@ -112,6 +112,36 @@ bool isDispatchSetupFileHandleTypeText(const std::string &typeText) {
   return base == "File" || base == "std/file/File";
 }
 
+bool inferDispatchSetupSemanticFileHandleCallKind(const Expr &expr,
+                                                  const SemanticProgram *semanticProgram,
+                                                  const SemanticProductIndex *semanticIndex,
+                                                  LocalInfo::ValueKind &kindOut,
+                                                  bool &hasSemanticCallOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  hasSemanticCallOut = false;
+  if (!isFileHandleCall(expr) || semanticProgram == nullptr ||
+      semanticIndex == nullptr || expr.semanticNodeId == 0) {
+    return false;
+  }
+  const auto *queryFact =
+      findSemanticProductQueryFactBySemanticId(*semanticIndex, expr);
+  if (queryFact == nullptr) {
+    return false;
+  }
+  hasSemanticCallOut = true;
+  std::string callType = resolveDispatchSetupSemanticFactTypeText(
+      *semanticProgram, queryFact->queryTypeText, queryFact->queryTypeTextId);
+  if (callType.empty()) {
+    callType = resolveDispatchSetupSemanticFactTypeText(
+        *semanticProgram, queryFact->bindingTypeText, queryFact->bindingTypeTextId);
+  }
+  if (!isDispatchSetupFileHandleTypeText(callType)) {
+    return false;
+  }
+  kindOut = LocalInfo::ValueKind::Int64;
+  return true;
+}
+
 bool resolveDispatchSetupSemanticReceiverTypeText(const Expr &receiver,
                                                   const SemanticProgram *semanticProgram,
                                                   const SemanticProductIndex *semanticIndex,
@@ -428,6 +458,17 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
         return false;
       }
       const Expr &resultExpr = tryExpr.args.front();
+      bool hasSemanticFileHandleCall = false;
+      if (inferDispatchSetupSemanticFileHandleCallKind(resultExpr,
+                                                       semanticProgram,
+                                                       semanticIndex,
+                                                       kindOut,
+                                                       hasSemanticFileHandleCall)) {
+        return true;
+      }
+      if (hasSemanticFileHandleCall) {
+        return true;
+      }
       bool hasSemanticResultOperand = false;
       if (inferDispatchSetupSemanticTryOperandResultKind(resultExpr,
                                                         semanticProgram,
