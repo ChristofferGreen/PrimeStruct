@@ -48,6 +48,28 @@ bool isUnqualifiedCollectionAccessCall(const Expr &candidate,
          resolvedHelperName == helperName;
 }
 
+bool isRootMapConstructorExpr(const Expr &candidate) {
+  if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
+      candidate.name.empty()) {
+    return false;
+  }
+  std::string normalizedName = candidate.name;
+  if (!candidate.namespacePrefix.empty() &&
+      normalizedName.find('/') == std::string::npos) {
+    std::string normalizedPrefix = candidate.namespacePrefix;
+    if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
+      normalizedPrefix.erase(normalizedPrefix.begin());
+    }
+    if (!normalizedPrefix.empty()) {
+      normalizedName = normalizedPrefix + "/" + normalizedName;
+    }
+  }
+  if (!normalizedName.empty() && normalizedName.front() == '/') {
+    normalizedName.erase(normalizedName.begin());
+  }
+  return normalizedName == "map" || normalizedName.rfind("map__", 0) == 0;
+}
+
 } // namespace
 
 bool SemanticsValidator::validateExprPreDispatchDirectCalls(
@@ -144,10 +166,13 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
         const bool receiverIsExperimentalMap =
             inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText) &&
             isExperimentalMapTypeText(receiverTypeText);
-        if (expr.name.rfind("/std/collections/map/", 0) == 0 ||
-            expr.namespacePrefix == "/std/collections/map" ||
-            expr.namespacePrefix == "std/collections/map" ||
-            receiverIsExperimentalMap) {
+        const bool canonicalMapAccessDiagnostic =
+            receiverIsExperimentalMap ||
+            (receiverExpr.kind != Expr::Kind::Name &&
+             (expr.name.rfind("/std/collections/map/", 0) == 0 ||
+              expr.namespacePrefix == "/std/collections/map" ||
+              expr.namespacePrefix == "std/collections/map"));
+        if (canonicalMapAccessDiagnostic) {
           return failPreDispatchDirectCallDiagnostic(
               "argument type mismatch for " + canonicalPath +
               " parameter key");
@@ -254,7 +279,8 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
           dispatchBootstrap.dispatchResolvers.resolveMapTarget != nullptr &&
           dispatchBootstrap.dispatchResolvers.resolveMapTarget(
               receiverExpr, keyType, valueType);
-      if (isBuiltinMapTarget && !isExperimentalMapTarget) {
+      if (isBuiltinMapTarget && !isExperimentalMapTarget &&
+          !isRootMapConstructorExpr(receiverExpr)) {
         return failPreDispatchDirectCallDiagnostic("unknown call target: " +
                                                    resolvedOut);
       }
@@ -350,17 +376,25 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     std::string builtinAccessName;
     std::string receiverTypeText;
     std::string borrowedHelperProbe;
+    auto resolvesNonRootExperimentalMapValueTarget =
+        [&](const Expr &candidate) {
+          return !isRootMapConstructorExpr(candidate) &&
+                 dispatchBootstrap.dispatchResolvers.resolveExperimentalMapValueTarget(
+                     candidate, receiverTypeText, borrowedHelperProbe);
+        };
+    auto isNonRootExperimentalMapReceiverExpr = [&](const Expr &candidate) {
+      return !isRootMapConstructorExpr(candidate) &&
+             isExperimentalMapReceiverExpr(candidate);
+    };
     if (getBuiltinArrayAccessName(expr, builtinAccessName) &&
         isUnqualifiedCollectionAccessCall(expr, builtinAccessName) &&
         expr.args.size() == 2 &&
         ((dispatchBootstrap.dispatchResolvers.resolveExperimentalMapValueTarget !=
           nullptr &&
-          (dispatchBootstrap.dispatchResolvers.resolveExperimentalMapValueTarget(
-               expr.args.front(), receiverTypeText, borrowedHelperProbe) ||
-           dispatchBootstrap.dispatchResolvers.resolveExperimentalMapValueTarget(
-               expr.args[1], receiverTypeText, borrowedHelperProbe))) ||
-         isExperimentalMapReceiverExpr(expr.args.front()) ||
-         isExperimentalMapReceiverExpr(expr.args[1]))) {
+          (resolvesNonRootExperimentalMapValueTarget(expr.args.front()) ||
+           resolvesNonRootExperimentalMapValueTarget(expr.args[1]))) ||
+         isNonRootExperimentalMapReceiverExpr(expr.args.front()) ||
+         isNonRootExperimentalMapReceiverExpr(expr.args[1]))) {
       return failPreDispatchDirectCallDiagnostic(
           "unknown call target: /std/collections/map/" + builtinAccessName);
     }

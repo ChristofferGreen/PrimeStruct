@@ -16,6 +16,28 @@ std::string experimentalCollectionBorrowedBindingTypeText(const BindingInfo &bin
   return binding.typeTemplateArg;
 }
 
+bool isRootMapConstructorReceiverExpr(const Expr *receiverExpr) {
+  if (receiverExpr == nullptr || receiverExpr->kind != Expr::Kind::Call ||
+      receiverExpr->isMethodCall || receiverExpr->name.empty()) {
+    return false;
+  }
+  std::string normalizedName = receiverExpr->name;
+  if (!receiverExpr->namespacePrefix.empty() &&
+      normalizedName.find('/') == std::string::npos) {
+    std::string normalizedPrefix = receiverExpr->namespacePrefix;
+    if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
+      normalizedPrefix.erase(normalizedPrefix.begin());
+    }
+    if (!normalizedPrefix.empty()) {
+      normalizedName = normalizedPrefix + "/" + normalizedName;
+    }
+  }
+  if (!normalizedName.empty() && normalizedName.front() == '/') {
+    normalizedName.erase(normalizedName.begin());
+  }
+  return normalizedName == "map" || normalizedName.rfind("map__", 0) == 0;
+}
+
 bool extractExperimentalVectorElementTypeFromTypeText(const std::string &typeText,
                                                       const Context &ctx,
                                                       std::string &valueTypeOut) {
@@ -296,6 +318,9 @@ bool resolvesExperimentalMapValueReceiver(const Expr *receiverExpr,
   if (receiverExpr == nullptr) {
     return false;
   }
+  if (isRootMapConstructorReceiverExpr(receiverExpr)) {
+    return false;
+  }
   BindingInfo receiverInfo;
   if (inferBindingTypeForMonomorph(*receiverExpr, params, locals, allowMathBare, ctx, receiverInfo) &&
       resolvesExperimentalMapValueTypeText(experimentalCollectionValueBindingTypeText(receiverInfo),
@@ -319,6 +344,9 @@ bool resolvesExperimentalMapBorrowedReceiver(const Expr *receiverExpr,
                                              const std::string &namespacePrefix,
                                              Context &ctx) {
   if (receiverExpr == nullptr) {
+    return false;
+  }
+  if (isRootMapConstructorReceiverExpr(receiverExpr)) {
     return false;
   }
   BindingInfo receiverInfo;
@@ -417,6 +445,9 @@ bool resolveExperimentalMapValueReceiverTemplateArgs(const Expr *receiverExpr,
                                                      std::vector<std::string> &templateArgsOut) {
   templateArgsOut.clear();
   if (receiverExpr == nullptr) {
+    return false;
+  }
+  if (isRootMapConstructorReceiverExpr(receiverExpr)) {
     return false;
   }
   BindingInfo receiverInfo;

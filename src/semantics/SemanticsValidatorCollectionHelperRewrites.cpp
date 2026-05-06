@@ -692,6 +692,30 @@ bool SemanticsValidator::explicitCanonicalExperimentalMapBorrowedHelperPath(
   if (receiverIndex >= candidate.args.size()) {
     return false;
   }
+  auto isRootMapConstructorCandidate = [](const Expr &receiverExpr) {
+    if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isMethodCall ||
+        receiverExpr.name.empty()) {
+      return false;
+    }
+    std::string normalizedName = receiverExpr.name;
+    if (!receiverExpr.namespacePrefix.empty() &&
+        normalizedName.find('/') == std::string::npos) {
+      std::string normalizedPrefix = receiverExpr.namespacePrefix;
+      if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
+        normalizedPrefix.erase(normalizedPrefix.begin());
+      }
+      if (!normalizedPrefix.empty()) {
+        normalizedName = normalizedPrefix + "/" + normalizedName;
+      }
+    }
+    if (!normalizedName.empty() && normalizedName.front() == '/') {
+      normalizedName.erase(normalizedName.begin());
+    }
+    return normalizedName == "map" || normalizedName.rfind("map__", 0) == 0;
+  };
+  if (isRootMapConstructorCandidate(candidate.args[receiverIndex])) {
+    return false;
+  }
   std::string keyType;
   std::string valueType;
   return dispatchResolvers.resolveExperimentalMapTarget(candidate.args[receiverIndex], keyType, valueType) &&

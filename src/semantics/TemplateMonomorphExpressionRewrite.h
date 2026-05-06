@@ -1305,7 +1305,8 @@ bool rewriteExpr(Expr &expr,
   }
   if (!expr.isMethodCall && !expr.isBinding) {
     if (Expr *receiverExpr = mutableMapHelperReceiverExpr(expr)) {
-      if (!rewriteNestedExperimentalMapConstructorValue(*receiverExpr)) {
+      if (!isRootMapConstructorReceiverExpr(receiverExpr) &&
+          !rewriteNestedExperimentalMapConstructorValue(*receiverExpr)) {
         return false;
       }
       if (!rewriteNestedExperimentalVectorConstructorValue(*receiverExpr)) {

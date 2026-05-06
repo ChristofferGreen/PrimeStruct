@@ -107,10 +107,13 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     const bool receiverIsExperimentalMap =
         inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText) &&
         isExperimentalMapTypeText(receiverTypeText);
-    if (expr.name.rfind("/std/collections/map/", 0) == 0 ||
-        expr.namespacePrefix == "/std/collections/map" ||
-        expr.namespacePrefix == "std/collections/map" ||
-        receiverIsExperimentalMap) {
+    const bool canonicalMapAccessDiagnostic =
+        receiverIsExperimentalMap ||
+        (receiverExpr.kind != Expr::Kind::Name &&
+         (expr.name.rfind("/std/collections/map/", 0) == 0 ||
+          expr.namespacePrefix == "/std/collections/map" ||
+          expr.namespacePrefix == "std/collections/map"));
+    if (canonicalMapAccessDiagnostic) {
       return failLateMapAccessBuiltinDiagnostic(
           "argument type mismatch for /std/collections/map/" + helperName +
           " parameter key");
@@ -149,6 +152,33 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
            this->isMapLikeBareAccessReceiver(candidate, params, locals,
                                              *context.dispatchResolvers);
   };
+  auto rootMapConstructorKeyType = [&](const Expr &candidate,
+                                       std::string &keyTypeOut) {
+    keyTypeOut.clear();
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
+        candidate.name.empty() || candidate.templateArgs.size() != 2) {
+      return false;
+    }
+    std::string normalizedName = candidate.name;
+    if (!candidate.namespacePrefix.empty() &&
+        normalizedName.find('/') == std::string::npos) {
+      std::string normalizedPrefix = candidate.namespacePrefix;
+      if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
+        normalizedPrefix.erase(normalizedPrefix.begin());
+      }
+      if (!normalizedPrefix.empty()) {
+        normalizedName = normalizedPrefix + "/" + normalizedName;
+      }
+    }
+    if (!normalizedName.empty() && normalizedName.front() == '/') {
+      normalizedName.erase(normalizedName.begin());
+    }
+    if (normalizedName != "map" && normalizedName.rfind("map__", 0) != 0) {
+      return false;
+    }
+    keyTypeOut = candidate.templateArgs.front();
+    return true;
+  };
   auto explicitCallPath = [&]() -> std::string {
     if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.name.empty()) {
       return {};
@@ -184,6 +214,10 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
 
   std::string builtinName;
   auto isExperimentalMapReceiver = [&](const Expr &receiverExpr) {
+    std::string ignoredKeyType;
+    if (rootMapConstructorKeyType(receiverExpr, ignoredKeyType)) {
+      return false;
+    }
     std::string receiverTypeText;
     return inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText) &&
            isExperimentalMapTypeText(receiverTypeText);
@@ -403,13 +437,21 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     return true;
   }
 
+  auto hasResolvedDefinition = [&](const std::string &path) {
+    const auto it = defMap_.find(path);
+    return it != defMap_.end() && it->second != nullptr;
+  };
+  std::string ignoredRootMapKeyType;
   if (!expr.isMethodCall &&
       getCanonicalMapAccessBuiltinName(expr, builtinName) &&
       expr.args.size() == 2 &&
-      !hasDeclaredDefinitionPath(resolved) &&
+      !hasResolvedDefinition(resolved) &&
       (context.shouldBuiltinValidateBareMapAccessCall ||
        isMapLikeReceiver(
            expr.args[this->mapHelperReceiverIndex(expr, *context.dispatchResolvers)]) ||
+       rootMapConstructorKeyType(
+           expr.args[this->mapHelperReceiverIndex(expr, *context.dispatchResolvers)],
+           ignoredRootMapKeyType) ||
        this->isIndexedArgsPackMapReceiverTarget(
            expr.args[this->mapHelperReceiverIndex(expr, *context.dispatchResolvers)],
            *context.dispatchResolvers))) {
@@ -428,7 +470,8 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
           "unknown call target: /std/collections/map/" + builtinName);
     }
     std::string mapKeyType;
-    if (resolveMapKeyTypeWithInference(receiverExpr, mapKeyType)) {
+    if (rootMapConstructorKeyType(receiverExpr, mapKeyType) ||
+        resolveMapKeyTypeWithInference(receiverExpr, mapKeyType)) {
       if (!mapKeyType.empty()) {
         if (normalizeBindingTypeName(mapKeyType) == "string") {
           if (!this->isStringExprForArgumentValidation(keyExpr,
@@ -460,7 +503,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
 
   if (!expr.isMethodCall &&
       getCanonicalMapAccessBuiltinName(expr, builtinName) &&
-      expr.args.size() == 2 && defMap_.find(resolved) == defMap_.end() &&
+      expr.args.size() == 2 && !hasResolvedDefinition(resolved) &&
       hasVisibleStdlibMapBuiltinDefinition(builtinName)) {
     size_t receiverIndex = 0;
     size_t keyIndex = 1;
@@ -474,9 +517,10 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     std::string receiverTypeText;
     std::string mapKeyType;
     std::string mapValueType;
-    if (inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText) &&
-        extractMapKeyValueTypesFromTypeText(receiverTypeText, mapKeyType,
-                                           mapValueType)) {
+    if (rootMapConstructorKeyType(receiverExpr, mapKeyType) ||
+        (inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText) &&
+         extractMapKeyValueTypesFromTypeText(receiverTypeText, mapKeyType,
+                                            mapValueType))) {
       if (!mapKeyType.empty()) {
         if (normalizeBindingTypeName(mapKeyType) == "string") {
           if (!this->isStringExprForArgumentValidation(keyExpr,

@@ -40,6 +40,18 @@ bool isLoopBlockEnvelope(const Expr &candidate) {
   return true;
 }
 
+bool isCanonicalMapAccessHelperPath(std::string_view path) {
+  std::string normalizedPath(path);
+  if (const size_t suffix = normalizedPath.find("__");
+      suffix != std::string::npos) {
+    normalizedPath.erase(suffix);
+  }
+  return normalizedPath == "/std/collections/map/at" ||
+         normalizedPath == "/std/collections/map/at_ref" ||
+         normalizedPath == "/std/collections/map/at_unsafe" ||
+         normalizedPath == "/std/collections/map/at_unsafe_ref";
+}
+
 } // namespace
 
 void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
@@ -90,6 +102,10 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
     std::string builtinName;
     std::string namespacedCollection;
     std::string namespacedHelper;
+    const bool isVisibleCanonicalMapAccessBuiltin =
+        isCanonicalMapAccessHelperPath(resolved) &&
+        (hasDefinitionPath(resolved) || hasDeclaredDefinitionPath(resolved) ||
+         hasImportedDefinitionPath(resolved));
     const bool isCollectionHelperBuiltin =
         isSimpleCallName(expr, "count") || isSimpleCallName(expr, "capacity") ||
         isSimpleCallName(expr, "count_ref") ||
@@ -107,7 +123,8 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
         isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos") ||
         isSimpleCallName(expr, "to_aos_ref") ||
         (getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper) &&
-         isBuiltinCollectionHelperName(namespacedHelper));
+         isBuiltinCollectionHelperName(namespacedHelper)) ||
+        isVisibleCanonicalMapAccessBuiltin;
     const bool isCollectionBuiltin = defMap_.count(resolved) == 0 && getBuiltinCollectionName(expr, builtinName);
     const bool isDirectFileErrorBuiltin = resolved == "/file_error/why";
     return getBuiltinOperatorName(expr, builtinName) || getBuiltinComparisonName(expr, builtinName) ||

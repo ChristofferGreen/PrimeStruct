@@ -99,6 +99,8 @@ bool rewriteCanonicalExperimentalMapConstructorExpr(Expr &valueExpr,
     });
     if (usesEntryArgs) {
       helperPath = "/std/collections/experimental_map/map";
+    } else {
+      helperPath.clear();
     }
   }
   if (helperPath.empty() || ctx.sourceDefs.count(helperPath) == 0) {

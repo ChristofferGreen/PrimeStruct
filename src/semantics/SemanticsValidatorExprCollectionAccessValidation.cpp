@@ -383,24 +383,30 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       }
       return candidate.namespacePrefix + "/" + candidate.name;
     };
+    auto isRootMapAliasExpr = [&](const Expr &candidate) {
+      return candidate.kind == Expr::Kind::Call &&
+             (isRootMapAliasPath(resolveCalleePath(candidate)) ||
+              isRootMapAliasPath(explicitCallPath(candidate)));
+    };
+    auto resolvesNonRootExperimentalMapTarget =
+        [&](const Expr &candidate) {
+          return !isRootMapAliasExpr(candidate) &&
+                 context.resolveExperimentalMapTarget(
+                     candidate, experimentalMapKeyType,
+                     experimentalMapValueType);
+        };
     const bool isUnqualifiedAccessCall =
         isUnqualifiedCollectionAccessCall(expr, builtinName);
     if (isUnqualifiedAccessCall &&
         context.resolveExperimentalMapTarget != nullptr &&
-        ((context.resolveExperimentalMapTarget(
-              expr.args.front(), experimentalMapKeyType,
-              experimentalMapValueType)) ||
-         (context.resolveExperimentalMapTarget(
-             expr.args[1], experimentalMapKeyType,
-             experimentalMapValueType)))) {
+        (resolvesNonRootExperimentalMapTarget(expr.args.front()) ||
+         resolvesNonRootExperimentalMapTarget(expr.args[1]))) {
       handledOut = true;
       return failCollectionAccessDiagnostic(
           "unknown call target: /std/collections/map/" + builtinName);
     }
     auto isExperimentalMapTypeReceiver = [&](const Expr &candidate) {
-      if (candidate.kind == Expr::Kind::Call &&
-          (isRootMapAliasPath(resolveCalleePath(candidate)) ||
-           isRootMapAliasPath(explicitCallPath(candidate)))) {
+      if (isRootMapAliasExpr(candidate)) {
         return false;
       }
       std::string receiverTypeText;
