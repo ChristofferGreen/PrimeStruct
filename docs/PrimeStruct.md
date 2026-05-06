@@ -369,6 +369,11 @@ Planned non-template inference migration contract:
   target's published query fact before borrowed/pointer args-pack fallback can classify the
   receiver. Published non-`File<Mode>` target facts suppress stale args-pack metadata;
   syntax-only contexts keep the old fallback.
+- Completed lowerer-side dispatch dereferenced file-handle receiver slice: dispatch inference for
+  nested `try(dereference(at(args<File<Mode>>, i)).flush())` and sibling file methods now reads
+  the indexed target's published query fact before borrowed/pointer args-pack fallback can
+  classify the receiver. Published non-`File<Mode>` target facts suppress stale args-pack
+  metadata; syntax-only contexts keep the old fallback.
 - Completed lowerer-side direct file-call query slice: base-kind inference for direct
   `File<Mode>(...)` calls and nested `try(File<Mode>(...))` operands now reads the published query
   type before syntax-owned file-handle-call fallback can classify the call as `i64`. Published

@@ -6,6 +6,31 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 6, 2026)**
+- [x] TODO-4298: Use dispatch dereferenced file facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-06
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes lowerer dispatch
+    inference classify nested
+    `try(dereference(at(args<File<Mode>>, i)).flush())` and sibling file
+    methods from published indexed-access query facts before
+    borrowed/pointer args-pack fallback can answer.
+  - acceptance:
+    - Dereferenced indexed-access `File<Mode>` query facts classify nested
+      `try(file.method())` dispatch inference as `i32`.
+    - Published non-`File<Mode>` indexed-access query facts suppress stale
+      borrowed/pointer args-pack metadata.
+    - Syntax-only contexts without semantic-product indexed-access facts keep
+      the existing borrowed/pointer args-pack fallback.
+  - stop_rule: Stop once dispatch dereferenced file-handle receivers depend
+    on graph-owned target facts and focused tests pin graph-backed,
+    stale-local, and syntax-only behavior.
+  - evidence: Added semantic-product indexed-access target fact handling for
+    dispatch `try(dereference(...).flush())` inference, covered `File<Mode>`
+    facts, non-file stale-local suppression, and syntax-only fallback paths,
+    and skipped broad baseline validation per the lite workflow.
+
 - [x] TODO-4298: Use base dereferenced file facts
   - owner: ai
   - created_at: 2026-04-28

@@ -319,6 +319,33 @@ bool inferDispatchSetupSemanticFileHandleMethodKind(const Expr &receiver,
   return true;
 }
 
+bool inferDispatchSetupSemanticDereferencedFileHandleMethodKind(
+    const Expr &receiver,
+    const std::string &methodName,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex,
+    LocalInfo::ValueKind &kindOut,
+    bool &hasSemanticTargetOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  hasSemanticTargetOut = false;
+  if (!isSimpleCallName(receiver, "dereference") || receiver.args.size() != 1) {
+    return false;
+  }
+
+  bool hasSemanticTarget = false;
+  if (inferDispatchSetupSemanticFileHandleMethodKind(receiver.args.front(),
+                                                    methodName,
+                                                    semanticProgram,
+                                                    semanticIndex,
+                                                    kindOut,
+                                                    hasSemanticTarget)) {
+    hasSemanticTargetOut = true;
+    return true;
+  }
+  hasSemanticTargetOut = hasSemanticTarget;
+  return false;
+}
+
 bool inferDispatchSetupSemanticTryOperandResultKind(const Expr &operand,
                                                     const SemanticProgram *semanticProgram,
                                                     const SemanticProductIndex *semanticIndex,
@@ -758,6 +785,16 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
                                                           hasSemanticFileHandleReceiver)) {
           return true;
         }
+        bool hasSemanticFileHandleTarget = false;
+        if (inferDispatchSetupSemanticDereferencedFileHandleMethodKind(
+                receiverExpr,
+                resultExpr.name,
+                semanticProgram,
+                semanticIndex,
+                kindOut,
+                hasSemanticFileHandleTarget)) {
+          return true;
+        }
         bool hasSemanticFileErrorReceiver = false;
         if (resultExpr.name == "why" &&
             inferDispatchSetupSemanticFileErrorWhyKind(receiverExpr,
@@ -767,7 +804,8 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
                                                        hasSemanticFileErrorReceiver)) {
           return true;
         }
-        if (hasSemanticFileHandleReceiver || hasSemanticFileErrorReceiver) {
+        if (hasSemanticFileHandleReceiver || hasSemanticFileHandleTarget ||
+            hasSemanticFileErrorReceiver) {
           return true;
         }
       }

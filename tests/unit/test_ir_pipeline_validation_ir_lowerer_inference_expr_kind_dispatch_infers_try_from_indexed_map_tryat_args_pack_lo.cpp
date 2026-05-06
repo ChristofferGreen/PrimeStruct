@@ -879,6 +879,31 @@ TEST_CASE("ir lowerer inference expr-kind dispatch uses semantic method receiver
     return expr;
   };
 
+  auto makeLiteralExpr = [] {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Literal;
+    expr.intWidth = 32;
+    expr.literalValue = 0;
+    return expr;
+  };
+
+  auto makeAtExpr = [&](const std::string &name, uint64_t semanticNodeId) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = "at";
+    expr.args = {makeNameExpr(name, 0), makeLiteralExpr()};
+    expr.semanticNodeId = semanticNodeId;
+    return expr;
+  };
+
+  auto makeDereferenceExpr = [](primec::Expr target) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = "dereference";
+    expr.args = {std::move(target)};
+    return expr;
+  };
+
   auto makeMethodExpr = [](const std::string &methodName, primec::Expr receiver) {
     primec::Expr expr;
     expr.kind = primec::Expr::Kind::Call;
@@ -902,6 +927,8 @@ TEST_CASE("ir lowerer inference expr-kind dispatch uses semantic method receiver
   addBindingFact(semanticProgram, 7503, "FileError", "i32");
   addLocalAutoFact(semanticProgram, 7504, "autoErr", "/std/file/FileError");
   addBindingFact(semanticProgram, 7505, "staleFile", "i32");
+  addQueryFact(semanticProgram, 7506, "at", "/std/file/File<Write>");
+  addQueryFact(semanticProgram, 7507, "at", "i32");
   const auto semanticIndex =
       primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
 
@@ -909,8 +936,15 @@ TEST_CASE("ir lowerer inference expr-kind dispatch uses semantic method receiver
   staleFileHandle.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   staleFileHandle.isFileHandle = true;
 
+  primec::ir_lowerer::LocalInfo staleBorrowedFileHandlePack;
+  staleBorrowedFileHandlePack.isArgsPack = true;
+  staleBorrowedFileHandlePack.isFileHandle = true;
+  staleBorrowedFileHandlePack.argsPackElementKind =
+      primec::ir_lowerer::LocalInfo::Kind::Reference;
+
   primec::ir_lowerer::LocalMap staleLocals;
   staleLocals.emplace("staleFile", staleFileHandle);
+  staleLocals.emplace("files", staleBorrowedFileHandlePack);
 
   std::unordered_map<std::string, const primec::Definition *> defMap;
   std::string inferenceError;
@@ -929,6 +963,16 @@ TEST_CASE("ir lowerer inference expr-kind dispatch uses semantic method receiver
                             staleLocals) == Kind::Int32);
   CHECK(state.inferExprKind(makeTryExpr(makeMethodExpr("write", makeNameExpr("staleFile", 7505))),
                             staleLocals) == Kind::Unknown);
+  CHECK(state.inferExprKind(
+            makeTryExpr(makeMethodExpr(
+                "flush",
+                makeDereferenceExpr(makeAtExpr("files", 7506)))),
+            staleLocals) == Kind::Int32);
+  CHECK(state.inferExprKind(
+            makeTryExpr(makeMethodExpr(
+                "flush",
+                makeDereferenceExpr(makeAtExpr("files", 7507)))),
+            staleLocals) == Kind::Unknown);
   CHECK(inferenceError.empty());
 
   std::unordered_map<std::string, const primec::Definition *> syntaxDefMap;
@@ -939,6 +983,11 @@ TEST_CASE("ir lowerer inference expr-kind dispatch uses semantic method receiver
                                   staleLocals) == Kind::String);
   CHECK(syntaxState.inferExprKind(makeTryExpr(makeMethodExpr("write", makeNameExpr("staleFile", 0))),
                                   staleLocals) == Kind::Int32);
+  CHECK(syntaxState.inferExprKind(
+            makeTryExpr(makeMethodExpr(
+                "flush",
+                makeDereferenceExpr(makeAtExpr("files", 0)))),
+            staleLocals) == Kind::Int32);
   CHECK(syntaxInferenceError.empty());
 }
 
