@@ -426,6 +426,10 @@ Planned non-template inference migration contract:
   metadata before lowerer bridge-routing consumers can dispatch through bridge-path choice facts.
   Missing or contradictory present ids fail closed with deterministic bridge-path metadata
   diagnostics.
+- Completed routing coverage map-authority slice: direct-call, method-call, and bridge-path
+  coverage validators now require the published routing lookup maps before raw routing entries can
+  satisfy coverage or trigger stale-metadata checks. Raw routing entries without the published map
+  no longer mask missing semantic-product routing facts.
 - Completed native pick target sum slice: semantic-product-addressed `pick(value)` lowering now
   resolves named targets from the published binding fact and confirms the sum layout through
   published sum metadata before local-map shape reconstruction can answer. Missing sum metadata or

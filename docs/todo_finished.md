@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 6, 2026)**
+- [x] TODO-4298: Require routing coverage maps
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-06
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes direct-call, method-call, and
+    bridge-path coverage validators require published routing lookup maps
+    before raw routing vectors can satisfy coverage or drive stale-metadata
+    checks.
+  - acceptance:
+    - Direct-call coverage does not treat raw direct-call target entries as
+      authoritative without `directCallTargetIdsByExpr`.
+    - Method-call coverage does not treat raw method-call target entries as
+      authoritative without `methodCallTargetIdsByExpr`.
+    - Bridge-path coverage does not treat raw bridge choices as authoritative
+      without `bridgePathChoiceIdsByExpr`.
+  - stop_rule: Stop once routing coverage validators fail closed without the
+    relevant published map entry and focused tests pin raw-only routing facts.
+  - evidence: Rewired routing coverage validation to gate raw route metadata
+    checks behind published direct-call, method-call, and bridge-path lookup
+    maps, added coverage regressions for raw-only routing facts, refreshed
+    graph source locks, updated TODO/design docs, and skipped local test
+    execution per the lite workflow.
+
 - [x] TODO-4298: Require callable summary maps
   - owner: ai
   - created_at: 2026-04-28

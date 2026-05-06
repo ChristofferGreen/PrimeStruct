@@ -1365,7 +1365,11 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irCallResolution.find("bool resolvesToPublishedDefinitionFamilyTarget(const SemanticProgram *semanticProgram,") !=
         std::string::npos);
-  CHECK(irCallResolution.find("bridgePathChoicesByExpr.contains(expr.semanticNodeId)") !=
+  CHECK(irCallResolution.find("semanticProgramLookupPublishedDirectCallTargetId(*semanticProgram,") !=
+        std::string::npos);
+  CHECK(irCallResolution.find("semanticProgramLookupPublishedBridgePathChoiceId(*semanticProgram,") !=
+        std::string::npos);
+  CHECK(irCallResolution.find("semanticProgramLookupPublishedMethodCallTargetId(*semanticProgram,") !=
         std::string::npos);
   CHECK(irCallResolution.find("bool isPublishedCollectionBridgeStdlibSurfaceId(") !=
         std::string::npos);

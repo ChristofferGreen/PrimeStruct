@@ -661,14 +661,6 @@ bool validateSemanticProductDirectCallCoverage(
     return true;
   }
 
-  const auto bridgePathChoices = semanticProgramBridgePathChoiceView(*semanticProgram);
-  std::unordered_map<uint64_t, const SemanticProgramBridgePathChoice *> bridgePathChoicesByExpr;
-  bridgePathChoicesByExpr.reserve(bridgePathChoices.size());
-  for (const auto *entry : bridgePathChoices) {
-    if (entry->semanticNodeId != 0) {
-      bridgePathChoicesByExpr.insert_or_assign(entry->semanticNodeId, entry);
-    }
-  }
   const auto directCallTargets = semanticProgramDirectCallTargetView(*semanticProgram);
   std::unordered_map<uint64_t, const SemanticProgramDirectCallTarget *> directCallTargetsByExpr;
   directCallTargetsByExpr.reserve(directCallTargets.size());
@@ -694,12 +686,16 @@ bool validateSemanticProductDirectCallCoverage(
                 describeCallSite(scopePath, expr);
         return false;
       }
-      if (bridgePathChoicesByExpr.contains(expr.semanticNodeId)) {
-        return validateExprs(scopePath, expr.args) &&
-               validateExprs(scopePath, expr.bodyArguments);
-      }
-      if (const auto it = directCallTargetsByExpr.find(expr.semanticNodeId);
-          it != directCallTargetsByExpr.end()) {
+      const auto publishedDirectTargetId =
+          semanticProgramLookupPublishedDirectCallTargetId(*semanticProgram,
+                                                           expr.semanticNodeId);
+      if (publishedDirectTargetId.has_value()) {
+        const auto it = directCallTargetsByExpr.find(expr.semanticNodeId);
+        if (it == directCallTargetsByExpr.end()) {
+          error = "missing semantic-product direct-call target: " +
+                  describeCallSite(scopePath, expr);
+          return false;
+        }
         const auto &entry = *it->second;
         const std::string siteDescription = describeCallSite(scopePath, expr);
         const std::string_view resolvedPath =
@@ -737,22 +733,17 @@ bool validateSemanticProductDirectCallCoverage(
             return false;
           }
         }
-        if (const auto publishedTargetId =
-                semanticProgramLookupPublishedDirectCallTargetId(*semanticProgram,
-                                                                 expr.semanticNodeId);
-            publishedTargetId.has_value()) {
-          const std::string_view publishedTarget =
-              semanticProgramResolveCallTargetString(*semanticProgram, *publishedTargetId);
-          if (publishedTarget.empty()) {
-            error = "missing semantic-product direct-call resolved path id: " +
-                    siteDescription;
-            return false;
-          }
-          if (publishedTarget != resolvedPath) {
-            error = "stale semantic-product direct-call target metadata: " +
-                    siteDescription;
-            return false;
-          }
+        const std::string_view publishedTarget =
+            semanticProgramResolveCallTargetString(*semanticProgram, *publishedDirectTargetId);
+        if (publishedTarget.empty()) {
+          error = "missing semantic-product direct-call resolved path id: " +
+                  siteDescription;
+          return false;
+        }
+        if (publishedTarget != resolvedPath) {
+          error = "stale semantic-product direct-call target metadata: " +
+                  siteDescription;
+          return false;
         }
       }
       if (findSemanticProductBridgePathChoice(semanticProgram, expr).empty() &&
@@ -818,8 +809,16 @@ bool validateSemanticProductBridgePathCoverage(
 
   validateExpr = [&](const std::string &scopePath, const Expr &expr) {
     if (expr.kind == Expr::Kind::Call && !expr.isMethodCall) {
-      if (const auto it = bridgePathChoicesByExpr.find(expr.semanticNodeId);
-          it != bridgePathChoicesByExpr.end()) {
+      const auto publishedChoiceId =
+          semanticProgramLookupPublishedBridgePathChoiceId(*semanticProgram,
+                                                           expr.semanticNodeId);
+      if (publishedChoiceId.has_value()) {
+        const auto it = bridgePathChoicesByExpr.find(expr.semanticNodeId);
+        if (it == bridgePathChoicesByExpr.end()) {
+          error = "missing semantic-product bridge-path choice: " +
+                  describeCallSite(scopePath, expr);
+          return false;
+        }
         const auto &entry = *it->second;
         const std::string siteDescription = describeCallSite(scopePath, expr);
         const std::string_view helperName =
@@ -864,22 +863,17 @@ bool validateSemanticProductBridgePathCoverage(
             return false;
           }
         }
-        if (const auto publishedChoiceId =
-                semanticProgramLookupPublishedBridgePathChoiceId(*semanticProgram,
-                                                                 expr.semanticNodeId);
-            publishedChoiceId.has_value()) {
-          const std::string_view publishedChoice =
-              semanticProgramResolveCallTargetString(*semanticProgram, *publishedChoiceId);
-          if (publishedChoice.empty()) {
-            error = "missing semantic-product bridge chosen path id: " +
-                    siteDescription;
-            return false;
-          }
-          if (publishedChoice != chosenPath) {
-            error = "stale semantic-product bridge target metadata: " +
-                    siteDescription;
-            return false;
-          }
+        const std::string_view publishedChoice =
+            semanticProgramResolveCallTargetString(*semanticProgram, *publishedChoiceId);
+        if (publishedChoice.empty()) {
+          error = "missing semantic-product bridge chosen path id: " +
+                  siteDescription;
+          return false;
+        }
+        if (publishedChoice != chosenPath) {
+          error = "stale semantic-product bridge target metadata: " +
+                  siteDescription;
+          return false;
         }
       }
       if (!findSemanticProductBridgePathChoice(semanticProgram, expr).empty()) {
@@ -953,8 +947,16 @@ bool validateSemanticProductMethodCallCoverage(const Program &program,
                 describeCallSite(scopePath, expr);
         return false;
       }
-      if (const auto it = methodCallTargetsByExpr.find(expr.semanticNodeId);
-          it != methodCallTargetsByExpr.end()) {
+      const auto publishedMethodTargetId =
+          semanticProgramLookupPublishedMethodCallTargetId(*semanticProgram,
+                                                           expr.semanticNodeId);
+      if (publishedMethodTargetId.has_value()) {
+        const auto it = methodCallTargetsByExpr.find(expr.semanticNodeId);
+        if (it == methodCallTargetsByExpr.end()) {
+          error = "missing semantic-product method-call target: " +
+                  describeCallSite(scopePath, expr);
+          return false;
+        }
         const auto &entry = *it->second;
         const std::string siteDescription = describeCallSite(scopePath, expr);
         const std::string_view resolvedPath =
@@ -1006,22 +1008,17 @@ bool validateSemanticProductMethodCallCoverage(const Program &program,
             return false;
           }
         }
-        if (const auto publishedTargetId =
-                semanticProgramLookupPublishedMethodCallTargetId(*semanticProgram,
-                                                                 expr.semanticNodeId);
-            publishedTargetId.has_value()) {
-          const std::string_view publishedTarget =
-              semanticProgramResolveCallTargetString(*semanticProgram, *publishedTargetId);
-          if (publishedTarget.empty()) {
-            error = "missing semantic-product method-call resolved path id: " +
-                    siteDescription;
-            return false;
-          }
-          if (publishedTarget != resolvedPath) {
-            error = "stale semantic-product method-call target metadata: " +
-                    siteDescription;
-            return false;
-          }
+        const std::string_view publishedTarget =
+            semanticProgramResolveCallTargetString(*semanticProgram, *publishedMethodTargetId);
+        if (publishedTarget.empty()) {
+          error = "missing semantic-product method-call resolved path id: " +
+                  siteDescription;
+          return false;
+        }
+        if (publishedTarget != resolvedPath) {
+          error = "stale semantic-product method-call target metadata: " +
+                  siteDescription;
+          return false;
         }
       }
       if (findSemanticProductMethodCallTarget(semanticProgram, expr).empty()) {

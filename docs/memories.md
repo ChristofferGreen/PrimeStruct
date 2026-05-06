@@ -94,18 +94,20 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Evidence: The retained `PrimeStruct_primestruct_ir_pipeline_validation_cases_331_340` and `PrimeStruct_primestruct_ir_pipeline_validation_cases_511_520` shards failed until unfrozen query, try, and on_error facts were indexed the same way as return and binding facts.
 
 ### semantic-product-routing-completeness-gates-lowering
-- Updated: 2026-05-04
+- Updated: 2026-05-06
 - Tags: semantics, ir, routing
-- Fact: IR lowering entry setup treats semantic-product direct-call,
-  bridge-path, and method-call routing facts as required completeness gates
-  before any fallback lowering path can run; helper tests that manually build
-  call targets must seed the published routing lookup maps because raw routing
-  facts are not lookup fallbacks.
+- Fact: IR lowering entry setup and routing coverage validators treat
+  semantic-product direct-call, bridge-path, and method-call routing facts as
+  published-map required gates; helper tests that manually build call targets
+  must seed the published routing lookup maps because raw routing facts are
+  not lookup fallbacks.
 - Evidence: The saved release log showed `IrLowerer::lower` accepting missing
   direct-call and bridge-path facts; `IrLowererLowerEntrySetup.cpp` now includes
   routing.direct-call, routing.bridge-path, and routing.method-call in the
   semantic-product completeness manifest, and `published target lookups ignore
-  raw routing facts without maps` locks the no-raw-routing-fallback contract.
+  raw routing facts without maps` plus `semantic-product coverage validators
+  ignore raw routing facts without maps` lock the no-raw-routing-fallback
+  contract.
 
 ### variadic-pointer-struct-metadata-keeps-wrapper
 - Updated: 2026-05-04
