@@ -1180,6 +1180,9 @@ Compile-pipeline publication contract:
 - Aggregate/uninitialized struct inference applies that rule to `try(...)` payloads as well: published try value-type
   facts provide the payload struct before local `Result` struct metadata can infer it, published scalar facts suppress
   stale local aggregate metadata, and syntax-only contexts keep the existing fallback.
+- Aggregate/uninitialized source expression inference now follows graph-backed type facts for direct binding,
+  local-auto, and query expressions before consulting stale local struct metadata or recomputed definition returns;
+  published scalar facts suppress aggregate fallback while syntax-only contexts keep compatibility inference.
 - Native indexed-access validation now follows the graph-backed rule for index
   expressions: query, binding, and local-auto type facts provide the index kind
   before legacy expression inference is consulted.

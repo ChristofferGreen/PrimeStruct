@@ -653,6 +653,10 @@ Task template:
     The lowerer uninitialized try payload struct slice is complete for
     semantic-product-backed `try(...)` value-type facts before stale local
     `Result` payload struct metadata can classify aggregate payloads.
+    The lowerer uninitialized source expression struct slice is complete for
+    semantic-product-backed binding, local-auto, and query type facts before
+    stale local struct metadata or recomputed definition returns can classify
+    aggregate source expressions.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -748,6 +752,12 @@ Task template:
       aggregate `try(status)` payloads. Published scalar try facts suppress
       stale aggregate metadata while syntax-only compatibility keeps the
       legacy fallback.
+    - Completed slice: semantic-product-addressed uninitialized/aggregate
+      source expression inference now consumes published binding, local-auto,
+      and query type facts before stale local struct metadata or recomputed
+      definition returns can classify aggregate source expressions. Published
+      scalar facts suppress stale aggregate fallbacks while syntax-only
+      compatibility keeps the legacy fallback.
     - Completed slice: semantic-product-addressed dispatch inference now
       consumes published method receiver binding, query, or local-auto facts
       for `FileError.why()` and nested `try(file.method())` file operations

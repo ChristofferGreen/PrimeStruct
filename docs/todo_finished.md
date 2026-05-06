@@ -6,6 +6,31 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 6, 2026)**
+- [x] TODO-4298: Use source type facts for aggregate inference
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-06
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes uninitialized/aggregate
+    source expression inference classify binding, local-auto, and query
+    expressions from published type facts before stale local or recomputed
+    definition metadata can answer.
+  - acceptance:
+    - Published binding type IDs classify direct aggregate local sources
+      before local struct metadata.
+    - Published local-auto and query type IDs classify aggregate source
+      expressions before local or definition-return fallback.
+    - Published scalar facts suppress stale aggregate fallback while
+      syntax-only source expressions keep compatibility inference.
+  - stop_rule: Stop once aggregate source expression inference depends on
+    graph-owned binding/local-auto/query facts and focused tests pin
+    graph-backed, stale-local/recomputed, and syntax-only behavior.
+  - evidence: Added a semantic-product source type resolver to
+    uninitialized struct inference, resolved binding/local-auto/query type
+    text by interned IDs before copied text, covered aggregate,
+    scalar-suppression, and syntax-only paths, and skipped broad baseline
+    validation per the lite workflow.
+
 - [x] TODO-4298: Use try value facts for aggregate payloads
   - owner: ai
   - created_at: 2026-04-28

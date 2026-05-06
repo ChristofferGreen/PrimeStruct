@@ -998,4 +998,200 @@ TEST_CASE("ir lowerer uninitialized type helpers use semantic try value facts") 
             resolveStructFieldSlot) == "/pkg/StalePair");
 }
 
+TEST_CASE("ir lowerer uninitialized type helpers use semantic source type facts") {
+  primec::Definition makePairDef;
+  makePairDef.fullPath = "/pkg/makePair";
+  makePairDef.namespacePrefix = "/pkg";
+  primec::Transform staleReturnTransform;
+  staleReturnTransform.name = "return";
+  staleReturnTransform.templateArgs.push_back("StalePair");
+  makePairDef.transforms.push_back(staleReturnTransform);
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {makePairDef.fullPath, &makePairDef},
+  };
+  auto resolveStructTypeName = [](const std::string &typeName,
+                                  const std::string &,
+                                  std::string &resolvedPath) {
+    if (typeName == "Pair") {
+      resolvedPath = "/pkg/Pair";
+      return true;
+    }
+    if (typeName == "AutoPair") {
+      resolvedPath = "/pkg/AutoPair";
+      return true;
+    }
+    if (typeName == "QueryPair") {
+      resolvedPath = "/pkg/QueryPair";
+      return true;
+    }
+    if (typeName == "StalePair") {
+      resolvedPath = "/pkg/StalePair";
+      return true;
+    }
+    return false;
+  };
+  auto resolveExprPath = [](const primec::Expr &expr) {
+    if (expr.kind == primec::Expr::Kind::Call && expr.name == "makePair") {
+      return std::string("/pkg/makePair");
+    }
+    return std::string();
+  };
+  const primec::ir_lowerer::UninitializedFieldBindingIndex fieldIndex;
+  auto resolveStructFieldSlot = [](const std::string &,
+                                   const std::string &,
+                                   primec::ir_lowerer::StructSlotFieldInfo &) {
+    return false;
+  };
+
+  primec::ir_lowerer::LocalInfo stalePair;
+  stalePair.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  stalePair.structTypeName = "/pkg/StalePair";
+  primec::ir_lowerer::LocalMap locals = {
+      {"value", stalePair},
+      {"autoValue", stalePair},
+  };
+
+  auto makeNameExpr = [](std::string name, uint64_t semanticNodeId) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Name;
+    expr.name = name;
+    expr.semanticNodeId = semanticNodeId;
+    return expr;
+  };
+  auto makeCallExpr = [](uint64_t semanticNodeId) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = "makePair";
+    expr.semanticNodeId = semanticNodeId;
+    return expr;
+  };
+
+  primec::SemanticProgram semanticProgram;
+  auto internType = [&](const std::string &typeText) {
+    return primec::semanticProgramInternCallTargetString(semanticProgram, typeText);
+  };
+  auto addBindingFact = [&](uint64_t semanticNodeId, std::string name, std::string typeText) {
+    const std::size_t factIndex = semanticProgram.bindingFacts.size();
+    semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+        .name = name,
+        .bindingTypeText = "StalePair",
+        .semanticNodeId = semanticNodeId,
+        .bindingTypeTextId = internType(typeText),
+    });
+    semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr[semanticNodeId] = factIndex;
+  };
+  auto addLocalAutoFact = [&](uint64_t semanticNodeId, std::string name, std::string typeText) {
+    const std::size_t factIndex = semanticProgram.localAutoFacts.size();
+    semanticProgram.localAutoFacts.push_back(primec::SemanticProgramLocalAutoFact{
+        .bindingName = name,
+        .bindingTypeText = "StalePair",
+        .semanticNodeId = semanticNodeId,
+        .bindingTypeTextId = internType(typeText),
+    });
+    semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr[semanticNodeId] = factIndex;
+  };
+  auto addQueryFact = [&](uint64_t semanticNodeId, std::string typeText) {
+    const std::size_t factIndex = semanticProgram.queryFacts.size();
+    semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+        .callName = "makePair",
+        .queryTypeText = "StalePair",
+        .bindingTypeText = "StalePair",
+        .semanticNodeId = semanticNodeId,
+        .queryTypeTextId = internType(typeText),
+        .bindingTypeTextId = internType(typeText),
+    });
+    semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr[semanticNodeId] = factIndex;
+  };
+
+  addBindingFact(3201, "value", "Pair");
+  addBindingFact(3202, "value", "i32");
+  addLocalAutoFact(3203, "autoValue", "AutoPair");
+  addLocalAutoFact(3204, "autoValue", "i32");
+  addQueryFact(3205, "QueryPair");
+  addQueryFact(3206, "i32");
+  const primec::ir_lowerer::SemanticProductIndex semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  CHECK(primec::ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+            makeNameExpr("value", 3201),
+            locals,
+            defMap,
+            resolveStructTypeName,
+            resolveExprPath,
+            fieldIndex,
+            resolveStructFieldSlot,
+            &semanticProgram,
+            &semanticIndex) == "/pkg/Pair");
+  CHECK(primec::ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+            makeNameExpr("value", 3202),
+            locals,
+            defMap,
+            resolveStructTypeName,
+            resolveExprPath,
+            fieldIndex,
+            resolveStructFieldSlot,
+            &semanticProgram,
+            &semanticIndex)
+            .empty());
+  CHECK(primec::ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+            makeNameExpr("autoValue", 3203),
+            locals,
+            defMap,
+            resolveStructTypeName,
+            resolveExprPath,
+            fieldIndex,
+            resolveStructFieldSlot,
+            &semanticProgram,
+            &semanticIndex) == "/pkg/AutoPair");
+  CHECK(primec::ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+            makeNameExpr("autoValue", 3204),
+            locals,
+            defMap,
+            resolveStructTypeName,
+            resolveExprPath,
+            fieldIndex,
+            resolveStructFieldSlot,
+            &semanticProgram,
+            &semanticIndex)
+            .empty());
+  CHECK(primec::ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+            makeCallExpr(3205),
+            locals,
+            defMap,
+            resolveStructTypeName,
+            resolveExprPath,
+            fieldIndex,
+            resolveStructFieldSlot,
+            &semanticProgram,
+            &semanticIndex) == "/pkg/QueryPair");
+  CHECK(primec::ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+            makeCallExpr(3206),
+            locals,
+            defMap,
+            resolveStructTypeName,
+            resolveExprPath,
+            fieldIndex,
+            resolveStructFieldSlot,
+            &semanticProgram,
+            &semanticIndex)
+            .empty());
+  CHECK(primec::ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+            makeNameExpr("value", 0),
+            locals,
+            defMap,
+            resolveStructTypeName,
+            resolveExprPath,
+            fieldIndex,
+            resolveStructFieldSlot) == "/pkg/StalePair");
+  CHECK(primec::ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+            makeCallExpr(0),
+            locals,
+            defMap,
+            resolveStructTypeName,
+            resolveExprPath,
+            fieldIndex,
+            resolveStructFieldSlot) == "/pkg/StalePair");
+}
+
 TEST_SUITE_END();
