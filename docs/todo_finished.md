@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 6, 2026)**
+- [x] TODO-4298: Use base dereferenced error facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-06
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes lowerer base-kind
+    inference classify `dereference(at(args<FileError>, i)).why()` from
+    published indexed-access query facts before borrowed/pointer args-pack
+    fallback can answer.
+  - acceptance:
+    - Dereferenced indexed-access FileError query facts classify `why()` as
+      `string`.
+    - Published non-`FileError` indexed-access query facts suppress stale
+      borrowed/pointer args-pack metadata.
+    - Syntax-only contexts without semantic-product indexed-access facts keep
+      the existing borrowed/pointer args-pack fallback.
+  - stop_rule: Stop once base-kind dereferenced FileError receivers depend on
+    graph-owned target facts and focused tests pin graph-backed, stale-local,
+    and syntax-only behavior.
+  - evidence: Added semantic-product indexed-access target fact handling for
+    base-kind `dereference(...).why()` inference, covered FileError facts,
+    non-FileError stale-local suppression, and syntax-only fallback paths, and
+    skipped broad baseline validation per the lite workflow.
+
 - [x] TODO-4298: Use dispatch count access facts
   - owner: ai
   - created_at: 2026-04-28

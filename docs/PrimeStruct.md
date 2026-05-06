@@ -360,6 +360,10 @@ Planned non-template inference migration contract:
   not only binding facts, before indexed args-pack or named-local fallback can answer. Published
   non-file receiver facts suppress stale local metadata; no-fact syntax-only contexts keep the
   old local fallback.
+- Completed lowerer-side base dereferenced FileError receiver slice: base-kind inference for
+  `dereference(at(args<FileError>, i)).why()` now reads the indexed target's published query fact
+  before borrowed/pointer args-pack fallback can classify the receiver. Published non-`FileError`
+  target facts suppress stale args-pack metadata; syntax-only contexts keep the old fallback.
 - Completed lowerer-side direct file-call query slice: base-kind inference for direct
   `File<Mode>(...)` calls and nested `try(File<Mode>(...))` operands now reads the published query
   type before syntax-owned file-handle-call fallback can classify the call as `i64`. Published

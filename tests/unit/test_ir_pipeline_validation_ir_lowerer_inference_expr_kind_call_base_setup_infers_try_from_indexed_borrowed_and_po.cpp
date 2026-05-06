@@ -1686,6 +1686,14 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic query an
     return expr;
   };
 
+  auto makeDereferenceExpr = [](primec::Expr target) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = "dereference";
+    expr.args = {target};
+    return expr;
+  };
+
   auto makeMethodExpr = [](const std::string &methodName, primec::Expr receiver) {
     primec::Expr methodExpr;
     methodExpr.kind = primec::Expr::Kind::Call;
@@ -1731,6 +1739,8 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic query an
   addQueryFact(semanticProgram, 941, "/std/file/FileError");
   addQueryFact(semanticProgram, 942, "i32");
   addQueryFact(semanticProgram, 945, "/std/file/File<Read>");
+  addQueryFact(semanticProgram, 946, "/std/file/FileError");
+  addQueryFact(semanticProgram, 947, "i32");
   addLocalAutoFact(semanticProgram, 943, "/std/file/File<Write>");
   addLocalAutoFact(semanticProgram, 944, "i32");
   const auto semanticIndex =
@@ -1763,12 +1773,21 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic query an
   staleFileErrorPack.isFileError = true;
   staleFileErrorPack.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Value;
 
+  primec::ir_lowerer::LocalInfo staleBorrowedFileErrorPack;
+  staleBorrowedFileErrorPack.isArgsPack = true;
+  staleBorrowedFileErrorPack.isFileError = true;
+  staleBorrowedFileErrorPack.argsPackElementKind =
+      primec::ir_lowerer::LocalInfo::Kind::Reference;
+
   primec::ir_lowerer::LocalInfo staleFileHandle;
   staleFileHandle.isFileHandle = true;
 
   primec::ir_lowerer::LocalMap staleLocals;
   staleLocals.emplace("errors", staleFileErrorPack);
   staleLocals.emplace("file", staleFileHandle);
+
+  primec::ir_lowerer::LocalMap borrowedStaleLocals;
+  borrowedStaleLocals.emplace("errors", staleBorrowedFileErrorPack);
 
   kindOut = ValueKind::Unknown;
   CHECK(state.inferCallExprBaseKind(
@@ -1777,8 +1796,33 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic query an
 
   kindOut = ValueKind::Unknown;
   CHECK(state.inferCallExprBaseKind(
+      makeMethodExpr("why",
+                     makeDereferenceExpr(makeAtExpr("errors", 946))),
+      borrowedStaleLocals,
+      kindOut));
+  CHECK(kindOut == ValueKind::String);
+
+  kindOut = ValueKind::Unknown;
+  CHECK(state.inferCallExprBaseKind(
+      makeMethodExpr("why",
+                     makeDereferenceExpr(makeAtExpr("errors", 947))),
+      borrowedStaleLocals,
+      kindOut));
+  CHECK(kindOut == ValueKind::Unknown);
+
+  kindOut = ValueKind::Unknown;
+  CHECK(state.inferCallExprBaseKind(
       makeMethodExpr("flush", makeNameExpr("file", 944)), staleLocals, kindOut));
   CHECK(kindOut == ValueKind::Unknown);
+
+  auto syntaxState = makeState(nullptr, nullptr);
+  kindOut = ValueKind::Unknown;
+  CHECK(syntaxState.inferCallExprBaseKind(
+      makeMethodExpr("why",
+                     makeDereferenceExpr(makeAtExpr("errors", 0))),
+      borrowedStaleLocals,
+      kindOut));
+  CHECK(kindOut == ValueKind::String);
 }
 
 TEST_CASE("ir lowerer inference expr-kind call-base setup does not infer missing query facts from fallback") {
