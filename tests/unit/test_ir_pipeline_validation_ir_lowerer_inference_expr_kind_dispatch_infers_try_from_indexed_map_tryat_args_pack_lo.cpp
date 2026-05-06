@@ -151,9 +151,8 @@ TEST_CASE("ir lowerer inference expr-kind dispatch prefers graph-backed indexed 
   queryFact.callName = "at";
   queryFact.callNameId =
       primec::semanticProgramInternCallTargetString(semanticProgram, "at");
-  queryFact.resolvedPath = "/std/collections/map/at";
   queryFact.resolvedPathId = primec::semanticProgramInternCallTargetString(
-      semanticProgram, queryFact.resolvedPath);
+      semanticProgram, "/std/collections/map/at");
   queryFact.queryTypeText = "string";
   queryFact.queryTypeTextId =
       primec::semanticProgramInternCallTargetString(semanticProgram, "string");
