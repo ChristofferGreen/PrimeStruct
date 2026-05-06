@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 6, 2026)**
+- [x] TODO-4298: Use indexed Result source facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-06
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes generic Result metadata
+    resolution classify `at(args<Result>, i)` and
+    `dereference(at(args<Result>, i))` from published indexed-access query
+    Result facts before args-pack fallback can answer.
+  - acceptance:
+    - Indexed-access Result query facts classify generic Result metadata from
+      the published result value and error types.
+    - Dereferenced indexed-access Result query facts classify generic Result
+      metadata from the published result value and error types.
+    - Published non-Result indexed-access query facts suppress stale
+      args-pack Result metadata while syntax-only contexts keep fallback.
+  - stop_rule: Stop once indexed Result source metadata depends on
+    graph-owned target facts and focused tests pin graph-backed, stale-local,
+    and syntax-only behavior.
+  - evidence: Added semantic-product indexed-access query handling before
+    args-pack Result metadata fallback in `resolveResultExprInfoFromLocals`,
+    covered direct, dereferenced, non-Result, and syntax-only paths, and
+    skipped broad baseline validation per the lite workflow.
+
 - [x] TODO-4298: Use base dereferenced Result facts
   - owner: ai
   - created_at: 2026-04-28

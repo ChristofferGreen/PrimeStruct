@@ -161,6 +161,42 @@ bool applySemanticQueryFactResultInfo(const Expr &expr,
   return true;
 }
 
+bool resolveSemanticQueryResultInfoWithPresence(const Expr &expr,
+                                                const SemanticProgram *semanticProgram,
+                                                const SemanticProductIndex *semanticIndex,
+                                                std::string *errorOut,
+                                                ResultExprInfo &out,
+                                                bool &hasSemanticQueryOut) {
+  hasSemanticQueryOut = false;
+  if (semanticProgram == nullptr || semanticIndex == nullptr || expr.semanticNodeId == 0) {
+    return false;
+  }
+  const auto *queryFact = findSemanticProductQueryFactBySemanticId(*semanticIndex, expr);
+  if (queryFact == nullptr) {
+    hasSemanticQueryOut = true;
+    assignSemanticResultError(
+        errorOut, "missing semantic-product query fact: " + describeSemanticResultCall(expr));
+    return false;
+  }
+  hasSemanticQueryOut = true;
+  if (!queryFact->hasResultType) {
+    return false;
+  }
+  out.isResult = true;
+  out.hasValue = queryFact->resultTypeHasValue;
+  out.errorType = resolveSemanticQueryResultErrorTypeText(*semanticProgram, *queryFact);
+  if (!out.hasValue) {
+    return true;
+  }
+  if (!applySemanticResultValueTypeText(
+          resolveSemanticQueryResultValueTypeText(*semanticProgram, *queryFact), out)) {
+    assignSemanticResultError(
+        errorOut, "incomplete semantic-product query fact: " + describeSemanticResultCall(expr));
+    return false;
+  }
+  return true;
+}
+
 bool needsSemanticQueryResultValueMetadata(const Expr &expr,
                                            const SemanticProgram *semanticProgram,
                                            const SemanticProductIndex *semanticIndex,
@@ -859,6 +895,14 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
   }
   std::string accessName;
   if (getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2 && expr.args.front().kind == Expr::Kind::Name) {
+    bool hasSemanticQuery = false;
+    if (resolveSemanticQueryResultInfoWithPresence(
+            expr, semanticProgram, semanticIndex, errorOut, out, hasSemanticQuery)) {
+      return true;
+    }
+    if (hasSemanticQuery) {
+      return false;
+    }
     const LocalResultInfo local = lookupLocal(expr.args.front().name);
     auto localIt = localsIn.find(expr.args.front().name);
     if (local.found && local.isResult && localIt != localsIn.end() && localIt->second.isArgsPack) {
@@ -886,6 +930,18 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     }
     if (targetExpr.kind == Expr::Kind::Call && getBuiltinArrayAccessName(targetExpr, accessName) &&
         targetExpr.args.size() == 2 && targetExpr.args.front().kind == Expr::Kind::Name) {
+      bool hasSemanticTargetQuery = false;
+      if (resolveSemanticQueryResultInfoWithPresence(targetExpr,
+                                                     semanticProgram,
+                                                     semanticIndex,
+                                                     errorOut,
+                                                     out,
+                                                     hasSemanticTargetQuery)) {
+        return true;
+      }
+      if (hasSemanticTargetQuery) {
+        return false;
+      }
       const LocalResultInfo local = lookupLocal(targetExpr.args.front().name);
       auto localIt = localsIn.find(targetExpr.args.front().name);
       if (local.found && local.isResult && localIt != localsIn.end() && localIt->second.isArgsPack &&

@@ -755,6 +755,206 @@ TEST_CASE("ir lowerer result helpers resolve indexed args-pack Result expression
   CHECK(out.errorType == "ParseError");
 }
 
+TEST_CASE("ir lowerer result helpers use semantic indexed args-pack Result facts") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  auto addQueryResultFact = [](primec::SemanticProgram &semanticProgram,
+                               uint64_t semanticNodeId,
+                               const std::string &resultValueType,
+                               const std::string &resultErrorType) {
+    const size_t index = semanticProgram.queryFacts.size();
+    semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+        .scopePath = "/main",
+        .callName = "at",
+        .queryTypeText = "",
+        .bindingTypeText = "",
+        .receiverBindingTypeText = "",
+        .hasResultType = true,
+        .resultTypeHasValue = true,
+        .resultValueType = resultValueType,
+        .resultErrorType = resultErrorType,
+        .sourceLine = 0,
+        .sourceColumn = 0,
+        .semanticNodeId = semanticNodeId,
+        .provenanceHandle = 0,
+        .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+        .callNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "at"),
+        .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main/at"),
+        .resultValueTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, resultValueType),
+        .resultErrorTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, resultErrorType),
+    });
+    semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(
+        semanticNodeId, index);
+  };
+
+  auto addQueryTypeFact = [](primec::SemanticProgram &semanticProgram,
+                             uint64_t semanticNodeId,
+                             const std::string &queryTypeText) {
+    const size_t index = semanticProgram.queryFacts.size();
+    semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+        .scopePath = "/main",
+        .callName = "at",
+        .queryTypeText = queryTypeText,
+        .bindingTypeText = queryTypeText,
+        .receiverBindingTypeText = "",
+        .hasResultType = false,
+        .resultTypeHasValue = false,
+        .resultValueType = "",
+        .resultErrorType = "",
+        .sourceLine = 0,
+        .sourceColumn = 0,
+        .semanticNodeId = semanticNodeId,
+        .provenanceHandle = 0,
+        .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+        .callNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "at"),
+        .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main/at"),
+        .queryTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, queryTypeText),
+        .bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, queryTypeText),
+    });
+    semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(
+        semanticNodeId, index);
+  };
+
+  auto makeNameExpr = [](const std::string &name) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Name;
+    expr.name = name;
+    return expr;
+  };
+
+  auto makeIndexExpr = [] {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Literal;
+    expr.literalValue = 0;
+    return expr;
+  };
+
+  auto makeAtExpr = [&](uint64_t semanticNodeId) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = "at";
+    expr.args = {makeNameExpr("values"), makeIndexExpr()};
+    expr.semanticNodeId = semanticNodeId;
+    return expr;
+  };
+
+  auto makeDereferenceExpr = [](primec::Expr target) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = "dereference";
+    expr.args = {target};
+    return expr;
+  };
+
+  auto resolveMethodCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+    return nullptr;
+  };
+  auto resolveDefinitionCall = [](const primec::Expr &) -> const primec::Definition * {
+    return nullptr;
+  };
+  auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
+    return false;
+  };
+  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind = {};
+
+  primec::SemanticProgram semanticProgram;
+  addQueryResultFact(semanticProgram, 8801, "bool", "FileError");
+  addQueryTypeFact(semanticProgram, 8802, "i32");
+  addQueryResultFact(semanticProgram, 8803, "bool", "FileError");
+  addQueryTypeFact(semanticProgram, 8804, "i32");
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  primec::ir_lowerer::LocalInfo staleResultPack;
+  staleResultPack.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  staleResultPack.isArgsPack = true;
+  staleResultPack.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  staleResultPack.isResult = true;
+  staleResultPack.resultHasValue = true;
+  staleResultPack.resultValueKind = ValueKind::Int32;
+  staleResultPack.resultErrorType = "ParseError";
+
+  primec::ir_lowerer::LocalMap staleLocals;
+  staleLocals.emplace("values", staleResultPack);
+
+  std::string error;
+  primec::ir_lowerer::ResultExprInfo out;
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      makeAtExpr(8801),
+      staleLocals,
+      resolveMethodCall,
+      resolveDefinitionCall,
+      lookupReturnInfo,
+      inferExprKind,
+      out,
+      &semanticProgram,
+      &semanticIndex,
+      &error));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.valueKind == ValueKind::Bool);
+  CHECK(out.errorType == "FileError");
+
+  out = {};
+  CHECK_FALSE(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      makeAtExpr(8802),
+      staleLocals,
+      resolveMethodCall,
+      resolveDefinitionCall,
+      lookupReturnInfo,
+      inferExprKind,
+      out,
+      &semanticProgram,
+      &semanticIndex,
+      &error));
+  CHECK(error.empty());
+
+  out = {};
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      makeDereferenceExpr(makeAtExpr(8803)),
+      staleLocals,
+      resolveMethodCall,
+      resolveDefinitionCall,
+      lookupReturnInfo,
+      inferExprKind,
+      out,
+      &semanticProgram,
+      &semanticIndex,
+      &error));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.valueKind == ValueKind::Bool);
+  CHECK(out.errorType == "FileError");
+
+  out = {};
+  CHECK_FALSE(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      makeDereferenceExpr(makeAtExpr(8804)),
+      staleLocals,
+      resolveMethodCall,
+      resolveDefinitionCall,
+      lookupReturnInfo,
+      inferExprKind,
+      out,
+      &semanticProgram,
+      &semanticIndex,
+      &error));
+  CHECK(error.empty());
+
+  out = {};
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      makeDereferenceExpr(makeAtExpr(0)),
+      staleLocals,
+      resolveMethodCall,
+      resolveDefinitionCall,
+      lookupReturnInfo,
+      inferExprKind,
+      out));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.valueKind == ValueKind::Int32);
+  CHECK(out.errorType == "ParseError");
+}
+
 TEST_CASE("ir lowerer result helpers resolve indexed args-pack file handle method results") {
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo handlePack;

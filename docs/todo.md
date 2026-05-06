@@ -622,6 +622,11 @@ Task template:
     for semantic-product-backed `try(dereference(at(args<Result>, i)))`
     inference before stale borrowed/pointer args-pack Result metadata can
     classify the operand's value kind.
+    The lowerer indexed Result source metadata slice is complete for
+    semantic-product-backed `at(args<Result>, i)` and
+    `dereference(at(args<Result>, i))` generic Result metadata resolution
+    before stale args-pack Result metadata can classify downstream source
+    values.
     The lowerer dispatch method receiver fact slice is complete for
     semantic-product-backed `FileError.why()` and nested `try(file.method())`
     inference before stale syntactic `FileError` spelling or local
@@ -715,6 +720,13 @@ Task template:
       `try(dereference(at(args<Result>, i)))` before borrowed/pointer
       args-pack Result fallback can infer the value kind. Published
       non-Result target facts suppress stale local metadata while syntax-only
+      compatibility keeps the legacy fallback.
+    - Completed slice: semantic-product-addressed generic Result metadata
+      resolution now consumes published indexed-access query facts for
+      `at(args<Result>, i)` and `dereference(at(args<Result>, i))` before
+      args-pack Result fallback can classify downstream `Result.error(...)`,
+      `Result.why(...)`, or combinator source values. Published non-Result
+      target facts suppress stale local metadata while syntax-only
       compatibility keeps the legacy fallback.
     - Completed slice: semantic-product-addressed dispatch inference now
       consumes published method receiver binding, query, or local-auto facts
