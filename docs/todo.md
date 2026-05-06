@@ -578,6 +578,10 @@ Task template:
     semantic-product-backed `try(operand)` base-kind inference before
     stale local `isResult` or args-pack metadata can classify the operand's
     value kind.
+    The lowerer nested try file-method receiver slice is complete for
+    semantic-product-backed `try(file.method())` base-kind inference before
+    stale local `isFileHandle` metadata can classify file operations as
+    status `i32` results.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -774,6 +778,12 @@ Task template:
       fallback can classify the value kind. Published non-Result operand
       facts suppress stale local metadata; syntax-only compatibility keeps
       the old fallback.
+    - Completed slice: semantic-product-addressed `try(file.method())`
+      base-kind inference now consumes the file-method receiver's published
+      binding, query, or local-auto fact before lowerer-local file-handle
+      fallback can classify file operations as status `i32` results.
+      Published non-file receiver facts suppress stale local metadata;
+      syntax-only compatibility keeps the old fallback.
     - Completed slice: semantic-product-addressed native tail-dispatch
       map/vector receiver classification now resolves interned query/binding
       type IDs before consulting copied query text fields, so collection

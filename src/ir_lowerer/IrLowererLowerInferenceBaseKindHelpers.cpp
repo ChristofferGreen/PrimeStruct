@@ -1009,6 +1009,20 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
     if (hasSemanticResultOperand) {
       return true;
     }
+    if (arg.kind == Expr::Kind::Call && arg.isMethodCall && !arg.args.empty()) {
+      bool hasSemanticFileHandleReceiver = false;
+      if (inferBaseSetupSemanticFileHandleMethodKind(arg.args.front(),
+                                                    arg.name,
+                                                    semanticProgram,
+                                                    semanticIndex,
+                                                    kindOut,
+                                                    hasSemanticFileHandleReceiver)) {
+        return true;
+      }
+      if (hasSemanticFileHandleReceiver) {
+        return true;
+      }
+    }
     if (arg.kind == Expr::Kind::Name) {
       auto it = localsIn.find(arg.name);
       if (it != localsIn.end() && it->second.isResult) {

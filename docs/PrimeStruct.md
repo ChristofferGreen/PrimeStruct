@@ -370,6 +370,11 @@ Planned non-template inference migration contract:
   before lowerer-local `isResult` and args-pack metadata can classify the value kind. Published
   non-Result operand facts suppress stale local Result metadata; no-fact syntax-only contexts
   keep the old fallback.
+- Completed lowerer-side nested try file-method receiver slice: base-kind inference for
+  `try(file.method())` now reads the file-method receiver's published binding, query, or
+  local-auto fact before lowerer-local `isFileHandle` metadata can classify file operations as
+  status `i32` results. Published non-file receiver facts suppress stale local file-handle
+  metadata; no-fact syntax-only contexts keep the old fallback.
 - Completed lowerer-side tail-dispatch collection query ID slice: native tail-dispatch map/vector
   target classification now resolves `bindingTypeTextId` and `queryTypeTextId` before copied
   query-fact text fields, so collection receiver classification consumes graph-owned query
