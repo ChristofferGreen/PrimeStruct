@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 6, 2026)**
+- [x] TODO-4298: Use dispatch dereferenced error facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-06
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes lowerer dispatch
+    inference classify `dereference(at(args<FileError>, i)).why()` and
+    nested `try(...)` forms from published indexed-access query facts before
+    method receiver inference can fall through to legacy dispatch fallback.
+  - acceptance:
+    - Dereferenced indexed-access `FileError` query facts classify `why()` as
+      `string`.
+    - Dereferenced indexed-access `FileError` query facts classify nested
+      `try(...why())` dispatch inference as `string`.
+    - Published non-`FileError` indexed-access query facts suppress stale
+      borrowed/pointer args-pack metadata and leave the value kind unresolved.
+  - stop_rule: Stop once dispatch dereferenced FileError receivers depend on
+    graph-owned target facts and focused tests pin graph-backed and
+    stale-local behavior.
+  - evidence: Added semantic-product indexed-access target fact handling for
+    dispatch `dereference(...).why()` inference, covered direct and nested
+    `try(...)` forms, non-FileError stale-local suppression, and skipped
+    broad baseline validation per the lite workflow.
+
 - [x] TODO-4298: Use dispatch dereferenced file facts
   - owner: ai
   - created_at: 2026-04-28
