@@ -533,12 +533,13 @@ const SemanticProgramSumTypeMetadata *findSemanticProductSumTypeMetadata(
   if (adapter.semanticProgram == nullptr || fullPath.empty()) {
     return nullptr;
   }
-  for (const auto &entry : adapter.semanticProgram->sumTypeMetadata) {
-    if (entry.fullPath == fullPath) {
-      return &entry;
-    }
+  const auto fullPathId =
+      semanticProgramLookupCallTargetStringId(*adapter.semanticProgram, fullPath);
+  if (!fullPathId.has_value()) {
+    return nullptr;
   }
-  return nullptr;
+  return semanticProgramLookupPublishedSumTypeMetadataByPathId(
+      *adapter.semanticProgram, *fullPathId);
 }
 
 const SemanticProgramSumVariantMetadata *findSemanticProductSumVariantMetadata(
@@ -548,12 +549,15 @@ const SemanticProgramSumVariantMetadata *findSemanticProductSumVariantMetadata(
   if (adapter.semanticProgram == nullptr || sumPath.empty() || variantName.empty()) {
     return nullptr;
   }
-  for (const auto &entry : adapter.semanticProgram->sumVariantMetadata) {
-    if (entry.sumPath == sumPath && entry.variantName == variantName) {
-      return &entry;
-    }
+  const auto sumPathId =
+      semanticProgramLookupCallTargetStringId(*adapter.semanticProgram, sumPath);
+  const auto variantNameId =
+      semanticProgramLookupCallTargetStringId(*adapter.semanticProgram, variantName);
+  if (!sumPathId.has_value() || !variantNameId.has_value()) {
+    return nullptr;
   }
-  return nullptr;
+  return semanticProgramLookupPublishedSumVariantMetadataBySumPathAndVariantNameId(
+      *adapter.semanticProgram, *sumPathId, *variantNameId);
 }
 
 const SemanticProgramCollectionSpecialization *findSemanticProductCollectionSpecialization(

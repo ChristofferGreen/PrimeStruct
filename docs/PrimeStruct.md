@@ -1039,6 +1039,8 @@ Compile-pipeline publication contract:
   materializes a return definition-path index as a recovery surface. The explicit return-by-path helper remains
   available for call-site consumers that already resolved a callee path, but it reads the published definition-path
   return-fact map instead of scanning raw return facts.
+- Sum type and variant metadata helpers follow the same publication-authority rule: resolved sum path/variant-name
+  consumers read the published sum metadata maps instead of scanning raw metadata vectors.
 - Base call-kind inference now applies the same graph-backed rule for `try(...)`: semantic-product `try` facts provide
   the value kind before local `Result` state can infer it, and missing facts leave the semantic-product path unresolved.
 - Native indexed-access validation now follows the graph-backed rule for index

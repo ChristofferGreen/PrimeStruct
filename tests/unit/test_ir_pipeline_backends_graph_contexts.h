@@ -952,6 +952,10 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticProduct.find("std::unordered_map<SymbolId, std::size_t> returnFactIndicesByDefinitionPathId;") !=
         std::string::npos);
+  CHECK(semanticProduct.find("std::unordered_map<SymbolId, std::size_t> sumTypeMetadataIndicesByPathId;") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("std::unordered_map<uint64_t, std::size_t> sumVariantMetadataIndicesBySumPathAndVariantNameId;") !=
+        std::string::npos);
   CHECK(semanticProduct.find("std::unordered_map<SymbolId, SymbolId> importAliasTargetPathIdsByNameId;") !=
         std::string::npos);
   CHECK(semanticProduct.find("std::vector<std::size_t> directCallTargetIndices;") !=
@@ -1234,6 +1238,11 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticPublicationBuildersSource.find("callableSummaryIndicesByPathId.insert_or_assign(") !=
         std::string::npos);
   CHECK(semanticPublicationBuildersSource.find("state.semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionPathId") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("state.semanticProgram.publishedRoutingLookups.sumTypeMetadataIndicesByPathId") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("state.semanticProgram.publishedRoutingLookups\n"
+                                               "      .sumVariantMetadataIndicesBySumPathAndVariantNameId") !=
         std::string::npos);
   CHECK(semanticPublicationBuildersSource.find("state.semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr.insert_or_assign(") !=
         std::string::npos);

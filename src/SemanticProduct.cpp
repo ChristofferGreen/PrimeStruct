@@ -105,6 +105,11 @@ uint64_t makeTryFactOperandPathSourceKey(SymbolId operandPathId, int sourceLine,
          columnBits;
 }
 
+uint64_t makeSumVariantMetadataSumPathVariantNameKey(SymbolId sumPathId, SymbolId variantNameId) {
+  return (static_cast<uint64_t>(sumPathId) << 32) |
+         static_cast<uint64_t>(variantNameId);
+}
+
 } // namespace
 
 void freezeSemanticProgramPublishedStorage(SemanticProgram &semanticProgram) {
@@ -517,6 +522,42 @@ const SemanticProgramReturnFact *semanticProgramLookupPublishedReturnFactByDefin
               definitionPathId);
       it != semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionPathId.end()) {
     return lookupPublishedSemanticEntryByIndex(semanticProgram.returnFacts, it->second);
+  }
+  return nullptr;
+}
+
+const SemanticProgramSumTypeMetadata *semanticProgramLookupPublishedSumTypeMetadataByPathId(
+    const SemanticProgram &semanticProgram,
+    SymbolId fullPathId) {
+  if (fullPathId == InvalidSymbolId) {
+    return nullptr;
+  }
+  if (const auto it =
+          semanticProgram.publishedRoutingLookups.sumTypeMetadataIndicesByPathId.find(
+              fullPathId);
+      it != semanticProgram.publishedRoutingLookups.sumTypeMetadataIndicesByPathId.end()) {
+    return lookupPublishedSemanticEntryByIndex(semanticProgram.sumTypeMetadata, it->second);
+  }
+  return nullptr;
+}
+
+const SemanticProgramSumVariantMetadata *
+semanticProgramLookupPublishedSumVariantMetadataBySumPathAndVariantNameId(
+    const SemanticProgram &semanticProgram,
+    SymbolId sumPathId,
+    SymbolId variantNameId) {
+  if (sumPathId == InvalidSymbolId || variantNameId == InvalidSymbolId) {
+    return nullptr;
+  }
+  const uint64_t compositeKey =
+      makeSumVariantMetadataSumPathVariantNameKey(sumPathId, variantNameId);
+  if (const auto it =
+          semanticProgram.publishedRoutingLookups
+              .sumVariantMetadataIndicesBySumPathAndVariantNameId.find(compositeKey);
+      it != semanticProgram.publishedRoutingLookups
+                .sumVariantMetadataIndicesBySumPathAndVariantNameId.end()) {
+    return lookupPublishedSemanticEntryByIndex(semanticProgram.sumVariantMetadata,
+                                               it->second);
   }
   return nullptr;
 }

@@ -519,8 +519,9 @@ Task template:
     cache quarantine slice is complete while the explicit return-by-path
     helper remains available for resolved callee-path consumers. The lowerer
     return-by-path helper published-map slice is complete for resolved
-    callee-path consumers. The lowerer
-    base call-kind `try(...)` fact authority slice is complete. The lowerer
+    callee-path consumers. The lowerer sum metadata helper published-map slice
+    is complete for sum type/variant lookup consumers. The lowerer base
+    call-kind `try(...)` fact authority slice is complete. The lowerer
     base call-kind Result method fact-authority slice is complete for
     semantic-product-addressed `Result.ok(...)`, `Result.error(...)`, and
     `Result.why(...)` calls. The lowerer `Result.why(...)` source-query
@@ -933,6 +934,11 @@ Task template:
       now resolve callee return facts from the published definition-path
       return-fact map instead of scanning raw return facts by definition path.
       Missing published metadata fails closed for the resolved callee path.
+    - Completed slice: semantic-product-addressed sum type and variant
+      metadata consumers now resolve through published sum path and
+      sum-path/variant-name maps instead of scanning raw metadata vectors.
+      Missing published metadata fails closed for resolved sum metadata
+      lookups.
     - Completed slice: semantic-product-addressed direct-call payloads for
       `Result.ok(...)` now resolve payload type metadata from published
       binding/query facts before direct callee collection or struct

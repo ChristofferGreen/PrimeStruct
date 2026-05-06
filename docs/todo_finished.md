@@ -6,6 +6,27 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 6, 2026)**
+- [x] TODO-4298: Publish sum metadata lookup
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-06
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes resolved sum
+    metadata consumers read published sum path and sum-path/variant-name maps
+    instead of scanning raw sum metadata vectors.
+  - acceptance:
+    - Semantic-product publication records sum type metadata by path id.
+    - Semantic-product publication records sum variant metadata by sum path id
+      and variant name id.
+    - Lowerer sum metadata helpers fail closed when matching raw metadata
+      exists without a published lookup entry.
+  - stop_rule: Stop once path-based sum metadata consumers fail closed without
+    published sum metadata lookup entries and tests pin the published lookup.
+  - evidence: Added published sum type and variant metadata lookup maps plus
+    lookup helpers, rewired the lowerer sum metadata adapter helpers to use
+    them, added adapter regressions for stale/raw sum metadata, refreshed graph
+    source locks, and skipped local test execution per the lite workflow.
+
 - [x] TODO-4298: Publish return path lookup
   - owner: ai
   - created_at: 2026-04-28

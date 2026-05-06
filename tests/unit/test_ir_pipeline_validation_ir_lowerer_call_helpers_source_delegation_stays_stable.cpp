@@ -2546,6 +2546,104 @@ TEST_CASE("ir lowerer return-by-path helper ignores raw path facts without publi
   CHECK(returnFact == nullptr);
 }
 
+TEST_CASE("ir lowerer sum metadata helpers use published lookup maps") {
+  primec::SemanticProgram semanticProgram;
+  const primec::SymbolId choicePathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/Choice");
+  const primec::SymbolId rightNameId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "right");
+
+  semanticProgram.sumTypeMetadata.push_back(primec::SemanticProgramSumTypeMetadata{
+      .fullPath = "/Choice",
+      .isPublic = false,
+      .activeTagTypeText = "u32",
+      .payloadStorageText = "array",
+      .variantCount = 1,
+      .semanticNodeId = 8101,
+  });
+  semanticProgram.sumTypeMetadata.push_back(primec::SemanticProgramSumTypeMetadata{
+      .fullPath = "/Choice",
+      .isPublic = false,
+      .activeTagTypeText = "u32",
+      .payloadStorageText = "array",
+      .variantCount = 2,
+      .semanticNodeId = 8102,
+  });
+  semanticProgram.publishedRoutingLookups.sumTypeMetadataIndicesByPathId
+      .insert_or_assign(choicePathId, 1);
+
+  semanticProgram.sumVariantMetadata.push_back(primec::SemanticProgramSumVariantMetadata{
+      .sumPath = "/Choice",
+      .variantName = "right",
+      .variantIndex = 0,
+      .tagValue = 0,
+      .hasPayload = false,
+      .payloadTypeText = "",
+      .semanticNodeId = 8201,
+  });
+  semanticProgram.sumVariantMetadata.push_back(primec::SemanticProgramSumVariantMetadata{
+      .sumPath = "/Choice",
+      .variantName = "right",
+      .variantIndex = 1,
+      .tagValue = 17,
+      .hasPayload = true,
+      .payloadTypeText = "i32",
+      .semanticNodeId = 8202,
+  });
+  const uint64_t rightKey =
+      (static_cast<uint64_t>(choicePathId) << 32) |
+      static_cast<uint64_t>(rightNameId);
+  semanticProgram.publishedRoutingLookups
+      .sumVariantMetadataIndicesBySumPathAndVariantNameId.insert_or_assign(rightKey, 1);
+
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  const auto *sumMetadata =
+      primec::ir_lowerer::findSemanticProductSumTypeMetadata(
+          semanticTargets, "/Choice");
+  REQUIRE(sumMetadata != nullptr);
+  CHECK(sumMetadata->semanticNodeId == 8102);
+  CHECK(sumMetadata->variantCount == 2);
+
+  const auto *variantMetadata =
+      primec::ir_lowerer::findSemanticProductSumVariantMetadata(
+          semanticTargets, "/Choice", "right");
+  REQUIRE(variantMetadata != nullptr);
+  CHECK(variantMetadata->semanticNodeId == 8202);
+  CHECK(variantMetadata->tagValue == 17);
+  CHECK(variantMetadata->payloadTypeText == "i32");
+}
+
+TEST_CASE("ir lowerer sum metadata helpers ignore raw metadata without published lookup") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.sumTypeMetadata.push_back(primec::SemanticProgramSumTypeMetadata{
+      .fullPath = "/Choice",
+      .isPublic = false,
+      .activeTagTypeText = "u32",
+      .payloadStorageText = "array",
+      .variantCount = 2,
+      .semanticNodeId = 8301,
+  });
+  semanticProgram.sumVariantMetadata.push_back(primec::SemanticProgramSumVariantMetadata{
+      .sumPath = "/Choice",
+      .variantName = "right",
+      .variantIndex = 1,
+      .tagValue = 1,
+      .hasPayload = true,
+      .payloadTypeText = "i32",
+      .semanticNodeId = 8302,
+  });
+  primec::semanticProgramInternCallTargetString(semanticProgram, "/Choice");
+  primec::semanticProgramInternCallTargetString(semanticProgram, "right");
+
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  CHECK(primec::ir_lowerer::findSemanticProductSumTypeMetadata(
+            semanticTargets, "/Choice") == nullptr);
+  CHECK(primec::ir_lowerer::findSemanticProductSumVariantMetadata(
+            semanticTargets, "/Choice", "right") == nullptr);
+}
+
 TEST_CASE("ir lowerer semantic-product adapter ignores on_error definition-path fallback") {
   primec::Definition mainDef;
   mainDef.fullPath = "/main";

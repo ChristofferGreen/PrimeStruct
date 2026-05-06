@@ -397,6 +397,8 @@ struct SemanticProgramPublishedRoutingLookups {
   std::unordered_map<uint64_t, std::size_t> bindingFactIndicesByExpr;
   std::unordered_map<uint64_t, std::size_t> returnFactIndicesByDefinitionId;
   std::unordered_map<SymbolId, std::size_t> returnFactIndicesByDefinitionPathId;
+  std::unordered_map<SymbolId, std::size_t> sumTypeMetadataIndicesByPathId;
+  std::unordered_map<uint64_t, std::size_t> sumVariantMetadataIndicesBySumPathAndVariantNameId;
   std::unordered_map<uint64_t, std::size_t> collectionSpecializationIndicesByExpr;
   std::unordered_map<uint64_t, std::size_t> onErrorFactIndicesByDefinitionId;
   std::unordered_map<SymbolId, std::size_t> onErrorFactIndicesByDefinitionPathId;
@@ -525,6 +527,14 @@ const SemanticProgramOnErrorFact *semanticProgramLookupPublishedOnErrorFactByDef
 const SemanticProgramReturnFact *semanticProgramLookupPublishedReturnFactByDefinitionPathId(
     const SemanticProgram &semanticProgram,
     SymbolId definitionPathId);
+const SemanticProgramSumTypeMetadata *semanticProgramLookupPublishedSumTypeMetadataByPathId(
+    const SemanticProgram &semanticProgram,
+    SymbolId fullPathId);
+const SemanticProgramSumVariantMetadata *
+semanticProgramLookupPublishedSumVariantMetadataBySumPathAndVariantNameId(
+    const SemanticProgram &semanticProgram,
+    SymbolId sumPathId,
+    SymbolId variantNameId);
 const SemanticProgramCollectionSpecialization *
 semanticProgramLookupPublishedCollectionSpecializationBySemanticId(
     const SemanticProgram &semanticProgram,
