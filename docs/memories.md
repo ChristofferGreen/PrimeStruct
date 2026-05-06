@@ -81,6 +81,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: Direct `Result.ok(...)` arithmetic payload calls such as `multiply(...)` are syntax-owned builtin payloads and must not require semantic-product query metadata before normal expression-kind inference can classify them.
 - Evidence: The saved release log showed `missing semantic-product Result.ok payload metadata: multiply` and unsupported auto-bound `Result.and_then` payloads; `IrLowererPackedResultHelpers.cpp` and `IrLowererResultMetadataHelpers.cpp` now exempt builtin operators from semantic query requirements alongside builtin comparisons.
 
+### return-info-precompute-requires-callable-map
+- Updated: 2026-05-06
+- Tags: ir, semantics, return-info
+- Fact: Semantic-product return-info precomputation enumerates callable definitions only through `callableSummaryIndicesByPathId`, so tests that manually create callable summaries must seed that published map.
+- Evidence: `precomputeSemanticProductReturnInfoCache(...)` now fails closed for raw callable summaries without the map, and inference get-return-info setup tests pin both mapped and raw-only paths.
+
 ### semantic-product-pick-target-query-facts
 - Updated: 2026-05-01
 - Tags: semantics, ir, sums

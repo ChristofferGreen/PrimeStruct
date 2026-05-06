@@ -324,47 +324,30 @@ bool precomputeSemanticProductReturnInfoCache(const LowerInferenceGetReturnInfoS
   std::vector<const Definition *> definitions;
   const auto &publishedCallableSummaryIndices =
       input.semanticProgram->publishedRoutingLookups.callableSummaryIndicesByPathId;
-  definitions.reserve(!publishedCallableSummaryIndices.empty() ? publishedCallableSummaryIndices.size()
-                                                               : callableSummaries.size());
+  definitions.reserve(publishedCallableSummaryIndices.size());
 
-  if (!publishedCallableSummaryIndices.empty()) {
-    for (const auto &[pathId, callableSummaryIndex] : publishedCallableSummaryIndices) {
-      if (callableSummaryIndex >= input.semanticProgram->callableSummaries.size()) {
-        errorOut = "missing semantic-product callable summary path id";
-        return false;
-      }
-      const std::string_view pathView = semanticProgramResolveCallTargetString(
-          *input.semanticProgram, pathId);
-      if (pathView.empty()) {
-        errorOut = "missing semantic-product callable summary path id";
-        return false;
-      }
-      const auto defIt = input.defMap->find(std::string(pathView));
-      if (defIt == input.defMap->end() || defIt->second == nullptr) {
-        errorOut = "native backend cannot resolve definition: " + std::string(pathView);
-        return false;
-      }
-      definitions.push_back(defIt->second);
+  if (publishedCallableSummaryIndices.empty() && !callableSummaries.empty()) {
+    errorOut = "missing semantic-product callable summary path id";
+    return false;
+  }
+
+  for (const auto &[pathId, callableSummaryIndex] : publishedCallableSummaryIndices) {
+    if (callableSummaryIndex >= input.semanticProgram->callableSummaries.size()) {
+      errorOut = "missing semantic-product callable summary path id";
+      return false;
     }
-  } else {
-    for (const auto *entry : callableSummaries) {
-      if (entry == nullptr || entry->fullPathId == InvalidSymbolId) {
-        errorOut = "missing semantic-product callable summary path id";
-        return false;
-      }
-      const std::string_view pathView = semanticProgramResolveCallTargetString(
-          *input.semanticProgram, entry->fullPathId);
-      if (pathView.empty()) {
-        errorOut = "missing semantic-product callable summary path id";
-        return false;
-      }
-      const auto defIt = input.defMap->find(std::string(pathView));
-      if (defIt == input.defMap->end() || defIt->second == nullptr) {
-        errorOut = "native backend cannot resolve definition: " + std::string(pathView);
-        return false;
-      }
-      definitions.push_back(defIt->second);
+    const std::string_view pathView = semanticProgramResolveCallTargetString(
+        *input.semanticProgram, pathId);
+    if (pathView.empty()) {
+      errorOut = "missing semantic-product callable summary path id";
+      return false;
     }
+    const auto defIt = input.defMap->find(std::string(pathView));
+    if (defIt == input.defMap->end() || defIt->second == nullptr) {
+      errorOut = "native backend cannot resolve definition: " + std::string(pathView);
+      return false;
+    }
+    definitions.push_back(defIt->second);
   }
   sortDefinitionsForDeterministicReturnSolve(definitions);
 
@@ -866,26 +849,6 @@ bool runLowerInferenceGetReturnInfoSetup(const LowerInferenceGetReturnInfoSetupI
       .inferArrayElementKind = input.inferArrayElementKind,
       .lowerMatchToIf = input.lowerMatchToIf,
   };
-  getReturnInfoOut = [defMap, returnInfoCache, returnInferenceStack, semanticProgram, semanticIndex, returnInfoSetupInput, inferenceError](
-                         const std::string &path, ReturnInfo &outInfo) -> bool {
-    auto cached = returnInfoCache->find(path);
-    if (cached != returnInfoCache->end()) {
-      outInfo = cached->second;
-      return true;
-    }
-    return runLowerInferenceGetReturnInfoStep(
-        {
-            .defMap = defMap,
-            .returnInfoCache = returnInfoCache,
-            .returnInferenceStack = returnInferenceStack,
-            .returnInfoSetupInput = &returnInfoSetupInput,
-            .semanticProgram = semanticProgram,
-            .semanticIndex = semanticIndex,
-        },
-        path,
-        outInfo,
-        *inferenceError);
-  };
   const LowerInferenceGetReturnInfoSetupInput precomputeInput = {
       .program = program,
       .defMap = defMap,
@@ -917,6 +880,26 @@ bool runLowerInferenceGetReturnInfoSetup(const LowerInferenceGetReturnInfoSetupI
             : precomputeOrderedReturnInfoCache(precomputeInput, returnInfoSetupInput, errorOut))) {
     return false;
   }
+  getReturnInfoOut = [defMap, returnInfoCache, returnInferenceStack, semanticProgram, semanticIndex, returnInfoSetupInput, inferenceError](
+                         const std::string &path, ReturnInfo &outInfo) -> bool {
+    auto cached = returnInfoCache->find(path);
+    if (cached != returnInfoCache->end()) {
+      outInfo = cached->second;
+      return true;
+    }
+    return runLowerInferenceGetReturnInfoStep(
+        {
+            .defMap = defMap,
+            .returnInfoCache = returnInfoCache,
+            .returnInferenceStack = returnInferenceStack,
+            .returnInfoSetupInput = &returnInfoSetupInput,
+            .semanticProgram = semanticProgram,
+            .semanticIndex = semanticIndex,
+        },
+        path,
+        outInfo,
+        *inferenceError);
+  };
   errorOut.clear();
   return true;
 }

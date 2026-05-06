@@ -1705,6 +1705,12 @@ TEST_CASE("semantic product callable summaries use fullPathId without fullPath s
         std::string::npos);
   CHECK(irLowererReturnInfoHelpers.find("entry->fullPathId == InvalidSymbolId || callablePath.empty()") !=
         std::string::npos);
+  CHECK(irLowererReturnInfoHelpers.find("definitions.reserve(publishedCallableSummaryIndices.size())") !=
+        std::string::npos);
+  CHECK(irLowererReturnInfoHelpers.find("publishedCallableSummaryIndices.empty() && !callableSummaries.empty()") !=
+        std::string::npos);
+  CHECK(irLowererReturnInfoHelpers.find("definitions.reserve(!publishedCallableSummaryIndices.empty()") ==
+        std::string::npos);
 }
 
 TEST_CASE("semantic product binding facts use resolvedPathId without resolvedPath shadow field") {

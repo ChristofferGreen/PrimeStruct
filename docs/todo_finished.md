@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 6, 2026)**
+- [x] TODO-4298: Require return-info callable maps
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-06
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes semantic-product
+    return-info precomputation enumerate callable definitions only through
+    `callableSummaryIndicesByPathId` instead of falling back to raw callable
+    summary vectors.
+  - acceptance:
+    - Setup-stage return-info precompute fails closed when raw callable
+      summaries exist without a published callable-summary lookup map.
+    - Hand-built semantic-product return-info tests seed
+      `callableSummaryIndicesByPathId` before expecting callable metadata to
+      precompute.
+    - Source-lock coverage prevents restoring the old raw-summary reserve and
+      enumeration branch.
+  - stop_rule: Stop once the setup precompute path requires the published
+    callable-summary map and tests pin both mapped and raw-only behavior.
+  - evidence: Removed raw callable-summary fallback enumeration from
+    return-info precompute, added a raw-only setup failure regression,
+    refreshed positive semantic-product tests and source locks, updated
+    TODO/design docs, and skipped local test execution per the lite workflow.
+
 - [x] TODO-4298: Require routing coverage maps
   - owner: ai
   - created_at: 2026-04-28

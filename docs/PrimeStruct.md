@@ -1047,6 +1047,8 @@ Compile-pipeline publication contract:
   consumers read the published sum metadata maps instead of scanning raw metadata vectors.
 - Callable summary lookups read the published callable-summary path map and fail closed when a matching raw summary has
   no published lookup entry.
+- Return-info precomputation follows the same callable-summary map authority: setup-stage precompute enumerates callable
+  definitions through `callableSummaryIndicesByPathId` instead of using raw callable-summary vectors as a fallback.
 - Base call-kind inference now applies the same graph-backed rule for `try(...)`: semantic-product `try` facts provide
   the value kind before local `Result` state can infer it, and missing facts leave the semantic-product path unresolved.
 - Native indexed-access validation now follows the graph-backed rule for index
