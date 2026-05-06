@@ -664,6 +664,9 @@ Task template:
     The lowerer `buffer_store(...)` target-kind slice is complete for
     semantic-product-backed binding, local-auto, and query buffer facts before
     stale local buffer metadata can classify target element kinds.
+    The lowerer `dispatch(...)` dimension-kind slice is complete for
+    semantic-product-backed binding, local-auto, and query scalar facts before
+    legacy expression-kind inference can classify GPU dispatch dimensions.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -777,6 +780,11 @@ Task template:
       kinds. Published non-buffer facts suppress stale local buffer fallback
       while syntax-only compatibility keeps the legacy local and args-pack
       inference path.
+    - Completed slice: semantic-product-addressed `dispatch(...)` dimension
+      validation now consumes published binding, local-auto, and query scalar
+      facts before legacy expression-kind inference can classify GPU dispatch
+      dimensions. Published non-`i32` facts suppress stale expression
+      inference while syntax-only compatibility keeps the legacy fallback.
     - Completed slice: semantic-product-addressed dispatch inference now
       consumes published method receiver binding, query, or local-auto facts
       for `FileError.why()` and nested `try(file.method())` file operations

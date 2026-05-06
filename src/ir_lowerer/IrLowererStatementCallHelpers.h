@@ -70,7 +70,9 @@ DispatchStatementEmitResult tryEmitDispatchStatement(
     const std::function<int32_t()> &allocTempLocal,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
     std::vector<IrInstruction> &instructions,
-    std::string &error);
+    std::string &error,
+    const SemanticProgram *semanticProgram = nullptr,
+    const SemanticProductIndex *semanticIndex = nullptr);
 DirectCallStatementEmitResult tryEmitDirectCallStatement(
     const Expr &stmt,
     const LocalMap &localsIn,

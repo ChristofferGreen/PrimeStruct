@@ -127,7 +127,9 @@ bool runLowerStatementsCallsStep(const LowerStatementsCallsStepInput &input,
         return input.emitInlineDefinitionCall(callExpr, callee, callLocals, expectValue);
       },
       instructions,
-      errorOut);
+      errorOut,
+      input.semanticProgram,
+      input.semanticIndex);
   if (dispatchResult == DispatchStatementEmitResult::Error) {
     return false;
   }

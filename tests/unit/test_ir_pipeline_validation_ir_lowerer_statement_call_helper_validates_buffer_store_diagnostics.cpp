@@ -326,6 +326,139 @@ TEST_CASE("ir lowerer statement call helper emits dispatch statements") {
   CHECK(jumpIfZeroCount == 3);
 }
 
+TEST_CASE("ir lowerer dispatch dimensions use semantic facts before expression inference") {
+  using EmitResult = primec::ir_lowerer::DispatchStatementEmitResult;
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr kernelName;
+  kernelName.kind = primec::Expr::Kind::Name;
+  kernelName.name = "Kernel";
+  kernelName.namespacePrefix = "/main";
+
+  auto makeDimension = [](std::string name, uint64_t semanticNodeId) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Name;
+    expr.name = name;
+    expr.semanticNodeId = semanticNodeId;
+    return expr;
+  };
+  auto makeQueryDimension = [](uint64_t semanticNodeId) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = "size";
+    expr.semanticNodeId = semanticNodeId;
+    return expr;
+  };
+
+  primec::SemanticProgram semanticProgram;
+  auto internType = [&](const std::string &typeText) {
+    return primec::semanticProgramInternCallTargetString(semanticProgram, typeText);
+  };
+  auto addBindingFact = [&](uint64_t semanticNodeId, std::string name, std::string typeText) {
+    const std::size_t factIndex = semanticProgram.bindingFacts.size();
+    semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+        .name = name,
+        .bindingTypeText = "f32",
+        .semanticNodeId = semanticNodeId,
+        .bindingTypeTextId = internType(typeText),
+    });
+    semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr[semanticNodeId] = factIndex;
+  };
+  auto addLocalAutoFact = [&](uint64_t semanticNodeId, std::string name, std::string typeText) {
+    const std::size_t factIndex = semanticProgram.localAutoFacts.size();
+    semanticProgram.localAutoFacts.push_back(primec::SemanticProgramLocalAutoFact{
+        .bindingName = name,
+        .bindingTypeText = "f32",
+        .semanticNodeId = semanticNodeId,
+        .bindingTypeTextId = internType(typeText),
+    });
+    semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr[semanticNodeId] = factIndex;
+  };
+  auto addQueryFact = [&](uint64_t semanticNodeId, std::string typeText) {
+    const std::size_t factIndex = semanticProgram.queryFacts.size();
+    semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+        .callName = "size",
+        .queryTypeText = "f32",
+        .bindingTypeText = "f32",
+        .semanticNodeId = semanticNodeId,
+        .queryTypeTextId = internType(typeText),
+        .bindingTypeTextId = internType(typeText),
+    });
+    semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr[semanticNodeId] = factIndex;
+  };
+  addBindingFact(7301, "gx", "i32");
+  addLocalAutoFact(7302, "gy", "i32");
+  addQueryFact(7303, "i32");
+  addBindingFact(7304, "bad", "u64");
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  primec::Definition kernelDef;
+  kernelDef.fullPath = "/main/Kernel";
+  kernelDef.transforms.push_back(primec::Transform{.name = "compute"});
+
+  auto emitDispatch = [&](std::vector<primec::Expr> dimensions,
+                          ValueKind fallbackKind,
+                          int &inferCalls,
+                          std::string &errorOut) {
+    primec::Expr stmt;
+    stmt.kind = primec::Expr::Kind::Call;
+    stmt.name = "dispatch";
+    stmt.args = {kernelName, dimensions[0], dimensions[1], dimensions[2]};
+
+    std::vector<primec::IrInstruction> instructions;
+    int32_t nextLocal = 0;
+    inferCalls = 0;
+    errorOut.clear();
+    return primec::ir_lowerer::tryEmitDispatchStatement(
+        stmt,
+        {},
+        [](const primec::Expr &) { return std::string("/main/Kernel"); },
+        [&](const std::string &path) -> const primec::Definition * {
+          return path == "/main/Kernel" ? &kernelDef : nullptr;
+        },
+        [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          ++inferCalls;
+          return fallbackKind;
+        },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+        [&]() { return nextLocal++; },
+        [](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool) {
+          return true;
+        },
+        instructions,
+        errorOut,
+        &semanticProgram,
+        &semanticIndex);
+  };
+
+  int inferCalls = 0;
+  std::string error;
+  CHECK(emitDispatch(
+            {makeDimension("gx", 7301), makeDimension("gy", 7302), makeQueryDimension(7303)},
+            ValueKind::Float32,
+            inferCalls,
+            error) == EmitResult::Emitted);
+  CHECK(inferCalls == 0);
+  CHECK(error.empty());
+
+  CHECK(emitDispatch(
+            {makeDimension("gx", 7301), makeDimension("bad", 7304), makeQueryDimension(7303)},
+            ValueKind::Int32,
+            inferCalls,
+            error) == EmitResult::Error);
+  CHECK(inferCalls == 0);
+  CHECK(error == "dispatch requires i32 dimensions");
+
+  CHECK(emitDispatch(
+            {makeDimension("gx", 0), makeDimension("gy", 0), makeQueryDimension(0)},
+            ValueKind::Int32,
+            inferCalls,
+            error) == EmitResult::Emitted);
+  CHECK(inferCalls == 3);
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer statement call helper validates dispatch diagnostics") {
   using EmitResult = primec::ir_lowerer::DispatchStatementEmitResult;
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;

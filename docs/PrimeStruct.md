@@ -711,6 +711,11 @@ Planned non-template inference migration contract:
   local-auto, and query facts before stale local buffer metadata can answer.
   Published non-buffer facts suppress stale buffer metadata while syntax-only
   compatibility keeps the legacy local and args-pack fallback.
+- Completed lowerer-side dispatch dimension slice: GPU dispatch statement
+  validation now classifies the three dimension expressions from published
+  binding, local-auto, and query facts before legacy expression inference.
+  Published non-`i32` facts suppress stale expression inference while
+  syntax-only compatibility keeps the old fallback.
 - Completed lowerer-side count-of-map-access slice: native count-kind
   inference for `count(map[key])` now asks the indexed access expression for
   its published query value kind before consulting local map metadata. Stale
@@ -1201,6 +1206,9 @@ Compile-pipeline publication contract:
   facts: semantic-product binding, local-auto, and query facts provide the
   buffer element kind before local buffer metadata is consulted, and published
   non-buffer facts suppress stale local fallback.
+- GPU `dispatch(...)` dimension validation follows the same graph-backed
+  scalar rule: semantic-product binding, local-auto, and query facts must
+  classify each dimension as `i32` before legacy expression inference is used.
 - Dump-stage handling should be able to read either the syntax-facing canonical AST dump or the future semantic-product
   dump from the same compile-pipeline success result without re-running semantics.
 - Backend/runtime entrypoints should consume the semantic product from compile-pipeline output once available rather

@@ -398,6 +398,59 @@ static std::optional<LocalInfo::ValueKind> resolveBufferTargetElementKind(
   return std::nullopt;
 }
 
+static std::optional<LocalInfo::ValueKind> resolveStatementValueKindFromSemanticFacts(
+    const Expr &expr,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex,
+    bool &hasSemanticValueFactOut) {
+  hasSemanticValueFactOut = false;
+  if (semanticProgram == nullptr || semanticIndex == nullptr || expr.semanticNodeId == 0) {
+    return std::nullopt;
+  }
+
+  auto tryResolveSemanticTypeText =
+      [&](SymbolId typeTextId, const std::string &typeText) -> std::optional<LocalInfo::ValueKind> {
+    const std::string resolvedTypeText =
+        resolveStatementCallSemanticTypeText(semanticProgram, typeTextId, typeText);
+    if (resolvedTypeText.empty()) {
+      return std::nullopt;
+    }
+    const LocalInfo::ValueKind valueKind = valueKindFromTypeName(resolvedTypeText);
+    if (valueKind == LocalInfo::ValueKind::Unknown) {
+      return std::nullopt;
+    }
+    return valueKind;
+  };
+
+  if (const auto *bindingFact = findSemanticProductBindingFact(*semanticIndex, expr);
+      bindingFact != nullptr) {
+    hasSemanticValueFactOut = true;
+    return tryResolveSemanticTypeText(bindingFact->bindingTypeTextId,
+                                      bindingFact->bindingTypeText);
+  }
+
+  if (const auto *localAutoFact =
+          findSemanticProductLocalAutoFact(semanticProgram, *semanticIndex, expr);
+      localAutoFact != nullptr) {
+    hasSemanticValueFactOut = true;
+    return tryResolveSemanticTypeText(localAutoFact->bindingTypeTextId,
+                                      localAutoFact->bindingTypeText);
+  }
+
+  if (const auto *queryFact = findSemanticProductQueryFact(semanticProgram, *semanticIndex, expr);
+      queryFact != nullptr) {
+    hasSemanticValueFactOut = true;
+    if (auto valueKind =
+            tryResolveSemanticTypeText(queryFact->bindingTypeTextId, queryFact->bindingTypeText);
+        valueKind.has_value()) {
+      return valueKind;
+    }
+    return tryResolveSemanticTypeText(queryFact->queryTypeTextId, queryFact->queryTypeText);
+  }
+
+  return std::nullopt;
+}
+
 static bool rewriteMapInsertHelperStatementToBuiltin(
     const Expr &stmt,
     const LocalMap &localsIn,
@@ -1182,7 +1235,9 @@ DispatchStatementEmitResult tryEmitDispatchStatement(
     const std::function<int32_t()> &allocTempLocal,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
     std::vector<IrInstruction> &instructions,
-    std::string &error) {
+    std::string &error,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
   if (stmt.kind != Expr::Kind::Call || !isSimpleCallName(stmt, "dispatch")) {
     return DispatchStatementEmitResult::NotMatched;
   }
@@ -1216,7 +1271,15 @@ DispatchStatementEmitResult tryEmitDispatchStatement(
   }
 
   for (size_t i = 1; i <= 3; ++i) {
-    const LocalInfo::ValueKind dimKind = inferExprKind(stmt.args[i], localsIn);
+    bool hasSemanticDimensionFact = false;
+    const std::optional<LocalInfo::ValueKind> semanticDimKind =
+        resolveStatementValueKindFromSemanticFacts(
+            stmt.args[i], semanticProgram, semanticIndex, hasSemanticDimensionFact);
+    const LocalInfo::ValueKind dimKind =
+        semanticDimKind.has_value()
+            ? *semanticDimKind
+            : (hasSemanticDimensionFact ? LocalInfo::ValueKind::Unknown
+                                        : inferExprKind(stmt.args[i], localsIn));
     if (dimKind != LocalInfo::ValueKind::Int32) {
       error = "dispatch requires i32 dimensions";
       return DispatchStatementEmitResult::Error;
