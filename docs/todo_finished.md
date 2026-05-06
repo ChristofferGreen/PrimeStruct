@@ -6,6 +6,33 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 6, 2026)**
+- [x] TODO-4298: Use File call query facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-06
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes lowerer call-base
+    inference classify direct `File<Mode>(...)` calls and nested
+    `try(File<Mode>(...))` operands from published query facts before
+    syntax-owned file-handle-call fallback can answer.
+  - acceptance:
+    - Direct `File<Mode>(...)` base-kind inference reads the expression's
+      semantic-product query fact before syntax fallback.
+    - Nested `try(File<Mode>(...))` operand base-kind inference reads the
+      operand's semantic-product query fact before syntax fallback.
+    - Published non-`File<Mode>` query facts suppress stale
+      constructor-shaped file-call classification.
+    - Syntax-only contexts without semantic-product query facts keep the
+      existing file-call fallback.
+  - stop_rule: Stop once direct and nested file-call base-kind consumers
+    depend on graph-owned query facts and focused tests pin graph-backed,
+    stale-query, and syntax-only behavior.
+  - evidence: Added semantic-product query fact handling for direct
+    `File<Mode>(...)` call-base inference and nested `try(File<Mode>(...))`
+    operands, covered graph-backed file, graph-backed non-file, and
+    syntax-only fallback paths, updated TODO/docs notes, and skipped broad
+    baseline validation per the lite workflow.
+
 - [x] TODO-4298: Use receiver query facts
   - owner: ai
   - created_at: 2026-04-28

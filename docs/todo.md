@@ -570,6 +570,10 @@ Task template:
     semantic-product-backed `FileError.why()` and file-handle method
     base-kind inference before stale indexed args-pack or local metadata can
     classify those receiver paths.
+    The lowerer direct file-call query slice is complete for
+    semantic-product-backed `File<Mode>(...)` and nested `try(File<Mode>(...))`
+    base-kind inference before syntax-owned file-handle-call fallback can
+    classify those calls as `i64`.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -754,6 +758,12 @@ Task template:
       or named-local metadata can answer. Published non-file receiver facts
       suppress stale local metadata; syntax-only compatibility keeps the old
       local fallback.
+    - Completed slice: semantic-product-addressed direct `File<Mode>(...)`
+      and nested `try(File<Mode>(...))` base-kind inference now consume the
+      call's published query fact before syntax-owned file-handle-call
+      fallback can classify the expression as `i64`. Published non-file query
+      facts suppress the legacy constructor-shaped fallback; syntax-only
+      compatibility keeps the old fallback.
     - Completed slice: semantic-product-addressed native tail-dispatch
       map/vector receiver classification now resolves interned query/binding
       type IDs before consulting copied query text fields, so collection

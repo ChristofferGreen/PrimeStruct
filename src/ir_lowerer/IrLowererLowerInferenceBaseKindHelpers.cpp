@@ -191,6 +191,36 @@ bool inferBaseSetupSemanticFileHandleMethodKind(const Expr &receiver,
   return true;
 }
 
+bool inferBaseSetupSemanticFileHandleCallKind(const Expr &expr,
+                                              const SemanticProgram *semanticProgram,
+                                              const SemanticProductIndex *semanticIndex,
+                                              LocalInfo::ValueKind &kindOut,
+                                              bool &hasSemanticCallOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  hasSemanticCallOut = false;
+  if (!isFileHandleCall(expr) || semanticProgram == nullptr ||
+      semanticIndex == nullptr || expr.semanticNodeId == 0) {
+    return false;
+  }
+  const auto *queryFact =
+      findSemanticProductQueryFactBySemanticId(*semanticIndex, expr);
+  if (queryFact == nullptr) {
+    return false;
+  }
+  hasSemanticCallOut = true;
+  std::string callType = resolveBaseSetupSemanticFactTypeText(
+      *semanticProgram, queryFact->queryTypeText, queryFact->queryTypeTextId);
+  if (callType.empty()) {
+    callType = resolveBaseSetupSemanticFactTypeText(
+        *semanticProgram, queryFact->bindingTypeText, queryFact->bindingTypeTextId);
+  }
+  if (!isBaseSetupFileHandleTypeText(callType)) {
+    return false;
+  }
+  kindOut = LocalInfo::ValueKind::Int64;
+  return true;
+}
+
 bool inferBaseSetupSemanticQueryFactValueKind(const Expr &expr,
                                               const SemanticProgram *semanticProgram,
                                               const SemanticProductIndex *semanticIndex,
@@ -843,6 +873,14 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
     }
     return false;
   }
+  bool hasSemanticFileHandleCall = false;
+  if (inferBaseSetupSemanticFileHandleCallKind(
+          expr, semanticProgram, semanticIndex, kindOut, hasSemanticFileHandleCall)) {
+    return true;
+  }
+  if (hasSemanticFileHandleCall) {
+    return true;
+  }
   if (isFileHandleCall(expr)) {
     kindOut = LocalInfo::ValueKind::Int64;
     return true;
@@ -924,6 +962,14 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
       }
     }
     if (arg.kind == Expr::Kind::Call) {
+      bool hasSemanticFileHandleArg = false;
+      if (inferBaseSetupSemanticFileHandleCallKind(
+              arg, semanticProgram, semanticIndex, kindOut, hasSemanticFileHandleArg)) {
+        return true;
+      }
+      if (hasSemanticFileHandleArg) {
+        return true;
+      }
       if (isFileHandleCall(arg)) {
         kindOut = LocalInfo::ValueKind::Int64;
         return true;
