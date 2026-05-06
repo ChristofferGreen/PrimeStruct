@@ -11,6 +11,7 @@
 #include "IrLowererOnErrorHelpers.h"
 #include "IrLowererReturnInferenceHelpers.h"
 #include "IrLowererRuntimeErrorHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupMathHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
 #include "primec/Ast.h"
@@ -258,6 +259,16 @@ bool buildSetupTypeStructAndUninitializedResolutionSetup(
     const InferStructExprPathFn &resolveExprPath,
     SetupTypeStructAndUninitializedResolutionSetup &out,
     std::string &error);
+bool buildSetupTypeStructAndUninitializedResolutionSetup(
+    const SemanticProgram *semanticProgram,
+    const std::unordered_set<std::string> &structNames,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    std::size_t structReserveHint,
+    const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const InferStructExprPathFn &resolveExprPath,
+    SetupTypeStructAndUninitializedResolutionSetup &out,
+    std::string &error);
 bool buildStructAndUninitializedResolutionSetup(
     std::size_t structReserveHint,
     const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
@@ -267,7 +278,25 @@ bool buildStructAndUninitializedResolutionSetup(
     const InferStructExprPathFn &resolveExprPath,
     StructAndUninitializedResolutionSetup &out,
     std::string &error);
+bool buildStructAndUninitializedResolutionSetup(
+    const SemanticProgram *semanticProgram,
+    std::size_t structReserveHint,
+    const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const ValueKindFromTypeNameFn &valueKindFromTypeName,
+    const InferStructExprPathFn &resolveExprPath,
+    StructAndUninitializedResolutionSetup &out,
+    std::string &error);
 UninitializedResolutionAdapters makeUninitializedResolutionAdapters(
+    const ResolveStructTypeNameFn &resolveStructTypePath,
+    const InferStructExprPathFn &resolveExprPath,
+    const UninitializedFieldBindingIndex &fieldIndex,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveStructFieldSlotFn &resolveStructFieldSlot,
+    std::string &error);
+UninitializedResolutionAdapters makeUninitializedResolutionAdapters(
+    const SemanticProgram *semanticProgram,
     const ResolveStructTypeNameFn &resolveStructTypePath,
     const InferStructExprPathFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex,
@@ -345,12 +374,29 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
     const InferStructExprPathFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex,
     const ResolveStructFieldSlotFn &resolveStructFieldSlot);
+std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const InferStructExprPathFn &resolveExprPath,
+    const UninitializedFieldBindingIndex &fieldIndex,
+    const ResolveStructFieldSlotFn &resolveStructFieldSlot,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex);
 InferStructExprWithLocalsFn makeInferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveStructTypeNameFn &resolveStructTypeName,
     const InferStructExprPathFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex,
     const ResolveStructFieldSlotFn &resolveStructFieldSlot);
+InferStructExprWithLocalsFn makeInferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const InferStructExprPathFn &resolveExprPath,
+    const UninitializedFieldBindingIndex &fieldIndex,
+    const ResolveStructFieldSlotFn &resolveStructFieldSlot,
+    const SemanticProgram *semanticProgram);
 bool collectUninitializedFieldBindingsFromIndex(const UninitializedFieldBindingIndex &fieldIndex,
                                                 const std::string &structPath,
                                                 std::vector<UninitializedFieldBindingInfo> &fieldsOut);

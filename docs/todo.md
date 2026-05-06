@@ -650,6 +650,9 @@ Task template:
     semantic-product-backed `take(storage)` and `borrow(storage)` base-kind
     inference before stale local uninitialized-storage metadata can classify
     value kinds.
+    The lowerer uninitialized try payload struct slice is complete for
+    semantic-product-backed `try(...)` value-type facts before stale local
+    `Result` payload struct metadata can classify aggregate payloads.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -739,6 +742,12 @@ Task template:
       `Result.error(...)`, `Result.why(...)`, or combinator source values.
       Published non-Result facts suppress stale local metadata while
       syntax-only compatibility keeps the legacy fallback.
+    - Completed slice: semantic-product-addressed uninitialized/aggregate
+      struct inference now consumes published `try(...)` value-type facts
+      before stale local `Result` payload struct metadata can classify
+      aggregate `try(status)` payloads. Published scalar try facts suppress
+      stale aggregate metadata while syntax-only compatibility keeps the
+      legacy fallback.
     - Completed slice: semantic-product-addressed dispatch inference now
       consumes published method receiver binding, query, or local-auto facts
       for `FileError.why()` and nested `try(file.method())` file operations

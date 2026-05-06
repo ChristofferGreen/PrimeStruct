@@ -360,6 +360,42 @@ std::string inferUninitializedTargetStructPath(const std::string &typeText,
   return specializedPath.str();
 }
 
+std::string resolveSemanticUninitializedFactText(const SemanticProgram &semanticProgram,
+                                                 const std::string &text,
+                                                 SymbolId textId) {
+  if (textId != InvalidSymbolId) {
+    std::string resolvedText =
+        std::string(semanticProgramResolveCallTargetString(semanticProgram, textId));
+    if (!resolvedText.empty()) {
+      return trimTemplateTypeText(resolvedText);
+    }
+  }
+  return trimTemplateTypeText(text);
+}
+
+std::string resolveSemanticTryValueStructPath(const Expr &expr,
+                                              const SemanticProgram *semanticProgram,
+                                              const SemanticProductIndex *semanticIndex,
+                                              const ResolveStructTypeNameFn &resolveStructTypeName,
+                                              bool &hasSemanticTryFactOut) {
+  hasSemanticTryFactOut = false;
+  if (semanticProgram == nullptr || semanticIndex == nullptr || expr.semanticNodeId == 0 ||
+      expr.kind != Expr::Kind::Call || !isSimpleCallName(expr, "try")) {
+    return "";
+  }
+  const auto *tryFact = findSemanticProductTryFactBySemanticId(*semanticIndex, expr);
+  if (tryFact == nullptr) {
+    return "";
+  }
+  hasSemanticTryFactOut = true;
+  const std::string valueTypeText =
+      resolveSemanticUninitializedFactText(*semanticProgram, tryFact->valueType, tryFact->valueTypeId);
+  if (valueTypeText.empty()) {
+    return "";
+  }
+  return inferUninitializedTargetStructPath(valueTypeText, expr.namespacePrefix, resolveStructTypeName);
+}
+
 } // namespace
 
 std::string inferStructPathFromCallTargetWithFieldBindingIndex(
@@ -467,6 +503,28 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
     const InferStructExprPathFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex,
     const ResolveStructFieldSlotFn &resolveStructFieldSlot) {
+  return inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+      expr,
+      localsIn,
+      defMap,
+      resolveStructTypeName,
+      resolveExprPath,
+      fieldIndex,
+      resolveStructFieldSlot,
+      nullptr,
+      nullptr);
+}
+
+std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const InferStructExprPathFn &resolveExprPath,
+    const UninitializedFieldBindingIndex &fieldIndex,
+    const ResolveStructFieldSlotFn &resolveStructFieldSlot,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
   std::function<std::string(const Expr &, const LocalMap &)> inferStructExprPath;
   std::unordered_set<std::string> visitedDefs;
   inferStructExprPath = [&](const Expr &exprIn, const LocalMap &localsInExpr) -> std::string {
@@ -657,6 +715,12 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
         return inferStructExprPath(exprIn.args.front(), localsInExpr);
       }
       if (!exprIn.isMethodCall && isSimpleCallName(exprIn, "try") && exprIn.args.size() == 1) {
+        bool hasSemanticTryFact = false;
+        const std::string semanticTryStruct = resolveSemanticTryValueStructPath(
+            exprIn, semanticProgram, semanticIndex, resolveStructTypeName, hasSemanticTryFact);
+        if (!semanticTryStruct.empty() || hasSemanticTryFact) {
+          return semanticTryStruct;
+        }
         const Expr &resultExpr = exprIn.args.front();
         if (resultExpr.kind == Expr::Kind::Name) {
           auto localIt = localsInExpr.find(resultExpr.name);
@@ -912,10 +976,40 @@ InferStructExprWithLocalsFn makeInferStructExprPathFromDefinitionMapByCallTarget
     const InferStructExprPathFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex,
     const ResolveStructFieldSlotFn &resolveStructFieldSlot) {
-  return [defMap, resolveStructTypeName, resolveExprPath, fieldIndex, resolveStructFieldSlot](
-             const Expr &expr, const LocalMap &localsIn) {
+  return makeInferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+      defMap,
+      resolveStructTypeName,
+      resolveExprPath,
+      fieldIndex,
+      resolveStructFieldSlot,
+      nullptr);
+}
+
+InferStructExprWithLocalsFn makeInferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const InferStructExprPathFn &resolveExprPath,
+    const UninitializedFieldBindingIndex &fieldIndex,
+    const ResolveStructFieldSlotFn &resolveStructFieldSlot,
+    const SemanticProgram *semanticProgram) {
+  SemanticProductIndex semanticIndex = buildSemanticProductIndex(semanticProgram);
+  return [defMap,
+          resolveStructTypeName,
+          resolveExprPath,
+          fieldIndex,
+          resolveStructFieldSlot,
+          semanticProgram,
+          semanticIndex](const Expr &expr, const LocalMap &localsIn) {
     return inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
-        expr, localsIn, defMap, resolveStructTypeName, resolveExprPath, fieldIndex, resolveStructFieldSlot);
+        expr,
+        localsIn,
+        defMap,
+        resolveStructTypeName,
+        resolveExprPath,
+        fieldIndex,
+        resolveStructFieldSlot,
+        semanticProgram,
+        &semanticIndex);
   };
 }
 

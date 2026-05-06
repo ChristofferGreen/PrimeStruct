@@ -6,6 +6,28 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 6, 2026)**
+- [x] TODO-4298: Use try value facts for aggregate payloads
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-06
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes uninitialized/aggregate
+    struct inference classify `try(...)` payload structs from published try
+    value-type facts before stale local Result metadata can answer.
+  - acceptance:
+    - Published try value-type IDs classify aggregate payload structs before
+      copied text or local Result payload metadata.
+    - Published scalar try facts suppress stale aggregate local metadata.
+    - Syntax-only `try(localResult)` inference keeps the legacy local Result
+      payload struct fallback.
+  - stop_rule: Stop once aggregate `try(...)` payload struct inference
+    depends on graph-owned try facts and focused tests pin graph-backed,
+    stale-local, and syntax-only behavior.
+  - evidence: Threaded the semantic product/index into uninitialized struct
+    inference, resolved try value-type text by interned ID before copied text,
+    covered aggregate, scalar-suppression, and syntax-only paths, and skipped
+    broad baseline validation per the lite workflow.
+
 - [x] TODO-4298: Use local Result source facts
   - owner: ai
   - created_at: 2026-04-28

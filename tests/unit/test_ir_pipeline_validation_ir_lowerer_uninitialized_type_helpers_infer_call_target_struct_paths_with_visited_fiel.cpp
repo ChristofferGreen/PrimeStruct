@@ -900,4 +900,102 @@ TEST_CASE("ir lowerer uninitialized type helpers infer forwarded stdlib map cons
   CHECK(mapStruct.rfind("/std/collections/experimental_map/Map__", 0) == 0);
 }
 
+TEST_CASE("ir lowerer uninitialized type helpers use semantic try value facts") {
+  const std::unordered_map<std::string, const primec::Definition *> defMap;
+  auto resolveStructTypeName = [](const std::string &typeName,
+                                  const std::string &,
+                                  std::string &resolvedPath) {
+    if (typeName == "Pair") {
+      resolvedPath = "/pkg/Pair";
+      return true;
+    }
+    if (typeName == "StalePair") {
+      resolvedPath = "/pkg/StalePair";
+      return true;
+    }
+    return false;
+  };
+  auto resolveExprPath = [](const primec::Expr &) {
+    return std::string();
+  };
+  const primec::ir_lowerer::UninitializedFieldBindingIndex fieldIndex;
+  auto resolveStructFieldSlot = [](const std::string &,
+                                   const std::string &,
+                                   primec::ir_lowerer::StructSlotFieldInfo &) {
+    return false;
+  };
+
+  primec::ir_lowerer::LocalInfo staleResult;
+  staleResult.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  staleResult.resultValueStructType = "/pkg/StalePair";
+  primec::ir_lowerer::LocalMap locals = {{"status", staleResult}};
+
+  auto makeTryExpr = [](uint64_t semanticNodeId) {
+    primec::Expr status;
+    status.kind = primec::Expr::Kind::Name;
+    status.name = "status";
+
+    primec::Expr tryExpr;
+    tryExpr.kind = primec::Expr::Kind::Call;
+    tryExpr.name = "try";
+    tryExpr.semanticNodeId = semanticNodeId;
+    tryExpr.args.push_back(status);
+    return tryExpr;
+  };
+
+  primec::SemanticProgram semanticProgram;
+  auto addTryFact = [&](uint64_t semanticNodeId,
+                        std::string staleValueTypeText,
+                        std::string publishedValueTypeText) {
+    const std::size_t factIndex = semanticProgram.tryFacts.size();
+    semanticProgram.tryFacts.push_back(primec::SemanticProgramTryFact{
+        .valueType = staleValueTypeText,
+        .semanticNodeId = semanticNodeId,
+        .valueTypeId = primec::semanticProgramInternCallTargetString(
+            semanticProgram,
+            publishedValueTypeText),
+    });
+    semanticProgram.publishedRoutingLookups.tryFactIndicesByExpr[semanticNodeId] = factIndex;
+  };
+  addTryFact(3101, "StalePair", "Pair");
+  addTryFact(3102, "StalePair", "i32");
+  const primec::ir_lowerer::SemanticProductIndex semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  const primec::Expr semanticTry = makeTryExpr(3101);
+  CHECK(primec::ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+            semanticTry,
+            locals,
+            defMap,
+            resolveStructTypeName,
+            resolveExprPath,
+            fieldIndex,
+            resolveStructFieldSlot,
+            &semanticProgram,
+            &semanticIndex) == "/pkg/Pair");
+
+  const primec::Expr nonStructTry = makeTryExpr(3102);
+  CHECK(primec::ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+            nonStructTry,
+            locals,
+            defMap,
+            resolveStructTypeName,
+            resolveExprPath,
+            fieldIndex,
+            resolveStructFieldSlot,
+            &semanticProgram,
+            &semanticIndex)
+            .empty());
+
+  const primec::Expr syntaxOnlyTry = makeTryExpr(0);
+  CHECK(primec::ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+            syntaxOnlyTry,
+            locals,
+            defMap,
+            resolveStructTypeName,
+            resolveExprPath,
+            fieldIndex,
+            resolveStructFieldSlot) == "/pkg/StalePair");
+}
+
 TEST_SUITE_END();

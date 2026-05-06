@@ -1177,6 +1177,9 @@ Compile-pipeline publication contract:
   published `bindingFactIndicesByExpr` entries and does not scan raw binding facts by scope/site as a recovery path.
 - Base call-kind inference now applies the same graph-backed rule for `try(...)`: semantic-product `try` facts provide
   the value kind before local `Result` state can infer it, and missing facts leave the semantic-product path unresolved.
+- Aggregate/uninitialized struct inference applies that rule to `try(...)` payloads as well: published try value-type
+  facts provide the payload struct before local `Result` struct metadata can infer it, published scalar facts suppress
+  stale local aggregate metadata, and syntax-only contexts keep the existing fallback.
 - Native indexed-access validation now follows the graph-backed rule for index
   expressions: query, binding, and local-auto type facts provide the index kind
   before legacy expression inference is consulted.
