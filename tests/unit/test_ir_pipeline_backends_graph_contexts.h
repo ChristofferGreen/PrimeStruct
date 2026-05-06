@@ -593,6 +593,10 @@ TEST_CASE("public lowerer testing headers stay in sync with semantic-product hel
         std::string::npos);
   CHECK(semanticTargetsSource.find("semanticProgramOnErrorFactView(*semanticProgram)") ==
         std::string::npos);
+  CHECK(semanticTargetsSource.find("populateSemanticFactIndex(index.returnFactsByDefinitionId,") !=
+        std::string::npos);
+  CHECK(semanticTargetsSource.find("semanticProgramReturnFactView(*semanticProgram)") ==
+        std::string::npos);
 }
 
 TEST_CASE("public lowerer testing umbrellas keep alias owners ahead of users") {

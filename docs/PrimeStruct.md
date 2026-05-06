@@ -1046,6 +1046,8 @@ Compile-pipeline publication contract:
   materializes a return definition-path index as a recovery surface. The explicit return-by-path helper remains
   available for call-site consumers that already resolved a callee path, but it reads the published definition-path
   return-fact map instead of scanning raw return facts.
+- Return definition-id indexing follows the same map authority: lowerer semantic-product indexes populate return facts
+  from `returnFactIndicesByDefinitionId` and do not backfill matching raw return facts by definition semantic node id.
 - Sum type and variant metadata helpers follow the same publication-authority rule: resolved sum path/variant-name
   consumers read the published sum metadata maps instead of scanning raw metadata vectors.
 - Callable summary lookups read the published callable-summary path map and fail closed when a matching raw summary has

@@ -305,6 +305,8 @@ TEST_CASE("ir lowerer return inference helper reads semantic product return fact
       .bindingTypeTextId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "Result<i64, FileError>"),
   });
+  semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId
+      .insert_or_assign(41, 0);
 
   primec::ir_lowerer::EntryReturnConfig out;
   std::string error;

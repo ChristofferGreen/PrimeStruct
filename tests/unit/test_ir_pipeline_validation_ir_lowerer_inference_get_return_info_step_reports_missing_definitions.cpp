@@ -522,6 +522,8 @@ TEST_CASE("ir lowerer inference get-return-info step uses semantic-product retur
       .bindingTypeTextId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "Result<Pair, MyError>"),
   });
+  semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId
+      .insert_or_assign(91, 0);
   const auto semanticIndex = primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
 
   const primec::ir_lowerer::LowerInferenceGetReturnInfoStepInput input = {
@@ -598,6 +600,8 @@ TEST_CASE("ir lowerer inference get-return-info setup precomputes semantic-produ
       .bindingTypeTextId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "vector<Pair>"),
   });
+  semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId
+      .insert_or_assign(97, 0);
   const auto semanticIndex = primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
 
   std::function<bool(const std::string &, primec::ir_lowerer::ReturnInfo &)> getReturnInfo;

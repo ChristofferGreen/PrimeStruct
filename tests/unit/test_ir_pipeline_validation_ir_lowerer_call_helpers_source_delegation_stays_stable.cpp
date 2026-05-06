@@ -2360,6 +2360,8 @@ TEST_CASE("ir lowerer semantic-product adapter joins facts by semantic id withou
       .definitionPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/legacy_main"),
   });
+  semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId
+      .insert_or_assign(61, 0);
   semanticProgram.localAutoFacts.push_back(primec::SemanticProgramLocalAutoFact{
       .scopePath = "/main",
       .bindingName = "selected",
@@ -2513,6 +2515,47 @@ TEST_CASE("ir lowerer semantic-product index does not expose return path fallbac
       primec::ir_lowerer::findSemanticProductReturnFact(
           &semanticProgram, semanticIndex, mainDef);
   CHECK(returnFact == nullptr);
+}
+
+TEST_CASE("ir lowerer semantic-product index requires published return definition-id maps") {
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 7801;
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
+      .returnKind = "return",
+      .structPath = "/i32",
+      .bindingTypeText = "i32",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 9,
+      .sourceColumn = 3,
+      .semanticNodeId = 7801,
+      .definitionPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+  });
+
+  const auto rawOnlySemanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+  CHECK(rawOnlySemanticIndex.returnFactsByDefinitionId.empty());
+  const auto *rawOnlyReturnFact =
+      primec::ir_lowerer::findSemanticProductReturnFact(
+          &semanticProgram, rawOnlySemanticIndex, mainDef);
+  CHECK(rawOnlyReturnFact == nullptr);
+
+  semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId
+      .insert_or_assign(7801, 0);
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+  CHECK(semanticIndex.returnFactsByDefinitionId.count(7801) == 1);
+  const auto *returnFact =
+      primec::ir_lowerer::findSemanticProductReturnFact(
+          &semanticProgram, semanticIndex, mainDef);
+  REQUIRE(returnFact != nullptr);
+  CHECK(returnFact->bindingTypeText == "i32");
 }
 
 TEST_CASE("ir lowerer return-by-path helper uses published definition-path facts") {

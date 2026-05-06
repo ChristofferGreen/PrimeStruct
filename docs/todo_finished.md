@@ -6,6 +6,31 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 6, 2026)**
+- [x] TODO-4298: Require return index maps
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-06
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes lowerer semantic-product
+    return definition-id indexes populate only from
+    `returnFactIndicesByDefinitionId` instead of backfilling raw return facts
+    from the semantic-product vector.
+  - acceptance:
+    - `buildSemanticProductIndex(...)` no longer scans raw return facts to
+      populate `returnFactsByDefinitionId`.
+    - Hand-built return fact tests seed `returnFactIndicesByDefinitionId`
+      before expecting definition-id return lookup to succeed.
+    - Raw return facts with matching definition semantic node ids are not
+      recovered by the lowerer semantic-product index or adapter path.
+  - stop_rule: Stop once definition-id return fact lookup requires the
+    published return map and focused tests pin both mapped and raw-only
+    behavior.
+  - evidence: Removed the raw return-fact backfill from
+    `buildSemanticProductIndex(...)`, refreshed hand-built semantic-product
+    return fixtures to publish their definition-id map entries, added a
+    raw-only return definition-id regression, updated source locks and docs,
+    and skipped local test execution per the lite workflow.
+
 - [x] TODO-4298: Require on_error index maps
   - owner: ai
   - created_at: 2026-04-28

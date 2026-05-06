@@ -188,6 +188,7 @@ void addVoidCallableSummaryForPath(primec::SemanticProgram &semanticProgram,
       .provenanceHandle = 0,
       .fullPathId = fullPathId,
   });
+  const auto returnFactIndex = semanticProgram.returnFacts.size();
   semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
       .returnKind = "void",
       .structPath = "",
@@ -201,6 +202,8 @@ void addVoidCallableSummaryForPath(primec::SemanticProgram &semanticProgram,
       .semanticNodeId = semanticNodeId,
       .definitionPathId = fullPathId,
   });
+  semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId
+      .insert_or_assign(semanticNodeId, returnFactIndex);
 }
 
 void addVoidCallableSummary(primec::SemanticProgram &semanticProgram, uint64_t semanticNodeId) {
@@ -3306,6 +3309,8 @@ TEST_CASE("ir lowerer keeps semantic-product direct-call targets authoritative o
       .definitionPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
   });
+  semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId
+      .insert_or_assign(81, semanticProgram.returnFacts.size() - 1);
   semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
       .scopePath = "/main",
       .callName = "/legacy",
@@ -4199,6 +4204,8 @@ TEST_CASE("ir lowerer rejects missing semantic-product local binding facts") {
       .definitionPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
   });
+  semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId
+      .insert_or_assign(81, semanticProgram.returnFacts.size() - 1);
   primec::IrLowerer lowerer;
   primec::IrModule module;
   primec::DiagnosticSinkReport diagnosticInfo;
@@ -4426,6 +4433,8 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
       .definitionPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
   });
+  semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId
+      .insert_or_assign(81, semanticProgram.returnFacts.size() - 1);
   semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
       .returnKind = "void",
       .structPath = "",
@@ -4440,6 +4449,8 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
       .definitionPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/callee"),
   });
+  semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId
+      .insert_or_assign(82, semanticProgram.returnFacts.size() - 1);
 
   std::string error;
   primec::DiagnosticSinkReport diagnosticInfo;
@@ -4893,6 +4904,8 @@ TEST_CASE("ir preparation rejects semantic-product local-auto path fallback in p
       .definitionPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/callee"),
   });
+  semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId
+      .insert_or_assign(183, semanticProgram.returnFacts.size() - 1);
   semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
       .returnKind = "void",
       .structPath = "",
@@ -4907,6 +4920,8 @@ TEST_CASE("ir preparation rejects semantic-product local-auto path fallback in p
       .definitionPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
   });
+  semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId
+      .insert_or_assign(181, semanticProgram.returnFacts.size() - 1);
   semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
       .scopePath = "/main",
       .callName = "callee",
@@ -5106,6 +5121,8 @@ TEST_CASE("ir lowerer rejects missing semantic-product entry parameter facts") {
       .definitionPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
   });
+  semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId
+      .insert_or_assign(81, semanticProgram.returnFacts.size() - 1);
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
@@ -5200,6 +5217,8 @@ TEST_CASE("ir lowerer rejects missing semantic-product callable result metadata"
       .definitionPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
   });
+  semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId
+      .insert_or_assign(82, semanticProgram.returnFacts.size() - 1);
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
@@ -5292,6 +5311,8 @@ TEST_CASE("ir lowerer rejects missing semantic-product callable summary path id"
       .definitionPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
   });
+  semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId
+      .insert_or_assign(8201, semanticProgram.returnFacts.size() - 1);
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
@@ -5391,6 +5412,8 @@ TEST_CASE("ir lowerer rejects missing semantic-product return binding types") {
       .definitionPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
   });
+  semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId
+      .insert_or_assign(83020, semanticProgram.returnFacts.size() - 1);
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
@@ -5444,6 +5467,8 @@ TEST_CASE("ir lowerer rejects missing semantic-product return definition path id
       .semanticNodeId = 9101,
       .definitionPathId = primec::InvalidSymbolId,
   });
+  semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId
+      .insert_or_assign(9101, semanticProgram.returnFacts.size() - 1);
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
@@ -5495,6 +5520,8 @@ TEST_CASE("ir lowerer rejects stale semantic-product return facts") {
       .structPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/i32"),
       .bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
   });
+  semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId
+      .insert_or_assign(9102, semanticProgram.returnFacts.size() - 1);
 
   std::string error;
   CHECK(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
@@ -5609,6 +5636,8 @@ TEST_CASE("ir lowerer rejects incomplete semantic-product query facts") {
       .definitionPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
   });
+  semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId
+      .insert_or_assign(83020, semanticProgram.returnFacts.size() - 1);
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
@@ -6533,6 +6562,8 @@ TEST_CASE("ir lowerer rejects missing semantic-product on_error handler path id"
       .definitionPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
   });
+  semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId
+      .insert_or_assign(9201, semanticProgram.returnFacts.size() - 1);
   semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
       .definitionPath = "/main",
       .returnKind = "void",
@@ -6632,6 +6663,8 @@ TEST_CASE("ir lowerer rejects missing semantic-product on_error facts") {
       .definitionPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/semantic/main"),
   });
+  semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId
+      .insert_or_assign(91, semanticProgram.returnFacts.size() - 1);
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
@@ -6710,6 +6743,8 @@ TEST_CASE("ir lowerer rejects stale semantic-product on_error facts") {
       .definitionPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
   });
+  semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId
+      .insert_or_assign(95, semanticProgram.returnFacts.size() - 1);
   semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
       .definitionPath = "/main",
       .returnKind = "void",
@@ -6817,6 +6852,8 @@ TEST_CASE("ir lowerer rejects stale semantic-product on_error result metadata") 
           primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
       .returnKindId = primec::semanticProgramInternCallTargetString(semanticProgram, "return"),
   });
+  semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId
+      .insert_or_assign(9601, semanticProgram.returnFacts.size() - 1);
   semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
       .definitionPath = "/main",
       .returnKind = "return",
@@ -6930,6 +6967,8 @@ TEST_CASE("ir lowerer rejects mismatched semantic-product on_error bound args") 
       .definitionPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
   });
+  semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId
+      .insert_or_assign(93, semanticProgram.returnFacts.size() - 1);
   semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
       .definitionPath = "/main",
       .returnKind = "void",

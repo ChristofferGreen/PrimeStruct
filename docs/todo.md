@@ -520,6 +520,8 @@ Task template:
     return definition-path adapter
     cache quarantine slice is complete while the explicit return-by-path
     helper remains available for resolved callee-path consumers. The lowerer
+    return semantic-index map-authority slice is complete for definition-id
+    fact lookup. The lowerer
     return-by-path helper published-map slice is complete for resolved
     callee-path consumers. The lowerer sum metadata helper published-map slice
     is complete for sum type/variant lookup consumers. The lowerer callable
