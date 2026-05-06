@@ -381,6 +381,11 @@ Planned non-template inference migration contract:
   lowerer-local `isFileHandle` metadata can classify the value kind. Published non-matching
   receiver facts suppress stale local metadata; no-fact syntax-only contexts keep the old
   fallback.
+- Completed lowerer-side dispatch Result method fact slice: dispatch inference for
+  `Result.ok(...)`, nested `try(Result.ok(...))`, `Result.error()`, and `Result.why()` now
+  consumes published payload binding/query facts before legacy Result method arity fallback can
+  classify the value kind. Missing semantic-product facts keep the dispatch value unresolved;
+  no-fact syntax-only contexts keep the old fallback.
 - Completed lowerer-side nested try file-method receiver slice: base-kind inference for
   `try(file.method())` now reads the file-method receiver's published binding, query, or
   local-auto fact before lowerer-local `isFileHandle` metadata can classify file operations as

@@ -6,6 +6,35 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 6, 2026)**
+- [x] TODO-4298: Use dispatch Result method facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-06
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes lowerer dispatch
+    inference classify `Result.ok(...)`, nested `try(Result.ok(...))`,
+    `Result.error()`, and `Result.why()` from published payload binding or
+    query facts before legacy Result method arity fallback can answer.
+  - acceptance:
+    - `Result.ok(call())` dispatch inference reads semantic-product query
+      facts before fallback expression-kind inference.
+    - `Result.ok(name)` dispatch inference reads semantic-product binding
+      facts before stale named-local value metadata.
+    - Nested `try(Result.ok(call()))` dispatch inference uses the same
+      semantic-product payload facts.
+    - Semantic-addressed `Result.error()` and `Result.why()` suppress the
+      legacy fallback when published facts are absent.
+    - Syntax-only contexts without semantic-product Result method facts keep
+      the existing Result method fallback.
+  - stop_rule: Stop once dispatch Result method consumers depend on
+    graph-owned payload facts and focused tests pin graph-backed,
+    stale-local, missing-fact, and syntax-only behavior.
+  - evidence: Added semantic-product Result method fact handling for
+    dispatch inference, covered query-backed payloads, binding-backed
+    payloads, nested `try(Result.ok(...))`, missing-fact suppression, and
+    syntax-only fallback paths, and skipped broad baseline validation per the
+    lite workflow.
+
 - [x] TODO-4298: Use dispatch method receiver facts
   - owner: ai
   - created_at: 2026-04-28

@@ -69,6 +69,22 @@ bool inferDispatchSetupResultValueKindFromResultTypeText(const std::string &type
   return inferDispatchSetupResultValueKindFromValueTypeText(resultArgs.front(), kindOut);
 }
 
+bool isDispatchSetupResultTypeMethodCall(const Expr &expr) {
+  return expr.kind == Expr::Kind::Call && expr.isMethodCall && !expr.args.empty() &&
+         expr.args.front().kind == Expr::Kind::Name && expr.args.front().name == "Result" &&
+         (expr.name == "ok" || expr.name == "error" || expr.name == "why");
+}
+
+bool hasSemanticProductDispatchResultMethodFactContext(const Expr &expr,
+                                                       const SemanticProgram *semanticProgram,
+                                                       const SemanticProductIndex *semanticIndex) {
+  if (semanticProgram != nullptr && semanticIndex != nullptr && expr.semanticNodeId != 0) {
+    return true;
+  }
+  return semanticProgram != nullptr && semanticIndex != nullptr && expr.name == "ok" &&
+         expr.args.size() > 1 && expr.args[1].semanticNodeId != 0;
+}
+
 bool isDispatchSetupFileErrorTypeText(const std::string &typeText) {
   std::string normalized = trimTemplateTypeText(typeText);
   if (!normalized.empty() && normalized.front() == '/') {
@@ -321,6 +337,56 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
         return stateInOut.inferExprKind(rewrittenExpr, localsIn);
       }
     }
+    auto resolveDefinitionCallForResultInfo = [&](const Expr &candidate) -> const Definition * {
+      if (candidate.isMethodCall || defMap == nullptr || !resolveExprPath) {
+        return nullptr;
+      }
+      std::string path = resolveExprPath(candidate);
+      if (path.empty() && !candidate.name.empty()) {
+        path = candidate.name;
+        if (!path.empty() && path.front() != '/') {
+          path.insert(path.begin(), '/');
+        }
+      }
+      if (path.empty()) {
+        return nullptr;
+      }
+      auto defIt = defMap->find(path);
+      return defIt != defMap->end() ? defIt->second : nullptr;
+    };
+    auto resolveMethodCallDefinitionForResultInfo =
+        [&](const Expr &candidate, const LocalMap &candidateLocals) -> const Definition * {
+      if (!stateInOut.resolveMethodCallDefinition) {
+        return nullptr;
+      }
+      return stateInOut.resolveMethodCallDefinition(candidate, candidateLocals);
+    };
+    auto inferSemanticResultMethodKind = [&](const Expr &candidate,
+                                             LocalInfo::ValueKind &kindOut) {
+      kindOut = LocalInfo::ValueKind::Unknown;
+      if (!isDispatchSetupResultTypeMethodCall(candidate) ||
+          !hasSemanticProductDispatchResultMethodFactContext(
+              candidate, semanticProgram, semanticIndex)) {
+        return false;
+      }
+      if (candidate.name != "ok") {
+        return true;
+      }
+      ResultExprInfo resultInfo;
+      if (resolveResultExprInfoFromLocals(candidate,
+                                          localsIn,
+                                          resolveMethodCallDefinitionForResultInfo,
+                                          resolveDefinitionCallForResultInfo,
+                                          stateInOut.getReturnInfo,
+                                          stateInOut.inferExprKind,
+                                          resultInfo,
+                                          semanticProgram,
+                                          semanticIndex) &&
+          resultInfo.isResult) {
+        kindOut = resultInfo.hasValue ? resultInfo.valueKind : LocalInfo::ValueKind::Int32;
+      }
+      return true;
+    };
     auto resolveTryValueKind = [&](const Expr &tryExpr, LocalInfo::ValueKind &kindOut) -> bool {
       kindOut = LocalInfo::ValueKind::Unknown;
       std::string semanticTryFactError;
@@ -435,6 +501,9 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
         return false;
       }
       if (resultExpr.kind == Expr::Kind::Call) {
+        if (inferSemanticResultMethodKind(resultExpr, kindOut)) {
+          return true;
+        }
         std::string accessName;
         if (getBuiltinArrayAccessName(resultExpr, accessName) && resultExpr.args.size() == 2 &&
             resultExpr.args.front().kind == Expr::Kind::Name) {
@@ -661,7 +730,7 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
 
         if (isSimpleCallName(expr, "try") && expr.args.size() == 1) {
           LocalInfo::ValueKind tryValueKind = LocalInfo::ValueKind::Unknown;
-          if (resolveTryValueKind(expr, tryValueKind) && tryValueKind != LocalInfo::ValueKind::Unknown) {
+          if (resolveTryValueKind(expr, tryValueKind)) {
             return tryValueKind;
           }
           if (!inferenceError->empty()) {
@@ -695,6 +764,10 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
             return LocalInfo::ValueKind::String;
           }
           if (receiverExpr.name == "Result") {
+            LocalInfo::ValueKind semanticResultMethodKind = LocalInfo::ValueKind::Unknown;
+            if (inferSemanticResultMethodKind(expr, semanticResultMethodKind)) {
+              return semanticResultMethodKind;
+            }
             if (expr.name == "ok") {
               return expr.args.size() > 1 ? stateInOut.inferExprKind(expr.args[1], localsIn)
                                           : LocalInfo::ValueKind::Int32;
