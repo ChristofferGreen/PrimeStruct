@@ -145,22 +145,32 @@ TEST_CASE("ir lowerer inference expr-kind dispatch infers try from indexed map t
 TEST_CASE("ir lowerer inference expr-kind dispatch prefers graph-backed indexed map value facts") {
   using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
 
+  auto addQueryFact = [](primec::SemanticProgram &semanticProgram,
+                         uint64_t semanticNodeId,
+                         const std::string &queryTypeText) {
+    primec::SemanticProgramQueryFact queryFact;
+    queryFact.semanticNodeId = semanticNodeId;
+    queryFact.callName = "at";
+    queryFact.callNameId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, "at");
+    queryFact.resolvedPathId = primec::semanticProgramInternCallTargetString(
+        semanticProgram, "/std/collections/map/at");
+    queryFact.queryTypeText = queryTypeText;
+    queryFact.queryTypeTextId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, queryTypeText);
+    queryFact.bindingTypeText = queryTypeText;
+    queryFact.bindingTypeTextId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, queryTypeText);
+    const size_t index = semanticProgram.queryFacts.size();
+    semanticProgram.queryFacts.push_back(std::move(queryFact));
+    semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(
+        semanticNodeId,
+        index);
+  };
+
   primec::SemanticProgram semanticProgram;
-  primec::SemanticProgramQueryFact queryFact;
-  queryFact.semanticNodeId = 7301;
-  queryFact.callName = "at";
-  queryFact.callNameId =
-      primec::semanticProgramInternCallTargetString(semanticProgram, "at");
-  queryFact.resolvedPathId = primec::semanticProgramInternCallTargetString(
-      semanticProgram, "/std/collections/map/at");
-  queryFact.queryTypeText = "string";
-  queryFact.queryTypeTextId =
-      primec::semanticProgramInternCallTargetString(semanticProgram, "string");
-  queryFact.bindingTypeText = "string";
-  queryFact.bindingTypeTextId =
-      primec::semanticProgramInternCallTargetString(semanticProgram, "string");
-  semanticProgram.queryFacts.push_back(std::move(queryFact));
-  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(7301, 0);
+  addQueryFact(semanticProgram, 7301, "string");
+  addQueryFact(semanticProgram, 7302, "i32");
   const auto semanticIndex =
       primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
 
@@ -245,7 +255,7 @@ TEST_CASE("ir lowerer inference expr-kind dispatch prefers graph-backed indexed 
   primec::ir_lowerer::LocalInfo staleMapInfo;
   staleMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
   staleMapInfo.mapKeyKind = Kind::Int32;
-  staleMapInfo.mapValueKind = Kind::Int32;
+  staleMapInfo.mapValueKind = Kind::String;
   locals.emplace("values", staleMapInfo);
 
   primec::Expr valuesName;
@@ -270,9 +280,13 @@ TEST_CASE("ir lowerer inference expr-kind dispatch prefers graph-backed indexed 
 
   CHECK(state.inferExprKind(countExpr, locals) == Kind::Int32);
 
-  accessExpr.semanticNodeId = 0;
+  accessExpr.semanticNodeId = 7302;
   countExpr.args = {accessExpr};
   CHECK(state.inferExprKind(countExpr, locals) == Kind::Unknown);
+
+  accessExpr.semanticNodeId = 0;
+  countExpr.args = {accessExpr};
+  CHECK(state.inferExprKind(countExpr, locals) == Kind::Int32);
 }
 
 TEST_CASE("ir lowerer inference expr-kind dispatch uses semantic map receiver facts") {

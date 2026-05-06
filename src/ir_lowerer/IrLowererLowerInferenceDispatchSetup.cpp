@@ -959,6 +959,11 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
                 stateInOut.inferExprKind(accessExpr, localsIn) == LocalInfo::ValueKind::String) {
               return LocalInfo::ValueKind::Int32;
             }
+            std::string semanticAccessType;
+            if (resolveDispatchSetupSemanticReceiverTypeText(
+                    accessExpr, semanticProgram, semanticIndex, semanticAccessType)) {
+              return LocalInfo::ValueKind::Unknown;
+            }
             const Expr &accessTarget = accessExpr.args.front();
             if (accessTarget.kind == Expr::Kind::Name) {
               auto it = localsIn.find(accessTarget.name);

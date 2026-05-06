@@ -378,6 +378,10 @@ Planned non-template inference migration contract:
   `try(map.tryAt(...))` operands now reads published receiver collection or binding facts before
   local-map fallback can classify the helper result. Published non-map receiver facts suppress
   stale local map metadata; no-fact syntax-only contexts keep the old fallback.
+- Completed lowerer-side dispatch count access fact slice: dispatch inference for
+  `count(map.at(...))` now treats published indexed-access query facts as authoritative before
+  local map metadata can classify the value as string-backed. Published non-string access facts
+  suppress stale local string-map metadata; no-fact syntax-only contexts keep the old fallback.
 - Completed lowerer-side try operand Result fact slice: base-kind inference for
   `try(operand)` now reads the operand's published binding, query, or local-auto Result fact
   before lowerer-local `isResult` and args-pack metadata can classify the value kind. Published
