@@ -104,6 +104,49 @@ bool isBaseSetupFileHandleTypeText(const std::string &typeText) {
   return base == "File" || base == "std/file/File";
 }
 
+bool resolveBaseSetupSemanticReceiverTypeText(
+    const Expr &receiver,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex,
+    std::string &typeTextOut) {
+  typeTextOut.clear();
+  if (semanticProgram == nullptr || semanticIndex == nullptr ||
+      receiver.semanticNodeId == 0) {
+    return false;
+  }
+  if (const auto *queryFact =
+          findSemanticProductQueryFactBySemanticId(*semanticIndex, receiver)) {
+    typeTextOut = resolveBaseSetupSemanticFactTypeText(
+        *semanticProgram,
+        queryFact->queryTypeText,
+        queryFact->queryTypeTextId);
+    if (typeTextOut.empty()) {
+      typeTextOut = resolveBaseSetupSemanticFactTypeText(
+          *semanticProgram,
+          queryFact->bindingTypeText,
+          queryFact->bindingTypeTextId);
+    }
+    return true;
+  }
+  if (const auto *bindingFact =
+          findSemanticProductBindingFact(*semanticIndex, receiver)) {
+    typeTextOut = resolveBaseSetupSemanticFactTypeText(
+        *semanticProgram,
+        bindingFact->bindingTypeText,
+        bindingFact->bindingTypeTextId);
+    return true;
+  }
+  if (const auto *localAutoFact =
+          findSemanticProductLocalAutoFactBySemanticId(*semanticIndex, receiver)) {
+    typeTextOut = resolveBaseSetupSemanticFactTypeText(
+        *semanticProgram,
+        localAutoFact->bindingTypeText,
+        localAutoFact->bindingTypeTextId);
+    return true;
+  }
+  return false;
+}
+
 bool inferBaseSetupSemanticFileErrorWhyKind(const Expr &receiver,
                                             const SemanticProgram *semanticProgram,
                                             const SemanticProductIndex *semanticIndex,
@@ -111,22 +154,13 @@ bool inferBaseSetupSemanticFileErrorWhyKind(const Expr &receiver,
                                             bool &hasSemanticReceiverOut) {
   kindOut = LocalInfo::ValueKind::Unknown;
   hasSemanticReceiverOut = false;
-  if (semanticProgram == nullptr || semanticIndex == nullptr ||
-      receiver.semanticNodeId == 0) {
-    return false;
-  }
-  const auto *bindingFact =
-      findSemanticProductBindingFact(*semanticIndex, receiver);
-  if (bindingFact == nullptr) {
+  std::string receiverType;
+  if (!resolveBaseSetupSemanticReceiverTypeText(
+          receiver, semanticProgram, semanticIndex, receiverType)) {
     return false;
   }
   hasSemanticReceiverOut = true;
-  const std::string bindingType =
-      resolveBaseSetupSemanticFactTypeText(
-          *semanticProgram,
-          bindingFact->bindingTypeText,
-          bindingFact->bindingTypeTextId);
-  if (!isBaseSetupFileErrorTypeText(bindingType)) {
+  if (!isBaseSetupFileErrorTypeText(receiverType)) {
     return false;
   }
   kindOut = LocalInfo::ValueKind::String;
@@ -141,23 +175,16 @@ bool inferBaseSetupSemanticFileHandleMethodKind(const Expr &receiver,
                                                 bool &hasSemanticReceiverOut) {
   kindOut = LocalInfo::ValueKind::Unknown;
   hasSemanticReceiverOut = false;
-  if (!isBaseSetupFileHandleMethodName(methodName) ||
-      semanticProgram == nullptr || semanticIndex == nullptr ||
-      receiver.semanticNodeId == 0) {
+  if (!isBaseSetupFileHandleMethodName(methodName)) {
     return false;
   }
-  const auto *bindingFact =
-      findSemanticProductBindingFact(*semanticIndex, receiver);
-  if (bindingFact == nullptr) {
+  std::string receiverType;
+  if (!resolveBaseSetupSemanticReceiverTypeText(
+          receiver, semanticProgram, semanticIndex, receiverType)) {
     return false;
   }
   hasSemanticReceiverOut = true;
-  const std::string bindingType =
-      resolveBaseSetupSemanticFactTypeText(
-          *semanticProgram,
-          bindingFact->bindingTypeText,
-          bindingFact->bindingTypeTextId);
-  if (!isBaseSetupFileHandleTypeText(bindingType)) {
+  if (!isBaseSetupFileHandleTypeText(receiverType)) {
     return false;
   }
   kindOut = LocalInfo::ValueKind::Int32;
@@ -768,7 +795,7 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
         }
       }
     }
-    if (!expr.args.empty() && expr.args.front().kind == Expr::Kind::Name) {
+    if (!expr.args.empty()) {
       const Expr &receiver = expr.args.front();
       bool hasSemanticFileHandleReceiver = false;
       if (inferBaseSetupSemanticFileHandleMethodKind(receiver,
@@ -782,6 +809,9 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
       if (hasSemanticFileHandleReceiver) {
         return true;
       }
+    }
+    if (!expr.args.empty() && expr.args.front().kind == Expr::Kind::Name) {
+      const Expr &receiver = expr.args.front();
       auto it = localsIn.find(receiver.name);
       if (it != localsIn.end() && it->second.isFileHandle) {
         if (isBaseSetupFileHandleMethodName(expr.name)) {

@@ -355,6 +355,11 @@ Planned non-template inference migration contract:
   `write_bytes`, `flush`, or `close` as returning `i32`. A published non-`File<Mode>`
   binding fact suppresses stale local file-handle metadata; syntax-only compatibility keeps the
   old local fallback.
+- Completed lowerer-side method receiver query/local-auto slice: the same `FileError.why()`
+  and file-handle method base-kind paths now read published receiver query and local-auto facts,
+  not only binding facts, before indexed args-pack or named-local fallback can answer. Published
+  non-file receiver facts suppress stale local metadata; no-fact syntax-only contexts keep the
+  old local fallback.
 - Completed lowerer-side tail-dispatch collection query ID slice: native tail-dispatch map/vector
   target classification now resolves `bindingTypeTextId` and `queryTypeTextId` before copied
   query-fact text fields, so collection receiver classification consumes graph-owned query

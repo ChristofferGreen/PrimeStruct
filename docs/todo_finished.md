@@ -6,6 +6,33 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 6, 2026)**
+- [x] TODO-4298: Use receiver query facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-06
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes lowerer call-base
+    inference classify `FileError.why()` and file-handle method receivers
+    from published query and local-auto facts as well as binding facts.
+  - acceptance:
+    - Method receiver base-kind inference reads semantic-product query facts
+      for receiver expressions with semantic node ids.
+    - Method receiver base-kind inference reads semantic-product local-auto
+      facts for receiver expressions with semantic node ids.
+    - Published non-file receiver facts suppress stale indexed args-pack or
+      named local metadata.
+    - Syntax-only contexts without semantic-product receiver facts keep the
+      existing local fallback.
+  - stop_rule: Stop once `FileError.why()` and file-handle method base-kind
+    consumers share graph-owned query/binding/local-auto receiver fact
+    resolution and focused tests pin graph-backed, stale-local, and
+    syntax-only boundaries.
+  - evidence: Added shared semantic receiver type resolution for query,
+    binding, and local-auto facts in call-base inference, covered query-backed
+    `FileError.why()`, local-auto-backed file-handle methods, and stale local
+    suppression for non-file facts, updated TODO/docs notes, and skipped broad
+    baseline validation per the lite workflow.
+
 - [x] TODO-4298: Use File receiver facts
   - owner: ai
   - created_at: 2026-04-28
