@@ -374,6 +374,10 @@ Planned non-template inference migration contract:
   collection or binding facts before syntax, definition, or local-map fallback can classify the
   helper result. Published non-map receiver facts suppress stale local map metadata; no-fact
   syntax-only contexts keep the old fallback.
+- Completed lowerer-side base map receiver fact slice: base-kind inference for nested
+  `try(map.tryAt(...))` operands now reads published receiver collection or binding facts before
+  local-map fallback can classify the helper result. Published non-map receiver facts suppress
+  stale local map metadata; no-fact syntax-only contexts keep the old fallback.
 - Completed lowerer-side try operand Result fact slice: base-kind inference for
   `try(operand)` now reads the operand's published binding, query, or local-auto Result fact
   before lowerer-local `isResult` and args-pack metadata can classify the value kind. Published

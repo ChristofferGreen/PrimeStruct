@@ -223,6 +223,92 @@ bool inferBaseSetupSemanticFileHandleCallKind(const Expr &expr,
   return true;
 }
 
+bool isBaseSetupMapFamilyText(const std::string &familyText) {
+  std::string normalized = trimTemplateTypeText(familyText);
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  return normalized == "map" || normalized == "std/collections/map" ||
+         normalized == "Map" ||
+         normalized == "std/collections/experimental_map/Map" ||
+         normalized.rfind("std/collections/experimental_map/Map__", 0) == 0;
+}
+
+bool inferBaseSetupMapKindsFromTypeText(const std::string &typeText,
+                                        LocalInfo::ValueKind &keyKindOut,
+                                        LocalInfo::ValueKind &valueKindOut) {
+  keyKindOut = LocalInfo::ValueKind::Unknown;
+  valueKindOut = LocalInfo::ValueKind::Unknown;
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argText) ||
+      !isBaseSetupMapFamilyText(base)) {
+    return false;
+  }
+  std::vector<std::string> args;
+  if (!splitTemplateArgs(argText, args) || args.size() != 2) {
+    return false;
+  }
+  keyKindOut = valueKindFromTypeName(trimTemplateTypeText(args.front()));
+  valueKindOut = valueKindFromTypeName(trimTemplateTypeText(args.back()));
+  return keyKindOut != LocalInfo::ValueKind::Unknown &&
+         valueKindOut != LocalInfo::ValueKind::Unknown;
+}
+
+bool inferBaseSetupSemanticMapTryAtReceiverKind(
+    const Expr &receiver,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex,
+    LocalInfo::ValueKind &kindOut,
+    bool &hasSemanticReceiverOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  hasSemanticReceiverOut = false;
+  if (semanticProgram == nullptr || semanticIndex == nullptr ||
+      receiver.semanticNodeId == 0) {
+    return false;
+  }
+  if (const auto *collectionFact =
+          findSemanticProductCollectionSpecialization(*semanticIndex, receiver)) {
+    hasSemanticReceiverOut = true;
+    const std::string familyText = resolveBaseSetupSemanticFactTypeText(
+        *semanticProgram,
+        collectionFact->collectionFamily,
+        collectionFact->collectionFamilyId);
+    if (!isBaseSetupMapFamilyText(familyText)) {
+      return false;
+    }
+    const LocalInfo::ValueKind keyKind = valueKindFromTypeName(
+        resolveBaseSetupSemanticFactTypeText(
+            *semanticProgram,
+            collectionFact->keyTypeText,
+            collectionFact->keyTypeTextId));
+    const LocalInfo::ValueKind valueKind = valueKindFromTypeName(
+        resolveBaseSetupSemanticFactTypeText(
+            *semanticProgram,
+            collectionFact->valueTypeText,
+            collectionFact->valueTypeTextId));
+    if (keyKind == LocalInfo::ValueKind::Unknown ||
+        valueKind == LocalInfo::ValueKind::Unknown) {
+      return false;
+    }
+    kindOut = valueKind;
+    return true;
+  }
+  std::string receiverType;
+  if (!resolveBaseSetupSemanticReceiverTypeText(
+          receiver, semanticProgram, semanticIndex, receiverType)) {
+    return false;
+  }
+  hasSemanticReceiverOut = true;
+  LocalInfo::ValueKind keyKind = LocalInfo::ValueKind::Unknown;
+  LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
+  if (!inferBaseSetupMapKindsFromTypeText(receiverType, keyKind, valueKind)) {
+    return false;
+  }
+  kindOut = valueKind;
+  return true;
+}
+
 bool inferBaseSetupSemanticFieldAccessKind(const Expr &receiver,
                                            const std::string &fieldName,
                                            const ResolveStructFieldSlotFn &resolveStructFieldSlot,
@@ -1128,6 +1214,19 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
           return true;
         }
         return true;
+      }
+      if (isMapTryAtCallName(arg) && !arg.args.empty()) {
+        bool hasSemanticMapReceiver = false;
+        if (inferBaseSetupSemanticMapTryAtReceiverKind(arg.args.front(),
+                                                       semanticProgram,
+                                                       semanticIndex,
+                                                       kindOut,
+                                                       hasSemanticMapReceiver)) {
+          return true;
+        }
+        if (hasSemanticMapReceiver) {
+          return true;
+        }
       }
       if (inferMapTryAtResultValueKind(arg, localsIn, kindOut)) {
         return true;
