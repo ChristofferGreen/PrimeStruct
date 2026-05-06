@@ -69,6 +69,119 @@ bool inferDispatchSetupResultValueKindFromResultTypeText(const std::string &type
   return inferDispatchSetupResultValueKindFromValueTypeText(resultArgs.front(), kindOut);
 }
 
+bool isDispatchSetupFileErrorTypeText(const std::string &typeText) {
+  std::string normalized = trimTemplateTypeText(typeText);
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  return normalized == "FileError" || normalized == "std/file/FileError";
+}
+
+bool isDispatchSetupFileHandleMethodName(const std::string &methodName) {
+  return methodName == "write" || methodName == "write_line" ||
+         methodName == "write_byte" || methodName == "write_bytes" ||
+         methodName == "flush" || methodName == "close";
+}
+
+bool isDispatchSetupFileHandleTypeText(const std::string &typeText) {
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argText)) {
+    return false;
+  }
+  base = trimTemplateTypeText(base);
+  if (!base.empty() && base.front() == '/') {
+    base.erase(base.begin());
+  }
+  return base == "File" || base == "std/file/File";
+}
+
+bool resolveDispatchSetupSemanticReceiverTypeText(const Expr &receiver,
+                                                  const SemanticProgram *semanticProgram,
+                                                  const SemanticProductIndex *semanticIndex,
+                                                  std::string &typeTextOut) {
+  typeTextOut.clear();
+  if (semanticProgram == nullptr || semanticIndex == nullptr ||
+      receiver.semanticNodeId == 0) {
+    return false;
+  }
+  if (const auto *queryFact =
+          findSemanticProductQueryFactBySemanticId(*semanticIndex, receiver)) {
+    typeTextOut = resolveDispatchSetupSemanticFactTypeText(
+        *semanticProgram,
+        queryFact->queryTypeText,
+        queryFact->queryTypeTextId);
+    if (typeTextOut.empty()) {
+      typeTextOut = resolveDispatchSetupSemanticFactTypeText(
+          *semanticProgram,
+          queryFact->bindingTypeText,
+          queryFact->bindingTypeTextId);
+    }
+    return true;
+  }
+  if (const auto *bindingFact =
+          findSemanticProductBindingFact(*semanticIndex, receiver)) {
+    typeTextOut = resolveDispatchSetupSemanticFactTypeText(
+        *semanticProgram,
+        bindingFact->bindingTypeText,
+        bindingFact->bindingTypeTextId);
+    return true;
+  }
+  if (const auto *localAutoFact =
+          findSemanticProductLocalAutoFactBySemanticId(*semanticIndex, receiver)) {
+    typeTextOut = resolveDispatchSetupSemanticFactTypeText(
+        *semanticProgram,
+        localAutoFact->bindingTypeText,
+        localAutoFact->bindingTypeTextId);
+    return true;
+  }
+  return false;
+}
+
+bool inferDispatchSetupSemanticFileErrorWhyKind(const Expr &receiver,
+                                                const SemanticProgram *semanticProgram,
+                                                const SemanticProductIndex *semanticIndex,
+                                                LocalInfo::ValueKind &kindOut,
+                                                bool &hasSemanticReceiverOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  hasSemanticReceiverOut = false;
+  std::string receiverType;
+  if (!resolveDispatchSetupSemanticReceiverTypeText(
+          receiver, semanticProgram, semanticIndex, receiverType)) {
+    return false;
+  }
+  hasSemanticReceiverOut = true;
+  if (!isDispatchSetupFileErrorTypeText(receiverType)) {
+    return false;
+  }
+  kindOut = LocalInfo::ValueKind::String;
+  return true;
+}
+
+bool inferDispatchSetupSemanticFileHandleMethodKind(const Expr &receiver,
+                                                    const std::string &methodName,
+                                                    const SemanticProgram *semanticProgram,
+                                                    const SemanticProductIndex *semanticIndex,
+                                                    LocalInfo::ValueKind &kindOut,
+                                                    bool &hasSemanticReceiverOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  hasSemanticReceiverOut = false;
+  if (!isDispatchSetupFileHandleMethodName(methodName)) {
+    return false;
+  }
+  std::string receiverType;
+  if (!resolveDispatchSetupSemanticReceiverTypeText(
+          receiver, semanticProgram, semanticIndex, receiverType)) {
+    return false;
+  }
+  hasSemanticReceiverOut = true;
+  if (!isDispatchSetupFileHandleTypeText(receiverType)) {
+    return false;
+  }
+  kindOut = LocalInfo::ValueKind::Int32;
+  return true;
+}
+
 bool inferDispatchSetupSemanticTryOperandResultKind(const Expr &operand,
                                                     const SemanticProgram *semanticProgram,
                                                     const SemanticProductIndex *semanticIndex,
@@ -416,6 +529,30 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
         kindOut = LocalInfo::ValueKind::Int64;
         return true;
       }
+      if (resultExpr.isMethodCall && !resultExpr.args.empty()) {
+        const Expr &receiverExpr = resultExpr.args.front();
+        bool hasSemanticFileHandleReceiver = false;
+        if (inferDispatchSetupSemanticFileHandleMethodKind(receiverExpr,
+                                                          resultExpr.name,
+                                                          semanticProgram,
+                                                          semanticIndex,
+                                                          kindOut,
+                                                          hasSemanticFileHandleReceiver)) {
+          return true;
+        }
+        bool hasSemanticFileErrorReceiver = false;
+        if (resultExpr.name == "why" &&
+            inferDispatchSetupSemanticFileErrorWhyKind(receiverExpr,
+                                                       semanticProgram,
+                                                       semanticIndex,
+                                                       kindOut,
+                                                       hasSemanticFileErrorReceiver)) {
+          return true;
+        }
+        if (hasSemanticFileHandleReceiver || hasSemanticFileErrorReceiver) {
+          return true;
+        }
+      }
       if (resultExpr.isMethodCall && !resultExpr.args.empty() && resultExpr.args.front().kind == Expr::Kind::Name) {
         const Expr &receiverExpr = resultExpr.args.front();
         auto it = localsIn.find(receiverExpr.name);
@@ -528,6 +665,21 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
             return tryValueKind;
           }
           if (!inferenceError->empty()) {
+            return LocalInfo::ValueKind::Unknown;
+          }
+        }
+
+        if (expr.isMethodCall && !expr.args.empty() && expr.name == "why") {
+          bool hasSemanticFileErrorReceiver = false;
+          LocalInfo::ValueKind semanticFileErrorWhyKind = LocalInfo::ValueKind::Unknown;
+          if (inferDispatchSetupSemanticFileErrorWhyKind(expr.args.front(),
+                                                        semanticProgram,
+                                                        semanticIndex,
+                                                        semanticFileErrorWhyKind,
+                                                        hasSemanticFileErrorReceiver)) {
+            return semanticFileErrorWhyKind;
+          }
+          if (hasSemanticFileErrorReceiver) {
             return LocalInfo::ValueKind::Unknown;
           }
         }

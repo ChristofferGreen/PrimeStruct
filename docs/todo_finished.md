@@ -6,6 +6,35 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 6, 2026)**
+- [x] TODO-4298: Use dispatch method receiver facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-06
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes lowerer dispatch
+    inference classify `FileError.why()` and nested `try(file.method())`
+    file-operation value kinds from the receiver's published binding, query,
+    or local-auto facts before syntactic receiver spelling or local
+    `isFileHandle` metadata can answer.
+  - acceptance:
+    - `FileError.why()` dispatch inference reads semantic-product binding
+      facts before stale syntactic receiver spelling.
+    - Local-auto FileError receiver facts classify `why()` as `string`.
+    - Nested `try(file.method())` dispatch inference reads semantic-product
+      query receiver facts before stale local file-handle metadata.
+    - Published non-matching receiver facts suppress stale syntactic or local
+      receiver metadata.
+    - Syntax-only contexts without semantic-product receiver facts keep the
+      existing receiver fallback.
+  - stop_rule: Stop once one dispatch method receiver consumer depends on
+    graph-owned receiver facts and focused tests pin graph-backed,
+    stale-local, and syntax-only behavior.
+  - evidence: Added semantic-product receiver fact handling for dispatch
+    `FileError.why()` and nested `try(file.method())` file-operation
+    inference, covered binding-backed, query-backed, local-auto-backed,
+    stale-local, and syntax-only paths, and skipped broad baseline validation
+    per the lite workflow.
+
 - [x] TODO-4298: Use dispatch try operand facts
   - owner: ai
   - created_at: 2026-04-28

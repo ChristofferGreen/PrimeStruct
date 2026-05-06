@@ -582,6 +582,10 @@ Task template:
     semantic-product-backed `try(operand)` dispatch inference before stale
     local `isResult` or args-pack metadata can classify the operand's value
     kind.
+    The lowerer dispatch method receiver fact slice is complete for
+    semantic-product-backed `FileError.why()` and nested `try(file.method())`
+    inference before stale syntactic `FileError` spelling or local
+    `isFileHandle` metadata can classify receiver method value kinds.
     The lowerer nested try file-method receiver slice is complete for
     semantic-product-backed `try(file.method())` base-kind inference before
     stale local `isFileHandle` metadata can classify file operations as
@@ -656,6 +660,13 @@ Task template:
       Result facts before local-result or args-pack fallback can infer the
       value kind. Published non-Result operand facts suppress stale local
       metadata while syntax-only compatibility keeps the legacy fallback.
+    - Completed slice: semantic-product-addressed dispatch inference now
+      consumes published method receiver binding, query, or local-auto facts
+      for `FileError.why()` and nested `try(file.method())` file operations
+      before syntactic receiver spelling or local `isFileHandle` metadata can
+      infer the value kind. Published non-matching receiver facts suppress
+      stale local metadata while syntax-only compatibility keeps the legacy
+      fallback.
     - Completed slice: semantic-product-addressed Result-combinator metadata
       now requires published query facts when direct lambda payload analysis
       cannot infer the resulting value kind, covering `Result.map`,
