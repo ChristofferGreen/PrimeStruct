@@ -84,6 +84,26 @@ bool isBaseSetupFileErrorTypeText(const std::string &typeText) {
   return normalized == "FileError" || normalized == "std/file/FileError";
 }
 
+bool isBaseSetupFileHandleMethodName(const std::string &methodName) {
+  return methodName == "write" || methodName == "write_line" ||
+         methodName == "write_byte" || methodName == "read_byte" ||
+         methodName == "write_bytes" || methodName == "flush" ||
+         methodName == "close";
+}
+
+bool isBaseSetupFileHandleTypeText(const std::string &typeText) {
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argText)) {
+    return false;
+  }
+  base = trimTemplateTypeText(base);
+  if (!base.empty() && base.front() == '/') {
+    base.erase(base.begin());
+  }
+  return base == "File" || base == "std/file/File";
+}
+
 bool inferBaseSetupSemanticFileErrorWhyKind(const Expr &receiver,
                                             const SemanticProgram *semanticProgram,
                                             const SemanticProductIndex *semanticIndex,
@@ -110,6 +130,37 @@ bool inferBaseSetupSemanticFileErrorWhyKind(const Expr &receiver,
     return false;
   }
   kindOut = LocalInfo::ValueKind::String;
+  return true;
+}
+
+bool inferBaseSetupSemanticFileHandleMethodKind(const Expr &receiver,
+                                                const std::string &methodName,
+                                                const SemanticProgram *semanticProgram,
+                                                const SemanticProductIndex *semanticIndex,
+                                                LocalInfo::ValueKind &kindOut,
+                                                bool &hasSemanticReceiverOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  hasSemanticReceiverOut = false;
+  if (!isBaseSetupFileHandleMethodName(methodName) ||
+      semanticProgram == nullptr || semanticIndex == nullptr ||
+      receiver.semanticNodeId == 0) {
+    return false;
+  }
+  const auto *bindingFact =
+      findSemanticProductBindingFact(*semanticIndex, receiver);
+  if (bindingFact == nullptr) {
+    return false;
+  }
+  hasSemanticReceiverOut = true;
+  const std::string bindingType =
+      resolveBaseSetupSemanticFactTypeText(
+          *semanticProgram,
+          bindingFact->bindingTypeText,
+          bindingFact->bindingTypeTextId);
+  if (!isBaseSetupFileHandleTypeText(bindingType)) {
+    return false;
+  }
+  kindOut = LocalInfo::ValueKind::Int32;
   return true;
 }
 
@@ -718,10 +769,22 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
       }
     }
     if (!expr.args.empty() && expr.args.front().kind == Expr::Kind::Name) {
-      auto it = localsIn.find(expr.args.front().name);
+      const Expr &receiver = expr.args.front();
+      bool hasSemanticFileHandleReceiver = false;
+      if (inferBaseSetupSemanticFileHandleMethodKind(receiver,
+                                                    expr.name,
+                                                    semanticProgram,
+                                                    semanticIndex,
+                                                    kindOut,
+                                                    hasSemanticFileHandleReceiver)) {
+        return true;
+      }
+      if (hasSemanticFileHandleReceiver) {
+        return true;
+      }
+      auto it = localsIn.find(receiver.name);
       if (it != localsIn.end() && it->second.isFileHandle) {
-        if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" || expr.name == "read_byte" ||
-            expr.name == "write_bytes" || expr.name == "flush" || expr.name == "close") {
+        if (isBaseSetupFileHandleMethodName(expr.name)) {
           kindOut = LocalInfo::ValueKind::Int32;
           return true;
         }

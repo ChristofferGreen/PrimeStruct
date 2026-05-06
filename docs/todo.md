@@ -563,6 +563,9 @@ Task template:
     The lowerer `FileError.why()` receiver fact slice is complete for
     semantic-product-backed base-kind inference before stale local
     `isFileError` metadata can classify `why()` as returning `string`.
+    The lowerer file-handle method receiver fact slice is complete for
+    semantic-product-backed base-kind inference before stale local
+    `isFileHandle` metadata can classify file methods as returning `i32`.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -736,6 +739,11 @@ Task template:
       before lowerer-local `isFileError` metadata can answer. Published
       non-`FileError` binding facts suppress stale local file-error metadata;
       syntax-only compatibility keeps the old local fallback.
+    - Completed slice: semantic-product-addressed file-handle method
+      base-kind inference now consumes the receiver's published binding fact
+      before lowerer-local `isFileHandle` metadata can answer. Published
+      non-`File<Mode>` binding facts suppress stale local file-handle
+      metadata; syntax-only compatibility keeps the old local fallback.
     - Completed slice: semantic-product-addressed native tail-dispatch
       map/vector receiver classification now resolves interned query/binding
       type IDs before consulting copied query text fields, so collection

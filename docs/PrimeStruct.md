@@ -349,6 +349,12 @@ Planned non-template inference migration contract:
   `isFileError` metadata can classify `why()` as returning `string`. A published non-`FileError`
   binding fact suppresses stale local file-error metadata; syntax-only compatibility keeps the old
   local fallback.
+- Completed lowerer-side file-handle method receiver slice: semantic-product-addressed
+  base-kind inference now reads the receiver's published binding fact before lowerer-local
+  `isFileHandle` metadata can classify `write`, `write_line`, `write_byte`, `read_byte`,
+  `write_bytes`, `flush`, or `close` as returning `i32`. A published non-`File<Mode>`
+  binding fact suppresses stale local file-handle metadata; syntax-only compatibility keeps the
+  old local fallback.
 - Completed lowerer-side tail-dispatch collection query ID slice: native tail-dispatch map/vector
   target classification now resolves `bindingTypeTextId` and `queryTypeTextId` before copied
   query-fact text fields, so collection receiver classification consumes graph-owned query
