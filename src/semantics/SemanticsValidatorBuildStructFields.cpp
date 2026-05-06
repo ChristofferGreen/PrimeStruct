@@ -1,5 +1,8 @@
 #include "SemanticsValidator.h"
 
+#include <algorithm>
+#include <functional>
+
 namespace primec::semantics {
 
 bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
@@ -38,7 +41,82 @@ bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
   const std::vector<ParameterInfo> noParams;
   const std::unordered_map<std::string, BindingInfo> noLocals;
   BindingInfo inferred = bindingOut;
+  std::function<bool(const Expr &, BindingInfo &)> inferIdentityWrappedInitializer;
+  inferIdentityWrappedInitializer = [&](const Expr &candidate,
+                                        BindingInfo &wrappedBinding) -> bool {
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
+        candidate.isBinding || candidate.args.size() != 1 ||
+        hasNamedArguments(candidate.argNames) || candidate.hasBodyArguments ||
+        !candidate.bodyArguments.empty()) {
+      return false;
+    }
+    const std::string resolvedPath = resolveCalleePath(candidate);
+    auto defIt = defMap_.find(resolvedPath);
+    if (defIt == defMap_.end() || defIt->second == nullptr ||
+        defIt->second->parameters.size() != 1) {
+      return false;
+    }
+    const Definition &definition = *defIt->second;
+    const auto returnTransformIt =
+        std::find_if(definition.transforms.begin(),
+                     definition.transforms.end(),
+                     [](const Transform &transform) {
+                       return transform.name == "return" &&
+                              transform.templateArgs.size() == 1;
+                     });
+    if (returnTransformIt == definition.transforms.end()) {
+      return false;
+    }
+    BindingInfo paramBinding;
+    std::optional<std::string> paramRestrictType;
+    std::string paramParseError;
+    if (!parseBindingInfo(definition.parameters.front(),
+                          definition.namespacePrefix,
+                          structNames_,
+                          importAliases_,
+                          paramBinding,
+                          paramRestrictType,
+                          paramParseError,
+                          &sumNames_)) {
+      return false;
+    }
+    const std::string returnType =
+        normalizeBindingTypeName(returnTransformIt->templateArgs.front());
+    if (returnType.empty() ||
+        returnType != normalizeBindingTypeName(paramBinding.typeName)) {
+      return false;
+    }
+    if (inferBindingTypeFromInitializer(candidate.args.front(), noParams, noLocals,
+                                        wrappedBinding)) {
+      return true;
+    }
+    if (tryInferBindingTypeFromInitializer(candidate.args.front(), noParams,
+                                           noLocals, wrappedBinding,
+                                           hasAnyMathImport())) {
+      return true;
+    }
+    return inferIdentityWrappedInitializer(candidate.args.front(), wrappedBinding);
+  };
   if (inferBindingTypeFromInitializer(fieldStmt.args.front(), noParams, noLocals, inferred)) {
+    if (!(inferred.typeName == "array" && inferred.typeTemplateArg.empty())) {
+      bindingOut = std::move(inferred);
+      if (!validateBuiltinMapKeyType(bindingOut, &structDef.templateArgs, error_)) {
+        return failExprDiagnostic(fieldStmt, error_);
+      }
+      return true;
+    }
+  }
+  if (tryInferBindingTypeFromInitializer(
+          fieldStmt.args.front(), noParams, noLocals, inferred, hasAnyMathImport())) {
+    if (!(inferred.typeName == "array" && inferred.typeTemplateArg.empty())) {
+      bindingOut = std::move(inferred);
+      if (!validateBuiltinMapKeyType(bindingOut, &structDef.templateArgs, error_)) {
+        return failExprDiagnostic(fieldStmt, error_);
+      }
+      return true;
+    }
+  }
+  if (inferIdentityWrappedInitializer(fieldStmt.args.front(), inferred)) {
     if (!(inferred.typeName == "array" && inferred.typeTemplateArg.empty())) {
       bindingOut = std::move(inferred);
       if (!validateBuiltinMapKeyType(bindingOut, &structDef.templateArgs, error_)) {

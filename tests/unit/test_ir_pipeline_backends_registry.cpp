@@ -996,16 +996,17 @@ main() {
 
   auto rewriteChoiceBindingType =
       [](primec::SemanticProgram &semanticProduct, const std::string &typeText) {
+        bool updated = false;
         for (auto &fact : semanticProduct.bindingFacts) {
           if (semanticTextOrFallback(semanticProduct, fact.scopePathId, fact.scopePath) == "/main" &&
               semanticTextOrFallback(semanticProduct, fact.nameId, fact.name) == "choice") {
             fact.bindingTypeText = typeText;
             fact.bindingTypeTextId =
                 primec::semanticProgramInternCallTargetString(semanticProduct, typeText);
-            return true;
+            updated = true;
           }
         }
-        return false;
+        return updated;
       };
 
   primec::Program staleProgram = program;
@@ -1034,6 +1035,8 @@ main() {
                        return entry.fullPath == "/Choice";
                      }),
       missingMetadataSemanticProgram.sumTypeMetadata.end());
+  missingMetadataSemanticProgram.publishedRoutingLookups
+      .sumTypeMetadataIndicesByPathId.clear();
 
   primec::IrModule missingMetadataIr;
   primec::IrPreparationFailure missingMetadataFailure;
@@ -1086,6 +1089,24 @@ main() {
                               entry.variantName == "right";
                      }),
       missingVariantSemanticProgram.sumVariantMetadata.end());
+  missingVariantSemanticProgram.publishedRoutingLookups
+      .sumVariantMetadataIndicesBySumPathAndVariantNameId.clear();
+  for (std::size_t index = 0;
+       index < missingVariantSemanticProgram.sumVariantMetadata.size();
+       ++index) {
+    const auto &entry = missingVariantSemanticProgram.sumVariantMetadata[index];
+    const auto sumPathId = primec::semanticProgramLookupCallTargetStringId(
+        missingVariantSemanticProgram, entry.sumPath);
+    const auto variantNameId = primec::semanticProgramLookupCallTargetStringId(
+        missingVariantSemanticProgram, entry.variantName);
+    if (sumPathId.has_value() && variantNameId.has_value()) {
+      missingVariantSemanticProgram.publishedRoutingLookups
+          .sumVariantMetadataIndicesBySumPathAndVariantNameId.insert_or_assign(
+              (static_cast<uint64_t>(*sumPathId) << 32) |
+                  static_cast<uint64_t>(*variantNameId),
+              index);
+    }
+  }
 
   primec::IrModule missingVariantIr;
   primec::IrPreparationFailure missingVariantFailure;

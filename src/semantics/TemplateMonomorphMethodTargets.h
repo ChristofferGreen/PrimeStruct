@@ -165,6 +165,19 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     }
     return false;
   };
+  auto hasTemplatedDefinitionFamilyPath = [&](std::string_view path) {
+    const std::string pathString(path);
+    if (ctx.templateDefs.count(pathString) > 0) {
+      return true;
+    }
+    const std::string templatedPrefix = pathString + "<";
+    for (const auto &[defPath, _] : ctx.sourceDefs) {
+      if (defPath.rfind(templatedPrefix, 0) == 0) {
+        return true;
+      }
+    }
+    return false;
+  };
   auto receiverHelperFamilyLeaf = [](std::string_view resolvedType) -> std::string {
     if (resolvedType.empty()) {
       return {};
@@ -281,6 +294,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     return true;
   };
   bool isBorrowedSoaReceiver = false;
+  std::string wrappedReceiverTypeName;
   if (receiver.kind == Expr::Kind::Name && normalizeBindingTypeName(receiver.name) == "FileError") {
     if (methodName == "result") {
       pathOut = selectStaticHelperOverloadPath("/std/file/FileError/result");
@@ -307,6 +321,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   if (receiver.kind == Expr::Kind::Name) {
     auto it = locals.find(receiver.name);
     if (it != locals.end()) {
+      wrappedReceiverTypeName = qualifyImportedCollectionTypeText(bindingTypeText(it->second));
       isBorrowedSoaReceiver = isBorrowedSoaReceiverType(bindingTypeText(it->second));
       typeName = unwrapImportedCollectionReceiverType(it->second);
     }
@@ -321,6 +336,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   } else if (receiver.kind == Expr::Kind::Call) {
     BindingInfo receiverInfo;
     if (inferBindingTypeForMonomorph(receiver, {}, locals, hasMathImport(ctx), const_cast<Context &>(ctx), receiverInfo)) {
+      wrappedReceiverTypeName = qualifyImportedCollectionTypeText(bindingTypeText(receiverInfo));
       isBorrowedSoaReceiver = isBorrowedSoaReceiverType(bindingTypeText(receiverInfo));
       typeName = unwrapImportedCollectionReceiverType(receiverInfo);
     }
@@ -354,6 +370,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
           if (returnType == "auto") {
             continue;
           }
+          wrappedReceiverTypeName = qualifyImportedCollectionTypeText(returnType);
           isBorrowedSoaReceiver = isBorrowedSoaReceiverType(returnType);
           typeName = unwrapCollectionReceiverEnvelope(
               qualifyImportedCollectionTypeText(returnType));
@@ -363,6 +380,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
           BindingInfo inferredReturn;
           if (inferDefinitionReturnBindingForTemplatedFallback(
                   defIt->second, hasMathImport(ctx), const_cast<Context &>(ctx), inferredReturn)) {
+            wrappedReceiverTypeName = qualifyImportedCollectionTypeText(bindingTypeText(inferredReturn));
             isBorrowedSoaReceiver =
                 isBorrowedSoaReceiverType(bindingTypeText(inferredReturn));
             typeName = unwrapImportedCollectionReceiverType(inferredReturn);
@@ -381,6 +399,30 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   }
   if (typeName.empty()) {
     return false;
+  }
+  if (!expr.templateArgs.empty() && !wrappedReceiverTypeName.empty()) {
+    std::string wrapperBase;
+    std::string wrapperArgText;
+    if (splitTemplateTypeName(normalizeBindingTypeName(wrappedReceiverTypeName),
+                              wrapperBase,
+                              wrapperArgText)) {
+      wrapperBase = normalizeCollectionReceiverTypeName(wrapperBase);
+      if ((wrapperBase == "Reference" || wrapperBase == "Pointer") &&
+          !wrapperArgText.empty()) {
+        std::string wrapperMethodName = methodName;
+        const size_t slash = wrapperMethodName.find_last_of('/');
+        if (slash != std::string::npos) {
+          wrapperMethodName.erase(0, slash + 1);
+        }
+        const std::string rootedWrapperMethodPath =
+            "/" + wrapperBase + "/" + wrapperMethodName;
+        if (hasTemplatedDefinitionFamilyPath(rootedWrapperMethodPath) &&
+            hasDefinitionFamilyPath(rootedWrapperMethodPath)) {
+          pathOut = selectHelperOverloadPath(expr, rootedWrapperMethodPath, ctx);
+          return true;
+        }
+      }
+    }
   }
   typeName = normalizeCollectionReceiverTypeName(typeName);
   auto preferredFileMethodTarget = [&](std::string_view helperName) {
@@ -552,6 +594,17 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   }
   const std::string samePathMethodTarget = resolvedType + "/" + normalizedMethodName;
   const std::string receiverHelperLeaf = receiverHelperFamilyLeaf(resolvedType);
+  if (!expr.templateArgs.empty() && receiverHelperLeaf == "map") {
+    const std::string rootedHelperTarget = "/map/" + normalizedMethodName;
+    if (samePathMethodTarget != rootedHelperTarget &&
+        hasDefinitionFamilyPath(rootedHelperTarget) &&
+        ctx.templateDefs.count(rootedHelperTarget) == 0 &&
+        isRemovedMapCompatibilityHelper(
+            mapCompatibilityHelperBase(normalizedMethodName))) {
+      pathOut = selectHelperOverloadPath(expr, rootedHelperTarget, ctx);
+      return true;
+    }
+  }
   if (!receiverHelperLeaf.empty()) {
     const std::string rootedHelperTarget = "/" + receiverHelperLeaf + "/" + normalizedMethodName;
     if (samePathMethodTarget != rootedHelperTarget &&

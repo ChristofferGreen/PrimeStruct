@@ -517,7 +517,7 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     return validateExpr(params, locals, expr.args.front());
   }
 
-  if (expr.isMethodCall && resolvedMethod &&
+  if (resolvedMethod &&
       (logicalResolvedMethod == "/std/collections/map/contains" ||
        logicalResolvedMethod == "/std/collections/map/contains_ref" ||
        logicalResolvedMethod == "/std/collections/map/tryAt" ||

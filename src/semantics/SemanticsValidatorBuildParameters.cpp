@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 
+#include <algorithm>
 #include <array>
 #include <functional>
 #include <string_view>
@@ -140,7 +141,8 @@ bool SemanticsValidator::buildParameters() {
       if (!normalizedType.empty() && normalizedType.front() == '/') {
         normalizedType.erase(normalizedType.begin());
       }
-      return normalizedType == "Map" || normalizedType == "std/collections/experimental_map/Map" ||
+      return normalizedType == "map" || normalizedType == "std/collections/map" ||
+             normalizedType == "Map" || normalizedType == "std/collections/experimental_map/Map" ||
              normalizedType.rfind("std/collections/experimental_map/Map__", 0) == 0;
     };
     auto typeTextCarriesExperimentalMapValue = [&](const std::string &typeText) {
@@ -202,11 +204,135 @@ bool SemanticsValidator::buildParameters() {
       }
       const std::string resolvedPath = resolveCalleePath(candidate);
       const bool isDirectExperimentalMapConstructor = isResolvedExperimentalMapConstructorPath(resolvedPath);
+      if (isDirectExperimentalMapConstructor) {
+        return true;
+      }
       if (!isDirectExperimentalMapConstructor) {
         for (const auto &arg : candidate.args) {
           if (!isAllowedExperimentalMapDefaultExpr(arg)) {
             return false;
           }
+        }
+      }
+      if (!isDirectExperimentalMapConstructor && candidate.args.size() == 1) {
+        auto isMapConstructorExpr = [&](const Expr &expr) {
+          if (expr.kind != Expr::Kind::Call) {
+            return false;
+          }
+          const std::string resolvedExprPath = resolveCalleePath(expr);
+          if (isResolvedExperimentalMapConstructorPath(resolvedExprPath)) {
+            return true;
+          }
+          auto pathHasMember = [](std::string_view path, std::string_view member) {
+            return path == member ||
+                   (path.size() > member.size() &&
+                    path.compare(path.size() - member.size(),
+                                 member.size(),
+                                 member) == 0 &&
+                    path[path.size() - member.size() - 1] == '/');
+          };
+          constexpr std::array<std::string_view, 11> MapConstructorMembers = {
+              "map",       "mapNew",  "mapSingle", "mapDouble",
+              "mapPair",   "mapTriple", "mapQuad", "mapQuint",
+              "mapSext",   "mapSept", "mapOct"};
+          for (const std::string_view member : MapConstructorMembers) {
+            if (pathHasMember(expr.name, member) ||
+                pathHasMember(resolvedExprPath, member)) {
+              return true;
+            }
+          }
+          return false;
+        };
+        auto argCarriesExperimentalMapValue = [&]() {
+          const Expr &argExpr = candidate.args.front();
+          if (isMapConstructorExpr(argExpr)) {
+            return true;
+          }
+          BindingInfo argBinding;
+          return (inferBindingTypeFromInitializer(argExpr, {}, {}, argBinding) &&
+                  bindingCarriesExperimentalMapValue(argBinding)) ||
+                 (tryInferBindingTypeFromInitializer(
+                      argExpr, {}, {}, argBinding, hasAnyMathImport()) &&
+                  bindingCarriesExperimentalMapValue(argBinding));
+        };
+        auto stripSpecialization = [](std::string path) {
+          const size_t suffix = path.find("__t");
+          if (suffix != std::string::npos) {
+            path.erase(suffix);
+          }
+          return path;
+        };
+        auto findDefinitionForCallPath = [&](const std::string &path) {
+          auto it = defMap_.find(path);
+          if (it != defMap_.end()) {
+            return it;
+          }
+          const std::string basePath = stripSpecialization(path);
+          it = defMap_.find(basePath);
+          if (it != defMap_.end()) {
+            return it;
+          }
+          const std::string specializedPrefix = basePath + "__t";
+          return std::find_if(defMap_.begin(), defMap_.end(), [&](const auto &entry) {
+            return entry.first.rfind(specializedPrefix, 0) == 0;
+          });
+        };
+        auto defIt = findDefinitionForCallPath(resolvedPath);
+        if (defIt == defMap_.end()) {
+          defIt = findDefinitionForCallPath(candidate.name);
+        }
+        const bool returnsExperimentalMapValue =
+            defIt != defMap_.end() && defIt->second != nullptr &&
+            std::any_of(defIt->second->transforms.begin(),
+                        defIt->second->transforms.end(),
+                        [&](const Transform &transform) {
+                          return transform.name == "return" &&
+                                 transform.templateArgs.size() == 1 &&
+                                 typeTextCarriesExperimentalMapValue(transform.templateArgs.front());
+                        });
+        if (returnsExperimentalMapValue && argCarriesExperimentalMapValue()) {
+          return true;
+        }
+        const bool returnsSingleParameterValue =
+            defIt != defMap_.end() && defIt->second != nullptr &&
+            defIt->second->parameters.size() == 1 &&
+            std::any_of(defIt->second->transforms.begin(),
+                        defIt->second->transforms.end(),
+                        [&](const Transform &transform) {
+                          if (transform.name != "return" ||
+                              transform.templateArgs.size() != 1) {
+                            return false;
+                          }
+                          BindingInfo paramBinding;
+                          std::optional<std::string> paramRestrictType;
+                          std::string paramParseError;
+                          if (!parseBindingInfo(defIt->second->parameters.front(),
+                                                defIt->second->namespacePrefix,
+                                                structNames_,
+                                                importAliases_,
+                                                paramBinding,
+                                                paramRestrictType,
+                                                paramParseError,
+                                                &sumNames_)) {
+                            return false;
+                          }
+                          return normalizeBindingTypeName(transform.templateArgs.front()) ==
+                                 normalizeBindingTypeName(paramBinding.typeName);
+                        });
+        if (returnsSingleParameterValue && argCarriesExperimentalMapValue()) {
+          return true;
+        }
+        const bool returnsTemplateParam =
+            defIt != defMap_.end() && defIt->second != nullptr &&
+            std::any_of(defIt->second->transforms.begin(),
+                        defIt->second->transforms.end(),
+                        [](const Transform &transform) {
+                          return transform.name == "return" &&
+                                 transform.templateArgs.size() == 1 &&
+                                 !transform.templateArgs.front().empty();
+                        });
+        if (returnsTemplateParam && argCarriesExperimentalMapValue()) {
+          return true;
         }
       }
       BindingInfo inferredBinding;

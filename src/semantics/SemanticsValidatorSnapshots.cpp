@@ -30,6 +30,25 @@ bool isSemanticCollectorEnabled(const SemanticProductBuildConfig *buildConfig,
                    collectorFamily) != buildConfig->collectorAllowlist.end();
 }
 
+std::string fallbackSnapshotBindingResolvedPath(std::string_view scopePath,
+                                                std::string_view bindingName) {
+  if (scopePath.empty() || bindingName.empty()) {
+    return {};
+  }
+  if (bindingName.front() == '/') {
+    return std::string(bindingName);
+  }
+  std::string normalizedScope(scopePath);
+  if (!normalizedScope.empty() && normalizedScope.front() != '/') {
+    normalizedScope.insert(normalizedScope.begin(), '/');
+  }
+  if (!normalizedScope.empty() && normalizedScope.back() != '/') {
+    normalizedScope.push_back('/');
+  }
+  normalizedScope.append(bindingName);
+  return normalizedScope;
+}
+
 template <typename Entry, typename PathForEntry>
 void appendEntriesForDefinitionPaths(std::vector<Entry> &out,
                                      std::vector<Entry> entries,
@@ -1812,6 +1831,24 @@ SemanticsValidator::bindingFactSnapshotForSemanticProduct() {
             expr.semanticNodeId,
         });
         insertLocalBinding(activeLocals, expr.name, std::move(binding));
+      }
+      return;
+    }
+
+    if (expr.kind == Expr::Kind::Name && expr.semanticNodeId != 0) {
+      if (const BindingInfo *binding = findBinding(defParams, activeLocals, expr.name);
+          binding != nullptr) {
+        const bool isLocal = activeLocals.find(expr.name) != activeLocals.end();
+        entries.push_back(BindingFactSnapshotEntry{
+            def.fullPath,
+            isLocal ? "local-reference" : "parameter-reference",
+            expr.name,
+            fallbackSnapshotBindingResolvedPath(def.fullPath, expr.name),
+            expr.sourceLine,
+            expr.sourceColumn,
+            *binding,
+            expr.semanticNodeId,
+        });
       }
       return;
     }

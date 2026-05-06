@@ -529,6 +529,19 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
   if (handledBodyArgumentStatement) {
     return true;
   }
+  if (stmt.kind == Expr::Kind::Call && !stmt.isBinding && !stmt.isMethodCall &&
+      isExperimentalSoaFieldViewHelperPath(resolveCalleePath(stmt)) &&
+      resolveCalleePath(stmt).rfind("/std/collections/soa_vector/soaVectorFieldView", 0) == 0) {
+    if (hasNamedArguments(stmt.argNames)) {
+      return failStatementDiagnostic("named arguments not supported for builtin calls");
+    }
+    if (stmt.args.size() != 2) {
+      return failStatementDiagnostic(
+          "argument count mismatch for builtin soaVectorFieldView");
+    }
+    return validateExpr(params, locals, stmt.args.front()) &&
+           validateExpr(params, locals, stmt.args[1]);
+  }
   return validateExpr(params, locals, stmt, enclosingStatements, statementIndex);
 }
 

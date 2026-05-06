@@ -29,6 +29,17 @@ primec::Definition *findDefinitionByPathMutable(primec::Program &program, std::s
   return it == program.definitions.end() ? nullptr : &*it;
 }
 
+std::string_view semanticTextOrFallback(const primec::SemanticProgram &semanticProgram,
+                                        primec::SymbolId textId,
+                                        const std::string &fallback) {
+  if (textId == primec::InvalidSymbolId) {
+    return fallback;
+  }
+  const std::string_view resolved =
+      primec::semanticProgramResolveCallTargetString(semanticProgram, textId);
+  return resolved.empty() ? std::string_view(fallback) : resolved;
+}
+
 [[maybe_unused]] const primec::Expr *findBindingStatementByName(const primec::Definition &definition, std::string_view name) {
   const auto it =
       std::find_if(definition.statements.begin(),
@@ -2940,13 +2951,17 @@ TEST_CASE("semantic product binding facts carry interned text ids") {
 
   const auto *aEntry = findSemanticEntry(
       primec::semanticProgramBindingFactView(semanticProgram),
-      [](const primec::SemanticProgramBindingFact &entry) {
-        return entry.scopePath == "/main" && entry.siteKind == "local" && entry.name == "a";
+      [&](const primec::SemanticProgramBindingFact &entry) {
+        return semanticTextOrFallback(semanticProgram, entry.scopePathId, entry.scopePath) == "/main" &&
+               semanticTextOrFallback(semanticProgram, entry.siteKindId, entry.siteKind) == "local" &&
+               semanticTextOrFallback(semanticProgram, entry.nameId, entry.name) == "a";
       });
   const auto *bEntry = findSemanticEntry(
       primec::semanticProgramBindingFactView(semanticProgram),
-      [](const primec::SemanticProgramBindingFact &entry) {
-        return entry.scopePath == "/main" && entry.siteKind == "local" && entry.name == "b";
+      [&](const primec::SemanticProgramBindingFact &entry) {
+        return semanticTextOrFallback(semanticProgram, entry.scopePathId, entry.scopePath) == "/main" &&
+               semanticTextOrFallback(semanticProgram, entry.siteKindId, entry.siteKind) == "local" &&
+               semanticTextOrFallback(semanticProgram, entry.nameId, entry.name) == "b";
       });
   REQUIRE(aEntry != nullptr);
   REQUIRE(bEntry != nullptr);
@@ -3014,8 +3029,10 @@ main() {
 
   const auto *choiceEntry = findSemanticEntry(
       primec::semanticProgramBindingFactView(semanticProgram),
-      [](const primec::SemanticProgramBindingFact &entry) {
-        return entry.scopePath == "/main" && entry.siteKind == "local" && entry.name == "choice";
+      [&](const primec::SemanticProgramBindingFact &entry) {
+        return semanticTextOrFallback(semanticProgram, entry.scopePathId, entry.scopePath) == "/main" &&
+               semanticTextOrFallback(semanticProgram, entry.siteKindId, entry.siteKind) == "local" &&
+               semanticTextOrFallback(semanticProgram, entry.nameId, entry.name) == "choice";
       });
   REQUIRE(choiceEntry != nullptr);
   CHECK(choiceEntry->bindingTypeText == "Choice");

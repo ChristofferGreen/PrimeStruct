@@ -1332,6 +1332,43 @@ bool rewriteExpr(Expr &expr,
       expr.name = preferredCollectionHelperPath;
       expr.namespacePrefix.clear();
     }
+    if (!expr.templateArgs.empty() &&
+        expr.name.find('/') == std::string::npos &&
+        !expr.args.empty()) {
+      BindingInfo receiverInfo;
+      if (inferBindingTypeForMonomorph(expr.args.front(),
+                                       params,
+                                       locals,
+                                       allowMathBare,
+                                       ctx,
+                                       receiverInfo)) {
+        const std::string wrapperBase =
+            normalizeCollectionReceiverTypeName(receiverInfo.typeName);
+        if ((wrapperBase == "Reference" || wrapperBase == "Pointer") &&
+            !receiverInfo.typeTemplateArg.empty()) {
+          const std::string rootedWrapperMethodPath =
+              "/" + wrapperBase + "/" + expr.name;
+          if (ctx.templateDefs.count(rootedWrapperMethodPath) > 0 &&
+              ctx.sourceDefs.count(rootedWrapperMethodPath) > 0) {
+            resolvedPath = rootedWrapperMethodPath;
+            expr.name = rootedWrapperMethodPath;
+            expr.namespacePrefix.clear();
+          }
+        }
+      }
+    }
+    if (!expr.templateArgs.empty() &&
+        expr.name.find('/') == std::string::npos &&
+        inferCollectionReceiverFamily(mapHelperReceiverExpr(expr)) == "map" &&
+        isRemovedMapCompatibilityHelper(mapCompatibilityHelperBase(expr.name))) {
+      const std::string compatibilityPath = "/map/" + std::string(mapCompatibilityHelperBase(expr.name));
+      if (ctx.sourceDefs.count(compatibilityPath) > 0 &&
+          ctx.templateDefs.count(compatibilityPath) == 0) {
+        error = "template arguments are only supported on templated definitions: " +
+                helperOverloadDisplayPath(compatibilityPath, ctx);
+        return false;
+      }
+    }
     if (!expr.isMethodCall && expr.templateArgs.empty() &&
         expr.name.find('/') == std::string::npos &&
         (resolvedPath == "/count" || resolvedPath == "/capacity")) {
@@ -1390,9 +1427,15 @@ bool rewriteExpr(Expr &expr,
     }
     const std::string experimentalMapPath = experimentalMapHelperPathForCanonicalHelper(resolvedPath);
     const Expr *experimentalMapReceiverExpr = mapHelperReceiverExpr(expr);
+    const bool receiverIsPublishedMapConstructor =
+        isPublishedMapConstructorReceiverExpr(experimentalMapReceiverExpr,
+                                              namespacePrefix,
+                                              ctx);
     const bool rejectsWrapperReturnedExperimentalMapAccess =
         experimentalMapReceiverExpr != nullptr &&
         experimentalMapReceiverExpr->kind == Expr::Kind::Call &&
+        !experimentalMapReceiverExpr->isFieldAccess &&
+        !receiverIsPublishedMapConstructor &&
         (borrowedCanonicalMapUnknownTarget == "/std/collections/map/at" ||
          borrowedCanonicalMapUnknownTarget == "/std/collections/map/at_unsafe");
     if (!experimentalMapPath.empty() && ctx.sourceDefs.count(experimentalMapPath) > 0 &&
@@ -1494,6 +1537,27 @@ bool rewriteExpr(Expr &expr,
       if (resolveExperimentalMapValueReceiverTemplateArgs(
               mapHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx, receiverTemplateArgs)) {
         expr.templateArgs = std::move(receiverTemplateArgs);
+      }
+    }
+    if (expr.templateArgs.empty() &&
+        (resolvedPath.rfind("/std/collections/map/", 0) == 0 ||
+         resolvedPath.rfind("/map/", 0) == 0) &&
+        hasVisibleStdCollectionsImportForPath(
+            ctx,
+            resolvedPath.rfind("/map/", 0) == 0
+                ? "/std/collections/map/" + resolvedPath.substr(std::string("/map/").size())
+                : resolvedPath)) {
+      std::vector<std::string> receiverTemplateArgs;
+      if (resolveExperimentalMapValueReceiverTemplateArgs(
+              mapHelperReceiverExpr(expr),
+              params,
+              locals,
+              allowMathBare,
+              namespacePrefix,
+              ctx,
+              receiverTemplateArgs)) {
+        expr.templateArgs = std::move(receiverTemplateArgs);
+        allConcrete = true;
       }
     }
     if (expr.templateArgs.empty() &&
@@ -1846,9 +1910,20 @@ bool rewriteExpr(Expr &expr,
     const bool methodCallSyntax = expr.isMethodCall;
     std::string methodPath;
     if (resolveMethodCallTemplateTarget(expr, locals, ctx, methodPath)) {
+      const bool preserveExplicitCompatibilityTemplateMethodPath =
+          !expr.templateArgs.empty() &&
+          shouldPreserveCompatibilityTemplatePath(methodPath, ctx);
+      if (preserveExplicitCompatibilityTemplateMethodPath) {
+        error = "template arguments are only supported on templated definitions: " +
+                helperOverloadDisplayPath(methodPath, ctx);
+        return false;
+      }
       const std::string preferredCollectionHelperMethodPath =
-          preferCanonicalStdlibCollectionHelperPath(methodPath);
-      if (preferredCollectionHelperMethodPath != methodPath) {
+          preserveExplicitCompatibilityTemplateMethodPath
+              ? methodPath
+              : preferCanonicalStdlibCollectionHelperPath(methodPath);
+      if (!preserveExplicitCompatibilityTemplateMethodPath &&
+          preferredCollectionHelperMethodPath != methodPath) {
         methodPath = preferredCollectionHelperMethodPath;
         expr.name = preferredCollectionHelperMethodPath;
         expr.namespacePrefix.clear();

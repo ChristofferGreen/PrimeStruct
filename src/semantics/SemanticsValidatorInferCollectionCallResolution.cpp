@@ -318,6 +318,47 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
     argsOut = target.templateArgs;
     return true;
   }
+  if (expectedBase == "map" &&
+      ((isDirectMapConstructorPath(resolvedTarget) &&
+        (!isRootMapAliasPath(resolvedTarget) || allowRootMapConstructorAlias)) ||
+       (isDirectMapConstructorPath(explicitTarget) &&
+        (!isRootMapAliasPath(explicitTarget) || allowRootMapConstructorAlias))) &&
+      target.templateArgs.empty() && !target.args.empty() &&
+      target.args.size() % 2 == 0) {
+    auto inferArgTypeText = [&](const Expr &arg, std::string &typeTextOut) {
+      BindingInfo inferredBinding;
+      if (!inferBindingTypeFromInitializer(arg, params, locals, inferredBinding) &&
+          !tryInferBindingTypeFromInitializer(arg, params, locals, inferredBinding,
+                                             hasAnyMathImport())) {
+        return false;
+      }
+      if (inferredBinding.typeName.empty()) {
+        return false;
+      }
+      typeTextOut = inferredBinding.typeTemplateArg.empty()
+                        ? inferredBinding.typeName
+                        : inferredBinding.typeName + "<" + inferredBinding.typeTemplateArg + ">";
+      return true;
+    };
+    std::string keyType;
+    std::string valueType;
+    if (!inferArgTypeText(target.args[0], keyType) ||
+        !inferArgTypeText(target.args[1], valueType)) {
+      return false;
+    }
+    for (size_t i = 2; i + 1 < target.args.size(); i += 2) {
+      std::string nextKeyType;
+      std::string nextValueType;
+      if (!inferArgTypeText(target.args[i], nextKeyType) ||
+          !inferArgTypeText(target.args[i + 1], nextValueType) ||
+          normalizeBindingTypeName(nextKeyType) != normalizeBindingTypeName(keyType) ||
+          normalizeBindingTypeName(nextValueType) != normalizeBindingTypeName(valueType)) {
+        return false;
+      }
+    }
+    argsOut = {keyType, valueType};
+    return true;
+  }
 
   for (const std::string *candidatePath : {&resolvedTarget, &explicitTarget}) {
     if (candidatePath->empty()) {

@@ -4520,6 +4520,7 @@ void rewriteExperimentalSoaFieldViewHelperExpr(
 
   std::string receiverElemType;
   bool receiverNeedsDereference = false;
+  bool receiverUsesCanonicalSoaVector = false;
   const Expr &receiver = expr.args.front();
   std::optional<Expr> canonicalReceiverExpr;
   const Expr *getReceiverExpr = &receiver;
@@ -4527,6 +4528,36 @@ void rewriteExperimentalSoaFieldViewHelperExpr(
     receiverNeedsDereference =
         semantics::normalizeBindingTypeName(binding.typeName) == "Reference" ||
         semantics::normalizeBindingTypeName(binding.typeName) == "Pointer";
+    auto markCanonicalSoaVector = [&](std::string typeText) {
+      while (true) {
+        std::string base;
+        std::string argText;
+        if (!semantics::splitTemplateTypeName(
+                semantics::normalizeBindingTypeName(typeText), base, argText)) {
+          base = semantics::normalizeBindingTypeName(typeText);
+        } else {
+          base = semantics::normalizeBindingTypeName(base);
+        }
+        if (base == "Reference" || base == "Pointer") {
+          std::vector<std::string> args;
+          if (!semantics::splitTopLevelTemplateArgs(argText, args) ||
+              args.size() != 1) {
+            return;
+          }
+          typeText = args.front();
+          continue;
+        }
+        receiverUsesCanonicalSoaVector =
+            base == "soa_vector" || base == "/soa_vector" ||
+            base == "std/collections/soa_vector" ||
+            base == "/std/collections/soa_vector";
+        return;
+      }
+    };
+    markCanonicalSoaVector(
+        binding.typeTemplateArg.empty()
+            ? binding.typeName
+            : binding.typeName + "<" + binding.typeTemplateArg + ">");
     return extractExperimentalSoaVectorElementTypeForFieldViewRewrite(
         binding, specializedSoaVectorElementTypes, receiverElemType);
   };
@@ -4673,7 +4704,9 @@ void rewriteExperimentalSoaFieldViewHelperExpr(
 
   Expr fieldViewCall;
   fieldViewCall.kind = Expr::Kind::Call;
-  fieldViewCall.name = "/std/collections/experimental_soa_vector/soaVectorFieldView";
+  fieldViewCall.name = receiverUsesCanonicalSoaVector
+                           ? "/std/collections/soa_vector/soaVectorFieldView"
+                           : "/std/collections/experimental_soa_vector/soaVectorFieldView";
   fieldViewCall.templateArgs = {receiverElemType, fieldIt->second.typeText};
   auto appendReceiverValueExpr = [&](Expr &callExpr) {
     if (!receiverNeedsDereference) {

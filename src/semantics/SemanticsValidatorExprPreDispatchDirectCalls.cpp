@@ -70,6 +70,28 @@ bool isRootMapConstructorExpr(const Expr &candidate) {
   return normalizedName == "map" || normalizedName.rfind("map__", 0) == 0;
 }
 
+bool isPublishedMapConstructorExpr(const Expr &candidate) {
+  if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
+      candidate.name.empty()) {
+    return false;
+  }
+  std::string normalizedName = candidate.name;
+  if (!candidate.namespacePrefix.empty() &&
+      normalizedName.find('/') == std::string::npos) {
+    std::string normalizedPrefix = candidate.namespacePrefix;
+    if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
+      normalizedPrefix.erase(normalizedPrefix.begin());
+    }
+    if (!normalizedPrefix.empty()) {
+      normalizedName = normalizedPrefix + "/" + normalizedName;
+    }
+  }
+  if (!normalizedName.empty() && normalizedName.front() != '/') {
+    normalizedName.insert(normalizedName.begin(), '/');
+  }
+  return isResolvedMapConstructorPath(normalizedName);
+}
+
 } // namespace
 
 bool SemanticsValidator::validateExprPreDispatchDirectCalls(
@@ -168,10 +190,9 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
             isExperimentalMapTypeText(receiverTypeText);
         const bool canonicalMapAccessDiagnostic =
             receiverIsExperimentalMap ||
-            (receiverExpr.kind != Expr::Kind::Name &&
-             (expr.name.rfind("/std/collections/map/", 0) == 0 ||
-              expr.namespacePrefix == "/std/collections/map" ||
-              expr.namespacePrefix == "std/collections/map"));
+            expr.name.rfind("/std/collections/map/", 0) == 0 ||
+            expr.namespacePrefix == "/std/collections/map" ||
+            expr.namespacePrefix == "std/collections/map";
         if (canonicalMapAccessDiagnostic) {
           return failPreDispatchDirectCallDiagnostic(
               "argument type mismatch for " + canonicalPath +
@@ -280,7 +301,8 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
           dispatchBootstrap.dispatchResolvers.resolveMapTarget(
               receiverExpr, keyType, valueType);
       if (isBuiltinMapTarget && !isExperimentalMapTarget &&
-          !isRootMapConstructorExpr(receiverExpr)) {
+          !isRootMapConstructorExpr(receiverExpr) &&
+          !isPublishedMapConstructorExpr(receiverExpr)) {
         return failPreDispatchDirectCallDiagnostic("unknown call target: " +
                                                    resolvedOut);
       }

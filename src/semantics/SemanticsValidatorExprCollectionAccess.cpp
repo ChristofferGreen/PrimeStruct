@@ -27,13 +27,6 @@ bool isSoaReceiverStructPath(const std::string &structPath) {
          structPath.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
 }
 
-bool isStdNamespacedCanonicalMapAccessPath(const std::string &path) {
-  return path == "/std/collections/map/at" ||
-         path == "/std/collections/map/at_ref" ||
-         path == "/std/collections/map/at_unsafe" ||
-         path == "/std/collections/map/at_unsafe_ref";
-}
-
 bool isMapCanonicalAccessPath(const std::string &path) {
   return path == "/map/at" || path == "/map/at_ref" ||
          path == "/map/at_unsafe" || path == "/map/at_unsafe_ref";
@@ -125,6 +118,26 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
           helperNameOut = "at_unsafe_ref";
           return true;
         }
+        std::string normalizedName = candidate.name;
+        if (!normalizedName.empty() && normalizedName.front() == '/') {
+          normalizedName.erase(normalizedName.begin());
+        }
+        if (normalizedName.rfind("std/collections/map/", 0) == 0) {
+          const std::string helperName =
+              normalizedName.substr(std::string("std/collections/map/").size());
+          if (isCanonicalMapAccessHelperName(helperName)) {
+            helperNameOut = helperName;
+            return true;
+          }
+        }
+        if (normalizedName.rfind("map/", 0) == 0) {
+          const std::string helperName =
+              normalizedName.substr(std::string("map/").size());
+          if (isCanonicalMapAccessHelperName(helperName)) {
+            helperNameOut = helperName;
+            return true;
+          }
+        }
         std::string namespacePrefix = candidate.namespacePrefix;
         if (!namespacePrefix.empty() && namespacePrefix.front() == '/') {
           namespacePrefix.erase(namespacePrefix.begin());
@@ -148,9 +161,6 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
   const bool isStdNamespacedVectorAccessCall =
       hasBuiltinAccessSpelling && !expr.isMethodCall &&
       resolveCalleePath(expr).rfind("/std/collections/vector/at", 0) == 0;
-  const bool isStdNamespacedMapAccessCall =
-      hasBuiltinAccessSpelling && !expr.isMethodCall &&
-      isStdNamespacedCanonicalMapAccessPath(resolveCalleePath(expr));
   const bool prefersExplicitDirectMapAccessAliasDefinition =
       !expr.isMethodCall &&
       (((context.isNamespacedMapHelperCall &&
@@ -205,7 +215,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
   const bool isBuiltinAccessName =
       hasBuiltinAccessSpelling &&
       !isStdNamespacedVectorAccessCall &&
-      !isStdNamespacedMapAccessCall && !isResolvedMapAccessCall;
+      !isResolvedMapAccessCall;
   const bool isNamespacedVectorAccessCall =
       !isStdNamespacedVectorAccessCall && isBuiltinAccessName &&
       context.isNamespacedVectorHelperCall &&
@@ -226,6 +236,49 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
     return this->resolveDirectSoaVectorOrExperimentalBorrowedReceiver(
         target, params, locals, context.resolveSoaVectorTarget, elemTypeOut);
   };
+  const bool explicitCanonicalMapAccessCall =
+      expr.name.rfind("/std/collections/map/", 0) == 0 ||
+      (expr.namespacePrefix == "/std/collections" &&
+       expr.name.rfind("map/", 0) == 0) ||
+      (expr.namespacePrefix == "std/collections" &&
+       expr.name.rfind("map/", 0) == 0) ||
+      expr.namespacePrefix == "/std/collections/map" ||
+      expr.namespacePrefix == "std/collections/map";
+  auto explicitCanonicalMapAccessHelperName = [&]() {
+    std::string normalizedName = expr.name;
+    if (!normalizedName.empty() && normalizedName.front() == '/') {
+      normalizedName.erase(normalizedName.begin());
+    }
+    if (normalizedName.rfind("std/collections/map/", 0) == 0) {
+      return normalizedName.substr(std::string("std/collections/map/").size());
+    }
+    if (normalizedName.rfind("map/", 0) == 0) {
+      return normalizedName.substr(std::string("map/").size());
+    }
+    if (expr.namespacePrefix == "/std/collections/map" ||
+        expr.namespacePrefix == "std/collections/map") {
+      return normalizedName;
+    }
+    return std::string{};
+  }();
+
+  if ((hasBuiltinAccessSpelling ||
+       isCanonicalMapAccessHelperName(explicitCanonicalMapAccessHelperName)) &&
+      !expr.isMethodCall &&
+      explicitCanonicalMapAccessCall && expr.args.size() == 2 &&
+      isCanonicalMapAccessHelperName(hasBuiltinAccessSpelling
+                                         ? accessHelperName
+                                         : explicitCanonicalMapAccessHelperName)) {
+    handledOut = true;
+    usedMethodTarget = true;
+    hasMethodReceiverIndex = true;
+    methodReceiverIndex = 0;
+    resolved = canonicalStdlibMapAccessPathForHelper(
+        hasBuiltinAccessSpelling ? accessHelperName
+                                 : explicitCanonicalMapAccessHelperName);
+    resolvedMethod = true;
+    return true;
+  }
 
   if (isBuiltinAccessName &&
       !(isStdNamespacedVectorAccessCall && hasNamedArguments(expr.argNames)) &&
@@ -233,10 +286,6 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
        isNamespacedMapAccessCall)) {
     handledOut = true;
     const bool hasNamedArgs = hasNamedArguments(expr.argNames);
-    const bool explicitCanonicalMapAccessCall =
-        expr.name.rfind("/std/collections/map/", 0) == 0 ||
-        expr.namespacePrefix == "/std/collections/map" ||
-        expr.namespacePrefix == "std/collections/map";
     const bool usesBuiltinVectorSurfaceMethodSemantics =
         accessHelperName == "count" || accessHelperName == "capacity" ||
         accessHelperName == "at" || accessHelperName == "at_unsafe";
@@ -335,7 +384,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
           isCanonicalMapAccessHelperName(accessHelperName) &&
           context.resolveMapTarget(receiverCandidate)) {
         methodResolved = canonicalMapAccessHelperTarget();
-        isBuiltinMethod = false;
+        isBuiltinMethod = true;
         resolvedCanonicalMapAccessMethod = true;
         if (!hasDefinitionPath(methodResolved) &&
             !hasDeclaredDefinitionPath(methodResolved) &&
@@ -490,7 +539,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
           isCanonicalMapAccessHelperName(accessHelperName) &&
           context.resolveMapTarget(expr.args.front())) {
         methodResolved = canonicalMapAccessHelperTarget();
-        isBuiltinMethod = false;
+        isBuiltinMethod = true;
         resolvedCanonicalMapAccessMethod = true;
         if (!hasDefinitionPath(methodResolved) &&
             !hasDeclaredDefinitionPath(methodResolved) &&

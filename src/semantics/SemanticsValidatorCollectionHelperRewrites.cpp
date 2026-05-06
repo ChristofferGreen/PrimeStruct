@@ -603,17 +603,38 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalMapHelperCall(
       return false;
     }
   }
-  if (!candidate.isMethodCall && !directExperimentalMapHelperSpelling &&
-      isBareMapAccessHelperName(helperName)) {
-    return false;
-  }
-
   const size_t receiverIndex =
       candidate.isMethodCall ? 0 : mapHelperReceiverIndex(canonicalCandidate, dispatchResolvers);
   if (receiverIndex >= canonicalCandidate.args.size()) {
     return false;
   }
   const Expr &receiverExpr = canonicalCandidate.args[receiverIndex];
+  auto isPublishedMapConstructorReceiver = [](const Expr &candidateExpr) {
+    if (candidateExpr.kind != Expr::Kind::Call || candidateExpr.isMethodCall ||
+        candidateExpr.name.empty()) {
+      return false;
+    }
+    std::string normalizedName = candidateExpr.name;
+    if (!candidateExpr.namespacePrefix.empty() &&
+        normalizedName.find('/') == std::string::npos) {
+      std::string normalizedPrefix = candidateExpr.namespacePrefix;
+      if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
+        normalizedPrefix.erase(normalizedPrefix.begin());
+      }
+      if (!normalizedPrefix.empty()) {
+        normalizedName = normalizedPrefix + "/" + normalizedName;
+      }
+    }
+    if (!normalizedName.empty() && normalizedName.front() != '/') {
+      normalizedName.insert(normalizedName.begin(), '/');
+    }
+    return isResolvedMapConstructorPath(normalizedName);
+  };
+  if (!candidate.isMethodCall && !directExperimentalMapHelperSpelling &&
+      isBareMapAccessHelperName(helperName) &&
+      !isPublishedMapConstructorReceiver(receiverExpr)) {
+    return false;
+  }
   if (!candidate.isMethodCall &&
       !candidate.templateArgs.empty() &&
       receiverExpr.kind == Expr::Kind::Call &&

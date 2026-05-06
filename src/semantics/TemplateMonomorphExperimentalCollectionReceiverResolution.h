@@ -38,6 +38,65 @@ bool isRootMapConstructorReceiverExpr(const Expr *receiverExpr) {
   return normalizedName == "map" || normalizedName.rfind("map__", 0) == 0;
 }
 
+bool isPublishedMapConstructorReceiverExpr(const Expr *receiverExpr,
+                                           const std::string &namespacePrefix,
+                                           Context &ctx) {
+  if (receiverExpr == nullptr || receiverExpr->kind != Expr::Kind::Call ||
+      receiverExpr->isMethodCall || receiverExpr->isBinding) {
+    return false;
+  }
+  return isResolvedPublishedMapConstructorPath(
+      resolveCalleePath(*receiverExpr, namespacePrefix, ctx));
+}
+
+bool inferPublishedMapConstructorReceiverTemplateArgs(
+    const Expr *receiverExpr,
+    const std::vector<ParameterInfo> &params,
+    const LocalTypeMap &locals,
+    bool allowMathBare,
+    const std::string &namespacePrefix,
+    Context &ctx,
+    std::vector<std::string> &templateArgsOut) {
+  templateArgsOut.clear();
+  if (!isPublishedMapConstructorReceiverExpr(receiverExpr, namespacePrefix, ctx)) {
+    return false;
+  }
+  if (receiverExpr->templateArgs.size() == 2) {
+    templateArgsOut = receiverExpr->templateArgs;
+    return true;
+  }
+  if (!receiverExpr->templateArgs.empty() || receiverExpr->args.empty() ||
+      receiverExpr->args.size() % 2 != 0) {
+    return false;
+  }
+  auto inferArgType = [&](const Expr &arg, std::string &typeTextOut) {
+    BindingInfo binding;
+    if (!inferBindingTypeForMonomorph(arg, params, locals, allowMathBare, ctx, binding)) {
+      return false;
+    }
+    typeTextOut = bindingTypeToString(binding);
+    return !typeTextOut.empty();
+  };
+  std::string keyType;
+  std::string valueType;
+  if (!inferArgType(receiverExpr->args[0], keyType) ||
+      !inferArgType(receiverExpr->args[1], valueType)) {
+    return false;
+  }
+  for (size_t i = 2; i + 1 < receiverExpr->args.size(); i += 2) {
+    std::string nextKeyType;
+    std::string nextValueType;
+    if (!inferArgType(receiverExpr->args[i], nextKeyType) ||
+        !inferArgType(receiverExpr->args[i + 1], nextValueType) ||
+        normalizeBindingTypeName(nextKeyType) != normalizeBindingTypeName(keyType) ||
+        normalizeBindingTypeName(nextValueType) != normalizeBindingTypeName(valueType)) {
+      return false;
+    }
+  }
+  templateArgsOut = {keyType, valueType};
+  return true;
+}
+
 bool extractExperimentalVectorElementTypeFromTypeText(const std::string &typeText,
                                                       const Context &ctx,
                                                       std::string &valueTypeOut) {
@@ -321,6 +380,16 @@ bool resolvesExperimentalMapValueReceiver(const Expr *receiverExpr,
   if (isRootMapConstructorReceiverExpr(receiverExpr)) {
     return false;
   }
+  std::vector<std::string> constructorTemplateArgs;
+  if (inferPublishedMapConstructorReceiverTemplateArgs(receiverExpr,
+                                                      params,
+                                                      locals,
+                                                      allowMathBare,
+                                                      namespacePrefix,
+                                                      ctx,
+                                                      constructorTemplateArgs)) {
+    return true;
+  }
   BindingInfo receiverInfo;
   if (inferBindingTypeForMonomorph(*receiverExpr, params, locals, allowMathBare, ctx, receiverInfo) &&
       resolvesExperimentalMapValueTypeText(experimentalCollectionValueBindingTypeText(receiverInfo),
@@ -449,6 +518,15 @@ bool resolveExperimentalMapValueReceiverTemplateArgs(const Expr *receiverExpr,
   }
   if (isRootMapConstructorReceiverExpr(receiverExpr)) {
     return false;
+  }
+  if (inferPublishedMapConstructorReceiverTemplateArgs(receiverExpr,
+                                                      params,
+                                                      locals,
+                                                      allowMathBare,
+                                                      namespacePrefix,
+                                                      ctx,
+                                                      templateArgsOut)) {
+    return true;
   }
   BindingInfo receiverInfo;
   if (inferBindingTypeForMonomorph(*receiverExpr, params, locals, allowMathBare, ctx, receiverInfo) &&

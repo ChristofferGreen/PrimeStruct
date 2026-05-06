@@ -590,6 +590,8 @@ bool isExperimentalSoaGrowthHelperPath(std::string_view path) {
 bool isExperimentalSoaFieldViewHelperPath(std::string_view path) {
   constexpr std::string_view kExperimentalSoaFieldViewPrefix =
       "/std/collections/experimental_soa_vector/soaVectorFieldView";
+  constexpr std::string_view kCanonicalSoaFieldViewPrefix =
+      "/std/collections/soa_vector/soaVectorFieldView";
   constexpr std::string_view kExperimentalSoaColumnFieldViewUnsafePrefix =
       "/std/collections/internal_soa_storage/soaColumnFieldViewUnsafe";
   std::string canonicalPath(path);
@@ -598,6 +600,7 @@ bool isExperimentalSoaFieldViewHelperPath(std::string_view path) {
     canonicalPath.erase(specializationSuffix);
   }
   return canonicalPath.rfind(kExperimentalSoaFieldViewPrefix, 0) == 0 ||
+         canonicalPath.rfind(kCanonicalSoaFieldViewPrefix, 0) == 0 ||
          canonicalPath.rfind(kExperimentalSoaColumnFieldViewUnsafePrefix, 0) == 0;
 }
 

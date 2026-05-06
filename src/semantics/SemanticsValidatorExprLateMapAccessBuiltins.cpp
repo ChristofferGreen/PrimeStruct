@@ -109,10 +109,9 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
         isExperimentalMapTypeText(receiverTypeText);
     const bool canonicalMapAccessDiagnostic =
         receiverIsExperimentalMap ||
-        (receiverExpr.kind != Expr::Kind::Name &&
-         (expr.name.rfind("/std/collections/map/", 0) == 0 ||
-          expr.namespacePrefix == "/std/collections/map" ||
-          expr.namespacePrefix == "std/collections/map"));
+        expr.name.rfind("/std/collections/map/", 0) == 0 ||
+        expr.namespacePrefix == "/std/collections/map" ||
+        expr.namespacePrefix == "std/collections/map";
     if (canonicalMapAccessDiagnostic) {
       return failLateMapAccessBuiltinDiagnostic(
           "argument type mismatch for /std/collections/map/" + helperName +

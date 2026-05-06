@@ -33,6 +33,17 @@ bool isExperimentalSoaVectorStructPath(const std::string &structPath) {
   return soa_paths::isExperimentalSoaVectorSpecializedTypePath(structPath);
 }
 
+bool isExperimentalVectorStructPath(const std::string &structPath) {
+  return structPath == "/std/collections/experimental_vector/Vector" ||
+         structPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+}
+
+bool isBuiltinVectorStructMatch(const std::string &expectedStruct,
+                                const std::string &argStruct) {
+  return isExperimentalVectorStructPath(expectedStruct) &&
+         normalizeCollectionBindingTypeName(argStruct) == "vector";
+}
+
 bool isBuiltinSoaToAosStructMatch(const std::string &calleePath,
                                   const std::string &expectedStruct,
                                   const std::string &argStruct) {
@@ -68,6 +79,7 @@ bool isStructParamMatch(const std::string &calleePath,
                         const std::string &expectedStruct,
                         const std::string &argStruct) {
   return expectedStruct == argStruct ||
+         isBuiltinVectorStructMatch(expectedStruct, argStruct) ||
          isBuiltinSoaToAosStructMatch(calleePath, expectedStruct, argStruct) ||
          isStdUiStructAliasMatch(expectedStruct, argStruct);
 }
