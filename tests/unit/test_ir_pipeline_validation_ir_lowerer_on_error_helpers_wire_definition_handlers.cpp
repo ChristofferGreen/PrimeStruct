@@ -178,6 +178,8 @@ TEST_CASE("ir lowerer on_error helpers prefer semantic-product metadata") {
       .errorTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
       .boundArgTextIds = {primec::semanticProgramInternCallTargetString(semanticProgram, "2i32")},
   });
+  semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionId
+      .insert_or_assign(22, 0);
 
   primec::ir_lowerer::OnErrorByDefinition onErrorByDef;
   std::string error;
@@ -658,6 +660,8 @@ TEST_CASE("ir lowerer on_error helpers use semantic-id facts without definition-
       .definitionPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
       .handlerPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler_fallback"),
   });
+  semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionId
+      .insert_or_assign(222, 0);
 
   primec::ir_lowerer::OnErrorByDefinition onErrorByDef;
   std::string error;
@@ -671,7 +675,7 @@ TEST_CASE("ir lowerer on_error helpers use semantic-id facts without definition-
   CHECK(onErrorByDef.at("/main")->boundArgs.front().literalValue == 2);
 }
 
-TEST_CASE("ir lowerer on_error helpers index unfrozen semantic-id facts") {
+TEST_CASE("ir lowerer on_error helpers require published definition-id maps") {
   primec::Definition mainDef;
   mainDef.fullPath = "/main";
   mainDef.semanticNodeId = 3301;
@@ -690,7 +694,19 @@ TEST_CASE("ir lowerer on_error helpers index unfrozen semantic-id facts") {
       .handlerPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
   });
 
-  const auto semanticIndex = primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+  const auto rawOnlySemanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+  CHECK(rawOnlySemanticIndex.onErrorFactsByDefinitionId.empty());
+  const auto *rawOnlyOnErrorFact =
+      primec::ir_lowerer::findSemanticProductOnErrorFact(
+          &semanticProgram, rawOnlySemanticIndex, mainDef);
+  CHECK(rawOnlyOnErrorFact == nullptr);
+
+  semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionId
+      .insert_or_assign(3301, 0);
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+  CHECK(semanticIndex.onErrorFactsByDefinitionId.count(3301) == 1);
   const auto *onErrorFact =
       primec::ir_lowerer::findSemanticProductOnErrorFact(&semanticProgram, semanticIndex, mainDef);
   REQUIRE(onErrorFact != nullptr);

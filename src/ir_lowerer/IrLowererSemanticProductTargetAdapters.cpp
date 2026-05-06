@@ -74,20 +74,6 @@ struct SemanticProductIndexBuilder {
     populateSemanticFactIndex(index.onErrorFactsByDefinitionId,
                               semanticProgram->publishedRoutingLookups.onErrorFactIndicesByDefinitionId,
                               semanticProgram->onErrorFacts);
-    if (semanticProgram->publishedStorageFrozen) {
-      return;
-    }
-    const auto onErrorFacts = semanticProgramOnErrorFactView(*semanticProgram);
-    index.onErrorFactsByDefinitionId.reserve(index.onErrorFactsByDefinitionId.size() +
-                                             onErrorFacts.size());
-    for (const auto *entry : onErrorFacts) {
-      if (entry == nullptr) {
-        continue;
-      }
-      if (entry->semanticNodeId != 0) {
-        index.onErrorFactsByDefinitionId.try_emplace(entry->semanticNodeId, entry);
-      }
-    }
   }
 
   void buildReturnIndex(SemanticProductIndex &index) const {
