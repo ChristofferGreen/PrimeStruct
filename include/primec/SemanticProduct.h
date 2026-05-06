@@ -396,6 +396,7 @@ struct SemanticProgramPublishedRoutingLookups {
   std::unordered_map<SymbolId, std::size_t> callableSummaryIndicesByPathId;
   std::unordered_map<uint64_t, std::size_t> bindingFactIndicesByExpr;
   std::unordered_map<uint64_t, std::size_t> returnFactIndicesByDefinitionId;
+  std::unordered_map<SymbolId, std::size_t> returnFactIndicesByDefinitionPathId;
   std::unordered_map<uint64_t, std::size_t> collectionSpecializationIndicesByExpr;
   std::unordered_map<uint64_t, std::size_t> onErrorFactIndicesByDefinitionId;
   std::unordered_map<SymbolId, std::size_t> onErrorFactIndicesByDefinitionPathId;
@@ -519,6 +520,9 @@ const SemanticProgramOnErrorFact *semanticProgramLookupPublishedOnErrorFactByDef
     const SemanticProgram &semanticProgram,
     uint64_t semanticNodeId);
 const SemanticProgramOnErrorFact *semanticProgramLookupPublishedOnErrorFactByDefinitionPathId(
+    const SemanticProgram &semanticProgram,
+    SymbolId definitionPathId);
+const SemanticProgramReturnFact *semanticProgramLookupPublishedReturnFactByDefinitionPathId(
     const SemanticProgram &semanticProgram,
     SymbolId definitionPathId);
 const SemanticProgramCollectionSpecialization *

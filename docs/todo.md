@@ -518,6 +518,8 @@ Task template:
     quarantine slice is complete. The lowerer return definition-path adapter
     cache quarantine slice is complete while the explicit return-by-path
     helper remains available for resolved callee-path consumers. The lowerer
+    return-by-path helper published-map slice is complete for resolved
+    callee-path consumers. The lowerer
     base call-kind `try(...)` fact authority slice is complete. The lowerer
     base call-kind Result method fact-authority slice is complete for
     semantic-product-addressed `Result.ok(...)`, `Result.error(...)`, and
@@ -927,6 +929,10 @@ Task template:
       metadata fails closed with a deterministic location reference return
       diagnostic while syntax-only or no-semantic-product compatibility keeps
       the old transform-scan path.
+    - Completed slice: semantic-product-addressed return-by-path consumers
+      now resolve callee return facts from the published definition-path
+      return-fact map instead of scanning raw return facts by definition path.
+      Missing published metadata fails closed for the resolved callee path.
     - Completed slice: semantic-product-addressed direct-call payloads for
       `Result.ok(...)` now resolve payload type metadata from published
       binding/query facts before direct callee collection or struct

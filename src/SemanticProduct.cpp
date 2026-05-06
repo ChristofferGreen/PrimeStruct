@@ -506,6 +506,21 @@ const SemanticProgramOnErrorFact *semanticProgramLookupPublishedOnErrorFactByDef
   return nullptr;
 }
 
+const SemanticProgramReturnFact *semanticProgramLookupPublishedReturnFactByDefinitionPathId(
+    const SemanticProgram &semanticProgram,
+    SymbolId definitionPathId) {
+  if (definitionPathId == InvalidSymbolId) {
+    return nullptr;
+  }
+  if (const auto it =
+          semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionPathId.find(
+              definitionPathId);
+      it != semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionPathId.end()) {
+    return lookupPublishedSemanticEntryByIndex(semanticProgram.returnFacts, it->second);
+  }
+  return nullptr;
+}
+
 const SemanticProgramCollectionSpecialization *
 semanticProgramLookupPublishedCollectionSpecializationBySemanticId(
     const SemanticProgram &semanticProgram,

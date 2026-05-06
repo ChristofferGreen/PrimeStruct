@@ -6,6 +6,27 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 6, 2026)**
+- [x] TODO-4298: Publish return path lookup
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-06
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes resolved
+    callee-path return-fact consumers read the published definition-path
+    return-fact map instead of scanning raw return facts.
+  - acceptance:
+    - Semantic-product publication records return facts by definition path id.
+    - `findSemanticProductReturnFactByPath` resolves through the published
+      definition-path return-fact lookup.
+    - Stale or unpublished raw return facts with the requested path are not
+      recovered by the lowerer helper.
+  - stop_rule: Stop once path-based return consumers fail closed without a
+    published definition-path return fact and tests pin the published lookup.
+  - evidence: Added a published return-fact definition-path index and lookup
+    helper, rewired the lowerer return-by-path adapter to use it, added
+    adapter regressions for stale/raw path facts, refreshed graph source locks,
+    and skipped local test execution per the lite workflow.
+
 - [x] TODO-4298: Remove binding scope fallback
   - owner: ai
   - created_at: 2026-04-28

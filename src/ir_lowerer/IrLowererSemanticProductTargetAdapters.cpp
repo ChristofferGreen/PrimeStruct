@@ -399,17 +399,13 @@ const SemanticProgramReturnFact *findSemanticProductReturnFactByPath(
   if (adapter.semanticProgram == nullptr || definitionPath.empty()) {
     return nullptr;
   }
-  const auto returnFacts = semanticProgramReturnFactView(*adapter.semanticProgram);
-  for (const auto *entry : returnFacts) {
-    if (entry == nullptr) {
-      continue;
-    }
-    if (semanticProgramReturnFactDefinitionPath(*adapter.semanticProgram, *entry) ==
-        definitionPath) {
-      return entry;
-    }
+  const auto definitionPathId =
+      semanticProgramLookupCallTargetStringId(*adapter.semanticProgram, definitionPath);
+  if (!definitionPathId.has_value()) {
+    return nullptr;
   }
-  return nullptr;
+  return semanticProgramLookupPublishedReturnFactByDefinitionPathId(
+      *adapter.semanticProgram, *definitionPathId);
 }
 
 const SemanticProgramReturnFact *findSemanticProductReturnFact(

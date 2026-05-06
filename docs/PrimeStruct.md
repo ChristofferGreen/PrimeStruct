@@ -1037,7 +1037,8 @@ Compile-pipeline publication contract:
   `on_error` facts by definition semantic id, while definition-path lookup remains a published inspection surface.
 - Return facts follow the same adapter-cache rule for direct definition lookup: the semantic-product adapter no longer
   materializes a return definition-path index as a recovery surface. The explicit return-by-path helper remains
-  available for call-site consumers that already resolved a callee path.
+  available for call-site consumers that already resolved a callee path, but it reads the published definition-path
+  return-fact map instead of scanning raw return facts.
 - Base call-kind inference now applies the same graph-backed rule for `try(...)`: semantic-product `try` facts provide
   the value kind before local `Result` state can infer it, and missing facts leave the semantic-product path unresolved.
 - Native indexed-access validation now follows the graph-backed rule for index

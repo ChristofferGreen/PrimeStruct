@@ -1162,6 +1162,9 @@ void publishReturnFacts(
   state.semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId.reserve(
       state.semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId.size() +
       returnFacts.size());
+  state.semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionPathId.reserve(
+      state.semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionPathId.size() +
+      returnFacts.size());
   for (const auto &snapshotEntry : returnFacts) {
     SemanticProgramReturnFact entry;
     entry.returnKind = returnKindSnapshotName(snapshotEntry.kind);
@@ -1190,6 +1193,11 @@ void publishReturnFacts(
     if (state.semanticProgram.returnFacts.back().semanticNodeId != 0) {
       state.semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionId
           .insert_or_assign(state.semanticProgram.returnFacts.back().semanticNodeId,
+                            entryIndex);
+    }
+    if (state.semanticProgram.returnFacts.back().definitionPathId != InvalidSymbolId) {
+      state.semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionPathId
+          .insert_or_assign(state.semanticProgram.returnFacts.back().definitionPathId,
                             entryIndex);
     }
   }

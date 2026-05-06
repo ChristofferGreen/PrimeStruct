@@ -2478,6 +2478,74 @@ TEST_CASE("ir lowerer semantic-product index does not expose return path fallbac
   CHECK(returnFact == nullptr);
 }
 
+TEST_CASE("ir lowerer return-by-path helper uses published definition-path facts") {
+  primec::SemanticProgram semanticProgram;
+  const primec::SymbolId makeChoicePathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/makeChoice");
+  semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
+      .returnKind = "return",
+      .structPath = "/i32",
+      .bindingTypeText = "i32",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 9,
+      .sourceColumn = 3,
+      .semanticNodeId = 7901,
+      .definitionPathId = makeChoicePathId,
+  });
+  semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
+      .returnKind = "return",
+      .structPath = "/Choice",
+      .bindingTypeText = "Choice",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 10,
+      .sourceColumn = 3,
+      .semanticNodeId = 7902,
+      .definitionPathId = makeChoicePathId,
+  });
+  semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionPathId
+      .insert_or_assign(makeChoicePathId, 1);
+
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  const auto *returnFact =
+      primec::ir_lowerer::findSemanticProductReturnFactByPath(
+          semanticTargets, "/makeChoice");
+  REQUIRE(returnFact != nullptr);
+  CHECK(returnFact->semanticNodeId == 7902);
+  CHECK(returnFact->bindingTypeText == "Choice");
+}
+
+TEST_CASE("ir lowerer return-by-path helper ignores raw path facts without published lookup") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
+      .returnKind = "return",
+      .structPath = "/Choice",
+      .bindingTypeText = "Choice",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 10,
+      .sourceColumn = 3,
+      .semanticNodeId = 7903,
+      .definitionPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/makeChoice"),
+  });
+
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  const auto *returnFact =
+      primec::ir_lowerer::findSemanticProductReturnFactByPath(
+          semanticTargets, "/makeChoice");
+  CHECK(returnFact == nullptr);
+}
+
 TEST_CASE("ir lowerer semantic-product adapter ignores on_error definition-path fallback") {
   primec::Definition mainDef;
   mainDef.fullPath = "/main";
