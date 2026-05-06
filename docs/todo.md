@@ -673,6 +673,10 @@ Task template:
     The statement-call vector mutator receiver slice is complete for
     semantic-product-backed binding, local-auto, and query vector facts before
     stale local vector metadata can select builtin mutator rewriting.
+    The statement-call SoA helper dispatch receiver slice is complete for
+    semantic-product-backed collection-specialization, binding, local-auto,
+    and query SoA vector facts before stale local SoA metadata can select
+    direct helper method dispatch.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -803,6 +807,12 @@ Task template:
       `push`/`reserve`/`pop`-style rewriting. Published non-vector facts
       suppress stale local vector metadata while syntax-only compatibility
       keeps the legacy fallback.
+    - Completed slice: semantic-product-addressed statement-call SoA helper
+      dispatch now consumes published collection-specialization, binding,
+      local-auto, and query SoA vector receiver facts before local
+      `isSoaVector` metadata can select direct helper method dispatch.
+      Published non-SoA facts suppress stale local SoA metadata while
+      syntax-only compatibility keeps the legacy fallback.
     - Completed slice: semantic-product-addressed dispatch inference now
       consumes published method receiver binding, query, or local-auto facts
       for `FileError.why()` and nested `try(file.method())` file operations

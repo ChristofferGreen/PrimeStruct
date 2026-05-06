@@ -12523,3 +12523,37 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     syntax spec with the generic sum contract, removed `TODO-4289` from the
     live queue, promoted `TODO-4264` to Ready Now, and deferred release reruns
     to CI per the lite workflow.
+
+- [x] TODO-4298: Use SoA statement dispatch facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes statement direct
+    SoA helper dispatch read semantic-product receiver facts before stale
+    local `isSoaVector` metadata.
+  - implementation_notes:
+    - Resolve collection-specialization family IDs plus binding, local-auto,
+      and query receiver type IDs before copied fact text.
+    - Treat `Reference<soa_vector<T>>`, `Pointer<soa_vector<T>>`, and
+      specialized experimental `SoaVector__` type text as SoA receiver facts.
+    - Keep the local `isSoaVector` flag and builtin `soa_vector(...)` syntax
+      as compatibility fallback for syntax-only or no-semantic-product
+      contexts.
+  - acceptance:
+    - Statement direct helper dispatch consumes graph-backed SoA receiver
+      facts before local metadata.
+    - Interned semantic-product type IDs override copied text for SoA
+      receiver classification.
+    - Published non-SoA facts suppress stale local SoA metadata.
+    - The remaining TODO-4298 block records the completed slice and remaining
+      adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once statement direct SoA helper dispatch prefers
+    published semantic-product facts and keeps local `isSoaVector` inference
+    only as compatibility fallback.
+  - finished_at: 2026-05-06
+  - evidence: Promoted statement-call SoA helper dispatch in
+    `IrLowererStatementCallEmission.cpp`, added targeted lowerer helper
+    coverage for collection-specialization, binding, local-auto, query, and
+    non-SoA receiver facts, and documented the remaining TODO-4298 work.
+    Local test execution was skipped per the lite workflow.

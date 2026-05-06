@@ -345,7 +345,108 @@ static size_t explicitVectorHelperReceiverIndex(const Expr &expr) {
   return 0;
 }
 
-static bool isSoaVectorTargetExpr(const Expr &expr, const LocalMap &localsIn) {
+static bool isStatementSoaVectorTypeText(const std::string &typeText) {
+  std::string base;
+  std::string argText;
+  const std::string normalizedTypeText =
+      unwrapTopLevelUninitializedTypeText(trimTemplateTypeText(typeText));
+  if (splitTemplateTypeName(normalizedTypeText, base, argText)) {
+    const std::string normalizedBase =
+        normalizeCollectionBindingTypeName(trimTemplateTypeText(base));
+    if (normalizedBase == "Reference" || normalizedBase == "/Reference" ||
+        normalizedBase == "Pointer" || normalizedBase == "/Pointer") {
+      return isStatementSoaVectorTypeText(argText);
+    }
+    return normalizedBase == "soa_vector";
+  }
+  return normalizeCollectionBindingTypeName(normalizedTypeText) == "soa_vector";
+}
+
+static bool resolveStatementSoaVectorReceiverFromSemanticFacts(
+    const Expr &receiverExpr,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex,
+    bool &hasSemanticSoaVectorFactOut) {
+  hasSemanticSoaVectorFactOut = false;
+  if (semanticProgram == nullptr || semanticIndex == nullptr) {
+    return false;
+  }
+
+  auto tryResolveSemanticTypeText =
+      [&](SymbolId typeTextId, const std::string &typeText) {
+    const std::string resolvedTypeText =
+        resolveStatementCallSemanticTypeText(semanticProgram, typeTextId, typeText);
+    return !resolvedTypeText.empty() && isStatementSoaVectorTypeText(resolvedTypeText);
+  };
+
+  if (receiverExpr.semanticNodeId != 0) {
+    if (const auto *collectionFact =
+            findSemanticProductCollectionSpecialization(*semanticIndex, receiverExpr);
+        collectionFact != nullptr) {
+      hasSemanticSoaVectorFactOut = true;
+      const std::string collectionFamily = resolveStatementCallSemanticTypeText(
+          semanticProgram,
+          collectionFact->collectionFamilyId,
+          collectionFact->collectionFamily);
+      return normalizeCollectionBindingTypeName(collectionFamily) == "soa_vector";
+    }
+
+    if (const auto *queryFact =
+            findSemanticProductQueryFact(semanticProgram, *semanticIndex, receiverExpr);
+        queryFact != nullptr) {
+      hasSemanticSoaVectorFactOut = true;
+      return tryResolveSemanticTypeText(queryFact->bindingTypeTextId,
+                                        queryFact->bindingTypeText) ||
+             tryResolveSemanticTypeText(queryFact->queryTypeTextId,
+                                        queryFact->queryTypeText) ||
+             tryResolveSemanticTypeText(queryFact->receiverBindingTypeTextId,
+                                        queryFact->receiverBindingTypeText);
+    }
+
+    if (const auto *bindingFact =
+            findSemanticProductBindingFact(*semanticIndex, receiverExpr);
+        bindingFact != nullptr) {
+      hasSemanticSoaVectorFactOut = true;
+      return tryResolveSemanticTypeText(bindingFact->bindingTypeTextId,
+                                        bindingFact->bindingTypeText);
+    }
+
+    if (const auto *localAutoFact =
+            findSemanticProductLocalAutoFact(semanticProgram, *semanticIndex, receiverExpr);
+        localAutoFact != nullptr) {
+      hasSemanticSoaVectorFactOut = true;
+      return tryResolveSemanticTypeText(localAutoFact->bindingTypeTextId,
+                                        localAutoFact->bindingTypeText);
+    }
+  }
+
+  if (receiverExpr.kind == Expr::Kind::Call && receiverExpr.args.size() == 1 &&
+      (isSimpleCallName(receiverExpr, "location") ||
+       isSimpleCallName(receiverExpr, "dereference"))) {
+    return resolveStatementSoaVectorReceiverFromSemanticFacts(
+        receiverExpr.args.front(),
+        semanticProgram,
+        semanticIndex,
+        hasSemanticSoaVectorFactOut);
+  }
+
+  return false;
+}
+
+static bool isSoaVectorTargetExpr(const Expr &expr,
+                                  const LocalMap &localsIn,
+                                  const SemanticProgram *semanticProgram,
+                                  const SemanticProductIndex *semanticIndex) {
+  bool hasSemanticSoaVectorFact = false;
+  if (resolveStatementSoaVectorReceiverFromSemanticFacts(expr,
+                                                         semanticProgram,
+                                                         semanticIndex,
+                                                         hasSemanticSoaVectorFact)) {
+    return true;
+  }
+  if (hasSemanticSoaVectorFact) {
+    return false;
+  }
   if (expr.kind == Expr::Kind::Name) {
     auto it = localsIn.find(expr.name);
     return it != localsIn.end() && it->second.isSoaVector;
@@ -1849,7 +1950,7 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
   if (!explicitVectorMutatorHelperCall &&
       !directStmt.isMethodCall &&
       directStmt.args.size() == 1 &&
-      isSoaVectorTargetExpr(directStmt.args.front(), localsIn)) {
+      isSoaVectorTargetExpr(directStmt.args.front(), localsIn, semanticProgram, semanticIndex)) {
     Expr methodStmt = directStmt;
     methodStmt.isMethodCall = true;
     const std::string priorError = error;

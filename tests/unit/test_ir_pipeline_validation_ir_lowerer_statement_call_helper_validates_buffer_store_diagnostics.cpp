@@ -970,6 +970,188 @@ TEST_CASE("ir lowerer vector mutator rewrite uses semantic receiver facts before
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer SoA helper dispatch uses semantic receiver facts before stale locals") {
+  using EmitResult = primec::ir_lowerer::DirectCallStatementEmitResult;
+
+  auto makeReceiver = [](std::string name, uint64_t semanticNodeId) {
+    primec::Expr receiver;
+    receiver.kind = primec::Expr::Kind::Name;
+    receiver.name = name;
+    receiver.semanticNodeId = semanticNodeId;
+    return receiver;
+  };
+
+  auto makeCountStmt = [](const primec::Expr &receiver) {
+    primec::Expr stmt;
+    stmt.kind = primec::Expr::Kind::Call;
+    stmt.name = "count";
+    stmt.args = {receiver};
+    stmt.argNames = {std::nullopt};
+    return stmt;
+  };
+
+  primec::SemanticProgram semanticProgram;
+  auto internType = [&](const std::string &typeText) {
+    return primec::semanticProgramInternCallTargetString(semanticProgram, typeText);
+  };
+  auto addCollectionFact =
+      [&](uint64_t semanticNodeId, std::string name, std::string collectionFamily) {
+    const std::size_t factIndex = semanticProgram.collectionSpecializations.size();
+    semanticProgram.collectionSpecializations.push_back(primec::SemanticProgramCollectionSpecialization{
+        .name = name,
+        .collectionFamily = "vector",
+        .bindingTypeText = "vector<i32>",
+        .elementTypeText = "Particle",
+        .semanticNodeId = semanticNodeId,
+        .collectionFamilyId = internType(collectionFamily),
+        .bindingTypeTextId = internType("soa_vector<Particle>"),
+        .elementTypeTextId = internType("Particle"),
+    });
+    semanticProgram.publishedRoutingLookups
+        .collectionSpecializationIndicesByExpr[semanticNodeId] = factIndex;
+  };
+  auto addBindingFact = [&](uint64_t semanticNodeId, std::string name, std::string typeText) {
+    const std::size_t factIndex = semanticProgram.bindingFacts.size();
+    semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+        .name = name,
+        .bindingTypeText = "i32",
+        .semanticNodeId = semanticNodeId,
+        .bindingTypeTextId = internType(typeText),
+    });
+    semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr[semanticNodeId] = factIndex;
+  };
+  auto addLocalAutoFact = [&](uint64_t semanticNodeId, std::string name, std::string typeText) {
+    const std::size_t factIndex = semanticProgram.localAutoFacts.size();
+    semanticProgram.localAutoFacts.push_back(primec::SemanticProgramLocalAutoFact{
+        .bindingName = name,
+        .bindingTypeText = "i32",
+        .semanticNodeId = semanticNodeId,
+        .bindingTypeTextId = internType(typeText),
+    });
+    semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr[semanticNodeId] = factIndex;
+  };
+  auto addQueryFact = [&](uint64_t semanticNodeId, std::string typeText) {
+    const std::size_t factIndex = semanticProgram.queryFacts.size();
+    semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+        .callName = "values",
+        .queryTypeText = "i32",
+        .bindingTypeText = "i32",
+        .semanticNodeId = semanticNodeId,
+        .queryTypeTextId = internType(typeText),
+        .bindingTypeTextId = internType(typeText),
+    });
+    semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr[semanticNodeId] = factIndex;
+  };
+  addCollectionFact(7601, "collectionValues", "soa_vector");
+  addBindingFact(7602, "bindingValues", "Reference<soa_vector<Particle>>");
+  addLocalAutoFact(7603, "autoValues", "Pointer<soa_vector<Particle>>");
+  addQueryFact(7604, "/std/collections/experimental_soa_vector/SoaVector__t8Particle");
+  addBindingFact(7605, "notASoa", "i32");
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  primec::ir_lowerer::LocalMap staleLocals;
+  auto addStaleLocalSoa = [&](const std::string &name) {
+    primec::ir_lowerer::LocalInfo local;
+    local.isSoaVector = true;
+    local.index = 11;
+    staleLocals[name] = local;
+  };
+  addStaleLocalSoa("collectionValues");
+  addStaleLocalSoa("bindingValues");
+  addStaleLocalSoa("autoValues");
+  addStaleLocalSoa("queryValues");
+  addStaleLocalSoa("notASoa");
+
+  primec::Definition countDef;
+  countDef.fullPath = "/std/collections/soa_vector/count";
+
+  auto emitSoaCount = [&](const primec::Expr &stmt,
+                          bool &forwardedWasMethod,
+                          int &inlineCalls,
+                          std::string &errorOut) {
+    std::vector<primec::IrInstruction> instructions;
+    forwardedWasMethod = false;
+    inlineCalls = 0;
+    errorOut.clear();
+    return primec::ir_lowerer::tryEmitDirectCallStatement(
+        stmt,
+        staleLocals,
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+        [&](const primec::Expr &callExpr,
+            const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+          forwardedWasMethod = callExpr.isMethodCall;
+          return callExpr.isMethodCall && callExpr.name == "count" ? &countDef : nullptr;
+        },
+        [](const primec::Expr &) -> const primec::Definition * { return nullptr; },
+        [](const std::string &, primec::ir_lowerer::ReturnInfo &info) {
+          info.returnsVoid = true;
+          return true;
+        },
+        [&](const primec::Expr &callExpr,
+            const primec::Definition &callee,
+            const primec::ir_lowerer::LocalMap &,
+            bool expectValue) {
+          ++inlineCalls;
+          CHECK(callExpr.isMethodCall);
+          CHECK(callExpr.name == "count");
+          CHECK(callee.fullPath == "/std/collections/soa_vector/count");
+          CHECK_FALSE(expectValue);
+          return true;
+        },
+        instructions,
+        errorOut,
+        &semanticProgram,
+        &semanticIndex);
+  };
+
+  bool forwardedWasMethod = false;
+  int inlineCalls = 0;
+  std::string error;
+  CHECK(emitSoaCount(makeCountStmt(makeReceiver("collectionValues", 7601)),
+                     forwardedWasMethod,
+                     inlineCalls,
+                     error) == EmitResult::Emitted);
+  CHECK(forwardedWasMethod);
+  CHECK(inlineCalls == 1);
+  CHECK(error.empty());
+
+  CHECK(emitSoaCount(makeCountStmt(makeReceiver("bindingValues", 7602)),
+                     forwardedWasMethod,
+                     inlineCalls,
+                     error) == EmitResult::Emitted);
+  CHECK(forwardedWasMethod);
+  CHECK(inlineCalls == 1);
+  CHECK(error.empty());
+
+  CHECK(emitSoaCount(makeCountStmt(makeReceiver("autoValues", 7603)),
+                     forwardedWasMethod,
+                     inlineCalls,
+                     error) == EmitResult::Emitted);
+  CHECK(forwardedWasMethod);
+  CHECK(inlineCalls == 1);
+  CHECK(error.empty());
+
+  CHECK(emitSoaCount(makeCountStmt(makeReceiver("queryValues", 7604)),
+                     forwardedWasMethod,
+                     inlineCalls,
+                     error) == EmitResult::Emitted);
+  CHECK(forwardedWasMethod);
+  CHECK(inlineCalls == 1);
+  CHECK(error.empty());
+
+  CHECK(emitSoaCount(makeCountStmt(makeReceiver("notASoa", 7605)),
+                     forwardedWasMethod,
+                     inlineCalls,
+                     error) == EmitResult::NotMatched);
+  CHECK_FALSE(forwardedWasMethod);
+  CHECK(inlineCalls == 0);
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer statement call helper emits direct calls") {
   using EmitResult = primec::ir_lowerer::DirectCallStatementEmitResult;
 
