@@ -1465,6 +1465,14 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding) {
       return false;
     }
+    const InlineVectorTargetFact semanticFact =
+        classifyInlineVectorTargetFromSemanticFacts(receiverExpr);
+    if (semanticFact == InlineVectorTargetFact::Vector) {
+      return true;
+    }
+    if (semanticFact == InlineVectorTargetFact::NonVector) {
+      return false;
+    }
     const Definition *receiverDef = resolveDefinitionCallFn(receiverExpr);
     if (receiverDef == nullptr) {
       return false;

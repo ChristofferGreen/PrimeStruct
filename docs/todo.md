@@ -700,6 +700,10 @@ Task template:
     semantic-product-backed collection-specialization, binding, local-auto,
     and query collection receiver facts before stale local array/vector/map
     or string metadata can decide count/access fallback routing.
+    The inline native vector-returning call deferral slice is complete for
+    semantic-product-backed collection-specialization, binding, local-auto,
+    and query vector facts before callee return-collection reconstruction can
+    decide temporary vector helper deferral.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -871,6 +875,13 @@ Task template:
       count/access fallback behavior. Published non-collection facts suppress
       stale local collection metadata while syntax-only compatibility keeps
       the legacy fallback.
+    - Completed slice: semantic-product-addressed inline native
+      vector-returning call deferral now consumes published
+      collection-specialization, binding, local-auto, and query vector facts
+      before resolved-callee return-collection reconstruction can select
+      temporary vector helper deferral. Published non-vector facts suppress
+      stale callee-return collection metadata while syntax-only compatibility
+      keeps the legacy fallback.
     - Completed slice: semantic-product-addressed dispatch inference now
       consumes published method receiver binding, query, or local-auto facts
       for `FileError.why()` and nested `try(file.method())` file operations

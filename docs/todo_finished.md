@@ -12732,3 +12732,36 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     non-collection, and stale-local fallback ordering, and documented the
     remaining TODO-4298 work. Local test execution was skipped per the lite
     workflow.
+
+- [x] TODO-4298: Use vector-return facts in inline dispatch
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes inline native
+    vector-returning call deferral read semantic-product facts before
+    resolved-callee return collection reconstruction decides temporary vector
+    helper deferral.
+  - implementation_notes:
+    - Reuse inline dispatch vector receiver fact classification for temporary
+      call targets.
+    - Resolve collection-specialization family IDs plus binding, local-auto,
+      and query type IDs before copied fact text.
+    - Keep resolved-callee return collection inference as compatibility
+      fallback for syntax-only or no-semantic-product contexts.
+  - acceptance:
+    - Inline native vector-returning call deferral consumes graph-backed
+      vector facts before resolved-callee return collection inference.
+    - Published non-vector facts suppress stale callee-return collection
+      metadata.
+    - The remaining TODO-4298 block records the completed slice and remaining
+      adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once inline native vector-returning call deferral prefers
+    published semantic-product facts and keeps callee return-collection
+    inference only as compatibility fallback.
+  - finished_at: 2026-05-06
+  - evidence: Promoted inline native vector-returning call deferral in
+    `IrLowererInlineNativeCallDispatch.cpp`, extended source-contract
+    coverage for semantic-first ordering before resolved-callee return
+    collection inference, and documented the remaining TODO-4298 work. Local
+    test execution was skipped per the lite workflow.

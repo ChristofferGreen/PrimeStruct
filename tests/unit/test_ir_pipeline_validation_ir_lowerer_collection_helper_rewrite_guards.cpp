@@ -1112,6 +1112,25 @@ TEST_CASE("ir lowerer inline dispatch vector helper deferral uses semantic recei
                     "    }\n"
                     "    return isVectorTarget(targetExpr, localsIn);") !=
         std::string::npos);
+
+  const size_t vectorReturningTarget =
+      source.find("auto isVectorReturningCallTarget = [&](const Expr &receiverExpr) {");
+  const size_t vectorReturningSemanticFact =
+      source.find("const InlineVectorTargetFact semanticFact =\n"
+                  "        classifyInlineVectorTargetFromSemanticFacts(receiverExpr);",
+                  vectorReturningTarget);
+  const size_t vectorReturningLegacyReturn =
+      source.find("const Definition *receiverDef = resolveDefinitionCallFn(receiverExpr);",
+                  vectorReturningTarget);
+  REQUIRE(vectorReturningTarget != std::string::npos);
+  REQUIRE(vectorReturningSemanticFact != std::string::npos);
+  REQUIRE(vectorReturningLegacyReturn != std::string::npos);
+  CHECK(vectorReturningSemanticFact < vectorReturningLegacyReturn);
+  CHECK(source.find("if (semanticFact == InlineVectorTargetFact::NonVector) {\n"
+                    "      return false;\n"
+                    "    }\n"
+                    "    const Definition *receiverDef = resolveDefinitionCallFn(receiverExpr);") !=
+        std::string::npos);
 }
 
 TEST_CASE("ir lowerer inline dispatch SoA vector fallback uses semantic receiver facts first") {
