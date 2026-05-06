@@ -354,6 +354,182 @@ TEST_CASE("ir lowerer conversions helper lowers realloc intrinsic to heap reallo
   CHECK(instructions[4].op == primec::IrOpcode::HeapRealloc);
 }
 
+TEST_CASE("ir lowerer conversions helper sizes memory pointer arithmetic from semantic facts") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo stalePointer;
+  stalePointer.kind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+  stalePointer.index = 4;
+  stalePointer.structTypeName = "/pkg/StalePair";
+  locals.emplace("ptr", stalePointer);
+  locals.emplace("autoPtr", stalePointer);
+
+  primec::SemanticProgram semanticProgram;
+  auto internType = [&](const std::string &typeText) {
+    return primec::semanticProgramInternCallTargetString(semanticProgram, typeText);
+  };
+  auto addBindingFact = [&](uint64_t semanticNodeId, std::string name, std::string typeText) {
+    const std::size_t factIndex = semanticProgram.bindingFacts.size();
+    semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+        .name = name,
+        .bindingTypeText = "Pointer<StalePair>",
+        .semanticNodeId = semanticNodeId,
+        .bindingTypeTextId = internType(typeText),
+    });
+    semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr[semanticNodeId] = factIndex;
+  };
+  auto addLocalAutoFact = [&](uint64_t semanticNodeId, std::string name, std::string typeText) {
+    const std::size_t factIndex = semanticProgram.localAutoFacts.size();
+    semanticProgram.localAutoFacts.push_back(primec::SemanticProgramLocalAutoFact{
+        .bindingName = name,
+        .bindingTypeText = "Pointer<StalePair>",
+        .semanticNodeId = semanticNodeId,
+        .bindingTypeTextId = internType(typeText),
+    });
+    semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr[semanticNodeId] = factIndex;
+  };
+  auto addQueryFact = [&](uint64_t semanticNodeId, std::string typeText) {
+    const std::size_t factIndex = semanticProgram.queryFacts.size();
+    semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+        .callName = "makePtr",
+        .queryTypeText = "Pointer<StalePair>",
+        .bindingTypeText = "Pointer<StalePair>",
+        .semanticNodeId = semanticNodeId,
+        .queryTypeTextId = internType(typeText),
+        .bindingTypeTextId = internType(typeText),
+    });
+    semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr[semanticNodeId] = factIndex;
+  };
+  addBindingFact(3301, "ptr", "Pointer<Pair>");
+  addBindingFact(3302, "ptr", "i32");
+  addLocalAutoFact(3303, "autoPtr", "Reference<AutoPair>");
+  addQueryFact(3304, "Pointer<QueryPair>");
+  const primec::ir_lowerer::SemanticProductTargetAdapter semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+
+  auto makePointerName = [](std::string name, uint64_t semanticNodeId) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Name;
+    expr.name = name;
+    expr.namespacePrefix = "/pkg";
+    expr.semanticNodeId = semanticNodeId;
+    return expr;
+  };
+  auto makePointerCall = [](uint64_t semanticNodeId) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = "makePtr";
+    expr.namespacePrefix = "/pkg";
+    expr.semanticNodeId = semanticNodeId;
+    return expr;
+  };
+  auto emitAtUnsafe = [&](primec::Expr pointerExpr) {
+    primec::Expr indexExpr;
+    indexExpr.kind = primec::Expr::Kind::Literal;
+    indexExpr.intWidth = 32;
+    indexExpr.literalValue = 1;
+
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = "/std/intrinsics/memory/at_unsafe";
+    expr.args = {pointerExpr, indexExpr};
+
+    std::vector<primec::IrInstruction> instructions;
+    std::string error;
+    bool handled = false;
+    int32_t nextLocal = 0;
+    const bool ok = primec::ir_lowerer::emitConversionsAndCallsOperatorExpr(
+        expr,
+        locals,
+        nextLocal,
+        [&](const primec::Expr &valueExpr, const primec::ir_lowerer::LocalMap &localsIn) {
+          if (valueExpr.kind == primec::Expr::Kind::Name) {
+            auto it = localsIn.find(valueExpr.name);
+            if (it == localsIn.end()) {
+              return false;
+            }
+            instructions.push_back({primec::IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+            return true;
+          }
+          if (valueExpr.kind == primec::Expr::Kind::Call) {
+            instructions.push_back({primec::IrOpcode::PushI64, 100});
+            return true;
+          }
+          instructions.push_back({primec::IrOpcode::PushI32, static_cast<uint64_t>(valueExpr.literalValue)});
+          return true;
+        },
+        [](const primec::Expr &valueExpr, const primec::ir_lowerer::LocalMap &) {
+          return valueExpr.kind == primec::Expr::Kind::Literal ? ValueKind::Int32 : ValueKind::Unknown;
+        },
+        [](ValueKind, bool) { return true; },
+        [&]() { return nextLocal++; },
+        []() {},
+        []() {},
+        []() {},
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+        [](const std::string &) { return ValueKind::Unknown; },
+        [](const std::string &, std::string &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+        [](const std::string &typeName, const std::string &namespacePrefix, std::string &resolvedOut) {
+          if (namespacePrefix != "/pkg") {
+            return false;
+          }
+          if (typeName == "Pair" || typeName == "AutoPair" || typeName == "QueryPair" ||
+              typeName == "StalePair") {
+            resolvedOut = "/pkg/" + typeName;
+            return true;
+          }
+          return false;
+        },
+        [](const std::string &structTypeName, int32_t &slotCount) {
+          if (structTypeName == "/pkg/Pair") {
+            slotCount = 2;
+            return true;
+          }
+          if (structTypeName == "/pkg/AutoPair") {
+            slotCount = 3;
+            return true;
+          }
+          if (structTypeName == "/pkg/QueryPair") {
+            slotCount = 4;
+            return true;
+          }
+          if (structTypeName == "/pkg/StalePair") {
+            slotCount = 7;
+            return true;
+          }
+          return false;
+        },
+        [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
+        [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) {
+          return false;
+        },
+        [](int32_t, int32_t, int32_t) { return false; },
+        instructions,
+        handled,
+        error,
+        [](const primec::Expr &) -> const primec::Definition * { return nullptr; },
+        &semanticTargets);
+    CHECK(ok);
+    CHECK(handled);
+    CHECK(error.empty());
+    return instructions;
+  };
+  auto hasScaleImmediate = [](const std::vector<primec::IrInstruction> &instructions,
+                              uint64_t expectedImmediate) {
+    return std::any_of(instructions.begin(), instructions.end(), [&](const primec::IrInstruction &inst) {
+      return inst.op == primec::IrOpcode::PushI32 && inst.imm == expectedImmediate;
+    });
+  };
+
+  CHECK(hasScaleImmediate(emitAtUnsafe(makePointerName("ptr", 3301)), 32));
+  CHECK(hasScaleImmediate(emitAtUnsafe(makePointerName("autoPtr", 3303)), 48));
+  CHECK(hasScaleImmediate(emitAtUnsafe(makePointerCall(3304)), 64));
+  CHECK(hasScaleImmediate(emitAtUnsafe(makePointerName("ptr", 3302)), 16));
+  CHECK(hasScaleImmediate(emitAtUnsafe(makePointerName("ptr", 0)), 112));
+}
+
 TEST_CASE("ir lowerer conversions helper lowers checked memory at intrinsic to bounded pointer arithmetic") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
 

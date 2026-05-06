@@ -1183,6 +1183,9 @@ Compile-pipeline publication contract:
 - Aggregate/uninitialized source expression inference now follows graph-backed type facts for direct binding,
   local-auto, and query expressions before consulting stale local struct metadata or recomputed definition returns;
   published scalar facts suppress aggregate fallback while syntax-only contexts keep compatibility inference.
+- Memory pointer arithmetic sizing follows graph-backed pointer target facts for binding, local-auto, and query pointer
+  expressions before local pointer struct metadata can determine aggregate slot scaling; published scalar facts suppress
+  stale aggregate scaling, and syntax-only pointer expressions keep compatibility inference.
 - Native indexed-access validation now follows the graph-backed rule for index
   expressions: query, binding, and local-auto type facts provide the index kind
   before legacy expression inference is consulted.

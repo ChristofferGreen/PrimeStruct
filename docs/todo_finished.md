@@ -6,6 +6,32 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 6, 2026)**
+- [x] TODO-4298: Use pointer facts for memory scaling
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-06
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes memory pointer arithmetic
+    slot scaling classify aggregate pointer targets from published binding,
+    local-auto, and query type facts before stale local pointer metadata can
+    answer.
+  - acceptance:
+    - Published binding type IDs classify aggregate pointer targets before
+      local pointer struct metadata.
+    - Published local-auto and query type IDs classify aggregate pointer
+      targets before local or recomputed fallback.
+    - Published scalar facts suppress stale aggregate scaling while
+      syntax-only pointer expressions keep compatibility inference.
+  - stop_rule: Stop once `realloc(...)`, `at(...)`, and `at_unsafe(...)`
+    aggregate pointer scaling depends on graph-owned binding/local-auto/query
+    facts and focused tests pin graph-backed, stale-local, and syntax-only
+    behavior.
+  - evidence: Added a semantic-product pointer target resolver to memory
+    pointer helpers, resolved binding/local-auto/query pointer type text by
+    interned IDs before copied text, covered aggregate, scalar-suppression,
+    and syntax-only scaling paths, and skipped broad baseline validation per
+    the lite workflow.
+
 - [x] TODO-4298: Use source type facts for aggregate inference
   - owner: ai
   - created_at: 2026-04-28
