@@ -763,19 +763,38 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
       }
     }
   }
-  if (expr.isMethodCall) {
-    if (!expr.args.empty() &&
+  if (expr.isMethodCall ||
+      isSimpleCallName(expr, "Result.map") ||
+      isSimpleCallName(expr, "Result.and_then") ||
+      isSimpleCallName(expr, "Result.map2")) {
+    const bool resultReceiverMethod =
+        expr.isMethodCall && !expr.args.empty() &&
         expr.args.front().kind == Expr::Kind::Name &&
-        normalizeBindingTypeName(expr.args.front().name) == "Result") {
-      if ((expr.name == "map" || expr.name == "and_then") && expr.args.size() == 3) {
+        normalizeBindingTypeName(expr.args.front().name) == "Result";
+    const auto isStaticResultCall = [&](std::string_view methodName) {
+      const std::string qualifiedName = "Result." + std::string(methodName);
+      return !expr.isMethodCall &&
+             (isSimpleCallName(expr, qualifiedName.c_str()) ||
+              resolveCalleePath(expr) == "/result/" + std::string(methodName) ||
+              resolveCalleePath(expr) == "/Result/" + std::string(methodName));
+    };
+    if (resultReceiverMethod || isStaticResultCall("map") ||
+        isStaticResultCall("and_then") || isStaticResultCall("map2")) {
+      if (((resultReceiverMethod && (expr.name == "map" || expr.name == "and_then") &&
+            expr.args.size() == 3) ||
+           ((!resultReceiverMethod && (isStaticResultCall("map") || isStaticResultCall("and_then"))) &&
+            expr.args.size() == 2))) {
+        const bool isMap = resultReceiverMethod ? expr.name == "map" : isStaticResultCall("map");
+        const size_t sourceIndex = resultReceiverMethod ? 1u : 0u;
+        const size_t lambdaIndex = resultReceiverMethod ? 2u : 1u;
         ResultTypeInfo argResult;
-        if (!resolveResultTypeForExpr(expr.args[1], params, locals, argResult) || !argResult.isResult ||
+        if (!resolveResultTypeForExpr(expr.args[sourceIndex], params, locals, argResult) || !argResult.isResult ||
             !argResult.hasValue) {
           return false;
         }
-        if (expr.name == "map") {
+        if (isMap) {
           std::string mappedType;
-          if (!inferLambdaBodyTypeText(expr.args[2], mappedType) || mappedType.empty()) {
+          if (!inferLambdaBodyTypeText(expr.args[lambdaIndex], mappedType) || mappedType.empty()) {
             return false;
           }
           out.isResult = true;
@@ -785,7 +804,8 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
           return true;
         }
         ResultTypeInfo chainedResult;
-        if (!inferLambdaBodyResultType(expr.args[2], argResult.errorType, chainedResult) || !chainedResult.isResult) {
+        if (!inferLambdaBodyResultType(expr.args[lambdaIndex], argResult.errorType, chainedResult) ||
+            !chainedResult.isResult) {
           return false;
         }
         if (!chainedResult.errorType.empty() && !argResult.errorType.empty() &&
@@ -795,12 +815,16 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
         out = std::move(chainedResult);
         return true;
       }
-      if (expr.name == "map2" && expr.args.size() == 4) {
+      if (((resultReceiverMethod && expr.name == "map2" && expr.args.size() == 4) ||
+           (!resultReceiverMethod && isStaticResultCall("map2") && expr.args.size() == 3))) {
+        const size_t leftIndex = resultReceiverMethod ? 1u : 0u;
+        const size_t rightIndex = resultReceiverMethod ? 2u : 1u;
+        const size_t lambdaIndex = resultReceiverMethod ? 3u : 2u;
         ResultTypeInfo leftResult;
         ResultTypeInfo rightResult;
-        if (!resolveResultTypeForExpr(expr.args[1], params, locals, leftResult) || !leftResult.isResult ||
+        if (!resolveResultTypeForExpr(expr.args[leftIndex], params, locals, leftResult) || !leftResult.isResult ||
             !leftResult.hasValue ||
-            !resolveResultTypeForExpr(expr.args[2], params, locals, rightResult) || !rightResult.isResult ||
+            !resolveResultTypeForExpr(expr.args[rightIndex], params, locals, rightResult) || !rightResult.isResult ||
             !rightResult.hasValue) {
           return false;
         }
@@ -808,7 +832,7 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
           return false;
         }
         std::string mappedType;
-        if (!inferLambdaBodyTypeText(expr.args[3], mappedType) || mappedType.empty()) {
+        if (!inferLambdaBodyTypeText(expr.args[lambdaIndex], mappedType) || mappedType.empty()) {
           return false;
         }
         out.isResult = true;

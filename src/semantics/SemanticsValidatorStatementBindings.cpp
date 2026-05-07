@@ -673,6 +673,9 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
         return false;
       }
       rootOut = pointerAliasRootForBinding(expr.name, *binding);
+      if (rootOut.empty() && binding->typeName == "Pointer") {
+        rootOut = expr.name;
+      }
       return !rootOut.empty();
     }
     if (expr.kind != Expr::Kind::Call) {
@@ -731,6 +734,107 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
       }
       rootOut = storageRoot + ".data";
       return true;
+    }
+    auto isPointerRootPreservingCall = [](const std::string &name) {
+      std::string normalizedName = name;
+      if (const auto slash = normalizedName.find_last_of('/'); slash != std::string::npos) {
+        normalizedName = normalizedName.substr(slash + 1);
+      }
+      if (const auto generatedSuffix = normalizedName.find("__");
+          generatedSuffix != std::string::npos) {
+        normalizedName = normalizedName.substr(0, generatedSuffix);
+      }
+      return normalizedName == "at" || normalizedName == "at_unsafe" ||
+             normalizedName == "reinterpret" ||
+             normalizedName == "bufferOffsetUnsafe" ||
+             normalizedName == "bufferOffsetChecked" ||
+             normalizedName == "bufferReinterpret" ||
+             normalizedName == "bufferReinterpretBytes" ||
+             normalizedName == "bufferOffsetBytesUnsafe" ||
+             normalizedName == "bufferOffsetBytesChecked" ||
+             normalizedName == "bufferReinterpretFromBytes";
+    };
+    if (isPointerRootPreservingCall(resolvedCallPath) && !expr.args.empty()) {
+      return resolvePointerRoot(expr.args.front(), rootOut);
+    }
+    auto defIt = defMap_.find(resolvedCallPath);
+    if (defIt == defMap_.end() || defIt->second == nullptr) {
+      return false;
+    }
+    bool returnsPointer = false;
+    for (const auto &transform : defIt->second->transforms) {
+      if (transform.name != "return" || transform.templateArgs.size() != 1) {
+        continue;
+      }
+      std::string base;
+      std::string arg;
+      if (!splitTemplateTypeName(normalizeBindingTypeName(transform.templateArgs.front()), base, arg)) {
+        continue;
+      }
+      if (normalizeBindingTypeName(base) == "Pointer" && !arg.empty()) {
+        returnsPointer = true;
+        break;
+      }
+    }
+    if (!returnsPointer) {
+      return false;
+    }
+    const auto paramsIt = paramsByDef_.find(resolvedCallPath);
+    if (paramsIt == paramsByDef_.end()) {
+      return false;
+    }
+    const auto &nestedParams = paramsIt->second;
+    std::string nestedArgError;
+    std::vector<const Expr *> nestedOrderedArgs;
+    if (!buildOrderedArguments(nestedParams, expr.args, expr.argNames,
+                               nestedOrderedArgs, nestedArgError)) {
+      return false;
+    }
+    const Expr *returnedValueExpr = nullptr;
+    const Definition &nestedDef = *defIt->second;
+    for (const auto &stmtExpr : nestedDef.statements) {
+      if (isReturnCall(stmtExpr) && stmtExpr.args.size() == 1) {
+        returnedValueExpr = &stmtExpr.args.front();
+      }
+    }
+    if (nestedDef.returnExpr.has_value()) {
+      returnedValueExpr = &*nestedDef.returnExpr;
+    }
+    if (returnedValueExpr == nullptr) {
+      return false;
+    }
+    auto resolveNestedArgPointerRoot = [&](const Expr &nestedArg,
+                                           std::string &nestedRootOut) {
+      if (nestedArg.kind == Expr::Kind::Name) {
+        for (size_t index = 0;
+             index < nestedParams.size() && index < nestedOrderedArgs.size();
+             ++index) {
+          if (nestedParams[index].name == nestedArg.name &&
+              nestedOrderedArgs[index] != nullptr) {
+            return resolvePointerRoot(*nestedOrderedArgs[index], nestedRootOut);
+          }
+        }
+      }
+      return resolvePointerRoot(nestedArg, nestedRootOut);
+    };
+    if (returnedValueExpr->kind == Expr::Kind::Name) {
+      return resolveNestedArgPointerRoot(*returnedValueExpr, rootOut);
+    }
+    if (returnedValueExpr->kind != Expr::Kind::Call) {
+      return false;
+    }
+    std::string returnedOpName;
+    if (getBuiltinOperatorName(*returnedValueExpr, returnedOpName) &&
+        (returnedOpName == "plus" || returnedOpName == "minus") &&
+        returnedValueExpr->args.size() == 2) {
+      return resolveNestedArgPointerRoot(returnedValueExpr->args.front(), rootOut);
+    }
+    std::string returnedCallPath = preferredCollectionHelperResolvedPath(*returnedValueExpr);
+    if (returnedCallPath.empty()) {
+      returnedCallPath = resolveCalleePath(*returnedValueExpr);
+    }
+    if (isPointerRootPreservingCall(returnedCallPath) && !returnedValueExpr->args.empty()) {
+      return resolveNestedArgPointerRoot(returnedValueExpr->args.front(), rootOut);
     }
     return false;
   };

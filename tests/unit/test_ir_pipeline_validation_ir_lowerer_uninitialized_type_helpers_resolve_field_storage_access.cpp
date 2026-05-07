@@ -355,6 +355,91 @@ TEST_CASE("ir lowerer uninitialized type helpers resolve indexed args-pack point
   CHECK(out.typeInfo.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 }
 
+TEST_CASE("ir lowerer uninitialized type helpers resolve pointer helper storage access") {
+  primec::ir_lowerer::LocalMap locals;
+
+  primec::ir_lowerer::LocalInfo ptrInfo;
+  ptrInfo.index = 9;
+  ptrInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+  ptrInfo.targetsUninitializedStorage = true;
+  ptrInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals.emplace("ptr", ptrInfo);
+  const auto ptrIt = locals.find("ptr");
+  REQUIRE(ptrIt != locals.end());
+
+  auto collectFields = [](const std::string &,
+                          std::vector<primec::ir_lowerer::UninitializedFieldBindingInfo> &) {
+    return false;
+  };
+  auto resolveTypeInfo = [](const std::string &typeText,
+                            const std::string &namespacePrefix,
+                            primec::ir_lowerer::UninitializedTypeInfo &out) {
+    const auto resolveStruct = [](const std::string &, const std::string &, std::string &) { return false; };
+    std::string error;
+    return primec::ir_lowerer::resolveUninitializedTypeInfo(typeText, namespacePrefix, resolveStruct, out, error);
+  };
+  auto resolveSlot = [](const std::string &, const std::string &, primec::ir_lowerer::StructSlotFieldInfo &) {
+    return false;
+  };
+
+  primec::Expr ptrName;
+  ptrName.kind = primec::Expr::Kind::Name;
+  ptrName.name = "ptr";
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 0;
+
+  primec::Expr bufferOffset;
+  bufferOffset.kind = primec::Expr::Kind::Call;
+  bufferOffset.name = "/std/collections/internal_buffer_unchecked/bufferOffsetUnsafe";
+  bufferOffset.args = {ptrName, indexExpr};
+  primec::Expr derefOffset;
+  derefOffset.kind = primec::Expr::Kind::Call;
+  derefOffset.name = "dereference";
+  derefOffset.args = {bufferOffset};
+
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  primec::ir_lowerer::UninitializedStorageAccessInfo out;
+  bool resolved = false;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::resolveUninitializedStorageAccessFromDefinitions(
+      derefOffset, locals, collectFields, defMap, resolveTypeInfo, resolveSlot, out, resolved, error));
+  CHECK(resolved);
+  CHECK(out.location == primec::ir_lowerer::UninitializedStorageAccessInfo::Location::Indirect);
+  CHECK(out.pointer == &ptrIt->second);
+  REQUIRE(out.pointerExpr != nullptr);
+  CHECK(out.pointerExpr->kind == primec::Expr::Kind::Call);
+  CHECK(out.typeInfo.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+
+  primec::Definition slotDef;
+  slotDef.name = "/slot";
+  primec::Transform returnTransform;
+  returnTransform.name = "return";
+  returnTransform.templateArgs = {"Pointer<uninitialized<i32>>"};
+  slotDef.transforms.push_back(returnTransform);
+  defMap.emplace("/slot", &slotDef);
+
+  primec::Expr slotCall;
+  slotCall.kind = primec::Expr::Kind::Call;
+  slotCall.name = "slot";
+  slotCall.args = {ptrName, indexExpr};
+  primec::Expr derefSlot;
+  derefSlot.kind = primec::Expr::Kind::Call;
+  derefSlot.name = "dereference";
+  derefSlot.args = {slotCall};
+
+  REQUIRE(primec::ir_lowerer::resolveUninitializedStorageAccessFromDefinitions(
+      derefSlot, locals, collectFields, defMap, resolveTypeInfo, resolveSlot, out, resolved, error));
+  CHECK(resolved);
+  CHECK(out.location == primec::ir_lowerer::UninitializedStorageAccessInfo::Location::Indirect);
+  CHECK(out.pointer == nullptr);
+  REQUIRE(out.pointerExpr != nullptr);
+  CHECK(out.pointerExpr->kind == primec::Expr::Kind::Call);
+  CHECK(out.pointerExpr->name == "slot");
+  CHECK(out.typeInfo.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+}
+
 TEST_CASE("ir lowerer uninitialized type helpers resolve unified storage with field bindings") {
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo localStorage;

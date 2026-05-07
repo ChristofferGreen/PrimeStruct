@@ -992,5 +992,167 @@
         if (bufferBuiltinResult != ir_lowerer::BufferBuiltinDispatchResult::NotHandled) {
           return bufferBuiltinResult == ir_lowerer::BufferBuiltinDispatchResult::Emitted;
         }
+        auto resolveVectorVoidExpressionBuiltinName =
+            [&](const Expr &callExpr, std::string &helperNameOut) {
+              helperNameOut.clear();
+              if (callExpr.kind != Expr::Kind::Call || callExpr.name.empty()) {
+                return false;
+              }
+              auto assignVectorVoidHelperName = [&](const std::string &leaf) {
+                if (leaf == "push" || leaf == "vectorPush") {
+                  helperNameOut = "push";
+                } else if (leaf == "pop" || leaf == "vectorPop") {
+                  helperNameOut = "pop";
+                } else if (leaf == "reserve" || leaf == "vectorReserve") {
+                  helperNameOut = "reserve";
+                } else if (leaf == "clear" || leaf == "vectorClear") {
+                  helperNameOut = "clear";
+                } else if (leaf == "remove_at" || leaf == "vectorRemoveAt") {
+                  helperNameOut = "remove_at";
+                } else if (leaf == "remove_swap" || leaf == "vectorRemoveSwap") {
+                  helperNameOut = "remove_swap";
+                }
+                return !helperNameOut.empty();
+              };
+              auto isVectorVoidReceiverExpr = [&](const Expr &receiver) {
+                if (receiver.kind != Expr::Kind::Name) {
+                  return false;
+                }
+                auto localIt = localsIn.find(receiver.name);
+                return localIt != localsIn.end() &&
+                       !localIt->second.isSoaVector &&
+                       (localIt->second.kind == LocalInfo::Kind::Vector ||
+                        localIt->second.referenceToVector ||
+                        localIt->second.pointerToVector ||
+                        localIt->second.structTypeName ==
+                            "/std/collections/experimental_vector/Vector" ||
+                        localIt->second.structTypeName.rfind(
+                            "/std/collections/experimental_vector/Vector__", 0) == 0);
+              };
+              if (callExpr.name.find('/') == std::string::npos &&
+                  callExpr.namespacePrefix.empty() &&
+                  assignVectorVoidHelperName(callExpr.name)) {
+                return !callExpr.args.empty() &&
+                       isVectorVoidReceiverExpr(callExpr.args.front());
+              }
+              std::string path = callExpr.name;
+              if (path.find('/') == std::string::npos &&
+                  !callExpr.namespacePrefix.empty()) {
+                path = callExpr.namespacePrefix == "/" ? "/" + path
+                                                       : callExpr.namespacePrefix + "/" + path;
+              }
+              if (!path.empty() && path.front() == '/') {
+                path.erase(path.begin());
+              }
+              std::string leaf;
+              for (std::string_view prefix :
+                   {std::string_view{"std/collections/vector/"},
+                    std::string_view{"std/collections/internal_vector/"},
+                    std::string_view{"std/collections/experimental_vector/"}}) {
+                if (path.rfind(prefix, 0) != 0 ||
+                    path.find('/', prefix.size()) != std::string::npos) {
+                  continue;
+                }
+                leaf = path.substr(prefix.size());
+                break;
+              }
+              if (leaf.empty()) {
+                return false;
+              }
+              const size_t generatedSuffix = leaf.find("__");
+              if (generatedSuffix != std::string::npos) {
+                leaf.erase(generatedSuffix);
+              }
+              return assignVectorVoidHelperName(leaf);
+            };
+        auto isVectorMutatorExpressionMethod = [&](const Expr &callExpr) {
+          if (callExpr.kind != Expr::Kind::Call || !callExpr.isMethodCall ||
+              callExpr.args.empty() || !callExpr.namespacePrefix.empty()) {
+            return false;
+          }
+          if (callExpr.name != "push" && callExpr.name != "pop" &&
+              callExpr.name != "reserve" && callExpr.name != "clear" &&
+              callExpr.name != "remove_at" && callExpr.name != "remove_swap") {
+            return false;
+          }
+          const Expr &receiver = callExpr.args.front();
+          if (receiver.kind != Expr::Kind::Name) {
+            return false;
+          }
+          auto localIt = localsIn.find(receiver.name);
+          return localIt != localsIn.end() &&
+                 !localIt->second.isSoaVector &&
+                 (localIt->second.kind == LocalInfo::Kind::Vector ||
+                  localIt->second.referenceToVector ||
+                  localIt->second.pointerToVector ||
+                  localIt->second.structTypeName ==
+                      "/std/collections/experimental_vector/Vector" ||
+                  localIt->second.structTypeName.rfind(
+                      "/std/collections/experimental_vector/Vector__", 0) == 0);
+        };
+        std::string vectorVoidExpressionHelper;
+        const bool isDirectVectorVoidExpressionHelper =
+            resolveVectorVoidExpressionBuiltinName(expr, vectorVoidExpressionHelper);
+        if (isDirectVectorVoidExpressionHelper ||
+            isVectorMutatorExpressionMethod(expr)) {
+          Expr vectorStmt = expr;
+          if (isDirectVectorVoidExpressionHelper) {
+            vectorStmt.name = vectorVoidExpressionHelper;
+            vectorStmt.namespacePrefix.clear();
+            vectorStmt.isMethodCall = false;
+            vectorStmt.templateArgs.clear();
+          }
+          const auto vectorStatementResult = ir_lowerer::tryEmitVectorStatementHelper(
+              vectorStmt,
+              localsIn,
+              function.instructions,
+              [&]() { return allocTempLocal(); },
+              [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+                return inferExprKind(valueExpr, valueLocals);
+              },
+              [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+                return inferStructExprPath(valueExpr, valueLocals);
+              },
+              [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+                return emitExpr(valueExpr, valueLocals);
+              },
+              [&](const std::string &structPath) -> const Definition * {
+                auto destroyIt = defMap.find(structPath + "/DestroyStack");
+                if (destroyIt != defMap.end()) {
+                  return destroyIt->second;
+                }
+                destroyIt = defMap.find(structPath + "/Destroy");
+                return destroyIt == defMap.end() ? nullptr : destroyIt->second;
+              },
+              [&](const std::string &structPath) -> const Definition * {
+                auto moveIt = defMap.find(structPath + "/Move");
+                if (moveIt != defMap.end()) {
+                  return moveIt->second;
+                }
+                moveIt = defMap.find(structPath + "/Copy");
+                return moveIt == defMap.end() ? nullptr : moveIt->second;
+              },
+              [&](const Expr &callExpr,
+                  const Definition &callee,
+                  const LocalMap &callLocals,
+                  bool requireValue) {
+                return emitInlineDefinitionCall(callExpr, callee, callLocals, requireValue);
+              },
+              [](const Expr &) { return false; },
+              [&]() { emitVectorCapacityExceeded(); },
+              [&]() { emitVectorPopOnEmpty(); },
+              [&]() { emitVectorIndexOutOfBounds(); },
+              [&]() { emitArrayIndexOutOfBounds(); },
+              [&]() { emitVectorReserveNegative(); },
+              [&]() { emitVectorReserveExceeded(); },
+              error);
+          if (vectorStatementResult == ir_lowerer::VectorStatementHelperEmitResult::Error) {
+            return false;
+          }
+          if (vectorStatementResult == ir_lowerer::VectorStatementHelperEmitResult::Emitted) {
+            function.instructions.push_back({IrOpcode::PushI32, 0});
+            return true;
+          }
+        }
         #include "IrLowererLowerEmitExprCollectionHelpers.h"
         #include "IrLowererLowerEmitExprTailDispatch.h"

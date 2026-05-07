@@ -108,24 +108,6 @@ bool isPublishedCanonicalStatementVectorHelperPath(std::string_view resolvedPath
          matchesRegistrySpellingSet(metadata->loweringSpellings, resolvedPath);
 }
 
-bool isPublishedWrapperStatementVectorMutatorAliasPath(std::string_view resolvedPath) {
-  if (!resolvedPath.empty() && resolvedPath.front() == '/') {
-    resolvedPath.remove_prefix(1);
-  }
-  auto matchesAlias = [resolvedPath](std::string_view alias) {
-    return resolvedPath == alias ||
-           (resolvedPath.rfind(alias, 0) == 0 &&
-            resolvedPath.size() > alias.size() &&
-            resolvedPath.substr(alias.size(), 2) == "__");
-  };
-  return matchesAlias("std/collections/vectorPush") ||
-         matchesAlias("std/collections/vectorPop") ||
-         matchesAlias("std/collections/vectorReserve") ||
-         matchesAlias("std/collections/vectorClear") ||
-         matchesAlias("std/collections/vectorRemoveAt") ||
-         matchesAlias("std/collections/vectorRemoveSwap");
-}
-
 std::string canonicalStatementMapHelperName(std::string helperName) {
   helperName = stripGeneratedHelperSuffix(std::move(helperName));
   if (helperName == "mapCount") {
@@ -1829,16 +1811,14 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     directStmt = rewrittenBareVectorMethodStmt;
     rewrittenBareVectorMutatorToBuiltinCall = true;
   }
-  const bool explicitWrapperVectorMutatorHelperPath =
-      isPublishedWrapperStatementVectorMutatorAliasPath(
-          resolveStatementCallPathWithoutFallbackProbes(directStmt));
-  if (explicitVectorMutatorHelperCall && !explicitWrapperVectorMutatorHelperPath &&
+  if (explicitVectorMutatorHelperCall &&
       explicitVectorHelperUsesBuiltinVectorReceiver(directStmt)) {
     std::string helperName;
     if (resolveStatementVectorHelperAliasName(directStmt, helperName)) {
       const size_t receiverIndex = explicitVectorHelperReceiverIndex(directStmt);
       directStmt.name = helperName;
       directStmt.namespacePrefix.clear();
+      directStmt.templateArgs.clear();
       if (receiverIndex < directStmt.args.size() && receiverIndex != 0) {
         std::swap(directStmt.args[0], directStmt.args[receiverIndex]);
         if (directStmt.argNames.size() < directStmt.args.size()) {
@@ -1854,14 +1834,26 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     }
   }
   if (rewrittenExplicitVectorMutatorToBuiltinCall) {
+    const size_t beforeExpr = instructions.size();
     if (!emitExpr(directStmt, localsIn)) {
       return DirectCallStatementEmitResult::Error;
+    }
+    if (instructions.size() > beforeExpr &&
+        instructions.back().op == IrOpcode::PushI32 &&
+        instructions.back().imm == 0) {
+      instructions.push_back({IrOpcode::Pop, 0});
     }
     return DirectCallStatementEmitResult::Emitted;
   }
   if (rewrittenBareVectorMutatorToBuiltinCall) {
+    const size_t beforeExpr = instructions.size();
     if (!emitExpr(directStmt, localsIn)) {
       return DirectCallStatementEmitResult::Error;
+    }
+    if (instructions.size() > beforeExpr &&
+        instructions.back().op == IrOpcode::PushI32 &&
+        instructions.back().imm == 0) {
+      instructions.push_back({IrOpcode::Pop, 0});
     }
     return DirectCallStatementEmitResult::Emitted;
   }

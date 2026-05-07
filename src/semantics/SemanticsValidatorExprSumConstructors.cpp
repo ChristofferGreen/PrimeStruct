@@ -545,6 +545,18 @@ bool SemanticsValidator::validateTargetTypedSumInitializer(
         resolveSumDefinitionForTypeText(typeText, typeNamespace);
     return actualSum != nullptr && actualSum->fullPath == sumDef->fullPath;
   };
+  auto resultTypeText = [](const ResultTypeInfo &resultInfo) {
+    if (!resultInfo.isResult || resultInfo.errorType.empty()) {
+      return std::string{};
+    }
+    if (!resultInfo.hasValue) {
+      return "Result<" + resultInfo.errorType + ">";
+    }
+    if (resultInfo.valueType.empty()) {
+      return std::string{};
+    }
+    return "Result<" + resultInfo.valueType + ", " + resultInfo.errorType + ">";
+  };
   BindingInfo directBinding;
   const std::optional<size_t> resultOkPayloadIndex = directResultOkPayloadIndex();
   const bool directResultOkInitializer = resultOkPayloadIndex.has_value();
@@ -565,6 +577,16 @@ bool SemanticsValidator::validateTargetTypedSumInitializer(
   if (!directResultOkInitializer &&
       inferQueryExprTypeText(initializer, params, locals, directTypeText) &&
       resolvesToTargetSum(directTypeText, initializer.namespacePrefix)) {
+    return validateExpr(params, locals, initializer);
+  }
+  ResultTypeInfo directResultType;
+  const std::string directResultTypeText =
+      !directResultOkInitializer &&
+              resolveResultTypeForExpr(initializer, params, locals, directResultType)
+          ? resultTypeText(directResultType)
+          : std::string{};
+  if (!directResultTypeText.empty() &&
+      resolvesToTargetSum(directResultTypeText, initializer.namespacePrefix)) {
     return validateExpr(params, locals, initializer);
   }
 
@@ -624,6 +646,58 @@ bool SemanticsValidator::validateTargetTypedSumInitializer(
         normalizeBindingTypeName(actualBinding.typeName));
     return actualKind == expectedKind;
   };
+  auto bindingFromTypeText = [](const std::string &typeText,
+                                BindingInfo &bindingOut) {
+    bindingOut = {};
+    const std::string normalized = normalizeBindingTypeName(typeText);
+    if (normalized.empty()) {
+      return false;
+    }
+    std::string base;
+    std::string argText;
+    if (splitTemplateTypeName(normalized, base, argText)) {
+      bindingOut.typeName = normalizeBindingTypeName(base);
+      bindingOut.typeTemplateArg = argText;
+      return true;
+    }
+    bindingOut.typeName = normalized;
+    return true;
+  };
+  auto resultInfoMatchesTargetSum = [&](const ResultTypeInfo &resultInfo) {
+    if (!resultInfo.isResult) {
+      return false;
+    }
+    const SumVariant *okVariant = findVariantByName(*sumDef, "ok");
+    const SumVariant *errorVariant = findVariantByName(*sumDef, "error");
+    if (errorVariant == nullptr || !errorVariant->hasPayload) {
+      return false;
+    }
+    BindingInfo errorBinding;
+    if (!bindingFromTypeText(resultInfo.errorType, errorBinding) ||
+        !bindingMatchesExpected(errorBinding,
+                                payloadTypeText(*errorVariant),
+                                sumDef->namespacePrefix)) {
+      return false;
+    }
+    if (okVariant == nullptr) {
+      return !resultInfo.hasValue;
+    }
+    if (resultInfo.hasValue != okVariant->hasPayload) {
+      return false;
+    }
+    if (!resultInfo.hasValue) {
+      return true;
+    }
+    BindingInfo valueBinding;
+    return bindingFromTypeText(resultInfo.valueType, valueBinding) &&
+           bindingMatchesExpected(valueBinding,
+                                  payloadTypeText(*okVariant),
+                                  sumDef->namespacePrefix);
+  };
+  if (!directResultOkInitializer &&
+      resultInfoMatchesTargetSum(directResultType)) {
+    return validateExpr(params, locals, initializer);
+  }
 
   auto validatePayloadAgainstVariant =
       [&](const Expr &payloadExpr, const SumVariant &selectedVariant) -> bool {

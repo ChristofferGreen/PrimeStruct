@@ -106,7 +106,7 @@ std::string inferPointerStructTypePath(
   bool hasSemanticPointerFact = false;
   const std::string semanticPointerStruct = resolveSemanticPointerStructTypePath(
       expr, semanticProductTargets, resolveStructTypeName, hasSemanticPointerFact);
-  if (!semanticPointerStruct.empty() || hasSemanticPointerFact) {
+  if (!semanticPointerStruct.empty()) {
     return semanticPointerStruct;
   }
 
@@ -288,7 +288,8 @@ bool isAggregatePointerLikeReturnType(
     return false;
   }
 
-  const std::string targetType = trimTemplateTypeText(args.front());
+  const std::string targetType =
+      unwrapTopLevelUninitializedTypeText(trimTemplateTypeText(args.front()));
   std::string targetBase;
   std::string targetArgList;
   if (splitTemplateTypeName(targetType, targetBase, targetArgList)) {

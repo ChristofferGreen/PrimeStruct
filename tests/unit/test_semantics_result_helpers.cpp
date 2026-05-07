@@ -824,6 +824,33 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("Result.map struct payload satisfies target typed Result binding") {
+  const std::string source = R"(
+import /std/result/*
+
+[struct]
+Token() {
+  [i32] code{0i32}
+}
+
+[return<void>]
+main() {
+  [Result<i32, i32>] status{Result.ok(2i32)}
+  [Result<Token, i32>] mapped{Result.map(status, []([i32] value) {
+    return(Token{[code] plus(value, 3i32)})
+  })}
+  [i32] code{pick(mapped) {
+    ok(value) { value.code }
+    error(err) { err }
+  }}
+  if(equal(code, 5i32), then(){ return() }, else(){ return() })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("Result.and_then and Result.map2 infer nested auto Result bindings") {
   const std::string source = R"(
 [return<Result<i32, FileError>>]

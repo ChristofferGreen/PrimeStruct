@@ -457,7 +457,9 @@ bool isVectorTarget(const Expr &expr, const LocalMap &localsIn) {
     return it != localsIn.end() &&
            !it->second.isSoaVector &&
            (it->second.kind == LocalInfo::Kind::Vector ||
-            (it->second.kind == LocalInfo::Kind::Value &&
+            ((it->second.kind == LocalInfo::Kind::Value ||
+              it->second.kind == LocalInfo::Kind::Reference ||
+              it->second.kind == LocalInfo::Kind::Pointer) &&
              isExperimentalVectorStructPath(it->second.structTypeName)));
   }
   if (expr.kind == Expr::Kind::Call) {
@@ -534,7 +536,9 @@ bool isExperimentalVectorTarget(const Expr &expr, const LocalMap &localsIn) {
   }
   auto it = localsIn.find(expr.name);
   return it != localsIn.end() &&
-         it->second.kind == LocalInfo::Kind::Value &&
+         (it->second.kind == LocalInfo::Kind::Value ||
+          it->second.kind == LocalInfo::Kind::Reference ||
+          it->second.kind == LocalInfo::Kind::Pointer) &&
          isExperimentalVectorStructPath(it->second.structTypeName);
 }
 

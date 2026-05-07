@@ -348,6 +348,110 @@
       }
       return true;
     }
+    auto resolveVectorVoidInlineHelperBuiltinName =
+        [](std::string path, std::string &helperNameOut) {
+          helperNameOut.clear();
+          if (!path.empty() && path.front() == '/') {
+            path.erase(path.begin());
+          }
+          std::string leaf;
+          for (std::string_view prefix :
+               {std::string_view{"std/collections/vector/"},
+                std::string_view{"std/collections/internal_vector/"},
+                std::string_view{"std/collections/experimental_vector/"}}) {
+            if (path.rfind(prefix, 0) != 0 ||
+                path.find('/', prefix.size()) != std::string::npos) {
+              continue;
+            }
+            leaf = path.substr(prefix.size());
+            break;
+          }
+          if (leaf.empty()) {
+            return false;
+          }
+          const size_t generatedSuffix = leaf.find("__");
+          if (generatedSuffix != std::string::npos) {
+            leaf.erase(generatedSuffix);
+          }
+          if (leaf == "push" || leaf == "vectorPush") {
+            helperNameOut = "push";
+          } else if (leaf == "pop" || leaf == "vectorPop") {
+            helperNameOut = "pop";
+          } else if (leaf == "reserve" || leaf == "vectorReserve") {
+            helperNameOut = "reserve";
+          } else if (leaf == "clear" || leaf == "vectorClear") {
+            helperNameOut = "clear";
+          } else if (leaf == "remove_at" || leaf == "vectorRemoveAt") {
+            helperNameOut = "remove_at";
+          } else if (leaf == "remove_swap" || leaf == "vectorRemoveSwap") {
+            helperNameOut = "remove_swap";
+          }
+          return !helperNameOut.empty();
+        };
+    std::string vectorVoidInlineHelper;
+    if (requireValue &&
+        resolveVectorVoidInlineHelperBuiltinName(callee.fullPath,
+                                                 vectorVoidInlineHelper)) {
+      Expr vectorStmt = callExpr;
+      vectorStmt.name = vectorVoidInlineHelper;
+      vectorStmt.namespacePrefix.clear();
+      vectorStmt.isMethodCall = false;
+      vectorStmt.templateArgs.clear();
+      const auto vectorStatementResult = ir_lowerer::tryEmitVectorStatementHelper(
+          vectorStmt,
+          callerLocals,
+          function.instructions,
+          [&]() { return allocTempLocal(); },
+          [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+            return inferExprKind(valueExpr, valueLocals);
+          },
+          [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+            return inferStructExprPath(valueExpr, valueLocals);
+          },
+          [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+            return emitExpr(valueExpr, valueLocals);
+          },
+          [&](const std::string &structPath) -> const Definition * {
+            auto destroyIt = defMap.find(structPath + "/DestroyStack");
+            if (destroyIt != defMap.end()) {
+              return destroyIt->second;
+            }
+            destroyIt = defMap.find(structPath + "/Destroy");
+            return destroyIt == defMap.end() ? nullptr : destroyIt->second;
+          },
+          [&](const std::string &structPath) -> const Definition * {
+            auto moveIt = defMap.find(structPath + "/Move");
+            if (moveIt != defMap.end()) {
+              return moveIt->second;
+            }
+            moveIt = defMap.find(structPath + "/Copy");
+            return moveIt == defMap.end() ? nullptr : moveIt->second;
+          },
+          [&](const Expr &nestedCallExpr,
+              const Definition &nestedCallee,
+              const LocalMap &nestedLocals,
+              bool nestedRequireValue) {
+            return emitInlineDefinitionCall(nestedCallExpr,
+                                            nestedCallee,
+                                            nestedLocals,
+                                            nestedRequireValue);
+          },
+          [](const Expr &) { return false; },
+          [&]() { emitVectorCapacityExceeded(); },
+          [&]() { emitVectorPopOnEmpty(); },
+          [&]() { emitVectorIndexOutOfBounds(); },
+          [&]() { emitArrayIndexOutOfBounds(); },
+          [&]() { emitVectorReserveNegative(); },
+          [&]() { emitVectorReserveExceeded(); },
+          error);
+      if (vectorStatementResult == ir_lowerer::VectorStatementHelperEmitResult::Error) {
+        return false;
+      }
+      if (vectorStatementResult == ir_lowerer::VectorStatementHelperEmitResult::Emitted) {
+        function.instructions.push_back({IrOpcode::PushI32, 0});
+        return true;
+      }
+    }
     ir_lowerer::InlineDefinitionCallContextSetup callSetup;
     if (!ir_lowerer::prepareInlineDefinitionCallContext(
             callee,

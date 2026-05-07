@@ -1146,6 +1146,16 @@ TEST_CASE("ir lowerer access helper recognizes namespaced canonical access helpe
       rootedLegacyVectorUnsafeAccessCall, helperName));
   CHECK(helperName == "at_unsafe");
 
+  primec::Expr rootedInternalVectorAccessCall;
+  rootedInternalVectorAccessCall.kind = primec::Expr::Kind::Call;
+  rootedInternalVectorAccessCall.name =
+      "/std/collections/internal_vector/vectorAt__t12345678";
+
+  helperName.clear();
+  CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(
+      rootedInternalVectorAccessCall, helperName));
+  CHECK(helperName == "at");
+
   primec::Expr namespacedExperimentalSoaStorageAccessCall;
   namespacedExperimentalSoaStorageAccessCall.kind = primec::Expr::Kind::Call;
   namespacedExperimentalSoaStorageAccessCall.namespacePrefix =

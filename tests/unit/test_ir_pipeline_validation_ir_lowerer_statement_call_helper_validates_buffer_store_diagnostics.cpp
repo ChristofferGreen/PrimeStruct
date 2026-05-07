@@ -883,8 +883,9 @@ TEST_CASE("ir lowerer vector mutator rewrite uses semantic receiver facts before
                             std::string &forwardedName,
                             bool &forwardedWasMethod,
                             int &inlineCalls,
+                            std::vector<primec::IrInstruction> &instructions,
                             std::string &errorOut) {
-    std::vector<primec::IrInstruction> instructions;
+    instructions.clear();
     forwardedName.clear();
     forwardedWasMethod = false;
     inlineCalls = 0;
@@ -898,6 +899,7 @@ TEST_CASE("ir lowerer vector mutator rewrite uses semantic receiver facts before
         [&](const primec::Expr &forwardedExpr, const primec::ir_lowerer::LocalMap &) {
           forwardedName = forwardedExpr.name;
           forwardedWasMethod = forwardedExpr.isMethodCall;
+          instructions.push_back({primec::IrOpcode::PushI32, 0});
           return true;
         },
         [&](const primec::Expr &callExpr,
@@ -929,44 +931,59 @@ TEST_CASE("ir lowerer vector mutator rewrite uses semantic receiver facts before
   std::string forwardedName;
   bool forwardedWasMethod = true;
   int inlineCalls = 0;
+  std::vector<primec::IrInstruction> instructions;
   std::string error;
   CHECK(emitVectorPush(makePushMethodStmt(makeReceiver("bindingValues", 7501)),
                        forwardedName,
                        forwardedWasMethod,
                        inlineCalls,
+                       instructions,
                        error) == EmitResult::Emitted);
   CHECK(forwardedName == "push");
   CHECK_FALSE(forwardedWasMethod);
   CHECK(inlineCalls == 0);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[1].op == primec::IrOpcode::Pop);
   CHECK(error.empty());
 
   CHECK(emitVectorPush(makePushMethodStmt(makeReceiver("autoValues", 7502)),
                        forwardedName,
                        forwardedWasMethod,
                        inlineCalls,
+                       instructions,
                        error) == EmitResult::Emitted);
   CHECK(forwardedName == "push");
   CHECK_FALSE(forwardedWasMethod);
   CHECK(inlineCalls == 0);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[1].op == primec::IrOpcode::Pop);
   CHECK(error.empty());
 
   CHECK(emitVectorPush(makeExplicitPushStmt(makeReceiver("queryValues", 7503)),
                        forwardedName,
                        forwardedWasMethod,
                        inlineCalls,
+                       instructions,
                        error) == EmitResult::Emitted);
   CHECK(forwardedName == "push");
   CHECK_FALSE(forwardedWasMethod);
   CHECK(inlineCalls == 0);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[1].op == primec::IrOpcode::Pop);
   CHECK(error.empty());
 
   CHECK(emitVectorPush(makePushMethodStmt(makeReceiver("notAVector", 7504)),
                        forwardedName,
                        forwardedWasMethod,
                        inlineCalls,
+                       instructions,
                        error) == EmitResult::Emitted);
   CHECK(forwardedName.empty());
   CHECK(inlineCalls == 1);
+  CHECK(instructions.empty());
   CHECK(error.empty());
 }
 

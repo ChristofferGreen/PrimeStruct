@@ -99,6 +99,35 @@ bool isExplicitPublishedVectorCountCall(const Expr &expr) {
          scopedPath.rfind("std/collections/experimental_vector/", 0) == 0;
 }
 
+bool isInternalVectorMetadataCall(const Expr &expr,
+                                  std::string_view helperName) {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall ||
+      expr.args.size() != 1) {
+    return false;
+  }
+  std::string scopedPath = resolveScopedCallPath(expr);
+  if (!scopedPath.empty() && scopedPath.front() == '/') {
+    scopedPath.erase(scopedPath.begin());
+  }
+  constexpr std::string_view Prefix = "std/collections/internal_vector/";
+  if (scopedPath.rfind(Prefix, 0) != 0 ||
+      scopedPath.find('/', Prefix.size()) != std::string::npos) {
+    return false;
+  }
+  std::string leaf = scopedPath.substr(Prefix.size());
+  const size_t generatedSuffix = leaf.find("__");
+  if (generatedSuffix != std::string::npos) {
+    leaf.erase(generatedSuffix);
+  }
+  if (helperName == "count") {
+    return leaf == "vectorCount";
+  }
+  if (helperName == "capacity") {
+    return leaf == "vectorCapacity";
+  }
+  return false;
+}
+
 bool isExplicitRemovedCountLikeAliasCall(const Expr &expr,
                                          std::string_view helperName) {
   if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
@@ -1203,6 +1232,22 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     emitInstruction(IrOpcode::LoadIndirect, 0);
     return true;
   };
+  if (isInternalVectorMetadataCall(expr, "count") &&
+      isDynamicVectorCountTargetFn != nullptr &&
+      isDynamicVectorCountTargetFn(expr.args.front(), localsIn)) {
+    if (!emitDynamicVectorCount(expr.args.front())) {
+      return CountAccessCallEmitResult::Error;
+    }
+    return CountAccessCallEmitResult::Emitted;
+  }
+  if (isInternalVectorMetadataCall(expr, "capacity") &&
+      isDynamicVectorCapacityTargetFn != nullptr &&
+      isDynamicVectorCapacityTargetFn(expr.args.front(), localsIn)) {
+    if (!emitDynamicVectorCapacity(expr.args.front())) {
+      return CountAccessCallEmitResult::Error;
+    }
+    return CountAccessCallEmitResult::Emitted;
+  }
   if (isInternalSoaStorageMetadataCall(expr, "field_count") &&
       isInternalSoaStorageMetadataTarget(expr.args.front(), localsIn)) {
     if (!emitInternalSoaStorageMetadataBase(

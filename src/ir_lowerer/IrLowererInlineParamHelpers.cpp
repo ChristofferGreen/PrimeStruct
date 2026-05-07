@@ -363,6 +363,42 @@ void preserveSequentialHandleArgumentInfo(LocalInfo &paramInfo,
   paramInfo.argsPackElementCount = paramArgsPackElementCount;
 }
 
+void preservePointerTargetArgumentInfo(LocalInfo &paramInfo,
+                                       const LocalInfo &argInfo) {
+  if (paramInfo.kind != LocalInfo::Kind::Pointer ||
+      (argInfo.kind != LocalInfo::Kind::Pointer &&
+       argInfo.kind != LocalInfo::Kind::Reference)) {
+    return;
+  }
+  if (paramInfo.valueKind == LocalInfo::ValueKind::Unknown &&
+      argInfo.valueKind != LocalInfo::ValueKind::Unknown) {
+    paramInfo.valueKind = argInfo.valueKind;
+  }
+  if (paramInfo.structTypeName.empty() && !argInfo.structTypeName.empty()) {
+    paramInfo.structTypeName = argInfo.structTypeName;
+  }
+  if (paramInfo.structSlotCount <= 0 && argInfo.structSlotCount > 0) {
+    paramInfo.structSlotCount = argInfo.structSlotCount;
+  }
+  paramInfo.pointerToArray = paramInfo.pointerToArray || argInfo.pointerToArray;
+  paramInfo.pointerToVector = paramInfo.pointerToVector || argInfo.pointerToVector;
+  paramInfo.pointerToBuffer = paramInfo.pointerToBuffer || argInfo.pointerToBuffer;
+  paramInfo.pointerToMap = paramInfo.pointerToMap || argInfo.pointerToMap;
+  paramInfo.targetsUninitializedStorage =
+      paramInfo.targetsUninitializedStorage || argInfo.targetsUninitializedStorage;
+  paramInfo.isSoaVector = paramInfo.isSoaVector || argInfo.isSoaVector;
+  paramInfo.usesBuiltinCollectionLayout =
+      paramInfo.usesBuiltinCollectionLayout || argInfo.usesBuiltinCollectionLayout;
+  if (paramInfo.mapKeyKind == LocalInfo::ValueKind::Unknown &&
+      argInfo.mapKeyKind != LocalInfo::ValueKind::Unknown) {
+    paramInfo.mapKeyKind = argInfo.mapKeyKind;
+  }
+  if (paramInfo.mapValueKind == LocalInfo::ValueKind::Unknown &&
+      argInfo.mapValueKind != LocalInfo::ValueKind::Unknown) {
+    paramInfo.mapValueKind = argInfo.mapValueKind;
+  }
+}
+
 } // namespace
 
 bool emitInlineDefinitionCallParameters(
@@ -621,6 +657,16 @@ bool emitInlineDefinitionCallParameters(
         emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(paramInfo.index));
         continue;
       }
+    }
+    if (orderedArg != nullptr && inferExprLocalInfo &&
+        paramInfo.kind == LocalInfo::Kind::Pointer) {
+      LocalInfo inferredArgInfo;
+      std::string inferredArgError;
+      if (!inferExprLocalInfo(*orderedArg, callerLocals, inferredArgInfo, inferredArgError)) {
+        error = inferredArgError;
+        return false;
+      }
+      preservePointerTargetArgumentInfo(paramInfo, inferredArgInfo);
     }
 
     if (isStringBinding(param)) {

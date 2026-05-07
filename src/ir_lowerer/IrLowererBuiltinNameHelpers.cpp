@@ -498,6 +498,12 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   if (scopedName.rfind("std/collections/experimental_vector/", 0) == 0) {
     return false;
   }
+  if (matchLegacyAccessAlias(scopedName, "std/collections/internal_vector/")) {
+    return true;
+  }
+  if (scopedName.rfind("std/collections/internal_vector/", 0) == 0) {
+    return false;
+  }
   if (matchAccessAlias(scopedName, "std/collections/soa_vector/", "SoaVector")) {
     return true;
   }

@@ -962,6 +962,12 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     return info;
   }
   if (hasSemanticTargetFact) {
+    if (resolveCallArrayVectorAccessTargetInfo) {
+      ArrayVectorAccessTargetInfo inferred;
+      if (resolveCallArrayVectorAccessTargetInfo(target, inferred)) {
+        return inferred;
+      }
+    }
     return {};
   }
 

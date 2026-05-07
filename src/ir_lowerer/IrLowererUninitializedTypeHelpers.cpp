@@ -34,7 +34,34 @@ bool isBareOrInternalSoaHelperCall(const Expr &expr, const char *helperName) {
          scopedCallPath == "/std/collections/internal_soa_storage/" + helperPath;
 }
 
+std::string normalizedLeafCallName(std::string name) {
+  if (const auto slash = name.find_last_of('/'); slash != std::string::npos) {
+    name = name.substr(slash + 1);
+  }
+  if (const auto generatedSuffix = name.find("__"); generatedSuffix != std::string::npos) {
+    name = name.substr(0, generatedSuffix);
+  }
+  return name;
+}
+
+bool isPointerRootPreservingStorageCall(const std::string &name) {
+  const std::string leafName = normalizedLeafCallName(name);
+  return leafName == "at" || leafName == "at_unsafe" ||
+         leafName == "reinterpret" ||
+         leafName == "bufferOffsetUnsafe" ||
+         leafName == "bufferOffsetChecked" ||
+         leafName == "bufferReinterpret" ||
+         leafName == "bufferReinterpretBytes" ||
+         leafName == "bufferOffsetBytesUnsafe" ||
+         leafName == "bufferOffsetBytesChecked" ||
+         leafName == "bufferReinterpretFromBytes";
+}
+
 } // namespace
+
+const Definition *resolveUninitializedReceiverHelperDefinition(
+    const Expr &expr,
+    const std::unordered_map<std::string, const Definition *> &defMap);
 
 bool resolveUninitializedTypeInfo(const std::string &typeText,
                                   const std::string &namespacePrefix,
@@ -539,6 +566,95 @@ bool resolveUninitializedStorageAccessWithDefinitions(
   if (storage.kind == Expr::Kind::Call && isBareOrInternalSoaHelperCall(storage, "dereference") &&
       storage.args.size() == 1) {
     const Expr &pointerExpr = storage.args.front();
+    auto resolveTargetTypeInfo = [&](const std::string &targetType,
+                                     const std::string &namespacePrefix,
+                                     UninitializedTypeInfo &typeInfoOut) {
+      std::string base;
+      std::string argText;
+      const std::string normalizedTargetType = normalizeCollectionBindingTypeName(targetType);
+      if (!splitTemplateTypeName(normalizedTargetType, base, argText) ||
+          normalizeCollectionBindingTypeName(base) != "uninitialized" || argText.empty()) {
+        return false;
+      }
+      return resolveUninitializedTypeInfo(argText, namespacePrefix, typeInfoOut);
+    };
+    std::function<bool(const Expr &, const LocalInfo *&, UninitializedTypeInfo &, bool &)>
+        resolveIndirectPointerTargetInfo;
+    resolveIndirectPointerTargetInfo =
+        [&](const Expr &candidate,
+            const LocalInfo *&pointerOut,
+            UninitializedTypeInfo &typeInfoOut,
+            bool &pointerResolvedOut) -> bool {
+          pointerOut = nullptr;
+          typeInfoOut = UninitializedTypeInfo{};
+          pointerResolvedOut = false;
+
+          if (candidate.kind == Expr::Kind::Name) {
+            auto pointerIt = localsIn.find(candidate.name);
+            if (pointerIt != localsIn.end()) {
+              if (resolveUninitializedTypeInfoFromPointerTargetLocal(pointerIt->second, typeInfoOut)) {
+                pointerOut = &pointerIt->second;
+                pointerResolvedOut = true;
+              }
+            }
+            return true;
+          }
+          if (candidate.kind != Expr::Kind::Call) {
+            return true;
+          }
+
+          std::string accessName;
+          if (getBuiltinArrayAccessName(candidate, accessName) &&
+              candidate.args.size() == 2 && candidate.args.front().kind == Expr::Kind::Name) {
+            auto pointerIt = localsIn.find(candidate.args.front().name);
+            if (pointerIt != localsIn.end() &&
+                resolveUninitializedTypeInfoFromArgsPackPointerTargetLocal(pointerIt->second, typeInfoOut)) {
+              pointerOut = &pointerIt->second;
+              pointerResolvedOut = true;
+            }
+            return true;
+          }
+
+          const std::string scopedCallPath = resolveScopedCallPath(candidate);
+          if (isPointerRootPreservingStorageCall(scopedCallPath) && !candidate.args.empty()) {
+            return resolveIndirectPointerTargetInfo(candidate.args.front(),
+                                                    pointerOut,
+                                                    typeInfoOut,
+                                                    pointerResolvedOut);
+          }
+
+          for (const std::string &templateArg : candidate.templateArgs) {
+            if (resolveTargetTypeInfo(templateArg, candidate.namespacePrefix, typeInfoOut)) {
+              pointerResolvedOut = true;
+              return true;
+            }
+          }
+
+          const Definition *helperDef = resolveUninitializedReceiverHelperDefinition(candidate, defMap);
+          if (helperDef == nullptr) {
+            return true;
+          }
+          for (const auto &transform : helperDef->transforms) {
+            if (transform.name != "return" || transform.templateArgs.size() != 1) {
+              continue;
+            }
+            std::string base;
+            std::string argText;
+            const std::string normalizedReturnType =
+                normalizeCollectionBindingTypeName(transform.templateArgs.front());
+            if (!splitTemplateTypeName(normalizedReturnType, base, argText) ||
+                normalizeCollectionBindingTypeName(base) != "Pointer" || argText.empty()) {
+              continue;
+            }
+            const std::string namespacePrefix =
+                resolveDefinitionNamespacePrefix(helperDef->name);
+            if (resolveTargetTypeInfo(argText, namespacePrefix, typeInfoOut)) {
+              pointerResolvedOut = true;
+              return true;
+            }
+          }
+          return true;
+        };
     if (pointerExpr.kind == Expr::Kind::Call && isBareOrInternalSoaHelperCall(pointerExpr, "location") &&
         pointerExpr.args.size() == 1) {
       return resolveUninitializedStorageAccessWithDefinitions(pointerExpr.args.front(),
@@ -552,35 +668,19 @@ bool resolveUninitializedStorageAccessWithDefinitions(
                                                               resolvedOut,
                                                               error);
     }
-    if (pointerExpr.kind == Expr::Kind::Name) {
-      auto pointerIt = localsIn.find(pointerExpr.name);
-      if (pointerIt != localsIn.end()) {
-        UninitializedTypeInfo pointerTypeInfo;
-        if (resolveUninitializedTypeInfoFromPointerTargetLocal(pointerIt->second, pointerTypeInfo)) {
-          out.location = UninitializedStorageAccessInfo::Location::Indirect;
-          out.pointer = &pointerIt->second;
-          out.pointerExpr = &pointerExpr;
-          out.typeInfo = pointerTypeInfo;
-          resolvedOut = true;
-          return true;
-        }
-      }
+    const LocalInfo *pointerLocal = nullptr;
+    UninitializedTypeInfo pointerTypeInfo;
+    bool pointerResolved = false;
+    if (!resolveIndirectPointerTargetInfo(pointerExpr, pointerLocal, pointerTypeInfo, pointerResolved)) {
+      return false;
     }
-    std::string accessName;
-    if (pointerExpr.kind == Expr::Kind::Call && getBuiltinArrayAccessName(pointerExpr, accessName) &&
-        pointerExpr.args.size() == 2 && pointerExpr.args.front().kind == Expr::Kind::Name) {
-      auto pointerIt = localsIn.find(pointerExpr.args.front().name);
-      if (pointerIt != localsIn.end()) {
-        UninitializedTypeInfo pointerTypeInfo;
-        if (resolveUninitializedTypeInfoFromArgsPackPointerTargetLocal(pointerIt->second, pointerTypeInfo)) {
-          out.location = UninitializedStorageAccessInfo::Location::Indirect;
-          out.pointer = &pointerIt->second;
-          out.pointerExpr = &pointerExpr;
-          out.typeInfo = pointerTypeInfo;
-          resolvedOut = true;
-          return true;
-        }
-      }
+    if (pointerResolved) {
+      out.location = UninitializedStorageAccessInfo::Location::Indirect;
+      out.pointer = pointerLocal;
+      out.pointerExpr = &pointerExpr;
+      out.typeInfo = pointerTypeInfo;
+      resolvedOut = true;
+      return true;
     }
   }
 

@@ -149,6 +149,30 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("pointer helper roots allow uninitialized borrow binding") {
+  const std::string source = R"(
+[return<Pointer<uninitialized<i32>>>]
+slot([Pointer<uninitialized<i32>>] values, [i32] index) {
+  return(/std/intrinsics/memory/at_unsafe(values, index))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Pointer<uninitialized<i32>>] ptr{/std/intrinsics/memory/alloc<uninitialized<i32>>(1i32)}
+  [Pointer<uninitialized<i32>>] ptrSlot{slot(ptr, 0i32)}
+  init(dereference(ptrSlot), 7i32)
+  [Reference<i32>] ref{borrow(dereference(ptrSlot))}
+  [i32] out{dereference(ref)}
+  drop(dereference(ptrSlot))
+  /std/intrinsics/memory/free(ptr)
+  return(out)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("reference targets allow top-level uninitialized storage") {
   const std::string source = R"(
 [return<int>]
