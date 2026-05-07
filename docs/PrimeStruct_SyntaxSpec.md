@@ -1019,11 +1019,12 @@ recursive sum layout is designed. The stdlib `Maybe<T>` surface consumes this ge
 now exposes imported `Result<E>` and value-carrying `Result<T, E>` sums at the same public path. `Result<E>` has a
 unit `ok` variant, an `error(E)` payload variant, default construction to `ok`, and an `ok<E>()` helper; error
 construction currently uses explicit sum construction such as `Result<E>{[error] err}`. Typed imported value-carrying
-sum locals/returns may use legacy `Result.ok(value)` as an `ok`-variant compatibility initializer on IR-backed
-VM/native paths, typed imported value-carrying sum locals/returns may use legacy `Result.map(result, fn)` or
-`Result.and_then(result, fn)` when the source is a local imported stdlib Result sum or a direct call returning one, and
-may use legacy `Result.map2(left, right, fn)` when both sources are local imported stdlib Result sums or direct calls
-returning them. `Result.error(value)` / `Result.why(value)` can inspect the imported value-carrying sum shape. Legacy
+sum locals/returns may use `Result.ok(value)` as an `ok`-variant compatibility initializer on IR-backed VM/native
+paths, typed imported value-carrying sum locals/returns may use the `Result.map(result, fn)` and
+`Result.and_then(result, fn)` compatibility helpers when the source is a local imported stdlib Result sum or a direct
+call returning one, and may use `Result.map2(left, right, fn)` compatibility when both sources are local imported
+stdlib Result sums or direct calls returning them. `Result.error(value)` / `Result.why(value)` can inspect the imported
+value-carrying sum shape. Legacy
 packed status-only `Result<E>` values without the stdlib import remain a compatibility bridge and report a deterministic
 diagnostic when used as a `pick` target. `try(...)` semantic validation and semantic-product metadata accept both
 `Result<T, E>` and `/std/result/Result<T, E>` value-result spellings. IR-backed `try(...)` can now consume local or
@@ -1036,7 +1037,7 @@ paths, and dereferenced local
 `Reference<Result<T, E>>` / `Pointer<Result<T, E>>` values can feed `try(...)`, `Result.error(...)`, and
 `Result.why(...)` when they point at imported stdlib Result sums. IR-backed `Result.error(...)` /
 `Result.why(...)` also inspect local, direct-call, and dereferenced local `Reference<Result<E>>` /
-`Pointer<Result<E>>` status-only imported sums. The legacy source C++ emitter keeps using a compatibility Result
+`Pointer<Result<E>>` status-only imported sums. The source C++ emitter keeps using a compatibility Result
 bridge, but it now preserves nested `Result<T...>` types under `Reference` / `Pointer` and recognizes dereferenced
 borrowed Result operands for `try(...)`, `Result.error(...)`, and `Result.why(...)`. Its source C++ Result
 storage-width decisions and construction/accessor expression emission are quarantined behind named emitter helpers, and
@@ -1662,16 +1663,17 @@ Draft constraints:
 
 - `Result<Error>` is a status-only wrapper for fallible operations; `Result<T, Error>` carries a success value.
 - Imported `Result<Error>` and value-carrying `Result<T, Error>` constructions have stdlib sum surfaces under
-  `/std/result/*`; typed value-carrying locals/returns may use legacy `Result.ok(value)` as an `ok`-variant
-  compatibility initializer, typed value-carrying locals/returns may use legacy `Result.map(result, fn)` or
-  `Result.and_then(result, fn)` when the source is a local imported stdlib Result sum or a direct call returning one,
-  and may use legacy `Result.map2(left, right, fn)` when both sources are local imported stdlib Result sums or direct
-  calls returning them. `Result.error(value)` / `Result.why(value)` can read value-carrying imported sums and local,
+  `/std/result/*`; typed value-carrying locals/returns may use `Result.ok(value)` as an `ok`-variant compatibility
+  initializer, typed value-carrying locals/returns may use the `Result.map(result, fn)` and
+  `Result.and_then(result, fn)` compatibility helpers when the source is a local imported stdlib Result sum or a
+  direct call returning one, and may use `Result.map2(left, right, fn)` compatibility when both sources are local
+  imported stdlib Result sums or direct calls returning them. `Result.error(value)` / `Result.why(value)` can read
+  value-carrying imported sums and local,
   direct-call, or dereferenced local borrowed/pointer imported status-only sums on IR-backed VM/native paths. Legacy
   packed status-only `Result<Error>` values without the stdlib import report a deterministic compatibility diagnostic
   when used as a `pick` target. Imported status-only `Result<Error>` is pickable, and IR-backed `try(...)`, postfix
   `?`, `Result.error(...)`, and `Result.why(...)` consume the supported local/direct/dereferenced status-only sum
-  sources. The legacy source C++ emitter mirrors borrowed/pointer helper operand inference while still using a
+  sources. The source C++ emitter mirrors borrowed/pointer helper operand inference while still using a
   compatibility bridge, with source C++ Result storage-width decisions and construction/accessor expression emission
   quarantined
   behind named emitter helpers. Value-carrying Result storage is named through the tagged `ps_result_value` bridge type,

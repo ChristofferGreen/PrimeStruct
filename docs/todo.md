@@ -72,7 +72,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4267: Retire legacy Maybe/Result representations
+- TODO-4364: Fence Result compatibility helper adapters
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -90,7 +90,7 @@ Task template:
 
 - Semantic ownership authority: none active; future semantic-authority work
   must enter as bounded leaves only.
-- Deferred stdlib ADT migration: TODO-4267 -> TODO-4291
+- Deferred stdlib ADT migration: TODO-4364 -> TODO-4291
 - Vector stdlib ownership cutover: TODO-4292 -> TODO-4293 -> TODO-4294
   -> TODO-4281 -> TODO-4295 -> TODO-4296 -> TODO-4297
 - Map stdlib ownership cutover: TODO-4299 -> TODO-4300 -> TODO-4301
@@ -111,7 +111,7 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4267: Retire legacy Maybe/Result representations
+- TODO-4364: Fence Result compatibility helper adapters
 - TODO-4291: Decide sum-backed mutable `Maybe<T>` helpers
 - TODO-4292: Promote and style canonical `.prime` vector implementation
 - TODO-4293: Stabilize generic contiguous-storage substrate
@@ -197,7 +197,7 @@ Task template:
 | VM/runtime debug stateful opcode parity | none |
 | Test-suite audit follow-up and release-gate stability | none |
 | Algebraic sum types and brace-only construction | none |
-| Stdlib ADT migration for `Maybe` and `Result` | TODO-4267, TODO-4291 |
+| Stdlib ADT migration for `Maybe` and `Result` | TODO-4364, TODO-4291 |
 | Generic type packs and tuple stdlib surface | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity and local type facts | TODO-4331, TODO-4332, TODO-4333, TODO-4334, TODO-4335, TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
 | Generic constraints and compile-time flow control | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
@@ -224,7 +224,7 @@ Task template:
 | Shared VM/debug stateful opcode behavior | none |
 | Release benchmark/example suite stability and doctest governance | none |
 | Sum-type and brace-construction conformance | none |
-| Maybe/Result sum migration conformance | TODO-4267, TODO-4291 |
+| Maybe/Result sum migration conformance | TODO-4364, TODO-4291 |
 | Generic type-pack and tuple conformance | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity conformance | TODO-4331, TODO-4332, TODO-4333, TODO-4334, TODO-4335, TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
 | Generic constraint and compile-time flow conformance | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
@@ -379,40 +379,44 @@ Task template:
 ### Task Blocks
 
 
-- [ ] TODO-4267: Retire legacy Maybe/Result representations
+- [ ] TODO-4364: Fence Result compatibility helper adapters
   - owner: ai
-  - created_at: 2026-04-27
+  - created_at: 2026-05-07
   - phase: Deferred stdlib ADT migration
-  - scope: Remove or quarantine old compiler/runtime special cases for Maybe
-    and Result after both are stdlib-owned sums and `?` consumes the Result sum
-    contract.
+  - scope: Inventory and fence the remaining compiler/runtime paths that
+    implement `Result.ok`, `Result.map`, `Result.and_then`, and `Result.map2`
+    compatibility outside stdlib after imported `Result` sums became the
+    public surface, without deleting behavior in this leaf.
   - implementation_notes:
-    - Inventory bespoke Maybe/Result code in semantics, semantic product,
-      lowerer, VM/native runtime helpers, C++ emitter, docs, and tests before
-      deleting behavior.
-    - Keep compatibility helpers only when they are implemented in stdlib or
-      routed through documented helper-call bridges.
-    - Split any deletion that risks changing unrelated error domains or payload
-      support into a follow-up TODO.
+    - Start from a repository search for Result helper calls and compatibility
+      wording, then classify only production adapter sites, not tests or
+      historical finished TODO notes.
+    - Check semantics helper-call bridging, semantic-product metadata, IR
+      lowerer dispatch, VM/native runtime helper routing, and source C++
+      emitter bridge helpers.
+    - Keep source C++ bridge storage names such as `ps_result_value` and
+      `ps_result_status` distinct from public Result helper compatibility.
   - acceptance:
-    - No production path silently depends on the retired Maybe/Result struct or
-      bespoke runtime representation.
-    - Compatibility helpers either live in stdlib, have explicit bridge tests,
-      or produce deterministic migration diagnostics.
-    - Docs and examples describe Maybe/Result as sums and remove obsolete
-      representation claims.
-    - Release, compile-run, semantic-product, and IR tests cover the migrated
-      Maybe/Result surface.
+    - The active docs contain a concise inventory of every remaining production
+      adapter that implements `Result.ok`, `Result.map`, `Result.and_then`, or
+      `Result.map2` compatibility outside stdlib, with an owner and retirement
+      decision for each adapter.
+    - Source-lock coverage fails if a new unlisted production Result helper
+      compatibility adapter or retired legacy-helper surface wording is
+      introduced.
+    - Any follow-up deletion or stdlib-retargeting work created from the
+      inventory is split into leaf TODOs and does not reuse this inventory task
+      as an implementation umbrella.
     - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once legacy Maybe/Result special cases are removed,
-    quarantined behind named compatibility bridges, or split into explicit
-    follow-up TODOs.
+  - stop_rule: Stop once the remaining Result helper compatibility adapters are
+    explicitly inventoried, source-locked, and split into concrete deletion or
+    stdlib-retargeting leaves where worthwhile.
 
 - [ ] TODO-4291: Decide sum-backed mutable `Maybe<T>` helpers
   - owner: ai
   - created_at: 2026-04-28
   - phase: Deferred stdlib ADT migration
-  - depends_on: TODO-4267
+  - depends_on: TODO-4364
   - scope: Decide whether `Maybe<T>.set(value)`, `Maybe<T>.clear()`, and
     `Maybe<T>.take()` should return as stdlib helpers on top of sum-backed
     `Maybe<T>`, or remain retired in favor of explicit `pick` plus value
@@ -439,7 +443,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred generic tuple substrate
-  - depends_on: TODO-4267
+  - depends_on: TODO-4364
   - scope: Add parser, AST, semantic-product, and diagnostic support for
     heterogeneous type-parameter packs such as `tuple<Ts...>` without adding
     pack expansion or tuple implementation yet.
@@ -2064,7 +2068,7 @@ Task template:
   - implementation_notes:
     - Start from `stdlib/std/collections/experimental_map.prime`,
       `stdlib/std/collections/errors.prime`, canonical vector helpers after
-      TODO-4297, Result migration notes from TODO-4267/TODO-4291, and
+      TODO-4297, Result migration notes from TODO-4364/TODO-4291, and
       map compile-run tests covering `contains`, `tryAt`, `at`, `at_unsafe`,
       and `insert`.
     - Keep key comparability policy explicit: `Comparable<K>` or its successor

@@ -14123,3 +14123,60 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     single-field success struct, added compile-run emitter coverage for map and
     map2 struct payloads, and promoted TODO-4267 to Ready Now. Local test
     execution was skipped per the lite workflow.
+
+- [x] TODO-4267: Retire legacy Maybe/Result representations
+  - owner: ai
+  - created_at: 2026-04-27
+  - phase: Deferred stdlib ADT migration
+  - scope: Close the oversized Maybe/Result representation retirement parent
+    after imported Result sums, `?` propagation, and source C++ bridge payload
+    slices had accumulated separate completed leaves, and stop using the parent
+    as live implementation work.
+  - implementation_notes:
+    - Future Result helper compatibility work must enter `docs/todo.md` as
+      bounded leaves with explicit `scope`, `acceptance`, and `stop_rule`.
+    - TODO-4364 owns the remaining Result helper adapter inventory/fencing
+      work before deletion or stdlib-retargeting leaves are created.
+    - TODO-4291 owns the remaining mutable Maybe helper policy.
+  - acceptance:
+    - The oversized parent no longer appears in `docs/todo.md`.
+    - `Ready Now`, `Priority Lanes`, execution queue, coverage snapshots, and
+      active `depends_on` fields no longer point at the closed parent.
+    - Remaining worthwhile work is split into leaf TODOs rather than appended
+      as another completed slice on this parent.
+  - stop_rule: Stop once the active TODO log no longer treats this parent as
+    executable work.
+  - finished_at: 2026-05-07
+  - evidence: Replaced the active TODO-4267 umbrella with TODO-4364, updated
+    the stdlib ADT lane, execution queue, coverage snapshots, and downstream
+    dependencies, and kept Maybe helper policy in TODO-4291.
+
+- [x] TODO-4363: Retire Result helper legacy wording
+  - owner: ai
+  - created_at: 2026-05-07
+  - phase: Deferred stdlib ADT migration
+  - scope: Rename active Result helper compatibility wording from legacy to
+    compatibility in docs, diagnostics, and test identities without changing
+    the supported helper behavior.
+  - implementation_notes:
+    - Keep historical finished TODO entries intact.
+    - Do not remove `Result.ok`, `Result.map`, `Result.and_then`, or
+      `Result.map2` behavior in this leaf; TODO-4364 owns the remaining
+      adapter inventory before any deletion work.
+  - acceptance:
+    - Current docs describe `Result.ok`, `Result.map`, `Result.and_then`, and
+      `Result.map2` as compatibility helpers or compatibility paths, not as
+      legacy Result helper surfaces.
+    - The status-only Result pick diagnostic says Result compatibility helpers
+      instead of legacy Result helpers.
+    - VM, native, and semantic test names plus temporary artifact names use
+      compatibility wording for imported stdlib Result helper coverage.
+    - Source-lock docs coverage pins the new active queue and prevents stale
+      syntax-spec Result helper wording from returning.
+  - stop_rule: Stop once active wording and locks no longer call Result helper
+    compatibility legacy.
+  - finished_at: 2026-05-07
+  - evidence: Updated PrimeStruct docs and syntax spec wording, changed the
+    status-only pick diagnostic, renamed VM/native/semantic Result helper
+    compatibility tests and temp artifacts, and updated docs source locks.
+    Local test execution was skipped per the lite workflow.

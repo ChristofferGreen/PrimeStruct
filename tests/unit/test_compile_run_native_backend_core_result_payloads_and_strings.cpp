@@ -114,7 +114,7 @@ main() {
   CHECK(readFile(outPath) == "\nfive\n");
 }
 
-TEST_CASE("native backend supports legacy Result.ok on imported stdlib Result sum") {
+TEST_CASE("native backend supports Result.ok compatibility on imported stdlib Result sum") {
   const std::string source = R"(
 import /std/result/*
 
@@ -164,15 +164,15 @@ main() {
   return(0i32)
 }
 )";
-  const std::string srcPath = writeTemp("compile_native_stdlib_result_sum_legacy_ok_helper.prime", source);
+  const std::string srcPath = writeTemp("compile_native_stdlib_result_sum_compat_ok_helper.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_native_stdlib_result_sum_legacy_ok_helper").string();
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_result_sum_compat_ok_helper").string();
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("native backend supports legacy Result.map on imported stdlib Result sum") {
+TEST_CASE("native backend supports Result.map compatibility on imported stdlib Result sum") {
   const std::string source = R"(
 import /std/result/*
 
@@ -229,15 +229,15 @@ main() {
   return(0i32)
 }
 )";
-  const std::string srcPath = writeTemp("compile_native_stdlib_result_sum_legacy_map_helper.prime", source);
+  const std::string srcPath = writeTemp("compile_native_stdlib_result_sum_compat_map_helper.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_native_stdlib_result_sum_legacy_map_helper").string();
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_result_sum_compat_map_helper").string();
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("native backend supports legacy Result.and_then on imported stdlib Result sum") {
+TEST_CASE("native backend supports Result.and_then compatibility on imported stdlib Result sum") {
   const std::string source = R"(
 import /std/result/*
 
@@ -311,15 +311,15 @@ main() {
   return(0i32)
 }
 )";
-  const std::string srcPath = writeTemp("compile_native_stdlib_result_sum_legacy_and_then_helper.prime", source);
+  const std::string srcPath = writeTemp("compile_native_stdlib_result_sum_compat_and_then_helper.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_native_stdlib_result_sum_legacy_and_then_helper").string();
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_result_sum_compat_and_then_helper").string();
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("native backend supports legacy Result.map2 on imported stdlib Result sum") {
+TEST_CASE("native backend supports Result.map2 compatibility on imported stdlib Result sum") {
   const std::string source = R"(
 import /std/result/*
 
@@ -393,15 +393,15 @@ main() {
   return(0i32)
 }
 )";
-  const std::string srcPath = writeTemp("compile_native_stdlib_result_sum_legacy_map2_helper.prime", source);
+  const std::string srcPath = writeTemp("compile_native_stdlib_result_sum_compat_map2_helper.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_native_stdlib_result_sum_legacy_map2_helper").string();
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_result_sum_compat_map2_helper").string();
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("native backend supports direct stdlib Result sum sources in legacy combinators") {
+TEST_CASE("native backend supports direct stdlib Result sum sources in compatibility combinators") {
   const std::string source = R"(
 import /std/result/*
 
@@ -525,9 +525,9 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_stdlib_result_sum_direct_legacy_combinators.prime", source);
+      writeTemp("compile_native_stdlib_result_sum_direct_compat_combinators.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_native_stdlib_result_sum_direct_legacy_combinators").string();
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_result_sum_direct_compat_combinators").string();
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 0);

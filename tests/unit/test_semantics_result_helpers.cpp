@@ -235,7 +235,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("stdlib result value sum accepts legacy Result.ok") {
+TEST_CASE("stdlib result value sum accepts Result.ok compatibility") {
   const std::string source = R"(
 import /std/result/*
 
@@ -336,7 +336,7 @@ main() {
   CHECK(error.find("try error type mismatch") != std::string::npos);
 }
 
-TEST_CASE("stdlib result value sum accepts legacy Result.map") {
+TEST_CASE("stdlib result value sum accepts Result.map compatibility") {
   const std::string source = R"(
 import /std/result/*
 
@@ -389,7 +389,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("stdlib result value sum accepts legacy Result.and_then") {
+TEST_CASE("stdlib result value sum accepts Result.and_then compatibility") {
   const std::string source = R"(
 import /std/result/*
 
@@ -456,7 +456,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("stdlib result value sum accepts legacy Result.map2") {
+TEST_CASE("stdlib result value sum accepts Result.map2 compatibility") {
   const std::string source = R"(
 import /std/result/*
 
@@ -523,7 +523,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("stdlib result legacy combinators accept direct sum-return sources") {
+TEST_CASE("stdlib result compatibility combinators accept direct sum-return sources") {
   const std::string source = R"(
 import /std/result/*
 
@@ -591,6 +591,8 @@ TEST_CASE("status-only Result pick reports compatibility diagnostic") {
     CHECK(error.find(expectedErrorDomain) != std::string::npos);
     CHECK(error.find("is not an imported stdlib Result sum") !=
           std::string::npos);
+    CHECK(error.find("Result compatibility helpers") != std::string::npos);
+    CHECK(error.find("legacy Result helpers") == std::string::npos);
   };
 
   checkDiagnostic(R"(

@@ -219,7 +219,7 @@ main() {
   CHECK(readFile(outPath) == "\nfive\n");
 }
 
-TEST_CASE("vm supports legacy Result.ok on imported stdlib Result sum") {
+TEST_CASE("vm supports Result.ok compatibility on imported stdlib Result sum") {
   const std::string source = R"(
 import /std/result/*
 
@@ -269,12 +269,12 @@ main() {
   return(0i32)
 }
 )";
-  const std::string srcPath = writeTemp("vm_stdlib_result_sum_legacy_ok_helper.prime", source);
+  const std::string srcPath = writeTemp("vm_stdlib_result_sum_compat_ok_helper.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 0);
 }
 
-TEST_CASE("vm supports legacy Result.map on imported stdlib Result sum") {
+TEST_CASE("vm supports Result.map compatibility on imported stdlib Result sum") {
   const std::string source = R"(
 import /std/result/*
 
@@ -331,12 +331,12 @@ main() {
   return(0i32)
 }
 )";
-  const std::string srcPath = writeTemp("vm_stdlib_result_sum_legacy_map_helper.prime", source);
+  const std::string srcPath = writeTemp("vm_stdlib_result_sum_compat_map_helper.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 0);
 }
 
-TEST_CASE("vm supports legacy Result.and_then on imported stdlib Result sum") {
+TEST_CASE("vm supports Result.and_then compatibility on imported stdlib Result sum") {
   const std::string source = R"(
 import /std/result/*
 
@@ -410,12 +410,12 @@ main() {
   return(0i32)
 }
 )";
-  const std::string srcPath = writeTemp("vm_stdlib_result_sum_legacy_and_then_helper.prime", source);
+  const std::string srcPath = writeTemp("vm_stdlib_result_sum_compat_and_then_helper.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 0);
 }
 
-TEST_CASE("vm supports legacy Result.map2 on imported stdlib Result sum") {
+TEST_CASE("vm supports Result.map2 compatibility on imported stdlib Result sum") {
   const std::string source = R"(
 import /std/result/*
 
@@ -489,12 +489,12 @@ main() {
   return(0i32)
 }
 )";
-  const std::string srcPath = writeTemp("vm_stdlib_result_sum_legacy_map2_helper.prime", source);
+  const std::string srcPath = writeTemp("vm_stdlib_result_sum_compat_map2_helper.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 0);
 }
 
-TEST_CASE("vm supports direct stdlib Result sum sources in legacy combinators") {
+TEST_CASE("vm supports direct stdlib Result sum sources in compatibility combinators") {
   const std::string source = R"(
 import /std/result/*
 
@@ -617,7 +617,7 @@ main() {
   return(0i32)
 }
 )";
-  const std::string srcPath = writeTemp("vm_stdlib_result_sum_direct_legacy_combinators.prime", source);
+  const std::string srcPath = writeTemp("vm_stdlib_result_sum_direct_compat_combinators.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 0);
 }

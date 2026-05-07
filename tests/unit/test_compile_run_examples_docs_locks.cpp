@@ -1121,6 +1121,16 @@ TEST_CASE("status-only result bridge docs stay source locked") {
   CHECK(syntaxSpec.find("Imported status-only `Result<Error>` is pickable, "
                         "and IR-backed `try(...)`, postfix") !=
         std::string::npos);
+  CHECK(syntaxSpec.find("use `Result.ok(value)` as an `ok`-variant compatibility") !=
+        std::string::npos);
+  CHECK(syntaxSpec.find("`Result.and_then(result, fn)` compatibility helpers") !=
+        std::string::npos);
+  CHECK(syntaxSpec.find("The source C++ emitter keeps using a compatibility Result\n"
+                        "bridge") != std::string::npos);
+  CHECK(syntaxSpec.find("use legacy `Result.ok(value)`") == std::string::npos);
+  CHECK(syntaxSpec.find("use legacy `Result.map(result, fn)`") ==
+        std::string::npos);
+  CHECK(syntaxSpec.find("The legacy source C++ emitter") == std::string::npos);
   CHECK(syntaxSpec.find("IR-backed local, direct-call, and dereferenced local\n"
                         "    borrowed/pointer imported status-only "
                         "`Result<Error>` sums preserve") !=
@@ -1175,10 +1185,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4298: Promote graph-backed non-template inference authority") !=
+                  "- TODO-4364: Fence Result compatibility helper adapters") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
-                  "- TODO-4267: Retire legacy Maybe/Result representations") !=
+                  "- TODO-4291: Decide sum-backed mutable `Maybe<T>` helpers") !=
         std::string::npos);
   CHECK(todo.find("- Semantic phase contract hardening:") == std::string::npos);
   CHECK(todo.find("- Deferred graph and inference hardening: TODO-4239") ==
@@ -1191,11 +1201,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4298: Promote graph-backed non-template inference authority") !=
+                  "- TODO-4364: Fence Result compatibility helper adapters") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4266: Rewire `?` to the `Result` sum contract",
-      "TODO-4267: Retire legacy Maybe/Result representations",
+      "TODO-4364: Fence Result compatibility helper adapters",
       "TODO-4291: Decide sum-backed mutable `Maybe<T>` helpers",
       "TODO-4268: Add heterogeneous type-pack syntax and metadata",
       "TODO-4269: Bind and monomorphize type-pack arguments",
@@ -1225,6 +1234,14 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4264: Add stdlib-owned `Maybe<T>` sum") !=
         std::string::npos);
   CHECK(todo.find("TODO-4265: Add stdlib-owned `Result<T, E>` sum") ==
+        std::string::npos);
+  CHECK(todo.find("TODO-4267: Retire legacy Maybe/Result representations") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4267: Retire legacy Maybe/Result representations") !=
+        std::string::npos);
+  CHECK(todo.find("TODO-4363: Retire Result helper legacy wording") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4363: Retire Result helper legacy wording") !=
         std::string::npos);
   CHECK(todo.find("TODO-4293: Bridge legacy `Result` helpers to the result sum") ==
         std::string::npos);

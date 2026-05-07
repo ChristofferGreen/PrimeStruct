@@ -64,7 +64,7 @@ bool isStatusOnlyResultTypeText(const std::string &typeText) {
 std::string statusOnlyResultPickDiagnostic(const std::string &typeText) {
   return "status-only " + typeText +
          " is not an imported stdlib Result sum; import /std/result/* to use "
-         "the Result<E> sum with pick, or keep using legacy Result helpers";
+         "the Result<E> sum with pick, or keep using Result compatibility helpers";
 }
 
 const SumVariant *findVariantByName(const Definition &sumDef,
