@@ -175,6 +175,8 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
                                  const ResolveReceiverExprPathFn &resolveExprPath,
                                  std::string &typeNameOut,
                                  std::string &resolvedTypePathOut,
-                                 std::string &errorOut);
+                                 std::string &errorOut,
+                                 const SemanticProgram *semanticProgram = nullptr,
+                                 const SemanticProductIndex *semanticIndex = nullptr);
 
 } // namespace primec::ir_lowerer

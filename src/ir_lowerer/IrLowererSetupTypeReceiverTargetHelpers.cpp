@@ -526,7 +526,9 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
                                  const ResolveReceiverExprPathFn &resolveExprPath,
                                  std::string &typeNameOut,
                                  std::string &resolvedTypePathOut,
-                                 std::string &errorOut) {
+                                 std::string &errorOut,
+                                 const SemanticProgram *semanticProgram,
+                                 const SemanticProductIndex *semanticIndex) {
   typeNameOut.clear();
   resolvedTypePathOut.clear();
 
@@ -697,12 +699,22 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
       }
       std::string accessName;
       return getBuiltinArrayAccessName(candidateExpr, accessName) &&
-             resolveMapAccessTargetInfo(candidateExpr.args.front(), localsIn).isMapTarget;
+             resolveMapAccessTargetInfo(candidateExpr.args.front(),
+                                        localsIn,
+                                        {},
+                                        semanticProgram,
+                                        semanticIndex)
+                 .isMapTarget;
     };
     auto isBareMapTryAtReceiverProbeExpr = [&](const Expr &candidateExpr) {
       return candidateExpr.kind == Expr::Kind::Call && candidateExpr.args.size() == 2 &&
              isSimpleCallName(candidateExpr, "tryAt") &&
-             resolveMapAccessTargetInfo(candidateExpr.args.front(), localsIn).isMapTarget;
+             resolveMapAccessTargetInfo(candidateExpr.args.front(),
+                                        localsIn,
+                                        {},
+                                        semanticProgram,
+                                        semanticIndex)
+                 .isMapTarget;
     };
     const bool blocksExplicitMapReceiverProbeKindFallback =
         isExplicitMapReceiverProbeHelperExpr(receiverExpr);

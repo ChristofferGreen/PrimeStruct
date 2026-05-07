@@ -552,7 +552,9 @@ const Definition *resolveMethodCallDefinitionFromExpr(
                                    resolveExprPath,
                                    typeName,
                                    resolvedTypePath,
-                                   errorOut)) {
+                                   errorOut,
+                                   semanticProgram,
+                                   semanticIndexPtr)) {
     if (allowBuiltinFallback) {
       errorOut = priorError;
     }

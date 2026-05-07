@@ -794,6 +794,10 @@ Task template:
     semantic-product-backed map and non-map receiver facts before stale local
     map metadata can decide whether `/std/collections/map/*` helper calls
     should defer to builtin/native map handling.
+    The lowerer setup receiver-target map probe slice is complete for
+    semantic-product-backed map and non-map target facts before stale local
+    map metadata can suppress fallback receiver-kind inference for bare
+    `at(target, key)` and `tryAt(target, key)` receiver probes.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -840,6 +844,12 @@ Task template:
       helper calls defer to builtin/native map handling. Published map facts
       suppress stale scalar locals while published non-map facts suppress
       stale map locals.
+    - Completed slice: semantic-product-addressed setup-type receiver-target
+      map probes now consume published map/non-map target facts before local
+      map metadata can suppress fallback receiver-kind inference for bare
+      `at(target, key)` and `tryAt(target, key)` receiver probes. Published
+      map facts suppress stale scalar locals while published non-map facts
+      suppress stale map locals.
     - Completed slice: semantic-product-addressed native `Result.why(...)`
       direct-call sources now resolve interned query result-error IDs before
       copied query text, so stale duplicated error text cannot override the

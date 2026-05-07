@@ -790,6 +790,112 @@ TEST_CASE("ir lowerer setup type helper dispatches receiver target resolution") 
   CHECK(resolvedTypePath == "/pkg/Ctor");
 }
 
+TEST_CASE("ir lowerer setup type helper gates bare map receiver probes with semantic target facts") {
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+  using ValueKind = LocalInfo::ValueKind;
+
+  primec::SemanticProgram semanticProgram;
+  auto addBindingFact = [&](uint64_t semanticNodeId,
+                            const std::string &bindingTypeText) {
+    primec::SemanticProgramBindingFact fact;
+    fact.semanticNodeId = semanticNodeId;
+    fact.bindingTypeText = bindingTypeText;
+    fact.bindingTypeTextId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, bindingTypeText);
+    const size_t factIndex = semanticProgram.bindingFacts.size();
+    semanticProgram.bindingFacts.push_back(fact);
+    semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(
+        semanticNodeId, factIndex);
+  };
+  auto addMapFact = [&](uint64_t semanticNodeId,
+                        const std::string &keyType,
+                        const std::string &valueType) {
+    primec::SemanticProgramCollectionSpecialization fact;
+    fact.semanticNodeId = semanticNodeId;
+    fact.collectionFamily = "map";
+    fact.collectionFamilyId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, "map");
+    fact.keyTypeText = keyType;
+    fact.keyTypeTextId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, keyType);
+    fact.valueTypeText = valueType;
+    fact.valueTypeTextId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, valueType);
+    const size_t factIndex = semanticProgram.collectionSpecializations.size();
+    semanticProgram.collectionSpecializations.push_back(fact);
+    semanticProgram.publishedRoutingLookups.collectionSpecializationIndicesByExpr
+        .insert_or_assign(semanticNodeId, factIndex);
+  };
+  addBindingFact(7701, "i32");
+  addMapFact(7702, "i32", "i32");
+  const primec::ir_lowerer::SemanticProductIndex semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  primec::Expr scalarTarget;
+  scalarTarget.kind = primec::Expr::Kind::Name;
+  scalarTarget.name = "values";
+  scalarTarget.semanticNodeId = 7701;
+
+  primec::Expr mapTarget = scalarTarget;
+  mapTarget.semanticNodeId = 7702;
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.literalValue = 0;
+
+  primec::ir_lowerer::LocalMap staleMapLocals;
+  LocalInfo staleMapInfo;
+  staleMapInfo.kind = LocalInfo::Kind::Map;
+  staleMapInfo.mapKeyKind = ValueKind::Int32;
+  staleMapInfo.mapValueKind = ValueKind::Int32;
+  staleMapLocals.emplace("values", staleMapInfo);
+
+  primec::ir_lowerer::LocalMap staleScalarLocals;
+  LocalInfo staleScalarInfo;
+  staleScalarInfo.kind = LocalInfo::Kind::Value;
+  staleScalarInfo.valueKind = ValueKind::Int32;
+  staleScalarLocals.emplace("values", staleScalarInfo);
+
+  auto makeReceiverProbe = [&](const primec::Expr &target,
+                               const char *name) {
+    primec::Expr callReceiver;
+    callReceiver.kind = primec::Expr::Kind::Call;
+    callReceiver.name = name;
+    callReceiver.args = {target, indexExpr};
+    return callReceiver;
+  };
+  auto inferString = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    return ValueKind::String;
+  };
+  auto expectReceiverType = [&](const primec::Expr &receiverExpr,
+                                const primec::ir_lowerer::LocalMap &locals,
+                                const std::string &expectedTypeName) {
+    std::string typeName;
+    std::string resolvedTypePath;
+    std::string error;
+    CHECK(primec::ir_lowerer::resolveMethodReceiverTarget(receiverExpr,
+                                                          locals,
+                                                          "trim",
+                                                          {},
+                                                          {},
+                                                          inferString,
+                                                          [](const primec::Expr &) { return std::string(); },
+                                                          typeName,
+                                                          resolvedTypePath,
+                                                          error,
+                                                          &semanticProgram,
+                                                          &semanticIndex));
+    CHECK(typeName == expectedTypeName);
+    CHECK(resolvedTypePath.empty());
+    CHECK(error.empty());
+  };
+
+  for (const char *name : {"at", "tryAt"}) {
+    expectReceiverType(makeReceiverProbe(scalarTarget, name), staleMapLocals, "string");
+    expectReceiverType(makeReceiverProbe(mapTarget, name), staleScalarLocals, "");
+  }
+}
+
 TEST_CASE("ir lowerer setup type helper resolves indexed args-pack vector receivers") {
   using LocalInfo = primec::ir_lowerer::LocalInfo;
   using ValueKind = LocalInfo::ValueKind;
