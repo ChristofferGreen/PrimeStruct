@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer diagnostic target facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes native-tail unsupported
+    count/capacity diagnostics read semantic-product target facts before
+    stale local vector metadata decides whether to suppress target errors.
+  - acceptance:
+    - Published binding type IDs force explicit vector count diagnostics for
+      scalar targets even when stale locals still mark the target as vector.
+    - Published binding type IDs force explicit vector capacity diagnostics
+      for scalar targets before stale local vector metadata can defer them.
+    - Published vector binding facts continue to defer unsupported diagnostics
+      when stale locals incorrectly look scalar.
+  - stop_rule: Stop once native-tail unsupported count/capacity diagnostics
+    prefer published target facts for direct helper targets and focused tests
+    pin stale-local suppression in both directions.
+  - evidence: Added semantic-product target classification to native-tail
+    unsupported count/capacity diagnostics, kept local target inference as
+    syntax-only compatibility fallback, covered stale vector/scalar local
+    suppression in the native-tail orchestration test, and skipped broad
+    baseline validation per the lite workflow.
+
 - [x] TODO-4298: Prefer capacity target facts
   - owner: ai
   - created_at: 2026-04-28

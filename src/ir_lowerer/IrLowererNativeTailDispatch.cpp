@@ -2,8 +2,15 @@
 
 #include "IrLowererCountAccessClassifiers.h"
 #include "IrLowererCountAccessHelpers.h"
+#include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
+
+#include <optional>
+#include <utility>
+#include <vector>
 
 namespace primec::ir_lowerer {
 using count_access_detail::isVectorCountTarget;
@@ -152,19 +159,112 @@ bool emitMapLookupTryAt(
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error);
 
-UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(
-    const Expr &expr,
-    const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
-    std::string &error) {
-  static const LocalMap emptyLocals;
-  return emitUnsupportedNativeCallDiagnostic(expr, emptyLocals, tryGetPrintBuiltinName, error);
+std::string resolveNativeTailSemanticText(const SemanticProgram &semanticProgram,
+                                          SymbolId textId,
+                                          const std::string &fallback) {
+  if (textId != InvalidSymbolId) {
+    const std::string_view resolved =
+        semanticProgramResolveCallTargetString(semanticProgram, textId);
+    if (!resolved.empty()) {
+      return std::string(resolved);
+    }
+  }
+  return fallback;
 }
 
-UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(
+std::optional<bool> classifyNativeTailVectorTargetType(std::string typeText) {
+  typeText = trimTemplateTypeText(std::move(typeText));
+  if (typeText.empty()) {
+    return std::nullopt;
+  }
+
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(typeText, base, argText)) {
+    const std::string normalizedType =
+        normalizeCollectionBindingTypeName(typeText);
+    if (normalizedType == "vector") {
+      return true;
+    }
+    return false;
+  }
+
+  base = normalizeCollectionBindingTypeName(trimTemplateTypeText(base));
+  if (base == "Reference" || base == "Pointer") {
+    std::vector<std::string> args;
+    if (!splitTemplateArgs(argText, args) || args.size() != 1) {
+      return false;
+    }
+    return classifyNativeTailVectorTargetType(args.front());
+  }
+  return base == "vector";
+}
+
+std::optional<bool> classifyNativeTailSemanticVectorTarget(
+    const Expr &target,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
+  if (semanticProgram == nullptr ||
+      semanticIndex == nullptr ||
+      target.semanticNodeId == 0) {
+    return std::nullopt;
+  }
+  if (const auto *collectionFact =
+          findSemanticProductCollectionSpecialization(*semanticIndex, target)) {
+    const std::string family = normalizeCollectionBindingTypeName(
+        resolveNativeTailSemanticText(*semanticProgram,
+                                      collectionFact->collectionFamilyId,
+                                      collectionFact->collectionFamily));
+    return family == "vector";
+  }
+  if (const auto *bindingFact =
+          findSemanticProductBindingFact(*semanticIndex, target)) {
+    return classifyNativeTailVectorTargetType(
+        resolveNativeTailSemanticText(*semanticProgram,
+                                      bindingFact->bindingTypeTextId,
+                                      bindingFact->bindingTypeText));
+  }
+  if (const auto *localAutoFact =
+          findSemanticProductLocalAutoFact(semanticProgram, *semanticIndex, target)) {
+    return classifyNativeTailVectorTargetType(
+        resolveNativeTailSemanticText(*semanticProgram,
+                                      localAutoFact->bindingTypeTextId,
+                                      localAutoFact->bindingTypeText));
+  }
+  if (const auto *queryFact =
+          findSemanticProductQueryFact(semanticProgram, *semanticIndex, target)) {
+    const auto classifyQueryType =
+        [&](SymbolId typeId, const std::string &typeText) {
+          return classifyNativeTailVectorTargetType(
+              resolveNativeTailSemanticText(*semanticProgram, typeId, typeText));
+        };
+    if (auto classified =
+            classifyQueryType(queryFact->queryTypeTextId, queryFact->queryTypeText);
+        classified.has_value()) {
+      return classified;
+    }
+    if (auto classified =
+            classifyQueryType(queryFact->bindingTypeTextId, queryFact->bindingTypeText);
+        classified.has_value()) {
+      return classified;
+    }
+    if (auto classified = classifyQueryType(queryFact->receiverBindingTypeTextId,
+                                            queryFact->receiverBindingTypeText);
+        classified.has_value()) {
+      return classified;
+    }
+    return false;
+  }
+  return std::nullopt;
+}
+
+UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnosticImpl(
     const Expr &expr,
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
-    std::string &error) {
+    std::string &error,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
   const auto isBareSimpleCountLikeCall = [&](std::string_view helperName) {
     return expr.kind == Expr::Kind::Call &&
            !expr.isMethodCall &&
@@ -172,23 +272,31 @@ UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(
            isSimpleCallName(expr, std::string(helperName).c_str()) &&
            expr.args.size() == 1;
   };
+  const auto isDiagnosticVectorTarget = [&](const Expr &target) {
+    if (const auto semanticTarget =
+            classifyNativeTailSemanticVectorTarget(target, semanticProgram, semanticIndex);
+        semanticTarget.has_value()) {
+      return *semanticTarget;
+    }
+    return isVectorTarget(target, localsIn);
+  };
   if (isBareSimpleCountLikeCall("count") &&
-      !isVectorTarget(expr.args.front(), localsIn)) {
+      !isDiagnosticVectorTarget(expr.args.front())) {
     return UnsupportedNativeCallResult::NotHandled;
   }
   if (isBareSimpleCountLikeCall("capacity") &&
-      !isVectorTarget(expr.args.front(), localsIn)) {
+      !isDiagnosticVectorTarget(expr.args.front())) {
     return UnsupportedNativeCallResult::NotHandled;
   }
   if (!expr.isMethodCall && count_access_detail::isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
-      isVectorTarget(expr.args.front(), localsIn)) {
+      isDiagnosticVectorTarget(expr.args.front())) {
     return UnsupportedNativeCallResult::NotHandled;
   }
   if (!expr.isMethodCall &&
       (count_access_detail::isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count"))) {
     if (expr.name == "/count" && expr.namespacePrefix.empty() &&
         expr.args.size() == 1 && expr.args.front().kind != Expr::Kind::Call &&
-        !isVectorTarget(expr.args.front(), localsIn)) {
+        !isDiagnosticVectorTarget(expr.args.front())) {
       return UnsupportedNativeCallResult::NotHandled;
     }
     std::string targetName = "<none>";
@@ -203,7 +311,7 @@ UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(
     return UnsupportedNativeCallResult::Error;
   }
   if (!expr.isMethodCall && count_access_detail::isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
-      isVectorTarget(expr.args.front(), localsIn)) {
+      isDiagnosticVectorTarget(expr.args.front())) {
     return UnsupportedNativeCallResult::NotHandled;
   }
   if (!expr.isMethodCall && count_access_detail::isVectorBuiltinName(expr, "capacity") &&
@@ -222,6 +330,23 @@ UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(
   }
 
   return UnsupportedNativeCallResult::NotHandled;
+}
+
+UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(
+    const Expr &expr,
+    const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
+    std::string &error) {
+  static const LocalMap emptyLocals;
+  return emitUnsupportedNativeCallDiagnostic(expr, emptyLocals, tryGetPrintBuiltinName, error);
+}
+
+UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
+    std::string &error) {
+  return emitUnsupportedNativeCallDiagnosticImpl(
+      expr, localsIn, tryGetPrintBuiltinName, error, nullptr, nullptr);
 }
 
 NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
@@ -449,8 +574,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     return NativeCallTailDispatchResult::Emitted;
   }
 
-  const auto unsupportedCallResult = emitUnsupportedNativeCallDiagnostic(
-      expr, localsIn, tryGetPrintBuiltinName, error);
+  const auto unsupportedCallResult = emitUnsupportedNativeCallDiagnosticImpl(
+      expr, localsIn, tryGetPrintBuiltinName, error, semanticProgram, semanticIndexPtr);
   if (unsupportedCallResult == UnsupportedNativeCallResult::Error) {
     return NativeCallTailDispatchResult::Error;
   }

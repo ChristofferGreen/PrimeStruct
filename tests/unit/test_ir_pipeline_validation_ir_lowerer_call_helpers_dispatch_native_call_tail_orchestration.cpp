@@ -476,4 +476,111 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
             error) == Result::NotHandled);
 }
 
+TEST_CASE("ir lowerer native unsupported count diagnostics prefer semantic facts") {
+  using Result = primec::ir_lowerer::NativeCallTailDispatchResult;
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+
+  primec::ir_lowerer::LocalMap locals;
+  LocalInfo staleVectorInfo;
+  staleVectorInfo.kind = LocalInfo::Kind::Vector;
+  staleVectorInfo.valueKind = LocalInfo::ValueKind::Int32;
+  locals.emplace("scalarTarget", staleVectorInfo);
+  LocalInfo staleScalarInfo;
+  staleScalarInfo.kind = LocalInfo::Kind::Value;
+  staleScalarInfo.valueKind = LocalInfo::ValueKind::Int32;
+  locals.emplace("vectorTarget", staleScalarInfo);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "local",
+      .name = "scalarTarget",
+      .bindingTypeText = "vector<i32>",
+      .semanticNodeId = 8101,
+      .bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+  });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(8101, 0);
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "local",
+      .name = "vectorTarget",
+      .bindingTypeText = "i32",
+      .semanticNodeId = 8102,
+      .bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "vector<i32>"),
+  });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(8102, 1);
+
+  std::vector<primec::IrInstruction> instructions;
+  auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
+    instructions.push_back({op, imm});
+  };
+  auto instructionCount = [&]() { return instructions.size(); };
+  auto patchInstructionImm = [&](size_t index, uint64_t imm) { instructions.at(index).imm = imm; };
+  int nextLocal = 20;
+  std::string error;
+
+  auto makeSemanticName = [](const char *name, uint64_t semanticNodeId) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Name;
+    expr.name = name;
+    expr.semanticNodeId = semanticNodeId;
+    return expr;
+  };
+  auto makeDirectCall = [](const char *name, const primec::Expr &target) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = name;
+    expr.args = {target};
+    return expr;
+  };
+  auto dispatch = [&](const primec::Expr &expr) {
+    instructions.clear();
+    error.clear();
+    return primec::ir_lowerer::tryEmitNativeCallTailDispatch(
+        expr,
+        locals,
+        [](const primec::Expr &, std::string &) { return false; },
+        [](const std::string &) { return true; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+          return false;
+        },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+        [](const primec::Expr &, std::string &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return LocalInfo::ValueKind::Int32;
+        },
+        [&]() { return nextLocal++; },
+        []() {},
+        []() {},
+        []() {},
+        instructionCount,
+        emitInstruction,
+        patchInstructionImm,
+        error,
+        &semanticProgram);
+  };
+
+  const primec::Expr semanticScalar = makeSemanticName("scalarTarget", 8101);
+  CHECK(dispatch(makeDirectCall("/std/collections/vector/count", semanticScalar)) ==
+        Result::Error);
+  CHECK(error == "count requires array, vector, map, or string target (target=scalarTarget)");
+  CHECK(dispatch(makeDirectCall("/std/collections/vector/capacity", semanticScalar)) ==
+        Result::Error);
+  CHECK(error == "capacity requires vector target");
+
+  const primec::Expr semanticVector = makeSemanticName("vectorTarget", 8102);
+  CHECK(dispatch(makeDirectCall("/std/collections/vector/count", semanticVector)) ==
+        Result::NotHandled);
+  CHECK(error.empty());
+  CHECK(dispatch(makeDirectCall("/std/collections/vector/capacity", semanticVector)) ==
+        Result::NotHandled);
+  CHECK(error.empty());
+}
+
 TEST_SUITE_END();

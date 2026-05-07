@@ -731,6 +731,9 @@ Task template:
     The lowerer capacity-classifier target slice is complete for
     semantic-product-backed dereferenced binding targets and indexed query
     targets before stale local vector metadata can classify `capacity(...)`.
+    The native unsupported count/capacity diagnostic slice is complete for
+    semantic-product-backed direct helper targets before stale local vector
+    metadata can suppress count/capacity target diagnostics.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
