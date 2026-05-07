@@ -419,6 +419,10 @@ Planned non-template inference migration contract:
   the indexed expression's published query collection fact before stale args-pack collection
   metadata can classify the count target. Published non-collection or missing semantic-id facts
   suppress stale local metadata; syntax-only contexts keep the old fallback.
+- Completed lowerer-side runtime string count emission slice: `count(name)` native emission now
+  reads the target's published string/non-string fact before stale runtime-string local metadata can
+  choose `LoadStringLength`. Published non-string or missing semantic-id facts suppress stale local
+  metadata; syntax-only contexts keep the old fallback.
 - Completed lowerer-side try operand Result fact slice: base-kind inference for
   `try(operand)` now reads the operand's published binding, query, or local-auto Result fact
   before lowerer-local `isResult` and args-pack metadata can classify the value kind. Published

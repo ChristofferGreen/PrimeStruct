@@ -623,6 +623,9 @@ Task template:
     The lowerer indexed count target fact slice is complete for
     semantic-product-backed `count(at(args, i))` classification before stale
     args-pack collection metadata can classify indexed count targets.
+    The lowerer runtime string count emission slice is complete for
+    semantic-product-backed `count(name)` emission before stale runtime-string
+    local metadata can choose `LoadStringLength`.
     The lowerer try operand Result fact slice is complete for
     semantic-product-backed `try(operand)` base-kind inference before
     stale local `isResult` or args-pack metadata can classify the operand's
@@ -951,6 +954,12 @@ Task template:
       `count(at(args, i))`. Published non-collection or missing semantic-id
       facts suppress stale local metadata while syntax-only compatibility
       keeps the legacy indexed args-pack fallback.
+    - Completed slice: semantic-product-addressed runtime string count
+      emission now consumes published string/non-string facts before stale
+      local runtime-string metadata can choose `LoadStringLength` for
+      `count(name)`. Published non-string or missing semantic-id facts
+      suppress stale local metadata while syntax-only compatibility keeps the
+      legacy runtime string fallback.
     - Completed slice: semantic-product-addressed native `Result.why(...)`
       direct-call sources now resolve interned query result-error IDs before
       copied query text, so stale duplicated error text cannot override the

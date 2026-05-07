@@ -985,6 +985,112 @@ TEST_CASE("ir lowerer count access helpers emit canonical runtime string count c
   CHECK(instructions[1].op == primec::IrOpcode::LoadStringLength);
 }
 
+TEST_CASE("ir lowerer count access helpers prefer semantic runtime string facts") {
+  using Result = primec::ir_lowerer::CountAccessCallEmitResult;
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "local",
+      .name = "scalarText",
+      .bindingTypeText = "string",
+      .semanticNodeId = 7401,
+      .bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+  });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(7401, 0);
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "local",
+      .name = "text",
+      .bindingTypeText = "i32",
+      .semanticNodeId = 7402,
+      .bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "string"),
+  });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(7402, 1);
+  const auto semanticIndex = primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo runtimeStringInfo;
+  runtimeStringInfo.index = 11;
+  runtimeStringInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  runtimeStringInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::String;
+  runtimeStringInfo.stringSource = primec::ir_lowerer::LocalInfo::StringSource::RuntimeIndex;
+  locals.emplace("scalarText", runtimeStringInfo);
+  locals.emplace("text", runtimeStringInfo);
+  locals.emplace("missingText", runtimeStringInfo);
+  locals.emplace("syntaxText", runtimeStringInfo);
+
+  auto makeTarget = [](const char *name, uint64_t semanticNodeId) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Name;
+    expr.name = name;
+    expr.semanticNodeId = semanticNodeId;
+    return expr;
+  };
+  auto makeCountCall = [](const primec::Expr &target) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = "/std/collections/vector/count";
+    expr.args = {target};
+    return expr;
+  };
+
+  auto inferLocalKind = [](const primec::Expr &valueExpr, const primec::ir_lowerer::LocalMap &valueLocals) {
+    if (valueExpr.kind == primec::Expr::Kind::Name) {
+      auto it = valueLocals.find(valueExpr.name);
+      if (it != valueLocals.end()) {
+        return it->second.valueKind;
+      }
+    }
+    return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  };
+  auto emitCall = [&](const primec::Expr &callExpr, std::vector<primec::IrInstruction> &instructions) {
+    std::string error;
+    return primec::ir_lowerer::tryEmitCountAccessCall(
+        callExpr,
+        locals,
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [&](const primec::Expr &countExpr, const primec::ir_lowerer::LocalMap &countLocals) {
+          return primec::ir_lowerer::isStringCountCall(countExpr, countLocals, &semanticProgram);
+        },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        inferLocalKind,
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+        [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          instructions.push_back({primec::IrOpcode::LoadLocal, 11});
+          return true;
+        },
+        [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+        error,
+        &semanticProgram,
+        &semanticIndex);
+  };
+
+  std::vector<primec::IrInstruction> instructions;
+  CHECK(emitCall(makeCountCall(makeTarget("scalarText", 7401)), instructions) == Result::NotHandled);
+  CHECK(instructions.empty());
+
+  CHECK(emitCall(makeCountCall(makeTarget("missingText", 7499)), instructions) == Result::NotHandled);
+  CHECK(instructions.empty());
+
+  CHECK(emitCall(makeCountCall(makeTarget("text", 7402)), instructions) == Result::Emitted);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadStringLength);
+
+  instructions.clear();
+  CHECK(emitCall(makeCountCall(makeTarget("syntaxText", 0)), instructions) == Result::Emitted);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadStringLength);
+}
+
 TEST_CASE("ir lowerer call helpers lower soa_vector count calls") {
   using Result = primec::ir_lowerer::NativeCallTailDispatchResult;
   using LocalInfo = primec::ir_lowerer::LocalInfo;

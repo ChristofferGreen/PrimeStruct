@@ -239,6 +239,12 @@ enum class SemanticDereferencedCountTargetResolution {
   NonCollection,
 };
 
+enum class SemanticStringCountTargetResolution {
+  NoFact,
+  String,
+  NonString,
+};
+
 bool classifySemanticCountTarget(const Expr &target,
                                  const SemanticProgram *semanticProgram,
                                  const SemanticProductIndex *semanticIndex,
@@ -531,6 +537,20 @@ SemanticDereferencedCountTargetResolution classifySemanticDereferencedCountTarge
   return semanticInfo.isCollection
              ? SemanticDereferencedCountTargetResolution::Collection
              : SemanticDereferencedCountTargetResolution::NonCollection;
+}
+
+SemanticStringCountTargetResolution classifySemanticStringCountTarget(
+    const Expr &target,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
+  SemanticCountTargetInfo semanticInfo;
+  if (!classifySemanticCountTarget(
+          target, semanticProgram, semanticIndex, semanticInfo)) {
+    return SemanticStringCountTargetResolution::NoFact;
+  }
+  return semanticInfo.isString
+             ? SemanticStringCountTargetResolution::String
+             : SemanticStringCountTargetResolution::NonString;
 }
 
 bool resolveEntryArgsParameterFromSemanticProduct(const Definition &entryDef,
@@ -1249,6 +1269,14 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       return false;
     }
     const Expr &target = expr.args.front();
+    const SemanticStringCountTargetResolution semanticStringTarget =
+        classifySemanticStringCountTarget(target, semanticProgram, semanticIndex);
+    if (semanticStringTarget == SemanticStringCountTargetResolution::String) {
+      return true;
+    }
+    if (semanticStringTarget == SemanticStringCountTargetResolution::NonString) {
+      return false;
+    }
     if (inferExprKind) {
       const LocalInfo::ValueKind targetKind = inferExprKind(target, localsIn);
       if (targetKind == LocalInfo::ValueKind::String) {
@@ -1438,7 +1466,16 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
   }
 
   if ((isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) && expr.args.size() == 1 &&
-      inferExprKind && inferExprKind(expr.args.front(), localsIn) == LocalInfo::ValueKind::String) {
+      inferExprKind) {
+    const SemanticStringCountTargetResolution semanticStringTarget =
+        classifySemanticStringCountTarget(expr.args.front(), semanticProgram, semanticIndex);
+    if (semanticStringTarget == SemanticStringCountTargetResolution::NonString) {
+      return CountAccessCallEmitResult::NotHandled;
+    }
+    if (semanticStringTarget != SemanticStringCountTargetResolution::String &&
+        inferExprKind(expr.args.front(), localsIn) != LocalInfo::ValueKind::String) {
+      return CountAccessCallEmitResult::NotHandled;
+    }
     if (!emitExpr(expr.args.front(), localsIn)) {
       return CountAccessCallEmitResult::Error;
     }
