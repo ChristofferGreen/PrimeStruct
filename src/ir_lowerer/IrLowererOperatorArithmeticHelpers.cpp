@@ -45,7 +45,7 @@ bool isSemanticPointerOperandTypeText(const std::string &typeText) {
     return false;
   }
   base = normalizeCollectionBindingTypeName(trimTemplateTypeText(base));
-  if (base != "Pointer" && base != "Reference") {
+  if (base != "Pointer") {
     return false;
   }
   std::vector<std::string> args;
@@ -282,7 +282,8 @@ OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
       return false;
     }
     bool semanticPointer = false;
-    if (classifySemanticPointerOperand(candidate, semanticProductTargets, semanticPointer)) {
+    if (classifySemanticPointerOperand(candidate, semanticProductTargets, semanticPointer) &&
+        semanticPointer) {
       return false;
     }
     auto it = localsRef.find(candidate.name);
@@ -320,9 +321,9 @@ OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
         return true;
       }
       if (it->second.kind == LocalInfo::Kind::Reference) {
-        // Mutable scalar locals lower as references but should still behave like
-        // numeric values here. Explicit reference handles remain pointer-like.
-        if (it->second.isMutable && isScalarReferenceValueOperand(candidate, localsRef)) {
+        // Scalar references lower as handles but expression evaluation
+        // implicitly loads their referenced value.
+        if (isScalarReferenceValueOperand(candidate, localsRef)) {
           return false;
         }
         return true;

@@ -1071,9 +1071,7 @@ void SemanticsValidator::rebindMergedWorkerPublicationFactSemanticNodeIds() {
                            0,
                            std::to_string(entry.variantIndex));
       });
-  rebindSemanticNodeIdsBySnapshotKey(
-      mergedWorkerPublicationFacts_.bindingFacts,
-      std::move(freshBindingFacts),
+  const auto bindingFactSnapshotKey =
       [](const BindingFactSnapshotEntry &entry) {
         return snapshotKey(entry.scopePath,
                            entry.siteKind,
@@ -1081,7 +1079,39 @@ void SemanticsValidator::rebindMergedWorkerPublicationFactSemanticNodeIds() {
                            entry.sourceColumn,
                            entry.name,
                            entry.resolvedPath);
-      });
+      };
+  if (appendMissingEntriesBySnapshotKey(
+          mergedWorkerPublicationFacts_.bindingFacts,
+          freshBindingFacts,
+          bindingFactSnapshotKey)) {
+    std::stable_sort(mergedWorkerPublicationFacts_.bindingFacts.begin(),
+                     mergedWorkerPublicationFacts_.bindingFacts.end(),
+                     [](const auto &left, const auto &right) {
+                       if (left.scopePath != right.scopePath) {
+                         return left.scopePath < right.scopePath;
+                       }
+                       if (left.sourceLine != right.sourceLine) {
+                         return left.sourceLine < right.sourceLine;
+                       }
+                       if (left.sourceColumn != right.sourceColumn) {
+                         return left.sourceColumn < right.sourceColumn;
+                       }
+                       if (left.siteKind != right.siteKind) {
+                         return left.siteKind < right.siteKind;
+                       }
+                       if (left.name != right.name) {
+                         return left.name < right.name;
+                       }
+                       if (left.resolvedPath != right.resolvedPath) {
+                         return left.resolvedPath < right.resolvedPath;
+                       }
+                       return left.semanticNodeId < right.semanticNodeId;
+                     });
+  }
+  rebindSemanticNodeIdsBySnapshotKey(
+      mergedWorkerPublicationFacts_.bindingFacts,
+      std::move(freshBindingFacts),
+      bindingFactSnapshotKey);
   rebindSemanticNodeIdsBySnapshotKey(
       mergedWorkerPublicationFacts_.returnFacts,
       std::move(freshReturnFacts),

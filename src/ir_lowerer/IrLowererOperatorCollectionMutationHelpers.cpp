@@ -6,6 +6,7 @@
 #include "IrLowererHelpers.h"
 #include "IrLowererIndexKindHelpers.h"
 #include "IrLowererSemanticProductTargetAdapters.h"
+#include "IrLowererStructFieldBindingHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "primec/SoaPathHelpers.h"
 
@@ -78,6 +79,31 @@ bool areCompatibleInternalSoaStoragePaths(const std::string &lhs, const std::str
 bool areCompatibleStructPaths(const std::string &lhs, const std::string &rhs) {
   return lhs == rhs || (isVectorStructPath(lhs) && isVectorStructPath(rhs)) ||
          areCompatibleInternalSoaStoragePaths(lhs, rhs);
+}
+
+bool classifyArrayVectorFieldBinding(
+    const LayoutFieldBinding &binding,
+    const ConversionsAndCallsValueKindFromTypeNameFn &valueKindFromTypeName,
+    ArrayVectorAccessTargetInfo &targetInfoOut) {
+  std::string collectionType =
+      normalizeCollectionBindingTypeName(trimTemplateTypeText(binding.typeName));
+  std::string elementType = trimTemplateTypeText(binding.typeTemplateArg);
+  if (collectionType == "Reference" || collectionType == "Pointer") {
+    std::string wrappedBase;
+    std::string wrappedArgs;
+    if (!splitTemplateTypeName(elementType, wrappedBase, wrappedArgs)) {
+      return false;
+    }
+    collectionType = normalizeCollectionBindingTypeName(trimTemplateTypeText(wrappedBase));
+    elementType = trimTemplateTypeText(wrappedArgs);
+  }
+  if (collectionType != "array" && collectionType != "vector") {
+    return false;
+  }
+  targetInfoOut.isArrayOrVectorTarget = true;
+  targetInfoOut.isVectorTarget = (collectionType == "vector");
+  targetInfoOut.elemKind = valueKindFromTypeName(elementType);
+  return true;
 }
 
 LocalInfo::ValueKind scalarMutationValueKindFromTypeText(
@@ -157,6 +183,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
   const auto &inferStructExprPath = context.inferStructExprPath;
   const auto &resolveStructSlotCount = context.resolveStructSlotCount;
   const auto &resolveStructFieldInfo = context.resolveStructFieldInfo;
+  const auto &resolveStructFieldBinding = context.resolveStructFieldBinding;
   const auto &emitStructCopyFromPtrs = context.emitStructCopyFromPtrs;
   auto &instructions = context.instructions;
   auto &error = context.error;
@@ -838,6 +865,15 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         if (collectionPath == "/array" || collectionPath == "/vector") {
           targetInfo.isArrayOrVectorTarget = true;
           targetInfo.isVectorTarget = (collectionPath == "/vector");
+        }
+      }
+      if (!targetInfo.isArrayOrVectorTarget && collectionTarget.kind == Expr::Kind::Call &&
+          collectionTarget.isFieldAccess && collectionTarget.args.size() == 1) {
+        const std::string receiverStruct = inferStructExprPath(collectionTarget.args.front(), localsIn);
+        LayoutFieldBinding fieldBinding;
+        if (!receiverStruct.empty() && resolveStructFieldBinding &&
+            resolveStructFieldBinding(receiverStruct, collectionTarget.name, fieldBinding)) {
+          classifyArrayVectorFieldBinding(fieldBinding, valueKindFromTypeName, targetInfo);
         }
       }
       if (!targetInfo.isArrayOrVectorTarget) {
