@@ -1789,7 +1789,12 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     if (hasSemanticVectorFact) {
       return false;
     }
-    const auto targetInfo = resolveArrayVectorAccessTargetInfo(callExpr.args[receiverIndex], localsIn);
+    const auto targetInfo =
+        resolveArrayVectorAccessTargetInfo(callExpr.args[receiverIndex],
+                                           localsIn,
+                                           {},
+                                           semanticProgram,
+                                           semanticIndex);
     return targetInfo.isVectorTarget;
   };
   auto isBuiltinVectorReceiverExpr = [&](const Expr &candidate) {
@@ -1805,7 +1810,12 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     if (hasSemanticVectorFact) {
       return false;
     }
-    const auto targetInfo = resolveArrayVectorAccessTargetInfo(candidate, localsIn);
+    const auto targetInfo =
+        resolveArrayVectorAccessTargetInfo(candidate,
+                                           localsIn,
+                                           {},
+                                           semanticProgram,
+                                           semanticIndex);
     if (targetInfo.isVectorTarget) {
       return true;
     }

@@ -731,6 +731,10 @@ Planned non-template inference migration contract:
   local vector metadata can select the builtin path. Published non-vector
   facts suppress stale local vector metadata while syntax-only compatibility
   keeps the old local fallback.
+- Completed statement direct-call vector target-resolver fallback slice:
+  explicit helper and builtin receiver probes now pass graph-backed vector
+  facts into residual array/vector target resolution before stale local
+  vector metadata can classify those receivers.
 - Completed lowerer-side count-of-map-access slice: native count-kind
   inference for `count(map[key])` now asks the indexed access expression for
   its published query value kind before consulting local map metadata. Stale

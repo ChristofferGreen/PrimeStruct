@@ -6,6 +6,31 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer statement vector fallback facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes statement direct-call vector
+    helper receiver fallback pass published vector facts into residual
+    array/vector target resolvers before stale local metadata can classify
+    explicit helper and builtin receiver probes.
+  - acceptance:
+    - Explicit vector helper receiver fallback uses semantic-aware
+      array/vector target resolution after the direct semantic receiver gate.
+    - Builtin vector receiver fallback uses semantic-aware array/vector target
+      resolution after the direct semantic receiver gate.
+    - Existing syntax-only vector receiver fallback remains available when no
+      semantic vector fact is published.
+  - stop_rule: Stop once statement direct-call vector receiver fallbacks route
+    through semantic-product target facts before legacy local vector metadata,
+    with source guard coverage pinning the resolver ordering.
+  - evidence: Routed the residual explicit-helper and builtin vector receiver
+    probes in `IrLowererStatementCallEmission.cpp` through semantic-aware
+    array/vector target resolution, added source guard coverage for both
+    resolver orderings, ran `git diff --check`, and skipped broad baseline
+    validation per the lite workflow.
+
 - [x] TODO-4298: Prefer statement map fallback facts
   - owner: ai
   - created_at: 2026-04-28

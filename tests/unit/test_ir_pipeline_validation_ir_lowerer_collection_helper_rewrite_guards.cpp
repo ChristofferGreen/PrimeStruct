@@ -1110,6 +1110,65 @@ TEST_CASE("ir lowerer statement vector method gate uses semantic receiver facts 
   CHECK(nonVectorGate < methodResolution);
 }
 
+TEST_CASE("ir lowerer statement direct vector receiver fallbacks use semantic target facts") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path statementCallPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererStatementCallEmission.cpp";
+
+  REQUIRE(std::filesystem::exists(statementCallPath));
+  const std::string source = readText(statementCallPath);
+
+  const size_t explicitHelperFallback = source.find(
+      "resolveArrayVectorAccessTargetInfo(callExpr.args[receiverIndex],\n"
+      "                                           localsIn,\n"
+      "                                           {},\n"
+      "                                           semanticProgram,\n"
+      "                                           semanticIndex)");
+  const size_t builtinReceiverFallback = source.find(
+      "resolveArrayVectorAccessTargetInfo(candidate,\n"
+      "                                           localsIn,\n"
+      "                                           {},\n"
+      "                                           semanticProgram,\n"
+      "                                           semanticIndex)");
+  const size_t explicitSemanticGate = source.find(
+      "resolveStatementVectorReceiverTargetInfoFromSemanticFacts(\n"
+      "            callExpr.args[receiverIndex],");
+  const size_t builtinSemanticGate = source.find(
+      "resolveStatementVectorReceiverTargetInfoFromSemanticFacts(candidate,");
+  const size_t explicitTargetGate =
+      source.find("return targetInfo.isVectorTarget;", explicitHelperFallback);
+  const size_t builtinTargetGate =
+      source.find("if (targetInfo.isVectorTarget) {", builtinReceiverFallback);
+
+  REQUIRE(explicitHelperFallback != std::string::npos);
+  REQUIRE(builtinReceiverFallback != std::string::npos);
+  REQUIRE(explicitSemanticGate != std::string::npos);
+  REQUIRE(builtinSemanticGate != std::string::npos);
+  REQUIRE(explicitTargetGate != std::string::npos);
+  REQUIRE(builtinTargetGate != std::string::npos);
+  CHECK(explicitSemanticGate < explicitHelperFallback);
+  CHECK(explicitHelperFallback < explicitTargetGate);
+  CHECK(builtinSemanticGate < builtinReceiverFallback);
+  CHECK(builtinReceiverFallback < builtinTargetGate);
+  CHECK(source.find("resolveArrayVectorAccessTargetInfo(callExpr.args[receiverIndex], localsIn)") ==
+        std::string::npos);
+  CHECK(source.find("resolveArrayVectorAccessTargetInfo(candidate, localsIn)") ==
+        std::string::npos);
+}
+
 TEST_CASE("ir lowerer inline dispatch map helper deferral uses semantic receiver facts first") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);

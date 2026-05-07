@@ -676,6 +676,10 @@ Task template:
     The statement-call vector mutator receiver slice is complete for
     semantic-product-backed binding, local-auto, and query vector facts before
     stale local vector metadata can select builtin mutator rewriting.
+    The statement direct-call vector target-resolver fallback slice is
+    complete for semantic-product-backed vector facts before stale local
+    array/vector metadata can classify explicit helper and builtin receiver
+    probes.
     The statement-call SoA helper dispatch receiver slice is complete for
     semantic-product-backed collection-specialization, binding, local-auto,
     and query SoA vector facts before stale local SoA metadata can select
@@ -1008,6 +1012,11 @@ Task template:
       `push`/`reserve`/`pop`-style rewriting. Published non-vector facts
       suppress stale local vector metadata while syntax-only compatibility
       keeps the legacy fallback.
+    - Completed slice: semantic-product-addressed statement direct-call
+      vector target-resolver fallback now passes published vector facts into
+      the residual array/vector resolver before local metadata can classify
+      explicit helper and builtin receiver probes. Syntax-only compatibility
+      keeps the legacy resolver fallback.
     - Completed slice: semantic-product-addressed statement-call SoA helper
       dispatch now consumes published collection-specialization, binding,
       local-auto, and query SoA vector receiver facts before local
