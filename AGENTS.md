@@ -18,7 +18,7 @@ build and layout solidify.
 - `rg` (`ripgrep`) for repository helper scripts such as `scripts/lines_of_code.sh`.
 - For coverage: `clang++`, `llvm-profdata`, and `llvm-cov` available in `PATH` (or discoverable via `xcrun` on macOS).
 
-## Naming rules (code)
+## Naming rules (C++/tooling code)
 - **Types (classes/structs/enums/aliases):** PascalCase (`PrimeStructParser`, `IrNode`).
 - **Functions (free/member):** lowerCamelCase (`parseModule`, `emitIr`).
 - **Variables/parameters/fields:** lowerCamelCase (`nodeId`, `tokenStream`).
@@ -27,21 +27,41 @@ build and layout solidify.
 
 ## Language/design docs
 - Primary design doc: `docs/PrimeStruct.md`.
-- PrimeStruct code-quality and example-style guide: `docs/CodeExamples.md`.
+- PrimeStruct code-quality and example-style authority:
+  `docs/CodeExamples.md`. If this AGENTS summary and that guide disagree
+  about well-written user-facing PrimeStruct code, follow
+  `docs/CodeExamples.md` and update AGENTS in the same change.
 - When semantics change, update docs first (or alongside code) and keep examples aligned.
 - When changing user-facing PrimeStruct examples or style guidance, keep
   `docs/CodeExamples.md` aligned with the supported surface syntax.
-- For stdlib style work, treat `stdlib/std/math`, `maybe`, `file`, `image`,
-  `ui`, the public collection wrapper files, and `stdlib/std/gfx/gfx.prime`
-  as style-aligned surface code; treat `stdlib/std/bench_non_math`,
-  `stdlib/std/collections/collections.prime`,
+- For user-facing examples, prefer the readable surface form documented in
+  `docs/CodeExamples.md`: operator syntax, method-style calls, concise
+  inferred locals, and user-facing names whenever the current language surface
+  supports them. Use bottom-level canonical spelling for dumps, debugging,
+  spec work, or bridge/substrate code where the canonical form is the point.
+- For user-facing PrimeStruct examples, prefer snake_case for free-standing
+  user-defined functions, lowerCamelCase for struct member functions, PascalCase
+  for struct/enum/type names, and descriptive behavior-oriented names.
+- For stdlib style work, follow the exact file-level boundary in
+  `docs/CodeExamples.md`. In summary, treat `stdlib/std/math/*`,
+  `stdlib/std/maybe/*`, `stdlib/std/file/*`, `stdlib/std/image/*`,
+  `stdlib/std/ui/*`, `stdlib/std/collections/vector.prime`,
+  `stdlib/std/collections/map.prime`,
+  `stdlib/std/collections/errors.prime`,
+  `stdlib/std/collections/soa_vector.prime`,
+  `stdlib/std/collections/soa_vector_conversions.prime`, and
+  `stdlib/std/gfx/gfx.prime` as style-aligned surface code; treat
+  `stdlib/std/bench_non_math/*`, `stdlib/std/collections/collections.prime`,
   `stdlib/std/collections/experimental_vector.prime`,
   `stdlib/std/collections/experimental_map.prime`,
   `stdlib/std/collections/experimental_soa_vector.prime`,
   `stdlib/std/collections/experimental_soa_vector_conversions.prime`,
   `stdlib/std/collections/internal_*`, and
-  `stdlib/std/gfx/experimental.prime` as canonical/bridge code unless an
-  active TODO explicitly retargets them.
+  `stdlib/std/gfx/experimental.prime` as internal, bridge, substrate, migration,
+  or benchmark code unless an active TODO explicitly retargets them.
+- When adding or editing examples in docs, keep them minimal but runnable and
+  re-check them with the current compiler before treating them as style
+  guidance.
 - When ownership classification changes for a public type/surface, update the canonical `core` / `hybrid` / `stdlib-owned` matrix in `docs/PrimeStruct.md` and keep the summary note in `docs/todo.md` aligned in the same change.
 - If new public syntax/IR features are added, document them with a minimal runnable
   example and expected IR snippet.
@@ -190,14 +210,27 @@ build and layout solidify.
 - The subject line must be non-empty, stay within 50 characters, start with a capital letter, and must not end with a period.
 - The second line must be blank.
 - A body is required: include at least one non-empty body line after the blank separator.
-- Wrap every body line at 72 characters or less.
+- Wrap every raw body line at 72 characters or less before running
+  `git commit`; do not rely on editor soft-wrap, terminal display wrapping,
+  or the hook to fix long lines.
+- Treat each `git commit -m` body argument as one physical message line. If a
+  body sentence would exceed 72 characters, split it into additional short
+  `-m` body arguments before committing.
+- Prefer this safe shape when committing from automation:
+  ```
+  git commit \
+    -m "Add IR dump stage for transforms" \
+    -m "Add a transform stage hook for IR dumps." \
+    -m "Document how it helps compare lowering output."
+  ```
 - Prefer one logical change per commit.
 
 Example:
 ```
 Add IR dump stage for transforms
 
-Explain why the dump is needed and how it changes tooling workflows.
+Add a transform stage hook for IR dumps.
+Document how it helps compare lowering output.
 ```
 
 ## Multi-agent workspaces
