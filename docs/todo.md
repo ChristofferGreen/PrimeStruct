@@ -752,6 +752,9 @@ Task template:
     The lowerer direct vector-mutator reorder slice is complete for
     semantic-product-backed non-vector first arguments before local metadata
     decides whether to probe a later graph-owned vector receiver.
+    The lowerer direct access reorder slice is complete for
+    semantic-product-backed non-collection first arguments before local
+    metadata decides whether to probe a later graph-owned collection receiver.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for

@@ -745,6 +745,15 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     return !semanticInfo.arrayVectorInfo.isVectorTarget &&
            !semanticInfo.arrayVectorInfo.isSoaVector;
   };
+  auto hasNonCollectionAccessReceiverSemanticFact = [&](const Expr &candidate) {
+    SemanticReturnKindTargetInfo semanticInfo;
+    if (!resolveSemanticReturnKindTargetInfo(
+            candidate, semanticProgram, semanticIndex, semanticInfo)) {
+      return false;
+    }
+    return !semanticInfo.arrayVectorInfo.isArrayOrVectorTarget &&
+           !semanticInfo.mapInfo.isMapTarget;
+  };
   auto isKnownLocalName = [&](const Expr &candidate) -> bool {
     if (candidate.kind != Expr::Kind::Name) {
       return false;
@@ -836,8 +845,9 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
       (callExpr.args.front().kind == Expr::Kind::Literal || callExpr.args.front().kind == Expr::Kind::BoolLiteral ||
        callExpr.args.front().kind == Expr::Kind::FloatLiteral || callExpr.args.front().kind == Expr::Kind::StringLiteral ||
        (callExpr.args.front().kind == Expr::Kind::Name &&
-        isKnownLocalName(callExpr.args.front()) &&
-        !isKnownCollectionAccessReceiverExpr(callExpr.args.front())));
+        ((isKnownLocalName(callExpr.args.front()) &&
+          !isKnownCollectionAccessReceiverExpr(callExpr.args.front())) ||
+         hasNonCollectionAccessReceiverSemanticFact(callExpr.args.front()))));
   if (probePositionalReorderedAccessReceiver) {
     for (size_t i = 1; i < callExpr.args.size(); ++i) {
       appendReceiverIndex(i);
