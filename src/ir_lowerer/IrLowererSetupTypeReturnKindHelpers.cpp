@@ -726,6 +726,14 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   auto isKnownMapReceiverExpr = [&](const Expr &candidate) -> bool {
     return mapTargetInfoFor(candidate).isMapTarget;
   };
+  auto hasNonMapReceiverSemanticFact = [&](const Expr &candidate) {
+    SemanticReturnKindTargetInfo semanticInfo;
+    if (!resolveSemanticReturnKindTargetInfo(
+            candidate, semanticProgram, semanticIndex, semanticInfo)) {
+      return false;
+    }
+    return !semanticInfo.mapInfo.isMapTarget;
+  };
   auto isKnownVectorMutatorReceiverExpr = [&](const Expr &candidate) -> bool {
     SemanticReturnKindTargetInfo semanticInfo;
     if (resolveSemanticReturnKindTargetInfo(
@@ -945,6 +953,9 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
       }
       kindOut = LocalInfo::ValueKind::Bool;
       return true;
+    }
+    if (isContainsCall && hasNonMapReceiverSemanticFact(methodExpr.args.front())) {
+      continue;
     }
     if (isCountCall && !requireArrayReturn) {
       const auto arrayVectorTargetInfo =
