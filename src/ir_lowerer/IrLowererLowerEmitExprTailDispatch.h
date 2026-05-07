@@ -874,28 +874,26 @@
             return false;
           }
 
+          const SemanticProductIndex borrowedMapReceiverSemanticIndex =
+              ir_lowerer::buildSemanticProductIndex(semanticProgram);
+          const SemanticProductIndex *const borrowedMapReceiverSemanticIndexPtr =
+              semanticProgram == nullptr ? nullptr : &borrowedMapReceiverSemanticIndex;
+          auto resolveBorrowedMapReceiverInfo =
+              [&](const Expr &receiverExpr) {
+                return ir_lowerer::resolveMapAccessTargetInfo(
+                    receiverExpr,
+                    localsIn,
+                    inferCallMapTargetInfo,
+                    semanticProgram,
+                    borrowedMapReceiverSemanticIndexPtr);
+              };
           auto isBorrowedOrPointerMapReceiver = [&](const Expr &receiverExpr) {
             if (receiverExpr.kind == Expr::Kind::Call && isSimpleCallName(receiverExpr, "dereference") &&
                 receiverExpr.args.size() == 1) {
               return false;
             }
-            if (receiverExpr.kind == Expr::Kind::Name) {
-              auto it = localsIn.find(receiverExpr.name);
-              return it != localsIn.end() &&
-                     ((it->second.kind == ir_lowerer::LocalInfo::Kind::Reference && it->second.referenceToMap) ||
-                      (it->second.kind == ir_lowerer::LocalInfo::Kind::Pointer && it->second.pointerToMap));
-            }
-            std::string accessName;
-            if (receiverExpr.kind == Expr::Kind::Call && getBuiltinArrayAccessName(receiverExpr, accessName) &&
-                receiverExpr.args.size() == 2 && receiverExpr.args.front().kind == Expr::Kind::Name) {
-              auto it = localsIn.find(receiverExpr.args.front().name);
-              return it != localsIn.end() && it->second.isArgsPack &&
-                     (((it->second.argsPackElementKind == ir_lowerer::LocalInfo::Kind::Reference) &&
-                       it->second.referenceToMap) ||
-                      ((it->second.argsPackElementKind == ir_lowerer::LocalInfo::Kind::Pointer) &&
-                       it->second.pointerToMap));
-            }
-            return false;
+            const auto mapTargetInfo = resolveBorrowedMapReceiverInfo(receiverExpr);
+            return mapTargetInfo.isMapTarget && mapTargetInfo.isWrappedMapTarget;
           };
 
           auto shouldRewriteReceiver = [&](const Expr &candidate) {
@@ -912,7 +910,7 @@
                 (candidate.name == "count" || candidate.name == "contains" ||
                  candidate.name == "tryAt" || candidate.name == "at" ||
                  candidate.name == "at_unsafe")) {
-              return ir_lowerer::resolveMapAccessTargetInfo(candidate.args.front(), localsIn).isMapTarget;
+              return resolveBorrowedMapReceiverInfo(candidate.args.front()).isMapTarget;
             }
             std::string helperName;
             return resolveBuiltinMapHelperName(candidate, false, helperName) &&

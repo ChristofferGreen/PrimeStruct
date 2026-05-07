@@ -1431,6 +1431,58 @@ TEST_CASE("ir lowerer tail canonical experimental map helper rewrite uses semant
   CHECK(semanticReceiverResolverPos < localFallbackPos);
 }
 
+TEST_CASE("ir lowerer tail borrowed map receiver rewrite uses semantic receiver facts first") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path tailDispatchPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h";
+
+  REQUIRE(std::filesystem::exists(tailDispatchPath));
+  const std::string tailDispatchSource = readText(tailDispatchPath);
+
+  const size_t rewritePos =
+      tailDispatchSource.find("auto rewriteImplicitBorrowedMapReceiverExpr =");
+  REQUIRE(rewritePos != std::string::npos);
+  const size_t semanticIndexPos =
+      tailDispatchSource.find("borrowedMapReceiverSemanticIndex", rewritePos);
+  const size_t semanticMapResolverPos = tailDispatchSource.find(
+      "ir_lowerer::resolveMapAccessTargetInfo(\n"
+      "                    receiverExpr,\n"
+      "                    localsIn,\n"
+      "                    inferCallMapTargetInfo,\n"
+      "                    semanticProgram,\n"
+      "                    borrowedMapReceiverSemanticIndexPtr)",
+      rewritePos);
+  const size_t wrappedMapGatePos = tailDispatchSource.find(
+      "return mapTargetInfo.isMapTarget && mapTargetInfo.isWrappedMapTarget;",
+      rewritePos);
+  const size_t oldNameLocalProbePos =
+      tailDispatchSource.find("localsIn.find(receiverExpr.name)", rewritePos);
+  const size_t oldArgsPackLocalProbePos =
+      tailDispatchSource.find("localsIn.find(receiverExpr.args.front().name)",
+                              rewritePos);
+
+  REQUIRE(semanticIndexPos != std::string::npos);
+  REQUIRE(semanticMapResolverPos != std::string::npos);
+  REQUIRE(wrappedMapGatePos != std::string::npos);
+  CHECK(semanticIndexPos < semanticMapResolverPos);
+  CHECK(semanticMapResolverPos < wrappedMapGatePos);
+  CHECK(oldNameLocalProbePos == std::string::npos);
+  CHECK(oldArgsPackLocalProbePos == std::string::npos);
+}
+
 TEST_CASE("ir lowerer native tail map access inference uses semantic receiver facts first") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);

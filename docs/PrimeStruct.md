@@ -870,6 +870,11 @@ Planned non-template inference migration contract:
   struct metadata can choose direct experimental helper rewrites. Known map
   facts suppress stale scalar locals; known non-map facts suppress stale map
   locals.
+- Completed tail borrowed map receiver rewrite slice: tail dispatch for
+  borrowed or pointer map receivers now asks graph-backed wrapped-map/non-map
+  receiver facts before local reference/pointer map metadata can inject
+  implicit `dereference(...)` receivers. Known wrapped-map facts suppress stale
+  scalar locals; known non-map facts suppress stale borrowed-map locals.
 - Completed lowerer setup receiver-target map probe slice: setup-type
   receiver-target inference for bare `at(target, key)` and `tryAt(target, key)`
   receiver probes now asks graph-backed map/non-map facts before local map

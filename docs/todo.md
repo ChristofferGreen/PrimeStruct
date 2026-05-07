@@ -802,6 +802,10 @@ Task template:
     semantic-product-backed map and non-map receiver facts before stale local
     experimental-map struct metadata can decide whether canonical map helper
     calls should rewrite to direct experimental helper paths.
+    The tail borrowed map receiver rewrite slice is complete for
+    semantic-product-backed wrapped-map and non-map receiver facts before
+    stale local reference/pointer map metadata can decide whether helper calls
+    should inject implicit `dereference(...)` receivers.
     The lowerer setup receiver-target map probe slice is complete for
     semantic-product-backed map and non-map target facts before stale local
     map metadata can suppress fallback receiver-kind inference for bare
@@ -864,6 +868,12 @@ Task template:
       whether canonical map helper calls rewrite to direct experimental helper
       paths. Published map facts suppress stale scalar locals while published
       non-map facts suppress stale map locals.
+    - Completed slice: semantic-product-addressed tail borrowed map receiver
+      rewriting now consumes published wrapped-map/non-map receiver facts
+      before local reference/pointer map metadata can decide whether helper
+      calls inject implicit `dereference(...)` receivers. Published wrapped-map
+      facts suppress stale scalar locals while published non-map facts
+      suppress stale borrowed-map locals.
     - Completed slice: semantic-product-addressed setup-type receiver-target
       map probes now consume published map/non-map target facts before local
       map metadata can suppress fallback receiver-kind inference for bare

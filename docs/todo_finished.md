@@ -6,6 +6,32 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer tail borrowed map facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes tail-dispatch rewriting for
+    borrowed or pointer map receivers consume published wrapped-map and
+    non-map receiver facts before stale local reference/pointer map metadata
+    can inject implicit `dereference(...)` receivers.
+  - acceptance:
+    - Published scalar binding facts suppress implicit borrowed-map receiver
+      rewrites when stale local metadata says the receiver target is a
+      reference or pointer map.
+    - Published wrapped-map facts allow implicit borrowed-map receiver
+      rewrites when stale local metadata says the receiver target is scalar.
+    - Existing local borrowed-map receiver rewrite behavior remains available
+      when no semantic wrapped-map/non-map fact is published.
+  - stop_rule: Stop once tail borrowed map receiver gates route through
+    semantic-product target facts before legacy local reference/pointer map
+    metadata, with source guard coverage pinning the resolver ordering.
+  - evidence: Routed tail borrowed/pointer map receiver checks through the
+    semantic-aware map target resolver, added source guard coverage for
+    semantic resolver ordering before stale local borrowed-map probes, ran
+    `git diff --check`, and skipped broad baseline validation per the lite
+    workflow.
+
 - [x] TODO-4298: Prefer tail canonical map facts
   - owner: ai
   - created_at: 2026-04-28
