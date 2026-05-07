@@ -761,6 +761,9 @@ Task template:
     The lowerer direct `contains(...)` receiver slice is complete for
     semantic-product-backed map and non-map receiver facts before stale local
     map metadata can resolve helper return kinds.
+    The lowerer direct `count(...)` receiver slice is complete for
+    semantic-product-backed map, string, and non-countable receiver facts
+    before stale local collection metadata can resolve helper return kinds.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for

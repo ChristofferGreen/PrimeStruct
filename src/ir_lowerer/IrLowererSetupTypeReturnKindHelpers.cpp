@@ -734,6 +734,16 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     }
     return !semanticInfo.mapInfo.isMapTarget;
   };
+  auto hasNonCountReceiverSemanticFact = [&](const Expr &candidate) {
+    SemanticReturnKindTargetInfo semanticInfo;
+    if (!resolveSemanticReturnKindTargetInfo(
+            candidate, semanticProgram, semanticIndex, semanticInfo)) {
+      return false;
+    }
+    return !semanticInfo.arrayVectorInfo.isArrayOrVectorTarget &&
+           !semanticInfo.mapInfo.isMapTarget &&
+           semanticInfo.valueKind != LocalInfo::ValueKind::String;
+  };
   auto isKnownVectorMutatorReceiverExpr = [&](const Expr &candidate) -> bool {
     SemanticReturnKindTargetInfo semanticInfo;
     if (resolveSemanticReturnKindTargetInfo(
@@ -778,6 +788,19 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     return localsIn.find(candidate.name) != localsIn.end();
   };
   auto isStringAccessReceiverExpr = [&](const Expr &candidate) {
+    if (requireArrayReturn) {
+      return false;
+    }
+    SemanticReturnKindTargetInfo semanticInfo;
+    if (resolveSemanticReturnKindTargetInfo(
+            candidate, semanticProgram, semanticIndex, semanticInfo) &&
+        semanticInfo.valueKind == LocalInfo::ValueKind::String) {
+      return true;
+    }
+    return inferExprKind &&
+           inferExprKind(candidate, localsIn) == LocalInfo::ValueKind::String;
+  };
+  auto isStringCountReceiverExpr = [&](const Expr &candidate) {
     if (requireArrayReturn) {
       return false;
     }
@@ -968,6 +991,16 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
         }
         kindOut = LocalInfo::ValueKind::Int32;
         return true;
+      }
+      if (isStringCountReceiverExpr(methodExpr.args.front())) {
+        if (methodResolvedOut != nullptr) {
+          *methodResolvedOut = true;
+        }
+        kindOut = LocalInfo::ValueKind::Int32;
+        return true;
+      }
+      if (hasNonCountReceiverSemanticFact(methodExpr.args.front())) {
+        continue;
       }
     }
     if (!resolveMethodCallDefinition) {

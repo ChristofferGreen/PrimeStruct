@@ -6,6 +6,32 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer count receiver facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes direct `count(...)`
+    return-kind fallback consume semantic-product map, string, and
+    non-countable receiver facts before stale local collection metadata can
+    resolve helper paths.
+  - acceptance:
+    - Published map binding facts classify direct `count(...)` receivers as
+      `i32` count returns before stale local metadata.
+    - Published string binding facts classify direct `count(...)` receivers
+      as `i32` string-count returns before stale local metadata.
+    - Published scalar binding facts suppress stale local collection helper
+      resolution for direct `count(...)` receivers.
+  - stop_rule: Stop once direct `count(...)` receiver fallback handles
+    graph-owned map, string, and non-countable receiver facts ahead of stale
+    local collection metadata and focused tests pin stale-map suppression plus
+    `i32` count return classification.
+  - evidence: Added semantic non-countable receiver suppression and semantic
+    string count classification before direct `count(...)` resolved-helper
+    fallback, added focused `count(...)` stale-local coverage for graph-owned
+    scalar, string, and map receivers, ran `git diff --check`, and skipped
+    broad baseline validation per the lite workflow.
+
 - [x] TODO-4298: Prefer contains receiver facts
   - owner: ai
   - created_at: 2026-04-28
