@@ -14010,3 +14010,29 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     source-contract coverage for semantic-first ordering before local struct
     metadata fallback, and documented the remaining TODO-4298 work. Local
     test execution was skipped per the lite workflow.
+
+- [x] TODO-4298: Promote graph-backed non-template inference authority
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Close the oversized semantic-authority parent after it satisfied
+    the original one-island migration acceptance many times over, and stop
+    using it as a live implementation queue entry.
+  - implementation_notes:
+    - Future graph-backed semantic-authority gaps must be added as bounded
+      TODO leaves with concrete `scope`, `acceptance`, and `stop_rule`.
+    - PrimeStruct map collection-surface work belongs to TODO-4299 through
+      TODO-4304, not to semantic-authority follow-up slices.
+  - acceptance:
+    - The oversized parent no longer appears in `docs/todo.md`.
+    - `Ready Now`, `Priority Lanes`, execution queue, coverage snapshots, and
+      active `depends_on` fields no longer point at the closed parent.
+    - The operating rules state that active work must stay leaf-shaped and
+      completed-slice history must not accumulate in open TODO blocks.
+  - stop_rule: Stop once the active TODO log no longer treats this parent as
+    executable work.
+  - finished_at: 2026-05-07
+  - evidence: Removed the active `TODO-4298` umbrella block from
+    `docs/todo.md`, cleared live queue/snapshot/dependency references to it,
+    added the leaf-shaped active-work rule, and kept map stdlib ownership work
+    in the dedicated TODO-4299 through TODO-4304 lane.
