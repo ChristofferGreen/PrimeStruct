@@ -135,6 +135,233 @@
               }
               return resolvePublishedTailDispatchMapHelperName(callExpr, helperNameOut);
             };
+        auto resolveTailDispatchSemanticTypeText =
+            [&](SymbolId typeTextId, const std::string &typeText) {
+              if (semanticProgram != nullptr && typeTextId != InvalidSymbolId) {
+                const std::string resolvedText = std::string(
+                    semanticProgramResolveCallTargetString(*semanticProgram,
+                                                           typeTextId));
+                if (!resolvedText.empty()) {
+                  return ir_lowerer::trimTemplateTypeText(resolvedText);
+                }
+              }
+              return ir_lowerer::trimTemplateTypeText(typeText);
+            };
+        std::function<bool(const std::string &,
+                           ir_lowerer::LocalInfo::ValueKind &,
+                           ir_lowerer::LocalInfo::ValueKind &)>
+            inferTailDispatchMapKindsFromTypeText;
+        inferTailDispatchMapKindsFromTypeText =
+            [&](const std::string &typeText,
+                ir_lowerer::LocalInfo::ValueKind &keyKindOut,
+                ir_lowerer::LocalInfo::ValueKind &valueKindOut) {
+              keyKindOut = ir_lowerer::LocalInfo::ValueKind::Unknown;
+              valueKindOut = ir_lowerer::LocalInfo::ValueKind::Unknown;
+
+              std::string base;
+              std::string argText;
+              if (!splitTemplateTypeName(
+                      ir_lowerer::trimTemplateTypeText(typeText),
+                      base,
+                      argText)) {
+                return false;
+              }
+
+              const std::string normalizedBase =
+                  ir_lowerer::trimTemplateTypeText(base);
+              if (normalizedBase == "Reference" ||
+                  normalizedBase == "Pointer") {
+                return inferTailDispatchMapKindsFromTypeText(
+                    argText, keyKindOut, valueKindOut);
+              }
+              const bool isMapBase =
+                  normalizedBase == "map" || normalizedBase == "/map" ||
+                  normalizedBase == "std/collections/map" ||
+                  normalizedBase == "/std/collections/map" ||
+                  normalizedBase == "Map" || normalizedBase == "/Map" ||
+                  normalizedBase == "std/collections/experimental_map/Map" ||
+                  normalizedBase == "/std/collections/experimental_map/Map";
+              if (!isMapBase) {
+                return false;
+              }
+
+              std::vector<std::string> mapArgs;
+              if (!splitTemplateArgs(argText, mapArgs) ||
+                  mapArgs.size() != 2) {
+                return false;
+              }
+              keyKindOut = ir_lowerer::valueKindFromTypeName(
+                  ir_lowerer::trimTemplateTypeText(mapArgs.front()));
+              valueKindOut = ir_lowerer::valueKindFromTypeName(
+                  ir_lowerer::trimTemplateTypeText(mapArgs.back()));
+              return keyKindOut != ir_lowerer::LocalInfo::ValueKind::Unknown &&
+                     valueKindOut != ir_lowerer::LocalInfo::ValueKind::Unknown;
+            };
+        std::function<std::string(const std::string &)>
+            inferTailDispatchMapStructPathFromTypeText;
+        inferTailDispatchMapStructPathFromTypeText =
+            [&](const std::string &typeText) {
+              std::string base;
+              std::string argText;
+              if (!splitTemplateTypeName(
+                      ir_lowerer::trimTemplateTypeText(typeText),
+                      base,
+                      argText)) {
+                return std::string{};
+              }
+
+              const std::string normalizedBase =
+                  ir_lowerer::trimTemplateTypeText(base);
+              if (normalizedBase == "Reference" ||
+                  normalizedBase == "Pointer") {
+                return inferTailDispatchMapStructPathFromTypeText(argText);
+              }
+              if (normalizedBase == "std/collections/experimental_map/Map" ||
+                  normalizedBase == "/std/collections/experimental_map/Map") {
+                return std::string{"/std/collections/experimental_map/Map"};
+              }
+              return std::string{};
+            };
+        auto tryPopulateTailDispatchMapKindsFromSemanticTypeText =
+            [&](SymbolId typeTextId,
+                const std::string &typeText,
+                ir_lowerer::MapAccessTargetInfo &targetInfoOut) {
+              const std::string resolvedTypeText =
+                  resolveTailDispatchSemanticTypeText(typeTextId, typeText);
+              if (resolvedTypeText.empty()) {
+                return false;
+              }
+              if (!inferTailDispatchMapKindsFromTypeText(
+                      resolvedTypeText,
+                      targetInfoOut.mapKeyKind,
+                      targetInfoOut.mapValueKind)) {
+                return false;
+              }
+              targetInfoOut.isMapTarget = true;
+              targetInfoOut.structTypeName =
+                  inferTailDispatchMapStructPathFromTypeText(resolvedTypeText);
+              return true;
+            };
+        auto tryPopulateTailDispatchMapKindsFromSemanticCollection =
+            [&](const Expr &targetExpr,
+                ir_lowerer::MapAccessTargetInfo &targetInfoOut) {
+              if (semanticProgram == nullptr || targetExpr.semanticNodeId == 0) {
+                return false;
+              }
+              const ir_lowerer::SemanticProductIndex semanticIndex =
+                  ir_lowerer::buildSemanticProductIndex(semanticProgram);
+              const auto *collectionFact =
+                  ir_lowerer::findSemanticProductCollectionSpecialization(
+                      semanticIndex, targetExpr);
+              if (collectionFact == nullptr) {
+                return false;
+              }
+              const std::string collectionFamily =
+                  resolveTailDispatchSemanticTypeText(
+                      collectionFact->collectionFamilyId,
+                      collectionFact->collectionFamily);
+              if (collectionFamily != "map" && collectionFamily != "/map" &&
+                  collectionFamily != "std/collections/map" &&
+                  collectionFamily != "/std/collections/map") {
+                return false;
+              }
+              const ir_lowerer::LocalInfo::ValueKind keyKind =
+                  ir_lowerer::valueKindFromTypeName(
+                      resolveTailDispatchSemanticTypeText(
+                          collectionFact->keyTypeTextId,
+                          collectionFact->keyTypeText));
+              const ir_lowerer::LocalInfo::ValueKind valueKind =
+                  ir_lowerer::valueKindFromTypeName(
+                      resolveTailDispatchSemanticTypeText(
+                          collectionFact->valueTypeTextId,
+                          collectionFact->valueTypeText));
+              if (keyKind == ir_lowerer::LocalInfo::ValueKind::Unknown ||
+                  valueKind == ir_lowerer::LocalInfo::ValueKind::Unknown) {
+                return false;
+              }
+              targetInfoOut.isMapTarget = true;
+              targetInfoOut.mapKeyKind = keyKind;
+              targetInfoOut.mapValueKind = valueKind;
+              return true;
+            };
+        auto tryPopulateTailDispatchMapTargetInfoFromSemanticFacts =
+            [&](const Expr &targetExpr,
+                ir_lowerer::MapAccessTargetInfo &targetInfoOut) {
+              if (semanticProgram == nullptr || targetExpr.semanticNodeId == 0) {
+                return false;
+              }
+              const ir_lowerer::SemanticProductIndex semanticIndex =
+                  ir_lowerer::buildSemanticProductIndex(semanticProgram);
+              if (tryPopulateTailDispatchMapKindsFromSemanticCollection(
+                      targetExpr, targetInfoOut)) {
+                return true;
+              }
+              if (const auto *queryFact =
+                      ir_lowerer::findSemanticProductQueryFact(
+                          semanticProgram, semanticIndex, targetExpr);
+                  queryFact != nullptr) {
+                if (tryPopulateTailDispatchMapKindsFromSemanticTypeText(
+                        queryFact->bindingTypeTextId,
+                        queryFact->bindingTypeText,
+                        targetInfoOut) ||
+                    tryPopulateTailDispatchMapKindsFromSemanticTypeText(
+                        queryFact->queryTypeTextId,
+                        queryFact->queryTypeText,
+                        targetInfoOut) ||
+                    tryPopulateTailDispatchMapKindsFromSemanticTypeText(
+                        queryFact->receiverBindingTypeTextId,
+                        queryFact->receiverBindingTypeText,
+                        targetInfoOut)) {
+                  return true;
+                }
+              }
+              if (const auto *bindingFact =
+                      ir_lowerer::findSemanticProductBindingFact(
+                          semanticIndex, targetExpr);
+                  bindingFact != nullptr &&
+                  tryPopulateTailDispatchMapKindsFromSemanticTypeText(
+                      bindingFact->bindingTypeTextId,
+                      bindingFact->bindingTypeText,
+                      targetInfoOut)) {
+                return true;
+              }
+              if (const auto *localAutoFact =
+                      ir_lowerer::findSemanticProductLocalAutoFact(
+                          semanticProgram, semanticIndex, targetExpr);
+                  localAutoFact != nullptr &&
+                  tryPopulateTailDispatchMapKindsFromSemanticTypeText(
+                      localAutoFact->bindingTypeTextId,
+                      localAutoFact->bindingTypeText,
+                      targetInfoOut)) {
+                return true;
+              }
+              return false;
+            };
+        const auto inferCallMapTargetInfo = [&](const Expr &targetExpr, ir_lowerer::MapAccessTargetInfo &out) {
+          out = {};
+          if (tryPopulateTailDispatchMapTargetInfoFromSemanticFacts(
+                  targetExpr, out)) {
+            return true;
+          }
+          const Definition *callee =
+              resolveTailDispatchDirectHelperDefinition(targetExpr);
+          if (callee == nullptr) {
+            return false;
+          }
+          std::string collectionName;
+          std::vector<std::string> collectionArgs;
+          if (!ir_lowerer::inferDeclaredReturnCollection(*callee, collectionName, collectionArgs) ||
+              collectionName != "map" ||
+              collectionArgs.size() != 2) {
+            return ir_lowerer::inferForwardedMapAccessTargetInfo(
+                targetExpr, *callee, localsIn, {}, out);
+          }
+          out.isMapTarget = true;
+          out.mapKeyKind = ir_lowerer::valueKindFromTypeName(collectionArgs.front());
+          out.mapValueKind = ir_lowerer::valueKindFromTypeName(collectionArgs.back());
+          return out.mapKeyKind != ir_lowerer::LocalInfo::ValueKind::Unknown &&
+                 out.mapValueKind != ir_lowerer::LocalInfo::ValueKind::Unknown;
+        };
         auto rewriteBuiltinMapInsertBuiltinExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
           if (callExpr.kind != Expr::Kind::Call || callExpr.args.size() != 3) {
             return false;
@@ -210,233 +437,6 @@
           if (receiverIndex >= callExpr.args.size()) {
             return false;
           }
-          auto resolveTailDispatchSemanticTypeText =
-              [&](SymbolId typeTextId, const std::string &typeText) {
-                if (semanticProgram != nullptr && typeTextId != InvalidSymbolId) {
-                  const std::string resolvedText = std::string(
-                      semanticProgramResolveCallTargetString(*semanticProgram,
-                                                             typeTextId));
-                  if (!resolvedText.empty()) {
-                    return ir_lowerer::trimTemplateTypeText(resolvedText);
-                  }
-                }
-                return ir_lowerer::trimTemplateTypeText(typeText);
-              };
-          std::function<bool(const std::string &,
-                             ir_lowerer::LocalInfo::ValueKind &,
-                             ir_lowerer::LocalInfo::ValueKind &)>
-              inferTailDispatchMapKindsFromTypeText;
-          inferTailDispatchMapKindsFromTypeText =
-              [&](const std::string &typeText,
-                  ir_lowerer::LocalInfo::ValueKind &keyKindOut,
-                  ir_lowerer::LocalInfo::ValueKind &valueKindOut) {
-                keyKindOut = ir_lowerer::LocalInfo::ValueKind::Unknown;
-                valueKindOut = ir_lowerer::LocalInfo::ValueKind::Unknown;
-
-                std::string base;
-                std::string argText;
-                if (!splitTemplateTypeName(
-                        ir_lowerer::trimTemplateTypeText(typeText),
-                        base,
-                        argText)) {
-                  return false;
-                }
-
-                const std::string normalizedBase =
-                    ir_lowerer::trimTemplateTypeText(base);
-                if (normalizedBase == "Reference" ||
-                    normalizedBase == "Pointer") {
-                  return inferTailDispatchMapKindsFromTypeText(
-                      argText, keyKindOut, valueKindOut);
-                }
-                const bool isMapBase =
-                    normalizedBase == "map" || normalizedBase == "/map" ||
-                    normalizedBase == "std/collections/map" ||
-                    normalizedBase == "/std/collections/map" ||
-                    normalizedBase == "Map" || normalizedBase == "/Map" ||
-                    normalizedBase == "std/collections/experimental_map/Map" ||
-                    normalizedBase == "/std/collections/experimental_map/Map";
-                if (!isMapBase) {
-                  return false;
-                }
-
-                std::vector<std::string> mapArgs;
-                if (!splitTemplateArgs(argText, mapArgs) ||
-                    mapArgs.size() != 2) {
-                  return false;
-                }
-                keyKindOut = ir_lowerer::valueKindFromTypeName(
-                    ir_lowerer::trimTemplateTypeText(mapArgs.front()));
-                valueKindOut = ir_lowerer::valueKindFromTypeName(
-                    ir_lowerer::trimTemplateTypeText(mapArgs.back()));
-                return keyKindOut != ir_lowerer::LocalInfo::ValueKind::Unknown &&
-                       valueKindOut != ir_lowerer::LocalInfo::ValueKind::Unknown;
-              };
-          std::function<std::string(const std::string &)>
-              inferTailDispatchMapStructPathFromTypeText;
-          inferTailDispatchMapStructPathFromTypeText =
-              [&](const std::string &typeText) {
-                std::string base;
-                std::string argText;
-                if (!splitTemplateTypeName(
-                        ir_lowerer::trimTemplateTypeText(typeText),
-                        base,
-                        argText)) {
-                  return std::string{};
-                }
-
-                const std::string normalizedBase =
-                    ir_lowerer::trimTemplateTypeText(base);
-                if (normalizedBase == "Reference" ||
-                    normalizedBase == "Pointer") {
-                  return inferTailDispatchMapStructPathFromTypeText(argText);
-                }
-                if (normalizedBase == "std/collections/experimental_map/Map" ||
-                    normalizedBase == "/std/collections/experimental_map/Map") {
-                  return std::string{"/std/collections/experimental_map/Map"};
-                }
-                return std::string{};
-              };
-          auto tryPopulateTailDispatchMapKindsFromSemanticTypeText =
-              [&](SymbolId typeTextId,
-                  const std::string &typeText,
-                  ir_lowerer::MapAccessTargetInfo &targetInfoOut) {
-                const std::string resolvedTypeText =
-                    resolveTailDispatchSemanticTypeText(typeTextId, typeText);
-                if (resolvedTypeText.empty()) {
-                  return false;
-                }
-                if (!inferTailDispatchMapKindsFromTypeText(
-                        resolvedTypeText,
-                        targetInfoOut.mapKeyKind,
-                        targetInfoOut.mapValueKind)) {
-                  return false;
-                }
-                targetInfoOut.isMapTarget = true;
-                targetInfoOut.structTypeName =
-                    inferTailDispatchMapStructPathFromTypeText(resolvedTypeText);
-                return true;
-              };
-          auto tryPopulateTailDispatchMapKindsFromSemanticCollection =
-              [&](const Expr &targetExpr,
-                  ir_lowerer::MapAccessTargetInfo &targetInfoOut) {
-                if (semanticProgram == nullptr || targetExpr.semanticNodeId == 0) {
-                  return false;
-                }
-                const ir_lowerer::SemanticProductIndex semanticIndex =
-                    ir_lowerer::buildSemanticProductIndex(semanticProgram);
-                const auto *collectionFact =
-                    ir_lowerer::findSemanticProductCollectionSpecialization(
-                        semanticIndex, targetExpr);
-                if (collectionFact == nullptr) {
-                  return false;
-                }
-                const std::string collectionFamily =
-                    resolveTailDispatchSemanticTypeText(
-                        collectionFact->collectionFamilyId,
-                        collectionFact->collectionFamily);
-                if (collectionFamily != "map" && collectionFamily != "/map" &&
-                    collectionFamily != "std/collections/map" &&
-                    collectionFamily != "/std/collections/map") {
-                  return false;
-                }
-                const ir_lowerer::LocalInfo::ValueKind keyKind =
-                    ir_lowerer::valueKindFromTypeName(
-                        resolveTailDispatchSemanticTypeText(
-                            collectionFact->keyTypeTextId,
-                            collectionFact->keyTypeText));
-                const ir_lowerer::LocalInfo::ValueKind valueKind =
-                    ir_lowerer::valueKindFromTypeName(
-                        resolveTailDispatchSemanticTypeText(
-                            collectionFact->valueTypeTextId,
-                            collectionFact->valueTypeText));
-                if (keyKind == ir_lowerer::LocalInfo::ValueKind::Unknown ||
-                    valueKind == ir_lowerer::LocalInfo::ValueKind::Unknown) {
-                  return false;
-                }
-                targetInfoOut.isMapTarget = true;
-                targetInfoOut.mapKeyKind = keyKind;
-                targetInfoOut.mapValueKind = valueKind;
-                return true;
-              };
-          auto tryPopulateTailDispatchMapTargetInfoFromSemanticFacts =
-              [&](const Expr &targetExpr,
-                  ir_lowerer::MapAccessTargetInfo &targetInfoOut) {
-                if (semanticProgram == nullptr || targetExpr.semanticNodeId == 0) {
-                  return false;
-                }
-                const ir_lowerer::SemanticProductIndex semanticIndex =
-                    ir_lowerer::buildSemanticProductIndex(semanticProgram);
-                if (tryPopulateTailDispatchMapKindsFromSemanticCollection(
-                        targetExpr, targetInfoOut)) {
-                  return true;
-                }
-                if (const auto *queryFact =
-                        ir_lowerer::findSemanticProductQueryFact(
-                            semanticProgram, semanticIndex, targetExpr);
-                    queryFact != nullptr) {
-                  if (tryPopulateTailDispatchMapKindsFromSemanticTypeText(
-                          queryFact->bindingTypeTextId,
-                          queryFact->bindingTypeText,
-                          targetInfoOut) ||
-                      tryPopulateTailDispatchMapKindsFromSemanticTypeText(
-                          queryFact->queryTypeTextId,
-                          queryFact->queryTypeText,
-                          targetInfoOut) ||
-                      tryPopulateTailDispatchMapKindsFromSemanticTypeText(
-                          queryFact->receiverBindingTypeTextId,
-                          queryFact->receiverBindingTypeText,
-                          targetInfoOut)) {
-                    return true;
-                  }
-                }
-                if (const auto *bindingFact =
-                        ir_lowerer::findSemanticProductBindingFact(
-                            semanticIndex, targetExpr);
-                    bindingFact != nullptr &&
-                    tryPopulateTailDispatchMapKindsFromSemanticTypeText(
-                        bindingFact->bindingTypeTextId,
-                        bindingFact->bindingTypeText,
-                        targetInfoOut)) {
-                  return true;
-                }
-                if (const auto *localAutoFact =
-                        ir_lowerer::findSemanticProductLocalAutoFact(
-                            semanticProgram, semanticIndex, targetExpr);
-                    localAutoFact != nullptr &&
-                    tryPopulateTailDispatchMapKindsFromSemanticTypeText(
-                        localAutoFact->bindingTypeTextId,
-                        localAutoFact->bindingTypeText,
-                        targetInfoOut)) {
-                  return true;
-                }
-                return false;
-              };
-          const auto inferCallMapTargetInfo = [&](const Expr &targetExpr, ir_lowerer::MapAccessTargetInfo &out) {
-            out = {};
-            if (tryPopulateTailDispatchMapTargetInfoFromSemanticFacts(
-                    targetExpr, out)) {
-              return true;
-            }
-            const Definition *callee =
-                resolveTailDispatchDirectHelperDefinition(targetExpr);
-            if (callee == nullptr) {
-              return false;
-            }
-            std::string collectionName;
-            std::vector<std::string> collectionArgs;
-            if (!ir_lowerer::inferDeclaredReturnCollection(*callee, collectionName, collectionArgs) ||
-                collectionName != "map" ||
-                collectionArgs.size() != 2) {
-              return ir_lowerer::inferForwardedMapAccessTargetInfo(
-                  targetExpr, *callee, localsIn, {}, out);
-            }
-            out.isMapTarget = true;
-            out.mapKeyKind = ir_lowerer::valueKindFromTypeName(collectionArgs.front());
-            out.mapValueKind = ir_lowerer::valueKindFromTypeName(collectionArgs.back());
-            return out.mapKeyKind != ir_lowerer::LocalInfo::ValueKind::Unknown &&
-                   out.mapValueKind != ir_lowerer::LocalInfo::ValueKind::Unknown;
-          };
           const auto targetInfo =
               ir_lowerer::resolveMapAccessTargetInfo(callExpr.args[receiverIndex], localsIn, inferCallMapTargetInfo);
           if (!targetInfo.isMapTarget &&

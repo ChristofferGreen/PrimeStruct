@@ -805,8 +805,16 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
   return info;
 }
 
+MapAccessTargetInfo resolveMapAccessTargetInfo(
+    const Expr &target,
+    const LocalMap &localsIn,
+    const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo) {
+  return resolveMapAccessTargetInfo(
+      target, localsIn, resolveCallMapAccessTargetInfo, nullptr, nullptr);
+}
+
 MapAccessTargetInfo resolveMapAccessTargetInfo(const Expr &target, const LocalMap &localsIn) {
-  return resolveMapAccessTargetInfo(target, localsIn, {});
+  return resolveMapAccessTargetInfo(target, localsIn, {}, nullptr, nullptr);
 }
 
 bool inferForwardedMapAccessTargetInfo(
@@ -834,7 +842,8 @@ bool inferForwardedMapAccessTargetInfo(
   }
 
   MapAccessTargetInfo forwardedInfo =
-      resolveMapAccessTargetInfo(*forwardedArg, localsIn, resolveCallMapAccessTargetInfo);
+      resolveMapAccessTargetInfo(
+          *forwardedArg, localsIn, resolveCallMapAccessTargetInfo, nullptr, nullptr);
   if (!forwardedInfo.isMapTarget) {
     return false;
   }
