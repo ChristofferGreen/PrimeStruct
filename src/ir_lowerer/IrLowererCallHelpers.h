@@ -329,7 +329,9 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
     const SemanticProgram *semanticProgram = nullptr);
 MapAccessTargetInfo resolveMapAccessTargetInfo(const Expr &target,
                                                const LocalMap &localsIn,
-                                               const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo);
+                                               const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo,
+                                               const SemanticProgram *semanticProgram = nullptr,
+                                               const SemanticProductIndex *semanticIndex = nullptr);
 MapAccessTargetInfo resolveMapAccessTargetInfo(const Expr &target, const LocalMap &localsIn);
 bool inferForwardedMapAccessTargetInfo(
     const Expr &target,
@@ -371,7 +373,9 @@ MapAccessLookupEmitResult tryEmitMapAccessLookup(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error);
+    std::string &error,
+    const SemanticProgram *semanticProgram = nullptr,
+    const SemanticProductIndex *semanticIndex = nullptr);
 MapAccessLookupEmitResult tryEmitMapAccessLookup(
     const std::string &accessName,
     const Expr &targetExpr,

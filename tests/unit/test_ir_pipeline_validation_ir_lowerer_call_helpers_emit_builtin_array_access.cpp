@@ -470,6 +470,161 @@ TEST_CASE("ir lowerer builtin array access prefers semantic target facts") {
   CHECK(instructions.empty());
 }
 
+TEST_CASE("ir lowerer builtin map access prefers semantic target facts") {
+  using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::SemanticProgram semanticProgram;
+  const auto addCollectionFact = [&](uint64_t semanticNodeId,
+                                     const std::string &family,
+                                     const std::string &keyType,
+                                     const std::string &valueType) {
+    primec::SemanticProgramCollectionSpecialization fact;
+    fact.semanticNodeId = semanticNodeId;
+    fact.collectionFamily = family;
+    fact.collectionFamilyId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, family);
+    fact.keyTypeText = keyType;
+    fact.keyTypeTextId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, keyType);
+    fact.valueTypeText = valueType;
+    fact.valueTypeTextId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, valueType);
+    const size_t factIndex = semanticProgram.collectionSpecializations.size();
+    semanticProgram.collectionSpecializations.push_back(fact);
+    semanticProgram.publishedRoutingLookups.collectionSpecializationIndicesByExpr
+        .insert_or_assign(semanticNodeId, factIndex);
+  };
+  const auto addBindingFact = [&](uint64_t semanticNodeId,
+                                  const std::string &bindingTypeText) {
+    primec::SemanticProgramBindingFact fact;
+    fact.semanticNodeId = semanticNodeId;
+    fact.bindingTypeText = bindingTypeText;
+    fact.bindingTypeTextId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, bindingTypeText);
+    const size_t factIndex = semanticProgram.bindingFacts.size();
+    semanticProgram.bindingFacts.push_back(fact);
+    semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(
+        semanticNodeId, factIndex);
+  };
+  addCollectionFact(7301, "map", "i32", "f64");
+  addBindingFact(7302, "i32");
+  const primec::ir_lowerer::SemanticProductIndex semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Name;
+  indexExpr.name = "key";
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo staleScalarInfo;
+  staleScalarInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  staleScalarInfo.valueKind = Kind::Int32;
+  locals.emplace("items", staleScalarInfo);
+
+  primec::Expr semanticMapTarget;
+  semanticMapTarget.kind = primec::Expr::Kind::Name;
+  semanticMapTarget.name = "items";
+  semanticMapTarget.semanticNodeId = 7301;
+
+  std::vector<primec::IrInstruction> instructions;
+  int nextLocal = 50;
+  int emitExprCalls = 0;
+  int mapKeyNotFoundCalls = 0;
+  std::string error;
+  CHECK(primec::ir_lowerer::emitBuiltinArrayAccess(
+      "at",
+      semanticMapTarget,
+      indexExpr,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+        return false;
+      },
+      0,
+      {},
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return Kind::Int32;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [&]() { return nextLocal++; },
+      [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+        ++emitExprCalls;
+        if (expr.kind == primec::Expr::Kind::Name && expr.name == "items") {
+          instructions.push_back({primec::IrOpcode::PushI64, 200});
+          return true;
+        }
+        instructions.push_back({primec::IrOpcode::PushI32, 2});
+        return true;
+      },
+      []() {},
+      [&]() { ++mapKeyNotFoundCalls; },
+      []() {},
+      [&]() { return instructions.size(); },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
+      error,
+      &semanticProgram,
+      &semanticIndex));
+  CHECK(error.empty());
+  CHECK(emitExprCalls == 2);
+  CHECK(mapKeyNotFoundCalls == 1);
+  REQUIRE(!instructions.empty());
+  CHECK(instructions.front().op == primec::IrOpcode::PushI64);
+
+  primec::ir_lowerer::LocalInfo staleMapInfo;
+  staleMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  staleMapInfo.mapKeyKind = Kind::Int32;
+  staleMapInfo.mapValueKind = Kind::Int32;
+  locals.clear();
+  locals.emplace("staleMap", staleMapInfo);
+
+  primec::Expr semanticScalarTarget;
+  semanticScalarTarget.kind = primec::Expr::Kind::Name;
+  semanticScalarTarget.name = "staleMap";
+  semanticScalarTarget.semanticNodeId = 7302;
+
+  instructions.clear();
+  error.clear();
+  nextLocal = 60;
+  emitExprCalls = 0;
+  mapKeyNotFoundCalls = 0;
+  CHECK_FALSE(primec::ir_lowerer::emitBuiltinArrayAccess(
+      "at",
+      semanticScalarTarget,
+      indexExpr,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+        return false;
+      },
+      0,
+      {},
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return Kind::Int32;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [&]() { return nextLocal++; },
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        ++emitExprCalls;
+        instructions.push_back({primec::IrOpcode::PushI64, 200});
+        return true;
+      },
+      []() {},
+      [&]() { ++mapKeyNotFoundCalls; },
+      []() {},
+      [&]() { return instructions.size(); },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
+      error,
+      &semanticProgram,
+      &semanticIndex));
+  CHECK(error.find("native backend only supports at() on numeric/bool/string arrays or vectors") !=
+        std::string::npos);
+  CHECK(emitExprCalls == 0);
+  CHECK(mapKeyNotFoundCalls == 0);
+  CHECK(instructions.empty());
+}
+
 TEST_CASE("ir lowerer call helpers validate non literal string access target") {
   using Result = primec::ir_lowerer::NonLiteralStringAccessTargetResult;
   using Kind = primec::ir_lowerer::LocalInfo::ValueKind;

@@ -161,6 +161,46 @@ bool classifySemanticArrayVectorAccessTypeText(const std::string &typeText,
   return true;
 }
 
+bool classifySemanticMapAccessTypeText(const std::string &typeText,
+                                       MapAccessTargetInfo &targetInfoOut) {
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argText)) {
+    return false;
+  }
+  base = normalizeAccessCollectionFamily(base);
+  bool isWrappedMap = false;
+  if (base == "Reference" || base == "Pointer") {
+    std::vector<std::string> wrappedArgs;
+    if (!splitTemplateArgs(argText, wrappedArgs) || wrappedArgs.size() != 1) {
+      return false;
+    }
+    if (!splitTemplateTypeName(trimTemplateTypeText(wrappedArgs.front()), base, argText)) {
+      return false;
+    }
+    base = normalizeAccessCollectionFamily(base);
+    isWrappedMap = true;
+  }
+  if (base != "map") {
+    return false;
+  }
+
+  std::vector<std::string> mapArgs;
+  if (!splitTemplateArgs(argText, mapArgs) || mapArgs.size() != 2) {
+    return false;
+  }
+
+  targetInfoOut = {};
+  targetInfoOut.isMapTarget = true;
+  targetInfoOut.mapKeyKind = valueKindFromTypeName(trimTemplateTypeText(mapArgs.front()));
+  targetInfoOut.mapValueKind = valueKindFromTypeName(trimTemplateTypeText(mapArgs.back()));
+  targetInfoOut.isWrappedMapTarget = isWrappedMap;
+  targetInfoOut.structTypeName =
+      inferExperimentalMapStructPathFromKinds(targetInfoOut.mapKeyKind,
+                                              targetInfoOut.mapValueKind);
+  return true;
+}
+
 bool resolveSemanticArrayVectorAccessTargetInfo(
     const Expr &targetExpr,
     const SemanticProgram *semanticProgram,
@@ -202,6 +242,71 @@ bool resolveSemanticArrayVectorAccessTargetInfo(
       targetInfoOut.structTypeName =
           inferExperimentalSoaVectorStructPathFromTypeName(elementTypeText);
     }
+    return true;
+  }
+  if (const auto *queryFact =
+          findSemanticProductQueryFact(semanticProgram, *semanticIndex, targetExpr);
+      queryFact != nullptr) {
+    hasSemanticFactOut = true;
+    return tryClassifyType(queryFact->queryTypeText, queryFact->queryTypeTextId) ||
+           tryClassifyType(queryFact->bindingTypeText, queryFact->bindingTypeTextId) ||
+           tryClassifyType(queryFact->receiverBindingTypeText,
+                           queryFact->receiverBindingTypeTextId);
+  }
+  if (const auto *bindingFact =
+          findSemanticProductBindingFact(*semanticIndex, targetExpr);
+      bindingFact != nullptr) {
+    hasSemanticFactOut = true;
+    return tryClassifyType(bindingFact->bindingTypeText, bindingFact->bindingTypeTextId);
+  }
+  if (const auto *localAutoFact =
+          findSemanticProductLocalAutoFactBySemanticId(*semanticIndex, targetExpr);
+      localAutoFact != nullptr) {
+    hasSemanticFactOut = true;
+    return tryClassifyType(localAutoFact->bindingTypeText, localAutoFact->bindingTypeTextId);
+  }
+  return false;
+}
+
+bool resolveSemanticMapAccessTargetInfo(
+    const Expr &targetExpr,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex,
+    MapAccessTargetInfo &targetInfoOut,
+    bool &hasSemanticFactOut) {
+  hasSemanticFactOut = false;
+  if (semanticProgram == nullptr || semanticIndex == nullptr || targetExpr.semanticNodeId == 0) {
+    return false;
+  }
+
+  auto tryClassifyType = [&](const std::string &typeText, SymbolId typeTextId) {
+    const std::string resolvedTypeText =
+        resolveAccessSemanticTypeText(semanticProgram, typeText, typeTextId);
+    return classifySemanticMapAccessTypeText(resolvedTypeText, targetInfoOut);
+  };
+
+  if (const auto *collectionFact =
+          findSemanticProductCollectionSpecialization(*semanticIndex, targetExpr);
+      collectionFact != nullptr) {
+    hasSemanticFactOut = true;
+    const std::string family = normalizeAccessCollectionFamily(
+        resolveAccessSemanticTypeText(
+            semanticProgram,
+            collectionFact->collectionFamily,
+            collectionFact->collectionFamilyId));
+    if (family != "map") {
+      return false;
+    }
+    targetInfoOut = {};
+    targetInfoOut.isMapTarget = true;
+    targetInfoOut.mapKeyKind = valueKindFromTypeName(resolveAccessSemanticTypeText(
+        semanticProgram, collectionFact->keyTypeText, collectionFact->keyTypeTextId));
+    targetInfoOut.mapValueKind = valueKindFromTypeName(resolveAccessSemanticTypeText(
+        semanticProgram, collectionFact->valueTypeText, collectionFact->valueTypeTextId));
+    targetInfoOut.isWrappedMapTarget = collectionFact->isReference || collectionFact->isPointer;
+    targetInfoOut.structTypeName =
+        inferExperimentalMapStructPathFromKinds(targetInfoOut.mapKeyKind,
+                                                targetInfoOut.mapValueKind);
     return true;
   }
   if (const auto *queryFact =
@@ -483,8 +588,19 @@ SemanticStringAccessTargetKind classifyAccessTargetSemanticStringKind(
 MapAccessTargetInfo resolveMapAccessTargetInfo(
     const Expr &target,
     const LocalMap &localsIn,
-    const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo) {
+    const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
   MapAccessTargetInfo info;
+  bool hasSemanticTargetFact = false;
+  if (resolveSemanticMapAccessTargetInfo(
+          target, semanticProgram, semanticIndex, info, hasSemanticTargetFact)) {
+    return info;
+  }
+  if (hasSemanticTargetFact) {
+    return {};
+  }
+
   const auto peelLocationWrappers = [&](const Expr &expr) {
     const Expr *current = &expr;
     while (current->kind == Expr::Kind::Call &&

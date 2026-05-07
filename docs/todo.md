@@ -778,6 +778,10 @@ Task template:
     semantic-product-backed collection, binding, local-auto, and query facts
     before stale local array/vector metadata can classify named
     `target[index]` load receivers.
+    The native indexed-access map target slice is complete for
+    semantic-product-backed collection, binding, local-auto, and query facts
+    before stale local map metadata can classify named `target[index]`
+    lookup receivers.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -801,6 +805,11 @@ Task template:
       `target[index]` receivers. Published non-collection facts suppress
       stale vector locals while syntax-only compatibility keeps the old
       local collection fallback.
+    - Completed slice: semantic-product-addressed native indexed-access map
+      lookups now consume published collection, binding, local-auto, and query
+      facts before local map metadata can classify named `target[index]`
+      receivers. Published non-map facts suppress stale map locals while
+      syntax-only compatibility keeps the old local map fallback.
     - Completed slice: semantic-product-addressed native `Result.why(...)`
       direct-call sources now resolve interned query result-error IDs before
       copied query text, so stale duplicated error text cannot override the

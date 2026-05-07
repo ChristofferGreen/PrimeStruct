@@ -838,6 +838,11 @@ Planned non-template inference migration contract:
   local-auto, and query facts before stale local array/vector metadata can
   classify named targets. Known scalar facts suppress stale vector locals;
   no-fact contexts keep the existing local collection fallback.
+- Completed native indexed-access map target slice: native `target[index]`
+  map lookup emission now asks graph-backed collection, binding, local-auto,
+  and query facts before stale local map metadata can classify named targets.
+  Known non-map facts suppress stale map locals; no-fact contexts keep the
+  existing local map fallback.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

@@ -35,9 +35,15 @@ MapAccessLookupEmitResult tryEmitMapAccessLookup(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error) {
+    std::string &error,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
   const auto mapTargetInfo = resolveMapAccessTargetInfo(
-      targetExpr, localsIn, resolveCallMapAccessTargetInfo);
+      targetExpr,
+      localsIn,
+      resolveCallMapAccessTargetInfo,
+      semanticProgram,
+      semanticIndex);
   if (!mapTargetInfo.isMapTarget) {
     return MapAccessLookupEmitResult::NotHandled;
   }
@@ -93,7 +99,9 @@ MapAccessLookupEmitResult tryEmitMapAccessLookup(
       instructionCount,
       emitInstruction,
       patchInstructionImm,
-      error);
+      error,
+      nullptr,
+      nullptr);
 }
 
 MapAccessLookupEmitResult tryEmitMapContainsLookup(
@@ -466,7 +474,9 @@ bool emitArrayVectorIndexedAccess(
       instructionCount,
       emitInstruction,
       patchInstructionImm,
-      error);
+      error,
+      nullptr,
+      nullptr);
 }
 
 bool emitBuiltinArrayAccess(
@@ -521,7 +531,11 @@ bool emitBuiltinArrayAccess(
       semanticProgram,
       semanticIndex);
   const auto mapTargetInfo = resolveMapAccessTargetInfo(
-      targetExpr, localsIn, resolveCallMapAccessTargetInfo);
+      targetExpr,
+      localsIn,
+      resolveCallMapAccessTargetInfo,
+      semanticProgram,
+      semanticIndex);
   std::string nestedAccessName;
   const bool isMapArgsPackElementTarget =
       arrayVectorTargetInfo.isArgsPackTarget &&
@@ -562,7 +576,9 @@ bool emitBuiltinArrayAccess(
       instructionCount,
       emitInstruction,
       patchInstructionImm,
-      error);
+      error,
+      semanticProgram,
+      semanticIndex);
   if (mapLookupResult == MapAccessLookupEmitResult::Error) {
     return false;
   }
