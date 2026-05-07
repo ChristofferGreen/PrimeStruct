@@ -667,6 +667,68 @@ TEST_CASE("ir lowerer inference call-return setup uses semantic count receiver f
   CHECK(staleMapResolutions == 0);
 }
 
+TEST_CASE("ir lowerer inference call-return setup uses semantic count tail facts before stale strings") {
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+
+  primec::SemanticProgram semanticProgram;
+  const primec::SymbolId scalarTypeId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "i32");
+  primec::SemanticProgramBindingFact scalarFact;
+  scalarFact.semanticNodeId = 9911;
+  scalarFact.bindingTypeText = "string";
+  scalarFact.bindingTypeTextId = scalarTypeId;
+  semanticProgram.bindingFacts.push_back(scalarFact);
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(
+      scalarFact.semanticNodeId, 0);
+
+  const primec::ir_lowerer::SemanticProductIndex semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  state.semanticProgram = &semanticProgram;
+  state.semanticIndex = &semanticIndex;
+  state.getReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
+    return false;
+  };
+  state.resolveMethodCallDefinition =
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+    return nullptr;
+  };
+
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallReturnSetup(
+      {
+          .defMap = &defMap,
+          .resolveExprPath = [](const primec::Expr &expr) { return expr.name; },
+          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      },
+      state,
+      error));
+  CHECK(error.empty());
+
+  primec::Expr candidateExpr;
+  candidateExpr.kind = primec::Expr::Kind::Name;
+  candidateExpr.name = "candidate";
+  candidateExpr.semanticNodeId = scalarFact.semanticNodeId;
+  primec::Expr countExpr;
+  countExpr.kind = primec::Expr::Kind::Call;
+  countExpr.name = "count";
+  countExpr.args = {candidateExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo staleStringLocal;
+  staleStringLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  staleStringLocal.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::String;
+  locals.emplace("candidate", staleStringLocal);
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut =
+      primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprDirectReturnKind(countExpr, locals, kindOut) ==
+        primec::ir_lowerer::CallExpressionReturnKindResolution::NotResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
 TEST_CASE("ir lowerer inference call-return setup uses semantic method access receiver facts before stale locals") {
   primec::Definition receiverAtDef;
   receiverAtDef.fullPath = "/std/collections/vector/at";

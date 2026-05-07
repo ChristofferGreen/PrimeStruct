@@ -1024,8 +1024,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
       kindOut = LocalInfo::ValueKind::Int32;
       return true;
     }
-    if (isCountCall && !requireArrayReturn && inferExprKind &&
-        inferExprKind(methodExpr.args.front(), localsIn) == LocalInfo::ValueKind::String) {
+    if (isCountCall && isStringCountReceiverExpr(methodExpr.args.front())) {
       if (methodResolvedOut != nullptr) {
         *methodResolvedOut = true;
       }
@@ -1035,8 +1034,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     return false;
   }
 
-  if (isCountCall && !requireArrayReturn && inferExprKind &&
-      inferExprKind(callExpr.args.front(), localsIn) == LocalInfo::ValueKind::String) {
+  if (isCountCall && isStringCountReceiverExpr(callExpr.args.front())) {
     kindOut = LocalInfo::ValueKind::Int32;
     return true;
   }

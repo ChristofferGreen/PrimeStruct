@@ -6,6 +6,29 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer count tail facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes the final direct
+    `count(...)` string fallback consume semantic-product value-kind facts
+    before stale local string metadata can classify helper returns.
+  - acceptance:
+    - Published scalar binding facts suppress the final stale local string
+      fallback for direct `count(...)` receivers.
+    - Published string binding facts still classify direct string count
+      receivers through the semantic-first string helper.
+    - Existing local string fallback remains available when no semantic
+      receiver fact is published.
+  - stop_rule: Stop once the direct `count(...)` tail fallback routes
+    through the semantic-first string receiver helper and focused tests pin
+    stale-string suppression after receiver probing.
+  - evidence: Routed the resolved-helper and final direct `count(...)`
+    string fallback through `isStringCountReceiverExpr(...)`, added focused
+    tail-fallback stale-string coverage, ran `git diff --check`, and skipped
+    broad baseline validation per the lite workflow.
+
 - [x] TODO-4298: Prefer string receiver facts
   - owner: ai
   - created_at: 2026-04-28
