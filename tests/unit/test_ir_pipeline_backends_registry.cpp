@@ -1906,20 +1906,36 @@ TEST_CASE("native field receivers use semantic-product type facts") {
   const size_t queryFactPos =
       source.find("findSemanticProductQueryFact(semanticTargets, receiverExpr)",
                   semanticResolverPos);
+  const size_t fieldQueryFactPos =
+      source.find("findSemanticProductQueryFact(semanticTargets, expr)",
+                  semanticResolverPos);
+  const size_t sourceFallbackPos =
+      source.find("semanticTargets.semanticProgram->queryFacts",
+                  semanticResolverPos);
   const size_t staleDiagnosticPos =
       source.find("stale semantic-product field receiver metadata",
                   semanticResolverPos);
   const size_t fallbackStructPathPos =
       source.find("structPath = inferStructExprPath(receiver, localsIn)",
                   semanticResolverPos);
+  const size_t resolveStructTypePos =
+      source.find("resolveStructTypeName(normalizedTypeText",
+                  semanticResolverPos);
+  const size_t primitiveTypePos =
+      source.find("valueKindFromTypeName(normalizedTypeText)",
+                  semanticResolverPos);
   const size_t internedTypeResolverPos =
       source.find("semanticProgramResolveCallTargetString(",
                   sharedTypeResolverPos);
   REQUIRE(bindingFactPos != std::string::npos);
   REQUIRE(queryFactPos != std::string::npos);
+  REQUIRE(fieldQueryFactPos != std::string::npos);
+  REQUIRE(sourceFallbackPos != std::string::npos);
   REQUIRE(internedTypeResolverPos != std::string::npos);
   REQUIRE(staleDiagnosticPos != std::string::npos);
   REQUIRE(fallbackStructPathPos != std::string::npos);
+  REQUIRE(resolveStructTypePos != std::string::npos);
+  REQUIRE(primitiveTypePos != std::string::npos);
   CHECK(source.find("appendSemanticProductTypeTextCandidate(\n"
                     "                  candidateTypeTexts,\n"
                     "                  bindingFact->bindingTypeText,",
@@ -1938,12 +1954,25 @@ TEST_CASE("native field receivers use semantic-product type facts") {
                     semanticResolverPos) != std::string::npos);
   CHECK(source.find("queryFact->queryTypeTextId",
                     semanticResolverPos) != std::string::npos);
+  CHECK(source.find("candidate.sourceLine != expr.sourceLine",
+                    semanticResolverPos) != std::string::npos);
+  CHECK(source.find("candidate.sourceColumn != expr.sourceColumn",
+                    semanticResolverPos) != std::string::npos);
+  CHECK(source.find("candidate.scopePath == function.name",
+                    semanticResolverPos) != std::string::npos);
+  CHECK(source.find("fieldQueryFact->receiverBindingTypeText",
+                    semanticResolverPos) != std::string::npos);
+  CHECK(source.find("fieldQueryFact->receiverBindingTypeTextId",
+                    semanticResolverPos) != std::string::npos);
   CHECK(source.find("splitTemplateTypeName(normalizedTypeText, wrapperBase, wrapperArgs)",
                     semanticResolverPos) != std::string::npos);
   CHECK(internedTypeResolverPos < fallbackStructPathPos);
   CHECK(sharedTypeResolverPos < semanticResolverPos);
   CHECK(bindingFactPos < fallbackStructPathPos);
   CHECK(queryFactPos < fallbackStructPathPos);
+  CHECK(fieldQueryFactPos < fallbackStructPathPos);
+  CHECK(sourceFallbackPos < fallbackStructPathPos);
+  CHECK(resolveStructTypePos < primitiveTypePos);
   CHECK(source.find("auto addCandidateTypeText", semanticResolverPos) ==
         std::string::npos);
   CHECK(source.find("if (!resolvedFieldReceiverBySemanticProduct.has_value())",

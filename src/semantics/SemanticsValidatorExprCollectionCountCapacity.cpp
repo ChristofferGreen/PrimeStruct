@@ -47,6 +47,22 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       [&](const std::string &callTargetPath) {
         return failExprDiagnostic(expr, "unknown call target: " + callTargetPath);
       };
+  const auto hasExactDefinitionFamily =
+      [&](const std::string &path) {
+        if (defMap_.count(path) > 0 || paramsByDef_.count(path) > 0) {
+          return true;
+        }
+        const std::string templatedPrefix = path + "<";
+        const std::string specializedPrefix = path + "__";
+        for (const auto &definition : program_.definitions) {
+          if (definition.fullPath == path ||
+              definition.fullPath.rfind(templatedPrefix, 0) == 0 ||
+              definition.fullPath.rfind(specializedPrefix, 0) == 0) {
+            return true;
+          }
+        }
+        return false;
+      };
   const auto failRemovedRootedVectorDirectCall =
       [&]() {
         if (const std::string removedRootedVectorDirectCallDiagnostic =
@@ -378,6 +394,32 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         context.resolveMapTarget(expr.args.front())) ||
        (context.isIndexedArgsPackMapReceiverTarget != nullptr &&
         context.isIndexedArgsPackMapReceiverTarget(expr.args.front())));
+  if (!expr.isMethodCall &&
+      (resolvedMapCountMethodPath == "/map/count" ||
+       resolvedMapCountMethodPath == "/map/count_ref") &&
+      hasExactDefinitionFamily(resolvedMapCountMethodPath)) {
+    resolved = resolveCalleePath(expr);
+    resolvedMethod = false;
+    return true;
+  }
+  if (!expr.isMethodCall &&
+      (resolvedMapCountMethodPath == "/map/count" ||
+       resolvedMapCountMethodPath == "/map/count_ref") &&
+      !hasExactDefinitionFamily(resolvedMapCountMethodPath)) {
+    handledOut = true;
+    if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+      return failExprDiagnostic(
+          expr,
+          "block arguments require a definition target: " +
+              resolvedMapCountMethodPath);
+    }
+    if (expr.args.size() != 1) {
+      return failExprDiagnostic(
+          expr,
+          "argument count mismatch for " + resolvedMapCountMethodPath);
+    }
+    return failUnknownCallTarget(resolvedMapCountMethodPath);
+  }
   const bool routesThroughMapCountCallSurface =
       routesThroughStdNamespacedMapCountSurface ||
       routesThroughNamespacedMapCountSurface ||

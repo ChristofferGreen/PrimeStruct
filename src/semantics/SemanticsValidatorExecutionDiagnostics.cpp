@@ -84,6 +84,58 @@ void SemanticsValidator::collectExecutionIntraBodyCallDiagnostics(
     std::string builtinName;
     std::string namespacedCollection;
     std::string namespacedHelper;
+    auto hasExactDefinitionFamily = [&](const std::string &path) {
+      if (defMap_.count(path) > 0 || paramsByDef_.count(path) > 0) {
+        return true;
+      }
+      const std::string templatedPrefix = path + "<";
+      const std::string specializedPrefix = path + "__";
+      for (const auto &definition : program_.definitions) {
+        if (definition.fullPath == path ||
+            definition.fullPath.rfind(templatedPrefix, 0) == 0 ||
+            definition.fullPath.rfind(specializedPrefix, 0) == 0) {
+          return true;
+        }
+      }
+      return false;
+    };
+    auto isRemovedMapCompatibilityHelper = [](std::string_view helperName) {
+      return helperName == "count" || helperName == "count_ref" ||
+             helperName == "size" ||
+             helperName == "contains" || helperName == "contains_ref" ||
+             helperName == "tryAt" || helperName == "tryAt_ref" ||
+             helperName == "at" || helperName == "at_ref" ||
+             helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
+             helperName == "insert" || helperName == "insert_ref";
+    };
+    const bool isMapNamespacedHelper =
+        getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper) &&
+        namespacedCollection == "map";
+    std::string normalizedNamespacedHelper = namespacedHelper;
+    if (const size_t specializationSuffix = normalizedNamespacedHelper.find("__");
+        specializationSuffix != std::string::npos) {
+      normalizedNamespacedHelper.erase(specializationSuffix);
+    }
+    const bool isUndefinedRemovedMapCompatibilityHelperCall =
+        isMapNamespacedHelper &&
+        isRemovedMapCompatibilityHelper(normalizedNamespacedHelper) &&
+        !hasExactDefinitionFamily("/map/" + normalizedNamespacedHelper);
+    const bool isDefinedRemovedMapCompatibilityHelperCall =
+        isMapNamespacedHelper &&
+        isRemovedMapCompatibilityHelper(normalizedNamespacedHelper) &&
+        hasExactDefinitionFamily("/map/" + normalizedNamespacedHelper);
+    std::string resolvedMapCompatibilityHelper;
+    if (resolved.rfind("/map/", 0) == 0) {
+      resolvedMapCompatibilityHelper = resolved.substr(std::string("/map/").size());
+      if (const size_t specializationSuffix = resolvedMapCompatibilityHelper.find("__");
+          specializationSuffix != std::string::npos) {
+        resolvedMapCompatibilityHelper.erase(specializationSuffix);
+      }
+    }
+    const bool isDefinedResolvedMapCompatibilityHelperCall =
+        !resolvedMapCompatibilityHelper.empty() &&
+        isRemovedMapCompatibilityHelper(resolvedMapCompatibilityHelper) &&
+        hasExactDefinitionFamily("/map/" + resolvedMapCompatibilityHelper);
     const bool isCollectionHelperBuiltin =
         isSimpleCallName(expr, "count") || isSimpleCallName(expr, "capacity") ||
         isSimpleCallName(expr, "count_ref") ||
@@ -98,8 +150,11 @@ void SemanticsValidator::collectExecutionIntraBodyCallDiagnostics(
         isSimpleCallName(expr, "remove_at") || isSimpleCallName(expr, "remove_swap") ||
         isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos") ||
         isSimpleCallName(expr, "to_aos_ref") ||
-        (getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper) &&
-         isBuiltinCollectionHelperName(namespacedHelper));
+        (!isUndefinedRemovedMapCompatibilityHelperCall &&
+         getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper) &&
+         (isBuiltinCollectionHelperName(namespacedHelper) ||
+          isDefinedRemovedMapCompatibilityHelperCall ||
+          isDefinedResolvedMapCompatibilityHelperCall));
     const bool isCollectionBuiltin = defMap_.count(resolved) == 0 && getBuiltinCollectionName(expr, builtinName);
     const bool isDirectFileErrorBuiltin = resolved == "/file_error/why";
     return getBuiltinOperatorName(expr, builtinName) || getBuiltinComparisonName(expr, builtinName) ||

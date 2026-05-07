@@ -255,8 +255,13 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
 
   auto validateMethodMapAccessBuiltin = [&](const std::string &helperName) -> bool {
     if (!expr.templateArgs.empty()) {
-      return failCollectionAccessDiagnostic(helperName +
-                                            " does not accept template arguments");
+      std::string diagnosticTarget = resolved;
+      if (diagnosticTarget.rfind("/map/", 0) == 0) {
+        diagnosticTarget = "/std/collections/map/" +
+                           diagnosticTarget.substr(std::string("/map/").size());
+      }
+      return failCollectionAccessDiagnostic("unknown call target: " +
+                                            diagnosticTarget);
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       return failCollectionAccessDiagnostic(helperName +
@@ -358,6 +363,19 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
           "named arguments not supported for builtin calls");
     }
     if (!expr.templateArgs.empty()) {
+      if (context.isStdNamespacedMapAccessCall ||
+          isCanonicalMapAccessResolvedPath(resolved)) {
+        std::string diagnosticTarget = resolved;
+        if (diagnosticTarget.rfind("/map/", 0) == 0) {
+          diagnosticTarget = "/std/collections/map/" +
+                             diagnosticTarget.substr(std::string("/map/").size());
+        }
+        if (diagnosticTarget.empty()) {
+          diagnosticTarget = "/std/collections/map/" + builtinName;
+        }
+        return failCollectionAccessDiagnostic("unknown call target: " +
+                                              diagnosticTarget);
+      }
       return failCollectionAccessDiagnostic(builtinName +
                                             " does not accept template arguments");
     }

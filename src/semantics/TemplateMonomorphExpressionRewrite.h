@@ -1425,6 +1425,62 @@ bool rewriteExpr(Expr &expr,
       error = "unknown call target: " + borrowedCanonicalMapUnknownTarget;
       return false;
     }
+    auto stripGeneratedSuffix = [](std::string path) {
+      const size_t suffix = path.find("__");
+      if (suffix != std::string::npos) {
+        path.erase(suffix);
+      }
+      return path;
+    };
+    const std::string removedMapCompatibilityPath =
+        stripGeneratedSuffix(resolvedPath);
+    const std::string removedMapCompatibilityHelper =
+        removedMapCompatibilityPath.rfind("/map/", 0) == 0
+            ? removedMapCompatibilityPath.substr(std::string("/map/").size())
+            : std::string{};
+    const std::string_view removedMapCompatibilityHelperBase =
+        mapCompatibilityHelperBase(removedMapCompatibilityHelper);
+    if (removedMapCompatibilityPath.rfind("/map/", 0) == 0 &&
+        isRemovedMapCompatibilityHelper(removedMapCompatibilityHelperBase) &&
+        (removedMapCompatibilityHelperBase == "count" ||
+         removedMapCompatibilityHelperBase == "count_ref" ||
+         removedMapCompatibilityHelperBase == "size") &&
+        ctx.sourceDefs.count(removedMapCompatibilityPath) == 0 &&
+        ctx.templateDefs.count(removedMapCompatibilityPath) == 0 &&
+        ctx.helperOverloads.count(removedMapCompatibilityPath) == 0) {
+      const std::string helperName(removedMapCompatibilityHelperBase);
+      if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+        error = "block arguments require a definition target: " +
+                removedMapCompatibilityPath;
+        return false;
+      }
+      const size_t expectedArgCount =
+          (helperName == "count" || helperName == "count_ref" ||
+           helperName == "size")
+              ? 1
+              : ((helperName == "at" || helperName == "at_ref" ||
+                  helperName == "at_unsafe" ||
+                  helperName == "at_unsafe_ref" ||
+                  helperName == "contains" ||
+                  helperName == "contains_ref" ||
+                  helperName == "tryAt" ||
+                  helperName == "tryAt_ref")
+                     ? 2
+                     : 3);
+      if (expr.args.size() != expectedArgCount) {
+        error = "argument count mismatch for " + removedMapCompatibilityPath;
+        return false;
+      }
+      error = "unknown call target: " + removedMapCompatibilityPath;
+      return false;
+    }
+    if (removedMapCompatibilityPath.rfind("/map/", 0) == 0 &&
+        removedMapCompatibilityPath != resolvedPath &&
+        ctx.templateDefs.count(removedMapCompatibilityPath) > 0) {
+      resolvedPath = removedMapCompatibilityPath;
+      expr.name = removedMapCompatibilityPath;
+      expr.namespacePrefix.clear();
+    }
     const std::string experimentalMapPath = experimentalMapHelperPathForCanonicalHelper(resolvedPath);
     const Expr *experimentalMapReceiverExpr = mapHelperReceiverExpr(expr);
     const bool receiverIsPublishedMapConstructor =
@@ -1529,6 +1585,7 @@ bool rewriteExpr(Expr &expr,
         }
       }
     }
+    bool inferredCanonicalMapReceiverTemplateArgs = false;
     if (expr.templateArgs.empty() &&
         resolvedPath.rfind("/std/collections/experimental_map/", 0) == 0 &&
         resolvesExperimentalMapValueReceiver(
@@ -1540,13 +1597,10 @@ bool rewriteExpr(Expr &expr,
       }
     }
     if (expr.templateArgs.empty() &&
-        (resolvedPath.rfind("/std/collections/map/", 0) == 0 ||
-         resolvedPath.rfind("/map/", 0) == 0) &&
+        resolvedPath.rfind("/std/collections/map/", 0) == 0 &&
         hasVisibleStdCollectionsImportForPath(
             ctx,
-            resolvedPath.rfind("/map/", 0) == 0
-                ? "/std/collections/map/" + resolvedPath.substr(std::string("/map/").size())
-                : resolvedPath)) {
+            resolvedPath)) {
       std::vector<std::string> receiverTemplateArgs;
       if (resolveExperimentalMapValueReceiverTemplateArgs(
               mapHelperReceiverExpr(expr),
@@ -1558,6 +1612,7 @@ bool rewriteExpr(Expr &expr,
               receiverTemplateArgs)) {
         expr.templateArgs = std::move(receiverTemplateArgs);
         allConcrete = true;
+        inferredCanonicalMapReceiverTemplateArgs = true;
       }
     }
     if (expr.templateArgs.empty() &&
@@ -1600,6 +1655,12 @@ bool rewriteExpr(Expr &expr,
       expr.templateArgs.clear();
     }
     if (isCanonicalSoaBorrowedWrapperHelper(resolvedPath) &&
+        resolvedPath.find("__t") != std::string::npos) {
+      expr.templateArgs.clear();
+    }
+    if (inferredCanonicalMapReceiverTemplateArgs &&
+        (resolvedPath.rfind("/std/collections/map/", 0) == 0 ||
+         resolvedPath.rfind("/map/", 0) == 0) &&
         resolvedPath.find("__t") != std::string::npos) {
       expr.templateArgs.clear();
     }

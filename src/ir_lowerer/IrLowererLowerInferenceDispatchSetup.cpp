@@ -275,6 +275,50 @@ bool resolveDispatchSetupSemanticReceiverTypeText(const Expr &receiver,
   return false;
 }
 
+const SemanticProgramBindingFact *findDispatchSetupSemanticBindingFactForExpr(
+    const Expr &expr,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
+  if (semanticProgram == nullptr || semanticIndex == nullptr) {
+    return nullptr;
+  }
+  if (expr.semanticNodeId != 0) {
+    if (const auto *bindingFact =
+            findSemanticProductBindingFact(*semanticIndex, expr)) {
+      return bindingFact;
+    }
+  }
+  if (expr.sourceLine <= 0 || expr.sourceColumn <= 0) {
+    return nullptr;
+  }
+  for (const SemanticProgramBindingFact &candidate : semanticProgram->bindingFacts) {
+    if (candidate.name == expr.name &&
+        candidate.sourceLine == expr.sourceLine &&
+        candidate.sourceColumn == expr.sourceColumn) {
+      return &candidate;
+    }
+  }
+  return nullptr;
+}
+
+bool inferDispatchSetupSemanticBindingFactKind(const Expr &expr,
+                                               const SemanticProgram *semanticProgram,
+                                               const SemanticProductIndex *semanticIndex,
+                                               LocalInfo::ValueKind &kindOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  const auto *bindingFact =
+      findDispatchSetupSemanticBindingFactForExpr(expr, semanticProgram, semanticIndex);
+  if (bindingFact == nullptr || semanticProgram == nullptr) {
+    return false;
+  }
+  kindOut = valueKindFromTypeName(
+      resolveDispatchSetupSemanticFactTypeText(
+          *semanticProgram,
+          bindingFact->bindingTypeText,
+          bindingFact->bindingTypeTextId));
+  return kindOut != LocalInfo::ValueKind::Unknown;
+}
+
 bool inferDispatchSetupSemanticFileErrorWhyKind(const Expr &receiver,
                                                 const SemanticProgram *semanticProgram,
                                                 const SemanticProductIndex *semanticIndex,
@@ -986,6 +1030,12 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
           std::string helperName;
           return getNamespacedCollectionHelperName(candidate, collectionName, helperName) && helperName == "count";
         };
+
+        LocalInfo::ValueKind semanticBindingKind = LocalInfo::ValueKind::Unknown;
+        if (inferDispatchSetupSemanticBindingFactKind(
+                expr, semanticProgram, semanticIndex, semanticBindingKind)) {
+          return semanticBindingKind;
+        }
 
         if (isSimpleCallName(expr, "try") && expr.args.size() == 1) {
           LocalInfo::ValueKind tryValueKind = LocalInfo::ValueKind::Unknown;

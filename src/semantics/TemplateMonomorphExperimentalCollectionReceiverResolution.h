@@ -551,6 +551,9 @@ bool resolveExperimentalMapValueReceiverTemplateArgs(const Expr *receiverExpr,
 }
 
 std::string experimentalMapHelperPathForCanonicalHelper(const std::string &path) {
+  if (path.rfind("/map/", 0) == 0) {
+    return {};
+  }
   return primec::stdlibSurfacePreferredSpellingForMember(
       primec::StdlibSurfaceId::CollectionsMapHelpers,
       path,
@@ -648,6 +651,9 @@ bool hasVisibleStdCollectionsImportForPath(const Context &ctx, const std::string
 }
 
 std::string experimentalMapHelperPathForWrapperHelper(const std::string &path) {
+  if (path.rfind("/map/", 0) == 0) {
+    return {};
+  }
   return primec::stdlibSurfacePreferredSpellingForMember(
       primec::StdlibSurfaceId::CollectionsMapHelpers,
       path,

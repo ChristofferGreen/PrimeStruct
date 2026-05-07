@@ -5726,6 +5726,43 @@ void rewriteBuiltinMapInsertExpr(
                          : std::string{};
   const bool matchesBuiltinAccessCall =
       directReadHelper == "at" || directReadHelper == "at_unsafe";
+  auto isStdlibOwnedDefinitionNamespace = [](const std::string &path) {
+    if (path.rfind("/std/", 0) == 0) {
+      return true;
+    }
+    if (path.size() <= 1 || path.front() != '/') {
+      return false;
+    }
+    const size_t nextSlash = path.find('/', 1);
+    const std::string rootName =
+        nextSlash == std::string::npos ? path.substr(1)
+                                       : path.substr(1, nextSlash - 1);
+    return semantics::isRootBuiltinName(rootName) || rootName == "string" ||
+           rootName == "Result" || rootName == "Maybe" ||
+           rootName == "Buffer" || rootName == "ImageError" ||
+           rootName == "ContainerError" || rootName == "GfxError";
+  };
+  auto explicitRemovedMapCompatibilityReadPath = [&]() -> std::string {
+    std::string normalized = scopedExprName;
+    if (!normalized.empty() && normalized.front() != '/') {
+      normalized.insert(normalized.begin(), '/');
+    }
+    if (normalized.rfind("/map/", 0) != 0) {
+      return {};
+    }
+    const std::string helperName = normalized.substr(std::string("/map/").size());
+    if (helperName != "at" && helperName != "at_unsafe" &&
+        helperName != "at_ref" && helperName != "at_unsafe_ref") {
+      return {};
+    }
+    return "/map/" + helperName;
+  }();
+  if (matchesBuiltinAccessCall &&
+      !explicitRemovedMapCompatibilityReadPath.empty() &&
+      !isStdlibOwnedDefinitionNamespace(definitionNamespace) &&
+      definitionMap.count(explicitRemovedMapCompatibilityReadPath) == 0) {
+    return;
+  }
   if (matchesBuiltinReadMethod || matchesBuiltinAccessCall) {
     const Expr &receiver = expr.args.front();
     auto receiverBinding = resolveBuiltinMapInsertReceiverBinding(

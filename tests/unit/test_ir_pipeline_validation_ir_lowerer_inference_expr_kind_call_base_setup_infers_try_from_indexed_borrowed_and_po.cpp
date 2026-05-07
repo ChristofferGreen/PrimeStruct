@@ -416,6 +416,9 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic try oper
         .initializerDirectCallReturnKind = "",
         .initializerMethodCallResolvedPath = "",
         .initializerMethodCallReturnKind = "",
+        .initializerStdlibSurfaceId = std::nullopt,
+        .initializerDirectCallStdlibSurfaceId = std::nullopt,
+        .initializerMethodCallStdlibSurfaceId = std::nullopt,
         .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
         .bindingNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "status"),
         .bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, bindingTypeText),
@@ -670,6 +673,9 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic try file
         .initializerDirectCallReturnKind = "",
         .initializerMethodCallResolvedPath = "",
         .initializerMethodCallReturnKind = "",
+        .initializerStdlibSurfaceId = std::nullopt,
+        .initializerDirectCallStdlibSurfaceId = std::nullopt,
+        .initializerMethodCallStdlibSurfaceId = std::nullopt,
         .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
         .bindingNameId = primec::semanticProgramInternCallTargetString(semanticProgram, bindingName),
         .bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, bindingTypeText),
@@ -889,6 +895,9 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic field re
         .initializerDirectCallReturnKind = "",
         .initializerMethodCallResolvedPath = "",
         .initializerMethodCallReturnKind = "",
+        .initializerStdlibSurfaceId = std::nullopt,
+        .initializerDirectCallStdlibSurfaceId = std::nullopt,
+        .initializerMethodCallStdlibSurfaceId = std::nullopt,
         .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
         .bindingNameId = primec::semanticProgramInternCallTargetString(semanticProgram, bindingName),
         .bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, bindingTypeText),
@@ -911,6 +920,36 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic field re
     expr.name = name;
     expr.semanticNodeId = semanticNodeId;
     return expr;
+  };
+
+  auto addFieldQueryFact = [](primec::SemanticProgram &semanticProgram,
+                              const std::string &fieldName,
+                              const std::string &queryTypeText,
+                              const std::string &receiverBindingTypeText,
+                              int sourceLine,
+                              int sourceColumn) {
+    semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+        .scopePath = "/main",
+        .callName = fieldName,
+        .queryTypeText = queryTypeText,
+        .bindingTypeText = queryTypeText,
+        .receiverBindingTypeText = receiverBindingTypeText,
+        .hasResultType = false,
+        .resultTypeHasValue = false,
+        .resultValueType = "",
+        .resultErrorType = "",
+        .sourceLine = sourceLine,
+        .sourceColumn = sourceColumn,
+        .semanticNodeId = 0,
+        .provenanceHandle = 0,
+        .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+        .callNameId = primec::semanticProgramInternCallTargetString(semanticProgram, fieldName),
+        .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main/" + fieldName),
+        .queryTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, queryTypeText),
+        .bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, queryTypeText),
+        .receiverBindingTypeTextId =
+            primec::semanticProgramInternCallTargetString(semanticProgram, receiverBindingTypeText),
+    });
   };
 
   auto makeFieldExpr = [](const std::string &fieldName, primec::Expr receiver) {
@@ -978,6 +1017,7 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic field re
   addQueryFact(semanticProgram, 992, "/main/Point");
   addLocalAutoFact(semanticProgram, 993, "autoPoint", "main/Point");
   addBindingFact(semanticProgram, 994, "point", "i32");
+  addFieldQueryFact(semanticProgram, "x", "i32", "ImageError", 42, 7);
   const auto semanticIndex =
       primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
   auto state = makeState(&semanticProgram, &semanticIndex);
@@ -1009,6 +1049,16 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic field re
       primec::ir_lowerer::LocalMap{},
       kindOut));
   CHECK(kindOut == ValueKind::Unknown);
+
+  primec::Expr sourcedField = makeFieldExpr("x", makeNameExpr("point", 0));
+  sourcedField.sourceLine = 42;
+  sourcedField.sourceColumn = 7;
+  kindOut = ValueKind::Unknown;
+  CHECK(state.inferCallExprBaseKind(
+      sourcedField,
+      primec::ir_lowerer::LocalMap{},
+      kindOut));
+  CHECK(kindOut == ValueKind::Int32);
 
   auto syntaxState = makeState(nullptr, nullptr);
   kindOut = ValueKind::Unknown;
@@ -1671,6 +1721,9 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic query an
         .initializerDirectCallReturnKind = "",
         .initializerMethodCallResolvedPath = "",
         .initializerMethodCallReturnKind = "",
+        .initializerStdlibSurfaceId = std::nullopt,
+        .initializerDirectCallStdlibSurfaceId = std::nullopt,
+        .initializerMethodCallStdlibSurfaceId = std::nullopt,
         .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
         .bindingNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "receiver"),
         .bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, bindingTypeText),

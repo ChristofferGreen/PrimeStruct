@@ -1114,7 +1114,6 @@ TEST_CASE("ir lowerer experimental vector setters use semantic receiver facts be
           CHECK_FALSE(expectValue);
           return true;
         },
-        []() {},
         instructions,
         errorOut,
         &semanticProgram,

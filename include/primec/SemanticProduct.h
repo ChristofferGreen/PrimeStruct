@@ -58,9 +58,9 @@ struct SemanticProgramStringEqual {
 };
 
 struct SemanticProgramDefinition {
-  std::string name;
-  std::string fullPath;
-  std::string namespacePrefix;
+  std::string name = {};
+  std::string fullPath = {};
+  std::string namespacePrefix = {};
   int sourceLine = 0;
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
@@ -68,9 +68,9 @@ struct SemanticProgramDefinition {
 };
 
 struct SemanticProgramExecution {
-  std::string name;
-  std::string fullPath;
-  std::string namespacePrefix;
+  std::string name = {};
+  std::string fullPath = {};
+  std::string namespacePrefix = {};
   int sourceLine = 0;
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
@@ -78,8 +78,8 @@ struct SemanticProgramExecution {
 };
 
 struct SemanticProgramBridgePathChoice {
-  std::string scopePath;
-  std::string collectionFamily;
+  std::string scopePath = {};
+  std::string collectionFamily = {};
   int sourceLine = 0;
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
@@ -88,23 +88,23 @@ struct SemanticProgramBridgePathChoice {
   SymbolId collectionFamilyId = InvalidSymbolId;
   SymbolId helperNameId = InvalidSymbolId;
   SymbolId chosenPathId = InvalidSymbolId;
-  std::optional<StdlibSurfaceId> stdlibSurfaceId;
+  std::optional<StdlibSurfaceId> stdlibSurfaceId = std::nullopt;
 };
 
 struct SemanticProgramCallableSummary {
   bool isExecution = false;
-  std::string returnKind;
+  std::string returnKind = {};
   bool isCompute = false;
   bool isUnsafe = false;
-  std::vector<std::string> activeEffects;
-  std::vector<std::string> activeCapabilities;
+  std::vector<std::string> activeEffects = {};
+  std::vector<std::string> activeCapabilities = {};
   bool hasResultType = false;
   bool resultTypeHasValue = false;
-  std::string resultValueType;
-  std::string resultErrorType;
+  std::string resultValueType = {};
+  std::string resultErrorType = {};
   bool hasOnError = false;
-  std::string onErrorHandlerPath;
-  std::string onErrorErrorType;
+  std::string onErrorHandlerPath = {};
+  std::string onErrorErrorType = {};
   std::size_t onErrorBoundArgCount = 0;
   uint64_t semanticNodeId = 0;
   uint64_t provenanceHandle = 0;
@@ -119,8 +119,8 @@ struct SemanticProgramCallableSummary {
 };
 
 struct SemanticProgramTypeMetadata {
-  std::string fullPath;
-  std::string category;
+  std::string fullPath = {};
+  std::string category = {};
   bool isPublic = false;
   bool hasNoPadding = false;
   bool hasPlatformIndependentPadding = false;
@@ -135,10 +135,10 @@ struct SemanticProgramTypeMetadata {
 };
 
 struct SemanticProgramStructFieldMetadata {
-  std::string structPath;
-  std::string fieldName;
+  std::string structPath = {};
+  std::string fieldName = {};
   std::size_t fieldIndex = 0;
-  std::string bindingTypeText;
+  std::string bindingTypeText = {};
   int sourceLine = 0;
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
@@ -146,10 +146,10 @@ struct SemanticProgramStructFieldMetadata {
 };
 
 struct SemanticProgramSumTypeMetadata {
-  std::string fullPath;
+  std::string fullPath = {};
   bool isPublic = false;
-  std::string activeTagTypeText;
-  std::string payloadStorageText;
+  std::string activeTagTypeText = {};
+  std::string payloadStorageText = {};
   std::size_t variantCount = 0;
   int sourceLine = 0;
   int sourceColumn = 0;
@@ -158,12 +158,12 @@ struct SemanticProgramSumTypeMetadata {
 };
 
 struct SemanticProgramSumVariantMetadata {
-  std::string sumPath;
-  std::string variantName;
+  std::string sumPath = {};
+  std::string variantName = {};
   std::size_t variantIndex = 0;
   uint32_t tagValue = 0;
   bool hasPayload = true;
-  std::string payloadTypeText;
+  std::string payloadTypeText = {};
   int sourceLine = 0;
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
@@ -171,14 +171,14 @@ struct SemanticProgramSumVariantMetadata {
 };
 
 struct SemanticProgramCollectionSpecialization {
-  std::string scopePath;
-  std::string siteKind;
-  std::string name;
-  std::string collectionFamily;
-  std::string bindingTypeText;
-  std::string elementTypeText;
-  std::string keyTypeText;
-  std::string valueTypeText;
+  std::string scopePath = {};
+  std::string siteKind = {};
+  std::string name = {};
+  std::string collectionFamily = {};
+  std::string bindingTypeText = {};
+  std::string elementTypeText = {};
+  std::string keyTypeText = {};
+  std::string valueTypeText = {};
   bool isReference = false;
   bool isPointer = false;
   int sourceLine = 0;
@@ -193,19 +193,19 @@ struct SemanticProgramCollectionSpecialization {
   SymbolId elementTypeTextId = InvalidSymbolId;
   SymbolId keyTypeTextId = InvalidSymbolId;
   SymbolId valueTypeTextId = InvalidSymbolId;
-  std::optional<StdlibSurfaceId> helperSurfaceId;
-  std::optional<StdlibSurfaceId> constructorSurfaceId;
+  std::optional<StdlibSurfaceId> helperSurfaceId = std::nullopt;
+  std::optional<StdlibSurfaceId> constructorSurfaceId = std::nullopt;
 };
 
 struct SemanticProgramBindingFact {
-  std::string scopePath;
-  std::string siteKind;
-  std::string name;
-  std::string bindingTypeText;
+  std::string scopePath = {};
+  std::string siteKind = {};
+  std::string name = {};
+  std::string bindingTypeText = {};
   bool isMutable = false;
   bool isEntryArgString = false;
   bool isUnsafeReference = false;
-  std::string referenceRoot;
+  std::string referenceRoot = {};
   int sourceLine = 0;
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
@@ -219,13 +219,13 @@ struct SemanticProgramBindingFact {
 };
 
 struct SemanticProgramReturnFact {
-  std::string returnKind;
-  std::string structPath;
-  std::string bindingTypeText;
+  std::string returnKind = {};
+  std::string structPath = {};
+  std::string bindingTypeText = {};
   bool isMutable = false;
   bool isEntryArgString = false;
   bool isUnsafeReference = false;
-  std::string referenceRoot;
+  std::string referenceRoot = {};
   int sourceLine = 0;
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
@@ -238,37 +238,37 @@ struct SemanticProgramReturnFact {
 };
 
 struct SemanticProgramLocalAutoFact {
-  std::string scopePath;
-  std::string bindingName;
-  std::string bindingTypeText;
-  std::string initializerBindingTypeText;
-  std::string initializerReceiverBindingTypeText;
-  std::string initializerQueryTypeText;
+  std::string scopePath = {};
+  std::string bindingName = {};
+  std::string bindingTypeText = {};
+  std::string initializerBindingTypeText = {};
+  std::string initializerReceiverBindingTypeText = {};
+  std::string initializerQueryTypeText = {};
   bool initializerResultHasValue = false;
-  std::string initializerResultValueType;
-  std::string initializerResultErrorType;
+  std::string initializerResultValueType = {};
+  std::string initializerResultErrorType = {};
   bool initializerHasTry = false;
-  std::string initializerTryOperandResolvedPath;
-  std::string initializerTryOperandBindingTypeText;
-  std::string initializerTryOperandReceiverBindingTypeText;
-  std::string initializerTryOperandQueryTypeText;
-  std::string initializerTryValueType;
-  std::string initializerTryErrorType;
-  std::string initializerTryContextReturnKind;
-  std::string initializerTryOnErrorHandlerPath;
-  std::string initializerTryOnErrorErrorType;
+  std::string initializerTryOperandResolvedPath = {};
+  std::string initializerTryOperandBindingTypeText = {};
+  std::string initializerTryOperandReceiverBindingTypeText = {};
+  std::string initializerTryOperandQueryTypeText = {};
+  std::string initializerTryValueType = {};
+  std::string initializerTryErrorType = {};
+  std::string initializerTryContextReturnKind = {};
+  std::string initializerTryOnErrorHandlerPath = {};
+  std::string initializerTryOnErrorErrorType = {};
   std::size_t initializerTryOnErrorBoundArgCount = 0;
   int sourceLine = 0;
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
   uint64_t provenanceHandle = 0;
-  std::string initializerDirectCallResolvedPath;
-  std::string initializerDirectCallReturnKind;
-  std::string initializerMethodCallResolvedPath;
-  std::string initializerMethodCallReturnKind;
-  std::optional<StdlibSurfaceId> initializerStdlibSurfaceId;
-  std::optional<StdlibSurfaceId> initializerDirectCallStdlibSurfaceId;
-  std::optional<StdlibSurfaceId> initializerMethodCallStdlibSurfaceId;
+  std::string initializerDirectCallResolvedPath = {};
+  std::string initializerDirectCallReturnKind = {};
+  std::string initializerMethodCallResolvedPath = {};
+  std::string initializerMethodCallReturnKind = {};
+  std::optional<StdlibSurfaceId> initializerStdlibSurfaceId = std::nullopt;
+  std::optional<StdlibSurfaceId> initializerDirectCallStdlibSurfaceId = std::nullopt;
+  std::optional<StdlibSurfaceId> initializerMethodCallStdlibSurfaceId = std::nullopt;
   SymbolId scopePathId = InvalidSymbolId;
   SymbolId bindingNameId = InvalidSymbolId;
   SymbolId bindingTypeTextId = InvalidSymbolId;
@@ -294,15 +294,15 @@ struct SemanticProgramLocalAutoFact {
 };
 
 struct SemanticProgramQueryFact {
-  std::string scopePath;
-  std::string callName;
-  std::string queryTypeText;
-  std::string bindingTypeText;
-  std::string receiverBindingTypeText;
+  std::string scopePath = {};
+  std::string callName = {};
+  std::string queryTypeText = {};
+  std::string bindingTypeText = {};
+  std::string receiverBindingTypeText = {};
   bool hasResultType = false;
   bool resultTypeHasValue = false;
-  std::string resultValueType;
-  std::string resultErrorType;
+  std::string resultValueType = {};
+  std::string resultErrorType = {};
   int sourceLine = 0;
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
@@ -318,15 +318,15 @@ struct SemanticProgramQueryFact {
 };
 
 struct SemanticProgramTryFact {
-  std::string scopePath;
-  std::string operandBindingTypeText;
-  std::string operandReceiverBindingTypeText;
-  std::string operandQueryTypeText;
-  std::string valueType;
-  std::string errorType;
-  std::string contextReturnKind;
-  std::string onErrorHandlerPath;
-  std::string onErrorErrorType;
+  std::string scopePath = {};
+  std::string operandBindingTypeText = {};
+  std::string operandReceiverBindingTypeText = {};
+  std::string operandQueryTypeText = {};
+  std::string valueType = {};
+  std::string errorType = {};
+  std::string contextReturnKind = {};
+  std::string onErrorHandlerPath = {};
+  std::string onErrorErrorType = {};
   std::size_t onErrorBoundArgCount = 0;
   int sourceLine = 0;
   int sourceColumn = 0;
@@ -345,14 +345,14 @@ struct SemanticProgramTryFact {
 };
 
 struct SemanticProgramOnErrorFact {
-  std::string definitionPath;
-  std::string returnKind;
-  std::string errorType;
+  std::string definitionPath = {};
+  std::string returnKind = {};
+  std::string errorType = {};
   std::size_t boundArgCount = 0;
-  std::vector<std::string> boundArgTexts;
+  std::vector<std::string> boundArgTexts = {};
   bool returnResultHasValue = false;
-  std::string returnResultValueType;
-  std::string returnResultErrorType;
+  std::string returnResultValueType = {};
+  std::string returnResultErrorType = {};
   uint64_t semanticNodeId = 0;
   uint64_t provenanceHandle = 0;
   SymbolId definitionPathId = InvalidSymbolId;
@@ -365,49 +365,49 @@ struct SemanticProgramOnErrorFact {
 };
 
 struct SemanticProgramModuleIdentity {
-  std::string moduleKey;
+  std::string moduleKey = {};
   std::size_t stableOrder = 0;
 };
 
 struct SemanticProgramModuleResolvedArtifacts {
   SemanticProgramModuleIdentity identity;
-  std::vector<std::size_t> directCallTargetIndices;
-  std::vector<std::size_t> methodCallTargetIndices;
-  std::vector<std::size_t> bridgePathChoiceIndices;
-  std::vector<std::size_t> callableSummaryIndices;
-  std::vector<std::size_t> bindingFactIndices;
-  std::vector<std::size_t> returnFactIndices;
-  std::vector<std::size_t> collectionSpecializationIndices;
-  std::vector<std::size_t> localAutoFactIndices;
-  std::vector<std::size_t> queryFactIndices;
-  std::vector<std::size_t> tryFactIndices;
-  std::vector<std::size_t> onErrorFactIndices;
+  std::vector<std::size_t> directCallTargetIndices = {};
+  std::vector<std::size_t> methodCallTargetIndices = {};
+  std::vector<std::size_t> bridgePathChoiceIndices = {};
+  std::vector<std::size_t> callableSummaryIndices = {};
+  std::vector<std::size_t> bindingFactIndices = {};
+  std::vector<std::size_t> returnFactIndices = {};
+  std::vector<std::size_t> collectionSpecializationIndices = {};
+  std::vector<std::size_t> localAutoFactIndices = {};
+  std::vector<std::size_t> queryFactIndices = {};
+  std::vector<std::size_t> tryFactIndices = {};
+  std::vector<std::size_t> onErrorFactIndices = {};
 };
 
 struct SemanticProgramPublishedRoutingLookups {
-  std::unordered_map<SymbolId, std::size_t> definitionIndicesByPathId;
-  std::unordered_map<SymbolId, SymbolId> importAliasTargetPathIdsByNameId;
-  std::unordered_map<uint64_t, SymbolId> directCallTargetIdsByExpr;
-  std::unordered_map<uint64_t, SymbolId> methodCallTargetIdsByExpr;
-  std::unordered_map<uint64_t, SymbolId> bridgePathChoiceIdsByExpr;
-  std::unordered_map<uint64_t, StdlibSurfaceId> directCallStdlibSurfaceIdsByExpr;
-  std::unordered_map<uint64_t, StdlibSurfaceId> methodCallStdlibSurfaceIdsByExpr;
-  std::unordered_map<uint64_t, StdlibSurfaceId> bridgePathChoiceStdlibSurfaceIdsByExpr;
-  std::unordered_map<SymbolId, std::size_t> callableSummaryIndicesByPathId;
-  std::unordered_map<uint64_t, std::size_t> bindingFactIndicesByExpr;
-  std::unordered_map<uint64_t, std::size_t> returnFactIndicesByDefinitionId;
-  std::unordered_map<SymbolId, std::size_t> returnFactIndicesByDefinitionPathId;
-  std::unordered_map<SymbolId, std::size_t> sumTypeMetadataIndicesByPathId;
-  std::unordered_map<uint64_t, std::size_t> sumVariantMetadataIndicesBySumPathAndVariantNameId;
-  std::unordered_map<uint64_t, std::size_t> collectionSpecializationIndicesByExpr;
-  std::unordered_map<uint64_t, std::size_t> onErrorFactIndicesByDefinitionId;
-  std::unordered_map<SymbolId, std::size_t> onErrorFactIndicesByDefinitionPathId;
-  std::unordered_map<uint64_t, std::size_t> localAutoFactIndicesByExpr;
-  std::unordered_map<uint64_t, std::size_t> localAutoFactIndicesByInitPathAndBindingNameId;
-  std::unordered_map<uint64_t, std::size_t> queryFactIndicesByExpr;
-  std::unordered_map<uint64_t, std::size_t> queryFactIndicesByResolvedPathAndCallNameId;
-  std::unordered_map<uint64_t, std::size_t> tryFactIndicesByExpr;
-  std::unordered_map<uint64_t, std::size_t> tryFactIndicesByOperandPathAndSource;
+  std::unordered_map<SymbolId, std::size_t> definitionIndicesByPathId = {};
+  std::unordered_map<SymbolId, SymbolId> importAliasTargetPathIdsByNameId = {};
+  std::unordered_map<uint64_t, SymbolId> directCallTargetIdsByExpr = {};
+  std::unordered_map<uint64_t, SymbolId> methodCallTargetIdsByExpr = {};
+  std::unordered_map<uint64_t, SymbolId> bridgePathChoiceIdsByExpr = {};
+  std::unordered_map<uint64_t, StdlibSurfaceId> directCallStdlibSurfaceIdsByExpr = {};
+  std::unordered_map<uint64_t, StdlibSurfaceId> methodCallStdlibSurfaceIdsByExpr = {};
+  std::unordered_map<uint64_t, StdlibSurfaceId> bridgePathChoiceStdlibSurfaceIdsByExpr = {};
+  std::unordered_map<SymbolId, std::size_t> callableSummaryIndicesByPathId = {};
+  std::unordered_map<uint64_t, std::size_t> bindingFactIndicesByExpr = {};
+  std::unordered_map<uint64_t, std::size_t> returnFactIndicesByDefinitionId = {};
+  std::unordered_map<SymbolId, std::size_t> returnFactIndicesByDefinitionPathId = {};
+  std::unordered_map<SymbolId, std::size_t> sumTypeMetadataIndicesByPathId = {};
+  std::unordered_map<uint64_t, std::size_t> sumVariantMetadataIndicesBySumPathAndVariantNameId = {};
+  std::unordered_map<uint64_t, std::size_t> collectionSpecializationIndicesByExpr = {};
+  std::unordered_map<uint64_t, std::size_t> onErrorFactIndicesByDefinitionId = {};
+  std::unordered_map<SymbolId, std::size_t> onErrorFactIndicesByDefinitionPathId = {};
+  std::unordered_map<uint64_t, std::size_t> localAutoFactIndicesByExpr = {};
+  std::unordered_map<uint64_t, std::size_t> localAutoFactIndicesByInitPathAndBindingNameId = {};
+  std::unordered_map<uint64_t, std::size_t> queryFactIndicesByExpr = {};
+  std::unordered_map<uint64_t, std::size_t> queryFactIndicesByResolvedPathAndCallNameId = {};
+  std::unordered_map<uint64_t, std::size_t> tryFactIndicesByExpr = {};
+  std::unordered_map<uint64_t, std::size_t> tryFactIndicesByOperandPathAndSource = {};
 };
 
 struct SemanticProgramPublishedLowererPreflightFacts {
@@ -419,32 +419,32 @@ struct SemanticProgramPublishedLowererPreflightFacts {
 struct SemanticProgram {
   uint32_t contractVersion = SemanticProductContractVersionCurrent;
   bool publishedStorageFrozen = false;
-  std::string entryPath;
-  std::vector<std::string> sourceImports;
-  std::vector<std::string> imports;
-  std::vector<std::string> callTargetStringTable;
+  std::string entryPath = {};
+  std::vector<std::string> sourceImports = {};
+  std::vector<std::string> imports = {};
+  std::vector<std::string> callTargetStringTable = {};
   std::unordered_map<std::string, SymbolId, SemanticProgramStringHash, SemanticProgramStringEqual>
       callTargetStringIdsByText;
-  std::vector<SemanticProgramModuleResolvedArtifacts> moduleResolvedArtifacts;
+  std::vector<SemanticProgramModuleResolvedArtifacts> moduleResolvedArtifacts = {};
   SemanticProgramPublishedRoutingLookups publishedRoutingLookups;
   SemanticProgramPublishedLowererPreflightFacts publishedLowererPreflightFacts;
-  std::vector<SemanticProgramDefinition> definitions;
-  std::vector<SemanticProgramExecution> executions;
-  std::vector<SemanticProgramDirectCallTarget> directCallTargets;
-  std::vector<SemanticProgramMethodCallTarget> methodCallTargets;
-  std::vector<SemanticProgramBridgePathChoice> bridgePathChoices;
-  std::vector<SemanticProgramCallableSummary> callableSummaries;
-  std::vector<SemanticProgramTypeMetadata> typeMetadata;
-  std::vector<SemanticProgramStructFieldMetadata> structFieldMetadata;
-  std::vector<SemanticProgramSumTypeMetadata> sumTypeMetadata;
-  std::vector<SemanticProgramSumVariantMetadata> sumVariantMetadata;
-  std::vector<SemanticProgramCollectionSpecialization> collectionSpecializations;
-  std::vector<SemanticProgramBindingFact> bindingFacts;
-  std::vector<SemanticProgramReturnFact> returnFacts;
-  std::vector<SemanticProgramLocalAutoFact> localAutoFacts;
-  std::vector<SemanticProgramQueryFact> queryFacts;
-  std::vector<SemanticProgramTryFact> tryFacts;
-  std::vector<SemanticProgramOnErrorFact> onErrorFacts;
+  std::vector<SemanticProgramDefinition> definitions = {};
+  std::vector<SemanticProgramExecution> executions = {};
+  std::vector<SemanticProgramDirectCallTarget> directCallTargets = {};
+  std::vector<SemanticProgramMethodCallTarget> methodCallTargets = {};
+  std::vector<SemanticProgramBridgePathChoice> bridgePathChoices = {};
+  std::vector<SemanticProgramCallableSummary> callableSummaries = {};
+  std::vector<SemanticProgramTypeMetadata> typeMetadata = {};
+  std::vector<SemanticProgramStructFieldMetadata> structFieldMetadata = {};
+  std::vector<SemanticProgramSumTypeMetadata> sumTypeMetadata = {};
+  std::vector<SemanticProgramSumVariantMetadata> sumVariantMetadata = {};
+  std::vector<SemanticProgramCollectionSpecialization> collectionSpecializations = {};
+  std::vector<SemanticProgramBindingFact> bindingFacts = {};
+  std::vector<SemanticProgramReturnFact> returnFacts = {};
+  std::vector<SemanticProgramLocalAutoFact> localAutoFacts = {};
+  std::vector<SemanticProgramQueryFact> queryFacts = {};
+  std::vector<SemanticProgramTryFact> tryFacts = {};
+  std::vector<SemanticProgramOnErrorFact> onErrorFacts = {};
 };
 
 const std::vector<SemanticProgramFactFamilyInfo> &semanticProgramFactFamilyInfos();

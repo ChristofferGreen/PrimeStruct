@@ -193,29 +193,70 @@
                   std::string &structPathOut) -> std::optional<bool> {
             structPathOut.clear();
             const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
-            if (!semanticTargets.hasSemanticProduct || receiverExpr.semanticNodeId == 0) {
+            if (!semanticTargets.hasSemanticProduct) {
               return std::nullopt;
             }
             std::vector<std::string> candidateTypeTexts;
-            if (const SemanticProgramBindingFact *bindingFact =
-                    findSemanticProductBindingFact(semanticTargets, receiverExpr);
-                bindingFact != nullptr) {
-              appendSemanticProductTypeTextCandidate(
-                  candidateTypeTexts,
-                  bindingFact->bindingTypeText,
-                  bindingFact->bindingTypeTextId);
+            auto findFieldAccessQueryFact = [&]() -> const SemanticProgramQueryFact * {
+              if (expr.semanticNodeId != 0) {
+                if (const SemanticProgramQueryFact *fieldQueryFact =
+                        findSemanticProductQueryFact(semanticTargets, expr);
+                    fieldQueryFact != nullptr) {
+                  return fieldQueryFact;
+                }
+              }
+              if (semanticTargets.semanticProgram == nullptr ||
+                  expr.sourceLine <= 0 || expr.sourceColumn <= 0) {
+                return nullptr;
+              }
+              const SemanticProgramQueryFact *fallbackQueryFact = nullptr;
+              for (const SemanticProgramQueryFact &candidate :
+                   semanticTargets.semanticProgram->queryFacts) {
+                if (candidate.callName != expr.name ||
+                    candidate.sourceLine != expr.sourceLine ||
+                    candidate.sourceColumn != expr.sourceColumn ||
+                    (candidate.receiverBindingTypeText.empty() &&
+                     candidate.receiverBindingTypeTextId == InvalidSymbolId)) {
+                  continue;
+                }
+                if (candidate.scopePath == function.name) {
+                  return &candidate;
+                }
+                if (fallbackQueryFact == nullptr) {
+                  fallbackQueryFact = &candidate;
+                }
+              }
+              return fallbackQueryFact;
+            };
+            if (receiverExpr.semanticNodeId != 0) {
+              if (const SemanticProgramBindingFact *bindingFact =
+                      findSemanticProductBindingFact(semanticTargets, receiverExpr);
+                  bindingFact != nullptr) {
+                appendSemanticProductTypeTextCandidate(
+                    candidateTypeTexts,
+                    bindingFact->bindingTypeText,
+                    bindingFact->bindingTypeTextId);
+              }
+              if (const SemanticProgramQueryFact *queryFact =
+                      findSemanticProductQueryFact(semanticTargets, receiverExpr);
+                  queryFact != nullptr) {
+                appendSemanticProductTypeTextCandidate(
+                    candidateTypeTexts,
+                    queryFact->bindingTypeText,
+                    queryFact->bindingTypeTextId);
+                appendSemanticProductTypeTextCandidate(
+                    candidateTypeTexts,
+                    queryFact->queryTypeText,
+                    queryFact->queryTypeTextId);
+              }
             }
-            if (const SemanticProgramQueryFact *queryFact =
-                    findSemanticProductQueryFact(semanticTargets, receiverExpr);
-                queryFact != nullptr) {
+            if (const SemanticProgramQueryFact *fieldQueryFact =
+                    findFieldAccessQueryFact();
+                fieldQueryFact != nullptr) {
               appendSemanticProductTypeTextCandidate(
                   candidateTypeTexts,
-                  queryFact->bindingTypeText,
-                  queryFact->bindingTypeTextId);
-              appendSemanticProductTypeTextCandidate(
-                  candidateTypeTexts,
-                  queryFact->queryTypeText,
-                  queryFact->queryTypeTextId);
+                  fieldQueryFact->receiverBindingTypeText,
+                  fieldQueryFact->receiverBindingTypeTextId);
             }
             if (candidateTypeTexts.empty()) {
               return std::nullopt;
@@ -237,10 +278,6 @@
                   normalizedTypeText = trimTemplateTypeText(wrappedArgs.front());
                 }
               }
-              if (valueKindFromTypeName(normalizedTypeText) !=
-                  LocalInfo::ValueKind::Unknown) {
-                return true;
-              }
               std::string candidateStructPath;
               if (resolveStructTypeName(normalizedTypeText,
                                         receiverExpr.namespacePrefix,
@@ -249,6 +286,10 @@
                                         function.name,
                                         candidateStructPath)) {
                 structPathOut = std::move(candidateStructPath);
+                return true;
+              }
+              if (valueKindFromTypeName(normalizedTypeText) !=
+                  LocalInfo::ValueKind::Unknown) {
                 return true;
               }
             }

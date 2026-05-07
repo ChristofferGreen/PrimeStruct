@@ -1001,35 +1001,35 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticProduct.find("struct SemanticProgramModuleIdentity") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramModuleResolvedArtifacts") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramPublishedRoutingLookups") != std::string::npos);
-  CHECK(semanticProduct.find("std::unordered_map<SymbolId, std::size_t> definitionIndicesByPathId;") !=
+  CHECK(semanticProduct.find("std::unordered_map<SymbolId, std::size_t> definitionIndicesByPathId = {};") !=
         std::string::npos);
-  CHECK(semanticProduct.find("std::unordered_map<SymbolId, std::size_t> returnFactIndicesByDefinitionPathId;") !=
+  CHECK(semanticProduct.find("std::unordered_map<SymbolId, std::size_t> returnFactIndicesByDefinitionPathId = {};") !=
         std::string::npos);
-  CHECK(semanticProduct.find("std::unordered_map<SymbolId, std::size_t> sumTypeMetadataIndicesByPathId;") !=
+  CHECK(semanticProduct.find("std::unordered_map<SymbolId, std::size_t> sumTypeMetadataIndicesByPathId = {};") !=
         std::string::npos);
-  CHECK(semanticProduct.find("std::unordered_map<uint64_t, std::size_t> sumVariantMetadataIndicesBySumPathAndVariantNameId;") !=
+  CHECK(semanticProduct.find("std::unordered_map<uint64_t, std::size_t> sumVariantMetadataIndicesBySumPathAndVariantNameId = {};") !=
         std::string::npos);
-  CHECK(semanticProduct.find("std::unordered_map<SymbolId, SymbolId> importAliasTargetPathIdsByNameId;") !=
+  CHECK(semanticProduct.find("std::unordered_map<SymbolId, SymbolId> importAliasTargetPathIdsByNameId = {};") !=
         std::string::npos);
-  CHECK(semanticProduct.find("std::vector<std::size_t> directCallTargetIndices;") !=
+  CHECK(semanticProduct.find("std::vector<std::size_t> directCallTargetIndices = {};") !=
         std::string::npos);
-  CHECK(semanticProduct.find("std::vector<std::size_t> methodCallTargetIndices;") !=
+  CHECK(semanticProduct.find("std::vector<std::size_t> methodCallTargetIndices = {};") !=
         std::string::npos);
-  CHECK(semanticProduct.find("std::vector<std::size_t> bridgePathChoiceIndices;") !=
+  CHECK(semanticProduct.find("std::vector<std::size_t> bridgePathChoiceIndices = {};") !=
         std::string::npos);
-  CHECK(semanticProduct.find("std::vector<std::size_t> callableSummaryIndices;") !=
+  CHECK(semanticProduct.find("std::vector<std::size_t> callableSummaryIndices = {};") !=
         std::string::npos);
-  CHECK(semanticProduct.find("std::vector<std::size_t> bindingFactIndices;") !=
+  CHECK(semanticProduct.find("std::vector<std::size_t> bindingFactIndices = {};") !=
         std::string::npos);
-  CHECK(semanticProduct.find("std::vector<std::size_t> returnFactIndices;") !=
+  CHECK(semanticProduct.find("std::vector<std::size_t> returnFactIndices = {};") !=
         std::string::npos);
-  CHECK(semanticProduct.find("std::vector<std::size_t> localAutoFactIndices;") !=
+  CHECK(semanticProduct.find("std::vector<std::size_t> localAutoFactIndices = {};") !=
         std::string::npos);
-  CHECK(semanticProduct.find("std::vector<std::size_t> queryFactIndices;") !=
+  CHECK(semanticProduct.find("std::vector<std::size_t> queryFactIndices = {};") !=
         std::string::npos);
-  CHECK(semanticProduct.find("std::vector<std::size_t> tryFactIndices;") !=
+  CHECK(semanticProduct.find("std::vector<std::size_t> tryFactIndices = {};") !=
         std::string::npos);
-  CHECK(semanticProduct.find("std::vector<std::size_t> onErrorFactIndices;") !=
+  CHECK(semanticProduct.find("std::vector<std::size_t> onErrorFactIndices = {};") !=
         std::string::npos);
   const size_t moduleArtifactsStart =
       semanticProduct.find("struct SemanticProgramModuleResolvedArtifacts {");
@@ -1040,7 +1040,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
       semanticProduct.substr(moduleArtifactsStart, moduleArtifactsEnd - moduleArtifactsStart);
   CHECK(moduleArtifactsBlock.find("std::vector<SemanticProgram") == std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramStructFieldMetadata") != std::string::npos);
-  CHECK(semanticProduct.find("std::vector<SemanticProgramModuleResolvedArtifacts> moduleResolvedArtifacts;") !=
+  CHECK(semanticProduct.find("std::vector<SemanticProgramModuleResolvedArtifacts> moduleResolvedArtifacts = {};") !=
         std::string::npos);
   CHECK(semanticProduct.find("SemanticProgramPublishedRoutingLookups publishedRoutingLookups;") !=
         std::string::npos);
@@ -1049,10 +1049,10 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticProduct.find("SemanticProgramPublishedLowererPreflightFacts publishedLowererPreflightFacts;") !=
         std::string::npos);
-  CHECK(semanticProduct.find("std::vector<SemanticProgramReturnFact> returnFacts;") != std::string::npos);
-  CHECK(semanticProduct.find("std::vector<SemanticProgramLocalAutoFact> localAutoFacts;") != std::string::npos);
-  CHECK(semanticProduct.find("std::vector<SemanticProgramQueryFact> queryFacts;") != std::string::npos);
-  CHECK(semanticProduct.find("std::vector<SemanticProgramTryFact> tryFacts;") != std::string::npos);
+  CHECK(semanticProduct.find("std::vector<SemanticProgramReturnFact> returnFacts = {};") != std::string::npos);
+  CHECK(semanticProduct.find("std::vector<SemanticProgramLocalAutoFact> localAutoFacts = {};") != std::string::npos);
+  CHECK(semanticProduct.find("std::vector<SemanticProgramQueryFact> queryFacts = {};") != std::string::npos);
+  CHECK(semanticProduct.find("std::vector<SemanticProgramTryFact> tryFacts = {};") != std::string::npos);
   CHECK(semanticProduct.find("std::vector<SemanticProgramOnErrorFact> onErrorFacts;") != std::string::npos);
   CHECK(semanticProduct.find("semanticProgramLookupPublishedLowererSoftwareNumericType(") !=
         std::string::npos);

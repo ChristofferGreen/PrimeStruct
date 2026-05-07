@@ -1202,6 +1202,15 @@
       function.instructions.push_back({IrOpcode::PrintI32, flags});
       return true;
     }
+    if (arg.kind == Expr::Kind::Call) {
+      const size_t slashPos = arg.name.find_last_of('/');
+      const std::string whyLeaf =
+          slashPos == std::string::npos ? arg.name : arg.name.substr(slashPos + 1);
+      if (whyLeaf == "why") {
+        function.instructions.push_back({IrOpcode::PrintStringDynamic, flags});
+        return true;
+      }
+    }
     error = builtin.name + " requires an integer/bool or string literal/binding argument";
     return false;
   };

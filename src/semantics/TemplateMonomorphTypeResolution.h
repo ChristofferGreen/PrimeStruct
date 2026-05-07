@@ -426,6 +426,22 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
   if (expr.name.empty()) {
     return "";
   }
+  auto isExplicitRemovedMapCompatibilityPath =
+      [&](std::string path) -> bool {
+        if (!path.empty() && path.front() != '/') {
+          path.insert(path.begin(), '/');
+        }
+        if (path.rfind("/map/", 0) != 0) {
+          return false;
+        }
+        std::string helperName = path.substr(std::string("/map/").size());
+        const size_t specializationSuffix = helperName.find("__");
+        if (specializationSuffix != std::string::npos) {
+          helperName.erase(specializationSuffix);
+        }
+        return isRemovedMapCompatibilityHelper(
+            mapCompatibilityHelperBase(helperName));
+      };
   std::string builtinCollection;
   if (!expr.isMethodCall &&
       getBuiltinCollectionName(expr, builtinCollection) &&
@@ -433,6 +449,10 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
     return finalizeResolvedPath("/" + builtinCollection);
   }
   if (!expr.name.empty() && expr.name[0] == '/') {
+    if (!usesStdlibScopedImportAliases(namespacePrefix, ctx) &&
+        isExplicitRemovedMapCompatibilityPath(expr.name)) {
+      return finalizeResolvedPath(expr.name);
+    }
     if (std::string stdlibSurfacePath =
             resolveRootedStdlibSurfaceCompatibilityPath(expr.name);
         !stdlibSurfacePath.empty()) {
@@ -442,6 +462,10 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
   }
   if (expr.name.find('/') != std::string::npos) {
     const std::string rootedPath = "/" + expr.name;
+    if (!usesStdlibScopedImportAliases(namespacePrefix, ctx) &&
+        isExplicitRemovedMapCompatibilityPath(rootedPath)) {
+      return finalizeResolvedPath(rootedPath);
+    }
     if (std::string stdlibSurfacePath =
             resolveRootedStdlibSurfaceCompatibilityPath(rootedPath);
         !stdlibSurfacePath.empty()) {

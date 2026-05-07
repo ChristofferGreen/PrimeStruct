@@ -22,6 +22,22 @@ std::string resolveScopedExprPath(const Expr &expr) {
   return expr.name;
 }
 
+bool isBaseSetupResultTypeCall(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call ||
+      (expr.name != "ok" && expr.name != "error" && expr.name != "why")) {
+    return false;
+  }
+  if (!expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
+      expr.args.front().name == "Result") {
+    return true;
+  }
+  std::string normalizedPrefix = expr.namespacePrefix;
+  if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
+    normalizedPrefix.erase(normalizedPrefix.begin());
+  }
+  return normalizedPrefix == "Result";
+}
+
 bool isBaseSetupResultOrTryCall(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call) {
     return false;
@@ -29,14 +45,84 @@ bool isBaseSetupResultOrTryCall(const Expr &expr) {
   if (isSimpleCallName(expr, "try")) {
     return true;
   }
-  return expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
-         expr.args.front().name == "Result";
+  return isBaseSetupResultTypeCall(expr);
 }
 
 bool isBaseSetupResultTypeMethodCall(const Expr &expr) {
-  return expr.kind == Expr::Kind::Call && expr.isMethodCall && !expr.args.empty() &&
-         expr.args.front().kind == Expr::Kind::Name && expr.args.front().name == "Result" &&
-         (expr.name == "ok" || expr.name == "error" || expr.name == "why");
+  return isBaseSetupResultTypeCall(expr);
+}
+
+LocalInfo::ValueKind inferBaseSetupSimpleExprKind(const Expr &expr,
+                                                  const LocalMap &localsIn,
+                                                  const ResolveMethodCallWithLocalsFn *resolveMethodCall,
+                                                  const ResolveCallDefinitionFn *resolveDefinitionCall,
+                                                  const LookupReturnInfoFn *lookupReturnInfo,
+                                                  const SemanticProgram *semanticProgram,
+                                                  const SemanticProductIndex *semanticIndex,
+                                                  const InferExprKindWithLocalsFn *fallbackInferExprKind);
+
+bool resolveBaseSetupResultExprInfo(const Expr &expr,
+                                    const LocalMap &localsIn,
+                                    const ResolveMethodCallWithLocalsFn *resolveMethodCall,
+                                    const ResolveCallDefinitionFn *resolveDefinitionCall,
+                                    const LookupReturnInfoFn *lookupReturnInfo,
+                                    const SemanticProgram *semanticProgram,
+                                    const SemanticProductIndex *semanticIndex,
+                                    const InferExprKindWithLocalsFn *fallbackInferExprKind,
+                                    ResultExprInfo &out);
+
+bool inferBaseSetupResultTypeCallKind(const Expr &expr,
+                                      const LocalMap &localsIn,
+                                      const ResolveMethodCallWithLocalsFn *resolveMethodCall,
+                                      const ResolveCallDefinitionFn *resolveDefinitionCall,
+                                      const LookupReturnInfoFn *lookupReturnInfo,
+                                      const SemanticProgram *semanticProgram,
+                                      const SemanticProductIndex *semanticIndex,
+                                      const InferExprKindWithLocalsFn *fallbackInferExprKind,
+                                      LocalInfo::ValueKind &kindOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  if (!isBaseSetupResultTypeMethodCall(expr)) {
+    return false;
+  }
+  if (expr.name == "error") {
+    kindOut = LocalInfo::ValueKind::Bool;
+    return true;
+  }
+  if (expr.name == "why") {
+    kindOut = LocalInfo::ValueKind::String;
+    return true;
+  }
+  const bool hasExplicitResultReceiverArg =
+      !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
+      expr.args.front().name == "Result";
+  const size_t payloadArgCount =
+      hasExplicitResultReceiverArg ? expr.args.size() - 1 : expr.args.size();
+  ResultExprInfo resultInfo;
+  if (expr.name == "ok" &&
+      resolveBaseSetupResultExprInfo(expr,
+                                     localsIn,
+                                     resolveMethodCall,
+                                     resolveDefinitionCall,
+                                     lookupReturnInfo,
+                                     semanticProgram,
+                                     semanticIndex,
+                                     fallbackInferExprKind,
+                                     resultInfo) &&
+      resultInfo.isResult) {
+    if (!resultInfo.hasValue) {
+      kindOut = LocalInfo::ValueKind::Int32;
+      return true;
+    }
+    if (resultInfo.valueKind != LocalInfo::ValueKind::Unknown) {
+      kindOut = resultInfo.valueKind;
+    }
+    return true;
+  }
+  if (expr.name == "ok") {
+    kindOut = payloadArgCount > 0 ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+    return true;
+  }
+  return false;
 }
 
 bool hasSemanticProductBaseSetupSite(const Expr &expr,
@@ -54,15 +140,6 @@ bool hasSemanticProductResultMethodFactContext(const Expr &expr,
   return semanticProgram != nullptr && semanticIndex != nullptr && expr.name == "ok" &&
          expr.args.size() > 1 && expr.args[1].semanticNodeId != 0;
 }
-
-LocalInfo::ValueKind inferBaseSetupSimpleExprKind(const Expr &expr,
-                                                  const LocalMap &localsIn,
-                                                  const ResolveMethodCallWithLocalsFn *resolveMethodCall,
-                                                  const ResolveCallDefinitionFn *resolveDefinitionCall,
-                                                  const LookupReturnInfoFn *lookupReturnInfo,
-                                                  const SemanticProgram *semanticProgram,
-                                                  const SemanticProductIndex *semanticIndex,
-                                                  const InferExprKindWithLocalsFn *fallbackInferExprKind);
 
 std::string resolveBaseSetupSemanticFactTypeText(
     const SemanticProgram &semanticProgram,
@@ -147,6 +224,58 @@ bool resolveBaseSetupSemanticReceiverTypeText(
     return true;
   }
   return false;
+}
+
+const SemanticProgramQueryFact *findBaseSetupSemanticQueryFactForExpr(
+    const Expr &expr,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
+  if (semanticProgram == nullptr || semanticIndex == nullptr) {
+    return nullptr;
+  }
+  if (expr.semanticNodeId != 0) {
+    if (const auto *queryFact =
+            findSemanticProductQueryFactBySemanticId(*semanticIndex, expr)) {
+      return queryFact;
+    }
+  }
+  if (expr.sourceLine <= 0 || expr.sourceColumn <= 0) {
+    return nullptr;
+  }
+  for (const SemanticProgramQueryFact &candidate : semanticProgram->queryFacts) {
+    if (candidate.callName == expr.name &&
+        candidate.sourceLine == expr.sourceLine &&
+        candidate.sourceColumn == expr.sourceColumn) {
+      return &candidate;
+    }
+  }
+  return nullptr;
+}
+
+const SemanticProgramBindingFact *findBaseSetupSemanticBindingFactForExpr(
+    const Expr &expr,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
+  if (semanticProgram == nullptr || semanticIndex == nullptr) {
+    return nullptr;
+  }
+  if (expr.semanticNodeId != 0) {
+    if (const auto *bindingFact =
+            findSemanticProductBindingFact(*semanticIndex, expr)) {
+      return bindingFact;
+    }
+  }
+  if (expr.sourceLine <= 0 || expr.sourceColumn <= 0) {
+    return nullptr;
+  }
+  for (const SemanticProgramBindingFact &candidate : semanticProgram->bindingFacts) {
+    if (candidate.name == expr.name &&
+        candidate.sourceLine == expr.sourceLine &&
+        candidate.sourceColumn == expr.sourceColumn) {
+      return &candidate;
+    }
+  }
+  return nullptr;
 }
 
 bool inferBaseSetupSemanticFileErrorWhyKind(const Expr &receiver,
@@ -529,11 +658,23 @@ bool inferBaseSetupSemanticQueryFactValueKindWithPresence(const Expr &expr,
                                                           bool &hasSemanticQueryOut) {
   kindOut = LocalInfo::ValueKind::Unknown;
   hasSemanticQueryOut = false;
-  if (semanticProgram == nullptr || semanticIndex == nullptr || expr.semanticNodeId == 0) {
-    return false;
-  }
-  const auto *queryFact = findSemanticProductQueryFactBySemanticId(*semanticIndex, expr);
+  const auto *queryFact =
+      findBaseSetupSemanticQueryFactForExpr(expr, semanticProgram, semanticIndex);
   if (queryFact == nullptr) {
+    if (const auto *bindingFact =
+            findBaseSetupSemanticBindingFactForExpr(expr, semanticProgram, semanticIndex)) {
+      hasSemanticQueryOut = true;
+      const LocalInfo::ValueKind semanticBindingKind =
+          valueKindFromTypeName(
+              resolveBaseSetupSemanticFactTypeText(
+                  *semanticProgram,
+                  bindingFact->bindingTypeText,
+                  bindingFact->bindingTypeTextId));
+      if (semanticBindingKind != LocalInfo::ValueKind::Unknown) {
+        kindOut = semanticBindingKind;
+        return true;
+      }
+    }
     return false;
   }
   hasSemanticQueryOut = true;
@@ -556,6 +697,19 @@ bool inferBaseSetupSemanticQueryFactValueKindWithPresence(const Expr &expr,
   if (bindingKind != LocalInfo::ValueKind::Unknown) {
     kindOut = bindingKind;
     return true;
+  }
+  if (const auto *bindingFact =
+          findBaseSetupSemanticBindingFactForExpr(expr, semanticProgram, semanticIndex)) {
+    const LocalInfo::ValueKind semanticBindingKind =
+        valueKindFromTypeName(
+            resolveBaseSetupSemanticFactTypeText(
+                *semanticProgram,
+                bindingFact->bindingTypeText,
+                bindingFact->bindingTypeTextId));
+    if (semanticBindingKind != LocalInfo::ValueKind::Unknown) {
+      kindOut = semanticBindingKind;
+      return true;
+    }
   }
   return false;
 }
@@ -701,6 +855,17 @@ LocalInfo::ValueKind inferBaseSetupSimpleExprKind(const Expr &expr,
       }
       LocalInfo::ValueKind kindOut = LocalInfo::ValueKind::Unknown;
       if (inferBaseSetupSemanticQueryFactValueKind(expr, semanticProgram, semanticIndex, kindOut)) {
+        return kindOut;
+      }
+      if (inferBaseSetupResultTypeCallKind(expr,
+                                           localsIn,
+                                           resolveMethodCall,
+                                           resolveDefinitionCall,
+                                           lookupReturnInfo,
+                                           semanticProgram,
+                                           semanticIndex,
+                                           fallbackInferExprKind,
+                                           kindOut)) {
         return kindOut;
       }
       bool hasSemanticTrySite = false;
@@ -1004,6 +1169,10 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
     if (expr.args.size() != 1) {
       return true;
     }
+    if (inferBaseSetupSemanticQueryFactValueKind(
+            expr, semanticProgram, semanticIndex, kindOut)) {
+      return true;
+    }
     const Expr &receiver = expr.args.front();
     bool hasSemanticFieldReceiver = false;
     if (inferBaseSetupSemanticFieldAccessKind(receiver,
@@ -1027,6 +1196,10 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
       return true;
     }
     kindOut = fieldInfo.structPath.empty() ? fieldInfo.valueKind : LocalInfo::ValueKind::Unknown;
+    return true;
+  }
+  if (inferBaseSetupSemanticQueryFactValueKind(
+          expr, semanticProgram, semanticIndex, kindOut)) {
     return true;
   }
   if (!expr.isMethodCall && (isSimpleCallName(expr, "take") || isSimpleCallName(expr, "borrow")) &&
@@ -1069,6 +1242,17 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
   if (hasSemanticTrySite) {
     return true;
   }
+  if (inferBaseSetupResultTypeCallKind(expr,
+                                       localsIn,
+                                       resolveMethodCall,
+                                       resolveDefinitionCall,
+                                       lookupReturnInfo,
+                                       semanticProgram,
+                                       semanticIndex,
+                                       fallbackInferExprKind,
+                                       kindOut)) {
+    return true;
+  }
   if (expr.isMethodCall) {
     if (!expr.args.empty() && expr.args.front().kind == Expr::Kind::Name && expr.args.front().name == "Result") {
       ResultExprInfo resultInfo;
@@ -1096,6 +1280,10 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
       }
       if (hasSemanticProductBaseSetupSite(expr, semanticProgram, semanticIndex) &&
           isBaseSetupResultTypeMethodCall(expr)) {
+        if (inferBaseSetupSemanticQueryFactValueKind(
+                expr, semanticProgram, semanticIndex, kindOut)) {
+          return true;
+        }
         return true;
       }
       if (expr.name == "ok") {

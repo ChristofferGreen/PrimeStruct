@@ -603,8 +603,8 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
         logicalResolvedMethod.substr(logicalResolvedMethod.find_last_of('/') +
                                      1);
     if (!expr.templateArgs.empty()) {
-      return failCountCapacityMapBuiltin(helperName +
-                                         " does not accept template arguments");
+      return failCountCapacityMapBuiltin("unknown call target: " +
+                                         logicalResolvedMethod);
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       return failCountCapacityMapBuiltin(helperName +

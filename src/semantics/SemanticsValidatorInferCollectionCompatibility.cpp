@@ -72,9 +72,11 @@ bool hasExplicitDefinitionFamilyPath(
     return true;
   }
   const std::string templatedPrefix = pathText + "<";
+  const std::string specializedPrefix = pathText + "__";
   for (const Definition &definition : program.definitions) {
     if (definition.fullPath == pathText ||
-        definition.fullPath.rfind(templatedPrefix, 0) == 0) {
+        definition.fullPath.rfind(templatedPrefix, 0) == 0 ||
+        definition.fullPath.rfind(specializedPrefix, 0) == 0) {
       return true;
     }
   }
@@ -600,6 +602,33 @@ std::string SemanticsValidator::directMapHelperCompatibilityPath(
   const std::string removedPath = "/map/" + helperName;
   if (hasExplicitDefinitionFamilyPath(program_, defMap_, removedPath) ||
       candidate.args.empty()) {
+    return "";
+  }
+  auto canonicalAccessHelperReturnsStruct = [&]() {
+    if (helperName != "at" && helperName != "at_unsafe" &&
+        helperName != "at_ref" && helperName != "at_unsafe_ref") {
+      return false;
+    }
+    const std::string canonicalPath = "/std/collections/map/" + helperName;
+    auto defIt = defMap_.find(canonicalPath);
+    if (defIt == defMap_.end() || defIt->second == nullptr) {
+      return false;
+    }
+    for (const auto &transform : defIt->second->transforms) {
+      if (transform.name != "return" || transform.templateArgs.size() != 1) {
+        continue;
+      }
+      std::string returnType = normalizeBindingTypeName(transform.templateArgs.front());
+      if (!returnType.empty() && returnType.front() == '/') {
+        returnType.erase(returnType.begin());
+      }
+      return !returnType.empty() && !isRootBuiltinName(returnType) &&
+             returnType != "string" && returnType != "map" &&
+             returnType != "vector" && returnType != "array";
+    }
+    return false;
+  };
+  if (canonicalAccessHelperReturnsStruct()) {
     return "";
   }
   if (helperName == "at" || helperName == "at_unsafe") {

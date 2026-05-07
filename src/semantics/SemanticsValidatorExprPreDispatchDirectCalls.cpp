@@ -92,6 +92,30 @@ bool isPublishedMapConstructorExpr(const Expr &candidate) {
   return isResolvedMapConstructorPath(normalizedName);
 }
 
+std::string removedMapCompatibilityHelperFromPath(std::string path) {
+  if (!path.empty() && path.front() != '/') {
+    path.insert(path.begin(), '/');
+  }
+  if (path.rfind("/map/", 0) != 0) {
+    return {};
+  }
+  std::string helper = path.substr(std::string("/map/").size());
+  const size_t specializationSuffix = helper.find("__");
+  if (specializationSuffix != std::string::npos) {
+    helper.erase(specializationSuffix);
+  }
+  if (helper == "count" || helper == "count_ref" ||
+      helper == "size" ||
+      helper == "contains" || helper == "contains_ref" ||
+      helper == "tryAt" || helper == "tryAt_ref" ||
+      helper == "at" || helper == "at_ref" ||
+      helper == "at_unsafe" || helper == "at_unsafe_ref" ||
+      helper == "insert" || helper == "insert_ref") {
+    return helper;
+  }
+  return {};
+}
+
 } // namespace
 
 bool SemanticsValidator::validateExprPreDispatchDirectCalls(
@@ -177,6 +201,84 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
   }
   if (expr.isFieldAccess) {
     return true;
+  }
+  const std::string removedMapCompatibilityHelper =
+      removedMapCompatibilityHelperFromPath(resolvedOut);
+  auto hasExactRemovedMapAliasDefinition = [&](const std::string &path) {
+    if (defMap_.count(path) > 0 || paramsByDef_.count(path) > 0) {
+      return true;
+    }
+    const std::string templatedPrefix = path + "<";
+    const std::string specializedPrefix = path + "__";
+    for (const auto &definition : program_.definitions) {
+      if (definition.fullPath == path ||
+          definition.fullPath.rfind(templatedPrefix, 0) == 0 ||
+          definition.fullPath.rfind(specializedPrefix, 0) == 0) {
+        return true;
+      }
+    }
+    return false;
+  };
+  if (!expr.isMethodCall && !removedMapCompatibilityHelper.empty() &&
+      !hasExactRemovedMapAliasDefinition("/map/" + removedMapCompatibilityHelper)) {
+    handledOut = true;
+    const std::string removedPath = "/map/" + removedMapCompatibilityHelper;
+    auto canonicalHelperReturnsStruct = [&]() {
+      if (removedMapCompatibilityHelper != "at" &&
+          removedMapCompatibilityHelper != "at_unsafe" &&
+          removedMapCompatibilityHelper != "at_ref" &&
+          removedMapCompatibilityHelper != "at_unsafe_ref") {
+        return false;
+      }
+      const std::string canonicalPath =
+          "/std/collections/map/" + removedMapCompatibilityHelper;
+      auto defIt = defMap_.find(canonicalPath);
+      if (defIt == defMap_.end() || defIt->second == nullptr) {
+        return false;
+      }
+      for (const auto &transform : defIt->second->transforms) {
+        if (transform.name != "return" || transform.templateArgs.size() != 1) {
+          continue;
+        }
+        std::string returnType = normalizeBindingTypeName(transform.templateArgs.front());
+        if (!returnType.empty() && returnType.front() == '/') {
+          returnType.erase(returnType.begin());
+        }
+        return !returnType.empty() && !isRootBuiltinName(returnType) &&
+               returnType != "string" && returnType != "map" &&
+               returnType != "vector" && returnType != "array";
+      }
+      return false;
+    };
+    if (canonicalHelperReturnsStruct()) {
+      handledOut = false;
+      return true;
+    }
+    if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+      return failPreDispatchDirectCallDiagnostic(
+          "block arguments require a definition target: " + removedPath);
+    }
+    const size_t expectedArgCount =
+        (removedMapCompatibilityHelper == "count" ||
+         removedMapCompatibilityHelper == "count_ref" ||
+         removedMapCompatibilityHelper == "size")
+            ? 1
+            : ((removedMapCompatibilityHelper == "at" ||
+                removedMapCompatibilityHelper == "at_ref" ||
+                removedMapCompatibilityHelper == "at_unsafe" ||
+                removedMapCompatibilityHelper == "at_unsafe_ref" ||
+                removedMapCompatibilityHelper == "contains" ||
+                removedMapCompatibilityHelper == "contains_ref" ||
+                removedMapCompatibilityHelper == "tryAt" ||
+                removedMapCompatibilityHelper == "tryAt_ref")
+                   ? 2
+                   : 3);
+    if (expr.args.size() != expectedArgCount) {
+      return failPreDispatchDirectCallDiagnostic(
+          "argument count mismatch for " + removedPath);
+    }
+    return failPreDispatchDirectCallDiagnostic("unknown call target: " +
+                                               removedPath);
   }
   auto failPreDispatchDirectCallMapKeyMismatch =
       [&](const std::string &helperName,

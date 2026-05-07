@@ -1479,6 +1479,28 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return "";
     }
     if (isCanonicalMapAccessMethodName(helperName)) {
+      const std::string canonicalPath = "/std/collections/map/" + helperName;
+      auto defIt = defMap_.find(canonicalPath);
+      if (defIt != defMap_.end() && defIt->second != nullptr) {
+        for (const auto &transform : defIt->second->transforms) {
+          if (transform.name != "return" ||
+              transform.templateArgs.size() != 1) {
+            continue;
+          }
+          std::string returnType =
+              normalizeBindingTypeName(transform.templateArgs.front());
+          if (!returnType.empty() && returnType.front() == '/') {
+            returnType.erase(returnType.begin());
+          }
+          if (!returnType.empty() && !isRootBuiltinName(returnType) &&
+              returnType != "string" && returnType != "map" &&
+              returnType != "vector" && returnType != "array") {
+            return "";
+          }
+        }
+      }
+    }
+    if (isCanonicalMapAccessMethodName(helperName)) {
       return removedPath;
     }
     size_t receiverIndex = 0;
@@ -1946,12 +1968,12 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         preferredSoaHelperTargetForCollectionType(canonicalCollectionHelperName,
                                                   "/soa_vector"));
   };
+  const std::string explicitRemovedVectorReceiverFamily =
+      classifyExplicitVectorHelperReceiver(receiver);
   if (normalizedMethodName == "count" &&
       (explicitVectorHelperPath == "/vector/count" ||
        explicitVectorHelperPath == "/std/collections/vector/count")) {
-    const std::string explicitVectorReceiverFamily =
-        classifyExplicitVectorHelperReceiver(receiver);
-    if (explicitVectorReceiverFamily == "map") {
+    if (explicitRemovedVectorReceiverFamily == "map") {
       if (auto explicitTarget =
               tryResolveExplicitMapReceiverVectorCountMethodTarget("map");
           explicitTarget.has_value()) {
@@ -1960,6 +1982,16 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return failMethodTargetResolutionDiagnostic("unknown method: " +
                                                   explicitVectorHelperPath);
     }
+  }
+  if (explicitVectorHelperPath.rfind("/vector/", 0) == 0 &&
+      (explicitRemovedVectorReceiverFamily == "string" ||
+       explicitRemovedVectorReceiverFamily == "array" ||
+       explicitRemovedVectorReceiverFamily == "map")) {
+    const std::string helperName =
+        explicitVectorHelperPath.substr(std::string("/vector/").size());
+    return failMethodTargetResolutionDiagnostic(
+        "unknown method: /" + explicitRemovedVectorReceiverFamily + "/" +
+        helperName);
   }
   auto resolveExplicitDirectCallReturnMethodTarget = [&](const Expr &receiverExpr) -> bool {
     if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding || receiverExpr.isMethodCall) {
