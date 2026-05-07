@@ -72,11 +72,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4362: Pack source Result.map struct payloads
+- TODO-4267: Retire legacy Maybe/Result representations
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4267: Retire legacy Maybe/Result representations
 - TODO-4291: Decide sum-backed mutable `Maybe<T>` helpers
 - TODO-4292: Promote and style canonical `.prime` vector implementation
 - TODO-4293: Stabilize generic contiguous-storage substrate
@@ -91,8 +90,7 @@ Task template:
 
 - Semantic ownership authority: none active; future semantic-authority work
   must enter as bounded leaves only.
-- Deferred stdlib ADT migration: TODO-4362 -> TODO-4267
-  -> TODO-4291
+- Deferred stdlib ADT migration: TODO-4267 -> TODO-4291
 - Vector stdlib ownership cutover: TODO-4292 -> TODO-4293 -> TODO-4294
   -> TODO-4281 -> TODO-4295 -> TODO-4296 -> TODO-4297
 - Map stdlib ownership cutover: TODO-4299 -> TODO-4300 -> TODO-4301
@@ -113,7 +111,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4362: Pack source Result.map struct payloads
 - TODO-4267: Retire legacy Maybe/Result representations
 - TODO-4291: Decide sum-backed mutable `Maybe<T>` helpers
 - TODO-4292: Promote and style canonical `.prime` vector implementation
@@ -200,7 +197,7 @@ Task template:
 | VM/runtime debug stateful opcode parity | none |
 | Test-suite audit follow-up and release-gate stability | none |
 | Algebraic sum types and brace-only construction | none |
-| Stdlib ADT migration for `Maybe` and `Result` | TODO-4362, TODO-4267, TODO-4291 |
+| Stdlib ADT migration for `Maybe` and `Result` | TODO-4267, TODO-4291 |
 | Generic type packs and tuple stdlib surface | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity and local type facts | TODO-4331, TODO-4332, TODO-4333, TODO-4334, TODO-4335, TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
 | Generic constraints and compile-time flow control | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
@@ -227,7 +224,7 @@ Task template:
 | Shared VM/debug stateful opcode behavior | none |
 | Release benchmark/example suite stability and doctest governance | none |
 | Sum-type and brace-construction conformance | none |
-| Maybe/Result sum migration conformance | TODO-4362, TODO-4267, TODO-4291 |
+| Maybe/Result sum migration conformance | TODO-4267, TODO-4291 |
 | Generic type-pack and tuple conformance | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity conformance | TODO-4331, TODO-4332, TODO-4333, TODO-4334, TODO-4335, TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
 | Generic constraint and compile-time flow conformance | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
@@ -382,38 +379,10 @@ Task template:
 ### Task Blocks
 
 
-- [ ] TODO-4362: Pack source Result.map struct payloads
-  - owner: ai
-  - created_at: 2026-05-07
-  - phase: Deferred stdlib ADT migration
-  - scope: Make source C++ `Result.map(...)` and `Result.map2(...)` bridge
-    outputs pack single-field int-backed success structs through their field
-    before entering the value-carrying Result bridge.
-  - implementation_notes:
-    - Start from `src/emitter/EmitterExprResultCalls.h`, especially the
-      `Result.map(...)` and `Result.map2(...)` lambdas that currently emit
-      `static_cast<uint32_t>(ps_mapped)`.
-    - Reuse the same source Result constructor payload classification used by
-      explicit `Result<T, E>{[ok] value}` and `Result.ok(value)` rather than
-      adding another bridge-specific shape check.
-    - Keep `Result.and_then(...)` out of this slice; it should receive an
-      already-constructed Result from the lambda.
-  - acceptance:
-    - Source C++ `Result.map(...)` preserves single-field success struct
-      payloads returned by the mapping lambda.
-    - Source C++ `Result.map2(...)` preserves single-field success struct
-      payloads returned by the combining lambda.
-    - Existing scalar `Result.map(...)` and `Result.map2(...)` behavior remains
-      unchanged.
-    - Release validation is deferred to CI per the lite workflow.
-  - stop_rule: Stop once map/map2 source C++ bridge outputs share the
-    single-field success-struct payload packing path with Result construction.
-
 - [ ] TODO-4267: Retire legacy Maybe/Result representations
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred stdlib ADT migration
-  - depends_on: TODO-4362
   - scope: Remove or quarantine old compiler/runtime special cases for Maybe
     and Result after both are stdlib-owned sums and `?` consumes the Result sum
     contract.
@@ -2095,7 +2064,7 @@ Task template:
   - implementation_notes:
     - Start from `stdlib/std/collections/experimental_map.prime`,
       `stdlib/std/collections/errors.prime`, canonical vector helpers after
-      TODO-4297, Result migration notes from TODO-4362/TODO-4291, and
+      TODO-4297, Result migration notes from TODO-4267/TODO-4291, and
       map compile-run tests covering `contains`, `tryAt`, `at`, `at_unsafe`,
       and `insert`.
     - Keep key comparability policy explicit: `Comparable<K>` or its successor

@@ -3239,8 +3239,8 @@ for(
     before extracting the error payload, so `ok` bridge values yield the empty string instead of calling the
     error-domain `why` helper. Explicit source C++ `ok` and `error` constructors pack single-field int-backed
     success/error structs through their code field before entering the bridge. Direct source C++ `Result.ok(value)`
-    does the same for local or explicitly constructed single-field success structs. The remaining source C++ bridge
-    migration work is limited to `Result.map(...)` and `Result.map2(...)` output payload packing.
+    does the same for local or explicitly constructed single-field success structs, and source C++
+    `Result.map(...)` / `Result.map2(...)` bridge outputs use that same single-field success-struct packing path.
   - `Result.ok()` (or `Result.ok(value)` for value-carrying results) constructs a success value.
   - `Result.error()` returns `true` when the result is an error.
   - `Result.why()` returns an owned `string` describing the error (heap-allocated by default).

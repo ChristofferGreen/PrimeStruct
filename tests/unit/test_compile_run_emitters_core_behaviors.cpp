@@ -233,6 +233,47 @@ main() {
   CHECK(runCommand(exePath) == 36);
 }
 
+TEST_CASE("C++ emitter packs single-field Result.map payloads") {
+  const std::string source = R"(
+import /std/result/*
+
+[struct]
+Token() {
+  [i32] code{0i32}
+}
+
+[return<int>]
+main() {
+  [Result<i32, i32>] left{Result.ok(2i32)}
+  [Result<i32, i32>] right{Result.ok(7i32)}
+  [Result<Token, i32>] mapped{Result.map(left, []([i32] value) {
+    return(Token{[code] plus(value, 3i32)})
+  })}
+  [Result<Token, i32>] combined{Result.map2(left, right, []([i32] a, [i32] b) {
+    return(Token{[code] plus(a, b)})
+  })}
+  [i32] mappedCode{pick(mapped) {
+    ok(value) { value.code }
+    error(err) { err }
+  }}
+  [i32] combinedCode{pick(combined) {
+    ok(value) { value.code }
+    error(err) { err }
+  }}
+  return(plus(mappedCode, combinedCode))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_result_map_struct_payload.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_result_map_struct_payload_exe").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 14);
+}
+
 TEST_CASE("C++ emitter rejects experimental map custom comparable struct keys") {
   const std::string source = R"(
 import /std/collections/*

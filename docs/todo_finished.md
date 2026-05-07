@@ -14090,3 +14090,36 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     coverage for local and direct success-struct payloads, and documented the
     remaining map/map2 bridge leaf. Local test execution was skipped per the
     lite workflow.
+
+- [x] TODO-4362: Pack source Result.map struct payloads
+  - owner: ai
+  - created_at: 2026-05-07
+  - phase: Deferred stdlib ADT migration
+  - scope: Make source C++ `Result.map(...)` and `Result.map2(...)` bridge
+    outputs pack single-field int-backed success structs through their field
+    before entering the value-carrying Result bridge.
+  - implementation_notes:
+    - Start from `src/emitter/EmitterExprResultCalls.h`, especially the
+      `Result.map(...)` and `Result.map2(...)` lambdas that emitted
+      `static_cast<uint32_t>(ps_mapped)`.
+    - Reuse the same source Result constructor payload classification used by
+      explicit `Result<T, E>{[ok] value}` and `Result.ok(value)`.
+    - Keep `Result.and_then(...)` out of this slice; it receives an
+      already-constructed Result from the lambda.
+  - acceptance:
+    - Source C++ `Result.map(...)` preserves single-field success struct
+      payloads returned by the mapping lambda.
+    - Source C++ `Result.map2(...)` preserves single-field success struct
+      payloads returned by the combining lambda.
+    - Existing scalar `Result.map(...)` and `Result.map2(...)` behavior remains
+      unchanged.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once map/map2 source C++ bridge outputs share the
+    single-field success-struct payload packing path with Result construction.
+  - finished_at: 2026-05-07
+  - evidence: Routed source C++ `Result.map(...)` and `Result.map2(...)`
+    outputs through the existing single-field bridge payload helper when
+    semantic Result metadata or the lambda return shape identifies a
+    single-field success struct, added compile-run emitter coverage for map and
+    map2 struct payloads, and promoted TODO-4267 to Ready Now. Local test
+    execution was skipped per the lite workflow.

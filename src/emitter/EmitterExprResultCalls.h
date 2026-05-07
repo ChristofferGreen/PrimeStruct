@@ -119,6 +119,29 @@
     }
     return "";
   };
+  auto resultPayloadTypeTextFromLambdaReturn = [&](const Expr &lambdaExpr) -> std::string {
+    if (!lambdaExpr.isLambda || lambdaExpr.bodyArguments.size() != 1) {
+      return "";
+    }
+    const Expr &stmt = lambdaExpr.bodyArguments.front();
+    if (stmt.kind == Expr::Kind::Call && stmt.name == "return" &&
+        stmt.args.size() == 1) {
+      return resultPayloadTypeTextFromExpr(stmt.args.front());
+    }
+    return resultPayloadTypeTextFromExpr(stmt);
+  };
+  auto sourceResultValueOkExprFromPayload = [&](const std::string &payloadExpr,
+                                                const std::string &payloadType) {
+    std::string packedPayload = "static_cast<uint32_t>(" + payloadExpr + ")";
+    if (!payloadType.empty()) {
+      auto singleFieldPayload =
+          singleFieldResultBridgePayload(payloadType, expr.namespacePrefix, payloadExpr);
+      if (singleFieldPayload.has_value()) {
+        packedPayload = *singleFieldPayload;
+      }
+    }
+    return sourceResultValueOkExpr(packedPayload);
+  };
   if (expr.kind == Expr::Kind::Call && !expr.isMethodCall && !expr.isFieldAccess &&
       expr.isBraceConstructor) {
     std::string resultBase = expr.name;
@@ -292,6 +315,15 @@
     if (!resolveResultExprInfo(expr.args[1], resultInfo) || !resultInfo.isResult || !resultInfo.hasValue) {
       return sourceResultValueOkExpr("0u");
     }
+    ResultInfo mappedInfo;
+    std::string mappedValueType;
+    if (resolveResultExprInfo(expr, mappedInfo) && mappedInfo.isResult &&
+        mappedInfo.hasValue) {
+      mappedValueType = mappedInfo.valueType;
+    }
+    if (mappedValueType.empty()) {
+      mappedValueType = resultPayloadTypeTextFromLambdaReturn(expr.args[2]);
+    }
     std::string valueType =
         bindingTypeToCpp(resultInfo.valueType, expr.namespacePrefix, importAliases, structTypeMap);
     if (valueType.empty()) {
@@ -312,7 +344,7 @@
     out << " auto ps_value = static_cast<" << valueType << ">("
         << sourceResultValueOkPayloadExpr("ps_result") << ");";
     out << " auto ps_mapped = (" << lambdaExpr << ")(ps_value);";
-    out << " return " << sourceResultValueOkExpr("static_cast<uint32_t>(ps_mapped)") << ";";
+    out << " return " << sourceResultValueOkExprFromPayload("ps_mapped", mappedValueType) << ";";
     out << " }())";
     return out.str();
   }
@@ -360,6 +392,15 @@
         !resolveResultExprInfo(expr.args[2], rightInfo) || !rightInfo.isResult || !rightInfo.hasValue) {
       return sourceResultValueOkExpr("0u");
     }
+    ResultInfo mappedInfo;
+    std::string mappedValueType;
+    if (resolveResultExprInfo(expr, mappedInfo) && mappedInfo.isResult &&
+        mappedInfo.hasValue) {
+      mappedValueType = mappedInfo.valueType;
+    }
+    if (mappedValueType.empty()) {
+      mappedValueType = resultPayloadTypeTextFromLambdaReturn(expr.args[3]);
+    }
     std::string leftType =
         bindingTypeToCpp(leftInfo.valueType, expr.namespacePrefix, importAliases, structTypeMap);
     std::string rightType =
@@ -394,7 +435,7 @@
     out << " auto ps_right_value = static_cast<" << rightType << ">("
         << sourceResultValueOkPayloadExpr("ps_right") << ");";
     out << " auto ps_mapped = (" << lambdaExpr << ")(ps_left_value, ps_right_value);";
-    out << " return " << sourceResultValueOkExpr("static_cast<uint32_t>(ps_mapped)") << ";";
+    out << " return " << sourceResultValueOkExprFromPayload("ps_mapped", mappedValueType) << ";";
     out << " }())";
     return out.str();
   }
