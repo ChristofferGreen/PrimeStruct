@@ -589,10 +589,24 @@
                helperName != "at_unsafe")) {
             return false;
           }
+          const SemanticProductIndex explicitMapHelperSemanticIndex =
+              ir_lowerer::buildSemanticProductIndex(semanticProgram);
+          const SemanticProductIndex *const explicitMapHelperSemanticIndexPtr =
+              semanticProgram == nullptr ? nullptr : &explicitMapHelperSemanticIndex;
           const auto mapTargetInfo =
-              ir_lowerer::resolveMapAccessTargetInfo(callExpr.args.front(), localsIn);
+              ir_lowerer::resolveMapAccessTargetInfo(
+                  callExpr.args.front(),
+                  localsIn,
+                  inferCallMapTargetInfo,
+                  semanticProgram,
+                  explicitMapHelperSemanticIndexPtr);
           const auto receiverTargetInfo =
-              ir_lowerer::resolveArrayVectorAccessTargetInfo(callExpr.args.front(), localsIn);
+              ir_lowerer::resolveArrayVectorAccessTargetInfo(
+                  callExpr.args.front(),
+                  localsIn,
+                  {},
+                  semanticProgram,
+                  explicitMapHelperSemanticIndexPtr);
           const bool isCanonicalStdMapHelperPath =
               ir_lowerer::isCanonicalPublishedStdlibSurfaceHelperPath(
                   resolveTailDispatchDirectHelperPath(callExpr),
