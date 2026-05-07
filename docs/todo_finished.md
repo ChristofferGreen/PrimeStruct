@@ -14639,3 +14639,32 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     expect setter definitions to inline without raw `StoreIndirect` header
     writes, and kept source-lock checks for the deleted fast path. Local test
     execution was skipped per the lite workflow.
+
+- [x] TODO-4373: Route vector metadata inline helpers through `.prime`
+  - owner: ai
+  - created_at: 2026-05-07
+  - phase: Vector stdlib ownership cutover
+  - scope: Remove experimental vector `field_count`, `field_capacity`,
+    `set_field_count`, and `set_field_capacity` inline-definition fast paths
+    from `IrLowererLowerInlineCalls.h` so imported `.prime` metadata helper
+    bodies own loads, bounds checks, and field stores.
+  - implementation_notes:
+    - Preserve SoA metadata helper fast paths for their own follow-up; this
+      leaf only removed `/std/collections/experimental_vector/Vector*`
+      metadata helper inlining.
+  - acceptance:
+    - `IrLowererLowerInlineCalls.h` no longer special-cases experimental
+      vector metadata helper field offsets or setter bounds.
+    - Experimental vector metadata helper calls resolve through the visible
+      `.prime` helper definition body.
+    - Source-lock coverage distinguishes the deleted vector fast path from
+      retained SoA metadata fast paths.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once `IrLowererLowerInlineCalls.h` has no experimental
+    vector metadata helper offset or setter branch.
+  - finished_at: 2026-05-07
+  - evidence: Deleted the experimental vector metadata inline helper
+    classifiers and count/capacity load/store branches from
+    `IrLowererLowerInlineCalls.h`, kept the internal SoA metadata branches
+    intact, and added source-lock coverage for that boundary. Local test
+    execution was skipped per the lite workflow.

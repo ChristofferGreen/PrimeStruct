@@ -72,11 +72,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4373: Route vector metadata inline helpers through `.prime`
+- TODO-4374: Route vector metadata expression fallbacks through `.prime`
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4374: Route vector metadata expression fallbacks through `.prime`
 - TODO-4375: Replace vector constructor header materialization
 - TODO-4281: Lift vector dynamic capacity limit
 - TODO-4295: Move collection surface metadata out of C++
@@ -86,13 +85,14 @@ Task template:
 - TODO-4300: Stabilize map lookup and insertion substrate
 - TODO-4301: Lower map helpers through ordinary `.prime`
 - TODO-4302: Move map surface metadata out of C++
+- TODO-4303: Delete map compatibility seams
 
 ### Priority Lanes (Current)
 
 - Semantic ownership authority: none active; future semantic-authority work
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
-- Vector stdlib ownership cutover: TODO-4373 -> TODO-4374 -> TODO-4375
+- Vector stdlib ownership cutover: TODO-4374 -> TODO-4375
   -> TODO-4281 -> TODO-4295 -> TODO-4296 -> TODO-4297
 - Map stdlib ownership cutover: TODO-4299 -> TODO-4300 -> TODO-4301
   -> TODO-4302 -> TODO-4303 -> TODO-4304
@@ -112,7 +112,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4373: Route vector metadata inline helpers through `.prime`
 - TODO-4374: Route vector metadata expression fallbacks through `.prime`
 - TODO-4375: Replace vector constructor header materialization
 - TODO-4281: Lift vector dynamic capacity limit
@@ -181,7 +180,7 @@ Task template:
 | Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4299, TODO-4305 |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4295, TODO-4296, TODO-4297, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4373, TODO-4374, TODO-4375, TODO-4281, TODO-4295, TODO-4296, TODO-4297, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4374, TODO-4375, TODO-4281, TODO-4295, TODO-4296, TODO-4297, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4296, TODO-4297, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Validator entrypoint and benchmark-plumbing split | none |
@@ -211,7 +210,7 @@ Task template:
 | Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
-| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4373, TODO-4374, TODO-4375, TODO-4281, TODO-4295, TODO-4296, TODO-4297, TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4374, TODO-4375, TODO-4281, TODO-4295, TODO-4296, TODO-4297, TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
 | De-experimentalization surface and namespace parity | TODO-4296, TODO-4297, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Focused backend rerun ergonomics and suite partitioning | none |
@@ -239,7 +238,7 @@ Task template:
   `/std/collections/experimental_*` implementation modules stay temporary.
   The vector/map adapter cutover is complete for semantic and
   template-monomorph helper decisions. Canonical read/access helper routing is
-  finished in `docs/todo_finished.md`; TODO-4373 through TODO-4375 finish the
+  finished in `docs/todo_finished.md`; TODO-4374 and TODO-4375 finish the
   remaining vector layout hard-code removal before TODO-4281 and
   TODO-4295 through TODO-4297 handle capacity widening, metadata extraction,
   compatibility deletion, and a final zero-C++-vector audit.
@@ -1639,31 +1638,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
-
-- [ ] TODO-4373: Route vector metadata inline helpers through `.prime`
-  - owner: ai
-  - created_at: 2026-05-07
-  - phase: Vector stdlib ownership cutover
-  - scope: Remove experimental vector `field_count`, `field_capacity`,
-    `set_field_count`, and `set_field_capacity` inline-definition fast paths
-    from `IrLowererLowerInlineCalls.h` so imported `.prime` metadata helper
-    bodies own loads, bounds checks, and field stores.
-  - implementation_notes:
-    - Start from `src/ir_lowerer/IrLowererLowerInlineCalls.h` and source-lock
-      tests that mention `isExperimentalVectorMetadataInlineHelper`.
-    - Preserve SoA metadata helper fast paths for their own follow-up; this
-      leaf is only about `/std/collections/experimental_vector/Vector*`
-      metadata helper inlining.
-  - acceptance:
-    - `IrLowererLowerInlineCalls.h` no longer special-cases experimental
-      vector metadata helper field offsets or setter bounds.
-    - Experimental vector metadata helper calls can still inline by resolving
-      the visible `.prime` helper definition body.
-    - Tests/source locks distinguish the deleted vector fast path from retained
-      SoA metadata fast paths.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once `IrLowererLowerInlineCalls.h` has no experimental
-    vector metadata helper offset or setter branch.
 
 - [ ] TODO-4374: Route vector metadata expression fallbacks through `.prime`
   - owner: ai

@@ -948,6 +948,39 @@ TEST_CASE("ir lowerer inline map insert builtin prefers semantic receiver facts"
         std::string::npos);
 }
 
+TEST_CASE("ir lowerer vector metadata inline helpers stay in prime definitions") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path inlineCallsPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerInlineCalls.h";
+
+  REQUIRE(std::filesystem::exists(inlineCallsPath));
+  const std::string source = readText(inlineCallsPath);
+
+  CHECK(source.find("isExperimentalVectorMetadataInlineHelper") ==
+        std::string::npos);
+  CHECK(source.find("isExperimentalVectorMetadataOwner") ==
+        std::string::npos);
+  CHECK(source.find("isInternalSoaMetadataInlineHelper") !=
+        std::string::npos);
+  CHECK(source.find("isInternalSoaMetadataOwner") != std::string::npos);
+  CHECK(source.find(
+            "isInternalSoaMetadataInlineHelper(callee.fullPath, \"set_field_count\")") !=
+        std::string::npos);
+}
+
 TEST_CASE("ir lowerer skips builtin map insert rewrite for direct experimental map locals") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);

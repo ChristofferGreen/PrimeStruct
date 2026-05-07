@@ -3110,11 +3110,12 @@ for(
     Direct `/std/collections/experimental_vector/vectorPush`-style imports
     remain narrow temporary shims until the vector compatibility deletion work
     removes them. Experimental `Vector<T>.set_field_count` and
-    `set_field_capacity` statement calls now inline their visible `.prime`
-    helper definitions instead of using a C++ statement fast path that writes
-    fixed count/capacity header slots directly; remaining vector metadata
-    inline and constructor/header materialization fast paths are tracked by the
-    active vector layout follow-up leaves. Canonical
+    `set_field_capacity` statement calls plus `field_count`, `field_capacity`,
+    `set_field_count`, and `set_field_capacity` inline helper calls now inline
+    their visible `.prime` helper definitions instead of using C++ fast paths
+    that write fixed count/capacity header slots directly; remaining vector
+    metadata expression fallback and constructor/header materialization fast
+    paths are tracked by the active vector layout follow-up leaves. Canonical
     `/std/collections/vector/*` `pop` / `clear` helpers now reuse that same
     backing discard path for ownership-sensitive element types on explicit
     experimental `Vector<T>` bindings, and canonical
