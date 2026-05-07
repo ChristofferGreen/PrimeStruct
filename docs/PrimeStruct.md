@@ -3104,9 +3104,12 @@ for(
     receiver cases. Explicit canonical statement calls to
     `/std/collections/vector/push`, `pop`, `reserve`, `clear`, `remove_at`,
     and `remove_swap` now fall through to visible `.prime` helper definitions
-    instead of the vector statement-helper emitter, while legacy
-    `vectorPush`-style compatibility names remain a temporary shim until the
-    vector compatibility deletion work removes them. Canonical
+    instead of the vector statement-helper emitter, and wrapper-layer
+    `/std/collections/vectorPush`-style mutator aliases now defer to visible
+    definitions instead of rewriting back into raw builtin-vector emission.
+    Direct `/std/collections/experimental_vector/vectorPush`-style imports
+    remain narrow temporary shims until the vector compatibility deletion work
+    removes them. Canonical
     `/std/collections/vector/*` `pop` / `clear` helpers now reuse that same
     backing discard path for ownership-sensitive element types on explicit
     experimental `Vector<T>` bindings, and canonical

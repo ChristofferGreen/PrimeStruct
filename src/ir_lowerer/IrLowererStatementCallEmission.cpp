@@ -12,6 +12,7 @@
 #include "primec/StdlibSurfaceRegistry.h"
 
 #include <optional>
+#include <string_view>
 #include <utility>
 
 namespace primec::ir_lowerer {
@@ -105,6 +106,24 @@ bool isPublishedCanonicalStatementVectorHelperPath(std::string_view resolvedPath
   return metadata != nullptr &&
          metadata->id == StdlibSurfaceId::CollectionsVectorHelpers &&
          matchesRegistrySpellingSet(metadata->loweringSpellings, resolvedPath);
+}
+
+bool isPublishedWrapperStatementVectorMutatorAliasPath(std::string_view resolvedPath) {
+  if (!resolvedPath.empty() && resolvedPath.front() == '/') {
+    resolvedPath.remove_prefix(1);
+  }
+  auto matchesAlias = [resolvedPath](std::string_view alias) {
+    return resolvedPath == alias ||
+           (resolvedPath.rfind(alias, 0) == 0 &&
+            resolvedPath.size() > alias.size() &&
+            resolvedPath.substr(alias.size(), 2) == "__");
+  };
+  return matchesAlias("std/collections/vectorPush") ||
+         matchesAlias("std/collections/vectorPop") ||
+         matchesAlias("std/collections/vectorReserve") ||
+         matchesAlias("std/collections/vectorClear") ||
+         matchesAlias("std/collections/vectorRemoveAt") ||
+         matchesAlias("std/collections/vectorRemoveSwap");
 }
 
 std::string canonicalStatementMapHelperName(std::string helperName) {
@@ -1984,7 +2003,11 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     directStmt = rewrittenBareVectorMethodStmt;
     rewrittenBareVectorMutatorToBuiltinCall = true;
   }
-  if (explicitVectorMutatorHelperCall && explicitVectorHelperUsesBuiltinVectorReceiver(directStmt)) {
+  const bool explicitWrapperVectorMutatorHelperPath =
+      isPublishedWrapperStatementVectorMutatorAliasPath(
+          resolveStatementCallPathWithoutFallbackProbes(directStmt));
+  if (explicitVectorMutatorHelperCall && !explicitWrapperVectorMutatorHelperPath &&
+      explicitVectorHelperUsesBuiltinVectorReceiver(directStmt)) {
     std::string helperName;
     if (resolveStatementVectorHelperAliasName(directStmt, helperName)) {
       const size_t receiverIndex = explicitVectorHelperReceiverIndex(directStmt);

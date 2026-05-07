@@ -6674,7 +6674,7 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
               error) == EmitResult::NotMatched);
     CHECK(error.empty());
     CHECK(aliasMethodResolutionCalls >= 0);
-    CHECK(aliasMethodResolutionCalls <= 1);
+    CHECK(aliasMethodResolutionCalls <= 2);
     CHECK(aliasDefinitionResolutionCalls == 1);
     CHECK(aliasInlineCalls == 0);
     CHECK(instructions.empty());
@@ -6695,6 +6695,24 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
 
   runVectorMutatorAliasNotHandledCase("/vector/push", {makeValueArg(), makeValuesArg()});
   runVectorMutatorAliasNotHandledCase("/std/collections/vector/push", {makeValueArg(), makeValuesArg()});
+  runVectorMutatorAliasNotHandledCase(
+      "/std/collections/vectorPush",
+      {makeValuesArg(), makeValueArg()});
+  runVectorMutatorAliasNotHandledCase(
+      "/std/collections/vectorPop",
+      {makeValuesArg()});
+  runVectorMutatorAliasNotHandledCase(
+      "/std/collections/vectorReserve",
+      {makeValuesArg(), makeValueArg()});
+  runVectorMutatorAliasNotHandledCase(
+      "/std/collections/vectorClear",
+      {makeValuesArg()});
+  runVectorMutatorAliasNotHandledCase(
+      "/std/collections/vectorRemoveAt",
+      {makeValuesArg(), makeValueArg()});
+  runVectorMutatorAliasNotHandledCase(
+      "/std/collections/vectorRemoveSwap",
+      {makeValuesArg(), makeValueArg()});
   runVectorMutatorAliasNotHandledCase(
       "/std/collections/experimental_vector/vectorPush",
       {makeValueArg(), makeValuesArg()});
@@ -6775,6 +6793,60 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
   runExplicitVectorMutatorDirectDefinitionCase(
       "/std/collections/experimental_vector/vectorPush",
       {makeValueArg(), makeValuesArg()});
+
+  primec::Expr wrapperAliasPushStmt;
+  wrapperAliasPushStmt.kind = primec::Expr::Kind::Call;
+  wrapperAliasPushStmt.name = "/std/collections/vectorPush";
+  wrapperAliasPushStmt.args = {makeValuesArg(), makeValueArg()};
+  wrapperAliasPushStmt.argNames = {std::nullopt, std::nullopt};
+
+  primec::ir_lowerer::LocalMap wrapperBuiltinVectorLocals;
+  primec::ir_lowerer::LocalInfo wrapperBuiltinVectorInfo;
+  wrapperBuiltinVectorInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  wrapperBuiltinVectorLocals.emplace("values", wrapperBuiltinVectorInfo);
+
+  int wrapperBuiltinVectorEmitCalls = 0;
+  int wrapperBuiltinVectorMethodResolutionCalls = 0;
+  int wrapperBuiltinVectorDefinitionResolutionCalls = 0;
+  primec::Expr observedWrapperBuiltinVectorExpr;
+  error.clear();
+  instructions.clear();
+  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+            wrapperAliasPushStmt,
+            wrapperBuiltinVectorLocals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+              ++wrapperBuiltinVectorEmitCalls;
+              observedWrapperBuiltinVectorExpr = expr;
+              return true;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              ++wrapperBuiltinVectorMethodResolutionCalls;
+              return nullptr;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              ++wrapperBuiltinVectorDefinitionResolutionCalls;
+              return nullptr;
+            },
+            [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return true; },
+            [&](const primec::Expr &,
+                const primec::Definition &,
+                const primec::ir_lowerer::LocalMap &,
+                bool) {
+              return true;
+            },
+            instructions,
+            error) == EmitResult::NotMatched);
+  CHECK(error.empty());
+  CHECK(wrapperBuiltinVectorEmitCalls == 0);
+  CHECK(wrapperBuiltinVectorMethodResolutionCalls >= 1);
+  CHECK(wrapperBuiltinVectorMethodResolutionCalls <= 2);
+  CHECK(wrapperBuiltinVectorDefinitionResolutionCalls == 1);
+  CHECK(observedWrapperBuiltinVectorExpr.name.empty());
+  CHECK(observedWrapperBuiltinVectorExpr.namespacePrefix.empty());
+  CHECK(observedWrapperBuiltinVectorExpr.args.empty());
 
   primec::Expr namespacedCanonicalPushStmt;
   namespacedCanonicalPushStmt.kind = primec::Expr::Kind::Call;
@@ -6875,6 +6947,10 @@ TEST_CASE("ir lowerer statement call emission source delegation stays stable") {
   CHECK(source.find("metadata->id != StdlibSurfaceId::CollectionsMapHelpers") !=
         std::string::npos);
   CHECK(source.find("matchesRegistrySpellingSet(metadata->loweringSpellings, resolvedPath)") !=
+        std::string::npos);
+  CHECK(source.find("isPublishedWrapperStatementVectorMutatorAliasPath(") !=
+        std::string::npos);
+  CHECK(source.find("explicitVectorMutatorHelperCall && !explicitWrapperVectorMutatorHelperPath") !=
         std::string::npos);
   CHECK(source.find("return resolvePublishedStatementVectorHelperName(expr.name, helperNameOut);") ==
         std::string::npos);

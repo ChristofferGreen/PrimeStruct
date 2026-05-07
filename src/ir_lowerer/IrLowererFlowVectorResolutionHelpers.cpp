@@ -3,6 +3,7 @@
 #include "IrLowererHelpers.h"
 
 #include <limits>
+#include <string_view>
 #include <utility>
 
 namespace primec::ir_lowerer {
@@ -172,6 +173,21 @@ bool resolveVectorMutatorAliasName(const Expr &expr, std::string &helperNameOut)
         normalized.substr(stdCollectionsPrefix.size()), helperNameOut);
   }
   return false;
+}
+
+bool isStdCollectionsVectorWrapperMutatorAliasPath(std::string_view helperPath) {
+  auto matchesAlias = [helperPath](std::string_view alias) {
+    return helperPath == alias ||
+           (helperPath.rfind(alias, 0) == 0 &&
+            helperPath.size() > alias.size() &&
+            helperPath.substr(alias.size(), 2) == "__");
+  };
+  return matchesAlias("std/collections/vectorPush") ||
+         matchesAlias("std/collections/vectorPop") ||
+         matchesAlias("std/collections/vectorReserve") ||
+         matchesAlias("std/collections/vectorClear") ||
+         matchesAlias("std/collections/vectorRemoveAt") ||
+         matchesAlias("std/collections/vectorRemoveSwap");
 }
 
 bool resolveVectorMutatorName(const Expr &expr, std::string &helperNameOut) {
@@ -556,14 +572,12 @@ VectorStatementHelperPrepareResult prepareVectorStatementHelperCall(
   if (explicitCanonicalVectorHelperPath) {
     return VectorStatementHelperPrepareResult::NotMatched;
   }
-  const bool explicitVectorHelperPath =
+  const bool explicitWrapperVectorHelperPath =
       !stmt.isMethodCall &&
-      (qualifiedHelperName.rfind("std/collections/vectorPush", 0) == 0 ||
-       qualifiedHelperName.rfind("std/collections/vectorPop", 0) == 0 ||
-       qualifiedHelperName.rfind("std/collections/vectorReserve", 0) == 0 ||
-       qualifiedHelperName.rfind("std/collections/vectorClear", 0) == 0 ||
-       qualifiedHelperName.rfind("std/collections/vectorRemoveAt", 0) == 0 ||
-       qualifiedHelperName.rfind("std/collections/vectorRemoveSwap", 0) == 0);
+      isStdCollectionsVectorWrapperMutatorAliasPath(qualifiedHelperName);
+  if (explicitWrapperVectorHelperPath) {
+    return VectorStatementHelperPrepareResult::NotMatched;
+  }
   Expr normalizedStmt = stmt;
   const Expr *activeStmt = &stmt;
   bool useBuiltinCompatibilityStmt = false;
@@ -645,11 +659,6 @@ VectorStatementHelperPrepareResult prepareVectorStatementHelperCall(
         activeStmt = &normalizedStmt;
         useBuiltinCompatibilityStmt = true;
       };
-      if (explicitVectorHelperPath && receiverIsMutableVector) {
-        useReceiverIndexedBuiltinStmt();
-        break;
-      }
-
       Expr methodStmt = stmt;
       methodStmt.isMethodCall = true;
       methodStmt.name = vectorHelper;

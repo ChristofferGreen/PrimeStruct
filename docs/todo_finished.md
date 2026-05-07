@@ -14540,3 +14540,43 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     and direct experimental-vector compatibility paths, documented the routing
     split, and promoted TODO-4370 to Ready Now. Local test execution was
     skipped per the lite workflow.
+
+- [x] TODO-4370: Route vector compatibility mutators through `.prime`
+  - owner: ai
+  - created_at: 2026-05-07
+  - phase: Vector stdlib ownership cutover
+  - scope: Shrink remaining vector mutator statement-helper emission to
+    ordinary `.prime` helper calls or explicitly retained compatibility shims,
+    covering `push`, `pop`, `reserve`, `clear`, `remove_at`, and
+    `remove_swap`.
+  - implementation_notes:
+    - Start from `src/ir_lowerer/IrLowererFlowVectorHelpers.cpp`,
+      `src/ir_lowerer/IrLowererFlowVectorResolutionHelpers.cpp`,
+      `src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp`,
+      `stdlib/std/collections/internal_vector.prime`, and VM/native mutator
+      conformance tests for owned elements and runtime diagnostics.
+    - Canonical `/std/collections/vector/*` statement calls were already
+      fenced to ordinary `.prime` definitions; this leaf owns the remaining
+      compatibility forms such as `/std/collections/vectorPush`,
+      `vectorPop`, and rooted `/vector/*` where they still need staged support.
+  - acceptance:
+    - VM/native lowering no longer emits canonical or compatibility vector
+      mutator behavior by matching helper paths when an ordinary `.prime`
+      helper body can be called instead.
+    - Retained compatibility names are either ordinary `.prime` wrappers or
+      narrowly documented temporary shims for TODO-4296 deletion.
+    - Runtime diagnostics for empty pop, checked removal/index failures,
+      negative reserve, capacity exceedance, and owned-element destruction stay
+      stable.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once vector mutator statement behavior no longer depends on
+    handwritten vector-specific emitters except for explicitly documented
+    compatibility shims owned by TODO-4296.
+  - finished_at: 2026-05-07
+  - evidence: Fenced `/std/collections/vectorPush`-style wrapper mutator
+    aliases out of the vector statement-helper emitter and the direct
+    builtin-vector rewrite path, added lowerer coverage for all six wrapper
+    mutator aliases plus the builtin-vector receiver case, and documented that
+    direct `/std/collections/experimental_vector/vectorPush`-style imports are
+    the remaining temporary shims for TODO-4296. Local test execution was
+    skipped per the lite workflow.
