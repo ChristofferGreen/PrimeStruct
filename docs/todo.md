@@ -72,11 +72,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4366: Route vector wrappers through canonical helpers
+- TODO-4367: Reclassify the vector backing implementation namespace
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4367: Reclassify the vector backing implementation namespace
 - TODO-4293: Stabilize generic contiguous-storage substrate
 - TODO-4294: Lower vector helpers through ordinary `.prime`
 - TODO-4281: Lift vector dynamic capacity limit
@@ -84,14 +83,15 @@ Task template:
 - TODO-4296: Delete vector compatibility seams
 - TODO-4297: Add zero C++ vector-surface audit
 - TODO-4299: Promote and style canonical `.prime` map implementation
+- TODO-4300: Stabilize map lookup and insertion substrate
 
 ### Priority Lanes (Current)
 
 - Semantic ownership authority: none active; future semantic-authority work
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
-- Vector stdlib ownership cutover: TODO-4366 -> TODO-4367 -> TODO-4293
-  -> TODO-4294 -> TODO-4281 -> TODO-4295 -> TODO-4296 -> TODO-4297
+- Vector stdlib ownership cutover: TODO-4367 -> TODO-4293 -> TODO-4294
+  -> TODO-4281 -> TODO-4295 -> TODO-4296 -> TODO-4297
 - Map stdlib ownership cutover: TODO-4299 -> TODO-4300 -> TODO-4301
   -> TODO-4302 -> TODO-4303 -> TODO-4304
 - SoA public surface rename and ownership cutover: TODO-4305 -> TODO-4306
@@ -110,7 +110,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4366: Route vector wrappers through canonical helpers
 - TODO-4367: Reclassify the vector backing implementation namespace
 - TODO-4293: Stabilize generic contiguous-storage substrate
 - TODO-4294: Lower vector helpers through ordinary `.prime`
@@ -178,9 +177,9 @@ Task template:
 | Semantic ownership boundary and graph/local-auto authority | none |
 | Compile-pipeline stage and publication-boundary contracts | none |
 | Compile-time macro hooks and AST transform ownership | none |
-| Stdlib surface-style alignment and public helper readability | TODO-4366, TODO-4299, TODO-4305 |
+| Stdlib surface-style alignment and public helper readability | TODO-4299, TODO-4305 |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4295, TODO-4296, TODO-4297, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4366, TODO-4367, TODO-4293, TODO-4294, TODO-4281, TODO-4295, TODO-4296, TODO-4297, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4367, TODO-4293, TODO-4294, TODO-4281, TODO-4295, TODO-4296, TODO-4297, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4367, TODO-4296, TODO-4297, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Validator entrypoint and benchmark-plumbing split | none |
@@ -206,7 +205,7 @@ Task template:
 | --- | --- |
 | Semantic-product-authority conformance | none |
 | AST transform hook conformance | none |
-| CodeExamples-aligned stdlib surface syntax conformance | TODO-4366, TODO-4299, TODO-4305 |
+| CodeExamples-aligned stdlib surface syntax conformance | TODO-4299, TODO-4305 |
 | Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
@@ -237,11 +236,11 @@ Task template:
   `vectorCount` / `mapCount`-style lowering names, and
   `/std/collections/experimental_*` implementation modules stay temporary.
   The vector/map adapter cutover is complete for semantic and
-  template-monomorph helper decisions. TODO-4366, TODO-4367, and TODO-4293
-  through TODO-4297 split the vector half of that remaining seam into
-  canonical wrapper cleanup, backing namespace reclassification, generic
-  storage/lifecycle substrate, ordinary `.prime` lowering, metadata extraction,
-  compatibility deletion, and a final zero-C++-vector audit.
+  template-monomorph helper decisions. TODO-4367 and TODO-4293 through
+  TODO-4297 split the vector half of that remaining seam into backing
+  namespace reclassification, generic storage/lifecycle substrate, ordinary
+  `.prime` lowering, metadata extraction, compatibility deletion, and a final
+  zero-C++-vector audit.
   TODO-4299 through TODO-4304 apply the same ownership model to map while
   keeping map-specific lookup, insertion, `Result<ContainerError>`, and key
   comparability policy explicit.
@@ -1636,42 +1635,10 @@ Task template:
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
 
-- [ ] TODO-4366: Route vector wrappers through canonical helpers
-  - owner: ai
-  - created_at: 2026-05-07
-  - phase: Vector stdlib ownership cutover
-  - scope: Finish cleaning `stdlib/std/collections/vector.prime` so the
-    canonical public wrapper layer delegates through canonical
-    `/std/collections/vector/*` helper names wherever doing so is
-    behavior-neutral, without changing the backing `Vector<T>` type owner yet.
-  - implementation_notes:
-    - Start from the remaining direct
-      `/std/collections/experimental_vector/vectorCount`,
-      `vectorCapacity`, `vectorPush`, `vectorPop`, `vectorReserve`,
-      `vectorClear`, `vectorRemoveAt`, `vectorRemoveSwap`, `vectorAt`, and
-      `vectorAtUnsafe` delegates in `stdlib/std/collections/vector.prime`.
-    - Keep the current `Vector<T>` representation and compatibility imports
-      unchanged; TODO-4367 owns reclassifying the backing namespace.
-    - Preserve exact canonical imports, method sugar, named-argument behavior,
-      mutation behavior, and diagnostics.
-  - acceptance:
-    - `stdlib/std/collections/vector.prime` no longer exposes direct
-      `vectorCount` / `vectorPush` / `vectorAt`-style implementation helper
-      calls in canonical wrapper bodies when a canonical helper wrapper can be
-      used instead.
-    - Source-lock coverage distinguishes public wrapper code from backing
-      compatibility helpers.
-    - Existing vector constructor, access, mutation, lifecycle, and import
-      conformance remains behavior-compatible.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once the canonical wrapper file has no avoidable public
-    wrapper bodies that call experimental-prefixed helper names directly.
-
 - [ ] TODO-4367: Reclassify the vector backing implementation namespace
   - owner: ai
   - created_at: 2026-05-07
   - phase: Vector stdlib ownership cutover
-  - depends_on: TODO-4366
   - scope: Move or reclassify the backing `Vector<T>` implementation so the
     canonical public `/std/collections/vector/*` surface delegates to an
     explicitly internal implementation module instead of an

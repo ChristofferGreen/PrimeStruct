@@ -23,6 +23,7 @@ import /std/collections/experimental_vector/*
 
 [public return<i32>]
 /std/collections/vector/count<T>([Vector<T>] values) {
+  // Terminal backing delegates stay until TODO-4367 reclassifies Vector<T>.
   return(/std/collections/experimental_vector/vectorCount<T>(values))
 }
 

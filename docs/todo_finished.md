@@ -14310,3 +14310,43 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     remaining vector promotion work into TODO-4366 and TODO-4367, and promoted
     TODO-4366 to Ready Now. Local test execution was skipped per the lite
     workflow.
+
+- [x] TODO-4366: Route vector wrappers through canonical helpers
+  - owner: ai
+  - created_at: 2026-05-07
+  - phase: Vector stdlib ownership cutover
+  - scope: Finish cleaning `stdlib/std/collections/vector.prime` so the
+    canonical public wrapper layer delegates through canonical
+    `/std/collections/vector/*` helper names wherever doing so is
+    behavior-neutral, without changing the backing `Vector<T>` type owner yet.
+  - implementation_notes:
+    - Start from the remaining direct
+      `/std/collections/experimental_vector/vectorCount`,
+      `vectorCapacity`, `vectorPush`, `vectorPop`, `vectorReserve`,
+      `vectorClear`, `vectorRemoveAt`, `vectorRemoveSwap`, `vectorAt`, and
+      `vectorAtUnsafe` delegates in `stdlib/std/collections/vector.prime`.
+    - Keep the current `Vector<T>` representation and compatibility imports
+      unchanged; TODO-4367 owns reclassifying the backing namespace.
+    - Preserve exact canonical imports, method sugar, named-argument behavior,
+      mutation behavior, and diagnostics.
+  - acceptance:
+    - `stdlib/std/collections/vector.prime` no longer exposes direct
+      `vectorCount` / `vectorPush` / `vectorAt`-style implementation helper
+      calls in canonical wrapper bodies when a canonical helper wrapper can be
+      used instead.
+    - Source-lock coverage distinguishes public wrapper code from backing
+      compatibility helpers.
+    - Existing vector constructor, access, mutation, lifecycle, and import
+      conformance remains behavior-compatible.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once the canonical wrapper file has no avoidable public
+    wrapper bodies that call experimental-prefixed helper names directly.
+  - finished_at: 2026-05-07
+  - evidence: Audited `stdlib/std/collections/vector.prime` after TODO-4365
+    and confirmed the behavior-neutral constructor routes already use
+    canonical `/std/collections/vector/push`; the remaining
+    experimental-prefixed calls are terminal backing delegates until TODO-4367
+    reclassifies `Vector<T>`. Added a source comment and source-lock coverage
+    for that boundary, removed TODO-4366 from active work, and promoted
+    TODO-4367 to Ready Now. Local test execution was skipped per the lite
+    workflow.

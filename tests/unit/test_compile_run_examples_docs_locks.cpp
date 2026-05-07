@@ -1277,10 +1277,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4366: Route vector wrappers through canonical helpers") !=
+                  "- TODO-4367: Reclassify the vector backing implementation namespace") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
-                  "- TODO-4367: Reclassify the vector backing implementation namespace") !=
+                  "- TODO-4293: Stabilize generic contiguous-storage substrate") !=
         std::string::npos);
   CHECK(todo.find("- Semantic phase contract hardening:") == std::string::npos);
   CHECK(todo.find("- Deferred graph and inference hardening: TODO-4239") ==
@@ -1293,7 +1293,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4366: Route vector wrappers through canonical helpers") !=
+                  "- TODO-4367: Reclassify the vector backing implementation namespace") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
       "TODO-4268: Add heterogeneous type-pack syntax and metadata",
@@ -1348,6 +1348,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("TODO-4365: Style canonical vector constructor wrappers") ==
         std::string::npos);
   CHECK(todoFinished.find("TODO-4365: Style canonical vector constructor wrappers") !=
+        std::string::npos);
+  CHECK(todo.find("TODO-4366: Route vector wrappers through canonical helpers") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4366: Route vector wrappers through canonical helpers") !=
         std::string::npos);
   CHECK(todo.find("TODO-4293: Bridge legacy `Result` helpers to the result sum") ==
         std::string::npos);
@@ -1581,7 +1585,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4295, TODO-4296, TODO-4297, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |") !=
         std::string::npos);
-  CHECK(todo.find("| Vector/map stdlib ownership cutover and collection surface authority | TODO-4366, TODO-4367, TODO-4293, TODO-4294, TODO-4281, TODO-4295, TODO-4296, TODO-4297, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |") !=
+  CHECK(todo.find("| Vector/map stdlib ownership cutover and collection surface authority | TODO-4367, TODO-4293, TODO-4294, TODO-4281, TODO-4295, TODO-4296, TODO-4297, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |") !=
         std::string::npos);
   CHECK(todo.find("| Release benchmark/example suite stability and doctest governance | none |") !=
         std::string::npos);
@@ -2678,6 +2682,14 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(vectorStdlib.find("/std/collections/vector/push<T>(result, first)") !=
         std::string::npos);
   CHECK(vectorStdlib.find("/std/collections/vector/push<T>(result, second)") !=
+        std::string::npos);
+  CHECK(vectorStdlib.find("// Terminal backing delegates stay until TODO-4367 reclassifies Vector<T>.") !=
+        std::string::npos);
+  CHECK(vectorStdlib.find("/std/collections/experimental_vector/vectorCount<T>(values)") !=
+        std::string::npos);
+  CHECK(vectorStdlib.find("/std/collections/experimental_vector/vectorPush<T>(values, value)") !=
+        std::string::npos);
+  CHECK(vectorStdlib.find("/std/collections/experimental_vector/vectorAt<T>(values, index)") !=
         std::string::npos);
   CHECK(vectorStdlib.find("/std/collections/experimental_vector/vectorPair<T>(first, second)") ==
         std::string::npos);
