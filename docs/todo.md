@@ -616,6 +616,10 @@ Task template:
     The lowerer count-access string-map emission slice is complete for
     semantic-product-backed `count(at(target, key))` native emission before
     stale local string-map metadata can choose `LoadStringLength`.
+    The lowerer dereferenced count target fact slice is complete for
+    semantic-product-backed `count(dereference(target))` classification before
+    stale reference/pointer collection metadata can classify dereferenced
+    count targets.
     The lowerer try operand Result fact slice is complete for
     semantic-product-backed `try(operand)` base-kind inference before
     stale local `isResult` or args-pack metadata can classify the operand's
@@ -932,6 +936,12 @@ Task template:
       `count(at(target, key))`. Published non-string access or target facts
       suppress stale local map metadata while syntax-only compatibility keeps
       the legacy emission fallback.
+    - Completed slice: semantic-product-addressed dereferenced count target
+      classification now consumes published binding/query collection facts
+      before stale local reference/pointer or args-pack collection metadata
+      can classify `count(dereference(...))`. Published non-collection or
+      missing semantic-id facts suppress stale local metadata while syntax-only
+      compatibility keeps the legacy dereference fallback.
     - Completed slice: semantic-product-addressed native `Result.why(...)`
       direct-call sources now resolve interned query result-error IDs before
       copied query text, so stale duplicated error text cannot override the

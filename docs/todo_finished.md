@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer deref count target facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that routes
+    `count(dereference(target))` classification through published
+    dereferenced binding/query collection facts before stale local
+    reference/pointer or args-pack metadata can classify the count target.
+  - acceptance:
+    - Published dereferenced collection facts still classify
+      `count(dereference(...))` as an array/collection count.
+    - Published non-collection and missing semantic-id facts suppress stale
+      local reference/pointer or args-pack collection metadata.
+    - Syntax-only contexts without semantic product facts keep the existing
+      local dereference fallback.
+  - stop_rule: Stop once dereferenced count target classification depends on
+    graph-owned target facts before legacy locals, with focused coverage
+    proving stale-local suppression and syntax-only compatibility.
+  - evidence: Added semantic-product dereferenced count target
+    classification, covered direct reference targets plus indexed args-pack
+    dereference targets, ran `git diff --check`, and skipped broad baseline
+    validation per the lite workflow.
+
 - [x] TODO-4298: Prefer count access emit facts
   - owner: ai
   - created_at: 2026-04-28

@@ -233,6 +233,12 @@ enum class SemanticStringMapAccessResolution {
   NonStringMapAccess,
 };
 
+enum class SemanticDereferencedCountTargetResolution {
+  NoFact,
+  Collection,
+  NonCollection,
+};
+
 bool classifySemanticCountTarget(const Expr &target,
                                  const SemanticProgram *semanticProgram,
                                  const SemanticProductIndex *semanticIndex,
@@ -501,6 +507,30 @@ bool hasPublishedSemanticCountTargetFact(const Expr &target,
          findSemanticProductBindingFact(*semanticIndex, target) != nullptr ||
          findSemanticProductLocalAutoFactBySemanticId(*semanticIndex, target) != nullptr ||
          findSemanticProductQueryFactBySemanticId(*semanticIndex, target) != nullptr;
+}
+
+SemanticDereferencedCountTargetResolution classifySemanticDereferencedCountTarget(
+    const Expr &target,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
+  if (!(target.kind == Expr::Kind::Call &&
+        isSimpleCallName(target, "dereference") &&
+        target.args.size() == 1)) {
+    return SemanticDereferencedCountTargetResolution::NoFact;
+  }
+  const Expr &derefTarget = target.args.front();
+  if (semanticProgram == nullptr || semanticIndex == nullptr ||
+      derefTarget.semanticNodeId == 0) {
+    return SemanticDereferencedCountTargetResolution::NoFact;
+  }
+  SemanticCountTargetInfo semanticInfo;
+  if (!classifySemanticCountTarget(
+          derefTarget, semanticProgram, semanticIndex, semanticInfo)) {
+    return SemanticDereferencedCountTargetResolution::NoFact;
+  }
+  return semanticInfo.isCollection
+             ? SemanticDereferencedCountTargetResolution::Collection
+             : SemanticDereferencedCountTargetResolution::NonCollection;
 }
 
 bool resolveEntryArgsParameterFromSemanticProduct(const Definition &entryDef,
@@ -783,6 +813,16 @@ bool isArrayCountCall(const Expr &expr,
   }
   if (hasSemanticTargetInfo) {
     return semanticTargetInfo.isCollection;
+  }
+  const SemanticDereferencedCountTargetResolution dereferencedTargetResolution =
+      classifySemanticDereferencedCountTarget(target, semanticProgram, semanticIndex);
+  if (dereferencedTargetResolution ==
+      SemanticDereferencedCountTargetResolution::Collection) {
+    return true;
+  }
+  if (dereferencedTargetResolution ==
+      SemanticDereferencedCountTargetResolution::NonCollection) {
+    return false;
   }
   if (isDereferencedCollectionCountTarget(expr, target, localsIn)) {
     return true;

@@ -238,6 +238,132 @@ TEST_CASE("ir lowerer count access classifiers prefer semantic direct-name facts
   CHECK_FALSE(setup.classifiers.isStringCountCall(missingFactCount, locals));
 }
 
+TEST_CASE("ir lowerer count access classifiers prefer semantic dereferenced target facts") {
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "local",
+      .name = "refVec",
+      .bindingTypeText = "i32",
+      .semanticNodeId = 7201,
+      .bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "Reference<vector<i32>>"),
+  });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(7201, 0);
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "local",
+      .name = "scalarRef",
+      .bindingTypeText = "Reference<vector<i32>>",
+      .semanticNodeId = 7202,
+      .bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "Reference<i32>"),
+  });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(7202, 1);
+  semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      .scopePath = "/main",
+      .callName = "at",
+      .queryTypeText = "i32",
+      .semanticNodeId = 7203,
+      .queryTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "Reference<map<i32, string>>"),
+  });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(7203, 0);
+  semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      .scopePath = "/main",
+      .callName = "at",
+      .queryTypeText = "Reference<vector<i32>>",
+      .semanticNodeId = 7204,
+      .queryTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+  });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(7204, 1);
+
+  primec::ir_lowerer::EntryCountAccessSetup setup;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::buildEntryCountAccessSetup(entryDef, &semanticProgram, setup, error));
+  CHECK(error.empty());
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo staleScalar;
+  staleScalar.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  staleScalar.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals.emplace("refVec", staleScalar);
+  primec::ir_lowerer::LocalInfo staleVectorRef;
+  staleVectorRef.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  staleVectorRef.referenceToVector = true;
+  locals.emplace("scalarRef", staleVectorRef);
+  locals.emplace("missingRef", staleVectorRef);
+  locals.emplace("syntaxRef", staleVectorRef);
+  primec::ir_lowerer::LocalInfo stalePrimitiveArgs;
+  stalePrimitiveArgs.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  stalePrimitiveArgs.isArgsPack = true;
+  stalePrimitiveArgs.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  stalePrimitiveArgs.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals.emplace("mapArgs", stalePrimitiveArgs);
+  primec::ir_lowerer::LocalInfo staleCollectionArgs;
+  staleCollectionArgs.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  staleCollectionArgs.isArgsPack = true;
+  staleCollectionArgs.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  staleCollectionArgs.referenceToMap = true;
+  staleCollectionArgs.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  staleCollectionArgs.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::String;
+  locals.emplace("scalarArgs", staleCollectionArgs);
+  locals.emplace("syntaxArgs", staleCollectionArgs);
+
+  auto makeSemanticName = [](const char *name, uint64_t semanticNodeId) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Name;
+    expr.name = name;
+    expr.semanticNodeId = semanticNodeId;
+    return expr;
+  };
+  auto makeAt = [&](const char *name, uint64_t semanticNodeId) {
+    primec::Expr zeroIndex;
+    zeroIndex.kind = primec::Expr::Kind::Literal;
+    zeroIndex.literalValue = 0;
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = "at";
+    expr.args = {makeSemanticName(name, 0), zeroIndex};
+    expr.semanticNodeId = semanticNodeId;
+    return expr;
+  };
+  auto makeDeref = [](const primec::Expr &target) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = "dereference";
+    expr.args = {target};
+    return expr;
+  };
+  auto makeCountCall = [](const primec::Expr &target) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = "count";
+    expr.args = {target};
+    return expr;
+  };
+
+  CHECK(setup.classifiers.isArrayCountCall(
+      makeCountCall(makeDeref(makeSemanticName("refVec", 7201))), locals));
+  CHECK_FALSE(setup.classifiers.isArrayCountCall(
+      makeCountCall(makeDeref(makeSemanticName("scalarRef", 7202))), locals));
+  CHECK_FALSE(setup.classifiers.isArrayCountCall(
+      makeCountCall(makeDeref(makeSemanticName("missingRef", 7299))), locals));
+  CHECK(setup.classifiers.isArrayCountCall(
+      makeCountCall(makeDeref(makeSemanticName("syntaxRef", 0))), locals));
+
+  CHECK(setup.classifiers.isArrayCountCall(
+      makeCountCall(makeDeref(makeAt("mapArgs", 7203))), locals));
+  CHECK_FALSE(setup.classifiers.isArrayCountCall(
+      makeCountCall(makeDeref(makeAt("scalarArgs", 7204))), locals));
+  CHECK(setup.classifiers.isArrayCountCall(
+      makeCountCall(makeDeref(makeAt("syntaxArgs", 0))), locals));
+}
+
 TEST_CASE("ir lowerer capacity classifiers prefer semantic target facts") {
   primec::Definition entryDef;
   entryDef.fullPath = "/main";
