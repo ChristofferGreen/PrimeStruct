@@ -150,6 +150,94 @@ TEST_CASE("ir lowerer count access helpers require published entry args binding 
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer count access classifiers prefer semantic direct-name facts") {
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "local",
+      .name = "values",
+      .bindingTypeText = "string",
+      .semanticNodeId = 7001,
+      .bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "array<bool>"),
+  });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(7001, 0);
+  semanticProgram.localAutoFacts.push_back(primec::SemanticProgramLocalAutoFact{
+      .scopePath = "/main",
+      .bindingName = "message",
+      .bindingTypeText = "i32",
+      .semanticNodeId = 7002,
+      .bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "string"),
+  });
+  semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr.insert_or_assign(7002, 0);
+  semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      .scopePath = "/main",
+      .callName = "makeScalar",
+      .queryTypeText = "array<i32>",
+      .bindingTypeText = "array<i32>",
+      .semanticNodeId = 7003,
+      .queryTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+  });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(7003, 0);
+
+  primec::ir_lowerer::EntryCountAccessSetup setup;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::buildEntryCountAccessSetup(entryDef, &semanticProgram, setup, error));
+  CHECK(error.empty());
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo staleStringInfo;
+  staleStringInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  staleStringInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::String;
+  staleStringInfo.stringSource = primec::ir_lowerer::LocalInfo::StringSource::TableIndex;
+  locals.emplace("values", staleStringInfo);
+  primec::ir_lowerer::LocalInfo staleMapInfo;
+  staleMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  staleMapInfo.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  staleMapInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals.emplace("message", staleMapInfo);
+  primec::ir_lowerer::LocalInfo staleArrayInfo;
+  staleArrayInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  staleArrayInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals.emplace("scalar", staleArrayInfo);
+
+  auto makeSemanticName = [](const char *name, uint64_t semanticNodeId) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Name;
+    expr.name = name;
+    expr.semanticNodeId = semanticNodeId;
+    return expr;
+  };
+  auto makeCountCall = [](const primec::Expr &target) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = "count";
+    expr.args = {target};
+    return expr;
+  };
+
+  primec::Expr valuesCount = makeCountCall(makeSemanticName("values", 7001));
+  CHECK(setup.classifiers.isArrayCountCall(valuesCount, locals));
+  CHECK_FALSE(setup.classifiers.isStringCountCall(valuesCount, locals));
+
+  primec::Expr messageCount = makeCountCall(makeSemanticName("message", 7002));
+  CHECK_FALSE(setup.classifiers.isArrayCountCall(messageCount, locals));
+  CHECK(setup.classifiers.isStringCountCall(messageCount, locals));
+
+  primec::Expr scalarCount = makeCountCall(makeSemanticName("scalar", 7003));
+  CHECK_FALSE(setup.classifiers.isArrayCountCall(scalarCount, locals));
+  CHECK_FALSE(setup.classifiers.isStringCountCall(scalarCount, locals));
+
+  primec::Expr missingFactCount = makeCountCall(makeSemanticName("values", 7999));
+  CHECK_FALSE(setup.classifiers.isArrayCountCall(missingFactCount, locals));
+  CHECK_FALSE(setup.classifiers.isStringCountCall(missingFactCount, locals));
+}
+
 TEST_CASE("ir lowerer count access helpers reject removed /array/capacity alias") {
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo vecInfo;

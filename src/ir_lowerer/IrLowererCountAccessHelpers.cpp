@@ -7,10 +7,14 @@
 #include <limits>
 #include <memory>
 #include <string_view>
+#include <utility>
 #include <vector>
 
+#include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
 #include "primec/SemanticProduct.h"
 
 namespace primec::ir_lowerer {
@@ -216,6 +220,121 @@ bool hasInferredTypedWrappedMap(const LocalInfo &info, LocalInfo::Kind kind) {
          info.mapValueKind != LocalInfo::ValueKind::Unknown;
 }
 
+struct SemanticCountTargetInfo {
+  bool isCollection = false;
+  bool isString = false;
+};
+
+bool classifySemanticCountTargetTypeText(std::string typeText,
+                                         SemanticCountTargetInfo &infoOut) {
+  infoOut = {};
+  typeText = trimTemplateTypeText(std::move(typeText));
+  if (typeText.empty()) {
+    return false;
+  }
+  if (isStringTypeName(typeText)) {
+    infoOut.isString = true;
+    return true;
+  }
+
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(typeText, base, argText)) {
+    return true;
+  }
+  base = normalizeCollectionBindingTypeName(trimTemplateTypeText(base));
+  if (base == "Reference" || base == "Pointer") {
+    std::vector<std::string> args;
+    if (!splitTemplateArgs(argText, args) || args.size() != 1) {
+      return true;
+    }
+    return classifySemanticCountTargetTypeText(args.front(), infoOut);
+  }
+  if (base == "array" || base == "vector" || base == "soa_vector" ||
+      base == "map" || base == "Buffer") {
+    infoOut.isCollection = true;
+    return true;
+  }
+  return true;
+}
+
+bool classifySemanticCountTargetTypeText(const SemanticProgram &semanticProgram,
+                                         const std::string &typeText,
+                                         SymbolId typeTextId,
+                                         SemanticCountTargetInfo &infoOut) {
+  const std::string resolvedTypeText =
+      std::string(resolveSemanticProductText(semanticProgram, typeTextId, typeText));
+  return classifySemanticCountTargetTypeText(resolvedTypeText, infoOut);
+}
+
+bool classifySemanticCollectionTarget(const SemanticProgram &semanticProgram,
+                                      const SemanticProgramCollectionSpecialization &collectionFact,
+                                      SemanticCountTargetInfo &infoOut) {
+  infoOut = {};
+  const std::string collectionFamily = normalizeCollectionBindingTypeName(
+      std::string(resolveSemanticProductText(semanticProgram,
+                                             collectionFact.collectionFamilyId,
+                                             collectionFact.collectionFamily)));
+  if (collectionFamily == "vector" || collectionFamily == "soa_vector" ||
+      collectionFamily == "map") {
+    infoOut.isCollection = true;
+  }
+  return true;
+}
+
+bool classifySemanticCountTarget(const Expr &target,
+                                 const SemanticProgram *semanticProgram,
+                                 const SemanticProductIndex *semanticIndex,
+                                 SemanticCountTargetInfo &infoOut) {
+  infoOut = {};
+  if (target.kind != Expr::Kind::Name || semanticProgram == nullptr ||
+      semanticIndex == nullptr || target.semanticNodeId == 0) {
+    return false;
+  }
+  if (const auto *collectionFact =
+          findSemanticProductCollectionSpecialization(*semanticIndex, target)) {
+    return classifySemanticCollectionTarget(*semanticProgram, *collectionFact, infoOut);
+  }
+  if (const auto *bindingFact = findSemanticProductBindingFact(*semanticIndex, target)) {
+    if (classifySemanticCountTargetTypeText(*semanticProgram,
+                                            bindingFact->bindingTypeText,
+                                            bindingFact->bindingTypeTextId,
+                                            infoOut)) {
+      return true;
+    }
+    return true;
+  }
+  if (const auto *localAutoFact =
+          findSemanticProductLocalAutoFact(semanticProgram, *semanticIndex, target)) {
+    if (classifySemanticCountTargetTypeText(*semanticProgram,
+                                            localAutoFact->bindingTypeText,
+                                            localAutoFact->bindingTypeTextId,
+                                            infoOut)) {
+      return true;
+    }
+    return true;
+  }
+  if (const auto *queryFact =
+          findSemanticProductQueryFact(semanticProgram, *semanticIndex, target)) {
+    if (classifySemanticCountTargetTypeText(*semanticProgram,
+                                            queryFact->queryTypeText,
+                                            queryFact->queryTypeTextId,
+                                            infoOut) ||
+        classifySemanticCountTargetTypeText(*semanticProgram,
+                                            queryFact->bindingTypeText,
+                                            queryFact->bindingTypeTextId,
+                                            infoOut) ||
+        classifySemanticCountTargetTypeText(*semanticProgram,
+                                            queryFact->receiverBindingTypeText,
+                                            queryFact->receiverBindingTypeTextId,
+                                            infoOut)) {
+      return true;
+    }
+    return true;
+  }
+  return true;
+}
+
 bool resolveEntryArgsParameterFromSemanticProduct(const Definition &entryDef,
                                                   const SemanticProgram *semanticProgram,
                                                   bool &hasEntryArgsOut,
@@ -332,7 +451,8 @@ bool buildEntryCountAccessSetup(const Definition &entryDef,
   if (!resolveEntryArgsParameter(entryDef, semanticProgram, out.hasEntryArgs, out.entryArgsName, error)) {
     return false;
   }
-  out.classifiers = makeCountAccessClassifiers(out.hasEntryArgs, out.entryArgsName);
+  out.classifiers =
+      makeCountAccessClassifiers(out.hasEntryArgs, out.entryArgsName, semanticProgram);
   return true;
 }
 
@@ -341,11 +461,17 @@ bool buildEntryCountAccessSetup(const Definition &entryDef, EntryCountAccessSetu
 }
 
 CountAccessClassifiers makeCountAccessClassifiers(bool hasEntryArgs, const std::string &entryArgsName) {
+  return makeCountAccessClassifiers(hasEntryArgs, entryArgsName, nullptr);
+}
+
+CountAccessClassifiers makeCountAccessClassifiers(bool hasEntryArgs,
+                                                  const std::string &entryArgsName,
+                                                  const SemanticProgram *semanticProgram) {
   CountAccessClassifiers classifiers{};
   classifiers.isEntryArgsName = makeIsEntryArgsName(hasEntryArgs, entryArgsName);
-  classifiers.isArrayCountCall = makeIsArrayCountCall(hasEntryArgs, entryArgsName);
+  classifiers.isArrayCountCall = makeIsArrayCountCall(hasEntryArgs, entryArgsName, semanticProgram);
   classifiers.isVectorCapacityCall = makeIsVectorCapacityCall();
-  classifiers.isStringCountCall = makeIsStringCountCall();
+  classifiers.isStringCountCall = makeIsStringCountCall(semanticProgram);
   return classifiers;
 }
 
@@ -355,9 +481,35 @@ IsEntryArgsNameFn makeIsEntryArgsName(bool hasEntryArgs, const std::string &entr
   };
 }
 
+bool isArrayCountCall(const Expr &expr,
+                      const LocalMap &localsIn,
+                      bool hasEntryArgs,
+                      const std::string &entryArgsName,
+                      const SemanticProgram *semanticProgram,
+                      const SemanticProductIndex *semanticIndex);
+bool isStringCountCall(const Expr &expr,
+                       const LocalMap &localsIn,
+                       const SemanticProgram *semanticProgram,
+                       const SemanticProductIndex *semanticIndex);
+
 IsArrayCountCallFn makeIsArrayCountCall(bool hasEntryArgs, const std::string &entryArgsName) {
+  return makeIsArrayCountCall(hasEntryArgs, entryArgsName, nullptr);
+}
+
+IsArrayCountCallFn makeIsArrayCountCall(bool hasEntryArgs,
+                                        const std::string &entryArgsName,
+                                        const SemanticProgram *semanticProgram) {
+  auto semanticIndex = semanticProgram == nullptr
+                           ? std::shared_ptr<SemanticProductIndex>{}
+                           : std::make_shared<SemanticProductIndex>(
+                                 buildSemanticProductIndex(semanticProgram));
   return [=](const Expr &expr, const LocalMap &localsIn) {
-    return isArrayCountCall(expr, localsIn, hasEntryArgs, entryArgsName);
+    return isArrayCountCall(expr,
+                            localsIn,
+                            hasEntryArgs,
+                            entryArgsName,
+                            semanticProgram,
+                            semanticIndex.get());
   };
 }
 
@@ -368,8 +520,16 @@ IsVectorCapacityCallFn makeIsVectorCapacityCall() {
 }
 
 IsStringCountCallFn makeIsStringCountCall() {
-  return [](const Expr &expr, const LocalMap &localsIn) {
-    return isStringCountCall(expr, localsIn);
+  return makeIsStringCountCall(nullptr);
+}
+
+IsStringCountCallFn makeIsStringCountCall(const SemanticProgram *semanticProgram) {
+  auto semanticIndex = semanticProgram == nullptr
+                           ? std::shared_ptr<SemanticProductIndex>{}
+                           : std::make_shared<SemanticProductIndex>(
+                                 buildSemanticProductIndex(semanticProgram));
+  return [=](const Expr &expr, const LocalMap &localsIn) {
+    return isStringCountCall(expr, localsIn, semanticProgram, semanticIndex.get());
   };
 }
 
@@ -381,6 +541,29 @@ bool isEntryArgsName(const Expr &expr, const LocalMap &localsIn, bool hasEntryAr
 }
 
 bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryArgs, const std::string &entryArgsName) {
+  return isArrayCountCall(expr, localsIn, hasEntryArgs, entryArgsName, nullptr, nullptr);
+}
+
+bool isArrayCountCall(const Expr &expr,
+                      const LocalMap &localsIn,
+                      bool hasEntryArgs,
+                      const std::string &entryArgsName,
+                      const SemanticProgram *semanticProgram) {
+  const SemanticProductIndex semanticIndex = buildSemanticProductIndex(semanticProgram);
+  return isArrayCountCall(expr,
+                          localsIn,
+                          hasEntryArgs,
+                          entryArgsName,
+                          semanticProgram,
+                          semanticProgram == nullptr ? nullptr : &semanticIndex);
+}
+
+bool isArrayCountCall(const Expr &expr,
+                      const LocalMap &localsIn,
+                      bool hasEntryArgs,
+                      const std::string &entryArgsName,
+                      const SemanticProgram *semanticProgram,
+                      const SemanticProductIndex *semanticIndex) {
   if (!(isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) || expr.args.size() != 1) {
     return false;
   }
@@ -398,19 +581,28 @@ bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryA
   if (isNamedArgumentCollectionTemporary(target, "vector")) {
     return false;
   }
+  SemanticCountTargetInfo semanticTargetInfo;
+  const bool hasSemanticTargetInfo =
+      target.kind == Expr::Kind::Name && semanticProgram != nullptr &&
+      semanticIndex != nullptr && target.semanticNodeId != 0 &&
+      classifySemanticCountTarget(target, semanticProgram, semanticIndex, semanticTargetInfo);
   const std::string scopedExprPath = resolveScopedCallPath(expr);
   const bool isBareSimpleVectorCountCall =
       expr.kind == Expr::Kind::Call && !expr.isMethodCall &&
       expr.namespacePrefix.empty() && isSimpleCallName(expr, "count");
-  if (isBareSimpleVectorCountCall &&
+  if (!hasSemanticTargetInfo && isBareSimpleVectorCountCall &&
       isVectorCountTarget(target, localsIn)) {
     return false;
   }
-  if (isExplicitArrayCountName(expr) && isVectorCountTarget(target, localsIn)) {
+  if (!hasSemanticTargetInfo && isExplicitArrayCountName(expr) &&
+      isVectorCountTarget(target, localsIn)) {
     return false;
   }
   if (isEntryArgsName(target, localsIn, hasEntryArgs, entryArgsName)) {
     return true;
+  }
+  if (hasSemanticTargetInfo) {
+    return semanticTargetInfo.isCollection;
   }
   if (isDereferencedCollectionCountTarget(expr, target, localsIn)) {
     return true;
@@ -551,6 +743,23 @@ bool isVectorCapacityCall(const Expr &expr, const LocalMap &localsIn) {
 }
 
 bool isStringCountCall(const Expr &expr, const LocalMap &localsIn) {
+  return isStringCountCall(expr, localsIn, nullptr, nullptr);
+}
+
+bool isStringCountCall(const Expr &expr,
+                       const LocalMap &localsIn,
+                       const SemanticProgram *semanticProgram) {
+  const SemanticProductIndex semanticIndex = buildSemanticProductIndex(semanticProgram);
+  return isStringCountCall(expr,
+                           localsIn,
+                           semanticProgram,
+                           semanticProgram == nullptr ? nullptr : &semanticIndex);
+}
+
+bool isStringCountCall(const Expr &expr,
+                       const LocalMap &localsIn,
+                       const SemanticProgram *semanticProgram,
+                       const SemanticProductIndex *semanticIndex) {
   if (!(isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) || expr.args.size() != 1) {
     return false;
   }
@@ -565,6 +774,13 @@ bool isStringCountCall(const Expr &expr, const LocalMap &localsIn) {
     return true;
   }
   if (target.kind == Expr::Kind::Name) {
+    if (semanticProgram != nullptr && semanticIndex != nullptr &&
+        target.semanticNodeId != 0) {
+      SemanticCountTargetInfo semanticInfo;
+      if (classifySemanticCountTarget(target, semanticProgram, semanticIndex, semanticInfo)) {
+        return semanticInfo.isString;
+      }
+    }
     auto it = localsIn.find(target.name);
     return it != localsIn.end() && it->second.valueKind == LocalInfo::ValueKind::String &&
            it->second.stringSource == LocalInfo::StringSource::TableIndex;

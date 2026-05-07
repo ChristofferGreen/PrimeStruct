@@ -55,14 +55,29 @@ bool buildEntryCountAccessSetup(const Definition &entryDef,
                                 std::string &error);
 bool buildEntryCountAccessSetup(const Definition &entryDef, EntryCountAccessSetup &out, std::string &error);
 CountAccessClassifiers makeCountAccessClassifiers(bool hasEntryArgs, const std::string &entryArgsName);
+CountAccessClassifiers makeCountAccessClassifiers(bool hasEntryArgs,
+                                                  const std::string &entryArgsName,
+                                                  const SemanticProgram *semanticProgram);
 IsEntryArgsNameFn makeIsEntryArgsName(bool hasEntryArgs, const std::string &entryArgsName);
 IsArrayCountCallFn makeIsArrayCountCall(bool hasEntryArgs, const std::string &entryArgsName);
+IsArrayCountCallFn makeIsArrayCountCall(bool hasEntryArgs,
+                                        const std::string &entryArgsName,
+                                        const SemanticProgram *semanticProgram);
 IsVectorCapacityCallFn makeIsVectorCapacityCall();
 IsStringCountCallFn makeIsStringCountCall();
+IsStringCountCallFn makeIsStringCountCall(const SemanticProgram *semanticProgram);
 bool isEntryArgsName(const Expr &expr, const LocalMap &localsIn, bool hasEntryArgs, const std::string &entryArgsName);
 bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryArgs, const std::string &entryArgsName);
+bool isArrayCountCall(const Expr &expr,
+                      const LocalMap &localsIn,
+                      bool hasEntryArgs,
+                      const std::string &entryArgsName,
+                      const SemanticProgram *semanticProgram);
 bool isVectorCapacityCall(const Expr &expr, const LocalMap &localsIn);
 bool isStringCountCall(const Expr &expr, const LocalMap &localsIn);
+bool isStringCountCall(const Expr &expr,
+                       const LocalMap &localsIn,
+                       const SemanticProgram *semanticProgram);
 StringCountCallEmitResult tryEmitStringCountCall(
     const Expr &expr,
     const LocalMap &localsIn,

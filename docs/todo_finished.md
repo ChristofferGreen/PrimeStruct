@@ -6,6 +6,31 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer count target facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes entry count-access
+    classifiers consume semantic-product direct-name binding, local-auto,
+    and query facts before stale local collection or string metadata can
+    classify `count(name)`.
+  - acceptance:
+    - Published binding type IDs classify direct-name collection count
+      targets before stale local string metadata.
+    - Published local-auto type IDs classify direct-name string count
+      targets before stale local map metadata.
+    - Published query type IDs suppress stale local collection count targets
+      when the graph-owned target type is scalar.
+  - stop_rule: Stop once bundled count-access classifier adapters built from
+    a semantic product honor graph-backed direct-name facts and focused tests
+    pin stale-local suppression plus missing-fact fail-closed behavior.
+  - evidence: Threaded the semantic product into entry count-access
+    classifiers, added semantic direct-name target classification for
+    `count(name)` collection and string paths, covered binding/local-auto/query
+    facts with stale local suppression, and skipped broad baseline validation
+    per the lite workflow.
+
 - [x] TODO-4298: Prefer access target facts
   - owner: ai
   - created_at: 2026-04-28

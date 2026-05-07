@@ -725,6 +725,9 @@ Task template:
     The lowerer access-target callback authority slice is complete for
     semantic-ID map and array/vector direct-name targets before stale local
     collection metadata can classify access helpers.
+    The lowerer count-classifier direct-name slice is complete for
+    semantic-product-backed binding, local-auto, and query target facts before
+    stale local collection/string metadata can classify `count(name)`.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
