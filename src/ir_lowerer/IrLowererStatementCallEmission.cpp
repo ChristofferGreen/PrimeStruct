@@ -1201,7 +1201,12 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
     // wrapped args-pack map-access forms (for example stacked
     // location/dereference around /map/at(argsPack, ...)) can flow through the
     // same typed map-target inference used by direct receivers.
-    auto canonicalTargetInfo = resolveMapAccessTargetInfo(*canonicalReceiverExpr, localsIn);
+    auto canonicalTargetInfo =
+        resolveMapAccessTargetInfo(*canonicalReceiverExpr,
+                                   localsIn,
+                                   {},
+                                   semanticProgram,
+                                   semanticIndex);
     if (receiverWasDereferenced) {
       canonicalTargetInfo.isWrappedMapTarget = false;
     }

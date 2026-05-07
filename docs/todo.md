@@ -670,6 +670,9 @@ Task template:
     The statement-call `map.insert(...)` receiver slice is complete for
     semantic-product-backed binding, local-auto, and query map facts before
     stale local map metadata can classify receiver key/value kinds.
+    The statement-call map-insert canonical receiver fallback slice is
+    complete for semantic-product-backed peeled receiver facts before stale
+    local map metadata can classify wrapped helper receiver forms.
     The statement-call vector mutator receiver slice is complete for
     semantic-product-backed binding, local-auto, and query vector facts before
     stale local vector metadata can select builtin mutator rewriting.
@@ -994,6 +997,11 @@ Task template:
       classify receiver key/value kinds. Published non-map facts suppress
       stale local map metadata while syntax-only compatibility keeps the
       legacy fallback.
+    - Completed slice: semantic-product-addressed statement-call map-insert
+      canonical receiver fallback now passes published map and non-map facts
+      into the peeled receiver resolver before local map metadata can
+      classify wrapped helper receiver forms. Syntax-only compatibility keeps
+      the legacy resolver fallback.
     - Completed slice: semantic-product-addressed statement-call vector
       mutator rewriting now consumes published binding, local-auto, and query
       vector receiver facts before local vector metadata can select builtin

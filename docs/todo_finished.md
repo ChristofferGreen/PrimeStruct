@@ -6,6 +6,31 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer statement map fallback facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes statement-call map-insert
+    wrapped receiver fallback pass published map and non-map facts into the
+    peeled receiver resolver before stale local map metadata can classify
+    helper receiver forms.
+  - acceptance:
+    - Statement map-insert wrapped receiver fallback uses semantic-aware map
+      target resolution after the direct semantic receiver gate.
+    - Published non-map facts suppress stale local map metadata for peeled
+      canonical receiver forms.
+    - Existing syntax-only wrapped receiver fallback remains available when no
+      semantic map fact is published.
+  - stop_rule: Stop once statement map-insert wrapped receiver fallback
+    routes through semantic-product target facts before legacy local map
+    metadata, with source guard coverage pinning the resolver ordering.
+  - evidence: Routed the peeled canonical receiver fallback in
+    `IrLowererStatementCallEmission.cpp` through the semantic-aware map target
+    resolver, tightened source guard coverage for resolver ordering after the
+    direct semantic receiver gate, ran `git diff --check`, and skipped broad
+    baseline validation per the lite workflow.
+
 - [x] TODO-4298: Prefer inline access fallback facts
   - owner: ai
   - created_at: 2026-04-28

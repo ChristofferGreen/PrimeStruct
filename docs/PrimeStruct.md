@@ -721,6 +721,10 @@ Planned non-template inference migration contract:
   binding, local-auto, and query map facts before local map metadata can
   supply key/value kinds. Published non-map facts suppress stale local map
   metadata while syntax-only compatibility keeps the old local fallback.
+- Completed statement-call map-insert canonical receiver fallback slice:
+  wrapped helper receiver classification now passes graph-backed map/non-map
+  facts into the peeled receiver resolver before stale local map metadata can
+  classify wrapped map helper forms.
 - Completed statement-call vector mutator receiver slice: builtin
   `vector.push(...)` / `receiver.push(...)` rewriting now classifies the
   receiver from published binding, local-auto, and query vector facts before

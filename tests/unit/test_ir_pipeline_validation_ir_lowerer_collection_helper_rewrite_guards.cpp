@@ -1030,6 +1030,23 @@ TEST_CASE("ir lowerer statement map insert rewrite uses semantic product receive
         statementSource.find("queryFact->queryTypeText,"));
   CHECK(statementSource.find("tryPopulateFromSemanticReceiverFact(*canonicalReceiverExpr, targetInfoOut)") !=
         std::string::npos);
+  const size_t semanticReceiverGate = statementSource.find(
+      "tryPopulateFromSemanticReceiverFact(*canonicalReceiverExpr, targetInfoOut)");
+  const size_t canonicalResolver = statementSource.find(
+      "resolveMapAccessTargetInfo(*canonicalReceiverExpr,\n"
+      "                                   localsIn,\n"
+      "                                   {},\n"
+      "                                   semanticProgram,\n"
+      "                                   semanticIndex)",
+      semanticReceiverGate);
+  const size_t mapTargetGate =
+      statementSource.find("if (canonicalTargetInfo.isMapTarget &&",
+                           semanticReceiverGate);
+  REQUIRE(semanticReceiverGate != std::string::npos);
+  REQUIRE(canonicalResolver != std::string::npos);
+  REQUIRE(mapTargetGate != std::string::npos);
+  CHECK(semanticReceiverGate < canonicalResolver);
+  CHECK(canonicalResolver < mapTargetGate);
   CHECK(callsStepSource.find("input.semanticProgram,\n"
                              "      input.semanticIndex);") !=
         std::string::npos);
