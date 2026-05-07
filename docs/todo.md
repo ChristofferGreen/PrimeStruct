@@ -1487,6 +1487,11 @@ Task template:
       `LocalInfo` scalar metadata can answer. Published non-scalar facts
       suppress stale local scalar kinds; no-fact names keep the syntax-only
       local fallback.
+    - Completed slice: lowerer array/buffer element-kind setup for bare names
+      now asks published collection, binding, local-auto, and query facts
+      before `LocalInfo` collection metadata can answer. Published
+      non-collection facts suppress stale local collection element kinds;
+      no-fact names keep the syntax-only local fallback.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.

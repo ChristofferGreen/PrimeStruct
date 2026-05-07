@@ -6,6 +6,31 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Use collection facts for element kinds
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes lowerer array/buffer
+    element-kind setup classify bare collection names from published
+    collection, binding, local-auto, and query facts before stale `LocalInfo`
+    collection metadata can answer.
+  - acceptance:
+    - Published collection facts classify vector element kinds before local
+      collection metadata.
+    - Published binding, local-auto, and query type IDs classify collection
+      element kinds before local collection metadata.
+    - Published non-collection facts suppress stale local collection fallback
+      while syntax-only names keep compatibility inference.
+  - stop_rule: Stop once native array/buffer element-kind inference depends on
+    graph-owned name facts and focused tests pin graph-backed, stale-local,
+    and syntax-only behavior.
+  - evidence: Added semantic-product collection element handling before
+    local array/buffer element inference for named expressions, covered
+    collection, binding, local-auto, query, non-collection suppression, and
+    syntax-only fallback, and skipped broad baseline validation per the lite
+    workflow.
+
 - [x] TODO-4298: Use name facts for value-kind dispatch
   - owner: ai
   - created_at: 2026-04-28

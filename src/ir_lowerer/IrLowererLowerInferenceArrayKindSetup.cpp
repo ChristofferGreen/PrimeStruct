@@ -1,8 +1,122 @@
 #include "IrLowererLowerInferenceSetup.h"
 
+#include "IrLowererBindingTypeHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupTypeHelpers.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
+
+#include <vector>
 
 namespace primec::ir_lowerer {
+
+namespace {
+
+LocalInfo::ValueKind semanticElementKindFromCollectionTypeText(
+    const std::string &typeText,
+    bool bufferOnly) {
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argText)) {
+    return LocalInfo::ValueKind::Unknown;
+  }
+  base = normalizeCollectionBindingTypeName(trimTemplateTypeText(base));
+  std::vector<std::string> args;
+  if ((base == "Reference" || base == "Pointer") &&
+      splitTemplateArgs(argText, args) && args.size() == 1) {
+    return semanticElementKindFromCollectionTypeText(args.front(), bufferOnly);
+  }
+  if (base == "Buffer") {
+    return valueKindFromTypeName(trimTemplateTypeText(argText));
+  }
+  if (bufferOnly) {
+    return LocalInfo::ValueKind::Unknown;
+  }
+  if (base == "array" || base == "vector" || base == "soa_vector") {
+    return valueKindFromTypeName(trimTemplateTypeText(argText));
+  }
+  if (base == "map" && splitTemplateArgs(argText, args) && args.size() == 2) {
+    return valueKindFromTypeName(trimTemplateTypeText(args.back()));
+  }
+  return LocalInfo::ValueKind::Unknown;
+}
+
+LocalInfo::ValueKind semanticElementKindFromCollectionFact(
+    const SemanticProgram *semanticProgram,
+    const SemanticProgramCollectionSpecialization &fact,
+    bool bufferOnly) {
+  const std::string family = normalizeCollectionBindingTypeName(
+      resolveSemanticProductTypeText(
+          semanticProgram, fact.collectionFamily, fact.collectionFamilyId));
+  if (family == "Buffer") {
+    return valueKindFromTypeName(resolveSemanticProductTypeText(
+        semanticProgram, fact.elementTypeText, fact.elementTypeTextId));
+  }
+  if (bufferOnly) {
+    return LocalInfo::ValueKind::Unknown;
+  }
+  if (family == "array" || family == "vector" || family == "soa_vector") {
+    return valueKindFromTypeName(resolveSemanticProductTypeText(
+        semanticProgram, fact.elementTypeText, fact.elementTypeTextId));
+  }
+  if (family == "map") {
+    return valueKindFromTypeName(resolveSemanticProductTypeText(
+        semanticProgram, fact.valueTypeText, fact.valueTypeTextId));
+  }
+  return LocalInfo::ValueKind::Unknown;
+}
+
+bool inferSemanticElementKindForName(
+    const Expr &expr,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex,
+    bool bufferOnly,
+    LocalInfo::ValueKind &kindOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  if (expr.kind != Expr::Kind::Name || semanticProgram == nullptr ||
+      semanticIndex == nullptr || expr.semanticNodeId == 0) {
+    return false;
+  }
+  if (const SemanticProgramCollectionSpecialization *collectionFact =
+          findSemanticProductCollectionSpecialization(*semanticIndex, expr);
+      collectionFact != nullptr) {
+    kindOut = semanticElementKindFromCollectionFact(
+        semanticProgram, *collectionFact, bufferOnly);
+    return true;
+  }
+  if (const SemanticProgramBindingFact *bindingFact =
+          findSemanticProductBindingFact(*semanticIndex, expr);
+      bindingFact != nullptr) {
+    kindOut = semanticElementKindFromCollectionTypeText(
+        resolveSemanticProductTypeText(
+            semanticProgram, bindingFact->bindingTypeText, bindingFact->bindingTypeTextId),
+        bufferOnly);
+    return true;
+  }
+  if (const SemanticProgramLocalAutoFact *localAutoFact =
+          findSemanticProductLocalAutoFactBySemanticId(*semanticIndex, expr);
+      localAutoFact != nullptr) {
+    kindOut = semanticElementKindFromCollectionTypeText(
+        resolveSemanticProductTypeText(
+            semanticProgram, localAutoFact->bindingTypeText, localAutoFact->bindingTypeTextId),
+        bufferOnly);
+    return true;
+  }
+  if (const SemanticProgramQueryFact *queryFact =
+          findSemanticProductQueryFactBySemanticId(*semanticIndex, expr);
+      queryFact != nullptr) {
+    std::string typeText = resolveSemanticProductTypeText(
+        semanticProgram, queryFact->queryTypeText, queryFact->queryTypeTextId);
+    if (typeText.empty()) {
+      typeText = resolveSemanticProductTypeText(
+          semanticProgram, queryFact->bindingTypeText, queryFact->bindingTypeTextId);
+    }
+    kindOut = semanticElementKindFromCollectionTypeText(typeText, bufferOnly);
+    return true;
+  }
+  return false;
+}
+
+} // namespace
 
 bool runLowerInferenceArrayKindSetup(const LowerInferenceArrayKindSetupInput &input,
                                      LowerInferenceSetupBootstrapState &stateInOut,
@@ -37,6 +151,8 @@ bool runLowerInferenceArrayKindSetup(const LowerInferenceArrayKindSetupInput &in
   const auto resolveStructArrayInfoFromPath = input.resolveStructArrayInfoFromPath;
   const auto isArrayCountCall = input.isArrayCountCall;
   const auto isStringCountCall = input.isStringCountCall;
+  const auto *semanticProgram = stateInOut.semanticProgram;
+  const auto *semanticIndex = stateInOut.semanticIndex;
   const auto resolveMethodCallDefinitionNoProbeError =
       [&stateInOut, &errorOut](const Expr &candidate, const LocalMap &candidateLocals) -> const Definition * {
     const std::string priorError = errorOut;
@@ -68,6 +184,11 @@ bool runLowerInferenceArrayKindSetup(const LowerInferenceArrayKindSetupInput &in
 
   stateInOut.inferBufferElementKind = [&stateInOut](const Expr &expr,
                                                     const LocalMap &localsIn) -> LocalInfo::ValueKind {
+    LocalInfo::ValueKind semanticKind = LocalInfo::ValueKind::Unknown;
+    if (inferSemanticElementKindForName(
+            expr, stateInOut.semanticProgram, stateInOut.semanticIndex, true, semanticKind)) {
+      return semanticKind;
+    }
     return inferBufferElementValueKind(
         expr,
         localsIn,
@@ -83,8 +204,15 @@ bool runLowerInferenceArrayKindSetup(const LowerInferenceArrayKindSetupInput &in
                                       isStringCountCall,
                                       isZeroFieldStructDef,
                                       resolveMethodCallDefinitionNoProbeError,
+                                      semanticProgram,
+                                      semanticIndex,
                                       &stateInOut](const Expr &expr,
                                                    const LocalMap &localsIn) -> LocalInfo::ValueKind {
+    LocalInfo::ValueKind semanticKind = LocalInfo::ValueKind::Unknown;
+    if (inferSemanticElementKindForName(
+            expr, semanticProgram, semanticIndex, false, semanticKind)) {
+      return semanticKind;
+    }
     return inferArrayElementValueKind(
         expr,
         localsIn,
