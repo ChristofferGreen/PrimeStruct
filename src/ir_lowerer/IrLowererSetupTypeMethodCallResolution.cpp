@@ -439,13 +439,24 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   const bool isBuiltinBareVectorAccessMethod =
       callExpr.isMethodCall && callExpr.args.size() == 2 &&
       (isSimpleCallName(callExpr, "at") || isSimpleCallName(callExpr, "at_unsafe")) &&
-      resolveArrayVectorAccessTargetInfo(callExpr.args.front(), localsIn).isVectorTarget;
+      resolveArrayVectorAccessTargetInfo(callExpr.args.front(),
+                                         localsIn,
+                                         {},
+                                         semanticProgram,
+                                         semanticIndexPtr)
+          .isVectorTarget;
   const bool isBuiltinBareVectorMutatorMethod =
       callExpr.isMethodCall &&
       (isSimpleCallName(callExpr, "push") || isSimpleCallName(callExpr, "pop") ||
        isSimpleCallName(callExpr, "reserve") || isSimpleCallName(callExpr, "clear") ||
        isSimpleCallName(callExpr, "remove_at") || isSimpleCallName(callExpr, "remove_swap")) &&
-      !callExpr.args.empty() && resolveArrayVectorAccessTargetInfo(callExpr.args.front(), localsIn).isVectorTarget;
+      !callExpr.args.empty() &&
+      resolveArrayVectorAccessTargetInfo(callExpr.args.front(),
+                                         localsIn,
+                                         {},
+                                         semanticProgram,
+                                         semanticIndexPtr)
+          .isVectorTarget;
   const bool isBuiltinVectorMutatorCall =
       isVectorBuiltinName(callExpr, "push") || isVectorBuiltinName(callExpr, "pop") ||
       isVectorBuiltinName(callExpr, "reserve") || isVectorBuiltinName(callExpr, "clear") ||

@@ -332,6 +332,110 @@ TEST_CASE("ir lowerer setup type helper keeps semantic explicit vector count hel
   CHECK(error == "semantic-product method-call target missing lowered definition: /string/count");
 }
 
+TEST_CASE("ir lowerer setup type helper prefers semantic vector method gate facts") {
+  primec::SemanticProgram semanticProgram;
+  auto addBindingFact = [&](uint64_t semanticNodeId,
+                            const std::string &bindingTypeText) {
+    primec::SemanticProgramBindingFact fact;
+    fact.semanticNodeId = semanticNodeId;
+    fact.bindingTypeText = bindingTypeText;
+    fact.bindingTypeTextId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, bindingTypeText);
+    const size_t factIndex = semanticProgram.bindingFacts.size();
+    semanticProgram.bindingFacts.push_back(fact);
+    semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(
+        semanticNodeId, factIndex);
+  };
+  auto addCollectionFact = [&](uint64_t semanticNodeId,
+                               const std::string &family,
+                               const std::string &elementType) {
+    primec::SemanticProgramCollectionSpecialization fact;
+    fact.semanticNodeId = semanticNodeId;
+    fact.collectionFamily = family;
+    fact.collectionFamilyId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, family);
+    fact.elementTypeText = elementType;
+    fact.elementTypeTextId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, elementType);
+    const size_t factIndex = semanticProgram.collectionSpecializations.size();
+    semanticProgram.collectionSpecializations.push_back(fact);
+    semanticProgram.publishedRoutingLookups.collectionSpecializationIndicesByExpr
+        .insert_or_assign(semanticNodeId, factIndex);
+  };
+  addBindingFact(7501, "i32");
+  addCollectionFact(7502, "vector", "i32");
+
+  primec::Expr scalarTarget;
+  scalarTarget.kind = primec::Expr::Kind::Name;
+  scalarTarget.name = "values";
+  scalarTarget.semanticNodeId = 7501;
+
+  primec::Expr vectorTarget = scalarTarget;
+  vectorTarget.semanticNodeId = 7502;
+
+  primec::Expr valueArg;
+  valueArg.kind = primec::Expr::Kind::Literal;
+  valueArg.intWidth = 32;
+  valueArg.literalValue = 3;
+
+  primec::ir_lowerer::LocalMap staleVectorLocals;
+  primec::ir_lowerer::LocalInfo staleVectorInfo;
+  staleVectorInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  staleVectorInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  staleVectorLocals.emplace("values", staleVectorInfo);
+
+  primec::ir_lowerer::LocalMap staleScalarLocals;
+  primec::ir_lowerer::LocalInfo staleScalarInfo;
+  staleScalarInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  staleScalarInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  staleScalarLocals.emplace("values", staleScalarInfo);
+
+  auto makeMethodCall = [&](const primec::Expr &receiver,
+                            const char *methodName) {
+    primec::Expr methodCall;
+    methodCall.kind = primec::Expr::Kind::Call;
+    methodCall.name = methodName;
+    methodCall.isMethodCall = true;
+    methodCall.args = {receiver, valueArg};
+    return methodCall;
+  };
+  auto resolveMethod = [&](const primec::Expr &methodCall,
+                           const primec::ir_lowerer::LocalMap &locals,
+                           std::string &error) {
+    return primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+        methodCall,
+        locals,
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        {},
+        {},
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+        },
+        [](const primec::Expr &) { return std::string(); },
+        &semanticProgram,
+        {},
+        std::unordered_map<std::string, const primec::Definition *>{},
+        error);
+  };
+
+  for (const char *methodName : {"at", "push"}) {
+    std::string error = "stale";
+    CHECK(resolveMethod(makeMethodCall(scalarTarget, methodName),
+                        staleVectorLocals,
+                        error) == nullptr);
+    CHECK(error == "stale");
+
+    error = "stale";
+    CHECK(resolveMethod(makeMethodCall(vectorTarget, methodName),
+                        staleScalarLocals,
+                        error) == nullptr);
+    CHECK(error == std::string("unknown method: /std/collections/vector/") +
+                       methodName);
+  }
+}
+
 TEST_CASE("ir lowerer setup type helper reports method call definition diagnostics from expressions") {
   primec::Expr methodCall;
   methodCall.kind = primec::Expr::Kind::Call;

@@ -786,6 +786,10 @@ Task template:
     semantic-product-backed map and non-map target facts before stale local
     map metadata can block primitive method receiver fallback for
     `at(target, key).method()` and `tryAt(target, key).method()`.
+    The lowerer setup method vector gate slice is complete for
+    semantic-product-backed vector and non-vector target facts before stale
+    local vector metadata can decide whether bare vector access or mutator
+    methods should suppress builtin fallback.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -820,6 +824,12 @@ Task template:
       `at(target, key).method()` and `tryAt(target, key).method()`. Published
       map facts suppress stale scalar locals while published non-map facts
       suppress stale map locals.
+    - Completed slice: semantic-product-addressed setup-type method
+      vector gates now consume published vector/non-vector target facts before
+      local vector metadata can suppress builtin fallback for bare vector
+      `at`/`at_unsafe` access and mutator methods. Published vector facts
+      suppress stale scalar locals while published non-vector facts suppress
+      stale vector locals.
     - Completed slice: semantic-product-addressed native `Result.why(...)`
       direct-call sources now resolve interned query result-error IDs before
       copied query text, so stale duplicated error text cannot override the

@@ -6,6 +6,32 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer method vector gate facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes setup-type method resolution
+    for bare vector `at`/`at_unsafe` access and vector mutator methods
+    consume published vector and non-vector facts before stale local vector
+    metadata can suppress builtin fallback.
+  - acceptance:
+    - Published scalar binding facts allow builtin fallback when stale local
+      metadata says the receiver target is a vector.
+    - Published vector collection facts block builtin fallback when stale
+      local metadata says the receiver target is scalar.
+    - Existing local vector method-gate behavior remains available when no
+      semantic vector/non-vector fact is published.
+  - stop_rule: Stop once bare vector access and mutator method gates route
+    through semantic-product target facts before legacy local vector metadata,
+    with focused coverage pinning stale vector suppression and stale scalar
+    rejection.
+  - evidence: Routed setup-type bare vector access and mutator method gates
+    through the shared semantic-aware array/vector target resolver, covered
+    stale local vector/scalar conflicts for `at(...)` and `push(...)` method
+    calls in the focused setup-type helper test, ran `git diff --check`, and
+    skipped broad baseline validation per the lite workflow.
+
 - [x] TODO-4298: Prefer method map probe facts
   - owner: ai
   - created_at: 2026-04-28

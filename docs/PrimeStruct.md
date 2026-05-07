@@ -848,6 +848,12 @@ Planned non-template inference migration contract:
   now asks graph-backed map/non-map facts before local map metadata can block
   primitive receiver fallback. Known map facts suppress stale scalar locals;
   known non-map facts suppress stale map locals.
+- Completed lowerer setup method vector gate slice: setup-type method
+  resolution for bare vector `at`/`at_unsafe` access and vector mutator
+  methods now asks graph-backed vector/non-vector facts before local vector
+  metadata can decide whether to suppress builtin fallback. Known vector
+  facts suppress stale scalar locals; known non-vector facts suppress stale
+  vector locals.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph
