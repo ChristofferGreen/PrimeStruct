@@ -6,7 +6,8 @@
             inferStructExprPath,
             combineNumericKinds,
             [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
-            error);
+            error,
+            &callResolutionAdapters.semanticProductTargets);
         if (arithmeticResult == ir_lowerer::OperatorArithmeticEmitResult::Error) {
           return false;
         }

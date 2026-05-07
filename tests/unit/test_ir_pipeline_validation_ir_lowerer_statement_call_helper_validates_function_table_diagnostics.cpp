@@ -244,6 +244,179 @@ TEST_CASE("ir lowerer arithmetic helper validates pointer operand side") {
   CHECK(error == "pointer arithmetic requires pointer on the left");
 }
 
+TEST_CASE("ir lowerer arithmetic helper uses semantic pointer operand facts before stale locals") {
+  using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::SemanticProgram semanticProgram;
+  auto intern = [](primec::SemanticProgram &program, const std::string &text) {
+    return primec::semanticProgramInternCallTargetString(program, text);
+  };
+  auto addBindingFact = [&](uint64_t semanticNodeId,
+                            const std::string &name,
+                            const std::string &typeText) {
+    primec::SemanticProgramBindingFact fact;
+    fact.scopePath = "/main";
+    fact.siteKind = "local";
+    fact.name = name;
+    fact.bindingTypeText = typeText;
+    fact.semanticNodeId = semanticNodeId;
+    fact.scopePathId = intern(semanticProgram, "/main");
+    fact.siteKindId = intern(semanticProgram, "local");
+    fact.nameId = intern(semanticProgram, name);
+    fact.bindingTypeTextId = intern(semanticProgram, typeText);
+    const size_t index = semanticProgram.bindingFacts.size();
+    semanticProgram.bindingFacts.push_back(fact);
+    semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr
+        .insert_or_assign(semanticNodeId, index);
+  };
+  auto addLocalAutoFact = [&](uint64_t semanticNodeId,
+                              const std::string &name,
+                              const std::string &typeText) {
+    primec::SemanticProgramLocalAutoFact fact;
+    fact.scopePath = "/main";
+    fact.bindingName = name;
+    fact.bindingTypeText = typeText;
+    fact.initializerBindingTypeText = typeText;
+    fact.semanticNodeId = semanticNodeId;
+    fact.scopePathId = intern(semanticProgram, "/main");
+    fact.bindingNameId = intern(semanticProgram, name);
+    fact.bindingTypeTextId = intern(semanticProgram, typeText);
+    const size_t index = semanticProgram.localAutoFacts.size();
+    semanticProgram.localAutoFacts.push_back(fact);
+    semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr
+        .insert_or_assign(semanticNodeId, index);
+  };
+  auto addQueryFact = [&](uint64_t semanticNodeId,
+                          const std::string &name,
+                          const std::string &typeText) {
+    primec::SemanticProgramQueryFact fact;
+    fact.scopePath = "/main";
+    fact.callName = name;
+    fact.queryTypeText = typeText;
+    fact.bindingTypeText = typeText;
+    fact.semanticNodeId = semanticNodeId;
+    fact.scopePathId = intern(semanticProgram, "/main");
+    fact.callNameId = intern(semanticProgram, name);
+    fact.resolvedPathId = intern(semanticProgram, "/main/" + name);
+    fact.queryTypeTextId = intern(semanticProgram, typeText);
+    fact.bindingTypeTextId = intern(semanticProgram, typeText);
+    const size_t index = semanticProgram.queryFacts.size();
+    semanticProgram.queryFacts.push_back(fact);
+    semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr
+        .insert_or_assign(semanticNodeId, index);
+  };
+  addBindingFact(701, "staleRightPointer", "i32");
+  addLocalAutoFact(702, "semanticRightPointer", "Pointer<i32>");
+  addQueryFact(703, "semanticLeftPointer", "Pointer<i64>");
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+
+  auto makeName = [](const std::string &name, uint64_t semanticNodeId) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Name;
+    expr.name = name;
+    expr.semanticNodeId = semanticNodeId;
+    return expr;
+  };
+  auto makePlus = [](primec::Expr left, primec::Expr right) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = "plus";
+    expr.args = {left, right};
+    return expr;
+  };
+  auto inferKind = [](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &localMap) {
+    if (arg.kind != primec::Expr::Kind::Name) {
+      return Kind::Int32;
+    }
+    auto it = localMap.find(arg.name);
+    return (it == localMap.end()) ? Kind::Unknown : it->second.valueKind;
+  };
+  auto combineKinds = [](Kind leftKind, Kind rightKind) {
+    return (leftKind == rightKind) ? leftKind : Kind::Unknown;
+  };
+  auto makeLocal = [](primec::ir_lowerer::LocalInfo::Kind kind, Kind valueKind, uint64_t index) {
+    primec::ir_lowerer::LocalInfo info;
+    info.kind = kind;
+    info.valueKind = valueKind;
+    info.index = index;
+    return info;
+  };
+
+  primec::ir_lowerer::LocalMap staleLocals;
+  staleLocals.emplace("value", makeLocal(primec::ir_lowerer::LocalInfo::Kind::Value, Kind::Int32, 1));
+  staleLocals.emplace("staleRightPointer",
+                      makeLocal(primec::ir_lowerer::LocalInfo::Kind::Pointer, Kind::Int32, 2));
+  staleLocals.emplace("semanticRightPointer",
+                      makeLocal(primec::ir_lowerer::LocalInfo::Kind::Value, Kind::Int32, 3));
+  staleLocals.emplace("semanticLeftPointer",
+                      makeLocal(primec::ir_lowerer::LocalInfo::Kind::Value, Kind::Int64, 4));
+  staleLocals.emplace("offset", makeLocal(primec::ir_lowerer::LocalInfo::Kind::Value, Kind::Int32, 5));
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  auto result = primec::ir_lowerer::emitArithmeticOperatorExpr(
+      makePlus(makeName("value", 0), makeName("staleRightPointer", 701)),
+      staleLocals,
+      [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &localMap) {
+        auto it = localMap.find(arg.name);
+        if (it == localMap.end()) {
+          return false;
+        }
+        instructions.push_back({primec::IrOpcode::LoadLocal, it->second.index});
+        return true;
+      },
+      inferKind,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string{}; },
+      combineKinds,
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      error,
+      &semanticTargets);
+  CHECK(result == primec::ir_lowerer::OperatorArithmeticEmitResult::Handled);
+  CHECK(error.empty());
+  REQUIRE(instructions.size() == 3);
+  CHECK(instructions[2].op == primec::IrOpcode::AddI32);
+
+  error.clear();
+  instructions.clear();
+  result = primec::ir_lowerer::emitArithmeticOperatorExpr(
+      makePlus(makeName("value", 0), makeName("semanticRightPointer", 702)),
+      staleLocals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      inferKind,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string{}; },
+      combineKinds,
+      [](primec::IrOpcode, uint64_t) {},
+      error,
+      &semanticTargets);
+  CHECK(result == primec::ir_lowerer::OperatorArithmeticEmitResult::Error);
+  CHECK(error == "pointer arithmetic requires pointer on the left");
+
+  error.clear();
+  instructions.clear();
+  result = primec::ir_lowerer::emitArithmeticOperatorExpr(
+      makePlus(makeName("semanticLeftPointer", 703), makeName("offset", 0)),
+      staleLocals,
+      [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &localMap) {
+        auto it = localMap.find(arg.name);
+        if (it == localMap.end()) {
+          return false;
+        }
+        instructions.push_back({primec::IrOpcode::LoadLocal, it->second.index});
+        return true;
+      },
+      inferKind,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string{}; },
+      combineKinds,
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      error,
+      &semanticTargets);
+  CHECK(result == primec::ir_lowerer::OperatorArithmeticEmitResult::Handled);
+  CHECK(error.empty());
+  REQUIRE(instructions.size() == 3);
+  CHECK(instructions[2].op == primec::IrOpcode::AddI64);
+}
+
 TEST_CASE("ir lowerer arithmetic helper treats reference handles as pointer operands") {
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo referenceInfo;

@@ -6,6 +6,31 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Use pointer facts for arithmetic operands
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes native arithmetic lowering
+    classify pointer arithmetic operands from published binding, local-auto,
+    and query facts before stale `LocalInfo` pointer/reference metadata can
+    decide operand sides.
+  - acceptance:
+    - Published binding type IDs suppress stale local pointer operands when
+      the graph-owned type is non-pointer.
+    - Published local-auto type IDs classify pointer operands before stale
+      local value metadata.
+    - Published query type IDs classify left-hand pointer operands before
+      stale local value metadata.
+  - stop_rule: Stop once native arithmetic pointer-side diagnostics and
+    pointer arithmetic op selection depend on graph-owned name facts and
+    focused tests pin graph-backed, stale-local, and syntax-only behavior.
+  - evidence: Added semantic-product pointer/reference operand
+    classification to arithmetic lowering, passed the adapter through the
+    production lowering call, covered binding/local-auto/query facts with
+    stale local suppression and pointer op selection, and skipped broad
+    baseline validation per the lite workflow.
+
 - [x] TODO-4298: Use pointer facts for target kinds
   - owner: ai
   - created_at: 2026-04-28

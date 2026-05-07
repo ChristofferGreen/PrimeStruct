@@ -10,6 +10,8 @@
 
 namespace primec::ir_lowerer {
 
+struct SemanticProductTargetAdapter;
+
 enum class OperatorArithmeticEmitResult { Handled, NotHandled, Error };
 
 using EmitExprWithLocalsFn = std::function<bool(const Expr &, const LocalMap &)>;
@@ -25,6 +27,7 @@ OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
                                                         const InferStructExprPathWithLocalsFn &inferStructExprPath,
                                                         const CombineNumericKindsFn &combineNumericKinds,
                                                         const EmitInstructionFn &emitInstruction,
-                                                        std::string &error);
+                                                        std::string &error,
+                                                        const SemanticProductTargetAdapter *semanticProductTargets = nullptr);
 
 } // namespace primec::ir_lowerer

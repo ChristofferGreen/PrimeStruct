@@ -1,8 +1,12 @@
 #include "IrLowererOperatorArithmeticHelpers.h"
 
+#include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
 
 #include <functional>
+#include <vector>
 
 namespace primec::ir_lowerer {
 
@@ -32,6 +36,54 @@ bool isNumericScalarKind(LocalInfo::ValueKind kind) {
   return kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Int64 ||
          kind == LocalInfo::ValueKind::UInt64 || kind == LocalInfo::ValueKind::Float32 ||
          kind == LocalInfo::ValueKind::Float64;
+}
+
+bool isSemanticPointerOperandTypeText(const std::string &typeText) {
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argText)) {
+    return false;
+  }
+  base = normalizeCollectionBindingTypeName(trimTemplateTypeText(base));
+  if (base != "Pointer" && base != "Reference") {
+    return false;
+  }
+  std::vector<std::string> args;
+  return splitTemplateArgs(argText, args) && args.size() == 1;
+}
+
+bool classifySemanticPointerOperand(const Expr &expr,
+                                    const SemanticProductTargetAdapter *semanticProductTargets,
+                                    bool &isPointerOut) {
+  isPointerOut = false;
+  if (expr.kind != Expr::Kind::Name || semanticProductTargets == nullptr ||
+      !semanticProductTargets->hasSemanticProduct ||
+      semanticProductTargets->semanticProgram == nullptr || expr.semanticNodeId == 0) {
+    return false;
+  }
+  const SemanticProgram *semanticProgram = semanticProductTargets->semanticProgram;
+  if (const auto *bindingFact = findSemanticProductBindingFact(*semanticProductTargets, expr)) {
+    isPointerOut = isSemanticPointerOperandTypeText(resolveSemanticProductTypeText(
+        semanticProgram, bindingFact->bindingTypeText, bindingFact->bindingTypeTextId));
+    return true;
+  }
+  if (const auto *localAutoFact =
+          findSemanticProductLocalAutoFactBySemanticId(*semanticProductTargets, expr)) {
+    isPointerOut = isSemanticPointerOperandTypeText(resolveSemanticProductTypeText(
+        semanticProgram, localAutoFact->bindingTypeText, localAutoFact->bindingTypeTextId));
+    return true;
+  }
+  if (const auto *queryFact = findSemanticProductQueryFactBySemanticId(*semanticProductTargets, expr)) {
+    std::string typeText = resolveSemanticProductTypeText(
+        semanticProgram, queryFact->queryTypeText, queryFact->queryTypeTextId);
+    if (typeText.empty()) {
+      typeText = resolveSemanticProductTypeText(
+          semanticProgram, queryFact->bindingTypeText, queryFact->bindingTypeTextId);
+    }
+    isPointerOut = isSemanticPointerOperandTypeText(typeText);
+    return true;
+  }
+  return false;
 }
 
 void rewriteHelperCall(const Expr &expr, const std::string &helperPath, Expr &rewrittenExpr) {
@@ -180,7 +232,8 @@ OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
                                                         const InferStructExprPathWithLocalsFn &inferStructExprPath,
                                                         const CombineNumericKindsFn &combineNumericKinds,
                                                         const EmitInstructionFn &emitInstruction,
-                                                        std::string &error) {
+                                                        std::string &error,
+                                                        const SemanticProductTargetAdapter *semanticProductTargets) {
   std::string builtin;
   if (!getBuiltinOperatorName(expr, builtin)) {
     return OperatorArithmeticEmitResult::NotHandled;
@@ -228,6 +281,10 @@ OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
     if (candidate.kind != Expr::Kind::Name) {
       return false;
     }
+    bool semanticPointer = false;
+    if (classifySemanticPointerOperand(candidate, semanticProductTargets, semanticPointer)) {
+      return false;
+    }
     auto it = localsRef.find(candidate.name);
     if (it == localsRef.end()) {
       return false;
@@ -251,6 +308,10 @@ OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
   std::function<bool(const Expr &, const LocalMap &)> isPointerOperand;
   isPointerOperand = [&](const Expr &candidate, const LocalMap &localsRef) -> bool {
     if (candidate.kind == Expr::Kind::Name) {
+      bool semanticPointer = false;
+      if (classifySemanticPointerOperand(candidate, semanticProductTargets, semanticPointer)) {
+        return semanticPointer;
+      }
       auto it = localsRef.find(candidate.name);
       if (it == localsRef.end()) {
         return false;
