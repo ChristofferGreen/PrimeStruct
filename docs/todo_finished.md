@@ -6,6 +6,32 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer deref mutation facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes native
+    `increment(dereference(...))` / `decrement(dereference(...))` target
+    value-kind classification consume published pointer/reference facts
+    before stale dereference inference can answer.
+  - acceptance:
+    - Published pointer binding type IDs classify dereferenced mutation
+      targets before stale local string metadata.
+    - Published numeric pointer target facts select numeric mutation opcodes
+      for dereferenced targets.
+    - Existing dereference value-kind inference remains available when no
+      semantic pointer/reference fact is published.
+  - stop_rule: Stop once dereferenced mutation target inference routes through
+    semantic-product pointer/reference facts before the legacy inferred
+    dereference value-kind fallback, with focused coverage pinning stale
+    local string suppression.
+  - evidence: Reused semantic-product mutation target lookup for
+    `dereference(...)` pointer operands, expanded the focused conversions
+    helper test to cover stale local string metadata on a graph-owned
+    `Pointer<f64>`, ran `git diff --check`, and skipped broad baseline
+    validation per the lite workflow.
+
 - [x] TODO-4298: Prefer indexed target facts
   - owner: ai
   - created_at: 2026-04-28

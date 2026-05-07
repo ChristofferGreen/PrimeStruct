@@ -659,12 +659,17 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         return false;
       }
       LocalInfo::ValueKind valueKind = inferExprKind(target, localsIn);
+      const Expr &pointerExpr = target.args.front();
+      LocalInfo::ValueKind semanticValueKind = LocalInfo::ValueKind::Unknown;
+      if (inferSemanticMutationTargetValueKind(
+              pointerExpr, context.semanticProductTargets, valueKindFromTypeName, semanticValueKind)) {
+        valueKind = semanticValueKind;
+      }
       if (valueKind == LocalInfo::ValueKind::Unknown || valueKind == LocalInfo::ValueKind::Bool ||
           valueKind == LocalInfo::ValueKind::String) {
         error = std::string(mutateName) + " requires numeric operand";
         return false;
       }
-      const Expr &pointerExpr = target.args.front();
       const int32_t ptrLocal = allocTempLocal();
       if (pointerExpr.kind == Expr::Kind::Name) {
         auto it = localsIn.find(pointerExpr.name);

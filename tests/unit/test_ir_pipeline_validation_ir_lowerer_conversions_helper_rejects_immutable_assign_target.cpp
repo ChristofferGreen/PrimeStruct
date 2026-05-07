@@ -124,6 +124,7 @@ TEST_CASE("ir lowerer conversions helper uses semantic mutation target facts bef
   addBindingFact(9201, "staleScalar", "string");
   addLocalAutoFact(9202, "semanticScalar", "f32");
   addQueryFact(9203, "semanticRef", "Reference<f64>");
+  addBindingFact(9204, "semanticPtr", "Pointer<f64>");
   const auto semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
 
@@ -142,6 +143,7 @@ TEST_CASE("ir lowerer conversions helper uses semantic mutation target facts bef
   addLocal("staleScalar", primec::ir_lowerer::LocalInfo::Kind::Value, Kind::Int32, 3);
   addLocal("semanticScalar", primec::ir_lowerer::LocalInfo::Kind::Value, Kind::Int32, 4);
   addLocal("semanticRef", primec::ir_lowerer::LocalInfo::Kind::Reference, Kind::Int32, 5);
+  addLocal("semanticPtr", primec::ir_lowerer::LocalInfo::Kind::Pointer, Kind::String, 6);
 
   auto makeMutation = [](const std::string &callName,
                          const std::string &targetName,
@@ -154,6 +156,23 @@ TEST_CASE("ir lowerer conversions helper uses semantic mutation target facts bef
     expr.kind = primec::Expr::Kind::Call;
     expr.name = callName;
     expr.args = {target};
+    return expr;
+  };
+  auto makeDereferenceMutation = [](const std::string &callName,
+                                    const std::string &targetName,
+                                    uint64_t semanticNodeId) {
+    primec::Expr target;
+    target.kind = primec::Expr::Kind::Name;
+    target.name = targetName;
+    target.semanticNodeId = semanticNodeId;
+    primec::Expr dereference;
+    dereference.kind = primec::Expr::Kind::Call;
+    dereference.name = "dereference";
+    dereference.args = {target};
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = callName;
+    expr.args = {dereference};
     return expr;
   };
 
@@ -226,6 +245,17 @@ TEST_CASE("ir lowerer conversions helper uses semantic mutation target facts bef
   CHECK(instructions[0].imm == 5u);
   CHECK(instructions[4].op == primec::IrOpcode::PushF64);
   CHECK(instructions[5].op == primec::IrOpcode::SubF64);
+  CHECK(instructions.back().op == primec::IrOpcode::StoreIndirect);
+
+  error.clear();
+  instructions.clear();
+  CHECK(emitMutation(makeDereferenceMutation("increment", "semanticPtr", 9204), instructions, error));
+  CHECK(error.empty());
+  REQUIRE(instructions.size() == 10);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 6u);
+  CHECK(instructions[4].op == primec::IrOpcode::PushF64);
+  CHECK(instructions[5].op == primec::IrOpcode::AddF64);
   CHECK(instructions.back().op == primec::IrOpcode::StoreIndirect);
 }
 

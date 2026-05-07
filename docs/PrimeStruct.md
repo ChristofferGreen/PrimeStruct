@@ -827,6 +827,12 @@ Planned non-template inference migration contract:
   storage. Known non-string graph facts suppress stale string-table metadata;
   no-fact literal-backed metadata remains the syntax-only compatibility
   fallback.
+- Completed native dereferenced mutation target slice: native
+  `increment(dereference(...))` / `decrement(dereference(...))` inference now
+  asks graph-backed pointer/reference facts before stale dereference
+  value-kind inference can classify the mutable target. Known numeric pointer
+  facts suppress stale local string metadata; no-fact contexts keep the
+  existing inference fallback.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph
@@ -1213,6 +1219,9 @@ Compile-pipeline publication contract:
 - Memory pointer arithmetic sizing follows graph-backed pointer target facts for binding, local-auto, and query pointer
   expressions before local pointer struct metadata can determine aggregate slot scaling; published scalar facts suppress
   stale aggregate scaling, and syntax-only pointer expressions keep compatibility inference.
+- Native `increment(dereference(...))` / `decrement(dereference(...))` target inference follows the same graph-backed
+  pointer rule: semantic-product pointer/reference binding facts provide the mutable target value kind before stale
+  dereference value-kind inference can answer, while syntax-only contexts keep the existing fallback.
 - Native indexed-access validation now follows the graph-backed rule for index
   expressions: query, binding, and local-auto type facts provide the index kind
   before legacy expression inference is consulted.

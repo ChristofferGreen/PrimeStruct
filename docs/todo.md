@@ -722,6 +722,10 @@ Task template:
     semantic-product-backed binding, local-auto, and query scalar/reference
     facts before stale local mutation metadata can classify
     `increment(...)`/`decrement(...)` targets.
+    The lowerer dereferenced mutation target slice is complete for
+    semantic-product-backed pointer/reference binding facts before stale
+    dereference inference can classify `increment(dereference(...))` and
+    `decrement(dereference(...))` target values.
     The lowerer access-target callback authority slice is complete for
     semantic-ID map and array/vector direct-name targets before stale local
     collection metadata can classify access helpers.
@@ -1561,6 +1565,11 @@ Task template:
       before `LocalInfo` collection metadata can answer. Published
       non-collection facts suppress stale local collection element kinds;
       no-fact names keep the syntax-only local fallback.
+    - Completed slice: native dereferenced mutation target inference now asks
+      published pointer/reference facts before `dereference(...)` value-kind
+      inference can answer for `increment(...)`/`decrement(...)`. Published
+      numeric pointer targets suppress stale local string metadata, and
+      no-fact contexts keep the existing inference fallback.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.
