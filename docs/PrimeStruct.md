@@ -5235,6 +5235,12 @@ read-only path.
   container-conformance work. They wrap the qualified memory intrinsics into small alloc/grow/free plus
   checked/unchecked offset, read, and write helpers so future stdlib `vector`/`map` implementations can be proven
   through import-driven VM/native/C++ tests without presenting those helpers as candidate public collection APIs.
+  VM/native conformance now also covers a non-vector `Pointer<uninitialized<T>>`
+  fixture that allocates raw slots, initializes values with `init(...)`, moves a
+  dynamic prefix between two buffers with `take(...)` plus `init(...)`, borrows
+  moved storage with `borrow(dereference(slot))`, drops initialized survivors,
+  frees both buffers, and checks that checked-offset failures still report
+  `pointer index out of bounds` rather than vector-specific diagnostics.
   - When any `/std...` import is present, the stdlib now also provides canonical `.prime` wrappers at
     `/std/collections/vector/*` over the current stdlib `vectorNew` / `vectorCount` / `vectorPush` helper surface. That
     imported path is now the sole public namespaced vector contract; the experimental vector namespace remains a

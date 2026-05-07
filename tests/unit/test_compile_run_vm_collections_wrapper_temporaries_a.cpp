@@ -3118,7 +3118,9 @@ TEST_CASE("runs vm imported container error contract conformance") {
 TEST_CASE("runs vm checked pointer conformance harness for imported .prime helpers") {
   expectCheckedPointerHelperSurfaceConformance("vm");
   expectCheckedPointerGrowthConformance("vm");
+  expectCheckedPointerUninitializedPrefixMoveConformance("vm");
   expectCheckedPointerOutOfBoundsConformance("vm");
+  expectCheckedPointerUninitializedOutOfBoundsConformance("vm");
 }
 
 TEST_CASE("runs vm with templated stdlib vector wrapper temporary call forms") {

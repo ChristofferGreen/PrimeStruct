@@ -72,11 +72,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4293: Stabilize generic contiguous-storage substrate
+- TODO-4294: Lower vector helpers through ordinary `.prime`
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4294: Lower vector helpers through ordinary `.prime`
 - TODO-4281: Lift vector dynamic capacity limit
 - TODO-4295: Move collection surface metadata out of C++
 - TODO-4296: Delete vector compatibility seams
@@ -84,14 +83,15 @@ Task template:
 - TODO-4299: Promote and style canonical `.prime` map implementation
 - TODO-4300: Stabilize map lookup and insertion substrate
 - TODO-4301: Lower map helpers through ordinary `.prime`
+- TODO-4302: Move map surface metadata out of C++
 
 ### Priority Lanes (Current)
 
 - Semantic ownership authority: none active; future semantic-authority work
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
-- Vector stdlib ownership cutover: TODO-4293 -> TODO-4294
-  -> TODO-4281 -> TODO-4295 -> TODO-4296 -> TODO-4297
+- Vector stdlib ownership cutover: TODO-4294 -> TODO-4281
+  -> TODO-4295 -> TODO-4296 -> TODO-4297
 - Map stdlib ownership cutover: TODO-4299 -> TODO-4300 -> TODO-4301
   -> TODO-4302 -> TODO-4303 -> TODO-4304
 - SoA public surface rename and ownership cutover: TODO-4305 -> TODO-4306
@@ -110,7 +110,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4293: Stabilize generic contiguous-storage substrate
 - TODO-4294: Lower vector helpers through ordinary `.prime`
 - TODO-4281: Lift vector dynamic capacity limit
 - TODO-4295: Move collection surface metadata out of C++
@@ -178,7 +177,7 @@ Task template:
 | Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4299, TODO-4305 |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4295, TODO-4296, TODO-4297, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4293, TODO-4294, TODO-4281, TODO-4295, TODO-4296, TODO-4297, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4294, TODO-4281, TODO-4295, TODO-4296, TODO-4297, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4296, TODO-4297, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Validator entrypoint and benchmark-plumbing split | none |
@@ -235,10 +234,9 @@ Task template:
   `vectorCount` / `mapCount`-style lowering names, and
   `/std/collections/experimental_*` implementation modules stay temporary.
   The vector/map adapter cutover is complete for semantic and
-  template-monomorph helper decisions. TODO-4293 through TODO-4297 split the
-  vector half of that remaining seam into generic storage/lifecycle substrate,
-  ordinary `.prime` lowering, metadata extraction, compatibility deletion, and
-  a final zero-C++-vector audit.
+  template-monomorph helper decisions. TODO-4294 through TODO-4297 split the
+  remaining vector half of that seam into ordinary `.prime` lowering, metadata
+  extraction, compatibility deletion, and a final zero-C++-vector audit.
   TODO-4299 through TODO-4304 apply the same ownership model to map while
   keeping map-specific lookup, insertion, `Result<ContainerError>`, and key
   comparability policy explicit.
@@ -264,11 +262,11 @@ Task template:
   field-view field-name lowering, gfx constructor sugar, and lowerer raw-path
   dispatch checks are syntax/provenance-owned or lowering-owned.
 - Outside this lane: `array<T>` core ownership and the `soa<T>` public-surface
-  rename remain separate boundaries tracked by TODO-4305 through TODO-4310. Generic
-  contiguous-storage work that is required to make vector ordinary `.prime`
-  code is tracked explicitly in TODO-4293 instead of being folded into
-  TODO-4281. Map-specific lookup/insertion substrate work is tracked in
-  TODO-4300 instead of being folded into vector storage work.
+  rename remain separate boundaries tracked by TODO-4305 through TODO-4310.
+  Generic contiguous-storage coverage needed before vector ordinary `.prime`
+  lowering is complete and recorded in `docs/todo_finished.md`. Map-specific
+  lookup/insertion substrate work is tracked in TODO-4300 instead of being
+  folded into vector storage work.
 - End-state rule for vector: after TODO-4297, production C++ under `src/` and
   `include/` must not contain PrimeStruct-vector-specific paths, helper names,
   type names, diagnostics, parser/lowering branches, or metadata tables.
@@ -1636,44 +1634,10 @@ Task template:
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
 
-- [ ] TODO-4293: Stabilize generic contiguous-storage substrate
-  - owner: ai
-  - created_at: 2026-04-28
-  - phase: Vector stdlib ownership cutover
-  - scope: Make the contiguous heap-buffer and lifecycle primitives needed by
-    vector usable as generic `.prime` substrate rather than vector-specific
-    runtime behavior.
-  - implementation_notes:
-    - Start from `/std/collections/internal_buffer_checked/*`,
-      `/std/collections/internal_buffer_unchecked/*`,
-      `Pointer<uninitialized<T>>`, `init`, `drop`, `take`, `borrow`,
-      `src/ir_lowerer/IrLowererUninitializedTypeHelpers.*`, and the reusable
-      lifecycle pieces currently embedded in `IrLowererFlowVectorHelpers.cpp`.
-    - Add or adjust focused fixtures that use a generic internal buffer helper
-      outside vector to allocate, offset by dynamic index, initialize, move,
-      borrow, take, drop, and free supported element types.
-    - Keep the buffer namespaces internal implementation plumbing; this task
-      proves the substrate for stdlib code and is not a public collection API.
-  - acceptance:
-    - VM/native lowering supports a non-vector `.prime` fixture that moves a
-      prefix between two `Pointer<uninitialized<T>>` buffers with dynamic
-      indexes and lifecycle-aware element handling.
-    - Generic buffer allocation, checked/unchecked offsetting, free, and
-      lifecycle failure paths produce deterministic diagnostics or runtime
-      traps instead of vector-named errors.
-    - Docs record the internal substrate contract and its relationship to
-      `uninitialized<T>` and ownership helpers.
-    - Existing vector and map behavior does not regress.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once generic buffer/lifecycle fixtures pass without relying
-    on vector-specific helper recognition; leave vector helper rerouting to
-    TODO-4294.
-
 - [ ] TODO-4294: Lower vector helpers through ordinary `.prime`
   - owner: ai
   - created_at: 2026-04-28
   - phase: Vector stdlib ownership cutover
-  - depends_on: TODO-4293
   - scope: Route canonical vector helper behavior through imported `.prime`
     helper bodies over the generic storage substrate instead of vector-specific
     semantic/lowering fast paths.
@@ -1718,7 +1682,7 @@ Task template:
     helpers over the generic contiguous-storage substrate.
   - implementation_notes:
     - Start from `src/ir_lowerer/IrLowererHelpers.{h,cpp}`,
-      the replacement generic storage/lifecycle lowering from TODO-4293 and
+      the completed generic storage/lifecycle substrate coverage plus
       TODO-4294, `src/ir_lowerer/IrLowererFlowVectorHelpers.cpp` if any
       compatibility path still exists,
       `src/ir_lowerer/IrLowererOperatorCollectionMutationHelpers.cpp`,

@@ -3588,7 +3588,9 @@ TEST_CASE("compiles and runs native imported container error contract conformanc
 TEST_CASE("compiles and runs native checked pointer conformance harness for imported .prime helpers") {
   expectCheckedPointerHelperSurfaceConformance("native");
   expectCheckedPointerGrowthConformance("native");
+  expectCheckedPointerUninitializedPrefixMoveConformance("native");
   expectCheckedPointerOutOfBoundsConformance("native");
+  expectCheckedPointerUninitializedOutOfBoundsConformance("native");
 }
 
 TEST_CASE("compiles and runs native templated stdlib vector wrapper temporary call forms") {

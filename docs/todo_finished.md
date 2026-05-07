@@ -14394,3 +14394,46 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     `/std/collections/internal_vector/*`. Updated docs/source locks and
     promoted TODO-4293 to Ready Now. Local test execution was skipped per the
     lite workflow.
+
+- [x] TODO-4293: Stabilize generic contiguous-storage substrate
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Vector stdlib ownership cutover
+  - scope: Make the contiguous heap-buffer and lifecycle primitives needed by
+    vector usable as generic `.prime` substrate rather than vector-specific
+    runtime behavior.
+  - implementation_notes:
+    - Start from `/std/collections/internal_buffer_checked/*`,
+      `/std/collections/internal_buffer_unchecked/*`,
+      `Pointer<uninitialized<T>>`, `init`, `drop`, `take`, `borrow`,
+      `src/ir_lowerer/IrLowererUninitializedTypeHelpers.*`, and the reusable
+      lifecycle pieces currently embedded in `IrLowererFlowVectorHelpers.cpp`.
+    - Add or adjust focused fixtures that use a generic internal buffer helper
+      outside vector to allocate, offset by dynamic index, initialize, move,
+      borrow, take, drop, and free supported element types.
+    - Keep the buffer namespaces internal implementation plumbing; this task
+      proves the substrate for stdlib code and is not a public collection API.
+  - acceptance:
+    - VM/native lowering supports a non-vector `.prime` fixture that moves a
+      prefix between two `Pointer<uninitialized<T>>` buffers with dynamic
+      indexes and lifecycle-aware element handling.
+    - Generic buffer allocation, checked/unchecked offsetting, free, and
+      lifecycle failure paths produce deterministic diagnostics or runtime
+      traps instead of vector-named errors.
+    - Docs record the internal substrate contract and its relationship to
+      `uninitialized<T>` and ownership helpers.
+    - Existing vector and map behavior does not regress.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once generic buffer/lifecycle fixtures pass without relying
+    on vector-specific helper recognition; leave vector helper rerouting to
+    TODO-4294.
+  - finished_at: 2026-05-07
+  - evidence: Added VM/native checked-pointer conformance fixtures that use a
+    non-vector `Token` buffer over `Pointer<uninitialized<T>>`, allocate raw
+    storage, initialize slots, move a dynamic prefix with `take` plus `init`,
+    borrow a moved slot, drop survivors, free both buffers, and lock checked
+    offset failure reporting to `pointer index out of bounds`. Documented the
+    generic internal substrate contract, added source-lock coverage for the
+    docs and harness calls, removed TODO-4293 from active work, and promoted
+    TODO-4294 to Ready Now. Local test execution was skipped per the lite
+    workflow.

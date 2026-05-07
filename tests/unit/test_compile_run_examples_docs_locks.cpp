@@ -676,6 +676,63 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
   CHECK(todo.find("- [ ] TODO-4056:") == std::string::npos);
 }
 
+TEST_CASE("generic contiguous buffer substrate docs and coverage stay source locked") {
+  std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
+  std::filesystem::path checkedPointerHelpersPath =
+      std::filesystem::path("..") / "tests" / "unit" / "test_compile_run_checked_pointer_conformance_helpers.h";
+  std::filesystem::path vmCompatTestPath =
+      std::filesystem::path("..") / "tests" / "unit" / "test_compile_run_vm_collections_wrapper_temporaries_a.cpp";
+  std::filesystem::path nativeCompatTestPath = std::filesystem::path("..") / "tests" / "unit" /
+                                               "test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp";
+  if (!std::filesystem::exists(primeStructPath)) {
+    primeStructPath = std::filesystem::current_path() / "docs" / "PrimeStruct.md";
+  }
+  if (!std::filesystem::exists(checkedPointerHelpersPath)) {
+    checkedPointerHelpersPath =
+        std::filesystem::current_path() / "tests" / "unit" / "test_compile_run_checked_pointer_conformance_helpers.h";
+  }
+  if (!std::filesystem::exists(vmCompatTestPath)) {
+    vmCompatTestPath =
+        std::filesystem::current_path() / "tests" / "unit" / "test_compile_run_vm_collections_wrapper_temporaries_a.cpp";
+  }
+  if (!std::filesystem::exists(nativeCompatTestPath)) {
+    nativeCompatTestPath = std::filesystem::current_path() / "tests" / "unit" /
+                           "test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp";
+  }
+  REQUIRE(std::filesystem::exists(primeStructPath));
+  REQUIRE(std::filesystem::exists(checkedPointerHelpersPath));
+  REQUIRE(std::filesystem::exists(vmCompatTestPath));
+  REQUIRE(std::filesystem::exists(nativeCompatTestPath));
+
+  const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::string checkedPointerHelpers = readFile(checkedPointerHelpersPath.string());
+  const std::string vmCompatTest = readFile(vmCompatTestPath.string());
+  const std::string nativeCompatTest = readFile(nativeCompatTestPath.string());
+
+  CHECK(primeStructDoc.find("VM/native conformance now also covers a non-vector") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("fixture that allocates raw slots, initializes values with `init(...)`, moves a") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("dynamic prefix between two buffers with `take(...)` plus `init(...)`") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`pointer index out of bounds` rather than vector-specific diagnostics") !=
+        std::string::npos);
+  CHECK(checkedPointerHelpers.find("makeCheckedPointerUninitializedPrefixMoveSource") !=
+        std::string::npos);
+  CHECK(checkedPointerHelpers.find("move_prefix([Pointer<uninitialized<Token>> mut] dst,") !=
+        std::string::npos);
+  CHECK(checkedPointerHelpers.find("init(dereference(dstSlot), take(dereference(srcSlot)))") !=
+        std::string::npos);
+  CHECK(checkedPointerHelpers.find("[Reference<Token>] borrowed{borrow(dereference(token_slot(dst, 1i32)))}") !=
+        std::string::npos);
+  CHECK(checkedPointerHelpers.find("expectCheckedPointerUninitializedOutOfBoundsConformance") !=
+        std::string::npos);
+  CHECK(vmCompatTest.find("expectCheckedPointerUninitializedPrefixMoveConformance(\"vm\")") !=
+        std::string::npos);
+  CHECK(nativeCompatTest.find("expectCheckedPointerUninitializedPrefixMoveConformance(\"native\")") !=
+        std::string::npos);
+}
+
 TEST_CASE("soa public collection docs stay source locked") {
   std::filesystem::path codeExamplesPath = std::filesystem::path("..") / "docs" / "CodeExamples.md";
   std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
