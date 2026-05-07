@@ -970,7 +970,7 @@ TEST_CASE("ir lowerer vector mutator rewrite uses semantic receiver facts before
   CHECK(error.empty());
 }
 
-TEST_CASE("ir lowerer experimental vector setters use semantic receiver facts before stale locals") {
+TEST_CASE("ir lowerer experimental vector setters defer to method definitions") {
   using EmitResult = primec::ir_lowerer::DirectCallStatementEmitResult;
 
   primec::Expr valueArg;
@@ -1133,32 +1133,32 @@ TEST_CASE("ir lowerer experimental vector setters use semantic receiver facts be
                    inlineCalls,
                    instructions,
                    error) == EmitResult::Emitted);
-  CHECK(inlineCalls == 0);
-  CHECK(hasHeaderStore(instructions));
+  CHECK(inlineCalls == 1);
+  CHECK_FALSE(hasHeaderStore(instructions));
   CHECK(error.empty());
 
   CHECK(emitSetter(makeSetCountStmt(makeReceiver("bindingValues", 7702)),
                    inlineCalls,
                    instructions,
                    error) == EmitResult::Emitted);
-  CHECK(inlineCalls == 0);
-  CHECK(hasHeaderStore(instructions));
+  CHECK(inlineCalls == 1);
+  CHECK_FALSE(hasHeaderStore(instructions));
   CHECK(error.empty());
 
   CHECK(emitSetter(makeSetCountStmt(makeReceiver("autoValues", 7703)),
                    inlineCalls,
                    instructions,
                    error) == EmitResult::Emitted);
-  CHECK(inlineCalls == 0);
-  CHECK(hasHeaderStore(instructions));
+  CHECK(inlineCalls == 1);
+  CHECK_FALSE(hasHeaderStore(instructions));
   CHECK(error.empty());
 
   CHECK(emitSetter(makeSetCountStmt(makeReceiver("queryValues", 7704)),
                    inlineCalls,
                    instructions,
                    error) == EmitResult::Emitted);
-  CHECK(inlineCalls == 0);
-  CHECK(hasHeaderStore(instructions));
+  CHECK(inlineCalls == 1);
+  CHECK_FALSE(hasHeaderStore(instructions));
   CHECK(error.empty());
 
   CHECK(emitSetter(makeSetCountStmt(makeReceiver("notAVector", 7705)),
@@ -6951,6 +6951,9 @@ TEST_CASE("ir lowerer statement call emission source delegation stays stable") {
   CHECK(source.find("isPublishedWrapperStatementVectorMutatorAliasPath(") !=
         std::string::npos);
   CHECK(source.find("explicitVectorMutatorHelperCall && !explicitWrapperVectorMutatorHelperPath") !=
+        std::string::npos);
+  CHECK(source.find("emitExperimentalVectorHeaderSetter") == std::string::npos);
+  CHECK(source.find("resolveStatementExperimentalVectorReceiverFromSemanticFacts") ==
         std::string::npos);
   CHECK(source.find("return resolvePublishedStatementVectorHelperName(expr.name, helperNameOut);") ==
         std::string::npos);

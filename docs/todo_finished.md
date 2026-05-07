@@ -14580,3 +14580,62 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     direct `/std/collections/experimental_vector/vectorPush`-style imports are
     the remaining temporary shims for TODO-4296. Local test execution was
     skipped per the lite workflow.
+
+- [x] TODO-4371: Split hard-coded vector layout lowering
+  - owner: ai
+  - created_at: 2026-05-07
+  - phase: Vector stdlib ownership cutover
+  - scope: Replace the oversized active vector layout task with bounded leaves
+    for statement setters, inline metadata helpers, expression/tail metadata
+    fallbacks, and constructor/header materialization.
+  - implementation_notes:
+    - Preserve the original goal of routing vector metadata and construction
+      behavior through visible `.prime` definitions, generic struct layout
+      facts, or generic storage substrate behavior.
+    - Keep capacity widening, metadata extraction, compatibility deletion, and
+      zero-C++-vector auditing as downstream leaves.
+  - acceptance:
+    - `docs/todo.md` no longer treats TODO-4371 as executable work.
+    - Remaining vector layout work is represented by concrete leaves with
+      explicit `scope`, `acceptance`, and `stop_rule`.
+    - The first split leaf is completed before reporting this run.
+  - stop_rule: Stop once the umbrella is absent from `docs/todo.md` and its
+    remaining work is represented by bounded active leaves.
+  - finished_at: 2026-05-07
+  - evidence: Removed TODO-4371 from active work, split the remaining vector
+    layout cutover into TODO-4372, TODO-4373, TODO-4374, and TODO-4375, and
+    completed TODO-4372 as the first split leaf in this run. Local test
+    execution was skipped per the lite workflow.
+
+- [x] TODO-4372: Route vector setter statements through `.prime`
+  - owner: ai
+  - created_at: 2026-05-07
+  - phase: Vector stdlib ownership cutover
+  - scope: Remove the experimental vector `set_field_count` and
+    `set_field_capacity` statement-call fast path from
+    `IrLowererStatementCallEmission.cpp` so statement lowering calls the
+    visible `.prime` helper body instead of writing fixed header slots
+    directly.
+  - implementation_notes:
+    - Start from `src/ir_lowerer/IrLowererStatementCallEmission.cpp` and the
+      lowerer statement-call test that covered semantic receiver facts for
+      experimental vector setters.
+    - Keep SoA metadata setter fast paths and non-statement inline/vector
+      metadata paths for follow-up leaves.
+  - acceptance:
+    - Statement-call lowering no longer emits experimental vector
+      `set_field_count` / `set_field_capacity` by matching receiver type and
+      fixed count/capacity slot offsets.
+    - The same statements still lower by resolving and inlining a visible
+      setter definition.
+    - Source-lock coverage keeps the removed statement fast path absent.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once experimental vector setter statements no longer
+    bypass method-definition inlining with handwritten header stores.
+  - finished_at: 2026-05-07
+  - evidence: Deleted the experimental vector setter statement fast path and
+    its semantic receiver classifier from
+    `IrLowererStatementCallEmission.cpp`, updated statement-call coverage to
+    expect setter definitions to inline without raw `StoreIndirect` header
+    writes, and kept source-lock checks for the deleted fast path. Local test
+    execution was skipped per the lite workflow.

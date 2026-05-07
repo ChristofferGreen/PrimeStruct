@@ -236,102 +236,6 @@ static bool populateStatementVectorTargetInfoFromTypeText(
   return true;
 }
 
-static bool isStatementExperimentalVectorTypeName(const std::string &typeName) {
-  const std::string normalized = trimTemplateTypeText(typeName);
-  return normalized == "Vector" ||
-         normalized == "std/collections/experimental_vector/Vector" ||
-         normalized == "/std/collections/experimental_vector/Vector" ||
-         normalized.rfind("std/collections/experimental_vector/Vector__", 0) == 0 ||
-         normalized.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
-}
-
-static bool isStatementExperimentalVectorTypeText(const std::string &typeText) {
-  std::string base;
-  std::string argText;
-  const std::string normalizedTypeText =
-      unwrapTopLevelUninitializedTypeText(trimTemplateTypeText(typeText));
-  if (splitTemplateTypeName(normalizedTypeText, base, argText)) {
-    const std::string normalizedBase = trimTemplateTypeText(base);
-    const std::string collectionBase =
-        normalizeCollectionBindingTypeName(normalizedBase);
-    if (collectionBase == "Reference" || collectionBase == "/Reference" ||
-        collectionBase == "Pointer" || collectionBase == "/Pointer") {
-      return isStatementExperimentalVectorTypeText(argText);
-    }
-    return isStatementExperimentalVectorTypeName(normalizedBase);
-  }
-  return isStatementExperimentalVectorTypeName(normalizedTypeText);
-}
-
-static bool resolveStatementExperimentalVectorReceiverFromSemanticFacts(
-    const Expr &receiverExpr,
-    const SemanticProgram *semanticProgram,
-    const SemanticProductIndex *semanticIndex,
-    bool &hasSemanticExperimentalVectorFactOut) {
-  hasSemanticExperimentalVectorFactOut = false;
-  if (semanticProgram == nullptr || semanticIndex == nullptr) {
-    return false;
-  }
-
-  auto tryResolveSemanticTypeText =
-      [&](SymbolId typeTextId, const std::string &typeText) {
-    const std::string resolvedTypeText =
-        resolveStatementCallSemanticTypeText(semanticProgram, typeTextId, typeText);
-    return !resolvedTypeText.empty() &&
-           isStatementExperimentalVectorTypeText(resolvedTypeText);
-  };
-
-  if (receiverExpr.semanticNodeId != 0) {
-    if (const auto *collectionFact =
-            findSemanticProductCollectionSpecialization(*semanticIndex, receiverExpr);
-        collectionFact != nullptr) {
-      hasSemanticExperimentalVectorFactOut = true;
-      return tryResolveSemanticTypeText(collectionFact->bindingTypeTextId,
-                                        collectionFact->bindingTypeText);
-    }
-
-    if (const auto *queryFact =
-            findSemanticProductQueryFact(semanticProgram, *semanticIndex, receiverExpr);
-        queryFact != nullptr) {
-      hasSemanticExperimentalVectorFactOut = true;
-      return tryResolveSemanticTypeText(queryFact->bindingTypeTextId,
-                                        queryFact->bindingTypeText) ||
-             tryResolveSemanticTypeText(queryFact->queryTypeTextId,
-                                        queryFact->queryTypeText) ||
-             tryResolveSemanticTypeText(queryFact->receiverBindingTypeTextId,
-                                        queryFact->receiverBindingTypeText);
-    }
-
-    if (const auto *bindingFact =
-            findSemanticProductBindingFact(*semanticIndex, receiverExpr);
-        bindingFact != nullptr) {
-      hasSemanticExperimentalVectorFactOut = true;
-      return tryResolveSemanticTypeText(bindingFact->bindingTypeTextId,
-                                        bindingFact->bindingTypeText);
-    }
-
-    if (const auto *localAutoFact =
-            findSemanticProductLocalAutoFact(semanticProgram, *semanticIndex, receiverExpr);
-        localAutoFact != nullptr) {
-      hasSemanticExperimentalVectorFactOut = true;
-      return tryResolveSemanticTypeText(localAutoFact->bindingTypeTextId,
-                                        localAutoFact->bindingTypeText);
-    }
-  }
-
-  if (receiverExpr.kind == Expr::Kind::Call && receiverExpr.args.size() == 1 &&
-      (isSimpleCallName(receiverExpr, "location") ||
-       isSimpleCallName(receiverExpr, "dereference"))) {
-    return resolveStatementExperimentalVectorReceiverFromSemanticFacts(
-        receiverExpr.args.front(),
-        semanticProgram,
-        semanticIndex,
-        hasSemanticExperimentalVectorFactOut);
-  }
-
-  return false;
-}
-
 static bool resolveStatementVectorReceiverTargetInfoFromSemanticFacts(
     const Expr &receiverExpr,
     const SemanticProgram *semanticProgram,
@@ -1848,27 +1752,6 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
             localIt->second.structTypeName.rfind(
                 "/std/collections/experimental_vector/Vector__", 0) == 0);
   };
-  auto isExperimentalVectorReceiverExpr = [&](const Expr &candidate) {
-    bool hasSemanticExperimentalVectorFact = false;
-    if (resolveStatementExperimentalVectorReceiverFromSemanticFacts(
-            candidate,
-            semanticProgram,
-            semanticIndex,
-            hasSemanticExperimentalVectorFact)) {
-      return true;
-    }
-    if (hasSemanticExperimentalVectorFact) {
-      return false;
-    }
-    if (candidate.kind != Expr::Kind::Name) {
-      return false;
-    }
-    auto localIt = localsIn.find(candidate.name);
-    return localIt != localsIn.end() &&
-           (localIt->second.structTypeName == "/std/collections/experimental_vector/Vector" ||
-            localIt->second.structTypeName.rfind(
-                "/std/collections/experimental_vector/Vector__", 0) == 0);
-  };
   auto emitVectorHeaderFieldAddress = [&](const Expr &receiver, int32_t slotOffset) {
     if (receiver.kind == Expr::Kind::Name) {
       auto localIt = localsIn.find(receiver.name);
@@ -1902,63 +1785,6 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     emitArrayIndexOutOfBounds();
     instructions[okJump].imm = instructions.size();
   };
-  auto emitExperimentalVectorHeaderSetter = [&]() -> int {
-    if (!stmt.isMethodCall || stmt.args.size() != 2 ||
-        (!isSimpleCallName(stmt, "set_field_count") &&
-         !isSimpleCallName(stmt, "set_field_capacity")) ||
-        !isExperimentalVectorReceiverExpr(stmt.args.front())) {
-      return -1;
-    }
-    const Expr &receiver = stmt.args.front();
-    const Expr &value = stmt.args[1];
-    if (!emitExpr(value, localsIn)) {
-      return 0;
-    }
-    instructions.push_back({IrOpcode::PushI32, 0});
-    instructions.push_back({IrOpcode::CmpLtI32, 0});
-    emitBoundsTrapIfStackTrue();
-
-    if (isSimpleCallName(stmt, "set_field_count")) {
-      if (!emitExpr(value, localsIn) ||
-          !emitVectorHeaderFieldLoad(receiver, 1)) {
-        return 0;
-      }
-      instructions.push_back({IrOpcode::CmpGtI32, 0});
-      emitBoundsTrapIfStackTrue();
-      if (!emitVectorHeaderFieldAddress(receiver, 0) ||
-          !emitExpr(value, localsIn)) {
-        return 0;
-      }
-      instructions.push_back({IrOpcode::StoreIndirect, 0});
-      instructions.push_back({IrOpcode::Pop, 0});
-      return 1;
-    }
-
-    if (!emitVectorHeaderFieldLoad(receiver, 0) ||
-        !emitExpr(value, localsIn)) {
-      return 0;
-    }
-    instructions.push_back({IrOpcode::CmpGtI32, 0});
-    emitBoundsTrapIfStackTrue();
-    if (!emitExpr(value, localsIn)) {
-      return 0;
-    }
-    instructions.push_back({IrOpcode::PushI32, 1073741823});
-    instructions.push_back({IrOpcode::CmpGtI32, 0});
-    emitBoundsTrapIfStackTrue();
-    if (!emitVectorHeaderFieldAddress(receiver, 1) ||
-        !emitExpr(value, localsIn)) {
-      return 0;
-    }
-    instructions.push_back({IrOpcode::StoreIndirect, 0});
-    instructions.push_back({IrOpcode::Pop, 0});
-    return 1;
-  };
-  if (const int setterResult = emitExperimentalVectorHeaderSetter();
-      setterResult >= 0) {
-    return setterResult != 0 ? DirectCallStatementEmitResult::Emitted
-                             : DirectCallStatementEmitResult::Error;
-  }
   auto rewriteBareVectorMethodMutatorToDirectCall = [&](const Expr &callExpr, Expr &rewrittenExpr) {
     if (callExpr.kind != Expr::Kind::Call || !callExpr.isMethodCall || callExpr.args.empty() ||
         !callExpr.namespacePrefix.empty() || callExpr.name.find('/') != std::string::npos) {
