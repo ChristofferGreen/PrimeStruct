@@ -238,6 +238,122 @@ TEST_CASE("ir lowerer count access classifiers prefer semantic direct-name facts
   CHECK_FALSE(setup.classifiers.isStringCountCall(missingFactCount, locals));
 }
 
+TEST_CASE("ir lowerer capacity classifiers prefer semantic target facts") {
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "local",
+      .name = "refVec",
+      .bindingTypeText = "i32",
+      .semanticNodeId = 7101,
+      .bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "Reference<vector<i32>>"),
+  });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(7101, 0);
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "local",
+      .name = "scalarRef",
+      .bindingTypeText = "Reference<vector<i32>>",
+      .semanticNodeId = 7102,
+      .bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "Reference<i32>"),
+  });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(7102, 1);
+  semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      .scopePath = "/main",
+      .callName = "at",
+      .queryTypeText = "i32",
+      .semanticNodeId = 7103,
+      .queryTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "vector<i32>"),
+  });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(7103, 0);
+  semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      .scopePath = "/main",
+      .callName = "at",
+      .queryTypeText = "vector<i32>",
+      .semanticNodeId = 7104,
+      .queryTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "map<i32, i32>"),
+  });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(7104, 1);
+
+  primec::ir_lowerer::EntryCountAccessSetup setup;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::buildEntryCountAccessSetup(entryDef, &semanticProgram, setup, error));
+  CHECK(error.empty());
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo staleScalar;
+  staleScalar.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  staleScalar.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals.emplace("refVec", staleScalar);
+  primec::ir_lowerer::LocalInfo staleVectorRef;
+  staleVectorRef.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  staleVectorRef.referenceToVector = true;
+  locals.emplace("scalarRef", staleVectorRef);
+  locals.emplace("missingRef", staleVectorRef);
+  primec::ir_lowerer::LocalInfo stalePrimitiveArgs;
+  stalePrimitiveArgs.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  stalePrimitiveArgs.isArgsPack = true;
+  stalePrimitiveArgs.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  locals.emplace("vectorArgs", stalePrimitiveArgs);
+  primec::ir_lowerer::LocalInfo staleVectorArgs;
+  staleVectorArgs.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  staleVectorArgs.isArgsPack = true;
+  staleVectorArgs.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  locals.emplace("mapArgs", staleVectorArgs);
+
+  auto makeSemanticName = [](const char *name, uint64_t semanticNodeId) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Name;
+    expr.name = name;
+    expr.semanticNodeId = semanticNodeId;
+    return expr;
+  };
+  auto makeDeref = [](const primec::Expr &target) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = "dereference";
+    expr.args = {target};
+    return expr;
+  };
+  auto makeAt = [](const primec::Expr &target, uint64_t semanticNodeId) {
+    primec::Expr zeroIndex;
+    zeroIndex.kind = primec::Expr::Kind::Literal;
+    zeroIndex.literalValue = 0;
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = "at";
+    expr.args = {target, zeroIndex};
+    expr.semanticNodeId = semanticNodeId;
+    return expr;
+  };
+  auto makeCapacityCall = [](const primec::Expr &target) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = "capacity";
+    expr.args = {target};
+    return expr;
+  };
+
+  CHECK(setup.classifiers.isVectorCapacityCall(
+      makeCapacityCall(makeDeref(makeSemanticName("refVec", 7101))), locals));
+  CHECK_FALSE(setup.classifiers.isVectorCapacityCall(
+      makeCapacityCall(makeDeref(makeSemanticName("scalarRef", 7102))), locals));
+  CHECK_FALSE(setup.classifiers.isVectorCapacityCall(
+      makeCapacityCall(makeDeref(makeSemanticName("missingRef", 7199))), locals));
+
+  CHECK(setup.classifiers.isVectorCapacityCall(
+      makeCapacityCall(makeAt(makeSemanticName("vectorArgs", 0), 7103)), locals));
+  CHECK_FALSE(setup.classifiers.isVectorCapacityCall(
+      makeCapacityCall(makeAt(makeSemanticName("mapArgs", 0), 7104)), locals));
+}
+
 TEST_CASE("ir lowerer count access helpers reject removed /array/capacity alias") {
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo vecInfo;

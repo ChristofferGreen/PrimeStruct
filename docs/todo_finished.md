@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer capacity target facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes entry count-access capacity
+    classifiers consume semantic-product target facts before stale local
+    vector metadata can classify call-shaped `capacity(...)` targets.
+  - acceptance:
+    - Published binding type IDs classify dereferenced vector capacity
+      targets before stale scalar local metadata.
+    - Published binding type IDs suppress stale local vector references when
+      the graph-owned dereferenced target type is scalar.
+    - Published query type IDs classify indexed vector capacity targets and
+      suppress stale args-pack vector metadata for non-vector query targets.
+  - stop_rule: Stop once bundled count-access classifier adapters built from
+    a semantic product honor graph-backed capacity target facts and focused
+    tests pin stale-local suppression plus missing-fact fail-closed behavior.
+  - evidence: Threaded the semantic product into the vector capacity
+    classifier factory, added semantic-product target classification for
+    dereferenced binding and indexed query capacity targets, covered stale
+    local vector suppression and missing-fact fail-closed behavior, and
+    skipped broad baseline validation per the lite workflow.
+
 - [x] TODO-4298: Prefer count target facts
   - owner: ai
   - created_at: 2026-04-28

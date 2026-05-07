@@ -64,6 +64,7 @@ IsArrayCountCallFn makeIsArrayCountCall(bool hasEntryArgs,
                                         const std::string &entryArgsName,
                                         const SemanticProgram *semanticProgram);
 IsVectorCapacityCallFn makeIsVectorCapacityCall();
+IsVectorCapacityCallFn makeIsVectorCapacityCall(const SemanticProgram *semanticProgram);
 IsStringCountCallFn makeIsStringCountCall();
 IsStringCountCallFn makeIsStringCountCall(const SemanticProgram *semanticProgram);
 bool isEntryArgsName(const Expr &expr, const LocalMap &localsIn, bool hasEntryArgs, const std::string &entryArgsName);

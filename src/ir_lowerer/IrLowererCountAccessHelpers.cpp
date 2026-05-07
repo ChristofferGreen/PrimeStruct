@@ -222,6 +222,7 @@ bool hasInferredTypedWrappedMap(const LocalInfo &info, LocalInfo::Kind kind) {
 
 struct SemanticCountTargetInfo {
   bool isCollection = false;
+  bool isVector = false;
   bool isString = false;
 };
 
@@ -253,6 +254,7 @@ bool classifySemanticCountTargetTypeText(std::string typeText,
   if (base == "array" || base == "vector" || base == "soa_vector" ||
       base == "map" || base == "Buffer") {
     infoOut.isCollection = true;
+    infoOut.isVector = base == "vector";
     return true;
   }
   return true;
@@ -278,6 +280,7 @@ bool classifySemanticCollectionTarget(const SemanticProgram &semanticProgram,
   if (collectionFamily == "vector" || collectionFamily == "soa_vector" ||
       collectionFamily == "map") {
     infoOut.isCollection = true;
+    infoOut.isVector = collectionFamily == "vector";
   }
   return true;
 }
@@ -287,7 +290,7 @@ bool classifySemanticCountTarget(const Expr &target,
                                  const SemanticProductIndex *semanticIndex,
                                  SemanticCountTargetInfo &infoOut) {
   infoOut = {};
-  if (target.kind != Expr::Kind::Name || semanticProgram == nullptr ||
+  if (semanticProgram == nullptr ||
       semanticIndex == nullptr || target.semanticNodeId == 0) {
     return false;
   }
@@ -333,6 +336,17 @@ bool classifySemanticCountTarget(const Expr &target,
     return true;
   }
   return true;
+}
+
+bool hasPublishedSemanticCountTargetFact(const Expr &target,
+                                         const SemanticProductIndex *semanticIndex) {
+  if (semanticIndex == nullptr || target.semanticNodeId == 0) {
+    return false;
+  }
+  return findSemanticProductCollectionSpecialization(*semanticIndex, target) != nullptr ||
+         findSemanticProductBindingFact(*semanticIndex, target) != nullptr ||
+         findSemanticProductLocalAutoFactBySemanticId(*semanticIndex, target) != nullptr ||
+         findSemanticProductQueryFactBySemanticId(*semanticIndex, target) != nullptr;
 }
 
 bool resolveEntryArgsParameterFromSemanticProduct(const Definition &entryDef,
@@ -470,7 +484,7 @@ CountAccessClassifiers makeCountAccessClassifiers(bool hasEntryArgs,
   CountAccessClassifiers classifiers{};
   classifiers.isEntryArgsName = makeIsEntryArgsName(hasEntryArgs, entryArgsName);
   classifiers.isArrayCountCall = makeIsArrayCountCall(hasEntryArgs, entryArgsName, semanticProgram);
-  classifiers.isVectorCapacityCall = makeIsVectorCapacityCall();
+  classifiers.isVectorCapacityCall = makeIsVectorCapacityCall(semanticProgram);
   classifiers.isStringCountCall = makeIsStringCountCall(semanticProgram);
   return classifiers;
 }
@@ -491,6 +505,10 @@ bool isStringCountCall(const Expr &expr,
                        const LocalMap &localsIn,
                        const SemanticProgram *semanticProgram,
                        const SemanticProductIndex *semanticIndex);
+bool isVectorCapacityCall(const Expr &expr,
+                          const LocalMap &localsIn,
+                          const SemanticProgram *semanticProgram,
+                          const SemanticProductIndex *semanticIndex);
 
 IsArrayCountCallFn makeIsArrayCountCall(bool hasEntryArgs, const std::string &entryArgsName) {
   return makeIsArrayCountCall(hasEntryArgs, entryArgsName, nullptr);
@@ -514,8 +532,16 @@ IsArrayCountCallFn makeIsArrayCountCall(bool hasEntryArgs,
 }
 
 IsVectorCapacityCallFn makeIsVectorCapacityCall() {
-  return [](const Expr &expr, const LocalMap &localsIn) {
-    return isVectorCapacityCall(expr, localsIn);
+  return makeIsVectorCapacityCall(nullptr);
+}
+
+IsVectorCapacityCallFn makeIsVectorCapacityCall(const SemanticProgram *semanticProgram) {
+  auto semanticIndex = semanticProgram == nullptr
+                           ? std::shared_ptr<SemanticProductIndex>{}
+                           : std::make_shared<SemanticProductIndex>(
+                                 buildSemanticProductIndex(semanticProgram));
+  return [=](const Expr &expr, const LocalMap &localsIn) {
+    return isVectorCapacityCall(expr, localsIn, semanticProgram, semanticIndex.get());
   };
 }
 
@@ -676,6 +702,13 @@ bool isArrayCountCall(const Expr &expr,
 }
 
 bool isVectorCapacityCall(const Expr &expr, const LocalMap &localsIn) {
+  return isVectorCapacityCall(expr, localsIn, nullptr, nullptr);
+}
+
+bool isVectorCapacityCall(const Expr &expr,
+                          const LocalMap &localsIn,
+                          const SemanticProgram *semanticProgram,
+                          const SemanticProductIndex *semanticIndex) {
   if (!isVectorBuiltinName(expr, "capacity") || expr.args.size() != 1) {
     return false;
   }
@@ -703,13 +736,37 @@ bool isVectorCapacityCall(const Expr &expr, const LocalMap &localsIn) {
            (kind == LocalInfo::Kind::Reference && info.referenceToVector) ||
            (kind == LocalInfo::Kind::Pointer && info.pointerToVector);
   };
+  const auto isSemanticVectorCapacityTarget = [&](const Expr &candidate) {
+    SemanticCountTargetInfo semanticInfo;
+    if (!classifySemanticCountTarget(candidate,
+                                     semanticProgram,
+                                     semanticIndex,
+                                     semanticInfo)) {
+      return false;
+    }
+    return semanticInfo.isVector;
+  };
+  const auto hasSemanticCapacityTargetFact = [&](const Expr &candidate) {
+    SemanticCountTargetInfo semanticInfo;
+    return classifySemanticCountTarget(candidate,
+                                       semanticProgram,
+                                       semanticIndex,
+                                       semanticInfo);
+  };
 
   if (target.kind == Expr::Kind::Name) {
     return false;
   }
   if (target.kind == Expr::Kind::Call) {
+    if (hasPublishedSemanticCountTargetFact(target, semanticIndex) &&
+        hasSemanticCapacityTargetFact(target)) {
+      return isSemanticVectorCapacityTarget(target);
+    }
     if (isSimpleCallName(target, "dereference") && target.args.size() == 1) {
       const Expr &derefTarget = target.args.front();
+      if (derefTarget.semanticNodeId != 0 && hasSemanticCapacityTargetFact(derefTarget)) {
+        return isSemanticVectorCapacityTarget(derefTarget);
+      }
       if (derefTarget.kind == Expr::Kind::Name) {
         auto it = localsIn.find(derefTarget.name);
         return it != localsIn.end() && isSupportedVectorTarget(it->second, false);

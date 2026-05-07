@@ -728,6 +728,9 @@ Task template:
     The lowerer count-classifier direct-name slice is complete for
     semantic-product-backed binding, local-auto, and query target facts before
     stale local collection/string metadata can classify `count(name)`.
+    The lowerer capacity-classifier target slice is complete for
+    semantic-product-backed dereferenced binding targets and indexed query
+    targets before stale local vector metadata can classify `capacity(...)`.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
