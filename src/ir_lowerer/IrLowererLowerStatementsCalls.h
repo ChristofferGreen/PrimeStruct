@@ -1,5 +1,7 @@
     return ir_lowerer::runLowerStatementsCallsStep(
         {
+            .semanticProgram = callResolutionAdapters.semanticProgram,
+            .semanticIndex = &callResolutionAdapters.semanticProductTargets.semanticIndex,
             .inferExprKind =
                 [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferExprKind(valueExpr, valueLocals); },
             .inferStructExprPath =

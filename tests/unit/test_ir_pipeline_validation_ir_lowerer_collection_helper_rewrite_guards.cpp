@@ -1052,6 +1052,63 @@ TEST_CASE("ir lowerer statement map insert rewrite uses semantic product receive
         std::string::npos);
 }
 
+TEST_CASE("ir lowerer statement calls step receives semantic product adapters") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path callsLoweringPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsCalls.h";
+  const std::filesystem::path callsStepPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsCallsStep.cpp";
+
+  REQUIRE(std::filesystem::exists(callsLoweringPath));
+  REQUIRE(std::filesystem::exists(callsStepPath));
+  const std::string loweringSource = readText(callsLoweringPath);
+  const std::string callsStepSource = readText(callsStepPath);
+
+  const size_t stepCall =
+      loweringSource.find("return ir_lowerer::runLowerStatementsCallsStep(");
+  const size_t semanticProgram =
+      loweringSource.find(".semanticProgram = callResolutionAdapters.semanticProgram",
+                          stepCall);
+  const size_t semanticIndex = loweringSource.find(
+      ".semanticIndex = &callResolutionAdapters.semanticProductTargets.semanticIndex",
+      semanticProgram);
+  const size_t firstDependency =
+      loweringSource.find(".inferExprKind =", semanticIndex);
+
+  REQUIRE(stepCall != std::string::npos);
+  REQUIRE(semanticProgram != std::string::npos);
+  REQUIRE(semanticIndex != std::string::npos);
+  REQUIRE(firstDependency != std::string::npos);
+  CHECK(stepCall < semanticProgram);
+  CHECK(semanticProgram < semanticIndex);
+  CHECK(semanticIndex < firstDependency);
+
+  const size_t vectorHelperCall =
+      callsStepSource.find("const auto vectorHelperResult = tryEmitVectorStatementHelper(");
+  const size_t receiverGate = callsStepSource.find(
+      "classifyCallsStepVectorHelperReceiverFromSemanticFacts(\n"
+      "                  candidate.args.front(),\n"
+      "                  input.semanticProgram,\n"
+      "                  input.semanticIndex)",
+      vectorHelperCall);
+  REQUIRE(vectorHelperCall != std::string::npos);
+  REQUIRE(receiverGate != std::string::npos);
+  CHECK(vectorHelperCall < receiverGate);
+}
+
 TEST_CASE("ir lowerer statement vector method gate uses semantic receiver facts first") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);

@@ -679,6 +679,9 @@ Task template:
     The statement-call vector mutator receiver slice is complete for
     semantic-product-backed binding, local-auto, and query vector facts before
     stale local vector metadata can select builtin mutator rewriting.
+    The statement-call semantic adapter wiring slice is complete for
+    passing graph-owned program/index facts into the calls step before null
+    step inputs can disable vector receiver gates.
     The statement direct-call vector target-resolver fallback slice is
     complete for semantic-product-backed vector facts before stale local
     array/vector metadata can classify explicit helper and builtin receiver
@@ -1328,6 +1331,11 @@ Task template:
       the residual initializer access classifier before local args-pack
       metadata can choose struct materialization. Syntax-only compatibility
       keeps the legacy resolver fallback.
+    - Completed slice: semantic-product-addressed statement-call step wiring
+      now passes the lowerer's published semantic program and product index
+      into `runLowerStatementsCallsStep`, so existing statement-call vector
+      receiver gates cannot silently run with null semantic context before
+      consulting local fallback metadata.
     - Completed slice: semantic-product-addressed native `pick(...)` target
       sum resolution now resolves interned binding, query, and return binding
       type IDs before consulting copied semantic-product text fields for

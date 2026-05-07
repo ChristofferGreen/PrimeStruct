@@ -6,6 +6,32 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Wire statement call facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that wires statement-call lowering's
+    semantic program and product index into `runLowerStatementsCallsStep` so
+    existing graph-backed receiver gates do not run with null semantic
+    context.
+  - acceptance:
+    - Statement-call step construction passes the published semantic program
+      into `LowerStatementsCallsStepInput`.
+    - Statement-call step construction passes the published semantic-product
+      index into `LowerStatementsCallsStepInput`.
+    - Source guard coverage pins adapter wiring before lowerer step
+      dependencies, and pins downstream vector receiver gates consuming the
+      supplied semantic inputs.
+  - stop_rule: Stop once statement-call lowering's production step wiring
+    cannot silently disable semantic-product receiver gates by omitting the
+    semantic program or product index.
+  - evidence: Passed `callResolutionAdapters.semanticProgram` and
+    `callResolutionAdapters.semanticProductTargets.semanticIndex` into
+    `runLowerStatementsCallsStep`, added source guard coverage for the wiring
+    and downstream semantic receiver gate, ran `git diff --check`, and
+    skipped broad baseline validation per the lite workflow.
+
 - [x] TODO-4298: Prefer binding args-pack facts
   - owner: ai
   - created_at: 2026-04-28

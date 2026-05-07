@@ -734,6 +734,10 @@ Planned non-template inference migration contract:
   local vector metadata can select the builtin path. Published non-vector
   facts suppress stale local vector metadata while syntax-only compatibility
   keeps the old local fallback.
+- Completed statement-call semantic adapter wiring slice: statement-call
+  lowering now passes the published semantic program and product index into
+  `runLowerStatementsCallsStep`, so graph-backed receiver gates cannot be
+  disabled by null step inputs before local fallback metadata is consulted.
 - Completed statement direct-call vector target-resolver fallback slice:
   explicit helper and builtin receiver probes now pass graph-backed vector
   facts into residual array/vector target resolution before stale local
