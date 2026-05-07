@@ -191,7 +191,7 @@ bool buildRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(
     std::string &error) {
   out = {};
   out.runtimeErrorAndStringLiteralSetup =
-      makeRuntimeErrorAndStringLiteralSetup(stringTable, function, error);
+      makeRuntimeErrorAndStringLiteralSetup(stringTable, function, error, semanticProgram);
   if (!buildEntrySetupMathTypeStructAndUninitializedResolutionSetup(
           program,
           semanticProgram,

@@ -21,9 +21,11 @@ void emitRuntimeError(IrFunction &function, const std::string &message, const In
 RuntimeErrorAndStringLiteralSetup makeRuntimeErrorAndStringLiteralSetup(
     std::vector<std::string> &stringTable,
     IrFunction &function,
-    std::string &error) {
+    std::string &error,
+    const SemanticProgram *semanticProgram) {
   RuntimeErrorAndStringLiteralSetup setup{};
-  setup.stringLiteralHelpers = makeStringLiteralHelperContext(stringTable, error);
+  setup.stringLiteralHelpers =
+      makeStringLiteralHelperContext(stringTable, error, semanticProgram);
   setup.runtimeErrorEmitters = makeRuntimeErrorEmitters(function, setup.stringLiteralHelpers.internString);
   return setup;
 }

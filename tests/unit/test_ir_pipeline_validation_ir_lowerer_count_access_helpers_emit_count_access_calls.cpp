@@ -1313,6 +1313,42 @@ TEST_CASE("ir lowerer string literal helper resolves string table targets") {
       nameExpr, locals, stringTable, internString, stringIndex, length, error));
   CHECK(stringIndex == 0);
   CHECK(length == 5);
+
+  nameExpr.semanticNodeId = 7111;
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "local",
+      .name = "name",
+      .bindingTypeText = "i32",
+      .semanticNodeId = nameExpr.semanticNodeId,
+      .bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+  });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr
+      .insert_or_assign(nameExpr.semanticNodeId, 0);
+  const auto semanticIndex = primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  error = "stale";
+  CHECK_FALSE(primec::ir_lowerer::resolveStringTableTarget(
+      nameExpr,
+      locals,
+      stringTable,
+      internString,
+      stringIndex,
+      length,
+      error,
+      &semanticProgram,
+      &semanticIndex));
+  CHECK(error == "stale");
+
+  auto semanticResolver = primec::ir_lowerer::makeResolveStringTableTarget(
+      stringTable, internString, error, &semanticProgram);
+  CHECK_FALSE(semanticResolver(nameExpr, locals, stringIndex, length));
+
+  auto semanticHelpers =
+      primec::ir_lowerer::makeStringLiteralHelperContext(stringTable, error, &semanticProgram);
+  CHECK_FALSE(semanticHelpers.resolveStringTableTarget(nameExpr, locals, stringIndex, length));
 }
 
 TEST_CASE("ir lowerer string literal helper builds string table target resolver") {

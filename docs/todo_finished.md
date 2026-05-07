@@ -6,6 +6,32 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer string table facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that routes native string-table target
+    resolution through published string/non-string facts before stale local
+    string-table metadata can resolve named string indices.
+  - acceptance:
+    - Direct string-table target resolution accepts an optional published
+      semantic program and product index.
+    - Bundled lowerer string-literal helper setup carries the published
+      semantic program into its string-table target resolver.
+    - Published non-string facts suppress stale local string-table metadata for
+      named table targets while no-fact compatibility remains available.
+  - stop_rule: Stop once named string-table target resolution uses
+    semantic-product string/non-string facts before legacy local string-table
+    metadata, with behavioral coverage proving non-string facts suppress stale
+    locals.
+  - evidence: Routed `resolveStringTableTarget(...)` through
+    semantic-aware string target classification, wired runtime string literal
+    setup to capture the published semantic program, added behavioral coverage
+    for stale-local suppression in direct and closure-built resolvers, ran
+    `git diff --check`, and skipped broad baseline validation per the lite
+    workflow.
+
 - [x] TODO-4298: Prefer base map result facts
   - owner: ai
   - created_at: 2026-04-28

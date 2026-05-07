@@ -837,6 +837,10 @@ Task template:
     The lowerer base map result helper slice is complete for
     semantic-product-backed `tryAt(...)` and `contains(...)` receiver facts
     before stale local map metadata can classify helper result kinds.
+    The lowerer string-table target resolver slice is complete for
+    semantic-product-backed binding, local-auto, and query string/non-string
+    facts before stale local string-table metadata can resolve named string
+    table targets.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -911,6 +915,10 @@ Task template:
       classification now passes published map/non-map receiver facts into
       `tryAt(...)` and `contains(...)` result-kind helpers before local map
       metadata can classify helper result kinds.
+    - Completed slice: semantic-product-addressed string-table target
+      resolution now suppresses stale local string-table metadata for published
+      non-string name facts before native string-table target helpers can
+      resolve named string indices.
     - Completed slice: semantic-product-addressed native `Result.why(...)`
       direct-call sources now resolve interned query result-error IDs before
       copied query text, so stale duplicated error text cannot override the

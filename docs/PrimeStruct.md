@@ -912,6 +912,11 @@ Planned non-template inference migration contract:
   inference for `tryAt(...)` and `contains(...)` now passes graph-backed
   map/non-map receiver facts into helper result classifiers before stale local
   map metadata can decide result value kinds.
+- Completed lowerer string-table target resolver slice: native string-table
+  target resolution now asks graph-backed binding, local-auto, and query
+  string/non-string facts before stale local string-table metadata can resolve
+  named string indices. Known non-string facts suppress stale string-table
+  locals; no-fact contexts keep the existing local table-index fallback.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

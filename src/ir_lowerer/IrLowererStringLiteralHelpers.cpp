@@ -1,7 +1,10 @@
 #include "IrLowererStringLiteralHelpers.h"
 
+#include <memory>
 #include <utility>
 
+#include "IrLowererCallHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
 #include "primec/StringLiteral.h"
 
 namespace primec::ir_lowerer {
@@ -29,10 +32,14 @@ bool parseLowererStringLiteral(const std::string &text, std::string &decoded, st
   return true;
 }
 
-StringLiteralHelperContext makeStringLiteralHelperContext(std::vector<std::string> &stringTable, std::string &error) {
+StringLiteralHelperContext makeStringLiteralHelperContext(
+    std::vector<std::string> &stringTable,
+    std::string &error,
+    const SemanticProgram *semanticProgram) {
   StringLiteralHelperContext context;
   context.internString = makeInternLowererString(stringTable);
-  context.resolveStringTableTarget = makeResolveStringTableTarget(stringTable, context.internString, error);
+  context.resolveStringTableTarget =
+      makeResolveStringTableTarget(stringTable, context.internString, error, semanticProgram);
   return context;
 }
 
@@ -45,14 +52,27 @@ InternStringLiteralFn makeInternLowererString(std::vector<std::string> &stringTa
 
 ResolveStringTableTargetFn makeResolveStringTableTarget(const std::vector<std::string> &stringTable,
                                                         const InternStringLiteralFn &internString,
-                                                        std::string &error) {
+                                                        std::string &error,
+                                                        const SemanticProgram *semanticProgram) {
   const auto *stringTablePtr = &stringTable;
   auto internStringFn = internString;
   auto *errorPtr = &error;
-  return [stringTablePtr, internStringFn, errorPtr](
+  auto semanticIndex = semanticProgram == nullptr
+                           ? std::shared_ptr<SemanticProductIndex>{}
+                           : std::make_shared<SemanticProductIndex>(
+                                 buildSemanticProductIndex(semanticProgram));
+  return [stringTablePtr, internStringFn, errorPtr, semanticProgram, semanticIndex](
              const Expr &expr, const LocalMap &localsIn, int32_t &stringIndexOut, size_t &lengthOut) {
     return resolveStringTableTarget(
-        expr, localsIn, *stringTablePtr, internStringFn, stringIndexOut, lengthOut, *errorPtr);
+        expr,
+        localsIn,
+        *stringTablePtr,
+        internStringFn,
+        stringIndexOut,
+        lengthOut,
+        *errorPtr,
+        semanticProgram,
+        semanticIndex.get());
   };
 }
 
@@ -62,7 +82,9 @@ bool resolveStringTableTarget(const Expr &expr,
                               const InternStringLiteralFn &internString,
                               int32_t &stringIndexOut,
                               size_t &lengthOut,
-                              std::string &error) {
+                              std::string &error,
+                              const SemanticProgram *semanticProgram,
+                              const SemanticProductIndex *semanticIndex) {
   stringIndexOut = -1;
   lengthOut = 0;
   if (expr.kind == Expr::Kind::StringLiteral) {
@@ -75,6 +97,11 @@ bool resolveStringTableTarget(const Expr &expr,
     return true;
   }
   if (expr.kind == Expr::Kind::Name) {
+    const SemanticStringAccessTargetKind semanticStringKind =
+        classifyAccessTargetSemanticStringKind(expr, semanticProgram, semanticIndex);
+    if (semanticStringKind == SemanticStringAccessTargetKind::NonString) {
+      return false;
+    }
     auto it = localsIn.find(expr.name);
     if (it == localsIn.end()) {
       return false;

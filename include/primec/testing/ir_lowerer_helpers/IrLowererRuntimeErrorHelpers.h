@@ -33,7 +33,8 @@ enum class FileErrorWhyCallEmitResult {
 RuntimeErrorAndStringLiteralSetup makeRuntimeErrorAndStringLiteralSetup(
     std::vector<std::string> &stringTable,
     IrFunction &function,
-    std::string &error);
+    std::string &error,
+    const ::primec::SemanticProgram *semanticProgram = nullptr);
 RuntimeErrorEmitters makeRuntimeErrorEmitters(IrFunction &function, const InternRuntimeErrorStringFn &internString);
 EmitRuntimeErrorFn makeEmitArrayIndexOutOfBounds(IrFunction &function,
                                                  const InternRuntimeErrorStringFn &internString);
