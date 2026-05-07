@@ -72,11 +72,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4367: Reclassify the vector backing implementation namespace
+- TODO-4293: Stabilize generic contiguous-storage substrate
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4293: Stabilize generic contiguous-storage substrate
 - TODO-4294: Lower vector helpers through ordinary `.prime`
 - TODO-4281: Lift vector dynamic capacity limit
 - TODO-4295: Move collection surface metadata out of C++
@@ -84,13 +83,14 @@ Task template:
 - TODO-4297: Add zero C++ vector-surface audit
 - TODO-4299: Promote and style canonical `.prime` map implementation
 - TODO-4300: Stabilize map lookup and insertion substrate
+- TODO-4301: Lower map helpers through ordinary `.prime`
 
 ### Priority Lanes (Current)
 
 - Semantic ownership authority: none active; future semantic-authority work
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
-- Vector stdlib ownership cutover: TODO-4367 -> TODO-4293 -> TODO-4294
+- Vector stdlib ownership cutover: TODO-4293 -> TODO-4294
   -> TODO-4281 -> TODO-4295 -> TODO-4296 -> TODO-4297
 - Map stdlib ownership cutover: TODO-4299 -> TODO-4300 -> TODO-4301
   -> TODO-4302 -> TODO-4303 -> TODO-4304
@@ -110,7 +110,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4367: Reclassify the vector backing implementation namespace
 - TODO-4293: Stabilize generic contiguous-storage substrate
 - TODO-4294: Lower vector helpers through ordinary `.prime`
 - TODO-4281: Lift vector dynamic capacity limit
@@ -179,8 +178,8 @@ Task template:
 | Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4299, TODO-4305 |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4295, TODO-4296, TODO-4297, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4367, TODO-4293, TODO-4294, TODO-4281, TODO-4295, TODO-4296, TODO-4297, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
-| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4367, TODO-4296, TODO-4297, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4293, TODO-4294, TODO-4281, TODO-4295, TODO-4296, TODO-4297, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4296, TODO-4297, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
@@ -209,8 +208,8 @@ Task template:
 | Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
-| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4367, TODO-4294, TODO-4281, TODO-4295, TODO-4296, TODO-4297, TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
-| De-experimentalization surface and namespace parity | TODO-4367, TODO-4296, TODO-4297, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
+| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4294, TODO-4281, TODO-4295, TODO-4296, TODO-4297, TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| De-experimentalization surface and namespace parity | TODO-4296, TODO-4297, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
@@ -236,11 +235,10 @@ Task template:
   `vectorCount` / `mapCount`-style lowering names, and
   `/std/collections/experimental_*` implementation modules stay temporary.
   The vector/map adapter cutover is complete for semantic and
-  template-monomorph helper decisions. TODO-4367 and TODO-4293 through
-  TODO-4297 split the vector half of that remaining seam into backing
-  namespace reclassification, generic storage/lifecycle substrate, ordinary
-  `.prime` lowering, metadata extraction, compatibility deletion, and a final
-  zero-C++-vector audit.
+  template-monomorph helper decisions. TODO-4293 through TODO-4297 split the
+  vector half of that remaining seam into generic storage/lifecycle substrate,
+  ordinary `.prime` lowering, metadata extraction, compatibility deletion, and
+  a final zero-C++-vector audit.
   TODO-4299 through TODO-4304 apply the same ownership model to map while
   keeping map-specific lookup, insertion, `Result<ContainerError>`, and key
   comparability policy explicit.
@@ -312,11 +310,14 @@ Task template:
   experimental imports are retained compatibility shims for targeted tests
   only, not ordinary public imports.
 - Internal collection implementation modules:
-  `/std/collections/experimental_vector/*` and
-  `/std/collections/experimental_map/*` now remain implementation-owned seams
-  behind canonical `/std/collections/vector/*` and `/std/collections/map/*`,
-  with direct imports kept only for targeted compatibility or conformance
-  coverage.
+  `/std/collections/internal_vector/*` owns the canonical vector backing
+  adapter while preserving the current compatibility `Vector<T>` identity;
+  `/std/collections/experimental_map/*` remains the implementation-owned seam
+  behind canonical `/std/collections/map/*`, with direct imports kept only for
+  targeted compatibility or conformance coverage.
+- Vector compatibility shim: `/std/collections/experimental_vector/*` remains
+  importable only for targeted compatibility and conformance coverage, and
+  canonical wrappers route through `/std/collections/internal_vector/*`.
 - Legacy gfx compatibility seam: `/std/gfx/experimental/*` remains importable
   only for targeted compatibility coverage and staged migration support;
   canonical `/std/gfx/*` is the only public gfx namespace.
@@ -1635,47 +1636,10 @@ Task template:
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
 
-- [ ] TODO-4367: Reclassify the vector backing implementation namespace
-  - owner: ai
-  - created_at: 2026-05-07
-  - phase: Vector stdlib ownership cutover
-  - scope: Move or reclassify the backing `Vector<T>` implementation so the
-    canonical public `/std/collections/vector/*` surface delegates to an
-    explicitly internal implementation module instead of an
-    `experimental_vector` public-looking namespace.
-  - implementation_notes:
-    - Start from `stdlib/std/collections/experimental_vector.prime`,
-      compiler/lowerer references to
-      `/std/collections/experimental_vector/Vector`, collection import tests,
-      vector compile-run suites, and docs/source locks that mention
-      `experimental_vector`.
-    - Direct experimental-vector imports may remain as targeted compatibility
-      shims, but ordinary docs/examples must point at the canonical surface or
-      an internal backing module.
-    - Do not change map or SoA public status in this task.
-  - acceptance:
-    - Canonical vector imports exercise a non-experimental or explicitly
-      internal implementation owner in `.prime`, not a public wrapper whose
-      primary body lives in `experimental_vector`.
-    - Direct experimental-vector imports either continue through a documented
-      shim or are limited to explicitly named compatibility/conformance tests.
-    - Public docs and examples no longer present `experimental_vector` as the
-      vector implementation namespace.
-    - Any remaining low-level buffer, slot, ownership, or compatibility code is
-      quarantined in `internal_*` or compatibility-shim files and is not used as
-      the public style reference.
-    - Existing vector constructor, access, mutation, lifecycle, and import
-      conformance remains behavior-compatible.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once the implementation owner is canonical/internal and
-    compatibility imports are only shims; leave generic storage/lowering
-    extraction to TODO-4293 and TODO-4294.
-
 - [ ] TODO-4293: Stabilize generic contiguous-storage substrate
   - owner: ai
   - created_at: 2026-04-28
   - phase: Vector stdlib ownership cutover
-  - depends_on: TODO-4367
   - scope: Make the contiguous heap-buffer and lifecycle primitives needed by
     vector usable as generic `.prime` substrate rather than vector-specific
     runtime behavior.

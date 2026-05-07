@@ -14350,3 +14350,47 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     for that boundary, removed TODO-4366 from active work, and promoted
     TODO-4367 to Ready Now. Local test execution was skipped per the lite
     workflow.
+
+- [x] TODO-4367: Reclassify the vector backing implementation namespace
+  - owner: ai
+  - created_at: 2026-05-07
+  - phase: Vector stdlib ownership cutover
+  - scope: Move or reclassify the backing `Vector<T>` implementation so the
+    canonical public `/std/collections/vector/*` surface delegates to an
+    explicitly internal implementation module instead of an
+    `experimental_vector` public-looking namespace.
+  - implementation_notes:
+    - Start from `stdlib/std/collections/experimental_vector.prime`,
+      compiler/lowerer references to
+      `/std/collections/experimental_vector/Vector`, collection import tests,
+      vector compile-run suites, and docs/source locks that mention
+      `experimental_vector`.
+    - Direct experimental-vector imports may remain as targeted compatibility
+      shims, but ordinary docs/examples must point at the canonical surface or
+      an internal backing module.
+    - Do not change map or SoA public status in this task.
+  - acceptance:
+    - Canonical vector imports exercise a non-experimental or explicitly
+      internal implementation owner in `.prime`, not a public wrapper whose
+      primary body lives in `experimental_vector`.
+    - Direct experimental-vector imports either continue through a documented
+      shim or are limited to explicitly named compatibility/conformance tests.
+    - Public docs and examples no longer present `experimental_vector` as the
+      vector implementation namespace.
+    - Any remaining low-level buffer, slot, ownership, or compatibility code is
+      quarantined in `internal_*` or compatibility-shim files and is not used as
+      the public style reference.
+    - Existing vector constructor, access, mutation, lifecycle, and import
+      conformance remains behavior-compatible.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once the implementation owner is canonical/internal and
+    compatibility imports are only shims; leave generic storage/lowering
+    extraction to TODO-4293 and TODO-4294.
+  - finished_at: 2026-05-07
+  - evidence: Moved the vector backing source to
+    `stdlib/std/collections/internal_vector.prime`, left
+    `experimental_vector.prime` as a direct-import compatibility shim, and
+    rerouted canonical `stdlib/std/collections/vector.prime` delegates through
+    `/std/collections/internal_vector/*`. Updated docs/source locks and
+    promoted TODO-4293 to Ready Now. Local test execution was skipped per the
+    lite workflow.
