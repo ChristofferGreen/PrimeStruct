@@ -188,6 +188,9 @@ TEST_CASE("ir lowerer conversions helper uses semantic mutation target facts bef
         [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) {
           return false;
         },
+        [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) {
+          return false;
+        },
         [](int32_t, int32_t, int32_t) { return false; },
         instructions,
         handled,

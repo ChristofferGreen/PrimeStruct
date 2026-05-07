@@ -734,6 +734,9 @@ Task template:
     The native unsupported count/capacity diagnostic slice is complete for
     semantic-product-backed direct helper targets before stale local vector
     metadata can suppress count/capacity target diagnostics.
+    The lowerer call-return access receiver slice is complete for
+    semantic-product-backed direct helper receiver facts before stale local
+    map/vector metadata can classify `at(...)` return kinds.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for

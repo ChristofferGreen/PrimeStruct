@@ -247,7 +247,9 @@ bool runLowerInferenceArrayKindSetup(const LowerInferenceArrayKindSetupInput &in
                                                   true,
                                                   kindOut,
                                                   nullptr,
-                                                  stateInOut.inferExprKind);
+                                                  stateInOut.inferExprKind,
+                                                  stateInOut.semanticProgram,
+                                                  stateInOut.semanticIndex);
         },
         [&](const Expr &candidate, const LocalMap &candidateLocals, LocalInfo::ValueKind &kindOut) {
           return resolveMethodCallReturnKind(

@@ -6,6 +6,31 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer access return facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes call-return access receiver
+    classification consume semantic-product receiver facts before stale local
+    map/vector metadata can classify `at(...)` return kinds.
+  - acceptance:
+    - Published binding type IDs classify direct access receivers before
+      copied semantic text and stale local map metadata.
+    - Call-return setup threads semantic-product state into count/access
+      return-kind helpers for scalar and array-return inference.
+    - Existing local map/vector target inference remains the compatibility
+      fallback when no semantic receiver fact is published.
+  - stop_rule: Stop once direct count/access return-kind classification uses
+    published semantic receiver facts ahead of stale locals and a focused test
+    pins ID-first vector element inference over stale map locals.
+  - evidence: Added semantic-product receiver target classification to the
+    count/access return-kind helper, threaded semantic state through direct
+    and array-kind call-return setup, covered stale local map suppression for
+    `at(values, i)`, fixed three focused-build compile blockers, built
+    `PrimeStruct_backend_ir_tests`, ran the focused doctest case, and skipped
+    broad baseline validation per the lite workflow.
+
 - [x] TODO-4298: Prefer diagnostic target facts
   - owner: ai
   - created_at: 2026-04-28

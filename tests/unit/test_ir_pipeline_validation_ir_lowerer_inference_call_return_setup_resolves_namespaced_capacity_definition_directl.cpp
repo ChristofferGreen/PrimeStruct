@@ -150,6 +150,72 @@ TEST_CASE("ir lowerer inference call-return setup resolves namespaced access def
   CHECK(resolveMethodCalls == 0);
 }
 
+TEST_CASE("ir lowerer inference call-return setup uses semantic access receiver facts before stale locals") {
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+
+  primec::SemanticProgram semanticProgram;
+  const primec::SymbolId vectorTypeId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "vector<f32>");
+  primec::SemanticProgramBindingFact bindingFact;
+  bindingFact.semanticNodeId = 9101;
+  bindingFact.bindingTypeText = "map<i32,i64>";
+  bindingFact.bindingTypeTextId = vectorTypeId;
+  semanticProgram.bindingFacts.push_back(bindingFact);
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(
+      bindingFact.semanticNodeId, 0);
+  const primec::ir_lowerer::SemanticProductIndex semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  state.semanticProgram = &semanticProgram;
+  state.semanticIndex = &semanticIndex;
+  state.getReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
+    return false;
+  };
+  state.resolveMethodCallDefinition =
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+    return nullptr;
+  };
+
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallReturnSetup(
+      {
+          .defMap = &defMap,
+          .resolveExprPath = [](const primec::Expr &expr) { return expr.name; },
+          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      },
+      state,
+      error));
+  CHECK(error.empty());
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+  receiverExpr.semanticNodeId = bindingFact.semanticNodeId;
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 1;
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "at";
+  callExpr.args = {receiverExpr, indexExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo staleLocal;
+  staleLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  staleLocal.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  staleLocal.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  locals.emplace("values", staleLocal);
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut =
+      primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprDirectReturnKind(callExpr, locals, kindOut) ==
+        primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Float32);
+}
+
 TEST_CASE("ir lowerer inference call-return setup rejects vector compatibility array access fallback") {
   primec::Definition receiverAtDef;
   receiverAtDef.fullPath = "/vector/at";

@@ -1,11 +1,15 @@
 #include "IrLowererSetupTypeHelpers.h"
 
 #include <algorithm>
+#include <vector>
 
+#include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeReceiverTargetHelpers.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -35,6 +39,140 @@ bool prefersExactDirectMapCountLikeReturnPath(const Expr &callExpr) {
   return resolveMapHelperAliasName(callExpr, helperName) &&
          (helperName == "count" || helperName == "count_ref" || helperName == "contains" ||
           helperName == "tryAt");
+}
+
+struct SemanticReturnKindTargetInfo {
+  ArrayVectorAccessTargetInfo arrayVectorInfo{};
+  MapAccessTargetInfo mapInfo{};
+};
+
+bool classifySemanticReturnKindCollectionTypeText(
+    const std::string &typeText,
+    SemanticReturnKindTargetInfo &infoOut) {
+  const std::string normalizedType = trimTemplateTypeText(typeText);
+  if (normalizedType.empty()) {
+    return false;
+  }
+
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(normalizedType, base, argText)) {
+    return true;
+  }
+  base = normalizeCollectionBindingTypeName(trimTemplateTypeText(base));
+  std::vector<std::string> args;
+  if (!splitTemplateArgs(argText, args)) {
+    return true;
+  }
+  if ((base == "Reference" || base == "Pointer") && args.size() == 1) {
+    return classifySemanticReturnKindCollectionTypeText(args.front(), infoOut);
+  }
+  if ((base == "array" || base == "vector" || base == "Buffer" ||
+       base == "soa_vector") &&
+      args.size() == 1) {
+    infoOut.arrayVectorInfo.isArrayOrVectorTarget = true;
+    infoOut.arrayVectorInfo.isVectorTarget = base == "vector";
+    infoOut.arrayVectorInfo.isSoaVector = base == "soa_vector";
+    infoOut.arrayVectorInfo.elemKind = valueKindFromTypeName(args.front());
+    return true;
+  }
+  if (base == "map" && args.size() == 2) {
+    infoOut.mapInfo.isMapTarget = true;
+    infoOut.mapInfo.mapKeyKind = valueKindFromTypeName(args.front());
+    infoOut.mapInfo.mapValueKind = valueKindFromTypeName(args.back());
+    return true;
+  }
+  return true;
+}
+
+bool classifySemanticReturnKindCollectionSpecialization(
+    const SemanticProgram *semanticProgram,
+    const SemanticProgramCollectionSpecialization &fact,
+    SemanticReturnKindTargetInfo &infoOut) {
+  const std::string family = normalizeCollectionBindingTypeName(
+      resolveSemanticProductTypeText(semanticProgram,
+                                     fact.collectionFamily,
+                                     fact.collectionFamilyId));
+  if (family == "array" || family == "vector" || family == "Buffer" ||
+      family == "soa_vector") {
+    infoOut.arrayVectorInfo.isArrayOrVectorTarget = true;
+    infoOut.arrayVectorInfo.isVectorTarget = family == "vector";
+    infoOut.arrayVectorInfo.isSoaVector = family == "soa_vector";
+    infoOut.arrayVectorInfo.elemKind =
+        valueKindFromTypeName(resolveSemanticProductTypeText(
+            semanticProgram, fact.elementTypeText, fact.elementTypeTextId));
+    return true;
+  }
+  if (family == "map") {
+    infoOut.mapInfo.isMapTarget = true;
+    infoOut.mapInfo.mapKeyKind =
+        valueKindFromTypeName(resolveSemanticProductTypeText(
+            semanticProgram, fact.keyTypeText, fact.keyTypeTextId));
+    infoOut.mapInfo.mapValueKind =
+        valueKindFromTypeName(resolveSemanticProductTypeText(
+            semanticProgram, fact.valueTypeText, fact.valueTypeTextId));
+    return true;
+  }
+  return true;
+}
+
+bool resolveSemanticReturnKindTargetInfo(
+    const Expr &target,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex,
+    SemanticReturnKindTargetInfo &infoOut) {
+  infoOut = {};
+  if (semanticProgram == nullptr || semanticIndex == nullptr ||
+      target.semanticNodeId == 0) {
+    return false;
+  }
+  if (const auto *collectionFact =
+          findSemanticProductCollectionSpecialization(*semanticIndex, target);
+      collectionFact != nullptr) {
+    return classifySemanticReturnKindCollectionSpecialization(
+        semanticProgram, *collectionFact, infoOut);
+  }
+  if (const auto *bindingFact =
+          findSemanticProductBindingFact(*semanticIndex, target);
+      bindingFact != nullptr) {
+    classifySemanticReturnKindCollectionTypeText(
+        resolveSemanticProductTypeText(semanticProgram,
+                                       bindingFact->bindingTypeText,
+                                       bindingFact->bindingTypeTextId),
+        infoOut);
+    return true;
+  }
+  if (const auto *localAutoFact =
+          findSemanticProductLocalAutoFactBySemanticId(*semanticIndex, target);
+      localAutoFact != nullptr) {
+    classifySemanticReturnKindCollectionTypeText(
+        resolveSemanticProductTypeText(semanticProgram,
+                                       localAutoFact->bindingTypeText,
+                                       localAutoFact->bindingTypeTextId),
+        infoOut);
+    return true;
+  }
+  if (const auto *queryFact =
+          findSemanticProductQueryFactBySemanticId(*semanticIndex, target);
+      queryFact != nullptr) {
+    classifySemanticReturnKindCollectionTypeText(
+        resolveSemanticProductTypeText(semanticProgram,
+                                       queryFact->queryTypeText,
+                                       queryFact->queryTypeTextId),
+        infoOut);
+    classifySemanticReturnKindCollectionTypeText(
+        resolveSemanticProductTypeText(semanticProgram,
+                                       queryFact->bindingTypeText,
+                                       queryFact->bindingTypeTextId),
+        infoOut);
+    classifySemanticReturnKindCollectionTypeText(
+        resolveSemanticProductTypeText(semanticProgram,
+                                       queryFact->receiverBindingTypeText,
+                                       queryFact->receiverBindingTypeTextId),
+        infoOut);
+    return true;
+  }
+  return false;
 }
 
 } // namespace
@@ -384,7 +522,9 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
                                       bool requireArrayReturn,
                                       LocalInfo::ValueKind &kindOut,
                                       bool *methodResolvedOut,
-                                      const InferReceiverExprKindFn &inferExprKind) {
+                                      const InferReceiverExprKindFn &inferExprKind,
+                                      const SemanticProgram *semanticProgram,
+                                      const SemanticProductIndex *semanticIndex) {
   kindOut = LocalInfo::ValueKind::Unknown;
   if (methodResolvedOut != nullptr) {
     *methodResolvedOut = false;
@@ -453,14 +593,43 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     }
     return false;
   };
+  auto resolveSemanticArrayVectorTargetInfo =
+      [&](const Expr &candidate, ArrayVectorAccessTargetInfo &infoOut) {
+        SemanticReturnKindTargetInfo semanticInfo;
+        if (!resolveSemanticReturnKindTargetInfo(
+                candidate, semanticProgram, semanticIndex, semanticInfo)) {
+          return false;
+        }
+        infoOut = semanticInfo.arrayVectorInfo;
+        return true;
+      };
+  auto resolveSemanticMapTargetInfo =
+      [&](const Expr &candidate, MapAccessTargetInfo &infoOut) {
+        SemanticReturnKindTargetInfo semanticInfo;
+        if (!resolveSemanticReturnKindTargetInfo(
+                candidate, semanticProgram, semanticIndex, semanticInfo)) {
+          return false;
+        }
+        infoOut = semanticInfo.mapInfo;
+        return true;
+      };
+  auto arrayVectorTargetInfoFor = [&](const Expr &candidate) {
+    return resolveArrayVectorAccessTargetInfo(
+        candidate, localsIn, resolveSemanticArrayVectorTargetInfo);
+  };
+  auto mapTargetInfoFor = [&](const Expr &candidate) {
+    return resolveMapAccessTargetInfo(
+        candidate, localsIn, resolveSemanticMapTargetInfo);
+  };
+
   auto isKnownCollectionAccessReceiverExpr = [&](const Expr &candidate) -> bool {
     if (candidate.kind == Expr::Kind::StringLiteral) {
       return true;
     }
-    if (resolveMapAccessTargetInfo(candidate, localsIn).isMapTarget) {
+    if (mapTargetInfoFor(candidate).isMapTarget) {
       return true;
     }
-    if (resolveArrayVectorAccessTargetInfo(candidate, localsIn).isArrayOrVectorTarget) {
+    if (arrayVectorTargetInfoFor(candidate).isArrayOrVectorTarget) {
       return true;
     }
     if (candidate.kind != Expr::Kind::Name) {
@@ -479,7 +648,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
            it->second.valueKind == LocalInfo::ValueKind::String;
   };
   auto isKnownMapReceiverExpr = [&](const Expr &candidate) -> bool {
-    return resolveMapAccessTargetInfo(candidate, localsIn).isMapTarget;
+    return mapTargetInfoFor(candidate).isMapTarget;
   };
   auto isKnownVectorMutatorReceiverExpr = [&](const Expr &candidate) -> bool {
     if (candidate.kind != Expr::Kind::Name) {
@@ -612,7 +781,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     Expr methodExpr = buildMethodExprForReceiverIndex(receiverIndex);
     if (isAccessCall && !preferDeclaredAccessReturnKind) {
       const auto arrayVectorTargetInfo =
-          resolveArrayVectorAccessTargetInfo(methodExpr.args.front(), localsIn);
+          arrayVectorTargetInfoFor(methodExpr.args.front());
       if (arrayVectorTargetInfo.isArrayOrVectorTarget &&
           arrayVectorTargetInfo.elemKind != LocalInfo::ValueKind::Unknown) {
         if (methodResolvedOut != nullptr) {
@@ -622,7 +791,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
         return true;
       }
 
-      const auto mapTargetInfo = resolveMapAccessTargetInfo(methodExpr.args.front(), localsIn);
+      const auto mapTargetInfo = mapTargetInfoFor(methodExpr.args.front());
       if (mapTargetInfo.isMapTarget &&
           mapTargetInfo.mapValueKind != LocalInfo::ValueKind::Unknown) {
         if (methodResolvedOut != nullptr) {
@@ -641,9 +810,9 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     }
     if (isCountCall && !requireArrayReturn) {
       const auto arrayVectorTargetInfo =
-          resolveArrayVectorAccessTargetInfo(methodExpr.args.front(), localsIn);
+          arrayVectorTargetInfoFor(methodExpr.args.front());
       const auto mapTargetInfo =
-          resolveMapAccessTargetInfo(methodExpr.args.front(), localsIn);
+          mapTargetInfoFor(methodExpr.args.front());
       if (arrayVectorTargetInfo.isArrayOrVectorTarget || mapTargetInfo.isMapTarget) {
         if (methodResolvedOut != nullptr) {
           *methodResolvedOut = true;

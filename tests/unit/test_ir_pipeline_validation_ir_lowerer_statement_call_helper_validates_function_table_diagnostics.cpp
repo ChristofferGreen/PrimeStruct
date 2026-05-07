@@ -363,7 +363,8 @@ TEST_CASE("ir lowerer arithmetic helper uses semantic pointer operand facts befo
         if (it == localMap.end()) {
           return false;
         }
-        instructions.push_back({primec::IrOpcode::LoadLocal, it->second.index});
+        instructions.push_back(
+            {primec::IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
         return true;
       },
       inferKind,
@@ -402,7 +403,8 @@ TEST_CASE("ir lowerer arithmetic helper uses semantic pointer operand facts befo
         if (it == localMap.end()) {
           return false;
         }
-        instructions.push_back({primec::IrOpcode::LoadLocal, it->second.index});
+        instructions.push_back(
+            {primec::IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
         return true;
       },
       inferKind,

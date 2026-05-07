@@ -94,7 +94,9 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
                                       bool requireArrayReturn,
                                       LocalInfo::ValueKind &kindOut,
                                       bool *methodResolvedOut = nullptr,
-                                      const InferReceiverExprKindFn &inferExprKind = {});
+                                      const InferReceiverExprKindFn &inferExprKind = {},
+                                      const SemanticProgram *semanticProgram = nullptr,
+                                      const SemanticProductIndex *semanticIndex = nullptr);
 bool resolveCapacityMethodCallReturnKind(const Expr &callExpr,
                                          const LocalMap &localsIn,
                                          const ResolveMethodCallDefinitionFn &resolveMethodCallDefinition,
