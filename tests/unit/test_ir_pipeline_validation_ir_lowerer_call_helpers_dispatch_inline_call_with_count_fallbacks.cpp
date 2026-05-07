@@ -1008,6 +1008,114 @@ TEST_CASE("ir lowerer call helpers dispatch bare semantic map sugar inline") {
   expectEmitted(atUnsafeCall, canonicalAtUnsafe);
 }
 
+TEST_CASE("ir lowerer call helpers gate canonical map helpers with semantic target facts") {
+  using Result = primec::ir_lowerer::InlineCallDispatchResult;
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+
+  primec::SemanticProgram semanticProgram;
+  auto addBindingFact = [&](uint64_t semanticNodeId,
+                            const std::string &bindingTypeText) {
+    primec::SemanticProgramBindingFact fact;
+    fact.semanticNodeId = semanticNodeId;
+    fact.bindingTypeText = bindingTypeText;
+    fact.bindingTypeTextId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, bindingTypeText);
+    const size_t factIndex = semanticProgram.bindingFacts.size();
+    semanticProgram.bindingFacts.push_back(fact);
+    semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(
+        semanticNodeId, factIndex);
+  };
+  auto addMapFact = [&](uint64_t semanticNodeId,
+                        const std::string &keyType,
+                        const std::string &valueType) {
+    primec::SemanticProgramCollectionSpecialization fact;
+    fact.semanticNodeId = semanticNodeId;
+    fact.collectionFamily = "map";
+    fact.collectionFamilyId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, "map");
+    fact.keyTypeText = keyType;
+    fact.keyTypeTextId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, keyType);
+    fact.valueTypeText = valueType;
+    fact.valueTypeTextId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, valueType);
+    const size_t factIndex = semanticProgram.collectionSpecializations.size();
+    semanticProgram.collectionSpecializations.push_back(fact);
+    semanticProgram.publishedRoutingLookups.collectionSpecializationIndicesByExpr
+        .insert_or_assign(semanticNodeId, factIndex);
+  };
+  addBindingFact(7601, "i32");
+  addMapFact(7602, "i32", "i32");
+
+  primec::Definition canonicalCount;
+  canonicalCount.fullPath = "/std/collections/map/count";
+
+  primec::Expr scalarReceiver;
+  scalarReceiver.kind = primec::Expr::Kind::Name;
+  scalarReceiver.name = "values";
+  scalarReceiver.semanticNodeId = 7601;
+
+  primec::Expr mapReceiver = scalarReceiver;
+  mapReceiver.semanticNodeId = 7602;
+
+  primec::ir_lowerer::LocalMap staleMapLocals;
+  LocalInfo staleMapInfo;
+  staleMapInfo.kind = LocalInfo::Kind::Map;
+  staleMapInfo.mapKeyKind = LocalInfo::ValueKind::Int32;
+  staleMapInfo.mapValueKind = LocalInfo::ValueKind::Int32;
+  staleMapLocals.emplace("values", staleMapInfo);
+
+  primec::ir_lowerer::LocalMap staleScalarLocals;
+  LocalInfo staleScalarInfo;
+  staleScalarInfo.kind = LocalInfo::Kind::Value;
+  staleScalarInfo.valueKind = LocalInfo::ValueKind::Int32;
+  staleScalarLocals.emplace("values", staleScalarInfo);
+
+  auto makeCountCall = [](const primec::Expr &receiver) {
+    primec::Expr callExpr;
+    callExpr.kind = primec::Expr::Kind::Call;
+    callExpr.name = "/std/collections/map/count";
+    callExpr.args = {receiver};
+    return callExpr;
+  };
+  auto expectDispatch = [&](const primec::Expr &callExpr,
+                            const primec::ir_lowerer::LocalMap &locals,
+                            Result expectedResult,
+                            int expectedEmitCalls) {
+    int emitCalls = 0;
+    std::string error = "stale";
+    CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+              callExpr,
+              locals,
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+                return nullptr;
+              },
+              [&](const primec::Expr &expr) -> const primec::Definition * {
+                return expr.name == "/std/collections/map/count" ? &canonicalCount : nullptr;
+              },
+              [&](const primec::Expr &,
+                  const primec::Definition &resolvedCallee,
+                  const primec::ir_lowerer::LocalMap &) {
+                ++emitCalls;
+                CHECK(resolvedCallee.fullPath == canonicalCount.fullPath);
+                return true;
+              },
+              error,
+              &semanticProgram,
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                return LocalInfo::ValueKind::Unknown;
+              }) == expectedResult);
+    CHECK(error == "stale");
+    CHECK(emitCalls == expectedEmitCalls);
+  };
+
+  expectDispatch(makeCountCall(scalarReceiver), staleMapLocals, Result::Emitted, 1);
+  expectDispatch(makeCountCall(mapReceiver), staleScalarLocals, Result::NotHandled, 0);
+}
+
 TEST_CASE("ir lowerer call helpers prefer graph facts for inline map receiver probes") {
   using Result = primec::ir_lowerer::InlineCallDispatchResult;
   using LocalInfo = primec::ir_lowerer::LocalInfo;

@@ -1431,7 +1431,11 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
         rawPath.rfind("std/collections/map/", 0) == 0;
     if (isCanonicalStdMapHelperCall && !expr.args.empty()) {
       const auto targetInfo =
-          resolveMapAccessTargetInfo(expr.args.front(), localsIn, inferCallMapTargetInfo);
+          resolveMapAccessTargetInfo(expr.args.front(),
+                                     localsIn,
+                                     inferCallMapTargetInfo,
+                                     semanticProgram,
+                                     semanticIndexPtr);
       std::string directHelperName = rawPath;
       const size_t lastSlash = directHelperName.find_last_of('/');
       if (lastSlash != std::string::npos) {
@@ -1448,7 +1452,11 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
           (directHelperName == "contains" || directHelperName == "tryAt" ||
            directHelperName == "at" || directHelperName == "at_unsafe")) {
         const auto alternateTargetInfo =
-            resolveMapAccessTargetInfo(expr.args[1], localsIn, inferCallMapTargetInfo);
+            resolveMapAccessTargetInfo(expr.args[1],
+                                       localsIn,
+                                       inferCallMapTargetInfo,
+                                       semanticProgram,
+                                       semanticIndexPtr);
         if (alternateTargetInfo.isMapTarget) {
           const LocalInfo::ValueKind keyKind =
               inferExprKind ? inferExprKind(expr.args.front(), localsIn)
@@ -1470,14 +1478,24 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     if (!expr.args.empty() &&
         (resolveMapHelperAliasName(expr, mapHelperName) ||
          (getBuiltinArrayAccessName(expr, mapHelperName) && expr.args.size() == 2)) &&
-        resolveMapAccessTargetInfo(expr.args.front(), localsIn, inferCallMapTargetInfo).isMapTarget &&
+        resolveMapAccessTargetInfo(expr.args.front(),
+                                   localsIn,
+                                   inferCallMapTargetInfo,
+                                   semanticProgram,
+                                   semanticIndexPtr)
+            .isMapTarget &&
         !isCanonicalStdMapHelperCall &&
         resolveDefinitionCallFn(expr) == nullptr) {
       return InlineCallDispatchResult::NotHandled;
     }
     std::string accessName;
     if (getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2) {
-      const auto targetInfo = resolveArrayVectorAccessTargetInfo(expr.args.front(), localsIn);
+      const auto targetInfo =
+          resolveArrayVectorAccessTargetInfo(expr.args.front(),
+                                             localsIn,
+                                             {},
+                                             semanticProgram,
+                                             semanticIndexPtr);
       if (targetInfo.isArgsPackTarget) {
         return InlineCallDispatchResult::NotHandled;
       }

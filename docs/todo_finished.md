@@ -6,6 +6,33 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer inline map helper facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes inline dispatch for canonical
+    `/std/collections/map/*` helper calls consume published map and non-map
+    receiver facts before stale local map metadata can decide whether to defer
+    to builtin/native map handling.
+  - acceptance:
+    - Published scalar binding facts allow canonical map helper definitions to
+      dispatch inline when stale local metadata says the receiver is a map.
+    - Published map collection facts defer canonical map helper calls to
+      builtin/native handling when stale local metadata says the receiver is
+      scalar.
+    - Existing local map helper dispatch behavior remains available when no
+      semantic map/non-map fact is published.
+  - stop_rule: Stop once inline canonical map helper receiver gates route
+    through semantic-product target facts before legacy local map metadata,
+    with focused coverage pinning stale map suppression and stale scalar
+    rejection.
+  - evidence: Routed inline canonical map helper receiver checks through the
+    semantic-aware map and collection target resolvers, covered stale local
+    map/scalar conflicts for `/std/collections/map/count(...)` inline
+    dispatch, ran `git diff --check`, and skipped broad baseline validation
+    per the lite workflow.
+
 - [x] TODO-4298: Prefer method vector gate facts
   - owner: ai
   - created_at: 2026-04-28

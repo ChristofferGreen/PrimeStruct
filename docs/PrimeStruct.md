@@ -854,6 +854,11 @@ Planned non-template inference migration contract:
   metadata can decide whether to suppress builtin fallback. Known vector
   facts suppress stale scalar locals; known non-vector facts suppress stale
   vector locals.
+- Completed inline canonical map helper gate slice: inline dispatch for
+  canonical `/std/collections/map/*` helper calls now asks graph-backed
+  map/non-map receiver facts before local map metadata can decide whether to
+  defer to builtin/native map handling. Known map facts suppress stale scalar
+  locals; known non-map facts suppress stale map locals.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph
