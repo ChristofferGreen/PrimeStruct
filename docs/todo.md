@@ -755,6 +755,9 @@ Task template:
     The lowerer direct access reorder slice is complete for
     semantic-product-backed non-collection first arguments before local
     metadata decides whether to probe a later graph-owned collection receiver.
+    The lowerer direct access stale-fallback slice is complete for
+    semantic-product-backed scalar and string receiver facts before stale
+    local map metadata can resolve helper return kinds.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for

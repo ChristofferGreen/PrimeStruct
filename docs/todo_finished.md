@@ -6,6 +6,32 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer access stale facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes direct access helper
+    return-kind fallback consume semantic-product scalar and string receiver
+    facts before stale local map metadata can resolve helper paths.
+  - acceptance:
+    - Published scalar binding facts suppress stale local map helper
+      resolution for direct `at(...)` receivers.
+    - Published string binding facts classify direct string access receivers
+      as byte-indexing returns before stale map helper resolution.
+    - Existing map, array/vector, local string, and resolved-helper fallback
+      behavior remains available when no semantic receiver fact is published.
+  - stop_rule: Stop once direct access receiver fallback handles
+    graph-owned scalar and string receiver facts ahead of stale local map
+    metadata and focused tests pin both stale-map suppression and string
+    byte-index return classification.
+  - evidence: Added semantic value-kind tracking to direct return-kind
+    target facts, moved string access receiver classification ahead of
+    resolved-helper fallback, skipped stale helper resolution for
+    semantic-product non-collection access receivers, added focused
+    `at(...)` stale-local coverage, ran `git diff --check`, and skipped
+    broad baseline validation per the lite workflow.
+
 - [x] TODO-4298: Prefer access reorder facts
   - owner: ai
   - created_at: 2026-04-28

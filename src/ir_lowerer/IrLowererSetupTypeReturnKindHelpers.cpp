@@ -44,6 +44,7 @@ bool prefersExactDirectMapCountLikeReturnPath(const Expr &callExpr) {
 struct SemanticReturnKindTargetInfo {
   ArrayVectorAccessTargetInfo arrayVectorInfo{};
   MapAccessTargetInfo mapInfo{};
+  LocalInfo::ValueKind valueKind{LocalInfo::ValueKind::Unknown};
 };
 
 bool classifySemanticReturnKindCollectionTypeText(
@@ -53,6 +54,7 @@ bool classifySemanticReturnKindCollectionTypeText(
   if (normalizedType.empty()) {
     return false;
   }
+  infoOut.valueKind = valueKindFromTypeName(normalizedType);
 
   std::string base;
   std::string argText;
@@ -711,6 +713,12 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     if (inferredKind != LocalInfo::ValueKind::Unknown) {
       return false;
     }
+    SemanticReturnKindTargetInfo semanticInfo;
+    if (resolveSemanticReturnKindTargetInfo(
+            candidate, semanticProgram, semanticIndex, semanticInfo) &&
+        semanticInfo.valueKind == LocalInfo::ValueKind::String) {
+      return true;
+    }
     auto it = localsIn.find(candidate.name);
     return it != localsIn.end() && it->second.kind == LocalInfo::Kind::Value &&
            it->second.valueKind == LocalInfo::ValueKind::String;
@@ -752,7 +760,8 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
       return false;
     }
     return !semanticInfo.arrayVectorInfo.isArrayOrVectorTarget &&
-           !semanticInfo.mapInfo.isMapTarget;
+           !semanticInfo.mapInfo.isMapTarget &&
+           semanticInfo.valueKind != LocalInfo::ValueKind::String;
   };
   auto isKnownLocalName = [&](const Expr &candidate) -> bool {
     if (candidate.kind != Expr::Kind::Name) {
@@ -761,7 +770,16 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     return localsIn.find(candidate.name) != localsIn.end();
   };
   auto isStringAccessReceiverExpr = [&](const Expr &candidate) {
-    return !requireArrayReturn && inferExprKind &&
+    if (requireArrayReturn) {
+      return false;
+    }
+    SemanticReturnKindTargetInfo semanticInfo;
+    if (resolveSemanticReturnKindTargetInfo(
+            candidate, semanticProgram, semanticIndex, semanticInfo) &&
+        semanticInfo.valueKind == LocalInfo::ValueKind::String) {
+      return true;
+    }
+    return inferExprKind &&
            inferExprKind(candidate, localsIn) == LocalInfo::ValueKind::String;
   };
   auto buildMethodExprForReceiverIndex = [&](size_t receiverIndex) {
@@ -909,6 +927,16 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
         }
         kindOut = mapTargetInfo.mapValueKind;
         return true;
+      }
+      if (isStringAccessReceiverExpr(methodExpr.args.front())) {
+        if (methodResolvedOut != nullptr) {
+          *methodResolvedOut = true;
+        }
+        kindOut = LocalInfo::ValueKind::Int32;
+        return true;
+      }
+      if (hasNonCollectionAccessReceiverSemanticFact(methodExpr.args.front())) {
+        continue;
       }
     }
     if (isContainsCall && isKnownMapReceiverExpr(methodExpr.args.front())) {
