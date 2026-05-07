@@ -14036,3 +14036,57 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     `docs/todo.md`, cleared live queue/snapshot/dependency references to it,
     added the leaf-shaped active-work rule, and kept map stdlib ownership work
     in the dedicated TODO-4299 through TODO-4304 lane.
+
+- [x] TODO-4266: Rewire `?` to the `Result` sum contract
+  - owner: ai
+  - created_at: 2026-04-27
+  - phase: Deferred stdlib ADT migration
+  - scope: Close the oversized Result migration parent after its runtime,
+    semantic-product, and source C++ bridge work had accumulated many completed
+    slices, and stop using it as the live implementation queue entry.
+  - implementation_notes:
+    - Future Result migration gaps must enter `docs/todo.md` as bounded leaves
+      with explicit `scope`, `acceptance`, and `stop_rule`.
+    - The remaining source C++ bridge work is tracked by TODO-4362 rather than
+      by appending another completed-slice note to this parent.
+  - acceptance:
+    - The oversized parent no longer appears in `docs/todo.md`.
+    - `Ready Now`, `Priority Lanes`, execution queue, and active `depends_on`
+      fields no longer point at the closed parent.
+    - A concrete follow-up leaf owns the remaining Result bridge work.
+  - stop_rule: Stop once the active TODO log no longer treats this parent as
+    executable work.
+  - finished_at: 2026-05-07
+  - evidence: Replaced the active TODO-4266 umbrella with TODO-4362, updated
+    the stdlib ADT lane and TODO-4267 dependency, and kept the remaining
+    source C++ Result work leaf-shaped.
+
+- [x] TODO-4361: Pack source Result ok constructor payloads
+  - owner: ai
+  - created_at: 2026-05-07
+  - phase: Deferred stdlib ADT migration
+  - scope: Make explicit source C++
+    `Result<T, E>{[ok] singleFieldStruct}` constructors pack single-field
+    int-backed success structs through their field before entering the
+    value-carrying Result bridge.
+  - implementation_notes:
+    - Reuse the single-field Result bridge payload path already used by
+      `Result.ok(value)` and explicit `error` constructors.
+    - Keep `Result.map(...)` and `Result.map2(...)` output payload packing in
+      the follow-up leaf.
+  - acceptance:
+    - Source C++ explicit `ok` sum constructors preserve local single-field
+      success struct payloads.
+    - Source C++ explicit `ok` sum constructors preserve directly constructed
+      single-field success struct payloads.
+    - Existing scalar Result constructor behavior remains unchanged.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once explicit source C++ value-Result `ok` constructors
+    share the single-field success-struct bridge packing path with
+    `Result.ok(value)`.
+  - finished_at: 2026-05-07
+  - evidence: Routed explicit value-Result `ok` constructors through the
+    existing single-field bridge payload helper, added C++ emitter compile-run
+    coverage for local and direct success-struct payloads, and documented the
+    remaining map/map2 bridge leaf. Local test execution was skipped per the
+    lite workflow.

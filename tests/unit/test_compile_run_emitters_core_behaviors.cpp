@@ -197,6 +197,42 @@ main() {
   CHECK(runCommand(exePath) == 24);
 }
 
+TEST_CASE("C++ emitter packs single-field ok sum constructor payloads") {
+  const std::string source = R"(
+import /std/result/*
+
+[struct]
+Token() {
+  [i32] code{0i32}
+}
+
+[return<int>]
+main() {
+  [Token] token{Token{[code] 17i32}}
+  [Result<Token, i32>] local{[ok] token}
+  [Result<Token, i32>] direct{[ok] Token{[code] 19i32}}
+  [i32] localCode{pick(local) {
+    ok(value) { value.code }
+    error(err) { err }
+  }}
+  [i32] directCode{pick(direct) {
+    ok(value) { value.code }
+    error(err) { err }
+  }}
+  return(plus(localCode, directCode))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_result_ok_sum_struct_payload.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_result_ok_sum_struct_payload_exe").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 36);
+}
+
 TEST_CASE("C++ emitter rejects experimental map custom comparable struct keys") {
   const std::string source = R"(
 import /std/collections/*

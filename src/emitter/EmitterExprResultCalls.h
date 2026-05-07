@@ -153,7 +153,7 @@
         const std::string &variantName = *constructorArgNames->front();
         if (hasValue && variantName == "ok") {
           const std::string payloadExpr =
-              emitResultConstructorPayload(constructorArgs->front(), resultArgs.front(), false);
+              emitResultConstructorPayload(constructorArgs->front(), resultArgs.front(), true);
           return sourceResultValueOkExpr(payloadExpr);
         }
         if (variantName == "error") {

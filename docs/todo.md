@@ -72,7 +72,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4266: Rewire `?` to the `Result` sum contract
+- TODO-4362: Pack source Result.map struct payloads
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -91,7 +91,7 @@ Task template:
 
 - Semantic ownership authority: none active; future semantic-authority work
   must enter as bounded leaves only.
-- Deferred stdlib ADT migration: TODO-4266 -> TODO-4267
+- Deferred stdlib ADT migration: TODO-4362 -> TODO-4267
   -> TODO-4291
 - Vector stdlib ownership cutover: TODO-4292 -> TODO-4293 -> TODO-4294
   -> TODO-4281 -> TODO-4295 -> TODO-4296 -> TODO-4297
@@ -113,7 +113,7 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4266: Rewire `?` to the `Result` sum contract
+- TODO-4362: Pack source Result.map struct payloads
 - TODO-4267: Retire legacy Maybe/Result representations
 - TODO-4291: Decide sum-backed mutable `Maybe<T>` helpers
 - TODO-4292: Promote and style canonical `.prime` vector implementation
@@ -200,7 +200,7 @@ Task template:
 | VM/runtime debug stateful opcode parity | none |
 | Test-suite audit follow-up and release-gate stability | none |
 | Algebraic sum types and brace-only construction | none |
-| Stdlib ADT migration for `Maybe` and `Result` | TODO-4266, TODO-4267, TODO-4291 |
+| Stdlib ADT migration for `Maybe` and `Result` | TODO-4362, TODO-4267, TODO-4291 |
 | Generic type packs and tuple stdlib surface | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity and local type facts | TODO-4331, TODO-4332, TODO-4333, TODO-4334, TODO-4335, TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
 | Generic constraints and compile-time flow control | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
@@ -227,7 +227,7 @@ Task template:
 | Shared VM/debug stateful opcode behavior | none |
 | Release benchmark/example suite stability and doctest governance | none |
 | Sum-type and brace-construction conformance | none |
-| Maybe/Result sum migration conformance | TODO-4266, TODO-4267, TODO-4291 |
+| Maybe/Result sum migration conformance | TODO-4362, TODO-4267, TODO-4291 |
 | Generic type-pack and tuple conformance | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity conformance | TODO-4331, TODO-4332, TODO-4333, TODO-4334, TODO-4335, TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
 | Generic constraint and compile-time flow conformance | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
@@ -382,97 +382,38 @@ Task template:
 ### Task Blocks
 
 
-- [ ] TODO-4266: Rewire `?` to the `Result` sum contract
+- [ ] TODO-4362: Pack source Result.map struct payloads
   - owner: ai
-  - created_at: 2026-04-27
+  - created_at: 2026-05-07
   - phase: Deferred stdlib ADT migration
-  - scope: Make postfix `?`, `try(...)`, and `on_error` propagation consume the
-    stdlib-owned `Result` sum shape instead of bespoke Result metadata or
-    legacy runtime representation.
+  - scope: Make source C++ `Result.map(...)` and `Result.map2(...)` bridge
+    outputs pack single-field int-backed success structs through their field
+    before entering the value-carrying Result bridge.
   - implementation_notes:
-    - Start from result/try/on_error semantic validation, result metadata in
-      `include/primec/SemanticProduct.h`, and IR lowerer result helpers.
-    - Semantic validation, semantic-product `try(...)`/query facts, and IR
-      Result type parsing now recognize both `Result<T, E>` and the qualified
-      `/std/result/Result<T, E>` spelling for value-carrying results. The
-      remaining work is the actual sum-backed propagation/lowering contract.
-    - IR-backed `try(...)` now consumes local imported stdlib value-result sums
-      for `return<int> on_error<...>` status-code flows by branching on the
-      `ok`/`error` tag and extracting int-backed error payloads. Result-return
-      functions now propagate local imported stdlib value-result sum errors by
-      copying the `error` payload into the declared return `Result` sum. Direct
-      calls that return imported stdlib value-result sums can now be consumed
-      by postfix `?` on the same VM/native sum-backed paths. Legacy
-      `Result.map`, `Result.and_then`, and `Result.map2` construction for typed
-      imported stdlib Result sums now accepts local sources and direct calls
-      that return imported stdlib Result sums. Dereferenced local
-      `Reference<Result<T, E>>` and `Pointer<Result<T, E>>` values now feed
-      `try(...)`, `Result.error(...)`, and `Result.why(...)` when they point at
-      imported stdlib Result sums. `/std/result/*` now exposes the
-      status-only `Result<E>` sum beside `Result<T, E>` at the same public path,
-      with a unit `ok` variant, an `error(E)` payload variant, default `ok`
-      construction, `ok<E>()`, and semantic `pick` coverage. IR-backed
-      `try(...)` now consumes local, direct-call, and dereferenced local
-      borrowed/pointer imported status-only `Result<E>` sums for status-code
-      returns and Result-return error propagation. IR-backed
-      `Result.error(...)` / `Result.why(...)` now inspect those same imported
-      status-only operand families. Remaining work covers non-VM/native bridge
-      cleanup. SyntaxSpec now documents the landed IR-backed status-only
-      `try(...)`, postfix `?`, `Result.error(...)`, and `Result.why(...)`
-      operand families and leaves only the broader/non-IR bridge cleanup as
-      migration work. The legacy source C++ emitter now preserves nested
-      `Result<T...>` types under `Reference` / `Pointer` and recognizes
-      dereferenced local/indexed borrowed Result operands for `try(...)`,
-      `Result.error(...)`, and `Result.why(...)` while it still uses a
-      compatibility bridge. Its source C++ Result storage-width decisions and
-      construction/accessor expression emission are quarantined behind named
-      emitter helpers. Value-carrying source C++ Result storage now emits the
-      tagged `ps_result_value` bridge type instead of raw `uint64_t`
-      return/binding types or legacy `ps_legacy_result_*` helper names; the
-      bridge uses named ok/error tag constants, an `ok` success field,
-      value-qualified tag/error/success accessors, and explicit ok/error
-      construction helpers. Raw packed-integer conversion, construction
-      compatibility, generic `ps_result_*` value accessor names, and the
-      generated `ps_result_pack(...)` helper have been deleted. Status-only
-      source C++ Result storage now emits the tagged `ps_result_status` bridge
-      type instead of raw `uint32_t` return/binding types, uses the same named
-      ok/error tag constants, and wraps low-level file helper status codes at
-      the source Result boundary. Explicit source C++ constructors for
-      supported `Result<T, E>{[ok] value}`,
-      `Result<T, E>{[error] err}`, `Result<E>{}`, `Result<E>{ok}`, and
-      `Result<E>{[error] err}` shapes now route through the same bridge
-      helper constructors. Source C++ `Result.why(...)` now binds status-only
-      and value-carrying bridge operands once, returns an empty string for
-      `ok` tags, and only calls the error-domain `why` helper for `error`
-      payloads. Explicit source C++ `error` constructors now also pack
-      single-field int-backed error structs through their code field before
-      entering the status-only or value-carrying bridge. Direct source C++
-      `Result.ok(value)` now also packs local or explicitly constructed
-      single-field success structs through their code field before entering the
-      value-carrying bridge. Remaining cleanup should retarget broader bridge
-      construction and propagation to the stdlib Result sum contract.
-    - Preserve current user-facing `?` behavior first; any broader propagation
-      syntax changes should be split into separate TODOs.
-    - Add semantic-product and IR tests before broad compile-run tests so the
-      result-sum contract is observable.
+    - Start from `src/emitter/EmitterExprResultCalls.h`, especially the
+      `Result.map(...)` and `Result.map2(...)` lambdas that currently emit
+      `static_cast<uint32_t>(ps_mapped)`.
+    - Reuse the same source Result constructor payload classification used by
+      explicit `Result<T, E>{[ok] value}` and `Result.ok(value)` rather than
+      adding another bridge-specific shape check.
+    - Keep `Result.and_then(...)` out of this slice; it should receive an
+      already-constructed Result from the lambda.
   - acceptance:
-    - `?` unwraps the `ok`/success variant and propagates the `error` variant
-      using the same observable behavior as the current Result contract.
-    - `on_error` handlers and status-code entry flows still work for current
-      file, image, collection, and gfx error domains.
-    - Unsupported or malformed Result-like sums do not accidentally participate
-      in `?` unless they match the documented Result contract.
-    - VM/native/C++ tests cover direct Result values, map/and_then/map2
-      sources, borrowed/pointer Result values, and status-only results.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once `?` and `try(...)` are sum-backed for the supported
-    Result surface and unsupported cases fail deterministically.
+    - Source C++ `Result.map(...)` preserves single-field success struct
+      payloads returned by the mapping lambda.
+    - Source C++ `Result.map2(...)` preserves single-field success struct
+      payloads returned by the combining lambda.
+    - Existing scalar `Result.map(...)` and `Result.map2(...)` behavior remains
+      unchanged.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once map/map2 source C++ bridge outputs share the
+    single-field success-struct payload packing path with Result construction.
 
 - [ ] TODO-4267: Retire legacy Maybe/Result representations
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred stdlib ADT migration
-  - depends_on: TODO-4266
+  - depends_on: TODO-4362
   - scope: Remove or quarantine old compiler/runtime special cases for Maybe
     and Result after both are stdlib-owned sums and `?` consumes the Result sum
     contract.
@@ -2154,7 +2095,7 @@ Task template:
   - implementation_notes:
     - Start from `stdlib/std/collections/experimental_map.prime`,
       `stdlib/std/collections/errors.prime`, canonical vector helpers after
-      TODO-4297, Result migration notes from TODO-4266/TODO-4291, and
+      TODO-4297, Result migration notes from TODO-4362/TODO-4291, and
       map compile-run tests covering `contains`, `tryAt`, `at`, `at_unsafe`,
       and `insert`.
     - Keep key comparability policy explicit: `Comparable<K>` or its successor
