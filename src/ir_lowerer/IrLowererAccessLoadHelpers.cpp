@@ -359,6 +359,30 @@ bool emitMapLookupKeyLocal(
     int32_t &keyLocalOut,
     std::string &error) {
   keyLocalOut = allocTempLocal();
+  if (mapKeyKind == LocalInfo::ValueKind::String) {
+    const LocalInfo::ValueKind lookupKeyKind = inferExprKind(lookupKeyExpr, localsIn);
+    if (lookupKeyKind != LocalInfo::ValueKind::Unknown &&
+        lookupKeyKind != LocalInfo::ValueKind::String) {
+      return validateMapLookupKeyKind(mapKeyKind, lookupKeyKind, error);
+    }
+
+    int32_t stringIndex = -1;
+    size_t length = 0;
+    if (resolveStringTableTarget(lookupKeyExpr, localsIn, stringIndex, length)) {
+      emitPushI32(stringIndex);
+      emitStoreLocal(keyLocalOut);
+      return true;
+    }
+    if (!validateMapLookupKeyKind(mapKeyKind, lookupKeyKind, error)) {
+      return false;
+    }
+    if (!emitExpr(lookupKeyExpr, localsIn)) {
+      return false;
+    }
+    emitStoreLocal(keyLocalOut);
+    return true;
+  }
+
   const auto stringLookupKeyEmitResult = tryEmitMapLookupStringKeyLocal(
       mapKeyKind,
       lookupKeyExpr,

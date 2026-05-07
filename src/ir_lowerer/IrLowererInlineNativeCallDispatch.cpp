@@ -1444,6 +1444,28 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
            directHelperName == "at_unsafe")) {
         return InlineCallDispatchResult::NotHandled;
       }
+      if (!targetInfo.isMapTarget && expr.args.size() >= 2 &&
+          (directHelperName == "contains" || directHelperName == "tryAt" ||
+           directHelperName == "at" || directHelperName == "at_unsafe")) {
+        const auto alternateTargetInfo =
+            resolveMapAccessTargetInfo(expr.args[1], localsIn, inferCallMapTargetInfo);
+        if (alternateTargetInfo.isMapTarget) {
+          const LocalInfo::ValueKind keyKind =
+              inferExprKind ? inferExprKind(expr.args.front(), localsIn)
+                            : LocalInfo::ValueKind::Unknown;
+          if (keyKind == LocalInfo::ValueKind::Unknown ||
+              alternateTargetInfo.mapKeyKind == LocalInfo::ValueKind::Unknown ||
+              keyKind != alternateTargetInfo.mapKeyKind) {
+            return InlineCallDispatchResult::NotHandled;
+          }
+          if (const Definition *callee = resolveDefinitionCallFn(expr);
+              callee != nullptr) {
+            return emitCanonicalInlineDefinitionCall(expr, *callee)
+                       ? InlineCallDispatchResult::Emitted
+                       : InlineCallDispatchResult::Error;
+          }
+        }
+      }
     }
     if (!expr.args.empty() &&
         (resolveMapHelperAliasName(expr, mapHelperName) ||
