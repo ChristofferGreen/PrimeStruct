@@ -6,6 +6,33 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer unresolved method receiver facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes unresolved builtin method
+    receiver classification consume semantic-product receiver facts before
+    stale local map/vector metadata can classify no-callee method return
+    kinds.
+  - acceptance:
+    - Published binding type IDs classify unresolved builtin map method
+      receivers before stale copied type text and stale local map values.
+    - Published scalar receiver facts suppress stale local map compatibility
+      fallback for builtin method return inference.
+    - Existing local receiver and declared-return inference remains the
+      compatibility fallback when no semantic receiver fact is published.
+  - stop_rule: Stop once no-callee builtin method return-kind classification
+    uses published semantic receiver facts ahead of stale locals and focused
+    tests pin both ID-first map value inference and stale-map suppression for
+    scalar graph facts.
+  - evidence: Made unresolved builtin method return-kind fallback consult
+    semantic-product receiver facts before local map/vector metadata, kept
+    legacy receiver and declared-return inference for missing semantic facts,
+    added focused `tryAt` and `contains` stale-local coverage, ran
+    `git diff --check`, and skipped broad baseline validation per the lite
+    workflow.
+
 - [x] TODO-4298: Prefer method access return facts
   - owner: ai
   - created_at: 2026-04-28

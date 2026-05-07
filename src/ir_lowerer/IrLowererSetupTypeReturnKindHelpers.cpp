@@ -318,6 +318,11 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
       }
 
       const Expr &receiverExpr = expr.args.front();
+      SemanticReturnKindTargetInfo semanticInfo;
+      if (resolveSemanticReturnKindTargetInfo(
+              receiverExpr, semanticProgram, semanticIndex, semanticInfo)) {
+        return semanticInfo.arrayVectorInfo.isVectorTarget;
+      }
       if (receiverExpr.kind == Expr::Kind::Name) {
         auto localIt = localsIn.find(receiverExpr.name);
         if (localIt == localsIn.end()) {
@@ -383,7 +388,23 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
         return false;
       };
 
+      SemanticReturnKindTargetInfo semanticInfo;
+      const bool hasSemanticReceiverFact = resolveSemanticReturnKindTargetInfo(
+          receiverExpr, semanticProgram, semanticIndex, semanticInfo);
       if (isBuiltinAccessMethodName(normalizedName)) {
+        if (hasSemanticReceiverFact) {
+          if (semanticInfo.arrayVectorInfo.isArrayOrVectorTarget &&
+              semanticInfo.arrayVectorInfo.elemKind != LocalInfo::ValueKind::Unknown) {
+            builtinKindOut = semanticInfo.arrayVectorInfo.elemKind;
+            return true;
+          }
+          if (semanticInfo.mapInfo.isMapTarget &&
+              semanticInfo.mapInfo.mapValueKind != LocalInfo::ValueKind::Unknown) {
+            builtinKindOut = semanticInfo.mapInfo.mapValueKind;
+            return true;
+          }
+          return false;
+        }
         const auto arrayVectorTargetInfo = resolveArrayVectorAccessTargetInfo(receiverExpr, localsIn);
         if (arrayVectorTargetInfo.isArrayOrVectorTarget &&
             arrayVectorTargetInfo.elemKind != LocalInfo::ValueKind::Unknown) {
@@ -399,6 +420,14 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
       }
 
       if (isBuiltinCountMethodName(normalizedName) || isBuiltinCapacityMethodName(normalizedName)) {
+        if (hasSemanticReceiverFact) {
+          if (semanticInfo.arrayVectorInfo.isArrayOrVectorTarget ||
+              semanticInfo.mapInfo.isMapTarget) {
+            builtinKindOut = LocalInfo::ValueKind::Int32;
+            return true;
+          }
+          return false;
+        }
         const auto arrayVectorTargetInfo = resolveArrayVectorAccessTargetInfo(receiverExpr, localsIn);
         if (arrayVectorTargetInfo.isArrayOrVectorTarget) {
           builtinKindOut = LocalInfo::ValueKind::Int32;
@@ -417,6 +446,13 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
       }
 
       if (isBuiltinContainsMethodName(normalizedName)) {
+        if (hasSemanticReceiverFact) {
+          if (semanticInfo.mapInfo.isMapTarget) {
+            builtinKindOut = LocalInfo::ValueKind::Bool;
+            return true;
+          }
+          return false;
+        }
         const auto mapTargetInfo = resolveMapAccessTargetInfo(receiverExpr, localsIn);
         if (mapTargetInfo.isMapTarget) {
           builtinKindOut = LocalInfo::ValueKind::Bool;
@@ -430,6 +466,14 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
       }
 
       if (isBuiltinTryAtMethodName(normalizedName)) {
+        if (hasSemanticReceiverFact) {
+          if (semanticInfo.mapInfo.isMapTarget &&
+              semanticInfo.mapInfo.mapValueKind != LocalInfo::ValueKind::Unknown) {
+            builtinKindOut = semanticInfo.mapInfo.mapValueKind;
+            return true;
+          }
+          return false;
+        }
         const auto mapTargetInfo = resolveMapAccessTargetInfo(receiverExpr, localsIn);
         if (mapTargetInfo.isMapTarget && mapTargetInfo.mapValueKind != LocalInfo::ValueKind::Unknown) {
           builtinKindOut = mapTargetInfo.mapValueKind;

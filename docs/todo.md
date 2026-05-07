@@ -740,6 +740,9 @@ Task template:
     The lowerer method-call access receiver slice is complete for
     semantic-product-backed `receiver.at(...)` receiver facts before stale
     local vector metadata can classify method access return kinds.
+    The lowerer unresolved builtin method receiver slice is complete for
+    semantic-product-backed receiver facts before stale local map/vector
+    metadata can classify no-callee builtin method return kinds.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
