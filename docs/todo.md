@@ -1570,6 +1570,12 @@ Task template:
       inference can answer for `increment(...)`/`decrement(...)`. Published
       numeric pointer targets suppress stale local string metadata, and
       no-fact contexts keep the existing inference fallback.
+    - Completed slice: native indexed assignment now asks published
+      collection, binding, local-auto, and query facts before local
+      array/vector metadata can classify `target[index] = value` receivers.
+      Published vector facts suppress stale local scalar metadata, published
+      non-collection facts suppress stale local vector metadata, and no-fact
+      contexts keep the existing inference fallback.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.

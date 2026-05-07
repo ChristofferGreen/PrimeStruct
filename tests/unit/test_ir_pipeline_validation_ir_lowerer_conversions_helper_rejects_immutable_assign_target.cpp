@@ -1,5 +1,7 @@
 #include "test_ir_pipeline_validation_helpers.h"
 
+#include <algorithm>
+
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
 TEST_CASE("ir lowerer conversions helper rejects immutable assign target") {
@@ -257,6 +259,149 @@ TEST_CASE("ir lowerer conversions helper uses semantic mutation target facts bef
   CHECK(instructions[4].op == primec::IrOpcode::PushF64);
   CHECK(instructions[5].op == primec::IrOpcode::AddF64);
   CHECK(instructions.back().op == primec::IrOpcode::StoreIndirect);
+}
+
+TEST_CASE("ir lowerer indexed assign consumes semantic collection facts before stale locals") {
+  primec::SemanticProgram semanticProgram;
+  auto intern = [](primec::SemanticProgram &program, const std::string &text) {
+    return primec::semanticProgramInternCallTargetString(program, text);
+  };
+  auto addBindingFact = [&](uint64_t semanticNodeId,
+                            const std::string &name,
+                            const std::string &typeText) {
+    primec::SemanticProgramBindingFact fact;
+    fact.scopePath = "/main";
+    fact.siteKind = "local";
+    fact.name = name;
+    fact.bindingTypeText = typeText;
+    fact.semanticNodeId = semanticNodeId;
+    fact.scopePathId = intern(semanticProgram, "/main");
+    fact.siteKindId = intern(semanticProgram, "local");
+    fact.nameId = intern(semanticProgram, name);
+    fact.bindingTypeTextId = intern(semanticProgram, typeText);
+    const size_t index = semanticProgram.bindingFacts.size();
+    semanticProgram.bindingFacts.push_back(fact);
+    semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr
+        .insert_or_assign(semanticNodeId, index);
+  };
+  addBindingFact(9301, "values", "vector<i32>");
+  addBindingFact(9302, "staleVector", "i32");
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+
+  auto makeIndexedAssign = [](const std::string &targetName,
+                              uint64_t semanticNodeId) {
+    primec::Expr target;
+    target.kind = primec::Expr::Kind::Name;
+    target.name = targetName;
+    target.semanticNodeId = semanticNodeId;
+
+    primec::Expr index;
+    index.kind = primec::Expr::Kind::Literal;
+    index.literalValue = 0;
+
+    primec::Expr access;
+    access.kind = primec::Expr::Kind::Call;
+    access.name = "at";
+    access.args = {target, index};
+
+    primec::Expr value;
+    value.kind = primec::Expr::Kind::Literal;
+    value.literalValue = 9;
+
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = "assign";
+    expr.args = {access, value};
+    return expr;
+  };
+
+  primec::ir_lowerer::LocalInfo staleScalar;
+  staleScalar.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  staleScalar.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::String;
+  staleScalar.index = 3;
+  staleScalar.isMutable = true;
+
+  primec::ir_lowerer::LocalInfo staleVector;
+  staleVector.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  staleVector.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::String;
+  staleVector.index = 4;
+  staleVector.isMutable = true;
+
+  const primec::ir_lowerer::LocalMap locals{
+      {"values", staleScalar},
+      {"staleVector", staleVector},
+  };
+
+  auto emitIndexedAssign = [&](const primec::Expr &expr,
+                               std::vector<primec::IrInstruction> &instructions,
+                               std::string &error) {
+    bool handled = false;
+    int32_t nextLocal = 20;
+    return primec::ir_lowerer::emitConversionsAndCallsOperatorExpr(
+        expr,
+        locals,
+        nextLocal,
+        [&](const primec::Expr &valueExpr, const primec::ir_lowerer::LocalMap &) {
+          if (valueExpr.kind == primec::Expr::Kind::Name) {
+            instructions.push_back({primec::IrOpcode::LoadLocal,
+                                    valueExpr.name == "staleVector" ? 4u : 3u});
+            return true;
+          }
+          if (valueExpr.kind == primec::Expr::Kind::Literal) {
+            instructions.push_back(
+                {primec::IrOpcode::PushI32, static_cast<uint64_t>(valueExpr.literalValue)});
+            return true;
+          }
+          return false;
+        },
+        [](const primec::Expr &valueExpr, const primec::ir_lowerer::LocalMap &) {
+          return valueExpr.kind == primec::Expr::Kind::Literal
+                     ? primec::ir_lowerer::LocalInfo::ValueKind::Int32
+                     : primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+        },
+        [](primec::ir_lowerer::LocalInfo::ValueKind, bool) { return true; },
+        [&]() { return nextLocal++; },
+        []() {},
+        []() {},
+        []() {},
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+          return false;
+        },
+        [](const std::string &typeName) {
+          return primec::ir_lowerer::valueKindFromTypeName(typeName);
+        },
+        [](const std::string &, std::string &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+        [](const std::string &, const std::string &, std::string &) { return false; },
+        [](const std::string &, int32_t &) { return false; },
+        [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) {
+          return false;
+        },
+        [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) {
+          return false;
+        },
+        [](int32_t, int32_t, int32_t) { return false; },
+        instructions,
+        handled,
+        error,
+        [](const primec::Expr &) { return static_cast<const primec::Definition *>(nullptr); },
+        &semanticTargets);
+  };
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  CHECK(emitIndexedAssign(makeIndexedAssign("values", 9301), instructions, error));
+  CHECK(error.empty());
+  CHECK(std::any_of(instructions.begin(), instructions.end(), [](const primec::IrInstruction &inst) {
+    return inst.op == primec::IrOpcode::StoreIndirect;
+  }));
+
+  instructions.clear();
+  error.clear();
+  CHECK_FALSE(emitIndexedAssign(makeIndexedAssign("staleVector", 9302), instructions, error));
+  CHECK(error == "native backend only supports assign to array/vector elements");
+  CHECK(instructions.empty());
 }
 
 TEST_CASE("ir lowerer conversions helper assigns compatible internal soa storage aliases") {

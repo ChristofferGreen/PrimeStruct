@@ -81,13 +81,17 @@ bool areCompatibleStructPaths(const std::string &lhs, const std::string &rhs) {
          areCompatibleInternalSoaStoragePaths(lhs, rhs);
 }
 
-bool classifyArrayVectorFieldBinding(
-    const LayoutFieldBinding &binding,
+bool classifyArrayVectorTypeText(
+    const std::string &typeText,
     const ConversionsAndCallsValueKindFromTypeNameFn &valueKindFromTypeName,
     ArrayVectorAccessTargetInfo &targetInfoOut) {
-  std::string collectionType =
-      normalizeCollectionBindingTypeName(trimTemplateTypeText(binding.typeName));
-  std::string elementType = trimTemplateTypeText(binding.typeTemplateArg);
+  std::string collectionType;
+  std::string argText;
+  if (!splitTemplateTypeName(trimTemplateTypeText(typeText), collectionType, argText)) {
+    return false;
+  }
+  collectionType = normalizeCollectionBindingTypeName(trimTemplateTypeText(collectionType));
+  std::string elementType = trimTemplateTypeText(argText);
   if (collectionType == "Reference" || collectionType == "Pointer") {
     std::string wrappedBase;
     std::string wrappedArgs;
@@ -100,10 +104,81 @@ bool classifyArrayVectorFieldBinding(
   if (collectionType != "array" && collectionType != "vector") {
     return false;
   }
+  std::vector<std::string> elementArgs;
+  if (!splitTemplateArgs(elementType, elementArgs) || elementArgs.size() != 1) {
+    return false;
+  }
+  targetInfoOut = {};
   targetInfoOut.isArrayOrVectorTarget = true;
   targetInfoOut.isVectorTarget = (collectionType == "vector");
-  targetInfoOut.elemKind = valueKindFromTypeName(elementType);
+  targetInfoOut.elemKind = valueKindFromTypeName(trimTemplateTypeText(elementArgs.front()));
   return true;
+}
+
+bool classifyArrayVectorFieldBinding(
+    const LayoutFieldBinding &binding,
+    const ConversionsAndCallsValueKindFromTypeNameFn &valueKindFromTypeName,
+    ArrayVectorAccessTargetInfo &targetInfoOut) {
+  return classifyArrayVectorTypeText(
+      binding.typeTemplateArg.empty()
+          ? binding.typeName
+          : binding.typeName + "<" + binding.typeTemplateArg + ">",
+      valueKindFromTypeName,
+      targetInfoOut);
+}
+
+bool resolveSemanticArrayVectorTargetInfo(
+    const Expr &expr,
+    const SemanticProductTargetAdapter *semanticProductTargets,
+    const ConversionsAndCallsValueKindFromTypeNameFn &valueKindFromTypeName,
+    ArrayVectorAccessTargetInfo &targetInfoOut,
+    bool &hasSemanticFactOut) {
+  hasSemanticFactOut = false;
+  if (semanticProductTargets == nullptr || !semanticProductTargets->hasSemanticProduct ||
+      semanticProductTargets->semanticProgram == nullptr || expr.semanticNodeId == 0) {
+    return false;
+  }
+  const SemanticProgram *semanticProgram = semanticProductTargets->semanticProgram;
+  auto tryClassifyType = [&](SymbolId typeTextId, const std::string &typeText) {
+    const std::string resolvedTypeText =
+        resolveSemanticProductTypeText(semanticProgram, typeText, typeTextId);
+    return classifyArrayVectorTypeText(resolvedTypeText, valueKindFromTypeName, targetInfoOut);
+  };
+
+  if (const auto *collectionFact =
+          findSemanticProductCollectionSpecialization(*semanticProductTargets, expr)) {
+    hasSemanticFactOut = true;
+    const std::string family = resolveSemanticProductTypeText(
+        semanticProgram, collectionFact->collectionFamily, collectionFact->collectionFamilyId);
+    const std::string elementType = resolveSemanticProductTypeText(
+        semanticProgram, collectionFact->elementTypeText, collectionFact->elementTypeTextId);
+    const std::string normalizedFamily = normalizeCollectionBindingTypeName(family);
+    if (normalizedFamily != "array" && normalizedFamily != "vector") {
+      return false;
+    }
+    targetInfoOut = {};
+    targetInfoOut.isArrayOrVectorTarget = true;
+    targetInfoOut.isVectorTarget = (normalizedFamily == "vector");
+    targetInfoOut.elemKind = valueKindFromTypeName(trimTemplateTypeText(elementType));
+    return true;
+  }
+  if (const auto *bindingFact = findSemanticProductBindingFact(*semanticProductTargets, expr)) {
+    hasSemanticFactOut = true;
+    return tryClassifyType(bindingFact->bindingTypeTextId, bindingFact->bindingTypeText);
+  }
+  if (const auto *localAutoFact =
+          findSemanticProductLocalAutoFactBySemanticId(*semanticProductTargets, expr)) {
+    hasSemanticFactOut = true;
+    return tryClassifyType(localAutoFact->bindingTypeTextId, localAutoFact->bindingTypeText);
+  }
+  if (const auto *queryFact = findSemanticProductQueryFactBySemanticId(*semanticProductTargets, expr)) {
+    hasSemanticFactOut = true;
+    return tryClassifyType(queryFact->bindingTypeTextId, queryFact->bindingTypeText) ||
+           tryClassifyType(queryFact->queryTypeTextId, queryFact->queryTypeText) ||
+           tryClassifyType(queryFact->receiverBindingTypeTextId,
+                           queryFact->receiverBindingTypeText);
+  }
+  return false;
 }
 
 LocalInfo::ValueKind scalarMutationValueKindFromTypeText(
@@ -185,6 +260,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
   const auto &resolveStructFieldInfo = context.resolveStructFieldInfo;
   const auto &resolveStructFieldBinding = context.resolveStructFieldBinding;
   const auto &emitStructCopyFromPtrs = context.emitStructCopyFromPtrs;
+  const auto *semanticProductTargets = context.semanticProductTargets;
   auto &instructions = context.instructions;
   auto &error = context.error;
 
@@ -859,15 +935,26 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
     if (getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) {
       const Expr &collectionTarget = target.args.front();
       const Expr &indexExpr = target.args[1];
-      auto targetInfo = resolveArrayVectorAccessTargetInfo(collectionTarget, localsIn);
-      if (!targetInfo.isArrayOrVectorTarget) {
+      ArrayVectorAccessTargetInfo targetInfo;
+      bool hasSemanticArrayVectorFact = false;
+      if (!resolveSemanticArrayVectorTargetInfo(collectionTarget,
+                                                semanticProductTargets,
+                                                valueKindFromTypeName,
+                                                targetInfo,
+                                                hasSemanticArrayVectorFact)) {
+        targetInfo = hasSemanticArrayVectorFact
+                         ? ArrayVectorAccessTargetInfo{}
+                         : resolveArrayVectorAccessTargetInfo(collectionTarget, localsIn);
+      }
+      if (!targetInfo.isArrayOrVectorTarget && !hasSemanticArrayVectorFact) {
         const std::string collectionPath = inferStructExprPath(collectionTarget, localsIn);
         if (collectionPath == "/array" || collectionPath == "/vector") {
           targetInfo.isArrayOrVectorTarget = true;
           targetInfo.isVectorTarget = (collectionPath == "/vector");
         }
       }
-      if (!targetInfo.isArrayOrVectorTarget && collectionTarget.kind == Expr::Kind::Call &&
+      if (!targetInfo.isArrayOrVectorTarget && !hasSemanticArrayVectorFact &&
+          collectionTarget.kind == Expr::Kind::Call &&
           collectionTarget.isFieldAccess && collectionTarget.args.size() == 1) {
         const std::string receiverStruct = inferStructExprPath(collectionTarget.args.front(), localsIn);
         LayoutFieldBinding fieldBinding;

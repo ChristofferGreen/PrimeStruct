@@ -1222,6 +1222,11 @@ Compile-pipeline publication contract:
 - Native `increment(dereference(...))` / `decrement(dereference(...))` target inference follows the same graph-backed
   pointer rule: semantic-product pointer/reference binding facts provide the mutable target value kind before stale
   dereference value-kind inference can answer, while syntax-only contexts keep the existing fallback.
+- Native indexed assignment follows the same collection authority rule:
+  semantic-product collection, binding, local-auto, and query facts classify
+  `target[index] = value` receivers before stale local array/vector metadata;
+  published non-collection facts suppress stale local collection fallback, and
+  syntax-only contexts keep compatibility inference.
 - Native indexed-access validation now follows the graph-backed rule for index
   expressions: query, binding, and local-auto type facts provide the index kind
   before legacy expression inference is consulted.
