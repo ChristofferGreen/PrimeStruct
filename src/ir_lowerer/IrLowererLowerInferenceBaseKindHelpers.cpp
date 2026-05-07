@@ -71,6 +71,10 @@ bool resolveBaseSetupResultExprInfo(const Expr &expr,
                                     const InferExprKindWithLocalsFn *fallbackInferExprKind,
                                     ResultExprInfo &out);
 
+bool hasSemanticProductResultMethodFactContext(const Expr &expr,
+                                               const SemanticProgram *semanticProgram,
+                                               const SemanticProductIndex *semanticIndex);
+
 bool inferBaseSetupResultTypeCallKind(const Expr &expr,
                                       const LocalMap &localsIn,
                                       const ResolveMethodCallWithLocalsFn *resolveMethodCall,
@@ -83,6 +87,11 @@ bool inferBaseSetupResultTypeCallKind(const Expr &expr,
   kindOut = LocalInfo::ValueKind::Unknown;
   if (!isBaseSetupResultTypeMethodCall(expr)) {
     return false;
+  }
+  const bool hasSemanticResultContext =
+      hasSemanticProductResultMethodFactContext(expr, semanticProgram, semanticIndex);
+  if (hasSemanticResultContext && (expr.name == "error" || expr.name == "why")) {
+    return true;
   }
   if (expr.name == "error") {
     kindOut = LocalInfo::ValueKind::Bool;
@@ -98,7 +107,7 @@ bool inferBaseSetupResultTypeCallKind(const Expr &expr,
   const size_t payloadArgCount =
       hasExplicitResultReceiverArg ? expr.args.size() - 1 : expr.args.size();
   ResultExprInfo resultInfo;
-  if (expr.name == "ok" &&
+  if (expr.name == "ok" && hasSemanticResultContext &&
       resolveBaseSetupResultExprInfo(expr,
                                      localsIn,
                                      resolveMethodCall,
@@ -116,6 +125,9 @@ bool inferBaseSetupResultTypeCallKind(const Expr &expr,
     if (resultInfo.valueKind != LocalInfo::ValueKind::Unknown) {
       kindOut = resultInfo.valueKind;
     }
+    return true;
+  }
+  if (expr.name == "ok" && hasSemanticResultContext) {
     return true;
   }
   if (expr.name == "ok") {

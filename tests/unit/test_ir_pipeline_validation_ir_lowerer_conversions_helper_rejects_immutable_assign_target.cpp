@@ -1177,6 +1177,8 @@ TEST_CASE("ir lowerer conversions helper dereferences direct aggregate pointer c
   callee.namespacePrefix = "/";
 
   primec::SemanticProgram semanticProgram;
+  const auto returnPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/makePairRef");
   semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
       .returnKind = "Int64",
       .structPath = "/Pair",
@@ -1185,11 +1187,12 @@ TEST_CASE("ir lowerer conversions helper dereferences direct aggregate pointer c
       .isEntryArgString = false,
       .isUnsafeReference = false,
       .referenceRoot = "",
-      .definitionPathId =
-          primec::semanticProgramInternCallTargetString(semanticProgram, "/makePairRef"),
+      .definitionPathId = returnPathId,
       .bindingTypeTextId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "Reference<Pair>"),
   });
+  semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionPathId
+      .insert_or_assign(returnPathId, 0);
   const auto semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
 
@@ -1329,6 +1332,8 @@ TEST_CASE("ir lowerer conversions helper locations direct reference calls from s
   callee.namespacePrefix = "/";
 
   primec::SemanticProgram semanticProgram;
+  const auto returnPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/makePairRef");
   semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
       .returnKind = "Int64",
       .structPath = "/Pair",
@@ -1337,11 +1342,12 @@ TEST_CASE("ir lowerer conversions helper locations direct reference calls from s
       .isEntryArgString = false,
       .isUnsafeReference = false,
       .referenceRoot = "",
-      .definitionPathId =
-          primec::semanticProgramInternCallTargetString(semanticProgram, "/makePairRef"),
+      .definitionPathId = returnPathId,
       .bindingTypeTextId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "Reference<Pair>"),
   });
+  semanticProgram.publishedRoutingLookups.returnFactIndicesByDefinitionPathId
+      .insert_or_assign(returnPathId, 0);
   const auto semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
 

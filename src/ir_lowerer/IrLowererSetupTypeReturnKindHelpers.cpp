@@ -33,7 +33,7 @@ bool prefersExactDirectMapCountLikeReturnPath(const Expr &callExpr) {
   }
   std::string helperName;
   return resolveMapHelperAliasName(callExpr, helperName) &&
-         (helperName == "count" || helperName == "contains" ||
+         (helperName == "count" || helperName == "count_ref" || helperName == "contains" ||
           helperName == "tryAt");
 }
 
@@ -406,8 +406,14 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
       return false;
     }
   }
-  const bool isCountCall = (isVectorBuiltinName(callExpr, "count") || isMapBuiltinName(callExpr, "count")) &&
-                           callExpr.args.size() == 1;
+  std::string mapHelperName;
+  const bool isMapCountCall =
+      isMapBuiltinName(callExpr, "count") ||
+      (resolveMapHelperAliasName(callExpr, mapHelperName) &&
+       mapHelperName == "count_ref");
+  const bool isCountCall =
+      (isVectorBuiltinName(callExpr, "count") || isMapCountCall) &&
+      callExpr.args.size() == 1;
   const bool isContainsCall = isSimpleCallName(callExpr, "contains") && callExpr.args.size() == 2;
   std::string accessName;
   const bool isCollectionAccessCall = getBuiltinArrayAccessName(callExpr, accessName);
@@ -632,6 +638,19 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
       }
       kindOut = LocalInfo::ValueKind::Bool;
       return true;
+    }
+    if (isCountCall && !requireArrayReturn) {
+      const auto arrayVectorTargetInfo =
+          resolveArrayVectorAccessTargetInfo(methodExpr.args.front(), localsIn);
+      const auto mapTargetInfo =
+          resolveMapAccessTargetInfo(methodExpr.args.front(), localsIn);
+      if (arrayVectorTargetInfo.isArrayOrVectorTarget || mapTargetInfo.isMapTarget) {
+        if (methodResolvedOut != nullptr) {
+          *methodResolvedOut = true;
+        }
+        kindOut = LocalInfo::ValueKind::Int32;
+        return true;
+      }
     }
     if (!resolveMethodCallDefinition) {
       continue;

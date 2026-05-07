@@ -289,6 +289,8 @@ TEST_CASE("ir lowerer return inference helper reads semantic product return fact
       .resultErrorTypeId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
   });
+  semanticProgram.publishedRoutingLookups.callableSummaryIndicesByPathId
+      .insert_or_assign(semanticProgram.callableSummaries.back().fullPathId, 0);
   semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
       .returnKind = "i32",
       .structPath = "",

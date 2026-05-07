@@ -64,7 +64,7 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
     if (helperName == "at" || helperName == "at_unsafe") {
       return candidate.args.size() == 2;
     }
-    if (helperName == "count") {
+    if (helperName == "count" || helperName == "count_ref") {
       return candidate.args.size() == 1;
     }
     return false;
