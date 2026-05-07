@@ -12,6 +12,8 @@
 
 namespace primec::ir_lowerer {
 
+struct SemanticProductIndex;
+
 using IsEntryArgsNameFn = std::function<bool(const Expr &, const LocalMap &)>;
 using IsArrayCountCallFn = std::function<bool(const Expr &, const LocalMap &)>;
 using IsVectorCapacityCallFn = std::function<bool(const Expr &, const LocalMap &)>;
@@ -101,7 +103,9 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    std::string &error);
+    std::string &error,
+    const SemanticProgram *semanticProgram = nullptr,
+    const SemanticProductIndex *semanticIndex = nullptr);
 CountAccessCallEmitResult tryEmitCountAccessCall(
     const Expr &expr,
     const LocalMap &localsIn,

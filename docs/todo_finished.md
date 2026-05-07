@@ -6,6 +6,32 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer count access emit facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that routes native
+    `count(at(target, key))` string-map emission through published
+    indexed-access and target map/non-map facts before stale local map
+    metadata can choose `LoadStringLength`.
+  - acceptance:
+    - Published string indexed-access facts and string-valued map target facts
+      still emit runtime string-length loads.
+    - Published non-string indexed-access, non-string map target, and non-map
+      target facts suppress stale local string-map metadata.
+    - Syntax-only contexts without published access or target facts keep the
+      existing local string-map emission fallback.
+  - stop_rule: Stop once native count-access emission depends on graph-owned
+    access/target facts before legacy locals, with focused coverage proving
+    stale-local suppression and syntax-only compatibility.
+  - evidence: Added semantic-product access and target classification to
+    `tryEmitCountAccessCall(...)`, wired native tail and statement-expression
+    call sites to pass semantic context, covered string access, string-map,
+    non-string-map, non-map, and syntax-only emission paths, ran
+    `git diff --check`, and skipped broad baseline validation per the lite
+    workflow.
+
 - [x] TODO-4298: Prefer count access target facts
   - owner: ai
   - created_at: 2026-04-28

@@ -420,7 +420,9 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       resolveStringTableTarget,
       emitExpr,
       emitInstruction,
-      error);
+      error,
+      semanticProgram,
+      semanticIndexPtr);
   if (countAccessResult == CountAccessCallEmitResult::Emitted) {
     return NativeCallTailDispatchResult::Emitted;
   }

@@ -1234,6 +1234,177 @@ TEST_CASE("ir lowerer count access helpers prefer graph facts for runtime string
   CHECK(instructions[1].op == primec::IrOpcode::LoadStringLength);
 }
 
+TEST_CASE("ir lowerer count access helpers prefer graph facts for string map access emission") {
+  using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
+  using Result = primec::ir_lowerer::CountAccessCallEmitResult;
+
+  auto intern = [](primec::SemanticProgram &semanticProgram,
+                   const std::string &text) {
+    return primec::semanticProgramInternCallTargetString(semanticProgram, text);
+  };
+  auto addBindingFact = [&](primec::SemanticProgram &semanticProgram,
+                            uint64_t semanticNodeId,
+                            const std::string &bindingTypeText) {
+    primec::SemanticProgramBindingFact fact;
+    fact.scopePath = "/main";
+    fact.siteKind = "local";
+    fact.name = "values";
+    fact.bindingTypeText = bindingTypeText;
+    fact.semanticNodeId = semanticNodeId;
+    fact.scopePathId = intern(semanticProgram, "/main");
+    fact.siteKindId = intern(semanticProgram, "local");
+    fact.nameId = intern(semanticProgram, "values");
+    fact.bindingTypeTextId = intern(semanticProgram, bindingTypeText);
+    const size_t index = semanticProgram.bindingFacts.size();
+    semanticProgram.bindingFacts.push_back(std::move(fact));
+    semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr
+        .insert_or_assign(semanticNodeId, index);
+  };
+  auto addQueryFact = [&](primec::SemanticProgram &semanticProgram,
+                          uint64_t semanticNodeId,
+                          const std::string &queryTypeText) {
+    primec::SemanticProgramQueryFact fact;
+    fact.scopePath = "/main";
+    fact.callName = "at";
+    fact.queryTypeText = queryTypeText;
+    fact.bindingTypeText = queryTypeText;
+    fact.semanticNodeId = semanticNodeId;
+    fact.scopePathId = intern(semanticProgram, "/main");
+    fact.callNameId = intern(semanticProgram, "at");
+    fact.resolvedPathId = intern(semanticProgram, "/std/collections/map/at");
+    fact.queryTypeTextId = intern(semanticProgram, queryTypeText);
+    fact.bindingTypeTextId = intern(semanticProgram, queryTypeText);
+    const size_t index = semanticProgram.queryFacts.size();
+    semanticProgram.queryFacts.push_back(std::move(fact));
+    semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr
+        .insert_or_assign(semanticNodeId, index);
+  };
+
+  primec::SemanticProgram semanticProgram;
+  addBindingFact(semanticProgram, 9201, "map<i32, string>");
+  addBindingFact(semanticProgram, 9202, "map<i32, bool>");
+  addBindingFact(semanticProgram, 9203, "i32");
+  addQueryFact(semanticProgram, 9204, "string");
+  addQueryFact(semanticProgram, 9205, "i32");
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  primec::ir_lowerer::LocalMap staleStringMapLocals;
+  primec::ir_lowerer::LocalInfo staleStringMapInfo;
+  staleStringMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  staleStringMapInfo.mapKeyKind = Kind::Int32;
+  staleStringMapInfo.mapValueKind = Kind::String;
+  staleStringMapLocals.emplace("values", staleStringMapInfo);
+
+  auto makeCountAtExpr = [](uint64_t accessNodeId, uint64_t targetNodeId) {
+    primec::Expr valuesName;
+    valuesName.kind = primec::Expr::Kind::Name;
+    valuesName.name = "values";
+    valuesName.semanticNodeId = targetNodeId;
+
+    primec::Expr keyExpr;
+    keyExpr.kind = primec::Expr::Kind::Literal;
+    keyExpr.intWidth = 32;
+    keyExpr.literalValue = 1;
+
+    primec::Expr accessExpr;
+    accessExpr.kind = primec::Expr::Kind::Call;
+    accessExpr.name = "at";
+    accessExpr.semanticNodeId = accessNodeId;
+    accessExpr.args = {valuesName, keyExpr};
+
+    primec::Expr countExpr;
+    countExpr.kind = primec::Expr::Kind::Call;
+    countExpr.name = "count";
+    countExpr.args = {accessExpr};
+    return countExpr;
+  };
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  int emitExprCalls = 0;
+  auto run = [&](const primec::Expr &expr) {
+    instructions.clear();
+    error.clear();
+    emitExprCalls = 0;
+    return primec::ir_lowerer::tryEmitCountAccessCall(
+        expr,
+        staleStringMapLocals,
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return false;
+        },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return false;
+        },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return false;
+        },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return false;
+        },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return false;
+        },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return false;
+        },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return false;
+        },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return Kind::Unknown;
+        },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+          return false;
+        },
+        [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          ++emitExprCalls;
+          instructions.push_back({primec::IrOpcode::PushI64, 29});
+          return true;
+        },
+        [&](primec::IrOpcode op, uint64_t imm) {
+          instructions.push_back({op, imm});
+        },
+        error,
+        &semanticProgram,
+        &semanticIndex);
+  };
+
+  CHECK(run(makeCountAtExpr(0, 9201)) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(emitExprCalls == 1);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadStringLength);
+
+  CHECK(run(makeCountAtExpr(0, 9202)) == Result::NotHandled);
+  CHECK(error.empty());
+  CHECK(emitExprCalls == 0);
+  CHECK(instructions.empty());
+
+  CHECK(run(makeCountAtExpr(0, 9203)) == Result::NotHandled);
+  CHECK(error.empty());
+  CHECK(emitExprCalls == 0);
+  CHECK(instructions.empty());
+
+  CHECK(run(makeCountAtExpr(9204, 0)) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(emitExprCalls == 1);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadStringLength);
+
+  CHECK(run(makeCountAtExpr(9205, 0)) == Result::NotHandled);
+  CHECK(error.empty());
+  CHECK(emitExprCalls == 0);
+  CHECK(instructions.empty());
+
+  CHECK(run(makeCountAtExpr(0, 0)) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(emitExprCalls == 1);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadStringLength);
+}
+
 TEST_CASE("ir lowerer string literal helper interns string table values") {
   std::vector<std::string> stringTable;
   CHECK(primec::ir_lowerer::internLowererString("hello", stringTable) == 0);

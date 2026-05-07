@@ -405,6 +405,11 @@ Planned non-template inference migration contract:
   stale local string-map metadata can classify target-owned access values as string-backed.
   Published non-string and non-map target facts suppress stale local metadata; no-fact
   syntax-only contexts keep the old fallback.
+- Completed lowerer-side count-access string-map emission slice: native emission for
+  `count(at(target, key))` now treats published indexed-access and target map/non-map facts as
+  authoritative before stale local string-map metadata can choose `LoadStringLength`. Published
+  non-string access or target facts suppress stale local metadata; no-fact syntax-only contexts
+  keep the old fallback.
 - Completed lowerer-side try operand Result fact slice: base-kind inference for
   `try(operand)` now reads the operand's published binding, query, or local-auto Result fact
   before lowerer-local `isResult` and args-pack metadata can classify the value kind. Published

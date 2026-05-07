@@ -14,6 +14,7 @@
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererSemanticProductTargetAdapters.h"
+#include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "primec/SemanticProduct.h"
 
@@ -226,6 +227,19 @@ struct SemanticCountTargetInfo {
   bool isString = false;
 };
 
+enum class SemanticStringMapAccessResolution {
+  NoFact,
+  StringMapAccess,
+  NonStringMapAccess,
+};
+
+bool classifySemanticCountTarget(const Expr &target,
+                                 const SemanticProgram *semanticProgram,
+                                 const SemanticProductIndex *semanticIndex,
+                                 SemanticCountTargetInfo &infoOut);
+bool hasPublishedSemanticCountTargetFact(const Expr &target,
+                                         const SemanticProductIndex *semanticIndex);
+
 bool classifySemanticCountTargetTypeText(std::string typeText,
                                          SemanticCountTargetInfo &infoOut) {
   infoOut = {};
@@ -258,6 +272,146 @@ bool classifySemanticCountTargetTypeText(std::string typeText,
     return true;
   }
   return true;
+}
+
+bool classifySemanticStringMapTargetTypeText(std::string typeText,
+                                             bool &isStringMapOut) {
+  isStringMapOut = false;
+  typeText = trimTemplateTypeText(std::move(typeText));
+  if (typeText.empty()) {
+    return false;
+  }
+
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(typeText, base, argText)) {
+    return true;
+  }
+  base = normalizeCollectionBindingTypeName(trimTemplateTypeText(base));
+  std::vector<std::string> args;
+  if (!splitTemplateArgs(argText, args)) {
+    return true;
+  }
+  if ((base == "Reference" || base == "Pointer") && args.size() == 1) {
+    return classifySemanticStringMapTargetTypeText(args.front(), isStringMapOut);
+  }
+  if (base != "map" || args.size() != 2) {
+    return true;
+  }
+  isStringMapOut =
+      valueKindFromTypeName(args.back()) == LocalInfo::ValueKind::String;
+  return true;
+}
+
+bool classifySemanticStringMapTargetTypeText(const SemanticProgram &semanticProgram,
+                                             const std::string &typeText,
+                                             SymbolId typeTextId,
+                                             bool &isStringMapOut) {
+  const std::string resolvedTypeText =
+      std::string(resolveSemanticProductText(semanticProgram, typeTextId, typeText));
+  return classifySemanticStringMapTargetTypeText(resolvedTypeText, isStringMapOut);
+}
+
+bool classifySemanticStringMapCollectionTarget(
+    const SemanticProgram &semanticProgram,
+    const SemanticProgramCollectionSpecialization &collectionFact,
+    bool &isStringMapOut) {
+  isStringMapOut = false;
+  const std::string collectionFamily = normalizeCollectionBindingTypeName(
+      std::string(resolveSemanticProductText(semanticProgram,
+                                             collectionFact.collectionFamilyId,
+                                             collectionFact.collectionFamily)));
+  if (collectionFamily != "map") {
+    return true;
+  }
+  const std::string valueType =
+      std::string(resolveSemanticProductText(semanticProgram,
+                                             collectionFact.valueTypeTextId,
+                                             collectionFact.valueTypeText));
+  isStringMapOut =
+      valueKindFromTypeName(valueType) == LocalInfo::ValueKind::String;
+  return true;
+}
+
+bool classifySemanticStringMapTarget(const Expr &target,
+                                     const SemanticProgram *semanticProgram,
+                                     const SemanticProductIndex *semanticIndex,
+                                     bool &isStringMapOut) {
+  isStringMapOut = false;
+  if (semanticProgram == nullptr ||
+      semanticIndex == nullptr || target.semanticNodeId == 0) {
+    return false;
+  }
+  if (const auto *collectionFact =
+          findSemanticProductCollectionSpecialization(*semanticIndex, target)) {
+    return classifySemanticStringMapCollectionTarget(
+        *semanticProgram, *collectionFact, isStringMapOut);
+  }
+  if (const auto *bindingFact = findSemanticProductBindingFact(*semanticIndex, target)) {
+    return classifySemanticStringMapTargetTypeText(*semanticProgram,
+                                                  bindingFact->bindingTypeText,
+                                                  bindingFact->bindingTypeTextId,
+                                                  isStringMapOut);
+  }
+  if (const auto *localAutoFact =
+          findSemanticProductLocalAutoFact(semanticProgram, *semanticIndex, target)) {
+    return classifySemanticStringMapTargetTypeText(*semanticProgram,
+                                                  localAutoFact->bindingTypeText,
+                                                  localAutoFact->bindingTypeTextId,
+                                                  isStringMapOut);
+  }
+  if (const auto *queryFact =
+          findSemanticProductQueryFact(semanticProgram, *semanticIndex, target)) {
+    if (classifySemanticStringMapTargetTypeText(*semanticProgram,
+                                               queryFact->queryTypeText,
+                                               queryFact->queryTypeTextId,
+                                               isStringMapOut)) {
+      return true;
+    }
+    if (classifySemanticStringMapTargetTypeText(*semanticProgram,
+                                               queryFact->bindingTypeText,
+                                               queryFact->bindingTypeTextId,
+                                               isStringMapOut)) {
+      return true;
+    }
+    return classifySemanticStringMapTargetTypeText(*semanticProgram,
+                                                  queryFact->receiverBindingTypeText,
+                                                  queryFact->receiverBindingTypeTextId,
+                                                  isStringMapOut);
+  }
+  return false;
+}
+
+SemanticStringMapAccessResolution classifySemanticStringMapAccess(
+    const Expr &accessExpr,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
+  if (semanticProgram == nullptr || semanticIndex == nullptr) {
+    return SemanticStringMapAccessResolution::NoFact;
+  }
+  if (hasPublishedSemanticCountTargetFact(accessExpr, semanticIndex)) {
+    SemanticCountTargetInfo accessInfo;
+    if (classifySemanticCountTarget(
+            accessExpr, semanticProgram, semanticIndex, accessInfo) &&
+        accessInfo.isString) {
+      return SemanticStringMapAccessResolution::StringMapAccess;
+    }
+    return SemanticStringMapAccessResolution::NonStringMapAccess;
+  }
+  if (accessExpr.args.empty()) {
+    return SemanticStringMapAccessResolution::NoFact;
+  }
+  const Expr &accessTarget = accessExpr.args.front();
+  if (!hasPublishedSemanticCountTargetFact(accessTarget, semanticIndex)) {
+    return SemanticStringMapAccessResolution::NoFact;
+  }
+  bool isStringMapTarget = false;
+  if (classifySemanticStringMapTarget(
+          accessTarget, semanticProgram, semanticIndex, isStringMapTarget) &&
+      isStringMapTarget) {
+    return SemanticStringMapAccessResolution::StringMapAccess;
+  }
+  return SemanticStringMapAccessResolution::NonStringMapAccess;
 }
 
 bool classifySemanticCountTargetTypeText(const SemanticProgram &semanticProgram,
@@ -896,7 +1050,9 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    std::string &error) {
+    std::string &error,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
   const auto isCountLikeCall = [&]() {
     return (isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) &&
            expr.args.size() == 1;
@@ -1184,6 +1340,20 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     std::string accessName;
     const Expr &target = expr.args.front();
     if (getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) {
+      const auto semanticStringMapAccess =
+          classifySemanticStringMapAccess(target, semanticProgram, semanticIndex);
+      if (semanticStringMapAccess ==
+          SemanticStringMapAccessResolution::StringMapAccess) {
+        if (!emitExpr(target, localsIn)) {
+          return CountAccessCallEmitResult::Error;
+        }
+        emitInstruction(IrOpcode::LoadStringLength, 0);
+        return CountAccessCallEmitResult::Emitted;
+      }
+      if (semanticStringMapAccess ==
+          SemanticStringMapAccessResolution::NonStringMapAccess) {
+        return CountAccessCallEmitResult::NotHandled;
+      }
       if (inferExprKind) {
         const LocalInfo::ValueKind targetKind = inferExprKind(target, localsIn);
         if (targetKind == LocalInfo::ValueKind::String) {

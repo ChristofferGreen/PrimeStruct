@@ -902,7 +902,9 @@
             resolveStringTableTarget,
             [&](const Expr &valueExpr, const LocalMap &valueLocals) { return emitExpr(valueExpr, valueLocals); },
             [&](IrOpcode opcode, uint64_t imm) { function.instructions.push_back({opcode, imm}); },
-            error);
+            error,
+            semanticProgram,
+            &callResolutionAdapters.semanticProductTargets.semanticIndex);
         if (countAccessResult == CountAccessCallEmitResult::Emitted) {
           return true;
         }

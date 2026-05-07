@@ -613,6 +613,9 @@ Task template:
     semantic-product-backed `count(at(target, key))` inference before stale
     local string-map metadata can classify target-owned access values as
     strings.
+    The lowerer count-access string-map emission slice is complete for
+    semantic-product-backed `count(at(target, key))` native emission before
+    stale local string-map metadata can choose `LoadStringLength`.
     The lowerer try operand Result fact slice is complete for
     semantic-product-backed `try(operand)` base-kind inference before
     stale local `isResult` or args-pack metadata can classify the operand's
@@ -923,6 +926,12 @@ Task template:
       resolution now suppresses stale local string-table metadata for published
       non-string name facts before native string-table target helpers can
       resolve named string indices.
+    - Completed slice: semantic-product-addressed count-access emission now
+      consumes published indexed-access and target map/non-map facts before
+      stale local string-map metadata can choose string length emission for
+      `count(at(target, key))`. Published non-string access or target facts
+      suppress stale local map metadata while syntax-only compatibility keeps
+      the legacy emission fallback.
     - Completed slice: semantic-product-addressed native `Result.why(...)`
       direct-call sources now resolve interned query result-error IDs before
       copied query text, so stale duplicated error text cannot override the
