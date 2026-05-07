@@ -730,7 +730,7 @@ TEST_CASE("ir lowerer conversions helper lowers unchecked memory at intrinsic to
                     [](const primec::IrInstruction &inst) { return inst.op == primec::IrOpcode::AddI64; }));
 }
 
-TEST_CASE("ir lowerer conversions helper emits vector record header with data pointer") {
+TEST_CASE("ir lowerer conversions helper emits vector record from layout fields") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
 
   primec::Expr argA;
@@ -783,7 +783,27 @@ TEST_CASE("ir lowerer conversions helper emits vector record header with data po
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
       [](const std::string &, const std::string &, std::string &) { return false; },
       [](const std::string &, int32_t &) { return false; },
-      [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
+      [](const std::string &structTypeName,
+         const std::string &fieldName,
+         int32_t &slotOffset,
+         int32_t &slotCount,
+         std::string &fieldStructPath) {
+        if (structTypeName != "/std/collections/vector") {
+          return false;
+        }
+        if (fieldName == "count") {
+          slotOffset = 0;
+        } else if (fieldName == "capacity") {
+          slotOffset = 1;
+        } else if (fieldName == "data") {
+          slotOffset = 2;
+        } else {
+          return false;
+        }
+        slotCount = 1;
+        fieldStructPath.clear();
+        return true;
+      },
       [](int32_t, int32_t, int32_t) { return false; },
       instructions,
       handled,
@@ -824,6 +844,38 @@ TEST_CASE("ir lowerer conversions helper emits vector record header with data po
   CHECK(instructions[16].op == primec::IrOpcode::Pop);
   CHECK(instructions[17].op == primec::IrOpcode::AddressOfLocal);
   CHECK(instructions[17].imm == 5);
+}
+
+TEST_CASE("ir lowerer vector record materialization uses layout helpers") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::string collectionMutation =
+      readText(repoRoot / "src" / "ir_lowerer" /
+               "IrLowererOperatorCollectionMutationHelpers.cpp");
+  const std::string inlineCalls =
+      readText(repoRoot / "src" / "ir_lowerer" /
+               "IrLowererLowerInlineCalls.h");
+
+  CHECK(collectionMutation.find("nextLocal += 8") == std::string::npos);
+  CHECK(inlineCalls.find("nextLocal += 4") == std::string::npos);
+  CHECK(collectionMutation.find("emitExperimentalVectorHeader") ==
+        std::string::npos);
+  CHECK(collectionMutation.find("resolveVectorRecordFieldSlotsFromFields") !=
+        std::string::npos);
+  CHECK(inlineCalls.find("resolveVectorRecordFieldSlotsFromLayout") !=
+        std::string::npos);
 }
 
 

@@ -14706,3 +14706,39 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     TODO queue coverage so vector metadata falls through to visible `.prime`
     helpers or existing diagnostics while internal SoA metadata bridges remain
     intact.
+
+- [x] TODO-4375: Replace vector constructor header materialization
+  - owner: ai
+  - created_at: 2026-05-07
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4374
+  - scope: Replace remaining experimental-vector constructor/header
+    materialization in lowering with ordinary struct layout facts or imported
+    `.prime` constructor bodies, leaving only declarative compatibility
+    metadata for TODO-4295/TODO-4296.
+  - implementation_notes:
+    - Start from `src/ir_lowerer/IrLowererOperatorCollectionMutationHelpers.cpp`,
+      `src/ir_lowerer/IrLowererLowerInlineCalls.h`,
+      `src/ir_lowerer/IrLowererStructSlotLayoutHelpers.cpp`, and tests that
+      mention vector record header, count/capacity/data offsets, or
+      `nextLocal += 4`.
+    - Keep the existing `256` dynamic-capacity limit until TODO-4281.
+  - acceptance:
+    - Lowering no longer materializes experimental vector headers by assuming
+      fixed count/capacity/data/ownsData local slots.
+    - Vector constructors and literals still lower through ordinary `.prime`
+      definitions, generic struct layout facts, or a documented generic storage
+      substrate path.
+    - Any remaining production vector strings are declarative surface metadata
+      or compatibility diagnostics owned by TODO-4295/TODO-4296.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once vector constructor/literal lowering no longer writes a
+    hard-coded four-slot experimental vector record.
+  - finished_at: 2026-05-07
+  - evidence: Added shared vector-record layout helpers and routed vector
+    constructor/literal materialization in
+    `IrLowererOperatorCollectionMutationHelpers.cpp` and
+    `IrLowererLowerInlineCalls.h` through struct layout field slots instead of
+    fixed `base + count/capacity/data/ownsData` offsets. Updated built
+    lowerer source-lock coverage plus focused VM vector and map construction
+    checks.

@@ -72,11 +72,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4375: Replace vector constructor header materialization
+- TODO-4281: Lift vector dynamic capacity limit
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4281: Lift vector dynamic capacity limit
 - TODO-4295: Move collection surface metadata out of C++
 - TODO-4296: Delete vector compatibility seams
 - TODO-4297: Add zero C++ vector-surface audit
@@ -86,14 +85,15 @@ Task template:
 - TODO-4302: Move map surface metadata out of C++
 - TODO-4303: Delete map compatibility seams
 - TODO-4304: Add zero C++ map-surface audit
+- TODO-4305: Rename and style canonical `.prime` SoA surface
 
 ### Priority Lanes (Current)
 
 - Semantic ownership authority: none active; future semantic-authority work
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
-- Vector stdlib ownership cutover: TODO-4375
-  -> TODO-4281 -> TODO-4295 -> TODO-4296 -> TODO-4297
+- Vector stdlib ownership cutover: TODO-4281 -> TODO-4295 -> TODO-4296
+  -> TODO-4297
 - Map stdlib ownership cutover: TODO-4299 -> TODO-4300 -> TODO-4301
   -> TODO-4302 -> TODO-4303 -> TODO-4304
 - SoA public surface rename and ownership cutover: TODO-4305 -> TODO-4306
@@ -112,7 +112,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4375: Replace vector constructor header materialization
 - TODO-4281: Lift vector dynamic capacity limit
 - TODO-4295: Move collection surface metadata out of C++
 - TODO-4296: Delete vector compatibility seams
@@ -179,7 +178,7 @@ Task template:
 | Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4299, TODO-4305 |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4295, TODO-4296, TODO-4297, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4375, TODO-4281, TODO-4295, TODO-4296, TODO-4297, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4281, TODO-4295, TODO-4296, TODO-4297, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4296, TODO-4297, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Validator entrypoint and benchmark-plumbing split | none |
@@ -209,7 +208,7 @@ Task template:
 | Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
-| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4375, TODO-4281, TODO-4295, TODO-4296, TODO-4297, TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4281, TODO-4295, TODO-4296, TODO-4297, TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
 | De-experimentalization surface and namespace parity | TODO-4296, TODO-4297, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Focused backend rerun ergonomics and suite partitioning | none |
@@ -237,8 +236,8 @@ Task template:
   `/std/collections/experimental_*` implementation modules stay temporary.
   The vector/map adapter cutover is complete for semantic and
   template-monomorph helper decisions. Canonical read/access helper routing is
-  finished in `docs/todo_finished.md`; TODO-4375 finishes the remaining vector
-  header-materialization hard-code removal before TODO-4281 and TODO-4295
+  finished in `docs/todo_finished.md`; vector header materialization now uses
+  layout facts instead of hard-coded record slots. TODO-4281 and TODO-4295
   through TODO-4297 handle capacity widening, metadata extraction,
   compatibility deletion, and a final zero-C++-vector audit.
   TODO-4299 through TODO-4304 apply the same ownership model to map while
@@ -1637,34 +1636,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
-
-- [ ] TODO-4375: Replace vector constructor header materialization
-  - owner: ai
-  - created_at: 2026-05-07
-  - phase: Vector stdlib ownership cutover
-  - depends_on: TODO-4374
-  - scope: Replace remaining experimental-vector constructor/header
-    materialization in lowering with ordinary struct layout facts or imported
-    `.prime` constructor bodies, leaving only declarative compatibility
-    metadata for TODO-4295/TODO-4296.
-  - implementation_notes:
-    - Start from `src/ir_lowerer/IrLowererOperatorCollectionMutationHelpers.cpp`,
-      `src/ir_lowerer/IrLowererLowerInlineCalls.h`,
-      `src/ir_lowerer/IrLowererStructSlotLayoutHelpers.cpp`, and tests that
-      mention vector record header, count/capacity/data offsets, or
-      `nextLocal += 4`.
-    - Keep the existing `256` dynamic-capacity limit until TODO-4281.
-  - acceptance:
-    - Lowering no longer materializes experimental vector headers by assuming
-      fixed count/capacity/data/ownsData local slots.
-    - Vector constructors and literals still lower through ordinary `.prime`
-      definitions, generic struct layout facts, or a documented generic storage
-      substrate path.
-    - Any remaining production vector strings are declarative surface metadata
-      or compatibility diagnostics owned by TODO-4295/TODO-4296.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once vector constructor/literal lowering no longer writes a
-    hard-coded four-slot experimental vector record.
 
 - [ ] TODO-4281: Lift vector dynamic capacity limit
   - owner: ai

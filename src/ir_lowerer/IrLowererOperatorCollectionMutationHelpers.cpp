@@ -8,6 +8,7 @@
 #include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererStructFieldBindingHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
+#include "IrLowererVectorRecordLayoutHelpers.h"
 #include "primec/SoaPathHelpers.h"
 
 #include <algorithm>
@@ -31,6 +32,13 @@ bool isSpecializedExperimentalSoaVectorStructPath(const std::string &structPath)
 
 bool isRawBuiltinSoaVectorStructPath(const std::string &structPath) {
   return structPath == "/soa_vector" || structPath == "/std/collections/soa_vector";
+}
+
+std::string defaultVectorRecordStructPath(std::string_view builtin) {
+  if (builtin == "soa_vector") {
+    return "/std/collections/soa_vector";
+  }
+  return "/std/collections/vector";
 }
 
 std::string stripGeneratedStructSuffix(std::string structPath) {
@@ -299,8 +307,6 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         return false;
       }
 
-      const int32_t baseLocal = nextLocal;
-      const int32_t headerSlots = isVectorLike ? 3 : 1;
       const int32_t literalCount = static_cast<int32_t>(expr.args.size());
       if (!isSoaVector && isVectorLike && literalCount > kVectorLocalDynamicCapacityLimit) {
         error = vectorLiteralExceedsLocalCapacityLimitMessage();
@@ -308,25 +314,48 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
       }
       const int32_t storageCapacity =
           isVectorLike ? std::max(literalCount, kVectorLocalDynamicCapacityLimit) : literalCount;
-      const int32_t dataBaseLocal = baseLocal + headerSlots;
-      nextLocal += isVectorLike ? headerSlots : (headerSlots + storageCapacity);
-
-      instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(literalCount)});
-      instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
+      const int32_t baseLocal = nextLocal;
+      int32_t dataBaseLocal = baseLocal + 1;
+      VectorRecordFieldSlots vectorSlots;
       if (isVectorLike) {
-        instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(literalCount)});
-        instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
-        if ((isSoaVector && literalCount == 0) || isEmptyOpaqueVectorLiteral) {
-          instructions.push_back({IrOpcode::PushI64, 0});
-        } else {
-          int32_t heapAllocSlots = storageCapacity;
-          if (isSoaStructLiteral) {
-            heapAllocSlots *= soaStructSlotCount;
-          }
-          instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(heapAllocSlots)});
-          instructions.push_back({IrOpcode::HeapAlloc, 0});
+        std::string vectorStructPath = inferStructExprPath(expr, localsIn);
+        if (vectorStructPath.empty()) {
+          vectorStructPath = defaultVectorRecordStructPath(builtin);
         }
-        instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 2)});
+        auto resolveVectorField =
+            [&](const std::string &structPath,
+                const char *fieldName,
+                int32_t &slotOffset,
+                int32_t &slotCount) {
+              std::string fieldStructPath;
+              return resolveStructFieldInfo(
+                  structPath, fieldName, slotOffset, slotCount, fieldStructPath);
+            };
+        if (!resolveVectorRecordFieldSlotsFromFields(
+                vectorStructPath, resolveVectorField, vectorSlots)) {
+          error = "native backend cannot resolve vector record layout: " +
+                  vectorStructPath;
+          return false;
+        }
+        nextLocal += vectorSlots.totalSlots;
+        dataBaseLocal = baseLocal + vectorSlots.data;
+        int32_t heapAllocSlots = storageCapacity;
+        if (isSoaStructLiteral) {
+          heapAllocSlots *= soaStructSlotCount;
+        }
+        emitVectorRecordHeader(
+            instructions,
+            baseLocal,
+            vectorSlots,
+            literalCount,
+            literalCount,
+            heapAllocSlots,
+            (isSoaVector && literalCount == 0) || isEmptyOpaqueVectorLiteral,
+            literalCount != 0);
+      } else {
+        nextLocal += 1 + storageCapacity;
+        instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(literalCount)});
+        instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
       }
 
       for (size_t i = 0; i < expr.args.size(); ++i) {
@@ -338,7 +367,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
             return false;
           }
           const int32_t destPtrLocal = allocTempLocal();
-          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(baseLocal + 2)});
+          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(dataBaseLocal)});
           const uint64_t offsetBytes =
               static_cast<uint64_t>(i) * static_cast<uint64_t>(soaStructSlotCount) * IrSlotBytes;
           if (offsetBytes != 0) {
@@ -364,7 +393,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
                argKind == LocalInfo::ValueKind::String) &&
               resolveStringTableTarget(arg, localsIn, stringIndex, length)) {
             if (isVectorLike) {
-              instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(baseLocal + 2)});
+              instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(dataBaseLocal)});
               const uint64_t offsetBytes = static_cast<uint64_t>(i) * IrSlotBytes;
               if (offsetBytes != 0) {
                 instructions.push_back({IrOpcode::PushI32, offsetBytes});
@@ -397,7 +426,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
           return false;
         }
         if (isVectorLike) {
-          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(baseLocal + 2)});
+          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(dataBaseLocal)});
           const uint64_t offsetBytes = static_cast<uint64_t>(i) * IrSlotBytes;
           if (offsetBytes != 0) {
             instructions.push_back({IrOpcode::PushI64, offsetBytes});
@@ -479,29 +508,87 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         return false;
       }
 
-      const std::string mapStructPath = inferStructExprPath(expr, localsIn);
+      std::string mapStructPath = inferStructExprPath(expr, localsIn);
       const bool useExperimentalMapLayout =
           mapStructPath.rfind("/std/collections/experimental_map/Map__", 0) == 0 ||
           (keyKind != LocalInfo::ValueKind::Unknown && valueKind != LocalInfo::ValueKind::Unknown);
       if (useExperimentalMapLayout) {
+        if (mapStructPath.empty()) {
+          mapStructPath = "/std/collections/experimental_map/Map";
+        }
         const int32_t baseLocal = nextLocal;
-        nextLocal += 8;
 
         const int32_t pairCount = static_cast<int32_t>(expr.args.size() / 2);
-        auto emitExperimentalVectorHeader = [&](int32_t headerBaseLocal) {
-          instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(pairCount)});
-          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(headerBaseLocal)});
-          instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(pairCount)});
-          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(headerBaseLocal + 1)});
-          if (pairCount == 0) {
-            instructions.push_back({IrOpcode::PushI64, 0});
-          } else {
-            instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(pairCount)});
-            instructions.push_back({IrOpcode::HeapAlloc, 0});
-          }
-          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(headerBaseLocal + 2)});
-          instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(pairCount == 0 ? 0 : 1)});
-          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(headerBaseLocal + 3)});
+        auto resolveMapVectorField =
+            [&](const char *fieldName,
+                int32_t &slotOffset,
+                int32_t &slotCount,
+                std::string &fieldStructPath) {
+              return resolveStructFieldInfo(
+                  mapStructPath, fieldName, slotOffset, slotCount, fieldStructPath);
+            };
+        int32_t keysSlotOffset = -1;
+        int32_t keysSlotCount = 0;
+        std::string keysStructPath;
+        int32_t payloadsSlotOffset = -1;
+        int32_t payloadsSlotCount = 0;
+        std::string payloadsStructPath;
+        if (!resolveMapVectorField(
+                "keys", keysSlotOffset, keysSlotCount, keysStructPath) ||
+            !resolveMapVectorField("payloads",
+                                   payloadsSlotOffset,
+                                   payloadsSlotCount,
+                                   payloadsStructPath)) {
+          error = "native backend cannot resolve map vector field layout: " +
+                  mapStructPath;
+          return false;
+        }
+        if (keysSlotOffset < 0 || payloadsSlotOffset < 0) {
+          error = "native backend map vector field layout is invalid";
+          return false;
+        }
+        if (keysStructPath.empty()) {
+          keysStructPath = "/std/collections/experimental_vector/Vector";
+        }
+        if (payloadsStructPath.empty()) {
+          payloadsStructPath = "/std/collections/experimental_vector/Vector";
+        }
+        auto resolveVectorField =
+            [&](const std::string &structPath,
+                const char *fieldName,
+                int32_t &slotOffset,
+                int32_t &slotCount) {
+              std::string fieldStructPath;
+              return resolveStructFieldInfo(
+                  structPath, fieldName, slotOffset, slotCount, fieldStructPath);
+            };
+        VectorRecordFieldSlots keysVectorSlots;
+        VectorRecordFieldSlots payloadsVectorSlots;
+        if (!resolveVectorRecordFieldSlotsFromFields(
+                keysStructPath, resolveVectorField, keysVectorSlots) ||
+            !resolveVectorRecordFieldSlotsFromFields(
+                payloadsStructPath, resolveVectorField, payloadsVectorSlots)) {
+          error = "native backend cannot resolve map vector record layout";
+          return false;
+        }
+        if (keysSlotCount < keysVectorSlots.totalSlots ||
+            payloadsSlotCount < payloadsVectorSlots.totalSlots) {
+          error = "native backend map vector field layout is too small";
+          return false;
+        }
+        nextLocal +=
+            std::max(keysSlotOffset + keysVectorSlots.totalSlots,
+                     payloadsSlotOffset + payloadsVectorSlots.totalSlots);
+        auto emitMapVectorHeaderFromLayout = [&](int32_t headerBaseLocal,
+                                                 const VectorRecordFieldSlots &slots) {
+          emitVectorRecordHeader(instructions,
+                                 headerBaseLocal,
+                                 slots,
+                                 pairCount,
+                                 pairCount,
+                                 pairCount,
+                                 pairCount == 0,
+                                 pairCount != 0);
         };
         auto emitExperimentalVectorElementStore = [&](int32_t dataPtrLocal,
                                                       size_t elementIndex,
@@ -554,12 +641,12 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
           return true;
         };
 
-        emitExperimentalVectorHeader(baseLocal);
-        emitExperimentalVectorHeader(baseLocal + 4);
+        emitMapVectorHeaderFromLayout(baseLocal + keysSlotOffset, keysVectorSlots);
+        emitMapVectorHeaderFromLayout(baseLocal + payloadsSlotOffset, payloadsVectorSlots);
 
         for (size_t pairIndex = 0; pairIndex < expr.args.size() / 2; ++pairIndex) {
           if (!emitExperimentalVectorElementStore(
-                  baseLocal + 2,
+                  baseLocal + keysSlotOffset + keysVectorSlots.data,
                   pairIndex,
                   expr.args[pairIndex * 2],
                   keyKind,
@@ -567,7 +654,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
             return false;
           }
           if (!emitExperimentalVectorElementStore(
-                  baseLocal + 6,
+                  baseLocal + payloadsSlotOffset + payloadsVectorSlots.data,
                   pairIndex,
                   expr.args[pairIndex * 2 + 1],
                   valueKind,

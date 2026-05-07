@@ -36,6 +36,7 @@
 #include "IrLowererStringLiteralHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "IrLowererUninitializedTypeHelpers.h"
+#include "IrLowererVectorRecordLayoutHelpers.h"
 
 #include <algorithm>
 #include <cstring>

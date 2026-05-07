@@ -3113,9 +3113,9 @@ for(
     `set_field_capacity` statement calls plus `field_count`, `field_capacity`,
     `set_field_count`, and `set_field_capacity` inline helper calls now inline
     their visible `.prime` helper definitions instead of using C++ fast paths
-    that write fixed count/capacity header slots directly; remaining vector
-    metadata expression fallback and constructor/header materialization fast
-    paths are tracked by the active vector layout follow-up leaves. Canonical
+    that write fixed count/capacity header slots directly. Vector metadata
+    expression fallbacks and constructor/header materialization now route
+    through visible `.prime` definitions or declarative layout facts. Canonical
     `/std/collections/vector/*` `pop` / `clear` helpers now reuse that same
     backing discard path for ownership-sensitive element types on explicit
     experimental `Vector<T>` bindings, and canonical

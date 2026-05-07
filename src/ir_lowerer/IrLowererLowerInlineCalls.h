@@ -166,34 +166,37 @@
         }
         const int32_t literalCount =
             static_cast<int32_t>(vectorLiteralExpr.args.size());
-        const int32_t baseLocal = nextLocal;
-        nextLocal += 4;
-        function.instructions.push_back(
-            {IrOpcode::PushI32, static_cast<uint64_t>(literalCount)});
-        function.instructions.push_back(
-            {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
-        function.instructions.push_back(
-            {IrOpcode::PushI32, static_cast<uint64_t>(literalCount)});
-        function.instructions.push_back(
-            {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
-        if (literalCount == 0) {
-          function.instructions.push_back({IrOpcode::PushI64, 0});
-        } else {
-          function.instructions.push_back(
-              {IrOpcode::PushI32, static_cast<uint64_t>(literalCount)});
-          function.instructions.push_back({IrOpcode::HeapAlloc, 0});
+        StructSlotLayoutInfo vectorLayout;
+        if (!resolveStructSlotLayout(
+                "/std/collections/experimental_vector/Vector", vectorLayout)) {
+          error =
+              "native backend cannot resolve experimental vector record layout";
+          return false;
         }
-        function.instructions.push_back(
-            {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 2)});
-        function.instructions.push_back({IrOpcode::PushI32, 0});
-        function.instructions.push_back(
-            {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 3)});
+        VectorRecordFieldSlots vectorSlots;
+        if (!resolveVectorRecordFieldSlotsFromLayout(
+                vectorLayout, vectorSlots)) {
+          error =
+              "native backend cannot resolve experimental vector record fields";
+          return false;
+        }
+        const int32_t baseLocal = nextLocal;
+        nextLocal += vectorSlots.totalSlots;
+        emitVectorRecordHeader(function.instructions,
+                               baseLocal,
+                               vectorSlots,
+                               literalCount,
+                               literalCount,
+                               literalCount,
+                               literalCount == 0,
+                               literalCount != 0);
 
         for (size_t argIndex = 0; argIndex < vectorLiteralExpr.args.size();
              ++argIndex) {
           const Expr &argExpr = vectorLiteralExpr.args[argIndex];
           function.instructions.push_back(
-              {IrOpcode::LoadLocal, static_cast<uint64_t>(baseLocal + 2)});
+              {IrOpcode::LoadLocal,
+               static_cast<uint64_t>(baseLocal + vectorSlots.data)});
           const uint64_t offsetBytes =
               static_cast<uint64_t>(argIndex) * IrSlotBytes;
           if (offsetBytes != 0) {
