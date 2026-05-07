@@ -880,6 +880,11 @@ Planned non-template inference migration contract:
   receiver probes now asks graph-backed map/non-map facts before local map
   metadata can suppress fallback receiver-kind inference. Known map facts
   suppress stale scalar locals; known non-map facts suppress stale map locals.
+- Completed late materialized collection receiver slice: late collection
+  helper receiver materialization now asks graph-backed map, wrapped-map, and
+  array/vector facts before stale local collection metadata can choose helper
+  receiver materialization or classify nested args-pack access. Syntax-only
+  local/direct-return inference remains the compatibility fallback.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

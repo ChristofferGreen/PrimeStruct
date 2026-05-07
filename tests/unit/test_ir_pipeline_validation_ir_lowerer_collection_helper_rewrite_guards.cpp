@@ -450,6 +450,77 @@ TEST_CASE("ir lowerer bare vector helper rewrites prefer semantic receiver facts
   CHECK(methodSemanticFactUse < methodDirectReturnInference);
 }
 
+TEST_CASE("ir lowerer materialized collection receivers prefer semantic target facts") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path collectionHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.h";
+
+  REQUIRE(std::filesystem::exists(collectionHelpersPath));
+  const std::string source = readText(collectionHelpersPath);
+
+  const size_t rewritePos =
+      source.find("auto emitMaterializedCollectionReceiverExpr =");
+  REQUIRE(rewritePos != std::string::npos);
+  const size_t semanticIndexPos =
+      source.find("lateCollectionSemanticIndex", rewritePos);
+  const size_t semanticMapResolverPos = source.find(
+      "ir_lowerer::resolveMapAccessTargetInfo(\n"
+      "                    *receiverExpr,\n"
+      "                    localsIn,\n"
+      "                    inferCallMapTargetInfo,\n"
+      "                    lateCollectionSemanticProgram,\n"
+      "                    lateCollectionSemanticIndex)",
+      rewritePos);
+  const size_t semanticArrayVectorResolverPos = source.find(
+      "ir_lowerer::resolveArrayVectorAccessTargetInfo(\n"
+      "                    *receiverExpr,\n"
+      "                    localsIn,\n"
+      "                    {},\n"
+      "                    lateCollectionSemanticProgram,\n"
+      "                    lateCollectionSemanticIndex)",
+      rewritePos);
+  const size_t wrappedMapGatePos = source.find(
+      "if (mapTargetInfo.isMapTarget && arrayVectorTargetInfo.isWrappedMapTarget)",
+      rewritePos);
+  const size_t emitReceiverValuePos =
+      source.find("auto emitCollectionReceiverValue =", rewritePos);
+  REQUIRE(emitReceiverValuePos != std::string::npos);
+  const size_t nestedArrayVectorResolverPos = source.find(
+      "ir_lowerer::resolveArrayVectorAccessTargetInfo(\n"
+      "                      valueExpr.args.front(),\n"
+      "                      localsIn,\n"
+      "                      {},\n"
+      "                      lateCollectionSemanticProgram,\n"
+      "                      lateCollectionSemanticIndex)",
+      emitReceiverValuePos);
+  const size_t argsPackGatePos =
+      source.find("const bool isStructArgsPackAccess =", emitReceiverValuePos);
+
+  REQUIRE(semanticIndexPos != std::string::npos);
+  REQUIRE(semanticMapResolverPos != std::string::npos);
+  REQUIRE(semanticArrayVectorResolverPos != std::string::npos);
+  REQUIRE(wrappedMapGatePos != std::string::npos);
+  REQUIRE(nestedArrayVectorResolverPos != std::string::npos);
+  REQUIRE(argsPackGatePos != std::string::npos);
+  CHECK(semanticIndexPos < semanticMapResolverPos);
+  CHECK(semanticMapResolverPos < wrappedMapGatePos);
+  CHECK(semanticArrayVectorResolverPos < wrappedMapGatePos);
+  CHECK(nestedArrayVectorResolverPos < argsPackGatePos);
+}
+
 TEST_CASE("ir lowerer map constructor rewrite checks constructor surface before resolving defs") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);

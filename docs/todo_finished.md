@@ -6,6 +6,33 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer late collection facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes late materialized collection
+    helper receiver rewriting consume published map, wrapped-map, and
+    array/vector target facts before stale local collection metadata can
+    choose helper receiver materialization.
+  - acceptance:
+    - Published scalar facts suppress stale collection receiver
+      materialization when local metadata says the receiver is map,
+      wrapped-map, array, or vector shaped.
+    - Published collection facts allow materialized helper receiver rewriting
+      when stale local metadata is missing or contradictory.
+    - Existing local collection receiver materialization remains available
+      when no semantic collection fact is published.
+  - stop_rule: Stop once late materialized collection receiver gates route
+    through semantic-product target facts before legacy local collection
+    metadata, with source guard coverage pinning the resolver ordering.
+  - evidence: Routed late materialized collection receiver map and
+    array/vector checks through semantic-aware target resolvers, including the
+    nested args-pack access classifier used during receiver materialization;
+    added source guard coverage for semantic resolver ordering before stale
+    local collection gates; ran `git diff --check`; and skipped broad
+    baseline validation per the lite workflow.
+
 - [x] TODO-4298: Prefer tail borrowed map facts
   - owner: ai
   - created_at: 2026-04-28

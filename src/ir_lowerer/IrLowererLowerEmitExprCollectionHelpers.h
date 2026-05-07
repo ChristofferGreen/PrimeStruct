@@ -650,6 +650,10 @@
                       receiverDef->fullPath);
             }
           }
+          const auto *lateCollectionSemanticProgram =
+              callResolutionAdapters.semanticProgram;
+          const auto *lateCollectionSemanticIndex =
+              &callResolutionAdapters.semanticProductTargets.semanticIndex;
           if (!resolvedCollectionFromDef) {
             auto isMapAccessValueCall = [&](const Expr &candidateExpr) {
               if (candidateExpr.kind != Expr::Kind::Call || candidateExpr.isMethodCall) {
@@ -692,9 +696,18 @@
                 };
             const auto mapTargetInfo =
                 ir_lowerer::resolveMapAccessTargetInfo(
-                    *receiverExpr, localsIn, inferCallMapTargetInfo);
+                    *receiverExpr,
+                    localsIn,
+                    inferCallMapTargetInfo,
+                    lateCollectionSemanticProgram,
+                    lateCollectionSemanticIndex);
             const auto arrayVectorTargetInfo =
-                ir_lowerer::resolveArrayVectorAccessTargetInfo(*receiverExpr, localsIn);
+                ir_lowerer::resolveArrayVectorAccessTargetInfo(
+                    *receiverExpr,
+                    localsIn,
+                    {},
+                    lateCollectionSemanticProgram,
+                    lateCollectionSemanticIndex);
             if (mapTargetInfo.isMapTarget && arrayVectorTargetInfo.isWrappedMapTarget) {
               materializedWrappedMapReceiver = true;
               materializedMapReceiverKind = arrayVectorTargetInfo.argsPackElementKind;
@@ -743,7 +756,12 @@
                 getBuiltinArrayAccessName(valueExpr, accessName) &&
                 valueExpr.args.size() == 2) {
               const auto targetInfo =
-                  ir_lowerer::resolveArrayVectorAccessTargetInfo(valueExpr.args.front(), localsIn);
+                  ir_lowerer::resolveArrayVectorAccessTargetInfo(
+                      valueExpr.args.front(),
+                      localsIn,
+                      {},
+                      lateCollectionSemanticProgram,
+                      lateCollectionSemanticIndex);
               const bool isStructArgsPackAccess =
                   targetInfo.isArgsPackTarget &&
                   !targetInfo.isVectorTarget &&

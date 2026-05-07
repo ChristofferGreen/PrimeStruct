@@ -810,6 +810,10 @@ Task template:
     semantic-product-backed map and non-map target facts before stale local
     map metadata can suppress fallback receiver-kind inference for bare
     `at(target, key)` and `tryAt(target, key)` receiver probes.
+    The late materialized collection receiver slice is complete for
+    semantic-product-backed map, wrapped-map, and array/vector facts before
+    stale local collection metadata can choose helper receiver
+    materialization.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -1547,6 +1551,12 @@ Task template:
       receiver calls or recover helper template arguments. Interned receiver
       type IDs win over copied text, while direct-return inference remains
       compatibility fallback for syntax-only/no-fact paths.
+    - Completed slice: late materialized collection receiver rewriting now
+      reads semantic-product map, wrapped-map, and array/vector receiver facts
+      before stale local collection metadata can choose helper receiver
+      materialization or classify nested args-pack access. Local and
+      direct-return inference remains compatibility fallback for
+      syntax-only/no-fact paths.
     - Completed slice: native count-kind inference for `count(map[key])` now
       asks the indexed access expression for its semantic-product query value
       kind before local map metadata can classify the access result. Stale
