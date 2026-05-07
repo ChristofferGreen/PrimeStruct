@@ -374,6 +374,142 @@ TEST_CASE("ir lowerer inference setup bootstrap wires callbacks") {
   CHECK(state.inferPointerTargetKind(pointerExpr, locals) == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
+TEST_CASE("ir lowerer inference setup uses semantic pointer facts before stale locals") {
+  using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_set<std::string> structNames;
+
+  primec::SemanticProgram semanticProgram;
+  auto intern = [](primec::SemanticProgram &program, const std::string &text) {
+    return primec::semanticProgramInternCallTargetString(program, text);
+  };
+  auto addBindingFact = [&](uint64_t semanticNodeId,
+                            const std::string &name,
+                            const std::string &typeText) {
+    primec::SemanticProgramBindingFact fact;
+    fact.scopePath = "/main";
+    fact.siteKind = "local";
+    fact.name = name;
+    fact.bindingTypeText = typeText;
+    fact.semanticNodeId = semanticNodeId;
+    fact.scopePathId = intern(semanticProgram, "/main");
+    fact.siteKindId = intern(semanticProgram, "local");
+    fact.nameId = intern(semanticProgram, name);
+    fact.bindingTypeTextId = intern(semanticProgram, typeText);
+    const size_t index = semanticProgram.bindingFacts.size();
+    semanticProgram.bindingFacts.push_back(std::move(fact));
+    semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr
+        .insert_or_assign(semanticNodeId, index);
+  };
+  auto addLocalAutoFact = [&](uint64_t semanticNodeId,
+                              const std::string &name,
+                              const std::string &typeText) {
+    primec::SemanticProgramLocalAutoFact fact;
+    fact.scopePath = "/main";
+    fact.bindingName = name;
+    fact.bindingTypeText = typeText;
+    fact.initializerBindingTypeText = typeText;
+    fact.semanticNodeId = semanticNodeId;
+    fact.scopePathId = intern(semanticProgram, "/main");
+    fact.bindingNameId = intern(semanticProgram, name);
+    fact.bindingTypeTextId = intern(semanticProgram, typeText);
+    const size_t index = semanticProgram.localAutoFacts.size();
+    semanticProgram.localAutoFacts.push_back(std::move(fact));
+    semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr
+        .insert_or_assign(semanticNodeId, index);
+  };
+  auto addQueryFact = [&](uint64_t semanticNodeId,
+                          const std::string &name,
+                          const std::string &typeText) {
+    primec::SemanticProgramQueryFact fact;
+    fact.scopePath = "/main";
+    fact.callName = name;
+    fact.queryTypeText = typeText;
+    fact.bindingTypeText = typeText;
+    fact.semanticNodeId = semanticNodeId;
+    fact.scopePathId = intern(semanticProgram, "/main");
+    fact.callNameId = intern(semanticProgram, name);
+    fact.resolvedPathId = intern(semanticProgram, "/main/" + name);
+    fact.queryTypeTextId = intern(semanticProgram, typeText);
+    fact.bindingTypeTextId = intern(semanticProgram, typeText);
+    const size_t index = semanticProgram.queryFacts.size();
+    semanticProgram.queryFacts.push_back(std::move(fact));
+    semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr
+        .insert_or_assign(semanticNodeId, index);
+  };
+
+  addBindingFact(801, "ptr", "Pointer<i64>");
+  addLocalAutoFact(802, "ref", "Reference<bool>");
+  addQueryFact(803, "queryPtr", "Pointer<f64>");
+  addBindingFact(804, "notPtr", "i32");
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::runLowerInferenceSetupBootstrap(
+      {
+          .defMap = &defMap,
+          .importAliases = &importAliases,
+          .structNames = &structNames,
+          .semanticProgram = &semanticProgram,
+          .semanticIndex = &semanticIndex,
+          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isVectorCapacityCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isEntryArgsName = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .resolveExprPath = [](const primec::Expr &) { return std::string(); },
+          .getBuiltinOperatorName = [](const primec::Expr &, std::string &) { return false; },
+      },
+      state,
+      error));
+  REQUIRE(error.empty());
+
+  auto makeName = [](const std::string &name, uint64_t semanticNodeId) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Name;
+    expr.name = name;
+    expr.semanticNodeId = semanticNodeId;
+    return expr;
+  };
+  auto makeLocal = [](primec::ir_lowerer::LocalInfo::Kind kind, Kind valueKind) {
+    primec::ir_lowerer::LocalInfo info;
+    info.kind = kind;
+    info.valueKind = valueKind;
+    return info;
+  };
+
+  primec::ir_lowerer::LocalMap staleLocals;
+  staleLocals.emplace("ptr", makeLocal(primec::ir_lowerer::LocalInfo::Kind::Pointer, Kind::String));
+  staleLocals.emplace("ref", makeLocal(primec::ir_lowerer::LocalInfo::Kind::Reference, Kind::Int32));
+  staleLocals.emplace("queryPtr", makeLocal(primec::ir_lowerer::LocalInfo::Kind::Pointer, Kind::Int32));
+  staleLocals.emplace("notPtr", makeLocal(primec::ir_lowerer::LocalInfo::Kind::Pointer, Kind::String));
+
+  CHECK(state.inferPointerTargetKind(makeName("ptr", 801), staleLocals) == Kind::Int64);
+  CHECK(state.inferPointerTargetKind(makeName("ref", 802), staleLocals) == Kind::Bool);
+  CHECK(state.inferPointerTargetKind(makeName("queryPtr", 803), staleLocals) == Kind::Float64);
+  CHECK(state.inferPointerTargetKind(makeName("notPtr", 804), staleLocals) == Kind::Unknown);
+
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState syntaxState;
+  std::string syntaxError;
+  REQUIRE(primec::ir_lowerer::runLowerInferenceSetupBootstrap(
+      {
+          .defMap = &defMap,
+          .importAliases = &importAliases,
+          .structNames = &structNames,
+          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isVectorCapacityCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isEntryArgsName = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .resolveExprPath = [](const primec::Expr &) { return std::string(); },
+          .getBuiltinOperatorName = [](const primec::Expr &, std::string &) { return false; },
+      },
+      syntaxState,
+      syntaxError));
+  REQUIRE(syntaxError.empty());
+  CHECK(syntaxState.inferPointerTargetKind(makeName("ptr", 0), staleLocals) == Kind::String);
+}
+
 TEST_CASE("ir lowerer inference setup bootstrap validates dependencies") {
   std::unordered_map<std::string, const primec::Definition *> defMap;
   std::unordered_map<std::string, std::string> importAliases;

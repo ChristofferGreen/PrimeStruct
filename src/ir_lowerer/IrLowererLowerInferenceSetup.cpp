@@ -1,10 +1,74 @@
 #include "IrLowererLowerInferenceSetup.h"
 
+#include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererResultHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupTypeHelpers.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
+
+#include <vector>
 
 namespace primec::ir_lowerer {
+
+namespace {
+
+LocalInfo::ValueKind semanticPointerTargetKindFromTypeText(const std::string &typeText) {
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argText)) {
+    return LocalInfo::ValueKind::Unknown;
+  }
+  base = normalizeCollectionBindingTypeName(trimTemplateTypeText(base));
+  if (base != "Pointer" && base != "Reference") {
+    return LocalInfo::ValueKind::Unknown;
+  }
+  std::vector<std::string> args;
+  if (!splitTemplateArgs(argText, args) || args.size() != 1) {
+    return LocalInfo::ValueKind::Unknown;
+  }
+  return valueKindFromTypeName(trimTemplateTypeText(args.front()));
+}
+
+bool inferSemanticPointerTargetKindForName(const Expr &expr,
+                                           const SemanticProgram *semanticProgram,
+                                           const SemanticProductIndex *semanticIndex,
+                                           LocalInfo::ValueKind &kindOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  if (expr.kind != Expr::Kind::Name || semanticProgram == nullptr ||
+      semanticIndex == nullptr || expr.semanticNodeId == 0) {
+    return false;
+  }
+  if (const SemanticProgramBindingFact *bindingFact =
+          findSemanticProductBindingFact(*semanticIndex, expr);
+      bindingFact != nullptr) {
+    kindOut = semanticPointerTargetKindFromTypeText(resolveSemanticProductTypeText(
+        semanticProgram, bindingFact->bindingTypeText, bindingFact->bindingTypeTextId));
+    return true;
+  }
+  if (const SemanticProgramLocalAutoFact *localAutoFact =
+          findSemanticProductLocalAutoFactBySemanticId(*semanticIndex, expr);
+      localAutoFact != nullptr) {
+    kindOut = semanticPointerTargetKindFromTypeText(resolveSemanticProductTypeText(
+        semanticProgram, localAutoFact->bindingTypeText, localAutoFact->bindingTypeTextId));
+    return true;
+  }
+  if (const SemanticProgramQueryFact *queryFact =
+          findSemanticProductQueryFactBySemanticId(*semanticIndex, expr);
+      queryFact != nullptr) {
+    std::string typeText = resolveSemanticProductTypeText(
+        semanticProgram, queryFact->queryTypeText, queryFact->queryTypeTextId);
+    if (typeText.empty()) {
+      typeText = resolveSemanticProductTypeText(
+          semanticProgram, queryFact->bindingTypeText, queryFact->bindingTypeTextId);
+    }
+    kindOut = semanticPointerTargetKindFromTypeText(typeText);
+    return true;
+  }
+  return false;
+}
+
+} // namespace
 
 bool runLowerInferenceSetupBootstrap(const LowerInferenceSetupBootstrapInput &input,
                                      LowerInferenceSetupBootstrapState &stateOut,
@@ -87,8 +151,14 @@ bool runLowerInferenceSetupBootstrap(const LowerInferenceSetupBootstrapInput &in
     return primec::ir_lowerer::resolveDefinitionCall(callExpr, *defMap, resolveExprPath);
   };
 
-  stateOut.inferPointerTargetKind = [getBuiltinOperatorName](const Expr &expr,
-                                                             const LocalMap &localsIn) -> LocalInfo::ValueKind {
+  stateOut.inferPointerTargetKind = [getBuiltinOperatorName,
+                                     semanticProgram,
+                                     semanticIndex](const Expr &expr,
+                                                    const LocalMap &localsIn) -> LocalInfo::ValueKind {
+    LocalInfo::ValueKind semanticKind = LocalInfo::ValueKind::Unknown;
+    if (inferSemanticPointerTargetKindForName(expr, semanticProgram, semanticIndex, semanticKind)) {
+      return semanticKind;
+    }
     return inferPointerTargetValueKind(
         expr,
         localsIn,

@@ -707,6 +707,9 @@ Task template:
     The tail-dispatch internal SoA metadata receiver slice is complete for
     semantic-product-backed query receiver facts before stale local struct
     metadata can decide `field_count`/`field_capacity` metadata loads.
+    The lowerer pointer target-kind setup slice is complete for
+    semantic-product-backed binding, local-auto, and query pointer/reference
+    facts before stale local pointer metadata can classify bare name targets.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for

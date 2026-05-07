@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Use pointer facts for target kinds
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes lowerer pointer
+    target-kind setup classify bare pointer/reference names from published
+    binding, local-auto, and query facts before stale `LocalInfo`
+    pointer/reference metadata can answer.
+  - acceptance:
+    - Published binding type IDs classify pointer target kinds before local
+      pointer metadata.
+    - Published local-auto and query type IDs classify pointer target kinds
+      before local pointer metadata.
+    - Published non-pointer facts suppress stale local pointer fallback while
+      syntax-only names keep compatibility inference.
+  - stop_rule: Stop once native pointer target-kind inference depends on
+    graph-owned name facts and focused tests pin graph-backed, stale-local,
+    and syntax-only behavior.
+  - evidence: Added semantic-product pointer/reference target-kind handling
+    before local pointer target inference for named expressions, covered
+    binding, local-auto, query, non-pointer suppression, and syntax-only
+    fallback, and skipped broad baseline validation per the lite workflow.
+
 - [x] TODO-4298: Use collection facts for element kinds
   - owner: ai
   - created_at: 2026-04-28
