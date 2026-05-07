@@ -400,6 +400,11 @@ Planned non-template inference migration contract:
   `count(map.at(...))` now treats published indexed-access query facts as authoritative before
   local map metadata can classify the value as string-backed. Published non-string access facts
   suppress stale local string-map metadata; no-fact syntax-only contexts keep the old fallback.
+- Completed lowerer-side dispatch count access-target fact slice: dispatch inference for
+  `count(at(target, key))` now treats published map/non-map target facts as authoritative before
+  stale local string-map metadata can classify target-owned access values as string-backed.
+  Published non-string and non-map target facts suppress stale local metadata; no-fact
+  syntax-only contexts keep the old fallback.
 - Completed lowerer-side try operand Result fact slice: base-kind inference for
   `try(operand)` now reads the operand's published binding, query, or local-auto Result fact
   before lowerer-local `isResult` and args-pack metadata can classify the value kind. Published

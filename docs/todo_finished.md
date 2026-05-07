@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer count access target facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that routes dispatch
+    `count(at(target, key))` inference through published target map/non-map
+    facts before stale local string-map metadata can classify access values.
+  - acceptance:
+    - Published map target facts with string values keep `count(...)`
+      classified as `i32`.
+    - Published non-string map and non-map target facts suppress stale local
+      string-map metadata.
+    - Syntax-only contexts without published target facts keep the existing
+      local map fallback.
+  - stop_rule: Stop once dispatch count-like indexed-access consumers depend
+    on graph-owned target facts before legacy locals, with focused coverage
+    proving stale-local suppression and syntax-only compatibility.
+  - evidence: Routed dispatch count-access inference through published
+    indexed-access and target type facts before recursive/local fallback,
+    added coverage for string-map, non-string-map, non-map, and syntax-only
+    target paths, ran `git diff --check`, and skipped broad baseline
+    validation per the lite workflow.
+
 - [x] TODO-4298: Prefer string table facts
   - owner: ai
   - created_at: 2026-04-28

@@ -183,6 +183,36 @@ bool inferDispatchSetupMapKindsFromTypeText(const std::string &typeText,
          valueKindOut != LocalInfo::ValueKind::Unknown;
 }
 
+bool inferDispatchSetupSemanticCountAccessKind(const Expr &accessExpr,
+                                               const SemanticProgram *semanticProgram,
+                                               const SemanticProductIndex *semanticIndex,
+                                               LocalInfo::ValueKind &kindOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  std::string accessType;
+  if (resolveDispatchSetupSemanticReceiverTypeText(
+          accessExpr, semanticProgram, semanticIndex, accessType)) {
+    if (valueKindFromTypeName(accessType) == LocalInfo::ValueKind::String) {
+      kindOut = LocalInfo::ValueKind::Int32;
+    }
+    return true;
+  }
+  if (accessExpr.args.empty()) {
+    return false;
+  }
+  std::string targetType;
+  if (!resolveDispatchSetupSemanticReceiverTypeText(
+          accessExpr.args.front(), semanticProgram, semanticIndex, targetType)) {
+    return false;
+  }
+  LocalInfo::ValueKind keyKind = LocalInfo::ValueKind::Unknown;
+  LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
+  if (inferDispatchSetupMapKindsFromTypeText(targetType, keyKind, valueKind) &&
+      valueKind == LocalInfo::ValueKind::String) {
+    kindOut = LocalInfo::ValueKind::Int32;
+  }
+  return true;
+}
+
 bool inferDispatchSetupSemanticMapReceiverKind(const Expr &receiver,
                                                bool containsResult,
                                                const SemanticProgram *semanticProgram,
@@ -1184,16 +1214,16 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
           std::string accessName;
           const Expr &accessExpr = expr.args.front();
           if (getBuiltinArrayAccessName(accessExpr, accessName) && accessExpr.args.size() == 2) {
+            LocalInfo::ValueKind semanticCountAccessKind = LocalInfo::ValueKind::Unknown;
+            if (inferDispatchSetupSemanticCountAccessKind(
+                    accessExpr, semanticProgram, semanticIndex, semanticCountAccessKind)) {
+              return semanticCountAccessKind;
+            }
+            const Expr &accessTarget = accessExpr.args.front();
             if (stateInOut.inferExprKind &&
                 stateInOut.inferExprKind(accessExpr, localsIn) == LocalInfo::ValueKind::String) {
               return LocalInfo::ValueKind::Int32;
             }
-            std::string semanticAccessType;
-            if (resolveDispatchSetupSemanticReceiverTypeText(
-                    accessExpr, semanticProgram, semanticIndex, semanticAccessType)) {
-              return LocalInfo::ValueKind::Unknown;
-            }
-            const Expr &accessTarget = accessExpr.args.front();
             if (accessTarget.kind == Expr::Kind::Name) {
               auto it = localsIn.find(accessTarget.name);
               if (it != localsIn.end() &&

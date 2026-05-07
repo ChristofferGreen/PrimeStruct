@@ -609,6 +609,10 @@ Task template:
     The lowerer dispatch count access fact slice is complete for
     semantic-product-backed `count(map.at(...))` inference before stale local
     string-map metadata can classify indexed access values as strings.
+    The lowerer dispatch count access-target fact slice is complete for
+    semantic-product-backed `count(at(target, key))` inference before stale
+    local string-map metadata can classify target-owned access values as
+    strings.
     The lowerer try operand Result fact slice is complete for
     semantic-product-backed `try(operand)` base-kind inference before
     stale local `isResult` or args-pack metadata can classify the operand's

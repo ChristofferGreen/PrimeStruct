@@ -167,10 +167,36 @@ TEST_CASE("ir lowerer inference expr-kind dispatch prefers graph-backed indexed 
         semanticNodeId,
         index);
   };
+  auto addBindingFact = [](primec::SemanticProgram &semanticProgram,
+                           uint64_t semanticNodeId,
+                           const std::string &bindingTypeText) {
+    primec::SemanticProgramBindingFact bindingFact;
+    bindingFact.semanticNodeId = semanticNodeId;
+    bindingFact.scopePath = "/main";
+    bindingFact.siteKind = "local";
+    bindingFact.name = "values";
+    bindingFact.bindingTypeText = bindingTypeText;
+    bindingFact.scopePathId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, "/main");
+    bindingFact.siteKindId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, "local");
+    bindingFact.nameId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, "values");
+    bindingFact.bindingTypeTextId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, bindingTypeText);
+    const size_t index = semanticProgram.bindingFacts.size();
+    semanticProgram.bindingFacts.push_back(std::move(bindingFact));
+    semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(
+        semanticNodeId,
+        index);
+  };
 
   primec::SemanticProgram semanticProgram;
   addQueryFact(semanticProgram, 7301, "string");
   addQueryFact(semanticProgram, 7302, "i32");
+  addBindingFact(semanticProgram, 7303, "map<i32, string>");
+  addBindingFact(semanticProgram, 7304, "map<i32, bool>");
+  addBindingFact(semanticProgram, 7305, "i32");
   const auto semanticIndex =
       primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
 
@@ -285,6 +311,26 @@ TEST_CASE("ir lowerer inference expr-kind dispatch prefers graph-backed indexed 
   CHECK(state.inferExprKind(countExpr, locals) == Kind::Unknown);
 
   accessExpr.semanticNodeId = 0;
+  countExpr.args = {accessExpr};
+  CHECK(state.inferExprKind(countExpr, locals) == Kind::Int32);
+
+  valuesName.semanticNodeId = 7303;
+  accessExpr.args = {valuesName, keyExpr};
+  countExpr.args = {accessExpr};
+  CHECK(state.inferExprKind(countExpr, locals) == Kind::Int32);
+
+  valuesName.semanticNodeId = 7304;
+  accessExpr.args = {valuesName, keyExpr};
+  countExpr.args = {accessExpr};
+  CHECK(state.inferExprKind(countExpr, locals) == Kind::Unknown);
+
+  valuesName.semanticNodeId = 7305;
+  accessExpr.args = {valuesName, keyExpr};
+  countExpr.args = {accessExpr};
+  CHECK(state.inferExprKind(countExpr, locals) == Kind::Unknown);
+
+  valuesName.semanticNodeId = 0;
+  accessExpr.args = {valuesName, keyExpr};
   countExpr.args = {accessExpr};
   CHECK(state.inferExprKind(countExpr, locals) == Kind::Int32);
 }
