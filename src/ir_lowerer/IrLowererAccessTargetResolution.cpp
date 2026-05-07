@@ -310,6 +310,59 @@ bool inferDirectMapConstructorTargetInfo(const Expr &target, MapAccessTargetInfo
 
 } // namespace
 
+SemanticStringAccessTargetKind classifyAccessTargetSemanticStringKind(
+    const Expr &targetExpr,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
+  if (semanticProgram == nullptr || semanticIndex == nullptr || targetExpr.semanticNodeId == 0) {
+    return SemanticStringAccessTargetKind::Unknown;
+  }
+
+  auto classifyTypeText = [&](const std::string &typeText,
+                              SymbolId typeTextId) {
+    const std::string resolvedTypeText =
+        resolveAccessSemanticTypeText(semanticProgram, typeText, typeTextId);
+    if (resolvedTypeText.empty()) {
+      return SemanticStringAccessTargetKind::Unknown;
+    }
+    return valueKindFromTypeName(resolvedTypeText) == LocalInfo::ValueKind::String
+               ? SemanticStringAccessTargetKind::String
+               : SemanticStringAccessTargetKind::NonString;
+  };
+
+  if (const auto *collectionFact =
+          findSemanticProductCollectionSpecialization(*semanticIndex, targetExpr);
+      collectionFact != nullptr) {
+    const std::string collectionFamily = resolveAccessSemanticTypeText(
+        semanticProgram, collectionFact->collectionFamily, collectionFact->collectionFamilyId);
+    if (collectionFamily == "string") {
+      return SemanticStringAccessTargetKind::String;
+    }
+    return SemanticStringAccessTargetKind::NonString;
+  }
+  if (const auto *queryFact =
+          findSemanticProductQueryFact(semanticProgram, *semanticIndex, targetExpr);
+      queryFact != nullptr) {
+    SemanticStringAccessTargetKind kind =
+        classifyTypeText(queryFact->queryTypeText, queryFact->queryTypeTextId);
+    if (kind != SemanticStringAccessTargetKind::Unknown) {
+      return kind;
+    }
+    return classifyTypeText(queryFact->bindingTypeText, queryFact->bindingTypeTextId);
+  }
+  if (const auto *bindingFact =
+          findSemanticProductBindingFact(*semanticIndex, targetExpr);
+      bindingFact != nullptr) {
+    return classifyTypeText(bindingFact->bindingTypeText, bindingFact->bindingTypeTextId);
+  }
+  if (const auto *localAutoFact =
+          findSemanticProductLocalAutoFactBySemanticId(*semanticIndex, targetExpr);
+      localAutoFact != nullptr) {
+    return classifyTypeText(localAutoFact->bindingTypeText, localAutoFact->bindingTypeTextId);
+  }
+  return SemanticStringAccessTargetKind::Unknown;
+}
+
 MapAccessTargetInfo resolveMapAccessTargetInfo(
     const Expr &target,
     const LocalMap &localsIn,
@@ -575,12 +628,22 @@ NonLiteralStringAccessTargetResult validateNonLiteralStringAccessTarget(
     const LocalMap &localsIn,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
-    std::string &error) {
+    std::string &error,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
   if (targetExpr.kind == Expr::Kind::StringLiteral) {
     return NonLiteralStringAccessTargetResult::Stop;
   }
+  const SemanticStringAccessTargetKind semanticTargetKind =
+      classifyAccessTargetSemanticStringKind(targetExpr, semanticProgram, semanticIndex);
+  if (semanticTargetKind == SemanticStringAccessTargetKind::NonString) {
+    return NonLiteralStringAccessTargetResult::Continue;
+  }
   if (targetExpr.kind == Expr::Kind::Name) {
-    const LocalInfo::ValueKind targetKind = inferExprKind(targetExpr, localsIn);
+    const LocalInfo::ValueKind targetKind =
+        semanticTargetKind == SemanticStringAccessTargetKind::String
+            ? LocalInfo::ValueKind::String
+            : inferExprKind(targetExpr, localsIn);
     if (targetKind != LocalInfo::ValueKind::Unknown &&
         targetKind != LocalInfo::ValueKind::String) {
       return NonLiteralStringAccessTargetResult::Continue;
@@ -601,6 +664,16 @@ NonLiteralStringAccessTargetResult validateNonLiteralStringAccessTarget(
     return NonLiteralStringAccessTargetResult::Error;
   }
   return NonLiteralStringAccessTargetResult::Continue;
+}
+
+NonLiteralStringAccessTargetResult validateNonLiteralStringAccessTarget(
+    const Expr &targetExpr,
+    const LocalMap &localsIn,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
+    std::string &error) {
+  return validateNonLiteralStringAccessTarget(
+      targetExpr, localsIn, inferExprKind, isEntryArgsName, error, nullptr, nullptr);
 }
 
 bool resolveValidatedAccessIndexKind(

@@ -340,6 +340,10 @@ bool inferForwardedMapAccessTargetInfo(
 bool validateMapAccessTargetInfo(const MapAccessTargetInfo &targetInfo,
                                  const std::string &accessName,
                                  std::string &error);
+SemanticStringAccessTargetKind classifyAccessTargetSemanticStringKind(
+    const Expr &targetExpr,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex);
 ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     const Expr &target,
     const LocalMap &localsIn,
@@ -503,6 +507,14 @@ NonLiteralStringAccessTargetResult validateNonLiteralStringAccessTarget(
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
     std::string &error);
+NonLiteralStringAccessTargetResult validateNonLiteralStringAccessTarget(
+    const Expr &targetExpr,
+    const LocalMap &localsIn,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
+    std::string &error,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex);
 bool resolveValidatedAccessIndexKind(
     const Expr &indexExpr,
     const LocalMap &localsIn,

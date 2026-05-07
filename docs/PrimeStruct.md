@@ -815,6 +815,12 @@ Planned non-template inference migration contract:
   graph facts continue to ordinary array/vector access; graph-known strings
   and no-fact local string bindings keep the unsupported string-index
   diagnostic.
+- Completed native indexed-access string-target classifier slice: native
+  indexed-access emission now classifies string targets from semantic-product
+  collection, binding, local-auto, and query facts before dynamic string
+  dispatch or non-literal string validation can consult local string metadata.
+  Known non-string graph facts suppress stale runtime/string-binding access
+  paths; graph-known strings keep the existing string-index diagnostic.
 - Completed native collection literal string slice: native array/vector and
   map literal string-element emission now asks graph-backed value-kind
   inference before literal-backed string metadata can select string-table

@@ -6,6 +6,31 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer indexed target facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes native indexed-access
+    string-target classification consume semantic-product collection,
+    binding, local-auto, and query facts before stale local string metadata
+    can select dynamic string dispatch or string-target diagnostics.
+  - acceptance:
+    - Published non-string target facts suppress stale local string metadata
+      for dynamic string indexed-access dispatch.
+    - Published non-string target facts suppress stale local string metadata
+      for non-literal string access validation.
+    - Published string target facts still preserve the existing unsupported
+      string-index diagnostic.
+  - stop_rule: Stop once indexed-access string-target classification routes
+    through a semantic-product-aware helper before dynamic string and
+    non-literal validation fallbacks consult local string metadata, with
+    focused tests pinning non-string suppression and string preservation.
+  - evidence: Added a shared semantic string-target classifier, used it in
+    dynamic string access emission and non-literal string validation, extended
+    focused helper/source-lock tests, ran `git diff --check`, and skipped
+    broad baseline validation per the lite workflow.
+
 - [x] TODO-4298: Prefer count tail facts
   - owner: ai
   - created_at: 2026-04-28

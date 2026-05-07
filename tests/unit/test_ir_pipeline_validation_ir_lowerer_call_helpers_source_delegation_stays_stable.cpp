@@ -205,14 +205,21 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   const size_t nonLiteralStringAccessPos = accessTargetResolutionSource.find(
       "NonLiteralStringAccessTargetResult validateNonLiteralStringAccessTarget(");
   REQUIRE(nonLiteralStringAccessPos != std::string::npos);
-  const size_t nonLiteralStringGraphKindPos = accessTargetResolutionSource.find(
-      "const LocalInfo::ValueKind targetKind = inferExprKind(targetExpr, localsIn);",
+  const size_t nonLiteralStringSemanticKindPos = accessTargetResolutionSource.find(
+      "const SemanticStringAccessTargetKind semanticTargetKind =",
       nonLiteralStringAccessPos);
+  const size_t nonLiteralStringGraphKindPos =
+      accessTargetResolutionSource.find("const LocalInfo::ValueKind targetKind =",
+                                        nonLiteralStringAccessPos);
   const size_t nonLiteralStringLocalLookupPos =
       accessTargetResolutionSource.find("localsIn.find(targetExpr.name)", nonLiteralStringAccessPos);
+  REQUIRE(nonLiteralStringSemanticKindPos != std::string::npos);
   REQUIRE(nonLiteralStringGraphKindPos != std::string::npos);
   REQUIRE(nonLiteralStringLocalLookupPos != std::string::npos);
+  CHECK(nonLiteralStringSemanticKindPos < nonLiteralStringGraphKindPos);
   CHECK(nonLiteralStringGraphKindPos < nonLiteralStringLocalLookupPos);
+  CHECK(accessTargetResolutionSource.find("SemanticStringAccessTargetKind::NonString",
+                                          nonLiteralStringSemanticKindPos) != std::string::npos);
   CHECK(accessTargetResolutionSource.find("targetKind != LocalInfo::ValueKind::Unknown",
                                           nonLiteralStringGraphKindPos) != std::string::npos);
   CHECK(accessTargetResolutionSource.find("targetKind != LocalInfo::ValueKind::String",

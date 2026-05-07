@@ -1539,6 +1539,12 @@ Task template:
       a named indexed-access target. Known non-string graph facts continue to
       ordinary array/vector access; graph-known strings and no-fact local
       string bindings keep the unsupported string-index diagnostic.
+    - Completed slice: native indexed-access string-target classification now
+      reads semantic-product collection, binding, local-auto, and query facts
+      before dynamic string dispatch or non-literal string validation can
+      consult stale local string metadata. Known non-string graph facts
+      suppress stale runtime/string-binding access paths; graph-known string
+      facts keep the existing string-index diagnostic.
     - Completed slice: native array/vector and map literal string-element
       emission now asks graph-backed value-kind inference before
       literal-backed string metadata can choose string-table storage. Known

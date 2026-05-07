@@ -64,6 +64,12 @@ enum class NonLiteralStringAccessTargetResult {
   Error,
 };
 
+enum class SemanticStringAccessTargetKind {
+  Unknown,
+  String,
+  NonString,
+};
+
 struct MapAccessTargetInfo {
   bool isMapTarget = false;
   LocalInfo::ValueKind mapKeyKind = LocalInfo::ValueKind::Unknown;

@@ -384,6 +384,58 @@ TEST_CASE("ir lowerer call helpers validate non literal string access target") {
             error) == Result::Continue);
   CHECK(error == "unchanged");
 
+  primec::SemanticProgram semanticProgram;
+  const primec::SymbolId scalarTypeId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "i32");
+  primec::SemanticProgramBindingFact scalarFact;
+  scalarFact.semanticNodeId = 7101;
+  scalarFact.bindingTypeText = "string";
+  scalarFact.bindingTypeTextId = scalarTypeId;
+  semanticProgram.bindingFacts.push_back(scalarFact);
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(
+      scalarFact.semanticNodeId, 0);
+  const primec::SymbolId stringTypeId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "string");
+  primec::SemanticProgramBindingFact stringFact;
+  stringFact.semanticNodeId = 7102;
+  stringFact.bindingTypeText = "i32";
+  stringFact.bindingTypeTextId = stringTypeId;
+  semanticProgram.bindingFacts.push_back(stringFact);
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(
+      stringFact.semanticNodeId, 1);
+  const primec::ir_lowerer::SemanticProductIndex semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  stringNameTarget.semanticNodeId = scalarFact.semanticNodeId;
+  error = "unchanged";
+  CHECK(primec::ir_lowerer::classifyAccessTargetSemanticStringKind(
+            stringNameTarget, &semanticProgram, &semanticIndex) ==
+        primec::ir_lowerer::SemanticStringAccessTargetKind::NonString);
+  CHECK(primec::ir_lowerer::validateNonLiteralStringAccessTarget(
+            stringNameTarget,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return Kind::Unknown; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            error,
+            &semanticProgram,
+            &semanticIndex) == Result::Continue);
+  CHECK(error == "unchanged");
+
+  stringNameTarget.semanticNodeId = stringFact.semanticNodeId;
+  error.clear();
+  CHECK(primec::ir_lowerer::classifyAccessTargetSemanticStringKind(
+            stringNameTarget, &semanticProgram, &semanticIndex) ==
+        primec::ir_lowerer::SemanticStringAccessTargetKind::String);
+  CHECK(primec::ir_lowerer::validateNonLiteralStringAccessTarget(
+            stringNameTarget,
+            primec::ir_lowerer::LocalMap{},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return Kind::Unknown; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            error,
+            &semanticProgram,
+            &semanticIndex) == Result::Error);
+  CHECK(error == "native backend only supports indexing into string literals or string bindings");
+
   error.clear();
   CHECK(primec::ir_lowerer::validateNonLiteralStringAccessTarget(
             stringNameTarget,

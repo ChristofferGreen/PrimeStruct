@@ -215,8 +215,16 @@ DynamicStringAccessEmitResult tryEmitDynamicStringAccessLoad(
     const SemanticProgram *semanticProgram,
     const SemanticProductIndex *semanticIndex) {
   bool isRuntimeStringTarget = false;
+  const SemanticStringAccessTargetKind semanticTargetKind =
+      classifyAccessTargetSemanticStringKind(targetExpr, semanticProgram, semanticIndex);
+  if (semanticTargetKind == SemanticStringAccessTargetKind::NonString) {
+    return DynamicStringAccessEmitResult::NotHandled;
+  }
   if (targetExpr.kind == Expr::Kind::Name) {
-    const LocalInfo::ValueKind targetKind = inferExprKind(targetExpr, localsIn);
+    const LocalInfo::ValueKind targetKind =
+        semanticTargetKind == SemanticStringAccessTargetKind::String
+            ? LocalInfo::ValueKind::String
+            : inferExprKind(targetExpr, localsIn);
     if (targetKind != LocalInfo::ValueKind::Unknown &&
         targetKind != LocalInfo::ValueKind::String) {
       return DynamicStringAccessEmitResult::NotHandled;
@@ -245,7 +253,9 @@ DynamicStringAccessEmitResult tryEmitDynamicStringAccessLoad(
         return DynamicStringAccessEmitResult::Error;
       }
     }
-    isRuntimeStringTarget = inferExprKind(targetExpr, localsIn) == LocalInfo::ValueKind::String;
+    isRuntimeStringTarget =
+        semanticTargetKind == SemanticStringAccessTargetKind::String ||
+        inferExprKind(targetExpr, localsIn) == LocalInfo::ValueKind::String;
   }
 
   if (!isRuntimeStringTarget || stringTableCount == 0) {
@@ -577,7 +587,8 @@ bool emitBuiltinArrayAccess(
   }
 
   const auto nonLiteralStringTargetResult =
-      validateNonLiteralStringAccessTarget(targetExpr, localsIn, inferExprKind, isEntryArgsName, error);
+      validateNonLiteralStringAccessTarget(
+          targetExpr, localsIn, inferExprKind, isEntryArgsName, error, semanticProgram, semanticIndex);
   if (nonLiteralStringTargetResult == NonLiteralStringAccessTargetResult::Stop) {
     return false;
   }
