@@ -743,6 +743,9 @@ Task template:
     The lowerer unresolved builtin method receiver slice is complete for
     semantic-product-backed receiver facts before stale local map/vector
     metadata can classify no-callee builtin method return kinds.
+    The lowerer direct vector-mutator receiver slice is complete for
+    semantic-product-backed receiver facts before stale local vector metadata
+    can choose direct helper receiver order or classify stale scalar targets.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for

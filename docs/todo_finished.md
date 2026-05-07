@@ -6,6 +6,33 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer vector mutator receiver facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes direct vector-mutator helper
+    receiver probing consume semantic-product receiver facts before stale
+    local vector metadata can choose helper receiver order or classify stale
+    scalar targets.
+  - acceptance:
+    - Published scalar binding facts suppress stale local vector receiver
+      metadata for direct vector-mutator helper calls.
+    - Published vector binding facts let reordered direct vector-mutator
+      calls select the graph-owned receiver instead of the stale first
+      candidate.
+    - Existing local vector and SoA receiver inference remains the
+      compatibility fallback when no semantic receiver fact is published.
+  - stop_rule: Stop once direct vector-mutator helper receiver probing uses
+    published semantic receiver facts ahead of stale locals and focused tests
+    pin both reordered vector receiver selection and stale-only scalar
+    suppression.
+  - evidence: Made direct vector-mutator receiver probing consult
+    semantic-product collection facts before local vector metadata, skipped
+    stale scalar semantic receiver candidates before method resolution, added
+    focused `push(...)` stale-local coverage, ran `git diff --check`, and
+    skipped broad baseline validation per the lite workflow.
+
 - [x] TODO-4298: Prefer unresolved method receiver facts
   - owner: ai
   - created_at: 2026-04-28

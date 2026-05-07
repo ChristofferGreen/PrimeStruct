@@ -719,6 +719,12 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     return mapTargetInfoFor(candidate).isMapTarget;
   };
   auto isKnownVectorMutatorReceiverExpr = [&](const Expr &candidate) -> bool {
+    SemanticReturnKindTargetInfo semanticInfo;
+    if (resolveSemanticReturnKindTargetInfo(
+            candidate, semanticProgram, semanticIndex, semanticInfo)) {
+      return semanticInfo.arrayVectorInfo.isVectorTarget ||
+             semanticInfo.arrayVectorInfo.isSoaVector;
+    }
     if (candidate.kind != Expr::Kind::Name) {
       return false;
     }
@@ -809,6 +815,12 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
       appendReceiverIndex(i);
     }
   }
+  const bool hasAlternativeVectorMutatorReceiver =
+      probePositionalReorderedVectorMutatorReceiver &&
+      std::any_of(receiverIndices.begin(), receiverIndices.end(), [&](size_t index) {
+        return index > 0 && index < callExpr.args.size() &&
+               isKnownVectorMutatorReceiverExpr(callExpr.args[index]);
+      });
   const bool probePositionalReorderedAccessReceiver =
       (isAccessCall || isContainsCall) && !hasNamedArgsValue && callExpr.args.size() > 1 &&
       (callExpr.args.front().kind == Expr::Kind::Literal || callExpr.args.front().kind == Expr::Kind::BoolLiteral ||
@@ -843,10 +855,20 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   }
 
   for (size_t receiverIndex : receiverIndices) {
-    if (hasAlternativeCollectionReceiver && receiverIndex == 0) {
+    if ((hasAlternativeCollectionReceiver || hasAlternativeVectorMutatorReceiver) &&
+        receiverIndex == 0) {
       continue;
     }
     Expr methodExpr = buildMethodExprForReceiverIndex(receiverIndex);
+    if (isVectorMutatorCall) {
+      SemanticReturnKindTargetInfo semanticInfo;
+      if (resolveSemanticReturnKindTargetInfo(
+              methodExpr.args.front(), semanticProgram, semanticIndex, semanticInfo) &&
+          !semanticInfo.arrayVectorInfo.isVectorTarget &&
+          !semanticInfo.arrayVectorInfo.isSoaVector) {
+        continue;
+      }
+    }
     if (isAccessCall && !preferDeclaredAccessReturnKind) {
       const auto arrayVectorTargetInfo =
           arrayVectorTargetInfoFor(methodExpr.args.front());
