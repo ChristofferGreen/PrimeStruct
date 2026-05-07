@@ -553,6 +553,33 @@ TEST_CASE("ir lowerer call helpers resolve and validate map access targets") {
   CHECK(primec::ir_lowerer::validateMapAccessTargetInfo(resolved, "get", error));
   CHECK(error == "stale");
 
+  primec::ir_lowerer::LocalInfo staleMapInfo;
+  staleMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  staleMapInfo.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  staleMapInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals.emplace("staleSemanticMap", staleMapInfo);
+
+  primec::Expr semanticMapName;
+  semanticMapName.kind = primec::Expr::Kind::Name;
+  semanticMapName.name = "staleSemanticMap";
+  semanticMapName.semanticNodeId = 42;
+  bool semanticMapCallbackInvoked = false;
+  resolved = primec::ir_lowerer::resolveMapAccessTargetInfo(
+      semanticMapName,
+      locals,
+      [&](const primec::Expr &targetExpr, primec::ir_lowerer::MapAccessTargetInfo &targetInfoOut) {
+        semanticMapCallbackInvoked = true;
+        CHECK(targetExpr.semanticNodeId == 42);
+        targetInfoOut.isMapTarget = true;
+        targetInfoOut.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::String;
+        targetInfoOut.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Bool;
+        return true;
+      });
+  CHECK(semanticMapCallbackInvoked);
+  CHECK(resolved.isMapTarget);
+  CHECK(resolved.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::String);
+  CHECK(resolved.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+
   primec::ir_lowerer::MapAccessTargetInfo untyped;
   untyped.isMapTarget = true;
   untyped.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
@@ -933,6 +960,33 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   error.clear();
   CHECK(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(resolved, error));
   CHECK(error.empty());
+
+  LocalInfo staleVectorInfo;
+  staleVectorInfo.kind = LocalInfo::Kind::Vector;
+  staleVectorInfo.valueKind = Kind::Int32;
+  locals.emplace("staleSemanticVector", staleVectorInfo);
+
+  primec::Expr semanticVectorName;
+  semanticVectorName.kind = primec::Expr::Kind::Name;
+  semanticVectorName.name = "staleSemanticVector";
+  semanticVectorName.semanticNodeId = 77;
+  bool semanticVectorCallbackInvoked = false;
+  resolved = primec::ir_lowerer::resolveArrayVectorAccessTargetInfo(
+      semanticVectorName,
+      locals,
+      [&](const primec::Expr &targetExpr,
+          primec::ir_lowerer::ArrayVectorAccessTargetInfo &targetInfoOut) {
+        semanticVectorCallbackInvoked = true;
+        CHECK(targetExpr.semanticNodeId == 77);
+        targetInfoOut.isArrayOrVectorTarget = true;
+        targetInfoOut.isVectorTarget = true;
+        targetInfoOut.elemKind = Kind::Float64;
+        return true;
+      });
+  CHECK(semanticVectorCallbackInvoked);
+  CHECK(resolved.isArrayOrVectorTarget);
+  CHECK(resolved.isVectorTarget);
+  CHECK(resolved.elemKind == Kind::Float64);
 
   resolved = primec::ir_lowerer::resolveArrayVectorAccessTargetInfo(plain, locals);
   CHECK_FALSE(resolved.isArrayOrVectorTarget);

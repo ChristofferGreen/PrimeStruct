@@ -6,6 +6,29 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer access target facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that lets direct-name map and
+    array/vector access-target helpers consult semantic-ID callback facts
+    before stale `LocalInfo` collection metadata can answer.
+  - acceptance:
+    - Semantic-ID map names prefer callback-supplied key/value kinds over
+      stale local map metadata.
+    - Semantic-ID array/vector names prefer callback-supplied element and
+      receiver shape facts over stale local vector metadata.
+    - Non-semantic direct-name fallback behavior remains on the legacy local
+      metadata path.
+  - stop_rule: Stop once shared access-target resolution honors graph-backed
+    callback authority for direct-name map and array/vector targets, with
+    focused helper tests pinning stale-local suppression.
+  - evidence: Moved semantic-ID callback resolution ahead of local metadata
+    for map and array/vector direct-name access targets, added focused helper
+    coverage for stale map/vector locals, and skipped broad baseline
+    validation per the lite workflow.
+
 - [x] TODO-4298: Use mutation target facts
   - owner: ai
   - created_at: 2026-04-28

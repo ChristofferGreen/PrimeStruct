@@ -722,6 +722,9 @@ Task template:
     semantic-product-backed binding, local-auto, and query scalar/reference
     facts before stale local mutation metadata can classify
     `increment(...)`/`decrement(...)` targets.
+    The lowerer access-target callback authority slice is complete for
+    semantic-ID map and array/vector direct-name targets before stale local
+    collection metadata can classify access helpers.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for

@@ -426,6 +426,12 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
     return true;
   };
   if (target.kind == Expr::Kind::Name) {
+    if (target.semanticNodeId != 0 && resolveCallMapAccessTargetInfo) {
+      MapAccessTargetInfo inferred;
+      if (resolveCallMapAccessTargetInfo(target, inferred)) {
+        return inferred;
+      }
+    }
     auto it = localsIn.find(target.name);
     if (it != localsIn.end()) {
       populateFromDirectLocal(it->second, false);
@@ -720,6 +726,12 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     return false;
   };
   if (target.kind == Expr::Kind::Name) {
+    if (target.semanticNodeId != 0 && resolveCallArrayVectorAccessTargetInfo) {
+      ArrayVectorAccessTargetInfo inferred;
+      if (resolveCallArrayVectorAccessTargetInfo(target, inferred)) {
+        return inferred;
+      }
+    }
     auto it = localsIn.find(target.name);
     if (it != localsIn.end() && populateFromArgsPackLocal(it->second, false)) {
       return info;
