@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Use mutation target facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes native
+    `increment(...)`/`decrement(...)` named target value-kind classification
+    consume published binding, local-auto, and query scalar/reference facts
+    before stale `LocalInfo` mutation metadata can answer.
+  - acceptance:
+    - Published binding type IDs suppress stale local numeric mutation targets
+      when the graph-owned type is non-numeric.
+    - Published local-auto type IDs classify direct scalar mutation targets
+      before stale local value metadata.
+    - Published query type IDs classify `Reference<T>` mutation targets
+      before stale local reference value metadata.
+  - stop_rule: Stop once native named mutation target inference depends on
+    graph-owned facts and focused tests pin stale-local suppression plus
+    scalar and reference opcode selection.
+  - evidence: Added semantic-product mutation target value-kind lookup to
+    native `increment(...)`/`decrement(...)` lowering, covered
+    binding/local-auto/query facts before stale locals, and skipped broad
+    baseline validation per the lite workflow.
+
 - [x] TODO-4298: Use buffer facts for load operands
   - owner: ai
   - created_at: 2026-04-28

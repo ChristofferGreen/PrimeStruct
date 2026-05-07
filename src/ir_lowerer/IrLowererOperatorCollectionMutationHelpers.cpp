@@ -1,9 +1,12 @@
 #include "IrLowererOperatorConversionsAndCallsInternal.h"
 
+#include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererCallHelpers.h"
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererIndexKindHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
 #include "primec/SoaPathHelpers.h"
 
 #include <algorithm>
@@ -11,6 +14,7 @@
 #include <limits>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 namespace primec::ir_lowerer {
 namespace {
@@ -74,6 +78,66 @@ bool areCompatibleInternalSoaStoragePaths(const std::string &lhs, const std::str
 bool areCompatibleStructPaths(const std::string &lhs, const std::string &rhs) {
   return lhs == rhs || (isVectorStructPath(lhs) && isVectorStructPath(rhs)) ||
          areCompatibleInternalSoaStoragePaths(lhs, rhs);
+}
+
+LocalInfo::ValueKind scalarMutationValueKindFromTypeText(
+    const std::string &typeText,
+    const ConversionsAndCallsValueKindFromTypeNameFn &valueKindFromTypeName) {
+  const std::string normalizedType = trimTemplateTypeText(typeText);
+  std::string base;
+  std::string argText;
+  if (splitTemplateTypeName(normalizedType, base, argText)) {
+    base = normalizeCollectionBindingTypeName(trimTemplateTypeText(base));
+    if (base == "Reference" || base == "Pointer") {
+      std::vector<std::string> args;
+      if (!splitTemplateArgs(argText, args) || args.size() != 1) {
+        return LocalInfo::ValueKind::Unknown;
+      }
+      return scalarMutationValueKindFromTypeText(args.front(), valueKindFromTypeName);
+    }
+    return LocalInfo::ValueKind::Unknown;
+  }
+  return valueKindFromTypeName(normalizedType);
+}
+
+bool inferSemanticMutationTargetValueKind(
+    const Expr &expr,
+    const SemanticProductTargetAdapter *semanticProductTargets,
+    const ConversionsAndCallsValueKindFromTypeNameFn &valueKindFromTypeName,
+    LocalInfo::ValueKind &kindOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  if (expr.kind != Expr::Kind::Name || semanticProductTargets == nullptr ||
+      !semanticProductTargets->hasSemanticProduct ||
+      semanticProductTargets->semanticProgram == nullptr || expr.semanticNodeId == 0) {
+    return false;
+  }
+  const SemanticProgram *semanticProgram = semanticProductTargets->semanticProgram;
+  if (const auto *bindingFact = findSemanticProductBindingFact(*semanticProductTargets, expr)) {
+    kindOut = scalarMutationValueKindFromTypeText(
+        resolveSemanticProductTypeText(
+            semanticProgram, bindingFact->bindingTypeText, bindingFact->bindingTypeTextId),
+        valueKindFromTypeName);
+    return true;
+  }
+  if (const auto *localAutoFact =
+          findSemanticProductLocalAutoFactBySemanticId(*semanticProductTargets, expr)) {
+    kindOut = scalarMutationValueKindFromTypeText(
+        resolveSemanticProductTypeText(
+            semanticProgram, localAutoFact->bindingTypeText, localAutoFact->bindingTypeTextId),
+        valueKindFromTypeName);
+    return true;
+  }
+  if (const auto *queryFact = findSemanticProductQueryFactBySemanticId(*semanticProductTargets, expr)) {
+    std::string typeText = resolveSemanticProductTypeText(
+        semanticProgram, queryFact->queryTypeText, queryFact->queryTypeTextId);
+    if (typeText.empty()) {
+      typeText = resolveSemanticProductTypeText(
+          semanticProgram, queryFact->bindingTypeText, queryFact->bindingTypeTextId);
+    }
+    kindOut = scalarMutationValueKindFromTypeText(typeText, valueKindFromTypeName);
+    return true;
+  }
+  return false;
 }
 
 } // namespace
@@ -498,7 +562,19 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
       return false;
     }
     const Expr &target = expr.args.front();
+    auto validateDeltaKind = [&](LocalInfo::ValueKind kind) -> bool {
+      if (kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Int64 ||
+          kind == LocalInfo::ValueKind::UInt64 || kind == LocalInfo::ValueKind::Float64 ||
+          kind == LocalInfo::ValueKind::Float32) {
+        return true;
+      }
+      error = std::string(mutateName) + " requires numeric operand";
+      return false;
+    };
     auto emitDelta = [&](LocalInfo::ValueKind kind) -> bool {
+      if (!validateDeltaKind(kind)) {
+        return false;
+      }
       if (kind == LocalInfo::ValueKind::Int32) {
         instructions.push_back({IrOpcode::PushI32, 1});
         instructions.push_back({isIncrement ? IrOpcode::AddI32 : IrOpcode::SubI32, 0});
@@ -525,7 +601,6 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         instructions.push_back({isIncrement ? IrOpcode::AddF32 : IrOpcode::SubF32, 0});
         return true;
       }
-      error = std::string(mutateName) + " requires numeric operand";
       return false;
     };
     if (target.kind == Expr::Kind::Name) {
@@ -538,13 +613,22 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         error = std::string(mutateName) + " target must be mutable: " + target.name;
         return false;
       }
+      LocalInfo::ValueKind targetValueKind = it->second.valueKind;
+      LocalInfo::ValueKind semanticValueKind = LocalInfo::ValueKind::Unknown;
+      if (inferSemanticMutationTargetValueKind(
+              target, context.semanticProductTargets, valueKindFromTypeName, semanticValueKind)) {
+        targetValueKind = semanticValueKind;
+      }
       if (it->second.kind == LocalInfo::Kind::Reference) {
+        if (!validateDeltaKind(targetValueKind)) {
+          return false;
+        }
         const int32_t ptrLocal = allocTempLocal();
         instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
         instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
         instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
         instructions.push_back({IrOpcode::LoadIndirect, 0});
-        if (!emitDelta(it->second.valueKind)) {
+        if (!emitDelta(targetValueKind)) {
           return false;
         }
         const int32_t valueLocal = allocTempLocal();
@@ -558,8 +642,11 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         error = std::string(mutateName) + " target must be a mutable binding";
         return false;
       }
+      if (!validateDeltaKind(targetValueKind)) {
+        return false;
+      }
       instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
-      if (!emitDelta(it->second.valueKind)) {
+      if (!emitDelta(targetValueKind)) {
         return false;
       }
       instructions.push_back({IrOpcode::Dup, 0});

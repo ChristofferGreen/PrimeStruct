@@ -59,6 +59,173 @@ TEST_CASE("ir lowerer conversions helper rejects immutable assign target") {
   CHECK(error == "assign target must be mutable: x");
 }
 
+TEST_CASE("ir lowerer conversions helper uses semantic mutation target facts before stale locals") {
+  using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::SemanticProgram semanticProgram;
+  auto intern = [](primec::SemanticProgram &program, const std::string &text) {
+    return primec::semanticProgramInternCallTargetString(program, text);
+  };
+  auto addBindingFact = [&](uint64_t semanticNodeId,
+                            const std::string &name,
+                            const std::string &typeText) {
+    primec::SemanticProgramBindingFact fact;
+    fact.scopePath = "/main";
+    fact.siteKind = "local";
+    fact.name = name;
+    fact.bindingTypeText = typeText;
+    fact.semanticNodeId = semanticNodeId;
+    fact.scopePathId = intern(semanticProgram, "/main");
+    fact.siteKindId = intern(semanticProgram, "local");
+    fact.nameId = intern(semanticProgram, name);
+    fact.bindingTypeTextId = intern(semanticProgram, typeText);
+    const size_t index = semanticProgram.bindingFacts.size();
+    semanticProgram.bindingFacts.push_back(fact);
+    semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr
+        .insert_or_assign(semanticNodeId, index);
+  };
+  auto addLocalAutoFact = [&](uint64_t semanticNodeId,
+                              const std::string &name,
+                              const std::string &typeText) {
+    primec::SemanticProgramLocalAutoFact fact;
+    fact.scopePath = "/main";
+    fact.bindingName = name;
+    fact.bindingTypeText = typeText;
+    fact.initializerBindingTypeText = typeText;
+    fact.semanticNodeId = semanticNodeId;
+    fact.scopePathId = intern(semanticProgram, "/main");
+    fact.bindingNameId = intern(semanticProgram, name);
+    fact.bindingTypeTextId = intern(semanticProgram, typeText);
+    const size_t index = semanticProgram.localAutoFacts.size();
+    semanticProgram.localAutoFacts.push_back(fact);
+    semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr
+        .insert_or_assign(semanticNodeId, index);
+  };
+  auto addQueryFact = [&](uint64_t semanticNodeId,
+                          const std::string &name,
+                          const std::string &typeText) {
+    primec::SemanticProgramQueryFact fact;
+    fact.scopePath = "/main";
+    fact.callName = name;
+    fact.queryTypeText = typeText;
+    fact.bindingTypeText = typeText;
+    fact.semanticNodeId = semanticNodeId;
+    fact.scopePathId = intern(semanticProgram, "/main");
+    fact.callNameId = intern(semanticProgram, name);
+    fact.resolvedPathId = intern(semanticProgram, "/main/" + name);
+    fact.queryTypeTextId = intern(semanticProgram, typeText);
+    fact.bindingTypeTextId = intern(semanticProgram, typeText);
+    const size_t index = semanticProgram.queryFacts.size();
+    semanticProgram.queryFacts.push_back(fact);
+    semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr
+        .insert_or_assign(semanticNodeId, index);
+  };
+
+  addBindingFact(9201, "staleScalar", "string");
+  addLocalAutoFact(9202, "semanticScalar", "f32");
+  addQueryFact(9203, "semanticRef", "Reference<f64>");
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+
+  primec::ir_lowerer::LocalMap locals;
+  auto addLocal = [&](const std::string &name,
+                      primec::ir_lowerer::LocalInfo::Kind kind,
+                      Kind valueKind,
+                      int32_t index) {
+    primec::ir_lowerer::LocalInfo info;
+    info.kind = kind;
+    info.valueKind = valueKind;
+    info.index = index;
+    info.isMutable = true;
+    locals.emplace(name, info);
+  };
+  addLocal("staleScalar", primec::ir_lowerer::LocalInfo::Kind::Value, Kind::Int32, 3);
+  addLocal("semanticScalar", primec::ir_lowerer::LocalInfo::Kind::Value, Kind::Int32, 4);
+  addLocal("semanticRef", primec::ir_lowerer::LocalInfo::Kind::Reference, Kind::Int32, 5);
+
+  auto makeMutation = [](const std::string &callName,
+                         const std::string &targetName,
+                         uint64_t semanticNodeId) {
+    primec::Expr target;
+    target.kind = primec::Expr::Kind::Name;
+    target.name = targetName;
+    target.semanticNodeId = semanticNodeId;
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = callName;
+    expr.args = {target};
+    return expr;
+  };
+
+  auto emitMutation = [&](const primec::Expr &expr,
+                          std::vector<primec::IrInstruction> &instructions,
+                          std::string &error) {
+    bool handled = false;
+    int32_t nextLocal = 20;
+    return primec::ir_lowerer::emitConversionsAndCallsOperatorExpr(
+        expr,
+        locals,
+        nextLocal,
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+        },
+        [](primec::ir_lowerer::LocalInfo::ValueKind, bool) { return true; },
+        [&]() { return nextLocal++; },
+        []() {},
+        []() {},
+        []() {},
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+          return false;
+        },
+        [](const std::string &typeName) {
+          return primec::ir_lowerer::valueKindFromTypeName(typeName);
+        },
+        [](const std::string &, std::string &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+        [](const std::string &, const std::string &, std::string &) { return false; },
+        [](const std::string &, int32_t &) { return false; },
+        [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) {
+          return false;
+        },
+        [](int32_t, int32_t, int32_t) { return false; },
+        instructions,
+        handled,
+        error,
+        [](const primec::Expr &) { return static_cast<const primec::Definition *>(nullptr); },
+        &semanticTargets);
+  };
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  CHECK_FALSE(emitMutation(makeMutation("increment", "staleScalar", 9201), instructions, error));
+  CHECK(error == "increment requires numeric operand");
+  CHECK(instructions.empty());
+
+  error.clear();
+  instructions.clear();
+  CHECK(emitMutation(makeMutation("increment", "semanticScalar", 9202), instructions, error));
+  CHECK(error.empty());
+  REQUIRE(instructions.size() == 5);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 4u);
+  CHECK(instructions[1].op == primec::IrOpcode::PushF32);
+  CHECK(instructions[2].op == primec::IrOpcode::AddF32);
+  CHECK(instructions[4].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[4].imm == 4u);
+
+  error.clear();
+  instructions.clear();
+  CHECK(emitMutation(makeMutation("decrement", "semanticRef", 9203), instructions, error));
+  CHECK(error.empty());
+  REQUIRE(instructions.size() == 10);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 5u);
+  CHECK(instructions[4].op == primec::IrOpcode::PushF64);
+  CHECK(instructions[5].op == primec::IrOpcode::SubF64);
+  CHECK(instructions.back().op == primec::IrOpcode::StoreIndirect);
+}
+
 TEST_CASE("ir lowerer conversions helper assigns compatible internal soa storage aliases") {
   primec::Expr target;
   target.kind = primec::Expr::Kind::Name;

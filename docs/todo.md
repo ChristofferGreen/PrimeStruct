@@ -718,6 +718,10 @@ Task template:
     semantic-product-backed binding, local-auto, and query `Buffer<T>` facts
     before stale local buffer metadata can classify `buffer_load(...)`
     operands.
+    The lowerer mutation target value-kind slice is complete for
+    semantic-product-backed binding, local-auto, and query scalar/reference
+    facts before stale local mutation metadata can classify
+    `increment(...)`/`decrement(...)` targets.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
