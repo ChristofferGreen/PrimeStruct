@@ -551,10 +551,14 @@ VectorStatementHelperPrepareResult prepareVectorStatementHelperCall(
     return VectorStatementHelperPrepareResult::NotMatched;
   }
   const std::string qualifiedHelperName = normalizeQualifiedHelperName(stmt);
+  const bool explicitCanonicalVectorHelperPath =
+      !stmt.isMethodCall && qualifiedHelperName.rfind("std/collections/vector/", 0) == 0;
+  if (explicitCanonicalVectorHelperPath) {
+    return VectorStatementHelperPrepareResult::NotMatched;
+  }
   const bool explicitVectorHelperPath =
       !stmt.isMethodCall &&
-      (qualifiedHelperName.rfind("std/collections/vector/", 0) == 0 ||
-       qualifiedHelperName.rfind("std/collections/vectorPush", 0) == 0 ||
+      (qualifiedHelperName.rfind("std/collections/vectorPush", 0) == 0 ||
        qualifiedHelperName.rfind("std/collections/vectorPop", 0) == 0 ||
        qualifiedHelperName.rfind("std/collections/vectorReserve", 0) == 0 ||
        qualifiedHelperName.rfind("std/collections/vectorClear", 0) == 0 ||

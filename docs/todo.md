@@ -72,10 +72,12 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4294: Lower vector helpers through ordinary `.prime`
+- TODO-4369: Route canonical vector read helpers through `.prime`
 
 ### Immediate Next 10 (After Ready Now)
 
+- TODO-4370: Route vector compatibility mutators through `.prime`
+- TODO-4371: Remove hard-coded vector layout lowering
 - TODO-4281: Lift vector dynamic capacity limit
 - TODO-4295: Move collection surface metadata out of C++
 - TODO-4296: Delete vector compatibility seams
@@ -90,8 +92,8 @@ Task template:
 - Semantic ownership authority: none active; future semantic-authority work
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
-- Vector stdlib ownership cutover: TODO-4294 -> TODO-4281
-  -> TODO-4295 -> TODO-4296 -> TODO-4297
+- Vector stdlib ownership cutover: TODO-4369 -> TODO-4370
+  -> TODO-4371 -> TODO-4281 -> TODO-4295 -> TODO-4296 -> TODO-4297
 - Map stdlib ownership cutover: TODO-4299 -> TODO-4300 -> TODO-4301
   -> TODO-4302 -> TODO-4303 -> TODO-4304
 - SoA public surface rename and ownership cutover: TODO-4305 -> TODO-4306
@@ -110,7 +112,9 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4294: Lower vector helpers through ordinary `.prime`
+- TODO-4369: Route canonical vector read helpers through `.prime`
+- TODO-4370: Route vector compatibility mutators through `.prime`
+- TODO-4371: Remove hard-coded vector layout lowering
 - TODO-4281: Lift vector dynamic capacity limit
 - TODO-4295: Move collection surface metadata out of C++
 - TODO-4296: Delete vector compatibility seams
@@ -177,7 +181,7 @@ Task template:
 | Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4299, TODO-4305 |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4295, TODO-4296, TODO-4297, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4294, TODO-4281, TODO-4295, TODO-4296, TODO-4297, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4369, TODO-4370, TODO-4371, TODO-4281, TODO-4295, TODO-4296, TODO-4297, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4296, TODO-4297, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Validator entrypoint and benchmark-plumbing split | none |
@@ -207,7 +211,7 @@ Task template:
 | Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
-| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4294, TODO-4281, TODO-4295, TODO-4296, TODO-4297, TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4369, TODO-4370, TODO-4371, TODO-4281, TODO-4295, TODO-4296, TODO-4297, TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
 | De-experimentalization surface and namespace parity | TODO-4296, TODO-4297, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Focused backend rerun ergonomics and suite partitioning | none |
@@ -234,9 +238,10 @@ Task template:
   `vectorCount` / `mapCount`-style lowering names, and
   `/std/collections/experimental_*` implementation modules stay temporary.
   The vector/map adapter cutover is complete for semantic and
-  template-monomorph helper decisions. TODO-4294 through TODO-4297 split the
-  remaining vector half of that seam into ordinary `.prime` lowering, metadata
-  extraction, compatibility deletion, and a final zero-C++-vector audit.
+  template-monomorph helper decisions. TODO-4369 through TODO-4371 finish the
+  remaining ordinary `.prime` vector-lowering cutover before TODO-4281 and
+  TODO-4295 through TODO-4297 handle capacity widening, metadata extraction,
+  compatibility deletion, and a final zero-C++-vector audit.
   TODO-4299 through TODO-4304 apply the same ownership model to map while
   keeping map-specific lookup, insertion, `Result<ContainerError>`, and key
   comparability policy explicit.
@@ -1634,56 +1639,114 @@ Task template:
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
 
-- [ ] TODO-4294: Lower vector helpers through ordinary `.prime`
+- [ ] TODO-4369: Route canonical vector read helpers through `.prime`
   - owner: ai
-  - created_at: 2026-04-28
+  - created_at: 2026-05-07
   - phase: Vector stdlib ownership cutover
-  - scope: Route canonical vector helper behavior through imported `.prime`
-    helper bodies over the generic storage substrate instead of vector-specific
-    semantic/lowering fast paths.
+  - scope: Route canonical `/std/collections/vector/count`, `capacity`,
+    `at`, and `at_unsafe` expression and method behavior through imported
+    `.prime` helper bodies instead of vector-specific read/access fast paths.
   - implementation_notes:
-    - Start from `src/semantics/SemanticsValidatorCollectionHelperRewrites.cpp`,
-      `src/semantics/SemanticsValidatorStatement.cpp`,
-      `src/ir_lowerer/IrLowererFlowVectorHelpers.cpp`,
+    - Start from `src/ir_lowerer/IrLowererCountAccessClassifiers.cpp`,
+      `src/ir_lowerer/IrLowererCountAccessHelpers.cpp`,
+      `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`,
+      `src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp`,
       `src/ir_lowerer/IrLowererOperatorCollectionMutationHelpers.cpp`,
-      `src/ir_lowerer/IrLowererStructSlotLayoutHelpers.cpp`,
-      `src/ir_lowerer/IrLowererCountAccessClassifiers.cpp`, and the vector
-      import/mutator/source-lock tests.
-    - Preserve user-visible canonical helper behavior while shrinking
-      production C++ to generic call resolution, field/layout metadata,
-      buffer/lifecycle primitives, and compatibility diagnostics.
-    - Keep rooted `/vector/*`, `vectorCount`-style names, and direct
-      experimental imports working only as temporary compatibility paths until
-      TODO-4296.
+      and the vector import/access/source-lock tests.
+    - Preserve user-visible canonical helper behavior and diagnostics while
+      keeping rooted `/vector/*`, `vectorCount`-style names, and direct
+      experimental imports as temporary compatibility paths until TODO-4296.
   - acceptance:
-    - Canonical `/std/collections/vector/*` `count`, `capacity`, `at`,
-      `at_unsafe`, `push`, `pop`, `reserve`, `clear`, `remove_at`, and
-      `remove_swap` run through ordinary `.prime` helper lowering on VM/native
-      for the supported element kinds.
-    - Production C++ no longer emits vector push/pop/reserve/remove semantics by
-      matching vector helper paths or builtin vector names.
+    - Canonical vector `count`, `capacity`, `at`, and `at_unsafe` direct calls
+      and method calls resolve through visible `.prime` definitions for
+      VM/native lowering rather than raw vector count/access emitters.
+    - Rooted `/vector/*`, `vectorCount`/`vectorAt`-style compatibility, and
+      direct experimental-vector imports continue only as compatibility seams
+      until TODO-4296.
+    - Tests distinguish canonical `.prime` read/access routing from retained
+      compatibility fallbacks and source locks list the remaining vector C++
+      read/access traces.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once canonical read/access helpers no longer depend on
+    vector-specific count/access emitters; leave compatibility mutators,
+    layout hard-code removal, capacity widening, metadata extraction, and
+    compatibility deletion to follow-up leaves.
+
+- [ ] TODO-4370: Route vector compatibility mutators through `.prime`
+  - owner: ai
+  - created_at: 2026-05-07
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4369
+  - scope: Shrink remaining vector mutator statement-helper emission to
+    ordinary `.prime` helper calls or explicitly retained compatibility shims,
+    covering `push`, `pop`, `reserve`, `clear`, `remove_at`, and
+    `remove_swap`.
+  - implementation_notes:
+    - Start from `src/ir_lowerer/IrLowererFlowVectorHelpers.cpp`,
+      `src/ir_lowerer/IrLowererFlowVectorResolutionHelpers.cpp`,
+      `src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp`,
+      `stdlib/std/collections/internal_vector.prime`, and VM/native mutator
+      conformance tests for owned elements and runtime diagnostics.
+    - Canonical `/std/collections/vector/*` statement calls are already fenced
+      to ordinary `.prime` definitions; this leaf owns the remaining
+      compatibility forms such as `/std/collections/vectorPush`,
+      `vectorPop`, and rooted `/vector/*` where they still need staged support.
+  - acceptance:
+    - VM/native lowering no longer emits canonical or compatibility vector
+      mutator behavior by matching helper paths when an ordinary `.prime`
+      helper body can be called instead.
+    - Retained compatibility names are either ordinary `.prime` wrappers or
+      narrowly documented temporary shims for TODO-4296 deletion.
+    - Runtime diagnostics for empty pop, checked removal/index failures,
+      negative reserve, capacity exceedance, and owned-element destruction stay
+      stable.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once vector mutator statement behavior no longer depends on
+    handwritten vector-specific emitters except for explicitly documented
+    compatibility shims owned by TODO-4296.
+
+- [ ] TODO-4371: Remove hard-coded vector layout lowering
+  - owner: ai
+  - created_at: 2026-05-07
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4370
+  - scope: Remove the remaining hard-coded vector header/data-pointer layout
+    assumptions from lowering after canonical read/access and mutator helpers
+    route through ordinary `.prime` helper bodies.
+  - implementation_notes:
+    - Start from `src/ir_lowerer/IrLowererFlowVectorHelpers.cpp`,
+      `src/ir_lowerer/IrLowererStructSlotLayoutHelpers.cpp`,
+      `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`,
+      `src/ir_lowerer/IrLowererOperatorCollectionMutationHelpers.cpp`, and
+      layout/source-lock tests that mention vector count/capacity/data offsets.
+    - Prefer ordinary struct metadata and generic storage/lifecycle substrate
+      facts over dedicated vector header offsets.
+  - acceptance:
     - Vector layout used by lowering comes from ordinary struct metadata or the
       generic storage substrate, not a hard-coded vector header special case.
     - Any remaining vector strings in production C++ are declarative surface
-      metadata or compatibility diagnostics, and are listed for removal in
+      metadata or compatibility diagnostics and are listed for removal in
       TODO-4295/TODO-4296.
+    - Existing vector construction, access, mutation, destruction, and import
+      conformance remains behavior-compatible.
     - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once canonical vector helpers no longer depend on
-    vector-specific semantic/lowering emission; leave capacity widening and
-    compatibility deletion to TODO-4281, TODO-4295, and TODO-4296.
+  - stop_rule: Stop once vector-specific layout offsets are absent from
+    production lowering code; leave capacity widening, metadata extraction,
+    compatibility deletion, and zero-trace audit to TODO-4281 and TODO-4295
+    through TODO-4297.
 
 - [ ] TODO-4281: Lift vector dynamic capacity limit
   - owner: ai
   - created_at: 2026-04-28
   - phase: Vector stdlib ownership cutover
-  - depends_on: TODO-4294
+  - depends_on: TODO-4371
   - scope: Lift the current VM/native vector local dynamic-capacity limit
     beyond `256` after vector growth has been routed through ordinary `.prime`
     helpers over the generic contiguous-storage substrate.
   - implementation_notes:
     - Start from `src/ir_lowerer/IrLowererHelpers.{h,cpp}`,
       the completed generic storage/lifecycle substrate coverage plus
-      TODO-4294, `src/ir_lowerer/IrLowererFlowVectorHelpers.cpp` if any
+      TODO-4371, `src/ir_lowerer/IrLowererFlowVectorHelpers.cpp` if any
       compatibility path still exists,
       `src/ir_lowerer/IrLowererOperatorCollectionMutationHelpers.cpp`,
       `tests/unit/test_compile_run_vm_collections_vector_limits_a.cpp`, and
@@ -1709,7 +1772,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-28
   - phase: Vector stdlib ownership cutover
-  - depends_on: TODO-4294
+  - depends_on: TODO-4371
   - scope: Remove vector-specific public-surface knowledge from handwritten C++
     and generated production C++ by moving canonical vector
     helper/import/constructor metadata into a stdlib-owned manifest or

@@ -14437,3 +14437,65 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     docs and harness calls, removed TODO-4293 from active work, and promoted
     TODO-4294 to Ready Now. Local test execution was skipped per the lite
     workflow.
+
+- [x] TODO-4294: Split vector ordinary `.prime` lowering
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Vector stdlib ownership cutover
+  - scope: Replace the oversized active vector ordinary-lowering task with
+    bounded leaves for canonical read/access routing, compatibility mutator
+    routing, and vector layout hard-code removal.
+  - implementation_notes:
+    - Preserve the original goal of routing canonical vector behavior through
+      imported `.prime` helper bodies over the generic storage substrate.
+    - Keep capacity widening, metadata extraction, compatibility deletion, and
+      zero-C++-vector auditing as separate downstream leaves.
+  - acceptance:
+    - `docs/todo.md` no longer treats TODO-4294 as executable work.
+    - Remaining vector ordinary-lowering work is represented by concrete leaves
+      with explicit `scope`, `acceptance`, and `stop_rule`.
+    - The first split leaf is completed before reporting this run.
+  - stop_rule: Stop once the umbrella is absent from `docs/todo.md` and its
+    remaining work is represented by bounded active leaves.
+  - finished_at: 2026-05-07
+  - evidence: Removed TODO-4294 from active work, split the remaining vector
+    ordinary-lowering cutover into TODO-4369, TODO-4370, and TODO-4371, and
+    completed TODO-4368 as the first split leaf in this run. Local test
+    execution was skipped per the lite workflow.
+
+- [x] TODO-4368: Route canonical vector mutator statements through `.prime`
+  - owner: ai
+  - created_at: 2026-05-07
+  - phase: Vector stdlib ownership cutover
+  - scope: Stop treating explicit canonical
+    `/std/collections/vector/{push,pop,reserve,clear,remove_at,remove_swap}`
+    statement calls as vector statement-helper fast paths; let visible
+    `.prime` definitions own canonical behavior while retaining
+    `vectorPush`-style compatibility shims for later deletion.
+  - implementation_notes:
+    - Start from
+      `src/ir_lowerer/IrLowererFlowVectorResolutionHelpers.cpp`,
+      `tests/unit/test_ir_pipeline_validation_ir_lowerer_flow_helpers_skip_user_defined_vector_helper_names.cpp`,
+      canonical vector mutator compile-run coverage, and docs/source locks.
+    - Keep `/std/collections/vectorPush`-style compatibility statement helpers
+      working until TODO-4370/TODO-4296 decide whether each spelling becomes an
+      ordinary `.prime` wrapper or a removed compatibility diagnostic.
+  - acceptance:
+    - The vector statement-helper preparation path returns `NotMatched` for
+      explicit canonical `/std/collections/vector/*` mutator statement calls so
+      normal definition resolution can lower the imported `.prime` helper body.
+    - Legacy `/std/collections/vectorPush`-style compatibility calls still hit
+      the temporary statement-helper path until their dedicated follow-up.
+    - Docs and source-lock tests record the split and the remaining vector
+      lowering leaves.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once canonical vector mutator statement calls no longer
+    enter `tryEmitVectorStatementHelper`, with compatibility names left as a
+    documented follow-up.
+  - finished_at: 2026-05-07
+  - evidence: Fenced explicit canonical `/std/collections/vector/*` mutator
+    statements out of `prepareVectorStatementHelperCall`, updated direct
+    lowerer unit coverage to expect `NotMatched` for canonical direct and
+    namespaced forms, kept `/std/collections/vectorPush` compatibility
+    emission source-locked, documented the behavior, and promoted TODO-4369 to
+    Ready Now. Local test execution was skipped per the lite workflow.

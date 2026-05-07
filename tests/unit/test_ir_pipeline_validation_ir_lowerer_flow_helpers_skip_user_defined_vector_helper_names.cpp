@@ -115,9 +115,9 @@ TEST_CASE("ir lowerer flow helpers skip user-defined vector helper names") {
             [] {},
             [] {},
             [] {},
-            error) == EmitResult::Emitted);
+            error) == EmitResult::NotMatched);
   CHECK(error.empty());
-  CHECK_FALSE(instructions.empty());
+  CHECK(instructions.empty());
   CHECK(vectorMethodProbeCalls == 0);
 
   primec::Expr namespacedStdlibPushCall = pushCall;
@@ -126,6 +126,36 @@ TEST_CASE("ir lowerer flow helpers skip user-defined vector helper names") {
   instructions.clear();
   CHECK(primec::ir_lowerer::tryEmitVectorStatementHelper(
             namespacedStdlibPushCall,
+            locals,
+            instructions,
+            [&]() { return nextTempLocal++; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [&](const primec::Expr &candidate) {
+              if (!candidate.isMethodCall || candidate.name != "push" || candidate.args.empty() ||
+                  candidate.args.front().kind != primec::Expr::Kind::Name ||
+                  candidate.args.front().name != "v") {
+                return false;
+              }
+              ++vectorMethodProbeCalls;
+              return true;
+            },
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            error) == EmitResult::NotMatched);
+  CHECK(error.empty());
+  CHECK(instructions.empty());
+  CHECK(vectorMethodProbeCalls == 0);
+
+  primec::Expr wrapperAliasPushCall = pushCall;
+  wrapperAliasPushCall.name = "/std/collections/vectorPush";
+  vectorMethodProbeCalls = 0;
+  instructions.clear();
+  CHECK(primec::ir_lowerer::tryEmitVectorStatementHelper(
+            wrapperAliasPushCall,
             locals,
             instructions,
             [&]() { return nextTempLocal++; },
