@@ -620,6 +620,9 @@ Task template:
     semantic-product-backed `count(dereference(target))` classification before
     stale reference/pointer collection metadata can classify dereferenced
     count targets.
+    The lowerer indexed count target fact slice is complete for
+    semantic-product-backed `count(at(args, i))` classification before stale
+    args-pack collection metadata can classify indexed count targets.
     The lowerer try operand Result fact slice is complete for
     semantic-product-backed `try(operand)` base-kind inference before
     stale local `isResult` or args-pack metadata can classify the operand's
@@ -942,6 +945,12 @@ Task template:
       can classify `count(dereference(...))`. Published non-collection or
       missing semantic-id facts suppress stale local metadata while syntax-only
       compatibility keeps the legacy dereference fallback.
+    - Completed slice: semantic-product-addressed indexed count target
+      classification now consumes published query collection facts before
+      stale local args-pack collection metadata can classify
+      `count(at(args, i))`. Published non-collection or missing semantic-id
+      facts suppress stale local metadata while syntax-only compatibility
+      keeps the legacy indexed args-pack fallback.
     - Completed slice: semantic-product-addressed native `Result.why(...)`
       direct-call sources now resolve interned query result-error IDs before
       copied query text, so stale duplicated error text cannot override the

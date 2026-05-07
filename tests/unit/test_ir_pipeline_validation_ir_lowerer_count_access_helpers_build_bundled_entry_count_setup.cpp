@@ -364,6 +364,97 @@ TEST_CASE("ir lowerer count access classifiers prefer semantic dereferenced targ
       makeCountCall(makeDeref(makeAt("syntaxArgs", 0))), locals));
 }
 
+TEST_CASE("ir lowerer count access classifiers prefer semantic indexed target facts") {
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      .scopePath = "/main",
+      .callName = "at",
+      .queryTypeText = "i32",
+      .semanticNodeId = 7301,
+      .queryTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "array<i32>"),
+  });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(7301, 0);
+  semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      .scopePath = "/main",
+      .callName = "at",
+      .queryTypeText = "array<i32>",
+      .semanticNodeId = 7302,
+      .queryTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+  });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(7302, 1);
+  semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      .scopePath = "/main",
+      .callName = "at",
+      .queryTypeText = "i32",
+      .semanticNodeId = 7303,
+      .queryTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "map<i32, string>"),
+  });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(7303, 2);
+
+  primec::ir_lowerer::EntryCountAccessSetup setup;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::buildEntryCountAccessSetup(entryDef, &semanticProgram, setup, error));
+  CHECK(error.empty());
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo staleScalarArgs;
+  staleScalarArgs.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  staleScalarArgs.isArgsPack = true;
+  staleScalarArgs.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  staleScalarArgs.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals.emplace("arrayArgs", staleScalarArgs);
+  locals.emplace("mapArgs", staleScalarArgs);
+  primec::ir_lowerer::LocalInfo staleCollectionArgs;
+  staleCollectionArgs.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  staleCollectionArgs.isArgsPack = true;
+  staleCollectionArgs.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  locals.emplace("scalarArgs", staleCollectionArgs);
+  locals.emplace("missingArgs", staleCollectionArgs);
+  locals.emplace("syntaxArgs", staleCollectionArgs);
+
+  auto makeName = [](const char *name) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Name;
+    expr.name = name;
+    return expr;
+  };
+  auto makeAt = [&](const char *name, uint64_t semanticNodeId) {
+    primec::Expr zeroIndex;
+    zeroIndex.kind = primec::Expr::Kind::Literal;
+    zeroIndex.literalValue = 0;
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = "at";
+    expr.args = {makeName(name), zeroIndex};
+    expr.semanticNodeId = semanticNodeId;
+    return expr;
+  };
+  auto makeCountCall = [](const primec::Expr &target) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = "count";
+    expr.args = {target};
+    return expr;
+  };
+
+  CHECK(setup.classifiers.isArrayCountCall(
+      makeCountCall(makeAt("arrayArgs", 7301)), locals));
+  CHECK_FALSE(setup.classifiers.isArrayCountCall(
+      makeCountCall(makeAt("scalarArgs", 7302)), locals));
+  CHECK(setup.classifiers.isArrayCountCall(
+      makeCountCall(makeAt("mapArgs", 7303)), locals));
+  CHECK_FALSE(setup.classifiers.isArrayCountCall(
+      makeCountCall(makeAt("missingArgs", 7399)), locals));
+  CHECK(setup.classifiers.isArrayCountCall(
+      makeCountCall(makeAt("syntaxArgs", 0)), locals));
+}
+
 TEST_CASE("ir lowerer capacity classifiers prefer semantic target facts") {
   primec::Definition entryDef;
   entryDef.fullPath = "/main";

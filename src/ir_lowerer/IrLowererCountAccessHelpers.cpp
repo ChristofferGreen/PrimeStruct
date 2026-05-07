@@ -793,7 +793,7 @@ bool isArrayCountCall(const Expr &expr,
   }
   SemanticCountTargetInfo semanticTargetInfo;
   const bool hasSemanticTargetInfo =
-      target.kind == Expr::Kind::Name && semanticProgram != nullptr &&
+      semanticProgram != nullptr &&
       semanticIndex != nullptr && target.semanticNodeId != 0 &&
       classifySemanticCountTarget(target, semanticProgram, semanticIndex, semanticTargetInfo);
   const std::string scopedExprPath = resolveScopedCallPath(expr);
