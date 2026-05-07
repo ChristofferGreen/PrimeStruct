@@ -1482,6 +1482,11 @@ Task template:
       non-string graph facts suppress stale string-table metadata; no-fact
       literal-backed metadata remains compatibility fallback for syntax-only
       paths.
+    - Completed slice: lowerer dispatch value-kind inference for bare names
+      now asks published binding, local-auto, and query type facts before
+      `LocalInfo` scalar metadata can answer. Published non-scalar facts
+      suppress stale local scalar kinds; no-fact names keep the syntax-only
+      local fallback.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.

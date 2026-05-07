@@ -1,5 +1,6 @@
 #include "IrLowererLowerInferenceSetup.h"
 
+#include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererLowerInferenceBaseKindHelpers.h"
 #include "IrLowererResultHelpers.h"
@@ -67,6 +68,39 @@ bool inferDispatchSetupResultValueKindFromResultTypeText(const std::string &type
     return false;
   }
   return inferDispatchSetupResultValueKindFromValueTypeText(resultArgs.front(), kindOut);
+}
+
+LocalInfo::ValueKind inferDispatchSetupNameValueKindFromTypeText(
+    const std::string &typeText) {
+  std::string normalizedType = trimTemplateTypeText(typeText);
+  bool resultHasValue = false;
+  LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
+  std::string resultErrorType;
+  if (parseResultTypeName(
+          normalizedType, resultHasValue, resultValueKind, resultErrorType)) {
+    return resultHasValue ? LocalInfo::ValueKind::Int64
+                          : LocalInfo::ValueKind::Int32;
+  }
+  std::string base;
+  std::string argText;
+  if (splitTemplateTypeName(normalizedType, base, argText)) {
+    base = normalizeCollectionBindingTypeName(trimTemplateTypeText(base));
+    std::vector<std::string> args;
+    if ((base == "Reference" || base == "Pointer") &&
+        splitTemplateArgs(argText, args) && args.size() == 1) {
+      return valueKindFromTypeName(trimTemplateTypeText(args.front()));
+    }
+    if (base == "Result") {
+      return splitTemplateArgs(argText, args) && args.size() == 1
+                 ? LocalInfo::ValueKind::Int32
+                 : LocalInfo::ValueKind::Int64;
+    }
+    if (base == "File") {
+      return LocalInfo::ValueKind::Int64;
+    }
+    return valueKindFromTypeName(base);
+  }
+  return valueKindFromTypeName(normalizeCollectionBindingTypeName(normalizedType));
 }
 
 bool isDispatchSetupResultTypeMethodCall(const Expr &expr) {
@@ -317,6 +351,23 @@ bool inferDispatchSetupSemanticBindingFactKind(const Expr &expr,
           bindingFact->bindingTypeText,
           bindingFact->bindingTypeTextId));
   return kindOut != LocalInfo::ValueKind::Unknown;
+}
+
+bool inferDispatchSetupSemanticNameKind(const Expr &expr,
+                                        const SemanticProgram *semanticProgram,
+                                        const SemanticProductIndex *semanticIndex,
+                                        LocalInfo::ValueKind &kindOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  if (expr.kind != Expr::Kind::Name) {
+    return false;
+  }
+  std::string typeText;
+  if (!resolveDispatchSetupSemanticReceiverTypeText(
+          expr, semanticProgram, semanticIndex, typeText)) {
+    return false;
+  }
+  kindOut = inferDispatchSetupNameValueKindFromTypeText(typeText);
+  return true;
 }
 
 bool inferDispatchSetupSemanticFileErrorWhyKind(const Expr &receiver,
@@ -1014,6 +1065,10 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
     };
 
     LocalInfo::ValueKind literalOrNameKind = LocalInfo::ValueKind::Unknown;
+    if (inferDispatchSetupSemanticNameKind(
+            expr, semanticProgram, semanticIndex, literalOrNameKind)) {
+      return literalOrNameKind;
+    }
     if (stateInOut.inferLiteralOrNameExprKind(expr, localsIn, literalOrNameKind)) {
       return literalOrNameKind;
     }

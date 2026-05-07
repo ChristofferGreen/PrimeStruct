@@ -5,6 +5,32 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Use name facts for value-kind dispatch
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes lowerer dispatch
+    value-kind inference classify bare name expressions from published
+    binding, local-auto, and query type facts before stale `LocalInfo` scalar
+    metadata can answer.
+  - acceptance:
+    - Published binding type IDs classify scalar bare names before local
+      scalar metadata.
+    - Published local-auto and query type IDs classify bare names before local
+      scalar metadata.
+    - Published non-scalar facts suppress stale local scalar fallback while
+      syntax-only names keep compatibility inference.
+  - stop_rule: Stop once native dispatch value-kind inference depends on
+    graph-owned binding/local-auto/query name facts and focused tests pin
+    graph-backed, stale-local, and syntax-only behavior.
+  - evidence: Added semantic-product name fact handling before
+    literal/local-name inference in the dispatch value-kind setup, covered
+    binding/local-auto/query facts, reference unwrapping, non-scalar stale
+    suppression, and syntax-only fallback, and skipped broad baseline
+    validation per the lite workflow.
+
 **Todo Completion (May 6, 2026)**
 - [x] TODO-4298: Use vector facts for mutator receivers
   - owner: ai
