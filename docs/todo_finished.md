@@ -6,6 +6,33 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer binding args-pack facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes statement binding args-pack
+    initializer materialization pass published array/vector target facts into
+    the residual initializer classifier before stale local args-pack metadata
+    can classify struct access initializers.
+  - acceptance:
+    - Statement binding args-pack initializer classification uses
+      semantic-aware array/vector target resolution before local args-pack
+      metadata.
+    - Published non-args-pack facts suppress stale local args-pack metadata for
+      initializer access materialization.
+    - Existing syntax-only args-pack initializer fallback remains available
+      when no semantic target fact is published.
+  - stop_rule: Stop once statement binding args-pack initializer
+    classification routes through semantic-product target facts before legacy
+    local args-pack metadata, with source guard coverage pinning resolver
+    ordering.
+  - evidence: Routed the statement binding args-pack initializer classifier in
+    `IrLowererLowerStatementsBindings.h` through semantic-aware array/vector
+    target resolution, added source guard coverage for resolver ordering
+    before struct materialization, ran `git diff --check`, and skipped broad
+    baseline validation per the lite workflow.
+
 - [x] TODO-4298: Prefer statement vector fallback facts
   - owner: ai
   - created_at: 2026-04-28

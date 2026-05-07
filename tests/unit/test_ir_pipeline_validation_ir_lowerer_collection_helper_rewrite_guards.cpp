@@ -2050,6 +2050,50 @@ TEST_CASE("ir lowerer binding normalization guards explicit map helper defs") {
         std::string::npos);
 }
 
+TEST_CASE("ir lowerer statement binding args-pack initializer uses semantic target facts") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path bindingsPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsBindings.h";
+
+  REQUIRE(std::filesystem::exists(bindingsPath));
+  const std::string source = readText(bindingsPath);
+
+  const size_t semanticResolver = source.find(
+      "ir_lowerer::resolveArrayVectorAccessTargetInfo(\n"
+      "                  init.args.front(),\n"
+      "                  localsIn,\n"
+      "                  {},\n"
+      "                  callResolutionAdapters.semanticProgram,\n"
+      "                  &callResolutionAdapters.semanticProductTargets.semanticIndex)");
+  const size_t argsPackGate =
+      source.find("const bool isVectorArgsPackAccess =", semanticResolver);
+  const size_t emitAccess =
+      source.find("ir_lowerer::emitArrayVectorIndexedAccess(",
+                  semanticResolver);
+
+  REQUIRE(semanticResolver != std::string::npos);
+  REQUIRE(argsPackGate != std::string::npos);
+  REQUIRE(emitAccess != std::string::npos);
+  CHECK(semanticResolver < argsPackGate);
+  CHECK(argsPackGate < emitAccess);
+  CHECK(source.find(
+            "resolveArrayVectorAccessTargetInfo(init.args.front(), localsIn)") ==
+        std::string::npos);
+}
+
 TEST_CASE("ir lowerer packed result buffer helpers normalize scoped gfx calls") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);

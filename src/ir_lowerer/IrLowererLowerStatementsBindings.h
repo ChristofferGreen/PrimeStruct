@@ -799,7 +799,13 @@
         if (init.kind == Expr::Kind::Call &&
             getBuiltinArrayAccessName(init, accessName) &&
             init.args.size() == 2) {
-          const auto targetInfo = ir_lowerer::resolveArrayVectorAccessTargetInfo(init.args.front(), localsIn);
+          const auto targetInfo =
+              ir_lowerer::resolveArrayVectorAccessTargetInfo(
+                  init.args.front(),
+                  localsIn,
+                  {},
+                  callResolutionAdapters.semanticProgram,
+                  &callResolutionAdapters.semanticProductTargets.semanticIndex);
           const bool isVectorArgsPackAccess =
               targetInfo.isArgsPackTarget &&
               targetInfo.argsPackElementKind == LocalInfo::Kind::Vector;

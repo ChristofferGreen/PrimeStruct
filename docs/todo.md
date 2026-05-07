@@ -490,11 +490,14 @@ Task template:
     declarations, for-condition declarations, and final LocalInfo fallback
     setup. The lowerer statement binding type-info ID consumer slice is
     complete for semantic-product-backed binding and initializer type
-    inference. The lowerer binding coverage ID consumer slice is complete for
-    binding, local-auto, and collection specialization completeness
-    validation. The lowerer args-pack binding ID consumer slice is complete
-    for semantic-product-backed variadic parameter metadata. The native pick
-    target ID consumer slice is complete for
+    inference. The lowerer statement binding args-pack initializer fallback
+    slice is complete for semantic-product-backed array/vector target facts
+    before stale local args-pack metadata can choose struct initializer
+    materialization. The lowerer binding coverage ID consumer slice is
+    complete for binding, local-auto, and collection specialization
+    completeness validation. The lowerer args-pack binding ID consumer slice
+    is complete for semantic-product-backed variadic parameter metadata. The
+    native pick target ID consumer slice is complete for
     semantic-product-backed named and direct-call target sum classification.
     The native named pick binding lookup slice is complete for
     semantic-product-backed target expression binding facts.
@@ -1320,6 +1323,11 @@ Task template:
     - Completed slice: semantic-product-addressed statement binding type-info
       inference now resolves interned binding type IDs before consulting
       copied binding fact text fields for binding and initializer metadata.
+    - Completed slice: semantic-product-addressed statement binding args-pack
+      initializer fallback now passes published array/vector target facts into
+      the residual initializer access classifier before local args-pack
+      metadata can choose struct materialization. Syntax-only compatibility
+      keeps the legacy resolver fallback.
     - Completed slice: semantic-product-addressed native `pick(...)` target
       sum resolution now resolves interned binding, query, and return binding
       type IDs before consulting copied semantic-product text fields for

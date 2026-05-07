@@ -501,6 +501,9 @@ Planned non-template inference migration contract:
 - Completed lowerer-side statement binding type-info ID slice: statement binding and initializer
   type-info inference now resolves interned binding type ids before copied binding-fact text, so
   map/vector/scalar binding metadata consumes graph-owned facts before compatibility text.
+- Completed lowerer-side statement binding args-pack initializer fallback slice: statement binding
+  struct materialization now passes graph-backed array/vector target facts into the initializer
+  access classifier before stale local args-pack metadata can choose struct-copy materialization.
 - Completed lowerer-side pick target ID slice: native `pick(...)` target sum resolution now
   resolves binding, query, and return binding type ids before copied semantic-product text, so
   named and direct-call pick target classification consumes graph-owned metadata before
