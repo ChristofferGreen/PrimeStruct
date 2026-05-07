@@ -833,6 +833,11 @@ Planned non-template inference migration contract:
   value-kind inference can classify the mutable target. Known numeric pointer
   facts suppress stale local string metadata; no-fact contexts keep the
   existing inference fallback.
+- Completed native indexed-access array/vector target slice: native
+  `target[index]` load emission now asks graph-backed collection, binding,
+  local-auto, and query facts before stale local array/vector metadata can
+  classify named targets. Known scalar facts suppress stale vector locals;
+  no-fact contexts keep the existing local collection fallback.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

@@ -774,6 +774,10 @@ Task template:
     The lowerer direct `count(...)` tail fallback slice is complete for
     semantic-product-backed scalar value-kind facts before the final string
     count fallback can consult stale local string metadata.
+    The native indexed-access array/vector target slice is complete for
+    semantic-product-backed collection, binding, local-auto, and query facts
+    before stale local array/vector metadata can classify named
+    `target[index]` load receivers.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -791,6 +795,12 @@ Task template:
       payloads and base-kind `try(Result.ok(query()))` inference now consume
       published binding/query facts and leave the value kind unresolved when
       the fact is absent, rather than consulting recursive fallback inference.
+    - Completed slice: semantic-product-addressed native indexed-access
+      loads now consume published collection, binding, local-auto, and query
+      facts before local array/vector metadata can classify named
+      `target[index]` receivers. Published non-collection facts suppress
+      stale vector locals while syntax-only compatibility keeps the old
+      local collection fallback.
     - Completed slice: semantic-product-addressed native `Result.why(...)`
       direct-call sources now resolve interned query result-error IDs before
       copied query text, so stale duplicated error text cannot override the

@@ -342,6 +342,134 @@ TEST_CASE("ir lowerer call helpers emit builtin array access") {
   CHECK(instructions.back().op == primec::IrOpcode::LoadIndirect);
 }
 
+TEST_CASE("ir lowerer builtin array access prefers semantic target facts") {
+  using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::SemanticProgram semanticProgram;
+  const auto addBindingFact = [&](uint64_t semanticNodeId,
+                                  const std::string &bindingTypeText) {
+    primec::SemanticProgramBindingFact fact;
+    fact.semanticNodeId = semanticNodeId;
+    fact.bindingTypeText = bindingTypeText;
+    fact.bindingTypeTextId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, bindingTypeText);
+    const size_t factIndex = semanticProgram.bindingFacts.size();
+    semanticProgram.bindingFacts.push_back(fact);
+    semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(
+        semanticNodeId, factIndex);
+  };
+  addBindingFact(7201, "vector<i32>");
+  addBindingFact(7202, "i32");
+  const primec::ir_lowerer::SemanticProductIndex semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Name;
+  indexExpr.name = "idx";
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo staleScalarInfo;
+  staleScalarInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  staleScalarInfo.valueKind = Kind::Int32;
+  locals.emplace("values", staleScalarInfo);
+
+  primec::Expr semanticVectorTarget;
+  semanticVectorTarget.kind = primec::Expr::Kind::Name;
+  semanticVectorTarget.name = "values";
+  semanticVectorTarget.semanticNodeId = 7201;
+
+  std::vector<primec::IrInstruction> instructions;
+  int nextLocal = 30;
+  int emitExprCalls = 0;
+  std::string error;
+  CHECK(primec::ir_lowerer::emitBuiltinArrayAccess(
+      "at",
+      semanticVectorTarget,
+      indexExpr,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+        return false;
+      },
+      0,
+      {},
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return Kind::Int32;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [&]() { return nextLocal++; },
+      [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+        ++emitExprCalls;
+        if (expr.kind == primec::Expr::Kind::Name && expr.name == "values") {
+          instructions.push_back({primec::IrOpcode::PushI64, 100});
+          return true;
+        }
+        instructions.push_back({primec::IrOpcode::PushI32, 1});
+        return true;
+      },
+      []() {},
+      []() {},
+      []() {},
+      [&]() { return instructions.size(); },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
+      error,
+      &semanticProgram,
+      &semanticIndex));
+  CHECK(error.empty());
+  CHECK(emitExprCalls == 2);
+  REQUIRE(!instructions.empty());
+  CHECK(instructions.front().op == primec::IrOpcode::PushI64);
+  CHECK(instructions.back().op == primec::IrOpcode::LoadIndirect);
+
+  primec::ir_lowerer::LocalInfo staleVectorInfo;
+  staleVectorInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  staleVectorInfo.valueKind = Kind::Int32;
+  locals.clear();
+  locals.emplace("staleVector", staleVectorInfo);
+
+  primec::Expr semanticScalarTarget;
+  semanticScalarTarget.kind = primec::Expr::Kind::Name;
+  semanticScalarTarget.name = "staleVector";
+  semanticScalarTarget.semanticNodeId = 7202;
+
+  instructions.clear();
+  error.clear();
+  nextLocal = 40;
+  CHECK_FALSE(primec::ir_lowerer::emitBuiltinArrayAccess(
+      "at",
+      semanticScalarTarget,
+      indexExpr,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+        return false;
+      },
+      0,
+      {},
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return Kind::Int32;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [&]() { return nextLocal++; },
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        instructions.push_back({primec::IrOpcode::PushI64, 100});
+        return true;
+      },
+      []() {},
+      []() {},
+      []() {},
+      [&]() { return instructions.size(); },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
+      error,
+      &semanticProgram,
+      &semanticIndex));
+  CHECK(error.find("native backend only supports at() on numeric/bool/string arrays or vectors") !=
+        std::string::npos);
+  CHECK(instructions.empty());
+}
+
 TEST_CASE("ir lowerer call helpers validate non literal string access target") {
   using Result = primec::ir_lowerer::NonLiteralStringAccessTargetResult;
   using Kind = primec::ir_lowerer::LocalInfo::ValueKind;

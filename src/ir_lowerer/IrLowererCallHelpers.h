@@ -349,6 +349,12 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     const LocalMap &localsIn,
     const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo);
 ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
+    const Expr &target,
+    const LocalMap &localsIn,
+    const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex);
+ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     const Expr &target, const LocalMap &localsIn);
 bool validateArrayVectorAccessTargetInfo(const ArrayVectorAccessTargetInfo &targetInfo, std::string &error);
 MapAccessLookupEmitResult tryEmitMapAccessLookup(

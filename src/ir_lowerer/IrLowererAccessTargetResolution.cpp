@@ -2,7 +2,9 @@
 
 #include <sstream>
 #include <utility>
+#include <vector>
 
+#include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererIndexKindHelpers.h"
 #include "IrLowererSemanticProductTargetAdapters.h"
@@ -109,6 +111,121 @@ std::string resolveAccessSemanticTypeText(const SemanticProgram *semanticProgram
     }
   }
   return trimTemplateTypeText(typeText);
+}
+
+std::string normalizeAccessCollectionFamily(std::string family) {
+  family = normalizeCollectionBindingTypeName(trimTemplateTypeText(family));
+  if (!family.empty() && family.front() == '/') {
+    family.erase(family.begin());
+  }
+  return family;
+}
+
+bool classifySemanticArrayVectorAccessTypeText(const std::string &typeText,
+                                               ArrayVectorAccessTargetInfo &targetInfoOut) {
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argText)) {
+    return false;
+  }
+  base = normalizeAccessCollectionFamily(base);
+  std::string elementText = trimTemplateTypeText(argText);
+  if (base == "Reference" || base == "Pointer") {
+    std::vector<std::string> wrappedArgs;
+    if (!splitTemplateArgs(argText, wrappedArgs) || wrappedArgs.size() != 1) {
+      return false;
+    }
+    if (!splitTemplateTypeName(trimTemplateTypeText(wrappedArgs.front()), base, elementText)) {
+      return false;
+    }
+    base = normalizeAccessCollectionFamily(base);
+  }
+
+  if (base != "array" && base != "vector" && base != "Buffer" && base != "soa_vector") {
+    return false;
+  }
+  std::vector<std::string> elementArgs;
+  if (!splitTemplateArgs(elementText, elementArgs) || elementArgs.size() != 1) {
+    return false;
+  }
+
+  targetInfoOut = {};
+  targetInfoOut.isArrayOrVectorTarget = true;
+  targetInfoOut.isVectorTarget = (base == "vector");
+  targetInfoOut.isSoaVector = (base == "soa_vector");
+  targetInfoOut.elemKind = valueKindFromTypeName(trimTemplateTypeText(elementArgs.front()));
+  if (targetInfoOut.isSoaVector) {
+    targetInfoOut.structTypeName =
+        inferExperimentalSoaVectorStructPathFromTypeName(elementArgs.front());
+  }
+  return true;
+}
+
+bool resolveSemanticArrayVectorAccessTargetInfo(
+    const Expr &targetExpr,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex,
+    ArrayVectorAccessTargetInfo &targetInfoOut,
+    bool &hasSemanticFactOut) {
+  hasSemanticFactOut = false;
+  if (semanticProgram == nullptr || semanticIndex == nullptr || targetExpr.semanticNodeId == 0) {
+    return false;
+  }
+
+  auto tryClassifyType = [&](const std::string &typeText, SymbolId typeTextId) {
+    const std::string resolvedTypeText =
+        resolveAccessSemanticTypeText(semanticProgram, typeText, typeTextId);
+    return classifySemanticArrayVectorAccessTypeText(resolvedTypeText, targetInfoOut);
+  };
+
+  if (const auto *collectionFact =
+          findSemanticProductCollectionSpecialization(*semanticIndex, targetExpr);
+      collectionFact != nullptr) {
+    hasSemanticFactOut = true;
+    const std::string family = normalizeAccessCollectionFamily(
+        resolveAccessSemanticTypeText(
+            semanticProgram,
+            collectionFact->collectionFamily,
+            collectionFact->collectionFamilyId));
+    if (family != "array" && family != "vector" && family != "Buffer" &&
+        family != "soa_vector") {
+      return false;
+    }
+    targetInfoOut = {};
+    targetInfoOut.isArrayOrVectorTarget = true;
+    targetInfoOut.isVectorTarget = (family == "vector");
+    targetInfoOut.isSoaVector = (family == "soa_vector");
+    const std::string elementTypeText = resolveAccessSemanticTypeText(
+        semanticProgram, collectionFact->elementTypeText, collectionFact->elementTypeTextId);
+    targetInfoOut.elemKind = valueKindFromTypeName(elementTypeText);
+    if (targetInfoOut.isSoaVector) {
+      targetInfoOut.structTypeName =
+          inferExperimentalSoaVectorStructPathFromTypeName(elementTypeText);
+    }
+    return true;
+  }
+  if (const auto *queryFact =
+          findSemanticProductQueryFact(semanticProgram, *semanticIndex, targetExpr);
+      queryFact != nullptr) {
+    hasSemanticFactOut = true;
+    return tryClassifyType(queryFact->queryTypeText, queryFact->queryTypeTextId) ||
+           tryClassifyType(queryFact->bindingTypeText, queryFact->bindingTypeTextId) ||
+           tryClassifyType(queryFact->receiverBindingTypeText,
+                           queryFact->receiverBindingTypeTextId);
+  }
+  if (const auto *bindingFact =
+          findSemanticProductBindingFact(*semanticIndex, targetExpr);
+      bindingFact != nullptr) {
+    hasSemanticFactOut = true;
+    return tryClassifyType(bindingFact->bindingTypeText, bindingFact->bindingTypeTextId);
+  }
+  if (const auto *localAutoFact =
+          findSemanticProductLocalAutoFactBySemanticId(*semanticIndex, targetExpr);
+      localAutoFact != nullptr) {
+    hasSemanticFactOut = true;
+    return tryClassifyType(localAutoFact->bindingTypeText, localAutoFact->bindingTypeTextId);
+  }
+  return false;
 }
 
 LocalInfo::ValueKind resolveAccessIndexSemanticKind(
@@ -710,8 +827,19 @@ bool resolveValidatedAccessIndexKind(
 ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     const Expr &target,
     const LocalMap &localsIn,
-    const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo) {
+    const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
   ArrayVectorAccessTargetInfo info;
+  bool hasSemanticTargetFact = false;
+  if (resolveSemanticArrayVectorAccessTargetInfo(
+          target, semanticProgram, semanticIndex, info, hasSemanticTargetFact)) {
+    return info;
+  }
+  if (hasSemanticTargetFact) {
+    return {};
+  }
+
   const auto elementSlotCountForLocal = [](const LocalInfo &localInfo) {
     if (localInfo.isArgsPack) {
       const bool isInlineStructPack =
@@ -1059,8 +1187,16 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
 }
 
 ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
+    const Expr &target,
+    const LocalMap &localsIn,
+    const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo) {
+  return resolveArrayVectorAccessTargetInfo(
+      target, localsIn, resolveCallArrayVectorAccessTargetInfo, nullptr, nullptr);
+}
+
+ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     const Expr &target, const LocalMap &localsIn) {
-  return resolveArrayVectorAccessTargetInfo(target, localsIn, {});
+  return resolveArrayVectorAccessTargetInfo(target, localsIn, {}, nullptr, nullptr);
 }
 
 } // namespace primec::ir_lowerer

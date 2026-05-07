@@ -366,7 +366,11 @@ bool emitArrayVectorIndexedAccess(
     const SemanticProgram *semanticProgram,
     const SemanticProductIndex *semanticIndex) {
   const auto arrayVectorTargetInfo = resolveArrayVectorAccessTargetInfo(
-      targetExpr, localsIn, resolveCallArrayVectorAccessTargetInfo);
+      targetExpr,
+      localsIn,
+      resolveCallArrayVectorAccessTargetInfo,
+      semanticProgram,
+      semanticIndex);
   if (!validateArrayVectorAccessTargetInfo(arrayVectorTargetInfo, error)) {
     return false;
   }
@@ -511,7 +515,11 @@ bool emitBuiltinArrayAccess(
   }
 
   const auto arrayVectorTargetInfo = resolveArrayVectorAccessTargetInfo(
-      targetExpr, localsIn, resolveCallArrayVectorAccessTargetInfo);
+      targetExpr,
+      localsIn,
+      resolveCallArrayVectorAccessTargetInfo,
+      semanticProgram,
+      semanticIndex);
   const auto mapTargetInfo = resolveMapAccessTargetInfo(
       targetExpr, localsIn, resolveCallMapAccessTargetInfo);
   std::string nestedAccessName;
