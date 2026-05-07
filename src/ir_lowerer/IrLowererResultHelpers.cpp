@@ -208,7 +208,8 @@ bool resolveSemanticQueryResultInfoWithPresence(const Expr &expr,
                                                 const SemanticProductIndex *semanticIndex,
                                                 std::string *errorOut,
                                                 ResultExprInfo &out,
-                                                bool &hasSemanticQueryOut) {
+                                                bool &hasSemanticQueryOut,
+                                                bool allowPointerLikeResultTarget = false) {
   hasSemanticQueryOut = false;
   if (semanticProgram == nullptr || semanticIndex == nullptr || expr.semanticNodeId == 0) {
     return false;
@@ -222,6 +223,20 @@ bool resolveSemanticQueryResultInfoWithPresence(const Expr &expr,
   }
   hasSemanticQueryOut = true;
   if (!queryFact->hasResultType) {
+    if (allowPointerLikeResultTarget) {
+      const std::string bindingTypeText = resolveSemanticResultFactText(
+          *semanticProgram, queryFact->bindingTypeText, queryFact->bindingTypeTextId);
+      if (!bindingTypeText.empty() &&
+          applySemanticResultTypeText(bindingTypeText, out, true)) {
+        return true;
+      }
+      const std::string queryTypeText = resolveSemanticResultFactText(
+          *semanticProgram, queryFact->queryTypeText, queryFact->queryTypeTextId);
+      if (!queryTypeText.empty() &&
+          applySemanticResultTypeText(queryTypeText, out, true)) {
+        return true;
+      }
+    }
     return false;
   }
   out.isResult = true;
@@ -1031,7 +1046,8 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
                                                      semanticIndex,
                                                      errorOut,
                                                      out,
-                                                     hasSemanticTargetQuery)) {
+                                                     hasSemanticTargetQuery,
+                                                     true)) {
         return true;
       }
       if (hasSemanticTargetQuery) {

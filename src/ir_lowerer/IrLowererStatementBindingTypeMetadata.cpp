@@ -655,7 +655,7 @@ void applyArgsPackElementStructMetadata(const Expr &param,
       return trimTemplateTypeText(elementTypeText);
     }
     unwrappedPointerLikeElementType = true;
-    return trimTemplateTypeText(elementTypeText);
+    return trimTemplateTypeText(wrappedArg);
   }();
   if (splitTemplateTypeName(structElementTypeText, base, arg)) {
     syntheticTransform.name = trimTemplateTypeText(base);

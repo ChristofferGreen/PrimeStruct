@@ -43,6 +43,64 @@ TEST_CASE("ir lowerer uninitialized type helpers infer call target struct paths 
             ctorCall, resolveExprPath, fieldIndex, inferDefinitionStructReturnPath, visitedDefs) == "/pkg/Ctor");
 }
 
+TEST_CASE("ir lowerer uninitialized type helpers unwrap semantic pointer-like struct query types") {
+  primec::Expr queryExpr;
+  queryExpr.kind = primec::Expr::Kind::Call;
+  queryExpr.name = "at";
+  queryExpr.namespacePrefix = "/pkg";
+  queryExpr.semanticNodeId = 4401;
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      .scopePath = "/pkg/main",
+      .callName = "at",
+      .queryTypeText = "",
+      .bindingTypeText = "",
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 4401,
+      .scopePathId = primec::semanticProgramInternCallTargetString(
+          semanticProgram, "/pkg/main"),
+      .callNameId = primec::semanticProgramInternCallTargetString(
+          semanticProgram, "at"),
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(
+          semanticProgram, "/array/at"),
+      .queryTypeTextId = primec::semanticProgramInternCallTargetString(
+          semanticProgram, "Reference<Pair>"),
+      .bindingTypeTextId = primec::semanticProgramInternCallTargetString(
+          semanticProgram, "Reference<Pair>"),
+  });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(
+      4401, 0);
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  auto resolveStructTypeName = [](const std::string &typeName,
+                                  const std::string &namespacePrefix,
+                                  std::string &resolvedOut) {
+    if (typeName == "Pair" && namespacePrefix == "/pkg") {
+      resolvedOut = "/pkg/Pair";
+      return true;
+    }
+    return false;
+  };
+  auto resolveExprPath = [](const primec::Expr &) { return std::string(); };
+  const primec::ir_lowerer::UninitializedFieldBindingIndex fieldIndex;
+
+  CHECK(primec::ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+            queryExpr,
+            {},
+            {},
+            resolveStructTypeName,
+            resolveExprPath,
+            fieldIndex,
+            {},
+            &semanticProgram,
+            &semanticIndex) == "/pkg/Pair");
+}
+
 TEST_CASE("ir lowerer uninitialized type helpers infer definition return paths with visited map lookups") {
   primec::Definition factoryDef;
   factoryDef.fullPath = "/pkg/factory";

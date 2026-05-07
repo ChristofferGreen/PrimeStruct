@@ -331,6 +331,14 @@ std::string inferUninitializedTargetStructPath(const std::string &typeText,
   }
 
   const std::string normalizedBase = normalizeCollectionBindingTypeName(base);
+  if (normalizedBase == "Reference" || normalizedBase == "Pointer") {
+    std::vector<std::string> wrappedArgs;
+    if (!splitTemplateArgs(argList, wrappedArgs) || wrappedArgs.size() != 1) {
+      return "";
+    }
+    return inferUninitializedTargetStructPath(
+        wrappedArgs.front(), namespacePrefix, resolveStructTypeName);
+  }
   if (normalizedBase == "vector") {
     return normalizeUninitializedVectorStructPath(base);
   }

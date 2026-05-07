@@ -263,6 +263,18 @@ TEST_CASE("ir lowerer struct type helpers build definition map and struct names"
   CHECK(structNames.count("/pkg/StructB") == 1u);
   CHECK(structNames.count("/pkg/Func") == 0u);
 
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.typeMetadata.push_back(primec::SemanticProgramTypeMetadata{
+      .fullPath = "/pkg/SemanticOnly",
+      .category = "struct",
+  });
+  primec::ir_lowerer::buildDefinitionMapAndStructNames(
+      definitions, defMap, structNames, &semanticProgram);
+  CHECK(structNames.count("/pkg/SemanticOnly") == 1u);
+  CHECK(structNames.count("/pkg/StructA") == 1u);
+  CHECK(structNames.count("/pkg/StructB") == 1u);
+  CHECK(structNames.count("/pkg/Func") == 0u);
+
   primec::ir_lowerer::buildDefinitionMapAndStructNames({}, defMap, structNames);
   CHECK(defMap.empty());
   CHECK(structNames.empty());

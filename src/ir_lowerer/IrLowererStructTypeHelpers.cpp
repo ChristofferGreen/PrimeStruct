@@ -217,12 +217,9 @@ void buildDefinitionMapAndStructNames(
         structNamesOut.insert(typeMetadata->fullPath);
       }
     }
-    if (!structNamesOut.empty()) {
-      return;
-    }
   }
 
-  structNamesOut.reserve(definitions.size());
+  structNamesOut.reserve(structNamesOut.size() + definitions.size());
   for (const auto &def : definitions) {
     if (isStructDefinition(def, semanticProgram)) {
       structNamesOut.insert(def.fullPath);

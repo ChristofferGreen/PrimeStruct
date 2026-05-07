@@ -1160,6 +1160,26 @@ TEST_CASE("ir lowerer result helpers use semantic indexed args-pack Result facts
       &error));
   CHECK(error.empty());
 
+  addQueryTypeFact(semanticProgram, 8805, "Reference<Result<bool, FileError>>");
+  const auto semanticIndexWithPointerLikeResult =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+  out = {};
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      makeDereferenceExpr(makeAtExpr(8805)),
+      staleLocals,
+      resolveMethodCall,
+      resolveDefinitionCall,
+      lookupReturnInfo,
+      inferExprKind,
+      out,
+      &semanticProgram,
+      &semanticIndexWithPointerLikeResult,
+      &error));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.valueKind == ValueKind::Bool);
+  CHECK(out.errorType == "FileError");
+
   out = {};
   CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
       makeDereferenceExpr(makeAtExpr(0)),

@@ -120,8 +120,7 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic struct refere
       [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
       [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo &infoOut) {
         for (const auto &transform : expr.transforms) {
-          if (transform.name == "Reference" && transform.templateArgs.size() == 1 &&
-              transform.templateArgs.front() == "Pair") {
+          if (transform.name == "Pair" && transform.templateArgs.empty()) {
             infoOut.structTypeName = "/pkg/Pair";
             return;
           }
@@ -203,8 +202,7 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic struct pointe
       [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
       [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo &infoOut) {
         for (const auto &transform : expr.transforms) {
-          if (transform.name == "Pointer" && transform.templateArgs.size() == 1 &&
-              transform.templateArgs.front() == "Pair") {
+          if (transform.name == "Pair" && transform.templateArgs.empty()) {
             infoOut.structTypeName = "/pkg/Pair";
             return;
           }
@@ -687,8 +685,7 @@ TEST_CASE("ir lowerer statement binding helper uses semantic-product args-pack b
       [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
       [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo &infoOut) {
         for (const auto &transform : expr.transforms) {
-          if (transform.name == "Reference" && transform.templateArgs.size() == 1 &&
-              transform.templateArgs.front() == "Pair") {
+          if (transform.name == "Pair" && transform.templateArgs.empty()) {
             infoOut.structTypeName = "/pkg/Pair";
             return;
           }
