@@ -555,11 +555,9 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
               return true;
             },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::Emitted);
-  CHECK(dynamicCountEmitExprCalls == 1);
-  REQUIRE(instructions.size() == 2);
-  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
-  CHECK(instructions[1].op == primec::IrOpcode::LoadIndirect);
+            error) == Result::NotHandled);
+  CHECK(dynamicCountEmitExprCalls == 0);
+  CHECK(instructions.empty());
 
   instructions.clear();
   error.clear();
@@ -595,11 +593,9 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
               return true;
             },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::Emitted);
-  CHECK(dynamicCountEmitExprCalls == 1);
-  REQUIRE(instructions.size() == 2);
-  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
-  CHECK(instructions[1].op == primec::IrOpcode::LoadIndirect);
+            error) == Result::NotHandled);
+  CHECK(dynamicCountEmitExprCalls == 0);
+  CHECK(instructions.empty());
 
   instructions.clear();
   error = "stale";
@@ -672,11 +668,9 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
               return true;
             },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::Emitted);
-  CHECK(dynamicCountEmitExprCalls == 1);
-  REQUIRE(instructions.size() == 2);
-  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
-  CHECK(instructions[1].op == primec::IrOpcode::LoadIndirect);
+            error) == Result::NotHandled);
+  CHECK(dynamicCountEmitExprCalls == 0);
+  CHECK(instructions.empty());
   callExpr.namespacePrefix.clear();
 
   instructions.clear();
@@ -734,14 +728,9 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
               return true;
             },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::Emitted);
-  CHECK(dynamicCapacityEmitExprCalls == 1);
-  REQUIRE(instructions.size() == 4);
-  CHECK(instructions[0].op == primec::IrOpcode::AddressOfLocal);
-  CHECK(instructions[1].op == primec::IrOpcode::PushI64);
-  CHECK(instructions[1].imm == primec::IrSlotBytes);
-  CHECK(instructions[2].op == primec::IrOpcode::AddI64);
-  CHECK(instructions[3].op == primec::IrOpcode::LoadIndirect);
+            error) == Result::NotHandled);
+  CHECK(dynamicCapacityEmitExprCalls == 0);
+  CHECK(instructions.empty());
 
   instructions.clear();
   error.clear();
@@ -808,10 +797,10 @@ TEST_CASE("ir lowerer count access helpers build count classifier adapters") {
   countEntry.args = {entryName};
   CHECK(isArrayCountCall(countEntry, locals));
   countEntry.namespacePrefix = "/std/collections/vector";
-  CHECK(isArrayCountCall(countEntry, locals));
+  CHECK_FALSE(isArrayCountCall(countEntry, locals));
   countEntry.namespacePrefix.clear();
   countEntry.name = "/std/collections/vector/count";
-  CHECK(isArrayCountCall(countEntry, locals));
+  CHECK_FALSE(isArrayCountCall(countEntry, locals));
   countEntry.name = "/vector/count";
   CHECK_FALSE(isArrayCountCall(countEntry, locals));
   countEntry.name = "/soa_vector/count";
@@ -902,7 +891,7 @@ TEST_CASE("ir lowerer count access helpers build count classifier adapters") {
   stringCount.args = {literal};
   CHECK(isStringCountCall(stringCount, locals));
   stringCount.name = "/std/collections/vector/count";
-  CHECK(isStringCountCall(stringCount, locals));
+  CHECK_FALSE(isStringCountCall(stringCount, locals));
 }
 
 TEST_CASE("ir lowerer count access helpers build bundled classifiers") {
@@ -920,10 +909,10 @@ TEST_CASE("ir lowerer count access helpers build bundled classifiers") {
   countEntry.args = {entryName};
   CHECK(classifiers.isArrayCountCall(countEntry, locals));
   countEntry.namespacePrefix = "/std/collections/vector";
-  CHECK(classifiers.isArrayCountCall(countEntry, locals));
+  CHECK_FALSE(classifiers.isArrayCountCall(countEntry, locals));
   countEntry.namespacePrefix.clear();
   countEntry.name = "/std/collections/vector/count";
-  CHECK(classifiers.isArrayCountCall(countEntry, locals));
+  CHECK_FALSE(classifiers.isArrayCountCall(countEntry, locals));
   countEntry.name = "/vector/count";
   CHECK_FALSE(classifiers.isArrayCountCall(countEntry, locals));
   countEntry.name = "/soa_vector/count";
@@ -1004,6 +993,76 @@ TEST_CASE("ir lowerer count access helpers build bundled classifiers") {
   countEntry.args = {pointerSoaDeref};
   CHECK(classifiers.isArrayCountCall(countEntry, locals));
   CHECK_FALSE(classifiers.isStringCountCall(capacityCall, locals));
+}
+
+TEST_CASE("ir lowerer count access helpers defer canonical vector read helpers") {
+  primec::ir_lowerer::LocalMap vectorLocals;
+  primec::ir_lowerer::LocalInfo vectorInfo;
+  vectorInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  vectorLocals.emplace("values", vectorInfo);
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.args.resize(1);
+  callExpr.args.front().kind = primec::Expr::Kind::Name;
+  callExpr.args.front().name = "argv";
+
+  callExpr.name = "count";
+  CHECK(primec::ir_lowerer::isArrayCountCall(callExpr, vectorLocals, true, "argv"));
+
+  callExpr.name = "/std/collections/vector/count";
+  CHECK_FALSE(primec::ir_lowerer::isArrayCountCall(callExpr, vectorLocals, true, "argv"));
+  callExpr.name = "/std/collections/vector/count__ti32";
+  CHECK_FALSE(primec::ir_lowerer::isArrayCountCall(callExpr, vectorLocals, true, "argv"));
+
+  callExpr.name = "count";
+  callExpr.namespacePrefix = "/std/collections/vector";
+  CHECK_FALSE(primec::ir_lowerer::isArrayCountCall(callExpr, vectorLocals, true, "argv"));
+  callExpr.isMethodCall = true;
+  CHECK_FALSE(primec::ir_lowerer::isArrayCountCall(callExpr, vectorLocals, true, "argv"));
+  callExpr.isMethodCall = false;
+
+  primec::Expr vectorTemporary;
+  vectorTemporary.kind = primec::Expr::Kind::Call;
+  vectorTemporary.name = "/std/collections/vector/vector";
+  vectorTemporary.templateArgs = {"i32"};
+  callExpr.args = {vectorTemporary};
+  callExpr.name = "/std/collections/vectorCapacity";
+  callExpr.namespacePrefix.clear();
+  CHECK(primec::ir_lowerer::isVectorCapacityCall(callExpr, vectorLocals));
+  callExpr.name = "/std/collections/vector/capacity";
+  CHECK_FALSE(primec::ir_lowerer::isVectorCapacityCall(callExpr, vectorLocals));
+  callExpr.name = "/std/collections/vector/capacity__ti32";
+  CHECK_FALSE(primec::ir_lowerer::isVectorCapacityCall(callExpr, vectorLocals));
+
+  std::string accessName;
+  callExpr.args.resize(2);
+  callExpr.args.back().kind = primec::Expr::Kind::Literal;
+  callExpr.args.back().literalValue = 0;
+
+  callExpr.name = "/std/collections/vector/at";
+  CHECK_FALSE(primec::ir_lowerer::getBuiltinArrayAccessName(callExpr, accessName));
+  callExpr.name = "/std/collections/vector/at__ti32";
+  CHECK_FALSE(primec::ir_lowerer::getBuiltinArrayAccessName(callExpr, accessName));
+
+  callExpr.name = "at_unsafe";
+  callExpr.namespacePrefix = "/std/collections/vector";
+  CHECK_FALSE(primec::ir_lowerer::getBuiltinArrayAccessName(callExpr, accessName));
+  callExpr.isMethodCall = true;
+  CHECK_FALSE(primec::ir_lowerer::getBuiltinArrayAccessName(callExpr, accessName));
+  callExpr.isMethodCall = false;
+  callExpr.name = "/std/collections/vector/at_unsafe__ti32";
+  callExpr.namespacePrefix.clear();
+  CHECK_FALSE(primec::ir_lowerer::getBuiltinArrayAccessName(callExpr, accessName));
+
+  callExpr.namespacePrefix.clear();
+  callExpr.name = "/std/collections/vectorAt";
+  CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(callExpr, accessName));
+  CHECK(accessName == "at");
+
+  callExpr.name = "/std/collections/experimental_vector/vectorAtUnsafe";
+  CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(callExpr, accessName));
+  CHECK(accessName == "at_unsafe");
 }
 
 TEST_CASE("ir lowerer count access helpers normalize parser-shaped canonical map access receivers") {

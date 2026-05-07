@@ -475,6 +475,11 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   if (!rawName.empty() && rawName[0] == '/') {
     rawName.erase(0, 1);
   }
+  const std::string scopedNameWithoutSuffix = stripGeneratedSuffix(scopedName);
+  if (scopedNameWithoutSuffix == "std/collections/vector/at" ||
+      scopedNameWithoutSuffix == "std/collections/vector/at_unsafe") {
+    return false;
+  }
   if (matchAccessAlias(scopedName, "std/collections/vector/", "Vector")) {
     return true;
   }

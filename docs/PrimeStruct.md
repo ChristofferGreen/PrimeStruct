@@ -3111,7 +3111,10 @@ for(
     backing discard path for ownership-sensitive element types on explicit
     experimental `Vector<T>` bindings, and canonical
     `/std/collections/vector/*` `remove_at` / `remove_swap` helpers now reuse the backing indexed-removal path for
-    those same explicit experimental `Vector<T>` bindings.
+    those same explicit experimental `Vector<T>` bindings. Explicit canonical read/access calls to
+    `/std/collections/vector/count`, `capacity`, `at`, and `at_unsafe` now fall through to visible `.prime` helper
+    definitions instead of count/access classifier raw vector emitters; `vectorCount`/`vectorAt`-style compatibility
+    names remain temporary shims.
   - Canonical `/std/collections/map/*` is now the sole public namespaced map contract. The
     `/std/collections/experimental_map/*` family now remains only as the internal implementation seam behind that
     public contract. That backing namespace (`Entry<K, V>`, `entry(key, value)`,

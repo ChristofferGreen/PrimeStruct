@@ -44,6 +44,31 @@ bool isExplicitRemovedCountLikeAliasCall(const Expr &expr,
          scopedPath == std::string("soa_vector/") + std::string(helperName);
 }
 
+bool isExplicitCanonicalVectorReadHelperCall(const Expr &expr,
+                                             std::string_view helperName) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  if (helperName != "count" && helperName != "capacity" &&
+      helperName != "at" && helperName != "at_unsafe") {
+    return false;
+  }
+  std::string scopedPath = expr.name;
+  if (scopedPath.find('/') == std::string::npos && !expr.namespacePrefix.empty()) {
+    scopedPath = expr.namespacePrefix + "/" + scopedPath;
+  }
+  if (!scopedPath.empty() && scopedPath.front() == '/') {
+    scopedPath.erase(scopedPath.begin());
+  }
+  const size_t leafStart = scopedPath.find_last_of('/');
+  const size_t suffixStart =
+      scopedPath.find("__", leafStart == std::string::npos ? 0 : leafStart + 1);
+  if (suffixStart != std::string::npos) {
+    scopedPath.erase(suffixStart);
+  }
+  return scopedPath == std::string("std/collections/vector/") + std::string(helperName);
+}
+
 bool isSoaVectorTargetImpl(const Expr &target, const LocalMap &localsIn) {
   auto isWrappedSoaVectorLocal = [&](const Expr &candidate, bool fromArgsPack) {
     if (candidate.kind != Expr::Kind::Name) {
@@ -182,6 +207,9 @@ bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
 }
 
 bool isVectorBuiltinName(const Expr &expr, const char *name) {
+  if (isExplicitCanonicalVectorReadHelperCall(expr, name)) {
+    return false;
+  }
   if (isSimpleCallName(expr, name)) {
     return true;
   }

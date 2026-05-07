@@ -434,11 +434,11 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       isVectorBuiltinName(callExpr, "count") || isMapBuiltinName(callExpr, "count") ||
       isVectorBuiltinName(callExpr, "capacity");
   const bool isBuiltinBareVectorCapacityMethod =
-      isSimpleCallName(callExpr, "capacity") &&
+      isVectorBuiltinName(callExpr, "capacity") &&
       isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn);
   const bool isBuiltinBareVectorAccessMethod =
       callExpr.isMethodCall && callExpr.args.size() == 2 &&
-      (isSimpleCallName(callExpr, "at") || isSimpleCallName(callExpr, "at_unsafe")) &&
+      isBuiltinAccessCall &&
       resolveArrayVectorAccessTargetInfo(callExpr.args.front(),
                                          localsIn,
                                          {},
@@ -910,10 +910,9 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   }
   if (resolvedDef == nullptr) {
     const bool blocksBuiltinBareVectorCountMethod =
-        isSimpleCallName(callExpr, "count") && typeName == "vector";
+        isVectorBuiltinName(callExpr, "count") && typeName == "vector";
     const bool blocksBuiltinBareVectorAccessMethod =
-        (isSimpleCallName(callExpr, "at") || isSimpleCallName(callExpr, "at_unsafe")) &&
-        typeName == "vector";
+        isBuiltinAccessCall && typeName == "vector";
     const bool blocksBuiltinBareVectorMutatorMethod =
         (isSimpleCallName(callExpr, "push") || isSimpleCallName(callExpr, "pop") ||
          isSimpleCallName(callExpr, "reserve") || isSimpleCallName(callExpr, "clear") ||

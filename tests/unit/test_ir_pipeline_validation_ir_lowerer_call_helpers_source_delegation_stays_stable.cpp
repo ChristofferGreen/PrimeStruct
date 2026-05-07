@@ -49,6 +49,8 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
       repoRoot / "src" / "ir_lowerer" / "IrLowererOperatorMemoryPointerHelpers.cpp";
   const std::filesystem::path stringCallHelpersPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererStringCallHelpers.cpp";
+  const std::filesystem::path builtinNameHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererBuiltinNameHelpers.cpp";
   const std::filesystem::path astCallPathHelpersPath =
       repoRoot / "include" / "primec" / "AstCallPathHelpers.h";
   REQUIRE(std::filesystem::exists(callHelpersPath));
@@ -68,6 +70,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   REQUIRE(std::filesystem::exists(operatorCollectionMutationHelpersPath));
   REQUIRE(std::filesystem::exists(operatorMemoryPointerHelpersPath));
   REQUIRE(std::filesystem::exists(stringCallHelpersPath));
+  REQUIRE(std::filesystem::exists(builtinNameHelpersPath));
   REQUIRE(std::filesystem::exists(astCallPathHelpersPath));
   const std::string callHelpersSource = readText(callHelpersPath);
   const std::string accessTargetResolutionSource = readText(accessTargetResolutionPath);
@@ -90,6 +93,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   const std::string operatorMemoryPointerHelpersSource =
       readText(operatorMemoryPointerHelpersPath);
   const std::string stringCallHelpersSource = readText(stringCallHelpersPath);
+  const std::string builtinNameHelpersSource = readText(builtinNameHelpersPath);
   const std::string astCallPathHelpersSource = readText(astCallPathHelpersPath);
 
   CHECK(callHelpersSource.find("const Definition *resolveDefinitionCall(const Expr &callExpr,") ==
@@ -728,11 +732,19 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(countAccessClassifiersSource.find("bool isVectorBuiltinName(const Expr &expr, const char *name)") !=
         std::string::npos);
+  CHECK(countAccessClassifiersSource.find("bool isExplicitCanonicalVectorReadHelperCall(") !=
+        std::string::npos);
+  CHECK(countAccessClassifiersSource.find("isExplicitCanonicalVectorReadHelperCall(expr, name)") !=
+        std::string::npos);
   CHECK(countAccessClassifiersSource.find("isExplicitRemovedCountLikeAliasCall(expr, name)") !=
         std::string::npos);
   CHECK(countAccessClassifiersSource.find("resolveVectorHelperAliasName(expr, aliasName)") !=
         std::string::npos);
   CHECK(countAccessClassifiersSource.find("aliasName == name") !=
+        std::string::npos);
+  CHECK(builtinNameHelpersSource.find("scopedNameWithoutSuffix == \"std/collections/vector/at\"") !=
+        std::string::npos);
+  CHECK(builtinNameHelpersSource.find("scopedNameWithoutSuffix == \"std/collections/vector/at_unsafe\"") !=
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("isExplicitPublishedVectorCountCall(expr)") ==
         std::string::npos);

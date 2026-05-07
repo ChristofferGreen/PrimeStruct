@@ -14499,3 +14499,44 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     namespaced forms, kept `/std/collections/vectorPush` compatibility
     emission source-locked, documented the behavior, and promoted TODO-4369 to
     Ready Now. Local test execution was skipped per the lite workflow.
+
+- [x] TODO-4369: Route canonical vector read helpers through `.prime`
+  - owner: ai
+  - created_at: 2026-05-07
+  - phase: Vector stdlib ownership cutover
+  - scope: Route canonical `/std/collections/vector/count`, `capacity`,
+    `at`, and `at_unsafe` expression and method behavior through imported
+    `.prime` helper bodies instead of vector-specific read/access fast paths.
+  - implementation_notes:
+    - Start from `src/ir_lowerer/IrLowererCountAccessClassifiers.cpp`,
+      `src/ir_lowerer/IrLowererCountAccessHelpers.cpp`,
+      `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`,
+      `src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp`,
+      `src/ir_lowerer/IrLowererOperatorCollectionMutationHelpers.cpp`,
+      and the vector import/access/source-lock tests.
+    - Preserve user-visible canonical helper behavior and diagnostics while
+      keeping rooted `/vector/*`, `vectorCount`-style names, and direct
+      experimental imports as temporary compatibility paths until TODO-4296.
+  - acceptance:
+    - Canonical vector `count`, `capacity`, `at`, and `at_unsafe` direct calls
+      and method calls resolve through visible `.prime` definitions for
+      VM/native lowering rather than raw vector count/access emitters.
+    - Rooted `/vector/*`, `vectorCount`/`vectorAt`-style compatibility, and
+      direct experimental-vector imports continue only as compatibility seams
+      until TODO-4296.
+    - Tests distinguish canonical `.prime` read/access routing from retained
+      compatibility fallbacks and source locks list the remaining vector C++
+      read/access traces.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once canonical read/access helpers no longer depend on
+    vector-specific count/access emitters; leave compatibility mutators,
+    layout hard-code removal, capacity widening, metadata extraction, and
+    compatibility deletion to follow-up leaves.
+  - finished_at: 2026-05-07
+  - evidence: Fenced exact canonical `/std/collections/vector/count` and
+    `capacity` calls out of count/access vector builtin classification, fenced
+    exact canonical `/std/collections/vector/at` and `at_unsafe` calls out of
+    builtin array-access classification, retained `vectorCount`/`vectorAt`
+    and direct experimental-vector compatibility paths, documented the routing
+    split, and promoted TODO-4370 to Ready Now. Local test execution was
+    skipped per the lite workflow.
