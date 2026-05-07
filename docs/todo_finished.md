@@ -14180,3 +14180,39 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     status-only pick diagnostic, renamed VM/native/semantic Result helper
     compatibility tests and temp artifacts, and updated docs source locks.
     Local test execution was skipped per the lite workflow.
+
+- [x] TODO-4364: Fence Result compatibility helper adapters
+  - owner: ai
+  - created_at: 2026-05-07
+  - phase: Deferred stdlib ADT migration
+  - scope: Inventory and fence the remaining compiler/runtime paths that
+    implement `Result.ok`, `Result.map`, `Result.and_then`, and `Result.map2`
+    compatibility outside stdlib after imported `Result` sums became the
+    public surface, without deleting behavior in this leaf.
+  - implementation_notes:
+    - Classify production adapter sites, not stdlib call sites or historical
+      finished TODO notes.
+    - Keep source C++ bridge storage names such as `ps_result_value` and
+      `ps_result_status` distinct from public Result helper compatibility.
+    - Do not create broad deletion trackers; future deletion or stdlib
+      retargeting work must enter as concrete leaves.
+  - acceptance:
+    - The active docs contain a concise inventory of every remaining production
+      adapter that implements `Result.ok`, `Result.map`, `Result.and_then`, or
+      `Result.map2` compatibility outside stdlib, with an owner and retirement
+      decision for each adapter.
+    - Source-lock coverage fails if a new unlisted production Result helper
+      compatibility adapter or retired legacy-helper surface wording is
+      introduced.
+    - Any follow-up deletion or stdlib-retargeting work created from the
+      inventory is split into leaf TODOs and does not reuse this inventory task
+      as an implementation umbrella.
+  - stop_rule: Stop once the remaining Result helper compatibility adapters are
+    explicitly inventoried, source-locked, and split into concrete deletion or
+    stdlib-retargeting leaves where worthwhile.
+  - finished_at: 2026-05-07
+  - evidence: Added the Result helper compatibility adapter inventory to
+    `docs/PrimeStruct.md`, source-locked the inventoried production paths and
+    retired wording in `test_compile_run_examples_docs_locks.cpp`, and
+    promoted TODO-4291 to Ready Now. Local test execution was skipped per the
+    lite workflow.

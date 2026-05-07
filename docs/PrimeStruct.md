@@ -3221,6 +3221,38 @@ for(
     payloads. Explicit source C++ `ok` and `error` constructors pack single-field int-backed success/error structs
     through their code field before entering the value-carrying or status-only bridge. Direct source C++
     `Result.ok(value)` uses the same single-field success-struct packing path before entering the bridge.
+    Result helper compatibility adapter inventory:
+    - **Semantic validation and type inference:** `src/semantics/SemanticsValidatorExprResultFile.cpp`,
+      `src/semantics/SemanticsValidatorResultHelpers.cpp`, `src/semantics/SemanticsValidatorExprSumConstructors.cpp`,
+      `src/semantics/SemanticsValidatorStatementReturns.cpp`, `src/semantics/SemanticsValidatorBuildParameters.cpp`,
+      `src/semantics/SemanticsValidatorInferGraph.cpp`, `src/semantics/SemanticsValidatorInferPreDispatchCalls.cpp`,
+      `src/semantics/TemplateMonomorphBindingCallInference.h`, and
+      `src/semantics/TemplateMonomorphExperimentalCollectionValueRewrites.h` own the remaining semantic acceptance,
+      type inference, parameter inference, and collection-payload rewrite paths for `Result.ok`, `Result.map`,
+      `Result.and_then`, and `Result.map2` compatibility. Retirement decision: keep them fenced until the same helper
+      calls are either implemented as ordinary `/std/result/*` helpers or intentionally rejected with deterministic
+      migration diagnostics.
+    - **IR metadata and helper-call inference:** `src/ir_lowerer/IrLowererResultHelpers.cpp`,
+      `src/ir_lowerer/IrLowererLowerInferenceBaseKindHelpers.cpp`,
+      `src/ir_lowerer/IrLowererLowerInferenceDispatchSetup.cpp`,
+      `src/ir_lowerer/IrLowererLowerEmitExprTryHelpers.h`,
+      `src/ir_lowerer/IrLowererStatementBindingTypeMetadata.cpp`, and
+      `src/ir_lowerer/IrLowererUninitializedStructInference.cpp` own helper-result metadata, base-kind inference,
+      direct-call `try(...)` operand inference, binding metadata, and direct `Result.ok(...)` payload-struct inference.
+      Retirement decision: delete the syntax-fallback pieces after semantic-product facts fully describe helper-call
+      results and stdlib sum construction covers the payload cases directly.
+    - **IR/backend lowering:** `src/ir_lowerer/IrLowererLowerSumHelpers.h`,
+      `src/ir_lowerer/IrLowererLowerEmitExprResultHelpers.h`,
+      `src/ir_lowerer/IrLowererPackedResultHelpers.cpp`, and
+      `src/ir_lowerer/IrLowererStatementBindingStatementEmit.cpp` own the remaining VM/native sum lowering and packed
+      bridge emission for `Result.ok`, `Result.map`, `Result.and_then`, and `Result.map2` compatibility. Retirement
+      decision: keep the stdlib-sum lowering only until ordinary stdlib helper calls can lower without bespoke
+      result-helper branches, and delete packed bridge emission after source and IR-backed paths no longer need packed
+      Result values.
+    - **Source C++ emitter:** `src/emitter/EmitterExprResultCalls.h` and `src/emitter/EmitterExprLambda.h` own the
+      source C++ compatibility bridge for helper expression emission and lambda result inference. Retirement decision:
+      keep the bridge quarantined behind those files until the source C++ emitter lowers imported Result sums directly
+      or delegates to ordinary stdlib helper bodies.
   - `Result<T, Error>` is in transition: explicit imported value construction is stdlib-owned, while `?` propagation
     and the minimum success/error runtime contract stay language-defined until the sum-backed propagation contract is
     implemented. The semantic `try(...)` contract already recognizes the unqualified and qualified stdlib-owned

@@ -40,6 +40,36 @@ static std::vector<std::filesystem::path> filesWithRetainedDoctestSkips(
   return paths;
 }
 
+static std::vector<std::string> productionFilesContainingAny(
+    const std::filesystem::path &repoRoot,
+    const std::vector<std::string> &needles) {
+  std::vector<std::string> paths;
+  for (const char *dirname : {"src", "include"}) {
+    const std::filesystem::path root = repoRoot / dirname;
+    if (!std::filesystem::exists(root)) {
+      continue;
+    }
+    for (const auto &entry : std::filesystem::recursive_directory_iterator(root)) {
+      if (!entry.is_regular_file()) {
+        continue;
+      }
+      const std::string ext = entry.path().extension().string();
+      if (ext != ".cpp" && ext != ".h" && ext != ".hpp") {
+        continue;
+      }
+      const std::string source = readFile(entry.path().string());
+      for (const std::string &needle : needles) {
+        if (source.find(needle) != std::string::npos) {
+          paths.push_back(entry.path().lexically_relative(repoRoot).generic_string());
+          break;
+        }
+      }
+    }
+  }
+  std::sort(paths.begin(), paths.end());
+  return paths;
+}
+
 TEST_CASE("contributor doctest guardrails stay source locked") {
   std::filesystem::path agentsPath = std::filesystem::path("..") / "AGENTS.md";
   if (!std::filesystem::exists(agentsPath)) {
@@ -1148,6 +1178,68 @@ TEST_CASE("status-only result bridge docs stay source locked") {
         std::string::npos);
 }
 
+TEST_CASE("Result helper compatibility adapter inventory stays source locked") {
+  const std::filesystem::path primeStructPath = resolveRepoPath("docs/PrimeStruct.md");
+  REQUIRE(std::filesystem::exists(primeStructPath));
+
+  const std::filesystem::path repoRoot = primeStructPath.parent_path().parent_path();
+  const std::string primeStructDoc = readFile(primeStructPath.string());
+
+  CHECK(primeStructDoc.find("Result helper compatibility adapter inventory:") !=
+        std::string::npos);
+  const std::vector<std::string> inventoriedPaths = {
+      "src/emitter/EmitterExprLambda.h",
+      "src/emitter/EmitterExprResultCalls.h",
+      "src/ir_lowerer/IrLowererLowerEmitExprResultHelpers.h",
+      "src/ir_lowerer/IrLowererLowerEmitExprTryHelpers.h",
+      "src/ir_lowerer/IrLowererLowerInferenceBaseKindHelpers.cpp",
+      "src/ir_lowerer/IrLowererLowerInferenceDispatchSetup.cpp",
+      "src/ir_lowerer/IrLowererLowerSumHelpers.h",
+      "src/ir_lowerer/IrLowererPackedResultHelpers.cpp",
+      "src/ir_lowerer/IrLowererResultHelpers.cpp",
+      "src/ir_lowerer/IrLowererStatementBindingStatementEmit.cpp",
+      "src/ir_lowerer/IrLowererStatementBindingTypeMetadata.cpp",
+      "src/ir_lowerer/IrLowererUninitializedStructInference.cpp",
+      "src/semantics/SemanticsValidatorBuildParameters.cpp",
+      "src/semantics/SemanticsValidatorExprResultFile.cpp",
+      "src/semantics/SemanticsValidatorExprSumConstructors.cpp",
+      "src/semantics/SemanticsValidatorInferGraph.cpp",
+      "src/semantics/SemanticsValidatorInferPreDispatchCalls.cpp",
+      "src/semantics/SemanticsValidatorResultHelpers.cpp",
+      "src/semantics/SemanticsValidatorStatementReturns.cpp",
+      "src/semantics/TemplateMonomorphBindingCallInference.h",
+      "src/semantics/TemplateMonomorphExperimentalCollectionValueRewrites.h",
+  };
+  for (const std::string &path : inventoriedPaths) {
+    CHECK(primeStructDoc.find("`" + path + "`") != std::string::npos);
+  }
+  CHECK(primeStructDoc.find("Retirement decision:") != std::string::npos);
+  CHECK(primeStructDoc.find("implemented as ordinary `/std/result/*` helpers") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("delete packed bridge emission") !=
+        std::string::npos);
+
+  const std::vector<std::string> expectedHelperStringFiles = {
+      "src/ir_lowerer/IrLowererLowerEmitExprResultHelpers.h",
+      "src/ir_lowerer/IrLowererLowerSumHelpers.h",
+      "src/ir_lowerer/IrLowererPackedResultHelpers.cpp",
+      "src/ir_lowerer/IrLowererStatementBindingStatementEmit.cpp",
+      "src/semantics/SemanticsValidatorExprResultFile.cpp",
+      "src/semantics/SemanticsValidatorExprSumConstructors.cpp",
+      "src/semantics/SemanticsValidatorStatementReturns.cpp",
+  };
+  CHECK(productionFilesContainingAny(repoRoot,
+                                     {"Result.ok",
+                                      "Result.map",
+                                      "Result.and_then",
+                                      "Result.map2"}) ==
+        expectedHelperStringFiles);
+  CHECK(primeStructDoc.find("legacy `Result.ok(value)`") == std::string::npos);
+  CHECK(primeStructDoc.find("legacy `Result.map(result, fn)`") ==
+        std::string::npos);
+  CHECK(primeStructDoc.find("legacy Result helpers") == std::string::npos);
+}
+
 TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   std::filesystem::path todoPath = std::filesystem::path("..") / "docs" / "todo.md";
   std::filesystem::path todoFinishedPath = std::filesystem::path("..") / "docs" / "todo_finished.md";
@@ -1185,10 +1277,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4364: Fence Result compatibility helper adapters") !=
+                  "- TODO-4291: Decide sum-backed mutable `Maybe<T>` helpers") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
-                  "- TODO-4291: Decide sum-backed mutable `Maybe<T>` helpers") !=
+                  "- TODO-4292: Promote and style canonical `.prime` vector implementation") !=
         std::string::npos);
   CHECK(todo.find("- Semantic phase contract hardening:") == std::string::npos);
   CHECK(todo.find("- Deferred graph and inference hardening: TODO-4239") ==
@@ -1201,10 +1293,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4364: Fence Result compatibility helper adapters") !=
+                  "- TODO-4291: Decide sum-backed mutable `Maybe<T>` helpers") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4364: Fence Result compatibility helper adapters",
       "TODO-4291: Decide sum-backed mutable `Maybe<T>` helpers",
       "TODO-4268: Add heterogeneous type-pack syntax and metadata",
       "TODO-4269: Bind and monomorphize type-pack arguments",
@@ -1242,6 +1333,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("TODO-4363: Retire Result helper legacy wording") ==
         std::string::npos);
   CHECK(todoFinished.find("TODO-4363: Retire Result helper legacy wording") !=
+        std::string::npos);
+  CHECK(todo.find("TODO-4364: Fence Result compatibility helper adapters") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4364: Fence Result compatibility helper adapters") !=
         std::string::npos);
   CHECK(todo.find("TODO-4293: Bridge legacy `Result` helpers to the result sum") ==
         std::string::npos);
