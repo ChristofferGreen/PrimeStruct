@@ -1762,8 +1762,18 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
         if (semanticFact == InlineCollectionAccessTargetFact::NonCollectionAccess) {
           return false;
         }
-        const auto arrayVectorTargetInfo = resolveArrayVectorAccessTargetInfo(receiverExpr, localsIn);
-        if (resolveMapAccessTargetInfo(receiverExpr, localsIn, inferCallMapTargetInfo).isMapTarget) {
+        const auto arrayVectorTargetInfo =
+            resolveArrayVectorAccessTargetInfo(receiverExpr,
+                                               localsIn,
+                                               {},
+                                               semanticProgram,
+                                               semanticIndexPtr);
+        if (resolveMapAccessTargetInfo(receiverExpr,
+                                       localsIn,
+                                       inferCallMapTargetInfo,
+                                       semanticProgram,
+                                       semanticIndexPtr)
+                .isMapTarget) {
           return true;
         }
         if (arrayVectorTargetInfo.isArrayOrVectorTarget) {

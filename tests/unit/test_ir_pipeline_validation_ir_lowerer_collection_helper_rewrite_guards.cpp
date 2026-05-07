@@ -1332,7 +1332,31 @@ TEST_CASE("ir lowerer inline dispatch collection access fallback uses semantic r
   CHECK(nonCollectionGate < staleLocalFallback);
   CHECK(source.find("isInlineExperimentalMapTypeName(collectionFamily)") !=
         std::string::npos);
-  CHECK(source.find("resolveMapAccessTargetInfo(receiverExpr, localsIn, inferCallMapTargetInfo).isMapTarget") !=
+  const size_t semanticArrayVectorFallback = source.find(
+      "resolveArrayVectorAccessTargetInfo(receiverExpr,\n"
+      "                                               localsIn,\n"
+      "                                               {},\n"
+      "                                               semanticProgram,\n"
+      "                                               semanticIndexPtr)",
+      semanticFactUse);
+  const size_t semanticMapFallback = source.find(
+      "resolveMapAccessTargetInfo(receiverExpr,\n"
+      "                                       localsIn,\n"
+      "                                       inferCallMapTargetInfo,\n"
+      "                                       semanticProgram,\n"
+      "                                       semanticIndexPtr)",
+      semanticFactUse);
+  const size_t builtinCollectionFallback =
+      source.find("getBuiltinCollectionName(receiverExpr, collectionName)",
+                  semanticFactUse);
+  REQUIRE(semanticArrayVectorFallback != std::string::npos);
+  REQUIRE(semanticMapFallback != std::string::npos);
+  REQUIRE(builtinCollectionFallback != std::string::npos);
+  CHECK(nonCollectionGate < semanticArrayVectorFallback);
+  CHECK(nonCollectionGate < semanticMapFallback);
+  CHECK(semanticArrayVectorFallback < builtinCollectionFallback);
+  CHECK(semanticMapFallback < builtinCollectionFallback);
+  CHECK(source.find("resolveMapAccessTargetInfo(receiverExpr, localsIn, inferCallMapTargetInfo).isMapTarget") ==
         std::string::npos);
 }
 

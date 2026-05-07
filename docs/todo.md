@@ -700,6 +700,9 @@ Task template:
     semantic-product-backed collection-specialization, binding, local-auto,
     and query collection receiver facts before stale local array/vector/map
     or string metadata can decide count/access fallback routing.
+    The inline native collection target-resolver fallback slice is complete
+    for semantic-product-backed map and array/vector facts before stale local
+    target metadata can classify collection access fallback receivers.
     The inline native vector-returning call deferral slice is complete for
     semantic-product-backed collection-specialization, binding, local-auto,
     and query vector facts before callee return-collection reconstruction can
@@ -1038,6 +1041,12 @@ Task template:
       count/access fallback behavior. Published non-collection facts suppress
       stale local collection metadata while syntax-only compatibility keeps
       the legacy fallback.
+    - Completed slice: semantic-product-addressed inline native collection
+      target-resolver fallback now passes published map and array/vector facts
+      into the remaining access-target resolvers before builtin collection
+      spelling or direct-return reconstruction can classify fallback
+      receivers. Syntax-only compatibility keeps the legacy resolver
+      fallback.
     - Completed slice: semantic-product-addressed inline native
       vector-returning call deferral now consumes published
       collection-specialization, binding, local-auto, and query vector facts

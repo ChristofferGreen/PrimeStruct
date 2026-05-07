@@ -859,6 +859,10 @@ Planned non-template inference migration contract:
   map/non-map receiver facts before local map metadata can decide whether to
   defer to builtin/native map handling. Known map facts suppress stale scalar
   locals; known non-map facts suppress stale map locals.
+- Completed inline collection target-resolver fallback slice: inline native
+  collection fallback now passes graph-backed map and array/vector facts into
+  the residual access-target resolvers before builtin collection spelling or
+  direct-return reconstruction can classify receivers.
 - Completed tail explicit map helper gate slice: tail dispatch for explicit
   `/std/collections/map/*` helper calls now asks graph-backed map/non-map
   receiver facts before local map metadata can decide whether to rewrite into

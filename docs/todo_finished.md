@@ -6,6 +6,32 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer inline access fallback facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes inline native collection
+    fallback receiver classification pass published map and array/vector
+    facts into residual access-target resolvers before stale local target
+    metadata can classify receivers.
+  - acceptance:
+    - Inline collection fallback uses semantic-aware array/vector target
+      resolution before builtin collection spelling fallback.
+    - Inline collection fallback uses semantic-aware map target resolution
+      before builtin collection spelling fallback.
+    - Existing syntax-only receiver fallback remains available when no
+      semantic collection fact is published.
+  - stop_rule: Stop once inline native collection fallback residual
+    access-target resolvers receive semantic-product target facts before
+    legacy builtin/direct-return reconstruction, with source guard coverage
+    pinning the resolver ordering.
+  - evidence: Routed the residual inline native collection fallback
+    array/vector and map receiver probes through semantic-aware target
+    resolvers, tightened source guard coverage to require semantic resolver
+    ordering before builtin collection fallback, ran `git diff --check`, and
+    skipped broad baseline validation per the lite workflow.
+
 - [x] TODO-4298: Prefer late collection facts
   - owner: ai
   - created_at: 2026-04-28
