@@ -12,6 +12,8 @@
 
 namespace primec::ir_lowerer {
 
+struct SemanticProductTargetAdapter;
+
 struct OnErrorHandler {
   std::string errorType;
   std::string handlerPath;
@@ -321,6 +323,7 @@ BufferBuiltinCallEmitResult tryEmitBufferBuiltinCall(
     const std::function<int32_t()> &allocTempLocal,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    std::string &error);
+    std::string &error,
+    const SemanticProductTargetAdapter *semanticProductTargets = nullptr);
 
 } // namespace primec::ir_lowerer

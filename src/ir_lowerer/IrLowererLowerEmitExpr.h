@@ -987,7 +987,8 @@
               return emitExpr(valueExpr, localMap);
             },
             [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
-            error);
+            error,
+            &callResolutionAdapters.semanticProductTargets);
         if (bufferBuiltinResult != ir_lowerer::BufferBuiltinDispatchResult::NotHandled) {
           return bufferBuiltinResult == ir_lowerer::BufferBuiltinDispatchResult::Emitted;
         }

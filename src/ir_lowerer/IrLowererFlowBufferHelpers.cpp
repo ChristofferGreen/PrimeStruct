@@ -1,11 +1,73 @@
 #include "IrLowererFlowHelpers.h"
 
+#include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererIndexKindHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
 
 #include <limits>
+#include <vector>
 
 namespace primec::ir_lowerer {
+
+namespace {
+
+LocalInfo::ValueKind semanticBufferElementKindFromTypeText(const std::string &typeText) {
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argText)) {
+    return LocalInfo::ValueKind::Unknown;
+  }
+  base = normalizeCollectionBindingTypeName(trimTemplateTypeText(base));
+  if (base == "Reference" || base == "Pointer") {
+    std::vector<std::string> args;
+    if (!splitTemplateArgs(argText, args) || args.size() != 1) {
+      return LocalInfo::ValueKind::Unknown;
+    }
+    return semanticBufferElementKindFromTypeText(args.front());
+  }
+  if (base != "Buffer") {
+    return LocalInfo::ValueKind::Unknown;
+  }
+  return valueKindFromTypeName(trimTemplateTypeText(argText));
+}
+
+bool inferSemanticBufferElementKindForName(const Expr &expr,
+                                           const SemanticProductTargetAdapter *semanticProductTargets,
+                                           LocalInfo::ValueKind &kindOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  if (expr.kind != Expr::Kind::Name || semanticProductTargets == nullptr ||
+      !semanticProductTargets->hasSemanticProduct ||
+      semanticProductTargets->semanticProgram == nullptr || expr.semanticNodeId == 0) {
+    return false;
+  }
+  const SemanticProgram *semanticProgram = semanticProductTargets->semanticProgram;
+  if (const auto *bindingFact = findSemanticProductBindingFact(*semanticProductTargets, expr)) {
+    kindOut = semanticBufferElementKindFromTypeText(resolveSemanticProductTypeText(
+        semanticProgram, bindingFact->bindingTypeText, bindingFact->bindingTypeTextId));
+    return true;
+  }
+  if (const auto *localAutoFact =
+          findSemanticProductLocalAutoFactBySemanticId(*semanticProductTargets, expr)) {
+    kindOut = semanticBufferElementKindFromTypeText(resolveSemanticProductTypeText(
+        semanticProgram, localAutoFact->bindingTypeText, localAutoFact->bindingTypeTextId));
+    return true;
+  }
+  if (const auto *queryFact = findSemanticProductQueryFactBySemanticId(*semanticProductTargets, expr)) {
+    std::string typeText = resolveSemanticProductTypeText(
+        semanticProgram, queryFact->queryTypeText, queryFact->queryTypeTextId);
+    if (typeText.empty()) {
+      typeText = resolveSemanticProductTypeText(
+          semanticProgram, queryFact->bindingTypeText, queryFact->bindingTypeTextId);
+    }
+    kindOut = semanticBufferElementKindFromTypeText(typeText);
+    return true;
+  }
+  return false;
+}
+
+} // namespace
 
 bool resolveBufferInitInfo(const Expr &expr,
                            const std::function<LocalInfo::ValueKind(const std::string &)> &resolveValueKind,
@@ -122,7 +184,8 @@ BufferBuiltinCallEmitResult tryEmitBufferBuiltinCall(
     const std::function<int32_t()> &allocTempLocal,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    std::string &error) {
+    std::string &error,
+    const SemanticProductTargetAdapter *semanticProductTargets) {
   if (isSimpleCallName(expr, "buffer")) {
     BufferInitInfo initInfo;
     if (!resolveBufferInitInfo(expr, resolveValueKind, initInfo, error)) {
@@ -147,6 +210,11 @@ BufferBuiltinCallEmitResult tryEmitBufferBuiltinCall(
             expr,
             [&](const Expr &bufferExpr) -> std::optional<LocalInfo::ValueKind> {
               if (bufferExpr.kind == Expr::Kind::Name) {
+                LocalInfo::ValueKind semanticKind = LocalInfo::ValueKind::Unknown;
+                if (inferSemanticBufferElementKindForName(
+                        bufferExpr, semanticProductTargets, semanticKind)) {
+                  return semanticKind;
+                }
                 auto it = localsIn.find(bufferExpr.name);
                 if (it == localsIn.end() || it->second.kind != LocalInfo::Kind::Buffer) {
                   return std::nullopt;
@@ -157,6 +225,11 @@ BufferBuiltinCallEmitResult tryEmitBufferBuiltinCall(
                   bufferExpr.args.size() == 1) {
                 const Expr &targetExpr = bufferExpr.args.front();
                 if (targetExpr.kind == Expr::Kind::Name) {
+                  LocalInfo::ValueKind semanticKind = LocalInfo::ValueKind::Unknown;
+                  if (inferSemanticBufferElementKindForName(
+                          targetExpr, semanticProductTargets, semanticKind)) {
+                    return semanticKind;
+                  }
                   auto it = localsIn.find(targetExpr.name);
                   if (it != localsIn.end() &&
                       ((it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToBuffer) ||

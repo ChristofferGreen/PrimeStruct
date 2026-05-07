@@ -714,6 +714,10 @@ Task template:
     semantic-product-backed binding, local-auto, and query pointer/reference
     facts before stale local pointer metadata can decide pointer arithmetic
     operand sides.
+    The lowerer buffer-load element-kind slice is complete for
+    semantic-product-backed binding, local-auto, and query `Buffer<T>` facts
+    before stale local buffer metadata can classify `buffer_load(...)`
+    operands.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for

@@ -3,6 +3,7 @@
 
 
 struct ReturnInfo;
+struct SemanticProductTargetAdapter;
 
 struct OnErrorHandler {
   std::string errorType;
@@ -313,4 +314,5 @@ BufferBuiltinCallEmitResult tryEmitBufferBuiltinCall(
     const std::function<int32_t()> &allocTempLocal,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    std::string &error);
+    std::string &error,
+    const SemanticProductTargetAdapter *semanticProductTargets = nullptr);

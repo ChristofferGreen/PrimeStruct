@@ -6,6 +6,31 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Use buffer facts for load operands
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes native `buffer_load(...)`
+    element-kind classification consume published binding, local-auto, and
+    query `Buffer<T>` facts before stale `LocalInfo` buffer metadata can
+    answer.
+  - acceptance:
+    - Published binding type IDs suppress stale local buffer operands when
+      the graph-owned type is non-buffer.
+    - Published local-auto type IDs classify direct `Buffer<T>` load
+      operands before stale local metadata.
+    - Published query type IDs classify `Reference<Buffer<T>>` dereference
+      operands before stale local metadata.
+  - stop_rule: Stop once native buffer-load element-kind inference depends on
+    graph-owned name facts and focused tests pin graph-backed, stale-local,
+    and syntax-only behavior.
+  - evidence: Added semantic-product buffer element-kind lookup to
+    `buffer_load(...)`, passed the semantic adapter through the production
+    buffer builtin dispatch path, covered binding/local-auto/query facts with
+    stale local suppression, and skipped broad baseline validation per the
+    lite workflow.
+
 - [x] TODO-4298: Use pointer facts for arithmetic operands
   - owner: ai
   - created_at: 2026-04-28
