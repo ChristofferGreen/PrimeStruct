@@ -6,6 +6,31 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer base map result facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that routes base-kind `tryAt(...)` and
+    `contains(...)` map result helper classification through published
+    map/non-map receiver facts before stale local map metadata can classify
+    helper result kinds.
+  - acceptance:
+    - Base `tryAt(...)` result-value classification passes the published
+      semantic program and product index into map target classification.
+    - Base `contains(...)` result classification passes the published semantic
+      program and product index into map target classification.
+    - Published non-map facts suppress stale local map metadata in both helper
+      classifiers.
+  - stop_rule: Stop once base map result helper classification uses
+    semantic-product map target facts before legacy local map metadata, with
+    behavioral coverage proving non-map facts suppress stale locals.
+  - evidence: Routed `inferMapTryAtResultValueKind` and
+    `inferMapContainsResultKind` through semantic-aware map target resolution,
+    passed semantic context from base call and dispatch inference, added
+    behavioral coverage for stale-local suppression, ran `git diff --check`,
+    and skipped broad baseline validation per the lite workflow.
+
 - [x] TODO-4298: Prefer late map helper facts
   - owner: ai
   - created_at: 2026-04-28

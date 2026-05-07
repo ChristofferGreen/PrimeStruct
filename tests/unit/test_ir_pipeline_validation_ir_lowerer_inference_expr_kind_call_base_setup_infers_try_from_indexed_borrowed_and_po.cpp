@@ -2454,6 +2454,41 @@ TEST_CASE("ir lowerer inference base-kind helpers resolve parser-shaped canonica
   CHECK(primec::ir_lowerer::isMapContainsCallName(containsCall));
   CHECK(primec::ir_lowerer::inferMapContainsResultKind(containsCall, locals, kindOut));
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+
+  valuesName.semanticNodeId = 4242;
+  tryAtCall.args = {valuesName};
+  containsCall.args = {valuesName};
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "local",
+      .name = "values",
+      .bindingTypeText = "i32",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = valuesName.semanticNodeId,
+      .resolvedPathId = primec::InvalidSymbolId,
+      .bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+  });
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(
+      valuesName.semanticNodeId, 0);
+  const auto semanticIndex = primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK_FALSE(primec::ir_lowerer::inferMapTryAtResultValueKind(
+      tryAtCall, locals, kindOut, &semanticProgram, &semanticIndex));
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK_FALSE(primec::ir_lowerer::inferMapContainsResultKind(
+      containsCall, locals, kindOut, &semanticProgram, &semanticIndex));
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
 TEST_CASE("ir lowerer inference expr-kind call-return setup wires callback") {

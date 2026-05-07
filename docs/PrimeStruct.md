@@ -908,6 +908,10 @@ Planned non-template inference migration contract:
   array/vector facts before stale local collection metadata can choose helper
   receiver materialization or classify nested args-pack access. Syntax-only
   local/direct-return inference remains the compatibility fallback.
+- Completed lowerer-side base map result helper slice: base-kind result
+  inference for `tryAt(...)` and `contains(...)` now passes graph-backed
+  map/non-map receiver facts into helper result classifiers before stale local
+  map metadata can decide result value kinds.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

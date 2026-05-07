@@ -1010,12 +1010,15 @@ bool isMapContainsCallName(const Expr &expr) {
 
 bool inferMapTryAtResultValueKind(const Expr &expr,
                                   const LocalMap &localsIn,
-                                  LocalInfo::ValueKind &kindOut) {
+                                  LocalInfo::ValueKind &kindOut,
+                                  const SemanticProgram *semanticProgram,
+                                  const SemanticProductIndex *semanticIndex) {
   kindOut = LocalInfo::ValueKind::Unknown;
   if (expr.kind != Expr::Kind::Call || expr.args.empty() || !isMapTryAtCallName(expr)) {
     return false;
   }
-  const auto targetInfo = resolveMapAccessTargetInfo(expr.args.front(), localsIn);
+  const auto targetInfo =
+      resolveMapAccessTargetInfo(expr.args.front(), localsIn, {}, semanticProgram, semanticIndex);
   if (!targetInfo.isMapTarget || targetInfo.mapValueKind == LocalInfo::ValueKind::Unknown) {
     return false;
   }
@@ -1025,12 +1028,15 @@ bool inferMapTryAtResultValueKind(const Expr &expr,
 
 bool inferMapContainsResultKind(const Expr &expr,
                                 const LocalMap &localsIn,
-                                LocalInfo::ValueKind &kindOut) {
+                                LocalInfo::ValueKind &kindOut,
+                                const SemanticProgram *semanticProgram,
+                                const SemanticProductIndex *semanticIndex) {
   kindOut = LocalInfo::ValueKind::Unknown;
   if (expr.kind != Expr::Kind::Call || expr.args.empty() || !isMapContainsCallName(expr)) {
     return false;
   }
-  const auto targetInfo = resolveMapAccessTargetInfo(expr.args.front(), localsIn);
+  const auto targetInfo =
+      resolveMapAccessTargetInfo(expr.args.front(), localsIn, {}, semanticProgram, semanticIndex);
   if (!targetInfo.isMapTarget) {
     return false;
   }
@@ -1542,7 +1548,8 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
           return true;
         }
       }
-      if (inferMapTryAtResultValueKind(arg, localsIn, kindOut)) {
+      if (inferMapTryAtResultValueKind(
+              arg, localsIn, kindOut, semanticProgram, semanticIndex)) {
         return true;
       }
       std::string accessName;

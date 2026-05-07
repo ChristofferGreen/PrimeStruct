@@ -921,10 +921,12 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
           return true;
         }
       }
-      if (inferMapContainsResultKind(resultExpr, localsIn, kindOut)) {
+      if (inferMapContainsResultKind(
+              resultExpr, localsIn, kindOut, semanticProgram, semanticIndex)) {
         return true;
       }
-      if (inferMapTryAtResultValueKind(resultExpr, localsIn, kindOut)) {
+      if (inferMapTryAtResultValueKind(
+              resultExpr, localsIn, kindOut, semanticProgram, semanticIndex)) {
         return true;
       }
       if (isFileHandleCall(resultExpr)) {

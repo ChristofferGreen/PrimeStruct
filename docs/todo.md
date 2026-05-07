@@ -834,6 +834,9 @@ Task template:
     semantic-product-backed map, wrapped-map, and array/vector facts before
     stale local collection metadata can choose helper receiver
     materialization.
+    The lowerer base map result helper slice is complete for
+    semantic-product-backed `tryAt(...)` and `contains(...)` receiver facts
+    before stale local map metadata can classify helper result kinds.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -904,6 +907,10 @@ Task template:
       `at(target, key)` and `tryAt(target, key)` receiver probes. Published
       map facts suppress stale scalar locals while published non-map facts
       suppress stale map locals.
+    - Completed slice: semantic-product-addressed base map result helper
+      classification now passes published map/non-map receiver facts into
+      `tryAt(...)` and `contains(...)` result-kind helpers before local map
+      metadata can classify helper result kinds.
     - Completed slice: semantic-product-addressed native `Result.why(...)`
       direct-call sources now resolve interned query result-error IDs before
       copied query text, so stale duplicated error text cannot override the
