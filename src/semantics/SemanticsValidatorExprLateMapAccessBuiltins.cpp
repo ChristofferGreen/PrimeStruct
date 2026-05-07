@@ -83,6 +83,13 @@ bool isExperimentalMapTypeText(const std::string &typeText) {
   }
 }
 
+bool isSourceSpelledCanonicalMapAccessCall(const Expr &expr) {
+  const std::string &sourceName =
+      expr.sourceName.empty() ? expr.name : expr.sourceName;
+  return sourceName.rfind("/std/collections/map/", 0) == 0 ||
+         sourceName.rfind("std/collections/map/", 0) == 0;
+}
+
 } // namespace
 
 bool SemanticsValidator::validateExprLateMapAccessBuiltins(
@@ -108,10 +115,9 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
         inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText) &&
         isExperimentalMapTypeText(receiverTypeText);
     const bool canonicalMapAccessDiagnostic =
-        receiverIsExperimentalMap ||
-        expr.name.rfind("/std/collections/map/", 0) == 0 ||
-        expr.namespacePrefix == "/std/collections/map" ||
-        expr.namespacePrefix == "std/collections/map";
+        isSourceSpelledCanonicalMapAccessCall(expr) ||
+        expr.sourceIsMethodCall ||
+        (receiverIsExperimentalMap && expr.isMethodCall);
     if (canonicalMapAccessDiagnostic) {
       return failLateMapAccessBuiltinDiagnostic(
           "argument type mismatch for /std/collections/map/" + helperName +

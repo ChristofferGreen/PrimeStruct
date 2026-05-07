@@ -21,6 +21,13 @@ bool isCanonicalMapAccessResolvedPath(const std::string &path) {
          path == "/std/collections/map/at_unsafe_ref";
 }
 
+bool isSourceSpelledCanonicalMapAccessCall(const Expr &expr) {
+  const std::string &sourceName =
+      expr.sourceName.empty() ? expr.name : expr.sourceName;
+  return sourceName.rfind("/std/collections/map/", 0) == 0 ||
+         sourceName.rfind("std/collections/map/", 0) == 0;
+}
+
 bool isUnqualifiedCollectionAccessCall(const Expr &candidate,
                                        const std::string &helperName) {
   if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
@@ -152,12 +159,16 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
   };
   auto failCollectionAccessMapKeyMismatch = [&](const std::string &helperName,
                                                 const std::string &mapKeyType) {
+    const bool hasSourceShape = !expr.sourceName.empty();
     const bool isExplicitCanonicalMapAccessCall =
-        !expr.isMethodCall &&
-        (isCanonicalMapAccessResolvedPath(resolved) ||
-         expr.name.rfind("/std/collections/map/", 0) == 0 ||
-         expr.namespacePrefix == "/std/collections/map" ||
-         expr.namespacePrefix == "std/collections/map");
+        expr.sourceIsMethodCall ||
+        (!expr.isMethodCall &&
+         (isSourceSpelledCanonicalMapAccessCall(expr) ||
+          (!hasSourceShape &&
+           (isCanonicalMapAccessResolvedPath(resolved) ||
+            expr.name.rfind("/std/collections/map/", 0) == 0 ||
+            expr.namespacePrefix == "/std/collections/map" ||
+            expr.namespacePrefix == "std/collections/map"))));
     if (isExplicitCanonicalMapAccessCall) {
       return failCollectionAccessDiagnostic("argument type mismatch for " +
                                             resolved + " parameter key");

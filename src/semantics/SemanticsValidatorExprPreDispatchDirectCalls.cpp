@@ -48,6 +48,13 @@ bool isUnqualifiedCollectionAccessCall(const Expr &candidate,
          resolvedHelperName == helperName;
 }
 
+bool isSourceSpelledCanonicalMapAccessCall(const Expr &expr) {
+  const std::string &sourceName =
+      expr.sourceName.empty() ? expr.name : expr.sourceName;
+  return sourceName.rfind("/std/collections/map/", 0) == 0 ||
+         sourceName.rfind("std/collections/map/", 0) == 0;
+}
+
 bool isRootMapConstructorExpr(const Expr &candidate) {
   if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
       candidate.name.empty()) {
@@ -291,10 +298,10 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
             inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText) &&
             isExperimentalMapTypeText(receiverTypeText);
         const bool canonicalMapAccessDiagnostic =
-            receiverIsExperimentalMap ||
-            expr.name.rfind("/std/collections/map/", 0) == 0 ||
-            expr.namespacePrefix == "/std/collections/map" ||
-            expr.namespacePrefix == "std/collections/map";
+            isSourceSpelledCanonicalMapAccessCall(expr) ||
+            expr.sourceIsMethodCall ||
+            (receiverIsExperimentalMap &&
+             expr.isMethodCall);
         if (canonicalMapAccessDiagnostic) {
           return failPreDispatchDirectCallDiagnostic(
               "argument type mismatch for " + canonicalPath +

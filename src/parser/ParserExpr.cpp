@@ -69,6 +69,9 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     if (target.sourceColumn == 0 && startColumn > 0) {
       target.sourceColumn = startColumn;
     }
+    if (target.sourceName.empty() && !target.name.empty()) {
+      target.sourceName = target.name;
+    }
   };
 
   auto looksLikeArgumentLabel = [&](size_t start, size_t &afterLabel) -> bool {
@@ -215,6 +218,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       Expr call;
       call.kind = Expr::Kind::Call;
       call.name = name.text;
+      call.sourceName = name.text;
       call.namespacePrefix = namespacePrefix;
       call.templateArgs = std::move(templateArgs);
       call.transforms = std::move(transforms);
@@ -473,6 +477,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       Expr call;
       call.kind = Expr::Kind::Call;
       call.name = name.text;
+      call.sourceName = name.text;
       call.namespacePrefix = namespacePrefix;
       call.templateArgs = std::move(templateArgs);
       bool hasCallSyntax = false;
@@ -538,6 +543,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       }
       out.kind = Expr::Kind::Name;
       out.name = name.text;
+      out.sourceName = name.text;
       out.namespacePrefix = namespacePrefix;
       return true;
     }
@@ -616,8 +622,10 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         Expr call;
         call.kind = Expr::Kind::Call;
         call.name = member.text;
+        call.sourceName = member.text;
         call.namespacePrefix = namespacePrefix;
         call.isMethodCall = true;
+        call.sourceIsMethodCall = true;
         call.templateArgs = std::move(templateArgs);
         if (!parseCallArgumentList(call.args, call.argNames, namespacePrefix)) {
           return false;
@@ -645,8 +653,10 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       Expr access;
       access.kind = Expr::Kind::Call;
       access.name = member.text;
+      access.sourceName = member.text;
       access.namespacePrefix = namespacePrefix;
       access.isMethodCall = true;
+      access.sourceIsMethodCall = true;
       access.isFieldAccess = true;
       access.args.push_back(current);
       access.argNames.push_back(std::nullopt);
@@ -686,6 +696,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       Expr call;
       call.kind = Expr::Kind::Call;
       call.name = "at";
+      call.sourceName = "at";
       call.namespacePrefix = namespacePrefix;
       call.args.push_back(current);
       call.args.push_back(std::move(indexExpr));
@@ -698,6 +709,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       Expr call;
       call.kind = Expr::Kind::Call;
       call.name = "try";
+      call.sourceName = "try";
       call.namespacePrefix = namespacePrefix;
       call.args.push_back(current);
       call.argNames.push_back(std::nullopt);

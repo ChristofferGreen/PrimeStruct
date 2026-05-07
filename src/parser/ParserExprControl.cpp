@@ -384,6 +384,7 @@ bool Parser::parseReturnStatement(Expr &out, const std::string &namespacePrefix)
   Expr returnCall = {};
   returnCall.kind = Expr::Kind::Call;
   returnCall.name = name.text;
+  returnCall.sourceName = name.text;
   returnCall.namespacePrefix = namespacePrefix;
   returnCall.sourceLine = name.line;
   returnCall.sourceColumn = name.column;

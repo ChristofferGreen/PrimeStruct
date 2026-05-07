@@ -29,6 +29,10 @@ struct Expr {
   int floatWidth = 32;
   std::string stringValue;
   std::string name;
+  // Original parsed callee/member spelling, retained for diagnostics after
+  // semantic rewrites specialize or canonicalize name.
+  std::string sourceName;
+  bool sourceIsMethodCall = false;
   std::vector<Expr> args;
   std::vector<std::optional<std::string>> argNames;
   std::vector<Expr> bodyArguments;
