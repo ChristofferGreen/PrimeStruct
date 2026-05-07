@@ -161,7 +161,9 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
                                                                 stateInOut.getReturnInfo,
                                                                 false,
                                                                 candidateKindOut,
-                                                                &methodResolved);
+                                                                &methodResolved,
+                                                                stateInOut.semanticProgram,
+                                                                stateInOut.semanticIndex);
               matchedOut = methodResolved;
               return resolved;
             },

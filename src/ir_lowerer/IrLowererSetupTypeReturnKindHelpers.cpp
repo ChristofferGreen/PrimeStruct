@@ -210,7 +210,9 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
                                  const GetReturnInfoForPathFn &getReturnInfo,
                                  bool requireArrayReturn,
                                  LocalInfo::ValueKind &kindOut,
-                                 bool *methodResolvedOut) {
+                                 bool *methodResolvedOut,
+                                 const SemanticProgram *semanticProgram,
+                                 const SemanticProductIndex *semanticIndex) {
   kindOut = LocalInfo::ValueKind::Unknown;
   if (methodResolvedOut != nullptr) {
     *methodResolvedOut = false;
@@ -227,40 +229,62 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
       (isSimpleCallName(methodCallExpr, "at") ||
        isSimpleCallName(methodCallExpr, "at_unsafe"))) {
     const Expr &receiverExpr = methodCallExpr.args.front();
-    if (receiverExpr.kind == Expr::Kind::Name) {
-      auto localIt = localsIn.find(receiverExpr.name);
-      if (localIt != localsIn.end()) {
-        const LocalInfo &receiverInfo = localIt->second;
-        const bool isVectorLikeReceiver =
-            receiverInfo.kind == LocalInfo::Kind::Vector ||
-            receiverInfo.kind == LocalInfo::Kind::Array ||
-            (receiverInfo.kind == LocalInfo::Kind::Reference &&
-             (receiverInfo.referenceToVector || receiverInfo.referenceToArray)) ||
-            (receiverInfo.kind == LocalInfo::Kind::Pointer &&
-             (receiverInfo.pointerToVector || receiverInfo.pointerToArray));
-        if (isVectorLikeReceiver &&
-            receiverInfo.valueKind != LocalInfo::ValueKind::Unknown) {
-          kindOut = receiverInfo.valueKind;
-          if (methodResolvedOut != nullptr) {
-            *methodResolvedOut = true;
+    SemanticReturnKindTargetInfo semanticInfo;
+    const bool hasSemanticReceiverFact = resolveSemanticReturnKindTargetInfo(
+        receiverExpr, semanticProgram, semanticIndex, semanticInfo);
+    if (hasSemanticReceiverFact) {
+      if (semanticInfo.arrayVectorInfo.isArrayOrVectorTarget &&
+          semanticInfo.arrayVectorInfo.elemKind != LocalInfo::ValueKind::Unknown) {
+        kindOut = semanticInfo.arrayVectorInfo.elemKind;
+        if (methodResolvedOut != nullptr) {
+          *methodResolvedOut = true;
+        }
+        return true;
+      }
+      if (semanticInfo.mapInfo.isMapTarget &&
+          semanticInfo.mapInfo.mapValueKind != LocalInfo::ValueKind::Unknown) {
+        kindOut = semanticInfo.mapInfo.mapValueKind;
+        if (methodResolvedOut != nullptr) {
+          *methodResolvedOut = true;
+        }
+        return true;
+      }
+    } else {
+      if (receiverExpr.kind == Expr::Kind::Name) {
+        auto localIt = localsIn.find(receiverExpr.name);
+        if (localIt != localsIn.end()) {
+          const LocalInfo &receiverInfo = localIt->second;
+          const bool isVectorLikeReceiver =
+              receiverInfo.kind == LocalInfo::Kind::Vector ||
+              receiverInfo.kind == LocalInfo::Kind::Array ||
+              (receiverInfo.kind == LocalInfo::Kind::Reference &&
+               (receiverInfo.referenceToVector || receiverInfo.referenceToArray)) ||
+              (receiverInfo.kind == LocalInfo::Kind::Pointer &&
+               (receiverInfo.pointerToVector || receiverInfo.pointerToArray));
+          if (isVectorLikeReceiver &&
+              receiverInfo.valueKind != LocalInfo::ValueKind::Unknown) {
+            kindOut = receiverInfo.valueKind;
+            if (methodResolvedOut != nullptr) {
+              *methodResolvedOut = true;
+            }
+            return true;
           }
-          return true;
         }
       }
-    }
-    if (receiverExpr.kind == Expr::Kind::Call) {
-      std::string collectionName;
-      if (getBuiltinCollectionName(receiverExpr, collectionName) &&
-          (collectionName == "vector" || collectionName == "array") &&
-          receiverExpr.templateArgs.size() == 1) {
-        const LocalInfo::ValueKind elemKind =
-            valueKindFromTypeName(receiverExpr.templateArgs.front());
-        if (elemKind != LocalInfo::ValueKind::Unknown) {
-          kindOut = elemKind;
-          if (methodResolvedOut != nullptr) {
-            *methodResolvedOut = true;
+      if (receiverExpr.kind == Expr::Kind::Call) {
+        std::string collectionName;
+        if (getBuiltinCollectionName(receiverExpr, collectionName) &&
+            (collectionName == "vector" || collectionName == "array") &&
+            receiverExpr.templateArgs.size() == 1) {
+          const LocalInfo::ValueKind elemKind =
+              valueKindFromTypeName(receiverExpr.templateArgs.front());
+          if (elemKind != LocalInfo::ValueKind::Unknown) {
+            kindOut = elemKind;
+            if (methodResolvedOut != nullptr) {
+              *methodResolvedOut = true;
+            }
+            return true;
           }
-          return true;
         }
       }
     }

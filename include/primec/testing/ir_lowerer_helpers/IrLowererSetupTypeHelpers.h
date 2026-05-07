@@ -71,7 +71,9 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
                                  const GetReturnInfoForPathFn &getReturnInfo,
                                  bool requireArrayReturn,
                                  LocalInfo::ValueKind &kindOut,
-                                 bool *methodResolvedOut = nullptr);
+                                 bool *methodResolvedOut = nullptr,
+                                 const SemanticProgram *semanticProgram = nullptr,
+                                 const SemanticProductIndex *semanticIndex = nullptr);
 bool getNamespacedCollectionHelperName(const Expr &expr, std::string &collectionOut, std::string &helperOut);
 bool resolveDefinitionCallReturnKind(const Expr &callExpr,
                                      const std::unordered_map<std::string, const Definition *> &defMap,

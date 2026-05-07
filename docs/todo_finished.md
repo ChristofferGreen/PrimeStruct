@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer method access return facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes method-call access receiver
+    classification consume semantic-product receiver facts before stale local
+    vector metadata can classify `receiver.at(...)` return kinds.
+  - acceptance:
+    - Published binding type IDs classify method access receivers before
+      copied semantic text and stale local vector metadata.
+    - Call-return setup threads semantic-product state into method-call
+      return-kind helpers for scalar and array-return inference.
+    - Existing local vector/array and constructor target inference remains
+      the compatibility fallback when no semantic receiver fact is published.
+  - stop_rule: Stop once method-call access return-kind classification uses
+    published semantic receiver facts ahead of stale locals and a focused test
+    pins ID-first vector element inference over stale vector locals.
+  - evidence: Threaded semantic-product state into method-call return-kind
+    inference, made resolved semantic receiver facts authoritative before
+    legacy local receiver metadata, added method-call stale-local regression
+    coverage for `values.at(i)`, ran `git diff --check`, and skipped broad
+    baseline validation per the lite workflow.
+
 - [x] TODO-4298: Prefer access return facts
   - owner: ai
   - created_at: 2026-04-28

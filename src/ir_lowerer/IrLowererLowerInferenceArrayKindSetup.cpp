@@ -261,7 +261,10 @@ bool runLowerInferenceArrayKindSetup(const LowerInferenceArrayKindSetupInput &in
               },
               stateInOut.getReturnInfo,
               true,
-              kindOut);
+              kindOut,
+              nullptr,
+              stateInOut.semanticProgram,
+              stateInOut.semanticIndex);
         });
   };
   return true;
