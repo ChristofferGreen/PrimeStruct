@@ -14216,3 +14216,37 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     retired wording in `test_compile_run_examples_docs_locks.cpp`, and
     promoted TODO-4291 to Ready Now. Local test execution was skipped per the
     lite workflow.
+
+- [x] TODO-4291: Decide sum-backed mutable `Maybe<T>` helpers
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Decide whether `Maybe<T>.set(value)`, `Maybe<T>.clear()`, and
+    `Maybe<T>.take()` should return as stdlib helpers on top of sum-backed
+    `Maybe<T>`, or remain retired in favor of explicit `pick` plus value
+    construction.
+  - implementation_notes:
+    - Start from `stdlib/std/maybe/maybe.prime`,
+      `tests/unit/test_semantics_maybe.cpp`, and the VM/native Maybe
+      compile-run tests.
+    - If mutable helpers return, first define the general language contract for
+      in-place active-variant mutation and payload movement on sum values.
+    - If mutable helpers stay retired, strengthen diagnostics so callers get a
+      named migration error rather than a generic missing-helper path.
+  - acceptance:
+    - The chosen direction is documented in `docs/PrimeStruct.md`.
+    - Semantic tests cover `set`, `clear`, and `take` as deterministic
+      migration diagnostics.
+    - Compile-run coverage covers the explicit-construction/pick replacement
+      surface through retired-helper diagnostics.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once the sum-backed Maybe mutable-helper policy is
+    implemented or intentionally retired with focused diagnostics and docs.
+  - finished_at: 2026-05-07
+  - evidence: Kept `set(value)`, `clear()`, and `take()` retired for
+    sum-backed `Maybe<T>`, added named diagnostics with explicit construction
+    and `pick` migration guidance, expanded semantic plus VM/native
+    compile-run diagnostic coverage for all three helpers, documented the
+    final policy in `docs/PrimeStruct.md`, removed TODO-4291 from the active
+    queue, and promoted TODO-4292 to Ready Now. Local test execution was
+    skipped per the lite workflow.

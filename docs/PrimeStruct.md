@@ -4154,8 +4154,9 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to brace
   constructor surface IDs as helper metadata rather than struct field construction.
 - **Maybe/Result migration:** `Maybe<T>` is now a stdlib-owned sum with `none` and `some` variants. `Maybe<T>{}`
   defaults to `none`, `Maybe<T>{none}` is the explicit empty form, `some<T>(value)` is the named helper, and
-  `Maybe<T>{value}` is accepted when the `some` payload is the only matching variant. The remaining Result
-  propagation and legacy cleanup work is tracked by TODO-4266 and TODO-4267, not by file/gfx/collection compatibility.
+  `Maybe<T>{value}` is accepted when the `some` payload is the only matching variant. Mutable `Maybe<T>` helper
+  calls are intentionally retired for the sum-backed surface; use explicit construction plus `pick` instead. Result
+  helper compatibility is separately inventoried and fenced rather than owned by file/gfx/collection compatibility.
 - **Follow-up policy:** do not add new constructor-shaped compatibility surfaces. Existing retained forms must either
   route through named helpers with focused coverage or get a dedicated migration TODO with scope, acceptance, and
   stop_rule before their status changes.
@@ -4170,7 +4171,9 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to brace
   payload uniquely matches the `some` variant; use `some<T>(value)` when call-site clarity matters.
 - **Helper surface (stdlib):** `isEmpty()` / `isSome()` and compatibility wrappers `is_empty()` / `is_some()` are
   implemented as type-path helpers over `pick`. The old mutable struct helpers `set(value)`, `clear()`, and `take()`
-  are retired for the sum-backed representation until a dedicated mutable active-variant contract lands.
+  are retired for the sum-backed representation; callers should rebind with `some<T>(value)`, explicit `[some]`
+  construction, `Maybe<T>{}`, or `none<T>()`, and use `pick(...)` to inspect or move payloads explicitly. A future
+  mutable active-variant helper surface would need a new language contract and TODO before it is added.
 - **Example shape:**
   ```
   [sum]
@@ -4221,11 +4224,13 @@ maybe_basic() {
   })
 }
 
-// Negative: retired mutable helper.
+// Negative: retired mutable helpers.
 [return<i32>]
 bad_set() {
   [Maybe<i32> mut] value{none<i32>()}
-  value.set(1i32) // error: no sum-backed Maybe set helper is defined yet
+  value.set(1i32) // error: sum-backed Maybe<T> has no mutable helper set
+  value.clear() // error: sum-backed Maybe<T> has no mutable helper clear
+  [i32] out{value.take()} // error: sum-backed Maybe<T> has no mutable helper take
   return(0i32)
 }
 ```

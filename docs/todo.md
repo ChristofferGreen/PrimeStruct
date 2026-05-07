@@ -72,11 +72,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4291: Decide sum-backed mutable `Maybe<T>` helpers
+- TODO-4292: Promote and style canonical `.prime` vector implementation
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4292: Promote and style canonical `.prime` vector implementation
 - TODO-4293: Stabilize generic contiguous-storage substrate
 - TODO-4294: Lower vector helpers through ordinary `.prime`
 - TODO-4281: Lift vector dynamic capacity limit
@@ -84,12 +83,13 @@ Task template:
 - TODO-4296: Delete vector compatibility seams
 - TODO-4297: Add zero C++ vector-surface audit
 - TODO-4299: Promote and style canonical `.prime` map implementation
+- TODO-4300: Stabilize map lookup and insertion substrate
 
 ### Priority Lanes (Current)
 
 - Semantic ownership authority: none active; future semantic-authority work
   must enter as bounded leaves only.
-- Deferred stdlib ADT migration: TODO-4291
+- Deferred stdlib ADT migration: none active
 - Vector stdlib ownership cutover: TODO-4292 -> TODO-4293 -> TODO-4294
   -> TODO-4281 -> TODO-4295 -> TODO-4296 -> TODO-4297
 - Map stdlib ownership cutover: TODO-4299 -> TODO-4300 -> TODO-4301
@@ -110,7 +110,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4291: Decide sum-backed mutable `Maybe<T>` helpers
 - TODO-4292: Promote and style canonical `.prime` vector implementation
 - TODO-4293: Stabilize generic contiguous-storage substrate
 - TODO-4294: Lower vector helpers through ordinary `.prime`
@@ -195,7 +194,7 @@ Task template:
 | VM/runtime debug stateful opcode parity | none |
 | Test-suite audit follow-up and release-gate stability | none |
 | Algebraic sum types and brace-only construction | none |
-| Stdlib ADT migration for `Maybe` and `Result` | TODO-4291 |
+| Stdlib ADT migration for `Maybe` and `Result` | none |
 | Generic type packs and tuple stdlib surface | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity and local type facts | TODO-4331, TODO-4332, TODO-4333, TODO-4334, TODO-4335, TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
 | Generic constraints and compile-time flow control | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
@@ -222,7 +221,7 @@ Task template:
 | Shared VM/debug stateful opcode behavior | none |
 | Release benchmark/example suite stability and doctest governance | none |
 | Sum-type and brace-construction conformance | none |
-| Maybe/Result sum migration conformance | TODO-4291 |
+| Maybe/Result sum migration conformance | none |
 | Generic type-pack and tuple conformance | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity conformance | TODO-4331, TODO-4332, TODO-4333, TODO-4334, TODO-4335, TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
 | Generic constraint and compile-time flow conformance | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
@@ -377,37 +376,10 @@ Task template:
 ### Task Blocks
 
 
-- [ ] TODO-4291: Decide sum-backed mutable `Maybe<T>` helpers
-  - owner: ai
-  - created_at: 2026-04-28
-  - phase: Deferred stdlib ADT migration
-  - scope: Decide whether `Maybe<T>.set(value)`, `Maybe<T>.clear()`, and
-    `Maybe<T>.take()` should return as stdlib helpers on top of sum-backed
-    `Maybe<T>`, or remain retired in favor of explicit `pick` plus value
-    construction.
-  - implementation_notes:
-    - Start from `stdlib/std/maybe/maybe.prime`,
-      `tests/unit/test_semantics_maybe.cpp`, and the VM/native Maybe
-      compile-run tests.
-    - If mutable helpers return, first define the general language contract for
-      in-place active-variant mutation and payload movement on sum values.
-    - If mutable helpers stay retired, strengthen diagnostics so callers get a
-      named migration error rather than a generic missing-helper path.
-  - acceptance:
-    - The chosen direction is documented in `docs/PrimeStruct.md`.
-    - Semantic tests cover `set`, `clear`, and `take` either as supported
-      helper behavior or as deterministic migration diagnostics.
-    - Compile-run coverage covers the chosen supported Maybe mutation or
-      explicit-construction/pick replacement surface.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once the sum-backed Maybe mutable-helper policy is
-    implemented or intentionally retired with focused diagnostics and docs.
-
 - [ ] TODO-4268: Add heterogeneous type-pack syntax and metadata
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred generic tuple substrate
-  - depends_on: TODO-4291
   - scope: Add parser, AST, semantic-product, and diagnostic support for
     heterogeneous type-parameter packs such as `tuple<Ts...>` without adding
     pack expansion or tuple implementation yet.
@@ -1959,7 +1931,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-28
   - phase: Map stdlib ownership cutover
-  - depends_on: TODO-4297, TODO-4291
+  - depends_on: TODO-4297
   - scope: Move the real `Map<K, V>` and `Entry<K, V>` implementation out of
     the public `/std/collections/experimental_map/*` namespace and make the
     canonical `/std/collections/map/*` surface, or a non-public
@@ -2032,7 +2004,7 @@ Task template:
   - implementation_notes:
     - Start from `stdlib/std/collections/experimental_map.prime`,
       `stdlib/std/collections/errors.prime`, canonical vector helpers after
-      TODO-4297, Result migration notes from TODO-4291, and
+      TODO-4297, Maybe/Result migration notes in `docs/PrimeStruct.md`, and
       map compile-run tests covering `contains`, `tryAt`, `at`, `at_unsafe`,
       and `insert`.
     - Keep key comparability policy explicit: `Comparable<K>` or its successor

@@ -1,6 +1,39 @@
 #include "test_compile_run_helpers.h"
 
 #if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
+namespace {
+
+void checkNativeRetiredMaybeMutableHelperDiagnostic(
+    const std::string &fileStem,
+    const std::string &statement,
+    const std::string &helper,
+    const std::string &replacement) {
+  const std::string source = R"(
+import /std/maybe/*
+
+[return<int>]
+main() {
+  [Maybe<i32> mut] value{none<i32>()}
+  )" + statement + R"(
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp(fileStem + ".prime", source);
+  const std::string errPath =
+      (testScratchPath("") / (fileStem + ".err")).string();
+  const std::string compileCmd =
+      "./primec --emit=native " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) != 0);
+  const std::string error = readFile(errPath);
+  CHECK(error.find("sum-backed Maybe<T> has no mutable helper") !=
+        std::string::npos);
+  CHECK(error.find(helper) != std::string::npos);
+  CHECK(error.find(replacement) != std::string::npos);
+}
+
+} // namespace
+
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.maybe");
 
 TEST_CASE("compiles and runs native Maybe some and pick") {
@@ -89,6 +122,18 @@ main() {
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 9);
+}
+
+TEST_CASE("rejects retired native Maybe mutable helpers with migration diagnostics") {
+  checkNativeRetiredMaybeMutableHelperDiagnostic(
+      "native_maybe_retired_set_helper", "value.set(9i32)", "set",
+      "use some<T>(value) or Maybe<T>{[some] value} instead");
+  checkNativeRetiredMaybeMutableHelperDiagnostic(
+      "native_maybe_retired_clear_helper", "value.clear()", "clear",
+      "use Maybe<T>{} or none<T>() instead");
+  checkNativeRetiredMaybeMutableHelperDiagnostic(
+      "native_maybe_retired_take_helper", "[i32] out{value.take()}", "take",
+      "use pick(value) and rebind the Maybe explicitly instead");
 }
 
 TEST_SUITE_END();

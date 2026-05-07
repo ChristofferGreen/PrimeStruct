@@ -470,19 +470,36 @@ main() {
 }
 
 TEST_CASE("maybe mutable struct helpers are retired on sum values") {
-  const std::string source = kMaybePrelude + R"(
+  struct Case {
+    const char *helper;
+    const char *statement;
+    const char *replacement;
+  };
+  const Case cases[] = {
+      {"set", "value.set(9i32)",
+       "use some<T>(value) or Maybe<T>{[some] value} instead"},
+      {"clear", "value.clear()", "use Maybe<T>{} or none<T>() instead"},
+      {"take", "[i32] out{value.take()}",
+       "use pick(value) and rebind the Maybe explicitly instead"},
+  };
+
+  for (const Case &testCase : cases) {
+    CAPTURE(testCase.helper);
+    const std::string source = kMaybePrelude + R"(
 [return<int>]
 main() {
   [Maybe<i32> mut] value{none<i32>()}
-  value.set(9i32)
+  )" + testCase.statement + R"(
   return(0i32)
 }
 )";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK((error.find("unknown call target") != std::string::npos ||
-         error.find("unknown method") != std::string::npos));
-  CHECK(error.find("set") != std::string::npos);
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("sum-backed Maybe<T> has no mutable helper") !=
+          std::string::npos);
+    CHECK(error.find(testCase.helper) != std::string::npos);
+    CHECK(error.find(testCase.replacement) != std::string::npos);
+  }
 }
 
 TEST_SUITE_END();

@@ -38,6 +38,25 @@ bool isFileMethodName(std::string_view methodName) {
          methodName == "close";
 }
 
+bool isRetiredMaybeMutableHelperName(std::string_view methodName) {
+  return methodName == "set" || methodName == "clear" || methodName == "take";
+}
+
+bool isMaybeSumTypePath(std::string_view typePath) {
+  if (typePath.empty()) {
+    return false;
+  }
+  const size_t leafStart = typePath.find_last_of('/');
+  std::string leaf = leafStart == std::string_view::npos
+                         ? std::string(typePath)
+                         : std::string(typePath.substr(leafStart + 1));
+  const size_t generatedSuffix = leaf.find("__");
+  if (generatedSuffix != std::string::npos) {
+    leaf.erase(generatedSuffix);
+  }
+  return leaf == "Maybe";
+}
+
 } // namespace
 
 bool SemanticsValidator::isStaticHelperDefinition(const Definition &def) const {
@@ -3267,6 +3286,20 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   }
   if (resolveDeclaredSumMethodTarget(resolvedType)) {
     return true;
+  }
+  if (isMaybeSumTypePath(resolvedType) &&
+      isRetiredMaybeMutableHelperName(normalizedMethodName)) {
+    std::string replacement;
+    if (normalizedMethodName == "set") {
+      replacement = "use some<T>(value) or Maybe<T>{[some] value} instead";
+    } else if (normalizedMethodName == "clear") {
+      replacement = "use Maybe<T>{} or none<T>() instead";
+    } else {
+      replacement = "use pick(value) and rebind the Maybe explicitly instead";
+    }
+    return failMethodTargetResolutionDiagnostic(
+        "sum-backed Maybe<T> has no mutable helper " + normalizedMethodName +
+        "; " + replacement);
   }
   if (traceFileErrorResult && receiver.kind == Expr::Kind::Name &&
       receiver.name == "FileError" && resolvedType.empty()) {

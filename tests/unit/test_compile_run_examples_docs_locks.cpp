@@ -1277,10 +1277,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4291: Decide sum-backed mutable `Maybe<T>` helpers") !=
+                  "- TODO-4292: Promote and style canonical `.prime` vector implementation") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
-                  "- TODO-4292: Promote and style canonical `.prime` vector implementation") !=
+                  "- TODO-4293: Stabilize generic contiguous-storage substrate") !=
         std::string::npos);
   CHECK(todo.find("- Semantic phase contract hardening:") == std::string::npos);
   CHECK(todo.find("- Deferred graph and inference hardening: TODO-4239") ==
@@ -1293,10 +1293,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4291: Decide sum-backed mutable `Maybe<T>` helpers") !=
+                  "- TODO-4292: Promote and style canonical `.prime` vector implementation") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4291: Decide sum-backed mutable `Maybe<T>` helpers",
       "TODO-4268: Add heterogeneous type-pack syntax and metadata",
       "TODO-4269: Bind and monomorphize type-pack arguments",
       "TODO-4270: Add compile-time integer template arguments",
@@ -1337,6 +1336,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("TODO-4364: Fence Result compatibility helper adapters") ==
         std::string::npos);
   CHECK(todoFinished.find("TODO-4364: Fence Result compatibility helper adapters") !=
+        std::string::npos);
+  CHECK(todo.find("TODO-4291: Decide sum-backed mutable `Maybe<T>` helpers") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4291: Decide sum-backed mutable `Maybe<T>` helpers") !=
         std::string::npos);
   CHECK(todo.find("TODO-4293: Bridge legacy `Result` helpers to the result sum") ==
         std::string::npos);
@@ -2504,7 +2507,11 @@ TEST_CASE("maybe stdlib control flow stays source locked to surface if syntax") 
         std::string::npos);
   CHECK(primeStructDoc.find("The old mutable struct helpers `set(value)`, `clear()`, and `take()`") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("value.set(1i32) // error: no sum-backed Maybe set helper is defined yet") !=
+  CHECK(primeStructDoc.find("value.set(1i32) // error: sum-backed Maybe<T> has no mutable helper set") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("value.clear() // error: sum-backed Maybe<T> has no mutable helper clear") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("[i32] out{value.take()} // error: sum-backed Maybe<T> has no mutable helper take") !=
         std::string::npos);
   CHECK(maybeStdlib.find("[public sum]\n  Maybe<T> {\n    none\n    [T] some\n  }") !=
         std::string::npos);
