@@ -504,6 +504,89 @@ TEST_CASE("ir lowerer inference call-return setup uses semantic vector mutator r
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
+TEST_CASE("ir lowerer inference call-return setup uses semantic capacity receiver facts before stale locals") {
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+
+  primec::SemanticProgram semanticProgram;
+  const primec::SymbolId vectorTypeId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "vector<f32>");
+  primec::SemanticProgramBindingFact vectorFact;
+  vectorFact.semanticNodeId = 9501;
+  vectorFact.bindingTypeText = "i32";
+  vectorFact.bindingTypeTextId = vectorTypeId;
+  semanticProgram.bindingFacts.push_back(vectorFact);
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(
+      vectorFact.semanticNodeId, 0);
+
+  const primec::SymbolId scalarTypeId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "i32");
+  primec::SemanticProgramBindingFact scalarFact;
+  scalarFact.semanticNodeId = 9502;
+  scalarFact.bindingTypeText = "vector<i64>";
+  scalarFact.bindingTypeTextId = scalarTypeId;
+  semanticProgram.bindingFacts.push_back(scalarFact);
+  semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(
+      scalarFact.semanticNodeId, 1);
+
+  const primec::ir_lowerer::SemanticProductIndex semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  state.semanticProgram = &semanticProgram;
+  state.semanticIndex = &semanticIndex;
+  state.getReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
+    return false;
+  };
+  state.resolveMethodCallDefinition =
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+    return nullptr;
+  };
+
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallReturnSetup(
+      {
+          .defMap = &defMap,
+          .resolveExprPath = [](const primec::Expr &expr) { return expr.name; },
+          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      },
+      state,
+      error));
+  CHECK(error.empty());
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+  receiverExpr.semanticNodeId = vectorFact.semanticNodeId;
+  primec::Expr capacityExpr;
+  capacityExpr.kind = primec::Expr::Kind::Call;
+  capacityExpr.name = "capacity";
+  capacityExpr.args = {receiverExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo staleScalarLocal;
+  staleScalarLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  staleScalarLocal.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  locals.emplace("values", staleScalarLocal);
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut =
+      primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprDirectReturnKind(capacityExpr, locals, kindOut) ==
+        primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+
+  primec::ir_lowerer::LocalInfo staleVectorLocal;
+  staleVectorLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  locals.insert_or_assign("values", staleVectorLocal);
+  receiverExpr.semanticNodeId = scalarFact.semanticNodeId;
+  capacityExpr.args = {receiverExpr};
+
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprDirectReturnKind(capacityExpr, locals, kindOut) ==
+        primec::ir_lowerer::CallExpressionReturnKindResolution::NotResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
 TEST_CASE("ir lowerer inference call-return setup rejects vector compatibility array access fallback") {
   primec::Definition receiverAtDef;
   receiverAtDef.fullPath = "/vector/at";

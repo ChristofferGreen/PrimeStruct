@@ -969,7 +969,9 @@ bool resolveCapacityMethodCallReturnKind(const Expr &callExpr,
                                          const GetReturnInfoForPathFn &getReturnInfo,
                                          bool requireArrayReturn,
                                          LocalInfo::ValueKind &kindOut,
-                                         bool *methodResolvedOut) {
+                                         bool *methodResolvedOut,
+                                         const SemanticProgram *semanticProgram,
+                                         const SemanticProductIndex *semanticIndex) {
   kindOut = LocalInfo::ValueKind::Unknown;
   if (methodResolvedOut != nullptr) {
     *methodResolvedOut = false;
@@ -999,7 +1001,9 @@ bool resolveCapacityMethodCallReturnKind(const Expr &callExpr,
                                      getReturnInfo,
                                      requireArrayReturn,
                                      kindOut,
-                                     methodResolvedOut);
+                                     methodResolvedOut,
+                                     semanticProgram,
+                                     semanticIndex);
 }
 
 } // namespace primec::ir_lowerer

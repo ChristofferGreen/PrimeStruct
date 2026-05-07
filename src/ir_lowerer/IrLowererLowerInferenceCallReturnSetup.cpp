@@ -131,7 +131,9 @@ bool runLowerInferenceExprKindCallReturnSetup(const LowerInferenceExprKindCallRe
                                                                                 stateInOut.getReturnInfo,
                                                                                 false,
                                                                                 candidateKindOut,
-                                                                                &capacityMethodResolved);
+                                                                                &capacityMethodResolved,
+                                                                                stateInOut.semanticProgram,
+                                                                                stateInOut.semanticIndex);
               if (capacityResolved) {
                 matchedOut = true;
                 return true;

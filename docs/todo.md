@@ -746,6 +746,9 @@ Task template:
     The lowerer direct vector-mutator receiver slice is complete for
     semantic-product-backed receiver facts before stale local vector metadata
     can choose direct helper receiver order or classify stale scalar targets.
+    The lowerer direct capacity receiver slice is complete for
+    semantic-product-backed receiver facts before stale local vector metadata
+    can classify direct `capacity(...)` return kinds.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for

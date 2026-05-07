@@ -100,7 +100,9 @@ bool resolveCapacityMethodCallReturnKind(const Expr &callExpr,
                                          const GetReturnInfoForPathFn &getReturnInfo,
                                          bool requireArrayReturn,
                                          LocalInfo::ValueKind &kindOut,
-                                         bool *methodResolvedOut = nullptr);
+                                         bool *methodResolvedOut = nullptr,
+                                         const SemanticProgram *semanticProgram = nullptr,
+                                         const SemanticProductIndex *semanticIndex = nullptr);
 const Definition *resolveMethodCallDefinitionFromExpr(
     const Expr &callExpr,
     const LocalMap &localsIn,

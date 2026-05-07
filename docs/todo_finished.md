@@ -6,6 +6,30 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer capacity receiver facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes direct `capacity(...)`
+    return-kind classification consume semantic-product receiver facts before
+    stale local vector metadata can classify helper returns.
+  - acceptance:
+    - Published vector binding facts classify direct `capacity(...)`
+      receivers before stale scalar locals.
+    - Published scalar binding facts suppress stale local vector metadata for
+      direct `capacity(...)` return inference.
+    - Existing direct capacity helper resolution keeps the old call shape and
+      fallback behavior when no semantic receiver fact is published.
+  - stop_rule: Stop once direct capacity return-kind setup threads semantic
+    receiver facts through the capacity helper and focused tests pin both
+    graph-owned vector resolution and stale-vector suppression.
+  - evidence: Threaded semantic-product state through
+    `resolveCapacityMethodCallReturnKind(...)`, reused method-return
+    graph-backed receiver classification for direct `capacity(...)`, added
+    focused stale-local coverage, ran `git diff --check`, and skipped broad
+    baseline validation per the lite workflow.
+
 - [x] TODO-4298: Prefer vector mutator receiver facts
   - owner: ai
   - created_at: 2026-04-28
