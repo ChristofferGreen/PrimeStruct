@@ -215,8 +215,15 @@ bool emitInlineStructDefinitionArguments(const std::string &calleePath,
   LocalMap structLocals = callerLocals;
   for (size_t i = 0; i < layout.fields.size(); ++i) {
     const StructSlotFieldInfo &field = layout.fields[i];
-    const Expr *arg = orderedArgs[i];
-    const Expr &param = params[i];
+    size_t paramIndex = i;
+    for (size_t candidate = 0; candidate < params.size(); ++candidate) {
+      if (params[candidate].name == field.name) {
+        paramIndex = candidate;
+        break;
+      }
+    }
+    const Expr *arg = orderedArgs[paramIndex];
+    const Expr &param = params[paramIndex];
     if (!arg) {
       error = "argument count mismatch";
       return false;

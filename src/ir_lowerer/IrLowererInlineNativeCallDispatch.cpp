@@ -591,6 +591,9 @@ ResolvedInlineCallResult emitResolvedInlineDefinitionCall(
   if (!callee) {
     return ResolvedInlineCallResult::NoCallee;
   }
+  if (isStructDefinition(*callee) && !callExpr.isBraceConstructor) {
+    return ResolvedInlineCallResult::NoCallee;
+  }
   if (callExpr.hasBodyArguments || !callExpr.bodyArguments.empty()) {
     error = "native backend does not support block arguments on calls";
     return ResolvedInlineCallResult::Error;
@@ -727,9 +730,13 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
       }
       const auto emitResult = emitResolvedInlineDefinitionCall(
           expr, directCallee, emitInlineDefinitionCall, error);
-      return emitResult == ResolvedInlineCallResult::Emitted
-                 ? InlineCallDispatchResult::Emitted
-                 : InlineCallDispatchResult::Error;
+      if (emitResult == ResolvedInlineCallResult::Emitted) {
+        return InlineCallDispatchResult::Emitted;
+      }
+      if (emitResult == ResolvedInlineCallResult::NoCallee) {
+        return InlineCallDispatchResult::NotHandled;
+      }
+      return InlineCallDispatchResult::Error;
     }
   }
 
@@ -773,9 +780,13 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
       }
       const auto emitResult = emitResolvedInlineDefinitionCall(
           expr, callee, emitInlineDefinitionCall, error);
-      return emitResult == ResolvedInlineCallResult::Emitted
-                 ? InlineCallDispatchResult::Emitted
-                 : InlineCallDispatchResult::Error;
+      if (emitResult == ResolvedInlineCallResult::Emitted) {
+        return InlineCallDispatchResult::Emitted;
+      }
+      if (emitResult == ResolvedInlineCallResult::NoCallee) {
+        return InlineCallDispatchResult::NotHandled;
+      }
+      return InlineCallDispatchResult::Error;
     }
     if (!isBuiltinCountLikeMethod) {
       return InlineCallDispatchResult::Error;
@@ -796,9 +807,13 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
     }
     const auto emitResult = emitResolvedInlineDefinitionCall(
         expr, callee, emitInlineDefinitionCall, error);
-    return emitResult == ResolvedInlineCallResult::Emitted
-               ? InlineCallDispatchResult::Emitted
-               : InlineCallDispatchResult::Error;
+    if (emitResult == ResolvedInlineCallResult::Emitted) {
+      return InlineCallDispatchResult::Emitted;
+    }
+    if (emitResult == ResolvedInlineCallResult::NoCallee) {
+      return InlineCallDispatchResult::NotHandled;
+    }
+    return InlineCallDispatchResult::Error;
   }
 
   const auto secondCountFallbackResult = tryEmitNonMethodCountFallback(

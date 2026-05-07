@@ -14668,3 +14668,41 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     `IrLowererLowerInlineCalls.h`, kept the internal SoA metadata branches
     intact, and added source-lock coverage for that boundary. Local test
     execution was skipped per the lite workflow.
+
+- [x] TODO-4374: Route vector metadata expression fallbacks through `.prime`
+  - owner: ai
+  - created_at: 2026-05-07
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4373
+  - scope: Remove remaining experimental-vector metadata field/load/setter
+    fallback emitters outside inline-definition calls, including expression
+    statement/tail dispatch paths that still load `field_count`,
+    `field_capacity`, `set_field_count`, or `set_field_capacity` by fixed slot
+    offsets.
+  - implementation_notes:
+    - Start from `src/ir_lowerer/IrLowererLowerStatementsExpr.h`,
+      `src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp`,
+      `src/ir_lowerer/IrLowererCountAccessHelpers.cpp`, and the lowerer
+      count/access/source-lock tests that mention experimental vector metadata
+      loads.
+    - Do not remove SoA metadata fallback support in this vector leaf unless a
+      path is inseparable and explicitly retargeted.
+  - acceptance:
+    - Expression/tail lowering no longer reads or writes experimental vector
+      metadata fields by hard-coded count/capacity offsets.
+    - The same expressions still lower through visible `.prime` definitions or
+      report existing deterministic diagnostics when no helper is visible.
+    - Remaining hard-coded SoA metadata support is documented as non-vector
+      follow-up or retained bridge work.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once non-inline-call expression fallback code has no
+    experimental-vector metadata offset emitter.
+  - finished_at: 2026-05-07
+  - evidence: Removed the experimental-vector `field_count` /
+    `field_capacity` expression fallback loads from
+    `IrLowererCountAccessHelpers.cpp` and removed the expression-lowering
+    experimental vector metadata setter emitter from
+    `IrLowererLowerStatementsExpr.h`. Updated count/access, VM bounds, and
+    TODO queue coverage so vector metadata falls through to visible `.prime`
+    helpers or existing diagnostics while internal SoA metadata bridges remain
+    intact.

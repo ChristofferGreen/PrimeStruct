@@ -1936,9 +1936,30 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     const bool isBuiltinCountLikeMethod =
         isArrayCountCall(directStmt, localsIn) || isStringCountCall(directStmt, localsIn) ||
         isVectorCapacityCall(directStmt, localsIn);
+    const bool isVectorMetadataSetterMethod =
+        directStmt.args.size() == 2 &&
+        (isSimpleCallName(directStmt, "set_field_count") ||
+         isSimpleCallName(directStmt, "set_field_capacity"));
+    auto isStructDefinitionCallee = [](const Definition &definition) {
+      for (const auto &transform : definition.transforms) {
+        if (transform.name == "struct") {
+          return true;
+        }
+      }
+      return false;
+    };
     const std::string priorError = error;
     const Definition *callee = resolveMethodCallDefinition(directStmt, localsIn);
+    if (callee != nullptr && isVectorMetadataSetterMethod &&
+        isStructDefinitionCallee(*callee)) {
+      error = priorError;
+      return DirectCallStatementEmitResult::NotMatched;
+    }
     if (!callee && !isBuiltinCountLikeMethod) {
+      if (isVectorMetadataSetterMethod) {
+        error = priorError;
+        return DirectCallStatementEmitResult::NotMatched;
+      }
       return DirectCallStatementEmitResult::Error;
     }
     if (callee) {

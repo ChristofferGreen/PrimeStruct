@@ -164,6 +164,64 @@ bool blocksSyntheticCollectionFallbackDirectTarget(const std::string &targetPath
          normalized.rfind("/std/collections/experimental_soa_vector/", 0) == 0;
 }
 
+bool isExperimentalVectorMetadataMethodPath(const std::string &methodPath) {
+  const std::string leaf = extractMethodLeafName(methodPath);
+  return leaf == "field_count" || leaf == "field_capacity" ||
+         leaf == "set_field_count" || leaf == "set_field_capacity";
+}
+
+bool isExperimentalVectorOwnerPath(const std::string &path) {
+  const std::string normalized = normalizeCollectionHelperPath(path);
+  return normalized == "/std/collections/experimental_vector/Vector" ||
+         normalized.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+}
+
+std::string unwrapSemanticReceiverTypeText(std::string typeText) {
+  typeText = trimTemplateTypeText(std::move(typeText));
+  while (true) {
+    std::string base;
+    std::string argList;
+    if (!splitTemplateTypeName(typeText, base, argList)) {
+      return typeText;
+    }
+    const std::string normalizedBase =
+        normalizeDeclaredCollectionTypeBase(trimTemplateTypeText(base));
+    if (normalizedBase != "Reference" && normalizedBase != "Pointer") {
+      return typeText;
+    }
+    std::vector<std::string> args;
+    if (!splitTemplateArgs(argList, args) || args.size() != 1) {
+      return typeText;
+    }
+    typeText = trimTemplateTypeText(args.front());
+  }
+}
+
+std::string findSemanticProductMethodCallReceiverTypeText(
+    const SemanticProgram *semanticProgram,
+    const Expr &expr) {
+  if (semanticProgram == nullptr || expr.semanticNodeId == 0) {
+    return "";
+  }
+  const auto methodCallTargets =
+      semanticProgramMethodCallTargetView(*semanticProgram);
+  for (const auto *entry : methodCallTargets) {
+    if (entry == nullptr || entry->semanticNodeId != expr.semanticNodeId) {
+      continue;
+    }
+    if (entry->receiverTypeTextId != InvalidSymbolId) {
+      const std::string_view internedTypeText =
+          semanticProgramResolveCallTargetString(*semanticProgram,
+                                                 entry->receiverTypeTextId);
+      if (!internedTypeText.empty()) {
+        return std::string(internedTypeText);
+      }
+    }
+    return entry->receiverTypeText;
+  }
+  return "";
+}
+
 std::string buildReceiverMethodTargetPath(const std::string &receiverPath,
                                           const std::string &explicitMethodPath) {
   if (receiverPath.empty()) {
@@ -298,6 +356,8 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   }
 
   const std::string explicitMethodPath = describeMethodCallExpr(callExpr);
+  const bool allowsReceiverResolvedVectorMetadataFallback =
+      isExperimentalVectorMetadataMethodPath(explicitMethodPath);
 
   if (semanticProgram != nullptr) {
     auto resolveLoweredDefinitionPath = [&](const std::string &targetPath)
@@ -321,6 +381,21 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         return nullptr;
       };
 
+      if (allowsReceiverResolvedVectorMetadataFallback) {
+        const std::string receiverMethodTargetPath =
+            buildReceiverMethodTargetPath(targetPath, explicitMethodPath);
+        if (!receiverMethodTargetPath.empty() &&
+            receiverMethodTargetPath != targetPath) {
+          if (const Definition *resolvedMethodDef =
+                  tryResolvedPath(receiverMethodTargetPath);
+              resolvedMethodDef != nullptr) {
+            return resolvedMethodDef;
+          }
+        }
+        if (isExperimentalVectorOwnerPath(targetPath)) {
+          return nullptr;
+        }
+      }
       if (const Definition *resolvedDef = tryResolvedPath(targetPath);
           resolvedDef != nullptr) {
         return resolvedDef;
@@ -386,46 +461,72 @@ const Definition *resolveMethodCallDefinitionFromExpr(
             directCallTarget;
         return nullptr;
       }
-      errorOut = "missing semantic-product method-call target: " +
-                 describeMethodCallExpr(callExpr);
-      return nullptr;
-    }
-    const bool routesExplicitVectorCountMethodThroughMapMethodTarget =
-        requestsExplicitVectorCountMethod &&
-        (normalizeCollectionHelperPath(resolvedPath) == "/map/count" ||
-         normalizeCollectionHelperPath(resolvedPath) ==
-             "/std/collections/map/count");
-    const bool routesExplicitVectorCountMethodThroughBuiltinScalarTarget =
-        requestsExplicitVectorCountMethod &&
-        (resolvedPath == "/string/count" || resolvedPath == "/array/count");
-    if (routesExplicitVectorCountMethodThroughBuiltinScalarTarget) {
-      if (const Definition *explicitVectorCountDef =
-              resolveLoweredDefinitionPath(explicitMethodPath);
-          explicitVectorCountDef != nullptr) {
-        return explicitVectorCountDef;
+      if (!allowsReceiverResolvedVectorMetadataFallback) {
+        errorOut = "missing semantic-product method-call target: " +
+                   describeMethodCallExpr(callExpr);
+        return nullptr;
       }
     }
-    const std::string explicitVectorCountBridgePath =
-        routesExplicitVectorCountMethodThroughMapMethodTarget
-            ? findSemanticProductBridgePathChoice(semanticProgram, callExpr)
-            : std::string{};
-    const std::string preferredResolvedPath =
-        !explicitVectorCountBridgePath.empty()
-            ? explicitVectorCountBridgePath
-            : resolvedPath;
-    if (const Definition *resolvedDef =
-            resolveLoweredDefinitionPath(preferredResolvedPath);
-        resolvedDef != nullptr) {
-      return resolvedDef;
+    if (!resolvedPath.empty()) {
+      const bool routesExplicitVectorCountMethodThroughMapMethodTarget =
+          requestsExplicitVectorCountMethod &&
+          (normalizeCollectionHelperPath(resolvedPath) == "/map/count" ||
+           normalizeCollectionHelperPath(resolvedPath) ==
+               "/std/collections/map/count");
+      const bool routesExplicitVectorCountMethodThroughBuiltinScalarTarget =
+          requestsExplicitVectorCountMethod &&
+          (resolvedPath == "/string/count" || resolvedPath == "/array/count");
+      if (routesExplicitVectorCountMethodThroughBuiltinScalarTarget) {
+        if (const Definition *explicitVectorCountDef =
+                resolveLoweredDefinitionPath(explicitMethodPath);
+            explicitVectorCountDef != nullptr) {
+          return explicitVectorCountDef;
+        }
+      }
+      const std::string explicitVectorCountBridgePath =
+          routesExplicitVectorCountMethodThroughMapMethodTarget
+              ? findSemanticProductBridgePathChoice(semanticProgram, callExpr)
+              : std::string{};
+      const std::string preferredResolvedPath =
+          !explicitVectorCountBridgePath.empty()
+              ? explicitVectorCountBridgePath
+              : resolvedPath;
+      if (allowsReceiverResolvedVectorMetadataFallback) {
+        std::string receiverTypeText =
+            unwrapSemanticReceiverTypeText(
+                findSemanticProductMethodCallReceiverTypeText(semanticProgram,
+                                                              callExpr));
+        if (!receiverTypeText.empty() && receiverTypeText.front() != '/') {
+          receiverTypeText.insert(receiverTypeText.begin(), '/');
+        }
+        if (isExperimentalVectorOwnerPath(receiverTypeText)) {
+          const std::string receiverMethodPath =
+              buildReceiverMethodTargetPath(receiverTypeText, explicitMethodPath);
+          if (const Definition *receiverTypedDef =
+                  resolveLoweredDefinitionPath(receiverMethodPath);
+              receiverTypedDef != nullptr) {
+            return receiverTypedDef;
+          }
+        }
+      }
+      if (const Definition *resolvedDef =
+              resolveLoweredDefinitionPath(preferredResolvedPath);
+          resolvedDef != nullptr) {
+        return resolvedDef;
+      }
+      if (preferredResolvedPath.rfind("/file/", 0) == 0) {
+        errorOut.clear();
+        return nullptr;
+      }
+      if (allowsReceiverResolvedVectorMetadataFallback) {
+        errorOut.clear();
+      } else {
+        errorOut =
+            "semantic-product method-call target missing lowered definition: " +
+            preferredResolvedPath;
+        return nullptr;
+      }
     }
-    if (preferredResolvedPath.rfind("/file/", 0) == 0) {
-      errorOut.clear();
-      return nullptr;
-    }
-    errorOut =
-        "semantic-product method-call target missing lowered definition: " +
-        preferredResolvedPath;
-    return nullptr;
   }
 
   std::string accessName;

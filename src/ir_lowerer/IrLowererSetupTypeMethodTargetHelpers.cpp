@@ -259,6 +259,34 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     }
     return findMethodDefinitionByPath("/std/collections/soa_vector/" + normalizedMethodName);
   };
+  auto isExperimentalVectorMetadataMethodName = [&]() {
+    return normalizedMethodName == "field_count" ||
+           normalizedMethodName == "field_capacity" ||
+           normalizedMethodName == "set_field_count" ||
+           normalizedMethodName == "set_field_capacity";
+  };
+  auto findExperimentalVectorMetadataDefinition =
+      [&](const std::string &candidate) -> const Definition * {
+    if (!isExperimentalVectorMetadataMethodName()) {
+      return nullptr;
+    }
+    const std::string normalized = stripReceiverPrefix(candidate);
+    if (normalized != "Vector" &&
+        normalized.rfind("Vector<", 0) != 0 &&
+        normalized != "std/collections/experimental_vector/Vector" &&
+        normalized.rfind("std/collections/experimental_vector/Vector<", 0) != 0 &&
+        normalized.rfind("std/collections/experimental_vector/Vector__", 0) != 0) {
+      return nullptr;
+    }
+    if (normalized.rfind("std/collections/experimental_vector/Vector__", 0) == 0) {
+      if (const Definition *specializedDef =
+              findMethodDefinitionByPath("/" + normalized + "/" + normalizedMethodName)) {
+        return specializedDef;
+      }
+    }
+    return findMethodDefinitionByPath(
+        "/std/collections/experimental_vector/Vector/" + normalizedMethodName);
+  };
   if (isExplicitVectorAliasMethod) {
     errorOut = "unknown method: /vector/" + normalizedMethodName;
     return nullptr;
@@ -291,6 +319,11 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
             findPreferredSoaWrapperDefinition(resolvedTypeWithoutSlash)) {
       errorOut.clear();
       return preferredSoaWrapperDef;
+    }
+    if (const Definition *vectorMetadataDef =
+            findExperimentalVectorMetadataDefinition(resolvedTypeWithoutSlash)) {
+      errorOut.clear();
+      return vectorMetadataDef;
     }
     const std::string resolvedBase =
         (shouldPreferCanonicalVectorPath(resolvedTypeWithoutSlash)
@@ -354,6 +387,11 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
           findPreferredSoaWrapperDefinition(normalizedTypeName)) {
     errorOut.clear();
     return preferredSoaWrapperDef;
+  }
+  if (const Definition *vectorMetadataDef =
+          findExperimentalVectorMetadataDefinition(normalizedTypeName)) {
+    errorOut.clear();
+    return vectorMetadataDef;
   }
 
   const std::string resolvedBase =

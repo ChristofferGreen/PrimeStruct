@@ -131,7 +131,8 @@ bool SemanticsValidator::inferCallSnapshotData(const std::vector<ParameterInfo> 
     }
     std::string canonicalResolvedPath = out.resolvedPath;
     if (const size_t suffix = canonicalResolvedPath.find("__t");
-        suffix != std::string::npos) {
+        suffix != std::string::npos &&
+        canonicalResolvedPath.find('/', suffix) == std::string::npos) {
       canonicalResolvedPath.erase(suffix);
     }
     canonicalResolvedPath =

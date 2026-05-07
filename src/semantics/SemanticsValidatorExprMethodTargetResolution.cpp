@@ -240,6 +240,96 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   } else if (normalizedMethodName.rfind("std/collections/map/", 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/map/").size());
   }
+  auto isExperimentalVectorMetadataMethodName = [](std::string_view name) {
+    return name == "field_count" || name == "field_capacity" ||
+           name == "set_field_count" || name == "set_field_capacity";
+  };
+  auto receiverBindingTypeText = [](const BindingInfo &binding) {
+    if (binding.typeTemplateArg.empty()) {
+      return binding.typeName;
+    }
+    return binding.typeName + "<" + binding.typeTemplateArg + ">";
+  };
+  auto concreteExperimentalVectorReceiverPath =
+      [&](const BindingInfo &binding) -> std::string {
+    std::string typeText =
+        normalizeBindingTypeName(receiverBindingTypeText(binding));
+    while (true) {
+      std::string base;
+      std::string argText;
+      if (!splitTemplateTypeName(typeText, base, argText) || base.empty()) {
+        break;
+      }
+      base = normalizeBindingTypeName(base);
+      if (base != "Reference" && base != "Pointer") {
+        break;
+      }
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+        return {};
+      }
+      typeText = normalizeBindingTypeName(args.front());
+    }
+    if (!typeText.empty() && typeText.front() != '/') {
+      typeText.insert(typeText.begin(), '/');
+    }
+    if (typeText.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) {
+      return typeText;
+    }
+    std::string elemType;
+    if (extractExperimentalVectorElementType(binding, elemType)) {
+      const std::string specializedVectorPath =
+          specializedExperimentalVectorHelperTarget("Vector", elemType);
+      if (specializedVectorPath.rfind(
+              "/std/collections/experimental_vector/Vector__", 0) == 0) {
+        return specializedVectorPath;
+      }
+    }
+    return {};
+  };
+  auto resolveExperimentalVectorMetadataMethodTarget = [&]() -> bool {
+    if (!isExperimentalVectorMetadataMethodName(normalizedMethodName)) {
+      return false;
+    }
+    BindingInfo receiverBinding;
+    if (receiver.kind == Expr::Kind::Name) {
+      if (const BindingInfo *paramBinding = findParamBinding(params, receiver.name)) {
+        receiverBinding = *paramBinding;
+      } else if (auto localIt = locals.find(receiver.name); localIt != locals.end()) {
+        receiverBinding = localIt->second;
+      }
+    }
+    if (receiverBinding.typeName.empty()) {
+      std::string receiverTypeText;
+      if (inferQueryExprTypeText(receiver, params, locals, receiverTypeText)) {
+        std::string base;
+        std::string argText;
+        const std::string normalizedReceiverType =
+            normalizeBindingTypeName(receiverTypeText);
+        if (splitTemplateTypeName(normalizedReceiverType, base, argText)) {
+          receiverBinding.typeName = normalizeBindingTypeName(base);
+          receiverBinding.typeTemplateArg = argText;
+        } else {
+          receiverBinding.typeName = normalizedReceiverType;
+        }
+      }
+    }
+    const std::string receiverPath =
+        concreteExperimentalVectorReceiverPath(receiverBinding);
+    if (receiverPath.empty()) {
+      return false;
+    }
+    const std::string methodPath = receiverPath + "/" + normalizedMethodName;
+    if (!hasDefinitionFamilyPath(methodPath)) {
+      return false;
+    }
+    resolvedOut = methodPath;
+    isBuiltinOut = false;
+    return true;
+  };
+  if (resolveExperimentalVectorMetadataMethodTarget()) {
+    return true;
+  }
   std::string canonicalCollectionHelperName = normalizedMethodName;
   if (const size_t specializationSuffix =
           canonicalCollectionHelperName.find("__t");

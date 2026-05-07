@@ -302,8 +302,8 @@ bool resolveStructSlotLayoutFromDefinitionFields(
     StructSlotLayoutInfo layout;
     layout.structPath = normalizeVectorStructPath(structPath);
     layout.totalSlots = 4;
-    layout.fields.push_back({"count", 0, 1, LocalInfo::ValueKind::Int32, ""});
-    layout.fields.push_back({"capacity", 1, 1, LocalInfo::ValueKind::Int32, ""});
+    layout.fields.push_back({"fieldCount", 0, 1, LocalInfo::ValueKind::Int32, ""});
+    layout.fields.push_back({"fieldCapacity", 1, 1, LocalInfo::ValueKind::Int32, ""});
     layout.fields.push_back({"data", 2, 1, LocalInfo::ValueKind::Int64, ""});
     layout.fields.push_back({"ownsData", 3, 1, LocalInfo::ValueKind::Bool, ""});
     out = layout;

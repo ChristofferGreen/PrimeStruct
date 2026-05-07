@@ -269,7 +269,7 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
   CHECK(instructions[3].op == primec::IrOpcode::LoadIndirect);
 
   instructions.clear();
-  error.clear();
+  error = "stale";
   callExpr.name = "field_count";
   callExpr.isMethodCall = true;
   int fieldCountEmitExprCalls = 0;
@@ -295,15 +295,13 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
               return true;
             },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::Emitted);
+            error) == Result::NotHandled);
   CHECK(fieldCountEmitExprCalls == 0);
-  REQUIRE(instructions.size() == 2);
-  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
-  CHECK(instructions[0].imm == 3);
-  CHECK(instructions[1].op == primec::IrOpcode::LoadIndirect);
+  CHECK(error == "stale");
+  CHECK(instructions.empty());
 
   instructions.clear();
-  error.clear();
+  error = "stale";
   callExpr.name = "field_capacity";
   int fieldCapacityEmitExprCalls = 0;
   CHECK(primec::ir_lowerer::tryEmitCountAccessCall(
@@ -328,15 +326,10 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
               return true;
             },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::Emitted);
+            error) == Result::NotHandled);
   CHECK(fieldCapacityEmitExprCalls == 0);
-  REQUIRE(instructions.size() == 4);
-  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
-  CHECK(instructions[0].imm == 3);
-  CHECK(instructions[1].op == primec::IrOpcode::PushI64);
-  CHECK(instructions[1].imm == primec::IrSlotBytes);
-  CHECK(instructions[2].op == primec::IrOpcode::AddI64);
-  CHECK(instructions[3].op == primec::IrOpcode::LoadIndirect);
+  CHECK(error == "stale");
+  CHECK(instructions.empty());
 
   instructions.clear();
   error = "stale";

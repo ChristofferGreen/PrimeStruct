@@ -82,21 +82,21 @@ bool isExplicitVectorCountMethodCall(const Expr &expr) {
          scopedPath == "std/collections/vector/count";
 }
 
-bool isExplicitPublishedVectorCountCall(const Expr &expr) {
+bool isExplicitPublishedVectorMetadataCall(const Expr &expr,
+                                           std::string_view helperName) {
   if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
     return false;
   }
-  std::string helperName;
-  if (!resolveVectorHelperAliasName(expr, helperName) ||
-      helperName != "count") {
+  std::string resolvedHelperName;
+  if (!resolveVectorHelperAliasName(expr, resolvedHelperName) ||
+      resolvedHelperName != helperName) {
     return false;
   }
   std::string scopedPath = resolveScopedCallPath(expr);
   if (!scopedPath.empty() && scopedPath.front() == '/') {
     scopedPath.erase(scopedPath.begin());
   }
-  return scopedPath.rfind("std/collections/vector/", 0) == 0 ||
-         scopedPath.rfind("std/collections/experimental_vector/", 0) == 0;
+  return scopedPath.rfind("std/collections/vector/", 0) == 0;
 }
 
 bool isInternalVectorMetadataCall(const Expr &expr,
@@ -829,7 +829,7 @@ bool isArrayCountCall(const Expr &expr,
   if (isExplicitVectorCountMethodCall(expr)) {
     return false;
   }
-  if (isExplicitPublishedVectorCountCall(expr) &&
+  if (isExplicitPublishedVectorMetadataCall(expr, "count") &&
       isVectorCountTarget(expr.args.front(), localsIn)) {
     return false;
   }
@@ -1189,6 +1189,16 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
   if (isExplicitVectorCountMethodCall(expr)) {
     return CountAccessCallEmitResult::NotHandled;
   }
+  const bool explicitPublishedVectorCountCall =
+      isExplicitPublishedVectorMetadataCall(expr, "count");
+  const bool namedArgVectorTemporaryCountCall =
+      explicitPublishedVectorCountCall &&
+      expr.args.size() == 1 &&
+      isNamedArgumentCollectionTemporary(expr.args.front(), "vector");
+  if ((explicitPublishedVectorCountCall && !namedArgVectorTemporaryCountCall) ||
+      isExplicitPublishedVectorMetadataCall(expr, "capacity")) {
+    return CountAccessCallEmitResult::NotHandled;
+  }
   if (isExplicitRemovedCountLikeAliasCall(expr, "count") ||
       isExplicitRemovedCountLikeAliasCall(expr, "capacity")) {
     return CountAccessCallEmitResult::NotHandled;
@@ -1257,14 +1267,6 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     emitInternalSoaStorageMetadataLoad("field_count", emitInstruction);
     return CountAccessCallEmitResult::Emitted;
   }
-  if (isInternalSoaStorageMetadataCall(expr, "field_count") &&
-      isDynamicVectorCountTargetFn != nullptr &&
-      isDynamicVectorCountTargetFn(expr.args.front(), localsIn)) {
-    if (!emitDynamicVectorCount(expr.args.front())) {
-      return CountAccessCallEmitResult::Error;
-    }
-    return CountAccessCallEmitResult::Emitted;
-  }
   if (isInternalSoaStorageMetadataCall(expr, "field_capacity") &&
       isInternalSoaStorageMetadataTarget(expr.args.front(), localsIn)) {
     if (!emitInternalSoaStorageMetadataBase(
@@ -1272,14 +1274,6 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       return CountAccessCallEmitResult::Error;
     }
     emitInternalSoaStorageMetadataLoad("field_capacity", emitInstruction);
-    return CountAccessCallEmitResult::Emitted;
-  }
-  if (isInternalSoaStorageMetadataCall(expr, "field_capacity") &&
-      isDynamicVectorCapacityTargetFn != nullptr &&
-      isDynamicVectorCapacityTargetFn(expr.args.front(), localsIn)) {
-    if (!emitDynamicVectorCapacity(expr.args.front())) {
-      return CountAccessCallEmitResult::Error;
-    }
     return CountAccessCallEmitResult::Emitted;
   }
   const bool namedArgVectorTemporaryCountTarget =

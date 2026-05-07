@@ -6,58 +6,58 @@ namespace std {
   namespace experimental_vector {
   [public struct]
   Vector<T>() {
-    [public i32] count
-    [public i32] capacity
+    [public i32] fieldCount
+    [public i32] fieldCapacity
     [public Pointer<uninitialized<T>>] data{/std/collections/internal_buffer_checked/bufferAlloc<uninitialized<T>>(1i32)}
     [bool mut] ownsData{true}
 
     [return<i32>]
     field_count() {
-      return(this.count)
+      return(this.fieldCount)
     }
 
     [return<i32>]
     field_capacity() {
-      return(this.capacity)
+      return(this.fieldCapacity)
     }
 
     [mut return<void>]
     set_field_count([i32] value) {
       if(or(less_than(value, 0i32),
-            greater_than(value, this.capacity)),
+            greater_than(value, this.fieldCapacity)),
          then() {
            [array<i32>] empty{array<i32>()}
            empty[value]
          },
          else() { })
-      assign(this.count, value)
+      assign(this.fieldCount, value)
     }
 
     [mut return<void>]
     set_field_capacity([i32] value) {
       if(or(or(less_than(value, 0i32),
-               greater_than(this.count, value)),
+               greater_than(this.fieldCount, value)),
             greater_than(value, 1073741823i32)),
          then() {
            [array<i32>] empty{array<i32>()}
            empty[value]
          },
          else() { })
-      assign(this.capacity, value)
+      assign(this.fieldCapacity, value)
     }
 
     [mut]
     Copy([Reference<Self>] other) {
-      assign(this.count, other.count)
-      assign(this.capacity, other.capacity)
+      assign(this.fieldCount, other.fieldCount)
+      assign(this.fieldCapacity, other.fieldCapacity)
       assign(this.data, other.data)
       assign(this.ownsData, false)
     }
 
     [mut]
     Move([Reference<Self>] other) {
-      assign(this.count, other.count)
-      assign(this.capacity, other.capacity)
+      assign(this.fieldCount, other.fieldCount)
+      assign(this.fieldCapacity, other.fieldCapacity)
       assign(this.data, other.data)
       assign(this.ownsData, other.ownsData)
       assign(other.ownsData, false)
@@ -69,11 +69,11 @@ namespace std {
         then() {
            [Pointer<uninitialized<T>>] dataPtr{vectorDataPtr<T>(this)}
            /std/collections/experimental_vector/vectorCheckShape<T>(this)
-           /std/collections/experimental_vector/vectorDropRange<T>(this, this.count)
+           /std/collections/experimental_vector/vectorDropRange<T>(this, this.fieldCount)
            /std/collections/internal_buffer_checked/bufferFree<uninitialized<T>>(dataPtr)
            assign(this.ownsData, false)
-           assign(this.count, 0i32)
-           assign(this.capacity, 0i32)
+           assign(this.fieldCount, 0i32)
+           assign(this.fieldCapacity, 0i32)
          },
          else() { })
     }
@@ -156,10 +156,10 @@ namespace std {
        then() { assign(allocCount, 1i32) },
        else() { })
     return(Vector<T>{
-        count,
-        capacity,
-        /std/collections/internal_buffer_checked/bufferAlloc<uninitialized<T>>(allocCount),
-        true})
+        [fieldCount] count,
+        [fieldCapacity] capacity,
+        [data] /std/collections/internal_buffer_checked/bufferAlloc<uninitialized<T>>(allocCount),
+        [ownsData] true})
   }
 
   [return<void>]

@@ -633,7 +633,8 @@
           }
         };
         if (initCallee != nullptr) {
-          if (ir_lowerer::isStructDefinition(*initCallee)) {
+          if (init.isBraceConstructor &&
+              ir_lowerer::isStructDefinition(*initCallee)) {
             adoptStructInitializerCallee(*initCallee);
           } else if (initStruct.empty()) {
             initStruct = ir_lowerer::inferStructReturnPathFromDefinition(
@@ -650,6 +651,7 @@
         }
         if (initCallee == nullptr && init.kind == Expr::Kind::Call &&
             !init.isFieldAccess &&
+            init.isBraceConstructor &&
             !initStruct.empty()) {
           const auto initDefIt = defMap.find(initStruct);
           if (initDefIt != defMap.end() && initDefIt->second != nullptr &&
@@ -706,6 +708,7 @@
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(info.index)});
         if (init.kind == Expr::Kind::Call &&
             !init.isFieldAccess &&
+            init.isBraceConstructor &&
             initCallee != nullptr &&
             ir_lowerer::isStructDefinition(*initCallee) &&
             initCallee->fullPath == info.structTypeName) {
