@@ -6,6 +6,33 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer late map helper facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that routes late statement-expression
+    canonical map helper deferral through published map/non-map receiver facts
+    before stale local map metadata can decide whether
+    `/std/collections/map/*` expression helpers stay on builtin/native
+    handling.
+  - acceptance:
+    - Late statement-expression canonical map helper target resolution passes
+      the published semantic program and product index into map target
+      classification.
+    - Published non-map facts suppress stale local map metadata before
+      canonical map expression helpers can stay on builtin/native handling.
+    - Source guard coverage rejects the old local-only map target resolver in
+      the late expression helper gate.
+  - stop_rule: Stop once canonical map expression-helper deferral uses
+    semantic-product map target facts before legacy local map metadata, with
+    source guard coverage pinning resolver ordering.
+  - evidence: Routed the late statement-expression canonical map helper
+    target classifier in `IrLowererLowerStatementsExpr.h` through
+    semantic-aware map target resolution, added source guard coverage for
+    resolver ordering before builtin/native deferral, ran `git diff --check`,
+    and skipped broad baseline validation per the lite workflow.
+
 - [x] TODO-4298: Wire statement call facts
   - owner: ai
   - created_at: 2026-04-28

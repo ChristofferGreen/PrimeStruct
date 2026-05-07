@@ -1993,6 +1993,50 @@ TEST_CASE("ir lowerer late expression fallback guards explicit map helper defs")
         std::string::npos);
 }
 
+TEST_CASE("ir lowerer late expression canonical map helpers prefer semantic targets") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path statementsExprPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsExpr.h";
+
+  REQUIRE(std::filesystem::exists(statementsExprPath));
+  const std::string source = readText(statementsExprPath);
+
+  const size_t canonicalMapGate =
+      source.find("const bool isExplicitCanonicalMapHelperPath =");
+  const size_t semanticResolver = source.find(
+      "ir_lowerer::resolveMapAccessTargetInfo(\n"
+      "                            expr.args.front(),\n"
+      "                            localsIn,\n"
+      "                            {},\n"
+      "                            semanticProgram,\n"
+      "                            &callResolutionAdapters.semanticProductTargets.semanticIndex)",
+      canonicalMapGate);
+  const size_t builtinDeferral =
+      source.find("if (isExplicitCanonicalMapHelperPath &&",
+                  semanticResolver);
+
+  REQUIRE(canonicalMapGate != std::string::npos);
+  REQUIRE(semanticResolver != std::string::npos);
+  REQUIRE(builtinDeferral != std::string::npos);
+  CHECK(canonicalMapGate < semanticResolver);
+  CHECK(semanticResolver < builtinDeferral);
+  CHECK(source.find("resolveMapAccessTargetInfo(expr.args.front(), localsIn)") ==
+        std::string::npos);
+}
+
 TEST_CASE("ir lowerer inline native dispatch prefers published canonical map access helpers") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);

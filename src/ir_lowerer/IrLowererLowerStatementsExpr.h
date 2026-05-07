@@ -720,7 +720,12 @@
                   rawPath.rfind("/std/collections/map/", 0) == 0;
               const auto targetInfo =
                   !expr.args.empty()
-                      ? ir_lowerer::resolveMapAccessTargetInfo(expr.args.front(), localsIn)
+                      ? ir_lowerer::resolveMapAccessTargetInfo(
+                            expr.args.front(),
+                            localsIn,
+                            {},
+                            semanticProgram,
+                            &callResolutionAdapters.semanticProductTargets.semanticIndex)
                       : ir_lowerer::MapAccessTargetInfo{};
               if (isExplicitCanonicalMapHelperPath &&
                   targetInfo.isMapTarget &&

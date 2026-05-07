@@ -810,6 +810,10 @@ Task template:
     semantic-product-backed map and non-map receiver facts before stale local
     map metadata can decide whether `/std/collections/map/*` helper calls
     should defer to builtin/native map handling.
+    The late statement-expression canonical map helper gate slice is complete
+    for semantic-product-backed map and non-map receiver facts before stale
+    local map metadata can decide whether `/std/collections/map/*` expression
+    helpers should stay on builtin/native handling.
     The tail explicit map helper gate slice is complete for
     semantic-product-backed map and non-map receiver facts before stale local
     map metadata can decide whether explicit `/std/collections/map/*` helper
@@ -1336,6 +1340,11 @@ Task template:
       into `runLowerStatementsCallsStep`, so existing statement-call vector
       receiver gates cannot silently run with null semantic context before
       consulting local fallback metadata.
+    - Completed slice: semantic-product-addressed late statement-expression
+      canonical map helper gates now pass published map/non-map receiver facts
+      into the map target resolver before local map metadata can decide
+      whether canonical `/std/collections/map/*` expression helpers should
+      remain on builtin/native handling.
     - Completed slice: semantic-product-addressed native `pick(...)` target
       sum resolution now resolves interned binding, query, and return binding
       type IDs before consulting copied semantic-product text fields for
