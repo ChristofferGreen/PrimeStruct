@@ -493,6 +493,12 @@ TEST_CASE("ir lowerer inference call-return setup uses semantic vector mutator r
         primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
 
+  primec::ir_lowerer::LocalMap noLocalLocals;
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprDirectReturnKind(reorderedPushExpr, noLocalLocals, kindOut) ==
+        primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
+
   primec::Expr staleOnlyPushExpr;
   staleOnlyPushExpr.kind = primec::Expr::Kind::Call;
   staleOnlyPushExpr.name = "push";

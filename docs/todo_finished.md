@@ -6,6 +6,31 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer vector mutator reorder facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes direct vector-mutator helper
+    receiver reordering consume semantic-product non-vector facts before
+    local metadata decides whether to probe later receiver candidates.
+  - acceptance:
+    - Published scalar binding facts on the first direct mutator argument
+      trigger later receiver probing even when the first argument has no
+      local metadata.
+    - Published vector binding facts on a later argument select the
+      graph-owned receiver for reordered direct mutator helper calls.
+    - Existing literal and local-metadata reorder triggers remain the
+      compatibility fallback when no semantic receiver fact is published.
+  - stop_rule: Stop once direct vector-mutator receiver reordering uses
+    published non-vector semantic facts ahead of local metadata and focused
+    tests pin graph-only scalar first-argument reordering.
+  - evidence: Added semantic-product non-vector receiver detection to the
+    direct vector-mutator reorder probe, extended focused `push(...)`
+    stale-local coverage to the no-local first-argument case, ran
+    `git diff --check`, and skipped broad baseline validation per the lite
+    workflow.
+
 - [x] TODO-4298: Prefer capacity receiver facts
   - owner: ai
   - created_at: 2026-04-28

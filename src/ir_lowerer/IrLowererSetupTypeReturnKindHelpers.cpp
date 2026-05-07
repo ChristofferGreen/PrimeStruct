@@ -736,6 +736,15 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     return info.kind == LocalInfo::Kind::Vector || info.isSoaVector ||
            (info.kind == LocalInfo::Kind::Pointer && info.pointerToVector);
   };
+  auto hasNonVectorMutatorReceiverSemanticFact = [&](const Expr &candidate) {
+    SemanticReturnKindTargetInfo semanticInfo;
+    if (!resolveSemanticReturnKindTargetInfo(
+            candidate, semanticProgram, semanticIndex, semanticInfo)) {
+      return false;
+    }
+    return !semanticInfo.arrayVectorInfo.isVectorTarget &&
+           !semanticInfo.arrayVectorInfo.isSoaVector;
+  };
   auto isKnownLocalName = [&](const Expr &candidate) -> bool {
     if (candidate.kind != Expr::Kind::Name) {
       return false;
@@ -808,8 +817,9 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
        callExpr.args.front().kind == Expr::Kind::FloatLiteral ||
        callExpr.args.front().kind == Expr::Kind::StringLiteral ||
        (callExpr.args.front().kind == Expr::Kind::Name &&
-        isKnownLocalName(callExpr.args.front()) &&
-        !isKnownVectorMutatorReceiverExpr(callExpr.args.front())));
+        ((isKnownLocalName(callExpr.args.front()) &&
+          !isKnownVectorMutatorReceiverExpr(callExpr.args.front())) ||
+         hasNonVectorMutatorReceiverSemanticFact(callExpr.args.front()))));
   if (probePositionalReorderedVectorMutatorReceiver) {
     for (size_t i = 1; i < callExpr.args.size(); ++i) {
       appendReceiverIndex(i);
