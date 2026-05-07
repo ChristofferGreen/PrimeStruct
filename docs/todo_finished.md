@@ -6,6 +6,33 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer tail canonical map facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes tail-dispatch rewriting for
+    canonical map helper calls on experimental map receivers consume
+    published map and non-map receiver facts before stale local
+    experimental-map struct metadata can choose direct experimental helper
+    rewrites.
+  - acceptance:
+    - Published scalar binding facts suppress direct experimental helper
+      rewrites when stale local metadata says the receiver target is an
+      experimental map.
+    - Published map collection facts allow direct experimental helper rewrites
+      when stale local metadata says the receiver target is scalar.
+    - Existing local experimental-map helper rewrite behavior remains
+      available when no semantic map/non-map fact is published.
+  - stop_rule: Stop once tail canonical map helper receiver gates route
+    through semantic-product target facts before legacy local experimental-map
+    metadata, with source guard coverage pinning the resolver ordering.
+  - evidence: Routed tail canonical experimental map helper receiver checks
+    through the semantic-aware map and collection target resolvers, added
+    source guard coverage for semantic resolver ordering before stale local
+    gates, ran `git diff --check`, and skipped broad baseline validation per
+    the lite workflow.
+
 - [x] TODO-4298: Prefer tail map helper facts
   - owner: ai
   - created_at: 2026-04-28

@@ -864,6 +864,12 @@ Planned non-template inference migration contract:
   receiver facts before local map metadata can decide whether to rewrite into
   builtin native helper forms. Known map facts suppress stale scalar locals;
   known non-map facts suppress stale map locals.
+- Completed tail canonical experimental map helper gate slice: tail dispatch
+  for canonical map helpers on experimental map receivers now asks
+  graph-backed map/non-map receiver facts before local experimental-map
+  struct metadata can choose direct experimental helper rewrites. Known map
+  facts suppress stale scalar locals; known non-map facts suppress stale map
+  locals.
 - Completed lowerer setup receiver-target map probe slice: setup-type
   receiver-target inference for bare `at(target, key)` and `tryAt(target, key)`
   receiver probes now asks graph-backed map/non-map facts before local map

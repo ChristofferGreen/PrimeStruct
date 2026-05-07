@@ -1371,6 +1371,66 @@ TEST_CASE("ir lowerer tail explicit map helper rewrite uses semantic receiver fa
   CHECK(semanticReceiverResolverPos < argsPackGatePos);
 }
 
+TEST_CASE("ir lowerer tail canonical experimental map helper rewrite uses semantic receiver facts first") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path tailDispatchPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h";
+
+  REQUIRE(std::filesystem::exists(tailDispatchPath));
+  const std::string tailDispatchSource = readText(tailDispatchPath);
+
+  const size_t rewritePos = tailDispatchSource.find(
+      "auto rewriteCanonicalMapHelperForExperimentalReceiverExpr =");
+  REQUIRE(rewritePos != std::string::npos);
+  const size_t semanticIndexPos =
+      tailDispatchSource.find("canonicalMapHelperSemanticIndex", rewritePos);
+  const size_t semanticFactGatePos = tailDispatchSource.find(
+      "hasCanonicalMapHelperSemanticReceiverFact(receiverExpr)",
+      rewritePos);
+  const size_t localFallbackPos =
+      tailDispatchSource.find("auto it = localsIn.find(receiverExpr.name);",
+                              rewritePos);
+  const size_t semanticMapResolverPos = tailDispatchSource.find(
+      "ir_lowerer::resolveMapAccessTargetInfo(\n"
+      "                    receiverExpr,\n"
+      "                    localsIn,\n"
+      "                    inferCallMapTargetInfo,\n"
+      "                    semanticProgram,\n"
+      "                    canonicalMapHelperSemanticIndexPtr)",
+      rewritePos);
+  const size_t semanticReceiverResolverPos = tailDispatchSource.find(
+      "ir_lowerer::resolveArrayVectorAccessTargetInfo(\n"
+      "                    receiverExpr,\n"
+      "                    localsIn,\n"
+      "                    {},\n"
+      "                    semanticProgram,\n"
+      "                    canonicalMapHelperSemanticIndexPtr)",
+      rewritePos);
+
+  REQUIRE(semanticIndexPos != std::string::npos);
+  REQUIRE(semanticFactGatePos != std::string::npos);
+  REQUIRE(localFallbackPos != std::string::npos);
+  REQUIRE(semanticMapResolverPos != std::string::npos);
+  REQUIRE(semanticReceiverResolverPos != std::string::npos);
+  CHECK(semanticIndexPos < semanticMapResolverPos);
+  CHECK(semanticMapResolverPos < semanticFactGatePos);
+  CHECK(semanticFactGatePos < localFallbackPos);
+  CHECK(semanticReceiverResolverPos < localFallbackPos);
+}
+
 TEST_CASE("ir lowerer native tail map access inference uses semantic receiver facts first") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);

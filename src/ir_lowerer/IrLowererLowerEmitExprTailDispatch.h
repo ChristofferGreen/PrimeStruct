@@ -479,13 +479,48 @@
           if (callExpr.args.size() != expectedArgCount) {
             return false;
           }
+          const SemanticProductIndex canonicalMapHelperSemanticIndex =
+              ir_lowerer::buildSemanticProductIndex(semanticProgram);
+          const SemanticProductIndex *const canonicalMapHelperSemanticIndexPtr =
+              semanticProgram == nullptr ? nullptr : &canonicalMapHelperSemanticIndex;
+          auto hasCanonicalMapHelperSemanticReceiverFact = [&](const Expr &receiverExpr) {
+            return semanticProgram != nullptr &&
+                   canonicalMapHelperSemanticIndexPtr != nullptr &&
+                   receiverExpr.semanticNodeId != 0 &&
+                   (ir_lowerer::findSemanticProductCollectionSpecialization(
+                        *canonicalMapHelperSemanticIndexPtr, receiverExpr) != nullptr ||
+                    ir_lowerer::findSemanticProductQueryFact(
+                        semanticProgram, *canonicalMapHelperSemanticIndexPtr, receiverExpr) != nullptr ||
+                    ir_lowerer::findSemanticProductBindingFact(
+                        *canonicalMapHelperSemanticIndexPtr, receiverExpr) != nullptr ||
+                    ir_lowerer::findSemanticProductLocalAutoFact(
+                        semanticProgram, *canonicalMapHelperSemanticIndexPtr, receiverExpr) != nullptr);
+          };
           const auto receiverMapTargetInfo =
-              ir_lowerer::resolveMapAccessTargetInfo(callExpr.args.front(), localsIn);
+              ir_lowerer::resolveMapAccessTargetInfo(
+                  callExpr.args.front(),
+                  localsIn,
+                  inferCallMapTargetInfo,
+                  semanticProgram,
+                  canonicalMapHelperSemanticIndexPtr);
           if (receiverMapTargetInfo.isWrappedMapTarget) {
             return false;
           }
 
           auto inferExperimentalMapStructPath = [&](const Expr &receiverExpr) {
+            const auto mapTargetInfo =
+                ir_lowerer::resolveMapAccessTargetInfo(
+                    receiverExpr,
+                    localsIn,
+                    inferCallMapTargetInfo,
+                    semanticProgram,
+                    canonicalMapHelperSemanticIndexPtr);
+            if (mapTargetInfo.structTypeName.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
+              return mapTargetInfo.structTypeName;
+            }
+            if (hasCanonicalMapHelperSemanticReceiverFact(receiverExpr)) {
+              return std::string{};
+            }
             if (receiverExpr.kind == Expr::Kind::Name) {
               auto it = localsIn.find(receiverExpr.name);
               if (it != localsIn.end() &&
@@ -497,10 +532,13 @@
               }
             }
             const auto accessTargetInfo =
-                ir_lowerer::resolveArrayVectorAccessTargetInfo(receiverExpr, localsIn);
+                ir_lowerer::resolveArrayVectorAccessTargetInfo(
+                    receiverExpr,
+                    localsIn,
+                    {},
+                    semanticProgram,
+                    canonicalMapHelperSemanticIndexPtr);
             if (accessTargetInfo.isWrappedMapTarget) {
-              const auto mapTargetInfo =
-                  ir_lowerer::resolveMapAccessTargetInfo(receiverExpr, localsIn);
               if (mapTargetInfo.structTypeName.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
                 return mapTargetInfo.structTypeName;
               }
@@ -508,11 +546,6 @@
             }
             if (accessTargetInfo.structTypeName.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
               return accessTargetInfo.structTypeName;
-            }
-            const auto mapTargetInfo =
-                ir_lowerer::resolveMapAccessTargetInfo(receiverExpr, localsIn);
-            if (mapTargetInfo.structTypeName.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
-              return mapTargetInfo.structTypeName;
             }
             return std::string{};
           };

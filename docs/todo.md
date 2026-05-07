@@ -798,6 +798,10 @@ Task template:
     semantic-product-backed map and non-map receiver facts before stale local
     map metadata can decide whether explicit `/std/collections/map/*` helper
     calls should rewrite into builtin native helper forms.
+    The tail canonical experimental map helper gate slice is complete for
+    semantic-product-backed map and non-map receiver facts before stale local
+    experimental-map struct metadata can decide whether canonical map helper
+    calls should rewrite to direct experimental helper paths.
     The lowerer setup receiver-target map probe slice is complete for
     semantic-product-backed map and non-map target facts before stale local
     map metadata can suppress fallback receiver-kind inference for bare
@@ -854,6 +858,12 @@ Task template:
       calls rewrite into builtin native helper forms. Published map facts
       suppress stale scalar locals while published non-map facts suppress
       stale map locals.
+    - Completed slice: semantic-product-addressed tail canonical
+      experimental map helper gates now consume published map/non-map
+      receiver facts before local experimental-map struct metadata can decide
+      whether canonical map helper calls rewrite to direct experimental helper
+      paths. Published map facts suppress stale scalar locals while published
+      non-map facts suppress stale map locals.
     - Completed slice: semantic-product-addressed setup-type receiver-target
       map probes now consume published map/non-map target facts before local
       map metadata can suppress fallback receiver-kind inference for bare
