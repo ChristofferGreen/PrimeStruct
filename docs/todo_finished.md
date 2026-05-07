@@ -14250,3 +14250,63 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     final policy in `docs/PrimeStruct.md`, removed TODO-4291 from the active
     queue, and promoted TODO-4292 to Ready Now. Local test execution was
     skipped per the lite workflow.
+
+- [x] TODO-4292: Split canonical vector promotion umbrella
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Vector stdlib ownership cutover
+  - scope: Retire the oversized active TODO that mixed vector wrapper style,
+    implementation ownership, experimental namespace classification, import
+    behavior, compatibility shims, docs, and source locks into one executable
+    item.
+  - implementation_notes:
+    - Split public wrapper cleanup into TODO-4365 and TODO-4366.
+    - Split backing implementation namespace reclassification into TODO-4367.
+    - Leave generic storage, ordinary `.prime` lowering, metadata extraction,
+      compatibility deletion, and zero-C++-vector audit in the existing
+      TODO-4293 through TODO-4297 sequence.
+  - acceptance:
+    - The active TODO queue no longer treats TODO-4292 as executable work.
+    - Remaining vector ownership work is represented by bounded leaves with
+      explicit `scope`, `acceptance`, and `stop_rule`.
+    - The highest-priority split leaf is completed before reporting this run.
+  - stop_rule: Stop once the umbrella is absent from `docs/todo.md` and its
+    useful work is represented by concrete leaves.
+  - finished_at: 2026-05-07
+  - evidence: Removed TODO-4292 from active work, added TODO-4366 and
+    TODO-4367 as bounded follow-up leaves, kept TODO-4293 through TODO-4297
+    for substrate/lowering/compatibility/audit work, and completed TODO-4365
+    as the first split leaf in this run.
+
+- [x] TODO-4365: Style canonical vector constructor wrappers
+  - owner: ai
+  - created_at: 2026-05-07
+  - phase: Vector stdlib ownership cutover
+  - scope: Make the canonical public vector constructor wrappers avoid
+    copying the old `vectorPair` / direct experimental mutator style while
+    preserving the current backing `Vector<T>` representation and import
+    behavior.
+  - implementation_notes:
+    - Start from `stdlib/std/collections/vector.prime`.
+    - Keep the current experimental backing constructor because TODO-4367 owns
+      reclassifying the implementation namespace.
+    - Use canonical `/std/collections/vector/push` from constructor wrapper
+      bodies instead of calling experimental-prefixed mutator helpers directly.
+  - acceptance:
+    - The variadic canonical constructor wrapper uses a readable `result`
+      local and canonical push helper calls for element insertion.
+    - The two-argument canonical constructor wrapper no longer delegates to the
+      old `vectorPair` compatibility helper name.
+    - Source-lock coverage pins the public wrapper style and guards against the
+      removed constructor-wrapper patterns returning.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once the canonical constructor wrappers no longer copy
+    the `vectorPair` / direct experimental mutator pattern.
+  - finished_at: 2026-05-07
+  - evidence: Updated `stdlib/std/collections/vector.prime` so canonical
+    constructor wrappers build a `result` and use canonical
+    `/std/collections/vector/push` calls, removed the canonical two-argument
+    wrapper's direct `vectorPair` dependency, updated source locks, split the
+    remaining vector promotion work into TODO-4366 and TODO-4367, and promoted
+    TODO-4366 to Ready Now. Local test execution was skipped per the lite
+    workflow.
