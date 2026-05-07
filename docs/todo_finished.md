@@ -6,6 +6,32 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer method map probe facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes setup-type method resolution
+    for bare `at(target, key).method()` and `tryAt(target, key).method()`
+    receiver probes consume published map and non-map facts before stale local
+    map metadata can block primitive receiver fallback.
+  - acceptance:
+    - Published scalar binding facts allow primitive receiver fallback when
+      stale local metadata says the receiver target is a map.
+    - Published map collection facts block primitive receiver fallback when
+      stale local metadata says the receiver target is scalar.
+    - Existing local map receiver-probe behavior remains available when no
+      semantic map/non-map fact is published.
+  - stop_rule: Stop once bare map access and tryAt receiver probes route
+    through semantic-product target facts before legacy local map metadata,
+    with focused coverage pinning stale map suppression and stale scalar
+    rejection.
+  - evidence: Routed setup-type bare map receiver probes through the shared
+    semantic-aware map target resolver, covered stale local map/scalar
+    conflicts for `at(...)` and `tryAt(...)` receiver method calls in the
+    focused setup-type helper test, ran `git diff --check`, and skipped broad
+    baseline validation per the lite workflow.
+
 - [x] TODO-4298: Prefer indexed map target facts
   - owner: ai
   - created_at: 2026-04-28

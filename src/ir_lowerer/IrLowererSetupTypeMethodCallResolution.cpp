@@ -281,6 +281,9 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   static const std::unordered_map<std::string, std::string> noImportAliases;
   const auto &semanticAwareImportAliases =
       semanticProgram != nullptr ? noImportAliases : importAliases;
+  const SemanticProductIndex semanticIndex = buildSemanticProductIndex(semanticProgram);
+  const SemanticProductIndex *const semanticIndexPtr =
+      semanticProgram != nullptr ? &semanticIndex : nullptr;
 
   if (callExpr.kind != Expr::Kind::Call || callExpr.isBinding) {
     return nullptr;
@@ -783,12 +786,22 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         }
         std::string accessName;
         return getBuiltinArrayAccessName(candidateExpr, accessName) &&
-               resolveMapAccessTargetInfo(candidateExpr.args.front(), localsIn).isMapTarget;
+               resolveMapAccessTargetInfo(candidateExpr.args.front(),
+                                          localsIn,
+                                          {},
+                                          semanticProgram,
+                                          semanticIndexPtr)
+                   .isMapTarget;
       };
       auto isBareMapTryAtReceiverProbeExpr = [&](const Expr &candidateExpr) {
         return candidateExpr.kind == Expr::Kind::Call && candidateExpr.args.size() == 2 &&
                isSimpleCallName(candidateExpr, "tryAt") &&
-               resolveMapAccessTargetInfo(candidateExpr.args.front(), localsIn).isMapTarget;
+               resolveMapAccessTargetInfo(candidateExpr.args.front(),
+                                          localsIn,
+                                          {},
+                                          semanticProgram,
+                                          semanticIndexPtr)
+                   .isMapTarget;
       };
       const bool blocksExplicitMapReceiverProbeKindFallback =
           isExplicitMapReceiverProbeHelperExpr(*receiver);

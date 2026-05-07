@@ -843,6 +843,11 @@ Planned non-template inference migration contract:
   and query facts before stale local map metadata can classify named targets.
   Known non-map facts suppress stale map locals; no-fact contexts keep the
   existing local map fallback.
+- Completed lowerer setup method map-receiver probe slice: setup-type method
+  resolution for `at(target, key).method()` and `tryAt(target, key).method()`
+  now asks graph-backed map/non-map facts before local map metadata can block
+  primitive receiver fallback. Known map facts suppress stale scalar locals;
+  known non-map facts suppress stale map locals.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

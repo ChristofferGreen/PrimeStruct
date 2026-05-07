@@ -782,6 +782,10 @@ Task template:
     semantic-product-backed collection, binding, local-auto, and query facts
     before stale local map metadata can classify named `target[index]`
     lookup receivers.
+    The lowerer setup method map-receiver probe slice is complete for
+    semantic-product-backed map and non-map target facts before stale local
+    map metadata can block primitive method receiver fallback for
+    `at(target, key).method()` and `tryAt(target, key).method()`.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -810,6 +814,12 @@ Task template:
       facts before local map metadata can classify named `target[index]`
       receivers. Published non-map facts suppress stale map locals while
       syntax-only compatibility keeps the old local map fallback.
+    - Completed slice: semantic-product-addressed setup-type method
+      resolution now consumes published map/non-map target facts before local
+      map metadata can block primitive receiver fallback for
+      `at(target, key).method()` and `tryAt(target, key).method()`. Published
+      map facts suppress stale scalar locals while published non-map facts
+      suppress stale map locals.
     - Completed slice: semantic-product-addressed native `Result.why(...)`
       direct-call sources now resolve interned query result-error IDs before
       copied query text, so stale duplicated error text cannot override the

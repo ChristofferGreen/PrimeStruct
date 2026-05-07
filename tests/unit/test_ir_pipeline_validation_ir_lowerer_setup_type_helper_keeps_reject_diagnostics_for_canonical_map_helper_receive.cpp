@@ -201,6 +201,127 @@ TEST_CASE("ir lowerer setup type helper rejects bare map tryAt receiver fallback
   expectReject(true);
 }
 
+TEST_CASE("ir lowerer setup type helper prefers semantic map receiver probe facts") {
+  primec::Definition i32TagDef;
+  i32TagDef.fullPath = "/i32/tag";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {i32TagDef.fullPath, &i32TagDef},
+  };
+
+  primec::SemanticProgram semanticProgram;
+  auto addBindingFact = [&](uint64_t semanticNodeId,
+                            const std::string &bindingTypeText) {
+    primec::SemanticProgramBindingFact fact;
+    fact.semanticNodeId = semanticNodeId;
+    fact.bindingTypeText = bindingTypeText;
+    fact.bindingTypeTextId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, bindingTypeText);
+    const size_t factIndex = semanticProgram.bindingFacts.size();
+    semanticProgram.bindingFacts.push_back(fact);
+    semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(
+        semanticNodeId, factIndex);
+  };
+  auto addCollectionFact = [&](uint64_t semanticNodeId,
+                               const std::string &keyType,
+                               const std::string &valueType) {
+    primec::SemanticProgramCollectionSpecialization fact;
+    fact.semanticNodeId = semanticNodeId;
+    fact.collectionFamily = "map";
+    fact.collectionFamilyId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, "map");
+    fact.keyTypeText = keyType;
+    fact.keyTypeTextId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, keyType);
+    fact.valueTypeText = valueType;
+    fact.valueTypeTextId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, valueType);
+    const size_t factIndex = semanticProgram.collectionSpecializations.size();
+    semanticProgram.collectionSpecializations.push_back(fact);
+    semanticProgram.publishedRoutingLookups.collectionSpecializationIndicesByExpr
+        .insert_or_assign(semanticNodeId, factIndex);
+  };
+  addBindingFact(7401, "i32");
+  addCollectionFact(7402, "i32", "i32");
+
+  primec::Expr scalarTarget;
+  scalarTarget.kind = primec::Expr::Kind::Name;
+  scalarTarget.name = "target";
+  scalarTarget.semanticNodeId = 7401;
+
+  primec::Expr mapTarget = scalarTarget;
+  mapTarget.semanticNodeId = 7402;
+
+  primec::Expr keyExpr;
+  keyExpr.kind = primec::Expr::Kind::Literal;
+  keyExpr.intWidth = 32;
+  keyExpr.literalValue = 1;
+
+  primec::ir_lowerer::LocalMap staleMapLocals;
+  primec::ir_lowerer::LocalInfo staleMapInfo;
+  staleMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  staleMapInfo.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  staleMapInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  staleMapLocals.emplace("target", staleMapInfo);
+
+  primec::ir_lowerer::LocalMap staleScalarLocals;
+  primec::ir_lowerer::LocalInfo staleScalarInfo;
+  staleScalarInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  staleScalarInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  staleScalarLocals.emplace("target", staleScalarInfo);
+
+  auto inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  };
+  auto resolveExprPath = [](const primec::Expr &expr) { return expr.name; };
+
+  auto makeMethodCall = [&](const primec::Expr &targetExpr,
+                            const char *accessName) {
+    primec::Expr receiverCall;
+    receiverCall.kind = primec::Expr::Kind::Call;
+    receiverCall.name = accessName;
+    receiverCall.args = {targetExpr, keyExpr};
+
+    primec::Expr methodCall;
+    methodCall.kind = primec::Expr::Kind::Call;
+    methodCall.name = "tag";
+    methodCall.isMethodCall = true;
+    methodCall.args = {receiverCall};
+    return methodCall;
+  };
+
+  auto resolveMethod = [&](const primec::Expr &methodCall,
+                           const primec::ir_lowerer::LocalMap &locals,
+                           std::string &error) {
+    return primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+        methodCall,
+        locals,
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        {},
+        {},
+        inferExprKind,
+        resolveExprPath,
+        &semanticProgram,
+        defMap,
+        error);
+  };
+
+  for (const char *accessName : {"at", "tryAt"}) {
+    std::string error;
+    const primec::Definition *resolved =
+        resolveMethod(makeMethodCall(scalarTarget, accessName), staleMapLocals, error);
+    REQUIRE(resolved != nullptr);
+    CHECK(resolved->fullPath == "/i32/tag");
+    CHECK(error.empty());
+
+    error.clear();
+    resolved = resolveMethod(makeMethodCall(mapTarget, accessName), staleScalarLocals, error);
+    CHECK(resolved == nullptr);
+    CHECK(error == "unknown method target for tag");
+  }
+}
+
 TEST_CASE("ir lowerer setup type helper keeps namespaced canonical contains receiver precedence") {
   primec::Definition canonicalContainsDef;
   canonicalContainsDef.fullPath = "/std/collections/map/contains";
