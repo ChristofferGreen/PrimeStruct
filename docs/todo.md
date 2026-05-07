@@ -764,6 +764,9 @@ Task template:
     The lowerer direct `count(...)` receiver slice is complete for
     semantic-product-backed map, string, and non-countable receiver facts
     before stale local collection metadata can resolve helper return kinds.
+    The lowerer direct string receiver fallback slice is complete for
+    semantic-product-backed scalar/string value-kind facts before stale local
+    string metadata can classify access and count helper return kinds.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for

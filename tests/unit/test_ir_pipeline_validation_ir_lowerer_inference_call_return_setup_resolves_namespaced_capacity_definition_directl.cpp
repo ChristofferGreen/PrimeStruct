@@ -395,6 +395,16 @@ TEST_CASE("ir lowerer inference call-return setup uses semantic access stale fac
         primec::ir_lowerer::CallExpressionReturnKindResolution::NotResolved);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
+  primec::ir_lowerer::LocalInfo staleStringLocal;
+  staleStringLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  staleStringLocal.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::String;
+  locals.insert_or_assign("candidate", staleStringLocal);
+
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprDirectReturnKind(atExpr, locals, kindOut) ==
+        primec::ir_lowerer::CallExpressionReturnKindResolution::NotResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+
   primec::Expr textExpr;
   textExpr.kind = primec::Expr::Kind::Name;
   textExpr.name = "text";
@@ -619,6 +629,16 @@ TEST_CASE("ir lowerer inference call-return setup uses semantic count receiver f
 
   primec::ir_lowerer::LocalInfo::ValueKind kindOut =
       primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprDirectReturnKind(countExpr, locals, kindOut) ==
+        primec::ir_lowerer::CallExpressionReturnKindResolution::NotResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+
+  primec::ir_lowerer::LocalInfo staleStringLocal;
+  staleStringLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  staleStringLocal.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::String;
+  locals.insert_or_assign("candidate", staleStringLocal);
+
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(state.inferCallExprDirectReturnKind(countExpr, locals, kindOut) ==
         primec::ir_lowerer::CallExpressionReturnKindResolution::NotResolved);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);

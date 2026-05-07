@@ -6,6 +6,32 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 7, 2026)**
+- [x] TODO-4298: Prefer string receiver facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-07
+  - phase: Semantic ownership authority
+  - scope: Land the TODO-4298 slice that makes direct string receiver
+    fallback consume semantic-product string and non-string value-kind facts
+    before stale local string metadata can classify access/count helpers.
+  - acceptance:
+    - Published scalar binding facts suppress stale local string
+      classification for direct `at(...)` receivers.
+    - Published scalar binding facts suppress stale local string
+      classification for direct `count(...)` receivers.
+    - Published string binding facts keep direct string access and count
+      classification ahead of stale local metadata.
+  - stop_rule: Stop once direct string receiver fallback treats published
+    semantic value-kind facts as authoritative before local/inferred string
+    metadata, with focused tests pinning access and count stale-string
+    suppression.
+  - evidence: Made direct string access/count receiver helpers return from
+    published semantic value-kind facts before consulting local inference,
+    moved collection-access string receiver probing to the same ordering,
+    extended focused `at(...)` and `count(...)` stale-local coverage, ran
+    `git diff --check`, and skipped broad baseline validation per the lite
+    workflow.
+
 - [x] TODO-4298: Prefer count receiver facts
   - owner: ai
   - created_at: 2026-04-28

@@ -705,6 +705,11 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     if (candidate.kind != Expr::Kind::Name) {
       return false;
     }
+    SemanticReturnKindTargetInfo semanticInfo;
+    if (resolveSemanticReturnKindTargetInfo(
+            candidate, semanticProgram, semanticIndex, semanticInfo)) {
+      return semanticInfo.valueKind == LocalInfo::ValueKind::String;
+    }
     const LocalInfo::ValueKind inferredKind =
         inferExprKind ? inferExprKind(candidate, localsIn) : LocalInfo::ValueKind::Unknown;
     if (inferredKind == LocalInfo::ValueKind::String) {
@@ -712,12 +717,6 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     }
     if (inferredKind != LocalInfo::ValueKind::Unknown) {
       return false;
-    }
-    SemanticReturnKindTargetInfo semanticInfo;
-    if (resolveSemanticReturnKindTargetInfo(
-            candidate, semanticProgram, semanticIndex, semanticInfo) &&
-        semanticInfo.valueKind == LocalInfo::ValueKind::String) {
-      return true;
     }
     auto it = localsIn.find(candidate.name);
     return it != localsIn.end() && it->second.kind == LocalInfo::Kind::Value &&
@@ -793,9 +792,8 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     }
     SemanticReturnKindTargetInfo semanticInfo;
     if (resolveSemanticReturnKindTargetInfo(
-            candidate, semanticProgram, semanticIndex, semanticInfo) &&
-        semanticInfo.valueKind == LocalInfo::ValueKind::String) {
-      return true;
+            candidate, semanticProgram, semanticIndex, semanticInfo)) {
+      return semanticInfo.valueKind == LocalInfo::ValueKind::String;
     }
     return inferExprKind &&
            inferExprKind(candidate, localsIn) == LocalInfo::ValueKind::String;
@@ -806,9 +804,8 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     }
     SemanticReturnKindTargetInfo semanticInfo;
     if (resolveSemanticReturnKindTargetInfo(
-            candidate, semanticProgram, semanticIndex, semanticInfo) &&
-        semanticInfo.valueKind == LocalInfo::ValueKind::String) {
-      return true;
+            candidate, semanticProgram, semanticIndex, semanticInfo)) {
+      return semanticInfo.valueKind == LocalInfo::ValueKind::String;
     }
     return inferExprKind &&
            inferExprKind(candidate, localsIn) == LocalInfo::ValueKind::String;
