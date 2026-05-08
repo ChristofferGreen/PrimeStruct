@@ -406,6 +406,11 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     return helperName == "push" || helperName == "pop" || helperName == "reserve" ||
            helperName == "clear" || helperName == "remove_at" || helperName == "remove_swap";
   };
+  auto rootedVectorMutatorPath = [](std::string_view helperName) {
+    return "/vector/" + std::string(helperName);
+  };
+  const std::string rootVectorMutatorPrefix =
+      rootedVectorMutatorPath("").substr(1);
   auto explicitCanonicalStdVectorMutatorCallPath = [&]() -> std::string {
     if (stmt.isMethodCall) {
       return "";
@@ -453,18 +458,18 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
         isVectorMutatorName(normalizedStatementName)) {
       helperName = normalizedStatementName;
     } else {
-      constexpr std::string_view kRootPrefix = "vector/";
-      if (normalizedStatementName.rfind(kRootPrefix, 0) != 0) {
+      if (normalizedStatementName.rfind(rootVectorMutatorPrefix, 0) != 0) {
         return "";
       }
       const std::string_view rootedHelperName =
-          std::string_view(normalizedStatementName).substr(kRootPrefix.size());
+          std::string_view(normalizedStatementName)
+              .substr(rootVectorMutatorPrefix.size());
       if (!isVectorMutatorName(rootedHelperName)) {
         return "";
       }
       helperName = std::string(rootedHelperName);
     }
-    return "/vector/" + helperName;
+    return rootedVectorMutatorPath(helperName);
   };
   const std::string explicitRootVectorMutatorCallPath =
       explicitRootVectorMutatorPath(false);

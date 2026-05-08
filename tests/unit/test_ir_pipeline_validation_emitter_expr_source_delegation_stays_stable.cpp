@@ -380,10 +380,25 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
             "explicitRootVectorMutatorPath(true)") !=
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
+            "auto rootedVectorMutatorPath = [](std::string_view helperName)") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "const std::string rootVectorMutatorPrefix =") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "rootedVectorMutatorPath(helperName)") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
             "auto explicitRootVectorMutatorCallPath = [&]()") ==
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
             "auto explicitRootVectorMutatorMethodPath = [&]()") ==
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "constexpr std::string_view kRootPrefix = \"vector/\"") ==
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "return \"/vector/\" + helperName;") ==
         std::string::npos);
 }
 TEST_CASE("template monomorph source delegation stays stable") {

@@ -15214,3 +15214,32 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     into TODO-4389, and ratcheted
     `scripts/vector_surface_trace_baseline.json` from 907 to 906 production
     traces. Baseline release validation was skipped per the lite workflow.
+
+- [x] TODO-4389: Collapse rooted statement mutator paths
+  - owner: ai
+  - created_at: 2026-05-08
+  - phase: Vector stdlib ownership cutover
+  - scope: Route explicit rooted vector mutator statement path detection in
+    `SemanticsValidatorStatementVectorHelpers.cpp` through a shared rooted
+    vector mutator path builder instead of separate `vector/` and `/vector/`
+    literals.
+  - acceptance:
+    - `SemanticsValidatorStatementVectorHelpers.cpp` no longer has a separate
+      rooted mutator `vector/` prefix constant or direct `/vector/` return
+      concatenation.
+    - Existing unknown-target diagnostics and explicit user-defined rooted
+      mutator helper handling are preserved.
+    - The vector surface trace baseline decreases for semantic validator files
+      and does not increase elsewhere.
+  - stop_rule: Stop after statement mutator rooted path construction reuses a
+    shared rooted helper, source-lock coverage keeps the old direct forms
+    absent, and the audit baseline ratchets downward.
+  - finished_at: 2026-05-08
+  - evidence: Added `rootedVectorMutatorPath` and
+    `rootVectorMutatorPrefix` in
+    `SemanticsValidatorStatementVectorHelpers.cpp`, routed explicit rooted
+    statement mutator detection through those helpers, added source-lock
+    assertions against the old direct rooted forms, split the remaining rooted
+    semantic work into TODO-4390, and ratcheted
+    `scripts/vector_surface_trace_baseline.json` from 906 to 905 production
+    traces. Baseline release validation was skipped per the lite workflow.
