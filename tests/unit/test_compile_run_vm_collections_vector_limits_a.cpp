@@ -412,12 +412,28 @@ TEST_CASE("runs vm vector literal at local dynamic limit") {
       "[effects(heap_alloc), return<int>]\n"
       "main() {\n"
       "  [vector<i32> mut] values{vector<i32>(") +
-                             buildVectorLiteralArgs(256) +
+                             buildVectorLiteralArgs(1024) +
                              ")}\n"
-                             "  return(convert<i32>(and(equal(count(values), 256i32), equal(capacity(values), "
-                             "256i32))))\n"
+                             "  return(convert<i32>(and(equal(count(values), 1024i32), equal(capacity(values), "
+                             "1024i32))))\n"
                              "}\n";
   const std::string srcPath = writeTemp("vm_vector_literal_local_limit.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 1);
+}
+
+TEST_CASE("runs vm vector reserve past former local dynamic limit") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  reserve(values, 300i32)
+  return(convert<i32>(and(equal(count(values), 1i32), equal(capacity(values), 300i32))))
+}
+)";
+  const std::string srcPath = writeTemp("vm_vector_reserve_past_former_limit.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 1);
 }
@@ -440,7 +456,7 @@ TEST_CASE("rejects vm vector literal above local dynamic limit") {
       "[effects(heap_alloc), return<int>]\n"
       "main() {\n"
       "  [vector<i32> mut] values{vector<i32>(") +
-                             buildVectorLiteralArgs(257) +
+                             buildVectorLiteralArgs(1025) +
                              ")}\n"
                              "  return(count(values))\n"
                              "}\n";
@@ -448,7 +464,7 @@ TEST_CASE("rejects vm vector literal above local dynamic limit") {
   const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_vector_literal_limit_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("vector literal exceeds local capacity limit (256)") != std::string::npos);
+  CHECK(readFile(errPath).find("vector literal exceeds local capacity limit (1024)") != std::string::npos);
 }
 
 TEST_CASE("rejects vm vector reserve beyond local dynamic limit") {
@@ -458,7 +474,7 @@ import /std/collections/*
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
-  reserve(values, 257i32)
+  reserve(values, 1025i32)
   return(0i32)
 }
 )";
@@ -466,7 +482,7 @@ main() {
   const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_vector_reserve_limit_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("vector reserve exceeds local capacity limit (256)") != std::string::npos);
+  CHECK(readFile(errPath).find("vector reserve exceeds local capacity limit (1024)") != std::string::npos);
 }
 
 TEST_CASE("rejects vm vector reserve negative literal at lowering") {
@@ -495,7 +511,7 @@ import /std/collections/*
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
-  reserve(values, plus(200i32, 57i32))
+  reserve(values, plus(1000i32, 25i32))
   return(0i32)
 }
 )";
@@ -504,7 +520,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_vector_reserve_folded_limit_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("vector reserve exceeds local capacity limit (256)") != std::string::npos);
+  CHECK(readFile(errPath).find("vector reserve exceeds local capacity limit (1024)") != std::string::npos);
 }
 
 TEST_CASE("rejects vm vector reserve folded negative expression at lowering") {
@@ -590,7 +606,7 @@ import /std/collections/*
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
-  reserve(values, plus(200u64, 57u64))
+  reserve(values, plus(1000u64, 25u64))
   return(0i32)
 }
 )";
@@ -599,7 +615,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_vector_reserve_folded_unsigned_limit_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("vector reserve exceeds local capacity limit (256)") != std::string::npos);
+  CHECK(readFile(errPath).find("vector reserve exceeds local capacity limit (1024)") != std::string::npos);
 }
 
 TEST_CASE("rejects vm vector reserve folded unsigned wraparound at lowering") {
@@ -648,7 +664,7 @@ import /std/collections/*
 [effects(heap_alloc), return<int>]
 main([array<string>] args) {
   [vector<i32> mut] values{vector<i32>(1i32)}
-  reserve(values, plus(257i32, count(args)))
+  reserve(values, plus(1025i32, count(args)))
   return(0i32)
 }
 )";

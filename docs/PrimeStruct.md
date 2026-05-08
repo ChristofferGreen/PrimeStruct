@@ -3020,13 +3020,13 @@ for(
   are supported in VM/native for numeric/bool values, and string-keyed maps work when the keys are string literals or
   bindings backed by literals (string table entries). VM/native vectors now lower through an explicit heap-backed
   record header (`count`, `capacity`, `data_ptr`): `push`/`reserve` reallocate backing storage while capacity remains
-  within the current `256` dynamic-capacity ceiling and error once exceeded, and shrinking helpers (`pop`, `clear`,
+  within the current `1024` dynamic-capacity ceiling and error once exceeded, and shrinking helpers (`pop`, `clear`,
   `remove_at`, `remove_swap`) work against that heap-backed record. Vector element access/mutation uses `data_ptr`
   indirection instead of fixed in-header element offsets. Vector constructors above the current VM/native local capacity
-  limit (`256`) are rejected during lowering with `vector literal exceeds local capacity limit (256)`,
+  limit (`1024`) are rejected during lowering with `vector literal exceeds local capacity limit (1024)`,
   and `reserve` with out-of-range or negative integer literal expressions (including folded signed/unsigned
-  `plus`/`minus`/`negate`, such as `plus(200i32, 57i32)`, `minus(1u64, 2u64)`, `plus(18446744073709551615u64, 1u64)`, or
-  `negate(1i32)`) is also rejected at lowering time (`vector reserve exceeds local capacity limit (256)` / `vector
+  `plus`/`minus`/`negate`, such as `plus(1000i32, 25i32)`, `minus(1u64, 2u64)`, `plus(18446744073709551615u64, 1u64)`, or
+  `negate(1i32)`) is also rejected at lowering time (`vector reserve exceeds local capacity limit (1024)` / `vector
   reserve expects non-negative capacity` / `vector reserve literal expression overflow`). Folded signed and unsigned
   literal-expression overflow now emits the deterministic lowering diagnostic `vector reserve literal expression
   overflow` instead of deferring to backend/runtime integer-overflow behavior.
@@ -3056,10 +3056,8 @@ for(
   - `vector<T>` is specified as a C++-style dynamic contiguous sequence
     (`push`/`reserve` may grow capacity). VM/native now use a heap-backed
     `count/capacity/data_ptr` record for vector locals, so push/reserve growth
-    reallocates backing storage while preserving existing elements. `TODO-4281`
-    tracks lifting the remaining local dynamic-capacity limit beyond `256`;
-    add a separate concrete TODO before changing runtime semantics outside
-    that scope.
+    reallocates backing storage while preserving existing elements up to the
+    current deterministic `1024` local dynamic-capacity limit.
   - Stdlib collection helpers now share `ContainerError` for deterministic error payloads: `containerMissingKey()`
     (`1`), `containerIndexOutOfBounds()` (`2`), `containerEmpty()` (`3`), and `containerCapacityExceeded()` (`4`).
     `containerErrorStatus(err)` packs a status-only `Result<ContainerError>`, `containerErrorResult<T>(err)` packs a
@@ -5151,10 +5149,10 @@ read-only path.
   - **Current implementation status:** VM/native vector locals use a heap-backed `count/capacity/data_ptr` record
     layout. `push` and dynamic `reserve` growth allocate/reallocate backing storage and report deterministic runtime
     allocation failures (`vector push allocation failed (out of memory)` / `vector reserve allocation failed (out of
-    memory)`) once the local dynamic-capacity limit (`256`) is exceeded. `vector<T>{...}` construction and legacy
-    `vector<T>(...)` compatibility construction above `256` elements and out-of-range/negative folded `reserve`
+    memory)`) once the local dynamic-capacity limit (`1024`) is exceeded. `vector<T>{...}` construction and legacy
+    `vector<T>(...)` compatibility construction above `1024` elements and out-of-range/negative folded `reserve`
     integer literal expressions are rejected at lowering time
-    (`vector literal exceeds local capacity limit (256)` / `vector reserve exceeds local capacity limit (256)` /
+    (`vector literal exceeds local capacity limit (1024)` / `vector reserve exceeds local capacity limit (1024)` /
     `vector reserve expects non-negative capacity` / `vector reserve literal expression overflow`). Folded literal
     support currently covers `plus`/`minus`/`negate` expression trees, and both signed and unsigned fold-overflow paths
     emit `vector reserve literal expression overflow`.
@@ -5464,9 +5462,8 @@ read-only path.
 - **Memory/GC:** there is no GC in the VM today. Arrays are inline locals with
   count metadata plus contiguous element slots. VM/native vector locals use a
   heap-backed `count/capacity/data_ptr` record; push/reserve growth reallocates
-  that backing storage and preserves existing elements, while the current
-  `256` local dynamic-capacity limit remains in force. `TODO-4281` tracks
-  lifting that limit once the allocator/runtime contract is widened. No
+  that backing storage and preserves existing elements up to the current
+  `1024` local dynamic-capacity limit. No
   reference counting is performed.
 - **Errors:** guard rails emit errors by printing to stderr and returning error codes (e.g., bounds checks), while VM
   runtime faults (stack underflow, invalid addresses) surface as `VM error:` with exit code 3.

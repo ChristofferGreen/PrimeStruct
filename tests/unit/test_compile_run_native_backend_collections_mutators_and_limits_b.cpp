@@ -9,6 +9,26 @@
 #if PRIMESTRUCT_NATIVE_COLLECTIONS_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
+TEST_CASE("compiles and runs native vector reserve past former local dynamic limit") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  reserve(values, 300i32)
+  return(convert<i32>(and(equal(count(values), 1i32), equal(capacity(values), 300i32))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_vector_reserve_past_former_limit.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_vector_reserve_past_former_limit_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
 TEST_CASE("rejects native vector literal above local dynamic limit") {
   auto buildVectorLiteralArgs = [](int count) {
     std::string args;
@@ -27,7 +47,7 @@ TEST_CASE("rejects native vector literal above local dynamic limit") {
       "[effects(heap_alloc), return<int>]\n"
       "main() {\n"
       "  [vector<i32> mut] values{vector<i32>(") +
-                             buildVectorLiteralArgs(257) +
+                             buildVectorLiteralArgs(1025) +
                              ")}\n"
                              "  return(count(values))\n"
                              "}\n";
@@ -38,7 +58,7 @@ TEST_CASE("rejects native vector literal above local dynamic limit") {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("vector literal exceeds local capacity limit (256)") != std::string::npos);
+  CHECK(readFile(errPath).find("vector literal exceeds local capacity limit (1024)") != std::string::npos);
 }
 
 TEST_CASE("rejects native vector reserve beyond local dynamic limit") {
@@ -48,7 +68,7 @@ import /std/collections/*
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
-  reserve(values, 257i32)
+  reserve(values, 1025i32)
   return(0i32)
 }
 )";
@@ -59,7 +79,29 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("vector reserve exceeds local capacity limit (256)") != std::string::npos);
+  CHECK(readFile(errPath).find("vector reserve exceeds local capacity limit (1024)") != std::string::npos);
+}
+
+TEST_CASE("compiles and runs native vector push past former local dynamic limit") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>()}
+  repeat(300i32) {
+    push(values, 1i32)
+  }
+  return(plus(at(values, 0i32), at(values, 299i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_vector_push_past_former_limit.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_vector_push_past_former_limit_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
 }
 
 TEST_CASE("rejects native vector reserve negative literal at lowering") {
@@ -90,7 +132,7 @@ import /std/collections/*
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
-  reserve(values, plus(200i32, 57i32))
+  reserve(values, plus(1000i32, 25i32))
   return(0i32)
 }
 )";
@@ -101,7 +143,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("vector reserve exceeds local capacity limit (256)") != std::string::npos);
+  CHECK(readFile(errPath).find("vector reserve exceeds local capacity limit (1024)") != std::string::npos);
 }
 
 TEST_CASE("rejects native vector reserve folded negative expression at lowering") {
@@ -198,7 +240,7 @@ import /std/collections/*
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
-  reserve(values, plus(200u64, 57u64))
+  reserve(values, plus(1000u64, 25u64))
   return(0i32)
 }
 )";
@@ -209,7 +251,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("vector reserve exceeds local capacity limit (256)") != std::string::npos);
+  CHECK(readFile(errPath).find("vector reserve exceeds local capacity limit (1024)") != std::string::npos);
 }
 
 TEST_CASE("rejects native vector reserve folded unsigned wraparound at lowering") {
@@ -262,7 +304,7 @@ import /std/collections/*
 [effects(heap_alloc), return<int>]
 main([array<string>] args) {
   [vector<i32> mut] values{vector<i32>(1i32)}
-  reserve(values, plus(257i32, count(args)))
+  reserve(values, plus(1025i32, count(args)))
   return(0i32)
 }
 )";
@@ -286,7 +328,7 @@ import /std/collections/*
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>()}
-  repeat(257i32) {
+  repeat(1025i32) {
     push(values, 1i32)
   }
   return(0i32)

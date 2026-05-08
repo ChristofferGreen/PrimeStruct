@@ -1180,10 +1180,9 @@ Current ownership contract:
 
 Implementation status note: VM/native now use heap-backed vector locals with a
 `count/capacity/data_ptr` record; push/reserve growth reallocates backing
-storage and preserves existing elements. The remaining runtime ceiling is the
-local dynamic-capacity limit (`256`), and `TODO-4281` tracks lifting that limit
-once the allocator/runtime contract is widened. Add a separate dynamic-storage
-TODO before changing runtime behavior outside that scope.
+storage and preserves existing elements up to the deterministic local
+dynamic-capacity limit (`1024`). Add a separate dynamic-storage TODO before
+changing runtime behavior outside that contract.
 
 ### 8.3 Maps
 

@@ -711,7 +711,7 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helper paths") {
             reserveExceededCalls,
             nullptr,
             error) == EmitResult::Error);
-  CHECK(error == "vector reserve exceeds local capacity limit (256)");
+  CHECK(error == "vector reserve exceeds local capacity limit (1024)");
   CHECK(reserveNegativeCalls == reserveNegativeBaseline);
   CHECK(reserveExceededCalls == reserveExceededBaseline);
 

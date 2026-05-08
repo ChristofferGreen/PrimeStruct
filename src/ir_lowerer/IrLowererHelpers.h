@@ -12,7 +12,7 @@ namespace primec::ir_lowerer {
 constexpr const char *kGpuGlobalIdXName = "__gpu_global_id_x";
 constexpr const char *kGpuGlobalIdYName = "__gpu_global_id_y";
 constexpr const char *kGpuGlobalIdZName = "__gpu_global_id_z";
-constexpr int32_t kVectorLocalDynamicCapacityLimit = 256;
+constexpr int32_t kVectorLocalDynamicCapacityLimit = 1024;
 std::string vectorLocalCapacityLimitExceededMessage();
 std::string vectorReserveExceedsLocalCapacityLimitMessage();
 std::string vectorLiteralExceedsLocalCapacityLimitMessage();

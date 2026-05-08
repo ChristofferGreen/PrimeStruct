@@ -472,10 +472,10 @@ TEST_CASE("compiles and runs native vector literal at local dynamic limit") {
       "[effects(heap_alloc), return<int>]\n"
       "main() {\n"
       "  [vector<i32> mut] values{vector<i32>(") +
-                             buildVectorLiteralArgs(256) +
+                             buildVectorLiteralArgs(1024) +
                              ")}\n"
-                             "  return(convert<i32>(and(equal(count(values), 256i32), equal(capacity(values), "
-                             "256i32))))\n"
+                             "  return(convert<i32>(and(equal(count(values), 1024i32), equal(capacity(values), "
+                             "1024i32))))\n"
                              "}\n";
   const std::string srcPath = writeTemp("compile_native_vector_literal_local_limit.prime", source);
   const std::string exePath =

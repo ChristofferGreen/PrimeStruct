@@ -14742,3 +14742,42 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     fixed `base + count/capacity/data/ownsData` offsets. Updated built
     lowerer source-lock coverage plus focused VM vector and map construction
     checks.
+
+- [x] TODO-4281: Lift vector dynamic capacity limit
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4375
+  - scope: Lift the current VM/native vector local dynamic-capacity limit
+    beyond `256` after vector growth has been routed through ordinary `.prime`
+    helpers over the generic contiguous-storage substrate.
+  - implementation_notes:
+    - Start from `src/ir_lowerer/IrLowererHelpers.{h,cpp}`,
+      the completed generic storage/lifecycle substrate coverage plus
+      TODO-4375, `src/ir_lowerer/IrLowererFlowVectorHelpers.cpp` if any
+      compatibility path still exists,
+      `src/ir_lowerer/IrLowererOperatorCollectionMutationHelpers.cpp`,
+      `tests/unit/test_compile_run_vm_collections_vector_limits_a.cpp`, and
+      `tests/unit/test_compile_run_native_backend_collections_mutators_and_limits_*.cpp`.
+    - Preserve deterministic allocation-failure diagnostics for requests that
+      still exceed the widened runtime/allocator contract.
+    - Update docs and source locks that mention the `256` ceiling in the same
+      change.
+  - acceptance:
+    - VM and native vector literals, `reserve`, and repeated `push` can grow
+      past the old `256` local dynamic-capacity limit for supported element
+      kinds.
+    - Out-of-range folded and runtime capacity requests still produce stable
+      diagnostics instead of silent wraparound or backend faults.
+    - Existing ownership, relocation, drop, and borrowed-access behavior stays
+      stable across growth.
+    - Docs record the new capacity contract and any remaining backend limits.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once the old `256` ceiling is either removed or replaced by
+    a documented wider allocator/runtime bound with VM/native coverage.
+  - finished_at: 2026-05-08
+  - evidence: Raised the deterministic VM/native vector dynamic-capacity
+    contract from `256` to `1024`, updated VM/native literal, reserve, push,
+    folded-limit, runtime-limit, and IR helper expectations, and documented the
+    widened bound in the PrimeStruct language docs. Baseline release
+    validation was skipped per the lite workflow.
