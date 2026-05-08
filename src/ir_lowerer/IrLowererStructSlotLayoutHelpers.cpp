@@ -10,6 +10,7 @@
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
+#include "IrLowererUninitializedTypeHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -243,6 +244,93 @@ std::string resolveSoaVectorFieldStructPath(const std::string &typeName,
   return normalizeVectorStructPath(typeName);
 }
 
+bool resolveExperimentalVectorElementKindFromLayoutFields(
+    const std::string &vectorStructPath,
+    const CollectStructLayoutFieldsFn &collectStructLayoutFields,
+    const ValueKindFromTypeNameFn &valueKindFromTypeName,
+    LocalInfo::ValueKind &kindOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  std::vector<StructLayoutFieldInfo> vectorFields;
+  if (!collectStructLayoutFields(vectorStructPath, vectorFields)) {
+    return false;
+  }
+  for (const auto &field : vectorFields) {
+    if (field.name != "data") {
+      continue;
+    }
+    std::string pointerBase = field.typeName;
+    std::string pointerArg = field.typeTemplateArg;
+    if (pointerArg.empty()) {
+      splitTemplateTypeName(field.typeName, pointerBase, pointerArg);
+    }
+    if (normalizeCollectionBindingTypeName(trimTemplateTypeText(pointerBase)) !=
+        "Pointer") {
+      return false;
+    }
+    std::vector<std::string> pointerArgs;
+    if (!splitTemplateArgs(pointerArg, pointerArgs) ||
+        pointerArgs.size() != 1) {
+      return false;
+    }
+    std::string elementType = trimTemplateTypeText(pointerArgs.front());
+    if (!extractTopLevelUninitializedTypeText(elementType, elementType)) {
+      return false;
+    }
+    kindOut = valueKindFromTypeName(elementType);
+    return kindOut != LocalInfo::ValueKind::Unknown;
+  }
+  return false;
+}
+
+std::string resolveExperimentalVectorFieldStructPath(
+    const StructLayoutFieldInfo &field) {
+  if (!isExperimentalVectorTypeName(field.typeName)) {
+    return normalizeVectorStructPath(field.typeName);
+  }
+  if (!field.typeTemplateArg.empty()) {
+    return specializedExperimentalVectorStructPathForElementType(
+        trimTemplateTypeText(field.typeTemplateArg));
+  }
+  return normalizeVectorStructPath(field.typeName);
+}
+
+void applySpecializedExperimentalMapFieldLayout(
+    const std::string &structPath,
+    const std::string &fieldName,
+    const CollectStructLayoutFieldsFn &collectStructLayoutFields,
+    const ValueKindFromTypeNameFn &valueKindFromTypeName,
+    StructSlotFieldInfo &fieldInfo) {
+  if (structPath.rfind("/std/collections/experimental_map/Map__", 0) != 0 &&
+      structPath.rfind("std/collections/experimental_map/Map__", 0) != 0) {
+    return;
+  }
+  std::vector<StructLayoutFieldInfo> fields;
+  if (!collectStructLayoutFields(structPath, fields)) {
+    return;
+  }
+  for (const auto &field : fields) {
+    if (field.name != fieldName || !isExperimentalVectorTypeName(field.typeName)) {
+      continue;
+    }
+    fieldInfo.structPath = resolveExperimentalVectorFieldStructPath(field);
+    if (!field.typeTemplateArg.empty()) {
+      fieldInfo.valueKind = valueKindFromTypeName(field.typeTemplateArg);
+    }
+    if (fieldInfo.valueKind == LocalInfo::ValueKind::Unknown &&
+        !fieldInfo.structPath.empty()) {
+      LocalInfo::ValueKind elementKind = LocalInfo::ValueKind::Unknown;
+      if (resolveExperimentalVectorElementKindFromLayoutFields(
+              fieldInfo.structPath,
+              collectStructLayoutFields,
+              valueKindFromTypeName,
+              elementKind)) {
+        fieldInfo.valueKind = elementKind;
+      }
+    }
+    return;
+  }
+}
+
 } // namespace
 
 bool resolveStructSlotFieldByName(const std::vector<StructSlotFieldInfo> &fields,
@@ -334,12 +422,16 @@ bool resolveStructSlotLayoutFromDefinitionFields(
     StructSlotLayoutInfo layout;
     layout.structPath = structPath;
     layout.totalSlots = 8;
-    layout.fields.push_back({"keys", 0, 4, LocalInfo::ValueKind::Unknown, "/std/collections/experimental_vector/Vector"});
-    layout.fields.push_back({"payloads",
-                             4,
-                             4,
-                             LocalInfo::ValueKind::Unknown,
-                             "/std/collections/experimental_vector/Vector"});
+    StructSlotFieldInfo keysField{
+        "keys", 0, 4, LocalInfo::ValueKind::Unknown, "/std/collections/experimental_vector/Vector"};
+    StructSlotFieldInfo payloadsField{
+        "payloads", 4, 4, LocalInfo::ValueKind::Unknown, "/std/collections/experimental_vector/Vector"};
+    applySpecializedExperimentalMapFieldLayout(
+        structPath, "keys", collectStructLayoutFields, valueKindFromTypeName, keysField);
+    applySpecializedExperimentalMapFieldLayout(
+        structPath, "payloads", collectStructLayoutFields, valueKindFromTypeName, payloadsField);
+    layout.fields.push_back(std::move(keysField));
+    layout.fields.push_back(std::move(payloadsField));
     out = layout;
     return true;
   }

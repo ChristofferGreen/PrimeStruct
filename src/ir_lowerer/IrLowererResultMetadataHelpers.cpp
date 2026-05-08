@@ -10,6 +10,7 @@
 #include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
+#include "IrLowererStatementBindingHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
 namespace primec::ir_lowerer {
@@ -500,6 +501,20 @@ bool applySemanticDirectValueTypeText(const std::string &typeText, ResultExprInf
   out.valueMapKeyKind = LocalInfo::ValueKind::Unknown;
   out.valueIsFileHandle = false;
   out.valueStructType.clear();
+  std::string valueBase;
+  std::string valueArgs;
+  if (splitTemplateTypeName(trimmedType, valueBase, valueArgs)) {
+    std::string normalizedBase = trimTemplateTypeText(valueBase);
+    if (!normalizedBase.empty() && normalizedBase.front() == '/') {
+      normalizedBase.erase(normalizedBase.begin());
+    }
+    if ((normalizedBase == "Map" ||
+         normalizedBase == "std/collections/experimental_map/Map") &&
+        resolveSpecializedExperimentalMapStructPathForBindingType(
+            trimmedType, out.valueStructType)) {
+      return true;
+    }
+  }
   if (resolveSupportedResultCollectionType(
           trimmedType, out.valueCollectionKind, out.valueKind, &out.valueMapKeyKind)) {
     return true;

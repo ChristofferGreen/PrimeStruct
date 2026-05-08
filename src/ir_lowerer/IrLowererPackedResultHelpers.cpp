@@ -1,10 +1,12 @@
 #include "IrLowererResultInternal.h"
 
 #include "IrLowererBindingTypeHelpers.h"
+#include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
+#include "IrLowererStatementBindingHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
 namespace primec::ir_lowerer {
@@ -103,6 +105,20 @@ bool resolveSemanticProductResultOkPayloadInfo(
   }
 
   out.found = true;
+  std::string payloadBase;
+  std::string payloadArgs;
+  if (splitTemplateTypeName(bindingTypeText, payloadBase, payloadArgs)) {
+    std::string normalizedBase = trimTemplateTypeText(payloadBase);
+    if (!normalizedBase.empty() && normalizedBase.front() == '/') {
+      normalizedBase.erase(normalizedBase.begin());
+    }
+    if ((normalizedBase == "Map" ||
+         normalizedBase == "std/collections/experimental_map/Map") &&
+        resolveSpecializedExperimentalMapStructPathForBindingType(
+            bindingTypeText, out.structType)) {
+      return true;
+    }
+  }
   if (resolveSupportedResultCollectionType(bindingTypeText,
                                            out.collectionKind,
                                            out.collectionValueKind,
@@ -592,7 +608,14 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
     }
     return ResultOkMethodCallEmitResult::Emitted;
   }
-  if (!emitExpr(payloadExpr, localsIn)) {
+  const Expr *structPayloadExpr = &payloadExpr;
+  Expr rewrittenStructMapPayloadExpr;
+  if (isExperimentalMapStructTypePath(structType) &&
+      rewritePublishedMapConstructorForExperimentalMapStruct(
+          payloadExpr, resolveDefinitionCall, rewrittenStructMapPayloadExpr)) {
+    structPayloadExpr = &rewrittenStructMapPayloadExpr;
+  }
+  if (!emitExpr(*structPayloadExpr, localsIn)) {
     return ResultOkMethodCallEmitResult::Error;
   }
   if (!payloadInfo.isPackedSingleSlot) {

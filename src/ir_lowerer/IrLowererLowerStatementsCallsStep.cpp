@@ -25,6 +25,39 @@ bool isCallsStepVectorMutatorMethod(const Expr &candidate) {
          candidate.args.front().kind == Expr::Kind::Name;
 }
 
+bool isCallsStepBuiltinVectorMutatorCall(const Expr &candidate) {
+  if (candidate.isMethodCall || candidate.name.empty()) {
+    return false;
+  }
+  std::string path = candidate.name;
+  if (path.find('/') == std::string::npos && !candidate.namespacePrefix.empty()) {
+    path = candidate.namespacePrefix == "/" ? "/" + path
+                                            : candidate.namespacePrefix + "/" + path;
+  }
+  if (!path.empty() && path.front() == '/') {
+    path.erase(path.begin());
+  }
+  const std::string experimentalPrefix = "std/collections/experimental_vector/";
+  const std::string internalPrefix = "std/collections/internal_vector/";
+  std::string leaf;
+  if (path.rfind(experimentalPrefix, 0) == 0) {
+    leaf = path.substr(experimentalPrefix.size());
+  } else if (path.rfind(internalPrefix, 0) == 0) {
+    leaf = path.substr(internalPrefix.size());
+  } else {
+    return false;
+  }
+  const size_t generatedSuffix = leaf.find("__");
+  if (generatedSuffix != std::string::npos) {
+    leaf.erase(generatedSuffix);
+  }
+  return leaf == "vectorPush" || leaf == "vectorPop" ||
+         leaf == "vectorReserve" || leaf == "vectorClear" ||
+         leaf == "vectorRemoveAt" || leaf == "vectorRemoveSwap" ||
+         leaf == "push" || leaf == "pop" || leaf == "reserve" ||
+         leaf == "clear" || leaf == "remove_at" || leaf == "remove_swap";
+}
+
 bool isCallsStepExperimentalVectorTypeName(const std::string &typeName) {
   const std::string normalized = trimTemplateTypeText(typeName);
   return normalized == "Vector" ||
@@ -320,6 +353,9 @@ bool runLowerStatementsCallsStep(const LowerStatementsCallsStepInput &input,
                    "/std/collections/experimental_vector/Vector__", 0) == 0)) {
             return false;
           }
+        }
+        if (isCallsStepBuiltinVectorMutatorCall(candidate)) {
+          return false;
         }
         if (candidate.isMethodCall && !input.isArrayCountCall(candidate, localsIn) &&
             !input.isStringCountCall(candidate, localsIn) &&

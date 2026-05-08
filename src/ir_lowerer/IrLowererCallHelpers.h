@@ -3,6 +3,7 @@
 #include <functional>
 #include <cstddef>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -89,6 +90,11 @@ std::string resolveCallPathFromScope(
 bool isTailCallCandidate(const Expr &expr,
                          const std::unordered_map<std::string, const Definition *> &defMap,
                          const ResolveExprPathFn &resolveExprPath);
+bool isExperimentalMapStructTypePath(std::string_view path);
+bool rewritePublishedMapConstructorForExperimentalMapStruct(
+    const Expr &callExpr,
+    const ResolveDefinitionCallFn &resolveDefinitionCall,
+    Expr &rewrittenExpr);
 
 bool hasTailExecutionCandidate(const std::vector<Expr> &statements,
                                bool definitionReturnsVoid,

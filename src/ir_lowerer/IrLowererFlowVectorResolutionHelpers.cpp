@@ -237,6 +237,10 @@ bool classifyMutableVectorLocal(const LocalInfo &localInfo, bool fromArgsPack) {
   if (!fromArgsPack && kind == LocalInfo::Kind::Vector && localInfo.isMutable) {
     return true;
   }
+  if (!fromArgsPack && kind == LocalInfo::Kind::Value && localInfo.isMutable &&
+      isVectorStructPath(localInfo.structTypeName)) {
+    return true;
+  }
   if (fromArgsPack && kind == LocalInfo::Kind::Vector) {
     return true;
   }
@@ -307,7 +311,11 @@ bool validateVectorStatementHelperTarget(
       error = vectorHelper + " requires mutable vector binding";
       return false;
     }
-    if (it->second.kind != LocalInfo::Kind::Vector || !it->second.isMutable) {
+    const bool isMutableVectorLocal =
+        (it->second.kind == LocalInfo::Kind::Vector && it->second.isMutable) ||
+        (it->second.kind == LocalInfo::Kind::Value && it->second.isMutable &&
+         isVectorStructPath(it->second.structTypeName));
+    if (!isMutableVectorLocal) {
       error = vectorHelper + " requires mutable vector binding";
       return false;
     }

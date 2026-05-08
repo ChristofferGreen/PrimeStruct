@@ -1005,6 +1005,7 @@
         [&](int32_t destPtrLocal, int32_t srcPtrLocal, int32_t slotCount) {
           return emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, slotCount);
         },
+        [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
         error,
         [&](const ir_lowerer::UninitializedStorageAccessInfo &access,
             int32_t valuePtrLocal,

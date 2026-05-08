@@ -242,7 +242,13 @@ bool emitInlineStructDefinitionArguments(const std::string &calleePath,
       }
       bool emittedFieldValue = false;
       if (argKind != field.valueKind) {
-        if (field.valueKind == LocalInfo::ValueKind::Int32 &&
+        if (isVectorStructPath(calleePath) &&
+            field.valueKind == LocalInfo::ValueKind::Int32 &&
+            (field.name == "fieldCount" || field.name == "fieldCapacity") &&
+            argKind == LocalInfo::ValueKind::Bool) {
+          emitInstruction(IrOpcode::PushI32, 0);
+          emittedFieldValue = true;
+        } else if (field.valueKind == LocalInfo::ValueKind::Int32 &&
             arg->kind == Expr::Kind::Literal && !arg->isUnsigned &&
             arg->literalValue <=
                 static_cast<uint64_t>(std::numeric_limits<int32_t>::max())) {

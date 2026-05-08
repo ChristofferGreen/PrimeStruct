@@ -34,6 +34,19 @@ bool isRawBuiltinSoaVectorStructPath(const std::string &structPath) {
   return structPath == "/soa_vector" || structPath == "/std/collections/soa_vector";
 }
 
+const Expr &mapStructRhsExprForTarget(
+    const std::string &targetStructPath,
+    const Expr &rhsExpr,
+    const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
+    Expr &rewrittenExpr) {
+  if (isExperimentalMapStructTypePath(targetStructPath) &&
+      rewritePublishedMapConstructorForExperimentalMapStruct(
+          rhsExpr, resolveDefinitionCall, rewrittenExpr)) {
+    return rewrittenExpr;
+  }
+  return rhsExpr;
+}
+
 std::string defaultVectorRecordStructPath(std::string_view builtin) {
   if (builtin == "soa_vector") {
     return "/std/collections/soa_vector";
@@ -912,7 +925,13 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
       }
       if (it->second.kind == LocalInfo::Kind::Reference) {
         if (!it->second.structTypeName.empty()) {
-          std::string rhsStruct = inferStructExprPath(expr.args[1], localsIn);
+          Expr rewrittenRhs;
+          const Expr &rhsExpr = mapStructRhsExprForTarget(
+              it->second.structTypeName,
+              expr.args[1],
+              context.resolveDefinitionCall,
+              rewrittenRhs);
+          std::string rhsStruct = inferStructExprPath(rhsExpr, localsIn);
           if (rhsStruct.empty() ||
               !areCompatibleStructPaths(rhsStruct, it->second.structTypeName)) {
             error = "assign requires matching struct value";
@@ -927,7 +946,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
               {IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
           instructions.push_back(
               {IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
-          if (!emitExpr(expr.args[1], localsIn)) {
+          if (!emitExpr(rhsExpr, localsIn)) {
             return false;
           }
           const int32_t srcPtrLocal = allocTempLocal();
@@ -954,7 +973,13 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         return true;
       }
       if (it->second.kind == LocalInfo::Kind::Value && !it->second.structTypeName.empty()) {
-        std::string rhsStruct = inferStructExprPath(expr.args[1], localsIn);
+        Expr rewrittenRhs;
+        const Expr &rhsExpr = mapStructRhsExprForTarget(
+            it->second.structTypeName,
+            expr.args[1],
+            context.resolveDefinitionCall,
+            rewrittenRhs);
+        std::string rhsStruct = inferStructExprPath(rhsExpr, localsIn);
         if (rhsStruct.empty() || !areCompatibleStructPaths(rhsStruct, it->second.structTypeName)) {
           error = "assign requires matching struct value";
           return false;
@@ -966,7 +991,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         const int32_t destPtrLocal = allocTempLocal();
         instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
         instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
-        if (!emitExpr(expr.args[1], localsIn)) {
+        if (!emitExpr(rhsExpr, localsIn)) {
           return false;
         }
         const int32_t srcPtrLocal = allocTempLocal();
@@ -1402,12 +1427,18 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
           target.name == "storage" &&
           fieldStructPath.rfind("/std/collections/internal_soa_storage/SoaColumn__", 0) == 0;
       if (isRawBuiltinSoaStorageAssign) {
-        const std::string rhsStruct = inferStructExprPath(expr.args[1], localsIn);
+        Expr rewrittenRhs;
+        const Expr &rhsExpr = mapStructRhsExprForTarget(
+            fieldStructPath,
+            expr.args[1],
+            context.resolveDefinitionCall,
+            rewrittenRhs);
+        const std::string rhsStruct = inferStructExprPath(rhsExpr, localsIn);
         if (rhsStruct.empty() || !areCompatibleStructPaths(rhsStruct, fieldStructPath)) {
           error = "assign requires matching struct value";
           return false;
         }
-        if (!emitExpr(expr.args[1], localsIn)) {
+        if (!emitExpr(rhsExpr, localsIn)) {
           return false;
         }
         const int32_t srcPtrLocal = allocTempLocal();
@@ -1447,12 +1478,18 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
       const int32_t destPtrLocal = allocTempLocal();
       instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
       if (!fieldStructPath.empty()) {
-        const std::string rhsStruct = inferStructExprPath(expr.args[1], localsIn);
+        Expr rewrittenRhs;
+        const Expr &rhsExpr = mapStructRhsExprForTarget(
+            fieldStructPath,
+            expr.args[1],
+            context.resolveDefinitionCall,
+            rewrittenRhs);
+        const std::string rhsStruct = inferStructExprPath(rhsExpr, localsIn);
         if (rhsStruct.empty() || !areCompatibleStructPaths(rhsStruct, fieldStructPath)) {
           error = "assign requires matching struct value";
           return false;
         }
-        if (!emitExpr(expr.args[1], localsIn)) {
+        if (!emitExpr(rhsExpr, localsIn)) {
           return false;
         }
         const int32_t srcPtrLocal = allocTempLocal();

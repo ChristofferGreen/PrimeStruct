@@ -50,12 +50,20 @@
     };
     const auto isExperimentalVectorConstructor =
         [](std::string_view path) {
-          constexpr std::string_view Prefix =
-              "/std/collections/experimental_vector/";
-          if (path.rfind(Prefix, 0) != 0) {
+          std::string leaf;
+          for (std::string_view prefix :
+               {std::string_view{"/std/collections/vector/"},
+                std::string_view{"/std/collections/internal_vector/"},
+                std::string_view{"/std/collections/experimental_vector/"}}) {
+            if (path.rfind(prefix, 0) != 0) {
+              continue;
+            }
+            leaf = std::string(path.substr(prefix.size()));
+            break;
+          }
+          if (leaf.empty()) {
             return false;
           }
-          std::string leaf(path.substr(Prefix.size()));
           const size_t generatedSuffix = leaf.find("__");
           if (generatedSuffix != std::string::npos) {
             leaf.erase(generatedSuffix);

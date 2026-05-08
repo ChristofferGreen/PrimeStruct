@@ -475,6 +475,18 @@
           if (!resolveBuiltinMapHelperName(callExpr, true, helperName)) {
             return false;
           }
+          if (hasPublishedSemanticMapSurface(callExpr)) {
+            return false;
+          }
+          if (ir_lowerer::isCanonicalPublishedStdlibSurfaceHelperPath(
+                  resolveTailDispatchDirectHelperPath(callExpr),
+                  primec::StdlibSurfaceId::CollectionsMapHelpers) ||
+              (hasPublishedSemanticMapSurface(callExpr) &&
+               ir_lowerer::isCanonicalPublishedStdlibSurfaceHelperPath(
+                   resolveExprPath(callExpr),
+                   primec::StdlibSurfaceId::CollectionsMapHelpers))) {
+            return false;
+          }
           const size_t expectedArgCount = helperName == "count" ? 1u : 2u;
           if (callExpr.args.size() != expectedArgCount) {
             return false;

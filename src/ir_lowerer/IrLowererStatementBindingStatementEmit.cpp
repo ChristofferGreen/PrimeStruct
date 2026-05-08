@@ -1,6 +1,7 @@
 #include "IrLowererStatementBindingInternal.h"
 
 #include "IrLowererBindingTypeHelpers.h"
+#include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererIndexKindHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
@@ -84,6 +85,7 @@ UninitializedStorageInitDropEmitResult tryEmitUninitializedStorageInitDropStatem
     const ResolveStructSlotLayoutForStatementFn &resolveStructSlotLayout,
     const std::function<int32_t()> &allocTempLocal,
     const EmitStructCopyFromPtrsForStatementFn &emitStructCopyFromPtrs,
+    const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
     std::string &error,
     const EmitUninitializedStorageDropFromPtrForStatementFn &emitDropFromPtr) {
   if (stmt.kind != Expr::Kind::Call || stmt.isMethodCall ||
@@ -200,6 +202,17 @@ UninitializedStorageInitDropEmitResult tryEmitUninitializedStorageInitDropStatem
   }
 
   const Expr &valueExpr = stmt.args.back();
+  auto mapStructInitValueExpr = [&](const std::string &targetStructPath,
+                                    Expr &rewrittenExpr) -> const Expr & {
+    if (isExperimentalMapStructTypePath(targetStructPath) &&
+        rewritePublishedMapConstructorForExperimentalMapStruct(
+            valueExpr,
+            [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
+            rewrittenExpr)) {
+      return rewrittenExpr;
+    }
+    return valueExpr;
+  };
   if (access.location == UninitializedStorageAccessInfo::Location::Local) {
     const LocalInfo &storageInfo = *access.local;
     if (!storageInfo.isFileHandle && !storageInfo.structTypeName.empty()) {
@@ -207,7 +220,10 @@ UninitializedStorageInitDropEmitResult tryEmitUninitializedStorageInitDropStatem
       if (!resolveStructSlotLayout(storageInfo.structTypeName, layout)) {
         return UninitializedStorageInitDropEmitResult::Error;
       }
-      if (!emitExpr(valueExpr, localsIn)) {
+      Expr rewrittenValue;
+      const Expr &initValueExpr =
+          mapStructInitValueExpr(storageInfo.structTypeName, rewrittenValue);
+      if (!emitExpr(initValueExpr, localsIn)) {
         return UninitializedStorageInitDropEmitResult::Error;
       }
       const int32_t srcPtrLocal = allocTempLocal();
@@ -235,7 +251,10 @@ UninitializedStorageInitDropEmitResult tryEmitUninitializedStorageInitDropStatem
       return UninitializedStorageInitDropEmitResult::Error;
     }
     if (!field.structPath.empty()) {
-      if (!emitExpr(valueExpr, localsIn)) {
+      Expr rewrittenValue;
+      const Expr &initValueExpr =
+          mapStructInitValueExpr(field.structPath, rewrittenValue);
+      if (!emitExpr(initValueExpr, localsIn)) {
         return UninitializedStorageInitDropEmitResult::Error;
       }
       const int32_t srcPtrLocal = allocTempLocal();
@@ -272,7 +291,10 @@ UninitializedStorageInitDropEmitResult tryEmitUninitializedStorageInitDropStatem
       if (!resolveStructSlotLayout(access.typeInfo.structPath, layout)) {
         return UninitializedStorageInitDropEmitResult::Error;
       }
-      if (!emitExpr(valueExpr, localsIn)) {
+      Expr rewrittenValue;
+      const Expr &initValueExpr =
+          mapStructInitValueExpr(access.typeInfo.structPath, rewrittenValue);
+      if (!emitExpr(initValueExpr, localsIn)) {
         return UninitializedStorageInitDropEmitResult::Error;
       }
       const int32_t srcPtrLocal = allocTempLocal();

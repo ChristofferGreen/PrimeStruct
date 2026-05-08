@@ -194,6 +194,7 @@ UninitializedStorageInitDropEmitResult tryEmitUninitializedStorageInitDropStatem
     const ResolveStructSlotLayoutForStatementFn &resolveStructSlotLayout,
     const std::function<int32_t()> &allocTempLocal,
     const EmitStructCopyFromPtrsForStatementFn &emitStructCopyFromPtrs,
+    const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
     std::string &error,
     const EmitUninitializedStorageDropFromPtrForStatementFn &emitDropFromPtr = {});
 UninitializedStorageTakeEmitResult tryEmitUninitializedStorageTakeStatement(

@@ -66,7 +66,90 @@ bool isArgsPackParam(const Expr &param) {
   return false;
 }
 
+std::string stripGeneratedPathLeaf(std::string path) {
+  const size_t slash = path.find_last_of('/');
+  if (slash != std::string::npos) {
+    path.erase(0, slash + 1);
+  }
+  const size_t generated = path.find("__");
+  if (generated != std::string::npos) {
+    path.erase(generated);
+  }
+  return path;
+}
+
+std::string experimentalMapConstructorLeafForCall(const Expr &callExpr,
+                                                  std::string leaf) {
+  if (leaf == "map") {
+    switch (callExpr.args.size()) {
+    case 0:
+      return "mapNew";
+    case 2:
+      return "mapSingle";
+    case 4:
+      return "mapPair";
+    case 6:
+      return "mapTriple";
+    case 8:
+      return "mapQuad";
+    case 10:
+      return "mapQuint";
+    case 12:
+      return "mapSext";
+    case 14:
+      return "mapSept";
+    case 16:
+      return "mapOct";
+    default:
+      return {};
+    }
+  }
+  if (leaf == "mapDouble") {
+    return "mapPair";
+  }
+  if (leaf == "mapNew" || leaf == "mapSingle" || leaf == "mapPair" ||
+      leaf == "mapTriple" || leaf == "mapQuad" || leaf == "mapQuint" ||
+      leaf == "mapSext" || leaf == "mapSept" || leaf == "mapOct") {
+    return leaf;
+  }
+  return {};
+}
+
 } // namespace
+
+bool isExperimentalMapStructTypePath(std::string_view path) {
+  return path == "/std/collections/experimental_map/Map" ||
+         path.rfind("/std/collections/experimental_map/Map__", 0) == 0;
+}
+
+bool rewritePublishedMapConstructorForExperimentalMapStruct(
+    const Expr &callExpr,
+    const ResolveDefinitionCallFn &resolveDefinitionCall,
+    Expr &rewrittenExpr) {
+  if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall ||
+      !resolveDefinitionCall) {
+    return false;
+  }
+  const Definition *callee = resolveDefinitionCall(callExpr);
+  if (callee == nullptr ||
+      !isResolvedCanonicalPublishedStdlibSurfaceConstructorPath(
+          callee->fullPath,
+          StdlibSurfaceId::CollectionsMapConstructors)) {
+    return false;
+  }
+  const std::string helperLeaf =
+      experimentalMapConstructorLeafForCall(callExpr,
+                                            stripGeneratedPathLeaf(callee->fullPath));
+  if (helperLeaf.empty()) {
+    return false;
+  }
+  rewrittenExpr = callExpr;
+  rewrittenExpr.name = "/std/collections/experimental_map/" + helperLeaf;
+  rewrittenExpr.namespacePrefix.clear();
+  rewrittenExpr.isMethodCall = false;
+  rewrittenExpr.semanticNodeId = 0;
+  return true;
+}
 
 BufferBuiltinDispatchResult tryEmitBufferBuiltinDispatchWithLocals(
     const Expr &expr,

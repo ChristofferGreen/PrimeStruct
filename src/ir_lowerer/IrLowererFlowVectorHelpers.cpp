@@ -9,6 +9,12 @@ namespace primec::ir_lowerer {
 
 namespace {
 
+bool isVectorStructPath(const std::string &structPath) {
+  return structPath == "/vector" ||
+         structPath == "/std/collections/experimental_vector/Vector" ||
+         structPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+}
+
 bool isSoaVectorStructPath(const std::string &structPath) {
   return structPath == "/soa_vector" ||
          structPath == "/std/collections/soa_vector" ||
@@ -281,6 +287,32 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
   const uint64_t capacityOffsetBytes = targetIsSoaVector ? 3 * IrSlotBytes : IrSlotBytes;
   const uint64_t dataPtrOffsetBytes = targetIsSoaVector ? 4 * IrSlotBytes : 2 * IrSlotBytes;
 
+  auto emitTargetPointer = [&]() -> bool {
+    if (target.kind == Expr::Kind::Name) {
+      auto localIt = localsIn.find(target.name);
+      if (localIt != localsIn.end()) {
+        const LocalInfo &targetInfo = localIt->second;
+        const bool isStructBackedVector =
+            targetInfo.kind == LocalInfo::Kind::Value &&
+            isVectorStructPath(targetInfo.structTypeName);
+        const bool isWrappedVector =
+            (targetInfo.kind == LocalInfo::Kind::Reference && targetInfo.referenceToVector) ||
+            (targetInfo.kind == LocalInfo::Kind::Pointer && targetInfo.pointerToVector);
+        if (isStructBackedVector) {
+          instructions.push_back(
+              {IrOpcode::AddressOfLocal, static_cast<uint64_t>(targetInfo.index)});
+          return true;
+        }
+        if (isWrappedVector) {
+          instructions.push_back(
+              {IrOpcode::LoadLocal, static_cast<uint64_t>(targetInfo.index)});
+          return true;
+        }
+      }
+    }
+    return emitExpr(target, localsIn);
+  };
+
   auto pushIndexConst = [&](LocalInfo::ValueKind kind, int32_t value) {
     if (kind == LocalInfo::ValueKind::Int32) {
       instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(value)});
@@ -290,7 +322,7 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
   };
 
   const int32_t ptrLocal = allocTempLocal();
-  if (!emitExpr(target, localsIn)) {
+  if (!emitTargetPointer()) {
     return VectorStatementHelperEmitResult::Error;
   }
   instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
