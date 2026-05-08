@@ -15270,3 +15270,31 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     TODO-4391, and ratcheted `scripts/vector_surface_trace_baseline.json` from
     905 to 903 production traces. Baseline release validation was skipped per
     the lite workflow.
+
+- [x] TODO-4391: Collapse rooted method-target prefixes
+  - owner: ai
+  - created_at: 2026-05-08
+  - phase: Vector stdlib ownership cutover
+  - scope: Fold rooted and unrooted vector method-target prefix constants in
+    `SemanticsValidatorExprMethodTargetResolution.cpp` so the resolver derives
+    the unrooted `vector/` prefix from the rooted `/vector/` prefix and reuses
+    the shared rooted-prefix predicate for explicit rooted helper checks.
+  - acceptance:
+    - `SemanticsValidatorExprMethodTargetResolution.cpp` no longer carries a
+      separate `vector/` prefix literal or duplicate explicit rooted vector
+      helper prefix literal for method-target resolution.
+    - Existing unknown-method diagnostics and explicit user-defined rooted
+      helper handling are preserved.
+    - The vector surface trace baseline decreases for semantic validator files
+      and does not increase elsewhere.
+  - stop_rule: Stop after rooted method-target prefix constants are folded
+    together, source-lock coverage keeps the old direct literals absent, and
+    the audit baseline ratchets downward.
+  - finished_at: 2026-05-08
+  - evidence: Derived `RootVectorMethodPrefix` from
+    `RootedVectorMethodPrefix`, reused `startsWithRootedVectorMethodPrefix`
+    for explicit rooted vector helper detection, added source-lock assertions
+    against the old direct prefix literals, split the remaining rooted semantic
+    work into TODO-4392, and ratcheted
+    `scripts/vector_surface_trace_baseline.json` from 903 to 901 production
+    traces. Baseline release validation was skipped per the lite workflow.

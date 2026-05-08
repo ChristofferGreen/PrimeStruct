@@ -110,8 +110,9 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return false;
   };
-  constexpr std::string_view RootVectorMethodPrefix = "vector/";
   constexpr std::string_view RootedVectorMethodPrefix = "/vector/";
+  const std::string_view RootVectorMethodPrefix =
+      RootedVectorMethodPrefix.substr(1);
   auto startsWithRootVectorMethodPrefix = [&](std::string_view path) {
     return path.rfind(RootVectorMethodPrefix, 0) == 0;
   };
@@ -2518,11 +2519,10 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       explicitVectorReceiverFamily == "vector" ||
       explicitVectorReceiverFamily == "experimental_vector" ||
       explicitVectorReceiverFamily == "soa_vector";
-  const std::string_view explicitRootedVectorHelperPrefix = "/vector/";
   const std::string_view explicitRootedVectorHelperName =
-      explicitVectorHelperPath.rfind(explicitRootedVectorHelperPrefix, 0) == 0
+      startsWithRootedVectorMethodPrefix(explicitVectorHelperPath)
           ? std::string_view(explicitVectorHelperPath).substr(
-                explicitRootedVectorHelperPrefix.size())
+                RootedVectorMethodPrefix.size())
           : std::string_view{};
   const bool isExplicitRootedVectorMethod =
       !explicitRootedVectorHelperName.empty() &&

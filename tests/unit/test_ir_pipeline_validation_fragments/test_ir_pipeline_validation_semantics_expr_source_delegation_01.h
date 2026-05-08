@@ -6048,6 +6048,10 @@
             "auto startsWithRootedVectorMethodPrefix =") !=
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "const std::string_view RootVectorMethodPrefix =\n"
+            "      RootedVectorMethodPrefix.substr(1);") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
             "auto rootedVectorMethodPath =") !=
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
@@ -6061,6 +6065,12 @@
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "const std::string legacyVectorMethodTarget = \"/vector/\" + normalizedMethodName") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "constexpr std::string_view RootVectorMethodPrefix = \"vector/\";") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "const std::string_view explicitRootedVectorHelperPrefix = \"/vector/\";") ==
         std::string::npos);
   CHECK(semanticsExprCallResolutionSource.find(
             "    const auto preferredMethodLikeSamePathSoaHelperCandidate = [&]() -> std::string {\n"
