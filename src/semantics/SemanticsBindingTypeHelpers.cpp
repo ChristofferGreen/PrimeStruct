@@ -250,7 +250,14 @@ bool extractMapKeyValueTypes(const BindingInfo &binding, std::string &keyTypeOut
 bool getArgsPackElementType(const BindingInfo &binding, std::string &elementTypeOut) {
   elementTypeOut.clear();
   const std::string normalizedTypeName = normalizeBindingTypeName(binding.typeName);
-  if (normalizedTypeName == "args") {
+  auto isArgsPackTypeName = [](const std::string &typeName) {
+    return typeName == "args" || typeName == "/args" ||
+           (typeName.size() > std::string_view("/args").size() &&
+            typeName.compare(typeName.size() - std::string_view("/args").size(),
+                             std::string_view("/args").size(),
+                             "/args") == 0);
+  };
+  if (isArgsPackTypeName(normalizedTypeName)) {
     if (binding.typeTemplateArg.empty()) {
       return false;
     }
@@ -259,7 +266,8 @@ bool getArgsPackElementType(const BindingInfo &binding, std::string &elementType
   }
   std::string base;
   std::string argText;
-  if (!splitTemplateTypeName(normalizedTypeName, base, argText) || normalizeBindingTypeName(base) != "args") {
+  if (!splitTemplateTypeName(normalizedTypeName, base, argText) ||
+      !isArgsPackTypeName(normalizeBindingTypeName(base))) {
     return false;
   }
   elementTypeOut = argText;

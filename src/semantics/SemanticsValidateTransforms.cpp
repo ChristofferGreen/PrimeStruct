@@ -768,13 +768,11 @@ void rewriteIndexedAccessSugar(Expr &expr) {
     Expr accessExpr;
     accessExpr.kind = Expr::Kind::Call;
     accessExpr.name = "at";
-    accessExpr.namespacePrefix = expr.namespacePrefix;
     accessExpr.args.push_back(std::move(expr.args[argIndex - 1]));
 
     Expr indexExpr;
     indexExpr.kind = Expr::Kind::Name;
     indexExpr.name = indexName;
-    indexExpr.namespacePrefix = expr.namespacePrefix;
     accessExpr.args.push_back(std::move(indexExpr));
     accessExpr.argNames.resize(2);
 

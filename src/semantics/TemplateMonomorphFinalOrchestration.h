@@ -244,6 +244,15 @@ void buildImportAliases(Context &ctx) {
     }
     if (isWildcard) {
       registerStdlibSurfaceWildcardAliases(ctx.transitiveImportAliases, prefix);
+      if (prefix == "/std/collections/internal_vector") {
+        constexpr std::string_view vectorPath =
+            "/std/collections/experimental_vector/Vector";
+        if (ctx.sourceDefs.count(std::string(vectorPath)) > 0) {
+          registerDefinitionAlias(
+              ctx.transitiveImportAliases, "Vector", std::string(vectorPath));
+        }
+        continue;
+      }
       const std::string scopedPrefix = prefix + "/";
       for (const auto &[publicPath, overloads] : ctx.helperOverloads) {
         (void)overloads;

@@ -1,5 +1,8 @@
 #include "SemanticsValidator.h"
 
+#include <cctype>
+#include <sstream>
+
 namespace primec::semantics {
 
 bool SemanticsValidator::validateExprFieldAccess(const std::vector<ParameterInfo> &params,
@@ -77,6 +80,27 @@ bool SemanticsValidator::resolveStructFieldReceiverPath(const std::vector<Parame
           !baseTypeName.empty()) {
         lookupTypeName = normalizeBindingTypeName(baseTypeName);
       }
+      auto resolveVectorSpecialization = [&]() -> bool {
+        if (lookupTypeName != "Vector" || templateArgText.empty()) {
+          return false;
+        }
+        uint64_t hash = 1469598103934665603ULL;
+        for (unsigned char c : templateArgText) {
+          if (std::isspace(c)) {
+            continue;
+          }
+          hash ^= static_cast<uint64_t>(c);
+          hash *= 1099511628211ULL;
+        }
+        std::ostringstream out;
+        out << "/std/collections/experimental_vector/Vector__t" << std::hex << hash;
+        const std::string path = out.str();
+        if (structNames_.count(path) == 0) {
+          return false;
+        }
+        resolvedStructPathOut = path;
+        return true;
+      };
       if (!lookupTypeName.empty() && lookupTypeName[0] == '/') {
         if (structNames_.count(lookupTypeName) > 0) {
           resolvedStructPathOut = lookupTypeName;
@@ -121,6 +145,9 @@ bool SemanticsValidator::resolveStructFieldReceiverPath(const std::vector<Parame
       auto importIt = importAliases_.find(lookupTypeName);
       if (importIt != importAliases_.end() && structNames_.count(importIt->second) > 0) {
         resolvedStructPathOut = importIt->second;
+        return true;
+      }
+      if (resolveVectorSpecialization()) {
         return true;
       }
       return false;
@@ -259,6 +286,8 @@ bool SemanticsValidator::resolveStructFieldReceiverPath(const std::vector<Parame
       std::string typeName = binding->typeName;
       if ((typeName == "Reference" || typeName == "Pointer") && !binding->typeTemplateArg.empty()) {
         typeName = binding->typeTemplateArg;
+      } else if (!binding->typeTemplateArg.empty()) {
+        typeName += "<" + binding->typeTemplateArg + ">";
       }
       (void)resolveStructPathFromType(typeName, receiverNamespace, structPathOut);
     } else {

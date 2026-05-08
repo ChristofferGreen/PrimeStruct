@@ -3365,6 +3365,9 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     resolvedOut = "/" + normalizedBaseTypeName + "/" + normalizedMethodName;
     return true;
   }
+  if (normalizedBaseTypeName == "args") {
+    return false;
+  }
   std::string resolvedType = resolveStructTypePath(typeName, receiver.namespacePrefix);
   if (resolvedType.empty()) {
     resolvedType = resolveSumTypePath(

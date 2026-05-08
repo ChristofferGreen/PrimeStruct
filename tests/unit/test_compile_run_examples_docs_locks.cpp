@@ -2838,9 +2838,9 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(vectorStdlib.find("import /std/collections/internal_vector/*") != std::string::npos);
   CHECK(vectorStdlib.find("[mut] result{/std/collections/internal_vector/vector<T>()}") !=
         std::string::npos);
-  CHECK(vectorStdlib.find("valueCount{count(values)}") != std::string::npos);
+  CHECK(vectorStdlib.find("valueCount{values.count()}") != std::string::npos);
   CHECK(vectorStdlib.find("[mut] index{0i32}") != std::string::npos);
-  CHECK(vectorStdlib.find("/std/collections/vector/push<T>(result, values[index])") !=
+  CHECK(vectorStdlib.find("/std/collections/vector/push<T>(result, /at(values, index))") !=
         std::string::npos);
   CHECK(vectorStdlib.find("/std/collections/vector/push<T>(result, first)") !=
         std::string::npos);
@@ -2919,9 +2919,10 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
         std::string::npos);
   CHECK(soaWrapper.find("import /std/collections/experimental_soa_vector/*") ==
         std::string::npos);
+  CHECK(soaWrapper.find("valueCount{values.count()}") != std::string::npos);
   CHECK(soaWrapper.find("/std/collections/internal_soa_vector/soaVectorNew<T>()") !=
         std::string::npos);
-  CHECK(soaWrapper.find("/std/collections/internal_soa_vector/soaVectorPush<T>(out, values[index])") !=
+  CHECK(soaWrapper.find("/std/collections/internal_soa_vector/soaVectorPush<T>(out, /at(values, index))") !=
         std::string::npos);
   CHECK(soaWrapper.find("/std/collections/experimental_soa_vector/soaVectorNew<T>()") ==
         std::string::npos);

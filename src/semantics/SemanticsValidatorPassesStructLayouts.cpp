@@ -4,6 +4,7 @@
 #include <cctype>
 #include <functional>
 #include <limits>
+#include <sstream>
 
 namespace primec::semantics {
 
@@ -112,30 +113,61 @@ bool SemanticsValidator::validateStructLayouts() {
     }
     return true;
   };
+  auto resolveUniqueSpecializedStructPath = [&](const std::string &path) -> std::string {
+    if (structNames_.count(path) > 0) {
+      return path;
+    }
+    if (ambiguousSpecializationBasePaths_.count(path) > 0) {
+      return path;
+    }
+    auto specializedIt = uniqueSpecializationPathByBase_.find(path);
+    if (specializedIt != uniqueSpecializationPathByBase_.end() &&
+        structNames_.count(specializedIt->second) > 0) {
+      return specializedIt->second;
+    }
+    return path;
+  };
+  auto vectorSpecializationPath = [&](const std::string &typeTemplateArg) -> std::string {
+    if (typeTemplateArg.empty()) {
+      return {};
+    }
+    uint64_t hash = 1469598103934665603ULL;
+    for (unsigned char c : typeTemplateArg) {
+      if (std::isspace(c)) {
+        continue;
+      }
+      hash ^= static_cast<uint64_t>(c);
+      hash *= 1099511628211ULL;
+    }
+    std::ostringstream out;
+    out << "/std/collections/experimental_vector/Vector__t" << std::hex << hash;
+    std::string path = out.str();
+    return structNames_.count(path) > 0 ? path : std::string{};
+  };
   auto resolveStructTypePath = [&](const std::string &typeName, const std::string &namespacePrefix) -> std::string {
     if (!typeName.empty() && typeName[0] == '/') {
-      return typeName;
+      return resolveUniqueSpecializedStructPath(typeName);
     }
-    std::string resolved = resolveTypePath(typeName, namespacePrefix);
+    std::string resolved = resolveUniqueSpecializedStructPath(resolveTypePath(typeName, namespacePrefix));
     std::string current = namespacePrefix;
     while (true) {
       if (!current.empty()) {
         std::string direct = current + "/" + typeName;
         if (structNames_.count(direct) > 0) {
-          return direct;
+          return resolveUniqueSpecializedStructPath(direct);
         }
         if (current.size() > typeName.size()) {
           const size_t start = current.size() - typeName.size();
           if (start > 0 && current[start - 1] == '/' &&
               current.compare(start, typeName.size(), typeName) == 0 &&
               structNames_.count(current) > 0) {
-            return current;
+            return resolveUniqueSpecializedStructPath(current);
           }
         }
       } else {
         std::string root = "/" + typeName;
         if (structNames_.count(root) > 0) {
-          return root;
+          return resolveUniqueSpecializedStructPath(root);
         }
       }
       if (current.empty()) {
@@ -150,7 +182,14 @@ bool SemanticsValidator::validateStructLayouts() {
     }
     auto importIt = importAliases_.find(typeName);
     if (importIt != importAliases_.end()) {
-      return importIt->second;
+      return resolveUniqueSpecializedStructPath(importIt->second);
+    }
+    if (typeName == "Vector") {
+      const std::string vectorPath =
+          resolveUniqueSpecializedStructPath("/std/collections/experimental_vector/Vector");
+      if (structNames_.count(vectorPath) > 0) {
+        return vectorPath;
+      }
     }
     return resolved;
   };
@@ -319,6 +358,13 @@ bool SemanticsValidator::validateStructLayouts() {
     }
     std::string structPath = resolveStructTypePath(binding.typeName, namespacePrefix);
     auto defIt = defMap_.find(structPath);
+    if (defIt == defMap_.end() && normalized == "Vector") {
+      const std::string vectorPath = vectorSpecializationPath(binding.typeTemplateArg);
+      if (!vectorPath.empty()) {
+        structPath = vectorPath;
+        defIt = defMap_.find(structPath);
+      }
+    }
     if (defIt == defMap_.end()) {
       return failPassesStructLayoutsDiagnostic("unknown struct type for layout: " + binding.typeName);
     }

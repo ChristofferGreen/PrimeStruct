@@ -159,6 +159,17 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
   }
 
   if (expr.kind == Expr::Kind::Call) {
+    if (!expr.isMethodCall && !expr.isFieldAccess && expr.isBraceConstructor) {
+      std::string typeText = expr.name;
+      if (!expr.templateArgs.empty()) {
+        typeText += "<" + joinTemplateArgs(expr.templateArgs) + ">";
+      }
+      const std::string structPath =
+          resolveInferStructTypePath(typeText, expr.namespacePrefix);
+      if (!structPath.empty()) {
+        return structPath;
+      }
+    }
     if (isSimpleCallName(expr, "move") && expr.args.size() == 1) {
       return inferStructReturnPath(expr.args.front(), params, locals);
     }

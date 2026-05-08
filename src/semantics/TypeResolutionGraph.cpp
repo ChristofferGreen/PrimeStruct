@@ -468,7 +468,7 @@ private:
           constexpr std::string_view vectorPath =
               "/std/collections/experimental_vector/Vector";
           if (publicDefinitions_.count(std::string(vectorPath)) > 0) {
-            importAliases_.emplace("Vector", vectorPath);
+            importAliases_["Vector"] = vectorPath;
           }
         }
         for (const auto &def : program_.definitions) {

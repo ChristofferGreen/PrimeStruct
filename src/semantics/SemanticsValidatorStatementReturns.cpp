@@ -114,6 +114,24 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       }
       return binding.typeName + "<" + binding.typeTemplateArg + ">";
     };
+    const auto effectiveNamespacePrefix = [&]() {
+      auto parentPath = [](const std::string &path) {
+        const size_t slash = path.find_last_of('/');
+        if (slash == std::string::npos || slash == 0) {
+          return std::string{};
+        }
+        return path.substr(0, slash);
+      };
+      if (!namespacePrefix.empty()) {
+        if (defMap_.count(namespacePrefix) > 0) {
+          return parentPath(namespacePrefix);
+        }
+        return namespacePrefix;
+      }
+      const std::string &definitionPath =
+          currentValidationState_.context.definitionPath;
+      return parentPath(definitionPath);
+    };
     auto resultOkPayloadIndex = [&](const Expr &expr) -> std::optional<size_t> {
       if (expr.kind != Expr::Kind::Call || expr.hasBodyArguments ||
           !expr.bodyArguments.empty() || !expr.templateArgs.empty()) {
@@ -160,7 +178,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       if (inferBindingTypeFromInitializer(payload, params, locals, payloadBinding) &&
           errorTypesMatch(bindingTypeText(payloadBinding),
                           resultType.valueType,
-                          namespacePrefix)) {
+                          effectiveNamespacePrefix())) {
         return true;
       }
       const ReturnKind expectedKind =

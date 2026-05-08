@@ -259,8 +259,8 @@ bool SemanticsValidator::buildImportAliases() {
             publicDefinitions_.count(vectorPath) == 0) {
           return false;
         }
-        targetAliases.emplace("Vector", vectorPath);
-        importAliases_.emplace("Vector", vectorPath);
+        targetAliases["Vector"] = vectorPath;
+        importAliases_["Vector"] = vectorPath;
         return true;
       };
   auto shouldPublishMergedImportAlias = [&](std::string_view aliasName,
@@ -499,7 +499,9 @@ bool SemanticsValidator::buildImportAliases() {
       if (isWildcard) {
         registerStdlibSurfaceWildcardAliases(prefix, transitiveImportAliases_);
         registerCanonicalSoaVectorWildcardAliases(prefix, transitiveImportAliases_);
-        registerInternalVectorWildcardAliases(prefix, transitiveImportAliases_);
+        if (registerInternalVectorWildcardAliases(prefix, transitiveImportAliases_)) {
+          return;
+        }
         const std::string scopedPrefix = prefix + "/";
         std::vector<std::string> matchingPaths;
         matchingPaths.reserve(defMap_.size());

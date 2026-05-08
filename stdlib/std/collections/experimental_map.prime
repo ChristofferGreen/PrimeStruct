@@ -118,8 +118,8 @@ namespace std {
   mapDestroyVector<T>([Vector<T> mut] values) {
     if(values.ownsData,
        then() {
-         /std/collections/internal_vector/vectorCheckShape<T>(values)
-         /std/collections/internal_vector/vectorDropRange<T>(
+         /std/collections/experimental_vector/vectorCheckShape<T>(values)
+         /std/collections/experimental_vector/vectorDropRange<T>(
              values,
              /std/collections/internal_vector/vectorCount<T>(values))
          /std/collections/internal_buffer_checked/bufferFree<uninitialized<T>>(values.data)

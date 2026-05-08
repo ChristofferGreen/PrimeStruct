@@ -641,7 +641,20 @@ bool hasVisibleStdCollectionsImportForPath(const Context &ctx, const std::string
   if (usesStdlibScopedImportAliases("", ctx)) {
     return true;
   }
+  if (path.rfind("/std/collections/experimental_vector/", 0) == 0) {
+    return false;
+  }
   const auto &importPaths = ctx.program.sourceImports.empty() ? ctx.program.imports : ctx.program.sourceImports;
+  if (path.rfind("/std/collections/internal_vector/", 0) == 0) {
+    for (const auto &importPath : importPaths) {
+      if (importPath == "/std/collections/internal_vector" ||
+          importPath == "/std/collections/internal_vector/*" ||
+          importPath == path) {
+        return true;
+      }
+    }
+    return false;
+  }
   for (const auto &importPath : importPaths) {
     if (importPathCoversTarget(importPath, path)) {
       return true;

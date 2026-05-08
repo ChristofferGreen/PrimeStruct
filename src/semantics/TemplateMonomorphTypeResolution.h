@@ -342,6 +342,11 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
         (ctx.sourceDefs.count(resolvedPath) > 0 || ctx.helperOverloads.count(resolvedPath) > 0)) {
       return resolvedPath;
     }
+    if (resolvedPath == "/std/collections/vector/Vector" &&
+        (ctx.sourceDefs.count("/std/collections/vector/vector") > 0 ||
+         ctx.helperOverloads.count("/std/collections/vector/vector") > 0)) {
+      return "/std/collections/vector/vector";
+    }
     const std::string helperPath =
         metadataBackedCanonicalMapConstructorRewritePath(resolvedPath,
                                                          expr.args.size());

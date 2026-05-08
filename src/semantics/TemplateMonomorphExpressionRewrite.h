@@ -2270,5 +2270,22 @@ bool rewriteExpr(Expr &expr,
       }
     }
   }
+  std::string builtinAccessName;
+  if (!expr.isMethodCall && getBuiltinArrayAccessName(expr, builtinAccessName)) {
+    expr.namespacePrefix.clear();
+    size_t receiverIndex = 0;
+    if (hasNamedCallArguments(expr)) {
+      for (size_t i = 0; i < expr.argNames.size() && i < expr.args.size(); ++i) {
+        if (expr.argNames[i].has_value() && *expr.argNames[i] == "values") {
+          receiverIndex = i;
+          break;
+        }
+      }
+    }
+    if (receiverIndex < expr.args.size() &&
+        expr.args[receiverIndex].kind == Expr::Kind::Name) {
+      expr.args[receiverIndex].namespacePrefix.clear();
+    }
+  }
   return true;
 }

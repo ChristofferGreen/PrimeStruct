@@ -468,6 +468,9 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     pathOut = selectHelperOverloadPath(expr, "/" + normalizeBindingTypeName(typeName) + "/" + normalizedMethodName, ctx);
     return true;
   }
+  if (normalizedReceiverLeafName == "args") {
+    return false;
+  }
   const std::string fileErrorMethodName =
       normalizeFileErrorMethodName(normalizedMethodName);
   if (normalizedReceiverLeafName == "FileError" &&

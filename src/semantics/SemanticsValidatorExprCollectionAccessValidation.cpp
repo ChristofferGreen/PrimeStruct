@@ -497,6 +497,11 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       return false;
     };
     bool isArrayOrString = isArrayOrStringTarget(expr.args.front(), elemType);
+    if (!isArrayOrString) {
+      isArrayOrString =
+          resolveArgsPackElementTypeForExpr(expr.args.front(), params, locals,
+                                            elemType);
+    }
     bool isMap = isMapTarget(expr.args.front(), mapKeyType);
     bool isExperimentalMap =
         context.resolveExperimentalMapTarget != nullptr &&
@@ -516,17 +521,22 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       std::string reorderedMapKeyType;
       std::string reorderedMapValueType;
       const bool reorderedArrayOrString = isArrayOrStringTarget(expr.args[1], reorderedElemType);
+      const bool reorderedArgsPack =
+          !reorderedArrayOrString &&
+          resolveArgsPackElementTypeForExpr(expr.args[1], params, locals,
+                                            reorderedElemType);
       const bool reorderedMap = isMapTarget(expr.args[1], reorderedMapKeyType);
       const bool reorderedExperimentalMap =
           context.resolveExperimentalMapTarget != nullptr &&
           context.resolveExperimentalMapTarget(expr.args[1], reorderedMapKeyType,
                                                reorderedMapValueType);
-      if (reorderedArrayOrString || reorderedMap || reorderedExperimentalMap) {
+      if (reorderedArrayOrString || reorderedArgsPack || reorderedMap ||
+          reorderedExperimentalMap) {
         indexArgIndex = 0;
         elemType = reorderedElemType;
         mapKeyType = reorderedMapKeyType;
         mapValueType = reorderedMapValueType;
-        isArrayOrString = reorderedArrayOrString;
+        isArrayOrString = reorderedArrayOrString || reorderedArgsPack;
         isMap = reorderedMap;
         isExperimentalMap = reorderedExperimentalMap;
       }

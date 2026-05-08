@@ -5,7 +5,7 @@ TEST_CASE("import resolves std gfx experimental type surface") {
 import /std/gfx/experimental/*
 [return<int>]
 main() {
-  [Window] window{Window([token] 1i32, [width] 1280i32, [height] 720i32)}
+  [Window] window{Window{[token] 1i32, [width] 1280i32, [height] 720i32}}
   [ColorFormat] colorFormat{ColorFormat.Bgra8Unorm}
   [PresentMode] presentMode{PresentMode.Fifo}
   [Buffer<i32>] buffer{[token] 2i32, [elementCount] 4i32}
@@ -37,7 +37,7 @@ TEST_CASE("import resolves std gfx canonical type surface") {
 import /std/gfx/*
 [return<int>]
 main() {
-  [Window] window{Window([token] 1i32, [width] 1280i32, [height] 720i32)}
+  [Window] window{Window{[token] 1i32, [width] 1280i32, [height] 720i32}}
   [ColorFormat] colorFormat{ColorFormat.Bgra8Unorm}
   [PresentMode] presentMode{PresentMode.Fifo}
   [Buffer<i32>] buffer{[token] 2i32, [elementCount] 4i32}
@@ -93,13 +93,13 @@ main() {
     SubstrateWindowConfig{[hostToken] 11i32, [width] 1280i32, [height] 720i32}
   }
   [i32] windowToken{GraphicsSubstrate.createWindow(windowConfig)?}
-  [Window] window{Window([token] windowToken, [width] windowConfig.width, [height] windowConfig.height)}
+  [Window] window{Window{[token] windowToken, [width] windowConfig.width, [height] windowConfig.height}}
   [SubstrateDeviceConfig] deviceConfig{
     SubstrateDeviceConfig{[window] window, [deviceToken] 13i32, [queueToken] 17i32}
   }
   [i32] deviceToken{GraphicsSubstrate.createDevice(deviceConfig)?}
   [i32] queueToken{GraphicsSubstrate.createQueue(deviceConfig)?}
-  [Device] device{Device([token] deviceToken)}
+  [Device] device{Device{[token] deviceToken}}
   [Queue] queue{Queue{[token] queueToken}}
   [SubstrateSwapchainConfig] swapchainConfig{
     SubstrateSwapchainConfig{
@@ -164,8 +164,8 @@ log_gfx_error([GfxError] err) {
 
 [return<int> on_error<GfxError, /log_gfx_error>]
 main() {
-  [Window] window{Window([token] 11i32, [width] 1280i32, [height] 720i32)}
-  [Device] device{Device([token] 13i32)}
+  [Window] window{Window{[token] 11i32, [width] 1280i32, [height] 720i32}}
+  [Device] device{Device{[token] 13i32}}
   [Queue] queue{device.default_queue()}
   [Swapchain] swapchain{
     device.create_swapchain(
@@ -312,8 +312,8 @@ import /std/gfx/experimental/*
 
 [return<int>]
 main() {
-  [Window] window{Window([token] 11i32, [width] 1280i32, [height] 720i32)}
-  [Device] device{Device([token] 13i32)}
+  [Window] window{Window{[token] 11i32, [width] 1280i32, [height] 720i32}}
+  [Device] device{Device{[token] 13i32}}
   [Swapchain] swapchain{
     device.create_swapchain(
       window,
@@ -376,7 +376,7 @@ log_gfx_error([GfxError] err) {
 
 [return<int> on_error<GfxError, /log_gfx_error>]
 main() {
-  [Device] device{Device([profile] "metal-osx"utf8)?}
+  [Device] device{Device{[profile] "metal-osx"utf8}?}
   return(device.token)
 }
 )";
@@ -452,7 +452,7 @@ log_gfx_error([GfxError] err) {
 
 [return<int> on_error<GfxError, /log_gfx_error>]
 main() {
-  [Device] device{Device([profile] "metal-osx"utf8)?}
+  [Device] device{Device{[profile] "metal-osx"utf8}?}
   return(device.token)
 }
 )";
