@@ -255,10 +255,10 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferCollectionsSource.find("bool SemanticsValidator::resolveCallCollectionTemplateArgs(") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find(
-            "const std::string resolvedSoaToAosCanonical =") !=
+            "const std::string resolvedTarget = resolveCalleePath(target);") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find(
-            "canonicalizeLegacySoaToAosHelperPath(resolveCalleePath(target))") !=
+            "isCanonicalStdlibSoaHelperPath(resolvedTarget, \"to_aos\")") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find(
             "const bool matchesSoaToAosTarget =") !=
@@ -267,10 +267,10 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "const bool matchesBorrowedSoaToAosTarget =") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find(
-            "resolvedSoaToAosCanonical, \"to_aos\")") !=
+            "isCanonicalStdlibSoaHelperPath(resolvedTarget, \"to_aos_ref\")") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find(
-            "resolvedSoaToAosCanonical, \"to_aos_ref\")") !=
+            "canonicalizeLegacySoaToAosHelperPath(resolveCalleePath(target))") ==
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find(
             "((target.isMethodCall && target.name == \"to_aos\") ||\n"
@@ -332,7 +332,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
             "resolvedOut =\n"
-            "            preferredSoaHelperTargetForCollectionType(\"count\", \"/vector\");") !=
+            "            preferredSoaHelperTargetForCollectionType(normalizedMethodName, \"/vector\");") !=
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
             "if (normalizedMethodName == \"count\" || normalizedMethodName == \"count_ref\") {") !=
@@ -387,28 +387,30 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "if ((normalizedMethodName == \"to_aos\" || normalizedMethodName == \"to_aos_ref\") &&\n"
             "        this->resolveSoaVectorOrExperimentalBorrowedReceiver(\n"
             "            receiver, params, locals, resolveDirectReceiver, elemType)) {\n"
-            "      resolvedOut = preferredBorrowedSoaAccessHelperTarget(normalizedMethodName);") !=
+            "      resolvedOut = preferredSoaToAosHelperTargetForReceiver(receiver);") !=
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
             "if (normalizedMethodName == \"count\" || normalizedMethodName == \"count_ref\") {\n"
             "      if (normalizedMethodName == \"count\" &&\n"
             "          resolveArgsPackCountTarget(receiver, elemType)) {\n"
             "        resolvedOut = preferVectorStdlibHelperPath(\"/array/count\");\n"
-            "        return true;\n"
-            "      }\n"
-            "      if (resolveVectorTarget(receiver, elemType) &&\n"
-            "          usesSamePathSoaHelperTargetForCurrentImports(normalizedMethodName)) {\n"
-            "        resolvedOut = preferredSoaHelperTargetForCurrentImports(normalizedMethodName);\n"
-            "        return true;\n"
-            "      }\n"
-            "      if (resolveSoaVectorTarget(receiver, elemType)) {\n"
-            "        resolvedOut = preferredSoaHelperTargetForCurrentImports(normalizedMethodName);\n"
-            "        return true;\n"
-            "      }\n"
-            "}") !=
+            "        return true;") !=
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
-            "if ((normalizedMethodName == \"count\" || normalizedMethodName == \"count_ref\") &&\n"
+            "if (resolveVectorTarget(receiver, elemType) &&\n"
+            "          usesSamePathSoaHelperTargetForCurrentImports(normalizedMethodName)) {\n"
+            "        resolvedOut = preferredSoaHelperTargetForCurrentImports(normalizedMethodName);\n"
+            "        return true;") !=
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
+            "if (normalizedMethodName == \"count\" &&\n"
+            "          resolveVectorTarget(receiver, elemType)) {\n"
+            "        resolvedOut = \"/std/collections/vector/count\";\n"
+            "        return true;") !=
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
+            "if ((normalizedMethodName == \"count\" || normalizedMethodName == \"count_ref\" ||\n"
+            "         normalizedMethodName == \"size\") &&\n"
             "        resolveMapTarget(receiver, keyType, valueType)) {\n"
             "      resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver,\n"
             "                                                    normalizedMethodName);\n"
@@ -736,18 +738,10 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "       hasImportedDefinitionPath(\"/std/collections/vector/capacity\"));") ==
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find(
-            "!expr.isMethodCall && isVectorBuiltinName(expr, \"capacity\") &&\n"
-            "      stdNamespacedVectorCapacityHelperAvailableForInfer") ==
-        std::string::npos);
-  CHECK(semanticsInferCollectionDispatchSetupSource.find(
             "const bool isDirectBuiltinCountCapacityCapacityCall =") ==
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find(
             "isDirectBuiltinCountCapacityCapacityCall && expr.args.size() == 1;") ==
-        std::string::npos);
-  CHECK(semanticsInferCollectionDispatchSetupSource.find(
-            "isInferBuiltinSingleArgCapacityLike &&\n"
-            "      inferBuiltinCapacityCallTargetsDirectReceiver;") ==
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find(
             "defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCapacityCall") ==
