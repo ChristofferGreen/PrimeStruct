@@ -296,6 +296,10 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("bool SemanticsValidator::resolveVectorHelperMethodTarget(") ==
         std::string::npos);
+  CHECK(semanticsExprSource.find("auto paramsIt = paramsByDef_.find(samePath);") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("\"argument type mismatch for \" + samePath") ==
+        std::string::npos);
 
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(") !=

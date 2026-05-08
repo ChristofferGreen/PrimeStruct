@@ -15008,3 +15008,26 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     coverage to keep those shims absent, and ratcheted
     `scripts/vector_surface_trace_baseline.json` from 952 to 946 production
     traces. Baseline release validation was skipped per the lite workflow.
+
+- [x] TODO-4380: Remove rooted vector expression direct-call shim
+  - owner: ai
+  - created_at: 2026-05-08
+  - phase: Vector stdlib ownership cutover
+  - scope: Remove the expression validator's special direct-call
+    hand-validation path for rooted `/vector/count`, `/vector/capacity`,
+    `/vector/at`, and `/vector/at_unsafe` definitions.
+  - acceptance:
+    - Direct rooted `/vector/*` expression calls no longer bypass ordinary
+      resolved-call validation through a vector-specific parameter check.
+    - Explicit user-defined rooted definitions remain ordinary definitions.
+    - The vector surface trace baseline decreases for semantic validator files
+      and does not increase elsewhere.
+  - stop_rule: Stop after the direct-call shim is removed, source-lock coverage
+    keeps it absent, and the audit baseline ratchets downward.
+  - finished_at: 2026-05-08
+  - evidence: Deleted the rooted expression direct-call parameter shim from
+    `SemanticsValidatorExpr.cpp`, added source-lock assertions that keep the
+    deleted `paramsByDef_`/`samePath` validation path absent, split the
+    remaining rooted semantic work into TODO-4382, and ratcheted
+    `scripts/vector_surface_trace_baseline.json` from 946 to 944 production
+    traces. Baseline release validation was skipped per the lite workflow.

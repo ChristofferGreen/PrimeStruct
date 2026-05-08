@@ -586,62 +586,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
       }
     }
-    if (!expr.isMethodCall &&
-        (expr.namespacePrefix == "vector" ||
-         expr.namespacePrefix == "/vector" ||
-         expr.name.rfind("/vector/", 0) == 0)) {
-      const std::string helperName = normalizeCollectionMethodName(expr.name);
-      if (helperName == "count" || helperName == "capacity" ||
-          helperName == "at" || helperName == "at_unsafe") {
-        const std::string samePath = "/vector/" + helperName;
-        auto paramsIt = paramsByDef_.find(samePath);
-        if (paramsIt != paramsByDef_.end()) {
-          const auto &helperParams = paramsIt->second;
-          for (size_t i = 0; i < expr.argNames.size() && i < expr.args.size(); ++i) {
-            if (!expr.argNames[i].has_value()) {
-              continue;
-            }
-            const std::string &argName = *expr.argNames[i];
-            const bool matched = std::any_of(
-                helperParams.begin(), helperParams.end(),
-                [&](const ParameterInfo &param) { return param.name == argName; });
-            if (!matched) {
-              return failExprRootDiagnostic("unknown named argument: " + argName);
-            }
-          }
-          if (expr.args.size() != helperParams.size()) {
-            return failExprRootDiagnostic("argument count mismatch for " +
-                                          samePath);
-          }
-          for (size_t i = 0; i < expr.args.size() && i < helperParams.size(); ++i) {
-            const std::string expectedType =
-                normalizeBindingTypeName(helperParams[i].binding.typeName);
-            const ReturnKind actualKind =
-                inferExprReturnKind(expr.args[i], params, locals);
-            const bool typeMatches =
-                (expectedType == "i32" && actualKind == ReturnKind::Int) ||
-                (expectedType == "i64" && actualKind == ReturnKind::Int64) ||
-                (expectedType == "u64" && actualKind == ReturnKind::UInt64) ||
-                (expectedType == "bool" && actualKind == ReturnKind::Bool) ||
-                (expectedType == "string" && actualKind == ReturnKind::String) ||
-                expectedType == "vector" ||
-                expectedType == "array";
-            if (!typeMatches) {
-              return failExprRootDiagnostic(
-                  "argument type mismatch for " + samePath +
-                  " parameter " + helperParams[i].name);
-            }
-          }
-          for (const Expr &arg : expr.args) {
-            if (!validateExpr(params, locals, arg, enclosingStatements,
-                              statementIndex)) {
-              return false;
-            }
-          }
-          return true;
-        }
-      }
-    }
     if (!resolveExprVectorHelperCall(params,
                                      locals,
                                      expr,
