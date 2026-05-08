@@ -554,10 +554,14 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         expr.namespacePrefix == "std/collections/vector" ||
         expr.namespacePrefix == "/std/collections/vector" ||
         expr.name.rfind("/std/collections/vector/", 0) == 0;
+    const std::string rootedVectorCountTargetPath =
+        "/vector/" + countHelperName;
+    const std::string stdlibVectorCountTargetPath =
+        "/std/collections/vector/" + countHelperName;
     const std::string explicitVectorCountTargetPath =
         requestsStdNamespacedVectorCountHelper
-            ? "/std/collections/vector/" + countHelperName
-            : "/vector/" + countHelperName;
+            ? stdlibVectorCountTargetPath
+            : rootedVectorCountTargetPath;
     const std::string bareCountTargetPath = "/" + countHelperName;
     const std::string bareMapCountTargetPath =
         "/map/" + countHelperName;
@@ -708,19 +712,18 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                      methodResolved == bareMapCountTargetPath &&
                      lacksVisibleBareCountDefinition &&
                      lacksVisibleStdlibMapCountDefinition) ||
-                    (isDirectNamedCountReceiverCall &&
-                     methodResolved == "/vector/count" &&
-                     !hasDeclaredDefinitionPath("/vector/count") &&
-                     !hasImportedDefinitionPath("/vector/count") &&
-                     !hasDeclaredDefinitionPath("/std/collections/vector/count") &&
-                     !hasImportedDefinitionPath("/std/collections/vector/count")) ||
+                    (countHelperName == "count" &&
+                     isDirectNamedCountReceiverCall &&
+                     methodResolved == rootedVectorCountTargetPath &&
+                     lacksVisibleMethodTargetPath(rootedVectorCountTargetPath) &&
+                     lacksVisibleMethodTargetPath(stdlibVectorCountTargetPath)) ||
                     (isBuiltinMethod &&
                      methodResolved == stdlibMapCountTargetPath &&
                      lacksVisibleStdlibMapCountDefinition &&
                      !resolvesIndexedArgsPackMapCountReceiver &&
                      !context.shouldBuiltinValidateBareMapCountCall);
                 if (failsCountUnknownTargetValidation) {
-                  return failUnknownCallTarget(methodResolved == "/vector/count"
+                  return failUnknownCallTarget(methodResolved == rootedVectorCountTargetPath
                                                    ? methodResolved
                                                    : stdlibMapCountTargetPath);
                 }
@@ -791,6 +794,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     {
                 const std::string stdlibVectorCapacityTargetPath =
                     "/std/collections/vector/capacity";
+                const std::string rootedVectorCapacityTargetPath =
+                    "/vector/capacity";
                 const auto assignStdlibVectorCapacityCompatibilityTarget =
                     [&]() {
                       methodResolved = stdlibVectorCapacityTargetPath;
@@ -835,11 +840,9 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 }
                 if (!expr.isMethodCall && expr.args.size() == 1 &&
                     receiver.kind == Expr::Kind::Name &&
-                    methodResolved == "/vector/capacity" &&
-                    !hasDeclaredDefinitionPath("/vector/capacity") &&
-                    !hasImportedDefinitionPath("/vector/capacity") &&
-                    !hasDeclaredDefinitionPath("/std/collections/vector/capacity") &&
-                    !hasImportedDefinitionPath("/std/collections/vector/capacity")) {
+                    methodResolved == rootedVectorCapacityTargetPath &&
+                    lacksVisibleMethodTargetPath(rootedVectorCapacityTargetPath) &&
+                    lacksVisibleMethodTargetPath(stdlibVectorCapacityTargetPath)) {
                   return failUnknownCallTarget(methodResolved);
                 }
                 promoteUnknownCapacityMethodToBuiltinValidation(

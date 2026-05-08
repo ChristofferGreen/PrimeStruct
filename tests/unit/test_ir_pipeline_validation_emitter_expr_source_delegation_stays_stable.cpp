@@ -309,6 +309,18 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(") !=
         std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "rootedVectorCountTargetPath") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "rootedVectorCapacityTargetPath") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "methodResolved == \"/vector/count\"") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "methodResolved == \"/vector/capacity\"") ==
+        std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "bool SemanticsValidator::prepareExprCollectionDispatchSetup(") !=
         std::string::npos);
