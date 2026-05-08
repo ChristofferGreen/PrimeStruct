@@ -99,7 +99,7 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
   const bool requestsExplicitVectorCompatibilityMethod =
       isExplicitVectorCompatibilityMethodNamespace(
           normalizedMethodNamespace) ||
-      expr.name.rfind("/vector/", 0) == 0 ||
+      isRootedVectorHelperPath(expr.name) ||
       expr.name.rfind("/std/collections/vector/", 0) == 0;
   if (context.resolveMapTarget != nullptr && expr.isMethodCall &&
       !requestsExplicitVectorCompatibilityMethod &&

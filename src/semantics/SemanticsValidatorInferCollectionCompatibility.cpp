@@ -262,6 +262,39 @@ std::string SemanticsValidator::preferredCanonicalExperimentalVectorHelperTarget
   return experimentalPath;
 }
 
+std::string_view SemanticsValidator::rootedVectorHelperPrefix() const {
+  return "/vector/";
+}
+
+std::string_view SemanticsValidator::unrootedVectorHelperPrefix() const {
+  return rootedVectorHelperPrefix().substr(1);
+}
+
+std::string SemanticsValidator::rootedVectorHelperPath(
+    std::string_view helperName) const {
+  return std::string(rootedVectorHelperPrefix()) + std::string(helperName);
+}
+
+bool SemanticsValidator::isRootedVectorHelperPath(
+    std::string_view path) const {
+  return path.rfind(rootedVectorHelperPrefix(), 0) == 0;
+}
+
+bool SemanticsValidator::isUnrootedVectorHelperPath(
+    std::string_view path) const {
+  return path.rfind(unrootedVectorHelperPrefix(), 0) == 0;
+}
+
+std::string_view SemanticsValidator::stripRootedVectorHelperPrefix(
+    std::string_view path) const {
+  return path.substr(rootedVectorHelperPrefix().size());
+}
+
+std::string_view SemanticsValidator::stripUnrootedVectorHelperPrefix(
+    std::string_view path) const {
+  return path.substr(unrootedVectorHelperPrefix().size());
+}
+
 std::string SemanticsValidator::specializedExperimentalVectorHelperTarget(
     std::string_view helperName,
     const std::string &elemType) const {
@@ -791,7 +824,7 @@ std::string SemanticsValidator::getRemovedRootedVectorDirectCallPath(
   }
 
   const std::string explicitPath = explicitCallPathForCandidate(candidate);
-  if (explicitPath.rfind("/vector/", 0) != 0) {
+  if (!isRootedVectorHelperPath(explicitPath)) {
     return "";
   }
 
@@ -800,7 +833,7 @@ std::string SemanticsValidator::getRemovedRootedVectorDirectCallPath(
   if (removedPath.empty()) {
     removedPath = explicitRemovedCollectionMethodPath(explicitPath, "");
   }
-  if (removedPath.rfind("/vector/", 0) != 0) {
+  if (!isRootedVectorHelperPath(removedPath)) {
     return "";
   }
   return (hasDefinitionPath(removedPath) || hasImportedDefinitionPath(removedPath))

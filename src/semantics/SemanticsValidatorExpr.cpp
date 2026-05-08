@@ -489,12 +489,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     bool hasVectorHelperCallResolution = false;
     std::string vectorHelperCallResolvedPath;
     size_t vectorHelperCallReceiverIndex = 0;
-    auto rootedVectorHelperPath = [](std::string_view helperName) {
-      return "/vector/" + std::string(helperName);
-    };
-    const std::string rootedVectorHelperPrefix = rootedVectorHelperPath("");
-    const std::string unrootedVectorHelperPrefix =
-        rootedVectorHelperPrefix.substr(1);
+    const std::string rootedVectorHelperPathPrefix(rootedVectorHelperPrefix());
+    const std::string unrootedVectorHelperPathPrefix(unrootedVectorHelperPrefix());
     if (expr.isMethodCall && !expr.args.empty() &&
         (normalizeCollectionMethodName(expr.name) == "count" ||
          normalizeCollectionMethodName(expr.name) == "capacity" ||
@@ -515,7 +511,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         const bool explicitVectorNamespace =
             expr.namespacePrefix == "vector" ||
             expr.namespacePrefix == "/vector" ||
-            expr.name.rfind(rootedVectorHelperPrefix, 0) == 0;
+            expr.name.rfind(rootedVectorHelperPathPrefix, 0) == 0;
         if (explicitArrayNamespace) {
           return failExprRootDiagnostic("unknown method: /array/" + helperName);
         }
@@ -560,9 +556,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           return "/" + normalizedPrefix + "/" + normalizedName;
         }
         constexpr std::string_view CanonicalPrefix = "std/collections/vector/";
-        if (normalizedName.rfind(unrootedVectorHelperPrefix, 0) == 0) {
+        if (normalizedName.rfind(unrootedVectorHelperPathPrefix, 0) == 0) {
           const std::string helperName =
-              normalizedName.substr(unrootedVectorHelperPrefix.size());
+              normalizedName.substr(unrootedVectorHelperPathPrefix.size());
           if (isVectorMutatorMethodName(helperName)) {
             return rootedVectorHelperPath(helperName);
           }

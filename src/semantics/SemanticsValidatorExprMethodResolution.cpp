@@ -255,7 +255,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
         const std::string preferredVectorMethodTarget =
             preferredBareVectorHelperTarget(normalizedMethodName);
         if ((normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") &&
-            preferredVectorMethodTarget.rfind("/vector/", 0) == 0 &&
+            isRootedVectorHelperPath(preferredVectorMethodTarget) &&
             (hasDeclaredDefinitionPath(preferredVectorMethodTarget) ||
              hasImportedDefinitionPath(preferredVectorMethodTarget))) {
           resolved = preferredVectorMethodTarget;
@@ -406,7 +406,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
           expr.namespacePrefix == "vector" || expr.namespacePrefix == "/vector" ||
           expr.namespacePrefix == "std/collections/vector" ||
           expr.namespacePrefix == "/std/collections/vector" ||
-          helperName.rfind("/vector/", 0) == 0 ||
+          isRootedVectorHelperPath(helperName) ||
           helperName.rfind("/std/collections/vector/", 0) == 0;
       if (requestsExplicitVectorHelperNamespace) {
         return false;

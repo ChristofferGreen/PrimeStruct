@@ -26,10 +26,6 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         return !hasDeclaredDefinitionPath(methodTargetPath) &&
                !hasImportedDefinitionPath(methodTargetPath);
       };
-  const auto rootedVectorCountCapacityTargetPath =
-      [](const std::string &helperName) {
-        return "/vector/" + helperName;
-      };
   const auto lacksVisibleResolvedMethodTarget =
       [&](const std::string &methodTargetPath, bool isBuiltinMethod) {
         return !isBuiltinMethod &&
@@ -266,7 +262,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         const Expr &receiver = expr.args.front();
         std::string visibleCountHelperTarget;
         const std::string rootedVectorCountTargetPath =
-            rootedVectorCountCapacityTargetPath("count");
+            rootedVectorHelperPath("count");
         const bool resolvesVisibleCollectionCountHelper =
             resolveVisiblePreferredVectorHelperMethodTarget(
                 receiver, "count", visibleCountHelperTarget) &&
@@ -561,7 +557,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         expr.namespacePrefix == "/std/collections/vector" ||
         expr.name.rfind("/std/collections/vector/", 0) == 0;
     const std::string rootedVectorCountTargetPath =
-        rootedVectorCountCapacityTargetPath(countHelperName);
+        rootedVectorHelperPath(countHelperName);
     const std::string stdlibVectorCountTargetPath =
         "/std/collections/vector/" + countHelperName;
     const std::string explicitVectorCountTargetPath =
@@ -801,7 +797,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 const std::string stdlibVectorCapacityTargetPath =
                     "/std/collections/vector/capacity";
                 const std::string rootedVectorCapacityTargetPath =
-                    rootedVectorCountCapacityTargetPath("capacity");
+                    rootedVectorHelperPath("capacity");
                 const auto assignStdlibVectorCapacityCompatibilityTarget =
                     [&]() {
                       methodResolved = stdlibVectorCapacityTargetPath;

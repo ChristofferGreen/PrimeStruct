@@ -295,7 +295,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       }
       const std::string preferredVectorAccessTarget =
           preferredBareVectorHelperTarget(accessHelperName);
-      return preferredVectorAccessTarget.rfind("/vector/", 0) == 0 &&
+      return isRootedVectorHelperPath(preferredVectorAccessTarget) &&
              (hasDeclaredDefinitionPath(preferredVectorAccessTarget) ||
               hasImportedDefinitionPath(preferredVectorAccessTarget));
     };

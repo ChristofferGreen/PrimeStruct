@@ -110,23 +110,20 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return false;
   };
-  constexpr std::string_view RootedVectorMethodPrefix = "/vector/";
-  const std::string_view RootVectorMethodPrefix =
-      RootedVectorMethodPrefix.substr(1);
   auto startsWithRootVectorMethodPrefix = [&](std::string_view path) {
-    return path.rfind(RootVectorMethodPrefix, 0) == 0;
+    return isUnrootedVectorHelperPath(path);
   };
   auto startsWithRootedVectorMethodPrefix = [&](std::string_view path) {
-    return path.rfind(RootedVectorMethodPrefix, 0) == 0;
+    return isRootedVectorHelperPath(path);
   };
   auto stripRootVectorMethodPrefix = [&](std::string_view path) {
-    return path.substr(RootVectorMethodPrefix.size());
+    return stripUnrootedVectorHelperPrefix(path);
   };
   auto stripRootedVectorMethodPrefix = [&](std::string_view path) {
-    return path.substr(RootedVectorMethodPrefix.size());
+    return stripRootedVectorHelperPrefix(path);
   };
   auto rootedVectorMethodPath = [&](std::string_view helperName) {
-    return std::string(RootedVectorMethodPrefix) + std::string(helperName);
+    return rootedVectorHelperPath(helperName);
   };
   auto explicitRemovedCollectionMethodPath = [&](const std::string &rawMethodName) -> std::string {
     std::string candidate = rawMethodName;
@@ -2521,8 +2518,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       explicitVectorReceiverFamily == "soa_vector";
   const std::string_view explicitRootedVectorHelperName =
       startsWithRootedVectorMethodPrefix(explicitVectorHelperPath)
-          ? std::string_view(explicitVectorHelperPath).substr(
-                RootedVectorMethodPrefix.size())
+          ? stripRootedVectorMethodPrefix(explicitVectorHelperPath)
           : std::string_view{};
   const bool isExplicitRootedVectorMethod =
       !explicitRootedVectorHelperName.empty() &&

@@ -223,13 +223,13 @@ std::string SemanticsValidator::preferredBareVectorHelperTarget(std::string_view
     return canonical;
   }
   if (helperName == "at" || helperName == "at_unsafe") {
-    const std::string samePath = "/vector/" + std::string(helperName);
+    const std::string samePath = rootedVectorHelperPath(helperName);
     if (hasVisibleVectorHelperFamily(samePath)) {
       return samePath;
     }
     return canonical;
   }
-  const std::string samePath = "/vector/" + std::string(helperName);
+  const std::string samePath = rootedVectorHelperPath(helperName);
   if (hasVisibleVectorHelperFamily(samePath)) {
     return samePath;
   }

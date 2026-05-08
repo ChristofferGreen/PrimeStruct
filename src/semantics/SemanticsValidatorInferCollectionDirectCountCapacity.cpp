@@ -35,7 +35,7 @@ ReturnKind SemanticsValidator::inferBuiltinCollectionDirectCountCapacityReturnKi
               context.hasDeclaredDefinitionPath("/std/collections/map/count"));
     };
     std::string methodResolved;
-    const std::string rootedHelperPath = "/vector/" + helperName;
+    const std::string rootedHelperPath = rootedVectorHelperPath(helperName);
     if (directCallPath == rootedHelperPath &&
         (hasImportedDefinitionPath(rootedHelperPath) ||
          defMap_.find(rootedHelperPath) != defMap_.end())) {

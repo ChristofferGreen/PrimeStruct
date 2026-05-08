@@ -140,6 +140,13 @@
   std::string preferredCanonicalExperimentalVectorHelperTarget(std::string_view helperName) const;
   std::string specializedExperimentalVectorHelperTarget(std::string_view helperName,
                                                         const std::string &elemType) const;
+  std::string_view rootedVectorHelperPrefix() const;
+  std::string_view unrootedVectorHelperPrefix() const;
+  std::string rootedVectorHelperPath(std::string_view helperName) const;
+  bool isRootedVectorHelperPath(std::string_view path) const;
+  bool isUnrootedVectorHelperPath(std::string_view path) const;
+  std::string_view stripRootedVectorHelperPrefix(std::string_view path) const;
+  std::string_view stripUnrootedVectorHelperPrefix(std::string_view path) const;
   bool canonicalExperimentalVectorHelperPath(const std::string &resolvedPath,
                                              std::string &canonicalPathOut,
                                              std::string &helperNameOut) const;

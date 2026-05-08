@@ -306,19 +306,19 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprSource.find("\"argument type mismatch for \" + samePath") ==
         std::string::npos);
   CHECK(semanticsExprSource.find(
-            "auto rootedVectorHelperPath = [](std::string_view helperName)") !=
+            "auto rootedVectorHelperPath = [](std::string_view helperName)") ==
         std::string::npos);
   CHECK(semanticsExprSource.find(
-            "const std::string rootedVectorHelperPrefix = rootedVectorHelperPath(\"\");") !=
+            "const std::string rootedVectorHelperPathPrefix(rootedVectorHelperPrefix());") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
-            "const std::string unrootedVectorHelperPrefix =") !=
+            "const std::string unrootedVectorHelperPathPrefix(unrootedVectorHelperPrefix());") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "const std::string samePath = rootedVectorHelperPath(helperName);") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
-            "normalizedName.rfind(unrootedVectorHelperPrefix, 0)") !=
+            "normalizedName.rfind(unrootedVectorHelperPathPrefix, 0)") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "const std::string samePath = \"/vector/\" + helperName;") ==
@@ -335,13 +335,16 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
             "bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "rootedVectorCountCapacityTargetPath") !=
+            "rootedVectorCountCapacityTargetPath") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "rootedVectorCountTargetPath") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "rootedVectorCapacityTargetPath") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "rootedVectorHelperPath(countHelperName)") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "methodResolved == \"/vector/count\"") ==
@@ -393,13 +396,13 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
             "explicitRootVectorMutatorPath(true)") !=
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
-            "auto rootedVectorMutatorPath = [](std::string_view helperName)") !=
+            "auto rootedVectorMutatorPath = [](std::string_view helperName)") ==
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
             "const std::string rootVectorMutatorPrefix =") !=
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
-            "rootedVectorMutatorPath(helperName)") !=
+            "rootedVectorHelperPath(helperName)") !=
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
             "auto explicitRootVectorMutatorCallPath = [&]()") ==

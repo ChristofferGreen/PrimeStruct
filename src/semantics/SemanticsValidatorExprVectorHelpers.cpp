@@ -158,8 +158,8 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
   }
   if (normalizedHelperName.rfind("std/collections/vector/", 0) == 0) {
     normalizedHelperName.erase(0, std::string("std/collections/vector/").size());
-  } else if (normalizedHelperName.rfind("vector/", 0) == 0) {
-    normalizedHelperName.erase(0, std::string("vector/").size());
+  } else if (isUnrootedVectorHelperPath(normalizedHelperName)) {
+    normalizedHelperName.erase(0, unrootedVectorHelperPrefix().size());
   } else if (normalizedHelperName.rfind("std/collections/soa_vector/", 0) == 0) {
     normalizedHelperName.erase(0, std::string("std/collections/soa_vector/").size());
   } else if (normalizedHelperName.rfind("soa_vector/", 0) == 0) {
@@ -897,7 +897,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
         expr.namespacePrefix == "/std/collections/vector" ||
         expr.namespacePrefix == "std/collections/soa_vector" ||
         expr.namespacePrefix == "/std/collections/soa_vector" ||
-        expr.name.rfind("/vector/", 0) == 0 ||
+        isRootedVectorHelperPath(expr.name) ||
         expr.name.rfind("/soa_vector/", 0) == 0 ||
         expr.name.rfind("/std/collections/vector/", 0) == 0 ||
         expr.name.rfind("/std/collections/soa_vector/", 0) == 0 ||

@@ -6049,7 +6049,13 @@
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "const std::string_view RootVectorMethodPrefix =\n"
-            "      RootedVectorMethodPrefix.substr(1);") !=
+            "      RootedVectorMethodPrefix.substr(1);") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "return isUnrootedVectorHelperPath(path);") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "return isRootedVectorHelperPath(path);") !=
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "auto rootedVectorMethodPath =") !=

@@ -15298,3 +15298,36 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     work into TODO-4392, and ratcheted
     `scripts/vector_surface_trace_baseline.json` from 903 to 901 production
     traces. Baseline release validation was skipped per the lite workflow.
+
+- [x] TODO-4392: Centralize rooted vector semantic paths
+  - owner: ai
+  - created_at: 2026-05-08
+  - phase: Vector stdlib ownership cutover
+  - scope: Centralize remaining semantic-validator rooted `/vector/*`
+    helper path construction, prefix matching, and prefix stripping behind
+    shared `SemanticsValidator` helpers instead of file-local rooted vector
+    path builders and direct prefix probes.
+  - acceptance:
+    - `SemanticsValidatorExpr.cpp`,
+      `SemanticsValidatorExprCollectionCountCapacity.cpp`,
+      `SemanticsValidatorExprMethodTargetResolution.cpp`,
+      `SemanticsValidatorStatementVectorHelpers.cpp`, and nearby semantic
+      helper files no longer carry local `/vector/` path builders or direct
+      rooted vector helper prefix probes where the shared helper applies.
+    - Existing unknown-target diagnostics and explicit user-defined rooted
+      helper handling are preserved.
+    - The vector surface trace baseline decreases for semantic validator files
+      and does not increase elsewhere.
+  - stop_rule: Stop after rooted semantic path construction and prefix matching
+    use shared validator helpers, source-lock coverage tracks the shared
+    helpers, and the audit baseline ratchets downward.
+  - finished_at: 2026-05-08
+  - evidence: Added shared rooted vector helper prefix/path utilities in
+    `SemanticsValidatorInferCollectionCompatibility.cpp`, routed expression,
+    count/capacity, method-target, statement mutator, collection rewrite,
+    access, late unknown-target, method-resolution, vector-helper, and direct
+    count/capacity inference code through them, updated source-lock coverage,
+    split remaining semantic rooted-vector audit work into TODO-4393, and
+    ratcheted `scripts/vector_surface_trace_baseline.json` from 901 to 886
+    production traces. Baseline release validation was skipped per the lite
+    workflow.
