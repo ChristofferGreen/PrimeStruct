@@ -1189,25 +1189,43 @@
             "const bool isStdNamespacedVectorCanonicalCompatibilityHelper =") ==
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
-            "bool isStdNamespacedVectorCanonicalCompatibilityHelperPath(") !=
+            "bool isStdNamespacedVectorCanonicalCompatibilityHelperPath(") ==
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
-            "bool isStdNamespacedVectorCanonicalCompatibilityDirectCall(") !=
+            "bool isStdNamespacedVectorCanonicalCompatibilityDirectCall(") ==
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
-            "bool isStdNamespacedVectorCanonicalCompatibilityMethodCall(") !=
+            "bool isStdNamespacedVectorCanonicalCompatibilityMethodCall(") ==
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
-            "bool isStdNamespacedVectorCanonicalDirectCallReceiverCompatible(") !=
+            "bool isStdNamespacedVectorCanonicalDirectCallReceiverCompatible(") ==
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "bool isStdNamespacedVectorCompatibilityHelperCallPath(") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "bool isStdNamespacedVectorCompatibilityDirectCall(") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "bool isStdNamespacedVectorCompatibilityMethodCallSite(") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "bool isStdNamespacedVectorDirectCallReceiverCompatible(") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "bool shouldProbePositionalReorderedVectorHelperReceiver(") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
-            "const bool isStdNamespacedVectorCanonicalCompatibilityDirectCallSite =") !=
+            "const bool isStdNamespacedVectorCanonicalCompatibilityDirectCallSite =") ==
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
-            "const bool isStdNamespacedVectorCanonicalCountCapacityNamedArgException =") !=
+            "const bool isStdNamespacedVectorCanonicalCountCapacityNamedArgException =") ==
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "const bool isStdNamespacedVectorCompatibilityDirectCallSite =") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "const bool isStdNamespacedVectorCountCapacityNamedArgException =") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "bool resolvedVectorHelperDefinitionMissing =") !=

@@ -389,6 +389,20 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprVectorHelpersSource.find(
             "bool SemanticsValidator::resolveVectorHelperMethodTarget(") !=
         std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find("\"/std/collections/vector/") ==
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "bool isStdNamespacedVectorCanonicalCompatibilityHelperPath(") ==
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "bool isStdNamespacedVectorCompatibilityHelperCallPath(") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "const bool isStdNamespacedVectorCompatibilityDirectCallSite =") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "const bool isStdNamespacedVectorCountCapacityNamedArgException =") !=
+        std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
             "explicitRootVectorMutatorPath(false)") !=
         std::string::npos);

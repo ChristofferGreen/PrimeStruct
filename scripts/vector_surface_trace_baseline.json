@@ -856,11 +856,6 @@
     },
     {
       "path": "src/semantics/SemanticsValidatorExprVectorHelpers.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 14
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorExprVectorHelpers.cpp",
       "pattern": "experimental-vector-path",
       "count": 4
     },

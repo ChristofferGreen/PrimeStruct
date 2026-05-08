@@ -15453,3 +15453,44 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     source-lock coverage, and ratcheted
     `scripts/vector_surface_trace_baseline.json` from 876 to 872 production
     traces. Baseline release validation was skipped per the lite workflow.
+
+- [x] TODO-4400: Retire remaining expression vector canonical shims
+  - owner: ai
+  - created_at: 2026-05-08
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4399
+  - scope: Retire the remaining direct canonical
+    `/std/collections/vector/*` expression helper normalization,
+    classification, and compatibility probes in
+    `SemanticsValidatorExprVectorHelpers.cpp` where generic collection
+    routing, preferred helper targets, or stdlib-surface metadata can provide
+    the same decision.
+  - implementation_notes:
+    - Start from the `canonical-vector-path` hits in
+      `SemanticsValidatorExprVectorHelpers.cpp`.
+    - TODO-4399 already routed the direct `at`/`at_unsafe` visibility probes;
+      focus this leaf on the remaining canonical compatibility helper
+      predicates and direct-call/method-call path checks.
+    - Keep canonical user-facing vector helpers working through the stdlib
+      surface; remove only production C++ compatibility branches that can be
+      delegated without statement, template monomorph, lowerer, or emitter
+      changes.
+  - acceptance:
+    - Expression vector helper classification no longer hard-codes canonical
+      vector helper paths where existing generic helper or metadata routing can
+      provide the same decision.
+    - Existing vector construction, helper, import, and explicit user shadowing
+      behavior remains covered by focused source-lock or semantic tests.
+    - The vector surface trace baseline decreases for
+      `SemanticsValidatorExprVectorHelpers.cpp` and does not increase
+      elsewhere.
+  - stop_rule: Stop once expression vector helper canonical target shims that
+    can be retired before statement/lowerer/emitter work are removed and the
+    audit baseline ratchets downward.
+  - finished_at: 2026-05-08
+  - evidence: Replaced the remaining expression-vector canonical helper path
+    predicates, direct/method call checks, count/capacity target probes, and
+    explicit namespace checks with stdlib surface metadata routing, updated
+    focused source-lock coverage, and ratcheted
+    `scripts/vector_surface_trace_baseline.json` from 872 to 858 production
+    traces. Baseline release validation was skipped per the lite workflow.

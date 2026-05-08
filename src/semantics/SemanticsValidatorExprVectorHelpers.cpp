@@ -7,36 +7,35 @@
 namespace primec::semantics {
 namespace {
 
-bool isStdNamespacedVectorCanonicalCompatibilityHelperPath(
+bool isStdNamespacedVectorCompatibilityHelperCallPath(
     const std::string &resolved,
     const std::string &namespacedCollection,
     const std::string &namespacedHelper) {
-  return resolved.rfind("/std/collections/vector/", 0) == 0 &&
-         namespacedCollection == "vector" &&
-         isVectorCompatibilityHelperName(namespacedHelper);
+  return namespacedCollection == "vector" &&
+         isStdNamespacedVectorCompatibilityHelperPath(resolved, namespacedHelper);
 }
 
-bool isStdNamespacedVectorCanonicalCompatibilityDirectCall(
+bool isStdNamespacedVectorCompatibilityDirectCall(
     const Expr &expr,
     const std::string &resolved,
     const std::string &namespacedCollection,
     const std::string &namespacedHelper) {
   return !expr.isMethodCall &&
-         isStdNamespacedVectorCanonicalCompatibilityHelperPath(
+         isStdNamespacedVectorCompatibilityHelperCallPath(
              resolved, namespacedCollection, namespacedHelper);
 }
 
-bool isStdNamespacedVectorCanonicalCompatibilityMethodCall(
+bool isStdNamespacedVectorCompatibilityMethodCallSite(
     const Expr &expr,
     const std::string &resolved,
     const std::string &namespacedCollection,
     const std::string &namespacedHelper) {
   return expr.isMethodCall &&
-         isStdNamespacedVectorCanonicalCompatibilityHelperPath(
+         isStdNamespacedVectorCompatibilityHelperCallPath(
              resolved, namespacedCollection, namespacedHelper);
 }
 
-bool isStdNamespacedVectorCanonicalDirectCallReceiverCompatible(
+bool isStdNamespacedVectorDirectCallReceiverCompatible(
     const std::string &receiverFamily,
     bool hasReceiverCompatibleVisibleDefinition,
     bool isCountCapacityNamedArgException) {
@@ -52,11 +51,11 @@ bool isVectorHelperReceiverName(const Expr &candidate,
 
 bool shouldProbePositionalReorderedVectorHelperReceiver(
     const Expr &expr,
-    bool isStdNamespacedVectorCanonicalCompatibilityDirectCallSite,
+    bool isStdNamespacedVectorCompatibilityDirectCallSite,
     bool hasNamedArgs,
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals) {
-  return !isStdNamespacedVectorCanonicalCompatibilityDirectCallSite &&
+  return !isStdNamespacedVectorCompatibilityDirectCallSite &&
          !hasNamedArgs && expr.args.size() > 1 &&
          (expr.args.front().kind == Expr::Kind::Literal ||
           expr.args.front().kind == Expr::Kind::BoolLiteral ||
@@ -95,6 +94,7 @@ bool isVectorHelperReceiverName(const Expr &candidate,
 } // namespace
 
 bool SemanticsValidator::isVectorBuiltinName(const Expr &candidate, const char *helper) const {
+  const std::string helperName = helper == nullptr ? std::string() : std::string(helper);
   auto hasVisibleDefinitionPath = [&](const std::string &path) {
     if (hasImportedDefinitionPath(path)) {
       return true;
@@ -102,7 +102,7 @@ bool SemanticsValidator::isVectorBuiltinName(const Expr &candidate, const char *
     if (defMap_.count(path) == 0) {
       return false;
     }
-    if (path.rfind("/std/collections/vector/", 0) == 0) {
+    if (isStdNamespacedVectorCompatibilityHelperPath(path, helperName)) {
       auto paramsIt = paramsByDef_.find(path);
       if (paramsIt != paramsByDef_.end() && !paramsIt->second.empty()) {
         std::string experimentalElemType;
@@ -126,18 +126,18 @@ bool SemanticsValidator::isVectorBuiltinName(const Expr &candidate, const char *
     if (resolvedPath.rfind("/std/", 0) != 0 || defMap_.count(resolvedPath) != 0) {
       return false;
     }
-    const std::string helperName = helper == nullptr ? std::string() : std::string(helper);
     const size_t lastSlash = resolvedPath.find_last_of('/');
     if (lastSlash == std::string::npos || resolvedPath.substr(lastSlash + 1) != helperName) {
       return false;
     }
     return isVectorCompatibilityHelperName(helperName);
   }
+  const std::string resolvedCandidate = resolveCalleePath(candidate);
   if ((namespacedHelper != "count" && namespacedHelper != "capacity") ||
-      resolveCalleePath(candidate) != "/std/collections/vector/" + namespacedHelper) {
+      !isStdNamespacedVectorCompatibilityHelperPath(resolvedCandidate, namespacedHelper)) {
     return true;
   }
-  return hasVisibleDefinitionPath("/std/collections/vector/" + namespacedHelper);
+  return hasVisibleDefinitionPath(resolvedCandidate);
 }
 
 bool SemanticsValidator::resolveVectorHelperMethodTarget(
@@ -156,8 +156,10 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
       specializationSuffix != std::string::npos) {
     normalizedHelperName.erase(specializationSuffix);
   }
-  if (normalizedHelperName.rfind("std/collections/vector/", 0) == 0) {
-    normalizedHelperName.erase(0, std::string("std/collections/vector/").size());
+  std::string canonicalVectorHelperName;
+  if (resolveCanonicalVectorHelperNameFromResolvedPath(
+          "/" + normalizedHelperName, canonicalVectorHelperName)) {
+    normalizedHelperName = canonicalVectorHelperName;
   } else if (isUnrootedVectorHelperPath(normalizedHelperName)) {
     normalizedHelperName.erase(0, unrootedVectorHelperPrefix().size());
   } else if (normalizedHelperName.rfind("std/collections/soa_vector/", 0) == 0) {
@@ -619,7 +621,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
     if (defMap_.count(path) == 0) {
       return false;
     }
-    if (path.rfind("/std/collections/vector/", 0) == 0) {
+    if (isStdNamespacedVectorCompatibilityHelperPath(path, vectorHelper)) {
       auto paramsIt = paramsByDef_.find(path);
       if (paramsIt != paramsByDef_.end() && !paramsIt->second.empty()) {
         std::string experimentalElemType;
@@ -720,8 +722,8 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
     return resolved;
   };
   const bool hasNamedArgs = hasNamedArguments(expr.argNames);
-  const bool isStdNamespacedVectorCanonicalCompatibilityDirectCallSite =
-      isStdNamespacedVectorCanonicalCompatibilityDirectCall(
+  const bool isStdNamespacedVectorCompatibilityDirectCallSite =
+      isStdNamespacedVectorCompatibilityDirectCall(
           expr, resolved, namespacedCollection, namespacedHelper);
   if (expr.isMethodCall && !expr.args.empty() &&
       (vectorHelper == "count" || vectorHelper == "capacity")) {
@@ -729,17 +731,17 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
     const bool resolvedVectorMethod =
         resolveVectorHelperMethodTarget(params, locals, expr.args.front(),
                                         vectorHelper, methodTarget);
-    const bool targetsCanonicalVectorCount =
+    const bool targetsStdNamespacedVectorCount =
         vectorHelper == "count" &&
-        ((resolved.rfind("/std/collections/vector/count", 0) == 0) ||
+        (isStdNamespacedVectorCompatibilityHelperPath(resolved, "count") ||
          (resolvedVectorMethod &&
-          methodTarget.rfind("/std/collections/vector/count", 0) == 0));
-    const bool targetsCanonicalVectorCapacity =
+          isStdNamespacedVectorCompatibilityHelperPath(methodTarget, "count")));
+    const bool targetsStdNamespacedVectorCapacity =
         vectorHelper == "capacity" &&
-        ((resolved.rfind("/std/collections/vector/capacity", 0) == 0) ||
+        (isStdNamespacedVectorCompatibilityHelperPath(resolved, "capacity") ||
          (resolvedVectorMethod &&
-          methodTarget.rfind("/std/collections/vector/capacity", 0) == 0));
-    if ((targetsCanonicalVectorCount || targetsCanonicalVectorCapacity) &&
+          isStdNamespacedVectorCompatibilityHelperPath(methodTarget, "capacity")));
+    if ((targetsStdNamespacedVectorCount || targetsStdNamespacedVectorCapacity) &&
         expr.args.size() != 1) {
       if (hasNamedArgs) {
         return failVectorHelperDiagnostic(
@@ -749,8 +751,8 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
           "argument count mismatch for builtin " + vectorHelper);
     }
   }
-  const bool isStdNamespacedVectorCanonicalCountCapacityNamedArgException =
-      isStdNamespacedVectorCanonicalCompatibilityDirectCallSite &&
+  const bool isStdNamespacedVectorCountCapacityNamedArgException =
+      isStdNamespacedVectorCompatibilityDirectCallSite &&
       (namespacedHelper == "count" || namespacedHelper == "capacity") &&
       hasNamedArgs;
   auto isBareVectorMutatorExpressionReceiver = [&](const Expr &receiverCandidate) {
@@ -759,26 +761,26 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
            expr.name == vectorHelper &&
            classifyReceiverFamily(receiverCandidate) == "vector";
   };
-  if (isStdNamespacedVectorCanonicalCompatibilityDirectCallSite &&
+  if (isStdNamespacedVectorCompatibilityDirectCallSite &&
       !hasVisibleDefinitionPath(resolved) &&
-      !isStdNamespacedVectorCanonicalCountCapacityNamedArgException) {
+      !isStdNamespacedVectorCountCapacityNamedArgException) {
     return failVectorHelperDiagnostic("unknown call target: " + diagnosticCallTarget());
   }
-  if (isStdNamespacedVectorCanonicalCompatibilityMethodCall(
+  if (isStdNamespacedVectorCompatibilityMethodCallSite(
           expr, resolved, namespacedCollection, namespacedHelper)) {
     return true;
   }
-  if (isStdNamespacedVectorCanonicalCompatibilityDirectCallSite &&
+  if (isStdNamespacedVectorCompatibilityDirectCallSite &&
       expr.args.size() == 1 &&
       !expr.hasBodyArguments &&
       expr.bodyArguments.empty()) {
     const Expr &receiverExpr = expr.args.front();
     const std::string receiverFamily = classifyReceiverFamily(receiverExpr);
-    if (!isStdNamespacedVectorCanonicalDirectCallReceiverCompatible(
+    if (!isStdNamespacedVectorDirectCallReceiverCompatible(
             receiverFamily,
             defMap_.count(resolved) > 0 &&
                 hasReceiverCompatibleVisibleDefinitionPath(resolved, receiverExpr),
-            isStdNamespacedVectorCanonicalCountCapacityNamedArgException)) {
+            isStdNamespacedVectorCountCapacityNamedArgException)) {
       return failVectorHelperDiagnostic("unknown call target: " + diagnosticCallTarget());
     }
   }
@@ -802,8 +804,8 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
   size_t resolvedReceiverIndex = 0;
   bool resolvedReceiver = false;
   bool failedReceiverProbe = false;
-  if ((!isStdNamespacedVectorCanonicalCompatibilityDirectCallSite ||
-       isStdNamespacedVectorCanonicalCountCapacityNamedArgException) &&
+  if ((!isStdNamespacedVectorCompatibilityDirectCallSite ||
+       isStdNamespacedVectorCountCapacityNamedArgException) &&
       !expr.args.empty()) {
     auto tryResolveReceiverIndex = [&](size_t receiverIndex) {
       if (receiverIndex >= expr.args.size()) {
@@ -883,7 +885,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
         return false;
       }
       if (!shouldProbePositionalReorderedVectorHelperReceiver(
-              expr, isStdNamespacedVectorCanonicalCompatibilityDirectCallSite,
+              expr, isStdNamespacedVectorCompatibilityDirectCallSite,
               hasNamedArgs, params, locals)) {
         return false;
       }
@@ -901,17 +903,15 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
         expr.namespacePrefix == "/vector" ||
         expr.namespacePrefix == "soa_vector" ||
         expr.namespacePrefix == "/soa_vector" ||
-        expr.namespacePrefix == "std/collections/vector" ||
-        expr.namespacePrefix == "/std/collections/vector" ||
         expr.namespacePrefix == "std/collections/soa_vector" ||
         expr.namespacePrefix == "/std/collections/soa_vector" ||
         isRootedVectorHelperPath(expr.name) ||
         expr.name.rfind("/soa_vector/", 0) == 0 ||
-        expr.name.rfind("/std/collections/vector/", 0) == 0 ||
+        isStdNamespacedVectorCompatibilityHelperPath(expr.name, vectorHelper) ||
         expr.name.rfind("/std/collections/soa_vector/", 0) == 0 ||
         namespacedCollection == "vector" ||
         namespacedCollection == "soa_vector";
-    if (!isStdNamespacedVectorCanonicalCompatibilityDirectCallSite) {
+    if (!isStdNamespacedVectorCompatibilityDirectCallSite) {
       const bool isExplicitOldSoaMethodSurface =
           expr.isMethodCall &&
           (expr.namespacePrefix == "soa_vector" ||
