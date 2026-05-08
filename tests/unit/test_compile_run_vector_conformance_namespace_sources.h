@@ -344,31 +344,31 @@ inline std::string makeVectorHelperRuntimeContractSource(const std::string &impo
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   if (mode == "pop_empty") {
-    source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{vectorNew<i32>()}\n";
-    source += "  vectorPop<i32>(values)\n";
+    source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{/std/collections/vector/vector<i32>()}\n";
+    source += "  /std/collections/vector/pop<i32>(values)\n";
   } else if (mode == "remove_at_oob") {
-    source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{vectorSingle<i32>(4i32)}\n";
-    source += "  vectorRemoveAt<i32>(values, 1i32)\n";
+    source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{/std/collections/vector/vector<i32>(4i32)}\n";
+    source += "  /std/collections/vector/remove_at<i32>(values, 1i32)\n";
   } else if (mode == "at_negative_index") {
-    source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{vectorPair<i32>(4i32, 9i32)}\n";
-    source += "  return(vectorAt<i32>(values, -1i32))\n";
+    source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{/std/collections/vector/vector<i32>(4i32, 9i32)}\n";
+    source += "  return(/std/collections/vector/at<i32>(values, -1i32))\n";
   } else if (mode == "at_unsafe_negative_index") {
-    source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{vectorPair<i32>(4i32, 9i32)}\n";
-    source += "  return(vectorAtUnsafe<i32>(values, -1i32))\n";
+    source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{/std/collections/vector/vector<i32>(4i32, 9i32)}\n";
+    source += "  return(/std/collections/vector/at_unsafe<i32>(values, -1i32))\n";
   } else if (mode == "push_growth_overflow") {
-    source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{vectorNew<i32>()}\n";
+    source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{/std/collections/vector/vector<i32>()}\n";
     source += "  values.set_field_count(1073741823i32)\n";
     source += "  values.set_field_capacity(1073741823i32)\n";
-    source += "  vectorPush<i32>(values, 3i32)\n";
+    source += "  /std/collections/vector/push<i32>(values, 3i32)\n";
   } else if (mode == "reserve_negative") {
-    source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{vectorPair<i32>(4i32, 9i32)}\n";
-    source += "  vectorReserve<i32>(values, -1i32)\n";
+    source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{/std/collections/vector/vector<i32>(4i32, 9i32)}\n";
+    source += "  /std/collections/vector/reserve<i32>(values, -1i32)\n";
   } else if (mode == "reserve_growth_overflow") {
-    source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{vectorPair<i32>(4i32, 9i32)}\n";
-    source += "  vectorReserve<i32>(values, 1073741824i32)\n";
+    source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{/std/collections/vector/vector<i32>(4i32, 9i32)}\n";
+    source += "  /std/collections/vector/reserve<i32>(values, 1073741824i32)\n";
   } else {
-    source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{vectorSingle<i32>(4i32)}\n";
-    source += "  vectorRemoveSwap<i32>(values, 1i32)\n";
+    source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{/std/collections/vector/vector<i32>(4i32)}\n";
+    source += "  /std/collections/vector/remove_swap<i32>(values, 1i32)\n";
   }
   if (mode != "at_negative_index" && mode != "at_unsafe_negative_index") {
     source += "  return(0i32)\n";
@@ -396,16 +396,16 @@ inline std::string makeExperimentalVectorOwnedDropConformanceSource() {
   source += "}\n\n";
   source += "[effects(heap_alloc), return<void>]\n";
   source += "destroy_pair() {\n";
-  source += "  [Vector<Tracked>] values{vectorPair<Tracked>(Tracked(1i32, true), Tracked(2i32, true))}\n";
+  source += "  [Vector<Tracked>] values{/std/collections/vector/vector<Tracked>(Tracked(1i32, true), Tracked(2i32, true))}\n";
   source += "  }\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  destroy_pair()\n";
-  source += "  [Vector<Tracked> mut] popped{vectorSingle<Tracked>(Tracked(3i32, true))}\n";
-  source += "  vectorPop<Tracked>(popped)\n";
-  source += "  [Vector<Tracked> mut] cleared{vectorPair<Tracked>(Tracked(4i32, true), Tracked(5i32, true))}\n";
-  source += "  vectorClear<Tracked>(cleared)\n";
-  source += "  return(plus(vectorCount<Tracked>(popped), vectorCount<Tracked>(cleared)))\n";
+  source += "  [Vector<Tracked> mut] popped{/std/collections/vector/vector<Tracked>(Tracked(3i32, true))}\n";
+  source += "  /std/collections/vector/pop<Tracked>(popped)\n";
+  source += "  [Vector<Tracked> mut] cleared{/std/collections/vector/vector<Tracked>(Tracked(4i32, true), Tracked(5i32, true))}\n";
+  source += "  /std/collections/vector/clear<Tracked>(cleared)\n";
+  source += "  return(plus(/std/collections/vector/count<Tracked>(popped), /std/collections/vector/count<Tracked>(cleared)))\n";
   source += "}\n";
   return source;
 }
@@ -424,16 +424,16 @@ inline std::string makeExperimentalVectorRelocationConformanceSource() {
   source += "}\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
-  source += "  [Vector<Mover> mut] values{vectorNew<Mover>()}\n";
-  source += "  vectorPush<Mover>(values, Mover(11i32))\n";
-  source += "  vectorReserve<Mover>(values, 4i32)\n";
-  source += "  vectorPush<Mover>(values, Mover(22i32))\n";
-  source += "  vectorPush<Mover>(values, Mover(33i32))\n";
-  source += "  return(plus(vectorCapacity<Mover>(values),\n";
-  source += "      plus(vectorCount<Mover>(values),\n";
-  source += "          plus(vectorAt<Mover>(values, 0i32).value,\n";
-  source += "              plus(vectorAtUnsafe<Mover>(values, 1i32).value,\n";
-  source += "                   vectorAt<Mover>(values, 2i32).value)))))\n";
+  source += "  [Vector<Mover> mut] values{/std/collections/vector/vector<Mover>()}\n";
+  source += "  /std/collections/vector/push<Mover>(values, Mover(11i32))\n";
+  source += "  /std/collections/vector/reserve<Mover>(values, 4i32)\n";
+  source += "  /std/collections/vector/push<Mover>(values, Mover(22i32))\n";
+  source += "  /std/collections/vector/push<Mover>(values, Mover(33i32))\n";
+  source += "  return(plus(/std/collections/vector/capacity<Mover>(values),\n";
+  source += "      plus(/std/collections/vector/count<Mover>(values),\n";
+  source += "          plus(/std/collections/vector/at<Mover>(values, 0i32).value,\n";
+  source += "              plus(/std/collections/vector/at_unsafe<Mover>(values, 1i32).value,\n";
+  source += "                   /std/collections/vector/at<Mover>(values, 2i32).value)))))\n";
   source += "}\n";
   return source;
 }
@@ -454,17 +454,17 @@ inline std::string makeExperimentalVectorRemovalConformanceSource() {
   source += "}\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
-  source += "  [Vector<Owned> mut] values{vectorQuad<Owned>(Owned(10i32), Owned(20i32), Owned(30i32), Owned(40i32))}\n";
-  source += "  vectorRemoveAt<Owned>(values, 1i32)\n";
-  source += "  [i32] afterRemoveAt{plus(vectorCount<Owned>(values),\n";
-  source += "      plus(vectorAt<Owned>(values, 0i32).value,\n";
-  source += "          plus(vectorAtUnsafe<Owned>(values, 1i32).value,\n";
-  source += "               vectorAt<Owned>(values, 2i32).value)))}\n";
-  source += "  vectorRemoveSwap<Owned>(values, 0i32)\n";
+  source += "  [Vector<Owned> mut] values{/std/collections/vector/vector<Owned>(Owned(10i32), Owned(20i32), Owned(30i32), Owned(40i32))}\n";
+  source += "  /std/collections/vector/remove_at<Owned>(values, 1i32)\n";
+  source += "  [i32] afterRemoveAt{plus(/std/collections/vector/count<Owned>(values),\n";
+  source += "      plus(/std/collections/vector/at<Owned>(values, 0i32).value,\n";
+  source += "          plus(/std/collections/vector/at_unsafe<Owned>(values, 1i32).value,\n";
+  source += "               /std/collections/vector/at<Owned>(values, 2i32).value)))}\n";
+  source += "  /std/collections/vector/remove_swap<Owned>(values, 0i32)\n";
   source += "  return(plus(afterRemoveAt,\n";
-  source += "      plus(vectorCount<Owned>(values),\n";
-  source += "          plus(vectorAt<Owned>(values, 0i32).value,\n";
-  source += "               vectorAtUnsafe<Owned>(values, 1i32).value))))\n";
+  source += "      plus(/std/collections/vector/count<Owned>(values),\n";
+  source += "          plus(/std/collections/vector/at<Owned>(values, 0i32).value,\n";
+  source += "               /std/collections/vector/at_unsafe<Owned>(values, 1i32).value))))\n";
   source += "}\n";
   return source;
 }
@@ -484,22 +484,22 @@ inline std::string makeExperimentalVectorCanonicalHelperRoutingSource() {
   source += "}\n\n";
   source += "[effects(heap_alloc), return<Vector<Mover>>]\n";
   source += "wrapValues() {\n";
-  source += "  return(vectorPair<Mover>(Mover(10i32), Mover(20i32)))\n";
+  source += "  return(/std/collections/vector/vector<Mover>(Mover(10i32), Mover(20i32)))\n";
   source += "}\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [Vector<Mover> mut] values{wrapValues()}\n";
-  source += "  /std/collections/vectorPush<Mover>(values, Mover(30i32))\n";
-  source += "  /std/collections/vectorReserve<Mover>(values, 6i32)\n";
-  source += "  [i32 mut] total{/std/collections/vectorCount<Mover>(values)}\n";
-  source += "  assign(total, plus(total, /std/collections/vectorCapacity<Mover>(values)))\n";
-  source += "  assign(total, plus(total, /std/collections/vectorAt<Mover>(values, 0i32).value))\n";
-  source += "  assign(total, plus(total, /std/collections/vectorAtUnsafe<Mover>(values, 2i32).value))\n";
+  source += "  /std/collections/vector/push<Mover>(values, Mover(30i32))\n";
+  source += "  /std/collections/vector/reserve<Mover>(values, 6i32)\n";
+  source += "  [i32 mut] total{/std/collections/vector/count<Mover>(values)}\n";
+  source += "  assign(total, plus(total, /std/collections/vector/capacity<Mover>(values)))\n";
+  source += "  assign(total, plus(total, /std/collections/vector/at<Mover>(values, 0i32).value))\n";
+  source += "  assign(total, plus(total, /std/collections/vector/at_unsafe<Mover>(values, 2i32).value))\n";
   source += "  /std/collections/vector/push<Mover>(values, Mover(40i32))\n";
   source += "  assign(total, plus(total, /std/collections/vector/count<Mover>(values)))\n";
   source += "  assign(total, plus(total, values.at(3i32).value))\n";
   source += "  /std/collections/vector/remove_at<Mover>(values, 1i32)\n";
-  source += "  /std/collections/vectorRemoveSwap<Mover>(values, 0i32)\n";
+  source += "  /std/collections/vector/remove_swap<Mover>(values, 0i32)\n";
   source += "  values.pop()\n";
   source += "  /std/collections/vector/clear<Mover>(values)\n";
   source += "  return(plus(total, values.count()))\n";

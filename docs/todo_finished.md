@@ -14875,3 +14875,30 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     coverage to assert old vector spellings no longer resolve through
     `StdlibSurfaceRegistry` while canonical vector metadata still resolves.
     Baseline release validation was skipped per the lite workflow.
+
+- [x] TODO-4376: Delete vector wrapper helper aliases
+  - owner: ai
+  - created_at: 2026-05-08
+  - phase: Vector stdlib ownership cutover
+  - scope: Remove `vectorCount` / `vectorCapacity` / `vectorPush`-style helper
+    aliases and fixed-arity constructor wrappers from the public
+    `/std/collections` wrapper layer, updating tests and docs to use canonical
+    `/std/collections/vector/*` imports and helper paths.
+  - acceptance:
+    - Wildcard and exact collection imports no longer expose `vectorCount`,
+      `vectorCapacity`, `vectorPush`, `vectorAt`, or fixed-arity
+      `vectorSingle`/`vectorPair`-style public aliases.
+    - Tests and docs that are not explicitly compatibility coverage use
+      canonical `/std/collections/vector/*` helpers or method sugar.
+    - Map wrapper aliases remain unchanged.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once wrapper-style vector helper names no longer provide a
+    public vector API surface and canonical vector examples remain covered.
+  - finished_at: 2026-05-08
+  - evidence: Removed the vector wrapper helper and fixed-arity constructor
+    aliases from `stdlib/std/collections/collections.prime`, migrated
+    non-experimental stdlib/test snippets to canonical
+    `/std/collections/vector/*` calls, added import semantics coverage proving
+    wildcard and exact collection imports no longer publish the removed vector
+    names, and updated docs plus source locks. Map wrapper aliases were left
+    unchanged. Baseline release validation was skipped per the lite workflow.

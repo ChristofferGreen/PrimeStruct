@@ -447,14 +447,14 @@ import /std/collections/*
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}
-  vectorPush<i32>(values, 4i32)
-  vectorRemoveAt<i32>(values, 1i32)
-  vectorRemoveSwap<i32>(values, 1i32)
-  vectorPop<i32>(values)
-  vectorReserve<i32>(values, 8i32)
-  vectorCapacity<i32>(values)
-  vectorClear<i32>(values)
-  return(vectorCount<i32>(values))
+  /std/collections/vector/push<i32>(values, 4i32)
+  /std/collections/vector/remove_at<i32>(values, 1i32)
+  /std/collections/vector/remove_swap<i32>(values, 1i32)
+  /std/collections/vector/pop<i32>(values)
+  /std/collections/vector/reserve<i32>(values, 8i32)
+  /std/collections/vector/capacity<i32>(values)
+  /std/collections/vector/clear<i32>(values)
+  return(/std/collections/vector/count<i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("compile_vector_helpers_exe.prime", source);
@@ -501,7 +501,7 @@ main() {
   pop(values)
   values.clear()
   clear(values)
-  return(vectorCount<i32>(values))
+  return(/std/collections/vector/count<i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_user_vector_mutator_shadow_precedence.prime", source);
@@ -546,7 +546,7 @@ import /std/collections/*
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
   push([value] 3i32, [values] values)
-  return(vectorCount<i32>(values))
+  return(/std/collections/vector/count<i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_vector_mutator_named_call_shadow.prime", source);
@@ -592,7 +592,7 @@ import /std/collections/*
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
   push(3i32, values)
-  return(vectorCount<i32>(values))
+  return(/std/collections/vector/count<i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_vector_mutator_positional_call_shadow.prime", source);

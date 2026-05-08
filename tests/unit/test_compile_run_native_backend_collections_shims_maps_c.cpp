@@ -253,11 +253,11 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32>] values{vectorQuad<i32>(2i32, 4i32, 6i32, 8i32)}
+  [vector<i32>] values{/std/collections/vector/vector<i32>(2i32, 4i32, 6i32, 8i32)}
   [map<i32, i32>] pairs{mapTriple<i32, i32>(1i32, 10i32, 2i32, 20i32, 3i32, 30i32)}
-  [i32] vectorTotal{plus(vectorAt<i32>(values, 1i32), vectorAtUnsafe<i32>(values, 3i32))}
+  [i32] vectorTotal{plus(/std/collections/vector/at<i32>(values, 1i32), /std/collections/vector/at_unsafe<i32>(values, 3i32))}
   [i32] mapTotal{plus(mapAt<i32, i32>(pairs, 1i32), mapAtUnsafe<i32, i32>(pairs, 3i32))}
-  return(plus(plus(vectorTotal, mapTotal), plus(vectorCount<i32>(values), mapCount<i32, i32>(pairs))))
+  return(plus(plus(vectorTotal, mapTotal), plus(/std/collections/vector/count<i32>(values), mapCount<i32, i32>(pairs))))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_extended_ctor.prime", source);
@@ -290,9 +290,9 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32>] values{vectorQuint<i32>(1i32, 3i32, 5i32, 7i32, 9i32)}
-  [i32] picked{plus(vectorAt<i32>(values, 4i32), vectorAtUnsafe<i32>(values, 0i32))}
-  return(plus(picked, vectorCount<i32>(values)))
+  [vector<i32>] values{/std/collections/vector/vector<i32>(1i32, 3i32, 5i32, 7i32, 9i32)}
+  [i32] picked{plus(/std/collections/vector/at<i32>(values, 4i32), /std/collections/vector/at_unsafe<i32>(values, 0i32))}
+  return(plus(picked, /std/collections/vector/count<i32>(values)))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_vector_quint_ctor.prime", source);
@@ -310,8 +310,8 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32>] values{vectorQuint<i32>(1i32, 2i32, 3i32, 4i32, true)}
-  return(vectorCount<i32>(values))
+  [vector<i32>] values{/std/collections/vector/vector<i32>(1i32, 2i32, 3i32, 4i32, true)}
+  return(/std/collections/vector/count<i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_vector_quint_mismatch.prime", source);
@@ -325,9 +325,9 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32>] values{vectorSext<i32>(2i32, 4i32, 6i32, 8i32, 10i32, 12i32)}
-  [i32] picked{plus(vectorAt<i32>(values, 5i32), vectorAtUnsafe<i32>(values, 0i32))}
-  return(plus(picked, vectorCount<i32>(values)))
+  [vector<i32>] values{/std/collections/vector/vector<i32>(2i32, 4i32, 6i32, 8i32, 10i32, 12i32)}
+  [i32] picked{plus(/std/collections/vector/at<i32>(values, 5i32), /std/collections/vector/at_unsafe<i32>(values, 0i32))}
+  return(plus(picked, /std/collections/vector/count<i32>(values)))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_vector_sext_ctor.prime", source);
@@ -345,8 +345,8 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32>] values{vectorSext<i32>(1i32, 2i32, 3i32, 4i32, 5i32, false)}
-  return(vectorCount<i32>(values))
+  [vector<i32>] values{/std/collections/vector/vector<i32>(1i32, 2i32, 3i32, 4i32, 5i32, false)}
+  return(/std/collections/vector/count<i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_vector_sext_mismatch.prime", source);
@@ -360,9 +360,9 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32>] values{vectorSept<i32>(3i32, 6i32, 9i32, 12i32, 15i32, 18i32, 21i32)}
-  [i32] picked{plus(vectorAt<i32>(values, 6i32), vectorAtUnsafe<i32>(values, 0i32))}
-  return(plus(picked, vectorCount<i32>(values)))
+  [vector<i32>] values{/std/collections/vector/vector<i32>(3i32, 6i32, 9i32, 12i32, 15i32, 18i32, 21i32)}
+  [i32] picked{plus(/std/collections/vector/at<i32>(values, 6i32), /std/collections/vector/at_unsafe<i32>(values, 0i32))}
+  return(plus(picked, /std/collections/vector/count<i32>(values)))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_vector_sept_ctor.prime", source);
@@ -380,8 +380,8 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32>] values{vectorSept<i32>(1i32, 2i32, 3i32, 4i32, 5i32, 6i32, false)}
-  return(vectorCount<i32>(values))
+  [vector<i32>] values{/std/collections/vector/vector<i32>(1i32, 2i32, 3i32, 4i32, 5i32, 6i32, false)}
+  return(/std/collections/vector/count<i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_vector_sept_mismatch.prime", source);
@@ -395,9 +395,9 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32>] values{vectorOct<i32>(4i32, 8i32, 12i32, 16i32, 20i32, 24i32, 28i32, 32i32)}
-  [i32] picked{plus(vectorAt<i32>(values, 7i32), vectorAtUnsafe<i32>(values, 0i32))}
-  return(plus(picked, vectorCount<i32>(values)))
+  [vector<i32>] values{/std/collections/vector/vector<i32>(4i32, 8i32, 12i32, 16i32, 20i32, 24i32, 28i32, 32i32)}
+  [i32] picked{plus(/std/collections/vector/at<i32>(values, 7i32), /std/collections/vector/at_unsafe<i32>(values, 0i32))}
+  return(plus(picked, /std/collections/vector/count<i32>(values)))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_vector_oct_ctor.prime", source);
@@ -415,8 +415,8 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32>] values{vectorOct<i32>(1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, false)}
-  return(vectorCount<i32>(values))
+  [vector<i32>] values{/std/collections/vector/vector<i32>(1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, false)}
+  return(/std/collections/vector/count<i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_vector_oct_mismatch.prime", source);

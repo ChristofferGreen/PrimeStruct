@@ -44,6 +44,36 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("collection wildcard import does not publish legacy vector wrapper helpers") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 5i32)}
+  return(vectorCount<i32>(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: vectorCount") != std::string::npos);
+}
+
+TEST_CASE("exact vector import does not publish fixed arity vector wrapper helpers") {
+  const std::string source = R"(
+import /std/collections/vector
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vectorPair<i32>(4i32, 5i32)}
+  return(values.count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: vectorPair") != std::string::npos);
+}
+
 TEST_CASE("definition ast transform hook resolves local symbol metadata") {
   const std::string source = R"(
 [ast return<void>]
@@ -1114,9 +1144,9 @@ namespace std {
   namespace demo {
   [public effects(heap_alloc), return<int>]
   probe() {
-    [vector<i32> mut] values{vectorSingle<i32>(7i32)}
-    vectorPush<i32>(values, 9i32)
-    return(plus(vectorAtUnsafe<i32>(values, 1i32), vectorCount<i32>(values)))
+    [vector<i32> mut] values{/std/collections/vector/vector<i32>(7i32)}
+    /std/collections/vector/push<i32>(values, 9i32)
+    return(plus(/std/collections/vector/at_unsafe<i32>(values, 1i32), /std/collections/vector/count<i32>(values)))
   }
   }
 }

@@ -414,16 +414,16 @@ import /std/collections/experimental_vector/*
 [effects(heap_alloc), return<int>]
 main() {
   [Vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
-  vectorReserve<i32>(values, 6i32)
-  vectorPush<i32>(values, 6i32)
-  [i32 mut] total{plus(vectorCount<i32>(values), vectorCapacity<i32>(values))}
-  assign(total, plus(total, vectorAt<i32>(values, 0i32)))
-  assign(total, plus(total, vectorAtUnsafe<i32>(values, 2i32)))
-  vectorPop<i32>(values)
-  vectorRemoveAt<i32>(values, 0i32)
-  vectorPush<i32>(values, 9i32)
-  vectorRemoveSwap<i32>(values, 0i32)
-  vectorClear<i32>(values)
+  /std/collections/vector/reserve<i32>(values, 6i32)
+  /std/collections/vector/push<i32>(values, 6i32)
+  [i32 mut] total{plus(/std/collections/vector/count<i32>(values), /std/collections/vector/capacity<i32>(values))}
+  assign(total, plus(total, /std/collections/vector/at<i32>(values, 0i32)))
+  assign(total, plus(total, /std/collections/vector/at_unsafe<i32>(values, 2i32)))
+  /std/collections/vector/pop<i32>(values)
+  /std/collections/vector/remove_at<i32>(values, 0i32)
+  /std/collections/vector/push<i32>(values, 9i32)
+  /std/collections/vector/remove_swap<i32>(values, 0i32)
+  /std/collections/vector/clear<i32>(values)
   return(total)
 }
 )";
@@ -440,7 +440,7 @@ import /std/collections/experimental_vector/*
 [effects(heap_alloc), return<int>]
 main() {
   [Vector<i32>] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
-  return(vectorCount<bool>(values))
+  return(/std/collections/vector/count<bool>(values))
 }
 )";
   std::string error;
@@ -460,7 +460,7 @@ wrapValues<T>([T] values) {
 
 [return<Vector<i32>> effects(heap_alloc)]
 buildValues() {
-  return(/std/collections/vectorPair<i32>(2i32, 4i32))
+  return(/std/collections/vector/vector<i32>(2i32, 4i32))
 }
 
 [return<i32> effects(heap_alloc)]
@@ -470,12 +470,12 @@ scoreValues([Vector<i32>] values) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Vector<i32> mut] direct{/std/collections/vectorPair<i32>(4i32, 5i32)}
-  [Vector<i32>] wrapped{wrapValues(/std/collections/vectorSingle<i32>(6i32))}
-  [Vector<i32> mut] assigned{/std/collections/vectorNew<i32>()}
+  [Vector<i32> mut] direct{/std/collections/vector/vector<i32>(4i32, 5i32)}
+  [Vector<i32>] wrapped{wrapValues(/std/collections/vector/vector<i32>(6i32))}
+  [Vector<i32> mut] assigned{/std/collections/vector/vector<i32>()}
   assign(assigned, buildValues())
   /std/collections/vector/push<i32>(direct, 7i32)
-  [i32 mut] total{scoreValues(/std/collections/vectorPair<i32>(1i32, 3i32))}
+  [i32 mut] total{scoreValues(/std/collections/vector/vector<i32>(1i32, 3i32))}
   assign(total, plus(total, /std/collections/vector/count<i32>(direct)))
   assign(total, plus(total, /std/collections/vector/at<i32>(direct, 0i32)))
   assign(total, plus(total, /std/collections/vector/at_unsafe<i32>(direct, 2i32)))
@@ -496,13 +496,13 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32> mut] direct{vectorSingle<i32>(6i32)}
-  [vector<i32> mut] assigned{vectorNew<i32>()}
-  vectorPush<i32>(direct, 7i32)
-  vectorPush<i32>(assigned, 5i32)
-  vectorPush<i32>(assigned, 8i32)
-  return(plus(plus(vectorCount<i32>(direct), vectorAtUnsafe<i32>(direct, 1i32)),
-              plus(vectorCount<i32>(assigned), vectorAt<i32>(assigned, 0i32))))
+  [vector<i32> mut] direct{/std/collections/vector/vector<i32>(6i32)}
+  [vector<i32> mut] assigned{/std/collections/vector/vector<i32>()}
+  /std/collections/vector/push<i32>(direct, 7i32)
+  /std/collections/vector/push<i32>(assigned, 5i32)
+  /std/collections/vector/push<i32>(assigned, 8i32)
+  return(plus(plus(/std/collections/vector/count<i32>(direct), /std/collections/vector/at_unsafe<i32>(direct, 1i32)),
+              plus(/std/collections/vector/count<i32>(assigned), /std/collections/vector/at<i32>(assigned, 0i32))))
 }
 )";
   std::string error;
@@ -516,7 +516,7 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32>] values{vectorSingle<bool>(false)}
+  [vector<i32>] values{/std/collections/vector/vector<bool>(false)}
   return(0i32)
 }
 )";
@@ -537,7 +537,7 @@ wrapValues<T>([T] values) {
 
 [return<Vector<i32>> effects(heap_alloc)]
 buildValues() {
-  return(/std/collections/vectorPair<i32>(2i32, false))
+  return(/std/collections/vector/vector<i32>(2i32, false))
 }
 
 [effects(heap_alloc), return<int>]
@@ -560,16 +560,16 @@ import /std/collections/experimental_vector/*
 buildValues([bool] wrapped) {
   if(wrapped,
     then() {
-      return(/std/collections/vectorPair(11i32, 13i32))
+      return(/std/collections/vector/vector(11i32, 13i32))
     },
     else() {
-      return(/std/collections/vectorSingle(19i32))
+      return(/std/collections/vector/vector(19i32))
     })
 }
 
 [effects(heap_alloc), return<int>]
 main() {
-  [auto mut] values{/std/collections/vectorNew<i32>()}
+  [auto mut] values{/std/collections/vector/vector<i32>()}
   /std/collections/vector/push<i32>(values, 3i32)
   [auto mut] built{buildValues(true)}
   /std/collections/vector/push<i32>(built, 17i32)
@@ -597,7 +597,7 @@ wrapValues<T>([T] values) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [auto mut] values{wrapValues(/std/collections/vectorPair(4i32, 7i32))}
+  [auto mut] values{wrapValues(/std/collections/vector/vector(4i32, 7i32))}
   /std/collections/vector/push<i32>(values, 9i32)
   return(plus(/std/collections/vector/count<i32>(values), /std/collections/vector/at_unsafe<i32>(values, 2i32)))
 }
@@ -620,14 +620,14 @@ wrapValues<T>([T] values) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [auto] values{wrapValues(/std/collections/vectorPair(2i32, false))}
+  [auto] values{wrapValues(/std/collections/vector/vector(2i32, false))}
   return(0i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/vectorPair") != std::string::npos);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/vector/vector") != std::string::npos);
 }
 
 TEST_CASE("implicit vector constructor auto inference keeps template conflict diagnostics") {
@@ -637,14 +637,14 @@ import /std/collections/experimental_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [auto] values{/std/collections/vectorPair(2i32, false)}
+  [auto] values{/std/collections/vector/vector(2i32, false)}
   return(0i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/vectorPair") != std::string::npos);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/vector/vector") != std::string::npos);
 }
 
 TEST_CASE("canonical vector helpers accept direct constructor receivers") {
@@ -654,9 +654,9 @@ import /std/collections/experimental_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [i32 mut] total{plus(/std/collections/vector/count(/std/collections/vectorPair(11i32, 13i32)),
-                       /std/collections/vector/at(/std/collections/vectorPair(17i32, 19i32), 1i32))}
-  assign(total, plus(total, vectorAt<i32>(/std/collections/vectorPair(23i32, 29i32), 0i32)))
+  [i32 mut] total{plus(/std/collections/vector/count(/std/collections/vector/vector(11i32, 13i32)),
+                       /std/collections/vector/at(/std/collections/vector/vector(17i32, 19i32), 1i32))}
+  assign(total, plus(total, /std/collections/vector/at<i32>(/std/collections/vector/vector(23i32, 29i32), 0i32)))
   return(total)
 }
 )";
@@ -673,13 +673,13 @@ import /std/collections/experimental_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  return(/std/collections/vector/count(/std/collections/vectorPair(2i32, false)))
+  return(/std/collections/vector/count(/std/collections/vector/vector(2i32, false)))
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/vectorPair") != std::string::npos);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/vector/vector") != std::string::npos);
 }
 
 TEST_CASE("experimental vector methods accept direct constructor receivers") {
@@ -689,9 +689,9 @@ import /std/collections/experimental_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [i32 mut] total{plus(/std/collections/vector/count(/std/collections/vectorPair(31i32, 37i32)),
-                       /std/collections/vector/at_unsafe(/std/collections/vectorPair(41i32, 43i32), 1i32))}
-  assign(total, plus(total, /std/collections/vector/at(/std/collections/vectorPair(47i32, 53i32), 0i32)))
+  [i32 mut] total{plus(/std/collections/vector/count(/std/collections/vector/vector(31i32, 37i32)),
+                       /std/collections/vector/at_unsafe(/std/collections/vector/vector(41i32, 43i32), 1i32))}
+  assign(total, plus(total, /std/collections/vector/at(/std/collections/vector/vector(47i32, 53i32), 0i32)))
   return(total)
 }
 )";
@@ -708,13 +708,13 @@ import /std/collections/experimental_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  return(/std/collections/vectorPair(2i32, false).count())
+  return(/std/collections/vector/vector(2i32, false).count())
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/vectorPair") != std::string::npos);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/vector/vector") != std::string::npos);
 }
 
 TEST_CASE("helper-wrapped canonical vector helpers accept direct constructor receivers") {
@@ -729,9 +729,9 @@ wrapValues<T>([T] values) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [i32 mut] total{plus(/std/collections/vector/count(wrapValues(/std/collections/vectorPair(11i32, 13i32))),
-                       /std/collections/vector/at(wrapValues(/std/collections/vectorPair(17i32, 19i32)), 1i32))}
-  assign(total, plus(total, vectorAt<i32>(wrapValues(/std/collections/vectorPair(23i32, 29i32)), 0i32)))
+  [i32 mut] total{plus(/std/collections/vector/count(wrapValues(/std/collections/vector/vector(11i32, 13i32))),
+                       /std/collections/vector/at(wrapValues(/std/collections/vector/vector(17i32, 19i32)), 1i32))}
+  assign(total, plus(total, /std/collections/vector/at<i32>(wrapValues(/std/collections/vector/vector(23i32, 29i32)), 0i32)))
   return(total)
 }
 )";
@@ -753,13 +753,13 @@ wrapValues<T>([T] values) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  return(/std/collections/vector/count(wrapValues(/std/collections/vectorPair(2i32, false))))
+  return(/std/collections/vector/count(wrapValues(/std/collections/vector/vector(2i32, false))))
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/vectorPair") != std::string::npos);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/vector/vector") != std::string::npos);
 }
 
 TEST_CASE("helper-wrapped experimental vector methods accept direct constructor receivers") {
@@ -774,9 +774,9 @@ wrapValues<T>([T] values) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [i32 mut] total{plus(/std/collections/vector/count(wrapValues(/std/collections/vectorPair(31i32, 37i32))),
-                       /std/collections/vector/at_unsafe(wrapValues(/std/collections/vectorPair(41i32, 43i32)), 1i32))}
-  assign(total, plus(total, /std/collections/vector/at(wrapValues(/std/collections/vectorPair(47i32, 53i32)), 0i32)))
+  [i32 mut] total{plus(/std/collections/vector/count(wrapValues(/std/collections/vector/vector(31i32, 37i32))),
+                       /std/collections/vector/at_unsafe(wrapValues(/std/collections/vector/vector(41i32, 43i32)), 1i32))}
+  assign(total, plus(total, /std/collections/vector/at(wrapValues(/std/collections/vector/vector(47i32, 53i32)), 0i32)))
   return(total)
 }
 )";
@@ -798,13 +798,13 @@ wrapValues<T>([T] values) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  return(wrapValues(/std/collections/vectorPair(2i32, false)).count())
+  return(wrapValues(/std/collections/vector/vector(2i32, false)).count())
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/vectorPair") != std::string::npos);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/vector/vector") != std::string::npos);
 }
 
 

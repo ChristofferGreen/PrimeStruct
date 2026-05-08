@@ -34,7 +34,7 @@ main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   push(values, 2i32)
   values.push(3i32)
-  return(vectorCount<i32>(values))
+  return(/std/collections/vector/count<i32>(values))
 }
 )";
   std::string error;

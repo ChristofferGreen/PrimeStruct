@@ -848,7 +848,7 @@ import /std/collections/experimental_vector/*
 [effects(heap_alloc), return<i32>]
 main() {
   [vector<i32>] values{vector<i32>(1i32)}
-  return(vectorCount<i32>(values))
+  return(/std/collections/vector/count<i32>(values))
 }
 )";
 
@@ -869,7 +869,7 @@ main() {
   const auto *directEntry = findSemanticEntry(
       primec::semanticProgramDirectCallTargetView(semanticProgram),
       [&semanticProgram](const primec::SemanticProgramDirectCallTarget &entry) {
-        return entry.scopePath == "/main" && entry.callName == "vectorCount" &&
+        return entry.scopePath == "/main" && entry.callName == "/std/collections/vector/count" &&
                primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, entry).find(
                    "/std/collections/experimental_vector/vectorCount") == 0;
       });

@@ -157,7 +157,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(vectorCount<i32>(pixels))
+  print_line(/std/collections/vector/count<i32>(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -229,7 +229,7 @@ main() {
      else() { })
   print_line(width)
   print_line(height)
-  print_line(vectorCount<i32>(pixels))
+  print_line(/std/collections/vector/count<i32>(pixels))
   print_line(pixels[0i32])
   print_line(pixels[1i32])
   print_line(pixels[2i32])
@@ -296,7 +296,7 @@ main() {
   print_line(Result.why(status))
   print_line(width)
   print_line(height)
-  print_line(vectorCount<i32>(pixels))
+  print_line(/std/collections/vector/count<i32>(pixels))
   return(0i32)
 }
 )";

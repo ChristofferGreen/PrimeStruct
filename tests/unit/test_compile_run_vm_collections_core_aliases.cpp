@@ -33,10 +33,10 @@ import /std/collections/*
 [return<int> effects(io_out, heap_alloc)]
 main() {
   [vector<i32>] values{vector<i32>(4i32, 7i32, 9i32)}
-  print_line(vectorCount<i32>(values))
-  print_line(vectorAt<i32>(values, 1i32))
-  print_line(vectorAt<i32>(values, 2i32))
-  return(vectorAt<i32>(values, 0i32))
+  print_line(/std/collections/vector/count<i32>(values))
+  print_line(/std/collections/vector/at<i32>(values, 1i32))
+  print_line(/std/collections/vector/at<i32>(values, 2i32))
+  return(/std/collections/vector/at<i32>(values, 0i32))
 }
 )";
   const std::string srcPath = writeTemp("vm_vector_literals.prime", source);

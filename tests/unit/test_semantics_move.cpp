@@ -41,7 +41,7 @@ import /std/collections/experimental_vector/*
 main() {
   [Vector<i32> mut] values{vector<i32>(1i32, 2i32)}
   [Vector<i32>] moved{move(values)}
-  return(vectorCount<i32>(values))
+  return(/std/collections/vector/count<i32>(values))
 }
 )";
   std::string error;
@@ -58,7 +58,7 @@ main() {
   [Vector<i32> mut] values{vector<i32>(1i32, 2i32)}
   [Vector<i32>] moved{move(values)}
   assign(values, vector<i32>(9i32))
-  return(plus(vectorCount<i32>(moved), vectorCount<i32>(values)))
+  return(plus(/std/collections/vector/count<i32>(moved), /std/collections/vector/count<i32>(values)))
 }
 )";
   std::string error;

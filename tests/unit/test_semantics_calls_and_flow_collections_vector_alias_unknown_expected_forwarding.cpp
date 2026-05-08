@@ -1107,10 +1107,10 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("vector method count rejects stdlib vectorCount alias-only helper") {
+TEST_CASE("vector method count rejects stdlib /std/collections/vector/count alias-only helper") {
   const std::string source = R"(
 [return<int>]
-/std/collections/vectorCount<T>([vector<T>] values) {
+/std/collections/vector/count<T>([vector<T>] values) {
   return(33i32)
 }
 
@@ -1125,10 +1125,10 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector method capacity rejects stdlib vectorCapacity alias-only helper") {
+TEST_CASE("vector method capacity rejects stdlib /std/collections/vector/capacity alias-only helper") {
   const std::string source = R"(
 [return<int>]
-/std/collections/vectorCapacity<T>([vector<T>] values) {
+/std/collections/vector/capacity<T>([vector<T>] values) {
   return(33i32)
 }
 

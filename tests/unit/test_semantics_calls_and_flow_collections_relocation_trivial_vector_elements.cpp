@@ -91,14 +91,14 @@ Owned() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Vector<Owned> mut] values{vectorPair<Owned>(Owned{10i32}, Owned{20i32})}
-  vectorPush<Owned>(values, Owned{30i32})
-  vectorReserve<Owned>(values, 6i32)
-  [i32] picked{plus(vectorAt<Owned>(values, 0i32).value, vectorAtUnsafe<Owned>(values, 2i32).value)}
-  vectorPop<Owned>(values)
-  vectorRemoveAt<Owned>(values, 0i32)
-  vectorRemoveSwap<Owned>(values, 0i32)
-  vectorClear<Owned>(values)
+  [Vector<Owned> mut] values{/std/collections/vector/vector<Owned>(Owned{10i32}, Owned{20i32})}
+  /std/collections/vector/push<Owned>(values, Owned{30i32})
+  /std/collections/vector/reserve<Owned>(values, 6i32)
+  [i32] picked{plus(/std/collections/vector/at<Owned>(values, 0i32).value, /std/collections/vector/at_unsafe<Owned>(values, 2i32).value)}
+  /std/collections/vector/pop<Owned>(values)
+  /std/collections/vector/remove_at<Owned>(values, 0i32)
+  /std/collections/vector/remove_swap<Owned>(values, 0i32)
+  /std/collections/vector/clear<Owned>(values)
   return(picked)
 }
 )";
@@ -128,23 +128,23 @@ Owned() {
 
 [effects(heap_alloc), return<Vector<Owned>>]
 wrapValues() {
-  return(vectorPair<Owned>(Owned{10i32}, Owned{20i32}))
+  return(/std/collections/vector/vector<Owned>(Owned{10i32}, Owned{20i32}))
 }
 
 [effects(heap_alloc), return<int>]
 main() {
   [Vector<Owned> mut] values{wrapValues()}
-  /std/collections/vectorPush<Owned>(values, Owned{30i32})
-  /std/collections/vectorReserve<Owned>(values, 6i32)
-  [i32 mut] total{/std/collections/vectorCount<Owned>(values)}
-  assign(total, plus(total, /std/collections/vectorCapacity<Owned>(values)))
-  assign(total, plus(total, /std/collections/vectorAt<Owned>(values, 0i32).value))
-  assign(total, plus(total, /std/collections/vectorAtUnsafe<Owned>(values, 2i32).value))
+  /std/collections/vector/push<Owned>(values, Owned{30i32})
+  /std/collections/vector/reserve<Owned>(values, 6i32)
+  [i32 mut] total{/std/collections/vector/count<Owned>(values)}
+  assign(total, plus(total, /std/collections/vector/capacity<Owned>(values)))
+  assign(total, plus(total, /std/collections/vector/at<Owned>(values, 0i32).value))
+  assign(total, plus(total, /std/collections/vector/at_unsafe<Owned>(values, 2i32).value))
   /std/collections/vector/push<Owned>(values, Owned{40i32})
   assign(total, plus(total, /std/collections/vector/count<Owned>(values)))
   assign(total, plus(total, /std/collections/vector/at<Owned>(values, 3i32).value))
   /std/collections/vector/remove_at<Owned>(values, 1i32)
-  /std/collections/vectorRemoveSwap<Owned>(values, 0i32)
+  /std/collections/vector/remove_swap<Owned>(values, 0i32)
   /std/collections/vector/pop<Owned>(values)
   /std/collections/vector/clear<Owned>(values)
   return(plus(total, /std/collections/vector/count<Owned>(values)))
@@ -173,7 +173,7 @@ Owned() {
 
 [effects(heap_alloc), return<Vector<Owned>>]
 wrapValues() {
-  return(vectorPair<Owned>(Owned{10i32}, Owned{20i32}))
+  return(/std/collections/vector/vector<Owned>(Owned{10i32}, Owned{20i32}))
 }
 
 [effects(heap_alloc), return<int>]
@@ -208,9 +208,9 @@ Wrapper() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Vector<Owned> mut] removed{/std/collections/vectorPair<Owned>(Owned{4i32}, Owned{9i32})}
+  [Vector<Owned> mut] removed{/std/collections/vector/vector<Owned>(Owned{4i32}, Owned{9i32})}
   remove_at(removed, 0i32)
-  [Vector<Wrapper> mut] swapped{/std/collections/vectorTriple<Wrapper>(
+  [Vector<Wrapper> mut] swapped{/std/collections/vector/vector<Wrapper>(
       Wrapper{Owned{1i32}},
       Wrapper{Owned{7i32}},
       Wrapper{Owned{11i32}})}
@@ -232,7 +232,7 @@ import /std/collections/experimental_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Vector<i32>] values{vectorPair<i32>(4i32, 5i32)}
+  [Vector<i32>] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
   return(/std/collections/vector/count<i32>(values))
 }
 )";
@@ -710,7 +710,7 @@ Owned() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Vector<Owned> mut] values{/std/collections/vectorSingle<Owned>(Owned{})}
+  [Vector<Owned> mut] values{/std/collections/vector/vector<Owned>(Owned{})}
   /std/collections/vector/pop<Owned>(values)
   return(/std/collections/vector/count<Owned>(values))
 }

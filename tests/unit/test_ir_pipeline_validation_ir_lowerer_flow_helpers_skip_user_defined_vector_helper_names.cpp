@@ -151,7 +151,7 @@ TEST_CASE("ir lowerer flow helpers skip user-defined vector helper names") {
   CHECK(vectorMethodProbeCalls == 0);
 
   primec::Expr wrapperAliasPushCall = pushCall;
-  wrapperAliasPushCall.name = "/std/collections/vectorPush";
+  wrapperAliasPushCall.name = "/std/collections/vector/push";
   vectorMethodProbeCalls = 0;
   instructions.clear();
   CHECK(primec::ir_lowerer::tryEmitVectorStatementHelper(

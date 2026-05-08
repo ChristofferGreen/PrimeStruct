@@ -1293,8 +1293,8 @@ import /std/collections/experimental_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Vector<i32>] values{vectorPair<i32>(4i32, 9i32)}
-  return(vectorAt<i32>(values, 0i32))
+  [Vector<i32>] values{/std/collections/vector/vector<i32>(4i32, 9i32)}
+  return(/std/collections/vector/at<i32>(values, 0i32))
 }
 )";
 

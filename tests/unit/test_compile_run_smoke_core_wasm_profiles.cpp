@@ -32,7 +32,7 @@ main() {
   print_line(Result.why(status))
   print_line(width)
   print_line(height)
-  print_line(vectorCount<i32>(pixels))
+  print_line(/std/collections/vector/count<i32>(pixels))
   return(0i32)
 }
 )";

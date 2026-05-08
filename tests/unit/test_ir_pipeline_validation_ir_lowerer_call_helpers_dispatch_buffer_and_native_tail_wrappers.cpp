@@ -1031,7 +1031,7 @@ TEST_CASE("ir lowerer temporary vector receiver reject guards stdlib wrapper con
   CHECK(source.find("ir_lowerer::resolvePublishedStdlibSurfaceMemberName(") !=
         std::string::npos);
   CHECK(source.find("constructorName") != std::string::npos);
-  CHECK(source.find("matchesVectorConstructorPath(\"/std/collections/vectorPair\")") ==
+  CHECK(source.find("matchesVectorConstructorPath(\"/std/collections/vector/vector\")") ==
         std::string::npos);
   CHECK(source.find("auto rejectCanonicalVectorTemporaryReceiverExpr = [&](const Expr &callExpr) -> bool {") !=
         std::string::npos);

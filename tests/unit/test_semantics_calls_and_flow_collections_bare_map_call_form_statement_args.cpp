@@ -727,14 +727,14 @@ main() {
   CHECK(error.find("unknown call target: /vector/vector") != std::string::npos);
 }
 
-TEST_CASE("canonical vector constructor call no longer falls back to vectorPair helper") {
+TEST_CASE("canonical vector constructor call no longer falls back to /std/collections/vector/vector helper") {
   const std::string source = R"(
 Marker {
   [i32] value
 }
 
 [return<Marker>]
-/std/collections/vectorPair([i32] first, [i32] second) {
+/std/collections/vector/vector([i32] first, [i32] second) {
   return(Marker(plus(first, second)))
 }
 

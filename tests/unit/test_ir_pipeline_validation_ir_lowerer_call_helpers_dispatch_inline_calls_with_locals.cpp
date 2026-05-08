@@ -1344,8 +1344,8 @@ TEST_CASE("ir lowerer inline dispatch defers vector-returning temporary mutators
   expectDeferred("/std/collections/vector/clear", {receiverCall});
   expectDeferred("/std/collections/vector/remove_at", {receiverCall, valueArg});
   expectDeferred("/std/collections/vector/remove_swap", {receiverCall, valueArg});
-  expectDeferred("/std/collections/vectorPush", {receiverCall, valueArg});
-  expectDeferred("/std/collections/vectorClear", {receiverCall});
+  expectDeferred("/std/collections/vector/push", {receiverCall, valueArg});
+  expectDeferred("/std/collections/vector/clear", {receiverCall});
 }
 
 TEST_CASE("ir lowerer inline dispatch defers vector-returning temporary mutator methods") {
@@ -1410,7 +1410,7 @@ TEST_CASE("ir lowerer inline dispatch defers vector-returning temporary mutator 
   expectDeferred("remove_at", {receiverCall, valueArg});
   expectDeferred("remove_swap", {receiverCall, valueArg});
   expectDeferred("/std/collections/vector/push", {receiverCall, valueArg});
-  expectDeferred("/std/collections/vectorPush", {receiverCall, valueArg});
+  expectDeferred("/std/collections/vector/push", {receiverCall, valueArg});
 }
 
 TEST_SUITE_END();

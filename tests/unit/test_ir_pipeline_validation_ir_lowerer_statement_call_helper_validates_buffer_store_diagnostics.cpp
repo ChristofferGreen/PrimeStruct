@@ -6713,22 +6713,22 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
   runVectorMutatorAliasNotHandledCase("/vector/push", {makeValueArg(), makeValuesArg()});
   runVectorMutatorAliasNotHandledCase("/std/collections/vector/push", {makeValueArg(), makeValuesArg()});
   runVectorMutatorAliasNotHandledCase(
-      "/std/collections/vectorPush",
+      "/std/collections/vector/push",
       {makeValuesArg(), makeValueArg()});
   runVectorMutatorAliasNotHandledCase(
-      "/std/collections/vectorPop",
+      "/std/collections/vector/pop",
       {makeValuesArg()});
   runVectorMutatorAliasNotHandledCase(
-      "/std/collections/vectorReserve",
+      "/std/collections/vector/reserve",
       {makeValuesArg(), makeValueArg()});
   runVectorMutatorAliasNotHandledCase(
-      "/std/collections/vectorClear",
+      "/std/collections/vector/clear",
       {makeValuesArg()});
   runVectorMutatorAliasNotHandledCase(
-      "/std/collections/vectorRemoveAt",
+      "/std/collections/vector/remove_at",
       {makeValuesArg(), makeValueArg()});
   runVectorMutatorAliasNotHandledCase(
-      "/std/collections/vectorRemoveSwap",
+      "/std/collections/vector/remove_swap",
       {makeValuesArg(), makeValueArg()});
   runVectorMutatorAliasNotHandledCase(
       "/std/collections/experimental_vector/vectorPush",
@@ -6813,7 +6813,7 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
 
   primec::Expr wrapperAliasPushStmt;
   wrapperAliasPushStmt.kind = primec::Expr::Kind::Call;
-  wrapperAliasPushStmt.name = "/std/collections/vectorPush";
+  wrapperAliasPushStmt.name = "/std/collections/vector/push";
   wrapperAliasPushStmt.args = {makeValuesArg(), makeValueArg()};
   wrapperAliasPushStmt.argNames = {std::nullopt, std::nullopt};
 

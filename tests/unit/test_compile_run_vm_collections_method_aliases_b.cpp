@@ -660,13 +660,13 @@ import /std/collections/*
 
 [return<vector<array<i32>>>]
 wrapVectorArray([i32] value) {
-  return(vectorSingle<i32>(value))
+  return(/std/collections/vector/vector<i32>(value))
 }
 
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{wrapVectorArray(3i32)}
-  return(vectorCount<i32>(values))
+  return(/std/collections/vector/count<i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_templated_return_vector_nested_arg.prime", source);
@@ -709,13 +709,13 @@ import /std/collections/*
 
 [return<vector<i32, i32>>]
 wrapVector([i32] value) {
-  return(vectorSingle<i32>(value))
+  return(/std/collections/vector/vector<i32>(value))
 }
 
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{wrapVector(3i32)}
-  return(vectorCount<i32>(values))
+  return(/std/collections/vector/count<i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_templated_return_vector_arity.prime", source);
@@ -759,8 +759,8 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32>] values{vectorSingle<i32>(7i32)}
-  return(plus(plus(vectorAt<i32>(values, 0i32), vectorAtUnsafe<i32>(values, 0i32)), vectorCount<i32>(values)))
+  [vector<i32>] values{/std/collections/vector/vector<i32>(7i32)}
+  return(plus(plus(/std/collections/vector/at<i32>(values, 0i32), /std/collections/vector/at_unsafe<i32>(values, 0i32)), /std/collections/vector/count<i32>(values)))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_single.prime", source);
@@ -774,8 +774,8 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32>] values{vectorNew<i32>()}
-  return(plus(vectorCount<i32>(values), 1i32))
+  [vector<i32>] values{/std/collections/vector/vector<i32>()}
+  return(plus(/std/collections/vector/count<i32>(values), 1i32))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_new.prime", source);

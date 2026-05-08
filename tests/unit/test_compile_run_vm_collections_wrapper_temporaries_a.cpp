@@ -946,7 +946,7 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32>] values{vectorSingle<i32>(1i32)}
+  [vector<i32>] values{/std/collections/vector/vector<i32>(1i32)}
   [int] direct{/to_aos(values)}
   [int] method{values.to_aos()}
   [int] slash{values./to_aos()}
@@ -2611,12 +2611,12 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32>] values{vectorSingle<i32>(7i32)}
+  [vector<i32>] values{/std/collections/vector/vector<i32>(7i32)}
   [map<i32, i32>] pairs{mapSingle<i32, i32>(3i32, 9i32)}
-  [i32 mut] total{plus(vectorCount<i32>(values), mapCount<i32, i32>(pairs))}
-  [vector<i32>] emptyValues{vectorNew<i32>()}
+  [i32 mut] total{plus(/std/collections/vector/count<i32>(values), mapCount<i32, i32>(pairs))}
+  [vector<i32>] emptyValues{/std/collections/vector/vector<i32>()}
   [map<i32, i32>] emptyPairs{mapNew<i32, i32>()}
-  assign(total, plus(total, plus(vectorCount<i32>(emptyValues), mapCount<i32, i32>(emptyPairs))))
+  assign(total, plus(total, plus(/std/collections/vector/count<i32>(emptyValues), mapCount<i32, i32>(emptyPairs))))
   return(total)
 }
 )";
@@ -2631,11 +2631,11 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32>] values{vectorTriple<i32>(5i32, 7i32, 9i32)}
+  [vector<i32>] values{/std/collections/vector/vector<i32>(5i32, 7i32, 9i32)}
   [map<i32, i32>] pairs{mapDouble<i32, i32>(1i32, 11i32, 2i32, 22i32)}
-  [i32] vectorTotal{plus(vectorAt<i32>(values, 0i32), vectorAt<i32>(values, 2i32))}
+  [i32] vectorTotal{plus(/std/collections/vector/at<i32>(values, 0i32), /std/collections/vector/at<i32>(values, 2i32))}
   [i32] mapTotal{plus(mapAt<i32, i32>(pairs, 1i32), mapAtUnsafe<i32, i32>(pairs, 2i32))}
-  return(plus(plus(vectorTotal, mapTotal), plus(vectorCount<i32>(values), mapCount<i32, i32>(pairs))))
+  return(plus(plus(vectorTotal, mapTotal), plus(/std/collections/vector/count<i32>(values), mapCount<i32, i32>(pairs))))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_multi_ctor.prime", source);
@@ -2649,7 +2649,7 @@ import /std/collections/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
-  return(vectorSingle<T>(value))
+  return(/std/collections/vector/vector<T>(value))
 }
 
 [return<map<K, V>>]
@@ -2662,7 +2662,7 @@ wrapMap<K, V>([K] key, [V] value) {
 main() {
   [vector<i32>] values{wrapVector<i32>(9i32)}
   [map<string, i32>] pairs{wrapMap<string, i32>("only"raw_utf8, 4i32)}
-  return(plus(plus(vectorCount<i32>(values), mapCount<string, i32>(pairs)), mapAt<string, i32>(pairs, "only"raw_utf8)))
+  return(plus(plus(/std/collections/vector/count<i32>(values), mapCount<string, i32>(pairs)), mapAt<string, i32>(pairs, "only"raw_utf8)))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_templated_returns.prime", source);
@@ -2676,7 +2676,7 @@ import /std/collections/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
-  return(vectorSingle<T>(value))
+  return(/std/collections/vector/vector<T>(value))
 }
 
 [return<map<K, V>>]
@@ -3129,15 +3129,15 @@ import /std/collections/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
-  return(vectorSingle<T>(value))
+  return(/std/collections/vector/vector<T>(value))
 }
 
 [effects(heap_alloc), return<int>]
 main() {
-  [i32] a{vectorAt<i32>(wrapVector<i32>(4i32), 0i32)}
-  [i32] b{vectorAtUnsafe<i32>(wrapVector<i32>(5i32), 0i32)}
-  [i32] c{vectorCount<i32>(wrapVector<i32>(6i32))}
-  [i32] d{vectorCapacity<i32>(wrapVector<i32>(7i32))}
+  [i32] a{/std/collections/vector/at<i32>(wrapVector<i32>(4i32), 0i32)}
+  [i32] b{/std/collections/vector/at_unsafe<i32>(wrapVector<i32>(5i32), 0i32)}
+  [i32] c{/std/collections/vector/count<i32>(wrapVector<i32>(6i32))}
+  [i32] d{/std/collections/vector/capacity<i32>(wrapVector<i32>(7i32))}
   return(plus(plus(plus(a, b), c), d))
 }
 )";
@@ -3153,7 +3153,7 @@ import /std/collections/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
-  return(vectorSingle<T>(value))
+  return(/std/collections/vector/vector<T>(value))
 }
 
 [effects(heap_alloc), return<int>]
@@ -3183,7 +3183,7 @@ import /std/collections/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
-  return(vectorSingle<T>(value))
+  return(/std/collections/vector/vector<T>(value))
 }
 
 [return<map<K, V>>]
@@ -3210,7 +3210,7 @@ import /std/collections/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
-  return(vectorSingle<T>(value))
+  return(/std/collections/vector/vector<T>(value))
 }
 
 [return<map<K, V>>]
@@ -3221,7 +3221,7 @@ wrapMap<K, V>([K] key, [V] value) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [i32] vectorCall{vectorAt<i32>(wrapVector<i32>(4i32), 0i32)}
+  [i32] vectorCall{/std/collections/vector/at<i32>(wrapVector<i32>(4i32), 0i32)}
   [i32] vectorMethod{wrapVector<i32>(4i32).at(0i32)}
   [i32] vectorIndex{wrapVector<i32>(4i32)[0i32]}
   [i32] mapCall{mapAt<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32), "only"raw_utf8)}
@@ -3248,7 +3248,7 @@ import /std/collections/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
-  return(vectorSingle<T>(value))
+  return(/std/collections/vector/vector<T>(value))
 }
 
 [return<map<K, V>>]
@@ -3259,7 +3259,7 @@ wrapMap<K, V>([K] key, [V] value) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [i32] vectorCall{vectorAtUnsafe<i32>(wrapVector<i32>(4i32), 0i32)}
+  [i32] vectorCall{/std/collections/vector/at_unsafe<i32>(wrapVector<i32>(4i32), 0i32)}
   [i32] vectorMethod{wrapVector<i32>(4i32).at_unsafe(0i32)}
   [i32] mapCall{mapAtUnsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32), "only"raw_utf8)}
   [i32] mapMethod{wrapMap<string, i32>("only"raw_utf8, 5i32).at_unsafe("only"raw_utf8)}
@@ -3284,7 +3284,7 @@ import /std/collections/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
-  return(vectorSingle<T>(value))
+  return(/std/collections/vector/vector<T>(value))
 }
 
 [return<map<K, V>>]
@@ -3297,9 +3297,9 @@ wrapMap<K, V>([K] key, [V] value) {
 main() {
   [i32] mapCall{mapCount<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32))}
   [i32] mapMethod{wrapMap<string, i32>("only"raw_utf8, 5i32).count()}
-  [i32] vectorCountCall{vectorCount<i32>(wrapVector<i32>(4i32))}
+  [i32] vectorCountCall{/std/collections/vector/count<i32>(wrapVector<i32>(4i32))}
   [i32] vectorCountMethod{wrapVector<i32>(4i32).count()}
-  [i32] vectorCapacityCall{vectorCapacity<i32>(wrapVector<i32>(4i32))}
+  [i32] vectorCapacityCall{/std/collections/vector/capacity<i32>(wrapVector<i32>(4i32))}
   [i32] vectorCapacityMethod{wrapVector<i32>(4i32).capacity()}
   return(plus(plus(plus(mapCall, mapMethod), plus(vectorCountCall, vectorCountMethod)),
               plus(vectorCapacityCall, vectorCapacityMethod)))

@@ -14,7 +14,7 @@ import /std/collections/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
-  return(vectorSingle<T>(value))
+  return(/std/collections/vector/vector<T>(value))
 }
 
 [return<int>]
@@ -34,7 +34,7 @@ import /std/collections/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
-  return(vectorSingle<T>(value))
+  return(/std/collections/vector/vector<T>(value))
 }
 
 [return<int>]
@@ -54,7 +54,7 @@ import /std/collections/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
-  return(vectorSingle<T>(value))
+  return(/std/collections/vector/vector<T>(value))
 }
 
 [return<int>]
@@ -74,12 +74,12 @@ import /std/collections/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
-  return(vectorSingle<T>(value))
+  return(/std/collections/vector/vector<T>(value))
 }
 
 [return<int>]
 main() {
-  return(vectorCapacity<bool>(wrapVector<i32>(4i32)))
+  return(/std/collections/vector/capacity<bool>(wrapVector<i32>(4i32)))
 }
 )";
   const std::string srcPath =
@@ -94,12 +94,12 @@ import /std/collections/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
-  return(vectorSingle<T>(value))
+  return(/std/collections/vector/vector<T>(value))
 }
 
 [return<int>]
 main() {
-  return(vectorCapacity<i32>(wrapVector<i32>(4i32), 1i32))
+  return(/std/collections/vector/capacity<i32>(wrapVector<i32>(4i32), 1i32))
 }
 )";
   const std::string srcPath =
@@ -114,7 +114,7 @@ import /std/collections/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
-  return(vectorSingle<T>(value))
+  return(/std/collections/vector/vector<T>(value))
 }
 
 [return<int>]
@@ -134,7 +134,7 @@ import /std/collections/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
-  return(vectorSingle<T>(value))
+  return(/std/collections/vector/vector<T>(value))
 }
 
 [return<int>]
@@ -154,7 +154,7 @@ import /std/collections/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
-  return(vectorSingle<T>(value))
+  return(/std/collections/vector/vector<T>(value))
 }
 
 [return<int>]
@@ -190,7 +190,7 @@ import /std/collections/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
-  return(vectorSingle<T>(value))
+  return(/std/collections/vector/vector<T>(value))
 }
 
 [return<int>]

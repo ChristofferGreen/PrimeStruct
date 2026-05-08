@@ -134,7 +134,7 @@ Wrapper() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Vector<Wrapper> mut] values{/std/collections/vectorPair<Wrapper>(Wrapper{Owned{}}, Wrapper{Owned{}})}
+  [Vector<Wrapper> mut] values{/std/collections/vector/vector<Wrapper>(Wrapper{Owned{}}, Wrapper{Owned{}})}
   /std/collections/vector/clear<Wrapper>(values)
   return(/std/collections/vector/count<Wrapper>(values))
 }
@@ -151,7 +151,7 @@ import /std/collections/experimental_vector/*
 [effects(heap_alloc), return<int>]
 main() {
   [Vector<i32>] values{vector<i32>(2i32, 4i32, 6i32)}
-  return(vectorCount<i32>(values))
+  return(/std/collections/vector/count<i32>(values))
 }
 )";
   std::string error;
@@ -165,7 +165,7 @@ import /std/collections/experimental_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  return(vectorCount<i32>(vector<i32>(2i32, 4i32, 6i32)))
+  return(/std/collections/vector/count<i32>(vector<i32>(2i32, 4i32, 6i32)))
 }
 )";
   std::string error;

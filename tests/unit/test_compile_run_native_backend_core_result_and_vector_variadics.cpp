@@ -618,17 +618,17 @@ forward([args<vector<i32>>] values) {
 
 [effects(heap_alloc), return<int>]
 forward_mixed([args<vector<i32>>] values) {
-  [vector<i32>] extra{vectorSingle<i32>(20i32)}
+  [vector<i32>] extra{/std/collections/vector/vector<i32>(20i32)}
   return(mutate_vectors(extra, [spread] values))
 }
 
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] a0{vector<i32>(1i32, 2i32)}
-  [vector<i32>] a1{vectorSingle<i32>(3i32)}
+  [vector<i32>] a1{/std/collections/vector/vector<i32>(3i32)}
   [vector<i32>] a2{vector<i32>(4i32, 5i32, 6i32)}
 
-  [vector<i32>] b0{vectorSingle<i32>(7i32)}
+  [vector<i32>] b0{/std/collections/vector/vector<i32>(7i32)}
   [vector<i32>] b1{vector<i32>(8i32, 9i32)}
   [vector<i32>] b2{vector<i32>(10i32, 11i32, 12i32)}
 

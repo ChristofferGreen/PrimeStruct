@@ -382,7 +382,7 @@ main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   [i32] index{7i32}
   push(values, index)
-  return(vectorCount<i32>(values))
+  return(/std/collections/vector/count<i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_mutator_known_receiver_no_reorder.prime", source);
@@ -506,14 +506,14 @@ main() {
   CHECK(runCommand(exePath) == 32);
 }
 
-TEST_CASE("compiles and runs std collections vectorAt wrapper in C++ emitter") {
+TEST_CASE("compiles and runs std collections /std/collections/vector/at wrapper in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(4i32, 5i32, 6i32)}
-  return(vectorAt<i32>(values, 1i32))
+  return(/std/collections/vector/at<i32>(values, 1i32))
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_std_collections_vectorat_wrapper.prime", source);

@@ -429,7 +429,7 @@ import /std/collections/*
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   /vector/push(values, 2i32)
-  return(vectorAt<i32>(values, 1i32))
+  return(/std/collections/vector/at<i32>(values, 1i32))
 }
 )";
   const std::string srcPath = writeTemp("vm_vector_namespaced_mutator_alias.prime", source);
@@ -468,7 +468,7 @@ main() {
   [array<i32>] values{array<i32>[1i32, 2i32]}
   [vector<i32>] list{vector<i32>[3i32, 4i32]}
   [map<i32, i32>] table{map<i32, i32>[5i32=6i32]}
-  return(plus(plus(values.count(), vectorCount<i32>(list)), count(table)))
+  return(plus(plus(values.count(), /std/collections/vector/count<i32>(list)), count(table)))
 }
 )";
   const std::string srcPath = writeTemp("vm_collection_brackets.prime", source);
@@ -747,7 +747,7 @@ import /std/collections/*
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
-  return(plus(vectorCount<i32>(values), vectorCount<i32>(values)))
+  return(plus(/std/collections/vector/count<i32>(values), /std/collections/vector/count<i32>(values)))
 }
 )";
   const std::string srcPath = writeTemp("vm_vector_count_helper.prime", source);
@@ -763,7 +763,7 @@ import /std/collections/*
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32, 4i32)}
   return(plus(
-      plus(vectorAt<i32>(values, 0i32), vectorAtUnsafe<i32>(values, 1i32)),
+      plus(/std/collections/vector/at<i32>(values, 0i32), /std/collections/vector/at_unsafe<i32>(values, 1i32)),
       plus(/std/collections/vector/at<i32>(values, 2i32), /std/collections/vector/at_unsafe<i32>(values, 3i32))))
 }
 )";

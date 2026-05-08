@@ -15,7 +15,7 @@ import /std/collections/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
-  return(vectorSingle<T>(value))
+  return(/std/collections/vector/vector<T>(value))
 }
 
 [return<int>]

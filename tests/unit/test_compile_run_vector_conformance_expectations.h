@@ -133,7 +133,7 @@ inline void expectVectorTypeMismatchReject(const std::string &emitMode,
   expectVectorConformanceCompileReject(makeVectorTypeMismatchRejectSource(importPath),
                                        "vector_type_mismatch_" + slug,
                                        emitMode,
-                                       "/std/collections/vectorPair",
+                                       "/std/collections/vector/vector",
                                        "argument type mismatch");
 }
 
@@ -234,7 +234,7 @@ inline void expectStdlibWrapperVectorConstructorAutoInferenceMismatchReject(cons
       makeStdlibWrapperVectorConstructorAutoInferenceMismatchSource(),
       "vector_wrapper_constructor_auto_inference_mismatch_" + emitMode,
       emitMode,
-      "/std/collections/vectorPair",
+      "/std/collections/vector/vector",
       "implicit template arguments conflict");
 }
 
@@ -259,7 +259,7 @@ inline void expectStdlibWrapperVectorConstructorHelperReceiverMismatchReject(con
       makeStdlibWrapperVectorConstructorHelperReceiverMismatchSource(),
       "vector_wrapper_constructor_helper_receiver_mismatch_" + emitMode,
       emitMode,
-      "/std/collections/vectorPair",
+      "/std/collections/vector/vector",
       "implicit template arguments conflict");
 }
 
@@ -268,7 +268,7 @@ inline void expectStdlibWrapperVectorConstructorMethodReceiverMismatchReject(con
       makeStdlibWrapperVectorConstructorMethodReceiverMismatchSource(),
       "vector_wrapper_constructor_method_receiver_mismatch_" + emitMode,
       emitMode,
-      "/std/collections/vectorPair",
+      "/std/collections/vector/vector",
       "implicit template arguments conflict");
 }
 

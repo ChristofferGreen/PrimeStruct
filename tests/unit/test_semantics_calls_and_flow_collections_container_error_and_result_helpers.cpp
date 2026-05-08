@@ -2886,9 +2886,9 @@ borrow_second([Vector<i32>] values) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Vector<i32> mut] values{vectorNew<i32>()}
-  vectorPush<i32>(values, 2i32)
-  vectorPush<i32>(values, 5i32)
+  [Vector<i32> mut] values{/std/collections/vector/vector<i32>()}
+  /std/collections/vector/push<i32>(values, 2i32)
+  /std/collections/vector/push<i32>(values, 5i32)
   return(dereference(borrow_second(values)))
 }
 )";

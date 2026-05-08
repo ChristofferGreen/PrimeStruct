@@ -154,7 +154,7 @@ main() {
           "canonical_vector_constructor_no_vector_pair_fallback",
           R"(
 [return<i32>]
-/std/collections/vectorPair([i32] first, [i32] second) {
+/std/collections/vector/vector([i32] first, [i32] second) {
   return(plus(first, second))
 }
 

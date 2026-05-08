@@ -15,13 +15,13 @@ import /std/collections/*
 
 [return<vector<Unknown>>]
 wrapUnknown([i32] value) {
-  return(vectorSingle<i32>(value))
+  return(/std/collections/vector/vector<i32>(value))
 }
 
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{wrapUnknown(3i32)}
-  return(vectorCount<i32>(values))
+  return(/std/collections/vector/count<i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_templated_return_bad_arg.prime", source);
@@ -104,7 +104,7 @@ import /std/collections/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
-  return(vectorSingle<T>(value))
+  return(/std/collections/vector/vector<T>(value))
 }
 
 [return<map<K, V>>]
@@ -117,7 +117,7 @@ main() {
   [bool] mapCall{mapAt<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32), "only"raw_utf8)}
   [bool] mapMethod{wrapMap<string, i32>("only"raw_utf8, 5i32).at("only"raw_utf8)}
   [bool] mapIndex{wrapMap<string, i32>("only"raw_utf8, 5i32)["only"raw_utf8]}
-  [bool] vectorCall{vectorAt<i32>(wrapVector<i32>(4i32), 0i32)}
+  [bool] vectorCall{/std/collections/vector/at<i32>(wrapVector<i32>(4i32), 0i32)}
   [bool] vectorMethod{wrapVector<i32>(4i32).at(0i32)}
   [bool] vectorIndex{wrapVector<i32>(4i32)[0i32]}
   return(plus(plus(plus(mapCall, mapMethod), mapIndex), plus(plus(vectorCall, vectorMethod), vectorIndex)))
@@ -136,7 +136,7 @@ import /std/collections/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
-  return(vectorSingle<T>(value))
+  return(/std/collections/vector/vector<T>(value))
 }
 
 [return<map<K, V>>]
@@ -149,7 +149,7 @@ main() {
   return(plus(
       plus(mapAtUnsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32), 1i32),
            wrapMap<string, i32>("only"raw_utf8, 5i32).at_unsafe(1i32)),
-      plus(vectorAtUnsafe<i32>(wrapVector<i32>(4i32), true), wrapVector<i32>(4i32).at_unsafe(true))))
+      plus(/std/collections/vector/at_unsafe<i32>(wrapVector<i32>(4i32), true), wrapVector<i32>(4i32).at_unsafe(true))))
 }
 )";
   const std::string srcPath =
@@ -164,7 +164,7 @@ import /std/collections/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
-  return(vectorSingle<T>(value))
+  return(/std/collections/vector/vector<T>(value))
 }
 
 [return<map<K, V>>]
@@ -176,7 +176,7 @@ wrapMap<K, V>([K] key, [V] value) {
 main() {
   [bool] mapCall{mapAtUnsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32), "only"raw_utf8)}
   [bool] mapMethod{wrapMap<string, i32>("only"raw_utf8, 5i32).at_unsafe("only"raw_utf8)}
-  [bool] vectorCall{vectorAtUnsafe<i32>(wrapVector<i32>(4i32), 0i32)}
+  [bool] vectorCall{/std/collections/vector/at_unsafe<i32>(wrapVector<i32>(4i32), 0i32)}
   [bool] vectorMethod{wrapVector<i32>(4i32).at_unsafe(0i32)}
   return(0i32)
 }
@@ -193,7 +193,7 @@ import /std/collections/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
-  return(vectorSingle<T>(value))
+  return(/std/collections/vector/vector<T>(value))
 }
 
 [return<map<K, V>>]
@@ -206,7 +206,7 @@ main() {
   return(plus(
       plus(mapAtUnsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32), "only"raw_utf8, 1i32),
            wrapMap<string, i32>("only"raw_utf8, 5i32).at_unsafe("only"raw_utf8, 1i32)),
-      plus(vectorAtUnsafe<i32>(wrapVector<i32>(4i32), 0i32, 1i32),
+      plus(/std/collections/vector/at_unsafe<i32>(wrapVector<i32>(4i32), 0i32, 1i32),
            wrapVector<i32>(4i32).at_unsafe(0i32, 1i32))))
 }
 )";
@@ -222,7 +222,7 @@ import /std/collections/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
-  return(vectorSingle<T>(value))
+  return(/std/collections/vector/vector<T>(value))
 }
 
 [return<map<K, V>>]
@@ -235,7 +235,7 @@ main() {
   return(plus(
       plus(mapAtUnsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32)),
            wrapMap<string, i32>("only"raw_utf8, 5i32).at_unsafe()),
-      plus(vectorAtUnsafe<i32>(wrapVector<i32>(4i32)), wrapVector<i32>(4i32).at_unsafe())))
+      plus(/std/collections/vector/at_unsafe<i32>(wrapVector<i32>(4i32)), wrapVector<i32>(4i32).at_unsafe())))
 }
 )";
   const std::string srcPath = writeTemp(
@@ -250,7 +250,7 @@ import /std/collections/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
-  return(vectorSingle<T>(value))
+  return(/std/collections/vector/vector<T>(value))
 }
 
 [return<map<K, V>>]
@@ -263,8 +263,8 @@ main() {
   return(plus(
       plus(mapCount<i32, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32)),
            wrapMap<string, i32>("only"raw_utf8, 5i32).count(1i32)),
-      plus(vectorCount<bool>(wrapVector<i32>(4i32)),
-           plus(vectorCapacity<bool>(wrapVector<i32>(4i32)), wrapVector<i32>(4i32).capacity(1i32)))))
+      plus(/std/collections/vector/count<bool>(wrapVector<i32>(4i32)),
+           plus(/std/collections/vector/capacity<bool>(wrapVector<i32>(4i32)), wrapVector<i32>(4i32).capacity(1i32)))))
 }
 )";
   const std::string srcPath = writeTemp(

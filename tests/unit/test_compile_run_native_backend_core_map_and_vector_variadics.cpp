@@ -560,7 +560,7 @@ forward([args<Pointer<vector<i32>>>] values) {
 
 [effects(heap_alloc), return<int>]
 forward_mixed([args<Pointer<vector<i32>>>] values) {
-  [vector<i32>] extra{vectorSingle<i32>(1i32)}
+  [vector<i32>] extra{/std/collections/vector/vector<i32>(1i32)}
   [Pointer<vector<i32>>] extra_ptr{location(extra)}
   return(score_ptrs(extra_ptr, [spread] values))
 }
@@ -568,13 +568,13 @@ forward_mixed([args<Pointer<vector<i32>>>] values) {
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] a0{vector<i32>(1i32, 2i32)}
-  [vector<i32>] a1{vectorSingle<i32>(3i32)}
+  [vector<i32>] a1{/std/collections/vector/vector<i32>(3i32)}
   [vector<i32>] a2{vector<i32>(4i32, 5i32, 6i32, 7i32)}
   [Pointer<vector<i32>>] r0{location(a0)}
   [Pointer<vector<i32>>] r1{location(a1)}
   [Pointer<vector<i32>>] r2{location(a2)}
 
-  [vector<i32>] b0{vectorSingle<i32>(8i32)}
+  [vector<i32>] b0{/std/collections/vector/vector<i32>(8i32)}
   [vector<i32>] b1{vector<i32>(9i32, 10i32)}
   [vector<i32>] b2{vector<i32>(11i32, 12i32, 13i32)}
   [Pointer<vector<i32>>] s0{location(b0)}
@@ -619,7 +619,7 @@ forward([args<Pointer<vector<i32>>>] values) {
 
 [effects(heap_alloc), return<int>]
 forward_mixed([args<Pointer<vector<i32>>>] values) {
-  [vector<i32>] extra{vectorSingle<i32>(1i32)}
+  [vector<i32>] extra{/std/collections/vector/vector<i32>(1i32)}
   [Pointer<vector<i32>>] extra_ptr{location(extra)}
   return(score_ptrs(extra_ptr, [spread] values))
 }
@@ -627,13 +627,13 @@ forward_mixed([args<Pointer<vector<i32>>>] values) {
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] a0{vector<i32>(1i32, 2i32)}
-  [vector<i32>] a1{vectorSingle<i32>(3i32)}
+  [vector<i32>] a1{/std/collections/vector/vector<i32>(3i32)}
   [vector<i32>] a2{vector<i32>(4i32, 5i32, 6i32, 7i32)}
   [Pointer<vector<i32>>] r0{location(a0)}
   [Pointer<vector<i32>>] r1{location(a1)}
   [Pointer<vector<i32>>] r2{location(a2)}
 
-  [vector<i32>] b0{vectorSingle<i32>(8i32)}
+  [vector<i32>] b0{/std/collections/vector/vector<i32>(8i32)}
   [vector<i32>] b1{vector<i32>(9i32, 10i32)}
   [vector<i32>] b2{vector<i32>(11i32, 12i32, 13i32)}
   [Pointer<vector<i32>>] s0{location(b0)}

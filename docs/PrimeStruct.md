@@ -3086,15 +3086,14 @@ for(
     `Pointer<uninitialized<T>>` slot storage, so constructor materialization, growth, checked/unchecked access,
     removed-element destruction, survivor compaction/swap, and scope-exit cleanup all run through stdlib-owned
     `init(...)`, `borrow(...)`, `take(...)`, and `drop(...)` flows instead of reusing builtin vector ownership gates.
-    Imported canonical `/std/collections/vector/*` plus `/std/collections/vector*` helper spellings still rewrite onto
-    that same backing implementation whenever their receiver is an experimental `Vector<T>` value, and the wrapper-layer
-    `vectorCount|vectorCapacity|vectorAt*|vectorPush|vectorPop|vectorReserve|vectorClear|vectorRemove*` helpers keep
-    forwarding through the canonical vector wrapper path with inferred receivers instead of hard-coded builtin
-    `vector<T>` parameters. Imported wrapper-layer `vectorNew|vectorSingle|vectorPair|vectorTriple|...` legacy
-    constructor-shaped aliases still rewrite onto `/std/collections/experimental_vector/*` whenever an explicit
-    experimental `Vector<T>` destination already pins the target type, infer that same experimental `Vector<T>` type for
-    imported `[auto]` locals and `return<auto>` definitions, and now also rewrite nested direct helper-call plus method-call receiver
-    expressions built from those aliases onto the experimental constructor path before helper resolution. Imported
+    Imported canonical `/std/collections/vector/*` helper spellings still
+    rewrite onto that same backing implementation whenever their receiver is an
+    experimental `Vector<T>` value. The old `/std/collections/vectorCount` /
+    `vectorCapacity` / `vectorPush`-style wrapper helpers and fixed-arity
+    `vectorSingle` / `vectorPair`-style constructor aliases are no longer
+    published by the public `/std/collections` wrapper layer; user-facing code
+    should use canonical `/std/collections/vector/*` paths or method sugar
+    instead. Imported
     positional canonical `/std/collections/vector/vector<T>(...)` calls now prefer a real variadic canonical wrapper
     over that same backing constructor for `auto` bindings and temporary receiver flows, and imported named-argument
     legacy constructor-shaped canonical calls now resolve through same-path fixed-arity
@@ -3102,9 +3101,10 @@ for(
     receiver cases. Explicit canonical statement calls to
     `/std/collections/vector/push`, `pop`, `reserve`, `clear`, `remove_at`,
     and `remove_swap` now fall through to visible `.prime` helper definitions
-    instead of the vector statement-helper emitter, and wrapper-layer
-    `/std/collections/vectorPush`-style mutator aliases now defer to visible
-    definitions instead of rewriting back into raw builtin-vector emission.
+    instead of the vector statement-helper emitter. Wrapper-layer
+    `/std/collections/vectorPush`-style mutator aliases are removed from the
+    public wrapper layer instead of rewriting back into raw builtin-vector
+    emission.
     Direct `/std/collections/experimental_vector/vectorPush`-style imports
     remain narrow temporary shims until the vector compatibility deletion work
     removes them. Experimental `Vector<T>.set_field_count` and
@@ -3120,8 +3120,9 @@ for(
     `/std/collections/vector/*` `remove_at` / `remove_swap` helpers now reuse the backing indexed-removal path for
     those same explicit experimental `Vector<T>` bindings. Explicit canonical read/access calls to
     `/std/collections/vector/count`, `capacity`, `at`, and `at_unsafe` now fall through to visible `.prime` helper
-    definitions instead of count/access classifier raw vector emitters; `vectorCount`/`vectorAt`-style compatibility
-    names remain temporary shims.
+    definitions instead of count/access classifier raw vector emitters; rooted
+    `/vector/*` and direct `/std/collections/experimental_vector/*`
+    compatibility names remain temporary shims.
   - Canonical `/std/collections/map/*` is now the sole public namespaced map contract. The
     `/std/collections/experimental_map/*` family now remains only as the internal implementation seam behind that
     public contract. That backing namespace (`Entry<K, V>`, `entry(key, value)`,
@@ -3802,8 +3803,8 @@ re-defining it piecemeal.
 - **Migration-only seams:** rooted `/vector/*` and `/map/*` spellings plus
   `vectorCount` / `mapCount`-style lowering names remain temporary
   compatibility seams. The vector/map adapter cutover is complete for
-  semantic and template-monomorph helper decisions; TODO-4376 through
-  TODO-4378 own vector seam deletion, and TODO-4303 owns the later map seam
+  semantic and template-monomorph helper decisions; TODO-4377 and TODO-4378
+  own the remaining vector seam deletion, and TODO-4303 owns the later map seam
   deletion after map metadata moves to a stdlib-owned manifest.
 - **Compatibility adapter inventory:** map insert helper compatibility was the
   first migrated family. The semantic map-insert rewrite asks the
@@ -5265,9 +5266,10 @@ read-only path.
   frees both buffers, and checks that checked-offset failures still report
   `pointer index out of bounds` rather than vector-specific diagnostics.
   - When any `/std...` import is present, the stdlib now also provides canonical `.prime` wrappers at
-    `/std/collections/vector/*` over the current stdlib `vectorNew` / `vectorCount` / `vectorPush` helper surface. That
-    imported path is now the sole public namespaced vector contract; the experimental vector namespace remains a
-    backing seam rather than a peer public API. Canonical
+    `/std/collections/vector/*` over the internal vector backing implementation.
+    That imported path is now the sole public namespaced vector contract; the
+    experimental vector namespace remains a backing seam rather than a peer
+    public API. Canonical
     `/std/collections/vector/vector(...)`, `/std/collections/vector/count(...)`,
     `/std/collections/vector/capacity(...)`, `/std/collections/vector/at(...)`,
     `/std/collections/vector/at_unsafe(...)`, `/std/collections/vector/push(...)`, `/std/collections/vector/pop(...)`,
@@ -5290,17 +5292,13 @@ read-only path.
     unless a same-path helper is declared, while direct canonical `/std/collections/vector/count(wrapMap())`,
     `/std/collections/vector/count(wrapText())`, and `/std/collections/vector/count(wrapArray())` calls also reject with
     same-path `unknown call target` diagnostics unless a same-path helper exists. Those canonical namespaced helper
-    declarations now use experimental `Vector<T>` receivers directly, imported wrapper helpers
-    `vectorCount|vectorCapacity|vectorAt*|vectorPush|vectorPop|vectorReserve|vectorClear|vectorRemove*` now likewise
-    accept explicit experimental `Vector<T>` receivers by forwarding through that canonical vector wrapper path while
-    keeping builtin `vector<T>` behavior, imported wrapper constructor aliases
-    `vectorNew|vectorSingle|vectorPair|vectorTriple|...` now also rewrite onto the experimental `.prime` constructor
-    path when explicit `Vector<T>` bindings, explicit `return<Vector<T>>` definitions, explicit `Vector<T>`
-    parameters/fields, or explicit assignment/init targets require that value type, now also infer experimental
-    `Vector<T>` results for `[auto]` locals and `return<auto>` definitions, and now also rewrite nested direct
-    helper-call plus method-call receiver expressions built from those aliases before canonical helper or method
-    resolution. Imported constructor/count/capacity/access wrappers plus statement-position mutators still follow
-    ordinary definition argument rules such as named-argument support.
+    declarations now use experimental `Vector<T>` receivers directly where
+    needed, but the old imported `/std/collections/vectorCount` /
+    `vectorCapacity` / `vectorPush`-style wrappers and fixed-arity constructor
+    aliases no longer form a public collection import surface. Canonical
+    constructor/count/capacity/access wrappers plus statement-position mutators
+    still follow ordinary definition argument rules such as named-argument
+    support.
   - When any `/std...` import is present, the stdlib also provides canonical `.prime` wrappers at
     `/std/collections/map/*` over the current stdlib `mapNew` / `mapCount` / `mapTryAt` helper surface. That imported
     path is now the sole public namespaced map contract; the experimental map namespace remains a backing seam rather

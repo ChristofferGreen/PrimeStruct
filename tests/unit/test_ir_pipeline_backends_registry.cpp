@@ -4758,7 +4758,7 @@ TEST_CASE("semantic-product local-auto call paths accept stdlib surface equivale
   localAutoFact.bindingTypeText = "";
   localAutoFact.initializerResolvedPathId =
       primec::semanticProgramInternCallTargetString(semanticProgram,
-                                                    "/std/collections/vectorAt");
+                                                    "/std/collections/vector/at");
   localAutoFact.initializerDirectCallResolvedPathId =
       primec::semanticProgramInternCallTargetString(
           semanticProgram, "/std/collections/vectorAt__t25a78a513414c3bf");

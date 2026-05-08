@@ -13,12 +13,12 @@ import /std/collections/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{vectorCount<i32>(words)}
+  [i32] len{/std/collections/vector/count<i32>(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
     }
-    print(vectorAt<i32>(words, index))
+    print(/std/collections/vector/at<i32>(words, index))
   }
   print_line(""utf8)
 }
@@ -83,12 +83,12 @@ import /std/collections/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{vectorCount<i32>(words)}
+  [i32] len{/std/collections/vector/count<i32>(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
     }
-    print(vectorAt<i32>(words, index))
+    print(/std/collections/vector/at<i32>(words, index))
   }
   print_line(""utf8)
 }
@@ -156,12 +156,12 @@ import /std/collections/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{vectorCount<i32>(words)}
+  [i32] len{/std/collections/vector/count<i32>(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
     }
-    print(vectorAt<i32>(words, index))
+    print(/std/collections/vector/at<i32>(words, index))
   }
   print_line(""utf8)
 }
@@ -210,12 +210,12 @@ import /std/collections/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{vectorCount<i32>(words)}
+  [i32] len{/std/collections/vector/count<i32>(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
     }
-    print(vectorAt<i32>(words, index))
+    print(/std/collections/vector/at<i32>(words, index))
   }
   print_line(""utf8)
 }
@@ -261,12 +261,12 @@ import /std/collections/*
 
 [effects(io_out), return<void>]
 dump_words([vector<i32>] words) {
-  [i32] len{vectorCount<i32>(words)}
+  [i32] len{/std/collections/vector/count<i32>(words)}
   for([i32 mut] index{0i32}, less_than(index, len), assign(index, plus(index, 1i32))) {
     if(greater_than(index, 0i32)) {
       print(","utf8)
     }
-    print(vectorAt<i32>(words, index))
+    print(/std/collections/vector/at<i32>(words, index))
   }
   print_line(""utf8)
 }

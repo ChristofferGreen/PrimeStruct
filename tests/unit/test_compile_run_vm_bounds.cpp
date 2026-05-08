@@ -90,8 +90,8 @@ import /std/collections/experimental_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Vector<i32>] values{vectorPair<i32>(4i32, 9i32)}
-  return(vectorAtUnsafe<i32>(values, 2i32))
+  [Vector<i32>] values{/std/collections/vector/vector<i32>(4i32, 9i32)}
+  return(/std/collections/vector/at_unsafe<i32>(values, 2i32))
 }
 )";
   const std::string srcPath = writeTemp("vm_experimental_vector_at_unsafe_oob.prime", source);
@@ -108,7 +108,7 @@ import /std/collections/experimental_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Vector<i32>] values{vectorPair<i32>(4i32, 9i32)}
+  [Vector<i32>] values{/std/collections/vector/vector<i32>(4i32, 9i32)}
   return(values.at_unsafe(2i32))
 }
 )";
@@ -126,8 +126,8 @@ import /std/collections/experimental_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Vector<i32>] values{vectorPair<i32>(4i32, 9i32)}
-  return(vectorAt<i32>(values, 2i32))
+  [Vector<i32>] values{/std/collections/vector/vector<i32>(4i32, 9i32)}
+  return(/std/collections/vector/at<i32>(values, 2i32))
 }
 )";
   const std::string srcPath = writeTemp("vm_experimental_vector_at_oob.prime", source);
@@ -144,7 +144,7 @@ import /std/collections/experimental_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Vector<i32>] values{vectorPair<i32>(4i32, 9i32)}
+  [Vector<i32>] values{/std/collections/vector/vector<i32>(4i32, 9i32)}
   return(values.at(2i32))
 }
 )";
@@ -162,9 +162,9 @@ import /std/collections/experimental_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Vector<i32> mut] values{vectorSingle<i32>(4i32)}
+  [Vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32)}
   values.set_field_count(2i32)
-  return(vectorAtUnsafe<i32>(values, 1i32))
+  return(/std/collections/vector/at_unsafe<i32>(values, 1i32))
 }
 )";
   const std::string srcPath =
@@ -183,7 +183,7 @@ import /std/collections/experimental_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Vector<i32> mut] values{vectorSingle<i32>(4i32)}
+  [Vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32)}
   values.set_field_count(2i32)
   return(values.at(1i32))
 }
@@ -204,9 +204,9 @@ import /std/collections/experimental_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Vector<i32> mut] values{vectorSingle<i32>(4i32)}
+  [Vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32)}
   values.set_field_count(2i32)
-  vectorReserve<i32>(values, 3i32)
+  /std/collections/vector/reserve<i32>(values, 3i32)
   return(0i32)
 }
 )";
@@ -226,9 +226,9 @@ import /std/collections/experimental_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Vector<i32> mut] values{vectorSingle<i32>(4i32)}
+  [Vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32)}
   values.set_field_count(2i32)
-  vectorClear<i32>(values)
+  /std/collections/vector/clear<i32>(values)
   return(0i32)
 }
 )";
@@ -248,7 +248,7 @@ import /std/collections/experimental_vector/*
 
 [effects(heap_alloc), return<int>]
 make_bad() {
-  [Vector<i32> mut] values{vectorSingle<i32>(4i32)}
+  [Vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32)}
   values.set_field_count(2i32)
   return(0i32)
 }
@@ -274,9 +274,9 @@ import /std/collections/experimental_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Vector<i32> mut] values{vectorSingle<i32>(4i32)}
+  [Vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32)}
   values.set_field_count(2i32)
-  return(vectorCount<i32>(values))
+  return(/std/collections/vector/count<i32>(values))
 }
 )";
   const std::string srcPath =
@@ -295,9 +295,9 @@ import /std/collections/experimental_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Vector<i32> mut] values{vectorSingle<i32>(4i32)}
+  [Vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32)}
   values.set_field_capacity(-1i32)
-  return(vectorCapacity<i32>(values))
+  return(/std/collections/vector/capacity<i32>(values))
 }
 )";
   const std::string srcPath =
@@ -316,9 +316,9 @@ import /std/collections/experimental_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Vector<i32> mut] values{vectorSingle<i32>(4i32)}
+  [Vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32)}
   values.set_field_capacity(2147483647i32)
-  return(vectorCapacity<i32>(values))
+  return(/std/collections/vector/capacity<i32>(values))
 }
 )";
   const std::string srcPath =
@@ -337,7 +337,7 @@ import /std/collections/experimental_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Vector<i32> mut] values{vectorSingle<i32>(4i32)}
+  [Vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32)}
   values.set_field_count(-1i32)
   return(0i32)
 }
@@ -357,7 +357,7 @@ import /std/collections/experimental_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Vector<i32> mut] values{vectorSingle<i32>(4i32)}
+  [Vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32)}
   values.set_field_capacity(0i32)
   return(0i32)
 }

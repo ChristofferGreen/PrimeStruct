@@ -1106,7 +1106,7 @@ TEST_CASE("ir lowerer count access helpers defer canonical vector read helpers")
   vectorTemporary.name = "/std/collections/vector/vector";
   vectorTemporary.templateArgs = {"i32"};
   callExpr.args = {vectorTemporary};
-  callExpr.name = "/std/collections/vectorCapacity";
+  callExpr.name = "/std/collections/vector/capacity";
   callExpr.namespacePrefix.clear();
   CHECK(primec::ir_lowerer::isVectorCapacityCall(callExpr, vectorLocals));
   callExpr.name = "/std/collections/vector/capacity";
@@ -1135,7 +1135,7 @@ TEST_CASE("ir lowerer count access helpers defer canonical vector read helpers")
   CHECK_FALSE(primec::ir_lowerer::getBuiltinArrayAccessName(callExpr, accessName));
 
   callExpr.namespacePrefix.clear();
-  callExpr.name = "/std/collections/vectorAt";
+  callExpr.name = "/std/collections/vector/at";
   CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(callExpr, accessName));
   CHECK(accessName == "at");
 

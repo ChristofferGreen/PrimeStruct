@@ -14,8 +14,8 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32>] values{vectorNew<bool>()}
-  return(vectorCount<i32>(values))
+  [vector<i32>] values{/std/collections/vector/vector<bool>()}
+  return(/std/collections/vector/count<i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_new_bool_element.prime", source);
@@ -29,8 +29,8 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32>] values{vectorSingle<i32>(false)}
-  return(vectorCount<i32>(values))
+  [vector<i32>] values{/std/collections/vector/vector<i32>(false)}
+  return(/std/collections/vector/count<i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_single_bool_tail.prime", source);
@@ -44,8 +44,8 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32>] values{vectorPair<i32>(11i32, 13i32)}
-  return(plus(plus(vectorAt<i32>(values, 1i32), vectorAtUnsafe<i32>(values, 0i32)), vectorCount<i32>(values)))
+  [vector<i32>] values{/std/collections/vector/vector<i32>(11i32, 13i32)}
+  return(plus(plus(/std/collections/vector/at<i32>(values, 1i32), /std/collections/vector/at_unsafe<i32>(values, 0i32)), /std/collections/vector/count<i32>(values)))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_pair.prime", source);
@@ -59,8 +59,8 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32>] values{vectorPair<i32>(1i32, false)}
-  return(vectorCount<i32>(values))
+  [vector<i32>] values{/std/collections/vector/vector<i32>(1i32, false)}
+  return(/std/collections/vector/count<i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_pair_bool_tail.prime", source);
@@ -74,8 +74,8 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32>] values{vectorTriple<i32>(10i32, 20i32, 30i32)}
-  return(plus(plus(vectorAt<i32>(values, 2i32), vectorAtUnsafe<i32>(values, 0i32)), vectorCount<i32>(values)))
+  [vector<i32>] values{/std/collections/vector/vector<i32>(10i32, 20i32, 30i32)}
+  return(plus(plus(/std/collections/vector/at<i32>(values, 2i32), /std/collections/vector/at_unsafe<i32>(values, 0i32)), /std/collections/vector/count<i32>(values)))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_triple.prime", source);
@@ -89,8 +89,8 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32>] values{vectorTriple<i32>(1i32, 2i32, false)}
-  return(vectorCount<i32>(values))
+  [vector<i32>] values{/std/collections/vector/vector<i32>(1i32, 2i32, false)}
+  return(/std/collections/vector/count<i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_triple_bool_tail.prime", source);
@@ -104,8 +104,8 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32>] values{vectorQuad<i32>(3i32, 6i32, 9i32, 12i32)}
-  return(plus(plus(vectorAt<i32>(values, 3i32), vectorAtUnsafe<i32>(values, 0i32)), vectorCount<i32>(values)))
+  [vector<i32>] values{/std/collections/vector/vector<i32>(3i32, 6i32, 9i32, 12i32)}
+  return(plus(plus(/std/collections/vector/at<i32>(values, 3i32), /std/collections/vector/at_unsafe<i32>(values, 0i32)), /std/collections/vector/count<i32>(values)))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_quad.prime", source);
@@ -119,8 +119,8 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32>] values{vectorQuad<i32>(1i32, 2i32, 3i32, false)}
-  return(vectorCount<i32>(values))
+  [vector<i32>] values{/std/collections/vector/vector<i32>(1i32, 2i32, 3i32, false)}
+  return(/std/collections/vector/count<i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_quad_bool_tail.prime", source);

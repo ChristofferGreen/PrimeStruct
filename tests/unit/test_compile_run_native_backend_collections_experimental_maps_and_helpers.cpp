@@ -30,7 +30,7 @@ import /std/collections/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
-  return(vectorSingle<T>(value))
+  return(/std/collections/vector/vector<T>(value))
 }
 
 [return<map<K, V>>]
@@ -1127,7 +1127,7 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<i32>] values{vectorSingle<i32>(1i32)}
+  [vector<i32>] values{/std/collections/vector/vector<i32>(1i32)}
   [int] direct{/to_aos(values)}
   [int] method{values.to_aos()}
   [int] slash{values./to_aos()}
@@ -3599,15 +3599,15 @@ import /std/collections/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
-  return(vectorSingle<T>(value))
+  return(/std/collections/vector/vector<T>(value))
 }
 
 [effects(heap_alloc), return<int>]
 main() {
-  [i32] a{vectorAt<i32>(wrapVector<i32>(4i32), 0i32)}
-  [i32] b{vectorAtUnsafe<i32>(wrapVector<i32>(5i32), 0i32)}
-  [i32] c{vectorCount<i32>(wrapVector<i32>(6i32))}
-  [i32] d{vectorCapacity<i32>(wrapVector<i32>(7i32))}
+  [i32] a{/std/collections/vector/at<i32>(wrapVector<i32>(4i32), 0i32)}
+  [i32] b{/std/collections/vector/at_unsafe<i32>(wrapVector<i32>(5i32), 0i32)}
+  [i32] c{/std/collections/vector/count<i32>(wrapVector<i32>(6i32))}
+  [i32] d{/std/collections/vector/capacity<i32>(wrapVector<i32>(7i32))}
   return(plus(plus(plus(a, b), c), d))
 }
 )";
@@ -3628,7 +3628,7 @@ import /std/collections/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
-  return(vectorSingle<T>(value))
+  return(/std/collections/vector/vector<T>(value))
 }
 
 [effects(heap_alloc), return<int>]
@@ -3657,7 +3657,7 @@ import /std/collections/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
-  return(vectorSingle<T>(value))
+  return(/std/collections/vector/vector<T>(value))
 }
 
 [return<map<K, V>>]
@@ -3690,7 +3690,7 @@ import /std/collections/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
-  return(vectorSingle<T>(value))
+  return(/std/collections/vector/vector<T>(value))
 }
 
 [return<map<K, V>>]
@@ -3701,7 +3701,7 @@ wrapMap<K, V>([K] key, [V] value) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [i32] vectorCall{vectorAt<i32>(wrapVector<i32>(4i32), 0i32)}
+  [i32] vectorCall{/std/collections/vector/at<i32>(wrapVector<i32>(4i32), 0i32)}
   [i32] vectorMethod{wrapVector<i32>(4i32).at(0i32)}
   [i32] vectorIndex{wrapVector<i32>(4i32)[0i32]}
   [i32] mapCall{mapAt<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32), "only"raw_utf8)}
@@ -3727,7 +3727,7 @@ import /std/collections/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
-  return(vectorSingle<T>(value))
+  return(/std/collections/vector/vector<T>(value))
 }
 
 [return<map<K, V>>]
@@ -3738,7 +3738,7 @@ wrapMap<K, V>([K] key, [V] value) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [i32] vectorCall{vectorAtUnsafe<i32>(wrapVector<i32>(4i32), 0i32)}
+  [i32] vectorCall{/std/collections/vector/at_unsafe<i32>(wrapVector<i32>(4i32), 0i32)}
   [i32] vectorMethod{wrapVector<i32>(4i32).at_unsafe(0i32)}
   [i32] mapCall{mapAtUnsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32), "only"raw_utf8)}
   [i32] mapMethod{wrapMap<string, i32>("only"raw_utf8, 5i32).at_unsafe("only"raw_utf8)}
@@ -3762,7 +3762,7 @@ import /std/collections/*
 
 [return<vector<T>>]
 wrapVector<T>([T] value) {
-  return(vectorSingle<T>(value))
+  return(/std/collections/vector/vector<T>(value))
 }
 
 [return<map<K, V>>]
@@ -3775,9 +3775,9 @@ wrapMap<K, V>([K] key, [V] value) {
 main() {
   [i32] mapCall{mapCount<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32))}
   [i32] mapMethod{wrapMap<string, i32>("only"raw_utf8, 5i32).count()}
-  [i32] vectorCountCall{vectorCount<i32>(wrapVector<i32>(4i32))}
+  [i32] vectorCountCall{/std/collections/vector/count<i32>(wrapVector<i32>(4i32))}
   [i32] vectorCountMethod{wrapVector<i32>(4i32).count()}
-  [i32] vectorCapacityCall{vectorCapacity<i32>(wrapVector<i32>(4i32))}
+  [i32] vectorCapacityCall{/std/collections/vector/capacity<i32>(wrapVector<i32>(4i32))}
   [i32] vectorCapacityMethod{wrapVector<i32>(4i32).capacity()}
   return(plus(plus(plus(mapCall, mapMethod), plus(vectorCountCall, vectorCountMethod)),
               plus(vectorCapacityCall, vectorCapacityMethod)))
