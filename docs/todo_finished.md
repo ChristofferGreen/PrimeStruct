@@ -15031,3 +15031,28 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     remaining rooted semantic work into TODO-4382, and ratcheted
     `scripts/vector_surface_trace_baseline.json` from 946 to 944 production
     traces. Baseline release validation was skipped per the lite workflow.
+
+- [x] TODO-4382: Remove rooted vector map-count method shim
+  - owner: ai
+  - created_at: 2026-05-08
+  - phase: Vector stdlib ownership cutover
+  - scope: Remove the method-target resolver's map-receiver special case for
+    rooted `/vector/count` while keeping canonical vector count diagnostics and
+    ordinary explicit user-defined rooted definitions intact.
+  - acceptance:
+    - Map receivers no longer route through a rooted vector count
+      compatibility branch in method-target resolution.
+    - Canonical `/std/collections/vector/count` handling for non-vector
+      receivers remains covered by the existing canonical diagnostic path.
+    - The vector surface trace baseline decreases for semantic validator files
+      and does not increase elsewhere.
+  - stop_rule: Stop after the map-count shim is deleted, source-lock coverage
+    keeps it absent, and the audit baseline ratchets downward.
+  - finished_at: 2026-05-08
+  - evidence: Removed `tryResolveExplicitMapReceiverVectorCountMethodTarget`
+    and its map-receiver call sites from
+    `SemanticsValidatorExprMethodTargetResolution.cpp`, added source-lock
+    assertions to keep the deleted helper absent, split the remaining rooted
+    semantic work into TODO-4383, and ratcheted
+    `scripts/vector_surface_trace_baseline.json` from 944 to 939 production
+    traces. Baseline release validation was skipped per the lite workflow.

@@ -872,7 +872,7 @@
     {
       "path": "src/semantics/SemanticsValidatorExprMethodTargetResolution.cpp",
       "pattern": "canonical-vector-path",
-      "count": 16
+      "count": 14
     },
     {
       "path": "src/semantics/SemanticsValidatorExprMethodTargetResolution.cpp",
@@ -882,7 +882,7 @@
     {
       "path": "src/semantics/SemanticsValidatorExprMethodTargetResolution.cpp",
       "pattern": "root-vector-helper-path",
-      "count": 22
+      "count": 19
     },
     {
       "path": "src/semantics/SemanticsValidatorExprNamedArgumentBuiltins.cpp",

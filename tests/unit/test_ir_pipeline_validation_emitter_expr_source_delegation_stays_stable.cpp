@@ -322,6 +322,12 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "bool SemanticsValidator::resolveMethodTarget(") !=
         std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "tryResolveExplicitMapReceiverVectorCountMethodTarget") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "explicitVectorHelperPath == \"/vector/count\" &&") ==
+        std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "bool SemanticsValidator::resolveVectorHelperMethodTarget(") !=
         std::string::npos);
