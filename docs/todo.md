@@ -72,11 +72,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4377: Reject rooted vector helper aliases
+- TODO-4378: Reject direct experimental vector imports
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4378: Reject direct experimental vector imports
 - TODO-4297: Add zero C++ vector-surface audit
 - TODO-4299: Promote and style canonical `.prime` map implementation
 - TODO-4300: Stabilize map lookup and insertion substrate
@@ -86,13 +85,14 @@ Task template:
 - TODO-4304: Add zero C++ map-surface audit
 - TODO-4305: Rename and style canonical `.prime` SoA surface
 - TODO-4306: Stabilize generic SoA substrate boundaries
+- TODO-4307: Lower SoA helpers through ordinary `.prime`
 
 ### Priority Lanes (Current)
 
 - Semantic ownership authority: none active; future semantic-authority work
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
-- Vector stdlib ownership cutover: TODO-4377 -> TODO-4378 -> TODO-4297
+- Vector stdlib ownership cutover: TODO-4378 -> TODO-4297
 - Map stdlib ownership cutover: TODO-4299 -> TODO-4300 -> TODO-4301
   -> TODO-4302 -> TODO-4303 -> TODO-4304
 - SoA public surface rename and ownership cutover: TODO-4305 -> TODO-4306
@@ -111,7 +111,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4377: Reject rooted vector helper aliases
 - TODO-4378: Reject direct experimental vector imports
 - TODO-4297: Add zero C++ vector-surface audit
 - TODO-4299: Promote and style canonical `.prime` map implementation
@@ -175,9 +174,9 @@ Task template:
 | Compile-pipeline stage and publication-boundary contracts | none |
 | Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4299, TODO-4305 |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4377, TODO-4378, TODO-4297, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4377, TODO-4378, TODO-4297, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
-| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4377, TODO-4378, TODO-4297, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
+| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4378, TODO-4297, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4378, TODO-4297, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4378, TODO-4297, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
@@ -206,8 +205,8 @@ Task template:
 | Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
-| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4377, TODO-4378, TODO-4297, TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
-| De-experimentalization surface and namespace parity | TODO-4377, TODO-4378, TODO-4297, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
+| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4378, TODO-4297, TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| De-experimentalization surface and namespace parity | TODO-4378, TODO-4297, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
@@ -229,17 +228,20 @@ Task template:
   `vector<T>` / `map<K, V>` constructor and literal-rewrite surfaces, helper
   families, compatibility spellings plus removed-helper diagnostics, semantic
   surface IDs, and lowerer dispatch metadata.
-- Migration-only seams: rooted `/vector/*` and `/map/*` spellings,
-  `vectorCount` / `mapCount`-style lowering names, and
+- Migration-only seams: rooted `/map/*` spellings,
+  `mapCount`-style lowering names, and
   `/std/collections/experimental_*` implementation modules stay temporary.
+  Rooted `/vector/*` helper spellings are no longer builtin vector
+  compatibility aliases; explicit user definitions under those paths remain
+  ordinary definitions.
   The vector/map adapter cutover is complete for semantic and
   template-monomorph helper decisions. Canonical read/access helper routing is
   finished in `docs/todo_finished.md`; vector header materialization now uses
   layout facts instead of hard-coded record slots, and canonical vector surface
   metadata is now owned by `stdlib/std/collections/surfaces.psmeta`, and the
   registry no longer advertises vector compatibility spellings through that
-  manifest. TODO-4377 and TODO-4378 delete the remaining vector
-  compatibility seams, and TODO-4297 handles the final zero-C++-vector audit.
+  manifest. TODO-4378 deletes the remaining direct experimental vector
+  compatibility seam, and TODO-4297 handles the final zero-C++-vector audit.
   TODO-4299 through TODO-4304 apply the same ownership model to map while
   keeping map-specific lookup, insertion, `Result<ContainerError>`, and key
   comparability policy explicit.
@@ -1637,30 +1639,10 @@ Task template:
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
 
-- [ ] TODO-4377: Reject rooted vector helper aliases
-  - owner: ai
-  - created_at: 2026-05-08
-  - phase: Vector stdlib ownership cutover
-  - scope: Remove or intentionally reject rooted `/vector/*` helper aliases and
-    same-path vector method compatibility while preserving user-defined
-    non-stdlib paths where they are ordinary definitions rather than builtin
-    vector compatibility.
-  - acceptance:
-    - Rooted `/vector/count`, `/vector/capacity`, `/vector/push`, `/vector/at`,
-      and related helper spellings no longer act as builtin vector
-      compatibility paths.
-    - Diagnostics for removed rooted aliases are stable and intentional.
-    - Canonical `/std/collections/vector/*` helper calls and imports remain the
-      supported public vector surface.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once rooted vector compatibility aliases are removed or
-    intentionally rejected without changing map rooted compatibility.
-
 - [ ] TODO-4378: Reject direct experimental vector imports
   - owner: ai
   - created_at: 2026-05-08
   - phase: Vector stdlib ownership cutover
-  - depends_on: TODO-4377
   - scope: Remove or intentionally reject direct
     `/std/collections/experimental_vector/*` imports from user code while
     keeping `/std/collections/internal_vector/*` available as the implementation

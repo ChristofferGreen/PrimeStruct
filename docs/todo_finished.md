@@ -14902,3 +14902,29 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     wildcard and exact collection imports no longer publish the removed vector
     names, and updated docs plus source locks. Map wrapper aliases were left
     unchanged. Baseline release validation was skipped per the lite workflow.
+
+- [x] TODO-4377: Reject rooted vector helper aliases
+  - owner: ai
+  - created_at: 2026-05-08
+  - phase: Vector stdlib ownership cutover
+  - scope: Remove or intentionally reject rooted `/vector/*` helper aliases and
+    same-path vector method compatibility while preserving user-defined
+    non-stdlib paths where they are ordinary definitions rather than builtin
+    vector compatibility.
+  - acceptance:
+    - Rooted `/vector/count`, `/vector/capacity`, `/vector/push`, `/vector/at`,
+      and related helper spellings no longer act as builtin vector
+      compatibility paths.
+    - Diagnostics for removed rooted aliases are stable and intentional.
+    - Canonical `/std/collections/vector/*` helper calls and imports remain the
+      supported public vector surface.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once rooted vector compatibility aliases are removed or
+    intentionally rejected without changing map rooted compatibility.
+  - finished_at: 2026-05-08
+  - evidence: Kept rooted `/vector/*` helper paths available only as ordinary
+    user-defined definitions, added focused semantics coverage proving
+    canonical vector imports do not revive rooted direct or slash-method helper
+    calls, and updated diagnostics/docs/TODO state to treat rooted vector
+    aliases as removed while leaving rooted map compatibility unchanged.
+    Baseline release validation was skipped per the lite workflow.

@@ -721,7 +721,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                      !context.shouldBuiltinValidateBareMapCountCall);
                 if (failsCountUnknownTargetValidation) {
                   return failUnknownCallTarget(methodResolved == "/vector/count"
-                                                   ? "/std/collections/vector/count"
+                                                   ? methodResolved
                                                    : stdlibMapCountTargetPath);
                 }
                 if (!failInvisibleResolvedMethodTarget(methodResolved,
@@ -836,10 +836,11 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 if (!expr.isMethodCall && expr.args.size() == 1 &&
                     receiver.kind == Expr::Kind::Name &&
                     methodResolved == "/vector/capacity" &&
+                    !hasDeclaredDefinitionPath("/vector/capacity") &&
+                    !hasImportedDefinitionPath("/vector/capacity") &&
                     !hasDeclaredDefinitionPath("/std/collections/vector/capacity") &&
                     !hasImportedDefinitionPath("/std/collections/vector/capacity")) {
-                  return failUnknownCallTarget(
-                      "/std/collections/vector/capacity");
+                  return failUnknownCallTarget(methodResolved);
                 }
                 promoteUnknownCapacityMethodToBuiltinValidation(
                     receiver, methodResolved, isBuiltinMethod);

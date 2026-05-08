@@ -25,6 +25,52 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("rooted vector helper calls stay rejected with canonical import") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(5i32, 6i32, 7i32)}
+  /vector/push(values, 8i32)
+  return(/vector/count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/push") != std::string::npos);
+}
+
+TEST_CASE("rooted vector count call stays rejected with canonical import") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(/vector/count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
+}
+
+TEST_CASE("rooted vector slash methods stay rejected with canonical import") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values./vector/count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
+}
+
 TEST_CASE("vector namespaced count alias keeps canonical helper diagnostics") {
   const std::string source = R"(
 [return<int>]

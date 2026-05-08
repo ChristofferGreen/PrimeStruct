@@ -3121,8 +3121,9 @@ for(
     those same explicit experimental `Vector<T>` bindings. Explicit canonical read/access calls to
     `/std/collections/vector/count`, `capacity`, `at`, and `at_unsafe` now fall through to visible `.prime` helper
     definitions instead of count/access classifier raw vector emitters; rooted
-    `/vector/*` and direct `/std/collections/experimental_vector/*`
-    compatibility names remain temporary shims.
+    `/vector/*` helper spellings are rejected unless an explicit same-path user
+    definition exists, and direct `/std/collections/experimental_vector/*`
+    compatibility imports remain temporary shims.
   - Canonical `/std/collections/map/*` is now the sole public namespaced map contract. The
     `/std/collections/experimental_map/*` family now remains only as the internal implementation seam behind that
     public contract. That backing namespace (`Entry<K, V>`, `entry(key, value)`,
@@ -3798,13 +3799,17 @@ re-defining it piecemeal.
   by `StdlibSurfaceRegistry` through generic manifest loading. Production C++
   keeps the surface id and registry APIs, but the canonical vector member lists,
   import aliases, lowering spellings, and statement-helper subset live with the
-  stdlib collection source. Old vector compatibility spellings are intentionally
-  absent from that metadata and remain tracked by the explicit deletion leaves.
-- **Migration-only seams:** rooted `/vector/*` and `/map/*` spellings plus
-  `vectorCount` / `mapCount`-style lowering names remain temporary
-  compatibility seams. The vector/map adapter cutover is complete for
-  semantic and template-monomorph helper decisions; TODO-4377 and TODO-4378
-  own the remaining vector seam deletion, and TODO-4303 owns the later map seam
+  stdlib collection source. Old vector compatibility spellings are
+  intentionally absent from that metadata; rooted helper aliases are removed,
+  and the direct experimental import seam remains tracked by the vector
+  deletion leaves.
+- **Migration-only seams:** rooted `/map/*` spellings plus
+  `mapCount`-style lowering names remain temporary compatibility seams. Rooted
+  `/vector/*` helper spellings no longer act as builtin vector compatibility
+  aliases; explicit user definitions under those paths remain ordinary
+  definitions. The vector/map adapter cutover is complete for semantic and
+  template-monomorph helper decisions; TODO-4378 owns the remaining direct
+  experimental vector seam deletion, and TODO-4303 owns the later map seam
   deletion after map metadata moves to a stdlib-owned manifest.
 - **Compatibility adapter inventory:** map insert helper compatibility was the
   first migrated family. The semantic map-insert rewrite asks the
