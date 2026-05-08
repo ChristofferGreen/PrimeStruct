@@ -492,6 +492,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     auto rootedVectorHelperPath = [](std::string_view helperName) {
       return "/vector/" + std::string(helperName);
     };
+    const std::string rootedVectorHelperPrefix = rootedVectorHelperPath("");
+    const std::string unrootedVectorHelperPrefix =
+        rootedVectorHelperPrefix.substr(1);
     if (expr.isMethodCall && !expr.args.empty() &&
         (normalizeCollectionMethodName(expr.name) == "count" ||
          normalizeCollectionMethodName(expr.name) == "capacity" ||
@@ -512,7 +515,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         const bool explicitVectorNamespace =
             expr.namespacePrefix == "vector" ||
             expr.namespacePrefix == "/vector" ||
-            expr.name.rfind(rootedVectorHelperPath(""), 0) == 0;
+            expr.name.rfind(rootedVectorHelperPrefix, 0) == 0;
         if (explicitArrayNamespace) {
           return failExprRootDiagnostic("unknown method: /array/" + helperName);
         }
@@ -556,13 +559,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             isVectorMutatorMethodName(normalizedName)) {
           return "/" + normalizedPrefix + "/" + normalizedName;
         }
-        constexpr std::string_view RootPrefix = "vector/";
         constexpr std::string_view CanonicalPrefix = "std/collections/vector/";
-        if (normalizedName.rfind(RootPrefix, 0) == 0) {
+        if (normalizedName.rfind(unrootedVectorHelperPrefix, 0) == 0) {
           const std::string helperName =
-              normalizedName.substr(RootPrefix.size());
+              normalizedName.substr(unrootedVectorHelperPrefix.size());
           if (isVectorMutatorMethodName(helperName)) {
-            return "/" + normalizedName;
+            return rootedVectorHelperPath(helperName);
           }
         }
         if (normalizedName.rfind(CanonicalPrefix, 0) == 0) {

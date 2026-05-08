@@ -309,10 +309,22 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
             "auto rootedVectorHelperPath = [](std::string_view helperName)") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
+            "const std::string rootedVectorHelperPrefix = rootedVectorHelperPath(\"\");") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "const std::string unrootedVectorHelperPrefix =") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
             "const std::string samePath = rootedVectorHelperPath(helperName);") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
+            "normalizedName.rfind(unrootedVectorHelperPrefix, 0)") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
             "const std::string samePath = \"/vector/\" + helperName;") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "constexpr std::string_view RootPrefix = \"vector/\";") ==
         std::string::npos);
   CHECK(semanticsExprSource.find("\"unknown method: /vector/\" + expr.name") ==
         std::string::npos);

@@ -737,7 +737,7 @@
     {
       "path": "src/semantics/SemanticsValidatorExpr.cpp",
       "pattern": "root-vector-helper-path",
-      "count": 2
+      "count": 1
     },
     {
       "path": "src/semantics/SemanticsValidatorExprArgumentValidation.cpp",
