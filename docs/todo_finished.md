@@ -15133,3 +15133,29 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     semantic work into TODO-4386, and ratcheted
     `scripts/vector_surface_trace_baseline.json` from 926 to 916 production
     traces. Baseline release validation was skipped per the lite workflow.
+
+- [x] TODO-4386: Collapse rooted vector expression method paths
+  - owner: ai
+  - created_at: 2026-05-08
+  - phase: Vector stdlib ownership cutover
+  - scope: Replace repeated rooted `/vector/` expression method helper path
+    checks in `SemanticsValidatorExpr.cpp` with a single local path builder.
+  - acceptance:
+    - `SemanticsValidatorExpr.cpp` no longer repeats direct rooted vector
+      helper prefix checks or direct rooted-vector unknown-method
+      concatenations for expression method validation.
+    - Existing unknown-method diagnostics and explicit user-defined rooted
+      helper handling are preserved.
+    - The vector surface trace baseline decreases for semantic validator files
+      and does not increase elsewhere.
+  - stop_rule: Stop after rooted expression method helper paths are centralized,
+    source-lock coverage keeps the repeated direct forms absent, and the audit
+    baseline ratchets downward.
+  - finished_at: 2026-05-08
+  - evidence: Introduced `rootedVectorHelperPath` in
+    `SemanticsValidatorExpr.cpp`, routed explicit rooted vector namespace and
+    wrapper-temporary diagnostics through that helper, added source-lock
+    assertions against the old direct rooted prefix/construction forms, split
+    the remaining rooted semantic work into TODO-4387, and ratcheted
+    `scripts/vector_surface_trace_baseline.json` from 916 to 914 production
+    traces. Baseline release validation was skipped per the lite workflow.

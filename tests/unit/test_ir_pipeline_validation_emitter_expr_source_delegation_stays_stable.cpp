@@ -305,6 +305,19 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("\"argument type mismatch for \" + samePath") ==
         std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "auto rootedVectorHelperPath = [](std::string_view helperName)") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "const std::string samePath = rootedVectorHelperPath(helperName);") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "const std::string samePath = \"/vector/\" + helperName;") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("\"unknown method: /vector/\" + expr.name") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("expr.name.rfind(\"/vector/\", 0)") ==
+        std::string::npos);
 
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(") !=

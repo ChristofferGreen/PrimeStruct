@@ -489,6 +489,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     bool hasVectorHelperCallResolution = false;
     std::string vectorHelperCallResolvedPath;
     size_t vectorHelperCallReceiverIndex = 0;
+    auto rootedVectorHelperPath = [](std::string_view helperName) {
+      return "/vector/" + std::string(helperName);
+    };
     if (expr.isMethodCall && !expr.args.empty() &&
         (normalizeCollectionMethodName(expr.name) == "count" ||
          normalizeCollectionMethodName(expr.name) == "capacity" ||
@@ -509,12 +512,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         const bool explicitVectorNamespace =
             expr.namespacePrefix == "vector" ||
             expr.namespacePrefix == "/vector" ||
-            expr.name.rfind("/vector/", 0) == 0;
+            expr.name.rfind(rootedVectorHelperPath(""), 0) == 0;
         if (explicitArrayNamespace) {
           return failExprRootDiagnostic("unknown method: /array/" + helperName);
         }
         if (explicitVectorNamespace) {
-          const std::string samePath = "/vector/" + helperName;
+          const std::string samePath = rootedVectorHelperPath(helperName);
           if (!hasDeclaredDefinitionPath(samePath) &&
               !hasImportedDefinitionPath(samePath)) {
             return failExprRootDiagnostic("unknown method: " + samePath);
@@ -630,7 +633,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
              !hasImportedDefinitionPath(methodPath);
     };
     if (isNonCtorWrapperReturnedBareVectorMethodWithoutHelper()) {
-      return failExprRootDiagnostic("unknown method: /vector/" + expr.name);
+      return failExprRootDiagnostic("unknown method: " +
+                                    rootedVectorHelperPath(expr.name));
     }
     ExprDispatchBootstrap dispatchBootstrap;
     prepareExprDispatchBootstrap(params, locals, dispatchBootstrap);
