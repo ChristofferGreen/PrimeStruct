@@ -713,6 +713,13 @@
         std::string::npos);
   CHECK(semanticsExprPointerLikeSource.find("std::string SemanticsValidator::normalizeCollectionMethodName") !=
         std::string::npos);
+  CHECK(semanticsExprPointerLikeSource.find("isUnrootedVectorHelperPath(normalized)") !=
+        std::string::npos);
+  CHECK(semanticsExprPointerLikeSource.find(
+            "normalized.substr(unrootedVectorHelperPrefix().size())") !=
+        std::string::npos);
+  CHECK(semanticsExprPointerLikeSource.find("const std::string vectorPrefix = \"vector/\";") ==
+        std::string::npos);
   CHECK(semanticsExprPointerLikeSource.find("std::string SemanticsValidator::inferPointerLikeCallReturnType") !=
         std::string::npos);
   CHECK(semanticsExprPointerLikeSource.find("bool SemanticsValidator::resolvePointerLikeMethodTarget") !=
@@ -883,6 +890,15 @@
             "usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, \"/vector\")") !=
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
+            "auto normalizeMethodName = [this](const std::string &name)") !=
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
+            "isUnrootedVectorHelperPath(normalizedMethodName)") !=
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
+            "normalizedMethodName.rfind(\"vector/\", 0)") ==
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
             "hasVisibleDefinitionPathForCurrentImports(canonical)") ==
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
@@ -911,7 +927,10 @@
   CHECK(semanticsCollectionHelperRewritesSource.find(
             "std::string SemanticsValidator::preferredBareVectorHelperTarget") != std::string::npos);
   CHECK(semanticsCollectionHelperRewritesSource.find(
-            "const std::string samePath = \"/vector/\" + std::string(helperName);") !=
+            "const std::string samePath = rootedVectorHelperPath(helperName);") !=
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find(
+            "const std::string samePath = \"/vector/\" + std::string(helperName);") ==
         std::string::npos);
   CHECK(semanticsCollectionHelperRewritesSource.find("bool SemanticsValidator::tryRewriteBareMapHelperCall") !=
         std::string::npos);

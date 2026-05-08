@@ -24,11 +24,10 @@ std::string SemanticsValidator::normalizeEffectFreeCollectionMethodName(const st
     methodName.erase(methodName.begin());
   }
   if (receiverPath == "/vector" || receiverPath == "/array") {
-    const std::string vectorPrefix = "vector/";
     const std::string arrayPrefix = "array/";
     const std::string stdVectorPrefix = "std/collections/vector/";
-    if (methodName.rfind(vectorPrefix, 0) == 0) {
-      return methodName.substr(vectorPrefix.size());
+    if (isUnrootedVectorHelperPath(methodName)) {
+      return methodName.substr(unrootedVectorHelperPrefix().size());
     }
     if (methodName.rfind(arrayPrefix, 0) == 0) {
       return methodName.substr(arrayPrefix.size());
@@ -132,7 +131,7 @@ std::vector<std::string> SemanticsValidator::effectFreeCollectionHelperPathCandi
 
   std::string normalizedPath = path;
   if (!normalizedPath.empty() && normalizedPath.front() != '/') {
-    if (normalizedPath.rfind("array/", 0) == 0 || normalizedPath.rfind("vector/", 0) == 0 ||
+    if (normalizedPath.rfind("array/", 0) == 0 || isUnrootedVectorHelperPath(normalizedPath) ||
         normalizedPath.rfind("std/collections/vector/", 0) == 0 || normalizedPath.rfind("map/", 0) == 0 ||
         normalizedPath.rfind("std/collections/map/", 0) == 0) {
       normalizedPath.insert(normalizedPath.begin(), '/');

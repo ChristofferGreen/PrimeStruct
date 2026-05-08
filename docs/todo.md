@@ -72,7 +72,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4393: Retire remaining rooted vector semantic checks
+- TODO-4394: Retire final rooted vector semantic checks
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -92,7 +92,7 @@ Task template:
 - Semantic ownership authority: none active; future semantic-authority work
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
-- Vector stdlib ownership cutover: TODO-4393 -> TODO-4381 -> TODO-4372
+- Vector stdlib ownership cutover: TODO-4394 -> TODO-4381 -> TODO-4372
   -> TODO-4373
 - Map stdlib ownership cutover: TODO-4299 -> TODO-4300 -> TODO-4301
   -> TODO-4302 -> TODO-4303 -> TODO-4304
@@ -112,7 +112,7 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4393: Retire remaining rooted vector semantic checks
+- TODO-4394: Retire final rooted vector semantic checks
 - TODO-4381: Remove canonical vector semantic shims
 - TODO-4372: Remove lowerer and emitter vector-surface traces
 - TODO-4373: Tighten vector trace audit to zero
@@ -177,9 +177,9 @@ Task template:
 | Compile-pipeline stage and publication-boundary contracts | none |
 | Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4299, TODO-4305 |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4393, TODO-4381, TODO-4372, TODO-4373, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4393, TODO-4381, TODO-4372, TODO-4373, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
-| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4393, TODO-4381, TODO-4372, TODO-4373, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
+| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4394, TODO-4381, TODO-4372, TODO-4373, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4394, TODO-4381, TODO-4372, TODO-4373, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4394, TODO-4381, TODO-4372, TODO-4373, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
@@ -208,8 +208,8 @@ Task template:
 | Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
-| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4393, TODO-4381, TODO-4372, TODO-4373, TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
-| De-experimentalization surface and namespace parity | TODO-4393, TODO-4381, TODO-4372, TODO-4373, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
+| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4394, TODO-4381, TODO-4372, TODO-4373, TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| De-experimentalization surface and namespace parity | TODO-4394, TODO-4381, TODO-4372, TODO-4373, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
@@ -244,7 +244,7 @@ Task template:
   metadata is now owned by `stdlib/std/collections/surfaces.psmeta`, and the
   registry no longer advertises vector compatibility spellings through that
   manifest. Direct experimental vector source imports are now rejected, and
-  TODO-4393, TODO-4381, TODO-4372, and TODO-4373 handle the remaining
+  TODO-4394, TODO-4381, TODO-4372, and TODO-4373 handle the remaining
   production C++ vector trace removal and final zero-vector audit tightening.
   TODO-4299 through TODO-4304 apply the same ownership model to map while
   keeping map-specific lookup, insertion, `Result<ContainerError>`, and key
@@ -1644,41 +1644,48 @@ Task template:
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
 
-- [ ] TODO-4393: Retire remaining rooted vector semantic checks
+- [ ] TODO-4394: Retire final rooted vector semantic checks
   - owner: ai
   - created_at: 2026-05-08
   - phase: Vector stdlib ownership cutover
-  - depends_on: TODO-4392
-  - scope: Audit the remaining semantic-validator rooted `/vector/*`
-    checks after rooted path construction and prefix matching were centralized,
-    then remove any checks that still act as builtin compatibility aliases
-    instead of stable unknown-target diagnostics or ordinary explicit
-    same-path user-definition routing.
+  - depends_on: TODO-4393
+  - scope: Audit the final non-shared semantic-validator rooted `/vector/*`
+    prefix checks in free helper normalizers after member validators were
+    moved onto shared prefix helpers, then remove or promote any remaining
+    checks that still act as builtin compatibility aliases instead of stable
+    unknown-target diagnostics or ordinary explicit same-path user-definition
+    routing.
   - implementation_notes:
-    - Start from the remaining `root-vector-helper-path` hits reported by
-      `scripts/check_vector_surface_traces.py` under `src/semantics/`.
+    - Start from `SemanticsValidate.cpp` SoA conversion method normalization
+      and `SemanticsValidatorInferStructReturnHelpers.cpp`, plus the remaining
+      semantic `root-vector-helper-path` hits reported by
+      `scripts/check_vector_surface_traces.py`.
     - Preserve explicit user-defined `/vector/*` definitions as ordinary
       definitions and preserve stable unknown-target diagnostics.
-    - Do not touch template monomorph, lowerer, or emitter dispatch in this
-      leaf; TODO-4372 owns those production traces.
+    - Preserve the shared rooted-vector helper prefix implementation added for
+      semantic validators; do not touch template monomorph, lowerer, or
+      emitter dispatch in this leaf.
   - acceptance:
+    - `SemanticsValidate.cpp` and
+      `SemanticsValidatorInferStructReturnHelpers.cpp` no longer contribute
+      non-shared `root-vector-helper-path` hits.
     - Rooted `/vector/count`, `/vector/capacity`, `/vector/push`,
-      `/vector/at`, and peer helper spellings no longer have semantic
-      compatibility branches beyond stable unknown-target diagnostics or
-      ordinary explicit user definitions.
+      `/vector/at`, and peer helper spellings have no remaining non-shared
+      semantic compatibility branches beyond stable unknown-target diagnostics
+      or ordinary explicit user definitions.
     - Canonical `/std/collections/vector/*` helper calls and imports remain the
       supported public vector surface.
     - The vector surface trace baseline decreases for semantic validator files
       and does not increase elsewhere.
-  - stop_rule: Stop once rooted vector semantic validator compatibility shims
-    that can be retired without template/lowerer/emitter changes are removed
-    and the audit baseline ratchets downward.
+  - stop_rule: Stop once the remaining non-shared rooted vector semantic
+    validator compatibility shims are removed or promoted to shared helpers and
+    the audit baseline ratchets downward.
 
 - [ ] TODO-4381: Remove canonical vector semantic shims
   - owner: ai
   - created_at: 2026-05-08
   - phase: Vector stdlib ownership cutover
-  - depends_on: TODO-4393
+  - depends_on: TODO-4394
   - scope: Remove remaining canonical `/std/collections/vector/*` semantic
     helper-path branches that are replaceable by `.prime` helpers, generic
     collection logic, or stdlib-surface metadata.

@@ -710,11 +710,6 @@
       "count": 7
     },
     {
-      "path": "src/semantics/SemanticsValidatorEffectFreeCollections.cpp",
-      "pattern": "root-vector-helper-path",
-      "count": 2
-    },
-    {
       "path": "src/semantics/SemanticsValidatorExecutionDiagnostics.cpp",
       "pattern": "canonical-vector-path",
       "count": 2
@@ -860,11 +855,6 @@
       "count": 2
     },
     {
-      "path": "src/semantics/SemanticsValidatorExprPointerLike.cpp",
-      "pattern": "root-vector-helper-path",
-      "count": 1
-    },
-    {
       "path": "src/semantics/SemanticsValidatorExprResolvedCallArguments.cpp",
       "pattern": "experimental-vector-path",
       "count": 1
@@ -953,11 +943,6 @@
       "path": "src/semantics/SemanticsValidatorInferMethodResolution.cpp",
       "pattern": "canonical-vector-path",
       "count": 8
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorInferMethodResolution.cpp",
-      "pattern": "root-vector-helper-path",
-      "count": 2
     },
     {
       "path": "src/semantics/SemanticsValidatorInferPreDispatchCalls.cpp",

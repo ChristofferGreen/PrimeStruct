@@ -57,13 +57,14 @@ bool SemanticsValidator::resolveInferMethodCallPath(
   const Expr &receiver = expr.args.front();
   std::string typeName;
   std::string typeTemplateArg;
-  auto normalizeMethodName = [](const std::string &name) {
+  auto normalizeMethodName = [this](const std::string &name) {
     std::string normalizedMethodName = name;
     if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
       normalizedMethodName.erase(normalizedMethodName.begin());
     }
-    if (normalizedMethodName.rfind("vector/", 0) == 0) {
-      normalizedMethodName = normalizedMethodName.substr(std::string("vector/").size());
+    if (isUnrootedVectorHelperPath(normalizedMethodName)) {
+      normalizedMethodName =
+          normalizedMethodName.substr(unrootedVectorHelperPrefix().size());
     } else if (normalizedMethodName.rfind("array/", 0) == 0) {
       normalizedMethodName = normalizedMethodName.substr(std::string("array/").size());
     } else if (normalizedMethodName.rfind("soa_vector/", 0) == 0) {

@@ -73,13 +73,12 @@ std::string SemanticsValidator::normalizeCollectionMethodName(const std::string 
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
-  const std::string vectorPrefix = "vector/";
   const std::string arrayPrefix = "array/";
   const std::string stdVectorPrefix = "std/collections/vector/";
   const std::string mapPrefix = "map/";
   const std::string stdMapPrefix = "std/collections/map/";
-  if (normalized.rfind(vectorPrefix, 0) == 0) {
-    normalized = normalized.substr(vectorPrefix.size());
+  if (isUnrootedVectorHelperPath(normalized)) {
+    normalized = normalized.substr(unrootedVectorHelperPrefix().size());
   } else if (normalized.rfind(arrayPrefix, 0) == 0) {
     normalized = normalized.substr(arrayPrefix.size());
   } else if (normalized.rfind(stdVectorPrefix, 0) == 0) {

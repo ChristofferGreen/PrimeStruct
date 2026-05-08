@@ -15331,3 +15331,32 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     ratcheted `scripts/vector_surface_trace_baseline.json` from 901 to 886
     production traces. Baseline release validation was skipped per the lite
     workflow.
+
+- [x] TODO-4393: Reuse rooted vector semantic prefix helpers
+  - owner: ai
+  - created_at: 2026-05-08
+  - phase: Vector stdlib ownership cutover
+  - scope: Route remaining member semantic-validator rooted vector helper
+    prefix checks in effect-free, pointer-like, and infer-method normalizers
+    through shared `SemanticsValidator` vector helper prefix predicates instead
+    of direct `vector/` probes.
+  - acceptance:
+    - `SemanticsValidatorEffectFreeCollections.cpp`,
+      `SemanticsValidatorExprPointerLike.cpp`, and
+      `SemanticsValidatorInferMethodResolution.cpp` no longer contribute
+      `root-vector-helper-path` trace hits.
+    - Existing unknown-target diagnostics and explicit user-defined rooted
+      helper handling are preserved.
+    - The vector surface trace baseline decreases for semantic validator files
+      and does not increase elsewhere.
+  - stop_rule: Stop after member semantic normalizers reuse the shared vector
+    prefix helpers, source-lock coverage keeps the old direct probes absent,
+    and the audit baseline ratchets downward.
+  - finished_at: 2026-05-08
+  - evidence: Reused `isUnrootedVectorHelperPath` and
+    `unrootedVectorHelperPrefix` in effect-free method normalization,
+    pointer-like method normalization, and infer-method normalization, updated
+    source-lock checks for those shared helper calls, split the final free
+    helper audit into TODO-4394, and ratcheted
+    `scripts/vector_surface_trace_baseline.json` from 886 to 881 production
+    traces. Baseline release validation was skipped per the lite workflow.

@@ -975,6 +975,19 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "std::string SemanticsValidator::resolveEffectFreeBareMapCallPath(") !=
         std::string::npos);
   CHECK(semanticsEffectFreeCollectionsSource.find(
+            "std::string SemanticsValidator::normalizeEffectFreeCollectionMethodName") !=
+        std::string::npos);
+  CHECK(semanticsEffectFreeCollectionsSource.find(
+            "isUnrootedVectorHelperPath(methodName)") !=
+        std::string::npos);
+  CHECK(semanticsEffectFreeCollectionsSource.find(
+            "isUnrootedVectorHelperPath(normalizedPath)") !=
+        std::string::npos);
+  CHECK(semanticsEffectFreeCollectionsSource.find("const std::string vectorPrefix = \"vector/\";") ==
+        std::string::npos);
+  CHECK(semanticsEffectFreeCollectionsSource.find("normalizedPath.rfind(\"vector/\", 0)") ==
+        std::string::npos);
+  CHECK(semanticsEffectFreeCollectionsSource.find(
             "auto tryResolveReceiverIndex = [&](size_t index) -> bool {") !=
         std::string::npos);
   CHECK(semanticsEffectFreeCollectionsSource.find(
