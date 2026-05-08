@@ -342,7 +342,7 @@ bool SemanticsValidator::resolveVectorStatementHelperTargetPath(
         return true;
       }
       if (collectionTypePath == "/vector") {
-        resolvedOut = "/std/collections/vector/" + helperName;
+        resolvedOut = preferredBareVectorHelperTarget(helperName);
         return true;
       }
     }
@@ -355,7 +355,7 @@ bool SemanticsValidator::resolveVectorStatementHelperTargetPath(
       return true;
     }
     if (vectorBinding.typeName == "vector") {
-      resolvedOut = "/std/collections/vector/" + helperName;
+      resolvedOut = preferredBareVectorHelperTarget(helperName);
       return true;
     }
     if (vectorBinding.typeName == "soa_vector") {

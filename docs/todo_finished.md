@@ -15394,3 +15394,31 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     rooted semantic checks, and ratcheted
     `scripts/vector_surface_trace_baseline.json` from 881 to 878 production
     traces. Baseline release validation was skipped per the lite workflow.
+
+- [x] TODO-4395: Route statement vector targets through preferred helper
+  - owner: ai
+  - created_at: 2026-05-08
+  - phase: Vector stdlib ownership cutover
+  - scope: Replace direct canonical `/std/collections/vector/*` target
+    construction in `SemanticsValidatorStatementVectorResolution.cpp` with the
+    existing preferred vector helper target used by the rest of semantic vector
+    routing.
+  - acceptance:
+    - Statement vector helper target resolution no longer directly constructs
+      canonical vector helper paths for builtin vector receivers.
+    - Existing canonical public vector helper behavior remains routed through
+      the preferred helper target.
+    - The vector surface trace baseline decreases for
+      `SemanticsValidatorStatementVectorResolution.cpp` and does not increase
+      elsewhere.
+  - stop_rule: Stop after statement vector target resolution uses the
+    preferred helper target, source-lock coverage keeps the old direct
+    canonical construction absent, and the audit baseline ratchets downward.
+  - finished_at: 2026-05-08
+  - evidence: Replaced the two direct
+    `"/std/collections/vector/" + helperName` statement target constructions
+    with `preferredBareVectorHelperTarget(helperName)`, updated source-lock
+    coverage, split the former TODO-4381 umbrella into TODO-4396 through
+    TODO-4398, and ratcheted `scripts/vector_surface_trace_baseline.json` from
+    878 to 876 production traces. Baseline release validation was skipped per
+    the lite workflow.

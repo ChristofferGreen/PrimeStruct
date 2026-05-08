@@ -1015,11 +1015,6 @@
       "count": 1
     },
     {
-      "path": "src/semantics/SemanticsValidatorStatementVectorResolution.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 2
-    },
-    {
       "path": "src/semantics/TemplateMonomorphBindingCallInference.h",
       "pattern": "experimental-vector-path",
       "count": 6

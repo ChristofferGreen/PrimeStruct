@@ -1939,6 +1939,13 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "        resolvedOut = preferredBareVectorHelperTarget(helperName);") !=
         std::string::npos);
   CHECK(semanticsStatementVectorResolutionSource.find(
+            "if (vectorBinding.typeName == \"vector\") {\n"
+            "      resolvedOut = preferredBareVectorHelperTarget(helperName);") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorResolutionSource.find(
+            "resolvedOut = \"/std/collections/vector/\" + helperName;") ==
+        std::string::npos);
+  CHECK(semanticsStatementVectorResolutionSource.find(
             "if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {") !=
         std::string::npos);
   CHECK(semanticsStatementVectorResolutionSource.find(
