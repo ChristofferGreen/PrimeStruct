@@ -298,12 +298,7 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
         const bool isWrappedVector =
             (targetInfo.kind == LocalInfo::Kind::Reference && targetInfo.referenceToVector) ||
             (targetInfo.kind == LocalInfo::Kind::Pointer && targetInfo.pointerToVector);
-        if (isStructBackedVector) {
-          instructions.push_back(
-              {IrOpcode::AddressOfLocal, static_cast<uint64_t>(targetInfo.index)});
-          return true;
-        }
-        if (isWrappedVector) {
+        if (isStructBackedVector || isWrappedVector) {
           instructions.push_back(
               {IrOpcode::LoadLocal, static_cast<uint64_t>(targetInfo.index)});
           return true;

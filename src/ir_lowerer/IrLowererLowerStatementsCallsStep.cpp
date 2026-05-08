@@ -127,7 +127,8 @@ CallsStepVectorHelperReceiverFact classifyCallsStepVectorHelperReceiverFromSeman
         resolveSemanticProductTypeText(semanticProgram,
                                        collectionFact->collectionFamily,
                                        collectionFact->collectionFamilyId);
-    return normalizeCollectionBindingTypeName(collectionFamily) == "vector"
+    return normalizeCollectionBindingTypeName(collectionFamily) == "vector" ||
+                   isCallsStepVectorTypeText(collectionFamily)
                ? CallsStepVectorHelperReceiverFact::Vector
                : CallsStepVectorHelperReceiverFact::NonVector;
   }
@@ -348,9 +349,9 @@ bool runLowerStatementsCallsStep(const LowerStatementsCallsStepInput &input,
           auto localIt = localsIn.find(candidate.args.front().name);
           if (localIt != localsIn.end() && !localIt->second.isSoaVector &&
               (localIt->second.kind == LocalInfo::Kind::Vector ||
-               localIt->second.structTypeName == "/std/collections/experimental_vector/Vector" ||
-               localIt->second.structTypeName.rfind(
-                   "/std/collections/experimental_vector/Vector__", 0) == 0)) {
+               localIt->second.referenceToVector ||
+               localIt->second.pointerToVector ||
+               isCallsStepVectorTypeText(localIt->second.structTypeName))) {
             return false;
           }
         }

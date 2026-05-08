@@ -404,9 +404,8 @@
           return !helperNameOut.empty();
         };
     std::string vectorVoidInlineHelper;
-    if (requireValue &&
-        resolveVectorVoidInlineHelperBuiltinName(callee.fullPath,
-                                                 vectorVoidInlineHelper)) {
+    if (resolveVectorVoidInlineHelperBuiltinName(callee.fullPath,
+                                                vectorVoidInlineHelper)) {
       Expr vectorStmt = callExpr;
       vectorStmt.name = vectorVoidInlineHelper;
       vectorStmt.namespacePrefix.clear();
@@ -463,7 +462,9 @@
         return false;
       }
       if (vectorStatementResult == ir_lowerer::VectorStatementHelperEmitResult::Emitted) {
-        function.instructions.push_back({IrOpcode::PushI32, 0});
+        if (requireValue) {
+          function.instructions.push_back({IrOpcode::PushI32, 0});
+        }
         return true;
       }
     }
