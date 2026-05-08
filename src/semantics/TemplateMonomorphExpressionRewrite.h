@@ -1683,8 +1683,6 @@ bool rewriteExpr(Expr &expr,
     }
     if (!expr.templateArgs.empty() && !resolvedWasTemplate) {
       if (!shouldPreserveCompatibilityTemplatePath(resolvedPath, ctx) &&
-          !shouldPreserveExplicitRootedVectorTemplatePath(resolvedPath, ctx) &&
-          !isExplicitRootedVectorFallbackReference(expr, resolvedPath) &&
           !shouldPreserveCanonicalMapTemplatePath(resolvedPath, ctx)) {
         const std::string templatePreferredPath = preferVectorStdlibTemplatePath(resolvedPath, ctx);
         if (templatePreferredPath != resolvedPath) {
@@ -2021,7 +2019,6 @@ bool rewriteExpr(Expr &expr,
       const bool methodWasTemplate = ctx.templateDefs.count(methodPath) > 0;
       if (!expr.templateArgs.empty() && !methodWasTemplate) {
         if (!shouldPreserveCompatibilityTemplatePath(methodPath, ctx) &&
-            !shouldPreserveExplicitRootedVectorTemplatePath(methodPath, ctx) &&
             !shouldPreserveCanonicalMapTemplatePath(methodPath, ctx)) {
           methodPath = preferVectorStdlibTemplatePath(methodPath, ctx);
         }

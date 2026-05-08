@@ -1102,17 +1102,12 @@
     {
       "path": "src/semantics/TemplateMonomorphCollectionCompatibilityPaths.h",
       "pattern": "canonical-vector-path",
-      "count": 6
+      "count": 5
     },
     {
       "path": "src/semantics/TemplateMonomorphCollectionCompatibilityPaths.h",
       "pattern": "experimental-vector-path",
       "count": 2
-    },
-    {
-      "path": "src/semantics/TemplateMonomorphCollectionCompatibilityPaths.h",
-      "pattern": "root-vector-helper-path",
-      "count": 5
     },
     {
       "path": "src/semantics/TemplateMonomorphCoreUtilities.h",

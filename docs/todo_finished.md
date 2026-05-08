@@ -14984,3 +14984,27 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     PrimeStruct vector traces now fail mechanically while the follow-up leaves
     ratchet the baseline down to zero. Baseline release validation was skipped
     per the lite workflow.
+
+- [x] TODO-4371: Remove rooted vector template fallback traces
+  - owner: ai
+  - created_at: 2026-05-08
+  - phase: Vector stdlib ownership cutover
+  - scope: Remove the template-monomorph rooted `/vector/*` fallback that could
+    still redirect removed vector helper template references to canonical
+    `/std/collections/vector/*` definitions.
+  - acceptance:
+    - Template monomorphization no longer rewrites rooted `/vector/*` template
+      fallback paths to canonical stdlib vector helpers.
+    - Existing explicit rooted `/vector/*` user definitions remain ordinary
+      definitions instead of builtin compatibility aliases.
+    - The vector surface trace baseline decreases for semantic/template files
+      and does not increase elsewhere.
+  - stop_rule: Stop after the rooted template fallback path and preservation
+    shims are removed and the audit baseline ratchets downward.
+  - finished_at: 2026-05-08
+  - evidence: Deleted the rooted `/vector/*` branch from
+    `preferVectorStdlibTemplatePath`, removed the explicit-rooted preservation
+    helpers from template monomorph fallback/rewrite flow, added source-lock
+    coverage to keep those shims absent, and ratcheted
+    `scripts/vector_surface_trace_baseline.json` from 952 to 946 production
+    traces. Baseline release validation was skipped per the lite workflow.

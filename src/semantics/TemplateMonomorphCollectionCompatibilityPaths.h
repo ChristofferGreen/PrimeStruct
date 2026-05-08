@@ -153,17 +153,6 @@ std::string preferVectorStdlibTemplatePath(const std::string &path, const Contex
     }
     return path;
   }
-  if (path.rfind("/vector/", 0) == 0) {
-    const std::string suffix = path.substr(std::string("/vector/").size());
-    if (isRemovedVectorCompatibilityHelper(suffix)) {
-      const std::string stdlibPath = "/std/collections/vector/" + suffix;
-      if (ctx.sourceDefs.count(stdlibPath) > 0 &&
-          ctx.templateDefs.count(stdlibPath) > 0) {
-        return stdlibPath;
-      }
-    }
-    return path;
-  }
   if (path.rfind("/map/", 0) == 0) {
     const std::string suffix = path.substr(std::string("/map/").size());
     if (!isRemovedMapCompatibilityHelper(mapCompatibilityHelperBase(suffix))) {
@@ -252,39 +241,6 @@ bool isExplicitCollectionCompatibilityAliasPath(std::string path) {
 bool shouldPreserveCompatibilityTemplatePath(const std::string &path, const Context &ctx) {
   return isCollectionCompatibilityTemplateFallbackPath(path) && ctx.sourceDefs.count(path) > 0 &&
          ctx.templateDefs.count(path) == 0;
-}
-
-bool shouldPreserveExplicitRootedVectorTemplatePath(const std::string &path, const Context &ctx) {
-  constexpr std::string_view rootedVectorPrefix = "/vector/";
-  if (path.rfind(rootedVectorPrefix, 0) != 0) {
-    return false;
-  }
-  if (ctx.sourceDefs.count(path) == 0 || ctx.templateDefs.count(path) > 0) {
-    return false;
-  }
-  const std::string helper = path.substr(rootedVectorPrefix.size());
-  return isRemovedVectorCompatibilityHelper(helper);
-}
-
-bool isExplicitRootedVectorFallbackReference(const Expr &expr, const std::string &path) {
-  constexpr std::string_view rootedVectorPrefix = "/vector/";
-  if (path.rfind(rootedVectorPrefix, 0) != 0) {
-    return false;
-  }
-  const std::string helper = path.substr(rootedVectorPrefix.size());
-  if (!isRemovedVectorCompatibilityHelper(helper)) {
-    return false;
-  }
-  std::string normalizedName = expr.name;
-  if (!normalizedName.empty() && normalizedName.front() == '/') {
-    normalizedName.erase(normalizedName.begin());
-  }
-  std::string normalizedPrefix = expr.namespacePrefix;
-  if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
-    normalizedPrefix.erase(normalizedPrefix.begin());
-  }
-  return normalizedName.rfind("vector/", 0) == 0 ||
-         normalizedPrefix == "vector";
 }
 
 bool shouldPreserveCanonicalMapTemplatePath(const std::string &path, const Context &ctx) {

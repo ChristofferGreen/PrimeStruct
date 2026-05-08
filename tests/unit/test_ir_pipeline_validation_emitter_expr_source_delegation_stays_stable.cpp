@@ -2587,6 +2587,24 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "\"/soa_vector/\" + suffix") !=
         std::string::npos);
   CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
+            "if (path.rfind(\"/vector/\", 0) == 0)") ==
+        std::string::npos);
+  CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
+            "shouldPreserveExplicitRootedVectorTemplatePath") ==
+        std::string::npos);
+  CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
+            "isExplicitRootedVectorFallbackReference") ==
+        std::string::npos);
+  CHECK(templateMonomorphFallbackSource.find(
+            "isExplicitRootedVectorFallbackReference(") ==
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "shouldPreserveExplicitRootedVectorTemplatePath(") ==
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "isExplicitRootedVectorFallbackReference(") ==
+        std::string::npos);
+  CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
             "value == \"std/collections/experimental_soa_vector/SoaVector\" || value == \"SoaVector\"") ==
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
