@@ -26,6 +26,10 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         return !hasDeclaredDefinitionPath(methodTargetPath) &&
                !hasImportedDefinitionPath(methodTargetPath);
       };
+  const auto rootedVectorCountCapacityTargetPath =
+      [](const std::string &helperName) {
+        return "/vector/" + helperName;
+      };
   const auto lacksVisibleResolvedMethodTarget =
       [&](const std::string &methodTargetPath, bool isBuiltinMethod) {
         return !isBuiltinMethod &&
@@ -261,10 +265,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         }
         const Expr &receiver = expr.args.front();
         std::string visibleCountHelperTarget;
+        const std::string rootedVectorCountTargetPath =
+            rootedVectorCountCapacityTargetPath("count");
         const bool resolvesVisibleCollectionCountHelper =
             resolveVisiblePreferredVectorHelperMethodTarget(
                 receiver, "count", visibleCountHelperTarget) &&
-            (visibleCountHelperTarget == "/vector/count" ||
+            (visibleCountHelperTarget == rootedVectorCountTargetPath ||
              visibleCountHelperTarget == "/std/collections/vector/count" ||
              visibleCountHelperTarget == "/soa_vector/count" ||
              visibleCountHelperTarget == "/std/collections/soa_vector/count" ||
@@ -555,7 +561,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         expr.namespacePrefix == "/std/collections/vector" ||
         expr.name.rfind("/std/collections/vector/", 0) == 0;
     const std::string rootedVectorCountTargetPath =
-        "/vector/" + countHelperName;
+        rootedVectorCountCapacityTargetPath(countHelperName);
     const std::string stdlibVectorCountTargetPath =
         "/std/collections/vector/" + countHelperName;
     const std::string explicitVectorCountTargetPath =
@@ -795,7 +801,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 const std::string stdlibVectorCapacityTargetPath =
                     "/std/collections/vector/capacity";
                 const std::string rootedVectorCapacityTargetPath =
-                    "/vector/capacity";
+                    rootedVectorCountCapacityTargetPath("capacity");
                 const auto assignStdlibVectorCapacityCompatibilityTarget =
                     [&]() {
                       methodResolved = stdlibVectorCapacityTargetPath;

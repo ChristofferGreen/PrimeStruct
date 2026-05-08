@@ -792,7 +792,7 @@
     {
       "path": "src/semantics/SemanticsValidatorExprCollectionCountCapacity.cpp",
       "pattern": "root-vector-helper-path",
-      "count": 3
+      "count": 1
     },
     {
       "path": "src/semantics/SemanticsValidatorExprCollectionDispatchSetup.cpp",

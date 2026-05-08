@@ -15243,3 +15243,30 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     semantic work into TODO-4390, and ratcheted
     `scripts/vector_surface_trace_baseline.json` from 906 to 905 production
     traces. Baseline release validation was skipped per the lite workflow.
+
+- [x] TODO-4390: Collapse rooted count/capacity target paths
+  - owner: ai
+  - created_at: 2026-05-08
+  - phase: Vector stdlib ownership cutover
+  - scope: Route rooted vector `count` and `capacity` target construction in
+    `SemanticsValidatorExprCollectionCountCapacity.cpp` through one
+    count/capacity helper instead of repeated direct `/vector/*` literals.
+  - acceptance:
+    - `SemanticsValidatorExprCollectionCountCapacity.cpp` no longer repeats
+      direct rooted count/capacity literal comparisons or construction for the
+      simple-count forwarding and capacity method paths.
+    - Existing unknown-target diagnostics and explicit user-defined rooted
+      count/capacity helper handling are preserved.
+    - The vector surface trace baseline decreases for semantic validator files
+      and does not increase elsewhere.
+  - stop_rule: Stop after count/capacity rooted target construction reuses the
+    shared helper, source-lock coverage keeps the old direct forms absent, and
+    the audit baseline ratchets downward.
+  - finished_at: 2026-05-08
+  - evidence: Added `rootedVectorCountCapacityTargetPath`, routed rooted count
+    forwarding, method target construction, and capacity method target
+    construction through it, added source-lock assertions against the old
+    direct rooted forms, split the remaining rooted semantic work into
+    TODO-4391, and ratcheted `scripts/vector_surface_trace_baseline.json` from
+    905 to 903 production traces. Baseline release validation was skipped per
+    the lite workflow.
