@@ -325,6 +325,12 @@
             "const bool isExplicitRootedVectorMethod =") !=
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "explicitVectorHelperPath == \"/vector/push\" ||") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "isRemovedVectorCompatibilityHelper(explicitRootedVectorHelperName)") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
             "if ((resolvedOut == \"/std/collections/vector/at\" ||\n"
             "         resolvedOut == \"/std/collections/vector/at_unsafe\") &&\n"
             "        explicitVectorHelperPath.empty() &&") ==

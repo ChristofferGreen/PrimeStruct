@@ -15056,3 +15056,28 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     semantic work into TODO-4383, and ratcheted
     `scripts/vector_surface_trace_baseline.json` from 944 to 939 production
     traces. Baseline release validation was skipped per the lite workflow.
+
+- [x] TODO-4383: Collapse rooted vector method classifier list
+  - owner: ai
+  - created_at: 2026-05-08
+  - phase: Vector stdlib ownership cutover
+  - scope: Replace the method-target resolver's explicit rooted `/vector/*`
+    helper spelling list with prefix extraction plus the existing removed
+    vector compatibility helper predicate.
+  - acceptance:
+    - Explicit rooted vector method classification no longer hard-codes each
+      removed helper path in `SemanticsValidatorExprMethodTargetResolution.cpp`.
+    - Explicit user-defined rooted vector helper definitions still route
+      through the existing ordinary-definition preservation path.
+    - The vector surface trace baseline decreases for semantic validator files
+      and does not increase elsewhere.
+  - stop_rule: Stop after the hand-maintained rooted method helper list is
+    deleted, source-lock coverage keeps it absent, and the audit baseline
+    ratchets downward.
+  - finished_at: 2026-05-08
+  - evidence: Replaced the rooted method helper literal list with
+    `isRemovedVectorCompatibilityHelper(explicitRootedVectorHelperName)`,
+    added source-lock assertions against reintroducing the literal list, split
+    the remaining rooted semantic work into TODO-4384, and ratcheted
+    `scripts/vector_surface_trace_baseline.json` from 939 to 930 production
+    traces. Baseline release validation was skipped per the lite workflow.

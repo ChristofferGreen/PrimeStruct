@@ -1921,6 +1921,12 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "const bool isExplicitRootedVectorMethod =") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
+            "explicitVectorHelperPath == \"/vector/push\" ||") ==
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "isRemovedVectorCompatibilityHelper(explicitRootedVectorHelperName)") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
             "const bool isExplicitVectorFamilyReceiver =") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(

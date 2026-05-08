@@ -2501,17 +2501,15 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       explicitVectorReceiverFamily == "vector" ||
       explicitVectorReceiverFamily == "experimental_vector" ||
       explicitVectorReceiverFamily == "soa_vector";
+  const std::string_view explicitRootedVectorHelperPrefix = "/vector/";
+  const std::string_view explicitRootedVectorHelperName =
+      explicitVectorHelperPath.rfind(explicitRootedVectorHelperPrefix, 0) == 0
+          ? std::string_view(explicitVectorHelperPath).substr(
+                explicitRootedVectorHelperPrefix.size())
+          : std::string_view{};
   const bool isExplicitRootedVectorMethod =
-      explicitVectorHelperPath == "/vector/count" ||
-      explicitVectorHelperPath == "/vector/capacity" ||
-      explicitVectorHelperPath == "/vector/at" ||
-      explicitVectorHelperPath == "/vector/at_unsafe" ||
-      explicitVectorHelperPath == "/vector/push" ||
-      explicitVectorHelperPath == "/vector/pop" ||
-      explicitVectorHelperPath == "/vector/reserve" ||
-      explicitVectorHelperPath == "/vector/clear" ||
-      explicitVectorHelperPath == "/vector/remove_at" ||
-      explicitVectorHelperPath == "/vector/remove_swap";
+      !explicitRootedVectorHelperName.empty() &&
+      isRemovedVectorCompatibilityHelper(explicitRootedVectorHelperName);
   if (isExplicitRootedVectorMethod && isExplicitVectorFamilyReceiver) {
     if (hasReceiverCompatibleExplicitVectorHelperPath(explicitVectorHelperPath, receiver)) {
       resolvedOut = explicitVectorHelperPath;
