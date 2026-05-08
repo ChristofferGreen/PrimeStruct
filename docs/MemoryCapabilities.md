@@ -14,6 +14,14 @@ advanced effect signatures. The deeper model should become visible only when a
 public API, allocator boundary, unsafe interop boundary, concurrency boundary,
 or nontrivial lifetime relationship needs to state its authority precisely.
 
+All PrimeStruct-shaped source examples in this note use the readable surface
+style from `docs/CodeExamples.md`: return/effect metadata in `[...]`, brace
+local bindings, `return(...)`, method-style calls, `Reference<T>`, and
+`location(value)`. Capability requirements are shown as proposed metadata
+transforms such as `needs<read(value)>` or `needs<write(this)>`. Those
+`needs<...>` transforms are design notation, not a currently implemented
+language feature.
+
 ## Design Goal
 
 The goal is safe code with these properties:
@@ -153,13 +161,13 @@ authority by themselves; they are values that carry limited inherited authority.
 A read reference carries read authority:
 
 ```text
-Ref<T>      carries read(P)
+Reference<T> carries read(P)
 ```
 
 A write reference carries write authority:
 
 ```text
-RefMut<T>   carries write(P)
+[Reference<T> mut] carries write(P)
 ```
 
 An owning value carries ownership authority:
@@ -168,7 +176,8 @@ An owning value carries ownership authority:
 T           carries own(P)
 ```
 
-The names above are placeholders, not final surface syntax. The important
+The reference spelling follows the current PrimeStruct examples. The exact
+capability inference attached to those forms is proposed. The important
 semantic distinction is:
 
 ```text
@@ -195,27 +204,39 @@ capabilities should use the same channel.
 
 Conceptually:
 
-```text
-update(buffer)
-  needs write(buffer)
-{
-  buffer.length = buffer.length + 1
+```prime
+[struct]
+Counter {
+  [int mut] value{0}
+
+  [return<void> needs<write(this)>]
+  increment() {
+    this.value = this.value + 1
+  }
+}
+
+[return<void> needs<write(counter)>]
+increment_counter([Reference<Counter> mut] counter) {
+  counter.increment()
 }
 ```
 
-The caller must hold `write(buffer)`. The callee inherits exactly the authority
+The caller must hold `write(counter)`. The callee inherits exactly the authority
 declared by the call boundary. It cannot retain, widen, or smuggle out more
 authority unless its signature says so.
 
 This lets memory checking compose with other authority:
 
-```text
-load_image(path, allocator)
-  needs read(path), write(allocator), file.read
-  returns Image
+```prime
+[return<Image> effects(file_read) needs<read(path), write(allocator)>]
+load_image([Path] path, [Reference<Allocator> mut] allocator) {
+  // body elided
+}
 
-upload(texture, image)
-  needs write(texture), read(image), gpu.queue
+[return<void> effects(gpu_queue) needs<write(texture), read(image)>]
+upload([Reference<Texture> mut] texture, [Reference<Image>] image) {
+  // body elided
+}
 ```
 
 Memory authority, IO authority, GPU authority, allocator authority, and unsafe
@@ -227,31 +248,42 @@ The default user experience should be mostly inferred.
 
 Simple value code should not need explicit capability annotations:
 
-```text
-main() -> i32 {
-  value := 1
-  next := add_one(value)
-  return next
+```prime
+[int]
+main() {
+  value{1}
+  next{add_one(value)}
+
+  return(next)
 }
 ```
 
 Public APIs should show authority only where it matters:
 
-```text
-fill(buffer, value)
-  needs write(buffer)
-{
-  buffer[0] = value
+```prime
+[struct]
+Counter {
+  [int mut] value{0}
+
+  [int needs<read(this)>]
+  current() {
+    return(this.value)
+  }
+
+  [return<void> needs<write(this)>]
+  increment() {
+    this.value = this.value + 1
+  }
 }
 
-sum(buffer) -> i32
-  needs read(buffer)
-{
-  total := 0
-  for item in buffer {
-    total = total + item
-  }
-  return total
+[int needs<read(counter)>]
+read_counter([Reference<Counter>] counter) {
+  return(counter.current())
+}
+
+[return<void> needs<write(counter)>]
+bump_counter([Reference<Counter> mut] counter) {
+  counter.increment()
 }
 ```
 
@@ -312,12 +344,14 @@ target region.
 
 Conceptually:
 
-```text
-first(buffer) -> Ref<Item>
-  needs read(buffer), escape(buffer)
+```prime
+[return<Reference<int>> needs<read(values), escape(values)>]
+first([Reference<vector<int>>] values) {
+  return(values.at_ref(0))
+}
 ```
 
-Without `escape(buffer)`, `first` may inspect the buffer but may not return a
+Without `escape(values)`, `first` may inspect the vector but may not return a
 reference into it.
 
 This keeps lifetime-like reasoning local:
@@ -329,9 +363,11 @@ escape authority says what can outlive now.
 
 Regions can be introduced as the advanced form of escape authority:
 
-```text
-arena: Region
-allocate(arena) needs write(arena) returns Ref<T in arena>
+```prime
+[return<Reference<T>> needs<write(arena), escape(arena)>]
+allocate<T>([Reference<Region> mut] arena) {
+  // body elided
+}
 ```
 
 The beginner model does not need explicit regions. Region names become useful
@@ -345,9 +381,11 @@ on stable identity, or pass raw pointers to foreign code.
 
 Conceptually:
 
-```text
-as_raw(buffer)
-  needs addr(buffer), read(buffer), unsafe
+```prime
+[return<RawPointer<int>> unsafe needs<addr(buffer), read(buffer)>]
+as_raw([Reference<Buffer>] buffer) {
+  // body elided
+}
 ```
 
 `addr(P)` should be rare in safe code. It marks an API that depends on physical
@@ -366,16 +404,20 @@ Data-race freedom should fall out of the same model.
 Sending a read-only shared value to multiple workers requires only shareable
 read authority:
 
-```text
-spawn_readers(data)
-  needs read(data), thread.spawn
+```prime
+[return<void> effects(thread_spawn) needs<read(data)>]
+spawn_readers([Reference<Data>] data) {
+  // body elided
+}
 ```
 
 Sending write authority to a worker transfers or lends exclusive authority:
 
-```text
-spawn_writer(buffer)
-  needs write(buffer), thread.spawn
+```prime
+[return<void> effects(thread_spawn) needs<write(buffer)>]
+spawn_writer([Reference<Buffer> mut] buffer) {
+  // body elided
+}
 ```
 
 The caller cannot keep using `write(buffer)` while the worker owns or holds the
