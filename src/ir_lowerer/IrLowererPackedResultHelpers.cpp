@@ -556,14 +556,25 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
       hasSemanticPayloadInfo ? semanticPayload.collectionValueKind : LocalInfo::ValueKind::Unknown;
   LocalInfo::ValueKind collectionMapKeyKind =
       hasSemanticPayloadInfo ? semanticPayload.collectionMapKeyKind : LocalInfo::ValueKind::Unknown;
-  const bool hasCollectionPayload =
-      hasSemanticPayloadInfo ? isSupportedPackedResultCollectionKind(collectionKind)
-                             : inferDirectResultValueCollectionInfo(payloadExpr,
-                                                                    localsIn,
-                                                                    resolveDefinitionCall,
-                                                                    collectionKind,
-                                                                    collectionValueKind,
-                                                                    collectionMapKeyKind);
+  const bool hasCompleteSemanticCollectionPayload =
+      hasSemanticPayloadInfo &&
+      isSupportedPackedResultCollectionKind(collectionKind) &&
+      collectionValueKind != LocalInfo::ValueKind::Unknown &&
+      (collectionKind != LocalInfo::Kind::Map ||
+       collectionMapKeyKind != LocalInfo::ValueKind::Unknown);
+  bool hasCollectionPayload = hasCompleteSemanticCollectionPayload;
+  if (!hasCollectionPayload) {
+    collectionKind = LocalInfo::Kind::Value;
+    collectionValueKind = LocalInfo::ValueKind::Unknown;
+    collectionMapKeyKind = LocalInfo::ValueKind::Unknown;
+    hasCollectionPayload =
+        inferDirectResultValueCollectionInfo(payloadExpr,
+                                             localsIn,
+                                             resolveDefinitionCall,
+                                             collectionKind,
+                                             collectionValueKind,
+                                             collectionMapKeyKind);
+  }
   if (hasCollectionPayload &&
       isSupportedPackedResultCollectionKind(collectionKind)) {
     const Expr *collectionPayloadExpr = &payloadExpr;

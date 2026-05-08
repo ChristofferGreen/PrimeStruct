@@ -265,7 +265,7 @@ inline void expectExperimentalMapReferenceMethodConformance(const std::string &e
   expectMapConformanceCompileReject(makeExperimentalMapReferenceMethodConformanceSource(),
                                     "experimental_map_reference_methods",
                                     emitMode,
-                                    "native backend only supports numeric/bool map values");
+                                    "Semantic error: unknown call target: /std/collections/map/at");
 }
 
 inline void expectExperimentalMapVariadicConstructorConformance(const std::string &emitMode) {
@@ -594,10 +594,10 @@ inline void expectBuiltinCanonicalMapInsertBorrowedHolderFieldDirectConformance(
 }
 
 inline void expectExperimentalMapIndexConformance(const std::string &emitMode) {
-  expectMapConformanceCompileReject(makeExperimentalMapIndexConformanceSource(),
-                                    "experimental_map_index",
-                                    emitMode,
-                                    "unknown call target: /std/collections/map/at");
+  expectMapConformanceProgramRuns(makeExperimentalMapIndexConformanceSource(),
+                                  "experimental_map_index",
+                                  emitMode,
+                                  11);
 }
 
 inline void expectCanonicalMapNamespaceVmConformance() {

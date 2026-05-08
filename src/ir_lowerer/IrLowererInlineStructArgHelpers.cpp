@@ -155,6 +155,19 @@ bool isExpectedStructBraceConstructor(const Expr &arg,
          pathLeaf(expectedStructPath) == arg.name;
 }
 
+bool isExpectedUninitializedStructStorageField(const Expr &param,
+                                               const std::string &expectedStructPath) {
+  for (const Transform &transform : param.transforms) {
+    if (transform.name != "uninitialized" || transform.templateArgs.size() != 1) {
+      continue;
+    }
+    if (isCompatibleInlineStructFieldPath(expectedStructPath, transform.templateArgs.front())) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void materializeInlineStructFieldLocal(const StructSlotFieldInfo &field,
                                        int32_t baseLocal,
                                        int32_t &nextLocal,
@@ -284,13 +297,6 @@ bool emitInlineStructDefinitionArguments(const std::string &calleePath,
     if (argStruct.empty() && isExpectedStructBraceConstructor(*arg, field.structPath)) {
       argStruct = field.structPath;
     }
-    if (argStruct.empty() ||
-        !isCompatibleInlineStructFieldPath(field.structPath, argStruct)) {
-      error = "struct field type mismatch: expected " + field.structPath + ", got " +
-              (argStruct.empty() ? std::string("<unknown>") : argStruct) +
-              " in " + calleePath + "::" + field.name;
-      return false;
-    }
     const bool isUninitializedStructStorage =
         arg->kind == Expr::Kind::Call &&
         !arg->isMethodCall &&
@@ -298,7 +304,20 @@ bool emitInlineStructDefinitionArguments(const std::string &calleePath,
         arg->name == "uninitialized" &&
         arg->args.empty() &&
         arg->templateArgs.size() == 1;
-    if (isUninitializedStructStorage) {
+    const bool isDefaultUninitializedStructStorage =
+        usesDefaultInitializer &&
+        isExpectedUninitializedStructStorageField(param, field.structPath);
+    if (argStruct.empty() && (isUninitializedStructStorage || isDefaultUninitializedStructStorage)) {
+      argStruct = field.structPath;
+    }
+    if (argStruct.empty() ||
+        !isCompatibleInlineStructFieldPath(field.structPath, argStruct)) {
+      error = "struct field type mismatch: expected " + field.structPath + ", got " +
+              (argStruct.empty() ? std::string("<unknown>") : argStruct) +
+              " in " + calleePath + "::" + field.name;
+      return false;
+    }
+    if (isUninitializedStructStorage || isDefaultUninitializedStructStorage) {
       emitInstruction(IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(field.slotCount - 1)));
       emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + field.slotOffset));
       LocalInfo fieldInfo;

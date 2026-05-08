@@ -1407,7 +1407,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
         isSemanticOrLegacyVectorTarget(expr.args.front())) {
       std::string vectorHelperName;
       if (resolveVectorHelperAliasName(expr, vectorHelperName) &&
-          vectorHelperName == "at") {
+          (vectorHelperName == "at" || vectorHelperName == "at_unsafe")) {
         return InlineCallDispatchResult::NotHandled;
       }
       const size_t rawLeafStart = rawPath.find_last_of('/');
@@ -1415,7 +1415,8 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
                                 ? rawPath
                                 : rawPath.substr(rawLeafStart + 1);
       rawLeaf = stripGeneratedInlineHelperSuffix(std::move(rawLeaf));
-      if (rawLeaf == "vectorAt" || rawLeaf == "at") {
+      if (rawLeaf == "vectorAt" || rawLeaf == "vectorAtUnsafe" ||
+          rawLeaf == "at" || rawLeaf == "at_unsafe") {
         return InlineCallDispatchResult::NotHandled;
       }
       if (const Definition *callee = resolveDefinitionCallFn(expr);
@@ -1425,7 +1426,8 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
                                ? callee->fullPath
                                : callee->fullPath.substr(leafStart + 1);
         leaf = stripGeneratedInlineHelperSuffix(std::move(leaf));
-        if (leaf == "vectorAt" || leaf == "at") {
+        if (leaf == "vectorAt" || leaf == "vectorAtUnsafe" ||
+            leaf == "at" || leaf == "at_unsafe") {
           return InlineCallDispatchResult::NotHandled;
         }
       }

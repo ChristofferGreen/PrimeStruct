@@ -440,14 +440,14 @@ inline void expectExperimentalMapMethodReceiverConformance(const std::string &em
   expectMapConformanceCompileReject(makeExperimentalMapMethodReceiverConformanceSource(),
                                     "map_experimental_method_receiver",
                                     emitMode,
-                                    "unknown call target: /std/collections/experimental_map/mapCount");
+                                    "native backend only supports at() on numeric/bool/string arrays or vectors");
 }
 
 inline void expectWrappedExperimentalMapMethodReceiverConformance(const std::string &emitMode) {
   expectMapConformanceCompileReject(makeWrappedExperimentalMapMethodReceiverConformanceSource(),
                                     "map_wrapped_experimental_method_receiver_" + emitMode,
                                     emitMode,
-                                    "unknown call target: /std/collections/experimental_map/mapCount");
+                                    "native backend only supports at() on numeric/bool/string arrays or vectors");
 }
 
 inline void expectExperimentalMapFieldAssignConformance(const std::string &emitMode) {
