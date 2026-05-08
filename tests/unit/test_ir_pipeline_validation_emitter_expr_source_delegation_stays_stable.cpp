@@ -258,6 +258,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprMethodTargetResolution.cpp";
   const std::filesystem::path semanticsExprVectorHelpersPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprVectorHelpers.cpp";
+  const std::filesystem::path semanticsStatementVectorHelpersPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorStatementVectorHelpers.cpp";
   REQUIRE(std::filesystem::exists(semanticsExprPath));
   REQUIRE(std::filesystem::exists(semanticsExprCollectionCountCapacityPath));
   REQUIRE(std::filesystem::exists(semanticsExprCollectionDispatchSetupPath));
@@ -267,6 +269,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprMethodResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsExprMethodTargetResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsExprVectorHelpersPath));
+  REQUIRE(std::filesystem::exists(semanticsStatementVectorHelpersPath));
 
   const std::string semanticsExprSource = readText(semanticsExprPath);
   const std::string semanticsExprCollectionCountCapacitySource =
@@ -285,6 +288,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       readText(semanticsExprMethodTargetResolutionPath);
   const std::string semanticsExprVectorHelpersSource =
       readText(semanticsExprVectorHelpersPath);
+  const std::string semanticsStatementVectorHelpersSource =
+      readText(semanticsStatementVectorHelpersPath);
 
   CHECK(semanticsExprSource.find("validateExprCountCapacityMapBuiltins(") !=
         std::string::npos);
@@ -330,6 +335,18 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "bool SemanticsValidator::resolveVectorHelperMethodTarget(") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "explicitRootVectorMutatorPath(false)") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "explicitRootVectorMutatorPath(true)") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "auto explicitRootVectorMutatorCallPath = [&]()") ==
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "auto explicitRootVectorMutatorMethodPath = [&]()") ==
         std::string::npos);
 }
 TEST_CASE("template monomorph source delegation stays stable") {

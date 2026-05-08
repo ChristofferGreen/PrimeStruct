@@ -15081,3 +15081,29 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     the remaining rooted semantic work into TODO-4384, and ratcheted
     `scripts/vector_surface_trace_baseline.json` from 939 to 930 production
     traces. Baseline release validation was skipped per the lite workflow.
+
+- [x] TODO-4384: Collapse rooted vector mutator path builders
+  - owner: ai
+  - created_at: 2026-05-08
+  - phase: Vector stdlib ownership cutover
+  - scope: Replace the duplicated statement-validator rooted `/vector/*`
+    mutator call and method path builders with one shared path builder while
+    preserving existing removed-helper diagnostics and explicit user-defined
+    rooted helper handling.
+  - acceptance:
+    - `SemanticsValidatorStatementVectorHelpers.cpp` no longer duplicates the
+      rooted vector mutator path construction logic for call and method forms.
+    - The shared builder still produces the same explicit rooted call and
+      method diagnostic targets.
+    - The vector surface trace baseline decreases for semantic validator files
+      and does not increase elsewhere.
+  - stop_rule: Stop after the duplicated rooted mutator path builders are
+    collapsed, source-lock coverage keeps them absent, and the audit baseline
+    ratchets downward.
+  - finished_at: 2026-05-08
+  - evidence: Collapsed the statement helper's explicit rooted vector mutator
+    call and method path builders into `explicitRootVectorMutatorPath`,
+    added source-lock assertions against reintroducing the duplicated lambdas,
+    split the remaining rooted semantic work into TODO-4385, and ratcheted
+    `scripts/vector_surface_trace_baseline.json` from 930 to 926 production
+    traces. Baseline release validation was skipped per the lite workflow.

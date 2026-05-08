@@ -444,44 +444,32 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     }
     return "/std/collections/vector/" + std::string(helperName);
   }();
-  auto explicitRootVectorMutatorCallPath = [&]() -> std::string {
-    if (stmt.isMethodCall) {
+  auto explicitRootVectorMutatorPath = [&](bool expectMethodCall) -> std::string {
+    if (stmt.isMethodCall != expectMethodCall) {
       return "";
     }
+    std::string helperName;
     if (normalizedStatementNamespacePrefix == "vector" &&
         isVectorMutatorName(normalizedStatementName)) {
-      return "/vector/" + normalizedStatementName;
+      helperName = normalizedStatementName;
+    } else {
+      constexpr std::string_view kRootPrefix = "vector/";
+      if (normalizedStatementName.rfind(kRootPrefix, 0) != 0) {
+        return "";
+      }
+      const std::string_view rootedHelperName =
+          std::string_view(normalizedStatementName).substr(kRootPrefix.size());
+      if (!isVectorMutatorName(rootedHelperName)) {
+        return "";
+      }
+      helperName = std::string(rootedHelperName);
     }
-    constexpr std::string_view kRootPrefix = "vector/";
-    if (normalizedStatementName.rfind(kRootPrefix, 0) != 0) {
-      return "";
-    }
-    const std::string_view helperName =
-        std::string_view(normalizedStatementName).substr(kRootPrefix.size());
-    if (!isVectorMutatorName(helperName)) {
-      return "";
-    }
-    return "/vector/" + std::string(helperName);
-  }();
-  auto explicitRootVectorMutatorMethodPath = [&]() -> std::string {
-    if (!stmt.isMethodCall) {
-      return "";
-    }
-    if (normalizedStatementNamespacePrefix == "vector" &&
-        isVectorMutatorName(normalizedStatementName)) {
-      return "/vector/" + normalizedStatementName;
-    }
-    constexpr std::string_view kRootPrefix = "vector/";
-    if (normalizedStatementName.rfind(kRootPrefix, 0) != 0) {
-      return "";
-    }
-    const std::string_view helperName =
-        std::string_view(normalizedStatementName).substr(kRootPrefix.size());
-    if (!isVectorMutatorName(helperName)) {
-      return "";
-    }
-    return "/vector/" + std::string(helperName);
-  }();
+    return "/vector/" + helperName;
+  };
+  const std::string explicitRootVectorMutatorCallPath =
+      explicitRootVectorMutatorPath(false);
+  const std::string explicitRootVectorMutatorMethodPath =
+      explicitRootVectorMutatorPath(true);
   auto bareBuiltinVectorMutatorPreferredPath = [&]() -> std::string {
     const bool isBareMutatorCall =
         !stmt.isMethodCall && normalizedStatementNamespacePrefix.empty() &&

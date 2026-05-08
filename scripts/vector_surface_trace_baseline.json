@@ -1087,7 +1087,7 @@
     {
       "path": "src/semantics/SemanticsValidatorStatementVectorHelpers.cpp",
       "pattern": "root-vector-helper-path",
-      "count": 6
+      "count": 2
     },
     {
       "path": "src/semantics/SemanticsValidatorStatementVectorResolution.cpp",
