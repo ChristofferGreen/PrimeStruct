@@ -11,6 +11,10 @@ At a glance:
 - Surface syntax is convenience only; transforms rewrite it into a smaller deterministic core.
 - Backends target the shared canonical representation rather than reinterpreting surface syntax.
 
+Related design notes:
+- `docs/MemoryCapabilities.md` sketches a capability-checked memory-safety direction where ownership, references,
+  effects, escape control, and unsafe raw-address authority share one inherited-authority model.
+
 ### Source-processing pipeline
 1. **Import resolver:** first pass walks the raw text and expands every `import<...>` source entry so the compiler
    always works on a single flattened source stream.
