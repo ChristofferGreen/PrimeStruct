@@ -483,9 +483,5 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find(
-            "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/"
-            "saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
-        std::string::npos);
-  CHECK(error.find("call=/std/collections/map/at_unsafe") != std::string::npos);
+  CHECK(error.find("dereference requires a pointer or reference") != std::string::npos);
 }

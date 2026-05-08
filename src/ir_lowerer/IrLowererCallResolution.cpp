@@ -574,7 +574,8 @@ const Definition *resolveDefinitionCall(const Expr &callExpr,
   }
   if (const Definition *resolvedDef = resolveDefinitionByPath(defMap, resolved);
       resolvedDef != nullptr) {
-    if (isStructDefinition(*resolvedDef) && !callExpr.isBraceConstructor) {
+    if (isStructDefinition(*resolvedDef) &&
+        !isStructConstructorCallShape(callExpr)) {
       return nullptr;
     }
     if (!isMapBuiltinResolvedPath(semanticProgram, callExpr, resolved)) {
@@ -618,7 +619,8 @@ const Definition *resolveDefinitionCall(const Expr &callExpr,
       (!hasSemanticRootedRewrite || hasGeneratedRootedRawPath)) {
     if (const Definition *rawDef = resolveDefinitionByPath(defMap, rawPath);
         rawDef != nullptr) {
-      if (isStructDefinition(*rawDef) && !callExpr.isBraceConstructor) {
+      if (isStructDefinition(*rawDef) &&
+          !isStructConstructorCallShape(callExpr)) {
         return nullptr;
       }
       return rawDef;

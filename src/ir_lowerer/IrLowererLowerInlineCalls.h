@@ -149,10 +149,14 @@
           error = "vector literal requires exactly one template argument";
           return false;
         }
-        const LocalInfo::ValueKind elemKind =
+        LocalInfo::ValueKind elemKind =
             vectorLiteralExpr.templateArgs.size() == 1
                 ? valueKindFromTypeName(vectorLiteralExpr.templateArgs.front())
                 : LocalInfo::ValueKind::Unknown;
+        if (elemKind == LocalInfo::ValueKind::Unknown &&
+            !vectorLiteralExpr.args.empty()) {
+          elemKind = inferExprKind(vectorLiteralExpr.args.front(), callerLocals);
+        }
         if (elemKind == LocalInfo::ValueKind::Unknown &&
             !vectorLiteralExpr.args.empty()) {
           error =

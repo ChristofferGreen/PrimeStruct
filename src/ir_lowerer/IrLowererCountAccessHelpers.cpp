@@ -1195,6 +1195,13 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       explicitPublishedVectorCountCall &&
       expr.args.size() == 1 &&
       isNamedArgumentCollectionTemporary(expr.args.front(), "vector");
+  if (explicitPublishedVectorCountCall &&
+      expr.args.size() == 1 &&
+      isEntryArgsNameFn &&
+      isEntryArgsNameFn(expr.args.front(), localsIn)) {
+    emitInstruction(IrOpcode::PushArgc, 0);
+    return CountAccessCallEmitResult::Emitted;
+  }
   if ((explicitPublishedVectorCountCall && !namedArgVectorTemporaryCountCall) ||
       isExplicitPublishedVectorMetadataCall(expr, "capacity")) {
     return CountAccessCallEmitResult::NotHandled;

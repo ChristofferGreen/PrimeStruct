@@ -591,7 +591,8 @@ ResolvedInlineCallResult emitResolvedInlineDefinitionCall(
   if (!callee) {
     return ResolvedInlineCallResult::NoCallee;
   }
-  if (isStructDefinition(*callee) && !callExpr.isBraceConstructor) {
+  if (isStructDefinition(*callee) &&
+      !isStructConstructorCallShape(callExpr)) {
     return ResolvedInlineCallResult::NoCallee;
   }
   if (callExpr.hasBodyArguments || !callExpr.bodyArguments.empty()) {
@@ -1527,6 +1528,17 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     const InlineVectorTargetFact semanticFact =
         classifyInlineVectorTargetFromSemanticFacts(receiverExpr);
     if (semanticFact == InlineVectorTargetFact::Vector) {
+      return true;
+    }
+    const auto receiverTargetInfo =
+        resolveArrayVectorAccessTargetInfo(receiverExpr,
+                                           localsIn,
+                                           {},
+                                           semanticProgram,
+                                           semanticIndexPtr);
+    if (receiverTargetInfo.isArrayOrVectorTarget &&
+        receiverTargetInfo.isVectorTarget &&
+        !receiverTargetInfo.isArgsPackTarget) {
       return true;
     }
     if (semanticFact == InlineVectorTargetFact::NonVector) {

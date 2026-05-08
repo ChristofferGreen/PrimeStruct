@@ -744,6 +744,10 @@
               return name == "count" || name == "capacity" ||
                      name == "at" || name == "at_unsafe";
             }
+            if (collectionName == "vector") {
+              return name == "count" || name == "capacity" ||
+                     name == "at" || name == "at_unsafe";
+            }
             return false;
           };
           if (!supportsHelperForCollection(helperName)) {

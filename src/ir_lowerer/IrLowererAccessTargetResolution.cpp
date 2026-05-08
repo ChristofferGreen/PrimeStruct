@@ -238,6 +238,10 @@ bool resolveSemanticArrayVectorAccessTargetInfo(
     const std::string elementTypeText = resolveAccessSemanticTypeText(
         semanticProgram, collectionFact->elementTypeText, collectionFact->elementTypeTextId);
     targetInfoOut.elemKind = valueKindFromTypeName(elementTypeText);
+    if (targetInfoOut.elemKind == LocalInfo::ValueKind::Unknown &&
+        !targetInfoOut.isSoaVector) {
+      return false;
+    }
     if (targetInfoOut.isSoaVector) {
       targetInfoOut.structTypeName =
           inferExperimentalSoaVectorStructPathFromTypeName(elementTypeText);
@@ -592,15 +596,6 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
     const SemanticProgram *semanticProgram,
     const SemanticProductIndex *semanticIndex) {
   MapAccessTargetInfo info;
-  bool hasSemanticTargetFact = false;
-  if (resolveSemanticMapAccessTargetInfo(
-          target, semanticProgram, semanticIndex, info, hasSemanticTargetFact)) {
-    return info;
-  }
-  if (hasSemanticTargetFact) {
-    return {};
-  }
-
   const auto peelLocationWrappers = [&](const Expr &expr) {
     const Expr *current = &expr;
     while (current->kind == Expr::Kind::Call &&
@@ -711,6 +706,69 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
     }
     return true;
   };
+  auto resolveArgsPackAccessTarget = [&](const Expr &candidate,
+                                         bool dereferenced) {
+    const Expr *accessReceiver = peelLocationWrappers(candidate);
+    bool receiverDereferenced = dereferenced;
+    while (accessReceiver->kind == Expr::Kind::Call &&
+           isSimpleCallName(*accessReceiver, "dereference") &&
+           accessReceiver->args.size() == 1) {
+      receiverDereferenced = true;
+      accessReceiver = peelLocationWrappers(accessReceiver->args.front());
+    }
+    if (accessReceiver->kind == Expr::Kind::Name) {
+      auto it = localsIn.find(accessReceiver->name);
+      if (it != localsIn.end() && populateFromArgsPackElement(it->second, false)) {
+        info.isWrappedMapTarget = info.isWrappedMapTarget && !receiverDereferenced;
+        return true;
+      }
+    }
+    return false;
+  };
+
+  if (target.kind == Expr::Kind::Name) {
+    auto it = localsIn.find(target.name);
+    if (it != localsIn.end() && populateFromArgsPackElement(it->second, false)) {
+      return info;
+    }
+  }
+  if (target.kind == Expr::Kind::Call) {
+    std::string preSemanticAccessName;
+    std::string preSemanticHelperName;
+    const std::string preSemanticScopedPath = resolveScopedCallPath(target);
+    const bool preSemanticAliasMapAccess =
+        resolveMapHelperAliasName(target, preSemanticHelperName) &&
+        (preSemanticHelperName == "at" || preSemanticHelperName == "at_ref" ||
+         preSemanticHelperName == "at_unsafe" ||
+         preSemanticHelperName == "at_unsafe_ref");
+    const bool preSemanticExplicitMapAccess =
+        !target.isMethodCall &&
+        (preSemanticScopedPath == "/map/at" ||
+         preSemanticScopedPath == "/std/collections/map/at" ||
+         preSemanticScopedPath == "/map/at_ref" ||
+         preSemanticScopedPath == "/std/collections/map/at_ref" ||
+         preSemanticScopedPath == "/map/at_unsafe" ||
+         preSemanticScopedPath == "/std/collections/map/at_unsafe" ||
+         preSemanticScopedPath == "/map/at_unsafe_ref" ||
+         preSemanticScopedPath == "/std/collections/map/at_unsafe_ref" ||
+         preSemanticAliasMapAccess) &&
+        target.args.size() == 2;
+    if (((getBuiltinArrayAccessName(target, preSemanticAccessName) &&
+          target.args.size() == 2) ||
+         preSemanticExplicitMapAccess) &&
+        resolveArgsPackAccessTarget(target.args.front(), false)) {
+      return info;
+    }
+  }
+
+  bool hasSemanticTargetFact = false;
+  if (resolveSemanticMapAccessTargetInfo(
+          target, semanticProgram, semanticIndex, info, hasSemanticTargetFact)) {
+    return info;
+  }
+  if (hasSemanticTargetFact) {
+    return {};
+  }
   if (target.kind == Expr::Kind::Name) {
     if (target.semanticNodeId != 0 && resolveCallMapAccessTargetInfo) {
       MapAccessTargetInfo inferred;
@@ -765,21 +823,8 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
         target.args.size() == 2;
     if ((getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) ||
         isExplicitMapArgsPackAccess) {
-      const Expr *accessReceiver = peelLocationWrappers(target.args.front());
-      bool receiverDereferenced = false;
-      while (accessReceiver->kind == Expr::Kind::Call &&
-             isSimpleCallName(*accessReceiver, "dereference") &&
-             accessReceiver->args.size() == 1) {
-        receiverDereferenced = true;
-        accessReceiver = peelLocationWrappers(accessReceiver->args.front());
-      }
-
-      if (accessReceiver->kind == Expr::Kind::Name) {
-        auto it = localsIn.find(accessReceiver->name);
-        if (it != localsIn.end() && populateFromArgsPackElement(it->second, false)) {
-          info.isWrappedMapTarget = info.isWrappedMapTarget && !receiverDereferenced;
-          return info;
-        }
+      if (resolveArgsPackAccessTarget(target.args.front(), false)) {
+        return info;
       }
     }
     std::string collection;
@@ -956,21 +1001,6 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     const SemanticProgram *semanticProgram,
     const SemanticProductIndex *semanticIndex) {
   ArrayVectorAccessTargetInfo info;
-  bool hasSemanticTargetFact = false;
-  if (resolveSemanticArrayVectorAccessTargetInfo(
-          target, semanticProgram, semanticIndex, info, hasSemanticTargetFact)) {
-    return info;
-  }
-  if (hasSemanticTargetFact) {
-    if (resolveCallArrayVectorAccessTargetInfo) {
-      ArrayVectorAccessTargetInfo inferred;
-      if (resolveCallArrayVectorAccessTargetInfo(target, inferred)) {
-        return inferred;
-      }
-    }
-    return {};
-  }
-
   const auto elementSlotCountForLocal = [](const LocalInfo &localInfo) {
     if (localInfo.isArgsPack) {
       const bool isInlineStructPack =
@@ -996,10 +1026,25 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     info.isMapTarget = false;
     info.isWrappedMapTarget = false;
 
+    if (localInfo.argsPackElementKind == LocalInfo::Kind::Array ||
+        localInfo.argsPackElementKind == LocalInfo::Kind::Buffer ||
+        localInfo.argsPackElementKind == LocalInfo::Kind::Vector) {
+      info.isArrayOrVectorTarget = true;
+      info.isVectorTarget = localInfo.argsPackElementKind == LocalInfo::Kind::Vector;
+      return true;
+    }
     if (localInfo.argsPackElementKind == LocalInfo::Kind::Map) {
       info.isArrayOrVectorTarget = true;
       info.isVectorTarget = false;
       info.isMapTarget = true;
+      return true;
+    }
+    if (localInfo.argsPackElementKind == LocalInfo::Kind::Value &&
+        localInfo.valueKind != LocalInfo::ValueKind::Unknown &&
+        localInfo.valueKind != LocalInfo::ValueKind::String &&
+        localInfo.structTypeName.empty()) {
+      info.isArrayOrVectorTarget = true;
+      info.isVectorTarget = false;
       return true;
     }
     if (localInfo.argsPackElementKind == LocalInfo::Kind::Value &&
@@ -1057,6 +1102,26 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     }
     return false;
   };
+
+  if (target.kind == Expr::Kind::Name) {
+    auto it = localsIn.find(target.name);
+    if (it != localsIn.end() && populateFromArgsPackLocal(it->second, false)) {
+      return info;
+    }
+  }
+
+  bool hasSemanticTargetFact = false;
+  if (resolveSemanticArrayVectorAccessTargetInfo(
+          target, semanticProgram, semanticIndex, info, hasSemanticTargetFact)) {
+    return info;
+  }
+  if (hasSemanticTargetFact && resolveCallArrayVectorAccessTargetInfo) {
+    ArrayVectorAccessTargetInfo inferred;
+    if (resolveCallArrayVectorAccessTargetInfo(target, inferred)) {
+      return inferred;
+    }
+  }
+
   if (target.kind == Expr::Kind::Name) {
     if (target.semanticNodeId != 0 && resolveCallArrayVectorAccessTargetInfo) {
       ArrayVectorAccessTargetInfo inferred;
@@ -1148,6 +1213,16 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     return info;
   }
   if (target.kind == Expr::Kind::Call) {
+    if (isSimpleCallName(target, "dereference") &&
+        target.args.size() == 1 &&
+        target.args.front().kind == Expr::Kind::Name) {
+      auto localIt = localsIn.find(target.args.front().name);
+      if (localIt != localsIn.end() &&
+          localIt->second.isArgsPack &&
+          populateFromArgsPackLocal(localIt->second, false)) {
+        return info;
+      }
+    }
     auto resolveDereferencedArgsPackTarget = [&](const Expr &derefTarget) {
       std::string derefAccessName;
       if (!(getBuiltinArrayAccessName(derefTarget, derefAccessName) && derefTarget.args.size() == 2)) {
@@ -1227,7 +1302,22 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     };
 
     std::string accessName;
-    if (getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) {
+    std::string helperName;
+    const std::string scopedTargetPath = resolveScopedCallPath(target);
+    const bool isAliasMapArgsPackAccess =
+        resolveMapHelperAliasName(target, helperName) &&
+        (helperName == "at" || helperName == "at_ref" ||
+         helperName == "at_unsafe" || helperName == "at_unsafe_ref");
+    const bool isExplicitMapArgsPackAccess =
+        !target.isMethodCall &&
+        (scopedTargetPath == "/map/at" || scopedTargetPath == "/std/collections/map/at" ||
+         scopedTargetPath == "/map/at_ref" || scopedTargetPath == "/std/collections/map/at_ref" ||
+         scopedTargetPath == "/map/at_unsafe" || scopedTargetPath == "/std/collections/map/at_unsafe" ||
+         scopedTargetPath == "/map/at_unsafe_ref" || scopedTargetPath == "/std/collections/map/at_unsafe_ref" ||
+         isAliasMapArgsPackAccess) &&
+        target.args.size() == 2;
+    if ((getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) ||
+        isExplicitMapArgsPackAccess) {
       const Expr &accessReceiver = target.args.front();
       if (accessReceiver.kind == Expr::Kind::Name) {
         auto localIt = localsIn.find(accessReceiver.name);

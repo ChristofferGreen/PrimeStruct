@@ -126,6 +126,47 @@ bool isDirectExperimentalMapAccessImplementationCall(
          (helperName == "at" || helperName == "at_unsafe");
 }
 
+bool hasSemanticMapAccessHelperDefinition(const SemanticProgram *semanticProgram,
+                                          std::string_view accessName) {
+  if (semanticProgram == nullptr ||
+      (accessName != "at" && accessName != "at_unsafe")) {
+    return false;
+  }
+  auto importsMapHelpers = [](const std::vector<std::string> &imports) {
+    for (const std::string &importPath : imports) {
+      if (importPath == "/std/collections/*" ||
+          importPath == "/std/collections/map/*" ||
+          importPath == "/map/*") {
+        return true;
+      }
+    }
+    return false;
+  };
+  if (importsMapHelpers(semanticProgram->sourceImports) ||
+      importsMapHelpers(semanticProgram->imports)) {
+    return true;
+  }
+  for (const auto &definition : semanticProgram->definitions) {
+    std::string path = definition.fullPath;
+    const size_t leafStart = path.find_last_of('/');
+    const size_t generatedSuffix =
+        path.find("__", leafStart == std::string::npos ? 0 : leafStart + 1);
+    if (generatedSuffix != std::string::npos) {
+      path.erase(generatedSuffix);
+    }
+    const std::string canonicalPath =
+        "/std/collections/map/" + std::string(accessName);
+    const std::string samePathAlias = "/map/" + std::string(accessName);
+    if (path == canonicalPath ||
+        path == samePathAlias ||
+        path == canonicalPath + "_ref" ||
+        path == samePathAlias + "_ref") {
+      return true;
+    }
+  }
+  return false;
+}
+
 } // namespace
 
 bool isMapContainsHelperName(const Expr &expr);
@@ -682,6 +723,18 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     if (expr.args.size() != 2) {
       error = accessName + " requires exactly two arguments";
       return NativeCallTailDispatchResult::Error;
+    }
+    if (!expr.isMethodCall &&
+        expr.namespacePrefix.empty() &&
+        (expr.name == "at" || expr.name == "at_unsafe") &&
+        !isExplicitMapAccessCall &&
+        !hasSemanticMapAccessHelperDefinition(semanticProgram, accessName)) {
+      const auto mapTargetInfo = resolveMapAccessTargetInfo(
+          expr.args.front(), localsIn, resolveCallMapAccessTargetInfo);
+      if (mapTargetInfo.isMapTarget) {
+        error = "unknown call target: /std/collections/map/" + accessName;
+        return NativeCallTailDispatchResult::Error;
+      }
     }
     if (!emitBuiltinArrayAccess(accessName,
                                 expr.args[0],

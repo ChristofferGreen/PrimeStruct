@@ -455,6 +455,12 @@ bool definitionHasTransform(const Definition &def, const std::string &transformN
   return false;
 }
 
+bool isStructConstructorCallShape(const Expr &expr) {
+  return expr.kind == Expr::Kind::Call &&
+         !expr.isMethodCall &&
+         !expr.isFieldAccess;
+}
+
 bool isStructTransformName(const std::string &name) {
   return name == "struct" || name == "pod" || name == "handle" || name == "gpu_lane" || name == "no_padding" ||
          name == "platform_independent_padding";

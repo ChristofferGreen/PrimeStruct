@@ -264,7 +264,7 @@
           return nullptr;
         };
         auto findDirectStructDefinition = [&](const Expr &callExpr) -> const Definition * {
-          if (!callExpr.isBraceConstructor) {
+          if (!ir_lowerer::isStructConstructorCallShape(callExpr)) {
             return nullptr;
           }
           const std::string rawPath = resolveDirectHelperPath(callExpr);
@@ -281,6 +281,19 @@
             return structDef;
           }
           return nullptr;
+        };
+        auto resolveBuiltinAccessName = [&](const Expr &callExpr,
+                                            std::string &accessNameOut) {
+          if (getBuiltinArrayAccessName(callExpr, accessNameOut)) {
+            return true;
+          }
+          std::string vectorHelperName;
+          if (resolveVectorHelperAliasName(callExpr, vectorHelperName) &&
+              (vectorHelperName == "at" || vectorHelperName == "at_unsafe")) {
+            accessNameOut = vectorHelperName;
+            return true;
+          }
+          return false;
         };
         auto resolveHelperReturnedArrayVectorAccessTargetInfo =
             [&](const Expr &targetCallExpr,
@@ -592,7 +605,7 @@
           }
           if (directCallee != nullptr &&
               ir_lowerer::isStructDefinition(*directCallee) &&
-              !expr.isBraceConstructor) {
+              !ir_lowerer::isStructConstructorCallShape(expr)) {
             directCallee = nullptr;
           }
           if (directCallee != nullptr) {
@@ -642,10 +655,25 @@
                  directCallee->fullPath.rfind("/std/collections/vector/", 0) == 0 ||
                  directCallee->fullPath.rfind("/std/collections/experimental_vector/", 0) == 0) &&
                 isDirectHelperDefinitionFamily(expr, *directCallee)) {
-              if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
-                return false;
+              std::string vectorHelperName;
+              const bool isMaterializableVectorMetadataReceiver =
+                  resolveVectorHelperAliasName(expr, vectorHelperName) &&
+                  expr.args.size() == 1 &&
+                  expr.args.front().kind == Expr::Kind::Call &&
+                  !expr.args.front().isFieldAccess &&
+                  resolveDirectHelperDefinition(expr.args.front()) != nullptr &&
+                  (vectorHelperName == "count" || vectorHelperName == "capacity");
+              const bool isDirectVectorBuiltin =
+                  (resolveBuiltinAccessName(expr, vectorHelperName) &&
+                   expr.args.size() == 2 &&
+                   (vectorHelperName == "at" || vectorHelperName == "at_unsafe")) ||
+                  isMaterializableVectorMetadataReceiver;
+              if (!isDirectVectorBuiltin) {
+                if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
+                  return false;
+                }
+                return true;
               }
-              return true;
             }
             if (hasMapEntryCtorArgs(expr) &&
                 extractHelperTail(normalizeCollectionHelperPath(directCallee->fullPath)) ==
@@ -716,9 +744,20 @@
               }
             }
             std::string accessName;
-            if (getBuiltinArrayAccessName(expr, accessName) &&
-                expr.args.size() == 2 &&
-                rawPath.rfind("/std/collections/map/", 0) == 0 &&
+            std::string explicitMapAccessHelperName;
+            const bool isExplicitCanonicalMapAccess =
+                (getBuiltinArrayAccessName(expr, accessName) &&
+                 expr.args.size() == 2 &&
+                 rawPath.rfind("/std/collections/map/", 0) == 0) ||
+                (resolveMapHelperAliasName(expr, explicitMapAccessHelperName) &&
+                 (explicitMapAccessHelperName == "at" ||
+                  explicitMapAccessHelperName == "at_ref" ||
+                  explicitMapAccessHelperName == "at_unsafe" ||
+                  explicitMapAccessHelperName == "at_unsafe_ref") &&
+                 expr.args.size() == 2 &&
+                 (rawPath.rfind("/std/collections/map/", 0) == 0 ||
+                  rawPath.rfind("/map/", 0) == 0));
+            if (isExplicitCanonicalMapAccess &&
                 isDirectHelperDefinitionFamily(expr, *directCallee)) {
               error =
                   "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions (call=" +
@@ -768,7 +807,7 @@
         }
 
         std::string accessName;
-        if (getBuiltinArrayAccessName(expr, accessName)) {
+        if (resolveBuiltinAccessName(expr, accessName)) {
           const bool isMethodCallTempReceiver =
               expr.isMethodCall &&
               !expr.args.empty() &&

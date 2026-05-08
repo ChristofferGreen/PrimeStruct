@@ -741,6 +741,7 @@ bool buildOrderedCallArguments(const Expr &callExpr,
                                std::vector<const Expr *> &ordered,
                                std::string &error);
 bool definitionHasTransform(const Definition &def, const std::string &transformName);
+bool isStructConstructorCallShape(const Expr &expr);
 bool isStructTransformName(const std::string &name);
 bool isStructDefinition(const Definition &def);
 bool isStructDefinition(const Definition &def, const SemanticProgram *semanticProgram);

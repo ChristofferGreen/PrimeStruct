@@ -390,7 +390,14 @@ bool emitArrayVectorIndexedAccess(
   }
 
   const int32_t ptrLocal = allocTempLocal();
-  if (!emitExpr(targetExpr, localsIn)) {
+  const Expr *emittedTargetExpr = &targetExpr;
+  if (arrayVectorTargetInfo.isArgsPackTarget &&
+      isSimpleCallName(targetExpr, "dereference") &&
+      targetExpr.args.size() == 1 &&
+      targetExpr.args.front().kind == Expr::Kind::Name) {
+    emittedTargetExpr = &targetExpr.args.front();
+  }
+  if (!emitExpr(*emittedTargetExpr, localsIn)) {
     return false;
   }
   emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal));
