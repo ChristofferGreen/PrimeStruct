@@ -1221,17 +1221,19 @@ TEST_CASE("stdlib surface metadata resolves collection helper member tokens") {
   const auto *vectorMetadata =
       primec::findStdlibSurfaceMetadata(primec::StdlibSurfaceId::CollectionsVectorHelpers);
   REQUIRE(vectorMetadata != nullptr);
-  CHECK(primec::resolveStdlibSurfaceMemberName(*vectorMetadata, "vectorCount") == "count");
-  CHECK(primec::resolveStdlibSurfaceMemberName(*vectorMetadata, "vectorRemoveSwap") ==
+  CHECK(primec::resolveStdlibSurfaceMemberName(*vectorMetadata, "count") == "count");
+  CHECK(primec::resolveStdlibSurfaceMemberName(*vectorMetadata, "remove_swap") ==
         "remove_swap");
+  CHECK(primec::resolveStdlibSurfaceMemberName(*vectorMetadata, "vectorCount").empty());
+  CHECK(primec::resolveStdlibSurfaceMemberName(*vectorMetadata, "vectorRemoveSwap").empty());
 
   const auto *vectorCtorMetadata =
       primec::findStdlibSurfaceMetadata(primec::StdlibSurfaceId::CollectionsVectorConstructors);
   REQUIRE(vectorCtorMetadata != nullptr);
-  CHECK(primec::resolveStdlibSurfaceMemberName(*vectorCtorMetadata, "vectorSingle") ==
-        "vectorSingle");
-  CHECK(primec::resolveStdlibSurfaceMemberName(*vectorCtorMetadata, "vectorOct") ==
-        "vectorOct");
+  CHECK(primec::resolveStdlibSurfaceMemberName(*vectorCtorMetadata, "vector") ==
+        "vector");
+  CHECK(primec::resolveStdlibSurfaceMemberName(*vectorCtorMetadata, "vectorSingle").empty());
+  CHECK(primec::resolveStdlibSurfaceMemberName(*vectorCtorMetadata, "vectorOct").empty());
 
   const auto *mapMetadata =
       primec::findStdlibSurfaceMetadata(primec::StdlibSurfaceId::CollectionsMapHelpers);
@@ -1698,29 +1700,28 @@ TEST_CASE("emitter collection inference keeps namespaced internal soa builtins o
 }
 
 TEST_CASE("stdlib surface metadata resolves collection alias paths") {
-  const auto *vectorMetadata = primec::findStdlibSurfaceMetadataByResolvedPath(
-      "/std/collections/experimental_vector/vectorPush");
+  const auto *vectorMetadata =
+      primec::findStdlibSurfaceMetadataByResolvedPath("/std/collections/vector/push");
   REQUIRE(vectorMetadata != nullptr);
   CHECK(vectorMetadata->id == primec::StdlibSurfaceId::CollectionsVectorHelpers);
   CHECK(primec::resolveStdlibSurfaceMemberName(
-            *vectorMetadata, "/std/collections/experimental_vector/vectorPush") == "push");
+            *vectorMetadata, "/std/collections/vector/push") == "push");
+  CHECK(primec::findStdlibSurfaceMetadataByResolvedPath(
+            "/std/collections/experimental_vector/vectorPush") == nullptr);
   const auto *vectorWrapperMetadata = primec::findStdlibSurfaceMetadataByResolvedPath(
       "/std/collections/vectorPush");
-  REQUIRE(vectorWrapperMetadata != nullptr);
-  CHECK(vectorWrapperMetadata->id == primec::StdlibSurfaceId::CollectionsVectorHelpers);
-  CHECK(primec::resolveStdlibSurfaceMemberName(
-            *vectorWrapperMetadata, "/std/collections/vectorPush") == "push");
+  CHECK(vectorWrapperMetadata == nullptr);
 
   const auto *vectorCtorMetadata = primec::findStdlibSurfaceMetadataByResolvedPath(
-      "/std/collections/experimental_vector/vectorPair");
+      "/std/collections/vector/vector");
   REQUIRE(vectorCtorMetadata != nullptr);
   CHECK(vectorCtorMetadata->id == primec::StdlibSurfaceId::CollectionsVectorConstructors);
   CHECK(primec::resolveStdlibSurfaceMemberName(
-            *vectorCtorMetadata, "/std/collections/experimental_vector/vectorPair") ==
-        "vectorPair");
+            *vectorCtorMetadata, "/std/collections/vector/vector") == "vector");
+  CHECK(primec::findStdlibSurfaceMetadataByResolvedPath(
+            "/std/collections/experimental_vector/vectorPair") == nullptr);
   CHECK(primec::resolveStdlibSurfaceMemberName(
-            *vectorCtorMetadata, "/std/collections/vectorSingle__tabcd") ==
-        "vectorSingle");
+            *vectorCtorMetadata, "/std/collections/vectorSingle__tabcd").empty());
 
   const auto *mapCtorMetadata = primec::findStdlibSurfaceMetadataByResolvedPath("/map/map");
   REQUIRE(mapCtorMetadata != nullptr);

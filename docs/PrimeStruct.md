@@ -3796,14 +3796,15 @@ re-defining it piecemeal.
   metadata is declared in `stdlib/std/collections/surfaces.psmeta` and consumed
   by `StdlibSurfaceRegistry` through generic manifest loading. Production C++
   keeps the surface id and registry APIs, but the canonical vector member lists,
-  import aliases, compatibility spellings, lowering spellings, statement-helper
-  subset, and member alias mapping live with the stdlib collection source.
+  import aliases, lowering spellings, and statement-helper subset live with the
+  stdlib collection source. Old vector compatibility spellings are intentionally
+  absent from that metadata and remain tracked by the explicit deletion leaves.
 - **Migration-only seams:** rooted `/vector/*` and `/map/*` spellings plus
   `vectorCount` / `mapCount`-style lowering names remain temporary
   compatibility seams. The vector/map adapter cutover is complete for
-  semantic and template-monomorph helper decisions; TODO-4296 owns vector seam
-  deletion, and TODO-4303 owns the later map seam deletion after map metadata
-  moves to a stdlib-owned manifest.
+  semantic and template-monomorph helper decisions; TODO-4376 through
+  TODO-4378 own vector seam deletion, and TODO-4303 owns the later map seam
+  deletion after map metadata moves to a stdlib-owned manifest.
 - **Compatibility adapter inventory:** map insert helper compatibility was the
   first migrated family. The semantic map-insert rewrite asks the
   `StdlibSurfaceRegistry` `CollectionsMapHelpers` adapter to classify
@@ -3867,8 +3868,8 @@ Current `stdlib/std` experimental and internal module classification:
 
 | Namespace family | Current role | Current interpretation | Follow-up |
 | --- | --- | --- | --- |
-| `/std/collections/internal_vector/*` | Internal substrate/helper namespace | Internal vector backing adapter used by canonical `/std/collections/vector/*`; it preserves the current compatibility `Vector<T>` type identity until the later vector seam deletion tasks. | TODO-4296 |
-| `/std/collections/experimental_vector/*` | Temporary compatibility namespace | Compatibility shim for direct experimental vector imports; canonical wrappers route through `/std/collections/internal_vector/*`, and direct imports remain only for targeted compatibility or conformance coverage. | TODO-4296 |
+| `/std/collections/internal_vector/*` | Internal substrate/helper namespace | Internal vector backing adapter used by canonical `/std/collections/vector/*`; it preserves the current compatibility `Vector<T>` type identity until the final vector surface audit. | TODO-4297 |
+| `/std/collections/experimental_vector/*` | Temporary compatibility namespace | Compatibility shim for direct experimental vector imports; canonical wrappers route through `/std/collections/internal_vector/*`, and direct imports remain only for targeted compatibility or conformance coverage. | TODO-4378 |
 | `/std/collections/experimental_map/*` | Internal substrate/helper namespace | Internal implementation module behind the canonical `/std/collections/map/*` public contract; direct imports remain only for targeted compatibility or conformance coverage. | none |
 | `/std/gfx/experimental/*` | Temporary compatibility namespace | Legacy compatibility shim over canonical `/std/gfx/*`; no longer part of the public gfx contract and retained only for targeted compatibility coverage while the residual seam remains importable. | none |
 | `/std/collections/experimental_soa_vector/*` | Accepted compatibility namespace | Compatibility module behind the promoted canonical `/std/collections/soa_vector/*` public surface; direct imports are accepted only for targeted compatibility or conformance coverage. C++/VM/native compile-run coverage locks this compatibility seam; ordinary public examples should use `/std/collections/soa_vector/*`. | none |

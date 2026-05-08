@@ -541,8 +541,8 @@ TEST_CASE("vector map bridge boundary docs stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("The vector/map adapter cutover is complete") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("TODO-4296 owns vector seam\n"
-                            "  deletion") !=
+  CHECK(primeStructDoc.find("TODO-4376 through\n"
+                            "  TODO-4378 own vector seam deletion") !=
         std::string::npos);
   CHECK(primeStructDoc.find("Compatibility adapter inventory:") !=
         std::string::npos);
@@ -566,7 +566,7 @@ TEST_CASE("vector map bridge boundary docs stay source locked") {
         std::string::npos);
   CHECK(todo.find("metadata is now owned by `stdlib/std/collections/surfaces.psmeta`") !=
         std::string::npos);
-  CHECK(todo.find("TODO-4296\n  and TODO-4297 handle compatibility deletion") !=
+  CHECK(todo.find("TODO-4376 through TODO-4378 delete the remaining vector") !=
         std::string::npos);
   CHECK(todo.find("Migration-only seams: rooted `/vector/*` and `/map/*` spellings,") !=
         std::string::npos);
@@ -630,9 +630,9 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("no `experimental` namespace counts as canonical public API") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("| `/std/collections/internal_vector/*` | Internal substrate/helper namespace | Internal vector backing adapter used by canonical `/std/collections/vector/*`; it preserves the current compatibility `Vector<T>` type identity until the later vector seam deletion tasks. | TODO-4296 |") !=
+  CHECK(primeStructDoc.find("| `/std/collections/internal_vector/*` | Internal substrate/helper namespace | Internal vector backing adapter used by canonical `/std/collections/vector/*`; it preserves the current compatibility `Vector<T>` type identity until the final vector surface audit. | TODO-4297 |") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("| `/std/collections/experimental_vector/*` | Temporary compatibility namespace | Compatibility shim for direct experimental vector imports; canonical wrappers route through `/std/collections/internal_vector/*`, and direct imports remain only for targeted compatibility or conformance coverage. | TODO-4296 |") !=
+  CHECK(primeStructDoc.find("| `/std/collections/experimental_vector/*` | Temporary compatibility namespace | Compatibility shim for direct experimental vector imports; canonical wrappers route through `/std/collections/internal_vector/*`, and direct imports remain only for targeted compatibility or conformance coverage. | TODO-4378 |") !=
         std::string::npos);
   CHECK(primeStructDoc.find("| `/std/collections/experimental_map/*` | Internal substrate/helper namespace | Internal implementation module behind the canonical `/std/collections/map/*` public contract; direct imports remain only for targeted compatibility or conformance coverage. | none |") !=
         std::string::npos);
@@ -1366,10 +1366,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4296: Delete vector compatibility seams") !=
+                  "- TODO-4376: Delete vector wrapper helper aliases") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
-                  "- TODO-4297: Add zero C++ vector-surface audit") !=
+                  "- TODO-4377: Reject rooted vector helper aliases") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4305: Rename and style canonical `.prime` SoA surface") !=
         std::string::npos);
@@ -1383,7 +1383,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4296: Delete vector compatibility seams") !=
+                  "- TODO-4376: Delete vector wrapper helper aliases") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
       "TODO-4268: Add heterogeneous type-pack syntax and metadata",
@@ -1482,6 +1482,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("TODO-4295: Move collection surface metadata out of C++") ==
         std::string::npos);
   CHECK(todoFinished.find("TODO-4295: Move collection surface metadata out of C++") !=
+        std::string::npos);
+  CHECK(todo.find("TODO-4296: Stop publishing vector compatibility metadata") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4296: Stop publishing vector compatibility metadata") !=
         std::string::npos);
   CHECK(todo.find("TODO-4293: Bridge legacy `Result` helpers to the result sum") ==
         std::string::npos);
@@ -1713,9 +1717,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Compile-time macro hooks and AST transform ownership | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4296, TODO-4297, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |") !=
+  CHECK(todo.find("| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4376, TODO-4377, TODO-4378, TODO-4297, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |") !=
         std::string::npos);
-  CHECK(todo.find("| Vector/map stdlib ownership cutover and collection surface authority | TODO-4296, TODO-4297, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |") !=
+  CHECK(todo.find("| Vector/map stdlib ownership cutover and collection surface authority | TODO-4376, TODO-4377, TODO-4378, TODO-4297, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |") !=
         std::string::npos);
   CHECK(todo.find("| Release benchmark/example suite stability and doctest governance | none |") !=
         std::string::npos);
@@ -1723,11 +1727,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Test-suite audit follow-up and release-gate stability | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4296, TODO-4297, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |") !=
+  CHECK(todo.find("| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4376, TODO-4377, TODO-4378, TODO-4297, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |") !=
         std::string::npos);
   CHECK(todo.find("| SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |") !=
         std::string::npos);
-  CHECK(todo.find("| De-experimentalization surface and namespace parity | TODO-4296, TODO-4297, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |") !=
+  CHECK(todo.find("| De-experimentalization surface and namespace parity | TODO-4376, TODO-4377, TODO-4378, TODO-4297, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |") !=
         std::string::npos);
   CHECK(todo.find("| `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |") !=
         std::string::npos);
@@ -1753,7 +1757,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Lowerer/source-composition contract coverage | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4296, TODO-4297, TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |") !=
+  CHECK(todo.find("| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4376, TODO-4377, TODO-4378, TODO-4297, TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |") !=
         std::string::npos);
   CHECK(todo.find("### Skipped Doctest Debt Summary") != std::string::npos);
   CHECK(todo.find("Retained `doctest::skip(true)` coverage is currently absent from the active") !=

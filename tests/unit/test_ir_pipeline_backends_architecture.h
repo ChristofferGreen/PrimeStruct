@@ -218,21 +218,29 @@ TEST_CASE("stdlib surface registry stays source locked") {
   CHECK(collectionManifest.find("bridge_key = collections.vector_helpers") != std::string::npos);
   CHECK(collectionManifest.find("canonical_path = /std/collections/vector") !=
         std::string::npos);
-  CHECK(collectionManifest.find("compatibility_spelling = /vector/remove_swap") !=
+  CHECK(collectionManifest.find("lowering_spelling = /std/collections/vector/remove_swap") !=
+        std::string::npos);
+  CHECK(collectionManifest.find("compatibility_spelling = /vector/remove_swap") ==
+        std::string::npos);
+  CHECK(collectionManifest.find("compatibility_spelling = /std/collections/vectorRemoveSwap") ==
         std::string::npos);
   CHECK(collectionManifest.find("member_name = remove_swap") != std::string::npos);
   CHECK(collectionManifest.find(
-            "compatibility_spelling = /std/collections/experimental_vector/vectorRemoveSwap") !=
+            "compatibility_spelling = /std/collections/experimental_vector/vectorRemoveSwap") ==
         std::string::npos);
+  CHECK(collectionManifest.find("member_alias = vectorRemoveSwap") == std::string::npos);
   CHECK(collectionManifest.find("id = CollectionsVectorConstructors") !=
         std::string::npos);
   CHECK(collectionManifest.find("bridge_key = collections.vector_constructors") !=
         std::string::npos);
   CHECK(collectionManifest.find("canonical_path = /std/collections/vector/vector") !=
         std::string::npos);
-  CHECK(collectionManifest.find("member_name = vectorSingle") != std::string::npos);
+  CHECK(collectionManifest.find("member_name = vector") != std::string::npos);
+  CHECK(collectionManifest.find("member_name = vectorSingle") == std::string::npos);
+  CHECK(collectionManifest.find("lowering_spelling = /std/collections/vectorSingle") ==
+        std::string::npos);
   CHECK(collectionManifest.find(
-            "compatibility_spelling = /std/collections/experimental_vector/vectorPair") !=
+            "compatibility_spelling = /std/collections/experimental_vector/vectorPair") ==
         std::string::npos);
 
   CHECK(source.find("StdlibSurfaceId::CollectionsMapHelpers") != std::string::npos);
@@ -347,12 +355,12 @@ TEST_CASE("collection helper surface registry resolves preferred compatibility s
             primec::StdlibSurfaceId::CollectionsVectorHelpers,
             "/std/collections/vector/count",
             "/std/collections/experimental_vector/") ==
-        "/std/collections/experimental_vector/vectorCount");
+        "");
   CHECK(primec::stdlibSurfacePreferredSpellingForMember(
             primec::StdlibSurfaceId::CollectionsVectorHelpers,
             "/vector/remove_swap",
             "/std/collections/experimental_vector/") ==
-        "/std/collections/experimental_vector/vectorRemoveSwap");
+        "");
   CHECK(primec::stdlibSurfacePreferredSpellingForMember(
             primec::StdlibSurfaceId::CollectionsMapHelpers,
             "/std/collections/map/contains_ref",

@@ -14827,3 +14827,51 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     preserving the existing registry API, documented the ownership boundary, and
     updated source locks and TODO queue state. Baseline release validation was
     skipped per the lite workflow.
+
+- [x] TODO-4296: Stop publishing vector compatibility metadata
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Vector stdlib ownership cutover
+  - scope: Remove old vector compatibility spellings from the stdlib-owned
+    surface manifest so `StdlibSurfaceRegistry` no longer classifies rooted
+    `/vector/*`, `vectorCount`-style wrappers, fixed-arity constructor wrappers,
+    or direct `/std/collections/experimental_vector/*` helpers as published
+    vector surface metadata.
+  - implementation_notes:
+    - Start from `stdlib/std/collections/surfaces.psmeta`,
+      `src/StdlibSurfaceRegistry.cpp`,
+      `tests/unit/test_ir_pipeline_backends_architecture.h`, and
+      `tests/unit/test_ir_pipeline_validation_ir_validator_accepts_lowered_canonical_module.cpp`.
+    - Preserve canonical helper metadata for:
+      `/std/collections/vector/count`, `/std/collections/vector/capacity`,
+      `/std/collections/vector/push`, `/std/collections/vector/pop`,
+      `/std/collections/vector/reserve`, `/std/collections/vector/clear`,
+      `/std/collections/vector/remove_at`,
+      `/std/collections/vector/remove_swap`, `/std/collections/vector/at`, and
+      `/std/collections/vector/at_unsafe`.
+    - Do not remove the remaining behavior yet; TODO-4376 through TODO-4378 own
+      wrapper helper deletion, rooted alias rejection, and direct experimental
+      import rejection.
+  - acceptance:
+    - `surfaces.psmeta` keeps canonical vector helper/import/constructor
+      metadata but contains no rooted `/vector/*`, `vectorCount`-style,
+      fixed-arity wrapper, or direct experimental-vector compatibility
+      spellings.
+    - Registry metadata tests assert old vector compatibility spellings no
+      longer resolve through `StdlibSurfaceRegistry`.
+    - Existing generic registry APIs and canonical vector metadata continue to
+      resolve.
+    - TODO-4376 through TODO-4378 track the remaining user-visible vector
+      compatibility deletion work.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once the stdlib surface manifest stops publishing vector
+    compatibility metadata while canonical vector metadata remains data-driven.
+  - finished_at: 2026-05-08
+  - evidence: Split the broader vector compatibility deletion into bounded
+    TODO-4376 through TODO-4378 follow-ups, removed rooted `/vector/*`,
+    `vectorCount`-style, fixed-arity constructor, and direct
+    `/std/collections/experimental_vector/*` compatibility entries from
+    `stdlib/std/collections/surfaces.psmeta`, and updated registry/source-lock
+    coverage to assert old vector spellings no longer resolve through
+    `StdlibSurfaceRegistry` while canonical vector metadata still resolves.
+    Baseline release validation was skipped per the lite workflow.
