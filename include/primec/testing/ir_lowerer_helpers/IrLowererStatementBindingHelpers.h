@@ -183,8 +183,32 @@ UninitializedStorageInitDropEmitResult tryEmitUninitializedStorageInitDropStatem
     const ResolveStructSlotLayoutForStatementFn &resolveStructSlotLayout,
     const std::function<int32_t()> &allocTempLocal,
     const EmitStructCopyFromPtrsForStatementFn &emitStructCopyFromPtrs,
+    const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
     std::string &error,
     const EmitUninitializedStorageDropFromPtrForStatementFn &emitDropFromPtr = {});
+inline UninitializedStorageInitDropEmitResult tryEmitUninitializedStorageInitDropStatement(
+    const Expr &stmt,
+    LocalMap &localsIn,
+    std::vector<IrInstruction> &instructions,
+    const ResolveUninitializedStorageForStatementFn &resolveUninitializedStorage,
+    const EmitExprForBindingFn &emitExpr,
+    const ResolveStructSlotLayoutForStatementFn &resolveStructSlotLayout,
+    const std::function<int32_t()> &allocTempLocal,
+    const EmitStructCopyFromPtrsForStatementFn &emitStructCopyFromPtrs,
+    std::string &error,
+    const EmitUninitializedStorageDropFromPtrForStatementFn &emitDropFromPtr = {}) {
+  return tryEmitUninitializedStorageInitDropStatement(stmt,
+                                                     localsIn,
+                                                     instructions,
+                                                     resolveUninitializedStorage,
+                                                     emitExpr,
+                                                     resolveStructSlotLayout,
+                                                     allocTempLocal,
+                                                     emitStructCopyFromPtrs,
+                                                     ResolveDefinitionCallForStatementFn{},
+                                                     error,
+                                                     emitDropFromPtr);
+}
 UninitializedStorageTakeEmitResult tryEmitUninitializedStorageTakeStatement(
     const Expr &stmt,
     const LocalMap &localsIn,

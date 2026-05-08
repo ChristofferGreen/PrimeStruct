@@ -857,6 +857,15 @@
             "usesSamePathSoaHelperTargetForCollectionType(helperName,") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
+            "auto tryResolvePublishedVectorAccessHelper =") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "hasDeclaredDefinitionPath(\"/std/collections/vector/\" + normalizedHelperName)") ==
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "hasImportedDefinitionPath(\"/std/collections/vector/\" + normalizedHelperName)") ==
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
             "preferredSoaHelperTargetForCollectionType(") !=
         std::string::npos);
   const size_t samePathVectorMutatorBranch =

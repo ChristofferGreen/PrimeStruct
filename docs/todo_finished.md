@@ -15422,3 +15422,34 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     TODO-4398, and ratcheted `scripts/vector_surface_trace_baseline.json` from
     878 to 876 production traces. Baseline release validation was skipped per
     the lite workflow.
+
+- [x] TODO-4399: Route expression vector access visibility probes
+  - owner: ai
+  - created_at: 2026-05-08
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4395
+  - scope: Replace the direct canonical
+    `/std/collections/vector/{at,at_unsafe}` expression-helper visibility
+    probes in `SemanticsValidatorExprVectorHelpers.cpp` with a shared
+    preferred vector helper target probe while preserving the existing
+    experimental-vector access fallback.
+  - acceptance:
+    - Expression vector helper access resolution no longer directly constructs
+      canonical vector helper paths for the `at` and `at_unsafe` visibility
+      probes.
+    - Existing canonical public vector helper behavior remains routed through
+      the preferred helper target.
+    - The vector surface trace baseline decreases for
+      `SemanticsValidatorExprVectorHelpers.cpp` and does not increase
+      elsewhere.
+  - stop_rule: Stop after expression vector access visibility probes use the
+    preferred helper target, source-lock coverage keeps the old direct
+    canonical construction absent, and the audit baseline ratchets downward.
+  - finished_at: 2026-05-08
+  - evidence: Split the former TODO-4396 expression-vector leaf into
+    TODO-4399 and TODO-4400, replaced the direct
+    `"/std/collections/vector/" + normalizedHelperName` `at`/`at_unsafe`
+    visibility probes with `tryResolvePublishedVectorAccessHelper`, updated
+    source-lock coverage, and ratcheted
+    `scripts/vector_surface_trace_baseline.json` from 876 to 872 production
+    traces. Baseline release validation was skipped per the lite workflow.

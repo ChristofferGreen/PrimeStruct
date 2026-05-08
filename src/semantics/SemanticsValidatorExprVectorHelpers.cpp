@@ -365,12 +365,23 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
                                                             "/vector");
     return true;
   };
+  auto tryResolvePublishedVectorAccessHelper =
+      [&](std::string_view helperName) -> bool {
+    if (!(helperName == "at" || helperName == "at_unsafe")) {
+      return false;
+    }
+    const std::string preferredHelperTarget =
+        preferredBareVectorHelperTarget(helperName);
+    if (!hasDeclaredDefinitionPath(preferredHelperTarget) &&
+        !hasImportedDefinitionPath(preferredHelperTarget)) {
+      return false;
+    }
+    resolvedOut = preferredHelperTarget;
+    return true;
+  };
   std::string experimentalElemType;
   if (resolveExperimentalVectorReceiver(receiver, experimentalElemType)) {
-    if ((normalizedHelperName == "at" || normalizedHelperName == "at_unsafe") &&
-        (hasDeclaredDefinitionPath("/std/collections/vector/" + normalizedHelperName) ||
-         hasImportedDefinitionPath("/std/collections/vector/" + normalizedHelperName))) {
-      resolvedOut = preferredBareVectorHelperTarget(normalizedHelperName);
+    if (tryResolvePublishedVectorAccessHelper(normalizedHelperName)) {
       return true;
     }
     resolvedOut = specializedExperimentalVectorHelperTarget(normalizedHelperName,
@@ -555,10 +566,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
         receiverBinding.typeName = resolvedType;
         std::string experimentalElemType;
         if (extractExperimentalVectorElementType(receiverBinding, experimentalElemType)) {
-          if ((normalizedHelperName == "at" || normalizedHelperName == "at_unsafe") &&
-              (hasDeclaredDefinitionPath("/std/collections/vector/" + normalizedHelperName) ||
-               hasImportedDefinitionPath("/std/collections/vector/" + normalizedHelperName))) {
-            resolvedOut = preferredBareVectorHelperTarget(normalizedHelperName);
+          if (tryResolvePublishedVectorAccessHelper(normalizedHelperName)) {
             return true;
           }
           resolvedOut = specializedExperimentalVectorHelperTarget(normalizedHelperName,
