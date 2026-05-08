@@ -117,7 +117,7 @@ main() {
 TEST_CASE("clear allows vector elements with nested drop requirements") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [struct]
 Owned() {
@@ -146,7 +146,7 @@ main() {
 
 TEST_CASE("direct experimental vector constructor binds as Vector under wildcard import") {
   const std::string source = R"(
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -161,7 +161,7 @@ main() {
 
 TEST_CASE("direct experimental vector constructor keeps temporary receiver inference") {
   const std::string source = R"(
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {

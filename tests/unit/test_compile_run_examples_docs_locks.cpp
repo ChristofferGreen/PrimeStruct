@@ -541,8 +541,8 @@ TEST_CASE("vector map bridge boundary docs stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("The vector/map adapter cutover is complete") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("TODO-4378 owns the remaining direct\n"
-                            "  experimental vector seam deletion") !=
+  CHECK(primeStructDoc.find("direct experimental vector source\n"
+                            "  imports are rejected") !=
         std::string::npos);
   CHECK(primeStructDoc.find("Compatibility adapter inventory:") !=
         std::string::npos);
@@ -566,7 +566,7 @@ TEST_CASE("vector map bridge boundary docs stay source locked") {
         std::string::npos);
   CHECK(todo.find("metadata is now owned by `stdlib/std/collections/surfaces.psmeta`") !=
         std::string::npos);
-  CHECK(todo.find("TODO-4378 deletes the remaining direct experimental vector") !=
+  CHECK(todo.find("Direct experimental vector source imports are now rejected") !=
         std::string::npos);
   CHECK(todo.find("Migration-only seams: rooted `/map/*` spellings,") !=
         std::string::npos);
@@ -632,7 +632,7 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("| `/std/collections/internal_vector/*` | Internal substrate/helper namespace | Internal vector backing adapter used by canonical `/std/collections/vector/*`; it preserves the current compatibility `Vector<T>` type identity until the final vector surface audit. | TODO-4297 |") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("| `/std/collections/experimental_vector/*` | Temporary compatibility namespace | Compatibility shim for direct experimental vector imports; canonical wrappers route through `/std/collections/internal_vector/*`, and direct imports remain only for targeted compatibility or conformance coverage. | TODO-4378 |") !=
+  CHECK(primeStructDoc.find("| `/std/collections/experimental_vector/*` | Rejected compatibility namespace | Direct source imports are rejected; the shim remains only as legacy forwarding storage identity behind `/std/collections/internal_vector/*` until the final vector surface audit. | TODO-4297 |") !=
         std::string::npos);
   CHECK(primeStructDoc.find("| `/std/collections/experimental_map/*` | Internal substrate/helper namespace | Internal implementation module behind the canonical `/std/collections/map/*` public contract; direct imports remain only for targeted compatibility or conformance coverage. | none |") !=
         std::string::npos);
@@ -646,13 +646,14 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
   CHECK(primeStructDoc.find("fall through to visible `.prime` helper definitions\n"
                             "    instead of the vector statement-helper emitter") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("wrapper-layer\n"
+  CHECK(primeStructDoc.find("Wrapper-layer\n"
                             "    `/std/collections/vectorPush`-style mutator aliases are removed from the") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("Direct `/std/collections/experimental_vector/vectorPush`-style imports\n"
-                            "    remain narrow temporary shims") !=
+  CHECK(primeStructDoc.find("Direct `/std/collections/experimental_vector/vectorPush`-style source\n"
+                            "    imports now fail with an import diagnostic") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("Experimental `Vector<T>.set_field_count` and\n"
+  CHECK(primeStructDoc.find("Experimental\n"
+                            "    `Vector<T>.set_field_count` and\n"
                             "    `set_field_capacity` statement calls plus `field_count`, `field_capacity`,") !=
         std::string::npos);
 
@@ -664,9 +665,10 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
   CHECK(todo.find("Internal collection implementation modules:") != std::string::npos);
   CHECK(todo.find("/std/collections/internal_vector/*` owns the canonical vector backing") !=
         std::string::npos);
-  CHECK(todo.find("Vector compatibility shim: `/std/collections/experimental_vector/*` remains") !=
+  CHECK(todo.find("Vector compatibility shim: direct\n"
+                  "  `/std/collections/experimental_vector/*` source imports are rejected") !=
         std::string::npos);
-  CHECK(todo.find("/std/collections/experimental_map/*` now remain implementation-owned seams") !=
+  CHECK(todo.find("/std/collections/experimental_map/*` remains the implementation-owned seam") !=
         std::string::npos);
   CHECK(todo.find("Stdlib de-experimentalization: TODO-4059") == std::string::npos);
   CHECK(todo.find("TODO-4103: Rename the remaining experimental SoA storage namespace") ==
@@ -1366,10 +1368,12 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4378: Reject direct experimental vector imports") !=
+                  "- TODO-4297: Add zero C++ vector-surface audit") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
-                  "- TODO-4297: Add zero C++ vector-surface audit") !=
+                  "- TODO-4299: Promote and style canonical `.prime` map implementation") !=
+        std::string::npos);
+  CHECK(todo.find("- TODO-4308: Move SoA surface metadata out of C++") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4305: Rename and style canonical `.prime` SoA surface") !=
         std::string::npos);
@@ -1383,7 +1387,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4378: Reject direct experimental vector imports") !=
+                  "- TODO-4297: Add zero C++ vector-surface audit") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
       "TODO-4268: Add heterogeneous type-pack syntax and metadata",
@@ -1725,9 +1729,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Compile-time macro hooks and AST transform ownership | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4378, TODO-4297, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |") !=
+  CHECK(todo.find("| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4297, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |") !=
         std::string::npos);
-  CHECK(todo.find("| Vector/map stdlib ownership cutover and collection surface authority | TODO-4378, TODO-4297, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |") !=
+  CHECK(todo.find("| Vector/map stdlib ownership cutover and collection surface authority | TODO-4297, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |") !=
         std::string::npos);
   CHECK(todo.find("| Release benchmark/example suite stability and doctest governance | none |") !=
         std::string::npos);
@@ -1735,11 +1739,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Test-suite audit follow-up and release-gate stability | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4378, TODO-4297, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |") !=
+  CHECK(todo.find("| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4297, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |") !=
         std::string::npos);
   CHECK(todo.find("| SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |") !=
         std::string::npos);
-  CHECK(todo.find("| De-experimentalization surface and namespace parity | TODO-4378, TODO-4297, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |") !=
+  CHECK(todo.find("| De-experimentalization surface and namespace parity | TODO-4297, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |") !=
         std::string::npos);
   CHECK(todo.find("| `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |") !=
         std::string::npos);
@@ -1765,7 +1769,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Lowerer/source-composition contract coverage | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4378, TODO-4297, TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |") !=
+  CHECK(todo.find("| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4297, TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |") !=
         std::string::npos);
   CHECK(todo.find("### Skipped Doctest Debt Summary") != std::string::npos);
   CHECK(todo.find("Retained `doctest::skip(true)` coverage is currently absent from the active") !=
@@ -2883,7 +2887,7 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(mapStdlib.find("[i32] entryCount{count(entries)}") == std::string::npos);
   CHECK(mapStdlib.find("[Entry<K, V>] current{entries[index]}") == std::string::npos);
 
-  CHECK(experimentalVectorStdlib.find("// Compatibility shim for direct experimental vector imports.") !=
+  CHECK(experimentalVectorStdlib.find("// Rejected direct-import shim for the legacy experimental vector namespace.") !=
         std::string::npos);
   CHECK(experimentalVectorStdlib.find(
             "// Canonical wrappers route through /std/collections/internal_vector/*.") !=
@@ -2900,9 +2904,11 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(experimentalMapStdlib.find("// Internal implementation module behind canonical /std/collections/map/*.") !=
         std::string::npos);
   CHECK(experimentalMapStdlib.find(
-            "// Direct imports remain only for targeted compatibility or conformance coverage.") !=
+            "// Vector storage comes from the internal vector backing module.") !=
         std::string::npos);
-  CHECK(experimentalMapStdlib.find("return(/std/collections/experimental_vector/vectorCount<K>(keys))") !=
+  CHECK(experimentalMapStdlib.find("return(/std/collections/internal_vector/vectorCount<K>(keys))") !=
+        std::string::npos);
+  CHECK(experimentalMapStdlib.find("import /std/collections/experimental_vector/*") ==
         std::string::npos);
   CHECK(experimentalMapStdlib.find("return(mapCount<K, V>(this))") == std::string::npos);
 

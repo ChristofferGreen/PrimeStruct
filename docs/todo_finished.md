@@ -14928,3 +14928,32 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     calls, and updated diagnostics/docs/TODO state to treat rooted vector
     aliases as removed while leaving rooted map compatibility unchanged.
     Baseline release validation was skipped per the lite workflow.
+
+- [x] TODO-4378: Reject direct experimental vector imports
+  - owner: ai
+  - created_at: 2026-05-08
+  - phase: Vector stdlib ownership cutover
+  - scope: Remove or intentionally reject direct
+    `/std/collections/experimental_vector/*` imports from user code while
+    keeping `/std/collections/internal_vector/*` available as the implementation
+    module behind canonical vector wrappers.
+  - acceptance:
+    - Direct experimental vector wildcard and exact imports fail with stable
+      diagnostics or are absent from public tests/docs.
+    - Canonical vector wrappers still route through the internal vector backing
+      module.
+    - Experimental map internals that still use vector backing are either moved
+      to internal vector imports or documented as map-owned follow-up if they
+      cannot be changed in this slice.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once ordinary user code cannot import
+    `/std/collections/experimental_vector/*` directly and canonical vector
+    behavior remains available through `/std/collections/vector/*`.
+  - finished_at: 2026-05-08
+  - evidence: Added semantic import validation that rejects direct source
+    wildcard and exact experimental-vector imports with a stable diagnostic,
+    preserved `/std/collections/internal_vector/*` as the backing import path
+    with the current `Vector<T>` type identity, moved experimental-map vector
+    backing calls through the internal vector module, and updated conformance
+    sources, docs, and source locks away from public experimental vector
+    imports. Baseline release validation was skipped per the lite workflow.

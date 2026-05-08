@@ -843,7 +843,7 @@ main() {
 
 TEST_CASE("semantic product normalizes experimental vector bridge helper aliases") {
   const std::string source = R"(
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [effects(heap_alloc), return<i32>]
 main() {

@@ -86,7 +86,7 @@ main() {
 
 TEST_CASE("vm experimental vector at_unsafe checks positive out-of-range index") {
   const std::string source = R"(
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -104,7 +104,7 @@ main() {
 
 TEST_CASE("vm experimental vector method at_unsafe checks positive out-of-range index") {
   const std::string source = R"(
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -122,7 +122,7 @@ main() {
 
 TEST_CASE("vm experimental vector at checks positive out-of-range index") {
   const std::string source = R"(
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -140,7 +140,7 @@ main() {
 
 TEST_CASE("vm experimental vector method at checks positive out-of-range index") {
   const std::string source = R"(
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -158,7 +158,7 @@ main() {
 
 TEST_CASE("vm experimental vector at_unsafe rejects index past capacity even if count is forged") {
   const std::string source = R"(
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -179,7 +179,7 @@ main() {
 
 TEST_CASE("vm experimental vector method at rejects index past capacity even if count is forged") {
   const std::string source = R"(
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -200,7 +200,7 @@ main() {
 
 TEST_CASE("vm experimental vector reserve rejects forged count above capacity") {
   const std::string source = R"(
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -222,7 +222,7 @@ main() {
 
 TEST_CASE("vm experimental vector clear rejects forged count above capacity") {
   const std::string source = R"(
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -244,7 +244,7 @@ main() {
 
 TEST_CASE("vm experimental vector destroy rejects forged count above capacity") {
   const std::string source = R"(
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [effects(heap_alloc), return<int>]
 make_bad() {
@@ -270,7 +270,7 @@ main() {
 
 TEST_CASE("vm experimental vector count rejects forged count above capacity") {
   const std::string source = R"(
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -291,7 +291,7 @@ main() {
 
 TEST_CASE("vm experimental vector capacity rejects forged negative capacity") {
   const std::string source = R"(
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -312,7 +312,7 @@ main() {
 
 TEST_CASE("vm experimental vector capacity rejects forged excessive capacity") {
   const std::string source = R"(
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -333,7 +333,7 @@ main() {
 
 TEST_CASE("vm experimental vector set_field_count rejects negative count") {
   const std::string source = R"(
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -353,7 +353,7 @@ main() {
 
 TEST_CASE("vm experimental vector set_field_capacity rejects below-count value") {
   const std::string source = R"(
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {

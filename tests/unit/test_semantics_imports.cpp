@@ -74,6 +74,52 @@ main() {
   CHECK(error.find("unknown call target: vectorPair") != std::string::npos);
 }
 
+TEST_CASE("direct experimental vector wildcard import is rejected") {
+  const std::string source = R"(
+import /std/collections/experimental_vector/*
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("direct import of /std/collections/experimental_vector/* is not supported; "
+                   "use /std/collections/vector/*") != std::string::npos);
+}
+
+TEST_CASE("direct experimental vector exact import is rejected") {
+  const std::string source = R"(
+import /std/collections/experimental_vector/vector
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("direct import of /std/collections/experimental_vector/* is not supported; "
+                   "use /std/collections/vector/*") != std::string::npos);
+}
+
+TEST_CASE("internal vector wildcard import preserves backing Vector identity") {
+  const std::string source = R"(
+import /std/collections/internal_vector/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<i32> mut] values{vector<i32>()}
+  vectorPush<i32>(values, 4i32)
+  return(vectorCount<i32>(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("definition ast transform hook resolves local symbol metadata") {
   const std::string source = R"(
 [ast return<void>]

@@ -61,6 +61,21 @@ bool isCanonicalSoaVectorHelperAliasName(std::string_view aliasName) {
          aliasName == "to_aos_ref";
 }
 
+bool isDirectExperimentalVectorImportPath(std::string_view importPath) {
+  constexpr std::string_view ExperimentalVectorRoot =
+      "/std/collections/experimental_vector";
+  return importPath == ExperimentalVectorRoot ||
+         importPath == "/std/collections/experimental_vector/*" ||
+         (importPath.size() > ExperimentalVectorRoot.size() &&
+          importPath.rfind(ExperimentalVectorRoot, 0) == 0 &&
+          importPath[ExperimentalVectorRoot.size()] == '/');
+}
+
+std::string directExperimentalVectorImportDiagnostic() {
+  return "direct import of /std/collections/experimental_vector/* is not supported; "
+         "use /std/collections/vector/*";
+}
+
 std::string genericTypeFamilyNameForInternalName(std::string_view name) {
   const size_t arityMarker = name.find("__arity");
   if (arityMarker == std::string_view::npos || arityMarker == 0) {
@@ -232,6 +247,22 @@ bool SemanticsValidator::buildImportAliases() {
         }
         return sawAlias;
       };
+  auto registerInternalVectorWildcardAliases =
+      [&](const std::string &prefix,
+          std::unordered_map<std::string, std::string> &targetAliases) {
+        if (prefix != "/std/collections/internal_vector") {
+          return false;
+        }
+        const std::string vectorPath = "/std/collections/experimental_vector/Vector";
+        auto defIt = defMap_.find(vectorPath);
+        if (defIt == defMap_.end() || defIt->second == nullptr ||
+            publicDefinitions_.count(vectorPath) == 0) {
+          return false;
+        }
+        targetAliases.emplace("Vector", vectorPath);
+        importAliases_.emplace("Vector", vectorPath);
+        return true;
+      };
   auto shouldPublishMergedImportAlias = [&](std::string_view aliasName,
                                             std::string_view targetPath) {
     return !(targetPath.rfind("/std/collections/soa_vector/", 0) == 0 &&
@@ -251,6 +282,12 @@ bool SemanticsValidator::buildImportAliases() {
 
   const auto &importPaths = validationPlan_->imports.directImportPaths;
   for (const auto &importPath : importPaths) {
+    if (isDirectExperimentalVectorImportPath(importPath)) {
+      if (!addImportDiagnostic(directExperimentalVectorImportDiagnostic())) {
+        return false;
+      }
+      continue;
+    }
     if (importPath == "/std/math") {
       if (!addImportDiagnostic("import /std/math is not supported; use import /std/math/* or /std/math/<name>")) {
         return false;
@@ -276,8 +313,11 @@ bool SemanticsValidator::buildImportAliases() {
       registerStdlibSurfaceWildcardAliases(prefix, directImportAliases_);
       bool sawCanonicalSoaVectorWildcardAliases =
           registerCanonicalSoaVectorWildcardAliases(prefix, directImportAliases_);
+      bool sawInternalVectorWildcardAliases =
+          registerInternalVectorWildcardAliases(prefix, directImportAliases_);
       const std::string scopedPrefix = prefix + "/";
-      bool sawImmediateDefinition = sawCanonicalSoaVectorWildcardAliases;
+      bool sawImmediateDefinition =
+          sawCanonicalSoaVectorWildcardAliases || sawInternalVectorWildcardAliases;
       bool importError = false;
       std::vector<std::string> matchingPaths;
       matchingPaths.reserve(defMap_.size());
@@ -459,6 +499,7 @@ bool SemanticsValidator::buildImportAliases() {
       if (isWildcard) {
         registerStdlibSurfaceWildcardAliases(prefix, transitiveImportAliases_);
         registerCanonicalSoaVectorWildcardAliases(prefix, transitiveImportAliases_);
+        registerInternalVectorWildcardAliases(prefix, transitiveImportAliases_);
         const std::string scopedPrefix = prefix + "/";
         std::vector<std::string> matchingPaths;
         matchingPaths.reserve(defMap_.size());

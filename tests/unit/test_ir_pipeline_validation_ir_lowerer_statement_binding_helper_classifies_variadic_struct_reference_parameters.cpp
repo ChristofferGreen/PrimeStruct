@@ -1289,7 +1289,7 @@ TEST_CASE(
     "ir lowerer statement binding helper preserves explicit specialized "
     "vector local element kinds") {
   const std::string source = R"(
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {

@@ -3073,8 +3073,10 @@ for(
     empty"` / `"container index out of bounds"` wording across VM/native/C++ flows.
   - Canonical `/std/collections/vector/*` is now the sole public namespaced vector contract. The
     `/std/collections/internal_vector/*` family owns the internal backing adapter behind that
-    public contract, while `/std/collections/experimental_vector/*` remains a compatibility shim
-    for targeted direct-import coverage. That backing adapter (`vector<T>(...)`, `vectorNew`, `vectorSingle`,
+    public contract, while direct `/std/collections/experimental_vector/*`
+    source imports are rejected. The legacy experimental shim remains only as
+    forwarding storage identity behind the internal backing adapter. That
+    backing adapter (`vector<T>(...)`, `vectorNew`, `vectorSingle`,
     `vectorPair`, `vectorTriple`, `vectorQuad`, `vectorQuint`, `vectorSext`, `vectorSept`, `vectorOct`, `vectorCount`,
     `vectorCapacity`, `vectorReserve`, `vectorPush`, `vectorPop`, `vectorClear`, `vectorRemoveAt`,
     `vectorRemoveSwap`, `vectorAt`, `vectorAtUnsafe`) returns the current `.prime` `Vector<T>` record backed by
@@ -3105,9 +3107,10 @@ for(
     `/std/collections/vectorPush`-style mutator aliases are removed from the
     public wrapper layer instead of rewriting back into raw builtin-vector
     emission.
-    Direct `/std/collections/experimental_vector/vectorPush`-style imports
-    remain narrow temporary shims until the vector compatibility deletion work
-    removes them. Experimental `Vector<T>.set_field_count` and
+    Direct `/std/collections/experimental_vector/vectorPush`-style source
+    imports now fail with an import diagnostic; use canonical
+    `/std/collections/vector/*` imports instead. Experimental
+    `Vector<T>.set_field_count` and
     `set_field_capacity` statement calls plus `field_count`, `field_capacity`,
     `set_field_count`, and `set_field_capacity` inline helper calls now inline
     their visible `.prime` helper definitions instead of using C++ fast paths
@@ -3123,7 +3126,7 @@ for(
     definitions instead of count/access classifier raw vector emitters; rooted
     `/vector/*` helper spellings are rejected unless an explicit same-path user
     definition exists, and direct `/std/collections/experimental_vector/*`
-    compatibility imports remain temporary shims.
+    source imports are rejected.
   - Canonical `/std/collections/map/*` is now the sole public namespaced map contract. The
     `/std/collections/experimental_map/*` family now remains only as the internal implementation seam behind that
     public contract. That backing namespace (`Entry<K, V>`, `entry(key, value)`,
@@ -3801,16 +3804,16 @@ re-defining it piecemeal.
   import aliases, lowering spellings, and statement-helper subset live with the
   stdlib collection source. Old vector compatibility spellings are
   intentionally absent from that metadata; rooted helper aliases are removed,
-  and the direct experimental import seam remains tracked by the vector
-  deletion leaves.
+  and direct experimental vector source imports are rejected by import
+  validation.
 - **Migration-only seams:** rooted `/map/*` spellings plus
   `mapCount`-style lowering names remain temporary compatibility seams. Rooted
   `/vector/*` helper spellings no longer act as builtin vector compatibility
   aliases; explicit user definitions under those paths remain ordinary
   definitions. The vector/map adapter cutover is complete for semantic and
-  template-monomorph helper decisions; TODO-4378 owns the remaining direct
-  experimental vector seam deletion, and TODO-4303 owns the later map seam
-  deletion after map metadata moves to a stdlib-owned manifest.
+  template-monomorph helper decisions; direct experimental vector source
+  imports are rejected, and TODO-4303 owns the later map seam deletion after
+  map metadata moves to a stdlib-owned manifest.
 - **Compatibility adapter inventory:** map insert helper compatibility was the
   first migrated family. The semantic map-insert rewrite asks the
   `StdlibSurfaceRegistry` `CollectionsMapHelpers` adapter to classify
@@ -3838,11 +3841,12 @@ re-defining it piecemeal.
 - **Internal implementation seams:** `/std/collections/internal_vector/*`
   owns the canonical vector backing adapter while preserving the current
   `/std/collections/experimental_vector/Vector` compatibility type identity.
-  `/std/collections/experimental_vector/*` remains a direct-import
-  compatibility shim for targeted tests only. `/std/collections/experimental_map/*`
-  remains an implementation-owned module behind the canonical map wrapper;
-  direct imports should stay limited to targeted compatibility or conformance
-  coverage rather than ordinary public API use.
+  `/std/collections/experimental_vector/*` is rejected as a source import and
+  remains only as a legacy forwarding shim behind the internal vector module.
+  `/std/collections/experimental_map/*` remains an implementation-owned module
+  behind the canonical map wrapper; direct imports should stay limited to
+  targeted compatibility or conformance coverage rather than ordinary public
+  API use.
 - **Out of scope for this bridge lane:** `array<T>` core ownership, promoted
   `soa_vector<T>` implementation details, and runtime storage/allocator
   redesign stay outside the vector/map bridge contract and require separate
@@ -3875,7 +3879,7 @@ Current `stdlib/std` experimental and internal module classification:
 | Namespace family | Current role | Current interpretation | Follow-up |
 | --- | --- | --- | --- |
 | `/std/collections/internal_vector/*` | Internal substrate/helper namespace | Internal vector backing adapter used by canonical `/std/collections/vector/*`; it preserves the current compatibility `Vector<T>` type identity until the final vector surface audit. | TODO-4297 |
-| `/std/collections/experimental_vector/*` | Temporary compatibility namespace | Compatibility shim for direct experimental vector imports; canonical wrappers route through `/std/collections/internal_vector/*`, and direct imports remain only for targeted compatibility or conformance coverage. | TODO-4378 |
+| `/std/collections/experimental_vector/*` | Rejected compatibility namespace | Direct source imports are rejected; the shim remains only as legacy forwarding storage identity behind `/std/collections/internal_vector/*` until the final vector surface audit. | TODO-4297 |
 | `/std/collections/experimental_map/*` | Internal substrate/helper namespace | Internal implementation module behind the canonical `/std/collections/map/*` public contract; direct imports remain only for targeted compatibility or conformance coverage. | none |
 | `/std/gfx/experimental/*` | Temporary compatibility namespace | Legacy compatibility shim over canonical `/std/gfx/*`; no longer part of the public gfx contract and retained only for targeted compatibility coverage while the residual seam remains importable. | none |
 | `/std/collections/experimental_soa_vector/*` | Accepted compatibility namespace | Compatibility module behind the promoted canonical `/std/collections/soa_vector/*` public surface; direct imports are accepted only for targeted compatibility or conformance coverage. C++/VM/native compile-run coverage locks this compatibility seam; ordinary public examples should use `/std/collections/soa_vector/*`. | none |

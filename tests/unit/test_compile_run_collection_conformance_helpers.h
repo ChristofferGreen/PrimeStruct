@@ -84,29 +84,13 @@ inline void expectSharedVectorConformanceHarness(const std::string &emitMode) {
 }
 
 inline void expectExperimentalVectorRuntimeContracts(const std::string &emitMode) {
-  expectExperimentalVectorVariadicConstructorConformance(emitMode);
-  expectExperimentalVectorVariadicConstructorMismatchReject(emitMode);
-  expectExperimentalVectorMoveOwnershipConformance(emitMode);
-  expectExperimentalVectorCountRefConformance(emitMode);
-  expectExperimentalVectorCapacityRefConformance(emitMode);
-  expectExperimentalVectorIsEmptyRefConformance(emitMode);
-  expectExperimentalVectorCountRefAfterPushConformance(emitMode);
-  expectExperimentalVectorCapacityRefAfterReserveConformance(emitMode);
-  expectVectorHelperRuntimeContract(emitMode, "/std/collections/experimental_vector/*", "pop_empty");
-  expectVectorHelperRuntimeContract(emitMode, "/std/collections/experimental_vector/*", "remove_at_oob");
-  expectVectorHelperRuntimeContract(emitMode, "/std/collections/experimental_vector/*", "remove_swap_oob");
-  expectVectorHelperRuntimeContract(emitMode, "/std/collections/experimental_vector/*", "at_negative_index");
-  expectVectorHelperRuntimeContract(emitMode, "/std/collections/experimental_vector/*",
-                                    "at_unsafe_negative_index");
-  expectVectorHelperRuntimeContract(emitMode, "/std/collections/experimental_vector/*", "reserve_negative");
-  expectVectorHelperRuntimeContract(emitMode, "/std/collections/experimental_vector/*",
-                                    "reserve_growth_overflow");
-  expectVectorHelperRuntimeContract(emitMode, "/std/collections/experimental_vector/*",
-                                    "push_growth_overflow");
+  expectDirectExperimentalVectorImportRejects(
+      emitMode, "experimental_vector_runtime_contracts_reject");
 }
 
 inline void expectExperimentalVectorOwnershipContracts(const std::string &emitMode) {
-  expectExperimentalVectorOwnershipConformance(emitMode);
+  expectDirectExperimentalVectorImportRejects(
+      emitMode, "experimental_vector_ownership_contracts_reject");
 }
 
 inline void expectVectorIndexedRemovalOwnershipConformance(const std::string &emitMode) {

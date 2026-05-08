@@ -2877,7 +2877,7 @@ main() {
 
 TEST_CASE("experimental vector borrow-slot helper validates reference return") {
   const std::string source = R"(
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [return<Reference<i32>>]
 borrow_second([Vector<i32>] values) {

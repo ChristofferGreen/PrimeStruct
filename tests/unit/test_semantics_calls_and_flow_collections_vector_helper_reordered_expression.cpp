@@ -387,7 +387,7 @@ main() {
 TEST_CASE("stdlib namespaced vector helpers accept explicit Vector bindings") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -409,7 +409,7 @@ main() {
 TEST_CASE("stdlib wrapper vector helpers accept explicit Vector bindings") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -435,7 +435,7 @@ main() {
 TEST_CASE("stdlib wrapper vector helpers reject explicit Vector type mismatch") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -451,7 +451,7 @@ main() {
 TEST_CASE("stdlib wrapper vector constructors accept explicit Vector destinations") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -528,7 +528,7 @@ main() {
 TEST_CASE("stdlib wrapper vector constructors keep mismatch diagnostics on explicit Vector destinations") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -554,7 +554,7 @@ main() {
 TEST_CASE("stdlib wrapper vector constructors infer experimental auto locals and auto returns") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [return<auto> effects(heap_alloc)]
 buildValues([bool] wrapped) {
@@ -588,7 +588,7 @@ main() {
 TEST_CASE("helper-wrapped vector constructors infer experimental auto locals") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -611,7 +611,7 @@ main() {
 TEST_CASE("helper-wrapped vector constructor auto inference keeps template conflict diagnostics") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -633,7 +633,7 @@ main() {
 TEST_CASE("implicit vector constructor auto inference keeps template conflict diagnostics") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -650,7 +650,7 @@ main() {
 TEST_CASE("canonical vector helpers accept direct constructor receivers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -669,7 +669,7 @@ main() {
 TEST_CASE("canonical vector helpers keep mismatch diagnostics on direct constructor receivers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -685,7 +685,7 @@ main() {
 TEST_CASE("experimental vector methods accept direct constructor receivers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -704,7 +704,7 @@ main() {
 TEST_CASE("experimental vector methods keep mismatch diagnostics on direct constructor receivers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -720,7 +720,7 @@ main() {
 TEST_CASE("helper-wrapped canonical vector helpers accept direct constructor receivers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -744,7 +744,7 @@ main() {
 TEST_CASE("helper-wrapped canonical vector helpers keep mismatch diagnostics on direct constructor receivers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -765,7 +765,7 @@ main() {
 TEST_CASE("helper-wrapped experimental vector methods accept direct constructor receivers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -789,7 +789,7 @@ main() {
 TEST_CASE("helper-wrapped experimental vector methods keep mismatch diagnostics on direct constructor receivers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_vector/*
+import /std/collections/internal_vector/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {

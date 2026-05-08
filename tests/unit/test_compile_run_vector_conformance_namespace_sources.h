@@ -379,7 +379,7 @@ inline std::string makeVectorHelperRuntimeContractSource(const std::string &impo
 
 inline std::string makeExperimentalVectorOwnedDropConformanceSource() {
   std::string source;
-  source += "import /std/collections/experimental_vector/*\n\n";
+  source += "import /std/collections/internal_vector/*\n\n";
   source += "[struct]\n";
   source += "Tracked() {\n";
   source += "  [i32 mut] value{0i32}\n";
@@ -412,7 +412,7 @@ inline std::string makeExperimentalVectorOwnedDropConformanceSource() {
 
 inline std::string makeExperimentalVectorRelocationConformanceSource() {
   std::string source;
-  source += "import /std/collections/experimental_vector/*\n\n";
+  source += "import /std/collections/internal_vector/*\n\n";
   source += "[struct]\n";
   source += "Mover() {\n";
   source += "  [i32 mut] value{0i32}\n\n";
@@ -440,7 +440,7 @@ inline std::string makeExperimentalVectorRelocationConformanceSource() {
 
 inline std::string makeExperimentalVectorRemovalConformanceSource() {
   std::string source;
-  source += "import /std/collections/experimental_vector/*\n\n";
+  source += "import /std/collections/internal_vector/*\n\n";
   source += "[struct]\n";
   source += "Owned() {\n";
   source += "  [i32 mut] value{0i32}\n\n";
@@ -472,7 +472,7 @@ inline std::string makeExperimentalVectorRemovalConformanceSource() {
 inline std::string makeExperimentalVectorCanonicalHelperRoutingSource() {
   std::string source;
   source += "import /std/collections/*\n";
-  source += "import /std/collections/experimental_vector/*\n\n";
+  source += "import /std/collections/internal_vector/*\n\n";
   source += "[struct]\n";
   source += "Mover() {\n";
   source += "  [i32 mut] value{0i32}\n\n";

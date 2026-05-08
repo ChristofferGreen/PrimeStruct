@@ -6,6 +6,26 @@ inline void expectVectorConformanceCompileReject(const std::string &source,
                                                  const std::string &expectedFragment,
                                                  const std::string &requiredFragment = "");
 
+inline std::string makeDirectExperimentalVectorImportRejectSource() {
+  return R"(import /std/collections/experimental_vector/*
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+}
+
+inline void expectDirectExperimentalVectorImportRejects(const std::string &emitMode,
+                                                        const std::string &nameStem) {
+  expectVectorConformanceCompileReject(
+      makeDirectExperimentalVectorImportRejectSource(),
+      nameStem + "_" + emitMode,
+      emitMode,
+      "direct import of /std/collections/experimental_vector/* is not supported",
+      "use /std/collections/vector/*");
+}
+
 inline void expectVectorConformanceProgramRuns(const std::string &source,
                                                const std::string &nameStem,
                                                const std::string &emitMode,
@@ -27,19 +47,8 @@ inline void expectVectorConformanceProgramRuns(const std::string &source,
 }
 
 inline void expectExperimentalVectorCanonicalHelperRoutingConformance(const std::string &emitMode) {
-  if (emitMode == "native" || emitMode == "exe") {
-    expectVectorConformanceCompileReject(
-        makeExperimentalVectorCanonicalHelperRoutingSource(),
-        "experimental_vector_canonical_helper_routing_" + emitMode,
-        emitMode,
-        "native backend only supports numeric/bool/string vector literals");
-    return;
-  }
-  expectVectorConformanceProgramRuns(
-      makeExperimentalVectorCanonicalHelperRoutingSource(),
-      "experimental_vector_canonical_helper_routing_" + emitMode,
-      emitMode,
-      93);
+  expectDirectExperimentalVectorImportRejects(
+      emitMode, "experimental_vector_canonical_helper_routing_reject");
 }
 
 inline void expectVectorVmProgramRunsWithOutput(const std::string &source,
@@ -853,9 +862,9 @@ inline void expectVectorHelperRuntimeContract(const std::string &emitMode,
       (testScratchPath("") /
        ("primec_vector_helper_runtime_" + slug + "_" + mode + "_" + emitMode + "_err.txt"))
           .string();
-  const bool experimentalPath = importPath == "/std/collections/experimental_vector/*";
+  const bool internalVectorPath = importPath == "/std/collections/internal_vector/*";
   std::string expectedError;
-  if (emitMode != "vm" && experimentalPath) {
+  if (emitMode != "vm" && internalVectorPath) {
     expectedError = "array index out of bounds\n";
   } else {
     expectedError = mode == "pop_empty"         ? "container empty\n"
@@ -863,8 +872,8 @@ inline void expectVectorHelperRuntimeContract(const std::string &emitMode,
                     : mode == "reserve_growth_overflow"
                         ? "array index out of bounds\n"
                     : mode == "push_growth_overflow"
-                        ? (experimentalPath ? "array index out of bounds\n"
-                                            : "vector reserve expects non-negative capacity\n")
+                        ? (internalVectorPath ? "array index out of bounds\n"
+                                              : "vector reserve expects non-negative capacity\n")
                                              : "array index out of bounds\n";
   }
 

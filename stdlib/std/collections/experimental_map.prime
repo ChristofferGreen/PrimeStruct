@@ -1,6 +1,6 @@
 // Internal implementation module behind canonical /std/collections/map/*.
-// Direct imports remain only for targeted compatibility or conformance coverage.
-import /std/collections/experimental_vector/*
+// Vector storage comes from the internal vector backing module.
+import /std/collections/internal_vector/*
 
 [return<bool>]
 /i32/equal([i32] self, [i32] other) {
@@ -63,13 +63,13 @@ namespace std {
 
   [public struct]
   Map<K, V>() {
-    [public Vector<K> mut] keys{/std/collections/experimental_vector/vector<K>()}
-    [public Vector<V> mut] payloads{/std/collections/experimental_vector/vector<V>()}
+    [public Vector<K> mut] keys{/std/collections/internal_vector/vector<K>()}
+    [public Vector<V> mut] payloads{/std/collections/internal_vector/vector<V>()}
 
     [public return<i32>]
     count() {
       [Vector<K>] keys{this.keys}
-      return(/std/collections/experimental_vector/vectorCount<K>(keys))
+      return(/std/collections/internal_vector/vectorCount<K>(keys))
     }
 
     [public return<bool> Comparable<K>]
@@ -101,8 +101,8 @@ namespace std {
     Move([Reference<Self>] other) {
       assign(this.keys, other.keys)
       assign(this.payloads, other.payloads)
-      assign(other.keys, /std/collections/experimental_vector/vector<K>())
-      assign(other.payloads, /std/collections/experimental_vector/vector<V>())
+      assign(other.keys, /std/collections/internal_vector/vector<K>())
+      assign(other.payloads, /std/collections/internal_vector/vector<V>())
     }
 
     [public effects(heap_alloc)]
@@ -118,10 +118,10 @@ namespace std {
   mapDestroyVector<T>([Vector<T> mut] values) {
     if(values.ownsData,
        then() {
-         /std/collections/experimental_vector/vectorCheckShape<T>(values)
-         /std/collections/experimental_vector/vectorDropRange<T>(
+         /std/collections/internal_vector/vectorCheckShape<T>(values)
+         /std/collections/internal_vector/vectorDropRange<T>(
              values,
-             /std/collections/experimental_vector/vectorCount<T>(values))
+             /std/collections/internal_vector/vectorCount<T>(values))
          /std/collections/internal_buffer_checked/bufferFree<uninitialized<T>>(values.data)
          assign(values.ownsData, false)
          values.set_field_count(0i32)
@@ -134,9 +134,9 @@ namespace std {
   mapFindIndex<K, V>([Map<K, V>] entries, [K] key) {
     [i32 mut] index{0i32}
     [Vector<K>] keys{entries.keys}
-    [i32] limit{/std/collections/experimental_vector/vectorCount<K>(keys)}
+    [i32] limit{/std/collections/internal_vector/vectorCount<K>(keys)}
     while(less_than(index, limit), do() {
-      if(/std/collections/experimental_vector/vectorAt<K>(keys, index).equal(key),
+      if(/std/collections/internal_vector/vectorAt<K>(keys, index).equal(key),
          then() { return(index) },
          else() { })
       increment(index)
@@ -148,9 +148,9 @@ namespace std {
   mapBorrowedFindIndex<K, V>([Reference<Map<K, V>>] entries, [K] key) {
     [i32 mut] index{0i32}
     [Vector<K>] keys{entries.keys}
-    [i32] limit{/std/collections/experimental_vector/vectorCount<K>(keys)}
+    [i32] limit{/std/collections/internal_vector/vectorCount<K>(keys)}
     while(less_than(index, limit), do() {
-      if(/std/collections/experimental_vector/vectorAt<K>(keys, index).equal(key),
+      if(/std/collections/internal_vector/vectorAt<K>(keys, index).equal(key),
          then() { return(index) },
          else() { })
       increment(index)
@@ -177,15 +177,15 @@ namespace std {
     [i32] index{/std/collections/experimental_map/mapFindIndex<K, V>(entries, key)}
     [Vector<K> mut] keys{entries.keys}
     [Vector<V> mut] payloads{entries.payloads}
-    [i32] limit{/std/collections/experimental_vector/vectorCount<K>(keys)}
+    [i32] limit{/std/collections/internal_vector/vectorCount<K>(keys)}
     if(less_than(index, limit),
        then() {
          /std/collections/experimental_map/mapOverwriteSlot<V>(payloads, index, value)
          assign(entries.payloads, payloads)
        },
        else() {
-         /std/collections/experimental_vector/vectorPush<K>(keys, key)
-         /std/collections/experimental_vector/vectorPush<V>(payloads, value)
+         /std/collections/internal_vector/vectorPush<K>(keys, key)
+         /std/collections/internal_vector/vectorPush<V>(payloads, value)
          assign(entries.keys, keys)
          assign(entries.payloads, payloads)
        })
@@ -196,15 +196,15 @@ namespace std {
     [i32] index{/std/collections/experimental_map/mapBorrowedFindIndex<K, V>(entries, key)}
     [Vector<K> mut] keys{entries.keys}
     [Vector<V> mut] payloads{entries.payloads}
-    [i32] limit{/std/collections/experimental_vector/vectorCount<K>(keys)}
+    [i32] limit{/std/collections/internal_vector/vectorCount<K>(keys)}
     if(less_than(index, limit),
        then() {
          /std/collections/experimental_map/mapOverwriteSlot<V>(payloads, index, value)
          assign(entries.payloads, payloads)
        },
        else() {
-         /std/collections/experimental_vector/vectorPush<K>(keys, key)
-         /std/collections/experimental_vector/vectorPush<V>(payloads, value)
+         /std/collections/internal_vector/vectorPush<K>(keys, key)
+         /std/collections/internal_vector/vectorPush<V>(payloads, value)
          assign(entries.keys, keys)
          assign(entries.payloads, payloads)
        })
@@ -346,13 +346,13 @@ namespace std {
   [public return<i32>]
   mapCount<K, V>([Map<K, V>] entries) {
     [Vector<K>] keys{entries.keys}
-    return(/std/collections/experimental_vector/vectorCount<K>(keys))
+    return(/std/collections/internal_vector/vectorCount<K>(keys))
   }
 
   [return<i32>]
   mapBorrowedCount<K, V>([Reference<Map<K, V>>] entries) {
     [Vector<K>] keys{entries.keys}
-    return(/std/collections/experimental_vector/vectorCount<K>(keys))
+    return(/std/collections/internal_vector/vectorCount<K>(keys))
   }
 
   [public return<i32>]
@@ -380,7 +380,7 @@ namespace std {
     [Vector<K>] keys{entries.keys}
     return(less_than(
         /std/collections/experimental_map/mapFindIndex<K, V>(entries, key),
-        /std/collections/experimental_vector/vectorCount<K>(keys)))
+        /std/collections/internal_vector/vectorCount<K>(keys)))
   }
 
   [return<bool> Comparable<K>]
@@ -388,7 +388,7 @@ namespace std {
     [Vector<K>] keys{entries.keys}
     return(less_than(
         /std/collections/experimental_map/mapBorrowedFindIndex<K, V>(entries, key),
-        /std/collections/experimental_vector/vectorCount<K>(keys)))
+        /std/collections/internal_vector/vectorCount<K>(keys)))
   }
 
   [public return<bool> Comparable<K>]
@@ -406,8 +406,8 @@ namespace std {
     [i32] index{/std/collections/experimental_map/mapFindIndex<K, V>(entries, key)}
     [Vector<K>] keys{entries.keys}
     [Vector<V>] payloads{entries.payloads}
-    if(less_than(index, /std/collections/experimental_vector/vectorCount<K>(keys)),
-       then() { return(Result.ok(/std/collections/experimental_vector/vectorAtUnsafe<V>(payloads, index))) },
+    if(less_than(index, /std/collections/internal_vector/vectorCount<K>(keys)),
+       then() { return(Result.ok(/std/collections/internal_vector/vectorAtUnsafe<V>(payloads, index))) },
        else() { return(containerErrorResult<V>(containerMissingKey())) })
   }
 
@@ -416,8 +416,8 @@ namespace std {
     [i32] index{/std/collections/experimental_map/mapBorrowedFindIndex<K, V>(entries, key)}
     [Vector<K>] keys{entries.keys}
     [Vector<V>] payloads{entries.payloads}
-    if(less_than(index, /std/collections/experimental_vector/vectorCount<K>(keys)),
-       then() { return(Result.ok(/std/collections/experimental_vector/vectorAtUnsafe<V>(payloads, index))) },
+    if(less_than(index, /std/collections/internal_vector/vectorCount<K>(keys)),
+       then() { return(Result.ok(/std/collections/internal_vector/vectorAtUnsafe<V>(payloads, index))) },
        else() { return(containerErrorResult<V>(containerMissingKey())) })
   }
 
@@ -436,10 +436,10 @@ namespace std {
     [i32] index{/std/collections/experimental_map/mapFindIndex<K, V>(entries, key)}
     [Vector<K>] keys{entries.keys}
     [Vector<V>] payloads{entries.payloads}
-    if(less_than(index, /std/collections/experimental_vector/vectorCount<K>(keys)),
-       then() { return(/std/collections/experimental_vector/vectorAtUnsafe<V>(payloads, index)) },
+    if(less_than(index, /std/collections/internal_vector/vectorCount<K>(keys)),
+       then() { return(/std/collections/internal_vector/vectorAtUnsafe<V>(payloads, index)) },
        else() {
-         return(/std/collections/experimental_vector/vectorAt<V>(payloads, index))
+         return(/std/collections/internal_vector/vectorAt<V>(payloads, index))
        })
   }
 
@@ -448,10 +448,10 @@ namespace std {
     [i32] index{/std/collections/experimental_map/mapBorrowedFindIndex<K, V>(entries, key)}
     [Vector<K>] keys{entries.keys}
     [Vector<V>] payloads{entries.payloads}
-    if(less_than(index, /std/collections/experimental_vector/vectorCount<K>(keys)),
-       then() { return(/std/collections/experimental_vector/vectorAtUnsafe<V>(payloads, index)) },
+    if(less_than(index, /std/collections/internal_vector/vectorCount<K>(keys)),
+       then() { return(/std/collections/internal_vector/vectorAtUnsafe<V>(payloads, index)) },
        else() {
-         return(/std/collections/experimental_vector/vectorAt<V>(payloads, index))
+         return(/std/collections/internal_vector/vectorAt<V>(payloads, index))
        })
   }
 
@@ -468,7 +468,7 @@ namespace std {
   [public return<V> Comparable<K>]
   mapAtUnsafe<K, V>([Map<K, V>] entries, [K] key) {
     [Vector<V>] payloads{entries.payloads}
-    return(/std/collections/experimental_vector/vectorAtUnsafe<V>(
+    return(/std/collections/internal_vector/vectorAtUnsafe<V>(
         payloads,
         /std/collections/experimental_map/mapFindIndex<K, V>(entries, key)))
   }
@@ -476,7 +476,7 @@ namespace std {
   [return<V> Comparable<K>]
   mapBorrowedAtUnsafe<K, V>([Reference<Map<K, V>>] entries, [K] key) {
     [Vector<V>] payloads{entries.payloads}
-    return(/std/collections/experimental_vector/vectorAtUnsafe<V>(
+    return(/std/collections/internal_vector/vectorAtUnsafe<V>(
         payloads,
         /std/collections/experimental_map/mapBorrowedFindIndex<K, V>(entries, key)))
   }
