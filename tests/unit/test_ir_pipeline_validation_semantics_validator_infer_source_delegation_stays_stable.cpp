@@ -74,6 +74,8 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferMethodResolution.cpp";
   const std::filesystem::path semanticsInferStructReturnPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferStructReturn.cpp";
+  const std::filesystem::path semanticsInferStructReturnHelpersPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorInferStructReturnHelpers.cpp";
   const std::filesystem::path semanticsInferTargetResolutionPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferTargetResolution.cpp";
   const std::filesystem::path semanticsInferUtilityPath =
@@ -109,6 +111,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticValidationResultPath));
   REQUIRE(std::filesystem::exists(semanticsInferMethodResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsInferStructReturnPath));
+  REQUIRE(std::filesystem::exists(semanticsInferStructReturnHelpersPath));
   REQUIRE(std::filesystem::exists(semanticsInferTargetResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsInferUtilityPath));
   REQUIRE(std::filesystem::exists(semanticsBuildUtilityPath));
@@ -139,6 +142,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
       semanticsInferGraphPath,
       semanticsInferMethodResolutionPath,
       semanticsInferStructReturnPath,
+      semanticsInferStructReturnHelpersPath,
       semanticsInferTargetResolutionPath,
       semanticsInferUtilityPath,
       semanticsCollectionHelperRewritesPath,
@@ -177,6 +181,8 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   const std::string semanticsInferControlFlowSource = readText(semanticsInferControlFlowPath);
   const std::string semanticsInferDefinitionSource = readText(semanticsInferDefinitionPath);
   const std::string semanticsInferStructReturnSource = readText(semanticsInferStructReturnPath);
+  const std::string semanticsInferStructReturnHelpersSource =
+      readText(semanticsInferStructReturnHelpersPath);
   const std::string semanticsCollectionHelperRewritesSource = readText(semanticsCollectionHelperRewritesPath);
   const std::string semanticsValidateSource = readText(semanticsValidatePath);
   CHECK(semanticsInferCombinedSource.find("ReturnKind SemanticsValidator::inferExprReturnKind") != std::string::npos);
@@ -986,6 +992,22 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsEffectFreeCollectionsSource.find("const std::string vectorPrefix = \"vector/\";") ==
         std::string::npos);
   CHECK(semanticsEffectFreeCollectionsSource.find("normalizedPath.rfind(\"vector/\", 0)") ==
+        std::string::npos);
+  CHECK(semanticsInferStructReturnHelpersSource.find(
+            "std::string SemanticsValidator::normalizeInferStructReturnHelperPath") !=
+        std::string::npos);
+  CHECK(semanticsInferStructReturnHelpersSource.find(
+            "isUnrootedVectorHelperPath(normalizedPath)") !=
+        std::string::npos);
+  CHECK(semanticsInferStructReturnHelpersSource.find("normalizeStructReturnHelperPath(") ==
+        std::string::npos);
+  CHECK(semanticsInferStructReturnHelpersSource.find("normalizedPath.rfind(\"vector/\", 0)") ==
+        std::string::npos);
+  CHECK(semanticsValidateSource.find("std::string builtinSoaConversionMethodName") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find("normalized.rfind(\"vector/\", 0)") ==
+        std::string::npos);
+  CHECK(semanticsValidateSource.find("std::string(\"vector/\").size()") ==
         std::string::npos);
   CHECK(semanticsEffectFreeCollectionsSource.find(
             "auto tryResolveReceiverIndex = [&](size_t index) -> bool {") !=

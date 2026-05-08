@@ -15360,3 +15360,37 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     helper audit into TODO-4394, and ratcheted
     `scripts/vector_surface_trace_baseline.json` from 886 to 881 production
     traces. Baseline release validation was skipped per the lite workflow.
+
+- [x] TODO-4394: Retire final rooted vector semantic checks
+  - owner: ai
+  - created_at: 2026-05-08
+  - phase: Vector stdlib ownership cutover
+  - scope: Audit the final non-shared semantic-validator rooted `/vector/*`
+    prefix checks in free helper normalizers after member validators were
+    moved onto shared prefix helpers, then remove or promote any remaining
+    checks that still act as builtin compatibility aliases instead of stable
+    unknown-target diagnostics or ordinary explicit same-path user-definition
+    routing.
+  - acceptance:
+    - `SemanticsValidate.cpp` and
+      `SemanticsValidatorInferStructReturnHelpers.cpp` no longer contribute
+      non-shared `root-vector-helper-path` hits.
+    - Rooted `/vector/count`, `/vector/capacity`, `/vector/push`,
+      `/vector/at`, and peer helper spellings have no remaining non-shared
+      semantic compatibility branches beyond stable unknown-target diagnostics
+      or ordinary explicit user definitions.
+    - Canonical `/std/collections/vector/*` helper calls and imports remain the
+      supported public vector surface.
+    - The vector surface trace baseline decreases for semantic validator files
+      and does not increase elsewhere.
+  - stop_rule: Stop once the remaining non-shared rooted vector semantic
+    validator compatibility shims are removed or promoted to shared helpers and
+    the audit baseline ratchets downward.
+  - finished_at: 2026-05-08
+  - evidence: Removed vector-prefixed SoA conversion method normalization from
+    `SemanticsValidate.cpp`, promoted struct-return helper path normalization
+    to `SemanticsValidator::normalizeInferStructReturnHelperPath` so it reuses
+    `isUnrootedVectorHelperPath`, updated source-lock coverage for both final
+    rooted semantic checks, and ratcheted
+    `scripts/vector_surface_trace_baseline.json` from 881 to 878 production
+    traces. Baseline release validation was skipped per the lite workflow.

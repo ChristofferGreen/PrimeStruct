@@ -24,18 +24,6 @@ std::string bindingTypeText(const BindingInfo &binding) {
   return binding.typeName + "<" + binding.typeTemplateArg + ">";
 }
 
-std::string normalizeStructReturnHelperPath(const std::string &path) {
-  std::string normalizedPath = path;
-  if (!normalizedPath.empty() && normalizedPath.front() != '/') {
-    if (normalizedPath.rfind("array/", 0) == 0 || normalizedPath.rfind("vector/", 0) == 0 ||
-        normalizedPath.rfind("std/collections/vector/", 0) == 0 || normalizedPath.rfind("map/", 0) == 0 ||
-        normalizedPath.rfind("std/collections/map/", 0) == 0) {
-      normalizedPath.insert(normalizedPath.begin(), '/');
-    }
-  }
-  return normalizedPath;
-}
-
 void eraseStructReturnCandidate(std::vector<std::string> &candidates, const std::string &candidate) {
   for (auto it = candidates.begin(); it != candidates.end();) {
     if (*it == candidate) {
@@ -218,6 +206,18 @@ std::string SemanticsValidator::inferStructReturnPointerTargetTypeText(
   return {};
 }
 
+std::string SemanticsValidator::normalizeInferStructReturnHelperPath(const std::string &path) const {
+  std::string normalizedPath = path;
+  if (!normalizedPath.empty() && normalizedPath.front() != '/') {
+    if (normalizedPath.rfind("array/", 0) == 0 || isUnrootedVectorHelperPath(normalizedPath) ||
+        normalizedPath.rfind("std/collections/vector/", 0) == 0 || normalizedPath.rfind("map/", 0) == 0 ||
+        normalizedPath.rfind("std/collections/map/", 0) == 0) {
+      normalizedPath.insert(normalizedPath.begin(), '/');
+    }
+  }
+  return normalizedPath;
+}
+
 std::vector<std::string> SemanticsValidator::inferStructReturnCollectionHelperPathCandidates(
     const std::string &path) const {
   std::vector<std::string> candidates;
@@ -230,7 +230,7 @@ std::vector<std::string> SemanticsValidator::inferStructReturnCollectionHelperPa
     candidates.push_back(candidate);
   };
 
-  const std::string normalizedPath = normalizeStructReturnHelperPath(path);
+  const std::string normalizedPath = normalizeInferStructReturnHelperPath(path);
   appendUnique(path);
   appendUnique(normalizedPath);
   if (normalizedPath.rfind("/array/", 0) == 0) {
@@ -257,7 +257,7 @@ std::vector<std::string> SemanticsValidator::inferStructReturnCollectionHelperPa
 void SemanticsValidator::pruneInferStructReturnMapAccessCompatibilityCandidates(
     const std::string &path,
     std::vector<std::string> &candidates) const {
-  const std::string normalizedPath = normalizeStructReturnHelperPath(path);
+  const std::string normalizedPath = normalizeInferStructReturnHelperPath(path);
   if (normalizedPath.rfind("/map/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/map/").size());
     if (suffix == "at" || suffix == "at_ref" ||
@@ -280,7 +280,7 @@ void SemanticsValidator::pruneInferStructReturnBuiltinVectorAccessCandidates(
     const std::string &path,
     const BuiltinCollectionDispatchResolvers &dispatchResolvers,
     std::vector<std::string> &candidates) const {
-  const std::string normalizedPath = normalizeStructReturnHelperPath(path);
+  const std::string normalizedPath = normalizeInferStructReturnHelperPath(path);
   if (normalizedPath.rfind("/std/collections/vector/", 0) != 0) {
     return;
   }

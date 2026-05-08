@@ -26,6 +26,7 @@
       const Expr &pointerExpr,
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals);
+  std::string normalizeInferStructReturnHelperPath(const std::string &path) const;
   std::vector<std::string> inferStructReturnCollectionHelperPathCandidates(
       const std::string &path) const;
   void pruneInferStructReturnMapAccessCompatibilityCandidates(
