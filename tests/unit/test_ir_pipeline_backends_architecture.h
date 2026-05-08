@@ -134,6 +134,8 @@ TEST_CASE("stdlib surface registry stays source locked") {
   std::filesystem::path cmakePath = cwd / "CMakeLists.txt";
   std::filesystem::path headerPath = cwd / "include" / "primec" / "StdlibSurfaceRegistry.h";
   std::filesystem::path sourcePath = cwd / "src" / "StdlibSurfaceRegistry.cpp";
+  std::filesystem::path collectionManifestPath =
+      cwd / "stdlib" / "std" / "collections" / "surfaces.psmeta";
   if (!std::filesystem::exists(cmakePath)) {
     cmakePath = cwd.parent_path() / "CMakeLists.txt";
   }
@@ -143,21 +145,32 @@ TEST_CASE("stdlib surface registry stays source locked") {
   if (!std::filesystem::exists(sourcePath)) {
     sourcePath = cwd.parent_path() / "src" / "StdlibSurfaceRegistry.cpp";
   }
+  if (!std::filesystem::exists(collectionManifestPath)) {
+    collectionManifestPath = cwd.parent_path() / "stdlib" / "std" / "collections" /
+                             "surfaces.psmeta";
+  }
 
   REQUIRE(std::filesystem::exists(cmakePath));
   REQUIRE(std::filesystem::exists(headerPath));
   REQUIRE(std::filesystem::exists(sourcePath));
+  REQUIRE(std::filesystem::exists(collectionManifestPath));
 
   const std::string cmake = readTextFile(cmakePath);
   const std::string header = readTextFile(headerPath);
   const std::string source = readTextFile(sourcePath);
+  const std::string collectionManifest = readTextFile(collectionManifestPath);
 
   CHECK(cmake.find("src/StdlibSurfaceRegistry.cpp") != std::string::npos);
 
   CHECK(header.find("enum class StdlibSurfaceDomain") != std::string::npos);
   CHECK(header.find("enum class StdlibSurfaceShape") != std::string::npos);
   CHECK(header.find("enum class StdlibSurfaceId") != std::string::npos);
+  CHECK(header.find("struct StdlibSurfaceMemberAlias") != std::string::npos);
   CHECK(header.find("std::span<const std::string_view> memberNames;") != std::string::npos);
+  CHECK(header.find("std::span<const StdlibSurfaceMemberAlias> memberAliases;") !=
+        std::string::npos);
+  CHECK(header.find("std::span<const std::string_view> statementMemberNames;") !=
+        std::string::npos);
   CHECK(header.find("std::span<const std::string_view> importAliasSpellings;") != std::string::npos);
   CHECK(header.find("std::span<const std::string_view> compatibilitySpellings;") != std::string::npos);
   CHECK(header.find("std::span<const std::string_view> loweringSpellings;") != std::string::npos);
@@ -186,18 +199,40 @@ TEST_CASE("stdlib surface registry stays source locked") {
   CHECK(source.find("\"/file_error/why\"") != std::string::npos);
 
   CHECK(source.find("StdlibSurfaceId::CollectionsVectorHelpers") != std::string::npos);
-  CHECK(source.find("\"collections.vector_helpers\"") != std::string::npos);
-  CHECK(source.find("\"/std/collections/vector\"") != std::string::npos);
-  CHECK(source.find("\"/vector/count\"") != std::string::npos);
-  CHECK(source.find("\"/vector/remove_swap\"") != std::string::npos);
-  CHECK(source.find("\"remove_swap\"") != std::string::npos);
-  CHECK(source.find("\"/std/collections/experimental_vector/vectorRemoveSwap\"") != std::string::npos);
+  CHECK(source.find("loadVectorManifestSurfaces()") != std::string::npos);
+  CHECK(source.find("surfaces.psmeta") != std::string::npos);
+  CHECK(source.find("resolveMetadataMemberName(") != std::string::npos);
+  CHECK(source.find("\"/std/collections/vector\"") == std::string::npos);
+  CHECK(source.find("\"/vector/count\"") == std::string::npos);
+  CHECK(source.find("\"/vector/remove_swap\"") == std::string::npos);
+  CHECK(source.find("\"remove_swap\"") == std::string::npos);
+  CHECK(source.find("\"/std/collections/experimental_vector/vectorRemoveSwap\"") ==
+        std::string::npos);
 
   CHECK(source.find("StdlibSurfaceId::CollectionsVectorConstructors") != std::string::npos);
-  CHECK(source.find("\"collections.vector_constructors\"") != std::string::npos);
-  CHECK(source.find("\"/std/collections/vector/vector\"") != std::string::npos);
-  CHECK(source.find("\"vectorSingle\"") != std::string::npos);
-  CHECK(source.find("\"/std/collections/experimental_vector/vectorPair\"") !=
+  CHECK(source.find("\"/std/collections/vector/vector\"") == std::string::npos);
+  CHECK(source.find("\"vectorSingle\"") == std::string::npos);
+  CHECK(source.find("\"/std/collections/experimental_vector/vectorPair\"") ==
+        std::string::npos);
+  CHECK(collectionManifest.find("id = CollectionsVectorHelpers") != std::string::npos);
+  CHECK(collectionManifest.find("bridge_key = collections.vector_helpers") != std::string::npos);
+  CHECK(collectionManifest.find("canonical_path = /std/collections/vector") !=
+        std::string::npos);
+  CHECK(collectionManifest.find("compatibility_spelling = /vector/remove_swap") !=
+        std::string::npos);
+  CHECK(collectionManifest.find("member_name = remove_swap") != std::string::npos);
+  CHECK(collectionManifest.find(
+            "compatibility_spelling = /std/collections/experimental_vector/vectorRemoveSwap") !=
+        std::string::npos);
+  CHECK(collectionManifest.find("id = CollectionsVectorConstructors") !=
+        std::string::npos);
+  CHECK(collectionManifest.find("bridge_key = collections.vector_constructors") !=
+        std::string::npos);
+  CHECK(collectionManifest.find("canonical_path = /std/collections/vector/vector") !=
+        std::string::npos);
+  CHECK(collectionManifest.find("member_name = vectorSingle") != std::string::npos);
+  CHECK(collectionManifest.find(
+            "compatibility_spelling = /std/collections/experimental_vector/vectorPair") !=
         std::string::npos);
 
   CHECK(source.find("StdlibSurfaceId::CollectionsMapHelpers") != std::string::npos);
@@ -220,7 +255,7 @@ TEST_CASE("stdlib surface registry stays source locked") {
   CHECK(source.find("\"/std/collections/experimental_map/mapInsertRef\"") != std::string::npos);
   CHECK(source.find("\"/std/collections/mapInsertRef\"") != std::string::npos);
   CHECK(source.find("stripResolvedPathSpecializationSuffix(") != std::string::npos);
-  CHECK(source.find("resolveCollectionsVectorMemberName(") != std::string::npos);
+  CHECK(source.find("resolveCollectionsVectorMemberName(") == std::string::npos);
   CHECK(source.find("resolveCollectionsMapHelperMemberName(") != std::string::npos);
   CHECK(source.find("resolveStdlibSurfaceMemberName(const StdlibSurfaceMetadata &metadata,") !=
         std::string::npos);

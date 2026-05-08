@@ -3792,12 +3792,18 @@ re-defining it piecemeal.
   `vector<T>` and `map<K, V>`, collection helper families, compatibility
   spellings plus removed-helper diagnostics, semantic surface IDs, and lowerer
   dispatch metadata.
+- **Stdlib-owned surface metadata:** canonical vector helper/import/constructor
+  metadata is declared in `stdlib/std/collections/surfaces.psmeta` and consumed
+  by `StdlibSurfaceRegistry` through generic manifest loading. Production C++
+  keeps the surface id and registry APIs, but the canonical vector member lists,
+  import aliases, compatibility spellings, lowering spellings, statement-helper
+  subset, and member alias mapping live with the stdlib collection source.
 - **Migration-only seams:** rooted `/vector/*` and `/map/*` spellings plus
   `vectorCount` / `mapCount`-style lowering names remain temporary
   compatibility seams. The vector/map adapter cutover is complete for
-  semantic and template-monomorph helper decisions; no active TODO targets
-  deleting or accepting those temporary seams, so add a concrete successor TODO
-  before changing their public status.
+  semantic and template-monomorph helper decisions; TODO-4296 owns vector seam
+  deletion, and TODO-4303 owns the later map seam deletion after map metadata
+  moves to a stdlib-owned manifest.
 - **Compatibility adapter inventory:** map insert helper compatibility was the
   first migrated family. The semantic map-insert rewrite asks the
   `StdlibSurfaceRegistry` `CollectionsMapHelpers` adapter to classify

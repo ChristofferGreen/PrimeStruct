@@ -72,11 +72,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4295: Move collection surface metadata out of C++
+- TODO-4296: Delete vector compatibility seams
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4296: Delete vector compatibility seams
 - TODO-4297: Add zero C++ vector-surface audit
 - TODO-4299: Promote and style canonical `.prime` map implementation
 - TODO-4300: Stabilize map lookup and insertion substrate
@@ -86,13 +85,14 @@ Task template:
 - TODO-4304: Add zero C++ map-surface audit
 - TODO-4305: Rename and style canonical `.prime` SoA surface
 - TODO-4306: Stabilize generic SoA substrate boundaries
+- TODO-4307: Lower SoA helpers through ordinary `.prime`
 
 ### Priority Lanes (Current)
 
 - Semantic ownership authority: none active; future semantic-authority work
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
-- Vector stdlib ownership cutover: TODO-4295 -> TODO-4296 -> TODO-4297
+- Vector stdlib ownership cutover: TODO-4296 -> TODO-4297
 - Map stdlib ownership cutover: TODO-4299 -> TODO-4300 -> TODO-4301
   -> TODO-4302 -> TODO-4303 -> TODO-4304
 - SoA public surface rename and ownership cutover: TODO-4305 -> TODO-4306
@@ -111,7 +111,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4295: Move collection surface metadata out of C++
 - TODO-4296: Delete vector compatibility seams
 - TODO-4297: Add zero C++ vector-surface audit
 - TODO-4299: Promote and style canonical `.prime` map implementation
@@ -175,8 +174,8 @@ Task template:
 | Compile-pipeline stage and publication-boundary contracts | none |
 | Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4299, TODO-4305 |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4295, TODO-4296, TODO-4297, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4295, TODO-4296, TODO-4297, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4296, TODO-4297, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4296, TODO-4297, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4296, TODO-4297, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Validator entrypoint and benchmark-plumbing split | none |
@@ -206,7 +205,7 @@ Task template:
 | Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
-| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4295, TODO-4296, TODO-4297, TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4296, TODO-4297, TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
 | De-experimentalization surface and namespace parity | TODO-4296, TODO-4297, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Focused backend rerun ergonomics and suite partitioning | none |
@@ -235,9 +234,10 @@ Task template:
   The vector/map adapter cutover is complete for semantic and
   template-monomorph helper decisions. Canonical read/access helper routing is
   finished in `docs/todo_finished.md`; vector header materialization now uses
-  layout facts instead of hard-coded record slots. TODO-4295 through TODO-4297
-  handle metadata extraction, compatibility deletion, and a final
-  zero-C++-vector audit.
+  layout facts instead of hard-coded record slots, and canonical vector surface
+  metadata is now owned by `stdlib/std/collections/surfaces.psmeta`. TODO-4296
+  and TODO-4297 handle compatibility deletion and the final zero-C++-vector
+  audit.
   TODO-4299 through TODO-4304 apply the same ownership model to map while
   keeping map-specific lookup, insertion, `Result<ContainerError>`, and key
   comparability policy explicit.
@@ -1635,48 +1635,10 @@ Task template:
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
 
-- [ ] TODO-4295: Move collection surface metadata out of C++
-  - owner: ai
-  - created_at: 2026-04-28
-  - phase: Vector stdlib ownership cutover
-  - depends_on: TODO-4375
-  - scope: Remove vector-specific public-surface knowledge from handwritten C++
-    and generated production C++ by moving canonical vector
-    helper/import/constructor metadata into a stdlib-owned manifest or
-    equivalent data-driven source consumed through generic collection-surface
-    APIs.
-  - implementation_notes:
-    - Start from `include/primec/StdlibSurfaceRegistry.h`,
-      `src/StdlibSurfaceRegistry.cpp`,
-      `src/semantics/TemplateMonomorph*.h`, collection import resolution,
-      wildcard import tests, and source locks that currently assert registry
-      spellings.
-    - The target is not to delete the notion of public stdlib surfaces; it is to
-      stop encoding vector-specific lists and compatibility names in C++ source
-      at all. Avoid generated C++ tables that still contain PrimeStruct vector
-      strings; prefer a non-C++ manifest or stdlib metadata read through generic
-      code.
-  - acceptance:
-    - Canonical vector import, wildcard import, constructor, and method-helper
-      metadata is loaded from stdlib-owned data rather than handwritten or
-      generated vector lists in production C++.
-    - Existing canonical vector behavior and diagnostics stay stable across
-      repeated builds.
-    - Production `src/` and `include/` C++ no longer contain canonical vector
-      surface tables, path aliases, import aliases, constructor spellings, or
-      helper-name lists; temporary compatibility traces are limited to the
-      deletion work tracked by TODO-4296.
-    - Docs describe the stdlib surface metadata ownership boundary.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once canonical vector surface metadata no longer requires
-    PrimeStruct-vector-specific C++ entries; leave removal of compatibility
-    spellings and the final zero-trace audit to TODO-4296 and TODO-4297.
-
 - [ ] TODO-4296: Delete vector compatibility seams
   - owner: ai
   - created_at: 2026-04-28
   - phase: Vector stdlib ownership cutover
-  - depends_on: TODO-4295
   - scope: Remove or intentionally reject the old vector compatibility spellings
     once the canonical `.prime` implementation, generic lowering path, widened
     capacity contract, and data-driven surface metadata are in place.

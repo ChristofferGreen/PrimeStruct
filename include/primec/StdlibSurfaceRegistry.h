@@ -32,6 +32,11 @@ enum class StdlibSurfaceId {
   GfxErrorHelpers,
 };
 
+struct StdlibSurfaceMemberAlias {
+  std::string_view spelling;
+  std::string_view memberName;
+};
+
 struct StdlibSurfaceMetadata {
   StdlibSurfaceId id{};
   StdlibSurfaceDomain domain{};
@@ -40,6 +45,8 @@ struct StdlibSurfaceMetadata {
   std::string_view canonicalImportRoot;
   std::string_view canonicalPath;
   std::span<const std::string_view> memberNames;
+  std::span<const StdlibSurfaceMemberAlias> memberAliases;
+  std::span<const std::string_view> statementMemberNames;
   std::span<const std::string_view> importAliasSpellings;
   std::span<const std::string_view> compatibilitySpellings;
   std::span<const std::string_view> loweringSpellings;

@@ -14715,7 +14715,7 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - scope: Replace remaining experimental-vector constructor/header
     materialization in lowering with ordinary struct layout facts or imported
     `.prime` constructor bodies, leaving only declarative compatibility
-    metadata for TODO-4295/TODO-4296.
+    metadata for the remaining vector compatibility cleanup.
   - implementation_notes:
     - Start from `src/ir_lowerer/IrLowererOperatorCollectionMutationHelpers.cpp`,
       `src/ir_lowerer/IrLowererLowerInlineCalls.h`,
@@ -14730,7 +14730,7 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
       definitions, generic struct layout facts, or a documented generic storage
       substrate path.
     - Any remaining production vector strings are declarative surface metadata
-      or compatibility diagnostics owned by TODO-4295/TODO-4296.
+      or compatibility diagnostics owned by vector compatibility cleanup.
     - Release validation is deferred to CI per the lite workflow.
   - stop_rule: Stop once vector constructor/literal lowering no longer writes a
     hard-coded four-slot experimental vector record.
@@ -14781,3 +14781,49 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     folded-limit, runtime-limit, and IR helper expectations, and documented the
     widened bound in the PrimeStruct language docs. Baseline release
     validation was skipped per the lite workflow.
+
+- [x] TODO-4295: Move collection surface metadata out of C++
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4375
+  - scope: Remove vector-specific public-surface knowledge from handwritten C++
+    and generated production C++ by moving canonical vector
+    helper/import/constructor metadata into a stdlib-owned manifest or
+    equivalent data-driven source consumed through generic collection-surface
+    APIs.
+  - implementation_notes:
+    - Start from `include/primec/StdlibSurfaceRegistry.h`,
+      `src/StdlibSurfaceRegistry.cpp`,
+      `src/semantics/TemplateMonomorph*.h`, collection import resolution,
+      wildcard import tests, and source locks that currently assert registry
+      spellings.
+    - The target is not to delete the notion of public stdlib surfaces; it is to
+      stop encoding vector-specific lists and compatibility names in C++ source
+      at all. Avoid generated C++ tables that still contain PrimeStruct vector
+      strings; prefer a non-C++ manifest or stdlib metadata read through generic
+      code.
+  - acceptance:
+    - Canonical vector import, wildcard import, constructor, and method-helper
+      metadata is loaded from stdlib-owned data rather than handwritten or
+      generated vector lists in production C++.
+    - Existing canonical vector behavior and diagnostics stay stable across
+      repeated builds.
+    - Production `src/` and `include/` C++ no longer contain canonical vector
+      surface tables, path aliases, import aliases, constructor spellings, or
+      helper-name lists; temporary compatibility traces are limited to the
+      deletion work tracked by TODO-4296.
+    - Docs describe the stdlib surface metadata ownership boundary.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once canonical vector surface metadata no longer requires
+    PrimeStruct-vector-specific C++ entries; leave removal of compatibility
+    spellings and the final zero-trace audit to TODO-4296 and TODO-4297.
+  - finished_at: 2026-05-08
+  - evidence: Added `stdlib/std/collections/surfaces.psmeta` as the
+    stdlib-owned vector surface manifest and taught `StdlibSurfaceRegistry` to
+    load canonical vector helper, constructor, alias, compatibility, lowering,
+    and statement-helper metadata through a generic manifest reader. Removed the
+    vector helper and constructor spelling tables from production C++ while
+    preserving the existing registry API, documented the ownership boundary, and
+    updated source locks and TODO queue state. Baseline release validation was
+    skipped per the lite workflow.
