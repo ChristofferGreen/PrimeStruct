@@ -1416,6 +1416,14 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_test_suite_naming PROPERTIES TIMEOUT 60)
 
+  add_test(
+    NAME PrimeStruct_vector_surface_traces
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_vector_surface_traces.py
+            --root ${CMAKE_SOURCE_DIR}
+            --baseline ${CMAKE_SOURCE_DIR}/scripts/vector_surface_trace_baseline.json
+  )
+  set_tests_properties(PrimeStruct_vector_surface_traces PROPERTIES TIMEOUT 60)
+
   add_custom_target(
     primestruct_graph_budget_check
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_graph_budget.py

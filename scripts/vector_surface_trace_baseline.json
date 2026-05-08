@@ -1,0 +1,1208 @@
+{
+  "schema": "primestruct_vector_surface_trace_baseline_v1",
+  "patterns": {
+    "canonical-vector-path": "canonical PrimeStruct vector helper path",
+    "experimental-vector-path": "experimental PrimeStruct vector helper or storage path",
+    "root-vector-helper-path": "rooted PrimeStruct vector helper path",
+    "vector-helper-symbol": "PrimeStruct vector helper symbol",
+    "vector-surface-id": "PrimeStruct stdlib vector surface registry id",
+    "vector-type-text": "PrimeStruct Vector<T> surface type spelling"
+  },
+  "entries": [
+    {
+      "path": "include/primec/StdlibSurfaceRegistry.h",
+      "pattern": "vector-surface-id",
+      "count": 1
+    },
+    {
+      "path": "src/IrPrinterHelpers.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 4
+    },
+    {
+      "path": "src/StdlibSurfaceRegistry.cpp",
+      "pattern": "vector-surface-id",
+      "count": 6
+    },
+    {
+      "path": "src/emitter/EmitterBuiltinCallPathHelpers.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 4
+    },
+    {
+      "path": "src/emitter/EmitterBuiltinCallPathHelpers.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/emitter/EmitterBuiltinCallPathHelpers.cpp",
+      "pattern": "vector-helper-symbol",
+      "count": 2
+    },
+    {
+      "path": "src/emitter/EmitterBuiltinCallPathHelpers.cpp",
+      "pattern": "vector-surface-id",
+      "count": 3
+    },
+    {
+      "path": "src/emitter/EmitterBuiltinMethodResolutionHelpers.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 5
+    },
+    {
+      "path": "src/emitter/EmitterBuiltinMethodResolutionMetadataHelpers.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 7
+    },
+    {
+      "path": "src/emitter/EmitterBuiltinMethodResolutionMetadataHelpers.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/emitter/EmitterBuiltinMethodResolutionMetadataHelpers.cpp",
+      "pattern": "root-vector-helper-path",
+      "count": 2
+    },
+    {
+      "path": "src/emitter/EmitterBuiltinMethodResolutionMetadataHelpers.cpp",
+      "pattern": "vector-surface-id",
+      "count": 1
+    },
+    {
+      "path": "src/emitter/EmitterBuiltinMethodResolutionTypeInferenceHelpers.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 13
+    },
+    {
+      "path": "src/emitter/EmitterEmitBodyVectorHelpers.h",
+      "pattern": "canonical-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/emitter/EmitterEmitSetupReturnInference.h",
+      "pattern": "canonical-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/emitter/EmitterEmitSetupReturnInferenceCollections.h",
+      "pattern": "canonical-vector-path",
+      "count": 10
+    },
+    {
+      "path": "src/emitter/EmitterEmitSetupReturnInferenceCollections.h",
+      "pattern": "root-vector-helper-path",
+      "count": 3
+    },
+    {
+      "path": "src/emitter/EmitterExprCollectionFallbackHelpers.h",
+      "pattern": "canonical-vector-path",
+      "count": 5
+    },
+    {
+      "path": "src/emitter/EmitterExprCollectionTypeHelpers.h",
+      "pattern": "canonical-vector-path",
+      "count": 12
+    },
+    {
+      "path": "src/emitter/EmitterExprCollectionTypeHelpers.h",
+      "pattern": "root-vector-helper-path",
+      "count": 1
+    },
+    {
+      "path": "src/emitter/EmitterExprLambdaBody.h",
+      "pattern": "canonical-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/emitter/EmitterExprPackedArgs.h",
+      "pattern": "canonical-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/emitter/EmitterHelpersBuiltins.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/emitter/EmitterHelpersTypes.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 4
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererAccessTargetResolution.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererBindingTypeHelpers.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererBindingTypeHelpers.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 4
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererBuiltinNameHelpers.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 6
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererBuiltinNameHelpers.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 5
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererBuiltinNameHelpers.cpp",
+      "pattern": "root-vector-helper-path",
+      "count": 1
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererBuiltinNameHelpers.cpp",
+      "pattern": "vector-helper-symbol",
+      "count": 17
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererCallHelpers.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 10
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererCallHelpers.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererCallHelpers.cpp",
+      "pattern": "root-vector-helper-path",
+      "count": 2
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererCallResolution.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererCallResolution.cpp",
+      "pattern": "vector-surface-id",
+      "count": 1
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererCountAccessClassifiers.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererCountAccessClassifiers.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererCountAccessClassifiers.cpp",
+      "pattern": "root-vector-helper-path",
+      "count": 4
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererCountAccessHelpers.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 3
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererCountAccessHelpers.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererCountAccessHelpers.cpp",
+      "pattern": "root-vector-helper-path",
+      "count": 6
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererCountAccessHelpers.cpp",
+      "pattern": "vector-helper-symbol",
+      "count": 2
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererFlowControlHelpers.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererFlowVectorHelpers.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererFlowVectorResolutionHelpers.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererFlowVectorResolutionHelpers.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 3
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererFlowVectorResolutionHelpers.cpp",
+      "pattern": "root-vector-helper-path",
+      "count": 1
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererFlowVectorResolutionHelpers.cpp",
+      "pattern": "vector-helper-symbol",
+      "count": 12
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererHelpers.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererHelpers.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererHelpers.cpp",
+      "pattern": "root-vector-helper-path",
+      "count": 1
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererIndexedAccessEmit.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererInlineCallContextHelpers.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererInlineCallContextHelpers.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 3
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererInlineCallContextHelpers.cpp",
+      "pattern": "vector-helper-symbol",
+      "count": 3
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 12
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 7
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp",
+      "pattern": "root-vector-helper-path",
+      "count": 2
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp",
+      "pattern": "vector-helper-symbol",
+      "count": 8
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererInlineParamHelpers.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererInlineStructArgHelpers.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererLowerEmitExpr.h",
+      "pattern": "canonical-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererLowerEmitExpr.h",
+      "pattern": "experimental-vector-path",
+      "count": 5
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererLowerEmitExpr.h",
+      "pattern": "vector-helper-symbol",
+      "count": 6
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererLowerEmitExprCollectionHelpers.h",
+      "pattern": "canonical-vector-path",
+      "count": 3
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererLowerEmitExprCollectionHelpers.h",
+      "pattern": "experimental-vector-path",
+      "count": 4
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererLowerEmitExprCollectionHelpers.h",
+      "pattern": "vector-surface-id",
+      "count": 4
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererLowerEmitExprTailDispatch.h",
+      "pattern": "experimental-vector-path",
+      "count": 5
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererLowerEmitExprTryHelpers.h",
+      "pattern": "experimental-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererLowerInferenceFallbackSetup.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererLowerInlineCalls.h",
+      "pattern": "canonical-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererLowerInlineCalls.h",
+      "pattern": "experimental-vector-path",
+      "count": 3
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererLowerInlineCalls.h",
+      "pattern": "vector-helper-symbol",
+      "count": 7
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererLowerStatementsBindings.h",
+      "pattern": "experimental-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererLowerStatementsBindings.h",
+      "pattern": "vector-helper-symbol",
+      "count": 1
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererLowerStatementsCallsStep.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 5
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererLowerStatementsCallsStep.cpp",
+      "pattern": "vector-helper-symbol",
+      "count": 6
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererLowerStatementsExpr.h",
+      "pattern": "canonical-vector-path",
+      "count": 3
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererLowerStatementsExpr.h",
+      "pattern": "experimental-vector-path",
+      "count": 18
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererLowerStatementsLoops.h",
+      "pattern": "experimental-vector-path",
+      "count": 3
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererNativeTailDispatch.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererNativeTailDispatch.cpp",
+      "pattern": "vector-surface-id",
+      "count": 5
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererOperatorCollectionMutationHelpers.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererOperatorCollectionMutationHelpers.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 4
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererResultMetadataHelpers.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererReturnInferenceHelpers.cpp",
+      "pattern": "vector-type-text",
+      "count": 1
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererSetupTypeCollectionHelpers.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 7
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererSetupTypeCollectionHelpers.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 3
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererSetupTypeCollectionHelpers.cpp",
+      "pattern": "root-vector-helper-path",
+      "count": 3
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererSetupTypeCollectionHelpers.cpp",
+      "pattern": "vector-surface-id",
+      "count": 6
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererSetupTypeDeclaredCollectionInference.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererSetupTypeDeclaredCollectionInference.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 4
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererSetupTypeMethodCallResolution.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 5
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererSetupTypeMethodCallResolution.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 3
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererSetupTypeMethodCallResolution.cpp",
+      "pattern": "root-vector-helper-path",
+      "count": 4
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererSetupTypeMethodTargetHelpers.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 8
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererSetupTypeMethodTargetHelpers.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 8
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererSetupTypeMethodTargetHelpers.cpp",
+      "pattern": "root-vector-helper-path",
+      "count": 4
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererSetupTypeMethodTargetHelpers.cpp",
+      "pattern": "vector-type-text",
+      "count": 4
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererStatementBindingHelpers.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererStatementCallEmission.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererStatementCallEmission.cpp",
+      "pattern": "vector-helper-symbol",
+      "count": 10
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererStatementCallEmission.cpp",
+      "pattern": "vector-surface-id",
+      "count": 3
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererStructFieldBindingHelpers.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererStructLayoutHelpers.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererStructReturnPathHelpers.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 11
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererStructReturnPathHelpers.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererStructReturnPathHelpers.cpp",
+      "pattern": "root-vector-helper-path",
+      "count": 3
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererStructReturnPathHelpers.cpp",
+      "pattern": "vector-helper-symbol",
+      "count": 1
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererStructReturnPathHelpers.cpp",
+      "pattern": "vector-type-text",
+      "count": 1
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererStructSlotLayoutHelpers.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererStructSlotLayoutHelpers.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 9
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererStructTypeHelpers.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererUninitializedStructInference.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/ir_lowerer/IrLowererUninitializedStructInference.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 3
+    },
+    {
+      "path": "src/parser/ParserLists.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/semantics/MapConstructorHelpers.h",
+      "pattern": "experimental-vector-path",
+      "count": 3
+    },
+    {
+      "path": "src/semantics/SemanticPublicationBuilders.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/semantics/SemanticPublicationBuilders.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/semantics/SemanticPublicationBuilders.cpp",
+      "pattern": "vector-surface-id",
+      "count": 1
+    },
+    {
+      "path": "src/semantics/SemanticsBindingTypeHelpers.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 4
+    },
+    {
+      "path": "src/semantics/SemanticsBuiltinPathHelpers.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 6
+    },
+    {
+      "path": "src/semantics/SemanticsBuiltinPathHelpers.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/semantics/SemanticsBuiltinPathHelpers.cpp",
+      "pattern": "vector-helper-symbol",
+      "count": 2
+    },
+    {
+      "path": "src/semantics/SemanticsCallPathHelpers.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/semantics/SemanticsValidate.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/semantics/SemanticsValidate.cpp",
+      "pattern": "root-vector-helper-path",
+      "count": 2
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorBuildCallResolution.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorBuildImports.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorBuildImports.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 4
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorBuildInitializerInference.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 5
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorBuildInitializerInference.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 6
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorBuildInitializerInferenceCalls.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 4
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorBuildInitializerInferenceCalls.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 10
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorBuildInitializerInferenceCalls.cpp",
+      "pattern": "vector-helper-symbol",
+      "count": 2
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorCollectionHelperRewrites.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorCollectionHelperRewrites.cpp",
+      "pattern": "root-vector-helper-path",
+      "count": 2
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorCollectionHelperRewrites.cpp",
+      "pattern": "vector-surface-id",
+      "count": 3
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorDiagnostics.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 5
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorEffectFreeCollections.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 7
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorEffectFreeCollections.cpp",
+      "pattern": "root-vector-helper-path",
+      "count": 2
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExecutionDiagnostics.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExecutionDiagnostics.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExpr.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 6
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExpr.cpp",
+      "pattern": "root-vector-helper-path",
+      "count": 6
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprArgumentValidation.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 3
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprArgumentValidationCollections.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprArgumentValidationCollections.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 3
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprBuiltinContextSetup.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprCollectionAccess.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 7
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprCollectionAccess.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 5
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprCollectionAccess.cpp",
+      "pattern": "root-vector-helper-path",
+      "count": 1
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprCollectionAccessValidation.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 4
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprCollectionAccessValidation.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprCollectionCountCapacity.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 18
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprCollectionCountCapacity.cpp",
+      "pattern": "root-vector-helper-path",
+      "count": 9
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprCollectionDispatchSetup.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 3
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprCollectionLiterals.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprCountCapacityMapBuiltins.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 6
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprCountCapacityMapBuiltins.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 4
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprCountCapacityMapBuiltins.cpp",
+      "pattern": "vector-helper-symbol",
+      "count": 4
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprDirectCollectionFallbacks.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 3
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprFieldResolution.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprLateCallCompatibility.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 3
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprLateUnknownTargetFallbacks.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 3
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprLateUnknownTargetFallbacks.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprLateUnknownTargetFallbacks.cpp",
+      "pattern": "root-vector-helper-path",
+      "count": 1
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprMethodCompatibilitySetup.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprMethodResolution.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 14
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprMethodResolution.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprMethodResolution.cpp",
+      "pattern": "root-vector-helper-path",
+      "count": 2
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprMethodTargetResolution.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 16
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprMethodTargetResolution.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 5
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprMethodTargetResolution.cpp",
+      "pattern": "root-vector-helper-path",
+      "count": 22
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprNamedArgumentBuiltins.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 8
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprPointerLike.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprPointerLike.cpp",
+      "pattern": "root-vector-helper-path",
+      "count": 1
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprResolvedCallArguments.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprVectorHelpers.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 18
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprVectorHelpers.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 4
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorExprVectorHelpers.cpp",
+      "pattern": "root-vector-helper-path",
+      "count": 3
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorInfer.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorInferCollectionCallResolution.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorInferCollectionCompatibility.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 5
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorInferCollectionCompatibility.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 6
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorInferCollectionCompatibility.cpp",
+      "pattern": "root-vector-helper-path",
+      "count": 2
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorInferCollectionCompatibility.cpp",
+      "pattern": "vector-surface-id",
+      "count": 2
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorInferCollectionCompatibilityInternal.h",
+      "pattern": "canonical-vector-path",
+      "count": 6
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorInferCollectionCompatibilityInternal.h",
+      "pattern": "vector-surface-id",
+      "count": 6
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorInferCollectionDirectCountCapacity.cpp",
+      "pattern": "root-vector-helper-path",
+      "count": 1
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorInferCollectionDispatch.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 4
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorInferCollectionDispatchSetup.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 5
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorInferCollectionReturnInference.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 12
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorInferCollectionReturnInference.cpp",
+      "pattern": "vector-type-text",
+      "count": 3
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorInferCollections.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorInferLateFallbackBuiltins.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorInferMethodResolution.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 8
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorInferMethodResolution.cpp",
+      "pattern": "root-vector-helper-path",
+      "count": 2
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorInferPreDispatchCalls.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 5
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorInferStructReturn.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorInferStructReturnHelpers.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 5
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorInferStructReturnHelpers.cpp",
+      "pattern": "root-vector-helper-path",
+      "count": 1
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorPassesDiagnostics.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorPassesDiagnostics.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorPassesStructLayouts.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorSnapshots.cpp",
+      "pattern": "vector-surface-id",
+      "count": 1
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorStatementBindings.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 5
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorStatementBodyArguments.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorStatementContainerHelpers.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 4
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorStatementPrintability.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorStatementReturns.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorStatementReturns.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorStatementVectorHelpers.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 20
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorStatementVectorHelpers.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorStatementVectorHelpers.cpp",
+      "pattern": "root-vector-helper-path",
+      "count": 6
+    },
+    {
+      "path": "src/semantics/SemanticsValidatorStatementVectorResolution.cpp",
+      "pattern": "canonical-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/semantics/TemplateMonomorphBindingCallInference.h",
+      "pattern": "experimental-vector-path",
+      "count": 6
+    },
+    {
+      "path": "src/semantics/TemplateMonomorphCollectionCompatibilityPaths.h",
+      "pattern": "canonical-vector-path",
+      "count": 6
+    },
+    {
+      "path": "src/semantics/TemplateMonomorphCollectionCompatibilityPaths.h",
+      "pattern": "experimental-vector-path",
+      "count": 2
+    },
+    {
+      "path": "src/semantics/TemplateMonomorphCollectionCompatibilityPaths.h",
+      "pattern": "root-vector-helper-path",
+      "count": 5
+    },
+    {
+      "path": "src/semantics/TemplateMonomorphCoreUtilities.h",
+      "pattern": "canonical-vector-path",
+      "count": 3
+    },
+    {
+      "path": "src/semantics/TemplateMonomorphExperimentalCollectionReceiverResolution.h",
+      "pattern": "experimental-vector-path",
+      "count": 7
+    },
+    {
+      "path": "src/semantics/TemplateMonomorphExperimentalCollectionReceiverResolution.h",
+      "pattern": "vector-helper-symbol",
+      "count": 10
+    },
+    {
+      "path": "src/semantics/TemplateMonomorphExperimentalCollectionReceiverResolution.h",
+      "pattern": "vector-surface-id",
+      "count": 1
+    },
+    {
+      "path": "src/semantics/TemplateMonomorphExperimentalCollectionTypeHelpers.h",
+      "pattern": "experimental-vector-path",
+      "count": 5
+    },
+    {
+      "path": "src/semantics/TemplateMonomorphExpressionRewrite.h",
+      "pattern": "canonical-vector-path",
+      "count": 15
+    },
+    {
+      "path": "src/semantics/TemplateMonomorphExpressionRewrite.h",
+      "pattern": "experimental-vector-path",
+      "count": 3
+    },
+    {
+      "path": "src/semantics/TemplateMonomorphExpressionRewrite.h",
+      "pattern": "root-vector-helper-path",
+      "count": 2
+    },
+    {
+      "path": "src/semantics/TemplateMonomorphExpressionRewrite.h",
+      "pattern": "vector-helper-symbol",
+      "count": 2
+    },
+    {
+      "path": "src/semantics/TemplateMonomorphFallbackTypeInference.h",
+      "pattern": "experimental-vector-path",
+      "count": 5
+    },
+    {
+      "path": "src/semantics/TemplateMonomorphFallbackTypeInference.h",
+      "pattern": "vector-type-text",
+      "count": 5
+    },
+    {
+      "path": "src/semantics/TemplateMonomorphFinalOrchestration.h",
+      "pattern": "experimental-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/semantics/TemplateMonomorphImplicitTemplateInference.h",
+      "pattern": "canonical-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/semantics/TemplateMonomorphMethodTargets.h",
+      "pattern": "canonical-vector-path",
+      "count": 1
+    },
+    {
+      "path": "src/semantics/TemplateMonomorphMethodTargets.h",
+      "pattern": "root-vector-helper-path",
+      "count": 1
+    },
+    {
+      "path": "src/semantics/TemplateMonomorphSetupUtilities.h",
+      "pattern": "vector-helper-symbol",
+      "count": 8
+    },
+    {
+      "path": "src/semantics/TemplateMonomorphTypeResolution.h",
+      "pattern": "canonical-vector-path",
+      "count": 4
+    },
+    {
+      "path": "src/semantics/TypeResolutionGraph.cpp",
+      "pattern": "experimental-vector-path",
+      "count": 1
+    }
+  ]
+}

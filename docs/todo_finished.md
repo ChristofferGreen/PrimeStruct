@@ -14957,3 +14957,30 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     backing calls through the internal vector module, and updated conformance
     sources, docs, and source locks away from public experimental vector
     imports. Baseline release validation was skipped per the lite workflow.
+
+- [x] TODO-4297: Add vector trace regression audit
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Vector stdlib ownership cutover
+  - scope: Add the first deterministic validation gate for PrimeStruct vector
+    surface ownership by scanning production C++ and recording the current
+    non-zero trace baseline before follow-up removals ratchet it down.
+  - acceptance:
+    - The audit scans production C++ under `src/` and `include/` for
+      PrimeStruct-vector-specific traces while allowing ordinary C++
+      `std::vector` usage.
+    - The audit is registered in CTest so release validation fails on any new
+      or increased PrimeStruct vector trace.
+    - Remaining zero-trace work is split into bounded follow-up leaves.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once the release gate has a non-zero vector trace
+    regression audit and the remaining removal work is split into leaf tasks.
+  - finished_at: 2026-05-08
+  - evidence: Split the oversized zero-trace target into TODO-4371,
+    TODO-4372, and TODO-4373 after the production scan showed remaining
+    semantic, template, lowerer, and emitter vector-surface branches. Added
+    `scripts/check_vector_surface_traces.py`, a current production-trace
+    baseline, and a release-path CTest registration so new or increased
+    PrimeStruct vector traces now fail mechanically while the follow-up leaves
+    ratchet the baseline down to zero. Baseline release validation was skipped
+    per the lite workflow.
