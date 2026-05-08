@@ -6042,7 +6042,25 @@
             "  if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {") !=
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
-            "vectorMethodTarget.rfind(\"/vector/\", 0) == 0 ||") !=
+            "auto startsWithRootVectorMethodPrefix =") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "auto startsWithRootedVectorMethodPrefix =") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "auto rootedVectorMethodPath =") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "startsWithRootedVectorMethodPrefix(vectorMethodTarget)") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "rootedVectorMethodPath(normalizedMethodName)") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "vectorMethodTarget.rfind(\"/vector/\", 0) == 0 ||") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "const std::string legacyVectorMethodTarget = \"/vector/\" + normalizedMethodName") ==
         std::string::npos);
   CHECK(semanticsExprCallResolutionSource.find(
             "    const auto preferredMethodLikeSamePathSoaHelperCandidate = [&]() -> std::string {\n"

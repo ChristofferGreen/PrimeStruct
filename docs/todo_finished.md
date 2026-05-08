@@ -15159,3 +15159,32 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     the remaining rooted semantic work into TODO-4387, and ratcheted
     `scripts/vector_surface_trace_baseline.json` from 916 to 914 production
     traces. Baseline release validation was skipped per the lite workflow.
+
+- [x] TODO-4387: Collapse rooted vector method-target probes
+  - owner: ai
+  - created_at: 2026-05-08
+  - phase: Vector stdlib ownership cutover
+  - scope: Replace repeated rooted `vector/` and `/vector/`
+    method-target prefix checks in `SemanticsValidatorExprMethodTargetResolution.cpp`
+    with shared prefix/path helpers.
+  - acceptance:
+    - `SemanticsValidatorExprMethodTargetResolution.cpp` no longer repeats
+      direct rooted vector prefix checks, prefix stripping, or same-path
+      legacy target construction across the method-target resolver.
+    - Existing unknown-method diagnostics and explicit user-defined rooted
+      helper handling are preserved.
+    - The vector surface trace baseline decreases for semantic validator files
+      and does not increase elsewhere.
+  - stop_rule: Stop after rooted method-target prefix probes are centralized,
+    source-lock coverage keeps the repeated direct forms absent, and the audit
+    baseline ratchets downward.
+  - finished_at: 2026-05-08
+  - evidence: Introduced shared rooted vector method-target prefix/path helpers
+    in `SemanticsValidatorExprMethodTargetResolution.cpp`, routed explicit
+    removed-helper parsing, explicit vector helper path recognition,
+    normalized method-name stripping, vector-family target checks, and legacy
+    same-path user helper construction through those helpers, added source-lock
+    assertions against the old direct rooted forms, split the remaining rooted
+    semantic work into TODO-4388, and ratcheted
+    `scripts/vector_surface_trace_baseline.json` from 914 to 907 production
+    traces. Baseline release validation was skipped per the lite workflow.

@@ -110,6 +110,23 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return false;
   };
+  constexpr std::string_view RootVectorMethodPrefix = "vector/";
+  constexpr std::string_view RootedVectorMethodPrefix = "/vector/";
+  auto startsWithRootVectorMethodPrefix = [&](std::string_view path) {
+    return path.rfind(RootVectorMethodPrefix, 0) == 0;
+  };
+  auto startsWithRootedVectorMethodPrefix = [&](std::string_view path) {
+    return path.rfind(RootedVectorMethodPrefix, 0) == 0;
+  };
+  auto stripRootVectorMethodPrefix = [&](std::string_view path) {
+    return path.substr(RootVectorMethodPrefix.size());
+  };
+  auto stripRootedVectorMethodPrefix = [&](std::string_view path) {
+    return path.substr(RootedVectorMethodPrefix.size());
+  };
+  auto rootedVectorMethodPath = [&](std::string_view helperName) {
+    return std::string(RootedVectorMethodPrefix) + std::string(helperName);
+  };
   auto explicitRemovedCollectionMethodPath = [&](const std::string &rawMethodName) -> std::string {
     std::string candidate = rawMethodName;
     if (!candidate.empty() && candidate.front() == '/') {
@@ -141,8 +158,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     } else if (candidate.rfind("array/", 0) == 0) {
       helperName = std::string_view(candidate).substr(std::string_view("array/").size());
       compatibilityCollection = "array";
-    } else if (candidate.rfind("vector/", 0) == 0) {
-      helperName = std::string_view(candidate).substr(std::string_view("vector/").size());
+    } else if (startsWithRootVectorMethodPrefix(candidate)) {
+      helperName = stripRootVectorMethodPrefix(candidate);
       compatibilityCollection = "vector";
     } else if (candidate.rfind("std/collections/vector/", 0) == 0) {
       helperName = std::string_view(candidate).substr(std::string_view("std/collections/vector/").size());
@@ -193,7 +210,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         normalizedPrefix == "std/collections/soa_vector") {
       return "/" + normalizedPrefix + "/" + candidate;
     }
-    if (candidate.rfind("vector/", 0) == 0 ||
+    if (startsWithRootVectorMethodPrefix(candidate) ||
         candidate.rfind("std/collections/vector/", 0) == 0 ||
         candidate.rfind("soa_vector/", 0) == 0 ||
         candidate.rfind("std/collections/soa_vector/", 0) == 0) {
@@ -224,8 +241,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
     normalizedMethodName.erase(normalizedMethodName.begin());
   }
-  if (normalizedMethodName.rfind("vector/", 0) == 0) {
-    normalizedMethodName = normalizedMethodName.substr(std::string("vector/").size());
+  if (startsWithRootVectorMethodPrefix(normalizedMethodName)) {
+    normalizedMethodName = std::string(stripRootVectorMethodPrefix(normalizedMethodName));
   } else if (normalizedMethodName.rfind("array/", 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(std::string("array/").size());
   } else if (normalizedMethodName.rfind("soa_vector/", 0) == 0) {
@@ -2058,12 +2075,12 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   };
   const std::string explicitRemovedVectorReceiverFamily =
       classifyExplicitVectorHelperReceiver(receiver);
-  if (explicitVectorHelperPath.rfind("/vector/", 0) == 0 &&
+  if (startsWithRootedVectorMethodPrefix(explicitVectorHelperPath) &&
       (explicitRemovedVectorReceiverFamily == "string" ||
        explicitRemovedVectorReceiverFamily == "array" ||
        explicitRemovedVectorReceiverFamily == "map")) {
     const std::string helperName =
-        explicitVectorHelperPath.substr(std::string("/vector/").size());
+        std::string(stripRootedVectorMethodPrefix(explicitVectorHelperPath));
     return failMethodTargetResolutionDiagnostic(
         "unknown method: /" + explicitRemovedVectorReceiverFamily + "/" +
         helperName);
@@ -2957,7 +2974,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       const bool isVectorFamilyTarget =
           vectorMethodTarget.rfind("/soa_vector/", 0) == 0 ||
           vectorMethodTarget.rfind("/std/collections/soa_vector/", 0) == 0 ||
-          vectorMethodTarget.rfind("/vector/", 0) == 0 ||
+          startsWithRootedVectorMethodPrefix(vectorMethodTarget) ||
           vectorMethodTarget.rfind("/std/collections/vector/", 0) == 0 ||
           vectorMethodTarget.rfind("/std/collections/experimental_vector/", 0) == 0;
       if (!isVectorFamilyTarget) {
@@ -3367,7 +3384,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       normalizedMethodName != "capacity" &&
       normalizedMethodName != "at" &&
       normalizedMethodName != "at_unsafe") {
-    const std::string legacyVectorMethodTarget = "/vector/" + normalizedMethodName;
+    const std::string legacyVectorMethodTarget =
+        rootedVectorMethodPath(normalizedMethodName);
     if (hasDeclaredDefinitionPath(legacyVectorMethodTarget)) {
       resolvedOut = legacyVectorMethodTarget;
       return true;
