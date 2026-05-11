@@ -45,16 +45,6 @@
       "count": 1
     },
     {
-      "path": "src/emitter/EmitterHelpersBuiltins.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 2
-    },
-    {
-      "path": "src/emitter/EmitterHelpersTypes.cpp",
-      "pattern": "experimental-vector-path",
-      "count": 4
-    },
-    {
       "path": "src/ir_lowerer/IrLowererAccessTargetResolution.cpp",
       "pattern": "experimental-vector-path",
       "count": 2

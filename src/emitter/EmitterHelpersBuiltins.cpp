@@ -1,7 +1,58 @@
 #include "EmitterBuiltinCallPathHelpersInternal.h"
 #include "EmitterHelpers.h"
 
+#include "primec/StdlibSurfaceRegistry.h"
+
+#include <utility>
+
 namespace primec::emitter {
+
+namespace {
+
+constexpr std::string_view VectorHelperSurfaceBridgeKey = "collections.vector_helpers";
+
+std::string_view trimLeadingSlash(std::string_view text) {
+  return !text.empty() && text.front() == '/' ? text.substr(1) : text;
+}
+
+std::string stripGeneratedHelperSuffix(std::string helperName) {
+  const size_t generatedSuffix = helperName.find("__");
+  if (generatedSuffix != std::string::npos) {
+    helperName.erase(generatedSuffix);
+  }
+  return helperName;
+}
+
+bool resolveCanonicalVectorHelperMemberName(std::string_view path,
+                                            std::string &memberNameOut) {
+  memberNameOut.clear();
+  const StdlibSurfaceMetadata *metadata =
+      findStdlibSurfaceMetadataByBridgeKey(VectorHelperSurfaceBridgeKey);
+  if (metadata == nullptr || metadata->canonicalPath.empty()) {
+    return false;
+  }
+  const std::string_view normalizedPath = trimLeadingSlash(path);
+  const std::string_view canonicalRoot = trimLeadingSlash(metadata->canonicalPath);
+  if (normalizedPath.size() <= canonicalRoot.size() ||
+      normalizedPath.compare(0, canonicalRoot.size(), canonicalRoot) != 0 ||
+      normalizedPath[canonicalRoot.size()] != '/') {
+    return false;
+  }
+  std::string helperToken(normalizedPath.substr(canonicalRoot.size() + 1));
+  helperToken = stripGeneratedHelperSuffix(std::move(helperToken));
+  if (helperToken.find('/') != std::string::npos) {
+    return false;
+  }
+  const std::string_view memberName =
+      resolveStdlibSurfaceMemberName(*metadata, helperToken);
+  if (memberName.empty()) {
+    return false;
+  }
+  memberNameOut.assign(memberName);
+  return true;
+}
+
+} // namespace
 
 static bool matchesScopedBuiltinSimpleCall(const Expr &expr, const char *nameToMatch) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
@@ -32,13 +83,6 @@ bool isBuiltinAssign(const Expr &expr, const std::unordered_map<std::string, std
 bool getVectorMutatorName(const Expr &expr,
                           const std::unordered_map<std::string, std::string> &nameMap,
                           std::string &out) {
-  auto stripGeneratedHelperSuffix = [](std::string helperName) {
-    const size_t generatedSuffix = helperName.find("__");
-    if (generatedSuffix != std::string::npos) {
-      helperName.erase(generatedSuffix);
-    }
-    return helperName;
-  };
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
@@ -50,8 +94,9 @@ bool getVectorMutatorName(const Expr &expr,
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
   }
-  if (name.rfind("std/collections/vector/", 0) == 0) {
-    name = stripGeneratedHelperSuffix(name.substr(std::string("std/collections/vector/").size()));
+  std::string memberName;
+  if (resolveCanonicalVectorHelperMemberName(full, memberName)) {
+    name = std::move(memberName);
   } else if (name.find('/') != std::string::npos) {
     return false;
   }

@@ -2,6 +2,7 @@
 #include "EmitterBuiltinCallPathHelpersInternal.h"
 
 #include <cctype>
+#include <string_view>
 
 namespace primec::emitter {
 
@@ -66,6 +67,29 @@ ReturnKind getReturnKind(const Definition &def) {
     break;
   }
   return ReturnKind::Unknown;
+}
+
+static bool isVectorCompatibilityStorageBase(std::string_view base) {
+  if (!base.empty() && base.front() == '/') {
+    base.remove_prefix(1);
+  }
+  if (base == "Vector") {
+    return true;
+  }
+  std::vector<std::string_view> segments;
+  while (!base.empty()) {
+    const std::size_t slash = base.find('/');
+    segments.push_back(base.substr(0, slash));
+    if (slash == std::string_view::npos) {
+      break;
+    }
+    base.remove_prefix(slash + 1);
+  }
+  if (segments.size() != 4 || segments[0] != "std" ||
+      segments[1] != "collections" || segments[2] != "experimental_vector") {
+    return false;
+  }
+  return segments[3] == "Vector" || segments[3].rfind("Vector__", 0) == 0;
 }
 
 bool isPrimitiveBindingTypeName(const std::string &name) {
@@ -537,10 +561,7 @@ ReturnKind returnKindForTypeName(const std::string &name) {
     }
     const bool isCollectionLike =
         ((base == "array" || base == "vector" || base == "soa_vector" || base == "Buffer" ||
-          base == "Vector" || base == "std/collections/experimental_vector/Vector" ||
-          base == "/std/collections/experimental_vector/Vector" ||
-          base.rfind("std/collections/experimental_vector/Vector__", 0) == 0 ||
-          base.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) &&
+          isVectorCompatibilityStorageBase(base)) &&
          args.size() == 1) ||
         ((base == "map" || base == "Map" || base == "std/collections/experimental_map/Map" ||
           base == "/std/collections/experimental_map/Map" ||

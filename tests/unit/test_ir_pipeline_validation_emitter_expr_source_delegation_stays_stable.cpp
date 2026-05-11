@@ -2909,6 +2909,10 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
       repoRoot / "src" / "emitter" / "EmitterExprCollectionTypeHelpers.h";
   const std::filesystem::path exprCollectionFallbackHelpersPath =
       repoRoot / "src" / "emitter" / "EmitterExprCollectionFallbackHelpers.h";
+  const std::filesystem::path helperBuiltinsPath =
+      repoRoot / "src" / "emitter" / "EmitterHelpersBuiltins.cpp";
+  const std::filesystem::path helperTypesPath =
+      repoRoot / "src" / "emitter" / "EmitterHelpersTypes.cpp";
   const std::filesystem::path exprControlCallPathStepPath =
       repoRoot / "src" / "emitter" / "EmitterExprControlCallPathStep.cpp";
 
@@ -2924,6 +2928,8 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
   REQUIRE(std::filesystem::exists(exprPackedArgsPath));
   REQUIRE(std::filesystem::exists(exprCollectionTypeHelpersPath));
   REQUIRE(std::filesystem::exists(exprCollectionFallbackHelpersPath));
+  REQUIRE(std::filesystem::exists(helperBuiltinsPath));
+  REQUIRE(std::filesystem::exists(helperTypesPath));
   REQUIRE(std::filesystem::exists(exprControlCallPathStepPath));
 
   const std::string metadataHeaderSource = readText(metadataHeaderPath);
@@ -2942,6 +2948,8 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
       readText(exprCollectionTypeHelpersPath);
   const std::string exprCollectionFallbackHelpersSource =
       readText(exprCollectionFallbackHelpersPath);
+  const std::string helperBuiltinsSource = readText(helperBuiltinsPath);
+  const std::string helperTypesSource = readText(helperTypesPath);
   const std::string exprControlCallPathStepSource = readText(exprControlCallPathStepPath);
 
   CHECK(metadataHeaderSource.find("bool resolvePublishedCollectionSurfaceMemberToken(") !=
@@ -3092,6 +3100,24 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
   CHECK(exprCollectionFallbackHelpersSource.find("vector/") == std::string::npos);
   CHECK(exprCollectionFallbackHelpersSource.find(
             "StdlibSurfaceId::CollectionsVectorHelpers") ==
+        std::string::npos);
+
+  CHECK(helperBuiltinsSource.find("findStdlibSurfaceMetadataByBridgeKey(") !=
+        std::string::npos);
+  CHECK(helperBuiltinsSource.find("collections.vector_helpers") !=
+        std::string::npos);
+  CHECK(helperBuiltinsSource.find("std/collections/vector/") ==
+        std::string::npos);
+  CHECK(helperBuiltinsSource.find("StdlibSurfaceId::CollectionsVectorHelpers") ==
+        std::string::npos);
+
+  CHECK(helperTypesSource.find("isVectorCompatibilityStorageBase(") !=
+        std::string::npos);
+  CHECK(helperTypesSource.find("std/collections/experimental_vector") ==
+        std::string::npos);
+  CHECK(helperTypesSource.find("std/collections/vector/") ==
+        std::string::npos);
+  CHECK(helperTypesSource.find("StdlibSurfaceId::CollectionsVectorHelpers") ==
         std::string::npos);
 
   CHECK(exprControlCallPathStepSource.find("normalizeMapImportAliasPath(importIt->second)") !=

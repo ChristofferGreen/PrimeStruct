@@ -15791,3 +15791,33 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     metadata. Updated source-lock coverage and ratcheted
     `scripts/vector_surface_trace_baseline.json` from 784 to 766 production
     traces. Baseline release validation was skipped per the lite workflow.
+
+- [x] TODO-4409: Route emitter helper/type vector traces
+  - owner: ai
+  - created_at: 2026-05-11
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4408
+  - scope: Replace remaining emitter helper-builtin and helper-type vector
+    surface traces with generic collection metadata or manifest-owned
+    spellings.
+  - implementation_notes:
+    - Start from `EmitterHelpersBuiltins.cpp` and `EmitterHelpersTypes.cpp`.
+    - Keep ordinary C++ `std::vector` container usage allowed.
+    - Do not touch lowerer files in this leaf.
+  - acceptance:
+    - Emitter helper builtin and type routing no longer hard-codes
+      PrimeStruct vector helper or experimental storage paths where metadata
+      can provide the same choice.
+    - Focused emitter source-lock or compile-run coverage remains aligned.
+    - The vector surface trace baseline decreases for the selected files and
+      does not increase elsewhere.
+  - stop_rule: Stop after helper/type emitter vector traces that can be
+    retired before lowerer work are removed and the baseline ratchets
+    downward.
+  - finished_at: 2026-05-11
+  - evidence: Routed vector mutator helper detection through collection
+    surface metadata and replaced helper-type experimental storage checks
+    with segmented compatibility classification. Updated source-lock coverage
+    and ratcheted `scripts/vector_surface_trace_baseline.json` from 766 to
+    760 production traces. Baseline release validation was skipped per the
+    lite workflow.
