@@ -388,7 +388,8 @@ TEST_CASE("ir lowerer prefers explicit experimental vector helper before struct 
   REQUIRE(collectionDirectResolution != std::string::npos);
   CHECK(statementsVectorHelperCheck < statementsDirectResolution);
   CHECK(collectionVectorHelperCheck < collectionDirectResolution);
-  CHECK(statementsSource.find("path == \"/std/collections/experimental_vector/vector\"") !=
+  CHECK(statementsSource.find(
+            "experimentalCollectionMemberPath(\"vector\", \"vector\")") !=
         std::string::npos);
   CHECK(collectionSource.find(
             "const std::string slashPath =\n"

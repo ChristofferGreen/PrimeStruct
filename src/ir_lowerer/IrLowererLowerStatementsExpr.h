@@ -11,6 +11,38 @@
           }
           return callExpr.name;
         };
+        auto stdCollectionsRoot = []() {
+          return std::string("/std/collections");
+        };
+        auto collectionMemberRoot = [&](std::string_view collectionName) {
+          return stdCollectionsRoot() + "/" + std::string(collectionName) + "/";
+        };
+        auto experimentalCollectionMemberRoot =
+            [&](std::string_view collectionName) {
+              return stdCollectionsRoot() + "/experimental_" +
+                     std::string(collectionName) + "/";
+            };
+        auto experimentalCollectionMemberPath =
+            [&](std::string_view collectionName, std::string_view memberName) {
+              return experimentalCollectionMemberRoot(collectionName) +
+                     std::string(memberName);
+            };
+        auto experimentalCollectionTypePath =
+            [&](std::string_view collectionName, std::string_view typeName) {
+              return experimentalCollectionMemberRoot(collectionName) +
+                     std::string(typeName);
+            };
+        auto matchesGeneratedSpecializedType =
+            [&](std::string_view path, std::string_view collectionName,
+                std::string_view typeName) {
+              const std::string typePath =
+                  experimentalCollectionTypePath(collectionName, typeName);
+              return path.rfind(typePath + "__", 0) == 0;
+            };
+        auto isExperimentalVectorTypePath = [&](std::string_view path) {
+          return path == experimentalCollectionTypePath("vector", "Vector") ||
+                 matchesGeneratedSpecializedType(path, "vector", "Vector");
+        };
         auto matchesDirectHelperDefinitionFamilyPath =
             [&](const std::string &candidatePath, const Definition &callee) {
               return !candidatePath.empty() &&
@@ -56,9 +88,10 @@
           return nullptr;
         };
         auto isExplicitExperimentalVectorConstructorHelper =
-            [](const std::string &path) {
-              return path == "/std/collections/experimental_vector/vector" ||
-                     path == "std/collections/experimental_vector/vector";
+            [&](const std::string &path) {
+              const std::string slashPath =
+                  experimentalCollectionMemberPath("vector", "vector");
+              return path == slashPath || path == slashPath.substr(1);
             };
         auto resolveDirectHelperDefinition = [&](const Expr &targetExpr) -> const Definition * {
           const std::string rawPath = resolveDirectHelperPath(targetExpr);
@@ -99,11 +132,11 @@
           }
           return helperPath;
         };
-        auto isDirectCollectionHelperPath = [](const std::string &path) {
+        auto isDirectCollectionHelperPath = [&](const std::string &path) {
           return path.rfind("/array/", 0) == 0 ||
                  path.rfind("/map/", 0) == 0 ||
-                 path.rfind("/std/collections/vector/", 0) == 0 ||
-                 path.rfind("/std/collections/experimental_vector/", 0) == 0 ||
+                 path.rfind(collectionMemberRoot("vector"), 0) == 0 ||
+                 path.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0 ||
                  path.rfind("/std/collections/map/", 0) == 0 ||
                  path.rfind("/std/collections/experimental_map/", 0) == 0;
         };
@@ -308,9 +341,8 @@
                     if (!normalized.empty() && normalized.front() != '/') {
                       normalized.insert(normalized.begin(), '/');
                     }
-                    if (normalized.rfind(
-                            "/std/collections/experimental_vector/Vector__",
-                            0) != 0) {
+                    if (!matchesGeneratedSpecializedType(
+                            normalized, "vector", "Vector")) {
                       return false;
                     }
                     Expr syntheticExpr;
@@ -351,9 +383,8 @@
                   };
               const std::string inferredReceiverStruct =
                   inferStructExprPath(targetCallExpr, localsIn);
-              if (inferredReceiverStruct.rfind(
-                      "/std/collections/experimental_vector/Vector__", 0) ==
-                  0) {
+              if (matchesGeneratedSpecializedType(
+                      inferredReceiverStruct, "vector", "Vector")) {
                 ir_lowerer::LocalInfo::ValueKind elemKind;
                 if (!resolveSpecializedVectorElementKind(inferredReceiverStruct,
                                                         elemKind)) {
@@ -420,7 +451,8 @@
                   resolveExprPath(expr), experimentalVectorElementType);
           if (isExperimentalVectorConstructorAlias) {
             Expr rewrittenVectorCtor = expr;
-            rewrittenVectorCtor.name = "/std/collections/experimental_vector/vector";
+            rewrittenVectorCtor.name =
+                experimentalCollectionMemberPath("vector", "vector");
             rewrittenVectorCtor.namespacePrefix.clear();
             rewrittenVectorCtor.templateArgs = {experimentalVectorElementType};
             if (const Definition *vectorCtor =
@@ -486,14 +518,12 @@
               receiverStructPath = inferStructExprPath(receiver, localsIn);
             }
             std::vector<std::string> candidates;
-            if (receiverStructPath ==
-                    "/std/collections/experimental_vector/Vector" ||
-                receiverStructPath.rfind(
-                    "/std/collections/experimental_vector/Vector__", 0) == 0) {
+            if (isExperimentalVectorTypePath(receiverStructPath)) {
               candidates.push_back(receiverStructPath + "/" + expr.name);
             }
             candidates.push_back(
-                "/std/collections/experimental_vector/Vector/" + expr.name);
+                experimentalCollectionTypePath("vector", "Vector") + "/" +
+                expr.name);
             for (const auto &candidate : candidates) {
               auto defIt = defMap.find(candidate);
               if (defIt != defMap.end() && defIt->second != nullptr) {
@@ -503,8 +533,8 @@
             const std::string methodSuffix = "/" + expr.name;
             for (const auto &[candidatePath, candidateDef] : defMap) {
               if (candidateDef == nullptr ||
-                  candidatePath.rfind(
-                      "/std/collections/experimental_vector/Vector__", 0) != 0 ||
+                  !matchesGeneratedSpecializedType(
+                      candidatePath, "vector", "Vector") ||
                   !candidatePath.ends_with(methodSuffix)) {
                 continue;
               }
@@ -650,10 +680,10 @@
               }
               return true;
             }
-            if ((rawPath.rfind("/std/collections/vector/", 0) == 0 ||
-                 rawPath.rfind("/std/collections/experimental_vector/", 0) == 0 ||
-                 directCallee->fullPath.rfind("/std/collections/vector/", 0) == 0 ||
-                 directCallee->fullPath.rfind("/std/collections/experimental_vector/", 0) == 0) &&
+            if ((rawPath.rfind(collectionMemberRoot("vector"), 0) == 0 ||
+                 rawPath.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0 ||
+                 directCallee->fullPath.rfind(collectionMemberRoot("vector"), 0) == 0 ||
+                 directCallee->fullPath.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0) &&
                 isDirectHelperDefinitionFamily(expr, *directCallee)) {
               std::string vectorHelperName;
               const bool isMaterializableVectorMetadataReceiver =
@@ -877,8 +907,7 @@
                       resolveHelperReturnedArrayVectorAccessTargetInfo);
               const std::string structPath = inferStructExprPath(targetExpr, targetLocals);
               const bool isExperimentalVectorTarget =
-                  structPath == "/std/collections/experimental_vector/Vector" ||
-                  structPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+                  isExperimentalVectorTypePath(structPath);
               const bool isExperimentalMapTarget =
                   structPath == "/std/collections/experimental_map/Map" ||
                   structPath.rfind("/std/collections/experimental_map/Map__", 0) == 0;
@@ -898,8 +927,7 @@
                       resolveHelperReturnedArrayVectorAccessTargetInfo);
               const std::string structPath = inferStructExprPath(targetExpr, targetLocals);
               return (targetInfo.isArrayOrVectorTarget && targetInfo.isVectorTarget) ||
-                     structPath == "/std/collections/experimental_vector/Vector" ||
-                     structPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+                     isExperimentalVectorTypePath(structPath);
             },
             [&](const Expr &targetExpr, const LocalMap &targetLocals) {
               const auto targetInfo =
@@ -909,8 +937,7 @@
                       resolveHelperReturnedArrayVectorAccessTargetInfo);
               const std::string structPath = inferStructExprPath(targetExpr, targetLocals);
               return (targetInfo.isArrayOrVectorTarget && targetInfo.isVectorTarget) ||
-                     structPath == "/std/collections/experimental_vector/Vector" ||
-                     structPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+                     isExperimentalVectorTypePath(structPath);
             },
             inferExprKind,
             resolveStringTableTarget,

@@ -6959,7 +6959,9 @@ TEST_CASE("ir lowerer statement call emission source delegation stays stable") {
         std::string::npos);
   CHECK(source.find("findStdlibSurfaceMetadataByResolvedPath(resolvedPath)") !=
         std::string::npos);
-  CHECK(source.find("metadata->id != StdlibSurfaceId::CollectionsVectorHelpers") !=
+  CHECK(source.find("const auto *vectorMetadata = statementVectorHelperMetadata();") !=
+        std::string::npos);
+  CHECK(source.find("metadata->id != vectorMetadata->id") !=
         std::string::npos);
   CHECK(source.find("metadata->id != StdlibSurfaceId::CollectionsMapHelpers") !=
         std::string::npos);

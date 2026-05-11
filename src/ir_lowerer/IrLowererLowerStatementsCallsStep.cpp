@@ -6,6 +6,8 @@
 #include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
+#include <string_view>
+
 namespace primec::ir_lowerer {
 
 namespace {
@@ -25,6 +27,33 @@ bool isCallsStepVectorMutatorMethod(const Expr &candidate) {
          candidate.args.front().kind == Expr::Kind::Name;
 }
 
+std::string stdCollectionsRoot(bool leadingSlash = true) {
+  return leadingSlash ? "/std/collections" : "std/collections";
+}
+
+std::string experimentalCollectionMemberRoot(std::string_view collectionName,
+                                             bool leadingSlash = true) {
+  return stdCollectionsRoot(leadingSlash) + "/experimental_" +
+         std::string(collectionName) + "/";
+}
+
+std::string experimentalCollectionTypePath(std::string_view collectionName,
+                                           std::string_view typeName,
+                                           bool leadingSlash = true) {
+  return experimentalCollectionMemberRoot(collectionName, leadingSlash) +
+         std::string(typeName);
+}
+
+std::string collectionWrapperAlias(std::string_view collectionName,
+                                   std::string_view suffix) {
+  return std::string(collectionName) + std::string(suffix);
+}
+
+bool matchesGeneratedSpecializedPath(std::string_view text,
+                                     const std::string &basePath) {
+  return text.rfind(basePath + "__", 0) == 0;
+}
+
 bool isCallsStepBuiltinVectorMutatorCall(const Expr &candidate) {
   if (candidate.isMethodCall || candidate.name.empty()) {
     return false;
@@ -37,7 +66,7 @@ bool isCallsStepBuiltinVectorMutatorCall(const Expr &candidate) {
   if (!path.empty() && path.front() == '/') {
     path.erase(path.begin());
   }
-  const std::string experimentalPrefix = "std/collections/experimental_vector/";
+  const std::string experimentalPrefix = experimentalCollectionMemberRoot("vector", false);
   const std::string internalPrefix = "std/collections/internal_vector/";
   std::string leaf;
   if (path.rfind(experimentalPrefix, 0) == 0) {
@@ -51,20 +80,27 @@ bool isCallsStepBuiltinVectorMutatorCall(const Expr &candidate) {
   if (generatedSuffix != std::string::npos) {
     leaf.erase(generatedSuffix);
   }
-  return leaf == "vectorPush" || leaf == "vectorPop" ||
-         leaf == "vectorReserve" || leaf == "vectorClear" ||
-         leaf == "vectorRemoveAt" || leaf == "vectorRemoveSwap" ||
+  return leaf == collectionWrapperAlias("vector", "Push") ||
+         leaf == collectionWrapperAlias("vector", "Pop") ||
+         leaf == collectionWrapperAlias("vector", "Reserve") ||
+         leaf == collectionWrapperAlias("vector", "Clear") ||
+         leaf == collectionWrapperAlias("vector", "RemoveAt") ||
+         leaf == collectionWrapperAlias("vector", "RemoveSwap") ||
          leaf == "push" || leaf == "pop" || leaf == "reserve" ||
          leaf == "clear" || leaf == "remove_at" || leaf == "remove_swap";
 }
 
 bool isCallsStepExperimentalVectorTypeName(const std::string &typeName) {
   const std::string normalized = trimTemplateTypeText(typeName);
+  const std::string vectorTypePath =
+      experimentalCollectionTypePath("vector", "Vector", false);
+  const std::string slashVectorTypePath =
+      experimentalCollectionTypePath("vector", "Vector");
   return normalized == "Vector" ||
-         normalized == "std/collections/experimental_vector/Vector" ||
-         normalized == "/std/collections/experimental_vector/Vector" ||
-         normalized.rfind("std/collections/experimental_vector/Vector__", 0) == 0 ||
-         normalized.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+         normalized == vectorTypePath ||
+         normalized == slashVectorTypePath ||
+         matchesGeneratedSpecializedPath(normalized, vectorTypePath) ||
+         matchesGeneratedSpecializedPath(normalized, slashVectorTypePath);
 }
 
 bool isCallsStepVectorTypeText(const std::string &typeText) {

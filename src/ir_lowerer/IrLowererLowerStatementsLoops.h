@@ -381,7 +381,25 @@
         popFileScope();
         return true;
       }
-      if (!stmt.isMethodCall && stmt.name.rfind("/std/collections/experimental_vector/", 0) == 0) {
+      auto experimentalCollectionMemberRoot =
+          [](std::string_view collectionName) {
+            return "/std/collections/experimental_" +
+                   std::string(collectionName) + "/";
+          };
+      auto experimentalCollectionTypePath =
+          [&](std::string_view collectionName, std::string_view typeName) {
+            return experimentalCollectionMemberRoot(collectionName) +
+                   std::string(typeName);
+          };
+      auto matchesGeneratedSpecializedType =
+          [&](std::string_view path, std::string_view collectionName,
+              std::string_view typeName) {
+            const std::string typePath =
+                experimentalCollectionTypePath(collectionName, typeName);
+            return path.rfind(typePath + "__", 0) == 0;
+          };
+      if (!stmt.isMethodCall &&
+          stmt.name.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0) {
         if (const Definition *callee = resolveDefinitionCall(stmt)) {
           ReturnInfo info;
           if (!getReturnInfo(callee->fullPath, info)) {
@@ -443,10 +461,9 @@
               if (localIt != localsIn.end() && !localIt->second.isSoaVector &&
                   (localIt->second.kind == LocalInfo::Kind::Vector ||
                    localIt->second.structTypeName ==
-                       "/std/collections/experimental_vector/Vector" ||
-                   localIt->second.structTypeName.rfind(
-                       "/std/collections/experimental_vector/Vector__", 0) ==
-                       0)) {
+                       experimentalCollectionTypePath("vector", "Vector") ||
+                   matchesGeneratedSpecializedType(
+                       localIt->second.structTypeName, "vector", "Vector"))) {
                 return false;
               }
             }

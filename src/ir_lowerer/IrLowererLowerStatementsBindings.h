@@ -660,13 +660,34 @@
             adoptStructInitializerCallee(*initCallee);
           }
         }
-        auto isExperimentalVectorConstructorCallee = [](const Definition *callee) {
+        auto experimentalCollectionMemberRoot =
+            [](std::string_view collectionName) {
+              return "/std/collections/experimental_" +
+                     std::string(collectionName) + "/";
+            };
+        auto experimentalCollectionTypePath =
+            [&](std::string_view collectionName, std::string_view typeName) {
+              return experimentalCollectionMemberRoot(collectionName) +
+                     std::string(typeName);
+            };
+        auto collectionWrapperAlias =
+            [](std::string_view collectionName, std::string_view suffix) {
+              return std::string(collectionName) + std::string(suffix);
+            };
+        auto matchesGeneratedSpecializedType =
+            [&](std::string_view path, std::string_view collectionName,
+                std::string_view typeName) {
+              const std::string typePath =
+                  experimentalCollectionTypePath(collectionName, typeName);
+              return path.rfind(typePath + "__", 0) == 0;
+            };
+        auto isExperimentalVectorConstructorCallee = [&](const Definition *callee) {
           if (callee == nullptr) {
             return false;
           }
-          constexpr std::string_view Prefix =
-              "/std/collections/experimental_vector/";
-          if (callee->fullPath.rfind(Prefix, 0) != 0) {
+          const std::string prefix = experimentalCollectionMemberRoot("vector");
+          const std::string_view prefixView(prefix.data(), prefix.size());
+          if (callee->fullPath.rfind(prefixView, 0) != 0) {
             return false;
           }
           std::string leaf = callee->fullPath.substr(Prefix.size());
@@ -674,14 +695,20 @@
           if (generatedSuffix != std::string::npos) {
             leaf.erase(generatedSuffix);
           }
-          return leaf == "vector" || leaf == "vectorNew" ||
-                 leaf == "vectorSingle" || leaf == "vectorPair" ||
-                 leaf == "vectorTriple" || leaf == "vectorQuad" ||
-                 leaf == "vectorQuint" || leaf == "vectorSext" ||
-                 leaf == "vectorSept" || leaf == "vectorOct";
+          return leaf == "vector" ||
+                 leaf == collectionWrapperAlias("vector", "New") ||
+                 leaf == collectionWrapperAlias("vector", "Single") ||
+                 leaf == collectionWrapperAlias("vector", "Pair") ||
+                 leaf == collectionWrapperAlias("vector", "Triple") ||
+                 leaf == collectionWrapperAlias("vector", "Quad") ||
+                 leaf == collectionWrapperAlias("vector", "Quint") ||
+                 leaf == collectionWrapperAlias("vector", "Sext") ||
+                 leaf == collectionWrapperAlias("vector", "Sept") ||
+                 leaf == collectionWrapperAlias("vector", "Oct");
         };
         if (!info.structTypeName.empty() &&
-            info.structTypeName.rfind("/std/collections/experimental_vector/Vector", 0) == 0 &&
+            (info.structTypeName == experimentalCollectionTypePath("vector", "Vector") ||
+             matchesGeneratedSpecializedType(info.structTypeName, "vector", "Vector")) &&
             (isExperimentalVectorConstructorCallee(initCallee) ||
              [&]() {
                std::string collectionName;

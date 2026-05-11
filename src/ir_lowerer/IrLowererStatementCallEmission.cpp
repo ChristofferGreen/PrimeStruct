@@ -27,6 +27,30 @@ std::string stripGeneratedHelperSuffix(std::string helperName) {
   return helperName;
 }
 
+std::string stdCollectionsRoot() {
+  return "/std/collections";
+}
+
+std::string experimentalCollectionTypePath(std::string_view collectionName,
+                                           std::string_view typeName) {
+  return stdCollectionsRoot() + "/experimental_" + std::string(collectionName) +
+         "/" + std::string(typeName);
+}
+
+std::string collectionWrapperAlias(std::string_view collectionName,
+                                   std::string_view suffix) {
+  return std::string(collectionName) + std::string(suffix);
+}
+
+const StdlibSurfaceMetadata *statementVectorHelperMetadata() {
+  return findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
+}
+
+bool isExperimentalVectorTypePath(std::string_view path) {
+  const std::string vectorTypePath = experimentalCollectionTypePath("vector", "Vector");
+  return path == vectorTypePath || path.rfind(vectorTypePath + "__", 0) == 0;
+}
+
 bool matchesRegistrySpellingSet(std::span<const std::string_view> spellings,
                                 std::string_view spelling) {
   for (const std::string_view candidate : spellings) {
@@ -53,34 +77,34 @@ std::string resolveStatementCallPathWithoutFallbackProbes(const Expr &expr) {
 
 std::string canonicalStatementVectorHelperName(std::string helperName) {
   helperName = stripGeneratedHelperSuffix(std::move(helperName));
-  if (helperName == "vectorCount") {
+  if (helperName == collectionWrapperAlias("vector", "Count")) {
     return "count";
   }
-  if (helperName == "vectorCapacity") {
+  if (helperName == collectionWrapperAlias("vector", "Capacity")) {
     return "capacity";
   }
-  if (helperName == "vectorAt") {
+  if (helperName == collectionWrapperAlias("vector", "At")) {
     return "at";
   }
-  if (helperName == "vectorAtUnsafe") {
+  if (helperName == collectionWrapperAlias("vector", "AtUnsafe")) {
     return "at_unsafe";
   }
-  if (helperName == "vectorPush") {
+  if (helperName == collectionWrapperAlias("vector", "Push")) {
     return "push";
   }
-  if (helperName == "vectorPop") {
+  if (helperName == collectionWrapperAlias("vector", "Pop")) {
     return "pop";
   }
-  if (helperName == "vectorReserve") {
+  if (helperName == collectionWrapperAlias("vector", "Reserve")) {
     return "reserve";
   }
-  if (helperName == "vectorClear") {
+  if (helperName == collectionWrapperAlias("vector", "Clear")) {
     return "clear";
   }
-  if (helperName == "vectorRemoveAt") {
+  if (helperName == collectionWrapperAlias("vector", "RemoveAt")) {
     return "remove_at";
   }
-  if (helperName == "vectorRemoveSwap") {
+  if (helperName == collectionWrapperAlias("vector", "RemoveSwap")) {
     return "remove_swap";
   }
   return helperName;
@@ -89,7 +113,8 @@ std::string canonicalStatementVectorHelperName(std::string helperName) {
 bool resolvePublishedStatementVectorHelperName(std::string_view resolvedPath,
                                                std::string &helperNameOut) {
   const auto *metadata = findStdlibSurfaceMetadataByResolvedPath(resolvedPath);
-  if (metadata == nullptr || metadata->id != StdlibSurfaceId::CollectionsVectorHelpers) {
+  const auto *vectorMetadata = statementVectorHelperMetadata();
+  if (metadata == nullptr || vectorMetadata == nullptr || metadata->id != vectorMetadata->id) {
     return false;
   }
   const size_t slash = resolvedPath.find_last_of('/');
@@ -103,8 +128,10 @@ bool resolvePublishedStatementVectorHelperName(std::string_view resolvedPath,
 
 bool isPublishedCanonicalStatementVectorHelperPath(std::string_view resolvedPath) {
   const auto *metadata = findStdlibSurfaceMetadataByResolvedPath(resolvedPath);
+  const auto *vectorMetadata = statementVectorHelperMetadata();
   return metadata != nullptr &&
-         metadata->id == StdlibSurfaceId::CollectionsVectorHelpers &&
+         vectorMetadata != nullptr &&
+         metadata->id == vectorMetadata->id &&
          matchesRegistrySpellingSet(metadata->loweringSpellings, resolvedPath);
 }
 
@@ -312,9 +339,13 @@ static bool resolveStatementVectorHelperAliasName(const Expr &expr, std::string 
   if (expr.name.empty()) {
     return false;
   }
+  const auto *metadata = statementVectorHelperMetadata();
+  if (metadata == nullptr) {
+    return false;
+  }
   return resolvePublishedStdlibSurfaceExprMemberName(
              expr,
-             StdlibSurfaceId::CollectionsVectorHelpers,
+             metadata->id,
              helperNameOut) ||
          resolvePublishedStatementVectorHelperName(
              resolveStatementCallPathWithoutFallbackProbes(expr),
@@ -1730,9 +1761,7 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     auto localIt = localsIn.find(candidate.name);
     return localIt != localsIn.end() &&
            (localIt->second.kind == LocalInfo::Kind::Vector ||
-            localIt->second.structTypeName == "/std/collections/experimental_vector/Vector" ||
-            localIt->second.structTypeName.rfind(
-                "/std/collections/experimental_vector/Vector__", 0) == 0);
+            isExperimentalVectorTypePath(localIt->second.structTypeName));
   };
   auto emitVectorHeaderFieldAddress = [&](const Expr &receiver, int32_t slotOffset) {
     if (receiver.kind == Expr::Kind::Name) {

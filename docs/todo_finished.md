@@ -15973,3 +15973,35 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     Updated source-lock coverage and ratcheted
     `scripts/vector_surface_trace_baseline.json` from 670 to 589 production
     traces. Baseline release validation was skipped per the lite workflow.
+
+- [x] TODO-4414: Route lowerer statement-call vector traces
+  - owner: ai
+  - created_at: 2026-05-11
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4413
+  - scope: Replace lowerer statement-call, loop, binding, and collection
+    mutation vector traces with semantic surface metadata, generic collection
+    routing, or existing call-resolution facts.
+  - implementation_notes:
+    - Start from `IrLowererStatementCallEmission.cpp`,
+      `IrLowererLowerStatements*`, and
+      `IrLowererOperatorCollectionMutationHelpers.cpp`.
+    - Keep ordinary C++ `std::vector` container usage allowed.
+    - Do not touch lowerer type/layout/struct-return files in this leaf.
+  - acceptance:
+    - Statement-call vector helper dispatch is generic or manifest-driven
+      rather than hard-coded to PrimeStruct vector paths where semantic facts
+      already carry the needed surface.
+    - Focused lowerer source-lock coverage remains aligned.
+    - The vector surface trace baseline decreases for the selected files and
+      does not increase elsewhere.
+  - stop_rule: Stop after statement-call vector-specific traces that can be
+    retired before type/layout work are removed and the baseline ratchets
+    downward.
+  - finished_at: 2026-05-11
+  - evidence: Routed statement-call, loop, binding, and collection mutation
+    vector helper checks through segmented collection paths, collection
+    wrapper aliases, and metadata-derived vector helper surface IDs. Updated
+    source-lock coverage and ratcheted
+    `scripts/vector_surface_trace_baseline.json` from 589 to 531 production
+    traces. Baseline release validation was skipped per the lite workflow.

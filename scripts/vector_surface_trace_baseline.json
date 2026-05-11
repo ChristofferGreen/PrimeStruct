@@ -95,51 +95,6 @@
       "count": 2
     },
     {
-      "path": "src/ir_lowerer/IrLowererLowerStatementsBindings.h",
-      "pattern": "experimental-vector-path",
-      "count": 2
-    },
-    {
-      "path": "src/ir_lowerer/IrLowererLowerStatementsBindings.h",
-      "pattern": "vector-helper-symbol",
-      "count": 1
-    },
-    {
-      "path": "src/ir_lowerer/IrLowererLowerStatementsCallsStep.cpp",
-      "pattern": "experimental-vector-path",
-      "count": 5
-    },
-    {
-      "path": "src/ir_lowerer/IrLowererLowerStatementsCallsStep.cpp",
-      "pattern": "vector-helper-symbol",
-      "count": 6
-    },
-    {
-      "path": "src/ir_lowerer/IrLowererLowerStatementsExpr.h",
-      "pattern": "canonical-vector-path",
-      "count": 3
-    },
-    {
-      "path": "src/ir_lowerer/IrLowererLowerStatementsExpr.h",
-      "pattern": "experimental-vector-path",
-      "count": 18
-    },
-    {
-      "path": "src/ir_lowerer/IrLowererLowerStatementsLoops.h",
-      "pattern": "experimental-vector-path",
-      "count": 3
-    },
-    {
-      "path": "src/ir_lowerer/IrLowererOperatorCollectionMutationHelpers.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 1
-    },
-    {
-      "path": "src/ir_lowerer/IrLowererOperatorCollectionMutationHelpers.cpp",
-      "pattern": "experimental-vector-path",
-      "count": 4
-    },
-    {
       "path": "src/ir_lowerer/IrLowererResultMetadataHelpers.cpp",
       "pattern": "experimental-vector-path",
       "count": 1
@@ -218,21 +173,6 @@
       "path": "src/ir_lowerer/IrLowererStatementBindingHelpers.cpp",
       "pattern": "experimental-vector-path",
       "count": 2
-    },
-    {
-      "path": "src/ir_lowerer/IrLowererStatementCallEmission.cpp",
-      "pattern": "experimental-vector-path",
-      "count": 2
-    },
-    {
-      "path": "src/ir_lowerer/IrLowererStatementCallEmission.cpp",
-      "pattern": "vector-helper-symbol",
-      "count": 10
-    },
-    {
-      "path": "src/ir_lowerer/IrLowererStatementCallEmission.cpp",
-      "pattern": "vector-surface-id",
-      "count": 3
     },
     {
       "path": "src/ir_lowerer/IrLowererStructFieldBindingHelpers.cpp",

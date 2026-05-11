@@ -21,9 +21,29 @@
 namespace primec::ir_lowerer {
 namespace {
 
+std::string stdCollectionsRoot() {
+  return "/std/collections";
+}
+
+std::string collectionTypePath(std::string_view collectionName) {
+  return stdCollectionsRoot() + "/" + std::string(collectionName);
+}
+
+std::string experimentalCollectionTypePath(std::string_view collectionName,
+                                           std::string_view typeName) {
+  return stdCollectionsRoot() + "/experimental_" + std::string(collectionName) +
+         "/" + std::string(typeName);
+}
+
+bool matchesGeneratedSpecializedPath(std::string_view text,
+                                     const std::string &basePath) {
+  return text.rfind(basePath + "__", 0) == 0;
+}
+
 bool isVectorStructPath(const std::string &structPath) {
-  return structPath == "/vector" || structPath == "/std/collections/experimental_vector/Vector" ||
-         structPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+  const std::string vectorTypePath = experimentalCollectionTypePath("vector", "Vector");
+  return structPath == "/vector" || structPath == vectorTypePath ||
+         matchesGeneratedSpecializedPath(structPath, vectorTypePath);
 }
 
 bool isSpecializedExperimentalSoaVectorStructPath(const std::string &structPath) {
@@ -49,9 +69,9 @@ const Expr &mapStructRhsExprForTarget(
 
 std::string defaultVectorRecordStructPath(std::string_view builtin) {
   if (builtin == "soa_vector") {
-    return "/std/collections/soa_vector";
+    return collectionTypePath("soa_vector");
   }
-  return "/std/collections/vector";
+  return collectionTypePath("vector");
 }
 
 std::string stripGeneratedStructSuffix(std::string structPath) {
@@ -561,10 +581,10 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
           return false;
         }
         if (keysStructPath.empty()) {
-          keysStructPath = "/std/collections/experimental_vector/Vector";
+          keysStructPath = experimentalCollectionTypePath("vector", "Vector");
         }
         if (payloadsStructPath.empty()) {
-          payloadsStructPath = "/std/collections/experimental_vector/Vector";
+          payloadsStructPath = experimentalCollectionTypePath("vector", "Vector");
         }
         auto resolveVectorField =
             [&](const std::string &structPath,

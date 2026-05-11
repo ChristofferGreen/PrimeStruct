@@ -41,6 +41,7 @@
 #include <algorithm>
 #include <cstring>
 #include <limits>
+#include <string_view>
 #include <utility>
 
 namespace primec::ir_lowerer {

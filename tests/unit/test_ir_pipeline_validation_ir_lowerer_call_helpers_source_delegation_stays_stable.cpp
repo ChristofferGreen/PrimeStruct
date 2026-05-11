@@ -55,6 +55,14 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
       repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTryHelpers.h";
   const std::filesystem::path lowerStatementsExprPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsExpr.h";
+  const std::filesystem::path lowerStatementsBindingsPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsBindings.h";
+  const std::filesystem::path lowerStatementsCallsStepPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsCallsStep.cpp";
+  const std::filesystem::path lowerStatementsLoopsPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsLoops.h";
+  const std::filesystem::path statementCallEmissionPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererStatementCallEmission.cpp";
   const std::filesystem::path operatorCollectionMutationHelpersPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererOperatorCollectionMutationHelpers.cpp";
   const std::filesystem::path operatorMemoryPointerHelpersPath =
@@ -85,6 +93,10 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   REQUIRE(std::filesystem::exists(lowerInlineCallsPath));
   REQUIRE(std::filesystem::exists(emitExprTryHelpersPath));
   REQUIRE(std::filesystem::exists(lowerStatementsExprPath));
+  REQUIRE(std::filesystem::exists(lowerStatementsBindingsPath));
+  REQUIRE(std::filesystem::exists(lowerStatementsCallsStepPath));
+  REQUIRE(std::filesystem::exists(lowerStatementsLoopsPath));
+  REQUIRE(std::filesystem::exists(statementCallEmissionPath));
   REQUIRE(std::filesystem::exists(operatorCollectionMutationHelpersPath));
   REQUIRE(std::filesystem::exists(operatorMemoryPointerHelpersPath));
   REQUIRE(std::filesystem::exists(stringCallHelpersPath));
@@ -114,6 +126,14 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   const std::string lowerInlineCallsSource = readText(lowerInlineCallsPath);
   const std::string emitExprTryHelpersSource = readText(emitExprTryHelpersPath);
   const std::string lowerStatementsExprSource = readText(lowerStatementsExprPath);
+  const std::string lowerStatementsBindingsSource =
+      readText(lowerStatementsBindingsPath);
+  const std::string lowerStatementsCallsStepSource =
+      readText(lowerStatementsCallsStepPath);
+  const std::string lowerStatementsLoopsSource =
+      readText(lowerStatementsLoopsPath);
+  const std::string statementCallEmissionSource =
+      readText(statementCallEmissionPath);
   const std::string operatorCollectionMutationHelpersSource =
       readText(operatorCollectionMutationHelpersPath);
   const std::string operatorMemoryPointerHelpersSource =
@@ -838,6 +858,37 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(lowerInlineCallsSource.find("collectionWrapperAlias(\"vector\", \"New\")") !=
         std::string::npos);
+  CHECK(statementCallEmissionSource.find("statementVectorHelperMetadata()") !=
+        std::string::npos);
+  CHECK(statementCallEmissionSource.find("metadata->id != vectorMetadata->id") !=
+        std::string::npos);
+  CHECK(statementCallEmissionSource.find("collectionWrapperAlias(\"vector\", \"Push\")") !=
+        std::string::npos);
+  CHECK(statementCallEmissionSource.find(
+            "experimentalCollectionTypePath(\"vector\", \"Vector\")") !=
+        std::string::npos);
+  CHECK(lowerStatementsCallsStepSource.find("collectionWrapperAlias(\"vector\", \"Push\")") !=
+        std::string::npos);
+  CHECK(lowerStatementsCallsStepSource.find(
+            "experimentalCollectionMemberRoot(\"vector\", false)") !=
+        std::string::npos);
+  CHECK(lowerStatementsBindingsSource.find("collectionWrapperAlias(\"vector\", \"New\")") !=
+        std::string::npos);
+  CHECK(lowerStatementsBindingsSource.find(
+            "experimentalCollectionTypePath(\"vector\", \"Vector\")") !=
+        std::string::npos);
+  CHECK(lowerStatementsExprSource.find(
+            "experimentalCollectionMemberPath(\"vector\", \"vector\")") !=
+        std::string::npos);
+  CHECK(lowerStatementsExprSource.find(
+            "experimentalCollectionTypePath(\"vector\", \"Vector\")") !=
+        std::string::npos);
+  CHECK(lowerStatementsLoopsSource.find(
+            "experimentalCollectionMemberRoot(\"vector\")") !=
+        std::string::npos);
+  CHECK(operatorCollectionMutationHelpersSource.find(
+            "collectionTypePath(\"vector\")") !=
+        std::string::npos);
   CHECK(tailDispatchSource.find("matchesGeneratedSpecializedType(") !=
         std::string::npos);
   CHECK(emitExprTryHelpersSource.find("matchesGeneratedSpecializedType(") !=
@@ -858,6 +909,29 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(lowerInlineCallsSource.find("std/collections/vector/") == std::string::npos);
   CHECK(lowerInlineCallsSource.find("std/collections/experimental_vector") ==
+        std::string::npos);
+  CHECK(statementCallEmissionSource.find("std/collections/vector/") ==
+        std::string::npos);
+  CHECK(statementCallEmissionSource.find("std/collections/experimental_vector") ==
+        std::string::npos);
+  CHECK(statementCallEmissionSource.find("StdlibSurfaceId::CollectionsVectorHelpers") ==
+        std::string::npos);
+  CHECK(statementCallEmissionSource.find("vectorPush") == std::string::npos);
+  CHECK(lowerStatementsBindingsSource.find("std/collections/experimental_vector") ==
+        std::string::npos);
+  CHECK(lowerStatementsBindingsSource.find("vectorNew") == std::string::npos);
+  CHECK(lowerStatementsCallsStepSource.find("std/collections/experimental_vector") ==
+        std::string::npos);
+  CHECK(lowerStatementsCallsStepSource.find("vectorPush") == std::string::npos);
+  CHECK(lowerStatementsExprSource.find("std/collections/vector/") ==
+        std::string::npos);
+  CHECK(lowerStatementsExprSource.find("std/collections/experimental_vector") ==
+        std::string::npos);
+  CHECK(lowerStatementsLoopsSource.find("std/collections/experimental_vector") ==
+        std::string::npos);
+  CHECK(operatorCollectionMutationHelpersSource.find("std/collections/vector/") ==
+        std::string::npos);
+  CHECK(operatorCollectionMutationHelpersSource.find("std/collections/experimental_vector") ==
         std::string::npos);
   CHECK(tailDispatchSource.find("std/collections/experimental_vector") ==
         std::string::npos);
