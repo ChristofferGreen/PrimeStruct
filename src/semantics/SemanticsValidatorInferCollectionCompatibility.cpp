@@ -398,8 +398,21 @@ bool SemanticsValidator::canonicalExperimentalVectorHelperPath(
     const std::string &resolvedPath,
     std::string &canonicalPathOut,
     std::string &helperNameOut) const {
-  if (!resolveCanonicalVectorHelperNameFromResolvedPath(resolvedPath, helperNameOut) ||
-      helperNameOut == "vector") {
+  helperNameOut.clear();
+  std::string normalizedPath = resolvedPath;
+  if (!normalizedPath.empty() && normalizedPath.front() != '/' &&
+      normalizedPath.find('/') == std::string::npos) {
+    if (isVectorCompatibilityHelperName(normalizedPath)) {
+      helperNameOut = normalizedPath;
+    }
+  } else {
+    if (!normalizedPath.empty() && normalizedPath.front() != '/') {
+      normalizedPath.insert(normalizedPath.begin(), '/');
+    }
+    resolveCanonicalVectorHelperNameFromResolvedPath(normalizedPath,
+                                                     helperNameOut);
+  }
+  if (helperNameOut.empty() || helperNameOut == "vector") {
     canonicalPathOut.clear();
     helperNameOut.clear();
     return false;

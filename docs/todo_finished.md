@@ -15533,3 +15533,42 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     source-lock coverage, and ratcheted
     `scripts/vector_surface_trace_baseline.json` from 858 to 838 production
     traces. Baseline release validation was skipped per the lite workflow.
+
+- [x] TODO-4398: Retire collection rewrite canonical vector shim
+  - owner: ai
+  - created_at: 2026-05-08
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4397
+  - scope: Remove remaining canonical vector helper rewrite compatibility
+    branches in `SemanticsValidatorCollectionHelperRewrites.cpp` that can be
+    owned by published stdlib-surface metadata, generic collection rewrite
+    routing, or existing preferred vector helper targets.
+  - implementation_notes:
+    - Start from the `canonical-vector-path` and
+      `CollectionsVectorHelpers` hits in
+      `SemanticsValidatorCollectionHelperRewrites.cpp`.
+    - Preserve canonical public vector calls and imports; remove only
+      production C++ compatibility routing that duplicates metadata-backed
+      behavior.
+    - Do not touch template monomorph, lowerer, or emitter dispatch in this
+      leaf.
+  - acceptance:
+    - Collection helper rewrites no longer contain vector-specific canonical
+      helper branches that can be delegated to generic or metadata-backed
+      routing.
+    - Existing bare and canonical vector helper rewrites remain covered by
+      focused source-lock or semantic tests.
+    - The vector surface trace baseline decreases for
+      `SemanticsValidatorCollectionHelperRewrites.cpp` and does not increase
+      elsewhere.
+  - stop_rule: Stop once collection rewrite canonical vector shims that can be
+    retired before lowerer/emitter work are removed and the audit baseline
+    ratchets downward.
+  - finished_at: 2026-05-11
+  - evidence: Routed canonical vector method-call rewrite normalization
+    through `canonicalExperimentalVectorHelperPath`, replaced the direct
+    canonical vector visibility path check with
+    `isStdNamespacedVectorCompatibilityHelperPath`, updated source-lock
+    coverage, and ratcheted `scripts/vector_surface_trace_baseline.json` from
+    838 to 835 production traces. Baseline release validation was skipped per
+    the lite workflow.

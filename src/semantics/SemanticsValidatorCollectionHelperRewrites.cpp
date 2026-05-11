@@ -415,17 +415,9 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalVectorHelperCall(
     if (!normalizedMethod.empty() && normalizedMethod.front() == '/') {
       normalizedMethod.erase(normalizedMethod.begin());
     }
-    if (!resolvePublishedCollectionHelperMemberToken(
-            normalizedMethod,
-            StdlibSurfaceId::CollectionsVectorHelpers,
-            helperName) ||
-        helperName == "vector") {
-      return false;
-    }
-    canonicalPath = canonicalCollectionHelperPath(
-        StdlibSurfaceId::CollectionsVectorHelpers, helperName);
-    if (canonicalPath.empty()) {
-      helperName.clear();
+    if (!canonicalExperimentalVectorHelperPath(normalizedMethod,
+                                               canonicalPath,
+                                               helperName)) {
       return false;
     }
     const size_t lastSlash = canonicalPath.find_last_of('/');
@@ -488,7 +480,7 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalVectorHelperCall(
     if (defMap_.count(path) == 0) {
       return false;
     }
-    if (path.rfind("/std/collections/vector/", 0) == 0) {
+    if (isStdNamespacedVectorCompatibilityHelperPath(path, helperName)) {
       auto paramsIt = paramsByDef_.find(path);
       if (paramsIt != paramsByDef_.end() && !paramsIt->second.empty()) {
         std::string experimentalElemType;

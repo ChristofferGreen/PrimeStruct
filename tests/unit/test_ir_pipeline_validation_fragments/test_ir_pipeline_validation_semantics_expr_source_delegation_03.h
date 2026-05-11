@@ -946,10 +946,21 @@
   CHECK(semanticsCollectionHelperRewritesSource.find("bool SemanticsValidator::tryRewriteBareVectorHelperCall") !=
         std::string::npos);
   CHECK(semanticsCollectionHelperRewritesSource.find(
+            "canonicalExperimentalVectorHelperPath(normalizedMethod,\n"
+            "                                               canonicalPath,\n"
+            "                                               helperName)") !=
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find(
             "resolvePublishedCollectionHelperMemberToken(\n"
             "            normalizedMethod,\n"
             "            StdlibSurfaceId::CollectionsVectorHelpers,\n"
-            "            helperName)") !=
+            "            helperName)") ==
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find(
+            "path.rfind(\"/std/collections/vector/\", 0) == 0") ==
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find(
+            "isStdNamespacedVectorCompatibilityHelperPath(path, helperName)") !=
         std::string::npos);
   CHECK(semanticsCollectionHelperRewritesSource.find(
             "resolvePublishedCollectionHelperMemberToken(\n"

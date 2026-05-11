@@ -686,13 +686,8 @@
     },
     {
       "path": "src/semantics/SemanticsValidatorCollectionHelperRewrites.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 1
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorCollectionHelperRewrites.cpp",
       "pattern": "vector-surface-id",
-      "count": 3
+      "count": 1
     },
     {
       "path": "src/semantics/SemanticsValidatorDiagnostics.cpp",

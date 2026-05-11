@@ -905,6 +905,27 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "resolvePublishedCollectionHelperMemberToken(") !=
         std::string::npos);
   CHECK(semanticsCollectionHelperRewritesSource.find(
+            "canonicalExperimentalVectorHelperPath(normalizedMethod,") !=
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find(
+            "resolvePublishedCollectionHelperMemberToken(\n"
+            "            normalizedMethod,\n"
+            "            StdlibSurfaceId::CollectionsVectorHelpers,\n"
+            "            helperName)") ==
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find(
+            "path.rfind(\"/std/collections/vector/\", 0) == 0") ==
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find(
+            "isStdNamespacedVectorCompatibilityHelperPath(path, helperName)") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find(
+            "normalizedPath.find('/') == std::string::npos") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find(
+            "if (isVectorCompatibilityHelperName(normalizedPath))") !=
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find(
             "preferredPublishedCollectionLoweringPath(") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find("bool SemanticsValidator::hasImportedDefinitionPath") !=
