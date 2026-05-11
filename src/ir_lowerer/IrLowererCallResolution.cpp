@@ -12,6 +12,24 @@ namespace {
 
 std::string resolveCallPathWithoutSemanticFallbackProbes(const Expr &expr);
 
+std::string stdCollectionsRoot() {
+  return "/std/collections";
+}
+
+std::string experimentalCollectionMemberRoot(std::string_view collectionName) {
+  return stdCollectionsRoot() + "/experimental_" + std::string(collectionName) + "/";
+}
+
+std::string experimentalCollectionMemberPath(std::string_view collectionName,
+                                             std::string_view memberName) {
+  return experimentalCollectionMemberRoot(collectionName) + std::string(memberName);
+}
+
+std::string experimentalCollectionSpecializedTypePrefix(std::string_view collectionName,
+                                                        std::string_view typeName) {
+  return experimentalCollectionMemberPath(collectionName, typeName) + "__";
+}
+
 std::string resolveScopedCallPathForHelperMatching(const Expr &expr) {
   if (!expr.name.empty() && expr.name.front() == '/') {
     return expr.name;
@@ -110,10 +128,14 @@ bool isBridgeHelperName(std::string_view collectionFamily, std::string_view help
 }
 
 bool isPublishedCollectionBridgeStdlibSurfaceId(std::optional<StdlibSurfaceId> surfaceId) {
-  return surfaceId.has_value() &&
-         (*surfaceId == StdlibSurfaceId::CollectionsVectorHelpers ||
-          *surfaceId == StdlibSurfaceId::CollectionsMapHelpers ||
-          *surfaceId == StdlibSurfaceId::CollectionsSoaVectorHelpers);
+  if (!surfaceId.has_value()) {
+    return false;
+  }
+  const auto *vectorMetadata =
+      findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
+  return (vectorMetadata != nullptr && *surfaceId == vectorMetadata->id) ||
+         *surfaceId == StdlibSurfaceId::CollectionsMapHelpers ||
+         *surfaceId == StdlibSurfaceId::CollectionsSoaVectorHelpers;
 }
 
 bool isPublishedCollectionBridgeCall(const SemanticProgram *semanticProgram, const Expr &expr) {
@@ -461,11 +483,11 @@ const Definition *preferExplicitExperimentalVectorHelperDefinition(
     const std::string &resolvedPath,
     const std::unordered_map<std::string, const Definition *> &defMap) {
   if (expr.kind != Expr::Kind::Call || expr.isMethodCall ||
-      resolvedPath.rfind("/std/collections/experimental_vector/Vector__", 0) != 0) {
+      resolvedPath.rfind(experimentalCollectionSpecializedTypePrefix("vector", "Vector"), 0) != 0) {
     return nullptr;
   }
   const std::string rawPath = resolveCallPathWithoutSemanticFallbackProbes(expr);
-  if (rawPath != "/std/collections/experimental_vector/vector") {
+  if (rawPath != experimentalCollectionMemberPath("vector", "vector")) {
     return nullptr;
   }
   if (const Definition *rawDef = resolveDefinitionByPath(defMap, rawPath);

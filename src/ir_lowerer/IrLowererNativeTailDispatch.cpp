@@ -9,6 +9,7 @@
 #include "IrLowererTemplateTypeParseHelpers.h"
 
 #include <optional>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -31,6 +32,23 @@ std::string resolveNativeTailCallPathWithoutFallbackProbes(const Expr &expr) {
   return expr.name;
 }
 
+std::string stdCollectionsRoot() {
+  return "/std/collections";
+}
+
+std::string experimentalCollectionMemberRoot(std::string_view collectionName) {
+  return stdCollectionsRoot() + "/experimental_" + std::string(collectionName) + "/";
+}
+
+const StdlibSurfaceMetadata *nativeTailVectorHelperMetadata() {
+  return findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
+}
+
+bool semanticSurfaceMatches(std::optional<StdlibSurfaceId> surfaceId,
+                            const StdlibSurfaceMetadata *metadata) {
+  return surfaceId.has_value() && metadata != nullptr && *surfaceId == metadata->id;
+}
+
 bool resolvePublishedNativeTailHelperName(const SemanticProgram *semanticProgram,
                                           const Expr &expr,
                                           StdlibSurfaceId surfaceId,
@@ -41,6 +59,26 @@ bool resolvePublishedNativeTailHelperName(const SemanticProgram *semanticProgram
              resolveNativeTailCallPathWithoutFallbackProbes(expr),
              surfaceId,
              helperNameOut);
+}
+
+bool resolvePublishedNativeTailVectorHelperName(const SemanticProgram *semanticProgram,
+                                                const Expr &expr,
+                                                std::string &helperNameOut) {
+  const auto *metadata = nativeTailVectorHelperMetadata();
+  return metadata != nullptr &&
+         resolvePublishedNativeTailHelperName(semanticProgram, expr, metadata->id, helperNameOut);
+}
+
+bool isCanonicalPublishedNativeTailVectorHelperPath(std::string_view path) {
+  const auto *metadata = nativeTailVectorHelperMetadata();
+  return metadata != nullptr &&
+         isCanonicalPublishedStdlibSurfaceHelperPath(path, metadata->id);
+}
+
+bool semanticDirectCallMatchesVectorHelperSurface(const SemanticProgram *semanticProgram,
+                                                  const Expr &expr) {
+  return semanticSurfaceMatches(findSemanticProductDirectCallStdlibSurfaceId(semanticProgram, expr),
+                                nativeTailVectorHelperMetadata());
 }
 
 bool isExplicitDirectMapCountContainsTryAtCall(const SemanticProgram *semanticProgram,
@@ -76,11 +114,7 @@ bool isExplicitDirectVectorCountCall(const SemanticProgram *semanticProgram,
     return false;
   }
   std::string helperName;
-  if (!resolvePublishedNativeTailHelperName(
-          semanticProgram,
-          expr,
-          StdlibSurfaceId::CollectionsVectorHelpers,
-          helperName) ||
+  if (!resolvePublishedNativeTailVectorHelperName(semanticProgram, expr, helperName) ||
       helperName != "count") {
     return false;
   }
@@ -133,15 +167,11 @@ bool isDirectExperimentalVectorAccessImplementationCall(
     return false;
   }
   const std::string rawPath = resolveNativeTailCallPathWithoutFallbackProbes(expr);
-  if (rawPath.rfind("/std/collections/experimental_vector/", 0) != 0) {
+  if (rawPath.rfind(experimentalCollectionMemberRoot("vector"), 0) != 0) {
     return false;
   }
   std::string helperName;
-  return resolvePublishedNativeTailHelperName(
-             semanticProgram,
-             expr,
-             StdlibSurfaceId::CollectionsVectorHelpers,
-             helperName) &&
+  return resolvePublishedNativeTailVectorHelperName(semanticProgram, expr, helperName) &&
          (helperName == "at" || helperName == "at_unsafe");
 }
 
@@ -670,16 +700,9 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     std::string explicitHelperName;
     const bool isExplicitVectorAccessCall =
         !expr.isMethodCall &&
-        resolvePublishedNativeTailHelperName(
-            semanticProgram,
-            expr,
-            StdlibSurfaceId::CollectionsVectorHelpers,
-            explicitHelperName) &&
-        (isCanonicalPublishedStdlibSurfaceHelperPath(
-             directHelperPath,
-             StdlibSurfaceId::CollectionsVectorHelpers) ||
-         findSemanticProductDirectCallStdlibSurfaceId(semanticProgram, expr) ==
-             StdlibSurfaceId::CollectionsVectorHelpers) &&
+        resolvePublishedNativeTailVectorHelperName(semanticProgram, expr, explicitHelperName) &&
+        (isCanonicalPublishedNativeTailVectorHelperPath(directHelperPath) ||
+         semanticDirectCallMatchesVectorHelperSurface(semanticProgram, expr)) &&
         (explicitHelperName == "at" || explicitHelperName == "at_unsafe");
     const bool isExperimentalVectorAccessImplementationCall =
         isDirectExperimentalVectorAccessImplementationCall(semanticProgram, expr);

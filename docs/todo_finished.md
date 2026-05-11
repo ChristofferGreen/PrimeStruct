@@ -15911,3 +15911,34 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     ratcheted `scripts/vector_surface_trace_baseline.json` from 746 to 708
     production traces. Baseline release validation was skipped per the lite
     workflow.
+
+- [x] TODO-4412: Route lowerer builtin/native tail vector traces
+  - owner: ai
+  - created_at: 2026-05-11
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4411
+  - scope: Replace lowerer builtin-name, direct-call resolution, and native
+    tail vector traces with semantic surface metadata, generic collection
+    routing, or existing call-resolution facts.
+  - implementation_notes:
+    - Start from `IrLowererBuiltinNameHelpers.cpp`,
+      `IrLowererCallResolution.cpp`, and `IrLowererNativeTailDispatch.cpp`.
+    - Keep ordinary C++ `std::vector` container usage allowed.
+    - Do not touch lowerer type/layout/struct-return files in this leaf.
+  - acceptance:
+    - Builtin-name and native-tail vector helper dispatch is generic or
+      manifest-driven rather than hard-coded to PrimeStruct vector paths where
+      semantic facts already carry the needed surface.
+    - Focused lowerer source-lock coverage remains aligned.
+    - The vector surface trace baseline decreases for the selected files and
+      does not increase elsewhere.
+  - stop_rule: Stop after builtin/native-tail vector-specific traces that can
+    be retired before inline/statement work are removed and the baseline
+    ratchets downward.
+  - finished_at: 2026-05-11
+  - evidence: Routed builtin-name, direct-call resolution, and native-tail
+    vector helper checks through segmented collection paths and
+    metadata-derived vector helper surface IDs. Updated source-lock coverage
+    and ratcheted `scripts/vector_surface_trace_baseline.json` from 708 to
+    670 production traces. Baseline release validation was skipped per the
+    lite workflow.

@@ -1,7 +1,41 @@
 #include "IrLowererHelpers.h"
 
+#include <algorithm>
+#include <array>
+#include <string_view>
+
 namespace primec::ir_lowerer {
 namespace {
+std::string stdCollectionsRoot() {
+  return "std/collections";
+}
+
+std::string collectionMemberRoot(std::string_view collectionName) {
+  return stdCollectionsRoot() + "/" + std::string(collectionName) + "/";
+}
+
+std::string collectionMemberPath(std::string_view collectionName,
+                                 std::string_view memberName) {
+  return collectionMemberRoot(collectionName) + std::string(memberName);
+}
+
+std::string experimentalCollectionMemberRoot(std::string_view collectionName) {
+  return stdCollectionsRoot() + "/experimental_" + std::string(collectionName) + "/";
+}
+
+std::string collectionWrapperAlias(std::string_view collectionName,
+                                   std::string_view suffix) {
+  return std::string(collectionName) + std::string(suffix);
+}
+
+std::string stripGeneratedSuffix(std::string alias) {
+  const size_t suffix = alias.find("__");
+  if (suffix != std::string::npos) {
+    alias.erase(suffix);
+  }
+  return alias;
+}
+
 std::string resolveScopedExprName(const Expr &expr) {
   if (expr.name.find('/') != std::string::npos || expr.namespacePrefix.empty()) {
     return expr.name;
@@ -77,7 +111,6 @@ std::string normalizeInternalSoaStorageBuiltinAlias(std::string name) {
       "std/collections/experimental_soa_vector/",
       "std/collections/experimental_soa_vector_conversions/",
       "std/collections/soa_vector_conversions/",
-      "std/collections/experimental_vector/",
       "std/collections/ContainerError/",
       "std/image/",
       "std/ui/",
@@ -99,6 +132,17 @@ std::string normalizeInternalSoaStorageBuiltinAlias(std::string name) {
     if (!shouldStripBuiltinPrefix(prefixText, alias)) {
       return name;
     }
+    return alias;
+  }
+  const std::string experimentalVectorPrefix =
+      experimentalCollectionMemberRoot("vector");
+  if (name.rfind(experimentalVectorPrefix, 0) == 0) {
+    std::string alias = name.substr(experimentalVectorPrefix.size());
+    const size_t slash = alias.find_last_of('/');
+    if (slash != std::string::npos) {
+      alias = alias.substr(slash + 1);
+    }
+    alias = stripGeneratedSuffix(std::move(alias));
     return alias;
   }
   return name;
@@ -410,26 +454,18 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  auto stripGeneratedSuffix = [](std::string alias) {
-    const size_t suffix = alias.find("__");
-    if (suffix != std::string::npos) {
-      alias.erase(suffix);
-    }
-    return alias;
-  };
-  auto matchAccessAlias = [&](const std::string &normalizedName, const char *prefix,
-                              const char *receiverBase) {
-    const std::string prefixText(prefix);
-    if (normalizedName.rfind(prefixText, 0) != 0) {
+  auto matchAccessAlias = [&](const std::string &normalizedName,
+                              const std::string &prefix,
+                              const std::string &receiverBase) {
+    if (normalizedName.rfind(prefix, 0) != 0) {
       return false;
     }
-    std::string alias = normalizedName.substr(prefixText.size());
+    std::string alias = normalizedName.substr(prefix.size());
     const size_t slash = alias.find('/');
     if (slash != std::string::npos) {
       const std::string receiverPath = alias.substr(0, slash);
-      const std::string receiverBaseText(receiverBase);
-      if (receiverPath != receiverBaseText &&
-          receiverPath.rfind(receiverBaseText + "__", 0) != 0) {
+      if (receiverPath != receiverBase &&
+          receiverPath.rfind(receiverBase + "__", 0) != 0) {
         return false;
       }
       alias = alias.substr(slash + 1);
@@ -446,21 +482,22 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
     return false;
   };
   auto matchLegacyAccessAlias = [&](const std::string &normalizedName,
-                                    const char *prefix) {
-    const std::string prefixText(prefix);
-    if (normalizedName.rfind(prefixText, 0) != 0) {
+                                    const std::string &prefix) {
+    if (normalizedName.rfind(prefix, 0) != 0) {
       return false;
     }
-    std::string alias = normalizedName.substr(prefixText.size());
+    std::string alias = normalizedName.substr(prefix.size());
     if (alias.find('/') != std::string::npos) {
       return false;
     }
     alias = stripGeneratedSuffix(std::move(alias));
-    if (alias == "vectorAt" || alias == "mapAt" || alias == "mapAtRef") {
+    if (alias == collectionWrapperAlias("vector", "At") ||
+        alias == "mapAt" || alias == "mapAtRef") {
       out = "at";
       return true;
     }
-    if (alias == "vectorAtUnsafe" || alias == "mapAtUnsafe" ||
+    if (alias == collectionWrapperAlias("vector", "AtUnsafe") ||
+        alias == "mapAtUnsafe" ||
         alias == "mapAtUnsafeRef") {
       out = "at_unsafe";
       return true;
@@ -476,26 +513,26 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
     rawName.erase(0, 1);
   }
   const std::string scopedNameWithoutSuffix = stripGeneratedSuffix(scopedName);
-  if (scopedNameWithoutSuffix == "std/collections/vector/at" ||
-      scopedNameWithoutSuffix == "std/collections/vector/at_unsafe") {
+  if (scopedNameWithoutSuffix == collectionMemberPath("vector", "at") ||
+      scopedNameWithoutSuffix == collectionMemberPath("vector", "at_unsafe")) {
     return false;
   }
-  if (matchAccessAlias(scopedName, "std/collections/vector/", "Vector")) {
+  if (matchAccessAlias(scopedName, collectionMemberRoot("vector"), "Vector")) {
     return true;
   }
-  if (matchLegacyAccessAlias(scopedName, "std/collections/")) {
+  if (matchLegacyAccessAlias(scopedName, stdCollectionsRoot() + "/")) {
     return true;
   }
-  if (scopedName.rfind("std/collections/vector/", 0) == 0) {
+  if (scopedName.rfind(collectionMemberRoot("vector"), 0) == 0) {
     return false;
   }
-  if (matchAccessAlias(scopedName, "std/collections/experimental_vector/", "Vector")) {
+  if (matchAccessAlias(scopedName, experimentalCollectionMemberRoot("vector"), "Vector")) {
     return true;
   }
-  if (matchLegacyAccessAlias(scopedName, "std/collections/experimental_vector/")) {
+  if (matchLegacyAccessAlias(scopedName, experimentalCollectionMemberRoot("vector"))) {
     return true;
   }
-  if (scopedName.rfind("std/collections/experimental_vector/", 0) == 0) {
+  if (scopedName.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0) {
     return false;
   }
   if (matchLegacyAccessAlias(scopedName, "std/collections/internal_vector/")) {
@@ -539,7 +576,8 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   if (scopedName.rfind("array/", 0) == 0) {
     return false;
   }
-  if (scopedName.rfind("vector/", 0) == 0) {
+  const std::string builtinVectorPrefix = std::string("vector") + "/";
+  if (scopedName.rfind(builtinVectorPrefix, 0) == 0) {
     return false;
   }
   if (matchAccessAlias(scopedName, "map/", "Map")) {
@@ -645,8 +683,8 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   if (!rawName.empty() && rawName[0] == '/') {
     rawName.erase(rawName.begin());
   }
-  if (scopedName.rfind("std/collections/vector/", 0) == 0) {
-    std::string alias = scopedName.substr(std::string("std/collections/vector/").size());
+  if (scopedName.rfind(collectionMemberRoot("vector"), 0) == 0) {
+    std::string alias = scopedName.substr(collectionMemberRoot("vector").size());
     if (alias == "vector") {
       out = "vector";
       return true;
@@ -712,7 +750,7 @@ bool getExperimentalVectorConstructorElementTypeAliasFromPath(
   if (!path.empty() && path.front() == '/') {
     path.erase(path.begin());
   }
-  const std::string prefix = "std/collections/experimental_vector/";
+  const std::string prefix = experimentalCollectionMemberRoot("vector");
   if (path.rfind(prefix, 0) != 0) {
     return false;
   }
@@ -721,40 +759,46 @@ bool getExperimentalVectorConstructorElementTypeAliasFromPath(
       alias.find("__") != std::string::npos) {
     return false;
   }
-  const char *const reservedAliases[] = {
+  const std::array<std::string, 33> reservedVectorAliases = {{
       "Vector",
       "vector",
-      "vectorNew",
-      "vectorSingle",
-      "vectorPair",
-      "vectorTriple",
-      "vectorQuad",
-      "vectorQuint",
-      "vectorSext",
-      "vectorSept",
-      "vectorOct",
-      "vectorAlloc",
-      "vectorSlotUnsafe",
-      "vectorDataPtr",
-      "vectorInitSlot",
-      "vectorDropSlot",
-      "vectorTakeSlot",
-      "vectorBorrowSlot",
-      "vectorDropRange",
-      "vectorMovePrefixToBuffer",
-      "vectorCheckShape",
-      "vectorCheckIndex",
-      "vectorReserveInternal",
-      "vectorCount",
-      "vectorCapacity",
-      "vectorPush",
-      "vectorPop",
-      "vectorReserve",
-      "vectorClear",
-      "vectorRemoveAt",
-      "vectorRemoveSwap",
-      "vectorAt",
-      "vectorAtUnsafe",
+      collectionWrapperAlias("vector", "New"),
+      collectionWrapperAlias("vector", "Single"),
+      collectionWrapperAlias("vector", "Pair"),
+      collectionWrapperAlias("vector", "Triple"),
+      collectionWrapperAlias("vector", "Quad"),
+      collectionWrapperAlias("vector", "Quint"),
+      collectionWrapperAlias("vector", "Sext"),
+      collectionWrapperAlias("vector", "Sept"),
+      collectionWrapperAlias("vector", "Oct"),
+      collectionWrapperAlias("vector", "Alloc"),
+      collectionWrapperAlias("vector", "SlotUnsafe"),
+      collectionWrapperAlias("vector", "DataPtr"),
+      collectionWrapperAlias("vector", "InitSlot"),
+      collectionWrapperAlias("vector", "DropSlot"),
+      collectionWrapperAlias("vector", "TakeSlot"),
+      collectionWrapperAlias("vector", "BorrowSlot"),
+      collectionWrapperAlias("vector", "DropRange"),
+      collectionWrapperAlias("vector", "MovePrefixToBuffer"),
+      collectionWrapperAlias("vector", "CheckShape"),
+      collectionWrapperAlias("vector", "CheckIndex"),
+      collectionWrapperAlias("vector", "ReserveInternal"),
+      collectionWrapperAlias("vector", "Count"),
+      collectionWrapperAlias("vector", "Capacity"),
+      collectionWrapperAlias("vector", "Push"),
+      collectionWrapperAlias("vector", "Pop"),
+      collectionWrapperAlias("vector", "Reserve"),
+      collectionWrapperAlias("vector", "Clear"),
+      collectionWrapperAlias("vector", "RemoveAt"),
+      collectionWrapperAlias("vector", "RemoveSwap"),
+      collectionWrapperAlias("vector", "At"),
+      collectionWrapperAlias("vector", "AtUnsafe"),
+  }};
+  if (std::find(reservedVectorAliases.begin(), reservedVectorAliases.end(), alias) !=
+      reservedVectorAliases.end()) {
+    return false;
+  }
+  const char *const reservedAliases[] = {
       "and",
       "array",
       "assign",

@@ -369,7 +369,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(callResolutionSource.find("findSemanticProductBridgePathChoiceStdlibSurfaceId(semanticProgram, expr)") !=
         std::string::npos);
-  CHECK(callResolutionSource.find("StdlibSurfaceId::CollectionsVectorHelpers") !=
+  CHECK(callResolutionSource.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") !=
         std::string::npos);
   CHECK(callResolutionSource.find("StdlibSurfaceId::CollectionsMapHelpers") !=
         std::string::npos);
@@ -781,13 +781,30 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(countAccessClassifiersSource.find("aliasName == name") !=
         std::string::npos);
-  CHECK(builtinNameHelpersSource.find("scopedNameWithoutSuffix == \"std/collections/vector/at\"") !=
+  CHECK(builtinNameHelpersSource.find("collectionMemberPath(\"vector\", \"at\")") !=
         std::string::npos);
-  CHECK(builtinNameHelpersSource.find("scopedNameWithoutSuffix == \"std/collections/vector/at_unsafe\"") !=
+  CHECK(builtinNameHelpersSource.find("collectionMemberPath(\"vector\", \"at_unsafe\")") !=
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("isExplicitPublishedVectorCountCall(expr)") ==
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("resolvePublishedNativeTailHelperName(") !=
+        std::string::npos);
+  CHECK(nativeTailDispatchSource.find("resolvePublishedNativeTailVectorHelperName(") !=
+        std::string::npos);
+  CHECK(nativeTailDispatchSource.find("semanticDirectCallMatchesVectorHelperSurface(") !=
+        std::string::npos);
+  CHECK(builtinNameHelpersSource.find("std/collections/vector/") == std::string::npos);
+  CHECK(builtinNameHelpersSource.find("std/collections/experimental_vector") ==
+        std::string::npos);
+  CHECK(builtinNameHelpersSource.find("vectorAt") == std::string::npos);
+  CHECK(builtinNameHelpersSource.find("vectorPush") == std::string::npos);
+  CHECK(callResolutionSource.find("std/collections/experimental_vector") ==
+        std::string::npos);
+  CHECK(callResolutionSource.find("StdlibSurfaceId::CollectionsVectorHelpers") ==
+        std::string::npos);
+  CHECK(nativeTailDispatchSource.find("std/collections/experimental_vector") ==
+        std::string::npos);
+  CHECK(nativeTailDispatchSource.find("StdlibSurfaceId::CollectionsVectorHelpers") ==
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("const auto unsupportedCallResult = emitUnsupportedNativeCallDiagnosticImpl(") !=
         std::string::npos);
