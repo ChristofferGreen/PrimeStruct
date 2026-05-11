@@ -10,6 +10,8 @@ using BindingInfo = Emitter::BindingInfo;
 
 namespace {
 
+constexpr std::string_view VectorHelperSurfaceBridgeKey = "collections.vector_helpers";
+
 std::string inferSoaReceiverTypeFromBinding(const BindingInfo &binding) {
   auto classifyTypeText = [&](const std::string &typeText) -> std::string {
     std::string normalized = normalizeBindingTypeName(typeText);
@@ -209,8 +211,13 @@ bool resolveMethodCallPath(const Expr &call,
   if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
     normalizedMethodName.erase(normalizedMethodName.begin());
   }
+  std::string explicitVectorMethodName;
   const bool isExplicitStdlibVectorMethod =
-      normalizedMethodName.rfind("std/collections/vector/", 0) == 0;
+      resolvePublishedCollectionSurfacePathMemberName(
+          normalizedMethodName,
+          VectorHelperSurfaceBridgeKey,
+          false,
+          explicitVectorMethodName);
   const bool isExplicitMapAliasMethod = normalizedMethodName.rfind("map/", 0) == 0;
   const bool isExplicitStdlibMapMethod =
       normalizedMethodName.rfind("std/collections/map/", 0) == 0;
@@ -219,9 +226,8 @@ bool resolveMethodCallPath(const Expr &call,
       normalizedMethodName.rfind("std/collections/soa_vector/", 0) == 0;
   if (normalizedMethodName.rfind("array/", 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(std::string("array/").size());
-  } else if (normalizedMethodName.rfind("std/collections/vector/", 0) == 0) {
-    normalizedMethodName =
-        normalizedMethodName.substr(std::string("std/collections/vector/").size());
+  } else if (isExplicitStdlibVectorMethod) {
+    normalizedMethodName = explicitVectorMethodName;
   } else if (normalizedMethodName.rfind("soa_vector/", 0) == 0) {
     normalizedMethodName =
         normalizedMethodName.substr(std::string("soa_vector/").size());
@@ -236,9 +242,9 @@ bool resolveMethodCallPath(const Expr &call,
   }
   if (isExplicitStdlibVectorMethod) {
     const std::string explicitPath =
-        std::string("/") +
-        "std/collections/vector/" +
-        normalizedMethodName;
+        publishedCollectionSurfaceHelperPath(
+            VectorHelperSurfaceBridgeKey,
+            normalizedMethodName);
     if (hasDefinitionOrMetadata(metadataView, explicitPath)) {
       resolvedOut = explicitPath;
       return true;
@@ -580,7 +586,13 @@ bool resolveMethodCallPath(const Expr &call,
     const bool isCountLikeMethod = normalizedMethodName == "count";
     const bool isCapacityLikeMethod = normalizedMethodName == "capacity";
     if (isCountLikeMethod || isCapacityLikeMethod) {
-      const std::string canonicalPath = "/std/collections/vector/" + normalizedMethodName;
+      const std::string canonicalPath =
+          publishedCollectionSurfaceHelperPath(
+              VectorHelperSurfaceBridgeKey,
+              normalizedMethodName);
+      if (canonicalPath.empty()) {
+        return false;
+      }
       if (isExplicitStdlibVectorMethod &&
           !hasDefinitionOrMetadata(metadataView, canonicalPath)) {
         return false;

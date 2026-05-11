@@ -182,6 +182,48 @@ bool resolvePublishedCollectionSurfaceMemberToken(std::string_view memberToken,
   return resolveSurfaceMemberToken(*metadata, memberToken, memberNameOut);
 }
 
+const StdlibSurfaceMetadata *findPublishedCollectionHelperSurfaceMetadataByBridgeKey(
+    std::string_view bridgeKey) {
+  const auto *metadata = findStdlibSurfaceMetadataByBridgeKey(bridgeKey);
+  if (metadata == nullptr ||
+      metadata->domain != StdlibSurfaceDomain::Collections ||
+      metadata->shape != StdlibSurfaceShape::HelperFamily) {
+    return nullptr;
+  }
+  return metadata;
+}
+
+bool resolvePublishedCollectionSurfacePathMemberName(std::string_view path,
+                                                     std::string_view bridgeKey,
+                                                     bool includeImportAliases,
+                                                     std::string &memberNameOut) {
+  memberNameOut.clear();
+  const auto *metadata =
+      findPublishedCollectionHelperSurfaceMetadataByBridgeKey(bridgeKey);
+  if (metadata == nullptr) {
+    return false;
+  }
+  std::string_view suffix;
+  if (!surfaceMemberSuffix(path, *metadata, includeImportAliases, suffix)) {
+    return false;
+  }
+  return resolveSurfaceMemberToken(*metadata, suffix, memberNameOut);
+}
+
+std::string publishedCollectionSurfaceHelperPath(std::string_view bridgeKey,
+                                                 std::string_view memberName) {
+  const auto *metadata =
+      findPublishedCollectionHelperSurfaceMetadataByBridgeKey(bridgeKey);
+  if (metadata == nullptr) {
+    return {};
+  }
+  std::string resolvedMemberName;
+  if (!resolveSurfaceMemberToken(*metadata, memberName, resolvedMemberName)) {
+    return {};
+  }
+  return std::string(metadata->canonicalPath) + "/" + resolvedMemberName;
+}
+
 bool resolvePublishedCollectionSurfaceExprMemberName(const Expr &expr,
                                                      StdlibSurfaceId surfaceId,
                                                      std::string &memberNameOut) {

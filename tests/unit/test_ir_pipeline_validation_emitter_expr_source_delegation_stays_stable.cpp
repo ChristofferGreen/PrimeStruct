@@ -2893,6 +2893,8 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
       repoRoot / "src" / "emitter" / "EmitterBuiltinCallPathHelpers.cpp";
   const std::filesystem::path methodResolutionHelpersPath =
       repoRoot / "src" / "emitter" / "EmitterBuiltinMethodResolutionHelpers.cpp";
+  const std::filesystem::path methodResolutionTypeInferenceHelpersPath =
+      repoRoot / "src" / "emitter" / "EmitterBuiltinMethodResolutionTypeInferenceHelpers.cpp";
   const std::filesystem::path exprControlCallPathStepPath =
       repoRoot / "src" / "emitter" / "EmitterExprControlCallPathStep.cpp";
 
@@ -2900,15 +2902,25 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
   REQUIRE(std::filesystem::exists(metadataHelpersPath));
   REQUIRE(std::filesystem::exists(callPathHelpersPath));
   REQUIRE(std::filesystem::exists(methodResolutionHelpersPath));
+  REQUIRE(std::filesystem::exists(methodResolutionTypeInferenceHelpersPath));
   REQUIRE(std::filesystem::exists(exprControlCallPathStepPath));
 
   const std::string metadataHeaderSource = readText(metadataHeaderPath);
   const std::string metadataHelpersSource = readText(metadataHelpersPath);
   const std::string callPathHelpersSource = readText(callPathHelpersPath);
   const std::string methodResolutionHelpersSource = readText(methodResolutionHelpersPath);
+  const std::string methodResolutionTypeInferenceHelpersSource =
+      readText(methodResolutionTypeInferenceHelpersPath);
   const std::string exprControlCallPathStepSource = readText(exprControlCallPathStepPath);
 
   CHECK(metadataHeaderSource.find("bool resolvePublishedCollectionSurfaceMemberToken(") !=
+        std::string::npos);
+  CHECK(metadataHeaderSource.find(
+            "const StdlibSurfaceMetadata *findPublishedCollectionHelperSurfaceMetadataByBridgeKey(") !=
+        std::string::npos);
+  CHECK(metadataHeaderSource.find("bool resolvePublishedCollectionSurfacePathMemberName(") !=
+        std::string::npos);
+  CHECK(metadataHeaderSource.find("std::string publishedCollectionSurfaceHelperPath(") !=
         std::string::npos);
   CHECK(metadataHeaderSource.find("bool resolvePublishedCollectionSurfaceExprMemberName(") !=
         std::string::npos);
@@ -2918,6 +2930,11 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
         std::string::npos);
 
   CHECK(metadataHelpersSource.find("findPublishedCollectionSurfaceMetadata(") !=
+        std::string::npos);
+  CHECK(metadataHelpersSource.find(
+            "findPublishedCollectionHelperSurfaceMetadataByBridgeKey(") !=
+        std::string::npos);
+  CHECK(metadataHelpersSource.find("publishedCollectionSurfaceHelperPath(") !=
         std::string::npos);
   CHECK(metadataHelpersSource.find("collections.vector_helpers") !=
         std::string::npos);
@@ -2966,9 +2983,26 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
         std::string::npos);
   CHECK(methodResolutionHelpersSource.find("removedCollectionAliasNeedsDefinitionPath(") !=
         std::string::npos);
+  CHECK(methodResolutionHelpersSource.find("resolvePublishedCollectionSurfacePathMemberName(") !=
+        std::string::npos);
+  CHECK(methodResolutionHelpersSource.find("publishedCollectionSurfaceHelperPath(") !=
+        std::string::npos);
+  CHECK(methodResolutionHelpersSource.find("std/collections/vector/") == std::string::npos);
+  CHECK(methodResolutionHelpersSource.find("StdlibSurfaceId::CollectionsVectorHelpers") ==
+        std::string::npos);
   CHECK(methodResolutionHelpersSource.find("bool isRemovedCollectionMethodAlias(") ==
         std::string::npos);
   CHECK(methodResolutionHelpersSource.find("bool removedCollectionAliasNeedsDefinition(") ==
+        std::string::npos);
+
+  CHECK(methodResolutionTypeInferenceHelpersSource.find("vectorHelperMemberNameFromPath(") !=
+        std::string::npos);
+  CHECK(methodResolutionTypeInferenceHelpersSource.find("vectorHelperPath(") !=
+        std::string::npos);
+  CHECK(methodResolutionTypeInferenceHelpersSource.find("std/collections/vector/") ==
+        std::string::npos);
+  CHECK(methodResolutionTypeInferenceHelpersSource.find(
+            "StdlibSurfaceId::CollectionsVectorHelpers") ==
         std::string::npos);
 
   CHECK(exprControlCallPathStepSource.find("normalizeMapImportAliasPath(importIt->second)") !=

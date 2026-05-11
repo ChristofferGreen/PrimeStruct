@@ -40,19 +40,9 @@
       "count": 2
     },
     {
-      "path": "src/emitter/EmitterBuiltinMethodResolutionHelpers.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 5
-    },
-    {
       "path": "src/emitter/EmitterBuiltinMethodResolutionMetadataHelpers.cpp",
       "pattern": "experimental-vector-path",
       "count": 1
-    },
-    {
-      "path": "src/emitter/EmitterBuiltinMethodResolutionTypeInferenceHelpers.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 13
     },
     {
       "path": "src/emitter/EmitterEmitBodyVectorHelpers.h",

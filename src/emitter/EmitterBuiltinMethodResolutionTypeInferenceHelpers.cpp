@@ -8,12 +8,44 @@
 namespace primec::emitter {
 namespace {
 
+constexpr std::string_view VectorHelperSurfaceBridgeKey = "collections.vector_helpers";
+
 std::string resolvedCollectionHelperName(const Expr &candidate) {
   std::string normalized = resolveExprPath(candidate);
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
   return normalized;
+}
+
+bool isVectorAccessHelperMemberName(std::string_view memberName) {
+  return memberName == "at" || memberName == "at_unsafe";
+}
+
+bool isVectorCountCapacityHelperMemberName(std::string_view memberName) {
+  return memberName == "count" || memberName == "capacity";
+}
+
+std::string vectorHelperMemberNameFromPath(std::string_view path) {
+  std::string memberName;
+  if (!resolvePublishedCollectionSurfacePathMemberName(
+          path,
+          VectorHelperSurfaceBridgeKey,
+          false,
+          memberName)) {
+    return "";
+  }
+  return memberName;
+}
+
+std::string vectorHelperMemberNameFromExpr(const Expr &candidate) {
+  return vectorHelperMemberNameFromPath(resolvedCollectionHelperName(candidate));
+}
+
+std::string vectorHelperPath(std::string_view memberName) {
+  return publishedCollectionSurfaceHelperPath(
+      VectorHelperSurfaceBridgeKey,
+      memberName);
 }
 
 bool isSoaVectorReceiverTypeNameLocal(const std::string &typeName) {
@@ -170,9 +202,8 @@ std::string inferMethodResolutionPrimitiveTypeName(
         candidate.args.empty()) {
       return false;
     }
-    const std::string normalized = resolvedCollectionHelperName(candidate);
-    if (normalized != "std/collections/vector/at" &&
-        normalized != "std/collections/vector/at_unsafe") {
+    const std::string memberName = vectorHelperMemberNameFromExpr(candidate);
+    if (!isVectorAccessHelperMemberName(memberName)) {
       return false;
     }
     const Expr &receiverExpr = candidate.args.front();
@@ -190,7 +221,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     if (!isBareVectorAccessMethod(candidate)) {
       return "";
     }
-    const std::string canonicalPath = "/std/collections/vector/" + candidate.name;
+    const std::string canonicalPath = vectorHelperPath(candidate.name);
     if (hasDefinitionOrMetadata(view, canonicalPath)) {
       return canonicalPath;
     }
@@ -258,8 +289,8 @@ std::string inferMethodResolutionPrimitiveTypeName(
       return false;
     }
     const std::string normalized = resolvedCollectionHelperName(candidate);
-    if (normalized != "std/collections/vector/at" &&
-        normalized != "std/collections/vector/at_unsafe") {
+    const std::string memberName = vectorHelperMemberNameFromPath(normalized);
+    if (!isVectorAccessHelperMemberName(memberName)) {
       return false;
     }
     if (view.defMap.find("/" + normalized) != view.defMap.end()) {
@@ -277,9 +308,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return false;
     }
-    const std::string normalized = resolvedCollectionHelperName(candidate);
-    return normalized == "std/collections/vector/count" ||
-           normalized == "std/collections/vector/capacity";
+    return isVectorCountCapacityHelperMemberName(vectorHelperMemberNameFromExpr(candidate));
   };
   auto inferExplicitVectorAccessCompatibilityTypeName = [&](const Expr &candidate) -> std::string {
     if (!isExplicitVectorAccessCompatibilityCall(candidate)) {
@@ -314,15 +343,12 @@ std::string inferMethodResolutionPrimitiveTypeName(
     if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
       return "";
     }
-    const std::string normalized = resolvedCollectionHelperName(candidate);
-    if (normalized != "std/collections/vector/at" &&
-        normalized != "std/collections/vector/at_unsafe") {
+    if (!isVectorAccessHelperMemberName(vectorHelperMemberNameFromExpr(candidate))) {
       return "";
     }
 
     const std::string resolvedExprPath = resolveExprPath(candidate);
-    if (resolvedExprPath == "/std/collections/vector/at" ||
-        resolvedExprPath == "/std/collections/vector/at_unsafe") {
+    if (isVectorAccessHelperMemberName(vectorHelperMemberNameFromPath(resolvedExprPath))) {
       return typeNameFromResolvedCandidates(view, collectionHelperPathCandidates(resolvedExprPath));
     }
     return "";
@@ -358,8 +384,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
       return false;
     }
     const std::string resolvedExprPath = resolveExprPath(candidate);
-    return resolvedExprPath == "/std/collections/vector/at" ||
-           resolvedExprPath == "/std/collections/vector/at_unsafe";
+    return isVectorAccessHelperMemberName(vectorHelperMemberNameFromPath(resolvedExprPath));
   };
   auto inferCanonicalMapAccessTypeName = [&](const Expr &candidate) -> std::string {
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {

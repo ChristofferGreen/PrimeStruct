@@ -16,6 +16,14 @@ struct MethodResolutionMetadataView {
 bool resolvePublishedCollectionSurfaceMemberToken(std::string_view memberToken,
                                                   StdlibSurfaceId surfaceId,
                                                   std::string &memberNameOut);
+const StdlibSurfaceMetadata *findPublishedCollectionHelperSurfaceMetadataByBridgeKey(
+    std::string_view bridgeKey);
+bool resolvePublishedCollectionSurfacePathMemberName(std::string_view path,
+                                                     std::string_view bridgeKey,
+                                                     bool includeImportAliases,
+                                                     std::string &memberNameOut);
+std::string publishedCollectionSurfaceHelperPath(std::string_view bridgeKey,
+                                                 std::string_view memberName);
 bool resolvePublishedCollectionSurfaceExprMemberName(const Expr &expr,
                                                      StdlibSurfaceId surfaceId,
                                                      std::string &memberNameOut);

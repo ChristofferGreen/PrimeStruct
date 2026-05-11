@@ -15696,3 +15696,35 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     collection surface metadata. Updated source-lock coverage and ratcheted
     `scripts/vector_surface_trace_baseline.json` from 830 to 820 production
     traces. Baseline release validation was skipped per the lite workflow.
+
+- [x] TODO-4406: Route emitter method-resolution vector traces
+  - owner: ai
+  - created_at: 2026-05-11
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4405
+  - scope: Replace remaining PrimeStruct-vector-specific method-resolution
+    traces in `EmitterBuiltinMethodResolutionHelpers.cpp` and
+    `EmitterBuiltinMethodResolutionTypeInferenceHelpers.cpp` with generic
+    collection metadata or manifest-driven helper lookups.
+  - implementation_notes:
+    - Start from the `canonical-vector-path` entries for the two method
+      resolution files in `scripts/vector_surface_trace_baseline.json`.
+    - Keep ordinary C++ `std::vector` container usage allowed.
+    - Do not touch lowerer files in this leaf.
+  - acceptance:
+    - Method-resolution vector helper dispatch is generic or manifest-driven
+      rather than hard-coded to PrimeStruct vector paths where metadata already
+      carries the needed surface.
+    - Focused emitter source-lock or compile-run coverage remains aligned.
+    - The vector surface trace baseline decreases for the selected method
+      resolution files and does not increase elsewhere.
+  - stop_rule: Stop after method-resolution vector-specific traces that can be
+    retired before return/setup work are removed and the baseline ratchets
+    downward.
+  - finished_at: 2026-05-11
+  - evidence: Routed explicit vector method matching, canonical helper path
+    construction, vector access inference, and count/capacity direct-call
+    recognition through collection surface metadata. Updated source-lock
+    coverage and ratcheted `scripts/vector_surface_trace_baseline.json` from
+    820 to 802 production traces. Baseline release validation was skipped per
+    the lite workflow.
