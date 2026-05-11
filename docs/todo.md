@@ -72,11 +72,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4411: Route lowerer count/access vector traces
+- TODO-4412: Route lowerer builtin/native tail vector traces
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4412: Route lowerer builtin/native tail vector traces
 - TODO-4413: Route lowerer inline/emit vector traces
 - TODO-4414: Route lowerer statement-call vector traces
 - TODO-4404: Route lowerer vector type and layout traces
@@ -86,13 +85,14 @@ Task template:
 - TODO-4301: Lower map helpers through ordinary `.prime`
 - TODO-4302: Move map surface metadata out of C++
 - TODO-4303: Delete map compatibility seams
+- TODO-4304: Add zero C++ map-surface audit
 
 ### Priority Lanes (Current)
 
 - Semantic ownership authority: none active; future semantic-authority work
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
-- Vector stdlib ownership cutover: TODO-4411 -> TODO-4412 -> TODO-4413
+- Vector stdlib ownership cutover: TODO-4412 -> TODO-4413
   -> TODO-4414 -> TODO-4404 -> TODO-4373
 - Map stdlib ownership cutover: TODO-4299 -> TODO-4300 -> TODO-4301
   -> TODO-4302 -> TODO-4303 -> TODO-4304
@@ -112,7 +112,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4411: Route lowerer count/access vector traces
 - TODO-4412: Route lowerer builtin/native tail vector traces
 - TODO-4413: Route lowerer inline/emit vector traces
 - TODO-4414: Route lowerer statement-call vector traces
@@ -179,9 +178,9 @@ Task template:
 | Compile-pipeline stage and publication-boundary contracts | none |
 | Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4299, TODO-4305 |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4411, TODO-4412, TODO-4413, TODO-4414, TODO-4404, TODO-4373, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4411, TODO-4412, TODO-4413, TODO-4414, TODO-4404, TODO-4373, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
-| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4411, TODO-4412, TODO-4413, TODO-4414, TODO-4404, TODO-4373, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
+| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4412, TODO-4413, TODO-4414, TODO-4404, TODO-4373, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4412, TODO-4413, TODO-4414, TODO-4404, TODO-4373, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4412, TODO-4413, TODO-4414, TODO-4404, TODO-4373, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
@@ -210,8 +209,8 @@ Task template:
 | Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
-| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4411, TODO-4412, TODO-4413, TODO-4414, TODO-4404, TODO-4373, TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
-| De-experimentalization surface and namespace parity | TODO-4411, TODO-4412, TODO-4413, TODO-4414, TODO-4404, TODO-4373, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
+| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4412, TODO-4413, TODO-4414, TODO-4404, TODO-4373, TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| De-experimentalization surface and namespace parity | TODO-4412, TODO-4413, TODO-4414, TODO-4404, TODO-4373, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
@@ -246,7 +245,7 @@ Task template:
   metadata is now owned by `stdlib/std/collections/surfaces.psmeta`, and the
   registry no longer advertises vector compatibility spellings through that
   manifest. Direct experimental vector source imports are now rejected, and
-  TODO-4411 through TODO-4414, TODO-4404, and TODO-4373 handle the
+  TODO-4412 through TODO-4414, TODO-4404, and TODO-4373 handle the
   remaining production C++ vector trace removal and final zero-vector audit
   tightening.
   TODO-4299 through TODO-4304 apply the same ownership model to map while
@@ -1646,30 +1645,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
-
-- [ ] TODO-4411: Route lowerer count/access vector traces
-  - owner: ai
-  - created_at: 2026-05-11
-  - phase: Vector stdlib ownership cutover
-  - depends_on: TODO-4410
-  - scope: Replace lowerer count/access and flow vector resolution traces with
-    semantic surface metadata, generic collection routing, or existing
-    call-resolution facts.
-  - implementation_notes:
-    - Start from `IrLowererCountAccess*` and
-      `IrLowererFlowVectorResolutionHelpers.cpp`.
-    - Keep ordinary C++ `std::vector` container usage allowed.
-    - Do not touch lowerer type/layout/struct-return files in this leaf.
-  - acceptance:
-    - Count/access vector helper dispatch is generic or manifest-driven rather
-      than hard-coded to PrimeStruct vector paths where semantic facts already
-      carry the needed surface.
-    - Focused lowerer source-lock coverage remains aligned.
-    - The vector surface trace baseline decreases for the selected
-      count/access files and does not increase elsewhere.
-  - stop_rule: Stop after count/access vector-specific traces that can be
-    retired before native-tail and inline work are removed and the baseline
-    ratchets downward.
 
 - [ ] TODO-4412: Route lowerer builtin/native tail vector traces
   - owner: ai

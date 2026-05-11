@@ -37,6 +37,8 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
       repoRoot / "src" / "ir_lowerer" / "IrLowererCountAccessClassifiers.cpp";
   const std::filesystem::path countAccessHelpersPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererCountAccessHelpers.cpp";
+  const std::filesystem::path flowVectorResolutionHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererFlowVectorResolutionHelpers.cpp";
   const std::filesystem::path nativeTailDispatchPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererNativeTailDispatch.cpp";
   const std::filesystem::path tailDispatchPath =
@@ -64,6 +66,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   REQUIRE(std::filesystem::exists(setupTypeMethodTargetHelpersPath));
   REQUIRE(std::filesystem::exists(countAccessClassifiersPath));
   REQUIRE(std::filesystem::exists(countAccessHelpersPath));
+  REQUIRE(std::filesystem::exists(flowVectorResolutionHelpersPath));
   REQUIRE(std::filesystem::exists(nativeTailDispatchPath));
   REQUIRE(std::filesystem::exists(tailDispatchPath));
   REQUIRE(std::filesystem::exists(lowerStatementsExprPath));
@@ -85,6 +88,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
       readText(setupTypeMethodTargetHelpersPath);
   const std::string countAccessClassifiersSource = readText(countAccessClassifiersPath);
   const std::string countAccessHelpersSource = readText(countAccessHelpersPath);
+  const std::string flowVectorResolutionHelpersSource = readText(flowVectorResolutionHelpersPath);
   const std::string nativeTailDispatchSource = readText(nativeTailDispatchPath);
   const std::string tailDispatchSource = readText(tailDispatchPath);
   const std::string lowerStatementsExprSource = readText(lowerStatementsExprPath);
@@ -690,6 +694,28 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(countAccessHelpersSource.find("bool isExplicitPublishedVectorMetadataCall(const Expr &expr,") !=
         std::string::npos);
+  CHECK(countAccessClassifiersSource.find("canonicalCollectionMemberPath(\"vector\", name)") !=
+        std::string::npos);
+  CHECK(countAccessHelpersSource.find("canonicalCollectionMemberPrefix(\"vector\")") !=
+        std::string::npos);
+  CHECK(flowVectorResolutionHelpersSource.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") !=
+        std::string::npos);
+  CHECK(countAccessClassifiersSource.find("std/collections/vector/") == std::string::npos);
+  CHECK(countAccessHelpersSource.find("std/collections/vector/") == std::string::npos);
+  CHECK(flowVectorResolutionHelpersSource.find("std/collections/vector/") == std::string::npos);
+  CHECK(countAccessClassifiersSource.find("std/collections/experimental_vector") ==
+        std::string::npos);
+  CHECK(countAccessHelpersSource.find("std/collections/experimental_vector") ==
+        std::string::npos);
+  CHECK(flowVectorResolutionHelpersSource.find("std/collections/experimental_vector") ==
+        std::string::npos);
+  CHECK(countAccessClassifiersSource.find("\"/vector/\"") == std::string::npos);
+  CHECK(countAccessHelpersSource.find("\"/vector/\"") == std::string::npos);
+  CHECK(flowVectorResolutionHelpersSource.find("\"/vector/\"") == std::string::npos);
+  CHECK(countAccessHelpersSource.find("vectorCount") == std::string::npos);
+  CHECK(countAccessHelpersSource.find("vectorCapacity") == std::string::npos);
+  CHECK(flowVectorResolutionHelpersSource.find("vectorPush") == std::string::npos);
+  CHECK(flowVectorResolutionHelpersSource.find("vectorRemoveSwap") == std::string::npos);
   CHECK(countAccessHelpersSource.find("isVectorCountTarget(expr.args.front(), localsIn)") !=
         std::string::npos);
   const size_t staticStringCountPos =

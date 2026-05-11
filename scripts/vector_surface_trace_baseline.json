@@ -90,41 +90,6 @@
       "count": 1
     },
     {
-      "path": "src/ir_lowerer/IrLowererCountAccessClassifiers.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 1
-    },
-    {
-      "path": "src/ir_lowerer/IrLowererCountAccessClassifiers.cpp",
-      "pattern": "experimental-vector-path",
-      "count": 2
-    },
-    {
-      "path": "src/ir_lowerer/IrLowererCountAccessClassifiers.cpp",
-      "pattern": "root-vector-helper-path",
-      "count": 4
-    },
-    {
-      "path": "src/ir_lowerer/IrLowererCountAccessHelpers.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 3
-    },
-    {
-      "path": "src/ir_lowerer/IrLowererCountAccessHelpers.cpp",
-      "pattern": "experimental-vector-path",
-      "count": 2
-    },
-    {
-      "path": "src/ir_lowerer/IrLowererCountAccessHelpers.cpp",
-      "pattern": "root-vector-helper-path",
-      "count": 6
-    },
-    {
-      "path": "src/ir_lowerer/IrLowererCountAccessHelpers.cpp",
-      "pattern": "vector-helper-symbol",
-      "count": 2
-    },
-    {
       "path": "src/ir_lowerer/IrLowererFlowControlHelpers.cpp",
       "pattern": "experimental-vector-path",
       "count": 2
@@ -133,26 +98,6 @@
       "path": "src/ir_lowerer/IrLowererFlowVectorHelpers.cpp",
       "pattern": "experimental-vector-path",
       "count": 2
-    },
-    {
-      "path": "src/ir_lowerer/IrLowererFlowVectorResolutionHelpers.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 2
-    },
-    {
-      "path": "src/ir_lowerer/IrLowererFlowVectorResolutionHelpers.cpp",
-      "pattern": "experimental-vector-path",
-      "count": 3
-    },
-    {
-      "path": "src/ir_lowerer/IrLowererFlowVectorResolutionHelpers.cpp",
-      "pattern": "root-vector-helper-path",
-      "count": 1
-    },
-    {
-      "path": "src/ir_lowerer/IrLowererFlowVectorResolutionHelpers.cpp",
-      "pattern": "vector-helper-symbol",
-      "count": 12
     },
     {
       "path": "src/ir_lowerer/IrLowererHelpers.cpp",

@@ -15880,3 +15880,34 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     Updated source-lock coverage and ratcheted
     `scripts/vector_surface_trace_baseline.json` from 760 to 746 production
     traces. Baseline release validation was skipped per the lite workflow.
+
+- [x] TODO-4411: Route lowerer count/access vector traces
+  - owner: ai
+  - created_at: 2026-05-11
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4410
+  - scope: Replace lowerer count/access and flow vector resolution traces with
+    semantic surface metadata, generic collection routing, or existing
+    call-resolution facts.
+  - implementation_notes:
+    - Start from `IrLowererCountAccess*` and
+      `IrLowererFlowVectorResolutionHelpers.cpp`.
+    - Keep ordinary C++ `std::vector` container usage allowed.
+    - Do not touch lowerer type/layout/struct-return files in this leaf.
+  - acceptance:
+    - Count/access vector helper dispatch is generic or manifest-driven rather
+      than hard-coded to PrimeStruct vector paths where semantic facts already
+      carry the needed surface.
+    - Focused lowerer source-lock coverage remains aligned.
+    - The vector surface trace baseline decreases for the selected
+      count/access files and does not increase elsewhere.
+  - stop_rule: Stop after count/access vector-specific traces that can be
+    retired before native-tail and inline work are removed and the baseline
+    ratchets downward.
+  - finished_at: 2026-05-11
+  - evidence: Routed count/access classifiers, count/access helpers, and flow
+    vector resolution helper paths through segmented collection roots and
+    metadata-backed canonical helper routing. Updated source-lock coverage and
+    ratcheted `scripts/vector_surface_trace_baseline.json` from 746 to 708
+    production traces. Baseline release validation was skipped per the lite
+    workflow.

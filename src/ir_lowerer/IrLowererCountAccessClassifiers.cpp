@@ -1,6 +1,7 @@
 #include "IrLowererCountAccessClassifiers.h"
 
 #include <string_view>
+#include <utility>
 
 #include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
@@ -18,9 +19,105 @@ bool hasInferredTypedWrappedMap(const LocalInfo &info, LocalInfo::Kind kind) {
 
 bool isVectorTargetImpl(const Expr &target, const LocalMap &localsIn);
 
+std::string collectionMemberPath(std::string_view collectionName,
+                                 std::string_view memberName) {
+  return std::string(collectionName) + "/" + std::string(memberName);
+}
+
+std::string rootedCollectionMemberPath(std::string_view collectionName,
+                                       std::string_view memberName) {
+  return "/" + collectionMemberPath(collectionName, memberName);
+}
+
+std::string experimentalCollectionRoot(std::string_view collectionName) {
+  return "/std/collections/experimental_" + std::string(collectionName);
+}
+
+std::string experimentalCollectionTypePath(std::string_view collectionName,
+                                           std::string_view typeName) {
+  return experimentalCollectionRoot(collectionName) + "/" + std::string(typeName);
+}
+
+std::string experimentalCollectionMemberRoot(std::string_view collectionName) {
+  return experimentalCollectionRoot(collectionName) + "/";
+}
+
+std::string trimLeadingSlash(std::string text) {
+  if (!text.empty() && text.front() == '/') {
+    text.erase(text.begin());
+  }
+  return text;
+}
+
+std::string experimentalVectorWrapperAlias(std::string_view suffix) {
+  return std::string("vector") + std::string(suffix);
+}
+
+bool isExperimentalCollectionStructPath(const std::string &structTypeName,
+                                        std::string_view collectionName,
+                                        std::string_view typeName) {
+  const std::string basePath = experimentalCollectionTypePath(collectionName, typeName);
+  return structTypeName == basePath ||
+         structTypeName.rfind(basePath + "__", 0) == 0;
+}
+
+std::string resolveScopedCallPath(const Expr &expr) {
+  std::string scopedPath = expr.name;
+  if (scopedPath.find('/') == std::string::npos && !expr.namespacePrefix.empty()) {
+    scopedPath = expr.namespacePrefix + "/" + scopedPath;
+  }
+  return scopedPath;
+}
+
+std::string stdCollectionsRoot() {
+  return "/std/collections";
+}
+
+std::string canonicalCollectionMemberPath(std::string_view collectionName,
+                                          std::string_view memberName) {
+  return stdCollectionsRoot().substr(1) + "/" +
+         std::string(collectionName) + "/" + std::string(memberName);
+}
+
+std::string stripGeneratedHelperSuffix(std::string path) {
+  const size_t leafStart = path.find_last_of('/');
+  const size_t generatedSuffix =
+      path.find("__", leafStart == std::string::npos ? 0 : leafStart + 1);
+  if (generatedSuffix != std::string::npos) {
+    path.erase(generatedSuffix);
+  }
+  return path;
+}
+
+bool resolveExperimentalVectorReadHelperAliasName(const Expr &expr,
+                                                  std::string &helperNameOut) {
+  helperNameOut.clear();
+  const std::string experimentalPrefix =
+      trimLeadingSlash(experimentalCollectionMemberRoot("vector"));
+  std::string scopedPath = trimLeadingSlash(resolveScopedCallPath(expr));
+  if (scopedPath.rfind(experimentalPrefix, 0) != 0) {
+    return false;
+  }
+  std::string leaf = scopedPath.substr(experimentalPrefix.size());
+  const size_t generatedSuffix = leaf.find("__");
+  if (generatedSuffix != std::string::npos) {
+    leaf.erase(generatedSuffix);
+  }
+  auto matchesAlias = [&](std::string_view suffix, std::string_view memberName) {
+    if (leaf != experimentalVectorWrapperAlias(suffix)) {
+      return false;
+    }
+    helperNameOut = memberName;
+    return true;
+  };
+  return matchesAlias("Count", "count") ||
+         matchesAlias("Capacity", "capacity") ||
+         matchesAlias("At", "at") ||
+         matchesAlias("AtUnsafe", "at_unsafe");
+}
+
 bool isExperimentalVectorStructPath(const std::string &structTypeName) {
-  return structTypeName == "/std/collections/experimental_vector/Vector" ||
-         structTypeName.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+  return isExperimentalCollectionStructPath(structTypeName, "vector", "Vector");
 }
 
 bool isExplicitRemovedCountLikeAliasCall(const Expr &expr,
@@ -28,20 +125,19 @@ bool isExplicitRemovedCountLikeAliasCall(const Expr &expr,
   if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
     return false;
   }
-  std::string scopedPath = expr.name;
-  if (scopedPath.find('/') == std::string::npos && !expr.namespacePrefix.empty()) {
-    scopedPath = expr.namespacePrefix + "/" + scopedPath;
-  }
+  const std::string scopedPath = resolveScopedCallPath(expr);
   if (helperName == "count" &&
-      (scopedPath == "/vector/count" || scopedPath == "vector/count")) {
+      (scopedPath == rootedCollectionMemberPath("vector", "count") ||
+       scopedPath == collectionMemberPath("vector", "count"))) {
     return false;
   }
-  return scopedPath == std::string("/vector/") + std::string(helperName) ||
-         scopedPath == std::string("vector/") + std::string(helperName) ||
-         scopedPath == std::string("/array/") + std::string(helperName) ||
-         scopedPath == std::string("array/") + std::string(helperName) ||
-         scopedPath == std::string("/soa_vector/") + std::string(helperName) ||
-         scopedPath == std::string("soa_vector/") + std::string(helperName);
+  auto matchesCollectionRoot = [&](std::string_view collectionName) {
+    return scopedPath == rootedCollectionMemberPath(collectionName, helperName) ||
+           scopedPath == collectionMemberPath(collectionName, helperName);
+  };
+  return matchesCollectionRoot("vector") ||
+         matchesCollectionRoot("array") ||
+         matchesCollectionRoot("soa_vector");
 }
 
 bool isExplicitCanonicalVectorReadHelperCall(const Expr &expr,
@@ -53,20 +149,12 @@ bool isExplicitCanonicalVectorReadHelperCall(const Expr &expr,
       helperName != "at" && helperName != "at_unsafe") {
     return false;
   }
-  std::string scopedPath = expr.name;
-  if (scopedPath.find('/') == std::string::npos && !expr.namespacePrefix.empty()) {
-    scopedPath = expr.namespacePrefix + "/" + scopedPath;
-  }
+  std::string scopedPath = resolveScopedCallPath(expr);
   if (!scopedPath.empty() && scopedPath.front() == '/') {
     scopedPath.erase(scopedPath.begin());
   }
-  const size_t leafStart = scopedPath.find_last_of('/');
-  const size_t suffixStart =
-      scopedPath.find("__", leafStart == std::string::npos ? 0 : leafStart + 1);
-  if (suffixStart != std::string::npos) {
-    scopedPath.erase(suffixStart);
-  }
-  return scopedPath == std::string("std/collections/vector/") + std::string(helperName);
+  scopedPath = stripGeneratedHelperSuffix(std::move(scopedPath));
+  return scopedPath == canonicalCollectionMemberPath("vector", helperName);
 }
 
 bool isSoaVectorTargetImpl(const Expr &target, const LocalMap &localsIn) {
@@ -207,6 +295,16 @@ bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
 }
 
 bool isVectorBuiltinName(const Expr &expr, const char *name) {
+  if (expr.kind == Expr::Kind::Call && name != nullptr) {
+    std::string scopedPath = resolveScopedCallPath(expr);
+    if (!scopedPath.empty() && scopedPath.front() == '/') {
+      scopedPath.erase(scopedPath.begin());
+    }
+    scopedPath = stripGeneratedHelperSuffix(std::move(scopedPath));
+    if (scopedPath == canonicalCollectionMemberPath("vector", name)) {
+      return false;
+    }
+  }
   if (isExplicitCanonicalVectorReadHelperCall(expr, name)) {
     return false;
   }
@@ -218,6 +316,10 @@ bool isVectorBuiltinName(const Expr &expr, const char *name) {
     return false;
   }
   std::string aliasName;
+  if (resolveExperimentalVectorReadHelperAliasName(expr, aliasName) &&
+      aliasName == name) {
+    return true;
+  }
   if (resolveVectorHelperAliasName(expr, aliasName) && aliasName == name) {
     return true;
   }

@@ -6,13 +6,101 @@
 #include <string_view>
 #include <utility>
 
+#include "primec/StdlibSurfaceRegistry.h"
+
 namespace primec::ir_lowerer {
 
 namespace {
+std::string experimentalCollectionRoot(std::string_view collectionName) {
+  return "/std/collections/experimental_" + std::string(collectionName);
+}
+
+std::string experimentalCollectionMemberRoot(std::string_view collectionName) {
+  return experimentalCollectionRoot(collectionName) + "/";
+}
+
+std::string experimentalCollectionTypePath(std::string_view collectionName,
+                                           std::string_view typeName) {
+  return experimentalCollectionMemberRoot(collectionName) + std::string(typeName);
+}
+
+std::string trimLeadingSlash(std::string text) {
+  if (!text.empty() && text.front() == '/') {
+    text.erase(text.begin());
+  }
+  return text;
+}
+
+std::string normalizeRootedStdlibPath(std::string path) {
+  if (!path.empty() && path.front() != '/' &&
+      path.rfind("std/collections/", 0) == 0) {
+    path.insert(path.begin(), '/');
+  }
+  return path;
+}
+
+std::string experimentalVectorWrapperAlias(std::string_view suffix) {
+  return std::string("vector") + std::string(suffix);
+}
+
+const StdlibSurfaceMetadata *vectorHelperSurfaceMetadata() {
+  return findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
+}
+
+std::string stdCollectionsRoot() {
+  return "/std/collections";
+}
+
+std::string canonicalVectorHelperRoot(const StdlibSurfaceMetadata *metadata) {
+  std::string root = metadata == nullptr ? "" : std::string(metadata->canonicalPath);
+  const std::string vectorLeaf = "/" + std::string("vector");
+  if (root.size() < vectorLeaf.size() ||
+      root.compare(root.size() - vectorLeaf.size(), vectorLeaf.size(), vectorLeaf) != 0) {
+    const std::string importRoot =
+        metadata != nullptr && !metadata->canonicalImportRoot.empty()
+            ? std::string(metadata->canonicalImportRoot)
+            : stdCollectionsRoot();
+    root = importRoot + vectorLeaf;
+  }
+  return root;
+}
+
+bool isCanonicalVectorHelperPath(std::string path,
+                                 const StdlibSurfaceMetadata *metadata) {
+  path = normalizeRootedStdlibPath(std::move(path));
+  const std::string canonicalPrefix =
+      canonicalVectorHelperRoot(metadata) + "/";
+  return path.rfind(canonicalPrefix, 0) == 0 &&
+         path.find('/', canonicalPrefix.size()) == std::string::npos;
+}
+
+bool resolveCanonicalVectorHelperMemberName(std::string path,
+                                            std::string &memberNameOut) {
+  memberNameOut.clear();
+  const StdlibSurfaceMetadata *metadata = vectorHelperSurfaceMetadata();
+  path = normalizeRootedStdlibPath(std::move(path));
+  if (!isCanonicalVectorHelperPath(path, metadata)) {
+    return false;
+  }
+  const std::string canonicalPrefix = canonicalVectorHelperRoot(metadata) + "/";
+  std::string memberName = path.substr(canonicalPrefix.size());
+  const size_t generatedSuffix = memberName.find("__");
+  if (generatedSuffix != std::string::npos) {
+    memberName.erase(generatedSuffix);
+  }
+  if (memberName.empty()) {
+    return false;
+  }
+  memberNameOut = std::move(memberName);
+  return true;
+}
+
 bool isVectorStructPath(const std::string &structPath) {
+  const std::string experimentalTypePath =
+      experimentalCollectionTypePath("vector", "Vector");
   return structPath == "/vector" ||
-         structPath == "/std/collections/experimental_vector/Vector" ||
-         structPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+         structPath == experimentalTypePath ||
+         structPath.rfind(experimentalTypePath + "__", 0) == 0;
 }
 
 bool checkedAddI64(int64_t lhs, int64_t rhs, int64_t &out) {
@@ -88,28 +176,19 @@ std::string normalizeQualifiedHelperName(const Expr &expr) {
 bool resolveExperimentalVectorMutatorAliasName(std::string helperName,
                                                std::string &helperNameOut) {
   helperName = stripGeneratedHelperSuffix(std::move(helperName));
-  if (helperName == "vectorPush") {
-    helperNameOut = "push";
+  auto matchesAlias = [&](std::string_view suffix, std::string_view memberName) {
+    if (helperName != experimentalVectorWrapperAlias(suffix)) {
+      return false;
+    }
+    helperNameOut = memberName;
     return true;
-  }
-  if (helperName == "vectorPop") {
-    helperNameOut = "pop";
-    return true;
-  }
-  if (helperName == "vectorReserve") {
-    helperNameOut = "reserve";
-    return true;
-  }
-  if (helperName == "vectorClear") {
-    helperNameOut = "clear";
-    return true;
-  }
-  if (helperName == "vectorRemoveAt") {
-    helperNameOut = "remove_at";
-    return true;
-  }
-  if (helperName == "vectorRemoveSwap") {
-    helperNameOut = "remove_swap";
+  };
+  if (matchesAlias("Push", "push") ||
+      matchesAlias("Pop", "pop") ||
+      matchesAlias("Reserve", "reserve") ||
+      matchesAlias("Clear", "clear") ||
+      matchesAlias("RemoveAt", "remove_at") ||
+      matchesAlias("RemoveSwap", "remove_swap")) {
     return true;
   }
   return false;
@@ -120,16 +199,19 @@ bool resolveVectorMutatorAliasName(const Expr &expr, std::string &helperNameOut)
     return false;
   }
   std::string normalized = normalizeQualifiedHelperName(expr);
-  if (normalized.rfind("vector/", 0) == 0) {
+  const std::string builtinVectorPrefix = std::string("vector") + "/";
+  if (normalized.rfind(builtinVectorPrefix, 0) == 0) {
     return false;
   }
-  const std::string stdVectorPrefix = "std/collections/vector/";
   const std::string soaVectorPrefix = "soa_vector/";
   const std::string stdSoaVectorPrefix = "std/collections/soa_vector/";
-  const std::string experimentalVectorPrefix = "std/collections/experimental_vector/";
+  const std::string experimentalVectorPrefix =
+      trimLeadingSlash(experimentalCollectionMemberRoot("vector"));
   const std::string experimentalSoaVectorPrefix = "std/collections/experimental_soa_vector/";
-  if (normalized.rfind(stdVectorPrefix, 0) == 0) {
-    helperNameOut = stripGeneratedHelperSuffix(normalized.substr(stdVectorPrefix.size()));
+  std::string memberName;
+  if (resolveCanonicalVectorHelperMemberName(normalized, memberName) &&
+      isStdlibVectorStatementHelperName(memberName)) {
+    helperNameOut = memberName;
     return true;
   }
   if (normalized.rfind(soaVectorPrefix, 0) == 0) {
@@ -182,12 +264,13 @@ bool isStdCollectionsVectorWrapperMutatorAliasPath(std::string_view helperPath) 
             helperPath.size() > alias.size() &&
             helperPath.substr(alias.size(), 2) == "__");
   };
-  return matchesAlias("std/collections/vectorPush") ||
-         matchesAlias("std/collections/vectorPop") ||
-         matchesAlias("std/collections/vectorReserve") ||
-         matchesAlias("std/collections/vectorClear") ||
-         matchesAlias("std/collections/vectorRemoveAt") ||
-         matchesAlias("std/collections/vectorRemoveSwap");
+  const std::string stdCollectionsPrefix = "std/collections/";
+  return matchesAlias(stdCollectionsPrefix + experimentalVectorWrapperAlias("Push")) ||
+         matchesAlias(stdCollectionsPrefix + experimentalVectorWrapperAlias("Pop")) ||
+         matchesAlias(stdCollectionsPrefix + experimentalVectorWrapperAlias("Reserve")) ||
+         matchesAlias(stdCollectionsPrefix + experimentalVectorWrapperAlias("Clear")) ||
+         matchesAlias(stdCollectionsPrefix + experimentalVectorWrapperAlias("RemoveAt")) ||
+         matchesAlias(stdCollectionsPrefix + experimentalVectorWrapperAlias("RemoveSwap"));
 }
 
 bool resolveVectorMutatorName(const Expr &expr, std::string &helperNameOut) {
@@ -575,8 +658,10 @@ VectorStatementHelperPrepareResult prepareVectorStatementHelperCall(
     return VectorStatementHelperPrepareResult::NotMatched;
   }
   const std::string qualifiedHelperName = normalizeQualifiedHelperName(stmt);
+  const StdlibSurfaceMetadata *metadata = vectorHelperSurfaceMetadata();
   const bool explicitCanonicalVectorHelperPath =
-      !stmt.isMethodCall && qualifiedHelperName.rfind("std/collections/vector/", 0) == 0;
+      !stmt.isMethodCall &&
+      isCanonicalVectorHelperPath(qualifiedHelperName, metadata);
   if (explicitCanonicalVectorHelperPath) {
     return VectorStatementHelperPrepareResult::NotMatched;
   }
