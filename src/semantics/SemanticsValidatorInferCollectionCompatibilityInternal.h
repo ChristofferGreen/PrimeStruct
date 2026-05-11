@@ -260,6 +260,55 @@ enum class RemovedCollectionHelperFamily {
          std::string(helperName);
 }
 
+[[maybe_unused]] std::string canonicalVectorCompatibilityPrefixOrFallback() {
+  const StdlibSurfaceMetadata *metadata = vectorHelperSurfaceMetadata();
+  if (metadata != nullptr) {
+    return std::string(metadata->canonicalPath);
+  }
+  return "/std/collections/" + std::string("vector");
+}
+
+[[maybe_unused]] std::string
+unrootedCanonicalVectorCompatibilityPrefixOrFallback() {
+  std::string prefix = canonicalVectorCompatibilityPrefixOrFallback();
+  if (!prefix.empty() && prefix.front() == '/') {
+    prefix.erase(prefix.begin());
+  }
+  return prefix;
+}
+
+[[maybe_unused]] bool isCanonicalVectorCompatibilityNamespace(
+    std::string_view namespacePrefix) {
+  return trimLeadingSlash(namespacePrefix) ==
+         unrootedCanonicalVectorCompatibilityPrefixOrFallback();
+}
+
+[[maybe_unused]] bool isCanonicalVectorCompatibilityPath(
+    std::string_view path) {
+  return path.rfind(canonicalVectorCompatibilityPrefixOrFallback() +
+                        std::string("/"),
+                    0) == 0;
+}
+
+[[maybe_unused]] bool isUnrootedCanonicalVectorCompatibilityPath(
+    std::string_view path) {
+  return trimLeadingSlash(path).rfind(
+             unrootedCanonicalVectorCompatibilityPrefixOrFallback() +
+                 std::string("/"),
+             0) == 0;
+}
+
+[[maybe_unused]] std::string_view
+stripUnrootedCanonicalVectorCompatibilityPrefix(std::string_view path) {
+  std::string_view strippedPath = trimLeadingSlash(path);
+  const std::string prefix =
+      unrootedCanonicalVectorCompatibilityPrefixOrFallback() + "/";
+  if (strippedPath.rfind(prefix, 0) == 0) {
+    strippedPath.remove_prefix(prefix.size());
+  }
+  return strippedPath;
+}
+
 [[maybe_unused]] std::string legacyExperimentalVectorCompatibilityPrefix() {
   return "/std/collections/experimental_" + std::string("vector") + "/";
 }

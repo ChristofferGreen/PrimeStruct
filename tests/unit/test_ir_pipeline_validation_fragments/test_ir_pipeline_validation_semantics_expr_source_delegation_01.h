@@ -305,6 +305,9 @@
             "auto failMethodTargetResolutionDiagnostic = [&](std::string message) -> bool {") !=
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "#include \"SemanticsValidatorInferCollectionCompatibilityInternal.h\"") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
             "return failExprDiagnostic(receiver, std::move(message));") !=
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
@@ -355,6 +358,20 @@
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "hasReceiverCompatibleExplicitVectorHelperPath(explicitVectorHelperPath, receiver)") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "return canonicalVectorCompatibilityHelperPathOrFallback(helperName);") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "isCanonicalVectorCompatibilityPath(explicitVectorHelperPath)") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "isLegacyExperimentalVectorCompatibilityPath(vectorMethodTarget)") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find("std/collections/vector/") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "std/collections/experimental_vector/") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "auto rejectsRootedVectorBuiltinAlias =") ==
@@ -858,7 +875,9 @@
             "auto isExplicitVectorCompatibilityMethodWithTemplateArgs = [&]() {") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
-            "if (resolved == \"/std/collections/vector/count\" &&") !=
+            "if (isStdNamespacedVectorCompatibilityHelperPath(resolved, \"capacity\")) {\n"
+            "    isBuiltinMethod = true;\n"
+            "  } else if (isStdNamespacedVectorCompatibilityHelperPath(resolved, \"count\") &&") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "auto explicitVectorCountMethodMissingSamePathHelper = [&]() -> std::string {") ==
@@ -888,6 +907,9 @@
             "const bool isVectorCompatibilityMethod =") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
+            "canonicalVectorCompatibilityHelperPathOrFallback(normalizedMethodName)") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
             "const bool hasExplicitVectorCompatibilityNamespace =") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
@@ -904,10 +926,7 @@
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "const bool isVectorCompatibilityMethod =\n"
-            "      expr.name == \"count\" || expr.name == \"capacity\" || expr.name == \"at\" ||\n"
-            "      expr.name == \"at_unsafe\" || expr.name == \"push\" || expr.name == \"pop\" ||\n"
-            "      expr.name == \"reserve\" || expr.name == \"clear\" || expr.name == \"remove_at\" ||\n"
-            "      expr.name == \"remove_swap\";") !=
+            "      isVectorCompatibilityHelperName(normalizedMethodName);") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "if (expr.namespacePrefix.empty() &&\n"
@@ -929,8 +948,7 @@
             "if (isVectorCompatibilityMethod &&\n"
             "      expr.namespacePrefix != \"vector\" &&\n"
             "      expr.namespacePrefix != \"/vector\" &&\n"
-            "      expr.namespacePrefix != \"std/collections/vector\" &&\n"
-            "      expr.namespacePrefix != \"/std/collections/vector\" &&") !=
+            "      !isCanonicalVectorCompatibilityNamespace(expr.namespacePrefix) &&") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "bool isExperimentalVectorCompatibilityMethodTarget(std::string_view methodTarget)") ==
@@ -970,12 +988,14 @@
             "bool resolvedCanonicalVectorCompatibilityMethod = false;") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
-            "if (expr.name == \"count\" || expr.name == \"capacity\" ||\n"
-            "        expr.name == \"at\" || expr.name == \"at_unsafe\") {\n"
+            "if (normalizedMethodName == \"count\" || normalizedMethodName == \"capacity\" ||\n"
+            "        normalizedMethodName == \"at\" || normalizedMethodName == \"at_unsafe\") {\n"
             "      std::string elemType;\n"
             "      if (resolveVectorTarget(expr.args.front(), elemType)) {\n"
-            "        resolved = \"/std/collections/vector/\" + expr.name;\n"
-            "        isBuiltinMethod = expr.name == \"count\" || expr.name == \"capacity\";\n"
+            "        resolved = canonicalVectorCompatibilityHelperPathOrFallback(\n"
+            "            normalizedMethodName);\n"
+            "        isBuiltinMethod = normalizedMethodName == \"count\" ||\n"
+            "                          normalizedMethodName == \"capacity\";\n"
             "        resolvedCanonicalVectorCompatibilityMethod = true;\n"
             "      }\n"
             "    }") !=
@@ -994,9 +1014,8 @@
             "auto shouldRewriteExperimentalVectorCompatibilityMethodTargetToCanonical =\n"
             "      [&](std::string_view methodTarget) {\n"
             "        const std::string canonicalVectorCompatibilityMethodTarget =\n"
-            "            \"/std/collections/vector/\" + expr.name;\n"
-            "        return (methodTarget.rfind(\"/std/collections/experimental_vector/\", 0) == 0 ||\n"
-            "                methodTarget.rfind(\"/std/collections/experimental_vector/Vector__\", 0) == 0) &&\n"
+            "            canonicalVectorCompatibilityHelperPathOrFallback(expr.name);\n"
+            "        return isLegacyExperimentalVectorCompatibilityPath(methodTarget) &&\n"
             "               (hasImportedDefinitionPath(canonicalVectorCompatibilityMethodTarget) ||\n"
             "                defMap_.count(canonicalVectorCompatibilityMethodTarget) > 0);\n"
             "      };") !=
@@ -1005,8 +1024,9 @@
             "if (!hasImportedDefinitionPath(vectorMethodTarget) &&\n"
             "          defMap_.count(vectorMethodTarget) == 0 &&\n"
             "          shouldRewriteExperimentalVectorCompatibilityMethodTargetToCanonical(vectorMethodTarget)) {\n"
-            "        vectorMethodTarget = \"/std/collections/vector/\" + expr.name;\n"
-            "    }") !=
+            "        vectorMethodTarget =\n"
+            "            canonicalVectorCompatibilityHelperPathOrFallback(expr.name);\n"
+            "      }") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "bool isExperimentalVectorCompatibilityMethodTarget(std::string_view methodTarget) {\n"
@@ -1029,7 +1049,7 @@
   CHECK(semanticsExprMethodResolutionSource.find(
             "if (!isBuiltinMethod && isVectorCompatibilityMethod && !resolved.empty() &&\n"
             "      shouldRewriteExperimentalVectorCompatibilityMethodTargetToCanonical(resolved)) {\n"
-            "    resolved = \"/std/collections/vector/\" + expr.name;\n"
+            "    resolved = canonicalVectorCompatibilityHelperPathOrFallback(expr.name);\n"
             "  }") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
@@ -1088,6 +1108,11 @@
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "shouldRewriteExperimentalVectorCompatibilityMethodTargetToCanonical(resolved)") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find("std/collections/vector/") ==
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "std/collections/experimental_vector/") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "if (vectorMethodTargetMissing) {\n"

@@ -72,11 +72,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4426: Route semantic method-target vector traces
+- TODO-4422: Route semantic initializer vector traces
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4422: Route semantic initializer vector traces
 - TODO-4423: Route semantic return/layout vector traces
 - TODO-4417: Route template monomorph vector surface traces
 - TODO-4418: Route emitter, registry, and parser vector traces
@@ -86,14 +85,15 @@ Task template:
 - TODO-4301: Lower map helpers through ordinary `.prime`
 - TODO-4302: Move map surface metadata out of C++
 - TODO-4303: Delete map compatibility seams
+- TODO-4304: Add zero C++ map-surface audit
 
 ### Priority Lanes (Current)
 
 - Semantic ownership authority: none active; future semantic-authority work
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
-- Vector stdlib ownership cutover: TODO-4426 -> TODO-4422
-  -> TODO-4423 -> TODO-4417 -> TODO-4418 -> TODO-4419
+- Vector stdlib ownership cutover: TODO-4422 -> TODO-4423 -> TODO-4417
+  -> TODO-4418 -> TODO-4419
 - Map stdlib ownership cutover: TODO-4299 -> TODO-4300 -> TODO-4301
   -> TODO-4302 -> TODO-4303 -> TODO-4304
 - SoA public surface rename and ownership cutover: TODO-4305 -> TODO-4306
@@ -112,7 +112,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4426: Route semantic method-target vector traces
 - TODO-4422: Route semantic initializer vector traces
 - TODO-4423: Route semantic return/layout vector traces
 - TODO-4417: Route template monomorph vector surface traces
@@ -179,9 +178,9 @@ Task template:
 | Compile-pipeline stage and publication-boundary contracts | none |
 | Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4299, TODO-4305 |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4426, TODO-4422, TODO-4423, TODO-4417, TODO-4418, TODO-4419, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4426, TODO-4422, TODO-4423, TODO-4417, TODO-4418, TODO-4419, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
-| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4426, TODO-4422, TODO-4423, TODO-4417, TODO-4418, TODO-4419, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
+| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4422, TODO-4423, TODO-4417, TODO-4418, TODO-4419, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4422, TODO-4423, TODO-4417, TODO-4418, TODO-4419, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4422, TODO-4423, TODO-4417, TODO-4418, TODO-4419, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
@@ -210,8 +209,8 @@ Task template:
 | Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
-| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4426, TODO-4422, TODO-4423, TODO-4417, TODO-4418, TODO-4419, TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
-| De-experimentalization surface and namespace parity | TODO-4426, TODO-4422, TODO-4423, TODO-4417, TODO-4418, TODO-4419, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
+| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4422, TODO-4423, TODO-4417, TODO-4418, TODO-4419, TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| De-experimentalization surface and namespace parity | TODO-4422, TODO-4423, TODO-4417, TODO-4418, TODO-4419, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
@@ -246,8 +245,8 @@ Task template:
   metadata is now owned by `stdlib/std/collections/surfaces.psmeta`, and the
   registry no longer advertises vector compatibility spellings through that
   manifest. Direct experimental vector source imports are now rejected, and
-  TODO-4426, TODO-4422 through TODO-4423, and TODO-4417 through TODO-4419
-  handle the remaining final zero-vector audit tightening.
+  TODO-4422 through TODO-4423 and TODO-4417 through TODO-4419 handle the
+  remaining final zero-vector audit tightening.
   TODO-4299 through TODO-4304 apply the same ownership model to map while
   keeping map-specific lookup, insertion, `Result<ContainerError>`, and key
   comparability policy explicit.
@@ -1645,29 +1644,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
-
-- [ ] TODO-4426: Route semantic method-target vector traces
-  - owner: ai
-  - created_at: 2026-05-11
-  - phase: Vector stdlib ownership cutover
-  - depends_on: TODO-4428
-  - scope: Replace semantic method-target and method-resolution vector helper
-    traces with registry-backed helper predicates or generic collection
-    helpers.
-  - implementation_notes:
-    - Start from `SemanticsValidatorExprMethodTargetResolution.cpp`,
-      `SemanticsValidatorExprMethodResolution.cpp`, and their source-lock
-      coverage.
-    - Keep ordinary C++ `std::vector` container usage allowed.
-  - acceptance:
-    - Semantic method-target and method-resolution helper selection no longer
-      hard-codes PrimeStruct vector helper paths where registry metadata can
-      provide the surface.
-    - Focused semantic source-lock or behavior coverage remains aligned.
-    - The vector surface trace baseline decreases for the selected
-      method-target files and does not increase elsewhere.
-  - stop_rule: Stop after method-target vector path traces are routed through
-    generic collection or registry-backed helpers.
 
 - [ ] TODO-4422: Route semantic initializer vector traces
   - owner: ai

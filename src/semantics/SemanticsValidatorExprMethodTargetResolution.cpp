@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 #include "MapConstructorHelpers.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "primec/StdlibSurfaceRegistry.h"
 
 #include <algorithm>
@@ -143,7 +144,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     } else if (normalizedPrefix == "vector") {
       helperName = candidate;
       compatibilityCollection = "vector";
-    } else if (normalizedPrefix == "std/collections/vector") {
+    } else if (isCanonicalVectorCompatibilityNamespace(normalizedPrefix)) {
       helperName = candidate;
       isStdNamespacedVectorHelper = true;
       compatibilityCollection = "vector";
@@ -159,8 +160,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     } else if (startsWithRootVectorMethodPrefix(candidate)) {
       helperName = stripRootVectorMethodPrefix(candidate);
       compatibilityCollection = "vector";
-    } else if (candidate.rfind("std/collections/vector/", 0) == 0) {
-      helperName = std::string_view(candidate).substr(std::string_view("std/collections/vector/").size());
+    } else if (isUnrootedCanonicalVectorCompatibilityPath(candidate)) {
+      helperName = stripUnrootedCanonicalVectorCompatibilityPrefix(candidate);
       isStdNamespacedVectorHelper = true;
       compatibilityCollection = "vector";
     } else if (candidate.rfind("map/", 0) == 0) {
@@ -187,7 +188,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return "";
     }
     if (isStdNamespacedVectorHelper) {
-      return "/std/collections/vector/" + std::string(helperName);
+      return canonicalVectorCompatibilityHelperPathOrFallback(helperName);
     }
     return "/" + candidate;
   };
@@ -203,13 +204,13 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       normalizedPrefix.erase(normalizedPrefix.begin());
     }
     if (normalizedPrefix == "vector" ||
-        normalizedPrefix == "std/collections/vector" ||
+        isCanonicalVectorCompatibilityNamespace(normalizedPrefix) ||
         normalizedPrefix == "soa_vector" ||
         normalizedPrefix == "std/collections/soa_vector") {
       return "/" + normalizedPrefix + "/" + candidate;
     }
     if (startsWithRootVectorMethodPrefix(candidate) ||
-        candidate.rfind("std/collections/vector/", 0) == 0 ||
+        isUnrootedCanonicalVectorCompatibilityPath(candidate) ||
         candidate.rfind("soa_vector/", 0) == 0 ||
         candidate.rfind("std/collections/soa_vector/", 0) == 0) {
       return "/" + candidate;
@@ -248,8 +249,9 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   } else if (normalizedMethodName.rfind("std/collections/soa_vector/", 0) == 0) {
     normalizedMethodName =
         normalizedMethodName.substr(std::string("std/collections/soa_vector/").size());
-  } else if (normalizedMethodName.rfind("std/collections/vector/", 0) == 0) {
-    normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/vector/").size());
+  } else if (isUnrootedCanonicalVectorCompatibilityPath(normalizedMethodName)) {
+    normalizedMethodName = std::string(
+        stripUnrootedCanonicalVectorCompatibilityPrefix(normalizedMethodName));
   } else if (normalizedMethodName.rfind("map/", 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(std::string("map/").size());
   } else if (normalizedMethodName.rfind("std/collections/map/", 0) == 0) {
@@ -288,15 +290,15 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (!typeText.empty() && typeText.front() != '/') {
       typeText.insert(typeText.begin(), '/');
     }
-    if (typeText.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) {
+    if (isLegacyExperimentalVectorCompatibilityTypePath(typeText)) {
       return typeText;
     }
     std::string elemType;
     if (extractExperimentalVectorElementType(binding, elemType)) {
       const std::string specializedVectorPath =
           specializedExperimentalVectorHelperTarget("Vector", elemType);
-      if (specializedVectorPath.rfind(
-              "/std/collections/experimental_vector/Vector__", 0) == 0) {
+      if (isLegacyExperimentalVectorCompatibilityTypePath(
+              specializedVectorPath)) {
         return specializedVectorPath;
       }
     }
@@ -1652,7 +1654,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           explicitRemovedMethodPath.rfind("/array/", 0) == 0;
       std::string ignoredElemType;
       const bool isCanonicalStdVectorPath =
-          explicitRemovedMethodPath.rfind("/std/collections/vector/", 0) == 0;
+          isCanonicalVectorCompatibilityPath(explicitRemovedMethodPath);
       if (normalizedMethodName == "count") {
         if (isExplicitArrayCompatibilityPath) {
           return false;
@@ -1795,7 +1797,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return true;
   };
   auto canonicalVectorHelperTarget = [](std::string_view helperName) {
-    return "/std/collections/vector/" + std::string(helperName);
+    return canonicalVectorCompatibilityHelperPathOrFallback(helperName);
   };
   auto bindingTypeText = [](const BindingInfo &binding) {
     if (binding.typeTemplateArg.empty()) {
@@ -1939,7 +1941,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return false;
     }
     std::string elemType;
-    if (explicitVectorHelperPath.rfind("/std/collections/vector/", 0) == 0) {
+    if (isCanonicalVectorCompatibilityPath(explicitVectorHelperPath)) {
       return resolveExperimentalVectorValueTarget(receiverExpr, elemType);
     }
     if (explicitVectorHelperPath.rfind("/std/collections/soa_vector/", 0) == 0) {
@@ -2031,7 +2033,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   auto tryResolveExplicitCanonicalVectorCountMethodTarget = [&](const Expr &receiverExpr)
       -> std::optional<bool> {
     if (explicitVectorHelperPath.empty() ||
-        explicitVectorHelperPath.rfind("/std/collections/vector/", 0) != 0 ||
+        !isCanonicalVectorCompatibilityPath(explicitVectorHelperPath) ||
         normalizedMethodName != "count") {
       return std::nullopt;
     }
@@ -2971,18 +2973,18 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           vectorMethodTarget.rfind("/soa_vector/", 0) == 0 ||
           vectorMethodTarget.rfind("/std/collections/soa_vector/", 0) == 0 ||
           startsWithRootedVectorMethodPrefix(vectorMethodTarget) ||
-          vectorMethodTarget.rfind("/std/collections/vector/", 0) == 0 ||
-          vectorMethodTarget.rfind("/std/collections/experimental_vector/", 0) == 0;
+          isCanonicalVectorCompatibilityPath(vectorMethodTarget) ||
+          isLegacyExperimentalVectorCompatibilityPath(vectorMethodTarget);
       if (!isVectorFamilyTarget) {
         vectorMethodTarget.clear();
       }
     }
     if (!vectorMethodTarget.empty()) {
-      if (vectorMethodTarget.rfind("/std/collections/experimental_vector/", 0) == 0 &&
+      if (isLegacyExperimentalVectorCompatibilityPath(vectorMethodTarget) &&
           !hasDeclaredDefinitionPath(vectorMethodTarget) &&
           !hasImportedDefinitionPath(vectorMethodTarget)) {
         const std::string canonicalVectorMethodTarget =
-            "/std/collections/vector/" + normalizedMethodName;
+            canonicalVectorHelperTarget(normalizedMethodName);
         if (hasDeclaredDefinitionPath(canonicalVectorMethodTarget) ||
             hasImportedDefinitionPath(canonicalVectorMethodTarget)) {
           vectorMethodTarget = canonicalVectorMethodTarget;
@@ -3366,7 +3368,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   }
   if ((normalizedMethodName == "count" || normalizedMethodName == "capacity" ||
        normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") &&
-      resolvedType.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) {
+      isLegacyExperimentalVectorCompatibilityTypePath(resolvedType)) {
     if (normalizedMethodName == "count") {
       return setCollectionMethodTarget(canonicalVectorHelperTarget("count"));
     }

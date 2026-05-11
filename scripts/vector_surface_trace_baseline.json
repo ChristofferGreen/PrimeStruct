@@ -235,26 +235,6 @@
       "count": 1
     },
     {
-      "path": "src/semantics/SemanticsValidatorExprMethodResolution.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 14
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorExprMethodResolution.cpp",
-      "pattern": "experimental-vector-path",
-      "count": 2
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorExprMethodTargetResolution.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 14
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorExprMethodTargetResolution.cpp",
-      "pattern": "experimental-vector-path",
-      "count": 5
-    },
-    {
       "path": "src/semantics/SemanticsValidatorExprPointerLike.cpp",
       "pattern": "canonical-vector-path",
       "count": 2

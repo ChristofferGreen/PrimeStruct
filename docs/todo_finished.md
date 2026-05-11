@@ -16295,3 +16295,33 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     ratcheted `scripts/vector_surface_trace_baseline.json` from 353 to 336
     production traces. Baseline release validation was skipped per the lite
     workflow.
+
+- [x] TODO-4426: Route semantic method-target vector traces
+  - owner: ai
+  - created_at: 2026-05-11
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4428
+  - scope: Replace semantic method-target and method-resolution vector helper
+    traces with registry-backed helper predicates or generic collection
+    helpers.
+  - implementation_notes:
+    - Start from `SemanticsValidatorExprMethodTargetResolution.cpp`,
+      `SemanticsValidatorExprMethodResolution.cpp`, and their source-lock
+      coverage.
+    - Keep ordinary C++ `std::vector` container usage allowed.
+  - acceptance:
+    - Semantic method-target and method-resolution helper selection no longer
+      hard-codes PrimeStruct vector helper paths where registry metadata can
+      provide the surface.
+    - Focused semantic source-lock or behavior coverage remains aligned.
+    - The vector surface trace baseline decreases for the selected
+      method-target files and does not increase elsewhere.
+  - stop_rule: Stop after method-target vector path traces are routed through
+    generic collection or registry-backed helpers.
+  - finished_at: 2026-05-11
+  - evidence: Routed method-target and method-resolution vector helper checks
+    through registry-backed canonical helper path queries, canonical namespace
+    predicates, and shared legacy experimental vector predicates; updated
+    source-lock coverage; and ratcheted
+    `scripts/vector_surface_trace_baseline.json` from 336 to 301 production
+    traces. Baseline release validation was skipped per the lite workflow.
