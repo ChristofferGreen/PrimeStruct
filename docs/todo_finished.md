@@ -16210,3 +16210,60 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     updated source-lock coverage, and ratcheted
     `scripts/vector_surface_trace_baseline.json` from 389 to 381 production
     traces. Baseline release validation was skipped per the lite workflow.
+
+- [x] TODO-4425: Route semantic count and access vector traces
+  - owner: ai
+  - created_at: 2026-05-11
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4424
+  - scope: Replace semantic count/capacity and collection-access vector helper
+    traces with registry-backed helper predicates or generic collection
+    helpers.
+  - implementation_notes:
+    - Start from `SemanticsValidatorExprCollectionAccess*.cpp`,
+      `SemanticsValidatorExprCollectionCountCapacity.cpp`, and
+      `SemanticsValidatorExprCountCapacityMapBuiltins.cpp`.
+    - Keep ordinary C++ `std::vector` container usage allowed.
+  - acceptance:
+    - Semantic count/capacity and access helper selection no longer hard-codes
+      PrimeStruct vector helper paths where registry metadata can provide the
+      surface.
+    - Focused semantic source-lock or behavior coverage remains aligned.
+    - The vector surface trace baseline decreases for the selected
+      count/access files and does not increase elsewhere.
+  - stop_rule: Stop after count/capacity and collection-access vector path
+    traces are routed through generic collection or registry-backed helpers.
+  - finished_at: 2026-05-11
+  - evidence: Split the broad count/access cleanup into closable leaves
+    TODO-4427 and TODO-4428, covering count/capacity and collection-access
+    semantic traces. Baseline release validation was skipped per the lite
+    workflow.
+
+- [x] TODO-4427: Route semantic count/capacity vector traces
+  - owner: ai
+  - created_at: 2026-05-11
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4424
+  - scope: Replace semantic count/capacity vector helper traces with
+    registry-backed helper predicates or generic collection helpers.
+  - implementation_notes:
+    - Start from `SemanticsValidatorExprCollectionCountCapacity.cpp`,
+      `SemanticsValidatorExprCountCapacityMapBuiltins.cpp`, and their
+      semantic source-lock coverage.
+    - Keep ordinary C++ `std::vector` container usage allowed.
+  - acceptance:
+    - Semantic count/capacity helper selection no longer hard-codes
+      PrimeStruct vector helper paths where registry metadata can provide the
+      surface.
+    - Focused semantic source-lock coverage remains aligned.
+    - The vector surface trace baseline decreases for the selected
+      count/capacity files and does not increase elsewhere.
+  - stop_rule: Stop after count/capacity vector path traces are routed through
+    generic collection or registry-backed helpers.
+  - finished_at: 2026-05-11
+  - evidence: Routed count/capacity helper validation through
+    registry-backed canonical helper path queries and constructed legacy
+    experimental helper targets through a shared compatibility helper, updated
+    source-lock coverage, and ratcheted
+    `scripts/vector_surface_trace_baseline.json` from 381 to 353 production
+    traces. Baseline release validation was skipped per the lite workflow.

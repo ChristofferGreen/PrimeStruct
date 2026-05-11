@@ -44,12 +44,20 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     return validateExpr(params, locals, expr.args.front());
   }
 
+  const std::string canonicalVectorCountPath =
+      canonicalVectorCompatibilityHelperPath("count");
+  const std::string canonicalVectorCapacityPath =
+      canonicalVectorCompatibilityHelperPath("capacity");
+  const std::string legacyExperimentalVectorCountPath =
+      legacyExperimentalVectorCompatibilityHelperPath("count");
+  const std::string legacyExperimentalVectorCapacityPath =
+      legacyExperimentalVectorCompatibilityHelperPath("capacity");
   const bool isDirectExperimentalVectorCountCall =
       !expr.isMethodCall && !resolvedMethod &&
-      resolved.rfind("/std/collections/experimental_vector/vectorCount", 0) == 0;
+      matchesResolvedPath(resolved, legacyExperimentalVectorCountPath);
   const bool isDirectExperimentalVectorCapacityCall =
       !expr.isMethodCall && !resolvedMethod &&
-      resolved.rfind("/std/collections/experimental_vector/vectorCapacity", 0) == 0;
+      matchesResolvedPath(resolved, legacyExperimentalVectorCapacityPath);
   auto canonicalizeSoaCountHelperPath = [](std::string canonicalPath) {
     const size_t specializationSuffix = canonicalPath.find("__");
     if (specializationSuffix != std::string::npos) {
@@ -108,7 +116,7 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     return true;
   };
   auto validateDirectVectorCountCapacityCall =
-      [&](const char *helperName, const char *resolvedPath) {
+      [&](const char *helperName, const std::string &resolvedPath) {
         handledOut = true;
         if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
           return failCountCapacityMapBuiltin(std::string(helperName) +
@@ -165,31 +173,33 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
       };
   if (isDirectExperimentalVectorCountCall) {
     return validateDirectVectorCountCapacityCall(
-        "count", "/std/collections/experimental_vector/vectorCount");
+        "count", legacyExperimentalVectorCountPath);
   }
   if (isDirectExperimentalVectorCapacityCall) {
     return validateDirectVectorCountCapacityCall(
-        "capacity", "/std/collections/experimental_vector/vectorCapacity");
+        "capacity", legacyExperimentalVectorCapacityPath);
   }
   if (isImportedResolvedStdNamespacedVectorCompatibilityDirectCall(
           expr.isMethodCall,
           resolveCalleePath(expr),
           "count",
-          hasImportedDefinitionPath("/std/collections/vector/count"),
+          hasImportedDefinitionPath(canonicalVectorCountPath),
           resolvedMethod,
           expr.args.size(),
           resolved)) {
-    return validateDirectVectorCountCapacityCall("count", "/std/collections/vector/count");
+    return validateDirectVectorCountCapacityCall("count",
+                                                canonicalVectorCountPath);
   }
   if (isImportedResolvedStdNamespacedVectorCompatibilityDirectCall(
           expr.isMethodCall,
           resolveCalleePath(expr),
           "capacity",
-          hasImportedDefinitionPath("/std/collections/vector/capacity"),
+          hasImportedDefinitionPath(canonicalVectorCapacityPath),
           resolvedMethod,
           expr.args.size(),
           resolved)) {
-    return validateDirectVectorCountCapacityCall("capacity", "/std/collections/vector/capacity");
+    return validateDirectVectorCountCapacityCall("capacity",
+                                                canonicalVectorCapacityPath);
   }
   if (isDirectStdNamespacedSoaCountBuiltinCall) {
     handledOut = true;
@@ -360,7 +370,8 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
       it == defMap_.end();
   const auto tryValidateVectorCountBuiltinPath = [&]() -> std::optional<bool> {
     if (resolvedMethod &&
-        logicalResolvedMethod.rfind("/std/collections/vector/count", 0) == 0) {
+        isStdNamespacedVectorCompatibilityHelperPath(logicalResolvedMethod,
+                                                     "count")) {
       return validateVectorCountBuiltinPath(false);
     }
     if (shouldValidateVectorCountBuiltinFallback) {
@@ -673,7 +684,7 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
   };
 
   if (resolvedMethod &&
-      resolved == "/std/collections/vector/capacity") {
+      matchesResolvedPath(resolved, canonicalVectorCapacityPath)) {
     return validateVectorCapacityBuiltinCall();
   }
 

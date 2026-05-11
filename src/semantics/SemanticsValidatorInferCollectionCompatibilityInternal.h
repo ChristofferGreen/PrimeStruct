@@ -250,6 +250,28 @@ enum class RemovedCollectionHelperFamily {
   return canonicalCollectionHelperPath(metadata->id, helperName);
 }
 
+[[maybe_unused]] std::string legacyExperimentalVectorCompatibilityHelperName(
+    std::string_view helperName) {
+  if (helperName == "count") {
+    return std::string("vector") + "Count";
+  }
+  if (helperName == "capacity") {
+    return std::string("vector") + "Capacity";
+  }
+  return std::string(helperName);
+}
+
+[[maybe_unused]] std::string legacyExperimentalVectorCompatibilityHelperPath(
+    std::string_view helperName) {
+  const std::string helper =
+      legacyExperimentalVectorCompatibilityHelperName(helperName);
+  if (helper.empty()) {
+    return "";
+  }
+  return "/std/collections/experimental_" + std::string("vector") + "/" +
+         helper;
+}
+
 [[maybe_unused]] std::string preferredPublishedCollectionLoweringPath(
     std::string_view helperName,
     StdlibSurfaceId surfaceId,

@@ -4619,10 +4619,13 @@
             "          expr.isMethodCall,\n"
             "          resolveCalleePath(expr),\n"
             "          \"count\",\n"
-            "          hasImportedDefinitionPath(\"/std/collections/vector/count\"),\n"
+            "          hasImportedDefinitionPath(canonicalVectorCountPath),\n"
             "          resolvedMethod,\n"
             "          expr.args.size(),\n"
             "          resolved))") != std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "legacyExperimentalVectorCompatibilityHelperPath(\"count\")") !=
+        std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "const auto validateVectorCountBuiltinCall = [&]() -> bool {\n"
             "    handledOut = true;\n"
@@ -4659,7 +4662,8 @@
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "const auto tryValidateVectorCountBuiltinPath = [&]() -> std::optional<bool> {\n"
             "    if (resolvedMethod &&\n"
-            "        logicalResolvedMethod == \"/std/collections/vector/count\") {\n"
+            "        isStdNamespacedVectorCompatibilityHelperPath(logicalResolvedMethod,\n"
+            "                                                     \"count\")) {\n"
             "      return validateVectorCountBuiltinPath(false);\n"
             "    }\n"
             "    if (shouldValidateVectorCountBuiltinFallback) {\n"
@@ -4829,7 +4833,7 @@
             "                        expr.isMethodCall,\n"
             "                        resolveCalleePath(expr),\n"
             "                        \"count\",\n"
-            "                        hasDeclaredDefinitionPath(\"/std/collections/vector/count\")),\n"
+            "                        hasDeclaredCanonicalVectorHelperPath(\"count\")),\n"
             "                    expr.args.size() == 1 &&\n"
             "                        context.resolveMapTarget != nullptr &&\n"
             "                        context.resolveMapTarget(expr.args.front()),\n"
@@ -4837,9 +4841,8 @@
             "                        expr.isMethodCall,\n"
             "                        resolveCalleePath(expr),\n"
             "                        \"count\",\n"
-            "                        hasDeclaredDefinitionPath(\"/std/collections/vector/count\") ||\n"
-            "                            hasImportedDefinitionPath(\n"
-            "                                \"/std/collections/vector/count\")));\n"
+            "                        hasDeclaredCanonicalVectorHelperPath(\"count\") ||\n"
+            "                            hasImportedCanonicalVectorHelperPath(\"count\"));\n"
             "            !stdNamespacedVectorCountDiagnosticMessage.empty()) {\n"
             "          handledOut = true;\n"
             "          return failExprDiagnostic(expr,\n"
@@ -4894,7 +4897,7 @@
             "            expr.isMethodCall,\n"
             "            resolveCalleePath(expr),\n"
             "            \"count\",\n"
-            "            hasImportedDefinitionPath(\"/std/collections/vector/count\")) ||\n"
+            "            hasImportedCanonicalVectorHelperPath(\"count\")) ||\n"
             "        expr.args.empty()) {") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
@@ -4957,6 +4960,9 @@
   CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "inline std::string classifyStdNamespacedVectorCountDiagnosticMessage(") !=
         std::string::npos);
+  CHECK(semanticsCollectionCompatibilityInternalSource.find(
+            "legacyExperimentalVectorCompatibilityHelperPath(") !=
+        std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "const bool shouldBuiltinValidateStdNamespacedVectorCapacityCall =\n"
             "      !expr.isMethodCall &&\n"
@@ -4977,10 +4983,13 @@
             "          expr.isMethodCall,\n"
             "          resolveCalleePath(expr),\n"
             "          \"capacity\",\n"
-            "          hasImportedDefinitionPath(\"/std/collections/vector/capacity\"),\n"
+            "          hasImportedDefinitionPath(canonicalVectorCapacityPath),\n"
             "          resolvedMethod,\n"
             "          expr.args.size(),\n"
             "          resolved))") != std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "legacyExperimentalVectorCompatibilityHelperPath(\"capacity\")") !=
+        std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "const auto validateVectorCapacityBuiltinCall = [&]() -> bool {\n"
             "    handledOut = true;\n"
@@ -5066,7 +5075,7 @@
             "            expr.isMethodCall,\n"
             "            resolveCalleePath(expr),\n"
             "            \"capacity\",\n"
-            "            hasImportedDefinitionPath(\"/std/collections/vector/capacity\")) ||") !=
+            "            hasImportedCanonicalVectorHelperPath(\"capacity\")) ||") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool methodResolvedMissing =\n"
@@ -5310,7 +5319,7 @@
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const std::string stdlibVectorCapacityTargetPath =\n"
-            "    \"/std/collections/vector/capacity\";\n") !=
+            "    canonicalVectorHelperPath(\"capacity\");\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool hasVisibleCapacityHelperMethodTarget =\n"

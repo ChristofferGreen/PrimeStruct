@@ -215,11 +215,6 @@
       "count": 1
     },
     {
-      "path": "src/semantics/SemanticsValidatorExprCollectionCountCapacity.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 14
-    },
-    {
       "path": "src/semantics/SemanticsValidatorExprCollectionDispatchSetup.cpp",
       "pattern": "canonical-vector-path",
       "count": 3
@@ -228,21 +223,6 @@
       "path": "src/semantics/SemanticsValidatorExprCollectionLiterals.cpp",
       "pattern": "experimental-vector-path",
       "count": 2
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorExprCountCapacityMapBuiltins.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 6
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorExprCountCapacityMapBuiltins.cpp",
-      "pattern": "experimental-vector-path",
-      "count": 4
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorExprCountCapacityMapBuiltins.cpp",
-      "pattern": "vector-helper-symbol",
-      "count": 4
     },
     {
       "path": "src/semantics/SemanticsValidatorExprDirectCollectionFallbacks.cpp",

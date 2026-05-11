@@ -123,6 +123,30 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       [](const std::string &helperName) {
         return helperName == "count" || helperName == "count_ref";
       };
+  const auto canonicalVectorHelperPath =
+      [](std::string_view helperName) {
+        std::string path = canonicalVectorCompatibilityHelperPath(helperName);
+        if (path.empty()) {
+          path = "/std/collections/" + std::string("vector") + "/" +
+                 std::string(helperName);
+        }
+        return path;
+      };
+  const auto hasDeclaredCanonicalVectorHelperPath =
+      [&](std::string_view helperName) {
+        const std::string path = canonicalVectorHelperPath(helperName);
+        return !path.empty() && hasDeclaredDefinitionPath(path);
+      };
+  const auto hasImportedCanonicalVectorHelperPath =
+      [&](std::string_view helperName) {
+        const std::string path = canonicalVectorHelperPath(helperName);
+        return !path.empty() && hasImportedDefinitionPath(path);
+      };
+  const auto lacksVisibleCanonicalVectorHelperPath =
+      [&](std::string_view helperName) {
+        const std::string path = canonicalVectorHelperPath(helperName);
+        return path.empty() || lacksVisibleMethodTargetPath(path);
+      };
   const auto isResolvedCountOrCapacityHelperInstantiation =
       [&]() {
         if (expr.isMethodCall || defMap_.find(resolved) == defMap_.end()) {
@@ -267,7 +291,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
             resolveVisiblePreferredVectorHelperMethodTarget(
                 receiver, "count", visibleCountHelperTarget) &&
             (visibleCountHelperTarget == rootedVectorCountTargetPath ||
-             visibleCountHelperTarget == "/std/collections/vector/count" ||
+             visibleCountHelperTarget == canonicalVectorHelperPath("count") ||
              visibleCountHelperTarget == "/soa_vector/count" ||
              visibleCountHelperTarget == "/std/collections/soa_vector/count" ||
              visibleCountHelperTarget == "/soa_vector/count_ref" ||
@@ -335,7 +359,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                         expr.isMethodCall,
                         resolveCalleePath(expr),
                         "count",
-                        hasDeclaredDefinitionPath("/std/collections/vector/count")),
+                        hasDeclaredCanonicalVectorHelperPath("count")),
                     expr.args.size() == 1 &&
                         context.resolveMapTarget != nullptr &&
                         context.resolveMapTarget(expr.args.front()),
@@ -343,9 +367,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                         expr.isMethodCall,
                         resolveCalleePath(expr),
                         "count",
-                        hasDeclaredDefinitionPath("/std/collections/vector/count") ||
-                            hasImportedDefinitionPath(
-                                "/std/collections/vector/count")));
+                        hasDeclaredCanonicalVectorHelperPath("count") ||
+                            hasImportedCanonicalVectorHelperPath("count")));
             !stdNamespacedVectorCountDiagnosticMessage.empty()) {
           handledOut = true;
           return failExprDiagnostic(expr,
@@ -458,8 +481,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
                                                    countHelperName);
   const bool lacksVisibleStdNamespacedVectorCountDefinition =
-      !hasDeclaredDefinitionPath("/std/collections/vector/count") &&
-      !hasImportedDefinitionPath("/std/collections/vector/count");
+      !hasDeclaredCanonicalVectorHelperPath("count") &&
+      !hasImportedCanonicalVectorHelperPath("count");
   const bool usesNonBuiltinStdNamespacedVectorCountShape =
       expr.args.size() != 1 || !expr.templateArgs.empty() ||
       expr.hasBodyArguments || !expr.bodyArguments.empty();
@@ -467,7 +490,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       lacksVisibleStdNamespacedVectorCountDefinition &&
       usesNonBuiltinStdNamespacedVectorCountShape) {
     handledOut = true;
-    return failUnknownCallTarget("/std/collections/vector/count");
+    return failUnknownCallTarget(canonicalVectorHelperPath("count"));
   }
   const bool isSingleArgCountCall = expr.args.size() == 1;
   const bool isMultiArgCountCall = !isSingleArgCountCall;
@@ -523,7 +546,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
               hasImportedDefinitionPath(
                   countHelperName == "count_ref"
                       ? "/std/collections/soa_vector/count_ref"
-                      : "/std/collections/vector/count"));
+                      : canonicalVectorHelperPath("count")));
   const bool countMethodSurfaceHasNoArguments = expr.args.empty();
   const bool violatesCountMethodSurfacePreconditions =
       countMethodSurfaceHasNamedArguments ||
@@ -553,13 +576,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         context.isIndexedArgsPackMapReceiverTarget != nullptr &&
         context.isIndexedArgsPackMapReceiverTarget(receiver);
     const bool requestsStdNamespacedVectorCountHelper =
-        expr.namespacePrefix == "std/collections/vector" ||
-        expr.namespacePrefix == "/std/collections/vector" ||
-        expr.name.rfind("/std/collections/vector/", 0) == 0;
+        isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
+                                                     countHelperName);
     const std::string rootedVectorCountTargetPath =
         rootedVectorHelperPath(countHelperName);
     const std::string stdlibVectorCountTargetPath =
-        "/std/collections/vector/" + countHelperName;
+        canonicalVectorHelperPath(countHelperName);
     const std::string explicitVectorCountTargetPath =
         requestsStdNamespacedVectorCountHelper
             ? stdlibVectorCountTargetPath
@@ -718,7 +740,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                      isDirectNamedCountReceiverCall &&
                      methodResolved == rootedVectorCountTargetPath &&
                      lacksVisibleMethodTargetPath(rootedVectorCountTargetPath) &&
-                     lacksVisibleMethodTargetPath(stdlibVectorCountTargetPath)) ||
+                     lacksVisibleCanonicalVectorHelperPath(countHelperName)) ||
                     (isBuiltinMethod &&
                      methodResolved == stdlibMapCountTargetPath &&
                      lacksVisibleStdlibMapCountDefinition &&
@@ -747,7 +769,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
               expr.isMethodCall,
               resolveCalleePath(expr),
               "capacity",
-              hasImportedDefinitionPath("/std/collections/vector/capacity"));
+              hasImportedCanonicalVectorHelperPath("capacity"));
   const bool capacityMethodSurfaceUsesNonVectorBuiltinName =
       !isVectorBuiltinName(expr, "capacity");
   const bool violatesCapacityMethodSurfacePreconditions =
@@ -795,7 +817,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     std::string methodResolved;
     {
                 const std::string stdlibVectorCapacityTargetPath =
-                    "/std/collections/vector/capacity";
+                    canonicalVectorHelperPath("capacity");
                 const std::string rootedVectorCapacityTargetPath =
                     rootedVectorHelperPath("capacity");
                 const auto assignStdlibVectorCapacityCompatibilityTarget =
