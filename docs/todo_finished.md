@@ -15728,3 +15728,36 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     coverage and ratcheted `scripts/vector_surface_trace_baseline.json` from
     820 to 802 production traces. Baseline release validation was skipped per
     the lite workflow.
+
+- [x] TODO-4407: Route emitter return/setup vector traces
+  - owner: ai
+  - created_at: 2026-05-11
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4406
+  - scope: Replace emitter setup/return, body, lambda-body, and packed-args
+    vector surface traces with generic collection metadata, return facts, or
+    manifest-derived helper paths.
+  - implementation_notes:
+    - Start from `EmitterEmitBodyVectorHelpers.h`,
+      `EmitterEmitSetupReturnInference.h`,
+      `EmitterEmitSetupReturnInferenceCollections.h`,
+      `EmitterExprLambdaBody.h`, and `EmitterExprPackedArgs.h`.
+    - Keep ordinary C++ `std::vector` container usage allowed.
+    - Do not touch lowerer files in this leaf.
+  - acceptance:
+    - Return/setup emitter vector routing no longer hard-codes PrimeStruct
+      vector helper paths where metadata or return facts can provide the same
+      decision.
+    - Focused emitter source-lock or compile-run coverage remains aligned.
+    - The vector surface trace baseline decreases for the selected files and
+      does not increase elsewhere.
+  - stop_rule: Stop after setup/return-oriented emitter vector traces that can
+    be retired before collection-expression work are removed and the baseline
+    ratchets downward.
+  - finished_at: 2026-05-11
+  - evidence: Routed setup/return vector mutator gating, struct-return helper
+    candidates, vector access pruning, lambda-body mutator gating, and packed
+    argument access recognition through collection surface metadata. Updated
+    source-lock coverage and ratcheted
+    `scripts/vector_surface_trace_baseline.json` from 802 to 784 production
+    traces. Baseline release validation was skipped per the lite workflow.

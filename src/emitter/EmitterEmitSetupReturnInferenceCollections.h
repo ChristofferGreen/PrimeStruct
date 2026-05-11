@@ -3,12 +3,31 @@
            suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
            suffix != "remove_at" && suffix != "remove_swap";
   };
+  constexpr std::string_view VectorHelperSurfaceBridgeKey = "collections.vector_helpers";
+  auto vectorHelperPath = [&](std::string_view helperName) {
+    const auto *metadata =
+        findPublishedCollectionHelperSurfaceMetadataByBridgeKey(
+            VectorHelperSurfaceBridgeKey);
+    if (metadata == nullptr || helperName.empty()) {
+      return std::string{};
+    }
+    return std::string(metadata->canonicalPath) + "/" + std::string(helperName);
+  };
+  auto resolveVectorHelperMemberName = [&](std::string_view path,
+                                           bool includeImportAliases,
+                                           std::string &memberNameOut) {
+    return resolvePublishedCollectionSurfacePathMemberName(
+        path,
+        VectorHelperSurfaceBridgeKey,
+        includeImportAliases,
+        memberNameOut);
+  };
   auto preferCollectionHelperPath = [&](const std::string &path) -> std::string {
     std::string preferred = path;
     if (preferred.rfind("/array/", 0) == 0 && defMap.count(preferred) == 0) {
       const std::string suffix = preferred.substr(std::string("/array/").size());
       if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-        const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+        const std::string stdlibAlias = vectorHelperPath(suffix);
         if (defMap.count(stdlibAlias) > 0) {
           return stdlibAlias;
         }
@@ -38,17 +57,17 @@
       methodName.erase(methodName.begin());
     }
     if (receiverStruct == "/vector" || receiverStruct == "/array") {
-      const std::string vectorPrefix = "vector/";
       const std::string arrayPrefix = "array/";
-      const std::string stdVectorPrefix = "std/collections/vector/";
-      if (methodName.rfind(vectorPrefix, 0) == 0) {
-        return methodName.substr(vectorPrefix.size());
-      }
       if (methodName.rfind(arrayPrefix, 0) == 0) {
         return methodName.substr(arrayPrefix.size());
       }
-      if (methodName.rfind(stdVectorPrefix, 0) == 0) {
-        return methodName.substr(stdVectorPrefix.size());
+      std::string vectorMemberName;
+      if (resolvePublishedCollectionSurfacePathMemberName(
+              methodName,
+              "collections.vector_helpers",
+              true,
+              vectorMemberName)) {
+        return vectorMemberName;
       }
     }
     if (receiverStruct == "/map") {
@@ -69,7 +88,7 @@
       -> std::vector<std::string> {
     if (receiverStruct == "/vector") {
       std::vector<std::string> candidates = {
-          "/std/collections/vector/" + methodName,
+          vectorHelperPath(methodName),
       };
       if (allowsArrayVectorCompatibilitySuffix(methodName)) {
         candidates.push_back("/array/" + methodName);
@@ -81,7 +100,7 @@
           "/array/" + methodName,
       };
       if (allowsArrayVectorCompatibilitySuffix(methodName)) {
-        candidates.push_back("/std/collections/vector/" + methodName);
+        candidates.push_back(vectorHelperPath(methodName));
       }
       return candidates;
     }
@@ -134,8 +153,9 @@
 
     std::string normalizedPath = path;
     if (!normalizedPath.empty() && normalizedPath.front() != '/') {
-      if (normalizedPath.rfind("array/", 0) == 0 || normalizedPath.rfind("vector/", 0) == 0 ||
-          normalizedPath.rfind("std/collections/vector/", 0) == 0 ||
+      std::string vectorMemberName;
+      if (normalizedPath.rfind("array/", 0) == 0 ||
+          resolveVectorHelperMemberName(normalizedPath, true, vectorMemberName) ||
           normalizedPath.rfind("soa_vector/", 0) == 0 ||
           normalizedPath.rfind("std/collections/soa_vector/", 0) == 0 ||
           normalizedPath.rfind("map/", 0) == 0 ||
@@ -149,7 +169,7 @@
     if (normalizedPath.rfind("/array/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/array/").size());
       if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-        appendUnique("/std/collections/vector/" + suffix);
+        appendUnique(vectorHelperPath(suffix));
       }
     } else if (normalizedPath.rfind("/soa_vector/", 0) == 0) {
       appendUnique("/std/collections/soa_vector/" +
@@ -209,18 +229,14 @@
           const std::unordered_map<std::string, std::string> &locals,
           std::vector<std::string> &candidates) {
         std::string normalizedPath = path;
-        if (!normalizedPath.empty() && normalizedPath.front() != '/') {
-          if (normalizedPath.rfind("vector/", 0) == 0 ||
-              normalizedPath.rfind("std/collections/vector/", 0) == 0) {
-            normalizedPath.insert(normalizedPath.begin(), '/');
-          }
-        }
-        if (normalizedPath.rfind("/std/collections/vector/", 0) != 0) {
+        std::string vectorMemberName;
+        if (!resolveVectorHelperMemberName(
+                normalizedPath,
+                false,
+                vectorMemberName)) {
           return;
         }
-        const std::string suffix =
-            normalizedPath.substr(std::string("/std/collections/vector/").size());
-        if (suffix != "at" && suffix != "at_unsafe") {
+        if (vectorMemberName != "at" && vectorMemberName != "at_unsafe") {
           return;
         }
         if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.args.empty()) {
@@ -250,7 +266,7 @@
             receiverStruct != "/string") {
           return;
         }
-        const std::string samePathCandidate = "/std/collections/vector/" + suffix;
+        const std::string samePathCandidate = vectorHelperPath(vectorMemberName);
         for (auto it = candidates.begin(); it != candidates.end();) {
           if (*it == samePathCandidate) {
             it = candidates.erase(it);

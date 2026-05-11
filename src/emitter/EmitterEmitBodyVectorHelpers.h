@@ -1,8 +1,12 @@
         std::string vectorHelper;
         if (getVectorMutatorName(stmt, nameMap, vectorHelper)) {
+          std::string explicitRequestedVectorHelperName;
           const std::string explicitRequestedVectorHelperPath =
-              (!stmt.isMethodCall &&
-               (resolveExprPath(stmt).rfind("/std/collections/vector/", 0) == 0))
+              (!stmt.isMethodCall && resolvePublishedCollectionSurfacePathMemberName(
+                                         resolveExprPath(stmt),
+                                         "collections.vector_helpers",
+                                         false,
+                                         explicitRequestedVectorHelperName))
                   ? resolveExprPath(stmt)
                   : std::string{};
           std::string helperPath;

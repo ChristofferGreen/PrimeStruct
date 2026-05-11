@@ -2,6 +2,7 @@
 
 #include "EmitterHelpers.h"
 #include "EmitterBuiltinCallPathHelpersInternal.h"
+#include "EmitterBuiltinMethodResolutionTypeInferenceInternal.h"
 #include "EmitterExprControlBuiltinBlockEarlyReturnStep.h"
 #include "EmitterExprControlBuiltinBlockBindingAutoStep.h"
 #include "EmitterExprControlBuiltinBlockBindingExplicitStep.h"

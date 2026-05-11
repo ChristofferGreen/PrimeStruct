@@ -4,6 +4,7 @@
 #include "primec/Parser.h"
 
 #include "EmitterHelpers.h"
+#include "EmitterBuiltinMethodResolutionTypeInferenceInternal.h"
 #include "EmitterEmitSetupLifecycleHelperStep.h"
 #include "EmitterEmitSetupMathImport.h"
 

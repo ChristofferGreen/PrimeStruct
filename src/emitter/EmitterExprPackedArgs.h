@@ -105,10 +105,16 @@
             if (!normalizedName.empty() && normalizedName.front() == '/') {
               normalizedName.erase(normalizedName.begin());
             }
+            std::string vectorAccessMemberName;
             const bool isVectorAccessName =
                 normalizedName == "at" || normalizedName == "at_unsafe" ||
-                normalizedName == "std/collections/vector/at" ||
-                normalizedName == "std/collections/vector/at_unsafe";
+                (resolvePublishedCollectionSurfacePathMemberName(
+                     normalizedName,
+                     "collections.vector_helpers",
+                     false,
+                     vectorAccessMemberName) &&
+                 (vectorAccessMemberName == "at" ||
+                  vectorAccessMemberName == "at_unsafe"));
             const bool isMapAccessName =
                 isCanonicalMapAccessHelperName(normalizedName) ||
                 isCanonicalMapAccessHelperPath(normalizedName);
