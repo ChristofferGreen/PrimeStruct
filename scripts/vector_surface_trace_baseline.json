@@ -1001,11 +1001,6 @@
     },
     {
       "path": "src/semantics/SemanticsValidatorStatementVectorHelpers.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 20
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorStatementVectorHelpers.cpp",
       "pattern": "experimental-vector-path",
       "count": 1
     },

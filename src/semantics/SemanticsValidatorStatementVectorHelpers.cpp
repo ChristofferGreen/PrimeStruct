@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <string>
 #include <string_view>
@@ -80,6 +81,50 @@ std::string explicitOldSoaAccessPath(const Expr &candidate) {
   return "/soa_vector/" + std::string(helperName);
 }
 
+std::string canonicalPublishedVectorHelperTarget(std::string_view helperName) {
+  const auto *metadata =
+      findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
+  if (metadata == nullptr || !isVectorCompatibilityHelperName(helperName)) {
+    return "";
+  }
+  return std::string(metadata->canonicalPath) + "/" + std::string(helperName);
+}
+
+bool resolveExplicitPublishedVectorHelperExprMemberName(
+    std::string_view rawMethodName,
+    std::string_view namespacePrefix,
+    std::string &helperNameOut) {
+  helperNameOut.clear();
+  rawMethodName = trimLeadingSlash(rawMethodName);
+  namespacePrefix = trimLeadingSlash(namespacePrefix);
+
+  const auto *metadata =
+      findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
+  if (metadata == nullptr) {
+    return false;
+  }
+
+  const std::string_view canonicalNamespace =
+      trimLeadingSlash(metadata->canonicalPath);
+  std::string_view helperName;
+  if (namespacePrefix == canonicalNamespace) {
+    helperName = resolveStdlibSurfaceMemberName(*metadata, rawMethodName);
+  } else {
+    const std::string resolvedPath = "/" + std::string(rawMethodName);
+    const std::string canonicalMemberPrefix =
+        std::string(metadata->canonicalPath) + "/";
+    if (resolvedPath.rfind(canonicalMemberPrefix, 0) != 0) {
+      return false;
+    }
+    helperName = resolveStdlibSurfaceMemberName(*metadata, resolvedPath);
+  }
+  if (helperName.empty() || !isVectorCompatibilityHelperName(helperName)) {
+    return false;
+  }
+  helperNameOut.assign(helperName);
+  return true;
+}
+
 } // namespace
 
 std::string SemanticsValidator::preferVectorStdlibHelperPath(const std::string &path) const {
@@ -97,7 +142,7 @@ std::string SemanticsValidator::preferVectorStdlibHelperPath(const std::string &
   if (preferred.rfind("/array/", 0) == 0 && !hasVisibleDefinitionPath(preferred)) {
     const std::string suffix = preferred.substr(std::string("/array/").size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-      const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+      const std::string stdlibAlias = canonicalPublishedVectorHelperTarget(suffix);
       if (hasVisibleDefinitionPath(stdlibAlias)) {
         return stdlibAlias;
       }
@@ -350,7 +395,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     if (defMap_.count(path) == 0) {
       return false;
     }
-    if (path.rfind("/std/collections/vector/", 0) == 0) {
+    if (isStdNamespacedVectorCompatibilityHelperPath(path, vectorHelper)) {
       auto paramsIt = paramsByDef_.find(path);
       if (paramsIt != paramsByDef_.end() && !paramsIt->second.empty()) {
         std::string experimentalElemType;
@@ -376,12 +421,11 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     }
     return canonicalPath;
   };
-  const bool isStdNamespacedVectorCanonicalHelperCall =
-      !stmt.isMethodCall && vectorHelperResolved.rfind("/std/collections/vector/", 0) == 0 &&
-      (namespacedHelper == "count" || namespacedHelper == "capacity" || namespacedHelper == "at" ||
-       namespacedHelper == "at_unsafe" || namespacedHelper == "push" || namespacedHelper == "pop" ||
-       namespacedHelper == "reserve" || namespacedHelper == "clear" || namespacedHelper == "remove_at" ||
-       namespacedHelper == "remove_swap");
+  auto isStdNamespacedVectorCompatibilityHelperCallPath = [&]() {
+    return !stmt.isMethodCall &&
+           isStdNamespacedVectorCompatibilityHelperPath(vectorHelperResolved,
+                                                        namespacedHelper);
+  };
   std::string vectorHelperResolvedCanonical =
       canonicalizeSoaMutatorHelperPath(vectorHelperResolved);
   bool isStdNamespacedSoaCanonicalMutatorHelperCall = false;
@@ -394,7 +438,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
         (isLegacyOrCanonicalSoaHelperPath(vectorHelperResolvedCanonical, "push") ||
          isLegacyOrCanonicalSoaHelperPath(vectorHelperResolvedCanonical, "reserve"));
     isStdNamespacedCanonicalBuiltinHelperCall =
-        isStdNamespacedVectorCanonicalHelperCall ||
+        isStdNamespacedVectorCompatibilityHelperCallPath() ||
         isStdNamespacedSoaCanonicalMutatorHelperCall;
   };
   recomputeCanonicalBuiltinHelperClassification();
@@ -408,43 +452,37 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
   };
   const std::string rootVectorMutatorPrefix =
       std::string(unrootedVectorHelperPrefix());
-  auto explicitCanonicalStdVectorMutatorCallPath = [&]() -> std::string {
+  auto explicitPublishedVectorMutatorCallPath = [&]() -> std::string {
     if (stmt.isMethodCall) {
       return "";
     }
-    if (normalizedStatementNamespacePrefix == "std/collections/vector" &&
-        isVectorMutatorName(normalizedStatementName)) {
-      return "/std/collections/vector/" + normalizedStatementName;
-    }
-    constexpr std::string_view kCanonicalPrefix = "std/collections/vector/";
-    if (normalizedStatementName.rfind(kCanonicalPrefix, 0) != 0) {
+    std::string helperName;
+    if (!resolveExplicitPublishedVectorHelperExprMemberName(
+            normalizedStatementName,
+            normalizedStatementNamespacePrefix,
+            helperName)) {
       return "";
     }
-    const std::string_view helperName =
-        std::string_view(normalizedStatementName).substr(kCanonicalPrefix.size());
     if (!isVectorMutatorName(helperName)) {
       return "";
     }
-    return "/std/collections/vector/" + std::string(helperName);
+    return canonicalPublishedVectorHelperTarget(helperName);
   }();
-  auto explicitCanonicalStdVectorMutatorMethodPath = [&]() -> std::string {
+  auto explicitPublishedVectorMutatorMethodPath = [&]() -> std::string {
     if (!stmt.isMethodCall) {
       return "";
     }
-    if (normalizedStatementNamespacePrefix == "std/collections/vector" &&
-        isVectorMutatorName(normalizedStatementName)) {
-      return "/std/collections/vector/" + normalizedStatementName;
-    }
-    constexpr std::string_view kCanonicalPrefix = "std/collections/vector/";
-    if (normalizedStatementName.rfind(kCanonicalPrefix, 0) != 0) {
+    std::string helperName;
+    if (!resolveExplicitPublishedVectorHelperExprMemberName(
+            normalizedStatementName,
+            normalizedStatementNamespacePrefix,
+            helperName)) {
       return "";
     }
-    const std::string_view helperName =
-        std::string_view(normalizedStatementName).substr(kCanonicalPrefix.size());
     if (!isVectorMutatorName(helperName)) {
       return "";
     }
-    return "/std/collections/vector/" + std::string(helperName);
+    return canonicalPublishedVectorHelperTarget(helperName);
   }();
   auto explicitRootVectorMutatorPath = [&](bool expectMethodCall) -> std::string {
     if (stmt.isMethodCall != expectMethodCall) {
@@ -502,12 +540,12 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
          stmt.args.front().kind == Expr::Kind::FloatLiteral || stmt.args.front().kind == Expr::Kind::StringLiteral ||
          (stmt.args.front().kind == Expr::Kind::Name && !isBuiltinVectorReceiver(stmt.args.front())));
     if (tryResolveReceiverIndex(0)) {
-      return "/std/collections/vector/" + vectorHelper;
+      return preferredBareVectorHelperTarget(vectorHelper);
     }
     if (probePositionalReorderedReceiver) {
       for (size_t i = 1; i < stmt.args.size(); ++i) {
         if (tryResolveReceiverIndex(i)) {
-          return "/std/collections/vector/" + vectorHelper;
+          return preferredBareVectorHelperTarget(vectorHelper);
         }
       }
     }
@@ -522,7 +560,8 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
   }
   const bool isUserMethodTarget =
       stmt.isMethodCall && defMap_.find(vectorHelperResolved) != defMap_.end() &&
-      vectorHelperResolved.rfind("/std/collections/vector/", 0) != 0 &&
+      !isStdNamespacedVectorCompatibilityHelperPath(vectorHelperResolved,
+                                                    vectorHelper) &&
       vectorHelperResolved.rfind("/soa_vector/", 0) != 0;
   if (isUserMethodTarget) {
     if (!stmt.args.empty() && vectorHelperNeedsStandaloneSoaBorrowCheck) {
@@ -620,13 +659,15 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       !hasDeclaredOrImportedPath(explicitRootVectorMutatorMethodPath)) {
     return failStatementDiagnostic("unknown method: " + explicitRootVectorMutatorMethodPath);
   }
-  if (!explicitCanonicalStdVectorMutatorCallPath.empty() &&
-      !hasDeclaredOrImportedPath(explicitCanonicalStdVectorMutatorCallPath)) {
-    return failStatementDiagnostic("unknown call target: " + explicitCanonicalStdVectorMutatorCallPath);
+  if (!explicitPublishedVectorMutatorCallPath.empty() &&
+      !hasDeclaredOrImportedPath(explicitPublishedVectorMutatorCallPath)) {
+    return failStatementDiagnostic("unknown call target: " +
+                                   explicitPublishedVectorMutatorCallPath);
   }
-  if (!explicitCanonicalStdVectorMutatorMethodPath.empty() &&
-      !hasDeclaredOrImportedPath(explicitCanonicalStdVectorMutatorMethodPath)) {
-    return failStatementDiagnostic("unknown method: " + explicitCanonicalStdVectorMutatorMethodPath);
+  if (!explicitPublishedVectorMutatorMethodPath.empty() &&
+      !hasDeclaredOrImportedPath(explicitPublishedVectorMutatorMethodPath)) {
+    return failStatementDiagnostic("unknown method: " +
+                                   explicitPublishedVectorMutatorMethodPath);
   }
   if (!bareBuiltinVectorMutatorPreferredPath.empty() &&
       !hasDeclaredOrImportedPath(bareBuiltinVectorMutatorPreferredPath)) {
@@ -713,12 +754,9 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       hasDeclaredResolvedVectorHelper || hasImportedResolvedVectorHelper ||
       hasResolvedVectorHelperDefinition;
   const bool isResolvedStdNamespacedVectorMutatorHelper =
-      vectorHelperResolved == "/std/collections/vector/push" ||
-      vectorHelperResolved == "/std/collections/vector/pop" ||
-      vectorHelperResolved == "/std/collections/vector/reserve" ||
-      vectorHelperResolved == "/std/collections/vector/clear" ||
-      vectorHelperResolved == "/std/collections/vector/remove_at" ||
-      vectorHelperResolved == "/std/collections/vector/remove_swap";
+      isVectorMutatorName(vectorHelper) &&
+      isStdNamespacedVectorCompatibilityHelperPath(vectorHelperResolved,
+                                                   vectorHelper);
   if (isBareUnqualifiedVectorMutatorCall &&
       isResolvedStdNamespacedVectorMutatorHelper &&
       hasResolvedReceiverIndex && resolvedReceiverIndex < stmt.args.size() &&

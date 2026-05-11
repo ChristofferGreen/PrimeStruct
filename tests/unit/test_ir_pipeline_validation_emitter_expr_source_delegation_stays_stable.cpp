@@ -409,6 +409,26 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   CHECK(semanticsStatementVectorHelpersSource.find(
             "explicitRootVectorMutatorPath(true)") !=
         std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find("\"/std/collections/vector/") ==
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "std::string canonicalPublishedVectorHelperTarget(") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "bool resolveExplicitPublishedVectorHelperExprMemberName(") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "auto explicitPublishedVectorMutatorCallPath = [&]() -> std::string {") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "return canonicalPublishedVectorHelperTarget(helperName);") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "auto explicitCanonicalStdVectorMutatorCallPath = [&]() -> std::string {") ==
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "vectorHelperResolved == \"/std/collections/vector/push\"") ==
+        std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
             "auto rootedVectorMutatorPath = [](std::string_view helperName)") ==
         std::string::npos);

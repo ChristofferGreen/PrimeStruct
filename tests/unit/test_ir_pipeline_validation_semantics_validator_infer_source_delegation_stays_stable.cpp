@@ -1808,8 +1808,50 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
   CHECK(semanticsStatementVectorHelpersSource.find(
             "const bool hasVisibleResolvedVectorHelper =") !=
         std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find("\"/std/collections/vector/") ==
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "#include \"SemanticsValidatorInferCollectionCompatibilityInternal.h\"") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "std::string canonicalPublishedVectorHelperTarget(") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "bool resolveExplicitPublishedVectorHelperExprMemberName(") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "auto isStdNamespacedVectorCompatibilityHelperCallPath = [&]() {") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "isStdNamespacedVectorCompatibilityHelperPath(vectorHelperResolved,\n"
+            "                                                   vectorHelper)") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "auto explicitPublishedVectorMutatorCallPath = [&]() -> std::string {") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "auto explicitPublishedVectorMutatorMethodPath = [&]() -> std::string {") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "return canonicalPublishedVectorHelperTarget(helperName);") !=
+        std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
             "!hasDeclaredDefinitionPath(explicitCanonicalStdVectorMutatorCallPath) &&") ==
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "auto explicitCanonicalStdVectorMutatorCallPath = [&]() -> std::string {") ==
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "auto explicitCanonicalStdVectorMutatorMethodPath = [&]() -> std::string {") ==
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "vectorHelperResolved == \"/std/collections/vector/push\"") ==
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "const std::string stdlibAlias = \"/std/collections/vector/\" + suffix;") ==
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
             "helperCall.templateArgs.empty() &&\n"

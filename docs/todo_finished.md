@@ -15494,3 +15494,42 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     focused source-lock coverage, and ratcheted
     `scripts/vector_surface_trace_baseline.json` from 872 to 858 production
     traces. Baseline release validation was skipped per the lite workflow.
+
+- [x] TODO-4397: Route statement vector helper canonical gates
+  - owner: ai
+  - created_at: 2026-05-08
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4400
+  - scope: Replace direct canonical `/std/collections/vector/*` statement
+    helper classification and explicit mutator path construction in
+    `SemanticsValidatorStatementVectorHelpers.cpp` with shared preferred
+    vector helper targets, published helper metadata, or generic collection
+    routing.
+  - implementation_notes:
+    - Start from the `canonical-vector-path` hits in
+      `SemanticsValidatorStatementVectorHelpers.cpp`.
+    - Preserve explicit user-defined rooted helper handling and existing
+      unknown-target diagnostics.
+    - Do not touch template monomorph, lowerer, or emitter dispatch in this
+      leaf.
+  - acceptance:
+    - Statement vector helper validation no longer carries direct canonical
+      vector helper classification or path construction where shared preferred
+      helper or metadata routing can provide the same target.
+    - Existing vector mutation, growth, destruction, borrow, and import
+      conformance remains covered by focused source-lock or semantic tests.
+    - The vector surface trace baseline decreases for
+      `SemanticsValidatorStatementVectorHelpers.cpp` and does not increase
+      elsewhere.
+  - stop_rule: Stop once statement helper canonical vector shims that can be
+    retired before lowerer/emitter work are removed and the audit baseline
+    ratchets downward.
+  - finished_at: 2026-05-11
+  - evidence: Replaced statement-vector canonical helper path checks,
+    explicit canonical mutator path construction, bare mutator target
+    construction, and resolved mutator equality gates in
+    `SemanticsValidatorStatementVectorHelpers.cpp` with published vector
+    metadata helpers or `preferredBareVectorHelperTarget`, updated
+    source-lock coverage, and ratcheted
+    `scripts/vector_surface_trace_baseline.json` from 858 to 838 production
+    traces. Baseline release validation was skipped per the lite workflow.
