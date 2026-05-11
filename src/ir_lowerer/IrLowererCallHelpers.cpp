@@ -25,8 +25,18 @@ bool isGeneratedSinglePathSegmentWithPrefix(std::string_view path, std::string_v
          path.find("__", prefix.size()) != std::string_view::npos;
 }
 
+std::string experimentalCollectionRoot(std::string_view collectionName) {
+  return "/std/collections/experimental_" + std::string(collectionName);
+}
+
+std::string experimentalCollectionMemberRoot(std::string_view collectionName) {
+  return experimentalCollectionRoot(collectionName) + "/";
+}
+
 bool isGeneratedStdlibCollectionStructPath(std::string_view path) {
-  return isSinglePathSegmentWithPrefix(path, "/std/collections/experimental_vector/Vector__") ||
+  const std::string experimentalVectorTypePrefix =
+      experimentalCollectionMemberRoot("vector") + "Vector__";
+  return isSinglePathSegmentWithPrefix(path, experimentalVectorTypePrefix) ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/experimental_map/Map__") ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/experimental_soa_vector/SoaVector__") ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/internal_soa_storage/SoaColumn__") ||
@@ -34,20 +44,50 @@ bool isGeneratedStdlibCollectionStructPath(std::string_view path) {
          isGeneratedSinglePathSegmentWithPrefix(path, "/std/collections/internal_soa_storage/SoaColumns");
 }
 
+std::string_view trimLeadingSlash(std::string_view path) {
+  return !path.empty() && path.front() == '/' ? path.substr(1) : path;
+}
+
+bool resolveCanonicalVectorHelperDefinitionMember(const std::string &path,
+                                                  std::string &memberNameOut) {
+  memberNameOut.clear();
+  const auto *metadata =
+      findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
+  if (metadata == nullptr) {
+    return false;
+  }
+  const std::string_view normalizedPath = trimLeadingSlash(path);
+  const std::string_view canonicalRoot = trimLeadingSlash(metadata->canonicalPath);
+  if (normalizedPath.size() <= canonicalRoot.size() ||
+      normalizedPath.compare(0, canonicalRoot.size(), canonicalRoot) != 0 ||
+      normalizedPath[canonicalRoot.size()] != '/') {
+    return false;
+  }
+  std::string memberPath(normalizedPath.substr(canonicalRoot.size() + 1));
+  const size_t slash = memberPath.find('/');
+  if (slash != std::string::npos) {
+    return false;
+  }
+  const size_t generated = memberPath.find("__");
+  if (generated != std::string::npos) {
+    memberPath.erase(generated);
+  }
+  if (memberPath.empty() || memberPath.find('/') != std::string::npos) {
+    return false;
+  }
+  const std::string_view memberName =
+      resolveStdlibSurfaceMemberName(*metadata, memberPath);
+  if (memberName.empty()) {
+    return false;
+  }
+  memberNameOut.assign(memberName);
+  return true;
+}
+
 bool isRemovedVectorHelperDefinitionPath(const std::string &path) {
-  auto matchesPath = [&](std::string_view basePath) {
-    return path == basePath || path.rfind(std::string(basePath) + "__", 0) == 0;
-  };
-  return matchesPath("/std/collections/vector/count") ||
-         matchesPath("/std/collections/vector/capacity") ||
-         matchesPath("/std/collections/vector/at") ||
-         matchesPath("/std/collections/vector/at_unsafe") ||
-         matchesPath("/std/collections/vector/push") ||
-         matchesPath("/std/collections/vector/pop") ||
-         matchesPath("/std/collections/vector/reserve") ||
-         matchesPath("/std/collections/vector/clear") ||
-         matchesPath("/std/collections/vector/remove_at") ||
-         matchesPath("/std/collections/vector/remove_swap");
+  std::string memberName;
+  return resolveCanonicalVectorHelperDefinitionMember(path, memberName) &&
+         memberName != "vector";
 }
 
 bool isArgsPackParam(const Expr &param) {
@@ -208,16 +248,18 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
       return false;
     }
     const std::string directHelperPath = resolveDirectHelperPath();
-    return directHelperPath == std::string("/vector/") + std::string(helperName) ||
-           directHelperPath == std::string("vector/") + std::string(helperName) ||
-           directHelperPath == std::string("/array/") + std::string(helperName) ||
-           directHelperPath == std::string("array/") + std::string(helperName) ||
-           directHelperPath == std::string("/soa_vector/") + std::string(helperName) ||
-           directHelperPath == std::string("soa_vector/") + std::string(helperName);
+    auto matchesCollectionRoot = [&](std::string_view collectionName) {
+      const std::string unrooted =
+          std::string(collectionName) + "/" + std::string(helperName);
+      return directHelperPath == unrooted || directHelperPath == "/" + unrooted;
+    };
+    return matchesCollectionRoot("vector") ||
+           matchesCollectionRoot("array") ||
+           matchesCollectionRoot("soa_vector");
   };
   if (!expr.isMethodCall) {
     const std::string directHelperPath = resolveDirectHelperPath();
-    if (directHelperPath.rfind("/std/collections/experimental_vector/", 0) == 0 ||
+    if (directHelperPath.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0 ||
         directHelperPath.rfind("/std/collections/experimental_map/", 0) == 0) {
       return CountMethodFallbackResult::NotHandled;
     }

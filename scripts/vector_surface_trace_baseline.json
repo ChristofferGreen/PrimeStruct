@@ -80,21 +80,6 @@
       "count": 17
     },
     {
-      "path": "src/ir_lowerer/IrLowererCallHelpers.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 10
-    },
-    {
-      "path": "src/ir_lowerer/IrLowererCallHelpers.cpp",
-      "pattern": "experimental-vector-path",
-      "count": 2
-    },
-    {
-      "path": "src/ir_lowerer/IrLowererCallHelpers.cpp",
-      "pattern": "root-vector-helper-path",
-      "count": 2
-    },
-    {
       "path": "src/ir_lowerer/IrLowererCallResolution.cpp",
       "pattern": "experimental-vector-path",
       "count": 2

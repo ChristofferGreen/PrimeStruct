@@ -159,6 +159,15 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(callHelpersSource.find("BufferBuiltinDispatchResult tryEmitBufferBuiltinDispatchWithLocals(") !=
         std::string::npos);
+  CHECK(callHelpersSource.find("resolveCanonicalVectorHelperDefinitionMember(") !=
+        std::string::npos);
+  CHECK(callHelpersSource.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") !=
+        std::string::npos);
+  CHECK(callHelpersSource.find("std/collections/vector/") == std::string::npos);
+  CHECK(callHelpersSource.find("std/collections/experimental_vector") == std::string::npos);
+  CHECK(callHelpersSource.find("StdlibSurfaceId::CollectionsVectorHelpers") ==
+        std::string::npos);
+  CHECK(callHelpersSource.find("\"/vector/\"") == std::string::npos);
   CHECK(callHelpersSource.find("IrOpcode mapKeyCompareOpcode(") ==
         std::string::npos);
   CHECK(callHelpersSource.find("MapLookupStringKeyResult tryResolveMapLookupStringKey(") ==
@@ -299,11 +308,15 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   const size_t dynamicStringAccessPos =
       indexedAccessEmitSource.find("DynamicStringAccessEmitResult tryEmitDynamicStringAccessLoad(");
   REQUIRE(dynamicStringAccessPos != std::string::npos);
-  const size_t dynamicStringGraphKindPos = indexedAccessEmitSource.find(
-      "const LocalInfo::ValueKind targetKind = inferExprKind(targetExpr, localsIn);",
+  const size_t dynamicStringGraphKindDeclarationPos = indexedAccessEmitSource.find(
+      "const LocalInfo::ValueKind targetKind =",
       dynamicStringAccessPos);
+  const size_t dynamicStringGraphKindPos = indexedAccessEmitSource.find(
+      "inferExprKind(targetExpr, localsIn)",
+      dynamicStringGraphKindDeclarationPos);
   const size_t dynamicStringLocalLookupPos =
       indexedAccessEmitSource.find("localsIn.find(targetExpr.name)", dynamicStringAccessPos);
+  REQUIRE(dynamicStringGraphKindDeclarationPos != std::string::npos);
   REQUIRE(dynamicStringGraphKindPos != std::string::npos);
   REQUIRE(dynamicStringLocalLookupPos != std::string::npos);
   CHECK(dynamicStringGraphKindPos < dynamicStringLocalLookupPos);
@@ -675,7 +688,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(tailDispatchSource.find("return findByPath(canonicalPath);") !=
         std::string::npos);
-  CHECK(countAccessHelpersSource.find("bool isExplicitPublishedVectorCountCall(const Expr &expr)") !=
+  CHECK(countAccessHelpersSource.find("bool isExplicitPublishedVectorMetadataCall(const Expr &expr,") !=
         std::string::npos);
   CHECK(countAccessHelpersSource.find("isVectorCountTarget(expr.args.front(), localsIn)") !=
         std::string::npos);
@@ -750,7 +763,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("resolvePublishedNativeTailHelperName(") !=
         std::string::npos);
-  CHECK(nativeTailDispatchSource.find("const auto unsupportedCallResult = emitUnsupportedNativeCallDiagnostic(") !=
+  CHECK(nativeTailDispatchSource.find("const auto unsupportedCallResult = emitUnsupportedNativeCallDiagnosticImpl(") !=
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("if (!emitBuiltinArrayAccess(accessName,") !=
         std::string::npos);

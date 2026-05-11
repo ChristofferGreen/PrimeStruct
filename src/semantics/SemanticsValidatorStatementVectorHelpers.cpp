@@ -8,13 +8,6 @@
 namespace primec::semantics {
 namespace {
 
-std::string_view trimLeadingSlash(std::string_view text) {
-  if (!text.empty() && text.front() == '/') {
-    text.remove_prefix(1);
-  }
-  return text;
-}
-
 bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
   return suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
          suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&

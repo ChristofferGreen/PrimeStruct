@@ -15821,3 +15821,62 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     and ratcheted `scripts/vector_surface_trace_baseline.json` from 766 to
     760 production traces. Baseline release validation was skipped per the
     lite workflow.
+
+- [x] TODO-4403: Route lowerer vector call and statement traces
+  - owner: ai
+  - created_at: 2026-05-11
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4409
+  - scope: Replace lowerer vector call, statement, count/access, native tail,
+    and inline dispatch traces with semantic surface metadata, generic
+    collection routing, or existing call-resolution facts.
+  - implementation_notes:
+    - Start from lowerer files whose trace entries are call/statement
+      dispatch oriented, including `IrLowererCall*`, `IrLowererCountAccess*`,
+      `IrLowererInline*`, `IrLowererLowerEmitExpr*`,
+      `IrLowererLowerStatements*`, `IrLowererNativeTailDispatch.cpp`, and
+      `IrLowererStatementCallEmission.cpp`.
+    - Keep ordinary C++ `std::vector` container usage allowed.
+    - Do not touch lowerer type/layout/struct-return files in this leaf
+      unless needed to preserve a call-dispatch contract.
+  - acceptance:
+    - Lowerer call and statement vector helper dispatch is generic or
+      manifest-driven rather than hard-coded to PrimeStruct vector paths where
+      semantic facts already carry the needed surface.
+    - Focused lowerer source-lock coverage remains aligned.
+    - The vector surface trace baseline decreases for call/statement lowerer
+      files and does not increase elsewhere.
+  - stop_rule: Stop after lowerer call/statement vector-specific traces that
+    can be retired before type/layout work are removed and the baseline
+    ratchets downward.
+  - finished_at: 2026-05-11
+  - evidence: Split the oversized lowerer call and statement trace leaf into
+    TODO-4410, TODO-4411, TODO-4412, TODO-4413, and TODO-4414 so each leaf
+    owns one bounded file family.
+
+- [x] TODO-4410: Route lowerer call helper vector traces
+  - owner: ai
+  - created_at: 2026-05-11
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4409
+  - scope: Replace lowerer call helper vector path gates in
+    `IrLowererCallHelpers.cpp` with metadata-backed or segmented collection
+    routing.
+  - implementation_notes:
+    - Start from `IrLowererCallHelpers.cpp`.
+    - Keep ordinary C++ `std::vector` container usage allowed.
+    - Do not touch lowerer type/layout/struct-return files in this leaf.
+  - acceptance:
+    - Call helper vector removal/shadowing decisions no longer hard-code
+      PrimeStruct vector paths where metadata carries the needed surface.
+    - Focused lowerer source-lock coverage remains aligned.
+    - The vector surface trace baseline decreases for
+      `IrLowererCallHelpers.cpp` and does not increase elsewhere.
+  - stop_rule: Stop after call helper vector-specific traces are removed and
+    the baseline ratchets downward.
+  - finished_at: 2026-05-11
+  - evidence: Routed generated vector storage and removed-vector helper checks
+    through segmented collection roots and collection surface metadata.
+    Updated source-lock coverage and ratcheted
+    `scripts/vector_surface_trace_baseline.json` from 760 to 746 production
+    traces. Baseline release validation was skipped per the lite workflow.
