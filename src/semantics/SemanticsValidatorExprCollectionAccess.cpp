@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <algorithm>
 #include <string>
@@ -160,7 +161,9 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       getCanonicalMapAccessHelperNameForDispatch(expr, accessHelperName);
   const bool isStdNamespacedVectorAccessCall =
       hasBuiltinAccessSpelling && !expr.isMethodCall &&
-      resolveCalleePath(expr).rfind("/std/collections/vector/at", 0) == 0;
+      isValueSurfaceAccessHelperName(accessHelperName) &&
+      isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
+                                                   accessHelperName);
   const bool prefersExplicitDirectMapAccessAliasDefinition =
       !expr.isMethodCall &&
       (((context.isNamespacedMapHelperCall &&
@@ -300,7 +303,8 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
               hasImportedDefinitionPath(preferredVectorAccessTarget));
     };
     auto canonicalVectorAccessHelperTarget = [&]() {
-      return "/std/collections/vector/" + accessHelperName;
+      return canonicalVectorCompatibilityHelperPathOrFallback(
+          accessHelperName);
     };
     auto canonicalMapAccessHelperTarget = [&]() {
       return canonicalStdlibMapAccessPathForHelper(accessHelperName);
@@ -405,12 +409,12 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
             !receiverHasVisibleCanonicalVectorAccessHelper)) &&
           resolveVectorHelperMethodTarget(params, locals, receiverCandidate,
                                           accessHelperName, methodResolved)) {
-        if (methodResolved.rfind("/std/collections/experimental_vector/", 0) == 0 &&
+        if (isLegacyExperimentalVectorCompatibilityPath(methodResolved) &&
             !hasDefinitionPath(methodResolved) &&
             !hasDeclaredDefinitionPath(methodResolved) &&
             !hasImportedDefinitionPath(methodResolved)) {
           const std::string canonicalVectorMethodTarget =
-              "/std/collections/vector/" + accessHelperName;
+              canonicalVectorAccessHelperTarget();
           if (hasDefinitionFamilyPath(canonicalVectorMethodTarget) ||
               hasDefinitionPath(canonicalVectorMethodTarget) ||
               hasDeclaredDefinitionPath(canonicalVectorMethodTarget) ||
@@ -434,12 +438,12 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
         return true;
       }
       if (!isBuiltinMethod &&
-          methodResolved.rfind("/std/collections/experimental_vector/Vector__", 0) == 0 &&
+          isLegacyExperimentalVectorCompatibilityTypePath(methodResolved) &&
           !hasDefinitionPath(methodResolved) &&
           !hasDeclaredDefinitionPath(methodResolved) &&
           !hasImportedDefinitionPath(methodResolved)) {
         const std::string canonicalVectorMethodTarget =
-            "/std/collections/vector/" + accessHelperName;
+            canonicalVectorAccessHelperTarget();
         if (hasDefinitionFamilyPath(canonicalVectorMethodTarget) ||
             hasDefinitionPath(canonicalVectorMethodTarget) ||
             hasDeclaredDefinitionPath(canonicalVectorMethodTarget) ||
@@ -558,12 +562,12 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
             !receiverHasVisibleCanonicalVectorAccessHelper)) &&
           resolveVectorHelperMethodTarget(params, locals, expr.args.front(),
                                           accessHelperName, methodResolved)) {
-        if (methodResolved.rfind("/std/collections/experimental_vector/", 0) == 0 &&
+        if (isLegacyExperimentalVectorCompatibilityPath(methodResolved) &&
             !hasDefinitionPath(methodResolved) &&
             !hasDeclaredDefinitionPath(methodResolved) &&
             !hasImportedDefinitionPath(methodResolved)) {
           const std::string canonicalVectorMethodTarget =
-              "/std/collections/vector/" + accessHelperName;
+              canonicalVectorAccessHelperTarget();
           if (hasDefinitionFamilyPath(canonicalVectorMethodTarget) ||
               hasDefinitionPath(canonicalVectorMethodTarget) ||
               hasDeclaredDefinitionPath(canonicalVectorMethodTarget) ||
@@ -584,12 +588,12 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
           resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), accessHelperName,
                               methodResolved, isBuiltinMethod)) {
         if (!isBuiltinMethod &&
-            methodResolved.rfind("/std/collections/experimental_vector/Vector__", 0) == 0 &&
+            isLegacyExperimentalVectorCompatibilityTypePath(methodResolved) &&
             !hasDefinitionPath(methodResolved) &&
             !hasDeclaredDefinitionPath(methodResolved) &&
             !hasImportedDefinitionPath(methodResolved)) {
           const std::string canonicalVectorMethodTarget =
-              "/std/collections/vector/" + accessHelperName;
+              canonicalVectorAccessHelperTarget();
           if (hasDefinitionFamilyPath(canonicalVectorMethodTarget) ||
               hasDefinitionPath(canonicalVectorMethodTarget) ||
               hasDeclaredDefinitionPath(canonicalVectorMethodTarget) ||
@@ -671,9 +675,10 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
             resolvedMethod = true;
             return true;
           }
-          if (receiverStructPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) {
+          if (isLegacyExperimentalVectorCompatibilityTypePath(
+                  receiverStructPath)) {
             const std::string canonicalVectorMethodTarget =
-                "/std/collections/vector/" + accessHelperName;
+                canonicalVectorAccessHelperTarget();
             if (hasDefinitionFamilyPath(canonicalVectorMethodTarget) ||
                 hasDefinitionPath(canonicalVectorMethodTarget) ||
                 hasDeclaredDefinitionPath(canonicalVectorMethodTarget) ||

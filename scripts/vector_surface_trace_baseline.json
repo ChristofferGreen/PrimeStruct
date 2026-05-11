@@ -195,26 +195,6 @@
       "count": 1
     },
     {
-      "path": "src/semantics/SemanticsValidatorExprCollectionAccess.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 7
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorExprCollectionAccess.cpp",
-      "pattern": "experimental-vector-path",
-      "count": 5
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorExprCollectionAccessValidation.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 4
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorExprCollectionAccessValidation.cpp",
-      "pattern": "experimental-vector-path",
-      "count": 1
-    },
-    {
       "path": "src/semantics/SemanticsValidatorExprCollectionDispatchSetup.cpp",
       "pattern": "canonical-vector-path",
       "count": 3

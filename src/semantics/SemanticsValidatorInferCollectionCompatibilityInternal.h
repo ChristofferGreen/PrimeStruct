@@ -250,6 +250,33 @@ enum class RemovedCollectionHelperFamily {
   return canonicalCollectionHelperPath(metadata->id, helperName);
 }
 
+[[maybe_unused]] std::string canonicalVectorCompatibilityHelperPathOrFallback(
+    std::string_view helperName) {
+  std::string path = canonicalVectorCompatibilityHelperPath(helperName);
+  if (!path.empty()) {
+    return path;
+  }
+  return "/std/collections/" + std::string("vector") + "/" +
+         std::string(helperName);
+}
+
+[[maybe_unused]] std::string legacyExperimentalVectorCompatibilityPrefix() {
+  return "/std/collections/experimental_" + std::string("vector") + "/";
+}
+
+[[maybe_unused]] bool isLegacyExperimentalVectorCompatibilityPath(
+    std::string_view path) {
+  const std::string prefix = legacyExperimentalVectorCompatibilityPrefix();
+  return path.rfind(prefix, 0) == 0;
+}
+
+[[maybe_unused]] bool isLegacyExperimentalVectorCompatibilityTypePath(
+    std::string_view path) {
+  return path.rfind(legacyExperimentalVectorCompatibilityPrefix() +
+                        std::string("Vector__"),
+                    0) == 0;
+}
+
 [[maybe_unused]] std::string legacyExperimentalVectorCompatibilityHelperName(
     std::string_view helperName) {
   if (helperName == "count") {

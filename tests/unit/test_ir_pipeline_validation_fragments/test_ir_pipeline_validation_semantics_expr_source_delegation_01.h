@@ -5935,6 +5935,12 @@
   CHECK(semanticsExprNamedArgumentBuiltinsSource.find("appendUniqueReceiverIndex(") ==
         std::string::npos);
   CHECK(semanticsExprCollectionAccessSource.find(
+            "#include \"SemanticsValidatorInferCollectionCompatibilityInternal.h\"") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessValidationSource.find(
+            "#include \"SemanticsValidatorInferCollectionCompatibilityInternal.h\"") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessSource.find(
             "auto tryResolveReceiverIndex = [&](size_t receiverIndex)") !=
         std::string::npos);
   CHECK(semanticsExprCollectionAccessSource.find(
@@ -5944,21 +5950,27 @@
             "      }\n"
             "      const std::string preferredVectorAccessTarget =\n"
             "          preferredBareVectorHelperTarget(accessHelperName);\n"
-            "      return preferredVectorAccessTarget.rfind(\"/vector/\", 0) == 0 &&\n"
+            "      return isRootedVectorHelperPath(preferredVectorAccessTarget) &&\n"
             "             (hasDeclaredDefinitionPath(preferredVectorAccessTarget) ||\n"
             "              hasImportedDefinitionPath(preferredVectorAccessTarget));\n"
             "    };") !=
         std::string::npos);
   CHECK(semanticsExprCollectionAccessSource.find(
             "auto canonicalVectorAccessHelperTarget = [&]() {\n"
-            "      return \"/std/collections/vector/\" + accessHelperName;\n"
+            "      return canonicalVectorCompatibilityHelperPathOrFallback(\n"
+            "          accessHelperName);\n"
             "    };") !=
         std::string::npos);
   CHECK(semanticsExprCollectionAccessSource.find(
             "auto hasVisibleCanonicalVectorAccessHelper = [&]() {\n"
             "      const std::string canonicalTarget = canonicalVectorAccessHelperTarget();\n"
+            "      const bool isStdlibVectorAccessWrapperDefinition =\n"
+            "          currentValidationState_.context.definitionPath.rfind(\"/std/collections/\", 0) == 0 ||\n"
+            "          currentValidationState_.context.definitionPath.rfind(\"/std/image/\", 0) == 0 ||\n"
+            "          currentValidationState_.context.definitionPath.rfind(\"/std/ui/\", 0) == 0;\n"
             "      return hasDeclaredDefinitionPath(canonicalTarget) ||\n"
-            "             hasImportedDefinitionPath(canonicalTarget);\n"
+            "             hasImportedDefinitionPath(canonicalTarget) ||\n"
+            "             isStdlibVectorAccessWrapperDefinition;\n"
             "    };") !=
         std::string::npos);
   CHECK(semanticsExprCollectionAccessSource.find(
@@ -5969,13 +5981,14 @@
   CHECK(semanticsExprCollectionAccessSource.find(
             "if (receiverIsBuiltinVectorAccessTarget) {\n"
             "        methodResolved = canonicalVectorAccessHelperTarget();\n"
-            "        if (!hasVisibleCanonicalVectorAccessHelper()) {\n"
+            "        if (receiverHasVisibleCanonicalVectorAccessHelper) {\n"
+            "          resolvedVectorAccessMethod = true;\n"
+            "        } else if (!hasVisiblePreferredVectorAccessHelper()) {\n"
             "          (void)failCollectionAccessTargetDiagnostic(\n"
             "              \"unknown call target: \" + methodResolved);\n"
             "          failedReceiverProbe = true;\n"
             "          return true;\n"
             "        }\n"
-            "        resolvedVectorAccessMethod = true;\n"
             "      }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionAccessSource.find(
@@ -6008,6 +6021,28 @@
   CHECK(semanticsExprCollectionAccessSource.find("std::vector<size_t> receiverIndices;") ==
         std::string::npos);
   CHECK(semanticsExprCollectionAccessSource.find("appendUniqueReceiverIndex(") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessSource.find("std/collections/vector/") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessSource.find("std/collections/experimental_vector/") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessSource.find(
+            "isLegacyExperimentalVectorCompatibilityPath(methodResolved)") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessSource.find(
+            "isLegacyExperimentalVectorCompatibilityTypePath(methodResolved)") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessValidationSource.find(
+            "canonicalVectorCompatibilityHelperPathOrFallback(builtinName)") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessValidationSource.find(
+            "isLegacyExperimentalVectorCompatibilityPath(\n"
+            "            currentValidationState_.context.definitionPath)") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessValidationSource.find("std/collections/vector/") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessValidationSource.find(
+            "std/collections/experimental_vector/") ==
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "auto tryResolveReceiverIndex = [&](size_t receiverIndex)") !=

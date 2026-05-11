@@ -16267,3 +16267,31 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     source-lock coverage, and ratcheted
     `scripts/vector_surface_trace_baseline.json` from 381 to 353 production
     traces. Baseline release validation was skipped per the lite workflow.
+
+- [x] TODO-4428: Route semantic collection-access vector traces
+  - owner: ai
+  - created_at: 2026-05-11
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4427
+  - scope: Replace semantic collection-access vector helper traces with
+    registry-backed helper predicates or generic collection helpers.
+  - implementation_notes:
+    - Start from `SemanticsValidatorExprCollectionAccess.cpp` and
+      `SemanticsValidatorExprCollectionAccessValidation.cpp`.
+    - Keep ordinary C++ `std::vector` container usage allowed.
+  - acceptance:
+    - Semantic collection-access helper selection no longer hard-codes
+      PrimeStruct vector helper paths where registry metadata can provide the
+      surface.
+    - Focused semantic source-lock or behavior coverage remains aligned.
+    - The vector surface trace baseline decreases for the selected access
+      files and does not increase elsewhere.
+  - stop_rule: Stop after collection-access vector path traces are routed
+    through generic collection or registry-backed helpers.
+  - finished_at: 2026-05-11
+  - evidence: Routed collection-access helper checks through
+    registry-backed canonical helper path queries and shared legacy
+    experimental vector path predicates, updated source-lock coverage, and
+    ratcheted `scripts/vector_surface_trace_baseline.json` from 353 to 336
+    production traces. Baseline release validation was skipped per the lite
+    workflow.

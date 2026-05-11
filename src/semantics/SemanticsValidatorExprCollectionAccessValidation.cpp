@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <string>
 #include <unordered_map>
@@ -342,8 +343,10 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
           context.resolveExperimentalVectorValueTarget != nullptr &&
           context.resolveExperimentalVectorValueTarget(expr.args[receiverIndex], elemType);
       if (!isBuiltinVectorReceiver && !isExperimentalVectorReceiver) {
+        const std::string canonicalVectorAccessPath =
+            canonicalVectorCompatibilityHelperPathOrFallback(builtinName);
         return failCollectionAccessDiagnostic(
-            "argument type mismatch for /std/collections/vector/" + builtinName);
+            "argument type mismatch for " + canonicalVectorAccessPath);
       }
     }
   }
@@ -588,16 +591,19 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     handledOut = true;
     const bool isStdlibVectorAccessWrapperDefinition =
         currentValidationState_.context.definitionPath.rfind("/std/collections/", 0) == 0 ||
-        currentValidationState_.context.definitionPath.rfind("/std/collections/experimental_vector/", 0) == 0 ||
+        isLegacyExperimentalVectorCompatibilityPath(
+            currentValidationState_.context.definitionPath) ||
         currentValidationState_.context.definitionPath.rfind("/std/image/", 0) == 0 ||
         currentValidationState_.context.definitionPath.rfind("/std/ui/", 0) == 0;
+    const std::string canonicalVectorAccessPath =
+        canonicalVectorCompatibilityHelperPathOrFallback(builtinName);
     if (!expr.isMethodCall &&
         (isDirectVectorReceiver || isDirectExperimentalVectorReceiver) &&
         !isStdlibVectorAccessWrapperDefinition &&
-        !hasDeclaredDefinitionPath("/std/collections/vector/" + builtinName) &&
-        !hasImportedDefinitionPath("/std/collections/vector/" + builtinName)) {
+        !hasDeclaredDefinitionPath(canonicalVectorAccessPath) &&
+        !hasImportedDefinitionPath(canonicalVectorAccessPath)) {
       return failCollectionAccessDiagnostic(
-          "unknown call target: /std/collections/vector/" + builtinName);
+          "unknown call target: " + canonicalVectorAccessPath);
     }
     if (!isArrayOrString && !isMap && !isExperimentalMap) {
       if (!validateExpr(params, locals, expr.args.front())) {
