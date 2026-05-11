@@ -647,6 +647,7 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helper paths") {
   CHECK(legacyAliasInstructions.empty());
   CHECK(capacityExceededCalls == 2);
 
+  std::vector<primec::IrInstruction> canonicalHelperInstructions;
   CHECK(runHelper(
             makeCall("/std/collections/vector/push", {makeTarget(), makeI32Literal(7)}),
             capacityExceededCalls,
@@ -654,10 +655,11 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helper paths") {
             indexOutOfBoundsCalls,
             reserveNegativeCalls,
             reserveExceededCalls,
-            nullptr,
-            error) == EmitResult::Emitted);
+            &canonicalHelperInstructions,
+            error) == EmitResult::NotMatched);
   CHECK(error.empty());
-  CHECK(capacityExceededCalls == 4);
+  CHECK(canonicalHelperInstructions.empty());
+  CHECK(capacityExceededCalls == 2);
 
   CHECK(runHelper(
             makeCall("pop", {makeTarget()}),
@@ -703,7 +705,7 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helper paths") {
   error.clear();
   CHECK(runHelper(
             makeCall("reserve",
-                     {makeTarget(), makeCall("plus", {makeI32Literal(200), makeI32Literal(57)})}),
+                     {makeTarget(), makeCall("plus", {makeI32Literal(1000), makeI32Literal(25)})}),
             capacityExceededCalls,
             popOnEmptyCalls,
             indexOutOfBoundsCalls,
