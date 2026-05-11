@@ -15572,3 +15572,65 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     coverage, and ratcheted `scripts/vector_surface_trace_baseline.json` from
     838 to 835 production traces. Baseline release validation was skipped per
     the lite workflow.
+
+- [x] TODO-4372: Remove lowerer and emitter vector-surface traces
+  - owner: ai
+  - created_at: 2026-05-08
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4398
+  - scope: Remove the remaining PrimeStruct-vector-specific lowerer and C++
+    emitter branches from production C++ or replace them with generic
+    collection, layout-fact, or manifest-driven paths.
+  - implementation_notes:
+    - Start from `src/ir_lowerer/IrLowerer*Vector*`,
+      `src/ir_lowerer/IrLowerer*Collection*`,
+      `src/emitter/Emitter*Vector*`, and the vector-related hits in
+      `scripts/vector_surface_trace_baseline.json`.
+    - Keep ordinary C++ `std::vector` container usage allowed.
+  - acceptance:
+    - Lowerer/emitter vector helper dispatch is generic or manifest-driven
+      rather than hard-coded to PrimeStruct vector paths.
+    - Focused IR/lowerer compile-run vector coverage still passes.
+    - The vector surface trace baseline decreases for lowerer/emitter files and
+      does not increase elsewhere.
+  - stop_rule: Stop after lowerer/emitter vector-specific traces that can be
+    retired before the final zero audit have been removed and the baseline
+    ratchets downward.
+  - finished_at: 2026-05-11
+  - evidence: Split the broad lowerer/emitter vector trace umbrella into
+    TODO-4401, TODO-4402, TODO-4403, and TODO-4404 so each leaf owns a
+    bounded file family before the final zero-vector audit.
+
+- [x] TODO-4401: Route emitter call-path vector gates
+  - owner: ai
+  - created_at: 2026-05-11
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4398
+  - scope: Replace direct canonical vector helper prefix checks and target
+    construction in `EmitterBuiltinCallPathHelpers.cpp` with published
+    collection-surface metadata or shared helper APIs.
+  - implementation_notes:
+    - Start from the `canonical-vector-path` hits in
+      `src/emitter/EmitterBuiltinCallPathHelpers.cpp`.
+    - Preserve canonical vector access and constructor rejection behavior.
+    - Do not touch lowerer, method-resolution, or return-inference files in
+      this leaf.
+  - acceptance:
+    - `EmitterBuiltinCallPathHelpers.cpp` no longer carries direct canonical
+      vector helper prefix checks or direct canonical helper path construction
+      where metadata can provide the same decision.
+    - Existing emitter source-lock or focused coverage keeps canonical vector
+      access and collection-name behavior covered.
+    - The vector surface trace baseline decreases for
+      `EmitterBuiltinCallPathHelpers.cpp` and does not increase elsewhere.
+  - stop_rule: Stop once emitter call-path vector gates are metadata-routed
+    and the audit baseline ratchets downward.
+  - finished_at: 2026-05-11
+  - evidence: Routed emitter call-path vector access and simple-call checks
+    through `resolvePublishedVectorHelperExprMemberName`, routed canonical
+    helper target reconstruction through `collections.vector_helpers`
+    metadata, preserved canonical vector collection-name rejection through
+    published vector helper/constructor surface queries, updated source-lock
+    coverage, and ratcheted `scripts/vector_surface_trace_baseline.json` from
+    835 to 830 production traces. Baseline release validation was skipped per
+    the lite workflow.

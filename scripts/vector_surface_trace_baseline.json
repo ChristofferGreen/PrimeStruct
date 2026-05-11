@@ -26,11 +26,6 @@
     },
     {
       "path": "src/emitter/EmitterBuiltinCallPathHelpers.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 4
-    },
-    {
-      "path": "src/emitter/EmitterBuiltinCallPathHelpers.cpp",
       "pattern": "experimental-vector-path",
       "count": 2
     },
@@ -42,7 +37,7 @@
     {
       "path": "src/emitter/EmitterBuiltinCallPathHelpers.cpp",
       "pattern": "vector-surface-id",
-      "count": 3
+      "count": 2
     },
     {
       "path": "src/emitter/EmitterBuiltinMethodResolutionHelpers.cpp",

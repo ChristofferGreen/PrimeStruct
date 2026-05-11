@@ -72,10 +72,12 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4372: Remove lowerer and emitter vector-surface traces
+- TODO-4402: Route remaining emitter vector-surface traces
 
 ### Immediate Next 10 (After Ready Now)
 
+- TODO-4403: Route lowerer vector call and statement traces
+- TODO-4404: Route lowerer vector type and layout traces
 - TODO-4373: Tighten vector trace audit to zero
 - TODO-4299: Promote and style canonical `.prime` map implementation
 - TODO-4300: Stabilize map lookup and insertion substrate
@@ -90,7 +92,8 @@ Task template:
 - Semantic ownership authority: none active; future semantic-authority work
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
-- Vector stdlib ownership cutover: TODO-4372 -> TODO-4373
+- Vector stdlib ownership cutover: TODO-4402 -> TODO-4403 -> TODO-4404
+  -> TODO-4373
 - Map stdlib ownership cutover: TODO-4299 -> TODO-4300 -> TODO-4301
   -> TODO-4302 -> TODO-4303 -> TODO-4304
 - SoA public surface rename and ownership cutover: TODO-4305 -> TODO-4306
@@ -109,7 +112,9 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4372: Remove lowerer and emitter vector-surface traces
+- TODO-4402: Route remaining emitter vector-surface traces
+- TODO-4403: Route lowerer vector call and statement traces
+- TODO-4404: Route lowerer vector type and layout traces
 - TODO-4373: Tighten vector trace audit to zero
 - TODO-4299: Promote and style canonical `.prime` map implementation
 - TODO-4300: Stabilize map lookup and insertion substrate
@@ -172,9 +177,9 @@ Task template:
 | Compile-pipeline stage and publication-boundary contracts | none |
 | Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4299, TODO-4305 |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4372, TODO-4373, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4372, TODO-4373, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
-| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4372, TODO-4373, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
+| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4402, TODO-4403, TODO-4404, TODO-4373, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4402, TODO-4403, TODO-4404, TODO-4373, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4402, TODO-4403, TODO-4404, TODO-4373, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
@@ -203,8 +208,8 @@ Task template:
 | Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
-| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4372, TODO-4373, TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
-| De-experimentalization surface and namespace parity | TODO-4372, TODO-4373, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
+| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4402, TODO-4403, TODO-4404, TODO-4373, TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| De-experimentalization surface and namespace parity | TODO-4402, TODO-4403, TODO-4404, TODO-4373, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
@@ -239,8 +244,8 @@ Task template:
   metadata is now owned by `stdlib/std/collections/surfaces.psmeta`, and the
   registry no longer advertises vector compatibility spellings through that
   manifest. Direct experimental vector source imports are now rejected, and
-  TODO-4372 and TODO-4373 handle the remaining production C++ vector trace
-  removal and final zero-vector audit tightening.
+  TODO-4402 through TODO-4404 and TODO-4373 handle the remaining production
+  C++ vector trace removal and final zero-vector audit tightening.
   TODO-4299 through TODO-4304 apply the same ownership model to map while
   keeping map-specific lookup, insertion, `Result<ContainerError>`, and key
   comparability policy explicit.
@@ -1639,27 +1644,83 @@ Task template:
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
 
-- [ ] TODO-4372: Remove lowerer and emitter vector-surface traces
+- [ ] TODO-4402: Route remaining emitter vector-surface traces
   - owner: ai
-  - created_at: 2026-05-08
+  - created_at: 2026-05-11
   - phase: Vector stdlib ownership cutover
-  - depends_on: TODO-4398
-  - scope: Remove the remaining PrimeStruct-vector-specific lowerer and C++
-    emitter branches from production C++ or replace them with generic
-    collection, layout-fact, or manifest-driven paths.
+  - depends_on: TODO-4401
+  - scope: Replace remaining PrimeStruct-vector-specific emitter traces in
+    builtin method resolution, setup/return inference, collection fallback,
+    collection type, lambda-body, packed-args, helper builtins, and helper type
+    files with generic collection, metadata-backed, or manifest-driven paths.
   - implementation_notes:
-    - Start from `src/ir_lowerer/IrLowerer*Vector*`,
-      `src/ir_lowerer/IrLowerer*Collection*`,
-      `src/emitter/Emitter*Vector*`, and the vector-related hits in
-      `scripts/vector_surface_trace_baseline.json`.
+    - Start from the `src/emitter/` entries in
+      `scripts/vector_surface_trace_baseline.json` excluding
+      `EmitterBuiltinCallPathHelpers.cpp`.
+    - Keep ordinary C++ `std::vector` container usage allowed.
+    - Do not touch lowerer files in this leaf.
+  - acceptance:
+    - Remaining emitter vector helper dispatch is generic or manifest-driven
+      rather than hard-coded to PrimeStruct vector paths where possible before
+      lowerer work.
+    - Focused emitter source-lock or compile-run coverage remains aligned.
+    - The vector surface trace baseline decreases for emitter files and does
+      not increase elsewhere.
+  - stop_rule: Stop after remaining emitter vector-specific traces that can be
+    retired before lowerer work are removed and the baseline ratchets downward.
+
+- [ ] TODO-4403: Route lowerer vector call and statement traces
+  - owner: ai
+  - created_at: 2026-05-11
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4402
+  - scope: Replace lowerer vector call, statement, count/access, native tail,
+    and inline dispatch traces with semantic surface metadata, generic
+    collection routing, or existing call-resolution facts.
+  - implementation_notes:
+    - Start from lowerer files whose trace entries are call/statement dispatch
+      oriented, including `IrLowererCall*`, `IrLowererCountAccess*`,
+      `IrLowererInline*`, `IrLowererLowerEmitExpr*`,
+      `IrLowererLowerStatements*`, `IrLowererNativeTailDispatch.cpp`, and
+      `IrLowererStatementCallEmission.cpp`.
+    - Keep ordinary C++ `std::vector` container usage allowed.
+    - Do not touch lowerer type/layout/struct-return files in this leaf unless
+      needed to preserve a call-dispatch contract.
+  - acceptance:
+    - Lowerer call and statement vector helper dispatch is generic or
+      manifest-driven rather than hard-coded to PrimeStruct vector paths where
+      semantic facts already carry the needed surface.
+    - Focused lowerer source-lock coverage remains aligned.
+    - The vector surface trace baseline decreases for call/statement lowerer
+      files and does not increase elsewhere.
+  - stop_rule: Stop after lowerer call/statement vector-specific traces that
+    can be retired before type/layout work are removed and the baseline
+    ratchets downward.
+
+- [ ] TODO-4404: Route lowerer vector type and layout traces
+  - owner: ai
+  - created_at: 2026-05-11
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4403
+  - scope: Replace lowerer vector type, layout, struct-return, access-target,
+    binding-type, uninitialized-struct, and operator mutation traces with
+    layout facts, semantic product metadata, generic collection routing, or
+    manifest-driven helpers.
+  - implementation_notes:
+    - Start from lowerer files whose trace entries are type/layout oriented,
+      including `IrLowererAccessTargetResolution.cpp`,
+      `IrLowererBindingTypeHelpers.cpp`,
+      `IrLowererFlowVector*`, `IrLowererStruct*`,
+      `IrLowererSetupType*`, and `IrLowererUninitializedStructInference.cpp`.
     - Keep ordinary C++ `std::vector` container usage allowed.
   - acceptance:
-    - Lowerer/emitter vector helper dispatch is generic or manifest-driven
-      rather than hard-coded to PrimeStruct vector paths.
-    - Focused IR/lowerer compile-run vector coverage still passes.
-    - The vector surface trace baseline decreases for lowerer/emitter files and
-      does not increase elsewhere.
-  - stop_rule: Stop after lowerer/emitter vector-specific traces that can be
+    - Lowerer type/layout vector decisions use generic collection or published
+      semantic/layout facts rather than hard-coded PrimeStruct vector paths
+      where possible before the zero audit.
+    - Focused lowerer source-lock coverage remains aligned.
+    - The vector surface trace baseline decreases for type/layout lowerer
+      files and does not increase elsewhere.
+  - stop_rule: Stop after remaining lowerer vector-specific traces that can be
     retired before the final zero audit have been removed and the baseline
     ratchets downward.
 
@@ -1667,7 +1728,7 @@ Task template:
   - owner: ai
   - created_at: 2026-05-08
   - phase: Vector stdlib ownership cutover
-  - depends_on: TODO-4372
+  - depends_on: TODO-4404
   - scope: Convert the vector surface trace audit from a regression baseline
     into a zero-tolerance production C++ gate.
   - implementation_notes:

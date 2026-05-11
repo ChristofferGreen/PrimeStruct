@@ -138,6 +138,59 @@ bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
       canonicalMemberName);
 }
 
+std::string normalizedExprPath(const Expr &expr) {
+  std::string path = resolveExprPath(expr);
+  if (!path.empty() && path.front() != '/') {
+    path.insert(path.begin(), '/');
+  }
+  return path;
+}
+
+bool isCanonicalVectorHelperExprPath(const Expr &expr) {
+  const auto *metadata =
+      findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
+  if (metadata == nullptr) {
+    return false;
+  }
+  const std::string prefix = std::string(metadata->canonicalPath) + "/";
+  return normalizedExprPath(expr).rfind(prefix, 0) == 0;
+}
+
+bool resolvePublishedVectorHelperExprMemberName(const Expr &expr,
+                                                std::string &memberNameOut) {
+  if (!isCanonicalVectorHelperExprPath(expr)) {
+    return false;
+  }
+  return resolvePublishedCollectionSurfaceExprMemberName(
+      expr, StdlibSurfaceId::CollectionsVectorHelpers, memberNameOut);
+}
+
+bool resolvePublishedVectorConstructorExprMemberName(
+    const Expr &expr,
+    std::string &memberNameOut) {
+  const auto *metadata =
+      findStdlibSurfaceMetadataByBridgeKey("collections.vector_constructors");
+  if (metadata == nullptr) {
+    return false;
+  }
+  const std::string path = normalizedExprPath(expr);
+  if (path != metadata->canonicalPath &&
+      path.rfind(std::string(metadata->canonicalPath) + "__", 0) != 0) {
+    return false;
+  }
+  return resolvePublishedCollectionSurfaceExprMemberName(
+      expr, StdlibSurfaceId::CollectionsVectorConstructors, memberNameOut);
+}
+
+std::string canonicalVectorHelperPathForSuffix(const std::string &suffix) {
+  const auto *metadata =
+      findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
+  if (metadata == nullptr) {
+    return "";
+  }
+  return std::string(metadata->canonicalPath) + "/" + suffix;
+}
+
 std::string normalizeInternalSoaStorageBuiltinAlias(const std::string &path) {
   std::string name = path;
   if (!name.empty() && name[0] == '/') {
@@ -244,9 +297,7 @@ bool getBuiltinArrayAccessNameLocal(const Expr &expr, std::string &out) {
     return false;
   };
   const std::string resolvedPath = resolveExprPath(expr);
-  if (resolvedPath.rfind("/std/collections/vector/", 0) == 0 &&
-      resolvePublishedCollectionSurfaceExprMemberName(
-          expr, StdlibSurfaceId::CollectionsVectorHelpers, out)) {
+  if (resolvePublishedVectorHelperExprMemberName(expr, out)) {
     return out == "at" || out == "at_unsafe";
   }
   if ((resolvedPath.rfind("/map/", 0) == 0 ||
@@ -425,9 +476,7 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   };
   const std::string resolvedPath = resolveExprPath(expr);
   std::string helperName;
-  if (resolvedPath.rfind("/std/collections/vector/", 0) == 0 &&
-      resolvePublishedCollectionSurfaceExprMemberName(
-          expr, StdlibSurfaceId::CollectionsVectorHelpers, helperName)) {
+  if (resolvePublishedVectorHelperExprMemberName(expr, helperName)) {
     return helperName == targetName;
   }
   if ((resolvedPath.rfind("/map/", 0) == 0 ||
@@ -757,7 +806,8 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   if (!rawName.empty() && rawName[0] == '/') {
     rawName.erase(0, 1);
   }
-  if (scopedName.rfind("std/collections/vector/", 0) == 0) {
+  if (resolvePublishedVectorHelperExprMemberName(expr, helperName) ||
+      resolvePublishedVectorConstructorExprMemberName(expr, helperName)) {
     return false;
   }
   if (scopedName.rfind("map/", 0) == 0) {
@@ -822,7 +872,7 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
   if (preferred.rfind("/array/", 0) == 0 && nameMap.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/array/").size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-      const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+      const std::string stdlibAlias = canonicalVectorHelperPathForSuffix(suffix);
       if (nameMap.count(stdlibAlias) > 0) {
         return stdlibAlias;
       }

@@ -2932,6 +2932,26 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
         std::string::npos);
   CHECK(callPathHelpersSource.find("resolvePublishedCollectionSurfaceExprMemberName(") !=
         std::string::npos);
+  CHECK(callPathHelpersSource.find("resolvePublishedVectorHelperExprMemberName(") !=
+        std::string::npos);
+  CHECK(callPathHelpersSource.find("resolvePublishedVectorConstructorExprMemberName(") !=
+        std::string::npos);
+  CHECK(callPathHelpersSource.find("isCanonicalVectorHelperExprPath(") !=
+        std::string::npos);
+  CHECK(callPathHelpersSource.find("canonicalVectorHelperPathForSuffix(") !=
+        std::string::npos);
+  CHECK(callPathHelpersSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") !=
+        std::string::npos);
+  CHECK(callPathHelpersSource.find(
+            "resolvedPath.rfind(\"/std/collections/vector/\", 0) == 0") ==
+        std::string::npos);
+  CHECK(callPathHelpersSource.find(
+            "scopedName.rfind(\"std/collections/vector/\", 0) == 0") ==
+        std::string::npos);
+  CHECK(callPathHelpersSource.find(
+            "const std::string stdlibAlias = \"/std/collections/vector/\" + suffix;") ==
+        std::string::npos);
   CHECK(callPathHelpersSource.find("bool allowsVectorStdlibCompatibilitySuffix(") ==
         std::string::npos);
 
