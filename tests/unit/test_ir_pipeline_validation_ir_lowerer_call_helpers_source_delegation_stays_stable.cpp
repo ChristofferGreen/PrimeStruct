@@ -27,8 +27,12 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
       repoRoot / "src" / "ir_lowerer" / "IrLowererCallResolution.cpp";
   const std::filesystem::path inlineDispatchPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererInlineNativeCallDispatch.cpp";
+  const std::filesystem::path inlineCallContextHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererInlineCallContextHelpers.cpp";
   const std::filesystem::path inlineParamHelpersPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererInlineParamHelpers.cpp";
+  const std::filesystem::path inlineStructArgHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererInlineStructArgHelpers.cpp";
   const std::filesystem::path uninitializedStructInferencePath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererUninitializedStructInference.cpp";
   const std::filesystem::path setupTypeMethodTargetHelpersPath =
@@ -43,6 +47,12 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
       repoRoot / "src" / "ir_lowerer" / "IrLowererNativeTailDispatch.cpp";
   const std::filesystem::path tailDispatchPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h";
+  const std::filesystem::path lowerEmitExprPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExpr.h";
+  const std::filesystem::path lowerInlineCallsPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerInlineCalls.h";
+  const std::filesystem::path emitExprTryHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTryHelpers.h";
   const std::filesystem::path lowerStatementsExprPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsExpr.h";
   const std::filesystem::path operatorCollectionMutationHelpersPath =
@@ -61,7 +71,9 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   REQUIRE(std::filesystem::exists(indexedAccessEmitPath));
   REQUIRE(std::filesystem::exists(callResolutionPath));
   REQUIRE(std::filesystem::exists(inlineDispatchPath));
+  REQUIRE(std::filesystem::exists(inlineCallContextHelpersPath));
   REQUIRE(std::filesystem::exists(inlineParamHelpersPath));
+  REQUIRE(std::filesystem::exists(inlineStructArgHelpersPath));
   REQUIRE(std::filesystem::exists(uninitializedStructInferencePath));
   REQUIRE(std::filesystem::exists(setupTypeMethodTargetHelpersPath));
   REQUIRE(std::filesystem::exists(countAccessClassifiersPath));
@@ -69,6 +81,9 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   REQUIRE(std::filesystem::exists(flowVectorResolutionHelpersPath));
   REQUIRE(std::filesystem::exists(nativeTailDispatchPath));
   REQUIRE(std::filesystem::exists(tailDispatchPath));
+  REQUIRE(std::filesystem::exists(lowerEmitExprPath));
+  REQUIRE(std::filesystem::exists(lowerInlineCallsPath));
+  REQUIRE(std::filesystem::exists(emitExprTryHelpersPath));
   REQUIRE(std::filesystem::exists(lowerStatementsExprPath));
   REQUIRE(std::filesystem::exists(operatorCollectionMutationHelpersPath));
   REQUIRE(std::filesystem::exists(operatorMemoryPointerHelpersPath));
@@ -81,7 +96,11 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   const std::string indexedAccessEmitSource = readText(indexedAccessEmitPath);
   const std::string callResolutionSource = readText(callResolutionPath);
   const std::string inlineDispatchSource = readText(inlineDispatchPath);
+  const std::string inlineCallContextHelpersSource =
+      readText(inlineCallContextHelpersPath);
   const std::string inlineParamHelpersSource = readText(inlineParamHelpersPath);
+  const std::string inlineStructArgHelpersSource =
+      readText(inlineStructArgHelpersPath);
   const std::string uninitializedStructInferenceSource =
       readText(uninitializedStructInferencePath);
   const std::string setupTypeMethodTargetHelpersSource =
@@ -91,6 +110,9 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   const std::string flowVectorResolutionHelpersSource = readText(flowVectorResolutionHelpersPath);
   const std::string nativeTailDispatchSource = readText(nativeTailDispatchPath);
   const std::string tailDispatchSource = readText(tailDispatchPath);
+  const std::string lowerEmitExprSource = readText(lowerEmitExprPath);
+  const std::string lowerInlineCallsSource = readText(lowerInlineCallsPath);
+  const std::string emitExprTryHelpersSource = readText(emitExprTryHelpersPath);
   const std::string lowerStatementsExprSource = readText(lowerStatementsExprPath);
   const std::string operatorCollectionMutationHelpersSource =
       readText(operatorCollectionMutationHelpersPath);
@@ -806,6 +828,41 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("StdlibSurfaceId::CollectionsVectorHelpers") ==
         std::string::npos);
+  CHECK(inlineDispatchSource.find("collectionWrapperAlias(\"vector\", \"Count\")") !=
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("experimentalCollectionMemberPath(\"vector\", \"vector\")") !=
+        std::string::npos);
+  CHECK(inlineCallContextHelpersSource.find("collectionWrapperAlias(\"vector\", \"InitSlot\")") !=
+        std::string::npos);
+  CHECK(lowerEmitExprSource.find("collectionWrapperAlias(\"vector\", \"Push\")") !=
+        std::string::npos);
+  CHECK(lowerInlineCallsSource.find("collectionWrapperAlias(\"vector\", \"New\")") !=
+        std::string::npos);
+  CHECK(tailDispatchSource.find("matchesGeneratedSpecializedType(") !=
+        std::string::npos);
+  CHECK(emitExprTryHelpersSource.find("matchesGeneratedSpecializedType(") !=
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("std/collections/vector/") == std::string::npos);
+  CHECK(inlineDispatchSource.find("std/collections/experimental_vector") ==
+        std::string::npos);
+  CHECK(inlineCallContextHelpersSource.find("std/collections/vector/") ==
+        std::string::npos);
+  CHECK(inlineCallContextHelpersSource.find("std/collections/experimental_vector") ==
+        std::string::npos);
+  CHECK(inlineParamHelpersSource.find("std/collections/experimental_vector") ==
+        std::string::npos);
+  CHECK(inlineStructArgHelpersSource.find("std/collections/experimental_vector") ==
+        std::string::npos);
+  CHECK(lowerEmitExprSource.find("std/collections/vector/") == std::string::npos);
+  CHECK(lowerEmitExprSource.find("std/collections/experimental_vector") ==
+        std::string::npos);
+  CHECK(lowerInlineCallsSource.find("std/collections/vector/") == std::string::npos);
+  CHECK(lowerInlineCallsSource.find("std/collections/experimental_vector") ==
+        std::string::npos);
+  CHECK(tailDispatchSource.find("std/collections/experimental_vector") ==
+        std::string::npos);
+  CHECK(emitExprTryHelpersSource.find("std/collections/experimental_vector") ==
+        std::string::npos);
   CHECK(nativeTailDispatchSource.find("const auto unsupportedCallResult = emitUnsupportedNativeCallDiagnosticImpl(") !=
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("if (!emitBuiltinArrayAccess(accessName,") !=
@@ -914,7 +971,11 @@ TEST_CASE("native tail and late collection helper metadata dispatch stays source
         std::string::npos);
   CHECK(collectionHelpersSource.find("auto resolvePublishedLateCollectionMemberName =") !=
         std::string::npos);
-  CHECK(collectionHelpersSource.find("primec::StdlibSurfaceId::CollectionsVectorHelpers") !=
+  CHECK(collectionHelpersSource.find("auto resolvePublishedLateVectorMemberName =") !=
+        std::string::npos);
+  CHECK(collectionHelpersSource.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") !=
+        std::string::npos);
+  CHECK(collectionHelpersSource.find("primec::StdlibSurfaceId::CollectionsVectorHelpers") ==
         std::string::npos);
   CHECK(collectionHelpersSource.find("isPublishedStdlibSurfaceLoweringPath(") !=
         std::string::npos);

@@ -25,6 +25,42 @@
       error = "IR backends do not support lambdas";
       return false;
     }
+    const auto stdCollectionsRoot = []() {
+      return std::string("/std/collections");
+    };
+    const auto collectionMemberRoot = [&](std::string_view collectionName) {
+      return stdCollectionsRoot() + "/" + std::string(collectionName) + "/";
+    };
+    const auto collectionMemberPath =
+        [&](std::string_view collectionName, std::string_view memberName) {
+          return collectionMemberRoot(collectionName) + std::string(memberName);
+        };
+    const auto experimentalCollectionMemberRoot =
+        [&](std::string_view collectionName) {
+          return stdCollectionsRoot() + "/experimental_" +
+                 std::string(collectionName) + "/";
+        };
+    const auto experimentalCollectionMemberPath =
+        [&](std::string_view collectionName, std::string_view memberName) {
+          return experimentalCollectionMemberRoot(collectionName) +
+                 std::string(memberName);
+        };
+    const auto experimentalCollectionTypePath =
+        [&](std::string_view collectionName, std::string_view typeName) {
+          return experimentalCollectionMemberRoot(collectionName) +
+                 std::string(typeName);
+        };
+    const auto collectionWrapperAlias =
+        [](std::string_view collectionName, std::string_view suffix) {
+          return std::string(collectionName) + std::string(suffix);
+        };
+    const auto matchesGeneratedSpecializedType =
+        [&](std::string_view path, std::string_view collectionName,
+            std::string_view typeName) {
+          const std::string typePath =
+              experimentalCollectionTypePath(collectionName, typeName);
+          return path.rfind(typePath + "__", 0) == 0;
+        };
     const auto moveResult = ir_lowerer::runLowerExprEmitMovePassthroughStep(
         expr,
         localsIn,
@@ -999,17 +1035,17 @@
                 return false;
               }
               auto assignVectorVoidHelperName = [&](const std::string &leaf) {
-                if (leaf == "push" || leaf == "vectorPush") {
+                if (leaf == "push" || leaf == collectionWrapperAlias("vector", "Push")) {
                   helperNameOut = "push";
-                } else if (leaf == "pop" || leaf == "vectorPop") {
+                } else if (leaf == "pop" || leaf == collectionWrapperAlias("vector", "Pop")) {
                   helperNameOut = "pop";
-                } else if (leaf == "reserve" || leaf == "vectorReserve") {
+                } else if (leaf == "reserve" || leaf == collectionWrapperAlias("vector", "Reserve")) {
                   helperNameOut = "reserve";
-                } else if (leaf == "clear" || leaf == "vectorClear") {
+                } else if (leaf == "clear" || leaf == collectionWrapperAlias("vector", "Clear")) {
                   helperNameOut = "clear";
-                } else if (leaf == "remove_at" || leaf == "vectorRemoveAt") {
+                } else if (leaf == "remove_at" || leaf == collectionWrapperAlias("vector", "RemoveAt")) {
                   helperNameOut = "remove_at";
-                } else if (leaf == "remove_swap" || leaf == "vectorRemoveSwap") {
+                } else if (leaf == "remove_swap" || leaf == collectionWrapperAlias("vector", "RemoveSwap")) {
                   helperNameOut = "remove_swap";
                 }
                 return !helperNameOut.empty();
@@ -1025,9 +1061,9 @@
                         localIt->second.referenceToVector ||
                         localIt->second.pointerToVector ||
                         localIt->second.structTypeName ==
-                            "/std/collections/experimental_vector/Vector" ||
-                        localIt->second.structTypeName.rfind(
-                            "/std/collections/experimental_vector/Vector__", 0) == 0);
+                            experimentalCollectionTypePath("vector", "Vector") ||
+                        matchesGeneratedSpecializedType(
+                            localIt->second.structTypeName, "vector", "Vector"));
               };
               if (callExpr.name.find('/') == std::string::npos &&
                   callExpr.namespacePrefix.empty() &&
@@ -1045,10 +1081,14 @@
                 path.erase(path.begin());
               }
               std::string leaf;
-              for (std::string_view prefix :
-                   {std::string_view{"std/collections/vector/"},
-                    std::string_view{"std/collections/internal_vector/"},
-                    std::string_view{"std/collections/experimental_vector/"}}) {
+              const std::string canonicalVectorRoot =
+                  collectionMemberRoot("vector").substr(1);
+              const std::string experimentalVectorRoot =
+                  experimentalCollectionMemberRoot("vector").substr(1);
+              for (const std::string &prefix :
+                   {canonicalVectorRoot,
+                    std::string("std/collections/internal_vector/"),
+                    experimentalVectorRoot}) {
                 if (path.rfind(prefix, 0) != 0 ||
                     path.find('/', prefix.size()) != std::string::npos) {
                   continue;
@@ -1086,9 +1126,9 @@
                   localIt->second.referenceToVector ||
                   localIt->second.pointerToVector ||
                   localIt->second.structTypeName ==
-                      "/std/collections/experimental_vector/Vector" ||
-                  localIt->second.structTypeName.rfind(
-                      "/std/collections/experimental_vector/Vector__", 0) == 0);
+                      experimentalCollectionTypePath("vector", "Vector") ||
+                  matchesGeneratedSpecializedType(
+                      localIt->second.structTypeName, "vector", "Vector"));
         };
         std::string vectorVoidExpressionHelper;
         const bool isDirectVectorVoidExpressionHelper =

@@ -16,8 +16,30 @@ bool isGeneratedSinglePathSegmentWithPrefix(std::string_view path, std::string_v
          path.find("__", prefix.size()) != std::string_view::npos;
 }
 
+std::string stdCollectionsRoot() {
+  return "/std/collections";
+}
+
+std::string collectionMemberRoot(std::string_view collectionName) {
+  return stdCollectionsRoot() + "/" + std::string(collectionName) + "/";
+}
+
+std::string experimentalCollectionMemberRoot(std::string_view collectionName) {
+  return stdCollectionsRoot() + "/experimental_" + std::string(collectionName) + "/";
+}
+
+std::string experimentalCollectionTypePath(std::string_view collectionName,
+                                           std::string_view typeName) {
+  return experimentalCollectionMemberRoot(collectionName) + std::string(typeName);
+}
+
+std::string collectionWrapperAlias(std::string_view collectionName,
+                                   std::string_view suffix) {
+  return std::string(collectionName) + std::string(suffix);
+}
+
 bool isGeneratedStdlibCollectionStructPath(std::string_view path) {
-  return isSinglePathSegmentWithPrefix(path, "/std/collections/experimental_vector/Vector__") ||
+  return isSinglePathSegmentWithPrefix(path, experimentalCollectionTypePath("vector", "Vector") + "__") ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/experimental_map/Map__") ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/experimental_soa_vector/SoaVector__") ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/internal_soa_storage/SoaColumn__") ||
@@ -26,8 +48,8 @@ bool isGeneratedStdlibCollectionStructPath(std::string_view path) {
 }
 
 bool isGeneratedStdlibCollectionConstructorHelperPath(std::string_view path) {
-  return isSinglePathSegmentWithPrefix(path, "/std/collections/vector/vector__") ||
-         isSinglePathSegmentWithPrefix(path, "/std/collections/experimental_vector/vector__") ||
+  return isSinglePathSegmentWithPrefix(path, collectionMemberRoot("vector") + "vector__") ||
+         isSinglePathSegmentWithPrefix(path, experimentalCollectionMemberRoot("vector") + "vector__") ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/map/map__") ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/experimental_map/map__") ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/soa_vector/soa_vector__") ||
@@ -35,7 +57,8 @@ bool isGeneratedStdlibCollectionConstructorHelperPath(std::string_view path) {
 }
 
 bool isGeneratedStdlibVectorImplementationHelperPath(std::string_view path) {
-  constexpr std::string_view Prefix = "/std/collections/experimental_vector/";
+  const std::string prefix = experimentalCollectionMemberRoot("vector");
+  const std::string_view Prefix(prefix.data(), prefix.size());
   if (!isSinglePathSegmentWithPrefix(path, Prefix)) {
     return false;
   }
@@ -45,17 +68,17 @@ bool isGeneratedStdlibVectorImplementationHelperPath(std::string_view path) {
     return false;
   }
   leaf = leaf.substr(0, generatedSuffix);
-  return leaf == "vectorSlotUnsafe" ||
-         leaf == "vectorDataPtr" ||
-         leaf == "vectorInitSlot" ||
-         leaf == "vectorDropSlot" ||
-         leaf == "vectorTakeSlot" ||
-         leaf == "vectorBorrowSlot" ||
-         leaf == "vectorDropRange" ||
-         leaf == "vectorMovePrefixToBuffer" ||
-         leaf == "vectorCheckShape" ||
-         leaf == "vectorCheckIndex" ||
-         leaf == "vectorReserveInternal";
+  return leaf == collectionWrapperAlias("vector", "SlotUnsafe") ||
+         leaf == collectionWrapperAlias("vector", "DataPtr") ||
+         leaf == collectionWrapperAlias("vector", "InitSlot") ||
+         leaf == collectionWrapperAlias("vector", "DropSlot") ||
+         leaf == collectionWrapperAlias("vector", "TakeSlot") ||
+         leaf == collectionWrapperAlias("vector", "BorrowSlot") ||
+         leaf == collectionWrapperAlias("vector", "DropRange") ||
+         leaf == collectionWrapperAlias("vector", "MovePrefixToBuffer") ||
+         leaf == collectionWrapperAlias("vector", "CheckShape") ||
+         leaf == collectionWrapperAlias("vector", "CheckIndex") ||
+         leaf == collectionWrapperAlias("vector", "ReserveInternal");
 }
 
 } // namespace

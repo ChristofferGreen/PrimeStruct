@@ -39,9 +39,11 @@
             return nullptr;
           };
           auto isExplicitExperimentalVectorConstructorHelper =
-              [](const std::string &path) {
-                return path == "/std/collections/experimental_vector/vector" ||
-                       path == "std/collections/experimental_vector/vector";
+              [&](const std::string &path) {
+                const std::string slashPath =
+                    experimentalCollectionMemberPath("vector", "vector");
+                return path == slashPath ||
+                       path == slashPath.substr(1);
               };
           const std::string rawPath = resolveCollectionExprDirectPath(candidate);
           if (isExplicitExperimentalVectorConstructorHelper(rawPath)) {
@@ -54,7 +56,8 @@
           if (getExperimentalVectorConstructorElementTypeAlias(
                   candidate, experimentalVectorElementType)) {
             Expr rewrittenVectorCtor = candidate;
-            rewrittenVectorCtor.name = "/std/collections/experimental_vector/vector";
+            rewrittenVectorCtor.name =
+                experimentalCollectionMemberPath("vector", "vector");
             rewrittenVectorCtor.namespacePrefix.clear();
             rewrittenVectorCtor.templateArgs = {experimentalVectorElementType};
             if (const Definition *vectorCtor =
@@ -119,6 +122,14 @@
                 normalizeLateCollectionHelperName(memberNameOut);
               }
               return resolved;
+            };
+        auto resolvePublishedLateVectorMemberName =
+            [&](const Expr &candidate, std::string &memberNameOut) {
+              const auto *metadata =
+                  findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
+              return metadata != nullptr &&
+                     resolvePublishedLateCollectionMemberName(
+                         candidate, metadata->id, memberNameOut);
             };
         auto resolvePublishedLateCollectionConstructorName =
             [&](const Expr &candidate,
@@ -434,10 +445,7 @@
           std::string helperName;
           const Expr *receiverExpr = nullptr;
           if (callExpr.isMethodCall) {
-            if (!resolvePublishedLateCollectionMemberName(
-                    callExpr,
-                    primec::StdlibSurfaceId::CollectionsVectorHelpers,
-                    helperName)) {
+            if (!resolvePublishedLateVectorMemberName(callExpr, helperName)) {
               helperName = resolveCollectionExprDirectPath(callExpr);
               if (!helperName.empty() && helperName.front() == '/') {
                 helperName.erase(helperName.begin());
@@ -451,10 +459,7 @@
           } else if (callExpr.args.size() == 2 && getBuiltinArrayAccessName(callExpr, helperName)) {
             receiverExpr = &callExpr.args.front();
           } else {
-            if (!resolvePublishedLateCollectionMemberName(
-                    callExpr,
-                    primec::StdlibSurfaceId::CollectionsVectorHelpers,
-                    helperName)) {
+            if (!resolvePublishedLateVectorMemberName(callExpr, helperName)) {
               return false;
             }
             receiverExpr = &callExpr.args.front();
@@ -469,10 +474,7 @@
           }
           if (!callExpr.isMethodCall) {
             std::string publishedHelperName;
-            if (!resolvePublishedLateCollectionMemberName(
-                    callExpr,
-                    primec::StdlibSurfaceId::CollectionsVectorHelpers,
-                    publishedHelperName)) {
+            if (!resolvePublishedLateVectorMemberName(callExpr, publishedHelperName)) {
               return false;
             }
           }
@@ -542,10 +544,7 @@
                            candidate,
                            primec::StdlibSurfaceId::CollectionsMapHelpers,
                            helperNameOut) ||
-                       resolvePublishedLateCollectionMemberName(
-                           candidate,
-                           primec::StdlibSurfaceId::CollectionsVectorHelpers,
-                           helperNameOut);
+                       resolvePublishedLateVectorMemberName(candidate, helperNameOut);
               };
           auto matchesDirectHelperName = [&](const Expr &candidate, std::string_view bareName) {
             std::string helperName;
@@ -1185,7 +1184,7 @@
             return true;
           };
 
-          return tryRewritePath("/std/collections/vector/" + helperName);
+          return tryRewritePath(collectionMemberPath("vector", helperName));
         };
         Expr rewrittenBareVectorHelperExpr;
         if (rewriteBareVectorHelperExpr(expr, rewrittenBareVectorHelperExpr)) {
@@ -1219,8 +1218,10 @@
             }
             if (!knownVectorCallReceiver) {
               knownVectorCallReceiver =
-                  receiverCallExpr.name.rfind("/std/collections/vector/vector", 0) == 0 ||
-                  receiverCallExpr.name.rfind("/std/collections/experimental_vector/vector", 0) == 0;
+                  receiverCallExpr.name.rfind(
+                      collectionMemberPath("vector", "vector"), 0) == 0 ||
+                  receiverCallExpr.name.rfind(
+                      experimentalCollectionMemberPath("vector", "vector"), 0) == 0;
             }
             std::string receiverCollectionName;
             if (!knownVectorCallReceiver &&
@@ -1285,7 +1286,9 @@
               rewrittenExpr = std::move(candidate);
               return true;
             };
-            return tryRewriteNamespace("/std/collections/vector");
+            std::string vectorNamespace = collectionMemberRoot("vector");
+            vectorNamespace.pop_back();
+            return tryRewriteNamespace(vectorNamespace);
           }
           rewrittenExpr = callExpr;
           rewrittenExpr.isMethodCall = false;

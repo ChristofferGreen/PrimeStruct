@@ -11,6 +11,8 @@
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "primec/SoaPathHelpers.h"
 
+#include <string_view>
+
 namespace primec::ir_lowerer {
 
 namespace {
@@ -33,9 +35,16 @@ bool isExperimentalSoaVectorStructPath(const std::string &structPath) {
   return soa_paths::isExperimentalSoaVectorSpecializedTypePath(structPath);
 }
 
+std::string experimentalCollectionTypePath(std::string_view collectionName,
+                                           std::string_view typeName) {
+  return "/std/collections/experimental_" + std::string(collectionName) +
+         "/" + std::string(typeName);
+}
+
 bool isExperimentalVectorStructPath(const std::string &structPath) {
-  return structPath == "/std/collections/experimental_vector/Vector" ||
-         structPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+  const std::string vectorTypePath = experimentalCollectionTypePath("vector", "Vector");
+  return structPath == vectorTypePath ||
+         structPath.rfind(vectorTypePath + "__", 0) == 0;
 }
 
 bool isBuiltinVectorStructMatch(const std::string &expectedStruct,

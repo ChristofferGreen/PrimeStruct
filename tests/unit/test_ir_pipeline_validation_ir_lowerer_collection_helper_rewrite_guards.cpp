@@ -90,9 +90,13 @@ TEST_CASE("ir lowerer materialized collection receivers use published helper que
         std::string::npos);
   CHECK(source.find("resolvePublishedStdlibSurfaceExprMemberName(") !=
         std::string::npos);
-  CHECK(source.find("primec::StdlibSurfaceId::CollectionsVectorHelpers") !=
+  CHECK(source.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") !=
         std::string::npos);
-  CHECK(source.find("if (!resolvePublishedLateCollectionMemberName(") !=
+  CHECK(source.find("primec::StdlibSurfaceId::CollectionsVectorHelpers") ==
+        std::string::npos);
+  CHECK(source.find("auto resolvePublishedLateVectorMemberName =") !=
+        std::string::npos);
+  CHECK(source.find("!resolvePublishedLateCollectionMemberName(") !=
         std::string::npos);
   CHECK(source.find("if (!resolveMaterializedCollectionHelperName(callExpr, helperName)) {") !=
         std::string::npos);
@@ -295,7 +299,9 @@ TEST_CASE("ir lowerer rewrites experimental vector constructor aliases before di
   CHECK(resolvedAliasRewrite < directResolution);
   CHECK(aliasRewrite < structFallback);
   CHECK(resolvedAliasRewrite < structFallback);
-  CHECK(source.find("rewrittenVectorCtor.name = \"/std/collections/experimental_vector/vector\";") !=
+  CHECK(source.find(
+            "rewrittenVectorCtor.name =\n"
+            "                experimentalCollectionMemberPath(\"vector\", \"vector\");") !=
         std::string::npos);
   CHECK(source.find("rewrittenVectorCtor.templateArgs = {experimentalVectorElementType};") !=
         std::string::npos);
@@ -334,7 +340,9 @@ TEST_CASE("ir lowerer collection helper resolves vector aliases before direct de
   REQUIRE(directResolution != std::string::npos);
   REQUIRE(receiverResolution != std::string::npos);
   CHECK(aliasRewrite < directResolution);
-  CHECK(source.find("rewrittenVectorCtor.name = \"/std/collections/experimental_vector/vector\";") !=
+  CHECK(source.find(
+            "rewrittenVectorCtor.name =\n"
+            "                experimentalCollectionMemberPath(\"vector\", \"vector\");") !=
         std::string::npos);
   CHECK(source.find("rewrittenVectorCtor.templateArgs = {experimentalVectorElementType};") !=
         std::string::npos);
@@ -382,7 +390,9 @@ TEST_CASE("ir lowerer prefers explicit experimental vector helper before struct 
   CHECK(collectionVectorHelperCheck < collectionDirectResolution);
   CHECK(statementsSource.find("path == \"/std/collections/experimental_vector/vector\"") !=
         std::string::npos);
-  CHECK(collectionSource.find("path == \"/std/collections/experimental_vector/vector\"") !=
+  CHECK(collectionSource.find(
+            "const std::string slashPath =\n"
+            "                    experimentalCollectionMemberPath(\"vector\", \"vector\");") !=
         std::string::npos);
 }
 

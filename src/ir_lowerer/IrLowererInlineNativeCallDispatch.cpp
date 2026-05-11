@@ -24,6 +24,54 @@ std::string stripGeneratedInlineHelperSuffix(std::string helperName) {
   return helperName;
 }
 
+std::string stdCollectionsRoot(bool leadingSlash = true) {
+  return leadingSlash ? "/std/collections" : "std/collections";
+}
+
+std::string collectionTypePath(std::string_view collectionName,
+                               bool leadingSlash = true) {
+  return stdCollectionsRoot(leadingSlash) + "/" + std::string(collectionName);
+}
+
+std::string experimentalCollectionTypePath(std::string_view collectionName,
+                                           std::string_view typeName,
+                                           bool leadingSlash = true) {
+  return stdCollectionsRoot(leadingSlash) + "/experimental_" +
+         std::string(collectionName) + "/" + std::string(typeName);
+}
+
+std::string experimentalCollectionMemberPath(std::string_view collectionName,
+                                             std::string_view memberName,
+                                             bool leadingSlash = true) {
+  return stdCollectionsRoot(leadingSlash) + "/experimental_" +
+         std::string(collectionName) + "/" + std::string(memberName);
+}
+
+std::string rootCollectionMemberPath(std::string_view collectionName,
+                                     std::string_view memberName) {
+  return "/" + std::string(collectionName) + "/" + std::string(memberName);
+}
+
+std::string collectionWrapperAlias(std::string_view collectionName,
+                                   std::string_view suffix) {
+  return std::string(collectionName) + std::string(suffix);
+}
+
+bool matchesGeneratedSpecializedPath(std::string_view text,
+                                     const std::string &basePath) {
+  return text.rfind(basePath + "__", 0) == 0;
+}
+
+bool matchesCollectionTypeText(std::string_view text,
+                               std::string_view collectionName) {
+  const std::string bare(collectionName);
+  const std::string rooted = "/" + bare;
+  return text == bare ||
+         text == rooted ||
+         text == collectionTypePath(collectionName, false) ||
+         text == collectionTypePath(collectionName);
+}
+
 std::string canonicalInlineMapHelperName(std::string helperName) {
   helperName = stripGeneratedInlineHelperSuffix(std::move(helperName));
   if (helperName == "mapCount") {
@@ -447,8 +495,9 @@ bool isMapTryAtHelperName(const Expr &expr) {
 bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn);
 
 bool isExperimentalVectorStructPath(std::string_view structTypeName) {
-  return structTypeName == "/std/collections/experimental_vector/Vector" ||
-         structTypeName.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+  const std::string vectorTypePath = experimentalCollectionTypePath("vector", "Vector");
+  return structTypeName == vectorTypePath ||
+         matchesGeneratedSpecializedPath(structTypeName, vectorTypePath);
 }
 
 bool isVectorTarget(const Expr &expr, const LocalMap &localsIn) {
@@ -874,12 +923,16 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
   };
   auto isInlineExperimentalVectorTypeName = [](std::string typeName) {
     typeName = trimTemplateTypeText(typeName);
+    const std::string vectorTypePath =
+        experimentalCollectionTypePath("vector", "Vector", false);
+    const std::string slashVectorTypePath =
+        experimentalCollectionTypePath("vector", "Vector");
     return typeName == "Vector" ||
            typeName == "/Vector" ||
-           typeName == "std/collections/experimental_vector/Vector" ||
-           typeName == "/std/collections/experimental_vector/Vector" ||
-           typeName.rfind("std/collections/experimental_vector/Vector__", 0) == 0 ||
-           typeName.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+           typeName == vectorTypePath ||
+           typeName == slashVectorTypePath ||
+           matchesGeneratedSpecializedPath(typeName, vectorTypePath) ||
+           matchesGeneratedSpecializedPath(typeName, slashVectorTypePath);
   };
   auto isInlineExperimentalMapTypeName = [](std::string typeName) {
     typeName = trimTemplateTypeText(typeName);
@@ -900,15 +953,11 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
           normalizedBase == "Pointer" || normalizedBase == "/Pointer") {
         return isInlineVectorTypeText(argText);
       }
-      return normalizedBase == "vector" || normalizedBase == "/vector" ||
-             normalizedBase == "std/collections/vector" ||
-             normalizedBase == "/std/collections/vector" ||
+      return matchesCollectionTypeText(normalizedBase, "vector") ||
              isInlineExperimentalVectorTypeName(normalizedBase);
     }
     const std::string normalizedTypeText = trimTemplateTypeText(typeText);
-    return normalizedTypeText == "vector" || normalizedTypeText == "/vector" ||
-           normalizedTypeText == "std/collections/vector" ||
-           normalizedTypeText == "/std/collections/vector" ||
+    return matchesCollectionTypeText(normalizedTypeText, "vector") ||
            isInlineExperimentalVectorTypeName(normalizedTypeText);
   };
   auto classifyInlineVectorTypeText =
@@ -942,9 +991,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       const std::string collectionFamily =
           resolveInlineSemanticTypeText(collectionFact->collectionFamilyId,
                                         collectionFact->collectionFamily);
-      return collectionFamily == "vector" || collectionFamily == "/vector" ||
-             collectionFamily == "std/collections/vector" ||
-             collectionFamily == "/std/collections/vector"
+      return matchesCollectionTypeText(collectionFamily, "vector")
                  ? InlineVectorTargetFact::Vector
                  : InlineVectorTargetFact::NonVector;
     }
@@ -1274,8 +1321,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
              normalizedBase == "map" || normalizedBase == "/map" ||
              normalizedBase == "Array" || normalizedBase == "/Array" ||
              normalizedBase == "Map" || normalizedBase == "/Map" ||
-             normalizedBase == "std/collections/vector" ||
-             normalizedBase == "/std/collections/vector" ||
+             matchesCollectionTypeText(normalizedBase, "vector") ||
              normalizedBase == "std/collections/map" ||
              normalizedBase == "/std/collections/map" ||
              isInlineExperimentalMapTypeName(normalizedBase) ||
@@ -1289,8 +1335,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
            normalizedTypeText == "map" || normalizedTypeText == "/map" ||
            normalizedTypeText == "Array" || normalizedTypeText == "/Array" ||
            normalizedTypeText == "Map" || normalizedTypeText == "/Map" ||
-           normalizedTypeText == "std/collections/vector" ||
-           normalizedTypeText == "/std/collections/vector" ||
+           matchesCollectionTypeText(normalizedTypeText, "vector") ||
            normalizedTypeText == "std/collections/map" ||
            normalizedTypeText == "/std/collections/map" ||
            isInlineExperimentalMapTypeName(normalizedTypeText) ||
@@ -1332,8 +1377,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
              collectionFamily == "vector" || collectionFamily == "/vector" ||
              collectionFamily == "map" || collectionFamily == "/map" ||
              collectionFamily == "string" || collectionFamily == "/string" ||
-             collectionFamily == "std/collections/vector" ||
-             collectionFamily == "/std/collections/vector" ||
+             matchesCollectionTypeText(collectionFamily, "vector") ||
              collectionFamily == "std/collections/map" ||
              collectionFamily == "/std/collections/map" ||
              isInlineExperimentalVectorTypeName(collectionFamily) ||
@@ -1388,7 +1432,8 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
                                 ? rawPath
                                 : rawPath.substr(rawLeafStart + 1);
       rawLeaf = stripGeneratedInlineHelperSuffix(std::move(rawLeaf));
-      if (rawLeaf == "vectorCount" || rawLeaf == "vectorCapacity") {
+      if (rawLeaf == collectionWrapperAlias("vector", "Count") ||
+          rawLeaf == collectionWrapperAlias("vector", "Capacity")) {
         return InlineCallDispatchResult::NotHandled;
       }
       if (const Definition *callee = resolveDefinitionCallFn(expr);
@@ -1398,7 +1443,8 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
                                ? callee->fullPath
                                : callee->fullPath.substr(leafStart + 1);
         leaf = stripGeneratedInlineHelperSuffix(std::move(leaf));
-        if (leaf == "vectorCount" || leaf == "vectorCapacity") {
+        if (leaf == collectionWrapperAlias("vector", "Count") ||
+            leaf == collectionWrapperAlias("vector", "Capacity")) {
           return InlineCallDispatchResult::NotHandled;
         }
       }
@@ -1415,7 +1461,8 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
                                 ? rawPath
                                 : rawPath.substr(rawLeafStart + 1);
       rawLeaf = stripGeneratedInlineHelperSuffix(std::move(rawLeaf));
-      if (rawLeaf == "vectorAt" || rawLeaf == "vectorAtUnsafe" ||
+      if (rawLeaf == collectionWrapperAlias("vector", "At") ||
+          rawLeaf == collectionWrapperAlias("vector", "AtUnsafe") ||
           rawLeaf == "at" || rawLeaf == "at_unsafe") {
         return InlineCallDispatchResult::NotHandled;
       }
@@ -1426,7 +1473,8 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
                                ? callee->fullPath
                                : callee->fullPath.substr(leafStart + 1);
         leaf = stripGeneratedInlineHelperSuffix(std::move(leaf));
-        if (leaf == "vectorAt" || leaf == "vectorAtUnsafe" ||
+        if (leaf == collectionWrapperAlias("vector", "At") ||
+            leaf == collectionWrapperAlias("vector", "AtUnsafe") ||
             leaf == "at" || leaf == "at_unsafe") {
           return InlineCallDispatchResult::NotHandled;
         }
@@ -1436,7 +1484,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     if (getExperimentalVectorConstructorElementTypeAlias(
             expr, experimentalVectorElementType)) {
       Expr rewrittenVectorCtor = expr;
-      rewrittenVectorCtor.name = "/std/collections/experimental_vector/vector";
+      rewrittenVectorCtor.name = experimentalCollectionMemberPath("vector", "vector");
       rewrittenVectorCtor.namespacePrefix.clear();
       rewrittenVectorCtor.templateArgs = {experimentalVectorElementType};
       const Definition *vectorCtor =
@@ -1709,10 +1757,12 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       (isSemanticOrLegacyVectorTarget(expr.args.front()) ||
        isVectorReturningCallTarget(expr.args.front()))) {
     const Definition *callee = resolveMethodCallDefinitionFn(expr, localsIn);
-    if (callee != nullptr && callee->fullPath == "/vector/count") {
+    if (callee != nullptr &&
+        callee->fullPath == rootCollectionMemberPath("vector", "count")) {
       return InlineCallDispatchResult::NotHandled;
     }
-    if (callee != nullptr && callee->fullPath == "/vector/capacity") {
+    if (callee != nullptr &&
+        callee->fullPath == rootCollectionMemberPath("vector", "capacity")) {
       if (isSemanticOrLegacyExperimentalVectorTarget(expr.args.front()) ||
           isVectorReturningCallTarget(expr.args.front())) {
         return InlineCallDispatchResult::NotHandled;

@@ -395,7 +395,7 @@
               if (!normalized.empty() && normalized.front() != '/') {
                 normalized.insert(normalized.begin(), '/');
               }
-              if (normalized.rfind("/std/collections/experimental_vector/Vector__", 0) != 0) {
+              if (!matchesGeneratedSpecializedType(normalized, "vector", "Vector")) {
                 return false;
               }
               Expr syntheticExpr;

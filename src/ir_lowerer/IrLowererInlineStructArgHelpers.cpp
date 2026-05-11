@@ -9,9 +9,16 @@ namespace primec::ir_lowerer {
 
 namespace {
 
+std::string experimentalCollectionTypePath(std::string_view collectionName,
+                                           std::string_view typeName) {
+  return "/std/collections/experimental_" + std::string(collectionName) +
+         "/" + std::string(typeName);
+}
+
 bool isVectorStructPath(const std::string &structPath) {
-  return structPath == "/vector" || structPath == "/std/collections/experimental_vector/Vector" ||
-         structPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+  const std::string vectorTypePath = experimentalCollectionTypePath("vector", "Vector");
+  return structPath == "/vector" || structPath == vectorTypePath ||
+         structPath.rfind(vectorTypePath + "__", 0) == 0;
 }
 
 bool isSoaVectorStructPath(const std::string &structPath) {

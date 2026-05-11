@@ -622,9 +622,11 @@
           return true;
         };
         auto isVectorStructPath = [](const std::string &structPath) {
+          const std::string vectorTypePath =
+              "/std/collections/experimental_" + std::string("vector") + "/Vector";
           return structPath == "/vector" ||
-                 structPath == "/std/collections/experimental_vector/Vector" ||
-                 structPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+                 structPath == vectorTypePath ||
+                 structPath.rfind(vectorTypePath + "__", 0) == 0;
         };
         auto rewriteExplicitMapHelperBuiltinExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
           std::string helperName;
@@ -1369,7 +1371,7 @@
                 if (!normalized.empty() && normalized.front() != '/') {
                   normalized.insert(normalized.begin(), '/');
                 }
-                if (normalized.rfind("/std/collections/experimental_vector/Vector__", 0) != 0) {
+                if (!matchesGeneratedSpecializedType(normalized, "vector", "Vector")) {
                   return false;
                 }
                 Expr syntheticExpr;
@@ -1446,8 +1448,8 @@
                     if (!normalizedPath.empty() && normalizedPath.front() != '/') {
                       normalizedPath.insert(normalizedPath.begin(), '/');
                     }
-                    if (normalizedPath.rfind(
-                            "/std/collections/experimental_vector/Vector__", 0) == 0) {
+                    if (matchesGeneratedSpecializedType(
+                            normalizedPath, "vector", "Vector")) {
                       ir_lowerer::LocalInfo::ValueKind elemKind;
                       if (!resolveSpecializedVectorElementKind(normalizedPath,
                                                               elemKind)) {
@@ -1627,9 +1629,8 @@
               }
               const std::string inferredReceiverStruct =
                   inferStructExprPath(targetCallExpr, localsIn);
-              if (inferredReceiverStruct.rfind(
-                      "/std/collections/experimental_vector/Vector__", 0) ==
-                  0) {
+              if (matchesGeneratedSpecializedType(
+                      inferredReceiverStruct, "vector", "Vector")) {
                 ir_lowerer::LocalInfo::ValueKind elemKind;
                 if (!resolveSpecializedVectorElementKind(inferredReceiverStruct,
                                                         elemKind)) {
