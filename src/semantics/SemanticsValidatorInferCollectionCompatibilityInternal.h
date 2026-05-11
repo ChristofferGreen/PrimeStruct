@@ -241,6 +241,15 @@ enum class RemovedCollectionHelperFamily {
   return std::string(metadata->canonicalPath) + "/" + std::string(helperName);
 }
 
+[[maybe_unused]] std::string canonicalVectorCompatibilityHelperPath(
+    std::string_view helperName) {
+  const StdlibSurfaceMetadata *metadata = vectorHelperSurfaceMetadata();
+  if (metadata == nullptr) {
+    return "";
+  }
+  return canonicalCollectionHelperPath(metadata->id, helperName);
+}
+
 [[maybe_unused]] std::string preferredPublishedCollectionLoweringPath(
     std::string_view helperName,
     StdlibSurfaceId surfaceId,

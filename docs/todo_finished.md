@@ -16097,3 +16097,59 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     coverage for the registry-backed helper lookup, and ratcheted
     `scripts/vector_surface_trace_baseline.json` from 412 to 398 production
     traces. Baseline release validation was skipped per the lite workflow.
+
+- [x] TODO-4416: Route remaining semantic vector surface traces
+  - owner: ai
+  - created_at: 2026-05-11
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4415
+  - scope: Replace remaining semantic validator vector paths, helper aliases,
+    diagnostics, receiver-type checks, and collection-return traces with
+    semantic product facts, registry-backed helpers, or generic collection
+    predicates.
+  - implementation_notes:
+    - Start from `src/semantics/SemanticsValidator*` files that still appear
+      in `scripts/vector_surface_trace_baseline.json` after TODO-4415.
+    - Keep ordinary C++ `std::vector` container usage allowed.
+  - acceptance:
+    - Remaining semantic validator vector-specific production traces are
+      removed or routed through generic collection/registry helpers.
+    - Focused semantic source-lock or behavior coverage remains aligned.
+    - The vector surface trace baseline decreases for semantic validator files
+      and does not increase elsewhere.
+  - stop_rule: Stop once semantic validator files no longer account for
+    removable PrimeStruct vector surface traces before template monomorph work.
+  - finished_at: 2026-05-11
+  - evidence: Split the broad semantic-validator zero-audit cleanup into
+    closable leaves TODO-4420 through TODO-4423, covering dispatch/setup,
+    method/access, initializer/import, and remaining return/layout semantic
+    traces. Baseline release validation was skipped per the lite workflow.
+
+- [x] TODO-4420: Route semantic dispatch vector traces
+  - owner: ai
+  - created_at: 2026-05-11
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4415
+  - scope: Replace semantic infer collection dispatch and dispatch-setup
+    vector helper path checks with registry-backed canonical helper queries.
+  - implementation_notes:
+    - Start from `SemanticsValidatorInferCollectionDispatch.cpp`,
+      `SemanticsValidatorInferCollectionDispatchSetup.cpp`, and
+      `SemanticsValidatorInferCollectionCompatibilityInternal.h`.
+    - Keep ordinary C++ `std::vector` container usage allowed.
+  - acceptance:
+    - Dispatch return-kind and dispatch setup checks use registry-backed
+      vector helper path predicates instead of direct canonical vector path
+      literals where possible.
+    - Focused semantic source-lock coverage remains aligned.
+    - The vector surface trace baseline decreases for the selected dispatch
+      files and does not increase elsewhere.
+  - stop_rule: Stop after infer collection dispatch/setup vector path traces
+    are removed and the baseline ratchets downward.
+  - finished_at: 2026-05-11
+  - evidence: Routed infer collection dispatch and dispatch-setup vector
+    helper checks through registry-backed compatibility predicates, added a
+    shared canonical vector helper path helper for semantic compatibility
+    callers, updated source-lock coverage, and ratcheted
+    `scripts/vector_surface_trace_baseline.json` from 398 to 389 production
+    traces. Baseline release validation was skipped per the lite workflow.

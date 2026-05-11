@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 namespace primec::semantics {
 
@@ -13,13 +14,17 @@ bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind(
       isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "count");
   const bool resolvedSoaCanonicalIsCountRef =
       isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "count_ref");
+  const bool resolvedVectorCount =
+      isStdNamespacedVectorCompatibilityHelperPath(resolvedPath, "count");
+  const bool resolvedVectorCapacity =
+      isStdNamespacedVectorCompatibilityHelperPath(resolvedPath, "capacity");
   if (resolvedPath == "/array/count" ||
-      resolvedPath == "/std/collections/vector/count" || resolvedPath == "/string/count" ||
+      resolvedVectorCount || resolvedPath == "/string/count" ||
       resolvedPath == "/map/count" || resolvedPath == "/std/collections/map/count" ||
       resolvedPath == "/std/collections/map/count_ref" ||
       resolvedSoaCanonicalIsCount || resolvedSoaCanonicalIsCountRef ||
       isExperimentalSoaCountLikeHelperPath(resolvedSoaCanonical) ||
-      resolvedPath == "/std/collections/vector/capacity") {
+      resolvedVectorCapacity) {
     kindOut = ReturnKind::Int;
     return true;
   }
@@ -44,8 +49,8 @@ bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind(
     }
     return false;
   }
-  if (resolvedPath == "/std/collections/vector/at" ||
-      resolvedPath == "/std/collections/vector/at_unsafe") {
+  if (isStdNamespacedVectorCompatibilityHelperPath(resolvedPath, "at") ||
+      isStdNamespacedVectorCompatibilityHelperPath(resolvedPath, "at_unsafe")) {
     std::string elemType;
     if (resolvers.resolveVectorTarget(receiverExpr, elemType)) {
       ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(elemType));

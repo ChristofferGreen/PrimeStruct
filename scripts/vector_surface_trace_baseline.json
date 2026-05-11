@@ -345,16 +345,6 @@
       "count": 2
     },
     {
-      "path": "src/semantics/SemanticsValidatorInferCollectionDispatch.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 4
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorInferCollectionDispatchSetup.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 5
-    },
-    {
       "path": "src/semantics/SemanticsValidatorInferCollectionReturnInference.cpp",
       "pattern": "experimental-vector-path",
       "count": 12

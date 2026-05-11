@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 namespace primec::semantics {
 
@@ -43,10 +44,18 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
       isNamespacedCollectionHelperCall && namespacedCollection == "vector";
   const bool isNamespacedMapHelperCall =
       isNamespacedCollectionHelperCall && namespacedCollection == "map";
+  const std::string resolvedCalleePath = resolveCalleePath(expr);
+  auto hasImportedCanonicalVectorHelperDefinition =
+      [&](std::string_view helperName) {
+        const std::string canonicalPath =
+            canonicalVectorCompatibilityHelperPath(helperName);
+        return !canonicalPath.empty() && hasImportedDefinitionPath(canonicalPath);
+      };
   const bool isStdNamespacedVectorCountCall =
-      !expr.isMethodCall && resolveCalleePath(expr).rfind("/std/collections/vector/count", 0) == 0;
+      !expr.isMethodCall &&
+      isStdNamespacedVectorCompatibilityHelperPath(resolvedCalleePath, "count");
   const bool hasStdNamespacedVectorCountDefinition =
-      hasImportedDefinitionPath("/std/collections/vector/count");
+      hasImportedCanonicalVectorHelperDefinition("count");
   const bool shouldBuiltinValidateStdNamespacedVectorCountCall =
       isStdNamespacedVectorCountCall && hasStdNamespacedVectorCountDefinition;
   const bool isStdNamespacedMapCountCall =
@@ -140,10 +149,10 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
       isVectorBuiltinName(expr, "capacity");
   const bool callsStdNamespacedVectorCapacityHelper =
       !expr.isMethodCall &&
-      resolveCalleePath(expr).rfind("/std/collections/vector/capacity", 0) == 0;
+      isStdNamespacedVectorCompatibilityHelperPath(resolvedCalleePath, "capacity");
   const bool stdNamespacedVectorCapacityHelperAvailableForInfer =
       !callsStdNamespacedVectorCapacityHelper ||
-      hasImportedDefinitionPath("/std/collections/vector/capacity");
+      hasImportedCanonicalVectorHelperDefinition("capacity");
   const bool isInferBuiltinCapacityLike =
       !expr.isMethodCall && isVectorBuiltinName(expr, "capacity") &&
       stdNamespacedVectorCapacityHelperAvailableForInfer;
@@ -151,23 +160,24 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
       isInferBuiltinCapacityLike && expr.args.size() == 1;
   setupOut.isStdNamespacedVectorAccessSpelling =
       setupOut.hasBuiltinAccessSpelling && !expr.isMethodCall &&
-      resolveCalleePath(expr).rfind("/std/collections/vector/at", 0) == 0;
+      (isStdNamespacedVectorCompatibilityHelperPath(resolvedCalleePath, "at") ||
+       isStdNamespacedVectorCompatibilityHelperPath(resolvedCalleePath, "at_unsafe"));
   const bool isStdlibVectorAccessWrapperDefinition =
       currentValidationState_.context.definitionPath.rfind("/std/collections/", 0) == 0 ||
       currentValidationState_.context.definitionPath.rfind("/std/image/", 0) == 0 ||
       currentValidationState_.context.definitionPath.rfind("/std/ui/", 0) == 0;
   const bool hasStdNamespacedVectorAccessDefinition =
       setupOut.isStdNamespacedVectorAccessSpelling &&
-      (hasImportedDefinitionPath(resolveCalleePath(expr)) ||
-       hasDeclaredDefinitionPath(resolveCalleePath(expr)) ||
+      (hasImportedDefinitionPath(resolvedCalleePath) ||
+       hasDeclaredDefinitionPath(resolvedCalleePath) ||
        isStdlibVectorAccessWrapperDefinition);
   setupOut.isStdNamespacedMapAccessSpelling =
       setupOut.hasBuiltinAccessSpelling && !expr.isMethodCall &&
-      isStdNamespacedCanonicalMapAccessPath(resolveCalleePath(expr));
+      isStdNamespacedCanonicalMapAccessPath(resolvedCalleePath);
   setupOut.hasStdNamespacedMapAccessDefinition =
       setupOut.isStdNamespacedMapAccessSpelling &&
-      (hasImportedDefinitionPath(resolveCalleePath(expr)) ||
-       hasDeclaredDefinitionPath(resolveCalleePath(expr)));
+      (hasImportedDefinitionPath(resolvedCalleePath) ||
+       hasDeclaredDefinitionPath(resolvedCalleePath));
   const bool isResolvedMapAccessCall =
       !expr.isMethodCall &&
       isMapAccessCompatibilityPath(resolved) &&

@@ -680,7 +680,19 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find("std::string namespacedCollection;") !=
         std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSetupSource.find(
+            "#include \"SemanticsValidatorInferCollectionCompatibilityInternal.h\"") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSetupSource.find(
+            "const std::string resolvedCalleePath = resolveCalleePath(expr);") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSetupSource.find(
+            "canonicalVectorCompatibilityHelperPath(helperName)") !=
+        std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find("const bool isStdNamespacedVectorCountCall =") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSetupSource.find(
+            "isStdNamespacedVectorCompatibilityHelperPath(resolvedCalleePath, \"count\")") !=
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find(
             "const bool isStdNamespacedVectorCapacityCall =") ==
@@ -688,12 +700,19 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferCollectionDispatchSetupSource.find(
             "const bool callsStdNamespacedVectorCapacityHelper =\n"
             "      !expr.isMethodCall &&\n"
-            "      resolveCalleePath(expr).rfind(\"/std/collections/vector/capacity\", 0) == 0;") !=
+            "      isStdNamespacedVectorCompatibilityHelperPath(resolvedCalleePath, \"capacity\");") !=
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find(
             "const bool stdNamespacedVectorCapacityHelperAvailableForInfer =\n"
             "      !callsStdNamespacedVectorCapacityHelper ||\n"
-            "      hasImportedDefinitionPath(\"/std/collections/vector/capacity\");") !=
+            "      hasImportedCanonicalVectorHelperDefinition(\"capacity\");") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSetupSource.find(
+            "isStdNamespacedVectorCompatibilityHelperPath(resolvedCalleePath, \"at\") ||\n"
+            "       isStdNamespacedVectorCompatibilityHelperPath(resolvedCalleePath, \"at_unsafe\")") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSetupSource.find(
+            "std/collections/vector/") ==
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find(
             "const bool isInferBuiltinCapacityLike =\n"
@@ -755,6 +774,21 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "(!(!expr.isMethodCall &&\n"
             "         resolveCalleePath(expr).rfind(\"/std/collections/vector/capacity\", 0) == 0) ||\n"
             "       hasImportedDefinitionPath(\"/std/collections/vector/capacity\"));") ==
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSource.find(
+            "#include \"SemanticsValidatorInferCollectionCompatibilityInternal.h\"") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSource.find(
+            "isStdNamespacedVectorCompatibilityHelperPath(resolvedPath, \"count\")") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSource.find(
+            "isStdNamespacedVectorCompatibilityHelperPath(resolvedPath, \"capacity\")") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSource.find(
+            "isStdNamespacedVectorCompatibilityHelperPath(resolvedPath, \"at\")") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSource.find(
+            "std/collections/vector/") ==
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find("setupOut.shouldDeferResolvedNamespacedCollectionHelperReturn =") !=
         std::string::npos);
