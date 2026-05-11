@@ -11,6 +11,7 @@
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererSemanticProductTargetAdapters.h"
+#include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
@@ -55,20 +56,16 @@ std::string resolveSemanticBindingTypeText(const SemanticProgram *semanticProgra
 }
 
 bool isSpecializedExperimentalVectorTypeText(const std::string &typeText) {
-  std::string normalized = trimTemplateTypeText(typeText);
-  if (!normalized.empty() && normalized.front() != '/') {
-    normalized.insert(normalized.begin(), '/');
-  }
-  return normalized.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+  const std::string normalized = trimTemplateTypeText(typeText);
+  return isExperimentalCollectionTypeName(normalized, "vector", "Vector") &&
+         normalized.find("__") != std::string::npos;
 }
 
 bool isExperimentalVectorSurfaceBase(const std::string &typeText) {
-  std::string normalized = trimTemplateTypeText(typeText);
-  if (!normalized.empty() && normalized.front() != '/') {
-    normalized.insert(normalized.begin(), '/');
-  }
-  return trimTemplateTypeText(typeText) == "Vector" ||
-         normalized == "/std/collections/experimental_vector/Vector";
+  const std::string normalized = trimTemplateTypeText(typeText);
+  return normalized == "Vector" ||
+         normalized == experimentalCollectionTypePath("vector", "Vector", false) ||
+         normalized == experimentalCollectionTypePath("vector", "Vector");
 }
 
 bool isSpecializedExperimentalSoaVectorStructPathText(const std::string &typeText) {

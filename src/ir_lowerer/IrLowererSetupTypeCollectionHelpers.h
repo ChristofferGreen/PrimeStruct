@@ -35,6 +35,31 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut);
 bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut);
 bool resolveBorrowedMapHelperAliasName(const Expr &expr, std::string &helperNameOut);
 
+std::string stdCollectionsRoot(bool leadingSlash = true);
+std::string collectionTypePath(std::string_view collectionName,
+                               bool leadingSlash = true);
+std::string collectionMemberRoot(std::string_view collectionName,
+                                 bool leadingSlash = true);
+std::string collectionMemberPath(std::string_view collectionName,
+                                 std::string_view memberName,
+                                 bool leadingSlash = true);
+std::string experimentalCollectionMemberRoot(std::string_view collectionName,
+                                             bool leadingSlash = true);
+std::string experimentalCollectionTypePath(std::string_view collectionName,
+                                           std::string_view typeName,
+                                           bool leadingSlash = true);
+std::string collectionWrapperAlias(std::string_view collectionName,
+                                   std::string_view suffix);
+bool isBuiltinCollectionTypeName(std::string_view typeName,
+                                 std::string_view collectionName);
+bool isExperimentalCollectionTypeName(std::string_view typeName,
+                                      std::string_view collectionName,
+                                      std::string_view experimentalTypeName);
+std::string normalizeBuiltinCollectionStructPath(std::string_view collectionName);
+std::string normalizeExperimentalCollectionTypePath(std::string_view typeName,
+                                                    std::string_view collectionName,
+                                                    std::string_view experimentalTypeName);
+
 std::string normalizeCollectionHelperPath(const std::string &path);
 bool isExplicitRemovedVectorMethodAliasPath(const std::string &methodName);
 bool isExplicitMapMethodAliasPath(const std::string &methodName);

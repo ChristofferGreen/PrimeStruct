@@ -16005,3 +16005,37 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     source-lock coverage and ratcheted
     `scripts/vector_surface_trace_baseline.json` from 589 to 531 production
     traces. Baseline release validation was skipped per the lite workflow.
+
+- [x] TODO-4404: Route lowerer vector type and layout traces
+  - owner: ai
+  - created_at: 2026-05-11
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4414
+  - scope: Replace lowerer vector type, layout, struct-return, access-target,
+    binding-type, uninitialized-struct, and operator mutation traces with
+    layout facts, semantic product metadata, generic collection routing, or
+    manifest-driven helpers.
+  - implementation_notes:
+    - Start from lowerer files whose trace entries are type/layout oriented,
+      including `IrLowererAccessTargetResolution.cpp`,
+      `IrLowererBindingTypeHelpers.cpp`,
+      `IrLowererFlowVector*`, `IrLowererStruct*`,
+      `IrLowererSetupType*`, and `IrLowererUninitializedStructInference.cpp`.
+    - Keep ordinary C++ `std::vector` container usage allowed.
+  - acceptance:
+    - Lowerer type/layout vector decisions use generic collection or published
+      semantic/layout facts rather than hard-coded PrimeStruct vector paths
+      where possible before the zero audit.
+    - Focused lowerer source-lock coverage remains aligned.
+    - The vector surface trace baseline decreases for type/layout lowerer
+      files and does not increase elsewhere.
+  - stop_rule: Stop after remaining lowerer vector-specific traces that can be
+    retired before the final zero audit have been removed and the baseline
+    ratchets downward.
+  - finished_at: 2026-05-11
+  - evidence: Routed lowerer type, layout, setup, struct-return, and
+    access-target vector decisions through generic collection path helpers and
+    metadata-derived vector helper surface IDs. Updated source-lock coverage
+    and ratcheted `scripts/vector_surface_trace_baseline.json` from 531 to
+    412 production traces. Baseline release validation was skipped per the
+    lite workflow.

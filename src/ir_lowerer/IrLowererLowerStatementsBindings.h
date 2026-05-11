@@ -690,7 +690,7 @@
           if (callee->fullPath.rfind(prefixView, 0) != 0) {
             return false;
           }
-          std::string leaf = callee->fullPath.substr(Prefix.size());
+          std::string leaf = callee->fullPath.substr(prefix.size());
           const size_t generatedSuffix = leaf.find("__");
           if (generatedSuffix != std::string::npos) {
             leaf.erase(generatedSuffix);

@@ -1,6 +1,7 @@
 #include "IrLowererFlowHelpers.h"
 
 #include "IrLowererHelpers.h"
+#include "IrLowererSetupTypeCollectionHelpers.h"
 
 #include <string_view>
 
@@ -198,8 +199,7 @@ void emitDisarmTemporaryStructAfterCopy(const std::function<void(IrOpcode, uint6
     return leaf;
   };
 
-  if (structPath == "/std/collections/experimental_vector/Vector" ||
-      structPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) {
+  if (isExperimentalCollectionTypeName(structPath, "vector", "Vector")) {
     emitStoreFalseAtOffset(3ull * IrSlotBytes);
     return;
   }

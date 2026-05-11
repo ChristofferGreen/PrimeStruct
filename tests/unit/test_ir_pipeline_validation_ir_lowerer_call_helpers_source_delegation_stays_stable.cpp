@@ -949,6 +949,97 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
 }
 
+TEST_CASE("ir lowerer vector type layout traces use generic collection helpers") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+  const std::filesystem::path lowererRoot =
+      repoRoot / "src" / "ir_lowerer";
+
+  const std::string setupCollectionHeader =
+      readText(lowererRoot / "IrLowererSetupTypeCollectionHelpers.h");
+  const std::string setupCollectionSource =
+      readText(lowererRoot / "IrLowererSetupTypeCollectionHelpers.cpp");
+  const std::string accessTargetSource =
+      readText(lowererRoot / "IrLowererAccessTargetResolution.cpp");
+  const std::string bindingTypeSource =
+      readText(lowererRoot / "IrLowererBindingTypeHelpers.cpp");
+  const std::string uninitializedStructSource =
+      readText(lowererRoot / "IrLowererUninitializedStructInference.cpp");
+  const std::string structSlotLayoutSource =
+      readText(lowererRoot / "IrLowererStructSlotLayoutHelpers.cpp");
+  const std::string structReturnPathSource =
+      readText(lowererRoot / "IrLowererStructReturnPathHelpers.cpp");
+  const std::string methodTargetSource =
+      readText(lowererRoot / "IrLowererSetupTypeMethodTargetHelpers.cpp");
+  const std::string methodCallSource =
+      readText(lowererRoot / "IrLowererSetupTypeMethodCallResolution.cpp");
+  const std::string declaredCollectionSource =
+      readText(lowererRoot / "IrLowererSetupTypeDeclaredCollectionInference.cpp");
+
+  auto checkNoDirectVectorSurfaceTrace = [](const std::string &source) {
+    CHECK(source.find("std/collections/vector/") == std::string::npos);
+    CHECK(source.find("std/collections/experimental_vector") ==
+          std::string::npos);
+    CHECK(source.find("StdlibSurfaceId::CollectionsVectorHelpers") ==
+          std::string::npos);
+    CHECK(source.find("Vector<") == std::string::npos);
+  };
+
+  CHECK(setupCollectionHeader.find("std::string collectionMemberPath(") !=
+        std::string::npos);
+  CHECK(setupCollectionHeader.find("bool isExperimentalCollectionTypeName(") !=
+        std::string::npos);
+  CHECK(setupCollectionSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") !=
+        std::string::npos);
+  CHECK(setupCollectionSource.find("stdCollectionsRoot(") !=
+        std::string::npos);
+  CHECK(accessTargetSource.find(
+            "isExperimentalCollectionTypeName(structTypeName, \"vector\", \"Vector\")") !=
+        std::string::npos);
+  CHECK(bindingTypeSource.find(
+            "isBuiltinCollectionTypeName(name, \"vector\")") !=
+        std::string::npos);
+  CHECK(uninitializedStructSource.find(
+            "normalizeBuiltinCollectionStructPath(\"vector\")") !=
+        std::string::npos);
+  CHECK(structSlotLayoutSource.find(
+            "experimentalCollectionTypePath(\"vector\", \"Vector\")") !=
+        std::string::npos);
+  CHECK(structReturnPathSource.find(
+            "collectionWrapperAlias(\"vector\", \"New\")") !=
+        std::string::npos);
+  CHECK(methodTargetSource.find(
+            "collectionMemberPath(\"vector\", normalizedMethodName)") !=
+        std::string::npos);
+  CHECK(methodCallSource.find(
+            "normalizeBuiltinCollectionStructPath(\"vector\") + \"/count\"") !=
+        std::string::npos);
+  CHECK(declaredCollectionSource.find(
+            "collectionMemberPath(\"vector\", \"vector\", false)") !=
+        std::string::npos);
+
+  checkNoDirectVectorSurfaceTrace(setupCollectionSource);
+  checkNoDirectVectorSurfaceTrace(accessTargetSource);
+  checkNoDirectVectorSurfaceTrace(bindingTypeSource);
+  checkNoDirectVectorSurfaceTrace(uninitializedStructSource);
+  checkNoDirectVectorSurfaceTrace(structSlotLayoutSource);
+  checkNoDirectVectorSurfaceTrace(structReturnPathSource);
+  checkNoDirectVectorSurfaceTrace(methodTargetSource);
+  checkNoDirectVectorSurfaceTrace(methodCallSource);
+  checkNoDirectVectorSurfaceTrace(declaredCollectionSource);
+}
+
 TEST_CASE("native tail and late collection helper metadata dispatch stays source locked") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);

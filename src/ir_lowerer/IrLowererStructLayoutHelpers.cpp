@@ -7,6 +7,7 @@
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
+#include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "primec/SemanticProduct.h"
@@ -21,7 +22,8 @@ bool isSpecializedExperimentalStructTypeName(const std::string &name) {
     normalized.insert(normalized.begin(), '/');
   }
   return normalized.rfind("/std/collections/experimental_map/Map__", 0) == 0 ||
-         normalized.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+         (isExperimentalCollectionTypeName(normalized, "vector", "Vector") &&
+          normalized.find("__") != std::string::npos);
 }
 
 std::string normalizeLayoutTypeName(const std::string &name) {

@@ -170,7 +170,7 @@ void analyzeDeclaredReturnTransforms(const Definition &def,
         if (info.kind == LocalInfo::ValueKind::Unknown) {
           std::string structPath;
           if (resolveStructTypeName(elementType, def.namespacePrefix, structPath)) {
-            // Vector<Struct> returns lower through the same opaque aggregate
+            // Collection-of-struct returns lower through the same opaque aggregate
             // handle path as other array-like aggregate returns.
             info.kind = LocalInfo::ValueKind::Int32;
           }

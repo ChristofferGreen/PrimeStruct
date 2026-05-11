@@ -1,6 +1,7 @@
 #include "IrLowererStructReturnPathHelpers.h"
 
 #include "IrLowererHelpers.h"
+#include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererStructFieldBindingHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
@@ -26,7 +27,8 @@ bool isExperimentalVectorConstructorPath(std::string path) {
   if (!path.empty() && path.front() != '/') {
     path.insert(path.begin(), '/');
   }
-  constexpr std::string_view Prefix = "/std/collections/experimental_vector/";
+  const std::string prefix = experimentalCollectionMemberRoot("vector");
+  const std::string_view Prefix(prefix.data(), prefix.size());
   if (path.rfind(Prefix, 0) != 0) {
     return false;
   }
@@ -35,11 +37,15 @@ bool isExperimentalVectorConstructorPath(std::string path) {
   if (generatedSuffix != std::string::npos) {
     leaf.erase(generatedSuffix);
   }
-  return leaf == "vector" || leaf == "vectorNew" ||
-         leaf == "vectorSingle" || leaf == "vectorPair" ||
-         leaf == "vectorTriple" || leaf == "vectorQuad" ||
-         leaf == "vectorQuint" || leaf == "vectorSext" ||
-         leaf == "vectorSept" || leaf == "vectorOct";
+  return leaf == "vector" || leaf == collectionWrapperAlias("vector", "New") ||
+         leaf == collectionWrapperAlias("vector", "Single") ||
+         leaf == collectionWrapperAlias("vector", "Pair") ||
+         leaf == collectionWrapperAlias("vector", "Triple") ||
+         leaf == collectionWrapperAlias("vector", "Quad") ||
+         leaf == collectionWrapperAlias("vector", "Quint") ||
+         leaf == collectionWrapperAlias("vector", "Sext") ||
+         leaf == collectionWrapperAlias("vector", "Sept") ||
+         leaf == collectionWrapperAlias("vector", "Oct");
 }
 
 std::string resolveSpecializedExperimentalVectorReturnPath(
@@ -147,9 +153,11 @@ std::string normalizeCollectionMethodName(std::string methodName) {
   if (!methodName.empty() && methodName.front() == '/') {
     methodName.erase(methodName.begin());
   }
-  const std::string vectorPrefix = "vector/";
+  const std::string vectorPrefix =
+      normalizeBuiltinCollectionStructPath("vector").substr(1) + "/";
   const std::string arrayPrefix = "array/";
-  const std::string stdVectorPrefix = "std/collections/vector/";
+  const std::string stdVectorPrefix =
+      collectionMemberRoot("vector", false);
   const std::string mapPrefix = "map/";
   const std::string stdMapPrefix = "std/collections/map/";
   if (methodName.rfind(vectorPrefix, 0) == 0) {
@@ -215,7 +223,8 @@ std::vector<std::string> collectionMethodPathCandidates(const std::string &recei
                                                         const std::string &methodName,
                                                         const std::string &rawMethodName) {
   if (receiverStruct == "/vector") {
-    std::vector<std::string> candidates = {"/std/collections/vector/" + methodName};
+    std::vector<std::string> candidates = {
+        collectionMemberPath("vector", methodName)};
     if (allowsArrayVectorCompatibilitySuffix(methodName)) {
       candidates.push_back("/array/" + methodName);
     }
@@ -226,7 +235,7 @@ std::vector<std::string> collectionMethodPathCandidates(const std::string &recei
         "/array/" + methodName,
     };
     if (allowsArrayVectorCompatibilitySuffix(methodName)) {
-      candidates.push_back("/std/collections/vector/" + methodName);
+      candidates.push_back(collectionMemberPath("vector", methodName));
     }
     return candidates;
   }
@@ -269,8 +278,9 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
 
   std::string normalizedPath = path;
   if (!normalizedPath.empty() && normalizedPath.front() != '/') {
-    if (normalizedPath.rfind("array/", 0) == 0 || normalizedPath.rfind("vector/", 0) == 0 ||
-        normalizedPath.rfind("std/collections/vector/", 0) == 0 || normalizedPath.rfind("map/", 0) == 0 ||
+    if (normalizedPath.rfind("array/", 0) == 0 ||
+        normalizedPath.rfind(normalizeBuiltinCollectionStructPath("vector").substr(1) + "/", 0) == 0 ||
+        normalizedPath.rfind(collectionMemberRoot("vector", false), 0) == 0 || normalizedPath.rfind("map/", 0) == 0 ||
         normalizedPath.rfind("std/collections/map/", 0) == 0) {
       normalizedPath.insert(normalizedPath.begin(), '/');
     }
@@ -281,7 +291,7 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
   if (normalizedPath.rfind("/array/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/array/").size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-      appendUnique("/std/collections/vector/" + suffix);
+      appendUnique(collectionMemberPath("vector", suffix));
     }
   } else if (normalizedPath.rfind("/map/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/map/").size());
@@ -303,7 +313,7 @@ std::string preferCollectionHelperPath(const std::string &path,
   if (preferred.rfind("/array/", 0) == 0 && defMap.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/array/").size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-      const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+      const std::string stdlibAlias = collectionMemberPath("vector", suffix);
       if (defMap.count(stdlibAlias) > 0) {
         return stdlibAlias;
       }
@@ -547,7 +557,7 @@ std::string inferStructReturnPathFromExprInternal(
     std::vector<std::string> candidates = collectionMethodPathCandidates(receiverStruct, methodName, rawMethodName);
     if ((receiverStruct == "/vector" || receiverStruct == "/array" || receiverStruct == "/string") &&
         (methodName == "at" || methodName == "at_unsafe")) {
-      const std::string canonicalCandidate = "/std/collections/vector/" + methodName;
+      const std::string canonicalCandidate = collectionMemberPath("vector", methodName);
       for (auto it = candidates.begin(); it != candidates.end();) {
         if (*it == canonicalCandidate) {
           it = candidates.erase(it);
@@ -571,7 +581,8 @@ std::string inferStructReturnPathFromExprInternal(
       expr.templateArgs.size() == 1) {
     const std::string specializedVector =
         resolveSpecializedExperimentalVectorReturnPath(
-            "Vector<" + trimTemplateTypeText(expr.templateArgs.front()) + ">");
+            std::string("Vector") + "<" +
+            trimTemplateTypeText(expr.templateArgs.front()) + ">");
     if (structNames.count(specializedVector) > 0) {
       return specializedVector;
     }
@@ -581,12 +592,13 @@ std::string inferStructReturnPathFromExprInternal(
   if (!expr.isMethodCall && !expr.args.empty()) {
     std::string normalizedPath = resolveStructLayoutExprPath(expr);
     if (!normalizedPath.empty() && normalizedPath.front() != '/') {
-      if (normalizedPath.rfind("vector/", 0) == 0 || normalizedPath.rfind("std/collections/vector/", 0) == 0) {
+      if (normalizedPath.rfind(normalizeBuiltinCollectionStructPath("vector").substr(1) + "/", 0) == 0 ||
+          normalizedPath.rfind(collectionMemberRoot("vector", false), 0) == 0) {
         normalizedPath.insert(normalizedPath.begin(), '/');
       }
     }
-    if (normalizedPath.rfind("/std/collections/vector/", 0) == 0) {
-      const std::string suffix = normalizedPath.substr(std::string("/std/collections/vector/").size());
+    if (normalizedPath.rfind(collectionMemberRoot("vector"), 0) == 0) {
+      const std::string suffix = normalizedPath.substr(collectionMemberRoot("vector").size());
       if (suffix == "at" || suffix == "at_unsafe") {
         size_t receiverIndex = 0;
         if (hasNamedArguments(expr.argNames)) {
@@ -614,7 +626,7 @@ std::string inferStructReturnPathFromExprInternal(
                                                                    visitedDefs);
           }
           if (receiverStruct == "/vector" || receiverStruct == "/array" || receiverStruct == "/string") {
-            const std::string canonicalCandidate = "/std/collections/vector/" + suffix;
+            const std::string canonicalCandidate = collectionMemberPath("vector", suffix);
             for (auto it = resolvedCandidates.begin(); it != resolvedCandidates.end();) {
               if (*it == canonicalCandidate) {
                 it = resolvedCandidates.erase(it);

@@ -5,6 +5,7 @@
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
+#include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererStructLayoutHelpers.h"
 #include "IrLowererStructReturnPathHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
@@ -16,8 +17,8 @@ namespace {
 bool isSpecializedExperimentalCollectionTypeName(const std::string &typeName) {
   return typeName.rfind("std/collections/experimental_map/Map__", 0) == 0 ||
          typeName.rfind("/std/collections/experimental_map/Map__", 0) == 0 ||
-         typeName.rfind("std/collections/experimental_vector/Vector__", 0) == 0 ||
-         typeName.rfind("/std/collections/experimental_vector/Vector__", 0) == 0 ||
+         (isExperimentalCollectionTypeName(typeName, "vector", "Vector") &&
+          typeName.find("__") != std::string::npos) ||
          typeName.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) == 0 ||
          typeName.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
 }

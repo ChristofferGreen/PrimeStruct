@@ -153,13 +153,13 @@ bool matchesGeneratedDefinitionFamilyPath(const std::string &candidatePath,
 
 bool blocksSyntheticCollectionFallbackDirectTarget(const std::string &targetPath) {
   const std::string normalized = normalizeCollectionHelperPath(targetPath);
-  return normalized.rfind("/vector/", 0) == 0 ||
-         normalized.rfind("/std/collections/vector/", 0) == 0 ||
+  return normalized.rfind(normalizeBuiltinCollectionStructPath("vector") + "/", 0) == 0 ||
+         normalized.rfind(collectionMemberRoot("vector"), 0) == 0 ||
          normalized.rfind("/map/", 0) == 0 ||
          normalized.rfind("/std/collections/map/", 0) == 0 ||
          normalized.rfind("/soa_vector/", 0) == 0 ||
          normalized.rfind("/std/collections/soa_vector/", 0) == 0 ||
-         normalized.rfind("/std/collections/experimental_vector/", 0) == 0 ||
+         normalized.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0 ||
          normalized.rfind("/std/collections/experimental_map/", 0) == 0 ||
          normalized.rfind("/std/collections/experimental_soa_vector/", 0) == 0;
 }
@@ -172,8 +172,7 @@ bool isExperimentalVectorMetadataMethodPath(const std::string &methodPath) {
 
 bool isExperimentalVectorOwnerPath(const std::string &path) {
   const std::string normalized = normalizeCollectionHelperPath(path);
-  return normalized == "/std/collections/experimental_vector/Vector" ||
-         normalized.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+  return isExperimentalCollectionTypeName(normalized, "vector", "Vector");
 }
 
 std::string unwrapSemanticReceiverTypeText(std::string typeText) {
@@ -429,8 +428,9 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       return nullptr;
     };
     const bool requestsExplicitVectorCountMethod =
-        explicitMethodPath == "/vector/count" ||
-        explicitMethodPath == "/std/collections/vector/count";
+        explicitMethodPath == collectionMemberPath("vector", "count") ||
+        explicitMethodPath ==
+            normalizeBuiltinCollectionStructPath("vector") + "/count";
     if (callExpr.semanticNodeId == 0 &&
         (callExpr.sourceLine <= 0 || callExpr.sourceColumn <= 0 ||
          callExpr.name.empty())) {
@@ -604,12 +604,16 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
       normalizedMethodName.erase(normalizedMethodName.begin());
     }
-    if (normalizedMethodName.rfind("vector/", 0) == 0) {
-      normalizedMethodName = normalizedMethodName.substr(std::string("vector/").size());
+    const std::string rootedVectorPrefix =
+        normalizeBuiltinCollectionStructPath("vector").substr(1) + "/";
+    const std::string canonicalVectorPrefix =
+        collectionMemberRoot("vector", false);
+    if (normalizedMethodName.rfind(rootedVectorPrefix, 0) == 0) {
+      normalizedMethodName = normalizedMethodName.substr(rootedVectorPrefix.size());
     } else if (normalizedMethodName.rfind("array/", 0) == 0) {
       normalizedMethodName = normalizedMethodName.substr(std::string("array/").size());
-    } else if (normalizedMethodName.rfind("std/collections/vector/", 0) == 0) {
-      normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/vector/").size());
+    } else if (normalizedMethodName.rfind(canonicalVectorPrefix, 0) == 0) {
+      normalizedMethodName = normalizedMethodName.substr(canonicalVectorPrefix.size());
     } else if (normalizedMethodName.rfind("map/", 0) == 0) {
       normalizedMethodName = normalizedMethodName.substr(std::string("map/").size());
     } else if (normalizedMethodName.rfind("std/collections/map/", 0) == 0) {
@@ -680,7 +684,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     }
     if (receiverTypeName == "vector") {
       resolved = resolveMethodDefinitionFromReceiverTarget(
-          explicitMethodPath, "", "/std/collections/vector", defMap, errorOutRef);
+          explicitMethodPath, "", collectionTypePath("vector"), defMap, errorOutRef);
       if (resolved != nullptr) {
         return resolved;
       }

@@ -72,11 +72,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4404: Route lowerer vector type and layout traces
+- TODO-4373: Tighten vector trace audit to zero
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4373: Tighten vector trace audit to zero
 - TODO-4299: Promote and style canonical `.prime` map implementation
 - TODO-4300: Stabilize map lookup and insertion substrate
 - TODO-4301: Lower map helpers through ordinary `.prime`
@@ -86,13 +85,14 @@ Task template:
 - TODO-4305: Rename SoA public surface to `soa`
 - TODO-4306: Promote SoA constructors and access helpers
 - TODO-4307: Lower SoA helpers through ordinary `.prime`
+- TODO-4308: Move SoA surface metadata out of C++
 
 ### Priority Lanes (Current)
 
 - Semantic ownership authority: none active; future semantic-authority work
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
-- Vector stdlib ownership cutover: TODO-4404 -> TODO-4373
+- Vector stdlib ownership cutover: TODO-4373
 - Map stdlib ownership cutover: TODO-4299 -> TODO-4300 -> TODO-4301
   -> TODO-4302 -> TODO-4303 -> TODO-4304
 - SoA public surface rename and ownership cutover: TODO-4305 -> TODO-4306
@@ -111,7 +111,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4404: Route lowerer vector type and layout traces
 - TODO-4373: Tighten vector trace audit to zero
 - TODO-4299: Promote and style canonical `.prime` map implementation
 - TODO-4300: Stabilize map lookup and insertion substrate
@@ -174,9 +173,9 @@ Task template:
 | Compile-pipeline stage and publication-boundary contracts | none |
 | Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4299, TODO-4305 |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4404, TODO-4373, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4404, TODO-4373, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
-| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4404, TODO-4373, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
+| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4373, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4373, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4373, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
@@ -205,8 +204,8 @@ Task template:
 | Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
-| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4404, TODO-4373, TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
-| De-experimentalization surface and namespace parity | TODO-4404, TODO-4373, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
+| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4373, TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| De-experimentalization surface and namespace parity | TODO-4373, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
@@ -241,9 +240,7 @@ Task template:
   metadata is now owned by `stdlib/std/collections/surfaces.psmeta`, and the
   registry no longer advertises vector compatibility spellings through that
   manifest. Direct experimental vector source imports are now rejected, and
-  TODO-4404 and TODO-4373 handle the
-  remaining production C++ vector trace removal and final zero-vector audit
-  tightening.
+  TODO-4373 handles the remaining final zero-vector audit tightening.
   TODO-4299 through TODO-4304 apply the same ownership model to map while
   keeping map-specific lookup, insertion, `Result<ContainerError>`, and key
   comparability policy explicit.
@@ -1641,33 +1638,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
-
-- [ ] TODO-4404: Route lowerer vector type and layout traces
-  - owner: ai
-  - created_at: 2026-05-11
-  - phase: Vector stdlib ownership cutover
-  - depends_on: TODO-4414
-  - scope: Replace lowerer vector type, layout, struct-return, access-target,
-    binding-type, uninitialized-struct, and operator mutation traces with
-    layout facts, semantic product metadata, generic collection routing, or
-    manifest-driven helpers.
-  - implementation_notes:
-    - Start from lowerer files whose trace entries are type/layout oriented,
-      including `IrLowererAccessTargetResolution.cpp`,
-      `IrLowererBindingTypeHelpers.cpp`,
-      `IrLowererFlowVector*`, `IrLowererStruct*`,
-      `IrLowererSetupType*`, and `IrLowererUninitializedStructInference.cpp`.
-    - Keep ordinary C++ `std::vector` container usage allowed.
-  - acceptance:
-    - Lowerer type/layout vector decisions use generic collection or published
-      semantic/layout facts rather than hard-coded PrimeStruct vector paths
-      where possible before the zero audit.
-    - Focused lowerer source-lock coverage remains aligned.
-    - The vector surface trace baseline decreases for type/layout lowerer
-      files and does not increase elsewhere.
-  - stop_rule: Stop after remaining lowerer vector-specific traces that can be
-    retired before the final zero audit have been removed and the baseline
-    ratchets downward.
 
 - [ ] TODO-4373: Tighten vector trace audit to zero
   - owner: ai

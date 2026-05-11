@@ -26,8 +26,7 @@ bool isSpecializedExperimentalMapStructPath(const std::string &typeText) {
 }
 
 bool isBuiltinVectorTypeName(const std::string &typeName) {
-  return typeName == "vector" || typeName == "/vector" || typeName == "std/collections/vector" ||
-         typeName == "/std/collections/vector";
+  return isBuiltinCollectionTypeName(typeName, "vector");
 }
 
 std::string resolveSpecializedExperimentalVectorStructPath(
@@ -149,14 +148,13 @@ bool isForwardedMapNewConstructor(const Expr &expr) {
 
 std::string normalizeUninitializedVectorStructPath(const std::string &typeName) {
   if (isBuiltinVectorTypeName(typeName)) {
-    return "/vector";
+    return normalizeBuiltinCollectionStructPath("vector");
   }
   if (typeName == "Vector") {
-    return "/std/collections/experimental_vector/Vector";
+    return experimentalCollectionTypePath("vector", "Vector");
   }
-  if (typeName == "std/collections/experimental_vector/Vector" ||
-      typeName.rfind("std/collections/experimental_vector/Vector__", 0) == 0) {
-    return "/" + typeName;
+  if (isExperimentalCollectionTypeName(typeName, "vector", "Vector")) {
+    return normalizeExperimentalCollectionTypePath(typeName, "vector", "Vector");
   }
   return typeName;
 }

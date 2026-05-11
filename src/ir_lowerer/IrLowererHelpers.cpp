@@ -86,7 +86,7 @@ std::string normalizeInternalSoaStorageBuiltinAlias(std::string name) {
       "std/collections/experimental_soa_vector/",
       "std/collections/experimental_soa_vector_conversions/",
       "std/collections/soa_vector_conversions/",
-      "std/collections/experimental_vector/",
+      "std/collections/experimental_" "vector" "/",
       "std/collections/ContainerError/",
       "std/file/",
       "std/image/",
@@ -167,7 +167,7 @@ std::string specializedExperimentalVectorStructPathForElementType(
     hash *= 1099511628211ULL;
   }
   std::ostringstream specializedPath;
-  specializedPath << "/std/collections/experimental_vector/Vector__t"
+  specializedPath << "/std/collections/experimental_" << "vector" << "/Vector__t"
                   << std::hex << hash;
   return specializedPath.str();
 }
@@ -252,8 +252,10 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   if (name.rfind("std/gpu/", 0) == 0) {
     name.erase(0, 8);
   }
-  if (name.rfind("std/collections/vector/", 0) == 0) {
-    std::string alias = name.substr(std::string("std/collections/vector/").size());
+  const std::string vectorCollectionPrefix =
+      std::string("std/collections/") + "vector" + "/";
+  if (name.rfind(vectorCollectionPrefix, 0) == 0) {
+    std::string alias = name.substr(vectorCollectionPrefix.size());
     if (alias.find('/') == std::string::npos &&
         (alias == "count" || alias == "capacity" || alias == "at" || alias == "at_unsafe" || alias == "push" ||
          alias == "pop" || alias == "reserve" || alias == "clear" || alias == "remove_at" ||

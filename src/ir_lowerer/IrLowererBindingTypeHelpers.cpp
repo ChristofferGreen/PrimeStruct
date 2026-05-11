@@ -3,6 +3,7 @@
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererSemanticProductTargetAdapters.h"
+#include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "primec/SoaPathHelpers.h"
@@ -919,11 +920,8 @@ bool validateSemanticProductCollectionSpecializationCoverage(
 }
 
 std::string normalizeCollectionBindingTypeName(const std::string &name) {
-  if (name == "/vector" || name == "std/collections/vector" || name == "/std/collections/vector" ||
-      name == "Vector" || name == "std/collections/experimental_vector/Vector" ||
-      name == "/std/collections/experimental_vector/Vector" ||
-      name.rfind("std/collections/experimental_vector/Vector__", 0) == 0 ||
-      name.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) {
+  if (isBuiltinCollectionTypeName(name, "vector") ||
+      isExperimentalCollectionTypeName(name, "vector", "Vector")) {
     return "vector";
   }
   if (name == "/map" || name == "std/collections/map" || name == "/std/collections/map" ||

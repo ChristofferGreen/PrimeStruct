@@ -10,10 +10,7 @@
 namespace primec::ir_lowerer {
 
 std::string normalizeDeclaredCollectionTypeBase(const std::string &base) {
-  if (base == "Vector" || base == "std/collections/experimental_vector/Vector" ||
-      base == "/std/collections/experimental_vector/Vector" ||
-      base.rfind("std/collections/experimental_vector/Vector__", 0) == 0 ||
-      base.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) {
+  if (isExperimentalCollectionTypeName(base, "vector", "Vector")) {
     return "vector";
   }
   if (base == "SoaVector" ||
@@ -172,8 +169,10 @@ bool inferDeclaredReturnCollection(const Definition &definition,
                  primec::StdlibSurfaceId::CollectionsMapConstructors);
     };
     auto isDirectVectorConstructor = [&]() {
-      return normalizedName == "std/collections/vector/vector" ||
-             normalizedName.rfind("std/collections/vector/vector__", 0) == 0 ||
+      const std::string constructorPath =
+          collectionMemberPath("vector", "vector", false);
+      return normalizedName == constructorPath ||
+             normalizedName.rfind(constructorPath + "__", 0) == 0 ||
              isPublishedStdlibSurfaceConstructorExpr(
                  candidate,
                  primec::StdlibSurfaceId::CollectionsVectorConstructors);

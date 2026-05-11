@@ -17,8 +17,7 @@ namespace primec::ir_lowerer {
 namespace {
 
 bool isBuiltinVectorTypeName(const std::string &typeName) {
-  return typeName == "vector" || typeName == "/vector" || typeName == "std/collections/vector" ||
-         typeName == "/std/collections/vector";
+  return isBuiltinCollectionTypeName(typeName, "vector");
 }
 
 bool isBuiltinSoaVectorTypeName(const std::string &typeName) {
@@ -43,10 +42,7 @@ bool isInternalSoaColumnTypeName(const std::string &typeName) {
 }
 
 bool isExperimentalVectorTypeName(const std::string &typeName) {
-  return typeName == "Vector" || typeName == "std/collections/experimental_vector/Vector" ||
-         typeName == "/std/collections/experimental_vector/Vector" ||
-         typeName.rfind("std/collections/experimental_vector/Vector__", 0) == 0 ||
-         typeName.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+  return isExperimentalCollectionTypeName(typeName, "vector", "Vector");
 }
 
 bool isVectorTypeName(const std::string &typeName) {
@@ -88,17 +84,16 @@ std::string resolveStructSlotLookupPath(
 
 std::string normalizeVectorStructPath(const std::string &typeName) {
   if (isBuiltinVectorTypeName(typeName)) {
-    return "/vector";
+    return normalizeBuiltinCollectionStructPath("vector");
   }
   if (isBuiltinSoaVectorTypeName(typeName)) {
     return "/soa_vector";
   }
   if (typeName == "Vector") {
-    return "/std/collections/experimental_vector/Vector";
+    return experimentalCollectionTypePath("vector", "Vector");
   }
-  if (typeName == "std/collections/experimental_vector/Vector" ||
-      typeName.rfind("std/collections/experimental_vector/Vector__", 0) == 0) {
-    return "/" + typeName;
+  if (isExperimentalCollectionTypeName(typeName, "vector", "Vector")) {
+    return normalizeExperimentalCollectionTypePath(typeName, "vector", "Vector");
   }
   return typeName;
 }
@@ -423,9 +418,11 @@ bool resolveStructSlotLayoutFromDefinitionFields(
     layout.structPath = structPath;
     layout.totalSlots = 8;
     StructSlotFieldInfo keysField{
-        "keys", 0, 4, LocalInfo::ValueKind::Unknown, "/std/collections/experimental_vector/Vector"};
+        "keys", 0, 4, LocalInfo::ValueKind::Unknown,
+        experimentalCollectionTypePath("vector", "Vector")};
     StructSlotFieldInfo payloadsField{
-        "payloads", 4, 4, LocalInfo::ValueKind::Unknown, "/std/collections/experimental_vector/Vector"};
+        "payloads", 4, 4, LocalInfo::ValueKind::Unknown,
+        experimentalCollectionTypePath("vector", "Vector")};
     applySpecializedExperimentalMapFieldLayout(
         structPath, "keys", collectStructLayoutFields, valueKindFromTypeName, keysField);
     applySpecializedExperimentalMapFieldLayout(

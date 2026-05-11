@@ -1,6 +1,7 @@
 #include "IrLowererSetupTypeCollectionHelpers.h"
 
 #include <algorithm>
+#include <optional>
 #include "IrLowererHelpers.h"
 #include "IrLowererSemanticProductTargetAdapters.h"
 #include "primec/StdlibSurfaceRegistry.h"
@@ -100,6 +101,31 @@ bool isBorrowedMapHelperSurface(const Expr &expr) {
              StdlibSurfaceId::CollectionsMapHelpers,
              helperName) &&
          helperName.ends_with("_ref");
+}
+
+std::optional<StdlibSurfaceId> vectorHelperSurfaceId() {
+  const auto *metadata =
+      findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
+  if (metadata == nullptr) {
+    return std::nullopt;
+  }
+  return metadata->id;
+}
+
+bool resolveVectorSurfaceMemberToken(std::string_view memberToken,
+                                     std::string &memberNameOut) {
+  const std::optional<StdlibSurfaceId> surfaceId = vectorHelperSurfaceId();
+  return surfaceId.has_value() &&
+         resolvePublishedStdlibSurfaceMemberToken(
+             memberToken, *surfaceId, memberNameOut);
+}
+
+bool resolveVectorSurfaceExprMemberName(const Expr &expr,
+                                        std::string &memberNameOut) {
+  const std::optional<StdlibSurfaceId> surfaceId = vectorHelperSurfaceId();
+  return surfaceId.has_value() &&
+         resolvePublishedStdlibSurfaceExprMemberName(
+             expr, *surfaceId, memberNameOut);
 }
 
 } // namespace
@@ -279,10 +305,7 @@ std::string preferredGfxErrorHelperTarget(
 
 bool isRemovedVectorCompatibilityHelper(const std::string &helperName) {
   std::string canonicalMemberName;
-  return resolvePublishedStdlibSurfaceMemberToken(
-             helperName,
-             StdlibSurfaceId::CollectionsVectorHelpers,
-             canonicalMemberName) &&
+  return resolveVectorSurfaceMemberToken(helperName, canonicalMemberName) &&
          canonicalMemberName == stripGeneratedHelperSuffix(helperName);
 }
 
@@ -297,18 +320,16 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   if (normalized.rfind("vector/", 0) == 0) {
     return false;
   }
-  if (resolvePublishedStdlibSurfaceExprMemberName(
-          expr,
-          StdlibSurfaceId::CollectionsVectorHelpers,
-          helperNameOut)) {
+  if (resolveVectorSurfaceExprMemberName(expr, helperNameOut)) {
     return true;
   }
   const std::string arrayPrefix = "array/";
-  const std::string stdVectorPrefix = "std/collections/vector/";
+  const std::string stdVectorPrefix = collectionMemberRoot("vector", false);
   const std::string stdSoaVectorPrefix = "std/collections/soa_vector/";
   const std::string internalSoaVectorPrefix = "std/collections/internal_soa_vector/";
   const std::string experimentalSoaVectorPrefix = "std/collections/experimental_soa_vector/";
-  const std::string experimentalVectorPrefix = "std/collections/experimental_vector/";
+  const std::string experimentalVectorPrefix =
+      experimentalCollectionMemberRoot("vector", false);
   if (normalized.rfind(arrayPrefix, 0) == 0) {
     helperNameOut = stripGeneratedHelperSuffix(normalized.substr(arrayPrefix.size()));
     if (isRemovedVectorCompatibilityHelper(helperNameOut)) {
@@ -362,10 +383,7 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
     return false;
   }
   if (normalized.rfind(experimentalVectorPrefix, 0) == 0) {
-    return resolvePublishedStdlibSurfaceExprMemberName(
-        expr,
-        StdlibSurfaceId::CollectionsVectorHelpers,
-        helperNameOut);
+    return resolveVectorSurfaceExprMemberName(expr, helperNameOut);
   }
   return false;
 }
@@ -388,12 +406,101 @@ bool resolveBorrowedMapHelperAliasName(const Expr &expr, std::string &helperName
          helperNameOut.ends_with("_ref");
 }
 
+std::string stdCollectionsRoot(bool leadingSlash) {
+  return leadingSlash ? "/std/collections" : "std/collections";
+}
+
+std::string collectionTypePath(std::string_view collectionName,
+                               bool leadingSlash) {
+  return stdCollectionsRoot(leadingSlash) + "/" + std::string(collectionName);
+}
+
+std::string collectionMemberRoot(std::string_view collectionName,
+                                 bool leadingSlash) {
+  return collectionTypePath(collectionName, leadingSlash) + "/";
+}
+
+std::string collectionMemberPath(std::string_view collectionName,
+                                 std::string_view memberName,
+                                 bool leadingSlash) {
+  return collectionMemberRoot(collectionName, leadingSlash) +
+         std::string(memberName);
+}
+
+std::string experimentalCollectionMemberRoot(std::string_view collectionName,
+                                             bool leadingSlash) {
+  return stdCollectionsRoot(leadingSlash) + "/experimental_" +
+         std::string(collectionName) + "/";
+}
+
+std::string experimentalCollectionTypePath(std::string_view collectionName,
+                                           std::string_view typeName,
+                                           bool leadingSlash) {
+  return experimentalCollectionMemberRoot(collectionName, leadingSlash) +
+         std::string(typeName);
+}
+
+std::string collectionWrapperAlias(std::string_view collectionName,
+                                   std::string_view suffix) {
+  return std::string(collectionName) + std::string(suffix);
+}
+
+bool isBuiltinCollectionTypeName(std::string_view typeName,
+                                 std::string_view collectionName) {
+  const std::string normalized(typeName);
+  const std::string raw(collectionName);
+  const std::string rooted = "/" + raw;
+  const std::string canonical = collectionTypePath(collectionName, false);
+  const std::string rootedCanonical = collectionTypePath(collectionName);
+  return normalized == raw || normalized == rooted ||
+         normalized == canonical || normalized == rootedCanonical ||
+         normalized.rfind(raw + "<", 0) == 0 ||
+         normalized.rfind(canonical + "<", 0) == 0 ||
+         normalized.rfind(rootedCanonical + "<", 0) == 0;
+}
+
+bool isExperimentalCollectionTypeName(std::string_view typeName,
+                                      std::string_view collectionName,
+                                      std::string_view experimentalTypeName) {
+  const std::string normalized(typeName);
+  const std::string raw(experimentalTypeName);
+  const std::string bareRoot = experimentalCollectionTypePath(
+      collectionName, experimentalTypeName, false);
+  const std::string rooted = experimentalCollectionTypePath(
+      collectionName, experimentalTypeName);
+  return normalized == raw || normalized.rfind(raw + "<", 0) == 0 ||
+         normalized == bareRoot || normalized == rooted ||
+         normalized.rfind(bareRoot + "<", 0) == 0 ||
+         normalized.rfind(rooted + "<", 0) == 0 ||
+         normalized.rfind(bareRoot + "__", 0) == 0 ||
+         normalized.rfind(rooted + "__", 0) == 0;
+}
+
+std::string normalizeBuiltinCollectionStructPath(std::string_view collectionName) {
+  return "/" + std::string(collectionName);
+}
+
+std::string normalizeExperimentalCollectionTypePath(std::string_view typeName,
+                                                    std::string_view collectionName,
+                                                    std::string_view experimentalTypeName) {
+  const std::string normalized(typeName);
+  if (normalized == experimentalTypeName) {
+    return experimentalCollectionTypePath(collectionName, experimentalTypeName);
+  }
+  const std::string bareRoot =
+      experimentalCollectionTypePath(collectionName, experimentalTypeName, false);
+  if (normalized == bareRoot || normalized.rfind(bareRoot + "__", 0) == 0) {
+    return "/" + normalized;
+  }
+  return normalized;
+}
+
 std::string normalizeCollectionHelperPath(const std::string &path) {
   std::string normalizedPath = path;
   if (!normalizedPath.empty() && normalizedPath.front() != '/') {
     if (normalizedPath.rfind("array/", 0) == 0 || normalizedPath.rfind("vector/", 0) == 0 ||
-        normalizedPath.rfind("std/collections/vector/", 0) == 0 ||
-        normalizedPath.rfind("std/collections/experimental_vector/", 0) == 0 ||
+        normalizedPath.rfind(collectionMemberRoot("vector", false), 0) == 0 ||
+        normalizedPath.rfind(experimentalCollectionMemberRoot("vector", false), 0) == 0 ||
         normalizedPath.rfind("map/", 0) == 0 ||
         normalizedPath.rfind("std/collections/map/", 0) == 0 ||
         normalizedPath.rfind("std/collections/experimental_map/", 0) == 0) {
@@ -412,8 +519,9 @@ bool isExplicitRemovedVectorMethodAliasPath(const std::string &methodName) {
     normalized.erase(normalized.begin());
   }
   const std::string arrayPrefix = "array/";
-  const std::string stdVectorPrefix = "std/collections/vector/";
-  const std::string experimentalVectorPrefix = "std/collections/experimental_vector/";
+  const std::string stdVectorPrefix = collectionMemberRoot("vector", false);
+  const std::string experimentalVectorPrefix =
+      experimentalCollectionMemberRoot("vector", false);
   if (normalized.rfind(arrayPrefix, 0) == 0) {
     return isRemovedVectorCompatibilityHelper(stripGeneratedHelperSuffix(normalized.substr(arrayPrefix.size())));
   }
@@ -422,10 +530,8 @@ bool isExplicitRemovedVectorMethodAliasPath(const std::string &methodName) {
   }
   if (normalized.rfind(experimentalVectorPrefix, 0) == 0) {
     std::string helperName;
-    return resolvePublishedStdlibSurfaceMemberToken(
-        normalized.substr(experimentalVectorPrefix.size()),
-        StdlibSurfaceId::CollectionsVectorHelpers,
-        helperName);
+    return resolveVectorSurfaceMemberToken(
+        normalized.substr(experimentalVectorPrefix.size()), helperName);
   }
   return false;
 }
@@ -533,8 +639,8 @@ bool isExplicitMapReceiverProbeHelperExpr(const Expr &expr) {
 
 bool isExplicitVectorAccessHelperPath(const std::string &path) {
   const std::string normalizedPath = normalizeCollectionHelperPath(path);
-  return normalizedPath == "/std/collections/vector/at" ||
-         normalizedPath == "/std/collections/vector/at_unsafe";
+  return normalizedPath == collectionMemberPath("vector", "at") ||
+         normalizedPath == collectionMemberPath("vector", "at_unsafe");
 }
 
 bool isExplicitVectorAccessHelperExpr(const Expr &expr) {
@@ -542,10 +648,7 @@ bool isExplicitVectorAccessHelperExpr(const Expr &expr) {
     return false;
   }
   std::string helperName;
-  return resolvePublishedStdlibSurfaceExprMemberName(
-             expr,
-             StdlibSurfaceId::CollectionsVectorHelpers,
-             helperName) &&
+  return resolveVectorSurfaceExprMemberName(expr, helperName) &&
          (helperName == "at" || helperName == "at_unsafe");
 }
 
@@ -554,10 +657,7 @@ bool isExplicitVectorReceiverProbeHelperExpr(const Expr &expr) {
     return false;
   }
   std::string helperName;
-  return resolvePublishedStdlibSurfaceExprMemberName(
-             expr,
-             StdlibSurfaceId::CollectionsVectorHelpers,
-             helperName) &&
+  return resolveVectorSurfaceExprMemberName(expr, helperName) &&
          (helperName == "at" || helperName == "at_unsafe" ||
           helperName == "count" || helperName == "capacity");
 }
@@ -597,7 +697,7 @@ bool isAllowedResolvedMapDirectCallPath(const std::string &callPath, const std::
 
 bool isAllowedResolvedVectorDirectCallPath(const std::string &callPath, const std::string &resolvedPath) {
   const std::string normalizedCallPath = normalizeCollectionHelperPath(callPath);
-  if (normalizedCallPath.rfind("/std/collections/vector/", 0) != 0) {
+  if (normalizedCallPath.rfind(collectionMemberRoot("vector"), 0) != 0) {
     return true;
   }
   auto allowedCandidates = collectionHelperPathCandidates(callPath);
@@ -864,7 +964,7 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
   if (normalizedPath.rfind("/array/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/array/").size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-      appendUnique("/std/collections/vector/" + suffix);
+      appendUnique(collectionMemberPath("vector", suffix));
     }
   } else if (normalizedPath.rfind("/soa_vector/", 0) == 0) {
     appendUnique("/std/collections/soa_vector/" +

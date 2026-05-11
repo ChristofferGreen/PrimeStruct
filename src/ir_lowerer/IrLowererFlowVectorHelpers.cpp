@@ -4,15 +4,15 @@
 #include "IrLowererFlowVectorResolutionInternal.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererIndexKindHelpers.h"
+#include "IrLowererSetupTypeCollectionHelpers.h"
 
 namespace primec::ir_lowerer {
 
 namespace {
 
 bool isVectorStructPath(const std::string &structPath) {
-  return structPath == "/vector" ||
-         structPath == "/std/collections/experimental_vector/Vector" ||
-         structPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+  return structPath == normalizeBuiltinCollectionStructPath("vector") ||
+         isExperimentalCollectionTypeName(structPath, "vector", "Vector");
 }
 
 bool isSoaVectorStructPath(const std::string &structPath) {

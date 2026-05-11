@@ -3,14 +3,14 @@
 #include <limits>
 
 #include "IrLowererHelpers.h"
+#include "IrLowererSetupTypeCollectionHelpers.h"
 
 namespace primec::ir_lowerer {
 
 namespace {
 
 bool isExperimentalVectorStructPath(const std::string &structPath) {
-  return structPath == "/std/collections/experimental_vector/Vector" ||
-         structPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+  return isExperimentalCollectionTypeName(structPath, "vector", "Vector");
 }
 
 bool usesBuiltinVectorValueStorage(const ArrayVectorAccessTargetInfo &targetInfo) {

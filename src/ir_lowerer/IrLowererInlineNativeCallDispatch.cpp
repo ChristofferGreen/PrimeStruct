@@ -24,37 +24,16 @@ std::string stripGeneratedInlineHelperSuffix(std::string helperName) {
   return helperName;
 }
 
-std::string stdCollectionsRoot(bool leadingSlash = true) {
-  return leadingSlash ? "/std/collections" : "std/collections";
-}
-
-std::string collectionTypePath(std::string_view collectionName,
-                               bool leadingSlash = true) {
-  return stdCollectionsRoot(leadingSlash) + "/" + std::string(collectionName);
-}
-
-std::string experimentalCollectionTypePath(std::string_view collectionName,
-                                           std::string_view typeName,
-                                           bool leadingSlash = true) {
-  return stdCollectionsRoot(leadingSlash) + "/experimental_" +
-         std::string(collectionName) + "/" + std::string(typeName);
-}
-
 std::string experimentalCollectionMemberPath(std::string_view collectionName,
                                              std::string_view memberName,
                                              bool leadingSlash = true) {
-  return stdCollectionsRoot(leadingSlash) + "/experimental_" +
-         std::string(collectionName) + "/" + std::string(memberName);
+  return experimentalCollectionMemberRoot(collectionName, leadingSlash) +
+         std::string(memberName);
 }
 
 std::string rootCollectionMemberPath(std::string_view collectionName,
                                      std::string_view memberName) {
   return "/" + std::string(collectionName) + "/" + std::string(memberName);
-}
-
-std::string collectionWrapperAlias(std::string_view collectionName,
-                                   std::string_view suffix) {
-  return std::string(collectionName) + std::string(suffix);
 }
 
 bool matchesGeneratedSpecializedPath(std::string_view text,

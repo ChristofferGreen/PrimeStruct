@@ -4,6 +4,7 @@
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
+#include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererStructFieldBindingHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
@@ -24,7 +25,8 @@ bool isSpecializedExperimentalVectorStructPath(const std::string &path) {
   if (!normalized.empty() && normalized.front() != '/') {
     normalized.insert(normalized.begin(), '/');
   }
-  return normalized.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+  return isExperimentalCollectionTypeName(normalized, "vector", "Vector") &&
+         normalized.find("__") != std::string::npos;
 }
 
 bool isSpecializedExperimentalSoaVectorStructPath(const std::string &path) {

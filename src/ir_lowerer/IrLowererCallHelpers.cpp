@@ -25,17 +25,9 @@ bool isGeneratedSinglePathSegmentWithPrefix(std::string_view path, std::string_v
          path.find("__", prefix.size()) != std::string_view::npos;
 }
 
-std::string experimentalCollectionRoot(std::string_view collectionName) {
-  return "/std/collections/experimental_" + std::string(collectionName);
-}
-
-std::string experimentalCollectionMemberRoot(std::string_view collectionName) {
-  return experimentalCollectionRoot(collectionName) + "/";
-}
-
 bool isGeneratedStdlibCollectionStructPath(std::string_view path) {
   const std::string experimentalVectorTypePrefix =
-      experimentalCollectionMemberRoot("vector") + "Vector__";
+      experimentalCollectionTypePath("vector", "Vector") + "__";
   return isSinglePathSegmentWithPrefix(path, experimentalVectorTypePrefix) ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/experimental_map/Map__") ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/experimental_soa_vector/SoaVector__") ||
