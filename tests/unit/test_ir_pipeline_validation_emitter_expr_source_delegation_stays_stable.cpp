@@ -2905,6 +2905,10 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
       repoRoot / "src" / "emitter" / "EmitterExprLambdaBody.h";
   const std::filesystem::path exprPackedArgsPath =
       repoRoot / "src" / "emitter" / "EmitterExprPackedArgs.h";
+  const std::filesystem::path exprCollectionTypeHelpersPath =
+      repoRoot / "src" / "emitter" / "EmitterExprCollectionTypeHelpers.h";
+  const std::filesystem::path exprCollectionFallbackHelpersPath =
+      repoRoot / "src" / "emitter" / "EmitterExprCollectionFallbackHelpers.h";
   const std::filesystem::path exprControlCallPathStepPath =
       repoRoot / "src" / "emitter" / "EmitterExprControlCallPathStep.cpp";
 
@@ -2918,6 +2922,8 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
   REQUIRE(std::filesystem::exists(emitSetupReturnInferenceCollectionsPath));
   REQUIRE(std::filesystem::exists(exprLambdaBodyPath));
   REQUIRE(std::filesystem::exists(exprPackedArgsPath));
+  REQUIRE(std::filesystem::exists(exprCollectionTypeHelpersPath));
+  REQUIRE(std::filesystem::exists(exprCollectionFallbackHelpersPath));
   REQUIRE(std::filesystem::exists(exprControlCallPathStepPath));
 
   const std::string metadataHeaderSource = readText(metadataHeaderPath);
@@ -2932,6 +2938,10 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
       readText(emitSetupReturnInferenceCollectionsPath);
   const std::string exprLambdaBodySource = readText(exprLambdaBodyPath);
   const std::string exprPackedArgsSource = readText(exprPackedArgsPath);
+  const std::string exprCollectionTypeHelpersSource =
+      readText(exprCollectionTypeHelpersPath);
+  const std::string exprCollectionFallbackHelpersSource =
+      readText(exprCollectionFallbackHelpersPath);
   const std::string exprControlCallPathStepSource = readText(exprControlCallPathStepPath);
 
   CHECK(metadataHeaderSource.find("bool resolvePublishedCollectionSurfaceMemberToken(") !=
@@ -3061,6 +3071,27 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
         std::string::npos);
   CHECK(exprPackedArgsSource.find("std/collections/vector/") == std::string::npos);
   CHECK(exprPackedArgsSource.find("StdlibSurfaceId::CollectionsVectorHelpers") ==
+        std::string::npos);
+
+  CHECK(exprCollectionTypeHelpersSource.find(
+            "resolvePublishedCollectionSurfacePathMemberName(") !=
+        std::string::npos);
+  CHECK(exprCollectionTypeHelpersSource.find("publishedCollectionSurfaceHelperPath(") !=
+        std::string::npos);
+  CHECK(exprCollectionTypeHelpersSource.find("std/collections/vector/") ==
+        std::string::npos);
+  CHECK(exprCollectionTypeHelpersSource.find("vector/") == std::string::npos);
+  CHECK(exprCollectionTypeHelpersSource.find("StdlibSurfaceId::CollectionsVectorHelpers") ==
+        std::string::npos);
+
+  CHECK(exprCollectionFallbackHelpersSource.find(
+            "resolvePublishedCollectionSurfacePathMemberName(") !=
+        std::string::npos);
+  CHECK(exprCollectionFallbackHelpersSource.find("std/collections/vector/") ==
+        std::string::npos);
+  CHECK(exprCollectionFallbackHelpersSource.find("vector/") == std::string::npos);
+  CHECK(exprCollectionFallbackHelpersSource.find(
+            "StdlibSurfaceId::CollectionsVectorHelpers") ==
         std::string::npos);
 
   CHECK(exprControlCallPathStepSource.find("normalizeMapImportAliasPath(importIt->second)") !=

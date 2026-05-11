@@ -13,62 +13,28 @@
     }
     return "";
   };
-  auto collectionHelperPathCandidates = [](const std::string &path) {
-    auto allowsArrayVectorCompatibilitySuffix = [](const std::string &suffix) {
-      return suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
-             suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
-             suffix != "remove_at" && suffix != "remove_swap";
-    };
-    std::vector<std::string> candidates;
-    auto appendUnique = [&](const std::string &candidate) {
-      if (candidate.empty()) {
-        return;
-      }
-      for (const auto &existing : candidates) {
-        if (existing == candidate) {
-          return;
-        }
-      }
-      candidates.push_back(candidate);
-    };
-
-    std::string normalizedPath = path;
-    if (!normalizedPath.empty() && normalizedPath.front() != '/') {
-      if (normalizedPath.rfind("array/", 0) == 0 || normalizedPath.rfind("vector/", 0) == 0 ||
-          normalizedPath.rfind("std/collections/vector/", 0) == 0 ||
-          normalizedPath.rfind("soa_vector/", 0) == 0 ||
-          normalizedPath.rfind("std/collections/soa_vector/", 0) == 0 ||
-          normalizedPath.rfind("map/", 0) == 0 ||
-          normalizedPath.rfind("std/collections/map/", 0) == 0) {
-        normalizedPath.insert(normalizedPath.begin(), '/');
-      }
+  constexpr std::string_view CollectionTypeVectorHelperSurfaceBridgeKey =
+      "collections.vector_helpers";
+  auto collectionTypeVectorHelperMemberName = [&](std::string_view path,
+                                                  bool includeImportAliases)
+      -> std::string {
+    std::string memberName;
+    if (!resolvePublishedCollectionSurfacePathMemberName(
+            path,
+            CollectionTypeVectorHelperSurfaceBridgeKey,
+            includeImportAliases,
+            memberName)) {
+      return "";
     }
-
-    appendUnique(path);
-    appendUnique(normalizedPath);
-    if (normalizedPath.rfind("/array/", 0) == 0) {
-      const std::string suffix = normalizedPath.substr(std::string("/array/").size());
-      if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-        appendUnique("/std/collections/vector/" + suffix);
-      }
-    } else if (normalizedPath.rfind("/soa_vector/", 0) == 0) {
-      appendUnique("/std/collections/soa_vector/" +
-                   normalizedPath.substr(std::string("/soa_vector/").size()));
-    } else if (normalizedPath.rfind("/std/collections/soa_vector/", 0) == 0) {
-      appendUnique("/soa_vector/" +
-                   normalizedPath.substr(std::string("/std/collections/soa_vector/").size()));
-    } else if (normalizedPath.rfind("/map/", 0) == 0) {
-      const std::string suffix = normalizedPath.substr(std::string("/map/").size());
-      if (!isCanonicalMapHelperName(suffix)) {
-        appendUnique("/std/collections/map/" + suffix);
-      }
-    } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
-      const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
-      if (!isCanonicalMapHelperName(suffix)) {
-        appendUnique("/map/" + suffix);
-      }
-    }
-    return candidates;
+    return memberName;
+  };
+  auto collectionTypeVectorHelperPath = [&](std::string_view memberName) {
+    return publishedCollectionSurfaceHelperPath(
+        CollectionTypeVectorHelperSurfaceBridgeKey,
+        memberName);
+  };
+  auto isCollectionTypeVectorAccessHelper = [](std::string_view memberName) {
+    return memberName == "at" || memberName == "at_unsafe";
   };
   auto pruneMapAccessStructReturnCompatibilityCandidates = [](const std::string &path,
                                                               std::vector<std::string> &candidates) {
@@ -103,28 +69,18 @@
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return false;
     }
-    std::string normalized = resolveExprPath(candidate);
-    if (!normalized.empty() && normalized.front() == '/') {
-      normalized.erase(normalized.begin());
-    }
-    return normalized == "std/collections/vector/at" ||
-           normalized == "std/collections/vector/at_unsafe";
+    return isCollectionTypeVectorAccessHelper(
+        collectionTypeVectorHelperMemberName(resolveExprPath(candidate), false));
   };
   auto explicitVectorAccessResolvedTypePath = [&](const Expr &candidate) -> std::string {
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return "";
     }
-    std::string normalized = resolveExprPath(candidate);
-    if (!normalized.empty() && normalized.front() == '/') {
-      normalized.erase(normalized.begin());
-    }
-    if (normalized != "std/collections/vector/at" &&
-        normalized != "std/collections/vector/at_unsafe") {
-      return "";
-    }
     const std::string resolvedExprPath = resolveExprPath(candidate);
-    if (resolvedExprPath != "/std/collections/vector/at" &&
-        resolvedExprPath != "/std/collections/vector/at_unsafe") {
+    const std::string memberName =
+        collectionTypeVectorHelperMemberName(resolvedExprPath, false);
+    if (!isCollectionTypeVectorAccessHelper(memberName) ||
+        resolvedExprPath != collectionTypeVectorHelperPath(memberName)) {
       return "";
     }
     std::vector<std::string> resolvedCandidates =
@@ -197,11 +153,8 @@
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return "";
     }
-    std::string normalized = resolveExprPath(candidate);
-    if (!normalized.empty() && normalized.front() == '/') {
-      normalized.erase(normalized.begin());
-    }
-    if (normalized != "std/collections/vector/at" && normalized != "std/collections/vector/at_unsafe") {
+    if (!isCollectionTypeVectorAccessHelper(
+            collectionTypeVectorHelperMemberName(resolveExprPath(candidate), false))) {
       return "";
     }
     if (candidate.args.empty()) {
@@ -304,13 +257,18 @@
         candidate.args.empty()) {
       return "";
     }
-    std::string normalized = resolveExprPath(candidate);
-    if (!normalized.empty() && normalized.front() == '/') {
-      normalized.erase(normalized.begin());
+    std::string memberName;
+    if (!resolvePublishedCollectionSurfacePathMemberName(
+            resolveExprPath(candidate),
+            CollectionTypeVectorHelperSurfaceBridgeKey,
+            true,
+            memberName)) {
+      memberName = resolveExprPath(candidate);
+      if (!memberName.empty() && memberName.front() == '/') {
+        memberName.erase(memberName.begin());
+      }
     }
-    if (normalized != "at" && normalized != "at_unsafe" &&
-        normalized != "std/collections/vector/at" &&
-        normalized != "std/collections/vector/at_unsafe") {
+    if (!isCollectionTypeVectorAccessHelper(memberName)) {
       return "";
     }
     const Expr &receiver = candidate.args.front();

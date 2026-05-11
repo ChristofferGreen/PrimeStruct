@@ -1,24 +1,33 @@
+  constexpr std::string_view CollectionFallbackVectorHelperSurfaceBridgeKey =
+      "collections.vector_helpers";
+  auto collectionFallbackVectorHelperMemberName = [&](const Expr &candidate,
+                                                      bool includeImportAliases)
+      -> std::string {
+    std::string memberName;
+    if (!resolvePublishedCollectionSurfacePathMemberName(
+            resolveExprPath(candidate),
+            CollectionFallbackVectorHelperSurfaceBridgeKey,
+            includeImportAliases,
+            memberName)) {
+      return "";
+    }
+    return memberName;
+  };
   auto isExplicitVectorCountCapacityDirectCall = [&](const Expr &candidate) {
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return false;
     }
-    std::string normalized = resolveExprPath(candidate);
-    if (!normalized.empty() && normalized.front() == '/') {
-      normalized.erase(normalized.begin());
-    }
-    return normalized == "std/collections/vector/count" ||
-           normalized == "std/collections/vector/capacity";
+    const std::string memberName =
+        collectionFallbackVectorHelperMemberName(candidate, false);
+    return memberName == "count" || memberName == "capacity";
   };
   auto isExplicitVectorAccessAliasDirectCall = [&](const Expr &candidate) {
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return false;
     }
-    std::string normalized = resolveExprPath(candidate);
-    if (!normalized.empty() && normalized.front() == '/') {
-      normalized.erase(normalized.begin());
-    }
-    return normalized == "std/collections/vector/at" ||
-           normalized == "std/collections/vector/at_unsafe";
+    const std::string memberName =
+        collectionFallbackVectorHelperMemberName(candidate, false);
+    return memberName == "at" || memberName == "at_unsafe";
   };
   auto pickAccessReceiverIndex = [&]() -> size_t {
     if (expr.args.size() != 2) {
@@ -41,15 +50,9 @@
     if (isSimpleCallName(candidate, helper)) {
       return true;
     }
-    const std::string resolvedPath = resolveExprPath(candidate);
-    if (resolvedPath.empty()) {
-      return false;
-    }
-    std::string normalized = resolvedPath;
-    if (!normalized.empty() && normalized.front() == '/') {
-      normalized.erase(normalized.begin());
-    }
-    return normalized == std::string("std/collections/vector/") + helper;
+    const std::string memberName =
+        collectionFallbackVectorHelperMemberName(candidate, false);
+    return memberName == helper;
   };
   auto preferStructReturningCollectionHelperPath = [&](const std::string &path) {
     std::string normalizedPath = path;

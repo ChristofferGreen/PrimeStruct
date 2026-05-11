@@ -45,21 +45,6 @@
       "count": 1
     },
     {
-      "path": "src/emitter/EmitterExprCollectionFallbackHelpers.h",
-      "pattern": "canonical-vector-path",
-      "count": 5
-    },
-    {
-      "path": "src/emitter/EmitterExprCollectionTypeHelpers.h",
-      "pattern": "canonical-vector-path",
-      "count": 12
-    },
-    {
-      "path": "src/emitter/EmitterExprCollectionTypeHelpers.h",
-      "pattern": "root-vector-helper-path",
-      "count": 1
-    },
-    {
       "path": "src/emitter/EmitterHelpersBuiltins.cpp",
       "pattern": "canonical-vector-path",
       "count": 2

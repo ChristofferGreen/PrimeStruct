@@ -15761,3 +15761,33 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     source-lock coverage and ratcheted
     `scripts/vector_surface_trace_baseline.json` from 802 to 784 production
     traces. Baseline release validation was skipped per the lite workflow.
+
+- [x] TODO-4408: Route emitter collection-expression vector traces
+  - owner: ai
+  - created_at: 2026-05-11
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4407
+  - scope: Replace PrimeStruct-vector-specific collection fallback and
+    collection type expression traces with generic collection metadata or
+    manifest-derived helper paths.
+  - implementation_notes:
+    - Start from `EmitterExprCollectionFallbackHelpers.h` and
+      `EmitterExprCollectionTypeHelpers.h`.
+    - Keep ordinary C++ `std::vector` container usage allowed.
+    - Do not touch lowerer files in this leaf.
+  - acceptance:
+    - Collection-expression emitter routing is generic or manifest-driven
+      rather than hard-coded to PrimeStruct vector helper paths where metadata
+      already carries the needed surface.
+    - Focused emitter source-lock or compile-run coverage remains aligned.
+    - The vector surface trace baseline decreases for the selected files and
+      does not increase elsewhere.
+  - stop_rule: Stop after collection-expression vector-specific traces that
+    can be retired before helper/type cleanup are removed and the baseline
+    ratchets downward.
+  - finished_at: 2026-05-11
+  - evidence: Routed collection fallback and collection type vector access,
+    count/capacity, and helper candidate checks through collection surface
+    metadata. Updated source-lock coverage and ratcheted
+    `scripts/vector_surface_trace_baseline.json` from 784 to 766 production
+    traces. Baseline release validation was skipped per the lite workflow.
