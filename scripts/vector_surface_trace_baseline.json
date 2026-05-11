@@ -100,11 +100,6 @@
       "count": 2
     },
     {
-      "path": "src/semantics/SemanticsCallPathHelpers.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 2
-    },
-    {
       "path": "src/semantics/SemanticsValidate.cpp",
       "pattern": "canonical-vector-path",
       "count": 2
@@ -348,16 +343,6 @@
       "path": "src/semantics/SemanticsValidatorInferCollectionCompatibility.cpp",
       "pattern": "vector-surface-id",
       "count": 2
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorInferCollectionCompatibilityInternal.h",
-      "pattern": "canonical-vector-path",
-      "count": 6
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorInferCollectionCompatibilityInternal.h",
-      "pattern": "vector-surface-id",
-      "count": 6
     },
     {
       "path": "src/semantics/SemanticsValidatorInferCollectionDispatch.cpp",

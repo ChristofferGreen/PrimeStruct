@@ -16039,3 +16039,61 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     and ratcheted `scripts/vector_surface_trace_baseline.json` from 531 to
     412 production traces. Baseline release validation was skipped per the
     lite workflow.
+
+- [x] TODO-4373: Tighten vector trace audit to zero
+  - owner: ai
+  - created_at: 2026-05-08
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4404
+  - scope: Convert the vector surface trace audit from a regression baseline
+    into a zero-tolerance production C++ gate.
+  - implementation_notes:
+    - Start from `scripts/check_vector_surface_traces.py`,
+      `scripts/vector_surface_trace_baseline.json`, `CMakeLists.txt`, and any
+      remaining non-zero baseline entries.
+    - Preserve allowance for ordinary C++ `std::vector`, tests, docs, stdlib
+      `.prime`, and generated source-lock fixtures outside production
+      `src/`/`include/`.
+  - acceptance:
+    - The audit fails on any PrimeStruct-vector-specific production C++ trace
+      and no longer needs a non-zero baseline file.
+    - Production C++ under `src/` and `include/` contains no PrimeStruct vector
+      paths, helper aliases, type-name recognizers, diagnostics, special
+      parser/text-transform cases, semantic rewrites, lowering dispatches, or
+      metadata tables.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once the release gate mechanically enforces zero
+    PrimeStruct-vector-specific production C++ traces.
+  - finished_at: 2026-05-11
+  - evidence: Split the oversized zero-audit parent into closable leaves
+    TODO-4415 through TODO-4419 after the current baseline still showed 412
+    production traces spread across semantic, template monomorph, emitter,
+    registry, parser, and final gate work. Baseline release validation was
+    skipped per the lite workflow.
+
+- [x] TODO-4415: Route semantic vector compatibility traces
+  - owner: ai
+  - created_at: 2026-05-11
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4373
+  - scope: Replace semantic compatibility helper and simple-call vector path
+    traces with registry-backed helper path queries and generic collection
+    member helpers.
+  - implementation_notes:
+    - Start from `SemanticsCallPathHelpers.cpp` and
+      `SemanticsValidatorInferCollectionCompatibilityInternal.h`.
+    - Keep ordinary C++ `std::vector` container usage allowed.
+  - acceptance:
+    - Semantic compatibility helpers use registry-backed canonical helper
+      paths instead of hard-coded PrimeStruct vector paths where possible.
+    - Focused source-lock coverage remains aligned.
+    - The vector surface trace baseline decreases for the selected semantic
+      compatibility files and does not increase elsewhere.
+  - stop_rule: Stop after the selected semantic compatibility vector path
+    traces are removed and the baseline ratchets downward.
+  - finished_at: 2026-05-11
+  - evidence: Routed semantic simple-call and compatibility helper vector path
+    checks through published collection surface metadata, added source-lock
+    coverage for the registry-backed helper lookup, and ratcheted
+    `scripts/vector_surface_trace_baseline.json` from 412 to 398 production
+    traces. Baseline release validation was skipped per the lite workflow.

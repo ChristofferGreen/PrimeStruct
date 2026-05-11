@@ -84,6 +84,8 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorBuildUtility.cpp";
   const std::filesystem::path semanticsCollectionHelperRewritesPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorCollectionHelperRewrites.cpp";
+  const std::filesystem::path semanticsCallPathHelpersPath =
+      repoRoot / "src" / "semantics" / "SemanticsCallPathHelpers.cpp";
   const std::filesystem::path semanticsValidatePath =
       repoRoot / "src" / "semantics" / "SemanticsValidate.cpp";
   REQUIRE(std::filesystem::exists(semanticsInferPath));
@@ -116,6 +118,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsInferUtilityPath));
   REQUIRE(std::filesystem::exists(semanticsBuildUtilityPath));
   REQUIRE(std::filesystem::exists(semanticsCollectionHelperRewritesPath));
+  REQUIRE(std::filesystem::exists(semanticsCallPathHelpersPath));
   REQUIRE(std::filesystem::exists(semanticsValidatePath));
   const std::string semanticsInferSource = readText(semanticsInferPath);
   const std::string semanticsDiagnosticsSource = readText(semanticsDiagnosticsPath);
@@ -184,6 +187,8 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   const std::string semanticsInferStructReturnHelpersSource =
       readText(semanticsInferStructReturnHelpersPath);
   const std::string semanticsCollectionHelperRewritesSource = readText(semanticsCollectionHelperRewritesPath);
+  const std::string semanticsCallPathHelpersSource =
+      readText(semanticsCallPathHelpersPath);
   const std::string semanticsValidateSource = readText(semanticsValidatePath);
   CHECK(semanticsInferCombinedSource.find("ReturnKind SemanticsValidator::inferExprReturnKind") != std::string::npos);
   CHECK(semanticsInferCombinedSource.find("inferControlFlowExprReturnKind(expr, params, locals, handledControlFlow);") !=
@@ -915,6 +920,12 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsCollectionHelperRewritesSource.find(
             "path.rfind(\"/std/collections/vector/\", 0) == 0") ==
+        std::string::npos);
+  CHECK(semanticsCallPathHelpersSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") !=
+        std::string::npos);
+  CHECK(semanticsCallPathHelpersSource.find(
+            "std/collections/vector/") ==
         std::string::npos);
   CHECK(semanticsCollectionHelperRewritesSource.find(
             "isStdNamespacedVectorCompatibilityHelperPath(path, helperName)") !=
@@ -2292,6 +2303,12 @@ main() {
             "resolvePublishedCollectionHelperMemberToken(") !=
         std::string::npos);
   CHECK(collectionCompatibilityInternalSource.find(
+            "const StdlibSurfaceMetadata *vectorHelperSurfaceMetadata()") !=
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") !=
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
             "inline bool isStdNamespacedVectorCompatibilityHelperPath(") !=
         std::string::npos);
   CHECK(collectionCompatibilityInternalSource.find(
@@ -2308,6 +2325,12 @@ main() {
         std::string::npos);
   CHECK(collectionCompatibilityInternalSource.find(
             "resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(") !=
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
+            "StdlibSurfaceId::CollectionsVectorHelpers") ==
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
+            "/std/collections/vector/") ==
         std::string::npos);
   CHECK(collectionCompatibilityInternalSource.find(
             "constexpr ExperimentalMapHelperDescriptor kExperimentalMapHelperDescriptors[] = {") ==

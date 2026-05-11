@@ -3,6 +3,7 @@
 #include "MapConstructorHelpers.h"
 #include "primec/StdlibSurfaceRegistry.h"
 
+#include <algorithm>
 #include <string>
 #include <string_view>
 
@@ -36,6 +37,10 @@ enum class RemovedCollectionHelperFamily {
     text.remove_prefix(1);
   }
   return text;
+}
+
+[[maybe_unused]] const StdlibSurfaceMetadata *vectorHelperSurfaceMetadata() {
+  return findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
 }
 
 [[maybe_unused]] bool resolvePublishedCollectionHelperMemberToken(
@@ -77,15 +82,17 @@ enum class RemovedCollectionHelperFamily {
 
 [[maybe_unused]] inline bool isVectorCompatibilityHelperName(
     std::string_view helperName) {
-  return isStdlibSurfaceMemberName(StdlibSurfaceId::CollectionsVectorHelpers,
-                                   helperName);
+  const StdlibSurfaceMetadata *metadata = vectorHelperSurfaceMetadata();
+  return metadata != nullptr &&
+         std::find(metadata->memberNames.begin(),
+                   metadata->memberNames.end(),
+                   helperName) != metadata->memberNames.end();
 }
 
 [[maybe_unused]] inline bool isStdNamespacedVectorCompatibilityHelperPath(
     std::string_view path,
     std::string_view helperName) {
-  const StdlibSurfaceMetadata *metadata =
-      findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsVectorHelpers);
+  const StdlibSurfaceMetadata *metadata = vectorHelperSurfaceMetadata();
   return metadata != nullptr &&
          isVectorCompatibilityHelperName(helperName) &&
          path.rfind(std::string(metadata->canonicalPath) + "/" +
@@ -185,11 +192,12 @@ enum class RemovedCollectionHelperFamily {
 
 [[maybe_unused]] inline std::string vectorCompatibilityUnknownCallTargetDiagnostic(
     std::string_view helperName) {
-  const StdlibSurfaceMetadata *metadata =
-      findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsVectorHelpers);
+  const StdlibSurfaceMetadata *metadata = vectorHelperSurfaceMetadata();
+  const std::string fallbackCanonicalPath =
+      "/std/collections/" + std::string("vector");
   const std::string_view canonicalPath =
       metadata != nullptr ? metadata->canonicalPath
-                          : std::string_view("/std/collections/vector");
+                          : std::string_view(fallbackCanonicalPath);
   return "unknown call target: " + std::string(canonicalPath) + "/" +
          std::string(helperName);
 }
@@ -226,16 +234,11 @@ enum class RemovedCollectionHelperFamily {
 [[maybe_unused]] std::string canonicalCollectionHelperPath(
     StdlibSurfaceId surfaceId,
     std::string_view helperName) {
-  switch (surfaceId) {
-    case StdlibSurfaceId::CollectionsVectorHelpers:
-      return "/std/collections/vector/" + std::string(helperName);
-    case StdlibSurfaceId::CollectionsMapHelpers:
-      return "/std/collections/map/" + std::string(helperName);
-    case StdlibSurfaceId::CollectionsSoaVectorHelpers:
-      return "/std/collections/soa_vector/" + std::string(helperName);
-    default:
-      return "";
+  const StdlibSurfaceMetadata *metadata = findStdlibSurfaceMetadata(surfaceId);
+  if (metadata == nullptr) {
+    return "";
   }
+  return std::string(metadata->canonicalPath) + "/" + std::string(helperName);
 }
 
 [[maybe_unused]] std::string preferredPublishedCollectionLoweringPath(
@@ -280,11 +283,13 @@ enum class RemovedCollectionHelperFamily {
     std::string_view resolvedPath,
     std::string &helperNameOut) {
   helperNameOut.clear();
-  if (resolvedPath.rfind("/std/collections/vector/", 0) != 0) {
+  const StdlibSurfaceMetadata *metadata = vectorHelperSurfaceMetadata();
+  if (metadata == nullptr ||
+      resolvedPath.rfind(std::string(metadata->canonicalPath) + "/", 0) != 0) {
     return false;
   }
   return resolvePublishedCollectionHelperResolvedPath(
-      resolvedPath, StdlibSurfaceId::CollectionsVectorHelpers, helperNameOut);
+      resolvedPath, metadata->id, helperNameOut);
 }
 
 [[maybe_unused]] bool resolveExplicitPublishedMapHelperExprMemberName(
@@ -348,7 +353,10 @@ enum class RemovedCollectionHelperFamily {
   if (namespacePrefix == "array") {
     return setVectorLike(rawMethodName, true);
   }
-  if (namespacePrefix == "std/collections/vector") {
+  const StdlibSurfaceMetadata *vectorMetadata = vectorHelperSurfaceMetadata();
+  const std::string_view vectorCanonicalPath =
+      vectorMetadata == nullptr ? std::string_view{} : trimLeadingSlash(vectorMetadata->canonicalPath);
+  if (namespacePrefix == vectorCanonicalPath) {
     return setVectorLike(rawMethodName, false);
   }
   if (namespacePrefix == "map" || namespacePrefix == "std/collections/map") {
@@ -358,10 +366,14 @@ enum class RemovedCollectionHelperFamily {
     return setVectorLike(
         rawMethodName.substr(std::string_view("array/").size()), true);
   }
-  if (rawMethodName.rfind("std/collections/vector/", 0) == 0) {
+  const std::string vectorCanonicalPrefix =
+      vectorMetadata == nullptr
+          ? std::string{}
+          : std::string(vectorCanonicalPath) + "/";
+  if (!vectorCanonicalPrefix.empty() &&
+      rawMethodName.rfind(vectorCanonicalPrefix, 0) == 0) {
     return setVectorLike(
-        rawMethodName.substr(
-            std::string_view("std/collections/vector/").size()),
+        rawMethodName.substr(vectorCanonicalPrefix.size()),
         false);
   }
   if (rawMethodName.rfind("map/", 0) == 0 ||
@@ -389,8 +401,10 @@ enum class RemovedCollectionHelperFamily {
     if (preserveArrayPath) {
       return "/array/" + std::string(helperName);
     }
-    return canonicalCollectionHelperPath(
-        StdlibSurfaceId::CollectionsVectorHelpers, helperName);
+    const StdlibSurfaceMetadata *metadata = vectorHelperSurfaceMetadata();
+    return metadata == nullptr
+               ? ""
+               : canonicalCollectionHelperPath(metadata->id, helperName);
   }
   if (!isPublishedMapBaseHelperName(helperName)) {
     return "";

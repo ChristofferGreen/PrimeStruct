@@ -1,9 +1,55 @@
 #include "SemanticsHelpers.h"
 
+#include "primec/StdlibSurfaceRegistry.h"
+
 #include <string_view>
 #include <utility>
 
 namespace primec::semantics {
+
+namespace {
+
+std::string_view trimLeadingSlash(std::string_view text) {
+  if (!text.empty() && text.front() == '/') {
+    text.remove_prefix(1);
+  }
+  return text;
+}
+
+bool resolveCanonicalVectorHelperMemberName(std::string_view path,
+                                            std::string &memberNameOut) {
+  memberNameOut.clear();
+  const StdlibSurfaceMetadata *metadata =
+      findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
+  if (metadata == nullptr) {
+    return false;
+  }
+  const std::string_view normalizedPath = trimLeadingSlash(path);
+  const std::string_view canonicalRoot = trimLeadingSlash(metadata->canonicalPath);
+  if (normalizedPath.size() <= canonicalRoot.size() ||
+      normalizedPath.compare(0, canonicalRoot.size(), canonicalRoot) != 0 ||
+      normalizedPath[canonicalRoot.size()] != '/') {
+    return false;
+  }
+  std::string memberPath(normalizedPath.substr(canonicalRoot.size() + 1));
+  const size_t slash = memberPath.find('/');
+  if (slash != std::string::npos) {
+    return false;
+  }
+  const size_t generatedSuffix = memberPath.find("__t");
+  if (generatedSuffix != std::string::npos) {
+    memberPath.erase(generatedSuffix);
+  }
+  const std::string_view memberName =
+      resolveStdlibSurfaceMemberName(*metadata, memberPath);
+  if (memberName.empty()) {
+    return false;
+  }
+  memberNameOut.assign(memberName);
+  return true;
+}
+
+} // namespace
 
 bool isAssignCall(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
@@ -38,15 +84,9 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   if (name.rfind("std/gpu/", 0) == 0) {
     name.erase(0, 8);
   }
-  if (name.rfind("std/collections/vector/", 0) == 0) {
-    std::string alias =
-        stripTemplateSpecializationSuffix(name.substr(std::string("std/collections/vector/").size()));
-    if (alias.find('/') == std::string::npos &&
-        (alias == "count" || alias == "capacity" || alias == "at" || alias == "at_unsafe" || alias == "push" ||
-         alias == "pop" || alias == "reserve" || alias == "clear" || alias == "remove_at" ||
-         alias == "remove_swap")) {
-      return alias == targetName;
-    }
+  std::string vectorHelperName;
+  if (resolveCanonicalVectorHelperMemberName(name, vectorHelperName)) {
+    return vectorHelperName == targetName;
   }
   if (name.rfind("map/", 0) == 0) {
     std::string alias = stripTemplateSpecializationSuffix(name.substr(std::string("map/").size()));
