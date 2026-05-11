@@ -15,10 +15,89 @@ std::string stripGeneratedHelperSuffix(std::string helperName) {
   return helperName;
 }
 
+constexpr std::string_view VectorHelperSurfaceBridgeKey = "collections.vector_helpers";
+
+std::string_view trimLeadingSlash(std::string_view text) {
+  return !text.empty() && text.front() == '/' ? text.substr(1) : text;
+}
+
+bool surfaceMemberSuffix(std::string_view path,
+                         const StdlibSurfaceMetadata &metadata,
+                         bool includeImportAliases,
+                         std::string_view &suffixOut) {
+  const std::string_view normalizedPath = trimLeadingSlash(path);
+  auto matchRoot = [&](std::string_view root) {
+    root = trimLeadingSlash(root);
+    if (normalizedPath.size() <= root.size() ||
+        normalizedPath.compare(0, root.size(), root) != 0 ||
+        normalizedPath[root.size()] != '/') {
+      return false;
+    }
+    suffixOut = normalizedPath.substr(root.size() + 1);
+    return !suffixOut.empty();
+  };
+  if (matchRoot(metadata.canonicalPath)) {
+    return true;
+  }
+  if (includeImportAliases) {
+    for (const std::string_view alias : metadata.importAliasSpellings) {
+      if (matchRoot(alias)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool collectionSurfaceMemberPathUsesKnownPrefix(std::string_view path) {
+  for (const StdlibSurfaceMetadata &metadata : stdlibSurfaceRegistry()) {
+    if (metadata.domain != StdlibSurfaceDomain::Collections ||
+        metadata.shape != StdlibSurfaceShape::HelperFamily) {
+      continue;
+    }
+    std::string_view suffix;
+    if (surfaceMemberSuffix(path, metadata, true, suffix) &&
+        !resolveStdlibSurfaceMemberName(metadata, suffix).empty()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+const StdlibSurfaceMetadata *findVectorHelperSurfaceMetadata() {
+  return findStdlibSurfaceMetadataByBridgeKey(VectorHelperSurfaceBridgeKey);
+}
+
+bool resolveSurfaceMemberToken(const StdlibSurfaceMetadata &metadata,
+                               std::string_view memberToken,
+                               std::string &memberNameOut) {
+  memberNameOut.clear();
+  const std::string normalizedToken =
+      stripGeneratedHelperSuffix(std::string(memberToken));
+  const std::string_view memberName =
+      resolveStdlibSurfaceMemberName(metadata, normalizedToken);
+  if (memberName.empty()) {
+    return false;
+  }
+  memberNameOut.assign(memberName);
+  return true;
+}
+
+bool resolveCanonicalSurfacePathMemberName(const StdlibSurfaceMetadata &metadata,
+                                           std::string_view path,
+                                           std::string &memberNameOut) {
+  memberNameOut.clear();
+  std::string_view suffix;
+  if (!surfaceMemberSuffix(path, metadata, false, suffix)) {
+    return false;
+  }
+  return resolveSurfaceMemberToken(metadata, suffix, memberNameOut);
+}
+
 std::string normalizeCollectionHelperPath(std::string path) {
   if (!path.empty() && path.front() != '/' &&
-      (path.rfind("array/", 0) == 0 || path.rfind("vector/", 0) == 0 ||
-       path.rfind("std/collections/vector/", 0) == 0 ||
+      (path.rfind("array/", 0) == 0 ||
+       collectionSurfaceMemberPathUsesKnownPrefix(path) ||
        path.rfind("std/collections/experimental_vector/", 0) == 0 ||
        path.rfind("map/", 0) == 0 ||
        path.rfind("std/collections/map/", 0) == 0 ||
@@ -74,10 +153,9 @@ std::string rebuildScopedCollectionHelperPath(const Expr &expr) {
 
 bool isRemovedExactPublishedVectorHelper(std::string_view helperName) {
   std::string canonicalMemberName;
-  return resolvePublishedCollectionSurfaceMemberToken(
-             helperName,
-             StdlibSurfaceId::CollectionsVectorHelpers,
-             canonicalMemberName) &&
+  const auto *metadata = findVectorHelperSurfaceMetadata();
+  return metadata != nullptr &&
+         resolveSurfaceMemberToken(*metadata, helperName, canonicalMemberName) &&
          canonicalMemberName == stripGeneratedHelperSuffix(std::string(helperName));
 }
 
@@ -101,15 +179,7 @@ bool resolvePublishedCollectionSurfaceMemberToken(std::string_view memberToken,
   if (metadata == nullptr) {
     return false;
   }
-  const std::string normalizedToken =
-      stripGeneratedHelperSuffix(std::string(memberToken));
-  const std::string_view memberName =
-      resolveStdlibSurfaceMemberName(*metadata, normalizedToken);
-  if (memberName.empty()) {
-    return false;
-  }
-  memberNameOut.assign(memberName);
-  return true;
+  return resolveSurfaceMemberToken(*metadata, memberToken, memberNameOut);
 }
 
 bool resolvePublishedCollectionSurfaceExprMemberName(const Expr &expr,
@@ -146,10 +216,15 @@ bool isRemovedCollectionMethodAliasPath(std::string_view rawMethodName) {
     return isRemovedExactPublishedVectorHelper(
         std::string_view(candidate).substr(std::string_view("array/").size()));
   }
-  if (candidate.rfind("std/collections/vector/", 0) == 0) {
-    return isRemovedExactPublishedVectorHelper(
-        std::string_view(candidate).substr(
-            std::string_view("std/collections/vector/").size()));
+  if (const auto *metadata = findVectorHelperSurfaceMetadata();
+      metadata != nullptr) {
+    std::string canonicalMemberName;
+    if (resolveCanonicalSurfacePathMemberName(
+            *metadata,
+            normalizeCollectionHelperPath(candidate),
+            canonicalMemberName)) {
+      return isRemovedExactPublishedVectorHelper(canonicalMemberName);
+    }
   }
   if (candidate.rfind("map/", 0) == 0) {
     return isRemovedExactPublishedMapHelper(
@@ -166,12 +241,18 @@ bool isRemovedCollectionMethodAliasPath(std::string_view rawMethodName) {
 bool removedCollectionAliasNeedsDefinitionPath(std::string_view rawMethodName) {
   const std::string normalizedPath = normalizeCollectionHelperPath(std::string(rawMethodName));
   const std::string_view mapHelperName = mapHelperNameFromPath(normalizedPath);
+  std::string vectorHelperName;
+  const auto *vectorMetadata = findVectorHelperSurfaceMetadata();
   return (!mapHelperName.empty() &&
           isCanonicalMapCountHelperName(mapHelperName)) ||
          normalizedPath == "/array/count" ||
          normalizedPath == "/array/capacity" ||
-         normalizedPath == "/std/collections/vector/count" ||
-         normalizedPath == "/std/collections/vector/capacity";
+         (vectorMetadata != nullptr &&
+          resolveCanonicalSurfacePathMemberName(
+              *vectorMetadata,
+              normalizedPath,
+              vectorHelperName) &&
+          (vectorHelperName == "count" || vectorHelperName == "capacity"));
 }
 
 void appendUniqueCandidate(std::vector<std::string> &candidates, const std::string &candidate) {
@@ -278,8 +359,8 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
   std::vector<std::string> candidates;
   std::string normalizedPath = path;
   if (!normalizedPath.empty() && normalizedPath.front() != '/') {
-    if (normalizedPath.rfind("array/", 0) == 0 || normalizedPath.rfind("vector/", 0) == 0 ||
-        normalizedPath.rfind("std/collections/vector/", 0) == 0 ||
+    if (normalizedPath.rfind("array/", 0) == 0 ||
+        collectionSurfaceMemberPathUsesKnownPrefix(normalizedPath) ||
         normalizedPath.rfind("soa_vector/", 0) == 0 ||
         normalizedPath.rfind("std/collections/soa_vector/", 0) == 0 ||
         normalizedPath.rfind("map/", 0) == 0 ||
@@ -293,7 +374,12 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
   if (normalizedPath.rfind("/array/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/array/").size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-      appendUniqueCandidate(candidates, "/std/collections/vector/" + suffix);
+      if (const auto *metadata = findVectorHelperSurfaceMetadata();
+          metadata != nullptr) {
+        appendUniqueCandidate(
+            candidates,
+            std::string(metadata->canonicalPath) + "/" + suffix);
+      }
     }
   } else if (normalizedPath.rfind("/soa_vector/", 0) == 0) {
     appendUniqueCandidate(

@@ -15634,3 +15634,65 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     coverage, and ratcheted `scripts/vector_surface_trace_baseline.json` from
     835 to 830 production traces. Baseline release validation was skipped per
     the lite workflow.
+
+- [x] TODO-4402: Route remaining emitter vector-surface traces
+  - owner: ai
+  - created_at: 2026-05-11
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4401
+  - scope: Replace remaining PrimeStruct-vector-specific emitter traces in
+    builtin method resolution, setup/return inference, collection fallback,
+    collection type, lambda-body, packed-args, helper builtins, and helper type
+    files with generic collection, metadata-backed, or manifest-driven paths.
+  - implementation_notes:
+    - Start from the `src/emitter/` entries in
+      `scripts/vector_surface_trace_baseline.json` excluding
+      `EmitterBuiltinCallPathHelpers.cpp`.
+    - Keep ordinary C++ `std::vector` container usage allowed.
+    - Do not touch lowerer files in this leaf.
+  - acceptance:
+    - Remaining emitter vector helper dispatch is generic or manifest-driven
+      rather than hard-coded to PrimeStruct vector paths where possible before
+      lowerer work.
+    - Focused emitter source-lock or compile-run coverage remains aligned.
+    - The vector surface trace baseline decreases for emitter files and does
+      not increase elsewhere.
+  - stop_rule: Stop after remaining emitter vector-specific traces that can be
+    retired before lowerer work are removed and the baseline ratchets downward.
+  - finished_at: 2026-05-11
+  - evidence: Split the oversized remaining-emitter trace umbrella into
+    TODO-4405, TODO-4406, TODO-4407, TODO-4408, and TODO-4409 so each leaf owns
+    one emitter file family with concrete trace-reduction acceptance.
+
+- [x] TODO-4405: Route emitter metadata vector traces
+  - owner: ai
+  - created_at: 2026-05-11
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4401
+  - scope: Replace PrimeStruct-vector-specific traces in
+    `EmitterBuiltinMethodResolutionMetadataHelpers.cpp` with generic
+    collection-surface metadata or manifest-derived helper paths.
+  - implementation_notes:
+    - Start from the `canonical-vector-path`, `root-vector-helper-path`, and
+      `vector-surface-id` entries for
+      `EmitterBuiltinMethodResolutionMetadataHelpers.cpp` in
+      `scripts/vector_surface_trace_baseline.json`.
+    - Preserve array alias handling and removed canonical vector helper
+      diagnostics.
+    - Do not touch lowerer files in this leaf.
+  - acceptance:
+    - Metadata helper vector decisions are derived from
+      `StdlibSurfaceRegistry` metadata instead of hard-coded PrimeStruct vector
+      helper paths where possible.
+    - Source-lock coverage keeps the metadata delegation contract aligned.
+    - The vector surface trace baseline decreases for
+      `EmitterBuiltinMethodResolutionMetadataHelpers.cpp` and does not
+      increase elsewhere.
+  - stop_rule: Stop once metadata helper canonical/root vector path and vector
+    surface enum traces are removed and the audit baseline ratchets downward.
+  - finished_at: 2026-05-11
+  - evidence: Routed metadata helper path normalization, canonical member
+    detection, array alias reconstruction, and removed-helper checks through
+    collection surface metadata. Updated source-lock coverage and ratcheted
+    `scripts/vector_surface_trace_baseline.json` from 830 to 820 production
+    traces. Baseline release validation was skipped per the lite workflow.

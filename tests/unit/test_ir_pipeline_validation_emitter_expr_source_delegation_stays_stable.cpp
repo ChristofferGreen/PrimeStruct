@@ -2919,9 +2919,16 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
 
   CHECK(metadataHelpersSource.find("findPublishedCollectionSurfaceMetadata(") !=
         std::string::npos);
+  CHECK(metadataHelpersSource.find("collections.vector_helpers") !=
+        std::string::npos);
+  CHECK(metadataHelpersSource.find("collectionSurfaceMemberPathUsesKnownPrefix(") !=
+        std::string::npos);
   CHECK(metadataHelpersSource.find("rebuildScopedCollectionHelperPath(") !=
         std::string::npos);
-  CHECK(metadataHelpersSource.find("resolveStdlibSurfaceMemberName(*metadata, normalizedToken)") !=
+  CHECK(metadataHelpersSource.find("resolveStdlibSurfaceMemberName(metadata, normalizedToken)") !=
+        std::string::npos);
+  CHECK(metadataHelpersSource.find("std/collections/vector/") == std::string::npos);
+  CHECK(metadataHelpersSource.find("StdlibSurfaceId::CollectionsVectorHelpers") ==
         std::string::npos);
   CHECK(metadataHelpersSource.find("bool isRemovedCollectionMethodAliasPath(") !=
         std::string::npos);
