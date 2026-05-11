@@ -295,11 +295,6 @@
       "count": 5
     },
     {
-      "path": "src/semantics/SemanticsValidatorExprNamedArgumentBuiltins.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 8
-    },
-    {
       "path": "src/semantics/SemanticsValidatorExprPointerLike.cpp",
       "pattern": "canonical-vector-path",
       "count": 2

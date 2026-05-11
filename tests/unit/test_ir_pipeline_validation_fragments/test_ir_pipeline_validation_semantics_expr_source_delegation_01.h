@@ -5905,6 +5905,20 @@
             "auto tryResolveReceiverIndex = [&](size_t index)") !=
         std::string::npos);
   CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
+            "#include \"SemanticsValidatorInferCollectionCompatibilityInternal.h\"") !=
+        std::string::npos);
+  CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
+            "canonicalVectorCompatibilityHelperPath(helperName)") !=
+        std::string::npos);
+  CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
+            "resolveCanonicalVectorHelperNameFromResolvedPath(") !=
+        std::string::npos);
+  CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
+            "isStdNamespacedVectorCompatibilityHelperPath(resolvedPath, \"count\")") !=
+        std::string::npos);
+  CHECK(semanticsExprNamedArgumentBuiltinsSource.find("std/collections/vector/") ==
+        std::string::npos);
+  CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
             "return resolveMethodTarget(params, locals, expr.namespacePrefix, receiverCandidate,") !=
         std::string::npos);
   CHECK(semanticsExprNamedArgumentBuiltinsSource.find("std::vector<size_t> receiverIndices;") ==

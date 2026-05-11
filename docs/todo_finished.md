@@ -16153,3 +16153,60 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     callers, updated source-lock coverage, and ratcheted
     `scripts/vector_surface_trace_baseline.json` from 398 to 389 production
     traces. Baseline release validation was skipped per the lite workflow.
+
+- [x] TODO-4421: Route semantic method/access vector traces
+  - owner: ai
+  - created_at: 2026-05-11
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4420
+  - scope: Replace semantic method-target, method-resolution, access,
+    count/capacity, and named-argument vector helper traces with
+    registry-backed helper predicates or generic collection helpers.
+  - implementation_notes:
+    - Start from `SemanticsValidatorExprMethodTargetResolution.cpp`,
+      `SemanticsValidatorExprMethodResolution.cpp`,
+      `SemanticsValidatorExprCollectionAccess*.cpp`,
+      `SemanticsValidatorExprCollectionCountCapacity.cpp`,
+      `SemanticsValidatorExprCountCapacityMapBuiltins.cpp`, and
+      `SemanticsValidatorExprNamedArgumentBuiltins.cpp`.
+    - Keep ordinary C++ `std::vector` container usage allowed.
+  - acceptance:
+    - Semantic method/access helper selection no longer hard-codes
+      PrimeStruct vector helper paths where registry metadata can provide the
+      surface.
+    - Focused semantic source-lock or behavior coverage remains aligned.
+    - The vector surface trace baseline decreases for the selected
+      method/access files and does not increase elsewhere.
+  - stop_rule: Stop after method/access vector path traces are routed through
+    generic collection or registry-backed helpers.
+  - finished_at: 2026-05-11
+  - evidence: Split the broad semantic method/access cleanup into closable
+    leaves TODO-4424 through TODO-4426, covering named-argument, count/access,
+    and method-target semantic traces. Baseline release validation was skipped
+    per the lite workflow.
+
+- [x] TODO-4424: Route semantic named-argument vector traces
+  - owner: ai
+  - created_at: 2026-05-11
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4420
+  - scope: Replace semantic named-argument vector helper traces with
+    registry-backed helper predicates and canonical helper path queries.
+  - implementation_notes:
+    - Start from `SemanticsValidatorExprNamedArgumentBuiltins.cpp` and its
+      semantic source-lock coverage.
+    - Keep ordinary C++ `std::vector` container usage allowed.
+  - acceptance:
+    - Named-argument builtin validation no longer hard-codes PrimeStruct
+      vector helper paths where registry metadata can provide the surface.
+    - Focused semantic source-lock coverage remains aligned.
+    - The vector surface trace baseline decreases for the named-argument file
+      and does not increase elsewhere.
+  - stop_rule: Stop after named-argument vector path traces are routed through
+    registry-backed helpers.
+  - finished_at: 2026-05-11
+  - evidence: Routed named-argument vector helper checks through
+    registry-backed compatibility predicates and canonical helper path queries,
+    updated source-lock coverage, and ratcheted
+    `scripts/vector_surface_trace_baseline.json` from 389 to 381 production
+    traces. Baseline release validation was skipped per the lite workflow.

@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <string>
 #include <vector>
@@ -26,15 +27,19 @@ bool SemanticsValidator::validateExprNamedArguments(
         const std::string helperName =
             normalized.substr(std::string("array/").size());
         const std::string canonicalPath =
-            "/std/collections/vector/" + helperName;
-        if (hasDefinitionPath(canonicalPath) ||
-            hasImportedDefinitionPath(canonicalPath)) {
+            canonicalVectorCompatibilityHelperPath(helperName);
+        if (!canonicalPath.empty() &&
+            (hasDefinitionPath(canonicalPath) ||
+             hasImportedDefinitionPath(canonicalPath))) {
           return false;
         }
         normalized = helperName;
-      } else if (normalized.rfind("std/collections/vector/", 0) == 0) {
-        normalized =
-            normalized.substr(std::string("std/collections/vector/").size());
+      } else {
+        std::string helperName;
+        if (resolveCanonicalVectorHelperNameFromResolvedPath(
+                "/" + normalized, helperName)) {
+          normalized = helperName;
+        }
       }
       if (normalized == "push" || normalized == "pop" ||
           normalized == "reserve" || normalized == "clear" ||
@@ -152,7 +157,8 @@ bool SemanticsValidator::validateExprNamedArgumentBuiltins(
       return false;
     }
     const std::string resolvedPath = resolveCalleePath(expr);
-    if (resolvedPath.rfind("/std/collections/vector/at", 0) == 0 ||
+    if (isStdNamespacedVectorCompatibilityHelperPath(resolvedPath, "at") ||
+        isStdNamespacedVectorCompatibilityHelperPath(resolvedPath, "at_unsafe") ||
         resolvedPath.rfind("/std/collections/map/at", 0) == 0) {
       return false;
     }
@@ -174,10 +180,10 @@ bool SemanticsValidator::validateExprNamedArgumentBuiltins(
       return false;
     }
     const std::string resolvedPath = resolveCalleePath(expr);
-    if (resolvedPath == "/std/collections/vector/count") {
+    if (isStdNamespacedVectorCompatibilityHelperPath(resolvedPath, "count")) {
       return false;
     }
-    if (resolvedPath == "/std/collections/vector/capacity") {
+    if (isStdNamespacedVectorCompatibilityHelperPath(resolvedPath, "capacity")) {
       return false;
     }
     if (std::string(helperName) == "count" &&
@@ -290,11 +296,13 @@ bool SemanticsValidator::validateExprNamedArgumentBuiltins(
     }
     if (normalized.rfind("array/", 0) == 0) {
       normalized = normalized.substr(std::string("array/").size());
-    } else if (normalized.rfind("std/collections/vector/", 0) == 0) {
-      normalized =
-          normalized.substr(std::string("std/collections/vector/").size());
     } else {
-      return false;
+      std::string helperName;
+      if (!resolveCanonicalVectorHelperNameFromResolvedPath(
+              "/" + normalized, helperName)) {
+        return false;
+      }
+      normalized = helperName;
     }
     if (normalized == "push" || normalized == "pop" || normalized == "reserve" ||
         normalized == "clear" || normalized == "remove_at" ||
