@@ -321,7 +321,7 @@ main() {
       "exe",
       "compile_cpp_lambda_vector_mutator_shadow_mismatch",
       source,
-      {"unknown call target: /std/collections/vector/push"});
+      {"push requires mutable vector binding"});
 }
 
 TEST_CASE("C++ emitter lambda mutator mismatch rejects call-form helper") {
@@ -342,7 +342,7 @@ main() {
       "exe",
       "compile_cpp_lambda_vector_mutator_call_mismatch",
       source,
-      {"unknown call target: /std/collections/vector/push"});
+      {"push requires mutable vector binding"});
 }
 
 TEST_CASE("compiles and runs import alias in C++ emitter") {

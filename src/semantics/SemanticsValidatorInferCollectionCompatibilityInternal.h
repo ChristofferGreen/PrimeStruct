@@ -86,6 +86,9 @@ enum class RemovedCollectionHelperFamily {
 
 [[maybe_unused]] inline bool isVectorCompatibilityHelperName(
     std::string_view helperName) {
+  if (helperName == "vector") {
+    return false;
+  }
   const StdlibSurfaceMetadata *metadata = vectorHelperSurfaceMetadata();
   return metadata != nullptr &&
          std::find(metadata->memberNames.begin(),
@@ -319,26 +322,50 @@ stripUnrootedCanonicalVectorCompatibilityPrefix(std::string_view path) {
 
 [[maybe_unused]] bool isLegacyExperimentalVectorCompatibilityPath(
     std::string_view path) {
-  const std::string prefix = legacyExperimentalVectorCompatibilityPrefix();
-  return path.rfind(prefix, 0) == 0;
+  return path == legacyExperimentalVectorCompatibilityPrefix() + "Vector";
 }
 
 [[maybe_unused]] bool isLegacyExperimentalVectorCompatibilityTypePath(
     std::string_view path) {
-  return path.rfind(legacyExperimentalVectorCompatibilityPrefix() +
+  return isLegacyExperimentalVectorCompatibilityPath(path) ||
+         path.rfind(legacyExperimentalVectorCompatibilityPrefix() +
                         std::string("Vector__"),
                     0) == 0;
 }
 
 [[maybe_unused]] std::string legacyExperimentalVectorCompatibilityHelperName(
     std::string_view helperName) {
+  if (helperName == "at") {
+    return std::string("vector") + "At";
+  }
+  if (helperName == "at_unsafe") {
+    return std::string("vector") + "AtUnsafe";
+  }
   if (helperName == "count") {
     return std::string("vector") + "Count";
   }
   if (helperName == "capacity") {
     return std::string("vector") + "Capacity";
   }
-  return std::string(helperName);
+  if (helperName == "push") {
+    return std::string("vector") + "Push";
+  }
+  if (helperName == "pop") {
+    return std::string("vector") + "Pop";
+  }
+  if (helperName == "reserve") {
+    return std::string("vector") + "Reserve";
+  }
+  if (helperName == "clear") {
+    return std::string("vector") + "Clear";
+  }
+  if (helperName == "remove_at") {
+    return std::string("vector") + "RemoveAt";
+  }
+  if (helperName == "remove_swap") {
+    return std::string("vector") + "RemoveSwap";
+  }
+  return "";
 }
 
 [[maybe_unused]] std::string legacyExperimentalVectorCompatibilityHelperPath(
@@ -407,12 +434,40 @@ stripUnrootedCanonicalVectorCompatibilityPrefix(std::string_view path) {
     std::string_view resolvedPath,
     std::string &helperNameOut) {
   helperNameOut.clear();
+  std::string normalizedPath(resolvedPath);
+  const size_t suffix = normalizedPath.find("__");
+  if (suffix != std::string::npos) {
+    normalizedPath.erase(suffix);
+  }
+  const std::string legacyPrefix = legacyExperimentalVectorCompatibilityPrefix();
+  if (normalizedPath.rfind(legacyPrefix, 0) == 0) {
+    const std::string_view legacyName =
+        std::string_view(normalizedPath).substr(legacyPrefix.size());
+    const StdlibSurfaceMetadata *metadata = vectorHelperSurfaceMetadata();
+    if (metadata == nullptr) {
+      return false;
+    }
+    for (const std::string_view helperName : metadata->memberNames) {
+      if (!isVectorCompatibilityHelperName(helperName)) {
+        continue;
+      }
+      if (legacyExperimentalVectorCompatibilityHelperName(helperName) ==
+          legacyName) {
+        helperNameOut.assign(helperName);
+        return true;
+      }
+    }
+    return false;
+  }
   const StdlibSurfaceMetadata *metadata = vectorHelperSurfaceMetadata();
   if (metadata == nullptr) {
     return false;
   }
-  return resolvePublishedCollectionHelperResolvedPath(
-      resolvedPath, metadata->id, helperNameOut);
+  if (!resolvePublishedCollectionHelperResolvedPath(
+          resolvedPath, metadata->id, helperNameOut)) {
+    return false;
+  }
+  return isVectorCompatibilityHelperName(helperNameOut);
 }
 
 [[maybe_unused]] bool isCanonicalVectorConstructorCall(

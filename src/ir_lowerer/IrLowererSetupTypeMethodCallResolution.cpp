@@ -569,7 +569,9 @@ const Definition *resolveMethodCallDefinitionFromExpr(
             normalizeBuiltinCollectionStructPath("vector") + "/count";
     if (callExpr.semanticNodeId == 0 &&
         (callExpr.sourceLine <= 0 || callExpr.sourceColumn <= 0 ||
-         callExpr.name.empty())) {
+         callExpr.name.empty()) &&
+        (callExpr.args.empty() ||
+         callExpr.args.front().kind != Expr::Kind::Call)) {
       errorOut = "missing semantic-product method-call semantic id: " +
                  describeMethodCallExpr(callExpr);
       return nullptr;
@@ -609,7 +611,9 @@ const Definition *resolveMethodCallDefinitionFromExpr(
             fallbackDirectTarget;
         return nullptr;
       }
-      if (!allowsReceiverResolvedVectorMetadataFallback) {
+      if (!allowsReceiverResolvedVectorMetadataFallback &&
+          (callExpr.args.empty() ||
+           callExpr.args.front().kind != Expr::Kind::Call)) {
         errorOut = "missing semantic-product method-call target: " +
                    describeMethodCallExpr(callExpr);
         return nullptr;

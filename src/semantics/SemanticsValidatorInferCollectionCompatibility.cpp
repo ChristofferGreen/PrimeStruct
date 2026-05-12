@@ -970,11 +970,11 @@ bool SemanticsValidator::resolveRemovedMapBodyArgumentTarget(const Expr &candida
   auto preferredRemovedMapHelperPath = [&](std::string_view helperName) {
     const std::string canonical = "/std/collections/map/" + std::string(helperName);
     const std::string alias = "/map/" + std::string(helperName);
-    if (defMap_.count(alias) > 0) {
-      return alias;
-    }
     if (defMap_.count(canonical) > 0) {
       return canonical;
+    }
+    if (defMap_.count(alias) > 0) {
+      return alias;
     }
     return canonical;
   };
