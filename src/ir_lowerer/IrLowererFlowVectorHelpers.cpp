@@ -700,7 +700,11 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
   instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(lastIndexLocal)});
 
   const auto targetInfo = resolveArrayVectorAccessTargetInfo(target, localsIn);
-  const std::string removedStructPath = targetInfo.structTypeName;
+  const std::string removedStructPath =
+      targetInfo.elemKind == LocalInfo::ValueKind::Unknown &&
+              !isVectorStructPath(targetInfo.structTypeName)
+          ? targetInfo.structTypeName
+          : std::string{};
   const Definition *destroyHelper = removedStructPath.empty()
                                         ? nullptr
                                         : resolveDestroyHelperForStruct(removedStructPath);

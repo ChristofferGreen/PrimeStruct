@@ -167,7 +167,7 @@ inline void expectVectorPushTypeMismatchReject(const std::string &emitMode,
 }
 
 inline void expectCanonicalVectorNamespaceConformance(const std::string &emitMode) {
-  if (emitMode == "vm") {
+  if (emitMode == "vm" || emitMode == "native") {
     expectVectorConformanceProgramRuns(
         makeCanonicalVectorNamespaceConformanceSource(),
         "vector_namespace_canonical_" + emitMode,
