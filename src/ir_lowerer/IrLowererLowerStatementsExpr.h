@@ -1142,13 +1142,27 @@
           error = "native backend does not support variadic entry map constructors";
           return false;
         }
-        if (!expr.isMethodCall && isVectorBuiltinName(expr, "capacity") &&
-            expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Call) {
+        if (!expr.isMethodCall && isSimpleCallName(expr, "capacity") &&
+            expr.args.size() == 1) {
           std::string receiverCollectionName;
           const bool isDirectVectorConstructor =
+              expr.args.front().kind == Expr::Kind::Call &&
               getBuiltinCollectionName(expr.args.front(), receiverCollectionName) &&
               receiverCollectionName == "vector";
-          if (!isDirectVectorConstructor) {
+          const auto targetInfo =
+              ir_lowerer::resolveArrayVectorAccessTargetInfo(
+                  expr.args.front(),
+                  localsIn,
+                  resolveHelperReturnedArrayVectorAccessTargetInfo,
+                  semanticProgram,
+                  &callResolutionAdapters.semanticProductTargets.semanticIndex);
+          const std::string structPath = inferStructExprPath(expr.args.front(), localsIn);
+          const bool isSemanticVectorTarget =
+              (targetInfo.isArrayOrVectorTarget && targetInfo.isVectorTarget) ||
+              isExperimentalVectorTypePath(structPath);
+          if (!isDirectVectorConstructor &&
+              (expr.args.front().kind == Expr::Kind::Call ||
+               isSemanticVectorTarget)) {
             if (!emitExpr(expr.args.front(), localsIn)) {
               return false;
             }

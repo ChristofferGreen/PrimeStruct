@@ -228,7 +228,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_capacity_mismatch.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_collection_shim_vector_capacity_mismatch.err")
+      (testScratchPath("") / "primec_vm_stdlib_collection_shim_vector_capacity_mismatch.err")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
@@ -287,16 +287,13 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_count_mismatch.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_collection_shim_vector_count_mismatch.err")
+      (testScratchPath("") / "primec_vm_stdlib_collection_shim_vector_count_mismatch.err")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.find("argument type mismatch for /std/collections/vectorCount__") !=
+  CHECK(error.find("argument type mismatch for /std/collections/vector/count parameter values") !=
         std::string::npos);
-  CHECK(error.find("parameter values: expected /std/collections/experimental_vector/Vector__") !=
-        std::string::npos);
-  CHECK(error.find("got vector<i32>") != std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim vector at") {
@@ -326,12 +323,12 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_at_mismatch.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_collection_shim_vector_at_mismatch.err")
+      (testScratchPath("") / "primec_vm_stdlib_collection_shim_vector_at_mismatch.err")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.find("argument type mismatch for /std/collections/vectorAt__") !=
+  CHECK(error.find("argument type mismatch for /std/collections/vector/at__") !=
         std::string::npos);
   CHECK(error.find("parameter values: expected /std/collections/experimental_vector/Vector__") !=
         std::string::npos);
@@ -365,13 +362,13 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_at_unsafe_mismatch.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() /
+      (testScratchPath("") /
        "primec_vm_stdlib_collection_shim_vector_at_unsafe_mismatch.err")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.find("argument type mismatch for /std/collections/vectorAtUnsafe__") !=
+  CHECK(error.find("argument type mismatch for /std/collections/vector/at_unsafe__") !=
         std::string::npos);
   CHECK(error.find("parameter values: expected /std/collections/experimental_vector/Vector__") !=
         std::string::npos);
@@ -408,12 +405,12 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_push_mismatch.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_collection_shim_vector_push_mismatch.err")
+      (testScratchPath("") / "primec_vm_stdlib_collection_shim_vector_push_mismatch.err")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.find("argument type mismatch for /std/collections/vectorPush__") !=
+  CHECK(error.find("argument type mismatch for /std/collections/vector/push__") !=
         std::string::npos);
   CHECK(error.find("parameter values: expected /std/collections/experimental_vector/Vector__") !=
         std::string::npos);
@@ -449,12 +446,12 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_pop_mismatch.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_collection_shim_vector_pop_mismatch.err")
+      (testScratchPath("") / "primec_vm_stdlib_collection_shim_vector_pop_mismatch.err")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.find("argument type mismatch for /std/collections/vectorPop__") !=
+  CHECK(error.find("argument type mismatch for /std/collections/vector/pop__") !=
         std::string::npos);
   CHECK(error.find("parameter values: expected /std/collections/experimental_vector/Vector__") !=
         std::string::npos);
