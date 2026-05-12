@@ -1,17 +1,11 @@
 #include "SemanticsValidator.h"
 #include "MapConstructorHelpers.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <limits>
 
 namespace primec::semantics {
 namespace {
-
-std::string bindingTypeText(const BindingInfo &binding) {
-  if (binding.typeTemplateArg.empty()) {
-    return binding.typeName;
-  }
-  return binding.typeName + "<" + binding.typeTemplateArg + ">";
-}
 
 std::string preferredSamePathSoaHelperTarget(std::string_view helperName) {
   if (helperName == "to_aos" || helperName == "to_aos_ref") {
@@ -98,7 +92,7 @@ bool SemanticsValidator::shouldBypassGraphBindingLookup(const Expr &candidate) c
     normalizedPrefix.erase(normalizedPrefix.begin());
   }
   if (normalizedName == "vector" ||
-      (normalizedPrefix == "std/collections/vector" && normalizedName == "vector")) {
+      isCanonicalVectorConstructorCall(normalizedPrefix, normalizedName)) {
     return true;
   }
   return false;
@@ -144,22 +138,15 @@ std::string SemanticsValidator::preferredCollectionHelperResolvedPath(
     return {};
   };
   auto explicitStdVectorHelperName = [&]() -> std::string {
-    if (normalizedPrefix == "std/collections/vector" &&
-        (normalizedName == "at" || normalizedName == "at_unsafe" ||
-         normalizedName == "count" || normalizedName == "capacity" ||
-         normalizedName == "push" || normalizedName == "pop" ||
-         normalizedName == "reserve" || normalizedName == "clear" ||
-         normalizedName == "remove_at" || normalizedName == "remove_swap")) {
+    if (isCanonicalVectorCompatibilityNamespace(normalizedPrefix) &&
+        normalizedName != "vector" &&
+        isVectorCompatibilityHelperName(normalizedName)) {
       return normalizedName;
     }
-    if (normalizedName.rfind("std/collections/vector/", 0) == 0) {
-      const std::string helperName =
-          normalizedName.substr(std::string("std/collections/vector/").size());
-      if (helperName == "at" || helperName == "at_unsafe" ||
-          helperName == "count" || helperName == "capacity" ||
-          helperName == "push" || helperName == "pop" ||
-          helperName == "reserve" || helperName == "clear" ||
-          helperName == "remove_at" || helperName == "remove_swap") {
+    if (isUnrootedCanonicalVectorCompatibilityPath(normalizedName)) {
+      const std::string helperName(
+          stripUnrootedCanonicalVectorCompatibilityPrefix(normalizedName));
+      if (helperName != "vector" && isVectorCompatibilityHelperName(helperName)) {
         return helperName;
       }
     }
@@ -217,7 +204,8 @@ std::string SemanticsValidator::preferredCollectionHelperResolvedPath(
 
   if (const std::string helperName = explicitStdVectorHelperName();
       !helperName.empty()) {
-    const std::string canonical = "/std/collections/vector/" + helperName;
+    const std::string canonical =
+        canonicalVectorCompatibilityHelperPathOrFallback(helperName);
     if (defMap_.count(canonical) > 0) {
       return canonical;
     }
@@ -887,9 +875,7 @@ bool SemanticsValidator::usesSamePathSoaHelperTargetForCollectionType(
 bool SemanticsValidator::hasDirectExperimentalVectorImport() const {
   const auto &importPaths = program_.sourceImports.empty() ? program_.imports : program_.sourceImports;
   for (const auto &importPath : importPaths) {
-    if (importPath == "/std/collections/experimental_vector/*" ||
-        importPath == "/std/collections/experimental_vector/vector" ||
-        importPath == "/std/collections/experimental_vector") {
+    if (isDirectExperimentalVectorImportPath(importPath)) {
       return true;
     }
   }
@@ -1044,8 +1030,8 @@ bool SemanticsValidator::canonicalizeInferredCollectionBinding(
   }
   const std::string normalizedBindingType = normalizeBindingTypeName(bindingOut.typeName);
   if ((normalizedBindingType == "Vector" && !bindingOut.typeTemplateArg.empty()) ||
-      normalizedBindingType.rfind("/std/collections/experimental_vector/Vector__", 0) == 0 ||
-      normalizedBindingType.rfind("std/collections/experimental_vector/Vector__", 0) == 0) {
+      isLegacyExperimentalVectorCompatibilityTypePath(normalizedBindingType) ||
+      isLegacyExperimentalVectorCompatibilityTypePath("/" + normalizedBindingType)) {
     return true;
   }
   if ((normalizedBindingType == "Map" && !bindingOut.typeTemplateArg.empty()) ||
@@ -1192,7 +1178,7 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
   if (initializer.kind == Expr::Kind::Call &&
       !initializer.isMethodCall &&
       initializer.templateArgs.size() == 1 &&
-      (canonicalResolvedInitializerPath == "/std/collections/experimental_vector/vector" ||
+      (isResolvedExperimentalVectorConstructorPath(canonicalResolvedInitializerPath) ||
        canonicalResolvedInitializerPath == "/vector" ||
        isBareImportedExperimentalVectorConstructor)) {
     if (canonicalResolvedInitializerPath == "/vector" &&

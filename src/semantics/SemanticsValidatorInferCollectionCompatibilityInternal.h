@@ -43,6 +43,10 @@ enum class RemovedCollectionHelperFamily {
   return findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
 }
 
+[[maybe_unused]] const StdlibSurfaceMetadata *vectorConstructorSurfaceMetadata() {
+  return findStdlibSurfaceMetadataByBridgeKey("collections.vector_constructors");
+}
+
 [[maybe_unused]] bool resolvePublishedCollectionHelperMemberToken(
     std::string_view memberToken,
     StdlibSurfaceId surfaceId,
@@ -397,6 +401,52 @@ stripUnrootedCanonicalVectorCompatibilityPrefix(std::string_view path) {
   }
   return resolvePublishedCollectionHelperResolvedPath(
       resolvedPath, metadata->id, helperNameOut);
+}
+
+[[maybe_unused]] bool resolveVectorCompatibilityHelperNameFromResolvedPath(
+    std::string_view resolvedPath,
+    std::string &helperNameOut) {
+  helperNameOut.clear();
+  const StdlibSurfaceMetadata *metadata = vectorHelperSurfaceMetadata();
+  if (metadata == nullptr) {
+    return false;
+  }
+  return resolvePublishedCollectionHelperResolvedPath(
+      resolvedPath, metadata->id, helperNameOut);
+}
+
+[[maybe_unused]] bool isCanonicalVectorConstructorCall(
+    std::string_view namespacePrefix,
+    std::string_view name) {
+  const StdlibSurfaceMetadata *metadata = vectorConstructorSurfaceMetadata();
+  if (metadata == nullptr) {
+    return false;
+  }
+  std::string callPath(trimLeadingSlash(namespacePrefix));
+  if (!callPath.empty()) {
+    callPath += "/";
+  }
+  callPath += std::string(trimLeadingSlash(name));
+  return callPath == trimLeadingSlash(metadata->canonicalPath);
+}
+
+[[maybe_unused]] bool isDirectExperimentalVectorImportPath(
+    std::string_view importPath) {
+  const std::string root = legacyExperimentalVectorCompatibilityPrefix();
+  const std::string normalizedRoot = root.substr(0, root.size() - 1);
+  return importPath == normalizedRoot || importPath == root + "*" ||
+         (importPath.size() > normalizedRoot.size() &&
+          importPath.rfind(normalizedRoot, 0) == 0 &&
+          importPath[normalizedRoot.size()] == '/');
+}
+
+[[maybe_unused]] std::string directExperimentalVectorImportDiagnostic() {
+  const std::string legacyRoot =
+      legacyExperimentalVectorCompatibilityPrefix();
+  const std::string canonicalRoot =
+      canonicalVectorCompatibilityPrefixOrFallback() + "/";
+  return "direct import of " + legacyRoot +
+         "* is not supported; use " + canonicalRoot + "*";
 }
 
 [[maybe_unused]] bool resolveExplicitPublishedMapHelperExprMemberName(

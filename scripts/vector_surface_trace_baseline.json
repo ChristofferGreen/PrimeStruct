@@ -105,46 +105,6 @@
       "count": 2
     },
     {
-      "path": "src/semantics/SemanticsValidatorBuildCallResolution.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 1
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorBuildImports.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 1
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorBuildImports.cpp",
-      "pattern": "experimental-vector-path",
-      "count": 4
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorBuildInitializerInference.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 5
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorBuildInitializerInference.cpp",
-      "pattern": "experimental-vector-path",
-      "count": 6
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorBuildInitializerInferenceCalls.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 4
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorBuildInitializerInferenceCalls.cpp",
-      "pattern": "experimental-vector-path",
-      "count": 10
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorBuildInitializerInferenceCalls.cpp",
-      "pattern": "vector-helper-symbol",
-      "count": 2
-    },
-    {
       "path": "src/semantics/SemanticsValidatorCollectionHelperRewrites.cpp",
       "pattern": "vector-surface-id",
       "count": 1

@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include "primec/StdlibSurfaceRegistry.h"
 
@@ -59,21 +60,6 @@ bool isCanonicalSoaVectorHelperAliasName(std::string_view aliasName) {
          aliasName == "ref_ref" || aliasName == "reserve" ||
          aliasName == "push" || aliasName == "to_aos" ||
          aliasName == "to_aos_ref";
-}
-
-bool isDirectExperimentalVectorImportPath(std::string_view importPath) {
-  constexpr std::string_view ExperimentalVectorRoot =
-      "/std/collections/experimental_vector";
-  return importPath == ExperimentalVectorRoot ||
-         importPath == "/std/collections/experimental_vector/*" ||
-         (importPath.size() > ExperimentalVectorRoot.size() &&
-          importPath.rfind(ExperimentalVectorRoot, 0) == 0 &&
-          importPath[ExperimentalVectorRoot.size()] == '/');
-}
-
-std::string directExperimentalVectorImportDiagnostic() {
-  return "direct import of /std/collections/experimental_vector/* is not supported; "
-         "use /std/collections/vector/*";
 }
 
 std::string genericTypeFamilyNameForInternalName(std::string_view name) {
@@ -253,7 +239,8 @@ bool SemanticsValidator::buildImportAliases() {
         if (prefix != "/std/collections/internal_vector") {
           return false;
         }
-        const std::string vectorPath = "/std/collections/experimental_vector/Vector";
+        const std::string vectorPath =
+            legacyExperimentalVectorCompatibilityPrefix() + "Vector";
         auto defIt = defMap_.find(vectorPath);
         if (defIt == defMap_.end() || defIt->second == nullptr ||
             publicDefinitions_.count(vectorPath) == 0) {

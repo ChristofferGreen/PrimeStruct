@@ -1,16 +1,12 @@
 #include "SemanticsValidator.h"
 #include "MapConstructorHelpers.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <functional>
 #include <optional>
 
 namespace primec::semantics {
 namespace {
-std::string bindingTypeText(const BindingInfo &binding) {
-  return binding.typeTemplateArg.empty() ? binding.typeName
-                                         : binding.typeName + "<" + binding.typeTemplateArg + ">";
-}
-
 bool extractBuiltinSoaVectorElementTypeFromTypeText(const std::string &typeText,
                                                     std::string &elemTypeOut) {
   elemTypeOut.clear();
@@ -55,7 +51,7 @@ bool SemanticsValidator::inferCollectionBindingFromExpr(const Expr &expr,
   auto isImportedExperimentalVectorConstructorPath =
       [&](std::string resolvedPath) {
         resolvedPath = canonicalizeResolvedPath(std::move(resolvedPath));
-        return resolvedPath == "/std/collections/experimental_vector/vector" ||
+        return isResolvedExperimentalVectorConstructorPath(resolvedPath) ||
                (resolvedPath == "/vector" &&
                 hasDirectExperimentalVectorImport());
       };
@@ -162,8 +158,8 @@ bool SemanticsValidator::inferBuiltinCollectionValueBinding(const Expr &expr,
         normalizedTypeName == "vector" ||
         normalizedTypeName == "soa_vector" ||
         normalizedTypeName == "Vector" ||
-        normalizedTypeName == "std/collections/experimental_vector/Vector" ||
-        normalizedTypeName == "/std/collections/experimental_vector/Vector";
+        isLegacyExperimentalVectorCompatibilityPath(normalizedTypeName) ||
+        isLegacyExperimentalVectorCompatibilityPath("/" + normalizedTypeName);
     if (isBuiltinOrExperimentalVector && !binding.typeTemplateArg.empty()) {
       elemTypeOut = binding.typeTemplateArg;
       return true;
@@ -181,8 +177,8 @@ bool SemanticsValidator::inferBuiltinCollectionValueBinding(const Expr &expr,
           base == "vector" ||
           base == "soa_vector" ||
           base == "Vector" ||
-          base == "std/collections/experimental_vector/Vector" ||
-          base == "/std/collections/experimental_vector/Vector";
+          isLegacyExperimentalVectorCompatibilityPath(base) ||
+          isLegacyExperimentalVectorCompatibilityPath("/" + base);
       if (isWrappedBuiltinOrExperimentalVector && !argText.empty()) {
         elemTypeOut = argText;
         return true;
@@ -233,14 +229,17 @@ bool SemanticsValidator::inferBuiltinCollectionValueBinding(const Expr &expr,
   };
   const std::string canonicalResolvedCallPath =
       canonicalizeResolvedPath(resolvedCallPath);
+  std::string vectorCompatibilityHelperName;
+  const bool isVectorCompatibilityResolvedCall =
+      resolveVectorCompatibilityHelperNameFromResolvedPath(
+          canonicalResolvedCallPath, vectorCompatibilityHelperName);
   const bool isVectorAccessLike =
       expr.args.size() == 2 &&
       (isSimpleCallName(expr, "at") ||
        isSimpleCallName(expr, "at_unsafe") ||
-       canonicalResolvedCallPath == "/std/collections/vector/at" ||
-       canonicalResolvedCallPath == "/std/collections/vector/at_unsafe" ||
-       canonicalResolvedCallPath == "/std/collections/experimental_vector/vectorAt" ||
-       canonicalResolvedCallPath == "/std/collections/experimental_vector/vectorAtUnsafe");
+       (isVectorCompatibilityResolvedCall &&
+        (vectorCompatibilityHelperName == "at" ||
+         vectorCompatibilityHelperName == "at_unsafe")));
   if (isVectorAccessLike) {
     BindingInfo collectionBinding;
     if (!inferCollectionBindingFromExpr(expr.args.front(), params, locals, collectionBinding)) {
@@ -272,8 +271,9 @@ bool SemanticsValidator::inferBuiltinCollectionValueBinding(const Expr &expr,
         defMap_.find("/std/collections/map/count") != defMap_.end()) ||
        (resolvedCallPath == "/std/collections/map/count_ref" &&
         defMap_.find("/std/collections/map/count_ref") != defMap_.end()) ||
-       resolvedCallPath == "/std/collections/vector/count" ||
-       resolvedCallPath == "/std/collections/vector/capacity");
+       (isVectorCompatibilityResolvedCall &&
+        (vectorCompatibilityHelperName == "count" ||
+         vectorCompatibilityHelperName == "capacity")));
   const bool isMapContainsLike =
       !expr.isMethodCall && isSimpleCallName(expr, "contains") && expr.args.size() == 2 &&
       (currentValidationState_.context.definitionPath == "/std/collections/mapContains" ||
@@ -595,7 +595,7 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
         elemType.empty()) {
       return false;
     }
-    bindingOut.typeName = "/std/collections/experimental_vector/Vector";
+    bindingOut.typeName = legacyExperimentalVectorCompatibilityPrefix() + "Vector";
     bindingOut.typeTemplateArg = elemType;
     return true;
   };
@@ -978,8 +978,8 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
       const std::string normalizedCollectionType = normalizeCollectionTypePath(inferredStruct);
       if (!normalizedCollectionType.empty()) {
         const bool keepExperimentalCollectionPath =
-            inferredStruct == "/std/collections/experimental_vector/Vector" ||
-            inferredStruct.rfind("/std/collections/experimental_vector/Vector__", 0) == 0 ||
+            isLegacyExperimentalVectorCompatibilityPath(inferredStruct) ||
+            isLegacyExperimentalVectorCompatibilityTypePath(inferredStruct) ||
             inferredStruct.rfind("/std/collections/experimental_map/Map__", 0) == 0;
         if (keepExperimentalCollectionPath) {
           bindingOut.typeName = inferredStruct;

@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 #include "MapConstructorHelpers.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <cctype>
 #include <string_view>
@@ -387,7 +388,7 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
       }
       prefix = prefix.substr(0, slash);
     }
-    if (normalizedPrefix.rfind("/std/collections/vector", 0) == 0 &&
+    if (isCanonicalVectorCompatibilityNamespace(normalizedPrefix) &&
         isRemovedVectorCompatibilityHelper(expr.name)) {
       return normalizedPrefix + "/" + expr.name;
     }
