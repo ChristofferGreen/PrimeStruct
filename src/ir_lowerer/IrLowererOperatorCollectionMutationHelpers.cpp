@@ -1444,6 +1444,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
           receiverLocalIt != localsIn.end() &&
           receiverLocalIt->second.usesBuiltinCollectionLayout &&
           receiverLocalIt->second.isSoaVector &&
+          isRawBuiltinSoaVectorStructPath(receiverStruct) &&
           target.name == "storage" &&
           fieldStructPath.rfind("/std/collections/internal_soa_storage/SoaColumn__", 0) == 0;
       if (isRawBuiltinSoaStorageAssign) {

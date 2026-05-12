@@ -360,9 +360,52 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
           return structIt->second;
         }
       }
+      auto declaredDefinitionStructReturn = [&](const std::string &candidate) -> std::string {
+        for (const Definition &definition : program_.definitions) {
+          if (definition.fullPath != candidate &&
+              definition.fullPath.rfind(candidate + "__", 0) != 0 &&
+              definition.fullPath.rfind(candidate + "<", 0) != 0) {
+            continue;
+          }
+          for (const Transform &transform : definition.transforms) {
+            if (transform.name != "return" ||
+                transform.templateArgs.size() != 1) {
+              continue;
+            }
+            const std::string structPath =
+                resolveInferStructTypePath(transform.templateArgs.front(),
+                                           definition.namespacePrefix);
+            if (!structPath.empty()) {
+              return structPath;
+            }
+            const std::string rootStructPath =
+                resolveInferStructTypePath(transform.templateArgs.front(),
+                                           std::string{});
+            if (!rootStructPath.empty()) {
+              return rootStructPath;
+            }
+          }
+        }
+        return {};
+      };
+      if (receiverStruct == "/map") {
+        for (const auto &candidate : methodCandidates) {
+          if (candidate.rfind("/std/collections/map/", 0) != 0) {
+            continue;
+          }
+          if (std::string structPath = declaredDefinitionStructReturn(candidate);
+              !structPath.empty()) {
+            return structPath;
+          }
+        }
+      }
       for (const auto &candidate : methodCandidates) {
         auto defIt = defMap_.find(candidate);
         if (defIt == defMap_.end()) {
+          if (std::string structPath = declaredDefinitionStructReturn(candidate);
+              !structPath.empty()) {
+            return structPath;
+          }
           continue;
         }
         if (!ensureDefinitionReturnKindReady(*defIt->second)) {
@@ -403,41 +446,115 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
       return inferStructReturnPath(*valueExpr, params, locals);
     }
 
-    const std::string resolvedDirectPath = resolveStructReturnCallTarget(expr);
-    auto directDefIt = defMap_.find(resolvedDirectPath);
-    if (directDefIt != defMap_.end() && directDefIt->second != nullptr) {
-      for (const auto &transform : directDefIt->second->transforms) {
-        if (transform.name != "return" || transform.templateArgs.size() != 1) {
-          continue;
-        }
-        const std::string normalizedReturnType =
-            normalizeBindingTypeName(transform.templateArgs.front());
-        if (std::string structPath =
-                resolveInferStructTypePath(normalizedReturnType,
-                                           directDefIt->second->namespacePrefix);
-            !structPath.empty()) {
-          return structPath;
-        }
-        if (std::string collectionPath = normalizeCollectionTypePath(normalizedReturnType);
-            !collectionPath.empty()) {
-          return collectionPath;
-        }
-        const std::string unwrappedReturnType =
-            unwrapReferencePointerTypeText(normalizedReturnType);
-        if (unwrappedReturnType != normalizedReturnType) {
+    auto sourceMethodMapHelperPath = [&](const Expr &candidate) -> std::string {
+      if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
+          !candidate.sourceIsMethodCall || !candidate.namespacePrefix.empty() ||
+          candidate.name.empty() || candidate.args.empty()) {
+        return {};
+      }
+      std::string helperName = candidate.name;
+      if (!helperName.empty() && helperName.front() == '/') {
+        helperName.erase(helperName.begin());
+      }
+      if (helperName != "count" && helperName != "count_ref" &&
+          helperName != "size" &&
+          helperName != "contains" && helperName != "contains_ref" &&
+          helperName != "tryAt" && helperName != "tryAt_ref" &&
+          helperName != "at" && helperName != "at_ref" &&
+          helperName != "at_unsafe" && helperName != "at_unsafe_ref" &&
+          helperName != "insert" && helperName != "insert_ref") {
+        return {};
+      }
+      const size_t receiverIndex =
+          mapHelperReceiverIndex(candidate, builtinCollectionDispatchResolvers);
+      if (receiverIndex >= candidate.args.size()) {
+        return {};
+      }
+      std::string keyType;
+      std::string valueType;
+      const bool isMapReceiver =
+          builtinCollectionDispatchResolvers.resolveMapTarget != nullptr &&
+          builtinCollectionDispatchResolvers.resolveMapTarget(
+              candidate.args[receiverIndex], keyType, valueType);
+      keyType.clear();
+      valueType.clear();
+      const bool isExperimentalMapReceiver =
+          builtinCollectionDispatchResolvers.resolveExperimentalMapTarget != nullptr &&
+          builtinCollectionDispatchResolvers.resolveExperimentalMapTarget(
+              candidate.args[receiverIndex], keyType, valueType);
+      if (!isMapReceiver && !isExperimentalMapReceiver) {
+        return {};
+      }
+      return preferredBareMapHelperTarget(helperName);
+    };
+    auto definitionStructReturnPath = [&](const std::string &path) -> std::string {
+      auto returnStructFromDefinition = [&](const Definition &definition) -> std::string {
+        for (const auto &transform : definition.transforms) {
+          if (transform.name != "return" || transform.templateArgs.size() != 1) {
+            continue;
+          }
+          const std::string normalizedReturnType =
+              normalizeBindingTypeName(transform.templateArgs.front());
           if (std::string structPath =
-                  resolveInferStructTypePath(unwrappedReturnType,
-                                             directDefIt->second->namespacePrefix);
+                  resolveInferStructTypePath(normalizedReturnType,
+                                             definition.namespacePrefix);
               !structPath.empty()) {
             return structPath;
           }
-          if (std::string collectionPath = normalizeCollectionTypePath(unwrappedReturnType);
+          if (std::string collectionPath = normalizeCollectionTypePath(normalizedReturnType);
               !collectionPath.empty()) {
             return collectionPath;
           }
+          const std::string unwrappedReturnType =
+              unwrapReferencePointerTypeText(normalizedReturnType);
+          if (unwrappedReturnType != normalizedReturnType) {
+            if (std::string structPath =
+                    resolveInferStructTypePath(unwrappedReturnType,
+                                               definition.namespacePrefix);
+                !structPath.empty()) {
+              return structPath;
+            }
+            if (std::string collectionPath = normalizeCollectionTypePath(unwrappedReturnType);
+                !collectionPath.empty()) {
+              return collectionPath;
+            }
+          }
+          break;
         }
-        break;
+        return {};
+      };
+      if (auto defIt = defMap_.find(path);
+          defIt != defMap_.end() && defIt->second != nullptr) {
+        if (std::string structPath = returnStructFromDefinition(*defIt->second);
+            !structPath.empty()) {
+          return structPath;
+        }
       }
+      for (const Definition &definition : program_.definitions) {
+        if (definition.fullPath != path &&
+            definition.fullPath.rfind(path + "__", 0) != 0 &&
+            definition.fullPath.rfind(path + "<", 0) != 0) {
+          continue;
+        }
+        if (std::string structPath = returnStructFromDefinition(definition);
+            !structPath.empty()) {
+          return structPath;
+        }
+      }
+      return {};
+    };
+    if (const std::string sourceMapHelperPath = sourceMethodMapHelperPath(expr);
+        !sourceMapHelperPath.empty()) {
+      if (std::string structPath = definitionStructReturnPath(sourceMapHelperPath);
+          !structPath.empty()) {
+        return structPath;
+      }
+    }
+
+    const std::string resolvedDirectPath = resolveStructReturnCallTarget(expr);
+    if (std::string structPath = definitionStructReturnPath(resolvedDirectPath);
+        !structPath.empty()) {
+      return structPath;
     }
 
     if (expr.kind == Expr::Kind::Call) {
@@ -447,6 +564,9 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
             explicitRemovedCollectionMethodPath(expr.name, expr.namespacePrefix);
         const bool preservesExplicitRemovedArrayAccessMethod =
             explicitRemovedMethodPath.rfind("/array/", 0) == 0 &&
+            hasDefinitionPath(explicitRemovedMethodPath);
+        const bool preservesExplicitCanonicalVectorAccessMethod =
+            explicitRemovedMethodPath.rfind("/std/collections/vector/", 0) == 0 &&
             hasDefinitionPath(explicitRemovedMethodPath);
         size_t receiverIndex = expr.isMethodCall ? 0 : 0;
         if (!expr.isMethodCall && hasNamedArguments(expr.argNames)) {
@@ -469,7 +589,8 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
               builtinCollectionDispatchResolvers.resolveVectorTarget(expr.args[receiverIndex], elemType) ||
               builtinCollectionDispatchResolvers.resolveArrayTarget(expr.args[receiverIndex], elemType) ||
               builtinCollectionDispatchResolvers.resolveStringTarget(expr.args[receiverIndex])) {
-            if (!preservesExplicitRemovedArrayAccessMethod) {
+            if (!preservesExplicitRemovedArrayAccessMethod &&
+                !preservesExplicitCanonicalVectorAccessMethod) {
               return "";
             }
           }

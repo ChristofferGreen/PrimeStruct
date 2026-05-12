@@ -507,6 +507,14 @@ std::string normalizeCollectionHelperPath(const std::string &path) {
       normalizedPath.insert(normalizedPath.begin(), '/');
     }
   }
+  const size_t leafStart =
+      normalizedPath.find_last_of('/') == std::string::npos
+          ? 0
+          : normalizedPath.find_last_of('/') + 1;
+  const size_t generatedSuffix = normalizedPath.find("__", leafStart);
+  if (generatedSuffix != std::string::npos) {
+    normalizedPath.erase(generatedSuffix);
+  }
   return normalizedPath;
 }
 

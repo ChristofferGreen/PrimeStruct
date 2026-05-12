@@ -51,7 +51,6 @@ void SemanticsValidator::populateBuiltinCollectionDispatchStringResolver(
         return true;
       }
     }
-
     std::string builtinName;
     if (!getBuiltinArrayAccessName(target, builtinName) || target.args.size() != 2) {
       return false;

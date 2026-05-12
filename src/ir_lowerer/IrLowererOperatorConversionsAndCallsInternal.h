@@ -27,6 +27,7 @@ struct ConversionsAndCallsOperatorContext {
   std::string &error;
   const ResolveConversionsAndCallsDefinitionCallFn &resolveDefinitionCall;
   const SemanticProductTargetAdapter *semanticProductTargets = nullptr;
+  std::string currentScopePath = {};
 };
 
 bool emitConversionsAndCallsMemoryAndPointerExpr(

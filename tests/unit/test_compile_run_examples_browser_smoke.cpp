@@ -148,8 +148,10 @@ TEST_CASE("spinning cube integration artifact matrix stays valid") {
       {"loader/shared/browser_runtime_shared.js", loaderSharedDir / "browser_runtime_shared.js"},
   };
 
-  const bool hasXcrun = runCommand("xcrun --version > /dev/null 2>&1") == 0;
-  if (hasXcrun) {
+  const bool hasMetalTools =
+      runCommand("xcrun --find metal > /dev/null 2>&1") == 0 &&
+      runCommand("xcrun --find metallib > /dev/null 2>&1") == 0;
+  if (hasMetalTools) {
     const std::filesystem::path airPath = outDir / "cube.air";
     const std::filesystem::path metallibPath = outDir / "cube.metallib";
     const std::string compileMetalCmd = "xcrun metal -std=metal3.0 -c " + quoteShellArg(metalPath.string()) + " -o " +
@@ -281,7 +283,8 @@ TEST_CASE("spinning cube optional startup visual smoke checks") {
   }
 
   // Metal visual startup smoke (headless GPU where available).
-  if (runCommand("xcrun --version > /dev/null 2>&1") == 0) {
+  if (runCommand("xcrun --find metal > /dev/null 2>&1") == 0 &&
+      runCommand("xcrun --find metallib > /dev/null 2>&1") == 0) {
     const std::filesystem::path outDir =
         testScratchPath("") / "primec_spinning_cube_visual_metal";
     std::error_code ec;
@@ -310,7 +313,7 @@ TEST_CASE("spinning cube optional startup visual smoke checks") {
     CHECK(runCommand(runHostCmd) == 0);
     CHECK(readFile(hostOutPath.string()).find("frame_rendered=1") != std::string::npos);
   } else {
-    INFO("xcrun unavailable; skipping metal startup visual smoke");
+    INFO("Metal toolchain unavailable; skipping metal startup visual smoke");
   }
 
   // Browser visual smoke (headless where possible, explicit skip otherwise).

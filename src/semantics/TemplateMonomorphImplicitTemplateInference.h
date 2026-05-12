@@ -166,6 +166,194 @@ bool inferImplicitTemplateArgs(const Definition &def,
     typeTextOut = inferTemplatedFallbackTypeText(candidate);
     return !typeTextOut.empty();
   };
+  auto extractSpecializedSumTemplateArgsFromTypeText =
+      [&](std::string typeText,
+          std::string paramBaseType,
+          const std::vector<std::string> &paramNames,
+          std::vector<std::string> &templateArgsOut) {
+    templateArgsOut.clear();
+    if (paramNames.size() != 1) {
+      return false;
+    }
+    typeText = normalizeBindingTypeName(typeText);
+    paramBaseType = normalizeBindingTypeName(paramBaseType);
+    if (typeText.empty() || paramBaseType.empty()) {
+      return false;
+    }
+    if (typeText.front() != '/') {
+      typeText.insert(typeText.begin(), '/');
+    }
+    if (paramBaseType.front() != '/') {
+      paramBaseType.insert(paramBaseType.begin(), '/');
+    }
+    const size_t paramLeafStart = paramBaseType.find_last_of('/');
+    const size_t paramSearchStart =
+        paramLeafStart == std::string::npos ? 0 : paramLeafStart + 1;
+    if (const size_t generatedSuffix = paramBaseType.find("__", paramSearchStart);
+        generatedSuffix != std::string::npos) {
+      paramBaseType.erase(generatedSuffix);
+    }
+    if (typeText.rfind(paramBaseType + "__t", 0) != 0) {
+      const size_t typeLeafStart = typeText.find_last_of('/');
+      const std::string typeLeaf =
+          typeLeafStart == std::string::npos
+              ? typeText
+              : typeText.substr(typeLeafStart + 1);
+      const size_t paramLeafStartForMatch = paramBaseType.find_last_of('/');
+      const std::string paramLeaf =
+          paramLeafStartForMatch == std::string::npos
+              ? paramBaseType
+              : paramBaseType.substr(paramLeafStartForMatch + 1);
+      if (typeLeaf.rfind(paramLeaf + "__t", 0) != 0) {
+        return false;
+      }
+    }
+    auto defIt = ctx.sourceDefs.find(typeText);
+    if (defIt == ctx.sourceDefs.end() || !isSumDefinitionForMonomorphRefresh(defIt->second)) {
+      return false;
+    }
+    std::string payloadType;
+    for (const SumVariant &variant : defIt->second.sumVariants) {
+      if (!variant.hasPayload) {
+        continue;
+      }
+      std::string candidate = !variant.payloadTypeText.empty()
+                                  ? variant.payloadTypeText
+                                  : [&]() {
+                                      BindingInfo payloadBinding;
+                                      payloadBinding.typeName = variant.payloadType;
+                                      payloadBinding.typeTemplateArg =
+                                          joinTemplateArgs(variant.payloadTemplateArgs);
+                                      return bindingTypeToString(payloadBinding);
+                                    }();
+      candidate = normalizeBindingTypeName(candidate);
+      if (candidate.empty()) {
+        continue;
+      }
+      if (!payloadType.empty() && payloadType != candidate) {
+        return false;
+      }
+      payloadType = std::move(candidate);
+    }
+    if (payloadType.empty()) {
+      return false;
+    }
+    templateArgsOut.push_back(payloadType);
+    return true;
+  };
+  auto inferMethodReceiverTemplateArgs =
+      [&](std::vector<std::string> &templateArgsOut) {
+    templateArgsOut.clear();
+    if (!callExpr.isMethodCall || callExpr.args.empty() ||
+        def.parameters.empty() || def.templateArgs.empty()) {
+      return false;
+    }
+    BindingInfo receiverInfo;
+    BindingInfo receiverParamInfo;
+    if (!inferBindingTypeForMonomorph(callExpr.args.front(),
+                                      params,
+                                      locals,
+                                      allowMathBare,
+                                      ctx,
+                                      receiverInfo) ||
+        !extractExplicitBindingType(def.parameters.front(), receiverParamInfo)) {
+      return false;
+    }
+    auto leafName = [](const std::string &path) {
+      const size_t slash = path.find_last_of('/');
+      return slash == std::string::npos ? path : path.substr(slash + 1);
+    };
+    std::string receiverBase = normalizeBindingTypeName(receiverInfo.typeName);
+    std::string paramBase = normalizeBindingTypeName(receiverParamInfo.typeName);
+    if (!receiverBase.empty() && receiverBase.front() == '/') {
+      receiverBase.erase(receiverBase.begin());
+    }
+    if (!paramBase.empty() && paramBase.front() == '/') {
+      paramBase.erase(paramBase.begin());
+    }
+    const bool baseMatches =
+        receiverBase == paramBase ||
+        (!receiverBase.empty() && !paramBase.empty() &&
+         leafName(receiverBase).rfind(leafName(paramBase), 0) == 0);
+    if (!baseMatches) {
+      return false;
+    }
+    if (!receiverInfo.typeTemplateArg.empty()) {
+      std::vector<std::string> receiverTemplateArgs;
+      if (splitTopLevelTemplateArgs(receiverInfo.typeTemplateArg,
+                                    receiverTemplateArgs) &&
+          receiverTemplateArgs.size() == def.templateArgs.size()) {
+        templateArgsOut = std::move(receiverTemplateArgs);
+        return true;
+      }
+    }
+    return extractSpecializedSumTemplateArgsFromTypeText(
+        bindingTypeToString(receiverInfo),
+        receiverParamInfo.typeName,
+        def.templateArgs,
+        templateArgsOut);
+  };
+  if (callExpr.templateArgs.empty()) {
+    std::vector<std::string> receiverTemplateArgs;
+    if (inferMethodReceiverTemplateArgs(receiverTemplateArgs)) {
+      outArgs = std::move(receiverTemplateArgs);
+      return true;
+    }
+  }
+  auto inferSingleSumOwnerTemplateArgs =
+      [&](std::vector<std::string> &templateArgsOut) {
+    templateArgsOut.clear();
+    if (def.templateArgs.size() != 1) {
+      return false;
+    }
+    const size_t methodSlash = def.fullPath.find_last_of('/');
+    if (methodSlash == std::string::npos || methodSlash == 0) {
+      return false;
+    }
+    std::string ownerPath = def.fullPath.substr(0, methodSlash);
+    std::string baseOwnerPath = ownerPath;
+    const size_t ownerLeafStart = baseOwnerPath.find_last_of('/');
+    const size_t ownerSearchStart =
+        ownerLeafStart == std::string::npos ? 0 : ownerLeafStart + 1;
+    if (const size_t generatedSuffix = baseOwnerPath.find("__", ownerSearchStart);
+        generatedSuffix != std::string::npos) {
+      baseOwnerPath.erase(generatedSuffix);
+    }
+    if (ownerPath != baseOwnerPath) {
+      return extractSpecializedSumTemplateArgsFromTypeText(ownerPath,
+                                                          baseOwnerPath,
+                                                          def.templateArgs,
+                                                          templateArgsOut);
+    }
+    bool found = false;
+    for (const auto &[path, definition] : ctx.sourceDefs) {
+      (void)definition;
+      if (path.rfind(baseOwnerPath + "__t", 0) != 0) {
+        continue;
+      }
+      std::vector<std::string> candidateArgs;
+      if (!extractSpecializedSumTemplateArgsFromTypeText(path,
+                                                         baseOwnerPath,
+                                                         def.templateArgs,
+                                                         candidateArgs)) {
+        continue;
+      }
+      if (found && templateArgsOut != candidateArgs) {
+        templateArgsOut.clear();
+        return false;
+      }
+      templateArgsOut = std::move(candidateArgs);
+      found = true;
+    }
+    return found;
+  };
+  if (callExpr.templateArgs.empty()) {
+    std::vector<std::string> sumOwnerTemplateArgs;
+    if (inferSingleSumOwnerTemplateArgs(sumOwnerTemplateArgs)) {
+      outArgs = std::move(sumOwnerTemplateArgs);
+      return true;
+    }
+  }
   auto inferIndexedArgsPackElementTypeText = [&](const Expr &candidate,
                                                  std::string &elemTypeOut) {
     elemTypeOut.clear();
@@ -759,6 +947,42 @@ bool inferImplicitTemplateArgs(const Definition &def,
       return true;
     };
     if (argsToInfer.empty()) {
+      if (inferFromWrappedTemplateArgs) {
+        std::string paramBaseType = normalizeBindingTypeName(paramInfo.typeName);
+        if (!paramBaseType.empty() && paramBaseType.front() != '/') {
+          paramBaseType.insert(paramBaseType.begin(), '/');
+        }
+        std::vector<std::string> inferredSpecializedArgs;
+        bool foundSpecializedSum = false;
+        bool ambiguousSpecializedSum = false;
+        for (const auto &[path, definition] : ctx.sourceDefs) {
+          (void)definition;
+          if (path.rfind(paramBaseType + "__t", 0) != 0) {
+            continue;
+          }
+          std::vector<std::string> candidateArgs;
+          if (!extractSpecializedSumTemplateArgsFromTypeText(path,
+                                                             paramInfo.typeName,
+                                                             inferredParamNames,
+                                                             candidateArgs)) {
+            continue;
+          }
+          if (foundSpecializedSum && inferredSpecializedArgs != candidateArgs) {
+            ambiguousSpecializedSum = true;
+            break;
+          }
+          inferredSpecializedArgs = std::move(candidateArgs);
+          foundSpecializedSum = true;
+        }
+        if (foundSpecializedSum && !ambiguousSpecializedSum &&
+            inferredSpecializedArgs.size() == inferredParamNames.size()) {
+          for (size_t templateIndex = 0; templateIndex < inferredParamNames.size(); ++templateIndex) {
+            inferred[inferredParamNames[templateIndex]] =
+                inferredSpecializedArgs[templateIndex];
+          }
+          continue;
+        }
+      }
       if (isStdlibCollectionHelper && allInferredParamNamesKnown(inferredParamNames)) {
         continue;
       }
@@ -880,7 +1104,11 @@ bool inferImplicitTemplateArgs(const Definition &def,
           if (!extractExperimentalVectorValueReceiverTemplateArgsFromTypeText(argBaseType, ctx, argTemplateArgs) &&
               !extractExperimentalSoaVectorValueReceiverTemplateArgsFromTypeText(
                   argBaseType, ctx, argTemplateArgs) &&
-              !extractExperimentalMapValueReceiverTemplateArgsFromTypeText(argBaseType, ctx, argTemplateArgs)) {
+              !extractExperimentalMapValueReceiverTemplateArgsFromTypeText(argBaseType, ctx, argTemplateArgs) &&
+              !extractSpecializedSumTemplateArgsFromTypeText(argBaseType,
+                                                             paramBaseType,
+                                                             inferredParamNames,
+                                                             argTemplateArgs)) {
             if (isStdlibCollectionHelper) {
               return false;
             }

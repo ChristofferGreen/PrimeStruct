@@ -1249,6 +1249,10 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
   if (isExplicitVectorCountMethodCall(expr)) {
     return CountAccessCallEmitResult::NotHandled;
   }
+  if (expr.kind == Expr::Kind::Call && !expr.isMethodCall &&
+      normalizeUnrootedHelperPath(resolveScopedCallPath(expr)) == "map/count") {
+    return CountAccessCallEmitResult::NotHandled;
+  }
   const bool explicitPublishedVectorCountCall =
       isExplicitPublishedVectorMetadataCall(expr, "count");
   const bool namedArgVectorTemporaryCountCall =

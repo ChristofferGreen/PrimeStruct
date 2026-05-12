@@ -180,6 +180,11 @@ bool SemanticsValidator::hasImportedDefinitionPath(const std::string &path) cons
           canonicalPath.rfind(importPath + "/", 0) == 0) {
         return true;
       }
+      if ((importPath == "/std/collections/internal_vector" ||
+           importPath == "/std/collections/internal_vector/*") &&
+          canonicalPath.rfind("/std/collections/vector/", 0) == 0) {
+        return true;
+      }
       if (importPath == "/std/collections/map" &&
           canonicalPath.rfind(importPath + "/", 0) == 0) {
         return true;
@@ -650,6 +655,9 @@ std::string SemanticsValidator::directMapHelperCompatibilityPath(
       candidate.args.empty()) {
     return "";
   }
+  if (explicitPath.rfind("/map/", 0) == 0) {
+    return removedPath;
+  }
   auto canonicalAccessHelperReturnsStruct = [&]() {
     if (helperName != "at" && helperName != "at_unsafe" &&
         helperName != "at_ref" && helperName != "at_unsafe_ref") {
@@ -703,6 +711,27 @@ std::string SemanticsValidator::directMapHelperCompatibilityPath(
 
 std::string SemanticsValidator::explicitRemovedCollectionMethodPath(std::string_view rawMethodName,
                                                                     std::string_view namespacePrefix) const {
+  std::string rawName = std::string(trimLeadingSlash(rawMethodName));
+  std::string rawNamespace = std::string(trimLeadingSlash(namespacePrefix));
+  auto declaredRootVectorAliasPath = [&]() -> std::string {
+    std::string_view helperName = rawName;
+    if (rawNamespace == "vector") {
+      helperName = rawName;
+    } else if (rawNamespace.empty() && helperName.rfind("vector/", 0) == 0) {
+      helperName.remove_prefix(std::string_view("vector/").size());
+    } else {
+      return "";
+    }
+    if (!isRemovedPublishedVectorStatementHelperName(helperName)) {
+      return "";
+    }
+    std::string aliasPath = "/vector/" + std::string(helperName);
+    return hasDefinitionPath(aliasPath) ? aliasPath : "";
+  };
+  if (std::string aliasPath = declaredRootVectorAliasPath(); !aliasPath.empty()) {
+    return aliasPath;
+  }
+
   RemovedCollectionHelperFamily family = RemovedCollectionHelperFamily::VectorLike;
   std::string_view helperName;
   bool preserveArrayPath = false;
@@ -811,6 +840,7 @@ bool SemanticsValidator::getVectorStatementHelperName(const Expr &candidate,
   }
   constexpr std::string_view kCanonicalVectorPrefix = "/std/collections/vector/";
   if (removedPath.rfind(kCanonicalVectorPrefix, 0) != 0 &&
+      !isRootedVectorHelperPath(removedPath) &&
       removedPath.rfind("/array/", 0) != 0) {
     return false;
   }

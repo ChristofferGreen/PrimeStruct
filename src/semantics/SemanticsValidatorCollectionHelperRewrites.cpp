@@ -220,6 +220,10 @@ std::string SemanticsValidator::preferredBareVectorHelperTarget(std::string_view
   const std::string canonical = canonicalCollectionHelperPath(
       StdlibSurfaceId::CollectionsVectorHelpers, helperName);
   if (isRemovedPublishedVectorStatementHelperName(helperName)) {
+    const std::string samePath = rootedVectorHelperPath(helperName);
+    if (hasVisibleVectorHelperFamily(samePath)) {
+      return samePath;
+    }
     return canonical;
   }
   if (helperName == "at" || helperName == "at_unsafe") {

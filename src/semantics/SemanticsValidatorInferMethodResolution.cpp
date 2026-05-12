@@ -717,6 +717,16 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       resolvedOut = joinMethodTarget(resolvedType, normalizedMethodName);
       return true;
     }
+    if (receiver.isMethodCall) {
+      resolvedType = inferStructReturnPath(receiver, params, locals);
+      if (!resolvedType.empty() && structNames_.count(resolvedType) > 0) {
+        if (redirectConcreteExperimentalSoaMethodTarget(resolvedType)) {
+          return true;
+        }
+        resolvedOut = joinMethodTarget(resolvedType, normalizedMethodName);
+        return true;
+      }
+    }
     std::string receiverCollectionTypePath;
     if (resolveCallCollectionTypePath(receiver, params, locals, receiverCollectionTypePath) &&
         resolveCollectionMethodFromTypePath(receiverCollectionTypePath)) {
@@ -742,6 +752,13 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         return true;
       }
       if (isPrimitiveBindingTypeName(normalizedReceiverType)) {
+        const std::string inferredStructPath =
+            inferStructReturnPath(receiver, params, locals);
+        if (!inferredStructPath.empty() &&
+            structNames_.count(inferredStructPath) > 0) {
+          resolvedOut = joinMethodTarget(inferredStructPath, normalizedMethodName);
+          return true;
+        }
         resolvedOut = joinMethodTarget(rootedPathFragment(normalizedReceiverType), normalizedMethodName);
         return true;
       }

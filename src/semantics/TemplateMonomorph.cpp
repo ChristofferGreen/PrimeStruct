@@ -34,6 +34,8 @@ struct TemplateRootInfo {
 struct HelperOverloadEntry {
   std::string internalPath;
   size_t parameterCount = 0;
+  size_t variadicMinArgumentCount = 0;
+  bool isVariadic = false;
 };
 
 struct GenericTypeOverloadEntry {
@@ -84,6 +86,19 @@ struct Context {
 };
 
 using LocalTypeMap = std::unordered_map<std::string, BindingInfo>;
+
+bool isArgsPackParameterExpr(const Expr &param) {
+  for (const Transform &transform : param.transforms) {
+    if (transform.name == "args" && transform.templateArgs.size() == 1) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool definitionHasVariadicParameter(const Definition &def) {
+  return !def.parameters.empty() && isArgsPackParameterExpr(def.parameters.back());
+}
 
 ResolvedType resolveTypeString(std::string input,
                                const SubstMap &mapping,

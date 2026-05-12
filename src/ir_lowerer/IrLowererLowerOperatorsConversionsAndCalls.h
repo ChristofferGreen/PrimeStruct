@@ -48,7 +48,8 @@
 	                handledConversionsAndCalls,
 	                error,
 		                [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
-		                &callResolutionAdapters.semanticProductTargets)) {
+		                &callResolutionAdapters.semanticProductTargets,
+                    activeInlineContext != nullptr ? activeInlineContext->defPath : function.name)) {
           return false;
         }
         if (handledConversionsAndCalls) {

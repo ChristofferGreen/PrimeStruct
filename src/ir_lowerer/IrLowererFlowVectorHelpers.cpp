@@ -276,11 +276,7 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
   const bool targetIsSoaVector =
       callUsesSoaVectorHelper ||
       isSoaVectorStatementTarget(target, localsIn, inferStructExprPath);
-  if (targetIsSoaVector && vectorHelper == "push" && callStmt.args.size() == 2 &&
-      !inferStructExprPath(callStmt.args[1], localsIn).empty()) {
-    return VectorStatementHelperEmitResult::NotMatched;
-  }
-  if (targetIsSoaVector && vectorHelper != "push" && vectorHelper != "reserve") {
+  if (targetIsSoaVector) {
     return VectorStatementHelperEmitResult::NotMatched;
   }
   const uint64_t countOffsetBytes = targetIsSoaVector ? 2 * IrSlotBytes : 0;

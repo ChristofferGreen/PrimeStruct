@@ -197,6 +197,17 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
   auto failStatementDiagnostic = [&](std::string message) -> bool {
     return failExprDiagnostic(stmt, std::move(message));
   };
+  auto isMaybeBindingType = [](const BindingInfo &binding) {
+    std::string typeName = normalizeBindingTypeName(binding.typeName);
+    const size_t leafStart = typeName.find_last_of('/');
+    if (leafStart != std::string::npos) {
+      typeName = typeName.substr(leafStart + 1);
+    }
+    if (const size_t suffix = typeName.find("__"); suffix != std::string::npos) {
+      typeName.erase(suffix);
+    }
+    return typeName == "Maybe";
+  };
   auto publishExistingStatementDiagnostic = [&]() -> bool {
     if (error_.empty()) {
       return false;
@@ -220,6 +231,16 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     }
     return nullptr;
   };
+  if (stmt.isMethodCall && stmt.name == "clear" && !stmt.args.empty() &&
+      stmt.args.front().kind == Expr::Kind::Name) {
+    if (const BindingInfo *receiverBinding =
+            resolveNamedBinding(stmt.args.front().name);
+        receiverBinding != nullptr && isMaybeBindingType(*receiverBinding)) {
+      return failStatementDiagnostic(
+          "sum-backed Maybe<T> has no mutable helper clear; "
+          "use Maybe<T>{} or none<T>() instead");
+    }
+  }
   auto isSoaFieldViewBindingType = [&](const BindingInfo &binding) -> bool {
     std::string normalized = normalizeBindingTypeName(binding.typeName);
     if (normalized.empty()) {

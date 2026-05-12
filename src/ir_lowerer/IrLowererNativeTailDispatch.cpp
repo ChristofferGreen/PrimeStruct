@@ -32,14 +32,6 @@ std::string resolveNativeTailCallPathWithoutFallbackProbes(const Expr &expr) {
   return expr.name;
 }
 
-std::string stdCollectionsRoot() {
-  return "/std/collections";
-}
-
-std::string experimentalCollectionMemberRoot(std::string_view collectionName) {
-  return stdCollectionsRoot() + "/experimental_" + std::string(collectionName) + "/";
-}
-
 const StdlibSurfaceMetadata *nativeTailVectorHelperMetadata() {
   return findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
 }
@@ -160,21 +152,6 @@ bool isDirectExperimentalMapAccessImplementationCall(
          (helperName == "at" || helperName == "at_unsafe");
 }
 
-bool isDirectExperimentalVectorAccessImplementationCall(
-    const SemanticProgram *semanticProgram,
-    const Expr &expr) {
-  if (expr.isMethodCall || expr.kind != Expr::Kind::Call) {
-    return false;
-  }
-  const std::string rawPath = resolveNativeTailCallPathWithoutFallbackProbes(expr);
-  if (rawPath.rfind(experimentalCollectionMemberRoot("vector"), 0) != 0) {
-    return false;
-  }
-  std::string helperName;
-  return resolvePublishedNativeTailVectorHelperName(semanticProgram, expr, helperName) &&
-         (helperName == "at" || helperName == "at_unsafe");
-}
-
 bool hasSemanticMapAccessHelperDefinition(const SemanticProgram *semanticProgram,
                                           std::string_view accessName) {
   if (semanticProgram == nullptr ||
@@ -214,6 +191,39 @@ bool hasSemanticMapAccessHelperDefinition(const SemanticProgram *semanticProgram
     }
   }
   return false;
+}
+
+bool semanticMapAccessHelperKeepsBuiltinReturn(
+    const SemanticProgram *semanticProgram,
+    std::string_view helperPath) {
+  if (semanticProgram == nullptr || helperPath.empty()) {
+    return true;
+  }
+  const auto pathId =
+      semanticProgramLookupCallTargetStringId(*semanticProgram, helperPath);
+  if (!pathId.has_value()) {
+    return true;
+  }
+  const SemanticProgramReturnFact *returnFact =
+      semanticProgramLookupPublishedReturnFactByDefinitionPathId(
+          *semanticProgram, *pathId);
+  if (returnFact == nullptr) {
+    return true;
+  }
+  std::string structPath =
+      returnFact->structPathId != InvalidSymbolId
+          ? std::string(semanticProgramResolveCallTargetString(
+                *semanticProgram, returnFact->structPathId))
+          : returnFact->structPath;
+  structPath = trimTemplateTypeText(structPath);
+  if (!structPath.empty() && structPath.front() == '/') {
+    structPath.erase(structPath.begin());
+  }
+  if (structPath.empty()) {
+    return true;
+  }
+  return structPath == "map" || structPath == "vector" ||
+         structPath == "array" || structPath == "string";
 }
 
 } // namespace
@@ -704,11 +714,12 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
         (isCanonicalPublishedNativeTailVectorHelperPath(directHelperPath) ||
          semanticDirectCallMatchesVectorHelperSurface(semanticProgram, expr)) &&
         (explicitHelperName == "at" || explicitHelperName == "at_unsafe");
-    const bool isExperimentalVectorAccessImplementationCall =
-        isDirectExperimentalVectorAccessImplementationCall(semanticProgram, expr);
-    if (isExplicitVectorAccessCall && arrayVectorTargetInfo.isVectorTarget &&
-        explicitHelperName == "at_unsafe" &&
-        !isExperimentalVectorAccessImplementationCall) {
+    const bool isExperimentalVectorAtUnsafeImplementationCall =
+        !expr.isMethodCall &&
+        directHelperPath.rfind("/std/collections/experimental_vector/vectorAtUnsafe", 0) == 0;
+    if (((isExplicitVectorAccessCall && explicitHelperName == "at_unsafe") ||
+         isExperimentalVectorAtUnsafeImplementationCall) &&
+        arrayVectorTargetInfo.isVectorTarget) {
       return NativeCallTailDispatchResult::NotHandled;
     }
     if ((isExplicitDirectSoaAccessCall(expr) ||
@@ -727,6 +738,26 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
         (explicitHelperName == "at" || explicitHelperName == "at_ref" ||
          explicitHelperName == "at_unsafe" ||
          explicitHelperName == "at_unsafe_ref");
+    const bool isExplicitMapAccessMethodCall =
+        expr.isMethodCall &&
+        resolvePublishedNativeTailHelperName(
+            semanticProgram,
+            expr,
+            StdlibSurfaceId::CollectionsMapHelpers,
+            explicitHelperName) &&
+        (explicitHelperName == "at" || explicitHelperName == "at_ref" ||
+         explicitHelperName == "at_unsafe" ||
+         explicitHelperName == "at_unsafe_ref");
+    const std::string explicitMapAccessMethodPath =
+        (directHelperPath.rfind("/std/collections/map/", 0) == 0 ||
+         directHelperPath.rfind("std/collections/map/", 0) == 0)
+            ? directHelperPath
+            : "/std/collections/map/" + explicitHelperName;
+    if (isExplicitMapAccessMethodCall &&
+        !semanticMapAccessHelperKeepsBuiltinReturn(semanticProgram,
+                                                   explicitMapAccessMethodPath)) {
+      return NativeCallTailDispatchResult::NotHandled;
+    }
     const auto isMapArgsPackAccessReceiver = [&](const Expr &receiver) {
       const auto isMapArgsPackAccessReceiverImpl =
           [&](const Expr &candidate, const auto &self) -> bool {

@@ -769,6 +769,47 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       return true;
     }
     const std::string canonicalResolvedCandidate = canonicalizeResolvedPath(resolvedCandidate);
+    auto sourceMethodMapResolvedCandidate = [&]() -> std::string {
+      if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
+          !candidate.sourceIsMethodCall || !candidate.namespacePrefix.empty() ||
+          candidate.name.empty() || candidate.args.empty()) {
+        return {};
+      }
+      std::string helperName = candidate.name;
+      if (!helperName.empty() && helperName.front() == '/') {
+        helperName.erase(helperName.begin());
+      }
+      if (helperName != "count" && helperName != "count_ref" &&
+          helperName != "size" &&
+          helperName != "contains" && helperName != "contains_ref" &&
+          helperName != "tryAt" && helperName != "tryAt_ref" &&
+          helperName != "at" && helperName != "at_ref" &&
+          helperName != "at_unsafe" && helperName != "at_unsafe_ref" &&
+          helperName != "insert" && helperName != "insert_ref") {
+        return {};
+      }
+      const size_t receiverIndex =
+          mapHelperReceiverIndex(candidate, builtinCollectionDispatchResolvers);
+      if (receiverIndex >= candidate.args.size()) {
+        return {};
+      }
+      std::string keyType;
+      std::string valueType;
+      const bool isMapReceiver =
+          builtinCollectionDispatchResolvers.resolveMapTarget != nullptr &&
+          builtinCollectionDispatchResolvers.resolveMapTarget(
+              candidate.args[receiverIndex], keyType, valueType);
+      keyType.clear();
+      valueType.clear();
+      const bool isExperimentalMapReceiver =
+          builtinCollectionDispatchResolvers.resolveExperimentalMapTarget != nullptr &&
+          builtinCollectionDispatchResolvers.resolveExperimentalMapTarget(
+              candidate.args[receiverIndex], keyType, valueType);
+      if (!isMapReceiver && !isExperimentalMapReceiver) {
+        return {};
+      }
+      return preferredBareMapHelperTarget(helperName);
+    };
     if (canonicalResolvedCandidate == "/vector" &&
         !hasDirectExperimentalVectorImport() &&
         candidate.templateArgs.size() == 1) {
@@ -1006,6 +1047,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
     };
     appendResolvedCandidate(resolvedCandidate);
     appendResolvedCandidate(canonicalResolvedCandidate);
+    appendResolvedCandidate(sourceMethodMapResolvedCandidate());
     appendResolvedCandidate(preferredResolvedCandidate());
     appendResolvedCandidate(resolvedMethodTargetCandidate());
     appendResolvedCandidate(methodResolvedCandidate());
@@ -1013,12 +1055,24 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
     std::string resolvedDefinitionPath;
     for (const auto &candidatePath : resolvedCandidates) {
       auto defIt = defMap_.find(candidatePath);
-      if (defIt == defMap_.end() || defIt->second == nullptr) {
-        continue;
+      if (defIt != defMap_.end() && defIt->second != nullptr) {
+        resolvedDefinition = defIt->second;
+        resolvedDefinitionPath = candidatePath;
+        break;
       }
-      resolvedDefinition = defIt->second;
-      resolvedDefinitionPath = candidatePath;
-      break;
+      for (const Definition &definition : program_.definitions) {
+        if (definition.fullPath != candidatePath &&
+            definition.fullPath.rfind(candidatePath + "__", 0) != 0 &&
+            definition.fullPath.rfind(candidatePath + "<", 0) != 0) {
+          continue;
+        }
+        resolvedDefinition = &definition;
+        resolvedDefinitionPath = definition.fullPath;
+        break;
+      }
+      if (resolvedDefinition != nullptr) {
+        break;
+      }
     }
     if (resolvedDefinition == nullptr) {
       if (!inferredMethodReturnTypeText.empty()) {

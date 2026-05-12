@@ -23,7 +23,7 @@ main() {
   CHECK(runCommand(runCmd) == 0);
 }
 
-TEST_CASE("runs vm with stdlib collection shim vector single bool tail") {
+TEST_CASE("rejects vm stdlib collection shim vector single type mismatch") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -35,7 +35,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_single_bool_tail.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 1);
+  CHECK(runCommand(runCmd) == 2);
 }
 
 TEST_CASE("runs vm with stdlib collection shim vector pair") {
@@ -53,7 +53,7 @@ main() {
   CHECK(runCommand(runCmd) == 26);
 }
 
-TEST_CASE("runs vm with stdlib collection shim vector pair bool tail") {
+TEST_CASE("rejects vm stdlib collection shim vector pair type mismatch") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -83,7 +83,7 @@ main() {
   CHECK(runCommand(runCmd) == 43);
 }
 
-TEST_CASE("runs vm with stdlib collection shim vector triple bool tail") {
+TEST_CASE("rejects vm stdlib collection shim vector triple type mismatch") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -95,7 +95,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_triple_bool_tail.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 3);
+  CHECK(runCommand(runCmd) == 2);
 }
 
 TEST_CASE("runs vm with stdlib collection shim vector quad") {
@@ -113,7 +113,7 @@ main() {
   CHECK(runCommand(runCmd) == 19);
 }
 
-TEST_CASE("runs vm with stdlib collection shim vector quad bool tail") {
+TEST_CASE("rejects vm stdlib collection shim vector quad type mismatch") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -125,7 +125,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_quad_bool_tail.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 4);
+  CHECK(runCommand(runCmd) == 2);
 }
 
 TEST_CASE("runs vm with stdlib collection shim map single") {

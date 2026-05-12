@@ -278,11 +278,25 @@ bool keepsBuiltinInlineReturnForPublishedMapHelper(std::string_view helperName,
   if (!inferReceiverTypeFromDeclaredReturn(callee, declaredReturnType)) {
     return true;
   }
+  declaredReturnType = trimTemplateTypeText(declaredReturnType);
+  if (!declaredReturnType.empty() && declaredReturnType.front() == '/') {
+    declaredReturnType.erase(declaredReturnType.begin());
+  }
   if (helperName == "contains" || helperName == "contains_ref") {
     return declaredReturnType == "bool";
   }
   if (helperName == "tryAt" || helperName == "tryAt_ref") {
     return declaredReturnType == "Result";
+  }
+  if (helperName == "at" || helperName == "at_ref" ||
+      helperName == "at_unsafe" || helperName == "at_unsafe_ref") {
+    return declaredReturnType == "bool" || declaredReturnType == "int" ||
+           declaredReturnType == "i8" || declaredReturnType == "i16" ||
+           declaredReturnType == "i32" || declaredReturnType == "i64" ||
+           declaredReturnType == "u8" || declaredReturnType == "u16" ||
+           declaredReturnType == "u32" || declaredReturnType == "u64" ||
+           declaredReturnType == "float" || declaredReturnType == "f32" ||
+           declaredReturnType == "f64" || declaredReturnType == "string";
   }
   return true;
 }
@@ -730,6 +744,31 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
         if (const Definition *preferredCallee =
                 resolveDefinitionCall(canonicalExpr)) {
           directCallee = preferredCallee;
+        }
+      }
+    }
+    if (directCallee != nullptr) {
+      std::string directVectorHelperName;
+      if (expr.args.size() == 2 &&
+          resolveVectorHelperAliasName(expr, directVectorHelperName) &&
+          (directVectorHelperName == "at" ||
+           directVectorHelperName == "at_unsafe")) {
+        Expr methodExpr = expr;
+        methodExpr.isMethodCall = true;
+        methodExpr.isFieldAccess = false;
+        methodExpr.semanticNodeId = 0;
+        methodExpr.namespacePrefix.clear();
+        methodExpr.name = directVectorHelperName;
+        if (const Definition *methodCallee =
+                resolveMethodCallDefinition(methodExpr)) {
+          const auto emitResult = emitResolvedInlineDefinitionCall(
+              methodExpr, methodCallee, emitInlineDefinitionCall, error);
+          if (emitResult == ResolvedInlineCallResult::Emitted) {
+            return InlineCallDispatchResult::Emitted;
+          }
+          if (emitResult == ResolvedInlineCallResult::Error) {
+            return InlineCallDispatchResult::Error;
+          }
         }
       }
     }
@@ -1495,7 +1534,21 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
           (directHelperName == "count" || directHelperName == "contains" ||
            directHelperName == "tryAt" || directHelperName == "at" ||
            directHelperName == "at_unsafe")) {
-        return InlineCallDispatchResult::NotHandled;
+        bool preserveBuiltinMapHelper = true;
+        if (directHelperName == "count") {
+          preserveBuiltinMapHelper = expr.args.size() == 1;
+        } else if (directHelperName == "contains" ||
+                   directHelperName == "tryAt") {
+          if (const Definition *callee = resolveDefinitionCallFn(expr);
+              callee != nullptr) {
+            preserveBuiltinMapHelper =
+                keepsBuiltinInlineReturnForPublishedMapHelper(directHelperName,
+                                                              *callee);
+          }
+        }
+        if (preserveBuiltinMapHelper) {
+          return InlineCallDispatchResult::NotHandled;
+        }
       }
       if (!targetInfo.isMapTarget && expr.args.size() >= 2 &&
           (directHelperName == "contains" || directHelperName == "tryAt" ||
@@ -1590,7 +1643,9 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
            isVectorBuiltinName(callExpr, "reserve") ||
            isVectorBuiltinName(callExpr, "clear") ||
            isVectorBuiltinName(callExpr, "remove_at") ||
-           isVectorBuiltinName(callExpr, "remove_swap");
+           isVectorBuiltinName(callExpr, "remove_swap") ||
+           isVectorBuiltinName(callExpr, "at") ||
+           isVectorBuiltinName(callExpr, "at_unsafe");
   };
   auto tryEmitVectorMutatorCallFormExpr = [&]() {
     const bool isVectorMutatorCall = isVectorMutatorCallName(expr);

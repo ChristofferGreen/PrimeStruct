@@ -336,8 +336,11 @@ bool isCoreBuiltinCountTargetPath(std::string_view path) {
 bool isQueryOwnedBuiltinCountTargetMatch(std::string_view queryCallName,
                                          std::string_view queryResolvedPath,
                                          std::string_view publishedTargetPath) {
-  return queryCallName == "count" && isRootBuiltinCountQueryPath(queryResolvedPath) &&
-         isCoreBuiltinCountTargetPath(publishedTargetPath);
+  return queryCallName == "count" &&
+         ((isRootBuiltinCountQueryPath(queryResolvedPath) &&
+           isCoreBuiltinCountTargetPath(publishedTargetPath)) ||
+          (isCoreBuiltinCountTargetPath(queryResolvedPath) &&
+           isRootBuiltinCountQueryPath(publishedTargetPath)));
 }
 
 std::vector<const SemanticProgramReturnFact *>

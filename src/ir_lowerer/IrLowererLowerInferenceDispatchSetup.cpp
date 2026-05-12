@@ -1118,6 +1118,108 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
           return getNamespacedCollectionHelperName(candidate, collectionName, helperName) && helperName == "count";
         };
 
+        std::string accessNameForCanonicalMapOverride;
+        if (getBuiltinArrayAccessName(expr, accessNameForCanonicalMapOverride) &&
+            expr.args.size() == 2 &&
+            (accessNameForCanonicalMapOverride == "at" ||
+             accessNameForCanonicalMapOverride == "at_unsafe")) {
+          LocalInfo::ValueKind mapValueKind = LocalInfo::ValueKind::Unknown;
+          ReturnInfo accessReturnInfo;
+          auto resolveAccessReceiverMapValueKind =
+              [&](const Expr &receiverExpr,
+                  LocalInfo::ValueKind &receiverMapValueKindOut) {
+                receiverMapValueKindOut = LocalInfo::ValueKind::Unknown;
+                std::string semanticReceiverTypeText;
+                LocalInfo::ValueKind semanticMapKeyKind =
+                    LocalInfo::ValueKind::Unknown;
+                LocalInfo::ValueKind semanticMapValueKind =
+                    LocalInfo::ValueKind::Unknown;
+                if (resolveDispatchSetupSemanticReceiverTypeText(
+                        receiverExpr,
+                        semanticProgram,
+                        semanticIndex,
+                        semanticReceiverTypeText) &&
+                    inferDispatchSetupMapKindsFromTypeText(
+                        semanticReceiverTypeText,
+                        semanticMapKeyKind,
+                        semanticMapValueKind)) {
+                  receiverMapValueKindOut = semanticMapValueKind;
+                  return receiverMapValueKindOut !=
+                         LocalInfo::ValueKind::Unknown;
+                }
+                if (receiverExpr.kind == Expr::Kind::Name) {
+                  auto localIt = localsIn.find(receiverExpr.name);
+                  if (localIt != localsIn.end() &&
+                      (localIt->second.kind == LocalInfo::Kind::Map ||
+                       ((localIt->second.kind == LocalInfo::Kind::Reference ||
+                         localIt->second.kind == LocalInfo::Kind::Pointer) &&
+                        (localIt->second.referenceToMap ||
+                         localIt->second.pointerToMap)))) {
+                    receiverMapValueKindOut = localIt->second.mapValueKind;
+                    return receiverMapValueKindOut !=
+                           LocalInfo::ValueKind::Unknown;
+                  }
+                }
+                if (receiverExpr.kind == Expr::Kind::Call &&
+                    stateInOut.getReturnInfo && resolveExprPath) {
+                  ReturnInfo receiverReturnInfo;
+                  if (stateInOut.getReturnInfo(resolveExprPath(receiverExpr),
+                                               receiverReturnInfo) &&
+                      receiverReturnInfo.returnsArray) {
+                    receiverMapValueKindOut = receiverReturnInfo.kind;
+                    return receiverMapValueKindOut !=
+                           LocalInfo::ValueKind::Unknown;
+                  }
+                }
+                return false;
+              };
+          auto semanticCallableReturnsString = [&](const std::string &path) {
+            if (semanticProgram == nullptr) {
+              return false;
+            }
+            const auto *summary =
+                findSemanticProductCallableSummary(semanticProgram, path);
+            if (summary == nullptr) {
+              return false;
+            }
+            std::string returnKind = summary->returnKind;
+            if (summary->returnKindId != InvalidSymbolId) {
+              const std::string resolvedReturnKind =
+                  std::string(semanticProgramResolveCallTargetString(
+                      *semanticProgram, summary->returnKindId));
+              if (!resolvedReturnKind.empty()) {
+                returnKind = resolvedReturnKind;
+              }
+            }
+            return trimTemplateTypeText(returnKind) == "string";
+          };
+          if (resolveAccessReceiverMapValueKind(expr.args.front(),
+                                                mapValueKind) &&
+              mapValueKind != LocalInfo::ValueKind::String &&
+              ((stateInOut.getReturnInfo &&
+                stateInOut.getReturnInfo(
+                    "/std/collections/map/" + accessNameForCanonicalMapOverride,
+                    accessReturnInfo) &&
+                !accessReturnInfo.returnsVoid &&
+                !accessReturnInfo.returnsArray &&
+                accessReturnInfo.kind == LocalInfo::ValueKind::String) ||
+               semanticCallableReturnsString(
+                   "/std/collections/map/" +
+                   accessNameForCanonicalMapOverride))) {
+            return LocalInfo::ValueKind::String;
+          }
+        }
+
+        std::string semanticExprTypeText;
+        if (resolveDispatchSetupSemanticReceiverTypeText(
+                expr, semanticProgram, semanticIndex, semanticExprTypeText)) {
+          const LocalInfo::ValueKind semanticExprKind =
+              valueKindFromTypeName(semanticExprTypeText);
+          if (semanticExprKind != LocalInfo::ValueKind::Unknown) {
+            return semanticExprKind;
+          }
+        }
+
         LocalInfo::ValueKind semanticBindingKind = LocalInfo::ValueKind::Unknown;
         if (inferDispatchSetupSemanticBindingFactKind(
                 expr, semanticProgram, semanticIndex, semanticBindingKind)) {

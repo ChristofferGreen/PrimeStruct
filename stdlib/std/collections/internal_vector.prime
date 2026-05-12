@@ -420,7 +420,7 @@ namespace std {
   namespace internal_vector {
   [public effects(heap_alloc), return</std/collections/experimental_vector/Vector<T>>]
   vector<T>([args<T>] values) {
-    return(/std/collections/experimental_vector/vector<T>(values))
+    return(/std/collections/experimental_vector/vector<T>([spread] values))
   }
 
   [public effects(heap_alloc), return</std/collections/experimental_vector/Vector<T>>]
@@ -486,6 +486,11 @@ namespace std {
   [public return<T>]
   vectorAtUnsafe<T>([/std/collections/experimental_vector/Vector<T>] values, [i32] index) {
     return(/std/collections/experimental_vector/vectorAtUnsafe<T>(values, index))
+  }
+
+  [public return<Reference<T>>]
+  vectorBorrowSlot<T>([/std/collections/experimental_vector/Vector<T>] values, [i32] index) {
+    return(/std/collections/experimental_vector/vectorBorrowSlot<T>(values, index))
   }
   }
   }

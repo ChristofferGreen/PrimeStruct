@@ -494,7 +494,7 @@ TEST_CASE("stdlib style boundary docs stay source locked") {
   CHECK(primeStructDoc.find("`stdlib/std/gfx/experimental.prime`") != std::string::npos);
   CHECK(primeStructDoc.find("`stdlib/std/collections` and `stdlib/std/gfx`") != std::string::npos);
 
-  CHECK(agents.find("For stdlib style work, treat `stdlib/std/math`, `maybe`, `file`, `image`,") !=
+  CHECK(agents.find("For stdlib style work, follow the exact file-level boundary in") !=
         std::string::npos);
   CHECK(agents.find("`stdlib/std/collections/collections.prime`,") != std::string::npos);
   CHECK(agents.find("`stdlib/std/collections/experimental_vector.prime`,") != std::string::npos);
@@ -630,9 +630,9 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("no `experimental` namespace counts as canonical public API") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("| `/std/collections/internal_vector/*` | Internal substrate/helper namespace | Internal vector backing adapter used by canonical `/std/collections/vector/*`; it preserves the current compatibility `Vector<T>` type identity until the final vector surface audit. | TODO-4297 |") !=
+  CHECK(primeStructDoc.find("| `/std/collections/internal_vector/*` | Internal substrate/helper namespace | Internal vector backing adapter used by canonical `/std/collections/vector/*`; it preserves the current compatibility `Vector<T>` type identity until the final vector surface audit. | TODO-4373 |") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("| `/std/collections/experimental_vector/*` | Rejected compatibility namespace | Direct source imports are rejected; the shim remains only as legacy forwarding storage identity behind `/std/collections/internal_vector/*` until the final vector surface audit. | TODO-4297 |") !=
+  CHECK(primeStructDoc.find("| `/std/collections/experimental_vector/*` | Rejected compatibility namespace | Direct source imports are rejected; the shim remains only as legacy forwarding storage identity behind `/std/collections/internal_vector/*` until the final vector surface audit. | TODO-4373 |") !=
         std::string::npos);
   CHECK(primeStructDoc.find("| `/std/collections/experimental_map/*` | Internal substrate/helper namespace | Internal implementation module behind the canonical `/std/collections/map/*` public contract; direct imports remain only for targeted compatibility or conformance coverage. | none |") !=
         std::string::npos);

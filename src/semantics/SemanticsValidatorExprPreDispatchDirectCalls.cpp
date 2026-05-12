@@ -320,6 +320,49 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
   }
 
   const auto &dispatchBootstrap = *context.dispatchBootstrap;
+  auto sourceMethodMapHelperName = [](const Expr &candidate) -> std::string {
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
+        !candidate.sourceIsMethodCall || !candidate.namespacePrefix.empty() ||
+        candidate.name.empty()) {
+      return {};
+    }
+    std::string helperName = candidate.name;
+    if (!helperName.empty() && helperName.front() == '/') {
+      helperName.erase(helperName.begin());
+    }
+    if (helperName == "count" || helperName == "count_ref" ||
+        helperName == "size" ||
+        helperName == "contains" || helperName == "contains_ref" ||
+        helperName == "tryAt" || helperName == "tryAt_ref" ||
+        helperName == "at" || helperName == "at_ref" ||
+        helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
+        helperName == "insert" || helperName == "insert_ref") {
+      return helperName;
+    }
+    return {};
+  };
+  if (const std::string helperName = sourceMethodMapHelperName(expr);
+      !helperName.empty() && !expr.args.empty()) {
+    const size_t receiverIndex =
+        this->mapHelperReceiverIndex(expr, dispatchBootstrap.dispatchResolvers);
+    if (receiverIndex < expr.args.size()) {
+      std::string keyType;
+      std::string valueType;
+      const bool isMapReceiver =
+          dispatchBootstrap.dispatchResolvers.resolveMapTarget != nullptr &&
+          dispatchBootstrap.dispatchResolvers.resolveMapTarget(
+              expr.args[receiverIndex], keyType, valueType);
+      keyType.clear();
+      valueType.clear();
+      const bool isExperimentalMapReceiver =
+          dispatchBootstrap.dispatchResolvers.resolveExperimentalMapTarget != nullptr &&
+          dispatchBootstrap.dispatchResolvers.resolveExperimentalMapTarget(
+              expr.args[receiverIndex], keyType, valueType);
+      if (isMapReceiver || isExperimentalMapReceiver) {
+        resolvedOut = preferredBareMapHelperTarget(helperName);
+      }
+    }
+  }
   auto isExperimentalMapReceiverExpr = [&](const Expr &candidate) {
     std::string receiverTypeText;
     if (inferQueryExprTypeText(candidate, params, locals, receiverTypeText) &&

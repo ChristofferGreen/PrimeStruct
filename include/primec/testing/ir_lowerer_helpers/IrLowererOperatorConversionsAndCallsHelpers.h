@@ -71,7 +71,8 @@ bool emitConversionsAndCallsOperatorExpr(
     bool &handled,
     std::string &error,
     const ResolveConversionsAndCallsDefinitionCallFn &resolveDefinitionCall = {},
-    const SemanticProductTargetAdapter *semanticProductTargets = nullptr);
+    const SemanticProductTargetAdapter *semanticProductTargets = nullptr,
+    std::string currentScopePath = {});
 
 bool emitConversionsAndCallsOperatorExpr(
     const Expr &expr,

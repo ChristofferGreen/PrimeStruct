@@ -2146,6 +2146,48 @@ bool rewriteExpr(Expr &expr,
           expr.argNames.erase(expr.argNames.begin());
         }
       }
+      if (expr.templateArgs.empty() && ctx.templateDefs.count(methodPath) > 0) {
+        auto defIt = ctx.sourceDefs.find(methodPath);
+        const Expr *receiverExpr = mapHelperReceiverExpr(expr);
+        if (defIt != ctx.sourceDefs.end() && receiverExpr != nullptr &&
+            !defIt->second.parameters.empty()) {
+          BindingInfo receiverInfo;
+          BindingInfo receiverParamInfo;
+          if (inferBindingTypeForMonomorph(*receiverExpr,
+                                           params,
+                                           locals,
+                                           allowMathBare,
+                                           ctx,
+                                           receiverInfo) &&
+              extractExplicitBindingType(defIt->second.parameters.front(),
+                                         receiverParamInfo) &&
+              !receiverInfo.typeTemplateArg.empty()) {
+            std::string receiverBase = normalizeBindingTypeName(receiverInfo.typeName);
+            std::string paramBase = normalizeBindingTypeName(receiverParamInfo.typeName);
+            if (!receiverBase.empty() && receiverBase.front() == '/') {
+              receiverBase.erase(receiverBase.begin());
+            }
+            if (!paramBase.empty() && paramBase.front() == '/') {
+              paramBase.erase(paramBase.begin());
+            }
+            auto leafName = [](const std::string &path) {
+              const size_t slash = path.find_last_of('/');
+              return slash == std::string::npos ? path : path.substr(slash + 1);
+            };
+            if (receiverBase == paramBase ||
+                (!receiverBase.empty() && !paramBase.empty() &&
+                 leafName(receiverBase) == leafName(paramBase))) {
+              std::vector<std::string> receiverTemplateArgs;
+              if (splitTopLevelTemplateArgs(receiverInfo.typeTemplateArg,
+                                            receiverTemplateArgs) &&
+                  receiverTemplateArgs.size() == defIt->second.templateArgs.size()) {
+                expr.templateArgs = std::move(receiverTemplateArgs);
+                allConcrete = true;
+              }
+            }
+          }
+        }
+      }
       const bool isTemplateDef = ctx.templateDefs.count(methodPath) > 0;
       const bool isKnownDef = ctx.sourceDefs.count(methodPath) > 0;
       if (isTemplateDef) {

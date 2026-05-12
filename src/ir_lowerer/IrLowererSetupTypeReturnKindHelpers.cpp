@@ -230,6 +230,34 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
       methodCallExpr.args.size() == 2 &&
       (isSimpleCallName(methodCallExpr, "at") ||
        isSimpleCallName(methodCallExpr, "at_unsafe"))) {
+    auto definitionReturnsString = [](const Definition &definition) {
+      for (const auto &transform : definition.transforms) {
+        if (transform.name == "return" &&
+            transform.templateArgs.size() == 1 &&
+            normalizeCollectionBindingTypeName(transform.templateArgs.front()) ==
+                "string") {
+          return true;
+        }
+      }
+      return false;
+    };
+    if (definitionReturnsString(*callee)) {
+      kindOut = LocalInfo::ValueKind::String;
+      if (methodResolvedOut != nullptr) {
+        *methodResolvedOut = true;
+      }
+      return true;
+    }
+    LocalInfo::ValueKind declaredReturnKind = LocalInfo::ValueKind::Unknown;
+    if (resolveReturnInfoKindForPath(
+            callee->fullPath, getReturnInfo, false, declaredReturnKind) &&
+        declaredReturnKind == LocalInfo::ValueKind::String) {
+      kindOut = declaredReturnKind;
+      if (methodResolvedOut != nullptr) {
+        *methodResolvedOut = true;
+      }
+      return true;
+    }
     const Expr &receiverExpr = methodCallExpr.args.front();
     SemanticReturnKindTargetInfo semanticInfo;
     const bool hasSemanticReceiverFact = resolveSemanticReturnKindTargetInfo(
@@ -313,6 +341,23 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
     auto isBuiltinTryAtMethodName = [](const std::string &name) {
       return name == "tryAt";
     };
+    auto resolveCanonicalMapAccessStringOverride =
+        [&](const std::string &normalizedName,
+            LocalInfo::ValueKind &overrideKindOut) {
+          overrideKindOut = LocalInfo::ValueKind::Unknown;
+          if (normalizedName != "at" && normalizedName != "at_unsafe") {
+            return false;
+          }
+          ReturnInfo info;
+          if (!getReturnInfo ||
+              !getReturnInfo("/std/collections/map/" + normalizedName, info) ||
+              info.returnsVoid || info.returnsArray ||
+              info.kind != LocalInfo::ValueKind::String) {
+            return false;
+          }
+          overrideKindOut = info.kind;
+          return true;
+        };
     auto isBareVectorAccessMethodExpr = [&](const Expr &expr) {
       if (!expr.isMethodCall || expr.args.size() != 2 ||
           !(isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_unsafe"))) {
@@ -490,6 +535,11 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
     if (!isBareVectorAccessMethodExpr(methodCallExpr) && !methodCallExpr.args.empty() &&
         resolveBuiltinMethodReceiverKind(
             methodCallExpr.args.front(), normalizeMethodName(methodCallExpr.name), kindOut)) {
+      LocalInfo::ValueKind overrideKind = LocalInfo::ValueKind::Unknown;
+      if (resolveCanonicalMapAccessStringOverride(
+              normalizeMethodName(methodCallExpr.name), overrideKind)) {
+        kindOut = overrideKind;
+      }
       if (methodResolvedOut != nullptr) {
         *methodResolvedOut = true;
       }

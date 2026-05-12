@@ -8,6 +8,45 @@ bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind(
     const Expr &receiverExpr,
     const BuiltinCollectionDispatchResolvers &resolvers,
     ReturnKind &kindOut) const {
+  if (resolvedPath.rfind("/std/collections/map/", 0) == 0 ||
+      resolvedPath.rfind("/map/", 0) == 0) {
+    auto declaredReturnKind = [](const Definition &definition,
+                                 ReturnKind &declaredKindOut) {
+      for (const Transform &transform : definition.transforms) {
+        if (transform.name != "return" || transform.templateArgs.size() != 1) {
+          continue;
+        }
+        declaredKindOut =
+            returnKindForTypeName(normalizeBindingTypeName(transform.templateArgs.front()));
+        return true;
+      }
+      return false;
+    };
+    auto defIt = defMap_.find(resolvedPath);
+    if (defIt != defMap_.end() && defIt->second != nullptr) {
+      ReturnKind declaredKind = ReturnKind::Unknown;
+      if (declaredReturnKind(*defIt->second, declaredKind)) {
+        if (declaredKind != ReturnKind::Unknown) {
+          kindOut = declaredKind;
+          return true;
+        }
+        return false;
+      }
+    }
+    for (const Definition &definition : program_.definitions) {
+      if (!matchesResolvedPath(definition.fullPath, resolvedPath)) {
+        continue;
+      }
+      ReturnKind declaredKind = ReturnKind::Unknown;
+      if (declaredReturnKind(definition, declaredKind)) {
+        if (declaredKind != ReturnKind::Unknown) {
+          kindOut = declaredKind;
+          return true;
+        }
+        return false;
+      }
+    }
+  }
   std::string resolvedSoaCanonical =
       canonicalizeLegacySoaGetHelperPath(resolvedPath);
   const bool resolvedSoaCanonicalIsCount =

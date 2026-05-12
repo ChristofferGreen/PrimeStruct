@@ -500,7 +500,8 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
           logicalMethodResolved == "/FileError/why") {
         return finish(ReturnKind::String);
       }
-      if (isVisibleStdlibMapMethodWithBuiltinReturn(logicalMethodResolved)) {
+      if (isVisibleStdlibMapMethodWithBuiltinReturn(logicalMethodResolved) &&
+          !hasDefinitionPath(logicalMethodResolved)) {
         ReturnKind builtinMethodKind = ReturnKind::Unknown;
         if (resolveBuiltinCollectionMethodReturnKind(
                 logicalMethodResolved,

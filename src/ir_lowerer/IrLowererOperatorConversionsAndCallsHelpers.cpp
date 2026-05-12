@@ -7,6 +7,7 @@
 #include "IrLowererIndexKindHelpers.h"
 
 #include <cstring>
+#include <utility>
 
 namespace primec::ir_lowerer {
 
@@ -34,7 +35,8 @@ bool emitConversionsAndCallsOperatorExpr(
     bool &handled,
     std::string &error,
     const ResolveConversionsAndCallsDefinitionCallFn &resolveDefinitionCall,
-    const SemanticProductTargetAdapter *semanticProductTargets) {
+    const SemanticProductTargetAdapter *semanticProductTargets,
+    std::string currentScopePath) {
   handled = true;
   std::string builtin;
   if (getBuiltinConvertName(expr)) {
@@ -263,7 +265,8 @@ bool emitConversionsAndCallsOperatorExpr(
       instructions,
       error,
       resolveDefinitionCall,
-      semanticProductTargets};
+      semanticProductTargets,
+      std::move(currentScopePath)};
 
   if (!emitConversionsAndCallsMemoryAndPointerExpr(expr, context, handled)) {
     return false;

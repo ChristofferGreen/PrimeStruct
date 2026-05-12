@@ -111,7 +111,11 @@ bool initializeTemplateMonomorphSourceDefinitions(Context &ctx,
         error = "helper overload internal path conflicts with existing definition: " + internalPath;
         return false;
       }
-      overloads.push_back({internalPath, parameterCount});
+      const bool isVariadic = definitionHasVariadicParameter(*def);
+      overloads.push_back({internalPath,
+                           parameterCount,
+                           isVariadic && parameterCount > 0 ? parameterCount - 1 : parameterCount,
+                           isVariadic});
     }
     if (!allowHelperOverloadFamily) {
       error = "duplicate definition: " + publicPath;

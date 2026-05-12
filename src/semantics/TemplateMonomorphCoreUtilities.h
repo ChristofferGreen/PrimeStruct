@@ -197,6 +197,13 @@ std::string selectHelperOverloadPath(const Expr &expr, const std::string &resolv
       }
     }
   }
+  for (size_t candidateCount : candidateCounts) {
+    for (const auto &entry : familyIt->second) {
+      if (entry.isVariadic && candidateCount >= entry.variadicMinArgumentCount) {
+        return entry.internalPath;
+      }
+    }
+  }
   return resolvedPath;
 }
 

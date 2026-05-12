@@ -230,8 +230,10 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
       isCanonicalMapAccessHelperName(namespacedHelper) &&
       !prefersExplicitDirectMapAccessAliasDefinition &&
       !isMapNamespacedAccessCompatibilityCall && !hasDefinitionPath(resolved);
-  setupOut.shouldInferBuiltinBareMapContainsCall = true;
-  setupOut.shouldInferBuiltinBareMapTryAtCall = true;
+  setupOut.shouldInferBuiltinBareMapContainsCall =
+      shouldBuiltinValidateCurrentMapWrapperHelper("contains");
+  setupOut.shouldInferBuiltinBareMapTryAtCall =
+      shouldBuiltinValidateCurrentMapWrapperHelper("tryAt");
   setupOut.shouldInferBuiltinBareMapAccessCall = true;
   setupOut.isIndexedArgsPackMapReceiverTarget =
       [&](const Expr &receiverExpr) -> bool {

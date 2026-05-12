@@ -752,6 +752,74 @@
                 inlineDispatchExpr, rewrittenInlineExplicitMapHelperExpr)) {
           inlineDispatchExpr = rewrittenInlineExplicitMapHelperExpr;
         }
+        auto rewriteCanonicalMapHelperDefinitionExpr =
+            [&](const Expr &callExpr, Expr &rewrittenExpr) {
+          if (callExpr.kind != Expr::Kind::Call || callExpr.args.empty()) {
+            return false;
+          }
+          std::string helperName;
+          if (callExpr.isMethodCall &&
+              resolveBuiltinMapHelperName(callExpr, true, helperName)) {
+            if (helperName == "contains_ref") {
+              helperName = "contains";
+            } else if (helperName == "tryAt_ref") {
+              helperName = "tryAt";
+            } else if (helperName == "count_ref") {
+              helperName = "count";
+            }
+          } else if (!callExpr.isMethodCall &&
+                     callExpr.namespacePrefix.empty() &&
+                     callExpr.name.find('/') == std::string::npos &&
+                     (callExpr.name == "contains" ||
+                      callExpr.name == "tryAt" ||
+                      callExpr.name == "count") &&
+                     resolveTailDispatchDirectHelperDefinition(callExpr) ==
+                         nullptr) {
+            helperName = callExpr.name;
+          }
+          if (helperName.empty()) {
+            return false;
+          }
+          if (!((helperName == "contains" && callExpr.args.size() == 2) ||
+                (helperName == "tryAt" && callExpr.args.size() == 2) ||
+                (helperName == "count" && callExpr.args.size() > 1))) {
+            return false;
+          }
+          const SemanticProductIndex canonicalMapHelperSemanticIndex =
+              ir_lowerer::buildSemanticProductIndex(semanticProgram);
+          const SemanticProductIndex *const canonicalMapHelperSemanticIndexPtr =
+              semanticProgram == nullptr ? nullptr : &canonicalMapHelperSemanticIndex;
+          const auto mapTargetInfo =
+              ir_lowerer::resolveMapAccessTargetInfo(
+                  callExpr.args.front(),
+                  localsIn,
+                  inferCallMapTargetInfo,
+                  semanticProgram,
+                  canonicalMapHelperSemanticIndexPtr);
+          if (!mapTargetInfo.isMapTarget) {
+            return false;
+          }
+          Expr candidate = callExpr;
+          candidate.isMethodCall = false;
+          candidate.isFieldAccess = false;
+          candidate.namespacePrefix.clear();
+          candidate.name = "/std/collections/map/" + helperName;
+          candidate.semanticNodeId = 0;
+          candidate.templateArgs.clear();
+          const Definition *callee =
+              resolveTailDispatchDirectHelperDefinition(candidate);
+          if (callee == nullptr) {
+            return false;
+          }
+          rewrittenExpr = std::move(candidate);
+          return true;
+        };
+        Expr rewrittenMethodCanonicalMapHelperDefinitionExpr;
+        if (rewriteCanonicalMapHelperDefinitionExpr(
+                inlineDispatchExpr,
+                rewrittenMethodCanonicalMapHelperDefinitionExpr)) {
+          inlineDispatchExpr = rewrittenMethodCanonicalMapHelperDefinitionExpr;
+        }
         auto emitInternalSoaMetadataBeforeInline = [&]() -> std::optional<bool> {
           auto metadataLeaf = [](const Expr &callExpr) {
             std::string path = callExpr.name;

@@ -8,6 +8,19 @@ namespace primec::semantics {
 
 namespace {
 
+std::string stripGeneratedHelperSuffix(std::string path) {
+  const size_t leafStart = path.find_last_of('/');
+  const size_t searchStart = leafStart == std::string::npos ? 0 : leafStart + 1;
+  if (const size_t templateSuffix = path.find("__t", searchStart);
+      templateSuffix != std::string::npos) {
+    path.erase(templateSuffix);
+  } else if (const size_t overloadSuffix = path.find("__ov", searchStart);
+             overloadSuffix != std::string::npos) {
+    path.erase(overloadSuffix);
+  }
+  return path;
+}
+
 bool getCanonicalMapAccessBuiltinName(const Expr &candidate,
                                       std::string &helperOut) {
   helperOut.clear();
@@ -97,17 +110,102 @@ bool SemanticsValidator::isStringExprForArgumentValidation(
   }
   if (arg.kind == Expr::Kind::Call) {
     const std::string resolvedPath = resolveCalleePath(arg);
+    const std::string resolvedBasePath = stripGeneratedHelperSuffix(resolvedPath);
+    auto methodMapAccessDefinitionReturnsString = [&]() {
+      auto definitionReturnTypeText = [](const Definition &definition,
+                                         std::string &typeTextOut) {
+        typeTextOut.clear();
+        for (const auto &transform : definition.transforms) {
+          if (transform.name == "return" && transform.templateArgs.size() == 1) {
+            typeTextOut = transform.templateArgs.front();
+            return true;
+          }
+        }
+        return false;
+      };
+      if (arg.args.size() != 2) {
+        return false;
+      }
+      std::string helperName = arg.name;
+      if (!helperName.empty() && helperName.front() == '/') {
+        helperName.erase(helperName.begin());
+      }
+      const size_t helperLeaf = helperName.find_last_of('/');
+      if (helperLeaf != std::string::npos) {
+        helperName = helperName.substr(helperLeaf + 1);
+      }
+      helperName = stripGeneratedHelperSuffix(std::move(helperName));
+      if (helperName != "at" && helperName != "at_unsafe") {
+        if (!getCanonicalMapAccessBuiltinName(arg, helperName) ||
+            (helperName != "at" && helperName != "at_unsafe")) {
+          return false;
+        }
+      }
+      std::string keyType;
+      std::string valueType;
+      bool receiverIsMap =
+          dispatchResolvers.resolveMapTarget != nullptr &&
+          dispatchResolvers.resolveMapTarget(arg.args.front(), keyType, valueType);
+      if (!receiverIsMap && arg.args.front().kind == Expr::Kind::Call) {
+        const std::string receiverPath = resolveCalleePath(arg.args.front());
+        auto receiverDefIt = defMap_.find(receiverPath);
+        if (receiverDefIt != defMap_.end() && receiverDefIt->second != nullptr) {
+          std::string receiverReturnType;
+          if (definitionReturnTypeText(*receiverDefIt->second, receiverReturnType)) {
+            receiverIsMap =
+                extractMapKeyValueTypesFromTypeText(receiverReturnType, keyType, valueType);
+          }
+        }
+      }
+      if (!receiverIsMap) {
+        return false;
+      }
+      const std::string helperPath = "/std/collections/map/" + helperName;
+      auto defIt = defMap_.find(helperPath);
+      if (defIt == defMap_.end()) {
+        for (auto candidateIt = defMap_.begin(); candidateIt != defMap_.end(); ++candidateIt) {
+          if (stripGeneratedHelperSuffix(candidateIt->first) == helperPath) {
+            defIt = candidateIt;
+            break;
+          }
+        }
+      }
+      if (defIt == defMap_.end() || defIt->second == nullptr) {
+        return false;
+      }
+      std::string returnTypeText;
+      return definitionReturnTypeText(*defIt->second, returnTypeText) &&
+             normalizeBindingTypeName(returnTypeText) == "string";
+    };
+    if (methodMapAccessDefinitionReturnsString()) {
+      return true;
+    }
+    const bool isExplicitMapAccessPath =
+        resolvedBasePath == "/map/at" ||
+        resolvedBasePath == "/map/at_ref" ||
+        resolvedBasePath == "/map/at_unsafe" ||
+        resolvedBasePath == "/map/at_unsafe_ref" ||
+        resolvedBasePath == "/std/collections/map/at" ||
+        resolvedBasePath == "/std/collections/map/at_ref" ||
+        resolvedBasePath == "/std/collections/map/at_unsafe" ||
+        resolvedBasePath == "/std/collections/map/at_unsafe_ref";
+    if (isExplicitMapAccessPath) {
+      auto defIt = defMap_.find(resolvedPath);
+      if (defIt == defMap_.end()) {
+        defIt = defMap_.find(resolvedBasePath);
+      }
+      if (defIt != defMap_.end() && defIt->second != nullptr) {
+        for (const auto &transform : defIt->second->transforms) {
+          if (transform.name == "return" && transform.templateArgs.size() == 1) {
+            return normalizeBindingTypeName(transform.templateArgs.front()) == "string";
+          }
+        }
+      }
+    }
     const bool treatAsBuiltinAccess =
         defMap_.find(resolvedPath) == defMap_.end() ||
         resolvedPath.rfind("/std/collections/vector/at", 0) == 0 ||
-        resolvedPath == "/map/at" ||
-        resolvedPath == "/map/at_ref" ||
-        resolvedPath == "/map/at_unsafe" ||
-        resolvedPath == "/map/at_unsafe_ref" ||
-        resolvedPath == "/std/collections/map/at" ||
-        resolvedPath == "/std/collections/map/at_ref" ||
-        resolvedPath == "/std/collections/map/at_unsafe" ||
-        resolvedPath == "/std/collections/map/at_unsafe_ref";
+        isExplicitMapAccessPath;
     std::string accessName;
     if (treatAsBuiltinAccess &&
         getCanonicalMapAccessBuiltinName(arg, accessName) &&

@@ -67,6 +67,28 @@ template <typename ResolveFieldFn>
 bool resolveVectorRecordFieldSlotsFromFields(const std::string &structPath,
                                              const ResolveFieldFn &resolveField,
                                              VectorRecordFieldSlots &out) {
+  auto isExperimentalSoaVectorPath = [](const std::string &path) {
+    return path == "/std/collections/experimental_soa_vector/SoaVector" ||
+           path == "std/collections/experimental_soa_vector/SoaVector" ||
+           path.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0 ||
+           path.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+  };
+  if (isExperimentalSoaVectorPath(structPath)) {
+    int32_t storageOffset = -1;
+    int32_t storageSlotCount = 0;
+    if (resolveField(structPath, "storage", storageOffset, storageSlotCount) &&
+        storageOffset >= 0 && storageSlotCount >= 5) {
+      VectorRecordFieldSlots slots;
+      slots.count = storageOffset + 1;
+      slots.capacity = storageOffset + 2;
+      slots.data = storageOffset + 3;
+      slots.ownsData = storageOffset + 4;
+      slots.totalSlots = storageOffset + storageSlotCount;
+      out = slots;
+      return true;
+    }
+  }
+
   auto findField = [&](std::initializer_list<const char *> names,
                        bool required,
                        int32_t &slotOut,

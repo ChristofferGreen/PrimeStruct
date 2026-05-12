@@ -102,7 +102,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("at requires array, vector, map, or string target") != std::string::npos);
+  CHECK(error.find("at requires map target") != std::string::npos);
 }
 
 TEST_CASE("user definition named Map reordered receiver is not treated as builtin experimental map target") {

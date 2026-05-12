@@ -87,6 +87,29 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   };
   const bool isVectorCompatibilityMethod =
       isVectorCompatibilityHelperName(normalizedMethodName);
+  auto hasVisibleRootVectorAlias = [&](std::string_view helperName) {
+    const std::string samePath = rootedVectorHelperPath(helperName);
+    return hasDefinitionFamilyPath(samePath) ||
+           hasDefinitionPath(samePath) ||
+           hasDeclaredDefinitionPath(samePath) ||
+           hasImportedDefinitionPath(samePath);
+  };
+  auto shouldPreferRootVectorAliasForMethodExtraArgs = [&]() {
+    if (!expr.isMethodCall ||
+        expr.args.size() <= 1 ||
+        !(normalizedMethodName == "count" ||
+          normalizedMethodName == "capacity") ||
+        !hasVisibleRootVectorAlias(normalizedMethodName)) {
+      return false;
+    }
+    for (size_t i = 1; i < expr.args.size(); ++i) {
+      if (expr.args[i].kind == Expr::Kind::Call ||
+          expr.args[i].kind == Expr::Kind::BoolLiteral) {
+        return false;
+      }
+    }
+    return true;
+  };
   if (expr.namespacePrefix.empty() &&
       !expr.args.empty() &&
       isVectorCompatibilityMethod) {
@@ -99,10 +122,12 @@ bool SemanticsValidator::validateExprMethodCallTarget(
          hasDefinitionPath(canonicalVectorHelperPath) ||
          hasDeclaredDefinitionPath(canonicalVectorHelperPath) ||
          hasImportedDefinitionPath(canonicalVectorHelperPath))) {
-      if (normalizedMethodName == "count" && expr.args.size() != 1) {
+      if (normalizedMethodName == "count" && expr.args.size() != 1 &&
+          !shouldPreferRootVectorAliasForMethodExtraArgs()) {
         return failMethodResolutionDiagnostic("argument count mismatch for builtin count");
       }
-      if (normalizedMethodName == "capacity" && expr.args.size() != 1) {
+      if (normalizedMethodName == "capacity" && expr.args.size() != 1 &&
+          !shouldPreferRootVectorAliasForMethodExtraArgs()) {
         return failMethodResolutionDiagnostic("argument count mismatch for builtin capacity");
       }
       if ((normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") &&
@@ -132,13 +157,51 @@ bool SemanticsValidator::validateExprMethodCallTarget(
         !isCanonicalMapAccessMethodName(accessHelperName)) {
       return false;
     }
+    auto canonicalMapAccessReturnsString = [&](std::string helperName) {
+      if (helperName != "at" && helperName != "at_unsafe" &&
+          helperName != "at_ref" && helperName != "at_unsafe_ref") {
+        return false;
+      }
+      const std::string helperPath = "/std/collections/map/" + helperName;
+      auto defIt = defMap_.find(helperPath);
+      if (defIt == defMap_.end() || defIt->second == nullptr) {
+        return false;
+      }
+      BindingInfo inferredReturn;
+      return inferDefinitionReturnBinding(*defIt->second, inferredReturn) &&
+             normalizeBindingTypeName(inferredReturn.typeName) == "string" &&
+             inferredReturn.typeTemplateArg.empty();
+    };
+    if (canonicalMapAccessReturnsString(accessHelperName)) {
+      return false;
+    }
     const Expr *accessReceiver = this->resolveBuiltinAccessReceiverExpr(receiverExpr);
     if (accessReceiver == nullptr) {
       return false;
     }
     std::string mapValueType;
-    if (!this->resolveMapValueType(*accessReceiver, dispatchResolvers, mapValueType) ||
-        normalizeBindingTypeName(mapValueType) == "string") {
+    if (!this->resolveMapValueType(*accessReceiver, dispatchResolvers, mapValueType)) {
+      if (accessReceiver->kind == Expr::Kind::Call) {
+        const std::string receiverPath = resolveCalleePath(*accessReceiver);
+        auto receiverDefIt = defMap_.find(receiverPath);
+        if (receiverDefIt != defMap_.end() && receiverDefIt->second != nullptr) {
+          BindingInfo receiverReturn;
+          if (inferDefinitionReturnBinding(*receiverDefIt->second, receiverReturn)) {
+            const std::string receiverReturnType =
+                receiverReturn.typeTemplateArg.empty()
+                    ? receiverReturn.typeName
+                    : receiverReturn.typeName + "<" + receiverReturn.typeTemplateArg + ">";
+            std::string keyType;
+            (void)extractMapKeyValueTypesFromTypeText(
+                receiverReturnType, keyType, mapValueType);
+          }
+        }
+      }
+      if (mapValueType.empty()) {
+        return false;
+      }
+    }
+    if (normalizeBindingTypeName(mapValueType) == "string") {
       return false;
     }
     return failMethodResolutionDiagnostic("argument type mismatch for /string/count parameter values: expected string");
@@ -252,7 +315,8 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       if (resolveVectorTarget(expr.args.front(), elemType)) {
         const std::string preferredVectorMethodTarget =
             preferredBareVectorHelperTarget(normalizedMethodName);
-        if ((normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") &&
+        if ((shouldPreferRootVectorAliasForMethodExtraArgs() ||
+             normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") &&
             isRootedVectorHelperPath(preferredVectorMethodTarget) &&
             (hasDeclaredDefinitionPath(preferredVectorMethodTarget) ||
              hasImportedDefinitionPath(preferredVectorMethodTarget))) {

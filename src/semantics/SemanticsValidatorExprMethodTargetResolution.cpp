@@ -190,6 +190,12 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (isStdNamespacedVectorHelper) {
       return canonicalVectorCompatibilityHelperPathOrFallback(helperName);
     }
+    if (compatibilityCollection == "array") {
+      return "/array/" + std::string(helperName);
+    }
+    if (compatibilityCollection == "vector") {
+      return rootedVectorMethodPath(helperName);
+    }
     return "/" + candidate;
   };
 
@@ -568,6 +574,43 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return "";
   };
+  auto maybeFailRetiredMaybeMutableHelperForType =
+      [&](const std::string &typeName,
+          const std::string &typeTemplateArg,
+          bool &handledOut) {
+        handledOut = false;
+        if (!isRetiredMaybeMutableHelperName(normalizedMethodName)) {
+          return false;
+        }
+        const std::string normalizedTypeName = normalizeBindingTypeName(typeName);
+        std::string normalizedBaseTypeName = normalizedTypeName;
+        if (!normalizedBaseTypeName.empty() && normalizedBaseTypeName.front() == '/') {
+          normalizedBaseTypeName.erase(normalizedBaseTypeName.begin());
+        }
+        std::string resolvedMaybeType = resolveSumTypePath(
+            bindingTypeTextForResolution(typeName, typeTemplateArg),
+            receiver.namespacePrefix);
+        if (resolvedMaybeType.empty()) {
+          resolvedMaybeType = resolveSumTypePath(typeName, receiver.namespacePrefix);
+        }
+        if (!isMaybeSumTypePath(resolvedMaybeType) &&
+            !isMaybeSumTypePath(normalizedTypeName) &&
+            !isMaybeSumTypePath(normalizedBaseTypeName)) {
+          return false;
+        }
+        handledOut = true;
+        std::string replacement;
+        if (normalizedMethodName == "set") {
+          replacement = "use some<T>(value) or Maybe<T>{[some] value} instead";
+        } else if (normalizedMethodName == "clear") {
+          replacement = "use Maybe<T>{} or none<T>() instead";
+        } else {
+          replacement = "use pick(value) and rebind the Maybe explicitly instead";
+        }
+        return failMethodTargetResolutionDiagnostic(
+            "sum-backed Maybe<T> has no mutable helper " + normalizedMethodName +
+            "; " + replacement);
+      };
   auto resolveDeclaredSumMethodTarget = [&](const std::string &sumPath) -> bool {
     if (sumPath.empty() || sumNames_.count(sumPath) == 0) {
       return false;
@@ -592,12 +635,12 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     };
 
     std::vector<std::string> candidates;
-    appendCandidate(candidates, sumPath + "/" + normalizedMethodName);
     const std::string canonicalSumPath = stripGeneratedLeafSuffix(sumPath);
     if (canonicalSumPath != sumPath) {
       appendCandidate(candidates,
                       canonicalSumPath + "/" + normalizedMethodName);
     }
+    appendCandidate(candidates, sumPath + "/" + normalizedMethodName);
     const size_t leafStart = canonicalSumPath.find_last_of('/');
     const std::string leafName = leafStart == std::string::npos
                                      ? canonicalSumPath
@@ -608,6 +651,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
 
     for (const std::string &candidate : candidates) {
       if (hasDefinitionFamilyPath(candidate) ||
+          hasDefinitionPath(candidate) ||
           hasImportedDefinitionPath(candidate)) {
         resolvedOut = candidate;
         isBuiltinOut = false;
@@ -1699,6 +1743,13 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return false;
     };
     if (!explicitRemovedMethodPath.empty() &&
+        explicitRemovedMethodPath.rfind("/vector/", 0) == 0 &&
+        hasDeclaredDefinitionPath(explicitRemovedMethodPath)) {
+      resolvedOut = explicitRemovedMethodPath;
+      isBuiltinOut = false;
+      return true;
+    }
+    if (!explicitRemovedMethodPath.empty() &&
         path.rfind("/string/", 0) == 0 &&
         isValueSurfaceAccessMethodName(normalizedMethodName)) {
       resolvedOut = explicitRemovedMethodPath;
@@ -2003,6 +2054,20 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return !helperParams.empty() &&
              classifyExplicitVectorHelperParam(helperParams.front().binding) == receiverFamily;
     };
+    auto definitionMatchesReceiver = [&](const Definition &def) {
+      if (def.parameters.empty()) {
+        return false;
+      }
+      BindingInfo binding;
+      std::optional<std::string> restrictType;
+      std::string parseError;
+      if (!parseBindingInfo(def.parameters.front(), def.namespacePrefix,
+                            structNames_, importAliases_, binding,
+                            restrictType, parseError, &sumNames_)) {
+        return false;
+      }
+      return classifyExplicitVectorHelperParam(binding) == receiverFamily;
+    };
     if (auto paramsIt = paramsByDef_.find(pathText);
         paramsIt != paramsByDef_.end() && paramsMatchReceiver(paramsIt->second)) {
       return true;
@@ -2017,6 +2082,9 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       }
       if (auto paramsIt = paramsByDef_.find(def.fullPath);
           paramsIt != paramsByDef_.end() && paramsMatchReceiver(paramsIt->second)) {
+        return true;
+      }
+      if (definitionMatchesReceiver(def)) {
         return true;
       }
     }
@@ -2081,6 +2149,15 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
        explicitRemovedVectorReceiverFamily == "map")) {
     const std::string helperName =
         std::string(stripRootedVectorMethodPrefix(explicitVectorHelperPath));
+    if ((explicitRemovedVectorReceiverFamily == "string" ||
+         explicitRemovedVectorReceiverFamily == "array") &&
+        hasDeclaredDefinitionPath(explicitVectorHelperPath) &&
+        explicitHelperFamilyHasCompatibleReceiver(
+            explicitVectorHelperPath, explicitRemovedVectorReceiverFamily)) {
+      resolvedOut = explicitVectorHelperPath;
+      isBuiltinOut = false;
+      return true;
+    }
     return failMethodTargetResolutionDiagnostic(
         "unknown method: /" + explicitRemovedVectorReceiverFamily + "/" +
         helperName);
@@ -2961,6 +3038,36 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return true;
     }
   }
+  if (isRetiredMaybeMutableHelperName(normalizedMethodName)) {
+    std::string receiverTypeName;
+    std::string receiverTypeTemplateArg;
+    if (receiver.kind == Expr::Kind::Name) {
+      if (const BindingInfo *paramBinding = findParamBinding(params, receiver.name)) {
+        receiverTypeName = paramBinding->typeName;
+        receiverTypeTemplateArg = paramBinding->typeTemplateArg;
+      } else if (auto it = locals.find(receiver.name); it != locals.end()) {
+        receiverTypeName = it->second.typeName;
+        receiverTypeTemplateArg = it->second.typeTemplateArg;
+      }
+    } else if (receiver.kind == Expr::Kind::Call) {
+      BindingInfo inferredReceiverBinding;
+      if (withPreservedError([&]() {
+            return inferBindingTypeFromInitializer(
+                receiver, params, locals, inferredReceiverBinding);
+          }) &&
+          !inferredReceiverBinding.typeName.empty()) {
+        receiverTypeName = normalizeBindingTypeName(inferredReceiverBinding.typeName);
+        receiverTypeTemplateArg = inferredReceiverBinding.typeTemplateArg;
+      }
+    }
+    bool handledRetiredMaybeMutableHelper = false;
+    if (bool ok = maybeFailRetiredMaybeMutableHelperForType(
+            receiverTypeName, receiverTypeTemplateArg,
+            handledRetiredMaybeMutableHelper);
+        handledRetiredMaybeMutableHelper) {
+      return ok;
+    }
+  }
   if ((normalizedMethodName == "count" || normalizedMethodName == "capacity" ||
        normalizedMethodName == "at" || normalizedMethodName == "at_unsafe" ||
        normalizedMethodName == "push" || normalizedMethodName == "pop" ||
@@ -3154,6 +3261,12 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   if (!normalizedBaseTypeName.empty() && normalizedBaseTypeName.front() == '/') {
     normalizedBaseTypeName.erase(normalizedBaseTypeName.begin());
   }
+  bool handledRetiredMaybeMutableHelper = false;
+  if (bool ok = maybeFailRetiredMaybeMutableHelperForType(
+          typeName, typeTemplateArg, handledRetiredMaybeMutableHelper);
+      handledRetiredMaybeMutableHelper) {
+    return ok;
+  }
   if (normalizedMethodName == "count" || normalizedMethodName == "capacity" ||
       normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") {
     BindingInfo receiverBinding;
@@ -3342,19 +3455,10 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   if (resolveDeclaredSumMethodTarget(resolvedType)) {
     return true;
   }
-  if (isMaybeSumTypePath(resolvedType) &&
-      isRetiredMaybeMutableHelperName(normalizedMethodName)) {
-    std::string replacement;
-    if (normalizedMethodName == "set") {
-      replacement = "use some<T>(value) or Maybe<T>{[some] value} instead";
-    } else if (normalizedMethodName == "clear") {
-      replacement = "use Maybe<T>{} or none<T>() instead";
-    } else {
-      replacement = "use pick(value) and rebind the Maybe explicitly instead";
-    }
-    return failMethodTargetResolutionDiagnostic(
-        "sum-backed Maybe<T> has no mutable helper " + normalizedMethodName +
-        "; " + replacement);
+  if (bool ok = maybeFailRetiredMaybeMutableHelperForType(
+          typeName, typeTemplateArg, handledRetiredMaybeMutableHelper);
+      handledRetiredMaybeMutableHelper) {
+    return ok;
   }
   if (traceFileErrorResult && receiver.kind == Expr::Kind::Name &&
       receiver.name == "FileError" && resolvedType.empty()) {

@@ -33,6 +33,64 @@ std::string describeMethodCallExpr(const Expr &expr) {
   return "<unnamed>";
 }
 
+bool isMapConstructorDirectTargetPath(std::string path) {
+  const size_t specializationSuffix = path.find("__t");
+  if (specializationSuffix != std::string::npos) {
+    path.erase(specializationSuffix);
+  }
+  const size_t overloadSuffix = path.find("__ov");
+  if (overloadSuffix != std::string::npos) {
+    path.erase(overloadSuffix);
+  }
+  return path == "/std/collections/map/map" ||
+         path == "/std/collections/mapNew" ||
+         path == "/std/collections/mapSingle" ||
+         path == "/std/collections/mapDouble" ||
+         path == "/std/collections/mapPair" ||
+         path == "/std/collections/mapTriple" ||
+         path == "/std/collections/mapQuad" ||
+         path == "/std/collections/mapQuint" ||
+         path == "/std/collections/mapSext" ||
+         path == "/std/collections/mapSept" ||
+         path == "/std/collections/mapOct" ||
+         path == "/std/collections/experimental_map/map" ||
+         path == "/std/collections/experimental_map/mapNew" ||
+         path == "/std/collections/experimental_map/mapSingle" ||
+         path == "/std/collections/experimental_map/mapDouble" ||
+         path == "/std/collections/experimental_map/mapPair" ||
+         path == "/std/collections/experimental_map/mapTriple" ||
+         path == "/std/collections/experimental_map/mapQuad" ||
+         path == "/std/collections/experimental_map/mapQuint" ||
+         path == "/std/collections/experimental_map/mapSext" ||
+         path == "/std/collections/experimental_map/mapSept" ||
+         path == "/std/collections/experimental_map/mapOct";
+}
+
+std::string findMapConstructorBridgePathChoiceBySource(
+    const SemanticProgram *semanticProgram,
+    const Expr &expr) {
+  if (semanticProgram == nullptr || expr.sourceLine <= 0 || expr.sourceColumn <= 0) {
+    return {};
+  }
+  const auto bridgePathChoices = semanticProgramBridgePathChoiceView(*semanticProgram);
+  for (const auto *entry : bridgePathChoices) {
+    if (entry == nullptr ||
+        entry->sourceLine != expr.sourceLine ||
+        entry->sourceColumn != expr.sourceColumn ||
+        semanticProgramBridgePathChoiceStdlibSurfaceId(*entry) !=
+            StdlibSurfaceId::CollectionsMapConstructors ||
+        entry->chosenPathId == InvalidSymbolId) {
+      continue;
+    }
+    const std::string_view chosenPath =
+        semanticProgramResolveCallTargetString(*semanticProgram, entry->chosenPathId);
+    if (!chosenPath.empty()) {
+      return std::string(chosenPath);
+    }
+  }
+  return {};
+}
+
 std::string extractMethodLeafName(const std::string &methodPath) {
   if (methodPath.empty()) {
     return "";
@@ -357,6 +415,84 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   const std::string explicitMethodPath = describeMethodCallExpr(callExpr);
   const bool allowsReceiverResolvedVectorMetadataFallback =
       isExperimentalVectorMetadataMethodPath(explicitMethodPath);
+  auto sourceMapMethodHelperName = [&]() -> std::string {
+    std::string helperName = explicitMethodPath;
+    if (!helperName.empty() && helperName.front() == '/') {
+      helperName.erase(helperName.begin());
+    }
+    if (helperName.rfind("std/collections/map/", 0) == 0) {
+      helperName.erase(0, std::string("std/collections/map/").size());
+    } else if (helperName.rfind("map/", 0) == 0) {
+      helperName.erase(0, std::string("map/").size());
+    }
+    if (helperName == "count" || helperName == "count_ref" ||
+        helperName == "size" ||
+        helperName == "contains" || helperName == "contains_ref" ||
+        helperName == "tryAt" || helperName == "tryAt_ref" ||
+        helperName == "at" || helperName == "at_ref" ||
+        helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
+        helperName == "insert" || helperName == "insert_ref") {
+      return helperName;
+    }
+    return {};
+  };
+  auto resolveDefinitionFamilyByArity = [&](const std::string &path,
+                                            size_t argCount) -> const Definition * {
+    auto defIt = defMap.find(path);
+    if (defIt != defMap.end() && defIt->second != nullptr &&
+        defIt->second->parameters.size() == argCount) {
+      return defIt->second;
+    }
+    const std::string overloadPrefix =
+        path + "__ov" + std::to_string(argCount);
+    const std::string specializedPrefix = path + "__t";
+    for (const auto &[candidatePath, candidateDef] : defMap) {
+      if (candidateDef == nullptr) {
+        continue;
+      }
+      if (candidatePath.rfind(overloadPrefix, 0) == 0 ||
+          (candidatePath.rfind(specializedPrefix, 0) == 0 &&
+           candidateDef->parameters.size() == argCount)) {
+        return candidateDef;
+      }
+    }
+    return nullptr;
+  };
+  if (!callExpr.args.empty()) {
+    const std::string mapHelperName = sourceMapMethodHelperName();
+    auto receiverHasMapLocalInfo = [&]() {
+      const Expr &receiverExpr = callExpr.args.front();
+      if (receiverExpr.kind != Expr::Kind::Name) {
+        return false;
+      }
+      auto localIt = localsIn.find(receiverExpr.name);
+      if (localIt == localsIn.end()) {
+        return false;
+      }
+      const LocalInfo &info = localIt->second;
+      return info.kind == LocalInfo::Kind::Map ||
+             info.referenceToMap ||
+             info.pointerToMap ||
+             info.mapKeyKind != LocalInfo::ValueKind::Unknown ||
+             info.mapValueKind != LocalInfo::ValueKind::Unknown;
+    };
+    if (!mapHelperName.empty() &&
+        (receiverHasMapLocalInfo() ||
+         resolveMapAccessTargetInfo(callExpr.args.front(),
+                                    localsIn,
+                                    {},
+                                    semanticProgram,
+                                    semanticIndexPtr)
+             .isMapTarget)) {
+      const std::string canonicalMapHelper =
+          "/std/collections/map/" + mapHelperName;
+      if (const Definition *canonicalDef =
+              resolveDefinitionFamilyByArity(canonicalMapHelper,
+                                             callExpr.args.size())) {
+        return canonicalDef;
+      }
+    }
+  }
 
   if (semanticProgram != nullptr) {
     auto resolveLoweredDefinitionPath = [&](const std::string &targetPath)
@@ -443,22 +579,34 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     if (resolvedPath.empty()) {
       const std::string directCallTarget =
           findSemanticProductDirectCallTarget(semanticProgram, callExpr);
+      const std::string bridgePathChoice =
+          findSemanticProductBridgePathChoice(semanticProgram, callExpr);
+      const std::string sourceMatchedBridgePathChoice =
+          bridgePathChoice.empty()
+              ? findMapConstructorBridgePathChoiceBySource(semanticProgram, callExpr)
+              : std::string{};
+      const std::string fallbackDirectTarget =
+          !directCallTarget.empty()
+              ? directCallTarget
+              : (!bridgePathChoice.empty() ? bridgePathChoice : sourceMatchedBridgePathChoice);
       const bool directTargetKeepsSyntheticCollectionFallback =
-          !directCallTarget.empty() &&
-          (isSimpleCallName(callExpr, "count") ||
-           isSimpleCallName(callExpr, "capacity") ||
-           isSimpleCallName(callExpr, "at") ||
-           isSimpleCallName(callExpr, "at_unsafe")) &&
-          !blocksSyntheticCollectionFallbackDirectTarget(directCallTarget);
+          !fallbackDirectTarget.empty() &&
+          (((isSimpleCallName(callExpr, "count") ||
+             isSimpleCallName(callExpr, "capacity") ||
+             isSimpleCallName(callExpr, "at") ||
+             isSimpleCallName(callExpr, "at_unsafe")) &&
+            !blocksSyntheticCollectionFallbackDirectTarget(fallbackDirectTarget)) ||
+           (isSimpleCallName(callExpr, "map") &&
+            isMapConstructorDirectTargetPath(fallbackDirectTarget)));
       if (directTargetKeepsSyntheticCollectionFallback) {
         if (const Definition *resolvedDef =
-                resolveLoweredDefinitionPath(directCallTarget);
+                resolveLoweredDefinitionPath(fallbackDirectTarget);
             resolvedDef != nullptr) {
           return resolvedDef;
         }
         errorOut =
             "semantic-product method-call target missing lowered definition: " +
-            directCallTarget;
+            fallbackDirectTarget;
         return nullptr;
       }
       if (!allowsReceiverResolvedVectorMetadataFallback) {

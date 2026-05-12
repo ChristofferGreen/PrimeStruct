@@ -1029,7 +1029,8 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
         localInfo.argsPackElementKind == LocalInfo::Kind::Buffer ||
         localInfo.argsPackElementKind == LocalInfo::Kind::Vector) {
       info.isArrayOrVectorTarget = true;
-      info.isVectorTarget = localInfo.argsPackElementKind == LocalInfo::Kind::Vector;
+      info.isVectorTarget =
+          dereferenced && localInfo.argsPackElementKind == LocalInfo::Kind::Vector;
       return true;
     }
     if (localInfo.argsPackElementKind == LocalInfo::Kind::Map) {

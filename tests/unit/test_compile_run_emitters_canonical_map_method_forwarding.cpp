@@ -6,7 +6,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
 
-TEST_CASE("rejects canonical map slash-method unsafe struct helper receiver mismatch in C++ emitter") {
+TEST_CASE("compiles canonical map slash-method unsafe struct helper receiver forwarding in C++ emitter but traps at runtime") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -36,15 +36,20 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_map_method_alias_access_unsafe_struct_method_chain_forwarding.prime",
                 source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_cpp_canonical_map_method_alias_access_unsafe_struct_method_chain_forwarding.err")
+       "primec_cpp_canonical_map_method_alias_access_unsafe_struct_method_chain_forwarding_exe")
+          .string();
+  const std::string outPath =
+      (testScratchPath("") /
+       "primec_cpp_canonical_map_method_alias_access_unsafe_struct_method_chain_forwarding.out")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /Marker/tag parameter self: expected /Marker got i32") !=
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath + " 2>&1") == 1);
+  CHECK(readFile(outPath).find("unaligned indirect address in IR") !=
         std::string::npos);
 }
 
@@ -79,7 +84,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("rejects wrapper-returned canonical map slash-method struct helper receiver mismatch in C++ emitter") {
+TEST_CASE("compiles wrapper-returned canonical map slash-method struct helper receiver forwarding in C++ emitter but traps at runtime") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -107,19 +112,24 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_map_method_alias_struct_receiver_forwarding.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_cpp_wrapper_map_method_alias_struct_receiver_forwarding.err")
+       "primec_cpp_wrapper_map_method_alias_struct_receiver_forwarding_exe")
+          .string();
+  const std::string outPath =
+      (testScratchPath("") /
+       "primec_cpp_wrapper_map_method_alias_struct_receiver_forwarding.out")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /Marker/tag parameter self: expected /Marker got i32") !=
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath + " 2>&1") == 1);
+  CHECK(readFile(outPath).find("unaligned indirect address in IR") !=
         std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps std-namespaced vector method alias access helper receiver forwarding") {
+TEST_CASE("rejects std-namespaced vector method alias access struct helper receiver mismatch in C++ emitter") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -149,15 +159,18 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_std_namespaced_vector_method_alias_access_struct_method_chain_forwarding.prime",
                 source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_std_namespaced_vector_method_alias_access_struct_method_chain_forwarding_exe")
+       "primec_cpp_std_namespaced_vector_method_alias_access_struct_method_chain_forwarding.err")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " +
+      errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "argument type mismatch for /Marker/tag parameter self: expected /Marker got array") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects std-namespaced vector method alias access receiver fallback without helper in C++ emitter") {

@@ -82,7 +82,8 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("map literal value type mismatch") != std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/mapTriple") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm stdlib collection shim map quad standalone key type mismatch") {
@@ -159,7 +160,8 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("map literal value type mismatch") != std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm stdlib collection shim map quint standalone key type mismatch") {
@@ -238,7 +240,8 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("map literal value type mismatch") != std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm stdlib collection shim map sext standalone key type mismatch") {
@@ -317,7 +320,8 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("map literal value type mismatch") != std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm stdlib collection shim map sept standalone key type mismatch") {
@@ -399,7 +403,8 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("map literal value type mismatch") != std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm stdlib collection shim map oct standalone key type mismatch") {
@@ -459,7 +464,8 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("map literal value type mismatch") != std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map") !=
+        std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim map triple") {
@@ -495,7 +501,8 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("map literal value type mismatch") != std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map") !=
+        std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim extended constructors") {
@@ -532,7 +539,8 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("map literal value type mismatch") != std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map") !=
+        std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim vector quint constructor") {
@@ -551,7 +559,7 @@ main() {
   CHECK(runCommand(runCmd) == 15);
 }
 
-TEST_CASE("runs vm with stdlib collection shim vector quint bool tail") {
+TEST_CASE("rejects vm stdlib collection shim vector quint type mismatch") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -563,7 +571,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_quint_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 5);
+  CHECK(runCommand(runCmd) == 2);
 }
 
 TEST_CASE("runs vm with stdlib collection shim vector sext constructor") {
@@ -582,7 +590,7 @@ main() {
   CHECK(runCommand(runCmd) == 20);
 }
 
-TEST_CASE("runs vm with stdlib collection shim vector sext bool tail") {
+TEST_CASE("rejects vm stdlib collection shim vector sext type mismatch") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -594,7 +602,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_sext_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 6);
+  CHECK(runCommand(runCmd) == 2);
 }
 
 TEST_CASE("runs vm with stdlib collection shim vector sept constructor") {
@@ -613,7 +621,7 @@ main() {
   CHECK(runCommand(runCmd) == 31);
 }
 
-TEST_CASE("runs vm with stdlib collection shim vector sept bool tail") {
+TEST_CASE("rejects vm stdlib collection shim vector sept type mismatch") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -625,7 +633,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_sept_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 7);
+  CHECK(runCommand(runCmd) == 2);
 }
 
 TEST_CASE("runs vm with stdlib collection shim vector oct constructor") {
@@ -644,7 +652,7 @@ main() {
   CHECK(runCommand(runCmd) == 44);
 }
 
-TEST_CASE("runs vm with stdlib collection shim vector oct bool tail") {
+TEST_CASE("rejects vm stdlib collection shim vector oct type mismatch") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -656,7 +664,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_oct_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 8);
+  CHECK(runCommand(runCmd) == 2);
 }
 
 TEST_CASE("runs vm with stdlib collection shim map pair string keys") {
@@ -693,7 +701,8 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("map literal value type mismatch") != std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map") !=
+        std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim map quad") {
@@ -730,7 +739,8 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("map literal value type mismatch") != std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map") !=
+        std::string::npos);
 }
 
 

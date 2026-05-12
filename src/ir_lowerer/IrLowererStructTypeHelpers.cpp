@@ -154,6 +154,24 @@ std::string joinTemplateArgsText(const std::vector<std::string> &args) {
   return out;
 }
 
+std::string templateSpecializationSuffixForStructType(const std::string &templateArgs) {
+  std::string canonical;
+  canonical.reserve(templateArgs.size());
+  for (unsigned char ch : templateArgs) {
+    if (std::isspace(ch) == 0) {
+      canonical.push_back(static_cast<char>(ch));
+    }
+  }
+  uint64_t hash = 1469598103934665603ULL;
+  for (unsigned char ch : canonical) {
+    hash ^= static_cast<uint64_t>(ch);
+    hash *= 1099511628211ULL;
+  }
+  std::ostringstream out;
+  out << "__t" << std::hex << hash;
+  return out.str();
+}
+
 StructTypeResolutionAdapters makeStructTypeResolutionAdapters(
     const std::unordered_set<std::string> &structNames,
     const std::unordered_map<std::string, std::string> &importAliases) {
@@ -215,8 +233,15 @@ void buildDefinitionMapAndStructNames(
     const auto structTypeMetadata = semanticProgramStructTypeMetadataView(*semanticProgram);
     structNamesOut.reserve(structTypeMetadata.size());
     for (const SemanticProgramTypeMetadata *typeMetadata : structTypeMetadata) {
-      if (typeMetadata != nullptr && isStructLikeSemanticProductCategory(typeMetadata->category)) {
+      if (typeMetadata != nullptr &&
+          (isStructLikeSemanticProductCategory(typeMetadata->category) ||
+           typeMetadata->category == "sum")) {
         structNamesOut.insert(typeMetadata->fullPath);
+      }
+    }
+    for (const auto &sumMetadata : semanticProgram->sumTypeMetadata) {
+      if (!sumMetadata.fullPath.empty()) {
+        structNamesOut.insert(sumMetadata.fullPath);
       }
     }
   }
@@ -295,6 +320,23 @@ bool resolveStructTypePathFromScope(
     std::string &resolvedOut) {
   if (typeName.empty()) {
     return false;
+  }
+  std::string templateBase;
+  std::string templateArgText;
+  if (splitTemplateTypeName(typeName, templateBase, templateArgText)) {
+    std::string resolvedBase;
+    if (resolveStructTypePathFromScope(templateBase,
+                                       namespacePrefix,
+                                       structNames,
+                                       importAliases,
+                                       resolvedBase)) {
+      const std::string specialized =
+          resolvedBase + templateSpecializationSuffixForStructType(templateArgText);
+      if (structNames.count(specialized) > 0) {
+        resolvedOut = specialized;
+        return true;
+      }
+    }
   }
   if (typeName[0] == '/') {
     if (structNames.count(typeName) > 0) {

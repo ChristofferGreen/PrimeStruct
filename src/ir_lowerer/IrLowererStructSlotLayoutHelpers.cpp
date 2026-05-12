@@ -1,5 +1,6 @@
 #include "IrLowererStructTypeHelpers.h"
 
+#include <algorithm>
 #include <memory>
 #include <sstream>
 
@@ -681,6 +682,56 @@ bool resolveStructSlotLayoutFromDefinitionFieldIndex(
     std::string &error) {
   const std::string resolvedStructPath =
       resolveStructSlotLookupPath(structPath, fieldIndex);
+  if (auto defIt = defMap.find(resolvedStructPath);
+      defIt != defMap.end() && defIt->second != nullptr) {
+    const Definition &def = *defIt->second;
+    const bool isSumDefinition =
+        std::any_of(def.transforms.begin(), def.transforms.end(),
+                    [](const Transform &transform) { return transform.name == "sum"; });
+    if (isSumDefinition) {
+      int32_t maxPayloadSlots = 0;
+      for (const SumVariant &variant : def.sumVariants) {
+        if (!variant.hasPayload) {
+          continue;
+        }
+        std::string payloadType = !variant.payloadTypeText.empty()
+                                      ? variant.payloadTypeText
+                                      : variant.payloadType;
+        if (payloadType.empty()) {
+          maxPayloadSlots = std::max(maxPayloadSlots, 1);
+          continue;
+        }
+        if (valueKindFromTypeName(payloadType) != LocalInfo::ValueKind::Unknown) {
+          maxPayloadSlots = std::max(maxPayloadSlots, 1);
+          continue;
+        }
+        std::string payloadStructPath;
+        if (!resolveStructTypeName(payloadType, def.namespacePrefix, payloadStructPath)) {
+          maxPayloadSlots = std::max(maxPayloadSlots, 1);
+          continue;
+        }
+        StructSlotLayoutInfo payloadLayout;
+        if (!resolveStructSlotLayoutFromDefinitionFieldIndex(payloadStructPath,
+                                                             fieldIndex,
+                                                             defMap,
+                                                             resolveStructTypeName,
+                                                             valueKindFromTypeName,
+                                                             layoutCache,
+                                                             layoutStack,
+                                                             payloadLayout,
+                                                             error)) {
+          return false;
+        }
+        maxPayloadSlots = std::max(maxPayloadSlots, payloadLayout.totalSlots);
+      }
+      StructSlotLayoutInfo layout;
+      layout.structPath = resolvedStructPath;
+      layout.totalSlots = 2 + maxPayloadSlots;
+      out = layout;
+      layoutCache[resolvedStructPath] = layout;
+      return true;
+    }
+  }
   return resolveStructSlotLayoutFromDefinitionFields(
       resolvedStructPath,
       [&](const std::string &structPathIn, std::vector<StructLayoutFieldInfo> &fieldsOut) {

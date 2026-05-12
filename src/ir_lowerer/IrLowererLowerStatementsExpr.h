@@ -737,20 +737,72 @@
               } else if (helperLeaf == "mapTryAt" || helperLeaf == "mapTryAtRef" ||
                          helperLeaf == "tryAt" || helperLeaf == "tryAt_ref") {
                 helperName = "tryAt";
+              } else if (helperLeaf == "mapAt" || helperLeaf == "mapAtRef" ||
+                         helperLeaf == "at" || helperLeaf == "at_ref") {
+                helperName = "at";
+              } else if (helperLeaf == "mapAtUnsafe" || helperLeaf == "mapAtUnsafeRef" ||
+                         helperLeaf == "at_unsafe" || helperLeaf == "at_unsafe_ref") {
+                helperName = "at_unsafe";
               } else if (helperLeaf == "mapInsert" || helperLeaf == "mapInsertRef") {
                 helperName = "insert";
               }
             }
             if (!helperName.empty() &&
                 (helperName == "count" || helperName == "contains" ||
-                 helperName == "tryAt" || helperName == "insert" ||
+                 helperName == "tryAt" || helperName == "at" ||
+                 helperName == "at_unsafe" || helperName == "insert" ||
                  helperName == "insert_ref") &&
                 (rawPath.rfind("/map/", 0) == 0 ||
                  rawPath.rfind("/std/collections/map/", 0) == 0 ||
-                 rawPath.rfind("/std/collections/experimental_map/", 0) == 0) &&
+                 rawPath.rfind("/std/collections/experimental_map/", 0) == 0 ||
+                 directCallee->fullPath.rfind("/map/", 0) == 0 ||
+                 directCallee->fullPath.rfind("/std/collections/map/", 0) == 0 ||
+                 directCallee->fullPath.rfind("/std/collections/experimental_map/", 0) == 0) &&
                 isDirectHelperDefinitionFamily(expr, *directCallee)) {
               const bool isExplicitCanonicalMapHelperPath =
-                  rawPath.rfind("/std/collections/map/", 0) == 0;
+                  rawPath.rfind("/std/collections/map/", 0) == 0 ||
+                  directCallee->fullPath.rfind("/std/collections/map/", 0) == 0;
+              auto keepsBuiltinCanonicalMapHelperReturn =
+                  [&](const std::string &canonicalHelperName) {
+                    if (canonicalHelperName == "count") {
+                      return expr.args.size() == 1;
+                    }
+                    std::string declaredReturnType;
+                    if (!ir_lowerer::inferReceiverTypeFromDeclaredReturn(
+                            *directCallee, declaredReturnType)) {
+                      return true;
+                    }
+                    declaredReturnType =
+                        ir_lowerer::trimTemplateTypeText(declaredReturnType);
+                    if (canonicalHelperName == "contains") {
+                      return declaredReturnType == "bool";
+                    }
+                    if (canonicalHelperName == "tryAt") {
+                      return declaredReturnType == "Result";
+                    }
+                    if (canonicalHelperName == "at" ||
+                        canonicalHelperName == "at_unsafe") {
+                      if (!declaredReturnType.empty() &&
+                          declaredReturnType.front() == '/') {
+                        declaredReturnType.erase(declaredReturnType.begin());
+                      }
+                      return declaredReturnType == "bool" ||
+                             declaredReturnType == "int" ||
+                             declaredReturnType == "i8" ||
+                             declaredReturnType == "i16" ||
+                             declaredReturnType == "i32" ||
+                             declaredReturnType == "i64" ||
+                             declaredReturnType == "u8" ||
+                             declaredReturnType == "u16" ||
+                             declaredReturnType == "u32" ||
+                             declaredReturnType == "u64" ||
+                             declaredReturnType == "float" ||
+                             declaredReturnType == "f32" ||
+                             declaredReturnType == "f64" ||
+                             declaredReturnType == "string";
+                    }
+                    return true;
+                  };
               const auto targetInfo =
                   !expr.args.empty()
                       ? ir_lowerer::resolveMapAccessTargetInfo(
@@ -764,7 +816,9 @@
                   targetInfo.isMapTarget &&
                   !targetInfo.isWrappedMapTarget &&
                   (helperName == "count" || helperName == "contains" ||
-                   helperName == "tryAt")) {
+                   helperName == "tryAt" || helperName == "at" ||
+                   helperName == "at_unsafe") &&
+                  keepsBuiltinCanonicalMapHelperReturn(helperName)) {
                 // Keep direct canonical map helpers on the builtin/native
                 // dispatch path for flat map storage receivers.
               } else if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {

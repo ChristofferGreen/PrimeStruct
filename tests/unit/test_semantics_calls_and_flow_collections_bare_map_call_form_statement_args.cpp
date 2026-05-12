@@ -727,7 +727,7 @@ main() {
   CHECK(error.find("unknown call target: /vector/vector") != std::string::npos);
 }
 
-TEST_CASE("canonical vector constructor call no longer falls back to /std/collections/vector/vector helper") {
+TEST_CASE("canonical vector constructor call keeps local same-path helper overload") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -747,10 +747,9 @@ project() {
 main() {
   return(project().value)
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/vector/vector") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
 }
 
 TEST_CASE("explicit vector import supports bare stdlib constructor and namespaced helpers") {

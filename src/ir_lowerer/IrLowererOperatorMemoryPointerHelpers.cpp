@@ -9,6 +9,10 @@
 #include "IrLowererStructFieldBindingHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
+#include <algorithm>
+#include <string_view>
+#include <vector>
+
 namespace primec::ir_lowerer {
 namespace {
 
@@ -18,7 +22,8 @@ std::string inferPointerStructTypePath(
     const InferConversionsAndCallsStructExprPathFn &inferStructExprPath,
     const ResolveConversionsAndCallsStructTypeNameFn &resolveStructTypeName,
     const ResolveConversionsAndCallsStructFieldInfoFn &resolveStructFieldInfo,
-    const SemanticProductTargetAdapter *semanticProductTargets);
+    const SemanticProductTargetAdapter *semanticProductTargets,
+    std::string_view currentScopePath);
 
 std::string resolveSemanticPointerFactTypeText(const SemanticProgram *semanticProgram,
                                                const std::string &typeText,
@@ -52,7 +57,12 @@ std::string inferPointerTargetStructPathFromTypeText(
     return "";
   }
   std::string structPath;
-  if (resolveStructTypeName(trimTemplateTypeText(args.front()), namespacePrefix, structPath)) {
+  const std::string targetType =
+      unwrapTopLevelUninitializedTypeText(trimTemplateTypeText(args.front()));
+  if (resolveStructTypeName(targetType, namespacePrefix, structPath)) {
+    return structPath;
+  }
+  if (!namespacePrefix.empty() && resolveStructTypeName(targetType, "", structPath)) {
     return structPath;
   }
   return "";
@@ -62,38 +72,108 @@ std::string resolveSemanticPointerStructTypePath(
     const Expr &expr,
     const SemanticProductTargetAdapter *semanticProductTargets,
     const ResolveConversionsAndCallsStructTypeNameFn &resolveStructTypeName,
+    std::string_view currentScopePath,
     bool &hasSemanticPointerFactOut) {
   hasSemanticPointerFactOut = false;
   if (semanticProductTargets == nullptr || !semanticProductTargets->hasSemanticProduct ||
-      semanticProductTargets->semanticProgram == nullptr || expr.semanticNodeId == 0) {
+      semanticProductTargets->semanticProgram == nullptr) {
     return "";
   }
 
   const SemanticProgram *semanticProgram = semanticProductTargets->semanticProgram;
   std::string typeText;
-  if (const auto *bindingFact = findSemanticProductBindingFact(*semanticProductTargets, expr)) {
+  auto assignQueryFactType = [&](const SemanticProgramQueryFact &queryFact) {
     hasSemanticPointerFactOut = true;
     typeText = resolveSemanticPointerFactTypeText(
-        semanticProgram, bindingFact->bindingTypeText, bindingFact->bindingTypeTextId);
-  } else if (const auto *localAutoFact =
-                 findSemanticProductLocalAutoFactBySemanticId(*semanticProductTargets, expr)) {
-    hasSemanticPointerFactOut = true;
-    typeText = resolveSemanticPointerFactTypeText(
-        semanticProgram, localAutoFact->bindingTypeText, localAutoFact->bindingTypeTextId);
-  } else if (const auto *queryFact = findSemanticProductQueryFactBySemanticId(*semanticProductTargets, expr)) {
-    hasSemanticPointerFactOut = true;
-    typeText = resolveSemanticPointerFactTypeText(
-        semanticProgram, queryFact->bindingTypeText, queryFact->bindingTypeTextId);
+        semanticProgram, queryFact.bindingTypeText, queryFact.bindingTypeTextId);
     if (typeText.empty()) {
       typeText = resolveSemanticPointerFactTypeText(
-          semanticProgram, queryFact->queryTypeText, queryFact->queryTypeTextId);
+          semanticProgram, queryFact.queryTypeText, queryFact.queryTypeTextId);
+    }
+  };
+
+  if (expr.semanticNodeId != 0) {
+    if (const auto *bindingFact = findSemanticProductBindingFact(*semanticProductTargets, expr)) {
+      hasSemanticPointerFactOut = true;
+      typeText = resolveSemanticPointerFactTypeText(
+          semanticProgram, bindingFact->bindingTypeText, bindingFact->bindingTypeTextId);
+    } else if (const auto *localAutoFact =
+                   findSemanticProductLocalAutoFactBySemanticId(*semanticProductTargets, expr)) {
+      hasSemanticPointerFactOut = true;
+      typeText = resolveSemanticPointerFactTypeText(
+          semanticProgram, localAutoFact->bindingTypeText, localAutoFact->bindingTypeTextId);
+    } else if (const auto *queryFact = findSemanticProductQueryFactBySemanticId(*semanticProductTargets, expr)) {
+      assignQueryFactType(*queryFact);
     }
   }
 
-  if (!hasSemanticPointerFactOut || typeText.empty()) {
-    return "";
+  std::vector<std::string> callNameCandidates;
+  callNameCandidates.push_back(expr.name);
+  if (!expr.sourceName.empty()) {
+    callNameCandidates.push_back(expr.sourceName);
   }
-  return inferPointerTargetStructPathFromTypeText(typeText, expr.namespacePrefix, resolveStructTypeName);
+  if (!expr.namespacePrefix.empty() && expr.name.find('/') == std::string::npos) {
+    callNameCandidates.push_back(expr.namespacePrefix + "/" + expr.name);
+  }
+
+  if (!hasSemanticPointerFactOut && !currentScopePath.empty() && expr.sourceLine > 0 &&
+      expr.sourceColumn > 0) {
+    for (const auto &queryFact : semanticProgram->queryFacts) {
+      if (queryFact.scopePath != currentScopePath ||
+          queryFact.sourceLine != expr.sourceLine ||
+          queryFact.sourceColumn != expr.sourceColumn) {
+        continue;
+      }
+      if (std::find(callNameCandidates.begin(), callNameCandidates.end(), queryFact.callName) ==
+          callNameCandidates.end()) {
+        continue;
+      }
+      assignQueryFactType(queryFact);
+      break;
+    }
+  }
+
+  if (hasSemanticPointerFactOut && !typeText.empty()) {
+    const std::string semanticStruct =
+        inferPointerTargetStructPathFromTypeText(typeText, expr.namespacePrefix, resolveStructTypeName);
+    if (!semanticStruct.empty()) {
+      return semanticStruct;
+    }
+  }
+
+  if (expr.sourceLine > 0 && expr.sourceColumn > 0) {
+    std::vector<std::string> structCandidates;
+    for (const auto &queryFact : semanticProgram->queryFacts) {
+      if (queryFact.sourceLine != expr.sourceLine ||
+          queryFact.sourceColumn != expr.sourceColumn) {
+        continue;
+      }
+      if (std::find(callNameCandidates.begin(), callNameCandidates.end(), queryFact.callName) ==
+          callNameCandidates.end()) {
+        continue;
+      }
+
+      std::string candidateTypeText = resolveSemanticPointerFactTypeText(
+          semanticProgram, queryFact.bindingTypeText, queryFact.bindingTypeTextId);
+      if (candidateTypeText.empty()) {
+        candidateTypeText = resolveSemanticPointerFactTypeText(
+            semanticProgram, queryFact.queryTypeText, queryFact.queryTypeTextId);
+      }
+      const std::string candidateStruct = inferPointerTargetStructPathFromTypeText(
+          candidateTypeText, expr.namespacePrefix, resolveStructTypeName);
+      if (!candidateStruct.empty() &&
+          std::find(structCandidates.begin(), structCandidates.end(), candidateStruct) ==
+              structCandidates.end()) {
+        structCandidates.push_back(candidateStruct);
+      }
+    }
+    if (structCandidates.size() == 1) {
+      hasSemanticPointerFactOut = true;
+      return structCandidates.front();
+    }
+  }
+
+  return "";
 }
 
 std::string inferPointerStructTypePath(
@@ -102,10 +182,11 @@ std::string inferPointerStructTypePath(
     const InferConversionsAndCallsStructExprPathFn &inferStructExprPath,
     const ResolveConversionsAndCallsStructTypeNameFn &resolveStructTypeName,
     const ResolveConversionsAndCallsStructFieldInfoFn &resolveStructFieldInfo,
-    const SemanticProductTargetAdapter *semanticProductTargets) {
+    const SemanticProductTargetAdapter *semanticProductTargets,
+    std::string_view currentScopePath) {
   bool hasSemanticPointerFact = false;
   const std::string semanticPointerStruct = resolveSemanticPointerStructTypePath(
-      expr, semanticProductTargets, resolveStructTypeName, hasSemanticPointerFact);
+      expr, semanticProductTargets, resolveStructTypeName, currentScopePath, hasSemanticPointerFact);
   if (!semanticPointerStruct.empty()) {
     return semanticPointerStruct;
   }
@@ -182,7 +263,8 @@ std::string inferPointerStructTypePath(
           inferStructExprPath,
           resolveStructTypeName,
           resolveStructFieldInfo,
-          semanticProductTargets);
+          semanticProductTargets,
+          currentScopePath);
     }
     if (memoryBuiltin == "at" && expr.args.size() == 3) {
       return inferPointerStructTypePath(
@@ -191,7 +273,8 @@ std::string inferPointerStructTypePath(
           inferStructExprPath,
           resolveStructTypeName,
           resolveStructFieldInfo,
-          semanticProductTargets);
+          semanticProductTargets,
+          currentScopePath);
     }
     if (memoryBuiltin == "at_unsafe" && expr.args.size() == 2) {
       return inferPointerStructTypePath(
@@ -200,7 +283,8 @@ std::string inferPointerStructTypePath(
           inferStructExprPath,
           resolveStructTypeName,
           resolveStructFieldInfo,
-          semanticProductTargets);
+          semanticProductTargets,
+          currentScopePath);
     }
     if (memoryBuiltin == "reinterpret" && expr.args.size() == 1) {
       return "";
@@ -213,13 +297,13 @@ std::string inferPointerStructTypePath(
       expr.args.size() == 2) {
     return inferPointerStructTypePath(
         expr.args.front(), localsIn, inferStructExprPath, resolveStructTypeName, resolveStructFieldInfo,
-        semanticProductTargets);
+        semanticProductTargets, currentScopePath);
   }
 
   if (isSimpleCallName(expr, "location") && expr.args.size() == 1) {
     return inferPointerStructTypePath(
         expr.args.front(), localsIn, inferStructExprPath, resolveStructTypeName, resolveStructFieldInfo,
-        semanticProductTargets);
+        semanticProductTargets, currentScopePath);
   }
 
   return "";
@@ -501,7 +585,8 @@ bool emitConversionsAndCallsMemoryAndPointerExpr(
           inferStructExprPath,
           resolveStructTypeName,
           resolveStructFieldInfo,
-          semanticProductTargets);
+          semanticProductTargets,
+          context.currentScopePath);
       if (!structTypeName.empty()) {
         if (!resolveStructSlotCount(structTypeName, slotCountMultiplier)) {
           return false;
@@ -597,7 +682,8 @@ bool emitConversionsAndCallsMemoryAndPointerExpr(
           inferStructExprPath,
           resolveStructTypeName,
           resolveStructFieldInfo,
-          semanticProductTargets);
+          semanticProductTargets,
+          context.currentScopePath);
       if (!structTypeName.empty()) {
         if (!resolveStructSlotCount(structTypeName, slotCountMultiplier)) {
           return false;
@@ -640,7 +726,8 @@ bool emitConversionsAndCallsMemoryAndPointerExpr(
           inferStructExprPath,
           resolveStructTypeName,
           resolveStructFieldInfo,
-          semanticProductTargets);
+          semanticProductTargets,
+          context.currentScopePath);
       if (!structTypeName.empty()) {
         if (!resolveStructSlotCount(structTypeName, slotCountMultiplier)) {
           return false;
@@ -693,6 +780,16 @@ bool emitConversionsAndCallsMemoryAndPointerExpr(
     if (targetKind == LocalInfo::ValueKind::Unknown) {
       std::string resolvedStructType;
       if (!resolveStructTypeName(targetTypeName, expr.namespacePrefix, resolvedStructType)) {
+        resolvedStructType = inferPointerStructTypePath(
+            expr,
+            localsIn,
+            inferStructExprPath,
+            resolveStructTypeName,
+            resolveStructFieldInfo,
+            semanticProductTargets,
+            context.currentScopePath);
+      }
+      if (resolvedStructType.empty()) {
         error = "native backend does not support alloc target type: " + targetTypeName;
         return false;
       }

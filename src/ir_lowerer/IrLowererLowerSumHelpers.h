@@ -2324,7 +2324,10 @@
     auto isPickCall = [](const Expr &candidate) {
       return candidate.kind == Expr::Kind::Call && !candidate.isBinding &&
              !candidate.isMethodCall && !candidate.isFieldAccess &&
-             isSimpleCallName(candidate, "pick") &&
+             (isSimpleCallName(candidate, "pick") ||
+              (candidate.name == "pick" &&
+               (candidate.namespacePrefix.empty() ||
+                candidate.namespacePrefix == "/Maybe"))) &&
              candidate.templateArgs.empty() && !hasNamedArguments(candidate.argNames);
     };
 

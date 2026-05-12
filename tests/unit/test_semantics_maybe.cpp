@@ -191,7 +191,7 @@ main() {
       0i32
     }
   }}
-  return(left + right)
+  return(plus(left, right))
 }
 )";
   std::string error;
