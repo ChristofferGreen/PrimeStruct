@@ -1,5 +1,7 @@
 #include "SemanticsValidator.h"
 
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+
 namespace primec::semantics {
 
 std::string SemanticsValidator::inferStructReturnPath(
@@ -566,7 +568,7 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
             explicitRemovedMethodPath.rfind("/array/", 0) == 0 &&
             hasDefinitionPath(explicitRemovedMethodPath);
         const bool preservesExplicitCanonicalVectorAccessMethod =
-            explicitRemovedMethodPath.rfind("/std/collections/vector/", 0) == 0 &&
+            isCanonicalVectorCompatibilityPath(explicitRemovedMethodPath) &&
             hasDefinitionPath(explicitRemovedMethodPath);
         size_t receiverIndex = expr.isMethodCall ? 0 : 0;
         if (!expr.isMethodCall && hasNamedArguments(expr.argNames)) {

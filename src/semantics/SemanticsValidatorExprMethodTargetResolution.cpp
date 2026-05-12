@@ -1743,7 +1743,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return false;
     };
     if (!explicitRemovedMethodPath.empty() &&
-        explicitRemovedMethodPath.rfind("/vector/", 0) == 0 &&
+        isRootedVectorHelperPath(explicitRemovedMethodPath) &&
         hasDeclaredDefinitionPath(explicitRemovedMethodPath)) {
       resolvedOut = explicitRemovedMethodPath;
       isBuiltinOut = false;

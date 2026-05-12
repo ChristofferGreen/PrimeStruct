@@ -182,7 +182,7 @@ bool SemanticsValidator::hasImportedDefinitionPath(const std::string &path) cons
       }
       if ((importPath == "/std/collections/internal_vector" ||
            importPath == "/std/collections/internal_vector/*") &&
-          canonicalPath.rfind("/std/collections/vector/", 0) == 0) {
+          isCanonicalVectorCompatibilityPath(canonicalPath)) {
         return true;
       }
       if (importPath == "/std/collections/map" &&
@@ -717,15 +717,15 @@ std::string SemanticsValidator::explicitRemovedCollectionMethodPath(std::string_
     std::string_view helperName = rawName;
     if (rawNamespace == "vector") {
       helperName = rawName;
-    } else if (rawNamespace.empty() && helperName.rfind("vector/", 0) == 0) {
-      helperName.remove_prefix(std::string_view("vector/").size());
+    } else if (rawNamespace.empty() && helperName.rfind(unrootedVectorHelperPrefix(), 0) == 0) {
+      helperName.remove_prefix(unrootedVectorHelperPrefix().size());
     } else {
       return "";
     }
     if (!isRemovedPublishedVectorStatementHelperName(helperName)) {
       return "";
     }
-    std::string aliasPath = "/vector/" + std::string(helperName);
+    std::string aliasPath = rootedVectorHelperPath(helperName);
     return hasDefinitionPath(aliasPath) ? aliasPath : "";
   };
   if (std::string aliasPath = declaredRootVectorAliasPath(); !aliasPath.empty()) {
@@ -838,8 +838,7 @@ bool SemanticsValidator::getVectorStatementHelperName(const Expr &candidate,
   if (removedPath.empty()) {
     removedPath = explicitRemovedCollectionMethodPath(resolveCalleePath(candidate), "");
   }
-  constexpr std::string_view kCanonicalVectorPrefix = "/std/collections/vector/";
-  if (removedPath.rfind(kCanonicalVectorPrefix, 0) != 0 &&
+  if (!isCanonicalVectorCompatibilityPath(removedPath) &&
       !isRootedVectorHelperPath(removedPath) &&
       removedPath.rfind("/array/", 0) != 0) {
     return false;
@@ -847,7 +846,7 @@ bool SemanticsValidator::getVectorStatementHelperName(const Expr &candidate,
 
   const std::string helperName = removedPath.substr(removedPath.find_last_of('/') + 1);
   if (removedPath.rfind("/array/", 0) == 0) {
-    const std::string canonicalPath = "/std/collections/vector/" + helperName;
+    const std::string canonicalPath = canonicalVectorCompatibilityHelperPathOrFallback(helperName);
     if (hasDefinitionPath(canonicalPath) || hasImportedDefinitionPath(canonicalPath)) {
       return false;
     }

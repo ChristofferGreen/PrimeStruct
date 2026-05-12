@@ -262,7 +262,7 @@
     {
       "path": "src/semantics/SemanticsValidatorInferCollectionCompatibility.cpp",
       "pattern": "canonical-vector-path",
-      "count": 5
+      "count": 3
     },
     {
       "path": "src/semantics/SemanticsValidatorInferCollectionCompatibility.cpp",

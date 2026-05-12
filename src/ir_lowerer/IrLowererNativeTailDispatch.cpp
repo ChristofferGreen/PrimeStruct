@@ -714,11 +714,13 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
         (isCanonicalPublishedNativeTailVectorHelperPath(directHelperPath) ||
          semanticDirectCallMatchesVectorHelperSurface(semanticProgram, expr)) &&
         (explicitHelperName == "at" || explicitHelperName == "at_unsafe");
-    const bool isExperimentalVectorAtUnsafeImplementationCall =
+    const bool isPublishedVectorAtUnsafeImplementationCall =
         !expr.isMethodCall &&
-        directHelperPath.rfind("/std/collections/experimental_vector/vectorAtUnsafe", 0) == 0;
+        explicitHelperName == "at_unsafe" &&
+        !isCanonicalPublishedNativeTailVectorHelperPath(directHelperPath) &&
+        !semanticDirectCallMatchesVectorHelperSurface(semanticProgram, expr);
     if (((isExplicitVectorAccessCall && explicitHelperName == "at_unsafe") ||
-         isExperimentalVectorAtUnsafeImplementationCall) &&
+         isPublishedVectorAtUnsafeImplementationCall) &&
         arrayVectorTargetInfo.isVectorTarget) {
       return NativeCallTailDispatchResult::NotHandled;
     }
