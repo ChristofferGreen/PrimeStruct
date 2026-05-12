@@ -301,6 +301,31 @@ bool keepsBuiltinInlineReturnForPublishedMapHelper(std::string_view helperName,
   return true;
 }
 
+bool keepsBuiltinInlineReturnForPublishedVectorHelper(std::string_view helperName,
+                                                      const Definition &callee) {
+  std::string declaredReturnType;
+  if (!inferReceiverTypeFromDeclaredReturn(callee, declaredReturnType)) {
+    return true;
+  }
+  declaredReturnType = trimTemplateTypeText(declaredReturnType);
+  if (!declaredReturnType.empty() && declaredReturnType.front() == '/') {
+    declaredReturnType.erase(declaredReturnType.begin());
+  }
+  if (helperName == "count" || helperName == "capacity") {
+    return declaredReturnType == "int" || declaredReturnType == "i32";
+  }
+  if (helperName == "at" || helperName == "at_unsafe") {
+    return declaredReturnType == "bool" || declaredReturnType == "int" ||
+           declaredReturnType == "i8" || declaredReturnType == "i16" ||
+           declaredReturnType == "i32" || declaredReturnType == "i64" ||
+           declaredReturnType == "u8" || declaredReturnType == "u16" ||
+           declaredReturnType == "u32" || declaredReturnType == "u64" ||
+           declaredReturnType == "float" || declaredReturnType == "f32" ||
+           declaredReturnType == "f64" || declaredReturnType == "string";
+  }
+  return true;
+}
+
 bool prefersPublishedMapHelperDefinition(const Expr &expr,
                                          std::string_view helperName,
                                          const Definition &callee) {
@@ -724,28 +749,15 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
         stripGeneratedInlineHelperSuffix(directCallPath);
     if (directCallee != nullptr &&
         isSoaVectorReceiverExpr != nullptr &&
-        !expr.args.empty()) {
-      std::string preferredCanonicalPath;
-      if (normalizedDirectCallPath ==
-              "/std/collections/experimental_soa_vector_conversions/soaVectorToAos" &&
-          isSoaVectorReceiverExpr(expr.args.front())) {
-        preferredCanonicalPath = "/std/collections/soa_vector/to_aos";
-      } else if (
-          normalizedDirectCallPath ==
-              "/std/collections/experimental_soa_vector_conversions/soaVectorToAosRef" &&
-          isSoaVectorReceiverExpr(expr.args.front())) {
-        preferredCanonicalPath = "/std/collections/soa_vector/to_aos_ref";
-      }
-      if (!preferredCanonicalPath.empty()) {
-        Expr canonicalExpr = expr;
-        canonicalExpr.isMethodCall = false;
-        canonicalExpr.name = preferredCanonicalPath;
-        canonicalExpr.namespacePrefix.clear();
-        if (const Definition *preferredCallee =
-                resolveDefinitionCall(canonicalExpr)) {
-          directCallee = preferredCallee;
-        }
-      }
+        !expr.args.empty() &&
+        (normalizedDirectCallPath ==
+             "/std/collections/experimental_soa_vector_conversions/soaVectorToAos" ||
+         normalizedDirectCallPath ==
+             "/std/collections/experimental_soa_vector_conversions/soaVectorToAosRef") &&
+        isSoaVectorReceiverExpr(expr.args.front())) {
+      error = "struct parameter type mismatch: direct experimental soa_vector conversion "
+              "helpers require SoaVector receiver";
+      return InlineCallDispatchResult::Error;
     }
     if (directCallee != nullptr) {
       std::string directVectorHelperName;
@@ -1064,100 +1076,87 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     }
     return isExperimentalVectorTarget(targetExpr, localsIn);
   };
-  auto isInlineExperimentalSoaVectorTypeName = [](std::string typeName) {
-    typeName = trimTemplateTypeText(typeName);
-    return typeName == "SoaVector" ||
-           typeName == "/SoaVector" ||
-           typeName == "std/collections/experimental_soa_vector/SoaVector" ||
-           typeName == "/std/collections/experimental_soa_vector/SoaVector" ||
-           typeName.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) == 0 ||
-           typeName.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
-  };
-  std::function<bool(const std::string &)> isInlineSoaVectorTypeText;
-  isInlineSoaVectorTypeText = [&](const std::string &typeText) {
+  auto isInlineRawBuiltinSoaVectorTypeText = [&](SymbolId typeTextId,
+                                                const std::string &typeText) {
+    const std::string normalizedTypeText =
+        trimTemplateTypeText(resolveInlineSemanticTypeText(typeTextId, typeText));
     std::string base;
     std::string argText;
-    if (splitTemplateTypeName(trimTemplateTypeText(typeText), base, argText)) {
+    if (splitTemplateTypeName(normalizedTypeText, base, argText)) {
       const std::string normalizedBase = trimTemplateTypeText(base);
       if (normalizedBase == "Reference" || normalizedBase == "/Reference" ||
           normalizedBase == "Pointer" || normalizedBase == "/Pointer") {
-        return isInlineSoaVectorTypeText(argText);
+        const std::string normalizedArg = trimTemplateTypeText(argText);
+        return normalizedArg == "soa_vector" ||
+               normalizedArg == "/soa_vector" ||
+               normalizedArg == "std/collections/soa_vector" ||
+               normalizedArg == "/std/collections/soa_vector";
       }
-      return normalizedBase == "soa_vector" || normalizedBase == "/soa_vector" ||
+      return normalizedBase == "soa_vector" ||
+             normalizedBase == "/soa_vector" ||
              normalizedBase == "std/collections/soa_vector" ||
-             normalizedBase == "/std/collections/soa_vector" ||
-             isInlineExperimentalSoaVectorTypeName(normalizedBase);
+             normalizedBase == "/std/collections/soa_vector";
     }
-    const std::string normalizedTypeText = trimTemplateTypeText(typeText);
-    return normalizedTypeText == "soa_vector" || normalizedTypeText == "/soa_vector" ||
+    return normalizedTypeText == "soa_vector" ||
+           normalizedTypeText == "/soa_vector" ||
            normalizedTypeText == "std/collections/soa_vector" ||
-           normalizedTypeText == "/std/collections/soa_vector" ||
-           isInlineExperimentalSoaVectorTypeName(normalizedTypeText);
+           normalizedTypeText == "/std/collections/soa_vector";
   };
-  auto classifyInlineSoaVectorTypeText =
-      [&](SymbolId typeTextId, const std::string &typeText) {
-    return isInlineSoaVectorTypeText(
-               resolveInlineSemanticTypeText(typeTextId, typeText))
-               ? InlineVectorTargetFact::Vector
-               : InlineVectorTargetFact::NonVector;
-  };
-  auto classifyInlineSoaVectorTargetFromSemanticFacts =
-      [&](const Expr &targetExpr) {
-    if (semanticProgram == nullptr || semanticIndexPtr == nullptr ||
-        targetExpr.semanticNodeId == 0) {
-      return InlineVectorTargetFact::Unknown;
+  std::function<bool(const Expr &)> isRawBuiltinSoaVectorTarget;
+  isRawBuiltinSoaVectorTarget = [&](const Expr &targetExpr) {
+    if (semanticProgram != nullptr && semanticIndexPtr != nullptr &&
+        targetExpr.semanticNodeId != 0) {
+      if (const auto *collectionFact =
+              findSemanticProductCollectionSpecialization(*semanticIndexPtr, targetExpr);
+          collectionFact != nullptr &&
+          isInlineRawBuiltinSoaVectorTypeText(collectionFact->collectionFamilyId,
+                                             collectionFact->collectionFamily)) {
+        return true;
+      }
+      if (const auto *queryFact =
+              findSemanticProductQueryFact(semanticProgram, *semanticIndexPtr, targetExpr);
+          queryFact != nullptr) {
+        return isInlineRawBuiltinSoaVectorTypeText(queryFact->bindingTypeTextId,
+                                                   queryFact->bindingTypeText) ||
+               isInlineRawBuiltinSoaVectorTypeText(queryFact->queryTypeTextId,
+                                                   queryFact->queryTypeText) ||
+               isInlineRawBuiltinSoaVectorTypeText(
+                   queryFact->receiverBindingTypeTextId,
+                   queryFact->receiverBindingTypeText);
+      }
+      if (const auto *bindingFact =
+              findSemanticProductBindingFact(*semanticIndexPtr, targetExpr);
+          bindingFact != nullptr &&
+          isInlineRawBuiltinSoaVectorTypeText(bindingFact->bindingTypeTextId,
+                                             bindingFact->bindingTypeText)) {
+        return true;
+      }
+      if (const auto *localAutoFact =
+              findSemanticProductLocalAutoFact(semanticProgram, *semanticIndexPtr, targetExpr);
+          localAutoFact != nullptr &&
+          isInlineRawBuiltinSoaVectorTypeText(localAutoFact->bindingTypeTextId,
+                                             localAutoFact->bindingTypeText)) {
+        return true;
+      }
     }
-    if (const auto *collectionFact =
-            findSemanticProductCollectionSpecialization(*semanticIndexPtr, targetExpr);
-        collectionFact != nullptr) {
-      const std::string collectionFamily =
-          resolveInlineSemanticTypeText(collectionFact->collectionFamilyId,
-                                        collectionFact->collectionFamily);
-      return collectionFamily == "soa_vector" || collectionFamily == "/soa_vector" ||
-             collectionFamily == "std/collections/soa_vector" ||
-             collectionFamily == "/std/collections/soa_vector"
-                 ? InlineVectorTargetFact::Vector
-                 : InlineVectorTargetFact::NonVector;
+    if (targetExpr.kind == Expr::Kind::Name) {
+      const auto localIt = localsIn.find(targetExpr.name);
+      return localIt != localsIn.end() &&
+             localIt->second.isSoaVector &&
+             localIt->second.usesBuiltinCollectionLayout;
     }
-    if (const auto *queryFact =
-            findSemanticProductQueryFact(semanticProgram, *semanticIndexPtr, targetExpr);
-        queryFact != nullptr) {
-      InlineVectorTargetFact fact =
-          classifyInlineSoaVectorTypeText(queryFact->bindingTypeTextId,
-                                          queryFact->bindingTypeText);
-      fact = combineInlineVectorTargetFacts(
-          fact,
-          classifyInlineSoaVectorTypeText(queryFact->queryTypeTextId,
-                                          queryFact->queryTypeText));
-      return combineInlineVectorTargetFacts(
-          fact,
-          classifyInlineSoaVectorTypeText(queryFact->receiverBindingTypeTextId,
-                                          queryFact->receiverBindingTypeText));
+    if (targetExpr.kind == Expr::Kind::Call) {
+      std::string collection;
+      if (getBuiltinCollectionName(targetExpr, collection) && collection == "soa_vector") {
+        return true;
+      }
+      if ((isSimpleCallName(targetExpr, "location") ||
+           isSimpleCallName(targetExpr, "dereference")) &&
+          targetExpr.args.size() == 1) {
+        return isRawBuiltinSoaVectorTarget(targetExpr.args.front());
+      }
     }
-    if (const auto *bindingFact =
-            findSemanticProductBindingFact(*semanticIndexPtr, targetExpr);
-        bindingFact != nullptr) {
-      return classifyInlineSoaVectorTypeText(bindingFact->bindingTypeTextId,
-                                             bindingFact->bindingTypeText);
-    }
-    if (const auto *localAutoFact =
-            findSemanticProductLocalAutoFact(semanticProgram, *semanticIndexPtr, targetExpr);
-        localAutoFact != nullptr) {
-      return classifyInlineSoaVectorTypeText(localAutoFact->bindingTypeTextId,
-                                             localAutoFact->bindingTypeText);
-    }
-    return InlineVectorTargetFact::Unknown;
-  };
-  auto isSemanticOrLegacySoaVectorTarget = [&](const Expr &targetExpr) {
-    const InlineVectorTargetFact semanticFact =
-        classifyInlineSoaVectorTargetFromSemanticFacts(targetExpr);
-    if (semanticFact == InlineVectorTargetFact::Vector) {
-      return true;
-    }
-    if (semanticFact == InlineVectorTargetFact::NonVector) {
-      return false;
-    }
-    return isSoaVectorTarget(targetExpr, localsIn);
+    return false;
   };
   auto emitCanonicalInlineDefinitionCall = [&](const Expr &callExpr, const Definition &callee) {
     if (isTypeNamespaceMethodCallForInlineEmit(callExpr, callee, localsIn)) {
@@ -1472,6 +1471,18 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       std::string vectorHelperName;
       if (resolveVectorHelperAliasName(expr, vectorHelperName) &&
           (vectorHelperName == "at" || vectorHelperName == "at_unsafe")) {
+        const bool isExplicitCanonicalVectorHelper =
+            rawPath.rfind("/std/collections/vector/", 0) == 0 ||
+            rawPath.rfind("std/collections/vector/", 0) == 0;
+        if (isExplicitCanonicalVectorHelper) {
+          if (const Definition *callee = resolveDefinitionCallFn(expr);
+              callee != nullptr &&
+              !keepsBuiltinInlineReturnForPublishedVectorHelper(vectorHelperName, *callee)) {
+            return emitCanonicalInlineDefinitionCall(expr, *callee)
+                       ? InlineCallDispatchResult::Emitted
+                       : InlineCallDispatchResult::Error;
+          }
+        }
         return InlineCallDispatchResult::NotHandled;
       }
       const size_t rawLeafStart = rawPath.find_last_of('/');
@@ -1814,7 +1825,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       [&](const Expr &callExpr) { return isArrayCountCallFn(callExpr, localsIn); },
       [&](const Expr &callExpr) { return isStringCountCallFn(callExpr, localsIn); },
       [&](const Expr &callExpr) { return isVectorCapacityCallFn(callExpr, localsIn); },
-      [&](const Expr &receiverExpr) { return isSemanticOrLegacySoaVectorTarget(receiverExpr); },
+      [&](const Expr &receiverExpr) { return isRawBuiltinSoaVectorTarget(receiverExpr); },
       [&](const Expr &receiverExpr) {
         if (receiverExpr.kind == Expr::Kind::StringLiteral) {
           return true;

@@ -859,7 +859,7 @@ main() {
 }
 
 TEST_CASE(
-    "direct experimental soaVectorToAos helpers on builtin soa_vector run in C++ emitter") {
+    "direct experimental soaVectorToAos helpers on builtin soa_vector reject in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector_conversions/*
@@ -887,18 +887,28 @@ runRef() {
 )";
   const std::string srcPath =
       writeTemp("compile_root_builtin_soa_vector_direct_experimental_to_aos_reject.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_root_builtin_soa_vector_direct_experimental_to_aos_reject").string();
+  const std::string directErrPath =
+      (testScratchPath("") /
+       "primec_root_builtin_soa_vector_direct_experimental_to_aos_reject_direct.err")
+          .string();
+  const std::string refErrPath =
+      (testScratchPath("") /
+       "primec_root_builtin_soa_vector_direct_experimental_to_aos_reject_ref.err")
+          .string();
 
   const std::string compileDirectCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /runDirect";
-  CHECK(runCommand(compileDirectCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /runDirect 2> " +
+      directErrPath;
+  CHECK(runCommand(compileDirectCmd) != 0);
+  CHECK(readFile(directErrPath).find("struct parameter type mismatch") !=
+        std::string::npos);
 
   const std::string compileRefCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /runRef";
-  CHECK(runCommand(compileRefCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /runRef 2> " +
+      refErrPath;
+  CHECK(runCommand(compileRefCmd) != 0);
+  CHECK(readFile(refErrPath).find("struct parameter type mismatch") !=
+        std::string::npos);
 }
 
 TEST_CASE("runs experimental soa_vector stdlib non-empty to-aos helper in C++ emitter") {

@@ -621,7 +621,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("native runs direct experimental soa_vector to-aos helper on builtin soa_vector") {
+TEST_CASE("native rejects direct experimental soa_vector to-aos helper on builtin soa_vector") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector_conversions/*
@@ -642,13 +642,14 @@ main() {
   const std::string srcPath =
       writeTemp("compile_native_builtin_soa_vector_direct_experimental_to_aos.prime",
                 source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_builtin_soa_vector_direct_experimental_to_aos_exe")
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_builtin_soa_vector_direct_experimental_to_aos_err.txt")
           .string();
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("struct parameter type mismatch") !=
+        std::string::npos);
 }
 
 TEST_CASE("native runs experimental soa_vector stdlib to-aos method on wrapper surface") {
