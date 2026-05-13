@@ -327,16 +327,6 @@ bool isVectorBuiltinName(const Expr &expr, const char *name) {
 }
 
 bool isMapBuiltinName(const Expr &expr, const char *name) {
-  if (std::string_view{name} == "count") {
-    std::string scopedPath = resolveScopedCallPath(expr);
-    if (!scopedPath.empty() && scopedPath.front() == '/') {
-      scopedPath.erase(scopedPath.begin());
-    }
-    scopedPath = stripGeneratedHelperSuffix(std::move(scopedPath));
-    if (scopedPath == collectionMemberPath("map", "count")) {
-      return false;
-    }
-  }
   if (isSimpleCallName(expr, name)) {
     return true;
   }

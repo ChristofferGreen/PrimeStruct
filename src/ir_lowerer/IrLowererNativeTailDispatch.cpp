@@ -688,7 +688,23 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       resolveMapAccessTargetInfo(expr.args.front(), localsIn, resolveCallMapAccessTargetInfo).isMapTarget) {
     return NativeCallTailDispatchResult::NotHandled;
   }
-  if (getBuiltinArrayAccessName(expr, accessName)) {
+  const bool hasBuiltinArrayAccessName =
+      getBuiltinArrayAccessName(expr, accessName);
+  std::string publishedVectorAccessName;
+  const std::string directHelperPath =
+      resolveNativeTailCallPathWithoutFallbackProbes(expr);
+  const bool hasPublishedVectorAccessName =
+      !expr.isMethodCall &&
+      resolvePublishedNativeTailVectorHelperName(
+          semanticProgram, expr, publishedVectorAccessName) &&
+      (publishedVectorAccessName == "at" ||
+       publishedVectorAccessName == "at_unsafe") &&
+      (isCanonicalPublishedNativeTailVectorHelperPath(directHelperPath) ||
+       semanticDirectCallMatchesVectorHelperSurface(semanticProgram, expr));
+  if (!hasBuiltinArrayAccessName && hasPublishedVectorAccessName) {
+    accessName = publishedVectorAccessName;
+  }
+  if (hasBuiltinArrayAccessName || hasPublishedVectorAccessName) {
     const bool isMethodCallTempReceiver =
         expr.isMethodCall &&
         !expr.args.empty() &&
@@ -706,7 +722,6 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
                                            ? resolveArrayVectorAccessTargetInfo(
                                                  expr.args.front(), localsIn, resolveCallArrayVectorAccessTargetInfo)
                                            : ArrayVectorAccessTargetInfo{};
-    const std::string directHelperPath = resolveNativeTailCallPathWithoutFallbackProbes(expr);
     std::string explicitHelperName;
     const bool isExplicitVectorAccessCall =
         !expr.isMethodCall &&

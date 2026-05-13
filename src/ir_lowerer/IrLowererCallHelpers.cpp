@@ -264,15 +264,31 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
   std::string normalizedMapHelperName;
   const bool hasVectorHelperAlias = resolveVectorHelperAliasName(expr, normalizedVectorHelperName);
   const bool hasMapHelperAlias = resolveMapHelperAliasName(expr, normalizedMapHelperName);
-  const bool isCountCall = isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count");
-  const bool isCapacityCall = isVectorBuiltinName(expr, "capacity");
+  const bool isCountCall = isVectorBuiltinName(expr, "count") ||
+                           isMapBuiltinName(expr, "count") ||
+                           (hasVectorHelperAlias && normalizedVectorHelperName == "count") ||
+                           (hasMapHelperAlias && normalizedMapHelperName == "count");
+  const bool isCapacityCall = isVectorBuiltinName(expr, "capacity") ||
+                              (hasVectorHelperAlias &&
+                               normalizedVectorHelperName == "capacity");
   std::string accessName;
-  const bool isCollectionAccessCall = getBuiltinArrayAccessName(expr, accessName);
+  const bool isCollectionAccessCall =
+      getBuiltinArrayAccessName(expr, accessName) ||
+      (hasVectorHelperAlias &&
+       (normalizedVectorHelperName == "at" ||
+        normalizedVectorHelperName == "at_unsafe"));
   const bool isAccessCall = isCollectionAccessCall || isSimpleCallName(expr, "get") || isSimpleCallName(expr, "ref");
   const bool isVectorMutatorCall =
       isVectorBuiltinName(expr, "push") || isVectorBuiltinName(expr, "pop") || isVectorBuiltinName(expr, "reserve") ||
       isVectorBuiltinName(expr, "clear") || isVectorBuiltinName(expr, "remove_at") ||
-      isVectorBuiltinName(expr, "remove_swap");
+      isVectorBuiltinName(expr, "remove_swap") ||
+      (hasVectorHelperAlias &&
+       (normalizedVectorHelperName == "push" ||
+        normalizedVectorHelperName == "pop" ||
+        normalizedVectorHelperName == "reserve" ||
+        normalizedVectorHelperName == "clear" ||
+        normalizedVectorHelperName == "remove_at" ||
+        normalizedVectorHelperName == "remove_swap"));
   auto expectedVectorMutatorArgCount = [&]() -> size_t {
     if (isVectorBuiltinName(expr, "pop") || isVectorBuiltinName(expr, "clear")) {
       return 1u;
