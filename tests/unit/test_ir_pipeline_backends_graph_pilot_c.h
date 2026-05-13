@@ -96,9 +96,9 @@
         std::string::npos);
   CHECK(validatorExpr.find("contextOut.resolvedCallArgumentContext = {") !=
         std::string::npos);
-  CHECK(validatorExprMain.find("const std::string canonicalMapMethodTarget =") ==
+  CHECK(validatorExprMain.find("const std::string preferredMapHelper = preferredMapMethodTarget(receiverExpr, helperName);") ==
         std::string::npos);
-  CHECK(validatorExpr.find("const std::string canonicalMapMethodTarget =") !=
+  CHECK(validatorExpr.find("const std::string preferredMapHelper = preferredMapMethodTarget(receiverExpr, helperName);") !=
         std::string::npos);
   CHECK(validatorExprMain.find("return failLateUnknownTargetDiagnostic(\"unknown call target: \" +") ==
         std::string::npos);
