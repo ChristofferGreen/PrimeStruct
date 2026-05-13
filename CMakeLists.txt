@@ -1068,6 +1068,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.lexer
     primestruct.printers.manual
     primestruct.semantics.manual
+    primestruct.stdlib.map_ownership
     primestruct.diagnostics.codes
   )
 
