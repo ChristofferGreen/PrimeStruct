@@ -1361,6 +1361,13 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
            isDynamicVectorCountTargetFn(target, localsIn))) {
         return false;
       }
+      std::string accessName;
+      if (target.kind == Expr::Kind::Call &&
+          target.args.size() == 2 &&
+          getBuiltinArrayAccessName(target, accessName) &&
+          (accessName == "at" || accessName == "at_unsafe")) {
+        return false;
+      }
       return true;
     }
     if ((isVectorCapacityCallFn != nullptr &&

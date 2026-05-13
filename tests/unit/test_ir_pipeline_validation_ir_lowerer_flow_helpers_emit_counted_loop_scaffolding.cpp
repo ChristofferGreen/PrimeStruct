@@ -130,7 +130,8 @@ TEST_CASE("ir lowerer statement bindings prefer struct constructor full paths") 
   CHECK(source.find("const std::string declaredStructSurface =") != std::string::npos);
   CHECK(source.find("const std::string calleeStructSurface =") != std::string::npos);
   CHECK(source.find("if (declaredStructSurface == calleeStructSurface)") != std::string::npos);
-  CHECK(source.find("if (ir_lowerer::isStructDefinition(*initCallee))") != std::string::npos);
+  CHECK(source.find("if (init.isBraceConstructor &&") != std::string::npos);
+  CHECK(source.find("ir_lowerer::isStructDefinition(*initCallee))") != std::string::npos);
   CHECK(source.find("initStruct = callee.fullPath;") != std::string::npos);
   CHECK(source.find("} else if (initStruct.empty()) {") != std::string::npos);
   CHECK(source.find("inferStructReturnPathFromDefinition(") != std::string::npos);
