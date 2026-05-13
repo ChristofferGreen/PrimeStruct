@@ -181,6 +181,8 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
       readText(semanticsEffectFreeCollectionsPath);
   const std::string semanticsInferCollectionCompatibilitySource =
       readText(semanticsInferCollectionCompatibilityPath);
+  const std::string semanticsInferCollectionReturnInferenceSource =
+      readText(semanticsInferCollectionReturnInferencePath);
   const std::string semanticsInferControlFlowSource = readText(semanticsInferControlFlowPath);
   const std::string semanticsInferDefinitionSource = readText(semanticsInferDefinitionPath);
   const std::string semanticsInferStructReturnSource = readText(semanticsInferStructReturnPath);
@@ -789,6 +791,15 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSource.find(
             "std/collections/vector/") ==
+        std::string::npos);
+  CHECK(semanticsInferCollectionReturnInferenceSource.find(
+            "isStdNamespacedVectorCompatibilityHelperPath(resolvedMethodTarget, \"at\")") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionReturnInferenceSource.find(
+            "isStdNamespacedVectorCompatibilityHelperPath(resolvedMethodTarget, \"at_unsafe\")") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionReturnInferenceSource.find(
+            "resolvedMethodTarget.rfind(\"/std/collections/vector/\", 0)") ==
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find("setupOut.shouldDeferResolvedNamespacedCollectionHelperReturn =") !=
         std::string::npos);

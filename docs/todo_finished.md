@@ -16325,3 +16325,42 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     source-lock coverage; and ratcheted
     `scripts/vector_surface_trace_baseline.json` from 336 to 301 production
     traces. Baseline release validation was skipped per the lite workflow.
+
+- [x] TODO-4422: Route semantic initializer vector traces
+  - owner: ai
+  - created_at: 2026-05-11
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4426
+  - scope: Replace semantic initializer, initializer-call, import, and direct
+    call-resolution vector traces with registry-backed constructor/helper
+    queries or generic collection predicates.
+  - implementation_notes:
+    - Start from `SemanticsValidatorBuildInitializerInference*.cpp`,
+      `SemanticsValidatorBuildImports.cpp`,
+      `SemanticsValidatorBuildCallResolution.cpp`, and related initializer
+      source-lock coverage.
+    - Keep ordinary C++ `std::vector` container usage allowed.
+  - acceptance:
+    - Semantic initializer and import routing no longer hard-codes
+      PrimeStruct vector helper paths where registry or semantic facts can
+      provide the surface.
+    - Focused semantic source-lock or behavior coverage remains aligned.
+    - The vector surface trace baseline decreases for the selected
+      initializer/import files and does not increase elsewhere.
+  - stop_rule: Stop after initializer/import vector traces are routed through
+    registry-backed or generic collection helpers.
+  - finished_at: 2026-05-13
+  - evidence: Retired this leaf after verifying
+    `SemanticsValidatorBuildInitializerInference*.cpp`,
+    `SemanticsValidatorBuildImports.cpp`, and
+    `SemanticsValidatorBuildCallResolution.cpp` no longer have vector surface
+    trace baseline entries; the remaining initializer/import routing already
+    uses registry-backed constructor/helper queries or generic collection
+    predicates. While stabilizing the trace gate before this retirement, routed
+    adjacent semantic vector access probes in
+    `SemanticsValidatorExprArgumentValidationCollections.cpp` and
+    `SemanticsValidatorInferCollectionReturnInference.cpp` through shared
+    registry-backed vector helper predicates, updated source-lock coverage, and
+    ratcheted `scripts/vector_surface_trace_baseline.json` from 266 to 265
+    production traces. Baseline release validation was skipped per the lite
+    workflow.

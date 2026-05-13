@@ -738,7 +738,8 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
         if (resolveMethodTarget(params, locals, candidate.namespacePrefix,
                                 receiver, candidate.name,
                                 resolvedMethodTarget, isBuiltinMethod) &&
-            resolvedMethodTarget.rfind("/std/collections/vector/", 0) == 0) {
+            (isStdNamespacedVectorCompatibilityHelperPath(resolvedMethodTarget, "at") ||
+             isStdNamespacedVectorCompatibilityHelperPath(resolvedMethodTarget, "at_unsafe"))) {
           std::string declaredReturnType;
           if (inferNonTemplateDefinitionReturnType(resolvedMethodTarget,
                                                    declaredReturnType)) {

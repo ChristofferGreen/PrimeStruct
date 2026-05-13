@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+
 namespace primec::semantics {
 
 namespace {
@@ -203,7 +205,9 @@ bool SemanticsValidator::isStringExprForArgumentValidation(
           !dispatchResolvers.resolveVectorTarget(arg.args.front(), elemType)) {
         return false;
       }
-      auto defIt = defMap_.find("/std/collections/vector/at_unsafe");
+      const std::string canonicalAtUnsafe =
+          canonicalVectorCompatibilityHelperPathOrFallback("at_unsafe");
+      auto defIt = defMap_.find(canonicalAtUnsafe);
       if (defIt == defMap_.end()) {
         return false;
       }
@@ -239,7 +243,8 @@ bool SemanticsValidator::isStringExprForArgumentValidation(
     }
     const bool treatAsBuiltinAccess =
         defMap_.find(resolvedPath) == defMap_.end() ||
-        resolvedPath.rfind("/std/collections/vector/at", 0) == 0 ||
+        isStdNamespacedVectorCompatibilityHelperPath(resolvedPath, "at") ||
+        isStdNamespacedVectorCompatibilityHelperPath(resolvedPath, "at_unsafe") ||
         isExplicitMapAccessPath;
     std::string accessName;
     if (treatAsBuiltinAccess &&

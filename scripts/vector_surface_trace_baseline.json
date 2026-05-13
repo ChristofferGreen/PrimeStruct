@@ -141,11 +141,6 @@
     },
     {
       "path": "src/semantics/SemanticsValidatorExprArgumentValidationCollections.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 1
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorExprArgumentValidationCollections.cpp",
       "pattern": "experimental-vector-path",
       "count": 3
     },

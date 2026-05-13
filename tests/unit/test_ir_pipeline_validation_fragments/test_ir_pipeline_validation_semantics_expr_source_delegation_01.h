@@ -307,6 +307,21 @@
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "#include \"SemanticsValidatorInferCollectionCompatibilityInternal.h\"") !=
         std::string::npos);
+  CHECK(semanticsExprArgumentValidationCombinedSource.find(
+            "#include \"SemanticsValidatorInferCollectionCompatibilityInternal.h\"") !=
+        std::string::npos);
+  CHECK(semanticsExprArgumentValidationCombinedSource.find(
+            "canonicalVectorCompatibilityHelperPathOrFallback(\"at_unsafe\")") !=
+        std::string::npos);
+  CHECK(semanticsExprArgumentValidationCombinedSource.find(
+            "isStdNamespacedVectorCompatibilityHelperPath(resolvedPath, \"at\")") !=
+        std::string::npos);
+  CHECK(semanticsExprArgumentValidationCombinedSource.find(
+            "defMap_.find(\"/std/collections/vector/at_unsafe\")") ==
+        std::string::npos);
+  CHECK(semanticsExprArgumentValidationCombinedSource.find(
+            "resolvedPath.rfind(\"/std/collections/vector/at\", 0)") ==
+        std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "return failExprDiagnostic(receiver, std::move(message));") !=
         std::string::npos);
