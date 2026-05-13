@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "TypeResolutionGraph.h"
 
 #include <algorithm>
@@ -28,9 +29,11 @@ std::string diagnosticOwningPath(const std::string &path) {
 bool isExplicitStdNamespacedVectorHelperCall(const Expr &expr,
                                              const char *helperName) {
   const std::string absolutePath =
-      "/std/collections/vector/" + std::string(helperName);
-  const std::string relativePath =
-      "std/collections/vector/" + std::string(helperName);
+      canonicalVectorCompatibilityHelperPathOrFallback(helperName);
+  std::string relativePath = absolutePath;
+  if (!relativePath.empty() && relativePath.front() == '/') {
+    relativePath.erase(relativePath.begin());
+  }
   if (expr.name == absolutePath || expr.name == relativePath) {
     return true;
   }
@@ -38,7 +41,11 @@ bool isExplicitStdNamespacedVectorHelperCall(const Expr &expr,
   if (!normalizedNamespace.empty() && normalizedNamespace.front() == '/') {
     normalizedNamespace.erase(normalizedNamespace.begin());
   }
-  return normalizedNamespace == "std/collections/vector" &&
+  std::string vectorNamespace = canonicalVectorCompatibilityPrefixOrFallback();
+  if (!vectorNamespace.empty() && vectorNamespace.front() == '/') {
+    vectorNamespace.erase(vectorNamespace.begin());
+  }
+  return normalizedNamespace == vectorNamespace &&
          expr.name == helperName;
 }
 
@@ -78,13 +85,17 @@ void SemanticsValidator::captureExecutionContext(const Execution &exec) {
 
 bool SemanticsValidator::failExprDiagnostic(const Expr &expr,
                                             std::string message) {
-  if (message.rfind("unknown call target: /std/collections/vector/count", 0) == 0 &&
+  const std::string unknownVectorCountTarget =
+      "unknown call target: " + canonicalVectorCompatibilityHelperPathOrFallback("count");
+  const std::string unknownVectorCapacityTarget =
+      "unknown call target: " + canonicalVectorCompatibilityHelperPathOrFallback("capacity");
+  if (message.rfind(unknownVectorCountTarget, 0) == 0 &&
       expr.args.size() != 1 &&
       !isExplicitStdNamespacedVectorHelperCall(expr, "count")) {
     message = hasNamedArguments(expr.argNames)
                   ? "named arguments not supported for builtin calls"
                   : "argument count mismatch for builtin count";
-  } else if (message.rfind("unknown call target: /std/collections/vector/capacity", 0) == 0 &&
+  } else if (message.rfind(unknownVectorCapacityTarget, 0) == 0 &&
              expr.args.size() != 1 &&
              !isExplicitStdNamespacedVectorHelperCall(expr, "capacity")) {
     message = hasNamedArguments(expr.argNames)

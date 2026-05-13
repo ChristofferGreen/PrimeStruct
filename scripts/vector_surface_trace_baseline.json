@@ -110,24 +110,9 @@
       "count": 1
     },
     {
-      "path": "src/semantics/SemanticsValidatorDiagnostics.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 5
-    },
-    {
       "path": "src/semantics/SemanticsValidatorEffectFreeCollections.cpp",
       "pattern": "canonical-vector-path",
       "count": 7
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorExecutionDiagnostics.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 2
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorExecutionDiagnostics.cpp",
-      "pattern": "experimental-vector-path",
-      "count": 2
     },
     {
       "path": "src/semantics/SemanticsValidatorExpr.cpp",
@@ -273,16 +258,6 @@
       "path": "src/semantics/SemanticsValidatorInferStructReturnHelpers.cpp",
       "pattern": "canonical-vector-path",
       "count": 5
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorPassesDiagnostics.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 2
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorPassesDiagnostics.cpp",
-      "pattern": "experimental-vector-path",
-      "count": 2
     },
     {
       "path": "src/semantics/SemanticsValidatorPassesStructLayouts.cpp",

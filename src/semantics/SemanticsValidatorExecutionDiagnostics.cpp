@@ -1,5 +1,7 @@
 #include "SemanticsValidator.h"
 
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+
 #include <string_view>
 
 namespace primec::semantics {
@@ -271,9 +273,12 @@ void SemanticsValidator::collectExecutionIntraBodyCallDiagnostics(
         return false;
       }
       const std::string normalizedInferredBase = normalizeBindingTypeName(inferredBase);
+      const bool isExperimentalVectorBase =
+          isLegacyExperimentalVectorCompatibilityPath(normalizedInferredBase) ||
+          isLegacyExperimentalVectorCompatibilityPath("/" + normalizedInferredBase);
       return (normalizedInferredBase == "vector" ||
               normalizedInferredBase == "Vector" ||
-              normalizedInferredBase == "std/collections/experimental_vector/Vector") &&
+              isExperimentalVectorBase) &&
              normalizeBindingTypeName(expectedElemType) == normalizeBindingTypeName(inferredArgs.front());
     };
     std::string message;
@@ -342,7 +347,7 @@ void SemanticsValidator::collectExecutionIntraBodyCallDiagnostics(
       if (!actualStructPath.empty()) {
         if (actualStructPath != expectedStructPath) {
           if (actualStructPath == "/vector" &&
-              expectedStructPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) {
+              isLegacyExperimentalVectorCompatibilityTypePath(expectedStructPath)) {
             return;
           }
           if (isCompatibleExperimentalVectorReceiver(arg, param, expectedStructPath)) {
@@ -479,7 +484,7 @@ void SemanticsValidator::collectExecutionIntraBodyCallDiagnostics(
         }
         const std::string resolved = resolveCalleePath(expr);
         if (defMap_.count(resolved) == 0) {
-          if (resolved.rfind("/std/collections/vector/count", 0) == 0 &&
+          if (isStdNamespacedVectorCompatibilityHelperPath(resolved, "count") &&
               expr.args.size() != 1) {
             appendExecutionRecord(
                 expr,
@@ -488,7 +493,7 @@ void SemanticsValidator::collectExecutionIntraBodyCallDiagnostics(
                     : "argument count mismatch for builtin count");
             return;
           }
-          if (resolved.rfind("/std/collections/vector/capacity", 0) == 0 &&
+          if (isStdNamespacedVectorCompatibilityHelperPath(resolved, "capacity") &&
               expr.args.size() != 1) {
             appendExecutionRecord(
                 expr,

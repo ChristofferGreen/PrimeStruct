@@ -16364,3 +16364,38 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     ratcheted `scripts/vector_surface_trace_baseline.json` from 266 to 265
     production traces. Baseline release validation was skipped per the lite
     workflow.
+
+- [x] TODO-4429: Route semantic diagnostics vector traces
+  - owner: ai
+  - created_at: 2026-05-13
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4422
+  - scope: Replace semantic diagnostics vector helper and experimental vector
+    type traces with registry-backed helper predicates and shared legacy
+    vector type predicates.
+  - implementation_notes:
+    - Split from broad former TODO-4423 after the remaining
+      `SemanticsValidator*` baseline entries covered expression, inference,
+      statement, layout, and diagnostics families.
+    - Start from `SemanticsValidatorDiagnostics.cpp`,
+      `SemanticsValidatorExecutionDiagnostics.cpp`, and
+      `SemanticsValidatorPassesDiagnostics.cpp`.
+    - Keep ordinary C++ `std::vector` container usage allowed.
+  - acceptance:
+    - Diagnostics-side semantic vector traces are routed through shared
+      metadata/predicate helpers rather than direct vector path literals.
+    - Focused semantic source-lock coverage remains aligned.
+    - The vector surface trace baseline decreases for the selected diagnostics
+      files and does not increase elsewhere.
+  - stop_rule: Stop after diagnostics-side semantic vector traces are removed
+    and the baseline ratchets downward.
+  - finished_at: 2026-05-13
+  - evidence: Split broad TODO-4423 into bounded follow-up leaves TODO-4430
+    through TODO-4433, routed diagnostics vector helper checks through
+    `canonicalVectorCompatibilityHelperPathOrFallback`,
+    `canonicalVectorCompatibilityPrefixOrFallback`, and
+    `isStdNamespacedVectorCompatibilityHelperPath`, routed experimental vector
+    type checks through shared legacy vector predicates, updated source-lock
+    coverage, and ratcheted `scripts/vector_surface_trace_baseline.json` from
+    265 to 252 production traces. Baseline release validation was skipped per
+    the lite workflow.

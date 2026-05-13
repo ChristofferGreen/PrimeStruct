@@ -1144,6 +1144,20 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsDiagnosticsSource.find(
             "void SemanticsValidator::sortTypeResolutionNodesForDiagnosticOrder(") !=
         std::string::npos);
+  CHECK(semanticsDiagnosticsSource.find(
+            "#include \"SemanticsValidatorInferCollectionCompatibilityInternal.h\"") !=
+        std::string::npos);
+  CHECK(semanticsDiagnosticsSource.find(
+            "canonicalVectorCompatibilityHelperPathOrFallback(helperName)") !=
+        std::string::npos);
+  CHECK(semanticsDiagnosticsSource.find(
+            "canonicalVectorCompatibilityPrefixOrFallback()") !=
+        std::string::npos);
+  CHECK(semanticsDiagnosticsSource.find(
+            "canonicalVectorCompatibilityHelperPathOrFallback(\"count\")") !=
+        std::string::npos);
+  CHECK(semanticsDiagnosticsSource.find("std/collections/vector/") ==
+        std::string::npos);
   CHECK(semanticsValidatorHeaderSource.find("SemanticValidationResultSink resultSink_;") !=
         std::string::npos);
   CHECK(semanticsValidatorHeaderSource.find("DiagnosticSink diagnosticSink_;") ==
@@ -1494,6 +1508,32 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsPassesDiagnosticsSource.find("isFlowEffectDiagnosticMessage(") != std::string::npos);
   CHECK(semanticsPassesDiagnosticsSource.find("collectResolvedCallArgumentDiagnostic") != std::string::npos);
+  CHECK(semanticsPassesDiagnosticsSource.find(
+            "#include \"SemanticsValidatorInferCollectionCompatibilityInternal.h\"") !=
+        std::string::npos);
+  CHECK(semanticsExecutionDiagnosticsSource.find(
+            "#include \"SemanticsValidatorInferCollectionCompatibilityInternal.h\"") !=
+        std::string::npos);
+  CHECK(semanticsPassesDiagnosticsSource.find(
+            "isLegacyExperimentalVectorCompatibilityPath(normalizedInferredBase)") !=
+        std::string::npos);
+  CHECK(semanticsExecutionDiagnosticsSource.find(
+            "isLegacyExperimentalVectorCompatibilityTypePath(expectedStructPath)") !=
+        std::string::npos);
+  CHECK(semanticsPassesDiagnosticsSource.find(
+            "isStdNamespacedVectorCompatibilityHelperPath(resolved, \"count\")") !=
+        std::string::npos);
+  CHECK(semanticsExecutionDiagnosticsSource.find(
+            "isStdNamespacedVectorCompatibilityHelperPath(resolved, \"capacity\")") !=
+        std::string::npos);
+  CHECK(semanticsPassesDiagnosticsSource.find("std/collections/vector/") ==
+        std::string::npos);
+  CHECK(semanticsExecutionDiagnosticsSource.find("std/collections/vector/") ==
+        std::string::npos);
+  CHECK(semanticsPassesDiagnosticsSource.find("std/collections/experimental_vector/") ==
+        std::string::npos);
+  CHECK(semanticsExecutionDiagnosticsSource.find("std/collections/experimental_vector/") ==
+        std::string::npos);
 }
 
 TEST_CASE("semantics validator statement source delegation stays stable") {
