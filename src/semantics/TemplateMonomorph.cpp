@@ -1,5 +1,6 @@
 #include "SemanticsHelpers.h"
 #include "MapConstructorHelpers.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "primec/Ast.h"
 #include "primec/StdlibSurfaceRegistry.h"
 #include "primec/testing/SemanticsGraphHelpers.h"

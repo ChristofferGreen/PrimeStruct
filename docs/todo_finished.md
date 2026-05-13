@@ -16528,3 +16528,32 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     before template monomorph work. Focused release target build, semantic
     source-lock validation, direct vector trace check, and vector trace CTest
     validation passed.
+
+- [x] TODO-4417: Route template monomorph vector surface traces
+  - owner: ai
+  - created_at: 2026-05-11
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4433
+  - scope: Replace template monomorph vector paths, helper aliases, and
+    compatibility checks with manifest or registry-backed collection helpers.
+  - implementation_notes:
+    - Start from `src/semantics/TemplateMonomorph*.h` entries in
+      `scripts/vector_surface_trace_baseline.json`.
+    - Keep ordinary C++ `std::vector` container usage allowed.
+  - acceptance:
+    - Template monomorph vector helper and type decisions no longer hard-code
+      PrimeStruct vector paths where registry metadata carries the surface.
+    - Focused template-monomorph source-lock or behavior coverage remains
+      aligned.
+    - The vector surface trace baseline decreases for template monomorph files
+      and does not increase elsewhere.
+  - stop_rule: Stop once template monomorph files no longer account for
+    removable PrimeStruct vector surface traces before emitter/parser work.
+  - finished_at: 2026-05-13
+  - evidence: Routed template-monomorph vector helper paths, legacy
+    experimental vector type spellings, constructor aliases, import coverage,
+    receiver-template checks, and auto-compat helper detection through shared
+    collection compatibility helpers and registry metadata. Ratcheted
+    `scripts/vector_surface_trace_baseline.json` from 135 to 49 production
+    traces, leaving no `TemplateMonomorph*` entries in the baseline. Focused
+    release source-lock validation and vector trace CTest validation passed.

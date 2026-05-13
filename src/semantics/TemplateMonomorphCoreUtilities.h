@@ -19,8 +19,9 @@ std::string normalizeBuiltinCollectionTemplateBase(const std::string &name) {
   if (name == "array" || name == "/array") {
     return "array";
   }
-  if (name == "vector" || name == "/vector" || name == "std/collections/vector" ||
-      name == "/std/collections/vector") {
+  if (name == "vector" || name == "/vector" ||
+      trimLeadingSlash(name) ==
+          trimLeadingSlash(canonicalVectorCompatibilityPrefixOrFallback())) {
     return "vector";
   }
   if (name == "soa_vector" || name == "/soa_vector") {
@@ -50,7 +51,7 @@ bool importPathCoversTarget(const std::string &importPath, const std::string &ta
   if (importPath == targetPath) {
     return true;
   }
-  if (importPath == "/std/collections/vector" ||
+  if (importPath == canonicalVectorCompatibilityPrefixOrFallback() ||
       importPath == "/std/collections/map" ||
       importPath == "/std/collections/soa_vector" ||
       importPath == "/std/collections/soa_vector_conversions") {

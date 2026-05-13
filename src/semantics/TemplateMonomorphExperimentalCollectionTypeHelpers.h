@@ -21,8 +21,7 @@ std::string experimentalVectorConstructorInferencePath(const std::string &resolv
 bool isExperimentalVectorConstructorHelperPath(const std::string &resolvedPath) {
   const std::string normalizedPath =
       stripCollectionConstructorSuffixes(resolvedPath);
-  return normalizedPath.rfind("/std/collections/experimental_vector/", 0) ==
-             0 &&
+  return normalizedPath.rfind(legacyExperimentalVectorCompatibilityPrefix(), 0) == 0 &&
          isResolvedVectorConstructorHelperPath(normalizedPath);
 }
 
@@ -39,7 +38,7 @@ bool resolvesExperimentalVectorValueTypeText(const std::string &typeText) {
       return false;
     }
     if ((normalizedBase == "Vector" ||
-         normalizedBase == "std/collections/experimental_vector/Vector") &&
+         isLegacyExperimentalVectorCompatibilityPath("/" + normalizedBase)) &&
         !argText.empty()) {
       std::vector<std::string> args;
       return splitTopLevelTemplateArgs(argText, args) && args.size() == 1;
@@ -53,7 +52,8 @@ bool resolvesExperimentalVectorValueTypeText(const std::string &typeText) {
   if (!normalizedResolvedPath.empty() && normalizedResolvedPath.front() == '/') {
     normalizedResolvedPath.erase(normalizedResolvedPath.begin());
   }
-  return normalizedResolvedPath.rfind("std/collections/experimental_vector/Vector__", 0) == 0;
+  return isLegacyExperimentalVectorCompatibilitySpecializedTypePath(
+      "/" + normalizedResolvedPath);
 }
 
 bool extractVectorValueTypeFromTypeText(const std::string &typeText, std::string &valueTypeOut) {
@@ -67,8 +67,8 @@ bool extractVectorValueTypeFromTypeText(const std::string &typeText, std::string
   const std::string normalizedBase = normalizeBindingTypeName(base);
   if (normalizedBase != "vector" &&
       normalizedBase != "Vector" &&
-      normalizedBase != "/std/collections/experimental_vector/Vector" &&
-      normalizedBase != "std/collections/experimental_vector/Vector") {
+      !isLegacyExperimentalVectorCompatibilityPath(normalizedBase) &&
+      !isLegacyExperimentalVectorCompatibilityPath("/" + normalizedBase)) {
     return false;
   }
   std::vector<std::string> args;

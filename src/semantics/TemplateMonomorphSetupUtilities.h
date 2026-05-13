@@ -190,10 +190,19 @@ bool replaceBindingTypeTransform(Expr &binding, const std::string &typeName, std
 }
 
 bool isTemplatedAutoCompatDefinitionPath(std::string_view fullPath) {
-  return fullPath == "/std/collections/vectorPush" || fullPath == "/std/collections/vectorPop" ||
-         fullPath == "/std/collections/vectorReserve" || fullPath == "/std/collections/vectorClear" ||
-         fullPath == "/std/collections/vectorRemoveAt" || fullPath == "/std/collections/vectorRemoveSwap" ||
-         fullPath == "/std/collections/vectorAt" || fullPath == "/std/collections/vectorAtUnsafe";
+  auto isVectorCompatibilityDefinition = [&](std::string_view helperName) {
+    const std::string path =
+        "/std/collections/" + legacyExperimentalVectorCompatibilityHelperName(helperName);
+    return fullPath == path;
+  };
+  return isVectorCompatibilityDefinition("push") ||
+         isVectorCompatibilityDefinition("pop") ||
+         isVectorCompatibilityDefinition("reserve") ||
+         isVectorCompatibilityDefinition("clear") ||
+         isVectorCompatibilityDefinition("remove_at") ||
+         isVectorCompatibilityDefinition("remove_swap") ||
+         isVectorCompatibilityDefinition("at") ||
+         isVectorCompatibilityDefinition("at_unsafe");
 }
 
 bool applyImplicitAutoTemplates(Program &program, Context &ctx, std::string &error) {

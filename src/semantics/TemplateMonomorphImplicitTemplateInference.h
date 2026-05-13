@@ -43,7 +43,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
   }
   const bool isStdlibCollectionHelper =
       [&]() {
-        if (def.fullPath.rfind("/std/collections/vector/", 0) == 0 ||
+        if (isCanonicalVectorCompatibilityPath(def.fullPath) ||
             def.fullPath.rfind("/std/collections/soa_vector/", 0) == 0 ||
             def.fullPath.rfind("/std/collections/map/", 0) == 0 ||
             def.fullPath.rfind("/map/", 0) == 0) {

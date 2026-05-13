@@ -9,8 +9,8 @@ void buildImportAliases(Context &ctx) {
   ctx.transitiveImportAliases.clear();
   ctx.stdlibScopedImportAliases.clear();
   ctx.importAliases.clear();
-  constexpr std::string_view InternalVectorTypePath =
-      "/std/collections/experimental_vector/Vector";
+  const std::string InternalVectorTypePath =
+      legacyExperimentalVectorCompatibilityPrefix() + "Vector";
   const auto &directImportPaths = ctx.program.sourceImports.empty()
                                       ? ctx.program.imports
                                       : ctx.program.sourceImports;
@@ -155,9 +155,9 @@ void buildImportAliases(Context &ctx) {
     if (isWildcard) {
       registerStdlibSurfaceWildcardAliases(ctx.directImportAliases, prefix);
       if (prefix == "/std/collections/internal_vector") {
-        if (ctx.sourceDefs.count(std::string(InternalVectorTypePath)) > 0) {
+        if (ctx.sourceDefs.count(InternalVectorTypePath) > 0) {
           registerDefinitionAlias(
-              ctx.directImportAliases, "Vector", std::string(InternalVectorTypePath));
+              ctx.directImportAliases, "Vector", InternalVectorTypePath);
         }
       }
       const std::string scopedPrefix = prefix + "/";
@@ -253,9 +253,9 @@ void buildImportAliases(Context &ctx) {
     if (isWildcard) {
       registerStdlibSurfaceWildcardAliases(ctx.transitiveImportAliases, prefix);
       if (prefix == "/std/collections/internal_vector") {
-        if (ctx.sourceDefs.count(std::string(InternalVectorTypePath)) > 0) {
+        if (ctx.sourceDefs.count(InternalVectorTypePath) > 0) {
           registerDefinitionAlias(
-              ctx.transitiveImportAliases, "Vector", std::string(InternalVectorTypePath));
+              ctx.transitiveImportAliases, "Vector", InternalVectorTypePath);
         }
         continue;
       }

@@ -118,7 +118,8 @@ bool extractExperimentalVectorElementTypeFromTypeText(const std::string &typeTex
       if (!normalizedBase.empty() && normalizedBase.front() == '/') {
         normalizedBase.erase(normalizedBase.begin());
       }
-      if ((normalizedBase == "Vector" || normalizedBase == "std/collections/experimental_vector/Vector") &&
+      if ((normalizedBase == "Vector" ||
+           isLegacyExperimentalVectorCompatibilityPath("/" + normalizedBase)) &&
           !argText.empty()) {
         std::vector<std::string> args;
         if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
@@ -137,7 +138,8 @@ bool extractExperimentalVectorElementTypeFromTypeText(const std::string &typeTex
     if (!normalizedResolvedPath.empty() && normalizedResolvedPath.front() == '/') {
       normalizedResolvedPath.erase(normalizedResolvedPath.begin());
     }
-    if (normalizedResolvedPath.rfind("std/collections/experimental_vector/Vector__", 0) != 0) {
+    if (!isLegacyExperimentalVectorCompatibilitySpecializedTypePath(
+            "/" + normalizedResolvedPath)) {
       return false;
     }
     auto defIt = ctx.sourceDefs.find(resolvedPath);
@@ -252,7 +254,8 @@ bool extractExperimentalVectorValueReceiverTemplateArgsFromTypeText(const std::s
     if (!normalizedBase.empty() && normalizedBase.front() == '/') {
       normalizedBase.erase(normalizedBase.begin());
     }
-    if ((normalizedBase == "Vector" || normalizedBase == "std/collections/experimental_vector/Vector") &&
+    if ((normalizedBase == "Vector" ||
+         isLegacyExperimentalVectorCompatibilityPath("/" + normalizedBase)) &&
         !argText.empty()) {
       return splitTopLevelTemplateArgs(argText, templateArgsOut) && templateArgsOut.size() == 1;
     }
@@ -265,7 +268,8 @@ bool extractExperimentalVectorValueReceiverTemplateArgsFromTypeText(const std::s
   if (!normalizedResolvedPath.empty() && normalizedResolvedPath.front() == '/') {
     normalizedResolvedPath.erase(normalizedResolvedPath.begin());
   }
-  if (normalizedResolvedPath.rfind("std/collections/experimental_vector/Vector__", 0) != 0) {
+  if (!isLegacyExperimentalVectorCompatibilitySpecializedTypePath(
+          "/" + normalizedResolvedPath)) {
     return false;
   }
   auto defIt = ctx.sourceDefs.find(resolvedPath);
@@ -561,10 +565,16 @@ std::string experimentalMapHelperPathForCanonicalHelper(const std::string &path)
 }
 
 std::string experimentalVectorHelperPathForCanonicalHelper(const std::string &path) {
-  return primec::stdlibSurfacePreferredSpellingForMember(
-      primec::StdlibSurfaceId::CollectionsVectorHelpers,
-      path,
-      "/std/collections/experimental_vector/");
+  std::string helperName;
+  if (!resolveCanonicalVectorHelperNameFromResolvedPath(path, helperName)) {
+    return {};
+  }
+  const StdlibSurfaceMetadata *metadata = vectorHelperSurfaceMetadata();
+  if (metadata == nullptr) {
+    return {};
+  }
+  return preferredPublishedCollectionLoweringPath(
+      helperName, metadata->id, legacyExperimentalVectorCompatibilityPrefix());
 }
 
 std::string experimentalSoaVectorHelperPathForCanonicalHelper(const std::string &path) {
@@ -620,14 +630,11 @@ std::string experimentalSoaVectorHelperPathForCanonicalHelper(const std::string 
 }
 
 bool isExperimentalVectorPublicHelperPath(const std::string &path) {
-  auto matchesHelper = [&](std::string_view helperName) {
-    const std::string base = "/std/collections/experimental_vector/" + std::string(helperName);
-    return path == base || path.rfind(base + "__t", 0) == 0;
-  };
-  return matchesHelper("vectorCount") || matchesHelper("vectorCapacity") || matchesHelper("vectorPush") ||
-         matchesHelper("vectorPop") || matchesHelper("vectorReserve") || matchesHelper("vectorClear") ||
-         matchesHelper("vectorRemoveAt") || matchesHelper("vectorRemoveSwap") || matchesHelper("vectorAt") ||
-         matchesHelper("vectorAtUnsafe");
+  if (path.rfind(legacyExperimentalVectorCompatibilityPrefix(), 0) != 0) {
+    return false;
+  }
+  std::string helperName;
+  return resolveVectorCompatibilityHelperNameFromResolvedPath(path, helperName);
 }
 
 bool isExperimentalSoaVectorPublicHelperPath(const std::string &path) {
@@ -641,7 +648,7 @@ bool hasVisibleStdCollectionsImportForPath(const Context &ctx, const std::string
   if (usesStdlibScopedImportAliases("", ctx)) {
     return true;
   }
-  if (path.rfind("/std/collections/experimental_vector/", 0) == 0) {
+  if (path.rfind(legacyExperimentalVectorCompatibilityPrefix(), 0) == 0) {
     return false;
   }
   const auto &importPaths = ctx.program.sourceImports.empty() ? ctx.program.imports : ctx.program.sourceImports;

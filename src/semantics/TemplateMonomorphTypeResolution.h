@@ -342,10 +342,18 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
         (ctx.sourceDefs.count(resolvedPath) > 0 || ctx.helperOverloads.count(resolvedPath) > 0)) {
       return resolvedPath;
     }
-    if (resolvedPath == "/std/collections/vector/Vector" &&
-        (ctx.sourceDefs.count("/std/collections/vector/vector") > 0 ||
-         ctx.helperOverloads.count("/std/collections/vector/vector") > 0)) {
-      return "/std/collections/vector/vector";
+    const StdlibSurfaceMetadata *vectorCtorMetadata =
+        vectorConstructorSurfaceMetadata();
+    const std::string vectorConstructorPath =
+        vectorCtorMetadata == nullptr
+            ? canonicalVectorCompatibilityHelperPathOrFallback("vector")
+            : std::string(vectorCtorMetadata->canonicalPath);
+    const std::string vectorTypePath =
+        canonicalVectorCompatibilityPrefixOrFallback() + "/Vector";
+    if (resolvedPath == vectorTypePath &&
+        (ctx.sourceDefs.count(vectorConstructorPath) > 0 ||
+         ctx.helperOverloads.count(vectorConstructorPath) > 0)) {
+      return vectorConstructorPath;
     }
     const std::string helperPath =
         metadataBackedCanonicalMapConstructorRewritePath(resolvedPath,

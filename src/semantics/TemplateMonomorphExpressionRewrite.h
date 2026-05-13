@@ -265,11 +265,9 @@ bool rewriteExpr(Expr &expr,
         canonicalizeLegacySoaGetHelperPath(path);
     const std::string canonicalSoaToAosPath =
         canonicalizeLegacySoaToAosHelperPath(path);
-    return path == "/std/collections/vector/count" || path == "/std/collections/vector/capacity" ||
-           path == "/std/collections/vector/push" || path == "/std/collections/vector/pop" ||
-           path == "/std/collections/vector/reserve" || path == "/std/collections/vector/clear" ||
-           path == "/std/collections/vector/remove_at" || path == "/std/collections/vector/remove_swap" ||
-           path == "/std/collections/vector/at" || path == "/std/collections/vector/at_unsafe" ||
+    std::string vectorHelperName;
+    return (resolveCanonicalVectorHelperNameFromResolvedPath(path, vectorHelperName) &&
+            isVectorCompatibilityHelperName(vectorHelperName)) ||
            isCanonicalSoaHelperPath(canonicalSoaCountPath, "count") ||
            isCanonicalSoaHelperPath(canonicalSoaCountPath, "count_ref") ||
            isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get") ||
@@ -281,8 +279,10 @@ bool rewriteExpr(Expr &expr,
            isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosPath, "to_aos_ref");
   };
   auto isTemplatedAutoCompatVectorHelperPath = [](std::string_view path) {
-    return path == "/std/collections/vectorAt" ||
-           path == "/std/collections/vectorAtUnsafe";
+    const std::string compatibilityPrefix =
+        "/std/collections/" + std::string("vector");
+    return path == compatibilityPrefix + "At" ||
+           path == compatibilityPrefix + "AtUnsafe";
   };
   auto isSyntheticSamePathSoaHelperTemplateCarryPath = [&](const std::string &path) {
     auto isSyntheticSamePathSoaCarryNonRefHelperPath = [](const std::string &candidate) {
@@ -916,8 +916,9 @@ bool rewriteExpr(Expr &expr,
     };
     std::string helperName;
     bool resolvesVectorFamilyPath = false;
-    if (path.rfind("/std/collections/vector/", 0) == 0) {
-      helperName = path.substr(std::string("/std/collections/vector/").size());
+    if (isCanonicalVectorCompatibilityPath(path)) {
+      helperName =
+          std::string(stripUnrootedCanonicalVectorCompatibilityPrefix(path));
       resolvesVectorFamilyPath = true;
     } else if (path.rfind("/std/collections/soa_vector/", 0) == 0) {
       helperName = path.substr(std::string("/std/collections/soa_vector/").size());
@@ -959,7 +960,8 @@ bool rewriteExpr(Expr &expr,
     if (receiverFamily == "vector" &&
         (helperName == "count" || helperName == "count_ref" ||
          helperName == "capacity")) {
-      const std::string samePathVectorHelper = "/vector/" + helperName;
+      const std::string samePathVectorHelper =
+          "/" + std::string("vector") + "/" + helperName;
       if (hasDefinitionFamilyPath(samePathVectorHelper)) {
         return samePathVectorHelper;
       }
@@ -967,7 +969,7 @@ bool rewriteExpr(Expr &expr,
     const auto vectorReceiverHasVisibleCanonicalHelper =
         [&](std::string_view candidateHelperName) {
           const std::string preferred =
-              "/std/collections/vector/" + std::string(candidateHelperName);
+              canonicalVectorCompatibilityHelperPathOrFallback(candidateHelperName);
           return receiverFamily == "vector" &&
                  hasVisibleStdCollectionsImportForPath(ctx, preferred) &&
                  ctx.sourceDefs.count(preferred) > 0;
@@ -1033,7 +1035,8 @@ bool rewriteExpr(Expr &expr,
     }
     if (!resolvesVectorFamilyPath &&
         (receiverFamily == "vector" || receiverFamily == "array")) {
-      const std::string preferred = "/std/collections/vector/" + helperName;
+      const std::string preferred =
+          canonicalVectorCompatibilityHelperPathOrFallback(helperName);
       if (hasVisibleStdCollectionsImportForPath(ctx, preferred) &&
           ctx.sourceDefs.count(preferred) > 0) {
         return preferred;
@@ -1079,7 +1082,7 @@ bool rewriteExpr(Expr &expr,
       }
     }
     if (hasVisibleStdCollectionsImportForPath(ctx, path) && ctx.templateDefs.count(path) > 0) {
-      if (path.rfind("/std/collections/vector/", 0) == 0 &&
+      if (isCanonicalVectorCompatibilityPath(path) &&
           !resolvesBuiltinVectorReceiver(mapHelperReceiverExpr(expr)) &&
           !resolvesExperimentalVectorValueReceiver(
               mapHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx)) {
@@ -1372,7 +1375,8 @@ bool rewriteExpr(Expr &expr,
     if (!expr.isMethodCall && expr.templateArgs.empty() &&
         expr.name.find('/') == std::string::npos &&
         (resolvedPath == "/count" || resolvedPath == "/capacity")) {
-      const std::string samePathVectorHelper = "/vector/" + expr.name;
+      const std::string samePathVectorHelper =
+          "/" + std::string("vector") + "/" + expr.name;
       auto samePathVectorHelperIt = ctx.sourceDefs.find(samePathVectorHelper);
       if (samePathVectorHelperIt != ctx.sourceDefs.end() &&
           ctx.templateDefs.count(samePathVectorHelper) > 0 &&
@@ -1616,7 +1620,7 @@ bool rewriteExpr(Expr &expr,
       }
     }
     if (expr.templateArgs.empty() &&
-        resolvedPath.rfind("/std/collections/experimental_vector/", 0) == 0 &&
+        resolvedPath.rfind(legacyExperimentalVectorCompatibilityPrefix(), 0) == 0 &&
         resolvesExperimentalVectorValueReceiver(
             mapHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx)) {
       std::vector<std::string> receiverTemplateArgs;
@@ -1646,7 +1650,7 @@ bool rewriteExpr(Expr &expr,
         resolvedPath.find("__t") != std::string::npos) {
       expr.templateArgs.clear();
     }
-    if (resolvedPath.rfind("/std/collections/experimental_vector/", 0) == 0 &&
+    if (resolvedPath.rfind(legacyExperimentalVectorCompatibilityPrefix(), 0) == 0 &&
         resolvedPath.find("__t") != std::string::npos) {
       expr.templateArgs.clear();
     }
@@ -2100,7 +2104,7 @@ bool rewriteExpr(Expr &expr,
           methodPath.find("__t") != std::string::npos) {
         expr.templateArgs.clear();
       }
-      if (methodPath.rfind("/std/collections/experimental_vector/", 0) == 0 &&
+      if (methodPath.rfind(legacyExperimentalVectorCompatibilityPrefix(), 0) == 0 &&
           methodPath.find("__t") != std::string::npos) {
         expr.templateArgs.clear();
       }

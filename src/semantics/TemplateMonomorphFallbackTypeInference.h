@@ -86,10 +86,10 @@ std::string resolveStructLikeExprPathForTemplatedVectorFallback(const Expr &expr
   if (!expr.isMethodCall && expr.templateArgs.size() == 1) {
     const std::string experimentalPath = experimentalVectorConstructorInferencePath(resolved);
     if (!experimentalPath.empty() && ctx.sourceDefs.count(experimentalPath) > 0) {
-      return "/std/collections/experimental_vector/Vector<" + joinTemplateArgs(expr.templateArgs) + ">";
+      return legacyExperimentalVectorCompatibilityTypeText(joinTemplateArgs(expr.templateArgs));
     }
     if (isExperimentalVectorConstructorHelperPath(resolved)) {
-      return "/std/collections/experimental_vector/Vector<" + joinTemplateArgs(expr.templateArgs) + ">";
+      return legacyExperimentalVectorCompatibilityTypeText(joinTemplateArgs(expr.templateArgs));
     }
   }
   if (!expr.isMethodCall && expr.templateArgs.empty()) {
@@ -154,7 +154,7 @@ std::string resolveStructLikeExprPathForTemplatedVectorFallback(const Expr &expr
                                       inferredArgs,
                                       inferError) &&
             inferredArgs.size() == 1) {
-          return "/std/collections/experimental_vector/Vector<" + joinTemplateArgs(inferredArgs) + ">";
+          return legacyExperimentalVectorCompatibilityTypeText(joinTemplateArgs(inferredArgs));
         }
       }
     }
@@ -175,7 +175,7 @@ std::string resolveStructLikeExprPathForTemplatedVectorFallback(const Expr &expr
                                       inferredArgs,
                                       inferError) &&
             inferredArgs.size() == 1) {
-          return "/std/collections/experimental_vector/Vector<" + joinTemplateArgs(inferredArgs) + ">";
+          return legacyExperimentalVectorCompatibilityTypeText(joinTemplateArgs(inferredArgs));
         }
       }
     }
@@ -193,7 +193,7 @@ std::string resolveStructLikeExprPathForTemplatedVectorFallback(const Expr &expr
         }
         std::string valueType;
         if (extractVectorValueTypeFromTypeText(transform.templateArgs.front(), valueType)) {
-          return "/std/collections/experimental_vector/Vector<" + valueType + ">";
+          return legacyExperimentalVectorCompatibilityTypeText(valueType);
         }
       }
     }

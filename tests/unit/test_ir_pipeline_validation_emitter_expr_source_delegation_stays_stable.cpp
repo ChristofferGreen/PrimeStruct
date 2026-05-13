@@ -1994,7 +1994,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "const auto vectorReceiverHasVisibleCanonicalHelper =\n"
             "        [&](std::string_view candidateHelperName) {\n"
             "          const std::string preferred =\n"
-            "              \"/std/collections/vector/\" + std::string(candidateHelperName);\n"
+            "              canonicalVectorCompatibilityHelperPathOrFallback(candidateHelperName);\n"
             "          return receiverFamily == \"vector\" &&\n"
             "                 hasVisibleStdCollectionsImportForPath(ctx, preferred) &&\n"
             "                 ctx.sourceDefs.count(preferred) > 0;\n"
@@ -2665,16 +2665,19 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "      }") !=
         std::string::npos);
   CHECK(collectionTypeHelpersSource.find(
-            "normalizedPath.rfind(\"/soa_vector/\", 0) == 0") !=
+            "normalizedPath.rfind(\"map/\", 0) == 0 || normalizedPath.rfind(\"std/collections/map/\", 0) == 0") !=
         std::string::npos);
   CHECK(collectionTypeHelpersSource.find(
-            "\"/std/collections/soa_vector/\" +") !=
+            "normalizedPath.rfind(\"/map/\", 0) == 0") !=
         std::string::npos);
   CHECK(collectionTypeHelpersSource.find(
-            "normalizedPath.rfind(\"/std/collections/soa_vector/\", 0) == 0") !=
+            "\"/std/collections/map/\" +") !=
         std::string::npos);
   CHECK(collectionTypeHelpersSource.find(
-            "\"/soa_vector/\" +") !=
+            "normalizedPath.rfind(\"/std/collections/map/\", 0) == 0") !=
+        std::string::npos);
+  CHECK(collectionTypeHelpersSource.find(
+            "\"/map/\" +") !=
         std::string::npos);
   CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
             "isExperimentalSoaVectorTypePath(value)") !=

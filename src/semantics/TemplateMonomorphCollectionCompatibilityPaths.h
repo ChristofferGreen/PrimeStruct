@@ -55,9 +55,8 @@ bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverTypeName,
     } else if (rawMethodName.rfind("soa_vector/", 0) == 0) {
       helperName =
           std::string_view(rawMethodName).substr(std::string_view("soa_vector/").size());
-    } else if (rawMethodName.rfind("std/collections/vector/", 0) == 0) {
-      helperName =
-          std::string_view(rawMethodName).substr(std::string_view("std/collections/vector/").size());
+    } else if (isUnrootedCanonicalVectorCompatibilityPath(rawMethodName)) {
+      helperName = stripUnrootedCanonicalVectorCompatibilityPrefix(rawMethodName);
     } else if (rawMethodName.rfind("std/collections/soa_vector/", 0) == 0) {
       helperName = std::string_view(rawMethodName)
                        .substr(std::string_view("std/collections/soa_vector/").size());
@@ -98,7 +97,8 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
   if (preferred.rfind("/array/", 0) == 0 && defs.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/array/").size());
     if (!isRemovedVectorCompatibilityHelper(suffix)) {
-      const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+      const std::string stdlibAlias =
+          canonicalVectorCompatibilityHelperPathOrFallback(suffix);
       if (defs.count(stdlibAlias) > 0) {
         return stdlibAlias;
       }
@@ -146,7 +146,8 @@ std::string preferVectorStdlibTemplatePath(const std::string &path, const Contex
   if (path.rfind("/array/", 0) == 0) {
     const std::string suffix = path.substr(std::string("/array/").size());
     if (!isRemovedVectorCompatibilityHelper(suffix)) {
-      const std::string stdlibPath = "/std/collections/vector/" + suffix;
+      const std::string stdlibPath =
+          canonicalVectorCompatibilityHelperPathOrFallback(suffix);
       if (ctx.sourceDefs.count(stdlibPath) > 0 && ctx.templateDefs.count(stdlibPath) > 0) {
         return stdlibPath;
       }
@@ -271,14 +272,14 @@ std::string normalizeCollectionReceiverTypeName(std::string value) {
   if (!value.empty() && value.front() == '/') {
     value.erase(value.begin());
   }
-  if (value == "std/collections/vector") {
+  if (trimLeadingSlash(value) ==
+      trimLeadingSlash(canonicalVectorCompatibilityPrefixOrFallback())) {
     return "vector";
   }
   if (value == "Vector" || value.rfind("Vector__", 0) == 0) {
     return "vector";
   }
-  if (value == "std/collections/experimental_vector/Vector" ||
-      value.rfind("std/collections/experimental_vector/Vector__", 0) == 0) {
+  if (isLegacyExperimentalVectorCompatibilityTypePath("/" + value)) {
     return "vector";
   }
   if (isExperimentalSoaVectorTypePath(value)) {
