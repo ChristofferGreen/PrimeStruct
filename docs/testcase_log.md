@@ -4,6 +4,10 @@
 - none
 
 ## Recent Test Runs
+- 2026-05-13 11:01 local | pass | mode: release | command: `cmake --build build-release --target PrimeStruct_backend_ir_tests && cd build-release && ./PrimeStruct_backend_ir_tests -tc="semantics validator infer source delegation stays stable"` | failures: none | notes: stale infer source-delegation lock now matches the current `definition.namespacePrefix` return-transform routing
+- 2026-05-13 11:01 local | fail | mode: release | command: `cd build-release && ./PrimeStruct_backend_ir_tests -tc="semantics validator infer source delegation stays stable"` | failures: stale infer source-delegation lock | notes: source lock still expected the removed `directDefIt->second->namespacePrefix` spelling before rebuilding the corrected expectation
+- 2026-05-13 11:00 local | pass | mode: release | command: `cd build-release && ctest --output-on-failure -R 'PrimeStruct_vector_surface_traces'` | failures: none | notes: CTest vector surface trace target passes with the ratcheted 208-trace baseline
+- 2026-05-13 11:00 local | canceled | mode: release | command: `./scripts/compile.sh --release` | failures: none observed before cancellation | notes: build completed and 54 CTest targets passed; stopped broad compile-run sweep as too broad for the lite TODO slice before focused validation
 - 2026-05-13 10:26 local | pass | mode: release | command: `python3 scripts/check_vector_surface_traces.py --root .` | failures: none | notes: vector trace audit passes at 265 observed traces after routing semantic vector access probes through registry-backed vector helper predicates and ratcheting the baseline
 - 2026-05-13 10:26 local | fail | mode: release | command: `python3 scripts/check_vector_surface_traces.py --root .` | failures: PrimeStruct_vector_surface_traces | notes: `SemanticsValidatorExprArgumentValidationCollections.cpp` canonical vector path traces rose from 1 to 2, and `SemanticsValidatorInferCollectionReturnInference.cpp` rose from 0 to 1
 - 2026-05-13 10:21 local | pass | mode: release | command: `cmake --build build-release --target primec PrimeStruct_compile_run_tests && cd build-release && ctest --output-on-failure -R 'PrimeStruct_primestruct_compile_run_native_backend_collections_templated_wrapper_parity_89_93'` | failures: none | notes: native vector/map count-shadow shard now passes after preserving string-returning source map access method calls for inline lowering while keeping explicit canonical map helpers on the builtin path
@@ -38,6 +42,7 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- stale infer source-delegation lock now passes after matching the current `definition.namespacePrefix` return-transform routing.
 - Vector surface trace gate now passes after semantic vector access probes use registry-backed canonical helper lookups and shared vector helper-path predicates.
 - native vector/map count-shadow shard now passes after semantic string-return inference for stdlib vector/map access helpers, native count-source target routing, and inline lowering for string-returning slash-method map access
 - VM Result string payload shard now passes after semantic-product named values in Result combinator lambdas fall back to lowerer local payload metadata.

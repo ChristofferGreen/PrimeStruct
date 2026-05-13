@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 #include "MapConstructorHelpers.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <optional>
 #include <string>
@@ -343,7 +344,8 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
           }
         }
       } else if ((normalizedExpectedBase == "Vector" ||
-                  normalizedExpectedBase == "std/collections/experimental_vector/Vector") &&
+                  isLegacyExperimentalVectorCompatibilityPath(
+                      "/" + normalizedExpectedBase)) &&
                  expectedTemplateArgs.size() == 1) {
         std::string actualElemType;
         if (dispatchResolvers.resolveVectorTarget != nullptr &&
@@ -631,7 +633,8 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
       }
       if ((normalizedInferredBase == "vector" ||
            normalizedInferredBase == "Vector" ||
-           normalizedInferredBase == "std/collections/experimental_vector/Vector") &&
+           isLegacyExperimentalVectorCompatibilityPath(
+               "/" + normalizedInferredBase)) &&
           normalizeBindingTypeName(expectedExperimentalVectorElemType) ==
               normalizeBindingTypeName(inferredArgs.front())) {
         return true;
@@ -663,7 +666,8 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
     }
     return (normalizedInferredBase == "vector" ||
             normalizedInferredBase == "Vector" ||
-            normalizedInferredBase == "std/collections/experimental_vector/Vector") &&
+            isLegacyExperimentalVectorCompatibilityPath(
+                "/" + normalizedInferredBase)) &&
            normalizeBindingTypeName(expectedExperimentalVectorElemType) ==
                normalizeBindingTypeName(inferredTypeArgs.front());
   }();

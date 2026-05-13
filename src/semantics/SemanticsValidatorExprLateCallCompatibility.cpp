@@ -69,7 +69,7 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
   }
 
   if (!expr.isMethodCall &&
-      resolved == "/std/collections/vector/count" &&
+      isStdNamespacedVectorCompatibilityHelperPath(resolved, "count") &&
       expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end()) {
     std::string elemType;
     std::string arrayElemType;
@@ -112,14 +112,14 @@ bool SemanticsValidator::validateExprLateCallCompatibility(
     }
     if (resolvesVectorLikeCountTarget &&
         !hasVisibleDefinitionPathForCurrentImports(
-            "/std/collections/vector/count")) {
+            canonicalVectorCompatibilityHelperPathOrFallback("count"))) {
       return failLateCallCompatibilityDiagnostic(
           vectorCompatibilityUnknownCallTargetDiagnostic("count"));
     }
   }
 
   if (!expr.isMethodCall &&
-      resolved == "/std/collections/vector/capacity" &&
+      isStdNamespacedVectorCompatibilityHelperPath(resolved, "capacity") &&
       expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end()) {
     std::string elemType;
     const bool resolvesVector =

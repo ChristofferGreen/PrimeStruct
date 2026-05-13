@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 #include "MapConstructorHelpers.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <optional>
 #include <string>
@@ -166,8 +167,8 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
                   normalizeBindingTypeName(actualBase);
               if (normalizedActualBase == "vector" ||
                   normalizedActualBase == "Vector" ||
-                  normalizedActualBase ==
-                      "std/collections/experimental_vector/Vector") {
+                  isLegacyExperimentalVectorCompatibilityPath(
+                      "/" + normalizedActualBase)) {
                 actualVectorSurface = "vector";
                 actualElemType = actualTypeArgs.front();
               } else if (normalizedActualBase == "soa_vector") {

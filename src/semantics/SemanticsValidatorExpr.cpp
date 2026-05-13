@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 #include "MapConstructorHelpers.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "primec/StringLiteral.h"
 
 #include <algorithm>
@@ -551,11 +552,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           normalizedName.erase(normalizedName.begin());
         }
         if ((normalizedPrefix == "vector" ||
-             normalizedPrefix == "std/collections/vector") &&
+             isCanonicalVectorCompatibilityNamespace(normalizedPrefix)) &&
             isVectorMutatorMethodName(normalizedName)) {
           return "/" + normalizedPrefix + "/" + normalizedName;
         }
-        constexpr std::string_view CanonicalPrefix = "std/collections/vector/";
         if (normalizedName.rfind(unrootedVectorHelperPathPrefix, 0) == 0) {
           const std::string helperName =
               normalizedName.substr(unrootedVectorHelperPathPrefix.size());
@@ -563,9 +563,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             return rootedVectorHelperPath(helperName);
           }
         }
-        if (normalizedName.rfind(CanonicalPrefix, 0) == 0) {
+        if (isUnrootedCanonicalVectorCompatibilityPath(normalizedName)) {
           const std::string helperName =
-              normalizedName.substr(CanonicalPrefix.size());
+              std::string(stripUnrootedCanonicalVectorCompatibilityPrefix(
+                  normalizedName));
           if (isVectorMutatorMethodName(helperName)) {
             return "/" + normalizedName;
           }
@@ -1347,7 +1348,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
     }
     if (resolvedDefinition == nullptr || calleeParamsIt == paramsByDef_.end()) {
-      if (resolved.rfind("/std/collections/vector/count", 0) == 0 &&
+      if (isStdNamespacedVectorCompatibilityHelperPath(resolved, "count") &&
           expr.args.size() != 1) {
         if (hasNamedArguments(expr.argNames)) {
           return failExprRootDiagnostic(
@@ -1356,7 +1357,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return failExprRootDiagnostic(
             "argument count mismatch for builtin count");
       }
-      if (resolved.rfind("/std/collections/vector/capacity", 0) == 0 &&
+      if (isStdNamespacedVectorCompatibilityHelperPath(resolved, "capacity") &&
           expr.args.size() != 1) {
         if (hasNamedArguments(expr.argNames)) {
           return failExprRootDiagnostic(
@@ -1366,7 +1367,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             "argument count mismatch for builtin capacity");
       }
       if (expr.isMethodCall &&
-          resolved.rfind("/std/collections/vector/count", 0) == 0 &&
+          isStdNamespacedVectorCompatibilityHelperPath(resolved, "count") &&
           expr.args.size() != 1) {
         if (hasNamedArguments(expr.argNames)) {
           return failExprRootDiagnostic(
@@ -1376,7 +1377,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             "argument count mismatch for builtin count");
       }
       if (expr.isMethodCall &&
-          resolved.rfind("/std/collections/vector/capacity", 0) == 0 &&
+          isStdNamespacedVectorCompatibilityHelperPath(resolved, "capacity") &&
           expr.args.size() != 1) {
         if (hasNamedArguments(expr.argNames)) {
           return failExprRootDiagnostic(

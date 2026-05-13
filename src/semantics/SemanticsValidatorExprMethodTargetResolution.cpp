@@ -2003,7 +2003,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   auto classifyExplicitVectorHelperReceiver = [&](const Expr &receiverExpr) -> std::string {
     std::string elemType;
     if (resolveExperimentalVectorValueTarget(receiverExpr, elemType)) {
-      return "experimental_vector";
+      return legacyExperimentalVectorCompatibilityFamilyName();
     }
     if (resolveVectorTarget(receiverExpr, elemType)) {
       return "vector";
@@ -2035,7 +2035,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     std::string keyType;
     std::string valueType;
     if (extractExperimentalVectorElementType(binding, elemType)) {
-      return "experimental_vector";
+      return legacyExperimentalVectorCompatibilityFamilyName();
     }
     if (extractMapKeyValueTypes(binding, keyType, valueType)) {
       return "map";
@@ -2593,7 +2593,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   auto explicitVectorReceiverFamily = classifyExplicitVectorHelperReceiver(receiver);
   const bool isExplicitVectorFamilyReceiver =
       explicitVectorReceiverFamily == "vector" ||
-      explicitVectorReceiverFamily == "experimental_vector" ||
+      explicitVectorReceiverFamily ==
+          legacyExperimentalVectorCompatibilityFamilyName() ||
       explicitVectorReceiverFamily == "soa_vector";
   const std::string_view explicitRootedVectorHelperName =
       startsWithRootedVectorMethodPrefix(explicitVectorHelperPath)

@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <string>
 #include <unordered_map>
@@ -118,9 +119,18 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
     const std::vector<std::string> *definitionTemplateArgs = nullptr;
     std::string definitionNamespacePrefix;
     resolveOwnershipContext(definitionNamespacePrefix, definitionTemplateArgs);
+    const std::string experimentalVectorContextPrefix =
+        legacyExperimentalVectorCompatibilityPrefix();
+    std::string experimentalVectorContextRoot =
+        experimentalVectorContextPrefix;
+    if (!experimentalVectorContextRoot.empty() &&
+        experimentalVectorContextRoot.back() == '/') {
+      experimentalVectorContextRoot.pop_back();
+    }
     const bool isExperimentalVectorContext =
-        currentValidationState_.context.definitionPath.rfind("/std/collections/experimental_vector/", 0) == 0 ||
-        definitionNamespacePrefix.rfind("/std/collections/experimental_vector", 0) == 0;
+        currentValidationState_.context.definitionPath.rfind(
+            experimentalVectorContextPrefix, 0) == 0 ||
+        definitionNamespacePrefix.rfind(experimentalVectorContextRoot, 0) == 0;
     if (builtinName == "vector" && !expr.args.empty() &&
         !isExperimentalVectorContext) {
       std::unordered_set<std::string> visitingStructs;

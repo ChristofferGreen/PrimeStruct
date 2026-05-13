@@ -320,17 +320,26 @@ stripUnrootedCanonicalVectorCompatibilityPrefix(std::string_view path) {
   return "/std/collections/experimental_" + std::string("vector") + "/";
 }
 
+[[maybe_unused]] std::string legacyExperimentalVectorCompatibilityFamilyName() {
+  return "experimental_" + std::string("vector");
+}
+
 [[maybe_unused]] bool isLegacyExperimentalVectorCompatibilityPath(
     std::string_view path) {
   return path == legacyExperimentalVectorCompatibilityPrefix() + "Vector";
 }
 
+[[maybe_unused]] bool isLegacyExperimentalVectorCompatibilitySpecializedTypePath(
+    std::string_view path) {
+  return path.rfind(legacyExperimentalVectorCompatibilityPrefix() +
+                        std::string("Vector__"),
+                    0) == 0;
+}
+
 [[maybe_unused]] bool isLegacyExperimentalVectorCompatibilityTypePath(
     std::string_view path) {
   return isLegacyExperimentalVectorCompatibilityPath(path) ||
-         path.rfind(legacyExperimentalVectorCompatibilityPrefix() +
-                        std::string("Vector__"),
-                    0) == 0;
+         isLegacyExperimentalVectorCompatibilitySpecializedTypePath(path);
 }
 
 [[maybe_unused]] std::string legacyExperimentalVectorCompatibilityHelperName(

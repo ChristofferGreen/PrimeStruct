@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <optional>
 #include <string>
@@ -317,7 +318,7 @@ bool SemanticsValidator::extractExperimentalVectorElementTypeFromStructPath(
     const std::string &structPath,
     std::string &elemTypeOut) const {
   elemTypeOut.clear();
-  if (structPath.rfind("/std/collections/experimental_vector/Vector__", 0) != 0) {
+  if (!isLegacyExperimentalVectorCompatibilitySpecializedTypePath(structPath)) {
     return false;
   }
   auto defIt = defMap_.find(structPath);
@@ -384,7 +385,8 @@ bool SemanticsValidator::extractExperimentalVectorElementType(const BindingInfo 
           normalizedBase.erase(normalizedBase.begin());
         }
         if ((normalizedBase == "Vector" ||
-             normalizedBase == "std/collections/experimental_vector/Vector") &&
+             isLegacyExperimentalVectorCompatibilityPath(
+                 "/" + normalizedBase)) &&
             !argText.empty()) {
           std::vector<std::string> args;
           if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
@@ -403,7 +405,8 @@ bool SemanticsValidator::extractExperimentalVectorElementType(const BindingInfo 
       if (!normalizedResolvedPath.empty() && normalizedResolvedPath.front() == '/') {
         normalizedResolvedPath.erase(normalizedResolvedPath.begin());
       }
-      if (normalizedResolvedPath.rfind("std/collections/experimental_vector/Vector__", 0) != 0) {
+      if (!isLegacyExperimentalVectorCompatibilitySpecializedTypePath(
+              "/" + normalizedResolvedPath)) {
         return false;
       }
       return extractExperimentalVectorElementTypeFromStructPath(resolvedPath, elemTypeOut);

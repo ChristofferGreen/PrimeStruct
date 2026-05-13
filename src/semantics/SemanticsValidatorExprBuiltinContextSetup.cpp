@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 namespace primec::semantics {
 
@@ -132,7 +133,7 @@ void SemanticsValidator::prepareExprLateFallbackBuiltinContext(
         }
         const std::string receiverPath = targetPath.substr(0, slash);
         if (receiverPath == "/array" || receiverPath == "/vector" ||
-            receiverPath == "/std/collections/vector" ||
+            receiverPath == canonicalVectorCompatibilityPrefixOrFallback() ||
             receiverPath == "/soa_vector" || receiverPath == "/map" ||
             receiverPath == "/std/collections/map" ||
             receiverPath == "/string") {

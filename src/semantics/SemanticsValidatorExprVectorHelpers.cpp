@@ -40,7 +40,7 @@ bool isStdNamespacedVectorDirectCallReceiverCompatible(
     bool hasReceiverCompatibleVisibleDefinition,
     bool isCountCapacityNamedArgException) {
   return receiverFamily == "vector" ||
-         receiverFamily == "experimental_vector" ||
+         receiverFamily == legacyExperimentalVectorCompatibilityFamilyName() ||
          hasReceiverCompatibleVisibleDefinition ||
          isCountCapacityNamedArgException;
 }
@@ -85,10 +85,8 @@ bool isVectorHelperReceiverName(const Expr &candidate,
     }
   }
   return typeName == "vector" || typeName == "soa_vector" || typeName == "Vector" ||
-         typeName == "/std/collections/experimental_vector/Vector" ||
-         typeName == "std/collections/experimental_vector/Vector" ||
-         typeName.rfind("/std/collections/experimental_vector/Vector__", 0) == 0 ||
-         typeName.rfind("std/collections/experimental_vector/Vector__", 0) == 0;
+         isLegacyExperimentalVectorCompatibilityTypePath(typeName) ||
+         isLegacyExperimentalVectorCompatibilityTypePath("/" + typeName);
 }
 
 } // namespace
@@ -666,7 +664,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
     std::string keyType;
     std::string valueType;
     if (extractExperimentalVectorElementType(receiverBinding, elemType)) {
-      return "experimental_vector";
+      return legacyExperimentalVectorCompatibilityFamilyName();
     }
     if (extractMapKeyValueTypes(receiverBinding, keyType, valueType)) {
       return "map";
@@ -695,7 +693,8 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
     std::string keyType;
     std::string valueType;
     if (extractExperimentalVectorElementType(binding, elemType)) {
-      return receiverFamily == "experimental_vector";
+      return receiverFamily ==
+             legacyExperimentalVectorCompatibilityFamilyName();
     }
     if (extractMapKeyValueTypes(binding, keyType, valueType)) {
       return receiverFamily == "map";

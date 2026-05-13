@@ -72,11 +72,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4430: Route semantic expression vector traces
+- TODO-4431: Route semantic inference vector traces
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4431: Route semantic inference vector traces
 - TODO-4432: Route semantic statement vector traces
 - TODO-4433: Route semantic layout and snapshot vector traces
 - TODO-4417: Route template monomorph vector surface traces
@@ -85,14 +84,15 @@ Task template:
 - TODO-4299: Promote and style canonical `.prime` map implementation
 - TODO-4300: Stabilize map lookup and insertion substrate
 - TODO-4301: Lower map helpers through ordinary `.prime`
+- TODO-4302: Move map surface metadata out of C++
 
 ### Priority Lanes (Current)
 
 - Semantic ownership authority: none active; future semantic-authority work
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
-- Vector stdlib ownership cutover: TODO-4430 -> TODO-4431 -> TODO-4432
-  -> TODO-4433 -> TODO-4417 -> TODO-4418 -> TODO-4419
+- Vector stdlib ownership cutover: TODO-4431 -> TODO-4432 -> TODO-4433
+  -> TODO-4417 -> TODO-4418 -> TODO-4419
 - Map stdlib ownership cutover: TODO-4299 -> TODO-4300 -> TODO-4301
   -> TODO-4302 -> TODO-4303 -> TODO-4304
 - SoA public surface rename and ownership cutover: TODO-4305 -> TODO-4306
@@ -111,7 +111,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4430: Route semantic expression vector traces
 - TODO-4431: Route semantic inference vector traces
 - TODO-4432: Route semantic statement vector traces
 - TODO-4433: Route semantic layout and snapshot vector traces
@@ -1645,31 +1644,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
-
-- [ ] TODO-4430: Route semantic expression vector traces
-  - owner: ai
-  - created_at: 2026-05-13
-  - phase: Vector stdlib ownership cutover
-  - depends_on: TODO-4429
-  - scope: Replace remaining semantic expression, collection-helper rewrite,
-    effect-free, builtin context, late-fallback, and argument-validation vector
-    traces with generic collection predicates or registry-backed vector helper
-    queries.
-  - implementation_notes:
-    - Start from the `SemanticsValidatorExpr*`,
-      `SemanticsValidatorCollectionHelperRewrites.cpp`, and
-      `SemanticsValidatorEffectFreeCollections.cpp` entries in
-      `scripts/vector_surface_trace_baseline.json` after TODO-4429.
-    - Keep ordinary C++ `std::vector` container usage allowed.
-  - acceptance:
-    - Expression-side semantic vector traces are removed or routed through
-      semantic facts, generic collection helpers, or registry metadata.
-    - Focused semantic source-lock or behavior coverage remains aligned.
-    - The vector surface trace baseline decreases for the selected expression
-      files and does not increase elsewhere.
-  - stop_rule: Stop after expression-side semantic vector traces that can be
-    routed before inference/statement work are removed and the baseline
-    ratchets downward.
 
 - [ ] TODO-4431: Route semantic inference vector traces
   - owner: ai

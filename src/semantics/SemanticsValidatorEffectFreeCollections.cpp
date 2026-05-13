@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <vector>
 
@@ -25,7 +26,8 @@ std::string SemanticsValidator::normalizeEffectFreeCollectionMethodName(const st
   }
   if (receiverPath == "/vector" || receiverPath == "/array") {
     const std::string arrayPrefix = "array/";
-    const std::string stdVectorPrefix = "std/collections/vector/";
+    const std::string stdVectorPrefix =
+        unrootedCanonicalVectorCompatibilityPrefixOrFallback() + "/";
     if (isUnrootedVectorHelperPath(methodName)) {
       return methodName.substr(unrootedVectorHelperPrefix().size());
     }
@@ -54,15 +56,17 @@ std::vector<std::string> SemanticsValidator::effectFreeMethodPathCandidatesForRe
     const std::string &methodName) const {
   if (receiverPath == "/vector") {
     if (methodName == "count") {
-      return {"/std/collections/vector/" + methodName};
+      return {canonicalVectorCompatibilityHelperPathOrFallback(methodName)};
     }
-    return {"/std/collections/vector/" + methodName, "/array/" + methodName};
+    return {canonicalVectorCompatibilityHelperPathOrFallback(methodName),
+            "/array/" + methodName};
   }
   if (receiverPath == "/array") {
     if (methodName == "count") {
       return {"/array/" + methodName};
     }
-    return {"/array/" + methodName, "/std/collections/vector/" + methodName};
+    return {"/array/" + methodName,
+            canonicalVectorCompatibilityHelperPathOrFallback(methodName)};
   }
   if (receiverPath == "/map") {
     if (isRemovedMapCompatibilityHelper(methodName)) {
@@ -83,7 +87,8 @@ std::string SemanticsValidator::preferEffectFreeCollectionHelperPath(const std::
   if (preferred.rfind("/array/", 0) == 0 && defMap_.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/array/").size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-      const std::string stdlibAlias = "/std/collections/vector/" + suffix;
+      const std::string stdlibAlias =
+          canonicalVectorCompatibilityHelperPathOrFallback(suffix);
       if (defMap_.count(stdlibAlias) > 0) {
         return stdlibAlias;
       }
@@ -132,7 +137,8 @@ std::vector<std::string> SemanticsValidator::effectFreeCollectionHelperPathCandi
   std::string normalizedPath = path;
   if (!normalizedPath.empty() && normalizedPath.front() != '/') {
     if (normalizedPath.rfind("array/", 0) == 0 || isUnrootedVectorHelperPath(normalizedPath) ||
-        normalizedPath.rfind("std/collections/vector/", 0) == 0 || normalizedPath.rfind("map/", 0) == 0 ||
+        isUnrootedCanonicalVectorCompatibilityPath(normalizedPath) ||
+        normalizedPath.rfind("map/", 0) == 0 ||
         normalizedPath.rfind("std/collections/map/", 0) == 0) {
       normalizedPath.insert(normalizedPath.begin(), '/');
     }
@@ -143,7 +149,7 @@ std::vector<std::string> SemanticsValidator::effectFreeCollectionHelperPathCandi
   if (normalizedPath.rfind("/array/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/array/").size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-      appendUnique("/std/collections/vector/" + suffix);
+      appendUnique(canonicalVectorCompatibilityHelperPathOrFallback(suffix));
     }
   } else if (normalizedPath.rfind("/map/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/map/").size());

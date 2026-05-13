@@ -122,7 +122,8 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
           expr.isMethodCall,
           resolveCalleePath(expr),
           "capacity",
-          hasVisibleCanonicalVectorHelperPath("/std/collections/vector/capacity"));
+          hasVisibleCanonicalVectorHelperPath(
+              canonicalVectorCompatibilityHelperPathOrFallback("capacity")));
 
   setupOut.isUnnamespacedMapCountFallbackCall =
       !expr.isMethodCall &&
@@ -140,7 +141,8 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
       !expr.isMethodCall && getBuiltinArrayAccessName(expr, accessHelperName);
   setupOut.isStdNamespacedVectorAccessCall =
       hasBuiltinAccessSpelling && !expr.isMethodCall &&
-      resolveCalleePath(expr).rfind("/std/collections/vector/at", 0) == 0;
+      isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
+                                                   "at");
   const bool isStdlibVectorAccessWrapperDefinition =
       currentValidationState_.context.definitionPath.rfind("/std/collections/", 0) == 0 ||
       currentValidationState_.context.definitionPath.rfind("/std/image/", 0) == 0 ||
@@ -209,7 +211,8 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
                 expr.isMethodCall,
                 resolveCalleePath(expr),
                 "count",
-                hasVisibleCanonicalVectorHelperPath("/std/collections/vector/count")),
+                hasVisibleCanonicalVectorHelperPath(
+                    canonicalVectorCompatibilityHelperPathOrFallback("count"))),
             false,
             false,
             false,

@@ -237,8 +237,8 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferStructReturnSource.find(
             "if (std::string structPath =\n"
-            "                resolveInferStructTypePath(normalizedReturnType,\n"
-            "                                           directDefIt->second->namespacePrefix);") !=
+            "                  resolveInferStructTypePath(normalizedReturnType,\n"
+            "                                             definition.namespacePrefix);") !=
         std::string::npos);
   CHECK(semanticsInferStructReturnSource.find(
             "if (std::string collectionPath = normalizeCollectionTypePath(normalizedReturnType);") !=

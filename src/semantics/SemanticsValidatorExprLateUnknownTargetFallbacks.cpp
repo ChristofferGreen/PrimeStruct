@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <functional>
 #include <string>
@@ -24,14 +25,14 @@ bool isCanonicalVectorAccessMethodHelper(std::string_view helperName) {
 
 bool isExplicitVectorCompatibilityMethodNamespace(std::string_view namespacePrefix) {
   return namespacePrefix == "vector" ||
-         namespacePrefix == "std/collections/vector";
+         isCanonicalVectorCompatibilityNamespace(namespacePrefix);
 }
 
 bool isVectorFamilyHelperPath(const std::string &path) {
   return path.rfind("/soa_vector/", 0) == 0 ||
          path.rfind("/std/collections/soa_vector/", 0) == 0 ||
-         path.rfind("/std/collections/vector/", 0) == 0 ||
-         path.rfind("/std/collections/experimental_vector/", 0) == 0;
+         isCanonicalVectorCompatibilityPath(path) ||
+         path.rfind(legacyExperimentalVectorCompatibilityPrefix(), 0) == 0;
 }
 
 std::string_view normalizeFileLateFallbackMethodName(std::string_view methodName) {
@@ -100,7 +101,7 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
       isExplicitVectorCompatibilityMethodNamespace(
           normalizedMethodNamespace) ||
       isRootedVectorHelperPath(expr.name) ||
-      expr.name.rfind("/std/collections/vector/", 0) == 0;
+      isCanonicalVectorCompatibilityPath(expr.name);
   if (context.resolveMapTarget != nullptr && expr.isMethodCall &&
       !requestsExplicitVectorCompatibilityMethod &&
       isCanonicalMapMethodHelper(normalizedMethodName) && !expr.args.empty() &&

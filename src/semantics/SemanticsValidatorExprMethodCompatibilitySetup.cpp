@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <string_view>
 
@@ -100,7 +101,8 @@ bool SemanticsValidator::prepareExprMethodCompatibilitySetup(
            dispatchBootstrap.resolveMapTarget(targetExpr);
   };
   setupOut.promoteCapacityToBuiltinValidation =
-      [isKnownCollectionTarget](const Expr &targetExpr, std::string &resolvedOut,
+      [isKnownCollectionTarget](const Expr &targetExpr,
+                                std::string &resolvedOut,
                                 bool &isBuiltinMethodOut,
                                 bool requireKnownCollection) {
         if (requireKnownCollection && !isKnownCollectionTarget(targetExpr)) {
@@ -108,7 +110,8 @@ bool SemanticsValidator::prepareExprMethodCompatibilitySetup(
         }
         // Route unresolved capacity() calls through builtin validation so
         // non-vector targets emit deterministic vector-target diagnostics.
-        resolvedOut = "/std/collections/vector/capacity";
+        resolvedOut =
+            canonicalVectorCompatibilityHelperPathOrFallback("capacity");
         isBuiltinMethodOut = true;
       };
   setupOut.isNonCollectionStructCapacityTarget =

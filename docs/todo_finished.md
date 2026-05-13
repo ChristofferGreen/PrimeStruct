@@ -16399,3 +16399,39 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     coverage, and ratcheted `scripts/vector_surface_trace_baseline.json` from
     265 to 252 production traces. Baseline release validation was skipped per
     the lite workflow.
+
+- [x] TODO-4430: Route semantic expression vector traces
+  - owner: ai
+  - created_at: 2026-05-13
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4429
+  - scope: Replace remaining semantic expression, collection-helper rewrite,
+    effect-free, builtin context, late-fallback, and argument-validation vector
+    traces with generic collection predicates or registry-backed vector helper
+    queries.
+  - implementation_notes:
+    - Start from the `SemanticsValidatorExpr*`,
+      `SemanticsValidatorCollectionHelperRewrites.cpp`, and
+      `SemanticsValidatorEffectFreeCollections.cpp` entries in
+      `scripts/vector_surface_trace_baseline.json` after TODO-4429.
+    - Keep ordinary C++ `std::vector` container usage allowed.
+  - acceptance:
+    - Expression-side semantic vector traces are removed or routed through
+      semantic facts, generic collection helpers, or registry metadata.
+    - Focused semantic source-lock or behavior coverage remains aligned.
+    - The vector surface trace baseline decreases for the selected expression
+      files and does not increase elsewhere.
+  - stop_rule: Stop after expression-side semantic vector traces that can be
+    routed before inference/statement work are removed and the baseline
+    ratchets downward.
+  - finished_at: 2026-05-13
+  - evidence: Routed expression-side semantic vector helper and legacy vector
+    type checks through shared registry-backed helper path predicates,
+    canonical vector namespace/prefix queries, and legacy experimental vector
+    compatibility helpers; kept effect-free path candidates and builtin
+    fallback contexts on shared vector helper metadata; updated the stale infer
+    source-lock expectation; and ratcheted
+    `scripts/vector_surface_trace_baseline.json` from 252 to 208 production
+    traces. The full release gate was stopped after the build and 54 passing
+    CTest targets as too broad for the lite slice; focused vector trace and
+    source-lock validation passed.

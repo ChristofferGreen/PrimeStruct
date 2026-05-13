@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <string>
 #include <vector>
@@ -49,7 +50,7 @@ std::vector<std::string> pointerLikeCallPathCandidates(const std::string &path) 
   if (canonicalPath.rfind("/array/", 0) == 0) {
     const std::string suffix = canonicalPath.substr(std::string("/array/").size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
-      appendUnique("/std/collections/vector/" + suffix);
+      appendUnique(canonicalVectorCompatibilityHelperPathOrFallback(suffix));
     }
   } else if (canonicalPath.rfind("/map/", 0) == 0) {
     const std::string suffix = canonicalPath.substr(std::string("/map/").size());
@@ -74,15 +75,15 @@ std::string SemanticsValidator::normalizeCollectionMethodName(const std::string 
     normalized.erase(normalized.begin());
   }
   const std::string arrayPrefix = "array/";
-  const std::string stdVectorPrefix = "std/collections/vector/";
   const std::string mapPrefix = "map/";
   const std::string stdMapPrefix = "std/collections/map/";
   if (isUnrootedVectorHelperPath(normalized)) {
     normalized = normalized.substr(unrootedVectorHelperPrefix().size());
   } else if (normalized.rfind(arrayPrefix, 0) == 0) {
     normalized = normalized.substr(arrayPrefix.size());
-  } else if (normalized.rfind(stdVectorPrefix, 0) == 0) {
-    normalized = normalized.substr(stdVectorPrefix.size());
+  } else if (isUnrootedCanonicalVectorCompatibilityPath(normalized)) {
+    normalized =
+        std::string(stripUnrootedCanonicalVectorCompatibilityPrefix(normalized));
   } else if (normalized.rfind(mapPrefix, 0) == 0) {
     normalized = normalized.substr(mapPrefix.size());
   } else if (normalized.rfind(stdMapPrefix, 0) == 0) {

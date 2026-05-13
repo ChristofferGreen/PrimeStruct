@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 namespace primec::semantics {
 
@@ -27,8 +28,8 @@ bool SemanticsValidator::validateExprDirectCollectionFallbacks(
       expr.namespacePrefix.empty() &&
       (expr.name == "at" || expr.name == "at_unsafe");
   const bool isResolvedCanonicalVectorAccessHelper =
-      resolved == "/std/collections/vector/at" ||
-      resolved == "/std/collections/vector/at_unsafe";
+      isStdNamespacedVectorCompatibilityHelperPath(resolved, "at") ||
+      isStdNamespacedVectorCompatibilityHelperPath(resolved, "at_unsafe");
   if (!expr.isMethodCall &&
       !hasNamedArguments(expr.argNames) &&
       expr.args.size() >= 1 &&
@@ -36,7 +37,7 @@ bool SemanticsValidator::validateExprDirectCollectionFallbacks(
        isResolvedCanonicalVectorAccessHelper)) {
     const bool isUnsafeHelper =
         expr.name == "at_unsafe" ||
-        resolved == "/std/collections/vector/at_unsafe";
+        isStdNamespacedVectorCompatibilityHelperPath(resolved, "at_unsafe");
     const std::string helperName = isUnsafeHelper ? "at_unsafe" : "at";
     std::string experimentalElemType;
     std::string receiverTypeText;
