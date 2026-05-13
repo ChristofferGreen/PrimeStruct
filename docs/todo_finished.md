@@ -17237,3 +17237,55 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     struct-return inference, deleted the map-access pruning hook and private
     declaration, added source locks for the removed adapter, and refreshed
     active queue bookkeeping.
+
+- [x] TODO-4451: Split remaining map raw/lowering adapters
+  - owner: ai
+  - created_at: 2026-05-13
+  - finished_at: 2026-05-13
+  - phase: Map stdlib ownership cutover
+  - split_from: TODO-4449
+  - scope: Split the remaining rooted map helper diagnostics, semantic helper
+    rewrites, inline/native raw-path checks, and internal lowering-name
+    cleanup into closable leaves before implementation.
+  - acceptance:
+    - Intra-body diagnostic adapter deletion is tracked separately from the
+      remaining raw dispatch and lowering-name cleanup.
+    - Active queues contain only leaf work after the split.
+  - stop_rule: Stop once rooted-map diagnostic adapter deletion and remaining
+    production raw/lowering cleanup have separate TODO IDs with explicit finish
+    lines.
+  - evidence: Split the broad TODO-4451 into completed TODO-4452 for
+    definition/execution intra-body rooted-map diagnostic adapters and active
+    TODO-4453 for remaining semantic rewrites, inline/native raw-path checks,
+    and internal lowering-name cleanup.
+
+- [x] TODO-4452: Delete map intra-body diagnostic adapters
+  - owner: ai
+  - created_at: 2026-05-13
+  - finished_at: 2026-05-13
+  - phase: Map stdlib ownership cutover
+  - split_from: TODO-4451
+  - scope: Remove the special removed-map compatibility helper branches from
+    definition and execution intra-body call diagnostics so rooted `/map/*`
+    calls are no longer classified through a semantic diagnostic adapter.
+  - implementation_notes:
+    - Target `SemanticsValidatorPassesDiagnostics.cpp` and
+      `SemanticsValidatorExecutionDiagnostics.cpp`.
+    - Preserve generic non-map collection helper classification and visible
+      canonical `/std/collections/map/at*` handling.
+    - Leave statement/body-argument rewrites and lowerer raw-path dispatch to
+      TODO-4453.
+  - acceptance:
+    - Definition and execution intra-body diagnostic classifiers no longer
+      contain `isRemovedMapCompatibilityHelper` or `/map/` exact-family
+      fallback checks.
+    - Rooted `/map/*` calls rely on ordinary explicit-path resolution:
+      explicit definitions can be diagnosed normally, while missing aliases
+      remain unknown targets.
+    - Source-lock coverage rejects reintroducing the diagnostic adapter.
+  - stop_rule: Stop once the passes/execution diagnostic classifiers no longer
+    contain special removed-map helper branches.
+  - evidence: Removed the duplicate removed-map helper classifiers and
+    `/map/` exact-family checks from definition and execution intra-body
+    diagnostics, kept non-map namespaced helper classification intact, added
+    source-lock coverage, and refreshed active queue bookkeeping.

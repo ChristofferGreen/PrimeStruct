@@ -308,6 +308,35 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("rooted map helper aliases use ordinary explicit path diagnostics") {
+  const std::string missingSource = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] items{map<i32, i32>(1i32, 2i32)}
+  return(/map/count(items))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(missingSource, "/main", error));
+  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
+
+  const std::string explicitSource = R"(
+[return<int>]
+/map/count([map<i32, i32>] values) {
+  return(1i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/map/count(1i32))
+}
+)";
+  error.clear();
+  CHECK_FALSE(validateProgram(explicitSource, "/main", error));
+  CHECK(error.find("argument type mismatch for /map/count parameter values") !=
+        std::string::npos);
+}
+
 TEST_CASE("vector method calls resolve to definitions") {
   const std::string source = R"(
 import /std/collections/*

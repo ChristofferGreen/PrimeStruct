@@ -1523,6 +1523,14 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
   CHECK(semanticsExecutionDiagnosticsSource.find(
             "#include \"SemanticsValidatorInferCollectionCompatibilityInternal.h\"") !=
         std::string::npos);
+  CHECK(semanticsPassesDiagnosticsSource.find("isRemovedMapCompatibilityHelper") ==
+        std::string::npos);
+  CHECK(semanticsExecutionDiagnosticsSource.find("isRemovedMapCompatibilityHelper") ==
+        std::string::npos);
+  CHECK(semanticsPassesDiagnosticsSource.find("\"/map/\" + normalizedNamespacedHelper") ==
+        std::string::npos);
+  CHECK(semanticsExecutionDiagnosticsSource.find("\"/map/\" + normalizedNamespacedHelper") ==
+        std::string::npos);
   CHECK(semanticsPassesDiagnosticsSource.find(
             "isLegacyExperimentalVectorCompatibilityPath(normalizedInferredBase)") !=
         std::string::npos);
