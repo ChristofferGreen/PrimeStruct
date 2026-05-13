@@ -412,7 +412,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferMethodResolutionSource.find(
             "if (normalizedMethodName == \"count\" &&\n"
             "          resolveVectorTarget(receiver, elemType)) {\n"
-            "        resolvedOut = \"/std/collections/vector/count\";\n"
+            "        resolvedOut = canonicalVectorCompatibilityHelperPathOrFallback(\"count\");\n"
             "        return true;") !=
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(

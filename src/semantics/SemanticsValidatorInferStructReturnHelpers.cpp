@@ -1,5 +1,7 @@
 #include "SemanticsValidator.h"
 
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+
 #include <cctype>
 #include <cstdint>
 #include <sstream>
@@ -15,13 +17,6 @@ bool isRemovedMapCompatibilitySuffix(std::string_view suffix) {
          suffix == "at" || suffix == "at_ref" ||
          suffix == "at_unsafe" || suffix == "at_unsafe_ref" ||
          suffix == "insert" || suffix == "insert_ref";
-}
-
-std::string bindingTypeText(const BindingInfo &binding) {
-  if (binding.typeTemplateArg.empty()) {
-    return binding.typeName;
-  }
-  return binding.typeName + "<" + binding.typeTemplateArg + ">";
 }
 
 void eraseStructReturnCandidate(std::vector<std::string> &candidates, const std::string &candidate) {
@@ -210,7 +205,7 @@ std::string SemanticsValidator::normalizeInferStructReturnHelperPath(const std::
   std::string normalizedPath = path;
   if (!normalizedPath.empty() && normalizedPath.front() != '/') {
     if (normalizedPath.rfind("array/", 0) == 0 || isUnrootedVectorHelperPath(normalizedPath) ||
-        normalizedPath.rfind("std/collections/vector/", 0) == 0 || normalizedPath.rfind("map/", 0) == 0 ||
+        isUnrootedCanonicalVectorCompatibilityPath(normalizedPath) || normalizedPath.rfind("map/", 0) == 0 ||
         normalizedPath.rfind("std/collections/map/", 0) == 0) {
       normalizedPath.insert(normalizedPath.begin(), '/');
     }
@@ -238,7 +233,7 @@ std::vector<std::string> SemanticsValidator::inferStructReturnCollectionHelperPa
     if (suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
         suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
         suffix != "remove_at" && suffix != "remove_swap") {
-      appendUnique("/std/collections/vector/" + suffix);
+      appendUnique(canonicalVectorCompatibilityHelperPathOrFallback(suffix));
     }
   } else if (normalizedPath.rfind("/map/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/map/").size());
@@ -281,10 +276,11 @@ void SemanticsValidator::pruneInferStructReturnBuiltinVectorAccessCandidates(
     const BuiltinCollectionDispatchResolvers &dispatchResolvers,
     std::vector<std::string> &candidates) const {
   const std::string normalizedPath = normalizeInferStructReturnHelperPath(path);
-  if (normalizedPath.rfind("/std/collections/vector/", 0) != 0) {
+  if (!isCanonicalVectorCompatibilityPath(normalizedPath)) {
     return;
   }
-  const std::string suffix = normalizedPath.substr(std::string("/std/collections/vector/").size());
+  const std::string suffix = std::string(
+      stripUnrootedCanonicalVectorCompatibilityPrefix(normalizedPath));
   if (suffix != "at" && suffix != "at_unsafe") {
     return;
   }
@@ -317,7 +313,8 @@ void SemanticsValidator::pruneInferStructReturnBuiltinVectorAccessCandidates(
       !dispatchResolvers.resolveStringTarget(candidate.args[receiverIndex])) {
     return;
   }
-  eraseStructReturnCandidate(candidates, "/std/collections/vector/" + suffix);
+  eraseStructReturnCandidate(
+      candidates, canonicalVectorCompatibilityHelperPathOrFallback(suffix));
 }
 
 bool SemanticsValidator::isExplicitMapAccessStructReturnCompatibilityCall(

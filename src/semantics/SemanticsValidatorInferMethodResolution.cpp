@@ -1,5 +1,7 @@
 #include "SemanticsValidator.h"
 
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+
 #include <algorithm>
 #include <functional>
 #include <string_view>
@@ -72,8 +74,11 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     } else if (normalizedMethodName.rfind("std/collections/soa_vector/", 0) == 0) {
       normalizedMethodName =
           normalizedMethodName.substr(std::string("std/collections/soa_vector/").size());
-    } else if (normalizedMethodName.rfind("std/collections/vector/", 0) == 0) {
-      normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/vector/").size());
+    } else if (isUnrootedCanonicalVectorCompatibilityPath(
+                   normalizedMethodName)) {
+      normalizedMethodName = std::string(
+          stripUnrootedCanonicalVectorCompatibilityPrefix(
+              normalizedMethodName));
     } else if (normalizedMethodName.rfind("map/", 0) == 0) {
       normalizedMethodName = normalizedMethodName.substr(std::string("map/").size());
     } else if (normalizedMethodName.rfind("std/collections/map/", 0) == 0) {
@@ -349,7 +354,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         return true;
       }
       if (collectionTypePath == "/vector" && normalizedMethodName == "count") {
-        resolvedOut = "/std/collections/vector/count";
+        resolvedOut = canonicalVectorCompatibilityHelperPathOrFallback("count");
         return true;
       }
       if (collectionTypePath == "/soa_vector") {
@@ -373,7 +378,8 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       }
     }
     if (normalizedMethodName == "capacity" && collectionTypePath == "/vector") {
-      resolvedOut = "/std/collections/vector/capacity";
+      resolvedOut =
+          canonicalVectorCompatibilityHelperPathOrFallback("capacity");
       return true;
     }
     if ((normalizedMethodName == "empty" || normalizedMethodName == "is_valid" ||
@@ -406,7 +412,9 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       }
       if (collectionTypePath == "/vector") {
         resolvedOut =
-            preferVectorStdlibHelperPath("/std/collections/vector/" + normalizedMethodName);
+            preferVectorStdlibHelperPath(
+                canonicalVectorCompatibilityHelperPathOrFallback(
+                    normalizedMethodName));
         return true;
       }
       if (collectionTypePath == "/string") {
@@ -900,7 +908,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       }
       if (normalizedMethodName == "count" &&
           resolveVectorTarget(receiver, elemType)) {
-        resolvedOut = "/std/collections/vector/count";
+        resolvedOut = canonicalVectorCompatibilityHelperPathOrFallback("count");
         return true;
       }
       if (resolveSoaVectorTarget(receiver, elemType)) {
@@ -922,7 +930,8 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       }
     }
     if (normalizedMethodName == "capacity" && resolveVectorTarget(receiver, elemType)) {
-      resolvedOut = "/std/collections/vector/capacity";
+      resolvedOut =
+          canonicalVectorCompatibilityHelperPathOrFallback("capacity");
       return true;
     }
     if ((normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
@@ -950,7 +959,9 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       }
       if (resolveVectorTarget(receiver, elemType)) {
         resolvedOut =
-            preferVectorStdlibHelperPath("/std/collections/vector/" + normalizedMethodName);
+            preferVectorStdlibHelperPath(
+                canonicalVectorCompatibilityHelperPathOrFallback(
+                    normalizedMethodName));
         return true;
       }
       if (resolveArrayTarget(receiver, elemType)) {

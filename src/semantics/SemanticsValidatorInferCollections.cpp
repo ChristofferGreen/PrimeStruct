@@ -670,7 +670,13 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
-    if (normalized != "std/collections/vector/at" && normalized != "std/collections/vector/at_unsafe") {
+    const std::string atPath =
+        std::string(trimLeadingSlash(
+            canonicalVectorCompatibilityHelperPathOrFallback("at")));
+    const std::string atUnsafePath =
+        std::string(trimLeadingSlash(
+            canonicalVectorCompatibilityHelperPathOrFallback("at_unsafe")));
+    if (normalized != atPath && normalized != atUnsafePath) {
       return false;
     }
     if (candidate.args.empty()) {

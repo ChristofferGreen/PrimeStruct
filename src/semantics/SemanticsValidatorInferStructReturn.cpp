@@ -338,7 +338,8 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
         appendMethodCandidate(explicitRemovedMethodPath);
       }
       if (receiverStruct == "/vector") {
-        appendMethodCandidate("/std/collections/vector/" + methodName);
+        appendMethodCandidate(
+            canonicalVectorCompatibilityHelperPathOrFallback(methodName));
         if (methodName != "count" && !blocksBuiltinVectorAccessStructReturnForwarding) {
           appendMethodCandidate("/array/" + methodName);
         }
@@ -346,7 +347,8 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
         appendMethodCandidate("/array/" + methodName);
         if (methodName != "count") {
           if (!blocksBuiltinVectorAccessStructReturnForwarding) {
-            appendMethodCandidate("/std/collections/vector/" + methodName);
+            appendMethodCandidate(
+                canonicalVectorCompatibilityHelperPathOrFallback(methodName));
           }
         }
       } else if (receiverStruct == "/map") {

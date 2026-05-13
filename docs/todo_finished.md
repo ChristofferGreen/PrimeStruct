@@ -16435,3 +16435,34 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     traces. The full release gate was stopped after the build and 54 passing
     CTest targets as too broad for the lite slice; focused vector trace and
     source-lock validation passed.
+
+- [x] TODO-4431: Route semantic inference vector traces
+  - owner: ai
+  - created_at: 2026-05-13
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4430
+  - scope: Replace remaining semantic inference, return-inference,
+    collection-compatibility, method-resolution, pre-dispatch, late-fallback,
+    and struct-return vector traces with generic collection predicates or
+    registry-backed vector helper queries.
+  - implementation_notes:
+    - Start from the `SemanticsValidatorInfer*` entries in
+      `scripts/vector_surface_trace_baseline.json` after TODO-4430.
+    - Keep ordinary C++ `std::vector` container usage allowed.
+  - acceptance:
+    - Inference-side semantic vector traces are removed or routed through
+      semantic facts, generic collection helpers, or registry metadata.
+    - Focused semantic source-lock or behavior coverage remains aligned.
+    - The vector surface trace baseline decreases for the selected inference
+      files and does not increase elsewhere.
+  - stop_rule: Stop after inference-side semantic vector traces that can be
+    routed before statement/layout work are removed and the baseline ratchets
+    downward.
+  - finished_at: 2026-05-13
+  - evidence: Routed semantic inference vector helper, canonical path, legacy
+    experimental vector, and `Vector<T>` text checks through shared
+    compatibility helpers and registry-backed metadata; updated semantic infer
+    source-lock coverage; and ratcheted
+    `scripts/vector_surface_trace_baseline.json` from 208 to 155 production
+    traces. Focused release target build, source-lock validation, direct vector
+    trace check, and vector trace CTest validation passed.

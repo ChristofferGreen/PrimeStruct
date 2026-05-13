@@ -1,5 +1,7 @@
 #include "SemanticsValidator.h"
 
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+
 namespace primec::semantics {
 
 ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
@@ -112,7 +114,8 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
       std::string valueType;
       if (resolveVectorTarget != nullptr &&
           resolveVectorTarget(receiverCandidate, elemType)) {
-        methodResolved = "/std/collections/vector/" + helperName;
+        methodResolved =
+            canonicalVectorCompatibilityHelperPathOrFallback(helperName);
       } else if (resolveArrayTarget != nullptr &&
                  resolveArrayTarget(receiverCandidate, elemType)) {
         methodResolved = "/array/" + helperName;

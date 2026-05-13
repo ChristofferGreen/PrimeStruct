@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <algorithm>
 #include <cctype>
@@ -143,7 +144,8 @@ ReturnKind SemanticsValidator::inferExprReturnKindImpl(const Expr &expr,
               hash *= 1099511628211ULL;
             }
             std::ostringstream out;
-            out << "/std/collections/experimental_vector/Vector__t" << std::hex << hash;
+            out << legacyExperimentalVectorCompatibilityPrefix()
+                << "Vector__t" << std::hex << hash;
             const std::string path = out.str();
             if (structNames_.count(path) == 0) {
               return false;

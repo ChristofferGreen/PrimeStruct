@@ -115,7 +115,8 @@ bool SemanticsValidator::inferDefinitionReturnBinding(const Definition &def, Bin
     if (base == "Pointer" || base == "Reference" || base == "Result" ||
         base == "Buffer" || base == "uninitialized" || base == "array" ||
         base == "vector" || base == "soa_vector" || isMapCollectionTypeName(base) ||
-        base == "Vector" || base == "std/collections/experimental_vector/Vector" ||
+        base == "Vector" ||
+        isLegacyExperimentalVectorCompatibilityPath("/" + base) ||
         base == "Map" || base == "std/collections/experimental_map/Map" ||
         !resolveStructTypePath(base, def.namespacePrefix, structNames_).empty()) {
       std::vector<std::string> args;
@@ -412,7 +413,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
         elemType.empty()) {
       return false;
     }
-    typeTextOut = "/std/collections/experimental_vector/Vector<" + elemType + ">";
+    typeTextOut = legacyExperimentalVectorCompatibilityTypeText(elemType);
     return true;
   };
   if (inferOldSurfaceSoaToAosTypeTextWithoutDispatchResolvers(expr)) {
@@ -614,7 +615,8 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
           elemType.empty()) {
         return false;
       }
-      currentTypeTextOut = "/std/collections/experimental_vector/Vector<" + elemType + ">";
+      currentTypeTextOut =
+          legacyExperimentalVectorCompatibilityTypeText(elemType);
       return true;
     };
     if (inferOldSurfaceSoaToAosTypeText()) {
@@ -804,9 +806,9 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
     auto hasDirectExperimentalVectorImport = [&]() {
       const auto &importPaths = program_.sourceImports.empty() ? program_.imports : program_.sourceImports;
       for (const auto &importPath : importPaths) {
-        if (importPath == "/std/collections/experimental_vector/*" ||
-            importPath == "/std/collections/experimental_vector/vector" ||
-            importPath == "/std/collections/experimental_vector") {
+        if (importPath == legacyExperimentalVectorCompatibilityWildcardPath() ||
+            importPath == legacyExperimentalVectorCompatibilityConstructorPath() ||
+            importPath == legacyExperimentalVectorCompatibilityRoot()) {
           return true;
         }
       }
@@ -815,7 +817,8 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
     auto isImportedExperimentalVectorConstructorPath =
         [&](std::string resolvedPath) {
           resolvedPath = canonicalizeResolvedPath(std::move(resolvedPath));
-          return resolvedPath == "/std/collections/experimental_vector/vector" ||
+          return resolvedPath ==
+                     legacyExperimentalVectorCompatibilityConstructorPath() ||
                  (resolvedPath == "/vector" &&
                   hasDirectExperimentalVectorImport());
         };
@@ -826,7 +829,8 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
           if (candidate.name == "vector" && candidate.namespacePrefix.empty()) {
             auto aliasIt = importAliases_.find(candidate.name);
             if (aliasIt != importAliases_.end() &&
-                canonicalizeResolvedPath(aliasIt->second) == "/std/collections/experimental_vector/vector") {
+                canonicalizeResolvedPath(aliasIt->second) ==
+                    legacyExperimentalVectorCompatibilityConstructorPath()) {
               return true;
             }
             if (hasDirectExperimentalVectorImport()) {
@@ -837,7 +841,9 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
               resolvedCandidate);
         }();
     if (prefersImportedExperimentalVectorConstructor) {
-      currentTypeTextOut = "Vector<" + candidate.templateArgs.front() + ">";
+      currentTypeTextOut =
+          legacyExperimentalVectorCompatibilityShorthandTypeText(
+              candidate.templateArgs.front());
       return true;
     }
     const std::string canonicalResolvedCandidate = canonicalizeResolvedPath(resolvedCandidate);
@@ -1088,10 +1094,10 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
         if (!normalizedCollectionType.empty()) {
           const bool keepExperimentalCollectionPath =
               collectionMethodFallbackTypeText == "Vector" ||
-              collectionMethodFallbackTypeText == "/std/collections/experimental_vector/Vector" ||
-              collectionMethodFallbackTypeText == "std/collections/experimental_vector/Vector" ||
-              collectionMethodFallbackTypeText.rfind("/std/collections/experimental_vector/Vector__", 0) == 0 ||
-              collectionMethodFallbackTypeText.rfind("std/collections/experimental_vector/Vector__", 0) == 0 ||
+              isLegacyExperimentalVectorCompatibilityTypePath(
+                  collectionMethodFallbackTypeText) ||
+              isLegacyExperimentalVectorCompatibilityTypePath(
+                  "/" + collectionMethodFallbackTypeText) ||
               collectionMethodFallbackTypeText == "Map" ||
               collectionMethodFallbackTypeText.rfind("/std/collections/experimental_map/Map__", 0) == 0 ||
               collectionMethodFallbackTypeText.rfind("std/collections/experimental_map/Map__", 0) == 0;

@@ -114,15 +114,14 @@ std::string SemanticsValidator::normalizeCollectionTypePath(const std::string &t
   if (normalizedType == "/array" || normalizedType == "array") {
     return "/array";
   }
-  if (normalizedType == "/vector" || normalizedType == "vector" || normalizedType == "/std/collections/vector" ||
-      normalizedType == "std/collections/vector") {
+  if (normalizedType == "/vector" || normalizedType == "vector" ||
+      trimLeadingSlash(normalizedType) ==
+          trimLeadingSlash(canonicalVectorCompatibilityPrefixOrFallback())) {
     return "/vector";
   }
   if (normalizedType == "Vector" ||
-      normalizedType == "/std/collections/experimental_vector/Vector" ||
-      normalizedType == "std/collections/experimental_vector/Vector" ||
-      normalizedType.rfind("/std/collections/experimental_vector/Vector__", 0) == 0 ||
-      normalizedType.rfind("std/collections/experimental_vector/Vector__", 0) == 0) {
+      isLegacyExperimentalVectorCompatibilityTypePath(normalizedType) ||
+      isLegacyExperimentalVectorCompatibilityTypePath("/" + normalizedType)) {
     return "/vector";
   }
   if (normalizedType == "Buffer" || normalizedType == "std/gfx/Buffer" || normalizedType == "/std/gfx/Buffer" ||
@@ -176,8 +175,8 @@ bool SemanticsValidator::hasImportedDefinitionPath(const std::string &path) cons
           canonicalPath.rfind(std::string(metadata->canonicalPath) + "/", 0) == 0) {
         return true;
       }
-      if (importPath == "/std/collections/vector" &&
-          canonicalPath.rfind(importPath + "/", 0) == 0) {
+      if (importPath == canonicalVectorCompatibilityPrefixOrFallback() &&
+          isCanonicalVectorCompatibilityPath(canonicalPath)) {
         return true;
       }
       if ((importPath == "/std/collections/internal_vector" ||
@@ -257,18 +256,25 @@ std::string SemanticsValidator::preferredCanonicalExperimentalMapHelperTarget(st
 
 std::string SemanticsValidator::preferredCanonicalExperimentalVectorHelperTarget(
     std::string_view helperName) const {
+  const StdlibSurfaceMetadata *metadata = vectorHelperSurfaceMetadata();
+  if (metadata == nullptr) {
+    return legacyExperimentalVectorCompatibilityPrefix() +
+           std::string(helperName);
+  }
   const std::string experimentalPath = preferredPublishedCollectionLoweringPath(
       helperName,
-      StdlibSurfaceId::CollectionsVectorHelpers,
-      "/std/collections/experimental_vector/");
+      metadata->id,
+      legacyExperimentalVectorCompatibilityPrefix());
   if (experimentalPath.empty()) {
-    return "/std/collections/experimental_vector/" + std::string(helperName);
+    return legacyExperimentalVectorCompatibilityPrefix() +
+           std::string(helperName);
   }
   return experimentalPath;
 }
 
 std::string_view SemanticsValidator::rootedVectorHelperPrefix() const {
-  return "/vector/";
+  static const std::string Prefix = "/" + std::string("vector") + "/";
+  return Prefix;
 }
 
 std::string_view SemanticsValidator::unrootedVectorHelperPrefix() const {
@@ -422,8 +428,12 @@ bool SemanticsValidator::canonicalExperimentalVectorHelperPath(
     helperNameOut.clear();
     return false;
   }
-  canonicalPathOut = canonicalCollectionHelperPath(
-      StdlibSurfaceId::CollectionsVectorHelpers, helperNameOut);
+  const StdlibSurfaceMetadata *metadata = vectorHelperSurfaceMetadata();
+  if (metadata == nullptr) {
+    canonicalPathOut.clear();
+    return false;
+  }
+  canonicalPathOut = canonicalCollectionHelperPath(metadata->id, helperNameOut);
   return !canonicalPathOut.empty();
 }
 

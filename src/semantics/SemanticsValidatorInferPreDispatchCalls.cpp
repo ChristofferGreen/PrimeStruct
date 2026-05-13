@@ -1,5 +1,7 @@
 #include "SemanticsValidator.h"
 
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+
 #include <functional>
 #include <optional>
 
@@ -200,7 +202,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
     std::string normalizedPath = path;
     if (!normalizedPath.empty() && normalizedPath.front() != '/') {
       if (normalizedPath.rfind("array/", 0) == 0 ||
-          normalizedPath.rfind("std/collections/vector/", 0) == 0 ||
+          isUnrootedCanonicalVectorCompatibilityPath(normalizedPath) ||
           normalizedPath.rfind("map/", 0) == 0 ||
           normalizedPath.rfind("std/collections/map/", 0) == 0) {
         normalizedPath.insert(normalizedPath.begin(), '/');
@@ -216,11 +218,11 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
           suffix != "at_unsafe" && suffix != "push" && suffix != "pop" &&
           suffix != "reserve" && suffix != "clear" &&
           suffix != "remove_at" && suffix != "remove_swap") {
-        appendUnique("/std/collections/vector/" + suffix);
+        appendUnique(canonicalVectorCompatibilityHelperPathOrFallback(suffix));
       }
-    } else if (normalizedPath.rfind("/std/collections/vector/", 0) == 0) {
-      // Keep explicit /std/collections/vector/* calls isolated so canonical
-      // paths no longer fall back through /array/* aliases.
+    } else if (isCanonicalVectorCompatibilityPath(normalizedPath)) {
+      // Keep explicit canonical vector helper calls isolated so canonical
+      // paths no longer fall back through array aliases.
     } else if (normalizedPath.rfind("/map/", 0) == 0) {
       const std::string suffix =
           normalizedPath.substr(std::string("/map/").size());
@@ -548,7 +550,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
       const bool isNamespacedVectorHelperCall =
           isNamespacedCollectionHelperCall && namespacedCollection == "vector";
       const bool isStdNamespacedVectorCanonicalHelperCall =
-          resolveCalleePath(expr).rfind("/std/collections/vector/", 0) == 0 &&
+          isCanonicalVectorCompatibilityPath(resolveCalleePath(expr)) &&
           (namespacedHelper == "push" || namespacedHelper == "pop" ||
            namespacedHelper == "reserve" || namespacedHelper == "clear" ||
            namespacedHelper == "remove_at" ||

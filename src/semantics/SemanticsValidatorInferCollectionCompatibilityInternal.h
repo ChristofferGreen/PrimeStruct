@@ -320,8 +320,24 @@ stripUnrootedCanonicalVectorCompatibilityPrefix(std::string_view path) {
   return "/std/collections/experimental_" + std::string("vector") + "/";
 }
 
+[[maybe_unused]] std::string legacyExperimentalVectorCompatibilityRoot() {
+  std::string root = legacyExperimentalVectorCompatibilityPrefix();
+  if (!root.empty() && root.back() == '/') {
+    root.pop_back();
+  }
+  return root;
+}
+
 [[maybe_unused]] std::string legacyExperimentalVectorCompatibilityFamilyName() {
   return "experimental_" + std::string("vector");
+}
+
+[[maybe_unused]] std::string legacyExperimentalVectorCompatibilityConstructorPath() {
+  return legacyExperimentalVectorCompatibilityPrefix() + std::string("vector");
+}
+
+[[maybe_unused]] std::string legacyExperimentalVectorCompatibilityWildcardPath() {
+  return legacyExperimentalVectorCompatibilityPrefix() + "*";
 }
 
 [[maybe_unused]] bool isLegacyExperimentalVectorCompatibilityPath(
@@ -340,6 +356,22 @@ stripUnrootedCanonicalVectorCompatibilityPrefix(std::string_view path) {
     std::string_view path) {
   return isLegacyExperimentalVectorCompatibilityPath(path) ||
          isLegacyExperimentalVectorCompatibilitySpecializedTypePath(path);
+}
+
+[[maybe_unused]] std::string legacyExperimentalVectorCompatibilityTypeText(
+    const std::string &elemType,
+    bool rooted = true) {
+  std::string prefix = legacyExperimentalVectorCompatibilityPrefix();
+  if (!rooted && !prefix.empty() && prefix.front() == '/') {
+    prefix.erase(prefix.begin());
+  }
+  return prefix + "Vector" + std::string("<") + elemType + ">";
+}
+
+[[maybe_unused]] std::string
+legacyExperimentalVectorCompatibilityShorthandTypeText(
+    const std::string &elemType) {
+  return "Vector" + std::string("<") + elemType + ">";
 }
 
 [[maybe_unused]] std::string legacyExperimentalVectorCompatibilityHelperName(
