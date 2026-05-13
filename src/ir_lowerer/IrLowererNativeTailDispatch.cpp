@@ -529,6 +529,7 @@ UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnosticImpl(
   const std::string directHelperPath =
       resolveNativeTailCallPathWithoutFallbackProbes(expr);
   const bool isPublishedVectorMetadataCall =
+      semanticProgram != nullptr &&
       expr.kind == Expr::Kind::Call &&
       !expr.isMethodCall &&
       expr.args.size() == 1 &&
