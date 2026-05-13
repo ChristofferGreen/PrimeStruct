@@ -199,7 +199,7 @@ TEST_CASE("stdlib surface registry stays source locked") {
   CHECK(source.find("\"/file_error/why\"") != std::string::npos);
 
   CHECK(source.find("StdlibSurfaceId::CollectionsVectorHelperSurface") != std::string::npos);
-  CHECK(source.find("loadVectorManifestSurfaces()") != std::string::npos);
+  CHECK(source.find("loadCollectionsManifestSurfaces()") != std::string::npos);
   CHECK(source.find("surfaces.psmeta") != std::string::npos);
   CHECK(source.find("resolveMetadataMemberName(") != std::string::npos);
   CHECK(source.find("\"/std/collections/vector\"") == std::string::npos);
@@ -244,27 +244,16 @@ TEST_CASE("stdlib surface registry stays source locked") {
         std::string::npos);
 
   CHECK(source.find("StdlibSurfaceId::CollectionsMapHelpers") != std::string::npos);
-  CHECK(source.find("\"collections.map_helpers\"") != std::string::npos);
-  CHECK(source.find("\"/map/count\"") != std::string::npos);
-  CHECK(source.find("\"count_ref\"") != std::string::npos);
-  CHECK(source.find("\"insert_ref\"") != std::string::npos);
-  CHECK(source.find("\"/std/collections/mapInsert\"") != std::string::npos);
-  CHECK(source.find("\"/std/collections/experimental_map/mapCount\"") != std::string::npos);
-  CHECK(source.find("\"/std/collections/experimental_map/mapCountRef\"") != std::string::npos);
-  CHECK(source.find("\"/std/collections/experimental_map/mapContains\"") != std::string::npos);
-  CHECK(source.find("\"/std/collections/experimental_map/mapContainsRef\"") != std::string::npos);
-  CHECK(source.find("\"/std/collections/experimental_map/mapTryAt\"") != std::string::npos);
-  CHECK(source.find("\"/std/collections/experimental_map/mapTryAtRef\"") != std::string::npos);
-  CHECK(source.find("\"/std/collections/experimental_map/mapAt\"") != std::string::npos);
-  CHECK(source.find("\"/std/collections/experimental_map/mapAtRef\"") != std::string::npos);
-  CHECK(source.find("\"/std/collections/experimental_map/mapAtUnsafe\"") != std::string::npos);
-  CHECK(source.find("\"/std/collections/experimental_map/mapAtUnsafeRef\"") != std::string::npos);
-  CHECK(source.find("\"/std/collections/experimental_map/mapInsert\"") != std::string::npos);
-  CHECK(source.find("\"/std/collections/experimental_map/mapInsertRef\"") != std::string::npos);
-  CHECK(source.find("\"/std/collections/mapInsertRef\"") != std::string::npos);
+  CHECK(source.find("\"collections.map_helpers\"") == std::string::npos);
+  CHECK(source.find("\"/map/count\"") == std::string::npos);
+  CHECK(source.find("\"/std/collections/mapInsert\"") == std::string::npos);
+  CHECK(source.find("\"/std/collections/experimental_map/mapCount\"") ==
+        std::string::npos);
   CHECK(source.find("stripResolvedPathSpecializationSuffix(") != std::string::npos);
   CHECK(source.find("resolveCollectionsVectorMemberName(") == std::string::npos);
-  CHECK(source.find("resolveCollectionsMapHelperMemberName(") != std::string::npos);
+  CHECK(source.find("resolveCollectionsMapHelperMemberName(") == std::string::npos);
+  CHECK(source.find("CollectionsMapHelperMembers") == std::string::npos);
+  CHECK(source.find("CollectionsMapConstructorMembers") == std::string::npos);
   CHECK(source.find("resolveStdlibSurfaceMemberName(const StdlibSurfaceMetadata &metadata,") !=
         std::string::npos);
   CHECK(source.find("stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId id,") !=
@@ -274,10 +263,35 @@ TEST_CASE("stdlib surface registry stays source locked") {
   CHECK(source.find("matchesResolvedRootedMemberPath(") != std::string::npos);
 
   CHECK(source.find("StdlibSurfaceId::CollectionsMapConstructors") != std::string::npos);
-  CHECK(source.find("\"collections.map_constructors\"") != std::string::npos);
-  CHECK(source.find("\"/std/collections/mapNew\"") != std::string::npos);
-  CHECK(source.find("\"mapOct\"") != std::string::npos);
-  CHECK(source.find("\"/std/collections/experimental_map/mapOct\"") != std::string::npos);
+  CHECK(source.find("\"collections.map_constructors\"") == std::string::npos);
+  CHECK(source.find("\"/std/collections/mapNew\"") == std::string::npos);
+  CHECK(source.find("\"mapOct\"") == std::string::npos);
+  CHECK(source.find("\"/std/collections/experimental_map/mapOct\"") ==
+        std::string::npos);
+  CHECK(collectionManifest.find("id = CollectionsMapHelpers") != std::string::npos);
+  CHECK(collectionManifest.find("bridge_key = collections.map_helpers") !=
+        std::string::npos);
+  CHECK(collectionManifest.find("canonical_path = /std/collections/map") !=
+        std::string::npos);
+  CHECK(collectionManifest.find("member_name = count_ref") != std::string::npos);
+  CHECK(collectionManifest.find("member_name = insert_ref") != std::string::npos);
+  CHECK(collectionManifest.find("member_alias = mapAtUnsafe -> at_unsafe") !=
+        std::string::npos);
+  CHECK(collectionManifest.find("compatibility_spelling = /map/count") !=
+        std::string::npos);
+  CHECK(collectionManifest.find(
+            "lowering_spelling = /std/collections/experimental_map/mapInsertRef") !=
+        std::string::npos);
+  CHECK(collectionManifest.find("id = CollectionsMapConstructors") !=
+        std::string::npos);
+  CHECK(collectionManifest.find("bridge_key = collections.map_constructors") !=
+        std::string::npos);
+  CHECK(collectionManifest.find("canonical_path = /std/collections/map/map") !=
+        std::string::npos);
+  CHECK(collectionManifest.find("member_name = mapOct") != std::string::npos);
+  CHECK(collectionManifest.find(
+            "compatibility_spelling = /std/collections/experimental_map/mapOct") !=
+        std::string::npos);
 
   CHECK(source.find("StdlibSurfaceId::CollectionsSoaVectorHelpers") != std::string::npos);
   CHECK(source.find("\"collections.soa_vector_helpers\"") != std::string::npos);

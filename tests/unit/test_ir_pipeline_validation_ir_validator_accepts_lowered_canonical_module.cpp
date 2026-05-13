@@ -1224,16 +1224,20 @@ TEST_CASE("stdlib surface metadata resolves collection helper member tokens") {
   CHECK(primec::resolveStdlibSurfaceMemberName(*vectorMetadata, "count") == "count");
   CHECK(primec::resolveStdlibSurfaceMemberName(*vectorMetadata, "remove_swap") ==
         "remove_swap");
-  CHECK(primec::resolveStdlibSurfaceMemberName(*vectorMetadata, "/std/collections/vector/count").empty());
-  CHECK(primec::resolveStdlibSurfaceMemberName(*vectorMetadata, "/std/collections/vector/remove_swap").empty());
+  CHECK(primec::resolveStdlibSurfaceMemberName(*vectorMetadata, "/std/collections/vector/count") ==
+        "count");
+  CHECK(primec::resolveStdlibSurfaceMemberName(*vectorMetadata, "/std/collections/vector/remove_swap") ==
+        "remove_swap");
 
   const auto *vectorCtorMetadata =
       primec::findStdlibSurfaceMetadata(primec::StdlibSurfaceId::CollectionsVectorConstructors);
   REQUIRE(vectorCtorMetadata != nullptr);
   CHECK(primec::resolveStdlibSurfaceMemberName(*vectorCtorMetadata, "vector") ==
         "vector");
-  CHECK(primec::resolveStdlibSurfaceMemberName(*vectorCtorMetadata, "/std/collections/vector/vector").empty());
-  CHECK(primec::resolveStdlibSurfaceMemberName(*vectorCtorMetadata, "/std/collections/vector/vector").empty());
+  CHECK(primec::resolveStdlibSurfaceMemberName(*vectorCtorMetadata, "/std/collections/vector/vector") ==
+        "vector");
+  CHECK(primec::resolveStdlibSurfaceMemberName(*vectorCtorMetadata, "/std/collections/vector/vector") ==
+        "vector");
 
   const auto *mapMetadata =
       primec::findStdlibSurfaceMetadata(primec::StdlibSurfaceId::CollectionsMapHelpers);

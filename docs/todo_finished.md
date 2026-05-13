@@ -16816,3 +16816,47 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     for ordinary helper routing, expanded stdlib ownership locks, and validated
     VM/native access smokes with and without experimental compatibility import.
     Broad release validation was skipped under the lite workflow.
+
+- [x] TODO-4302: Move map surface metadata out of C++
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-13
+  - phase: Map stdlib ownership cutover
+  - scope: Remove map-specific public-surface knowledge from handwritten C++
+    and generated production C++ by moving canonical map helper, import, and
+    constructor metadata into a stdlib-owned manifest consumed through generic
+    collection-surface APIs.
+  - implementation_notes:
+    - `stdlib/std/collections/surfaces.psmeta` now owns
+      `CollectionsMapHelpers` and `CollectionsMapConstructors` metadata,
+      including canonical member names, import aliases, compatibility
+      spellings, lowering spellings, and wrapper member aliases.
+    - `StdlibSurfaceRegistry` loads vector and map collection surfaces through
+      the same manifest loader and no longer carries map helper/constructor
+      constexpr tables or custom map member-name resolver ladders.
+    - Map base/borrowed helper classification now resolves through
+      manifest-backed metadata, and slash spellings passed to
+      `stdlibSurfaceCanonicalHelperPath` must belong to the requested surface
+      id before canonicalization.
+  - acceptance:
+    - Canonical map import, wildcard import, constructor, and method-helper
+      metadata is loaded from stdlib-owned data rather than handwritten or
+      generated map lists in production C++.
+    - Existing canonical map behavior and diagnostics stay stable across
+      repeated builds.
+    - Production `src/` and `include/` C++ no longer contain canonical map
+      surface tables, path aliases, import aliases, constructor spellings, or
+      helper-name lists; temporary compatibility traces are limited to
+      deletion work tracked by TODO-4303.
+    - Docs describe the map surface metadata ownership boundary.
+  - stop_rule: Stop once canonical map surface metadata no longer requires
+    PrimeStruct-map-specific C++ entries; leave removal of compatibility
+    spellings and the final zero-trace audit to TODO-4303 and TODO-4304.
+  - evidence: Moved map helper and constructor surface metadata into
+    `stdlib/std/collections/surfaces.psmeta`, replaced the vector-only
+    manifest loader with collection-surface manifest data for vector and map,
+    removed handwritten C++ map metadata arrays and custom member resolver
+    ladders from `StdlibSurfaceRegistry.cpp`, tightened slash-spelling
+    validation for canonical helper path construction, refreshed
+    ownership/source-lock/registry tests, and validated focused release
+    targets. Broad release validation was skipped under the lite workflow.

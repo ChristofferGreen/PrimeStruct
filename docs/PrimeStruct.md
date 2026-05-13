@@ -3799,23 +3799,25 @@ re-defining it piecemeal.
   `vector<T>` and `map<K, V>`, collection helper families, compatibility
   spellings plus removed-helper diagnostics, semantic surface IDs, and lowerer
   dispatch metadata.
-- **Stdlib-owned surface metadata:** canonical vector helper/import/constructor
-  metadata is declared in `stdlib/std/collections/surfaces.psmeta` and consumed
-  by `StdlibSurfaceRegistry` through generic manifest loading. Production C++
-  keeps the surface id and registry APIs, but the canonical vector member lists,
-  import aliases, lowering spellings, and statement-helper subset live with the
-  stdlib collection source. Old vector compatibility spellings are
+- **Stdlib-owned surface metadata:** canonical vector and map
+  helper/import/constructor metadata is declared in
+  `stdlib/std/collections/surfaces.psmeta` and consumed by
+  `StdlibSurfaceRegistry` through generic manifest loading. Production C++
+  keeps the surface ids and registry APIs, but the canonical collection member
+  lists, import aliases, lowering spellings, and vector statement-helper subset
+  live with the stdlib collection source. Old vector compatibility spellings are
   intentionally absent from that metadata; rooted helper aliases are removed,
   and direct experimental vector source imports are rejected by import
-  validation.
+  validation. Map compatibility spellings remain in the manifest until
+  TODO-4303 deletes or intentionally rejects those seams.
 - **Migration-only seams:** rooted `/map/*` spellings plus
   `mapCount`-style lowering names remain temporary compatibility seams. Rooted
   `/vector/*` helper spellings no longer act as builtin vector compatibility
   aliases; explicit user definitions under those paths remain ordinary
   definitions. The vector/map adapter cutover is complete for semantic and
   template-monomorph helper decisions; direct experimental vector source
-  imports are rejected, and TODO-4303 owns the later map seam deletion after
-  map metadata moves to a stdlib-owned manifest.
+  imports are rejected, map surface metadata is now stdlib-owned, and
+  TODO-4303 owns the later map seam deletion.
 - **Compatibility adapter inventory:** map insert helper compatibility was the
   first migrated family. The semantic map-insert rewrite asks the
   `StdlibSurfaceRegistry` `CollectionsMapHelpers` adapter to classify

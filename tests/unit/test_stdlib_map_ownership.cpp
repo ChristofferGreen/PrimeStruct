@@ -38,6 +38,8 @@ TEST_CASE("canonical map surface owns implementation through internal map module
   const std::string mapSource = readText(collectionsFile("map.prime"));
   const std::string experimentalSource = readText(collectionsFile("experimental_map.prime"));
   const std::string internalSource = readText(collectionsFile("internal_map.prime"));
+  const std::string surfacesSource = readText(collectionsFile("surfaces.psmeta"));
+  const std::string registrySource = readText(repoRoot() / "src" / "StdlibSurfaceRegistry.cpp");
   const std::string semanticsSource = readText(repoRoot() / "src" / "semantics" / "SemanticsValidate.cpp");
   const std::string statementLowererSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererStatementCallEmission.cpp");
@@ -53,6 +55,8 @@ TEST_CASE("canonical map surface owns implementation through internal map module
   REQUIRE(!mapSource.empty());
   REQUIRE(!experimentalSource.empty());
   REQUIRE(!internalSource.empty());
+  REQUIRE(!surfacesSource.empty());
+  REQUIRE(!registrySource.empty());
   REQUIRE(!semanticsSource.empty());
   REQUIRE(!statementLowererSource.empty());
   REQUIRE(!lowerStatementsExprSource.empty());
@@ -90,6 +94,18 @@ TEST_CASE("canonical map surface owns implementation through internal map module
   CHECK(internalNamespace.find("/std/collections/experimental_map/mapTryAt") == std::string::npos);
   CHECK(internalNamespace.find("/std/collections/experimental_map/mapAt") == std::string::npos);
   CHECK(internalNamespace.find("/std/collections/experimental_map/mapInsert") == std::string::npos);
+
+  CHECK(surfacesSource.find("id = CollectionsMapHelpers") != std::string::npos);
+  CHECK(surfacesSource.find("id = CollectionsMapConstructors") != std::string::npos);
+  CHECK(surfacesSource.find("member_name = at_unsafe_ref") != std::string::npos);
+  CHECK(surfacesSource.find("member_alias = mapInsertRef -> insert_ref") !=
+        std::string::npos);
+  CHECK(surfacesSource.find("lowering_spelling = /std/collections/mapInsertRef") !=
+        std::string::npos);
+  CHECK(registrySource.find("CollectionsMapHelperMembers") == std::string::npos);
+  CHECK(registrySource.find("CollectionsMapConstructorMembers") == std::string::npos);
+  CHECK(registrySource.find("resolveCollectionsMapHelperMemberName") == std::string::npos);
+  CHECK(registrySource.find("\"/std/collections/mapInsert\"") == std::string::npos);
 
   CHECK(semanticsSource.find("path == \"mapSingle\"") != std::string::npos);
   CHECK(semanticsSource.find("constructorBackedBuiltinMapBindings.count(initializer.args.front().name)") !=

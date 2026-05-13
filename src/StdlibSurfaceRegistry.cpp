@@ -92,149 +92,6 @@ constexpr auto FileErrorLoweringSpellings = std::to_array<std::string_view>({
     "/file_error/why",
 });
 
-constexpr auto CollectionsMapHelperMembers = std::to_array<std::string_view>({
-    "entry",
-    "map",
-    "count",
-    "count_ref",
-    "contains",
-    "contains_ref",
-    "tryAt",
-    "tryAt_ref",
-    "at",
-    "at_ref",
-    "at_unsafe",
-    "at_unsafe_ref",
-    "insert",
-    "insert_ref",
-});
-
-constexpr auto CollectionsMapImportAliases = std::to_array<std::string_view>({
-    "/std/collections/map",
-    "/map",
-    "map",
-});
-
-constexpr auto CollectionsMapCompatibilitySpellings = std::to_array<std::string_view>({
-    "/map/count",
-    "/map/count_ref",
-    "/map/contains",
-    "/map/contains_ref",
-    "/map/tryAt",
-    "/map/tryAt_ref",
-    "/map/at",
-    "/map/at_ref",
-    "/map/at_unsafe",
-    "/map/at_unsafe_ref",
-    "/map/insert",
-    "/map/insert_ref",
-});
-
-constexpr auto CollectionsMapLoweringSpellings = std::to_array<std::string_view>({
-    "/std/collections/map/count",
-    "/std/collections/map/count_ref",
-    "/std/collections/map/contains",
-    "/std/collections/map/contains_ref",
-    "/std/collections/map/tryAt",
-    "/std/collections/map/tryAt_ref",
-    "/std/collections/map/at",
-    "/std/collections/map/at_ref",
-    "/std/collections/map/at_unsafe",
-    "/std/collections/map/at_unsafe_ref",
-    "/std/collections/map/insert",
-    "/std/collections/map/insert_ref",
-    "/std/collections/mapCount",
-    "/std/collections/mapCountRef",
-    "/std/collections/experimental_map/mapCount",
-    "/std/collections/experimental_map/mapCountRef",
-    "/std/collections/mapContains",
-    "/std/collections/mapContainsRef",
-    "/std/collections/experimental_map/mapContains",
-    "/std/collections/experimental_map/mapContainsRef",
-    "/std/collections/mapTryAt",
-    "/std/collections/mapTryAtRef",
-    "/std/collections/experimental_map/mapTryAt",
-    "/std/collections/experimental_map/mapTryAtRef",
-    "/std/collections/mapAt",
-    "/std/collections/mapAtRef",
-    "/std/collections/experimental_map/mapAt",
-    "/std/collections/experimental_map/mapAtRef",
-    "/std/collections/mapAtUnsafe",
-    "/std/collections/mapAtUnsafeRef",
-    "/std/collections/experimental_map/mapAtUnsafe",
-    "/std/collections/experimental_map/mapAtUnsafeRef",
-    "/std/collections/mapInsert",
-    "/std/collections/mapInsertRef",
-    "/std/collections/experimental_map/mapInsert",
-    "/std/collections/experimental_map/mapInsertRef",
-});
-
-constexpr auto CollectionsMapBaseHelperMembers = std::to_array<std::string_view>({
-    "count",
-    "contains",
-    "tryAt",
-    "at",
-    "at_unsafe",
-    "insert",
-});
-
-constexpr auto CollectionsMapBorrowedHelperMembers = std::to_array<std::string_view>({
-    "count_ref",
-    "contains_ref",
-    "tryAt_ref",
-    "at_ref",
-    "at_unsafe_ref",
-    "insert_ref",
-});
-
-constexpr auto CollectionsMapConstructorMembers = std::to_array<std::string_view>({
-    "map",
-    "mapNew",
-    "mapSingle",
-    "mapDouble",
-    "mapPair",
-    "mapTriple",
-    "mapQuad",
-    "mapQuint",
-    "mapSext",
-    "mapSept",
-    "mapOct",
-});
-
-constexpr auto CollectionsMapConstructorImportAliases = std::to_array<std::string_view>({
-    "/std/collections/map",
-    "/map",
-    "map",
-});
-
-constexpr auto CollectionsMapConstructorCompatibilitySpellings = std::to_array<std::string_view>({
-    "/std/collections/experimental_map/map",
-    "/std/collections/experimental_map/mapNew",
-    "/std/collections/experimental_map/mapSingle",
-    "/std/collections/experimental_map/mapDouble",
-    "/std/collections/experimental_map/mapPair",
-    "/std/collections/experimental_map/mapTriple",
-    "/std/collections/experimental_map/mapQuad",
-    "/std/collections/experimental_map/mapQuint",
-    "/std/collections/experimental_map/mapSext",
-    "/std/collections/experimental_map/mapSept",
-    "/std/collections/experimental_map/mapOct",
-});
-
-constexpr auto CollectionsMapConstructorLoweringSpellings = std::to_array<std::string_view>({
-    "/std/collections/map/map",
-    "/std/collections/mapNew",
-    "/std/collections/mapSingle",
-    "/std/collections/mapDouble",
-    "/std/collections/mapPair",
-    "/std/collections/mapTriple",
-    "/std/collections/mapQuad",
-    "/std/collections/mapQuint",
-    "/std/collections/mapSext",
-    "/std/collections/mapSept",
-    "/std/collections/mapOct",
-});
-
 constexpr auto CollectionsSoaVectorHelperMembers = std::to_array<std::string_view>({
     "count",
     "count_ref",
@@ -523,9 +380,11 @@ struct ManifestSurfaceData {
   }
 };
 
-struct VectorManifestSurfaces {
-  ManifestSurfaceData helpers;
-  ManifestSurfaceData constructors;
+struct CollectionsManifestSurfaces {
+  ManifestSurfaceData vectorHelpers;
+  ManifestSurfaceData vectorConstructors;
+  ManifestSurfaceData mapHelpers;
+  ManifestSurfaceData mapConstructors;
 };
 
 std::string trimAscii(std::string_view value) {
@@ -546,6 +405,12 @@ std::optional<StdlibSurfaceId> parseManifestSurfaceId(std::string_view value) {
   }
   if (value == "CollectionsVectorConstructors") {
     return StdlibSurfaceId::CollectionsVectorConstructors;
+  }
+  if (value == "CollectionsMapHelpers") {
+    return StdlibSurfaceId::CollectionsMapHelpers;
+  }
+  if (value == "CollectionsMapConstructors") {
+    return StdlibSurfaceId::CollectionsMapConstructors;
   }
   return std::nullopt;
 }
@@ -667,18 +532,24 @@ void applyManifestSurfaceRecord(ManifestSurfaceData &surface,
   surface.refreshViews();
 }
 
-VectorManifestSurfaces loadVectorManifestSurfaces() {
-  VectorManifestSurfaces surfaces;
+CollectionsManifestSurfaces loadCollectionsManifestSurfaces() {
+  CollectionsManifestSurfaces surfaces;
   for (ManifestSurfaceRecord &record : readStdlibSurfaceManifest()) {
     if (!record.id.has_value()) {
       continue;
     }
     switch (*record.id) {
       case StdlibSurfaceId::CollectionsVectorHelperSurface:
-        applyManifestSurfaceRecord(surfaces.helpers, std::move(record));
+        applyManifestSurfaceRecord(surfaces.vectorHelpers, std::move(record));
         break;
       case StdlibSurfaceId::CollectionsVectorConstructors:
-        applyManifestSurfaceRecord(surfaces.constructors, std::move(record));
+        applyManifestSurfaceRecord(surfaces.vectorConstructors, std::move(record));
+        break;
+      case StdlibSurfaceId::CollectionsMapHelpers:
+        applyManifestSurfaceRecord(surfaces.mapHelpers, std::move(record));
+        break;
+      case StdlibSurfaceId::CollectionsMapConstructors:
+        applyManifestSurfaceRecord(surfaces.mapConstructors, std::move(record));
         break;
       default:
         break;
@@ -687,7 +558,7 @@ VectorManifestSurfaces loadVectorManifestSurfaces() {
   return surfaces;
 }
 
-const VectorManifestSurfaces VectorSurfaces = loadVectorManifestSurfaces();
+const CollectionsManifestSurfaces CollectionsSurfaces = loadCollectionsManifestSurfaces();
 
 const std::array<StdlibSurfaceMetadata, 11> Registry = {{
     {
@@ -722,57 +593,57 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .id = StdlibSurfaceId::CollectionsVectorHelperSurface,
         .domain = StdlibSurfaceDomain::Collections,
         .shape = StdlibSurfaceShape::HelperFamily,
-        .bridgeKey = VectorSurfaces.helpers.bridgeKey,
-        .canonicalImportRoot = VectorSurfaces.helpers.canonicalImportRoot,
-        .canonicalPath = VectorSurfaces.helpers.canonicalPath,
-        .memberNames = VectorSurfaces.helpers.memberNames.views,
-        .memberAliases = VectorSurfaces.helpers.memberAliases.views,
-        .statementMemberNames = VectorSurfaces.helpers.statementMemberNames.views,
-        .importAliasSpellings = VectorSurfaces.helpers.importAliasSpellings.views,
-        .compatibilitySpellings = VectorSurfaces.helpers.compatibilitySpellings.views,
-        .loweringSpellings = VectorSurfaces.helpers.loweringSpellings.views,
+        .bridgeKey = CollectionsSurfaces.vectorHelpers.bridgeKey,
+        .canonicalImportRoot = CollectionsSurfaces.vectorHelpers.canonicalImportRoot,
+        .canonicalPath = CollectionsSurfaces.vectorHelpers.canonicalPath,
+        .memberNames = CollectionsSurfaces.vectorHelpers.memberNames.views,
+        .memberAliases = CollectionsSurfaces.vectorHelpers.memberAliases.views,
+        .statementMemberNames = CollectionsSurfaces.vectorHelpers.statementMemberNames.views,
+        .importAliasSpellings = CollectionsSurfaces.vectorHelpers.importAliasSpellings.views,
+        .compatibilitySpellings = CollectionsSurfaces.vectorHelpers.compatibilitySpellings.views,
+        .loweringSpellings = CollectionsSurfaces.vectorHelpers.loweringSpellings.views,
     },
     {
         .id = StdlibSurfaceId::CollectionsVectorConstructors,
         .domain = StdlibSurfaceDomain::Collections,
         .shape = StdlibSurfaceShape::ConstructorFamily,
-        .bridgeKey = VectorSurfaces.constructors.bridgeKey,
-        .canonicalImportRoot = VectorSurfaces.constructors.canonicalImportRoot,
-        .canonicalPath = VectorSurfaces.constructors.canonicalPath,
-        .memberNames = VectorSurfaces.constructors.memberNames.views,
-        .memberAliases = VectorSurfaces.constructors.memberAliases.views,
-        .statementMemberNames = VectorSurfaces.constructors.statementMemberNames.views,
-        .importAliasSpellings = VectorSurfaces.constructors.importAliasSpellings.views,
-        .compatibilitySpellings = VectorSurfaces.constructors.compatibilitySpellings.views,
-        .loweringSpellings = VectorSurfaces.constructors.loweringSpellings.views,
+        .bridgeKey = CollectionsSurfaces.vectorConstructors.bridgeKey,
+        .canonicalImportRoot = CollectionsSurfaces.vectorConstructors.canonicalImportRoot,
+        .canonicalPath = CollectionsSurfaces.vectorConstructors.canonicalPath,
+        .memberNames = CollectionsSurfaces.vectorConstructors.memberNames.views,
+        .memberAliases = CollectionsSurfaces.vectorConstructors.memberAliases.views,
+        .statementMemberNames = CollectionsSurfaces.vectorConstructors.statementMemberNames.views,
+        .importAliasSpellings = CollectionsSurfaces.vectorConstructors.importAliasSpellings.views,
+        .compatibilitySpellings = CollectionsSurfaces.vectorConstructors.compatibilitySpellings.views,
+        .loweringSpellings = CollectionsSurfaces.vectorConstructors.loweringSpellings.views,
     },
     {
         .id = StdlibSurfaceId::CollectionsMapHelpers,
         .domain = StdlibSurfaceDomain::Collections,
         .shape = StdlibSurfaceShape::HelperFamily,
-        .bridgeKey = "collections.map_helpers",
-        .canonicalImportRoot = "/std/collections",
-        .canonicalPath = "/std/collections/map",
-        .memberNames = CollectionsMapHelperMembers,
-        .memberAliases = {},
-        .statementMemberNames = {},
-        .importAliasSpellings = CollectionsMapImportAliases,
-        .compatibilitySpellings = CollectionsMapCompatibilitySpellings,
-        .loweringSpellings = CollectionsMapLoweringSpellings,
+        .bridgeKey = CollectionsSurfaces.mapHelpers.bridgeKey,
+        .canonicalImportRoot = CollectionsSurfaces.mapHelpers.canonicalImportRoot,
+        .canonicalPath = CollectionsSurfaces.mapHelpers.canonicalPath,
+        .memberNames = CollectionsSurfaces.mapHelpers.memberNames.views,
+        .memberAliases = CollectionsSurfaces.mapHelpers.memberAliases.views,
+        .statementMemberNames = CollectionsSurfaces.mapHelpers.statementMemberNames.views,
+        .importAliasSpellings = CollectionsSurfaces.mapHelpers.importAliasSpellings.views,
+        .compatibilitySpellings = CollectionsSurfaces.mapHelpers.compatibilitySpellings.views,
+        .loweringSpellings = CollectionsSurfaces.mapHelpers.loweringSpellings.views,
     },
     {
         .id = StdlibSurfaceId::CollectionsMapConstructors,
         .domain = StdlibSurfaceDomain::Collections,
         .shape = StdlibSurfaceShape::ConstructorFamily,
-        .bridgeKey = "collections.map_constructors",
-        .canonicalImportRoot = "/std/collections",
-        .canonicalPath = "/std/collections/map/map",
-        .memberNames = CollectionsMapConstructorMembers,
-        .memberAliases = {},
-        .statementMemberNames = {},
-        .importAliasSpellings = CollectionsMapConstructorImportAliases,
-        .compatibilitySpellings = CollectionsMapConstructorCompatibilitySpellings,
-        .loweringSpellings = CollectionsMapConstructorLoweringSpellings,
+        .bridgeKey = CollectionsSurfaces.mapConstructors.bridgeKey,
+        .canonicalImportRoot = CollectionsSurfaces.mapConstructors.canonicalImportRoot,
+        .canonicalPath = CollectionsSurfaces.mapConstructors.canonicalPath,
+        .memberNames = CollectionsSurfaces.mapConstructors.memberNames.views,
+        .memberAliases = CollectionsSurfaces.mapConstructors.memberAliases.views,
+        .statementMemberNames = CollectionsSurfaces.mapConstructors.statementMemberNames.views,
+        .importAliasSpellings = CollectionsSurfaces.mapConstructors.importAliasSpellings.views,
+        .compatibilitySpellings = CollectionsSurfaces.mapConstructors.compatibilitySpellings.views,
+        .loweringSpellings = CollectionsSurfaces.mapConstructors.loweringSpellings.views,
     },
     {
         .id = StdlibSurfaceId::CollectionsSoaVectorHelpers,
@@ -903,57 +774,6 @@ std::string_view resolveMetadataMemberName(const StdlibSurfaceMetadata &metadata
   return {};
 }
 
-std::string_view resolveCollectionsMapHelperMemberName(std::string_view memberName) {
-  if (matchesAny(CollectionsMapHelperMembers, memberName)) {
-    return memberName;
-  }
-  if (memberName == "Count" || memberName == "mapCount") {
-    return "count";
-  }
-  if (memberName == "CountRef" || memberName == "mapCountRef") {
-    return "count_ref";
-  }
-  if (memberName == "Contains" || memberName == "mapContains") {
-    return "contains";
-  }
-  if (memberName == "ContainsRef" || memberName == "mapContainsRef") {
-    return "contains_ref";
-  }
-  if (memberName == "TryAt" || memberName == "mapTryAt") {
-    return "tryAt";
-  }
-  if (memberName == "TryAtRef" || memberName == "mapTryAtRef") {
-    return "tryAt_ref";
-  }
-  if (memberName == "At" || memberName == "mapAt") {
-    return "at";
-  }
-  if (memberName == "AtRef" || memberName == "mapAtRef") {
-    return "at_ref";
-  }
-  if (memberName == "AtUnsafe" || memberName == "mapAtUnsafe") {
-    return "at_unsafe";
-  }
-  if (memberName == "AtUnsafeRef" || memberName == "mapAtUnsafeRef") {
-    return "at_unsafe_ref";
-  }
-  if (memberName == "Insert" || memberName == "mapInsert") {
-    return "insert";
-  }
-  if (memberName == "InsertRef" || memberName == "mapInsertRef" ||
-      memberName == "MapInsertRef") {
-    return "insert_ref";
-  }
-  return {};
-}
-
-std::string_view resolveCollectionsMapConstructorMemberName(std::string_view memberName) {
-  if (matchesAny(CollectionsMapConstructorMembers, memberName)) {
-    return memberName;
-  }
-  return {};
-}
-
 std::string_view resolveCollectionsSoaVectorHelperMemberName(std::string_view memberName) {
   if (matchesAny(CollectionsSoaVectorHelperMembers, memberName)) {
     return memberName;
@@ -1006,11 +826,9 @@ std::string_view resolveSurfaceMemberNameImpl(const StdlibSurfaceMetadata &metad
   switch (metadata.id) {
     case StdlibSurfaceId::CollectionsVectorHelperSurface:
     case StdlibSurfaceId::CollectionsVectorConstructors:
-      return resolveMetadataMemberName(metadata, memberName);
     case StdlibSurfaceId::CollectionsMapHelpers:
-      return resolveCollectionsMapHelperMemberName(memberName);
     case StdlibSurfaceId::CollectionsMapConstructors:
-      return resolveCollectionsMapConstructorMemberName(memberName);
+      return resolveMetadataMemberName(metadata, memberName);
     case StdlibSurfaceId::CollectionsSoaVectorHelpers:
       return resolveCollectionsSoaVectorHelperMemberName(memberName);
     case StdlibSurfaceId::CollectionsSoaVectorConstructors:
@@ -1061,6 +879,13 @@ std::string stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId id, std::string_vie
   const StdlibSurfaceMetadata *metadata = findStdlibSurfaceMetadata(id);
   if (metadata == nullptr || metadata->shape == StdlibSurfaceShape::ConstructorFamily) {
     return {};
+  }
+  if (helperName.find('/') != std::string_view::npos) {
+    const StdlibSurfaceMetadata *helperMetadata =
+        findStdlibSurfaceMetadataByResolvedPath(helperName);
+    if (helperMetadata == nullptr || helperMetadata->id != id) {
+      return {};
+    }
   }
   const std::string_view resolvedMemberName = resolveStdlibSurfaceMemberName(*metadata, helperName);
   if (resolvedMemberName.empty()) {
@@ -1115,11 +940,24 @@ bool isStdlibVectorStatementHelperName(std::string_view memberName) {
 }
 
 bool isStdlibMapBaseHelperName(std::string_view memberName) {
-  return matchesAny(CollectionsMapBaseHelperMembers, memberName);
+  const auto *metadata = findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsMapHelpers);
+  if (metadata == nullptr) {
+    return false;
+  }
+  const std::string_view resolvedMemberName =
+      resolveMetadataMemberName(*metadata, memberName);
+  return !resolvedMemberName.empty() && resolvedMemberName != "entry" &&
+         resolvedMemberName != "map" && !resolvedMemberName.ends_with("_ref");
 }
 
 bool isStdlibMapBorrowedHelperName(std::string_view memberName) {
-  return matchesAny(CollectionsMapBorrowedHelperMembers, memberName);
+  const auto *metadata = findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsMapHelpers);
+  if (metadata == nullptr) {
+    return false;
+  }
+  const std::string_view resolvedMemberName =
+      resolveMetadataMemberName(*metadata, memberName);
+  return resolvedMemberName.ends_with("_ref");
 }
 
 const StdlibSurfaceMetadata *findStdlibSurfaceMetadataBySpelling(std::string_view spelling) {
