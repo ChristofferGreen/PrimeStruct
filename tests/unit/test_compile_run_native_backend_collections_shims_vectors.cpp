@@ -19,8 +19,8 @@ main() {
   [map<i32, i32>] pairs{mapSingle<i32, i32>(3i32, 9i32)}
   [i32] a{/std/collections/vector/at<i32>(values, 0i32)}
   [i32] b{/std/collections/vector/at_unsafe<i32>(values, 0i32)}
-  [i32] c{mapAt<i32, i32>(pairs, 3i32)}
-  [i32] d{mapAtUnsafe<i32, i32>(pairs, 3i32)}
+  [i32] c{/std/collections/map/at<i32, i32>(pairs, 3i32)}
+  [i32] d{/std/collections/map/at_unsafe<i32, i32>(pairs, 3i32)}
   return(plus(plus(a, b), plus(c, d)))
 }
 )";

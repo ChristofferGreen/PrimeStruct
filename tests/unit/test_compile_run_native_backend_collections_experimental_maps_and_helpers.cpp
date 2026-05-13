@@ -3190,9 +3190,9 @@ wrapMap<K, V>([K] key, [V] value) {
 
 [return<int>]
 main() {
-  [i32] a{mapAt<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8)}
-  [i32] b{mapAtUnsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8)}
-  [i32] c{mapCount<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32))}
+  [i32] a{/std/collections/map/at<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8)}
+  [i32] b{/std/collections/map/at_unsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8)}
+  [i32] c{/std/collections/map/count<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32))}
   return(plus(plus(a, b), c))
 }
 )";
@@ -3466,10 +3466,10 @@ Key() {
 [effects(heap_alloc), return<int>]
 main() {
   [Map<Key, i32>] values{mapPair<Key, i32>(Key{2i32}, 7i32, Key{5i32}, 11i32)}
-  [i32 mut] total{mapCount<Key, i32>(values)}
-  assign(total, plus(total, mapAt<Key, i32>(values, Key{2i32})))
-  assign(total, plus(total, mapAtUnsafe<Key, i32>(values, Key{5i32})))
-  if(mapContains<Key, i32>(values, Key{2i32}),
+  [i32 mut] total{/std/collections/map/count<Key, i32>(values)}
+  assign(total, plus(total, /std/collections/map/at<Key, i32>(values, Key{2i32})))
+  assign(total, plus(total, /std/collections/map/at_unsafe<Key, i32>(values, Key{5i32})))
+  if(/std/collections/map/contains<Key, i32>(values, Key{2i32}),
      then() { assign(total, plus(total, 1i32)) },
      else() { })
   return(total)
@@ -3705,7 +3705,7 @@ main() {
   [i32] vectorCall{/std/collections/vector/at<i32>(wrapVector<i32>(4i32), 0i32)}
   [i32] vectorMethod{wrapVector<i32>(4i32).at(0i32)}
   [i32] vectorIndex{wrapVector<i32>(4i32)[0i32]}
-  [i32] mapCall{mapAt<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32), "only"raw_utf8)}
+  [i32] mapCall{/std/collections/map/at<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32), "only"raw_utf8)}
   [i32] mapMethod{wrapMap<string, i32>("only"raw_utf8, 5i32).at("only"raw_utf8)}
   [i32] mapIndex{wrapMap<string, i32>("only"raw_utf8, 5i32)["only"raw_utf8]}
   return(plus(plus(plus(vectorCall, vectorMethod), vectorIndex), plus(plus(mapCall, mapMethod), mapIndex)))
@@ -3741,7 +3741,7 @@ wrapMap<K, V>([K] key, [V] value) {
 main() {
   [i32] vectorCall{/std/collections/vector/at_unsafe<i32>(wrapVector<i32>(4i32), 0i32)}
   [i32] vectorMethod{wrapVector<i32>(4i32).at_unsafe(0i32)}
-  [i32] mapCall{mapAtUnsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32), "only"raw_utf8)}
+  [i32] mapCall{/std/collections/map/at_unsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32), "only"raw_utf8)}
   [i32] mapMethod{wrapMap<string, i32>("only"raw_utf8, 5i32).at_unsafe("only"raw_utf8)}
   return(plus(plus(vectorCall, vectorMethod), plus(mapCall, mapMethod)))
 }
@@ -3774,7 +3774,7 @@ wrapMap<K, V>([K] key, [V] value) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [i32] mapCall{mapCount<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32))}
+  [i32] mapCall{/std/collections/map/count<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32))}
   [i32] mapMethod{wrapMap<string, i32>("only"raw_utf8, 5i32).count()}
   [i32] vectorCountCall{/std/collections/vector/count<i32>(wrapVector<i32>(4i32))}
   [i32] vectorCountMethod{wrapVector<i32>(4i32).count()}

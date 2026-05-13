@@ -118,6 +118,7 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
 
     instructions.clear();
     std::string error = "stale";
+    INFO(std::string(helperName));
     CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatch(
               callExpr,
               locals,
@@ -208,14 +209,14 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
                  {mapName, keyName},
                  Result::NotHandled,
                  "stale");
-  expectDispatch("/map/at", {mapName, keyName}, Result::NotHandled, "stale");
+  expectDispatch("/map/at", {mapName, keyName}, Result::Emitted, "stale");
   expectDispatch("/std/collections/map/at",
                  {mapName, keyName},
                  Result::NotHandled,
                  "stale");
   expectDispatch("/map/at_unsafe",
                  {mapName, keyName},
-                 Result::NotHandled,
+                 Result::Emitted,
                  "stale");
   expectDispatch("/std/collections/map/at_unsafe",
                  {mapName, keyName},

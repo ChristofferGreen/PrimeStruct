@@ -25,7 +25,7 @@ wrapMap<K, V>([K] key, [V] value) {
 [return<int>]
 main() {
   return(plus(
-      plus(mapAtUnsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32)),
+      plus(/std/collections/map/at_unsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32)),
            wrapMap<string, i32>("only"raw_utf8, 5i32).at_unsafe()),
       plus(/std/collections/vector/at_unsafe<i32>(wrapVector<i32>(4i32)), wrapVector<i32>(4i32).at_unsafe())))
 }
@@ -53,7 +53,7 @@ wrapMap<K, V>([K] key, [V] value) {
 [return<int>]
 main() {
   return(plus(
-      plus(mapCount<i32, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32)),
+      plus(/std/collections/map/count<i32, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32)),
            wrapMap<string, i32>("only"raw_utf8, 5i32).count(1i32)),
       plus(/std/collections/vector/count<bool>(wrapVector<i32>(4i32)),
            plus(/std/collections/vector/capacity<bool>(wrapVector<i32>(4i32)), wrapVector<i32>(4i32).capacity(1i32)))))
@@ -92,7 +92,7 @@ wrapMap<K, V>([K] key, [V] value) {
 
 [return<int>]
 main() {
-  return(mapAt<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), 1i32))
+  return(/std/collections/map/at<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), 1i32))
 }
 )";
   const std::string srcPath =
@@ -119,7 +119,7 @@ wrapMap<K, V>([K] key, [V] value) {
 
 [return<int>]
 main() {
-  return(mapAt<string, bool>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8))
+  return(/std/collections/map/at<string, bool>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8))
 }
 )";
   const std::string srcPath =
@@ -139,7 +139,7 @@ wrapMap<K, V>([K] key, [V] value) {
 
 [return<int>]
 main() {
-  return(mapAtUnsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), 1i32))
+  return(/std/collections/map/at_unsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), 1i32))
 }
 )";
   const std::string srcPath =
@@ -166,7 +166,7 @@ wrapMap<K, V>([K] key, [V] value) {
 
 [return<int>]
 main() {
-  return(mapAtUnsafe<string, bool>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8))
+  return(/std/collections/map/at_unsafe<string, bool>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8))
 }
 )";
   const std::string srcPath =
@@ -186,7 +186,7 @@ wrapMap<K, V>([K] key, [V] value) {
 
 [return<int>]
 main() {
-  return(mapCount<i32, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32)))
+  return(/std/collections/map/count<i32, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32)))
 }
 )";
   const std::string srcPath =
@@ -206,7 +206,7 @@ wrapMap<K, V>([K] key, [V] value) {
 
 [return<int>]
 main() {
-  return(mapCount<string, bool>(wrapMap<string, i32>("only"raw_utf8, 4i32)))
+  return(/std/collections/map/count<string, bool>(wrapMap<string, i32>("only"raw_utf8, 4i32)))
 }
 )";
   const std::string srcPath =
@@ -226,7 +226,7 @@ wrapMap<K, V>([K] key, [V] value) {
 
 [return<int>]
 main() {
-  return(mapAt<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8, 1i32))
+  return(/std/collections/map/at<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8, 1i32))
 }
 )";
   const std::string srcPath =
@@ -246,7 +246,7 @@ wrapMap<K, V>([K] key, [V] value) {
 
 [return<int>]
 main() {
-  return(mapAt<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32)))
+  return(/std/collections/map/at<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32)))
 }
 )";
   const std::string srcPath =
@@ -266,7 +266,7 @@ wrapMap<K, V>([K] key, [V] value) {
 
 [return<int>]
 main() {
-  return(mapAtUnsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8, 1i32))
+  return(/std/collections/map/at_unsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8, 1i32))
 }
 )";
   const std::string srcPath =
@@ -286,7 +286,7 @@ wrapMap<K, V>([K] key, [V] value) {
 
 [return<int>]
 main() {
-  return(mapAtUnsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32)))
+  return(/std/collections/map/at_unsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32)))
 }
 )";
   const std::string srcPath =
@@ -306,7 +306,7 @@ wrapMap<K, V>([K] key, [V] value) {
 
 [return<int>]
 main() {
-  return(mapCount<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8))
+  return(/std/collections/map/count<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8))
 }
 )";
   const std::string srcPath =

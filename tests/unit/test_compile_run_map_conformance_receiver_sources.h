@@ -112,7 +112,7 @@ inline std::string makeInferredExperimentalMapParameterConformanceSource() {
   source += "Holder() {}\n\n";
   source += "[return<int> effects(io_out, heap_alloc)]\n";
   source += "scoreValues([auto mut] values) {\n";
-  source += "  mapInsert<string, i32>(values, \"extra\"raw_utf8, 9i32)\n";
+  source += "  /std/collections/map/insert<string, i32>(values, \"extra\"raw_utf8, 9i32)\n";
   source += "  [i32] count{/std/collections/map/count(values)}\n";
   source += "  [i32] left{/std/collections/map/at(values, \"left\"raw_utf8)}\n";
   source += "  print_line(count)\n";
@@ -121,7 +121,7 @@ inline std::string makeInferredExperimentalMapParameterConformanceSource() {
   source += "}\n\n";
   source += "[return<int> effects(io_out, heap_alloc)]\n";
   source += "/Holder/score([Holder] self, [auto mut] values) {\n";
-  source += "  mapInsert<string, i32>(values, \"bonus\"raw_utf8, 5i32)\n";
+  source += "  /std/collections/map/insert<string, i32>(values, \"bonus\"raw_utf8, 5i32)\n";
   source += "  [i32] count{/std/collections/map/count(values)}\n";
   source += "  [i32] extra{/std/collections/map/at(values, \"extra\"raw_utf8)}\n";
   source += "  print_line(count)\n";
@@ -149,7 +149,7 @@ inline std::string makeInferredExperimentalMapDefaultParameterConformanceSource(
   source += "import /std/collections/internal_map/*\n\n";
   source += "[return<int> effects(io_out, heap_alloc)]\n";
   source += "scoreValues([auto mut] values{mapNew<string, i32>()}) {\n";
-  source += "  mapInsert<string, i32>(values, \"left\"raw_utf8, 4i32)\n";
+  source += "  /std/collections/map/insert<string, i32>(values, \"left\"raw_utf8, 4i32)\n";
   source += "  [i32] count{/std/collections/map/count(values)}\n";
   source += "  [i32] left{/std/collections/map/at(values, \"left\"raw_utf8)}\n";
   source += "  print_line(count)\n";
@@ -159,7 +159,7 @@ inline std::string makeInferredExperimentalMapDefaultParameterConformanceSource(
   source += "[return<int> effects(io_out, heap_alloc)]\n";
   source +=
       "scorePairDefault([auto mut] values{/std/collections/mapPair(\"left\"raw_utf8, 6i32, \"right\"raw_utf8, 8i32)}) {\n";
-  source += "  mapInsert<string, i32>(values, \"bonus\"raw_utf8, 5i32)\n";
+  source += "  /std/collections/map/insert<string, i32>(values, \"bonus\"raw_utf8, 5i32)\n";
   source += "  [i32] count{/std/collections/map/count(values)}\n";
   source += "  [i32] bonus{/std/collections/map/at(values, \"bonus\"raw_utf8)}\n";
   source += "  print_line(count)\n";
@@ -192,8 +192,8 @@ inline std::string makeWrappedInferredExperimentalMapDefaultParameterConformance
   source += "}\n\n";
   source += "[return<int> effects(io_out, heap_alloc)]\n";
   source += "scoreValues([auto mut] values{wrapValues(mapNew<string, i32>())}) {\n";
-  source += "  mapInsert<string, i32>(values, \"left\"raw_utf8, 4i32)\n";
-  source += "  mapInsert<string, i32>(values, \"extra\"raw_utf8, 9i32)\n";
+  source += "  /std/collections/map/insert<string, i32>(values, \"left\"raw_utf8, 4i32)\n";
+  source += "  /std/collections/map/insert<string, i32>(values, \"extra\"raw_utf8, 9i32)\n";
   source += "  [i32] count{/std/collections/map/count<string, i32>(values)}\n";
   source += "  [i32] left{/std/collections/map/at<string, i32>(values, \"left\"raw_utf8)}\n";
   source += "  print_line(count)\n";
@@ -202,8 +202,8 @@ inline std::string makeWrappedInferredExperimentalMapDefaultParameterConformance
   source += "}\n\n";
   source += "[return<int> effects(io_out, heap_alloc)]\n";
   source += "/Holder/score([Holder] self, [auto mut] values{wrapValues(mapNew<string, i32>())}) {\n";
-  source += "  mapInsert<string, i32>(values, \"extra\"raw_utf8, 9i32)\n";
-  source += "  mapInsert<string, i32>(values, \"bonus\"raw_utf8, 5i32)\n";
+  source += "  /std/collections/map/insert<string, i32>(values, \"extra\"raw_utf8, 9i32)\n";
+  source += "  /std/collections/map/insert<string, i32>(values, \"bonus\"raw_utf8, 5i32)\n";
   source += "  [i32] count{/std/collections/map/count<string, i32>(values)}\n";
   source += "  [i32] extra{/std/collections/map/at<string, i32>(values, \"extra\"raw_utf8)}\n";
   source += "  print_line(count)\n";

@@ -135,7 +135,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<string, i32>] values{mapSingle<string, i32>("only"raw_utf8, 21i32)}
-  return(plus(mapAt<string, i32>(values, "only"raw_utf8), mapCount<string, i32>(values)))
+  return(plus(/std/collections/map/at<string, i32>(values, "only"raw_utf8), /std/collections/map/count<string, i32>(values)))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_single.prime", source);
@@ -150,7 +150,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{mapSingle<i32, i32>(1i32, false)}
-  return(mapCount<i32, i32>(values))
+  return(/std/collections/map/count<i32, i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_single_mismatch.prime", source);
@@ -169,7 +169,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{mapSingle<i32, i32>("oops"raw_utf8, 4i32)}
-  return(mapCount<i32, i32>(values))
+  return(/std/collections/map/count<i32, i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_single_key_mismatch.prime", source);
@@ -191,7 +191,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{mapNew<i32, i32>()}
-  return(plus(mapCount<i32, i32>(values), 1i32))
+  return(plus(/std/collections/map/count<i32, i32>(values), 1i32))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_new.prime", source);
@@ -206,7 +206,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<string, i32>] values{mapNew<string, i32>()}
-  return(plus(mapCount<string, i32>(values), 1i32))
+  return(plus(/std/collections/map/count<string, i32>(values), 1i32))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_new_string.prime", source);
@@ -221,7 +221,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{mapNew<bool, i32>()}
-  return(mapCount<i32, i32>(values))
+  return(/std/collections/map/count<i32, i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_new_mismatch.prime", source);
@@ -241,7 +241,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{mapNew<string, i32>()}
-  return(mapCount<i32, i32>(values))
+  return(/std/collections/map/count<i32, i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_new_string_mismatch.prime", source);
@@ -262,7 +262,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{mapTriple<i32, i32>(1i32, 10i32, 2i32, 20i32, 3i32, 30i32)}
-  return(plus(mapCount<i32, i32>(values), 9i32))
+  return(plus(/std/collections/map/count<i32, i32>(values), 9i32))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_count.prime", source);
@@ -277,7 +277,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<string, i32>] values{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
-  return(plus(mapCount<string, i32>(values), 9i32))
+  return(plus(/std/collections/map/count<string, i32>(values), 9i32))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_count_string_key.prime", source);
@@ -292,7 +292,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{mapTriple<i32, i32>(1i32, 10i32, 2i32, 20i32, 3i32, 30i32)}
-  return(mapCount<bool, i32>(values))
+  return(/std/collections/map/count<bool, i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_count_mismatch.prime", source);
@@ -302,7 +302,7 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.find("argument type mismatch for /std/collections/mapCount__") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /std/collections/map/count__") != std::string::npos);
   CHECK(error.find("parameter values: expected map<bool, i32> got map<i32, i32>") !=
         std::string::npos);
 }
@@ -314,7 +314,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<string, i32>] values{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
-  return(mapCount<i32, i32>(values))
+  return(/std/collections/map/count<i32, i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_count_string_key_mismatch.prime", source);
@@ -325,7 +325,7 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.find("argument type mismatch for /std/collections/mapCount__") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /std/collections/map/count__") != std::string::npos);
   CHECK(error.find("parameter values: expected map<i32, i32> got map<string, i32>") !=
         std::string::npos);
 }
@@ -337,7 +337,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{mapTriple<i32, i32>(1i32, 10i32, 2i32, 20i32, 3i32, 30i32)}
-  return(plus(mapAt<i32, i32>(values, 2i32), mapCount<i32, i32>(values)))
+  return(plus(/std/collections/map/at<i32, i32>(values, 2i32), /std/collections/map/count<i32, i32>(values)))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_at.prime", source);
@@ -352,7 +352,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<string, i32>] values{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
-  return(plus(mapAt<string, i32>(values, "right"raw_utf8), mapCount<string, i32>(values)))
+  return(plus(/std/collections/map/at<string, i32>(values, "right"raw_utf8), /std/collections/map/count<string, i32>(values)))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_at_string_key.prime", source);
@@ -367,7 +367,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{mapTriple<i32, i32>(1i32, 10i32, 2i32, 20i32, 3i32, 30i32)}
-  return(mapAt<bool, i32>(values, true))
+  return(/std/collections/map/at<bool, i32>(values, true))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_at_mismatch.prime", source);
@@ -387,7 +387,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<string, i32>] values{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
-  return(mapAt<string, i32>(values, 1i32))
+  return(/std/collections/map/at<string, i32>(values, 1i32))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_at_string_key_mismatch.prime", source);
@@ -408,7 +408,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{mapTriple<i32, i32>(1i32, 10i32, 2i32, 20i32, 3i32, 30i32)}
-  return(plus(mapAtUnsafe<i32, i32>(values, 3i32), mapCount<i32, i32>(values)))
+  return(plus(/std/collections/map/at_unsafe<i32, i32>(values, 3i32), /std/collections/map/count<i32, i32>(values)))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_at_unsafe.prime", source);
@@ -423,7 +423,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<string, i32>] values{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
-  return(plus(mapAtUnsafe<string, i32>(values, "left"raw_utf8), mapCount<string, i32>(values)))
+  return(plus(/std/collections/map/at_unsafe<string, i32>(values, "left"raw_utf8), /std/collections/map/count<string, i32>(values)))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_at_unsafe_string_key.prime", source);
@@ -438,7 +438,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{mapTriple<i32, i32>(1i32, 10i32, 2i32, 20i32, 3i32, 30i32)}
-  return(mapAtUnsafe<bool, i32>(values, true))
+  return(/std/collections/map/at_unsafe<bool, i32>(values, true))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_at_unsafe_mismatch.prime", source);
@@ -460,7 +460,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<string, i32>] values{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
-  return(mapAtUnsafe<string, i32>(values, 1i32))
+  return(/std/collections/map/at_unsafe<string, i32>(values, 1i32))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_at_unsafe_string_key_mismatch.prime", source);
@@ -544,9 +544,9 @@ main() {
   [map<string, i32>] viaCall{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
   [map<string, i32>] viaMethod{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
   return(plus(
-      plus(mapAt<string, i32>(viaCall, "right"raw_utf8), viaMethod.at("right"raw_utf8)),
-      plus(mapAtUnsafe<string, i32>(viaCall, "left"raw_utf8),
-          plus(viaMethod.at_unsafe("left"raw_utf8), plus(mapCount<string, i32>(viaCall), viaMethod.count())))))
+      plus(/std/collections/map/at<string, i32>(viaCall, "right"raw_utf8), viaMethod.at("right"raw_utf8)),
+      plus(/std/collections/map/at_unsafe<string, i32>(viaCall, "left"raw_utf8),
+          plus(viaMethod.at_unsafe("left"raw_utf8), plus(/std/collections/map/count<string, i32>(viaCall), viaMethod.count())))))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_method_call_parity_string_key.prime", source);
@@ -561,7 +561,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<string, i32>] values{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
-  return(plus(mapAt<string, i32>(values, 1i32), values.at(1i32)))
+  return(plus(/std/collections/map/at<string, i32>(values, 1i32), values.at(1i32)))
 }
 )";
   const std::string srcPath =
@@ -583,7 +583,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<string, i32>] values{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
-  return(plus(mapAtUnsafe<string, i32>(values, 1i32), values.at_unsafe(1i32)))
+  return(plus(/std/collections/map/at_unsafe<string, i32>(values, 1i32), values.at_unsafe(1i32)))
 }
 )";
   const std::string srcPath =
@@ -606,8 +606,8 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<string, i32>] values{mapSingle<string, i32>("only"raw_utf8, 21i32)}
-  return(plus(plus(mapAt<string, i32>(values, "only"raw_utf8), mapAtUnsafe<string, i32>(values, "only"raw_utf8)),
-      mapCount<string, i32>(values)))
+  return(plus(plus(/std/collections/map/at<string, i32>(values, "only"raw_utf8), /std/collections/map/at_unsafe<string, i32>(values, "only"raw_utf8)),
+      /std/collections/map/count<string, i32>(values)))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_single_standalone_string_key.prime", source);
@@ -622,7 +622,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{mapSingle<i32, i32>("oops"raw_utf8, 4i32)}
-  return(mapCount<i32, i32>(values))
+  return(/std/collections/map/count<i32, i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_single_standalone_key_mismatch.prime", source);
@@ -645,7 +645,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{mapPair<i32, i32>(1i32, 7i32, 2i32, 10i32)}
-  return(plus(plus(mapAt<i32, i32>(values, 2i32), mapAtUnsafe<i32, i32>(values, 1i32)), mapCount<i32, i32>(values)))
+  return(plus(plus(/std/collections/map/at<i32, i32>(values, 2i32), /std/collections/map/at_unsafe<i32, i32>(values, 1i32)), /std/collections/map/count<i32, i32>(values)))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_pair_standalone.prime", source);
@@ -660,7 +660,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{mapPair<i32, i32>(1i32, 2i32, 3i32, false)}
-  return(mapCount<i32, i32>(values))
+  return(/std/collections/map/count<i32, i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_pair_standalone_mismatch.prime", source);
@@ -680,8 +680,8 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<string, i32>] values{mapPair<string, i32>("alpha"raw_utf8, 12i32, "beta"raw_utf8, 20i32)}
-  return(plus(plus(mapAt<string, i32>(values, "beta"raw_utf8), mapAtUnsafe<string, i32>(values, "alpha"raw_utf8)),
-      mapCount<string, i32>(values)))
+  return(plus(plus(/std/collections/map/at<string, i32>(values, "beta"raw_utf8), /std/collections/map/at_unsafe<string, i32>(values, "alpha"raw_utf8)),
+      /std/collections/map/count<string, i32>(values)))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_pair_standalone_string_key.prime", source);
@@ -696,7 +696,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{mapPair<i32, i32>(1i32, 2i32, "oops"raw_utf8, 4i32)}
-  return(mapCount<i32, i32>(values))
+  return(/std/collections/map/count<i32, i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_pair_standalone_key_mismatch.prime", source);
@@ -719,8 +719,8 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<string, i32>] values{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
-  return(plus(plus(mapAt<string, i32>(values, "right"raw_utf8), mapAtUnsafe<string, i32>(values, "left"raw_utf8)),
-      mapCount<string, i32>(values)))
+  return(plus(plus(/std/collections/map/at<string, i32>(values, "right"raw_utf8), /std/collections/map/at_unsafe<string, i32>(values, "left"raw_utf8)),
+      /std/collections/map/count<string, i32>(values)))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_double_standalone_string_key.prime", source);
@@ -735,7 +735,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{mapDouble<i32, i32>(1i32, 2i32, "oops"raw_utf8, 4i32)}
-  return(mapCount<i32, i32>(values))
+  return(/std/collections/map/count<i32, i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_double_standalone_key_mismatch.prime", source);
@@ -759,8 +759,8 @@ import /std/collections/*
 main() {
   [map<string, i32>] values{
     mapTriple<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32, "c"raw_utf8, 3i32)}
-  return(plus(plus(mapAt<string, i32>(values, "c"raw_utf8), mapAtUnsafe<string, i32>(values, "a"raw_utf8)),
-      mapCount<string, i32>(values)))
+  return(plus(plus(/std/collections/map/at<string, i32>(values, "c"raw_utf8), /std/collections/map/at_unsafe<string, i32>(values, "a"raw_utf8)),
+      /std/collections/map/count<string, i32>(values)))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_triple_standalone_string_key.prime", source);

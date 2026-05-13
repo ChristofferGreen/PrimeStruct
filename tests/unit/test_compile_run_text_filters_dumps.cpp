@@ -103,7 +103,7 @@ import /std/collections/internal_map/*
 [return<int>]
 main() {
   [Map<string, i32> mut] values{mapSingle<string, i32>("left"raw_utf8, 4i32)}
-  return(mapCount<string, i32>(values))
+  return(/std/collections/map/count<string, i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("compile_dump_ast_semantic_experimental_map_destroy.prime", source);

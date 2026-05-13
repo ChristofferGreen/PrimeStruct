@@ -53,16 +53,16 @@ inline std::string makeMapHelperSurfaceConformanceSource(const std::string &impo
   source += "main() {\n";
   source += "  [" + mapConformanceType(importPath, keyType, "i32") + "] pairs{wrapMap<" + keyType +
             ", i32>(" + leftKey + ", 4i32, " + rightKey + ", 7i32)}\n";
-  source += "  [i32] count{mapCount<" + keyType + ", i32>(pairs)}\n";
-  source += "  [i32] left{mapAt<" + keyType + ", i32>(pairs, " + leftKey + ")}\n";
-  source += "  [i32] right{mapAtUnsafe<" + keyType + ", i32>(pairs, " + rightKey + ")}\n";
+  source += "  [i32] count{/std/collections/map/count<" + keyType + ", i32>(pairs)}\n";
+  source += "  [i32] left{/std/collections/map/at<" + keyType + ", i32>(pairs, " + leftKey + ")}\n";
+  source += "  [i32] right{/std/collections/map/at_unsafe<" + keyType + ", i32>(pairs, " + rightKey + ")}\n";
   source += "  [i32 mut] total{plus(plus(count, left), right)}\n";
   source += "  [i32 mut] containsBonus{0i32}\n";
-  source += "  if(mapContains<" + keyType + ", i32>(pairs, " + leftKey + "),\n";
+  source += "  if(/std/collections/map/contains<" + keyType + ", i32>(pairs, " + leftKey + "),\n";
   source += "     then() { assign(containsBonus, 1i32) assign(total, plus(total, containsBonus)) },\n";
   source += "     else() { })\n";
   source += "  [i32 mut] missingBonus{0i32}\n";
-  source += "  if(not(mapContains<" + keyType + ", i32>(pairs, " + missingKey + ")),\n";
+  source += "  if(not(/std/collections/map/contains<" + keyType + ", i32>(pairs, " + missingKey + ")),\n";
   source += "     then() { assign(missingBonus, 2i32) assign(total, plus(total, missingBonus)) },\n";
   source += "     else() { })\n";
   source += "  print_line(count)\n";
@@ -105,28 +105,28 @@ inline std::string makeMapExtendedConstructorConformanceSource(const std::string
   source += "  [" + mapConformanceType(importPath, keyType, "i32") + "] direct{mapTriple<" + keyType +
             ", i32>(" + directLeftKey + ", 10i32, " + directMidKey + ", 20i32, " + directRightKey + ", 30i32)}\n";
   source += "  [" + mapConformanceType(importPath, keyType, "i32") + "] wrapped{wrapMap<" + keyType + ", i32>()}\n";
-  source += "  [i32] directCount{mapCount<" + keyType + ", i32>(direct)}\n";
-  source += "  [i32] directLeft{mapAt<" + keyType + ", i32>(direct, " + directLeftKey + ")}\n";
-  source += "  [i32] directRight{mapAtUnsafe<" + keyType + ", i32>(direct, " + directRightKey + ")}\n";
+  source += "  [i32] directCount{/std/collections/map/count<" + keyType + ", i32>(direct)}\n";
+  source += "  [i32] directLeft{/std/collections/map/at<" + keyType + ", i32>(direct, " + directLeftKey + ")}\n";
+  source += "  [i32] directRight{/std/collections/map/at_unsafe<" + keyType + ", i32>(direct, " + directRightKey + ")}\n";
   source += "  [i32 mut] directTotal{plus(directCount, plus(directLeft, directRight))}\n";
   source += "  [i32 mut] directContainsBonus{0i32}\n";
-  source += "  if(mapContains<" + keyType + ", i32>(direct, " + directLeftKey + "),\n";
+  source += "  if(/std/collections/map/contains<" + keyType + ", i32>(direct, " + directLeftKey + "),\n";
   source += "     then() { assign(directContainsBonus, 1i32) assign(directTotal, plus(directTotal, directContainsBonus)) },\n";
   source += "     else() { })\n";
   source += "  [i32 mut] directMissingBonus{0i32}\n";
-  source += "  if(not(mapContains<" + keyType + ", i32>(direct, " + missingKey + ")),\n";
+  source += "  if(not(/std/collections/map/contains<" + keyType + ", i32>(direct, " + missingKey + ")),\n";
   source += "     then() { assign(directMissingBonus, 2i32) assign(directTotal, plus(directTotal, directMissingBonus)) },\n";
   source += "     else() { })\n";
-  source += "  [i32] wrappedCount{mapCount<" + keyType + ", i32>(wrapped)}\n";
-  source += "  [i32] wrappedCenter{mapAt<" + keyType + ", i32>(wrapped, " + wrappedCKey + ")}\n";
-  source += "  [i32] wrappedEdge{mapAtUnsafe<" + keyType + ", i32>(wrapped, " + wrappedHKey + ")}\n";
+  source += "  [i32] wrappedCount{/std/collections/map/count<" + keyType + ", i32>(wrapped)}\n";
+  source += "  [i32] wrappedCenter{/std/collections/map/at<" + keyType + ", i32>(wrapped, " + wrappedCKey + ")}\n";
+  source += "  [i32] wrappedEdge{/std/collections/map/at_unsafe<" + keyType + ", i32>(wrapped, " + wrappedHKey + ")}\n";
   source += "  [i32 mut] wrappedTotal{plus(wrappedCount, plus(wrappedCenter, wrappedEdge))}\n";
   source += "  [i32 mut] wrappedContainsBonus{0i32}\n";
-  source += "  if(mapContains<" + keyType + ", i32>(wrapped, " + wrappedCKey + "),\n";
+  source += "  if(/std/collections/map/contains<" + keyType + ", i32>(wrapped, " + wrappedCKey + "),\n";
   source += "     then() { assign(wrappedContainsBonus, 4i32) assign(wrappedTotal, plus(wrappedTotal, wrappedContainsBonus)) },\n";
   source += "     else() { })\n";
   source += "  [i32 mut] wrappedMissingBonus{0i32}\n";
-  source += "  if(not(mapContains<" + keyType + ", i32>(wrapped, " + missingKey + ")),\n";
+  source += "  if(not(/std/collections/map/contains<" + keyType + ", i32>(wrapped, " + missingKey + ")),\n";
   source += "     then() { assign(wrappedMissingBonus, 8i32) assign(wrappedTotal, plus(wrappedTotal, wrappedMissingBonus)) },\n";
   source += "     else() { })\n";
   source += "  print_line(directCount)\n";
@@ -154,9 +154,9 @@ inline std::string makeMapOverwriteConformanceSource(const std::string &importPa
   source += "main() {\n";
   source += "  [" + mapConformanceType(importPath, keyType, "i32") + "] values{mapPair<" + keyType +
             ", i32>(" + repeatedKey + ", 4i32, " + repeatedKey + ", 9i32)}\n";
-  source += "  return(plus(plus(mapCount<" + keyType + ", i32>(values), mapAt<" + keyType + ", i32>(values, " +
+  source += "  return(plus(plus(/std/collections/map/count<" + keyType + ", i32>(values), /std/collections/map/at<" + keyType + ", i32>(values, " +
             repeatedKey + ")),\n";
-  source += "      mapAtUnsafe<" + keyType + ", i32>(values, " + repeatedKey + ")))\n";
+  source += "      /std/collections/map/at_unsafe<" + keyType + ", i32>(values, " + repeatedKey + ")))\n";
   source += "}\n";
   return source;
 }
@@ -176,11 +176,11 @@ inline std::string makeExperimentalMapVariadicConstructorConformanceSource() {
       "  [Map<string, i32>] direct{map<string, i32>(entry(\"left\"raw_utf8, 4i32), entry(\"right\"raw_utf8, 7i32), entry(\"bonus\"raw_utf8, 9i32))}\n";
   source +=
       "  [Map<string, i32>] wrapped{wrapMap<string, i32>(entry(\"alpha\"raw_utf8, 2i32), entry(\"beta\"raw_utf8, 5i32))}\n";
-  source += "  [i32 mut] total{plus(mapCount<string, i32>(empty), mapCount<string, i32>(direct))}\n";
-  source += "  assign(total, plus(total, mapAt<string, i32>(direct, \"right\"raw_utf8)))\n";
-  source += "  assign(total, plus(total, mapAtUnsafe<string, i32>(wrapped, \"beta\"raw_utf8)))\n";
-  source += "  if(mapContains<string, i32>(direct, \"bonus\"raw_utf8),\n";
-  source += "     then() { assign(total, plus(total, mapCount<string, i32>(wrapped))) },\n";
+  source += "  [i32 mut] total{plus(/std/collections/map/count<string, i32>(empty), /std/collections/map/count<string, i32>(direct))}\n";
+  source += "  assign(total, plus(total, /std/collections/map/at<string, i32>(direct, \"right\"raw_utf8)))\n";
+  source += "  assign(total, plus(total, /std/collections/map/at_unsafe<string, i32>(wrapped, \"beta\"raw_utf8)))\n";
+  source += "  if(/std/collections/map/contains<string, i32>(direct, \"bonus\"raw_utf8),\n";
+  source += "     then() { assign(total, plus(total, /std/collections/map/count<string, i32>(wrapped))) },\n";
   source += "     else() { })\n";
   source += "  return(total)\n";
   source += "}\n";
@@ -194,7 +194,7 @@ inline std::string makeExperimentalMapVariadicConstructorMismatchSource() {
   source += "main() {\n";
   source +=
       "  [Map<string, i32>] values{map<string, i32>(entry(\"left\"raw_utf8, 4i32), entry(\"wrong\"raw_utf8, false))}\n";
-  source += "  return(mapCount<string, i32>(values))\n";
+  source += "  return(/std/collections/map/count<string, i32>(values))\n";
   source += "}\n";
   return source;
 }
@@ -226,9 +226,9 @@ inline std::string makeMapTryAtConformanceImportSource(const std::string &import
   source += "main() {\n";
   source += "  [" + mapConformanceType(importPath, keyType, valueType) + "] values{mapPair<" + keyType + ", " +
             valueType + ">(" + leftKey + ", " + leftValue + ", " + rightKey + ", " + rightValue + ")}\n";
-  source += "  [" + valueType + "] found{try(mapTryAt<" + keyType + ", " + valueType + ">(values, " + leftKey +
+  source += "  [" + valueType + "] found{try(/std/collections/map/tryAt<" + keyType + ", " + valueType + ">(values, " + leftKey +
             "))}\n";
-  source += "  [Result<" + valueType + ", ContainerError>] missing{mapTryAt<" + keyType + ", " + valueType +
+  source += "  [Result<" + valueType + ", ContainerError>] missing{/std/collections/map/tryAt<" + keyType + ", " + valueType +
             ">(values, " + missingKey + ")}\n";
   source += "  print_line(Result.why(missing))\n";
   source += "  return(Result.ok(plus(" + successExpr + ", 21i32)))\n";
@@ -283,15 +283,15 @@ inline std::string makeExperimentalMapReferenceHelperConformanceSource() {
   source += "main() {\n";
   source += "  [Map<string, i32>] values{mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
   source += "  [Reference<Map<string, i32>>] ref{location(values)}\n";
-  source += "  [i32] found{try(mapTryAtRef<string, i32>(ref, \"left\"raw_utf8))}\n";
-  source += "  [Result<i32, ContainerError>] missing{mapTryAtRef<string, i32>(ref, \"missing\"raw_utf8)}\n";
-  source += "  [i32 mut] total{plus(mapCountRef<string, i32>(ref), found)}\n";
-  source += "  assign(total, plus(total, mapAtRef<string, i32>(ref, \"left\"raw_utf8)))\n";
-  source += "  assign(total, plus(total, mapAtUnsafeRef<string, i32>(ref, \"right\"raw_utf8)))\n";
-  source += "  if(mapContainsRef<string, i32>(ref, \"left\"raw_utf8),\n";
+  source += "  [i32] found{try(/std/collections/map/tryAt_ref<string, i32>(ref, \"left\"raw_utf8))}\n";
+  source += "  [Result<i32, ContainerError>] missing{/std/collections/map/tryAt_ref<string, i32>(ref, \"missing\"raw_utf8)}\n";
+  source += "  [i32 mut] total{plus(/std/collections/map/count_ref<string, i32>(ref), found)}\n";
+  source += "  assign(total, plus(total, /std/collections/map/at_ref<string, i32>(ref, \"left\"raw_utf8)))\n";
+  source += "  assign(total, plus(total, /std/collections/map/at_unsafe_ref<string, i32>(ref, \"right\"raw_utf8)))\n";
+  source += "  if(/std/collections/map/contains_ref<string, i32>(ref, \"left\"raw_utf8),\n";
   source += "     then() { assign(total, plus(total, 1i32)) },\n";
   source += "     else() { })\n";
-  source += "  if(not(mapContainsRef<string, i32>(ref, \"missing\"raw_utf8)),\n";
+  source += "  if(not(/std/collections/map/contains_ref<string, i32>(ref, \"missing\"raw_utf8)),\n";
   source += "     then() { assign(total, plus(total, 2i32)) },\n";
   source += "     else() { })\n";
   source += "  print_line(Result.why(missing))\n";
@@ -315,17 +315,17 @@ inline std::string makePublicMapReferenceWrapperConformanceSource() {
   source += "main() {\n";
   source += "  [Map<string, i32> mut] values{mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
   source += "  [Reference<Map<string, i32>> mut] ref{location(values)}\n";
-  source += "  mapInsertRef<string, i32>(ref, \"third\"raw_utf8, 11i32)\n";
-  source += "  mapInsertRef<string, i32>(ref, \"right\"raw_utf8, 13i32)\n";
-  source += "  [i32] found{try(mapTryAtRef<string, i32>(ref, \"left\"raw_utf8))}\n";
-  source += "  [Result<i32, ContainerError>] missing{mapTryAtRef<string, i32>(ref, \"missing\"raw_utf8)}\n";
-  source += "  [i32 mut] total{plus(mapCountRef<string, i32>(ref), found)}\n";
-  source += "  assign(total, plus(total, mapAtRef<string, i32>(ref, \"left\"raw_utf8)))\n";
-  source += "  assign(total, plus(total, mapAtUnsafeRef<string, i32>(ref, \"right\"raw_utf8)))\n";
-  source += "  if(mapContainsRef<string, i32>(ref, \"left\"raw_utf8),\n";
+  source += "  /std/collections/map/insert_ref<string, i32>(ref, \"third\"raw_utf8, 11i32)\n";
+  source += "  /std/collections/map/insert_ref<string, i32>(ref, \"right\"raw_utf8, 13i32)\n";
+  source += "  [i32] found{try(/std/collections/map/tryAt_ref<string, i32>(ref, \"left\"raw_utf8))}\n";
+  source += "  [Result<i32, ContainerError>] missing{/std/collections/map/tryAt_ref<string, i32>(ref, \"missing\"raw_utf8)}\n";
+  source += "  [i32 mut] total{plus(/std/collections/map/count_ref<string, i32>(ref), found)}\n";
+  source += "  assign(total, plus(total, /std/collections/map/at_ref<string, i32>(ref, \"left\"raw_utf8)))\n";
+  source += "  assign(total, plus(total, /std/collections/map/at_unsafe_ref<string, i32>(ref, \"right\"raw_utf8)))\n";
+  source += "  if(/std/collections/map/contains_ref<string, i32>(ref, \"left\"raw_utf8),\n";
   source += "     then() { assign(total, plus(total, 1i32)) },\n";
   source += "     else() { })\n";
-  source += "  if(not(mapContainsRef<string, i32>(ref, \"missing\"raw_utf8)),\n";
+  source += "  if(not(/std/collections/map/contains_ref<string, i32>(ref, \"missing\"raw_utf8)),\n";
   source += "     then() { assign(total, plus(total, 2i32)) },\n";
   source += "     else() { })\n";
   source += "  print_line(Result.why(missing))\n";
@@ -395,15 +395,15 @@ inline std::string makeExperimentalMapInsertConformanceSource() {
   source += "[effects(io_out, heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [Map<string, i32> mut] values{mapSingle<string, i32>(\"left\"raw_utf8, 4i32)}\n";
-  source += "  mapInsert<string, i32>(values, \"right\"raw_utf8, 7i32)\n";
-  source += "  mapInsert<string, i32>(values, \"left\"raw_utf8, 9i32)\n";
+  source += "  /std/collections/map/insert<string, i32>(values, \"right\"raw_utf8, 7i32)\n";
+  source += "  /std/collections/map/insert<string, i32>(values, \"left\"raw_utf8, 9i32)\n";
   source += "  [Reference<Map<string, i32>> mut] ref{location(values)}\n";
-  source += "  mapInsertRef<string, i32>(ref, \"third\"raw_utf8, 11i32)\n";
-  source += "  mapInsertRef<string, i32>(ref, \"right\"raw_utf8, 13i32)\n";
-  source += "  [i32] count{mapCount<string, i32>(values)}\n";
-  source += "  [i32] left{mapAt<string, i32>(values, \"left\"raw_utf8)}\n";
-  source += "  [i32] right{mapAtRef<string, i32>(ref, \"right\"raw_utf8)}\n";
-  source += "  [i32] third{mapAt<string, i32>(values, \"third\"raw_utf8)}\n";
+  source += "  /std/collections/map/insert_ref<string, i32>(ref, \"third\"raw_utf8, 11i32)\n";
+  source += "  /std/collections/map/insert_ref<string, i32>(ref, \"right\"raw_utf8, 13i32)\n";
+  source += "  [i32] count{/std/collections/map/count<string, i32>(values)}\n";
+  source += "  [i32] left{/std/collections/map/at<string, i32>(values, \"left\"raw_utf8)}\n";
+  source += "  [i32] right{/std/collections/map/at_ref<string, i32>(ref, \"right\"raw_utf8)}\n";
+  source += "  [i32] third{/std/collections/map/at<string, i32>(values, \"third\"raw_utf8)}\n";
   source += "  print_line(count)\n";
   source += "  print_line(left)\n";
   source += "  print_line(right)\n";
@@ -454,10 +454,10 @@ inline std::string makeExperimentalMapOwnershipConformanceSource() {
   source += "main() {\n";
   source +=
       "  [Map<string, Tracked> mut] values{mapSingle<string, Tracked>(\"left\"raw_utf8, Tracked(4i32))}\n";
-  source += "  mapInsert<string, Tracked>(values, \"right\"raw_utf8, Tracked(7i32))\n";
-  source += "  return(plus(mapCount<string, Tracked>(values),\n";
-  source += "      plus(mapAt<string, Tracked>(values, \"left\"raw_utf8).value,\n";
-  source += "           mapAtUnsafe<string, Tracked>(values, \"right\"raw_utf8).value)))\n";
+  source += "  /std/collections/map/insert<string, Tracked>(values, \"right\"raw_utf8, Tracked(7i32))\n";
+  source += "  return(plus(/std/collections/map/count<string, Tracked>(values),\n";
+  source += "      plus(/std/collections/map/at<string, Tracked>(values, \"left\"raw_utf8).value,\n";
+  source += "           /std/collections/map/at_unsafe<string, Tracked>(values, \"right\"raw_utf8).value)))\n";
   source += "}\n";
   return source;
 }

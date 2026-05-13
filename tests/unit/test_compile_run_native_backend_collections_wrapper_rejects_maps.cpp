@@ -86,7 +86,7 @@ wrapMap<K, V>([K] key, [V] value) {
 [return<int>]
 main() {
   return(plus(
-      plus(mapAt<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32), 1i32),
+      plus(/std/collections/map/at<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32), 1i32),
            wrapMap<string, i32>("only"raw_utf8, 5i32).at(1i32)),
       wrapMap<string, i32>("only"raw_utf8, 5i32)[1i32]))
 }
@@ -114,7 +114,7 @@ wrapMap<K, V>([K] key, [V] value) {
 
 [return<int>]
 main() {
-  [bool] mapCall{mapAt<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32), "only"raw_utf8)}
+  [bool] mapCall{/std/collections/map/at<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32), "only"raw_utf8)}
   [bool] mapMethod{wrapMap<string, i32>("only"raw_utf8, 5i32).at("only"raw_utf8)}
   [bool] mapIndex{wrapMap<string, i32>("only"raw_utf8, 5i32)["only"raw_utf8]}
   [bool] vectorCall{/std/collections/vector/at<i32>(wrapVector<i32>(4i32), 0i32)}
@@ -147,7 +147,7 @@ wrapMap<K, V>([K] key, [V] value) {
 [return<int>]
 main() {
   return(plus(
-      plus(mapAtUnsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32), 1i32),
+      plus(/std/collections/map/at_unsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32), 1i32),
            wrapMap<string, i32>("only"raw_utf8, 5i32).at_unsafe(1i32)),
       plus(/std/collections/vector/at_unsafe<i32>(wrapVector<i32>(4i32), true), wrapVector<i32>(4i32).at_unsafe(true))))
 }
@@ -174,7 +174,7 @@ wrapMap<K, V>([K] key, [V] value) {
 
 [return<int>]
 main() {
-  [bool] mapCall{mapAtUnsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32), "only"raw_utf8)}
+  [bool] mapCall{/std/collections/map/at_unsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32), "only"raw_utf8)}
   [bool] mapMethod{wrapMap<string, i32>("only"raw_utf8, 5i32).at_unsafe("only"raw_utf8)}
   [bool] vectorCall{/std/collections/vector/at_unsafe<i32>(wrapVector<i32>(4i32), 0i32)}
   [bool] vectorMethod{wrapVector<i32>(4i32).at_unsafe(0i32)}
@@ -204,7 +204,7 @@ wrapMap<K, V>([K] key, [V] value) {
 [return<int>]
 main() {
   return(plus(
-      plus(mapAtUnsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32), "only"raw_utf8, 1i32),
+      plus(/std/collections/map/at_unsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32), "only"raw_utf8, 1i32),
            wrapMap<string, i32>("only"raw_utf8, 5i32).at_unsafe("only"raw_utf8, 1i32)),
       plus(/std/collections/vector/at_unsafe<i32>(wrapVector<i32>(4i32), 0i32, 1i32),
            wrapVector<i32>(4i32).at_unsafe(0i32, 1i32))))
@@ -233,7 +233,7 @@ wrapMap<K, V>([K] key, [V] value) {
 [return<int>]
 main() {
   return(plus(
-      plus(mapAtUnsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32)),
+      plus(/std/collections/map/at_unsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32)),
            wrapMap<string, i32>("only"raw_utf8, 5i32).at_unsafe()),
       plus(/std/collections/vector/at_unsafe<i32>(wrapVector<i32>(4i32)), wrapVector<i32>(4i32).at_unsafe())))
 }
@@ -261,7 +261,7 @@ wrapMap<K, V>([K] key, [V] value) {
 [return<int>]
 main() {
   return(plus(
-      plus(mapCount<i32, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32)),
+      plus(/std/collections/map/count<i32, i32>(wrapMap<string, i32>("only"raw_utf8, 5i32)),
            wrapMap<string, i32>("only"raw_utf8, 5i32).count(1i32)),
       plus(/std/collections/vector/count<bool>(wrapVector<i32>(4i32)),
            plus(/std/collections/vector/capacity<bool>(wrapVector<i32>(4i32)), wrapVector<i32>(4i32).capacity(1i32)))))
@@ -300,7 +300,7 @@ wrapMap<K, V>([K] key, [V] value) {
 
 [return<int>]
 main() {
-  return(mapAt<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), 1i32))
+  return(/std/collections/map/at<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), 1i32))
 }
 )";
   const std::string srcPath =
@@ -312,7 +312,7 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > " +
                                  quoteShellArg(errPath) + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/mapAt__") !=
+  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/at__") !=
         std::string::npos);
 }
 
@@ -327,7 +327,7 @@ wrapMap<K, V>([K] key, [V] value) {
 
 [return<int>]
 main() {
-  return(mapAt<string, bool>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8))
+  return(/std/collections/map/at<string, bool>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8))
 }
 )";
   const std::string srcPath =
@@ -347,7 +347,7 @@ wrapMap<K, V>([K] key, [V] value) {
 
 [return<int>]
 main() {
-  return(mapAtUnsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), 1i32))
+  return(/std/collections/map/at_unsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), 1i32))
 }
 )";
   const std::string srcPath =
@@ -359,7 +359,7 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > " +
                                  quoteShellArg(errPath) + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/mapAtUnsafe__") !=
+  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/at_unsafe__") !=
         std::string::npos);
 }
 
@@ -374,7 +374,7 @@ wrapMap<K, V>([K] key, [V] value) {
 
 [return<int>]
 main() {
-  return(mapAtUnsafe<string, bool>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8))
+  return(/std/collections/map/at_unsafe<string, bool>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8))
 }
 )";
   const std::string srcPath =
@@ -394,7 +394,7 @@ wrapMap<K, V>([K] key, [V] value) {
 
 [return<int>]
 main() {
-  return(mapCount<i32, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32)))
+  return(/std/collections/map/count<i32, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32)))
 }
 )";
   const std::string srcPath =
@@ -414,7 +414,7 @@ wrapMap<K, V>([K] key, [V] value) {
 
 [return<int>]
 main() {
-  return(mapCount<string, bool>(wrapMap<string, i32>("only"raw_utf8, 4i32)))
+  return(/std/collections/map/count<string, bool>(wrapMap<string, i32>("only"raw_utf8, 4i32)))
 }
 )";
   const std::string srcPath =
@@ -434,7 +434,7 @@ wrapMap<K, V>([K] key, [V] value) {
 
 [return<int>]
 main() {
-  return(mapAt<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8, 1i32))
+  return(/std/collections/map/at<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8, 1i32))
 }
 )";
   const std::string srcPath =
@@ -454,7 +454,7 @@ wrapMap<K, V>([K] key, [V] value) {
 
 [return<int>]
 main() {
-  return(mapAt<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32)))
+  return(/std/collections/map/at<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32)))
 }
 )";
   const std::string srcPath =
@@ -474,7 +474,7 @@ wrapMap<K, V>([K] key, [V] value) {
 
 [return<int>]
 main() {
-  return(mapAtUnsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8, 1i32))
+  return(/std/collections/map/at_unsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8, 1i32))
 }
 )";
   const std::string srcPath = writeTemp(
@@ -494,7 +494,7 @@ wrapMap<K, V>([K] key, [V] value) {
 
 [return<int>]
 main() {
-  return(mapAtUnsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32)))
+  return(/std/collections/map/at_unsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32)))
 }
 )";
   const std::string srcPath =
@@ -514,7 +514,7 @@ wrapMap<K, V>([K] key, [V] value) {
 
 [return<int>]
 main() {
-  return(mapCount<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8))
+  return(/std/collections/map/count<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8))
 }
 )";
   const std::string srcPath =

@@ -603,8 +603,8 @@ inline std::string makeExperimentalMapTryAtStringConformanceSource() {
       "[return<Result<i32, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedMapTryAtStringError>]\n";
   source += "main() {\n";
   source += "  [Map<i32, string>] values{mapPair<i32, string>(11i32, \"alpha\"utf8, 22i32, \"beta\"utf8)}\n";
-  source += "  [string] found{try(mapTryAt<i32, string>(values, 11i32))}\n";
-  source += "  [Result<string, ContainerError>] missing{mapTryAt<i32, string>(values, 99i32)}\n";
+  source += "  [string] found{try(/std/collections/map/tryAt<i32, string>(values, 11i32))}\n";
+  source += "  [Result<string, ContainerError>] missing{/std/collections/map/tryAt<i32, string>(values, 99i32)}\n";
   source += "  print_line(found)\n";
   source += "  print_line(Result.why(missing))\n";
   source += "  return(Result.ok(plus(count(found), 23i32)))\n";
@@ -644,7 +644,7 @@ inline std::string makeExperimentalMapAtMissingConformanceSource() {
   source += "[return<int>]\n";
   source += "main() {\n";
   source += "  [Map<i32, i32>] values{mapPair<i32, i32>(11i32, 7i32, 22i32, 9i32)}\n";
-  source += "  return(mapAt<i32, i32>(values, 99i32))\n";
+  source += "  return(/std/collections/map/at<i32, i32>(values, 99i32))\n";
   source += "}\n";
   return source;
 }
@@ -683,10 +683,10 @@ inline std::string makeExperimentalMapStringKeyRejectSource(const std::string &m
   source += "  [string] key{args[0i32]}\n";
   if (mode == "lookup_argv") {
     source += "  [Map<string, i32>] values{mapSingle<string, i32>(\"a\"raw_utf8, 1i32)}\n";
-    source += "  return(mapAtUnsafe<string, i32>(values, key))\n";
+    source += "  return(/std/collections/map/at_unsafe<string, i32>(values, key))\n";
   } else {
     source += "  [Map<string, i32>] values{mapSingle<string, i32>(key, 1i32)}\n";
-    source += "  return(mapCount<string, i32>(values))\n";
+    source += "  return(/std/collections/map/count<string, i32>(values))\n";
   }
   source += "}\n";
   return source;

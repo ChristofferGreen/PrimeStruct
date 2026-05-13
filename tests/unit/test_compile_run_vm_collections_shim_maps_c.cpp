@@ -17,8 +17,8 @@ main() {
   [map<string, i32>] values{
     mapQuint<string, i32>(
         "a"raw_utf8, 1i32, "b"raw_utf8, 2i32, "c"raw_utf8, 3i32, "d"raw_utf8, 4i32, "e"raw_utf8, 5i32)}
-  return(plus(plus(mapAt<string, i32>(values, "e"raw_utf8), mapAtUnsafe<string, i32>(values, "a"raw_utf8)),
-      mapCount<string, i32>(values)))
+  return(plus(plus(/std/collections/map/at<string, i32>(values, "e"raw_utf8), /std/collections/map/at_unsafe<string, i32>(values, "a"raw_utf8)),
+      /std/collections/map/count<string, i32>(values)))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_quint.prime", source);
@@ -33,7 +33,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{mapQuint<i32, i32>(1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, 8i32, 9i32, false)}
-  return(mapCount<i32, i32>(values))
+  return(/std/collections/map/count<i32, i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_quint_mismatch.prime", source);
@@ -55,8 +55,8 @@ main() {
     mapSext<string, i32>(
         "a"raw_utf8, 1i32, "b"raw_utf8, 2i32, "c"raw_utf8, 3i32, "d"raw_utf8, 4i32, "e"raw_utf8, 5i32, "f"raw_utf8,
         6i32)}
-  return(plus(plus(mapAt<string, i32>(values, "f"raw_utf8), mapAtUnsafe<string, i32>(values, "a"raw_utf8)),
-      mapCount<string, i32>(values)))
+  return(plus(plus(/std/collections/map/at<string, i32>(values, "f"raw_utf8), /std/collections/map/at_unsafe<string, i32>(values, "a"raw_utf8)),
+      /std/collections/map/count<string, i32>(values)))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_sext.prime", source);
@@ -72,7 +72,7 @@ import /std/collections/*
 main() {
   [map<i32, i32>] values{
     mapSext<i32, i32>(1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, 8i32, 9i32, 10i32, 11i32, false)}
-  return(mapCount<i32, i32>(values))
+  return(/std/collections/map/count<i32, i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_sext_mismatch.prime", source);
@@ -94,8 +94,8 @@ main() {
     mapSept<string, i32>(
         "a"raw_utf8, 1i32, "b"raw_utf8, 2i32, "c"raw_utf8, 3i32, "d"raw_utf8, 4i32, "e"raw_utf8, 5i32, "f"raw_utf8,
         6i32, "g"raw_utf8, 7i32)}
-  return(plus(plus(mapAt<string, i32>(values, "g"raw_utf8), mapAtUnsafe<string, i32>(values, "a"raw_utf8)),
-      mapCount<string, i32>(values)))
+  return(plus(plus(/std/collections/map/at<string, i32>(values, "g"raw_utf8), /std/collections/map/at_unsafe<string, i32>(values, "a"raw_utf8)),
+      /std/collections/map/count<string, i32>(values)))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_sept.prime", source);
@@ -112,7 +112,7 @@ main() {
   [map<i32, i32>] values{
     mapSept<i32, i32>(
         1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, 8i32, 9i32, 10i32, 11i32, 12i32, 13i32, false)}
-  return(mapCount<i32, i32>(values))
+  return(/std/collections/map/count<i32, i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_sept_mismatch.prime", source);
@@ -134,8 +134,8 @@ main() {
     mapOct<string, i32>(
         "a"raw_utf8, 1i32, "b"raw_utf8, 2i32, "c"raw_utf8, 3i32, "d"raw_utf8, 4i32, "e"raw_utf8, 5i32, "f"raw_utf8,
         6i32, "g"raw_utf8, 7i32, "h"raw_utf8, 8i32)}
-  return(plus(plus(mapAt<string, i32>(values, "h"raw_utf8), mapAtUnsafe<string, i32>(values, "a"raw_utf8)),
-      mapCount<string, i32>(values)))
+  return(plus(plus(/std/collections/map/at<string, i32>(values, "h"raw_utf8), /std/collections/map/at_unsafe<string, i32>(values, "a"raw_utf8)),
+      /std/collections/map/count<string, i32>(values)))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_oct.prime", source);
@@ -152,7 +152,7 @@ main() {
   [map<i32, i32>] values{
     mapOct<i32, i32>(
         1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, 8i32, 9i32, 10i32, 11i32, 12i32, 13i32, 14i32, 15i32, false)}
-  return(mapCount<i32, i32>(values))
+  return(/std/collections/map/count<i32, i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_oct_mismatch.prime", source);
@@ -174,8 +174,8 @@ main() {
   [map<i32, i32>] pairs{mapSingle<i32, i32>(3i32, 9i32)}
   [i32] a{/std/collections/vector/at<i32>(values, 0i32)}
   [i32] b{/std/collections/vector/at_unsafe<i32>(values, 0i32)}
-  [i32] c{mapAt<i32, i32>(pairs, 3i32)}
-  [i32] d{mapAtUnsafe<i32, i32>(pairs, 3i32)}
+  [i32] c{/std/collections/map/at<i32, i32>(pairs, 3i32)}
+  [i32] d{/std/collections/map/at_unsafe<i32, i32>(pairs, 3i32)}
   return(plus(plus(a, b), plus(c, d)))
 }
 )";

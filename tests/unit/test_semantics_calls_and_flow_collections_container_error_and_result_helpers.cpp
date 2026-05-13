@@ -67,7 +67,7 @@ TEST_CASE("mapTryAt helper validates for supported i32 container result payloads
 import /std/collections/*
 
 [return<Result<V, ContainerError>>]
-mapTryAt<K, V>([map<K, V>] values, [K] key) {
+/std/collections/map/tryAt<K, V>([map<K, V>] values, [K] key) {
   if(/std/collections/map/contains(values, key),
      then() { return(Result.ok(/std/collections/map/at_unsafe(values, key))) },
      else() { return(containerErrorResult<V>(containerMissingKey())) })
@@ -76,7 +76,7 @@ mapTryAt<K, V>([map<K, V>] values, [K] key) {
 [return<Result<i32, ContainerError>>]
 main() {
   [map<string, i32>] values{map<string, i32>("left"raw_utf8, 7i32)}
-  return(mapTryAt<string, i32>(values, "left"raw_utf8))
+  return(/std/collections/map/tryAt<string, i32>(values, "left"raw_utf8))
 }
 )";
   std::string error;
@@ -89,7 +89,7 @@ TEST_CASE("mapTryAt helper validates for supported bool container result payload
 import /std/collections/*
 
 [return<Result<V, ContainerError>>]
-mapTryAt<K, V>([map<K, V>] values, [K] key) {
+/std/collections/map/tryAt<K, V>([map<K, V>] values, [K] key) {
   if(/std/collections/map/contains(values, key),
      then() { return(Result.ok(/std/collections/map/at_unsafe(values, key))) },
      else() { return(containerErrorResult<V>(containerMissingKey())) })
@@ -98,7 +98,7 @@ mapTryAt<K, V>([map<K, V>] values, [K] key) {
 [return<Result<bool, ContainerError>>]
 main() {
   [map<string, bool>] values{map<string, bool>("left"raw_utf8, true)}
-  return(mapTryAt<string, bool>(values, "left"raw_utf8))
+  return(/std/collections/map/tryAt<string, bool>(values, "left"raw_utf8))
 }
 )";
   std::string error;
@@ -111,7 +111,7 @@ TEST_CASE("mapTryAt helper validates for supported string container result paylo
 import /std/collections/*
 
 [return<Result<V, ContainerError>>]
-mapTryAt<K, V>([map<K, V>] values, [K] key) {
+/std/collections/map/tryAt<K, V>([map<K, V>] values, [K] key) {
   if(/std/collections/map/contains(values, key),
      then() { return(Result.ok(/std/collections/map/at_unsafe(values, key))) },
      else() { return(containerErrorResult<V>(containerMissingKey())) })
@@ -120,7 +120,7 @@ mapTryAt<K, V>([map<K, V>] values, [K] key) {
 [return<Result<string, ContainerError>>]
 main() {
   [map<string, string>] values{map<string, string>("left"raw_utf8, "alpha"utf8)}
-  return(mapTryAt<string, string>(values, "left"raw_utf8))
+  return(/std/collections/map/tryAt<string, string>(values, "left"raw_utf8))
 }
 )";
   std::string error;

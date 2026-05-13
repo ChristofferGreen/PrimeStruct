@@ -36,8 +36,8 @@ unexpectedWrappedExperimentalMapAutoError([ContainerError] err) {
  on_error<ContainerError, /unexpectedWrappedExperimentalMapAutoError>]
 main() {
   [auto mut] values{wrapValues(/std/collections/map/map("seed"raw_utf8, 1i32))}
-  mapInsert<string, i32>(values, "left"raw_utf8, 4i32)
-  mapInsert<string, i32>(values, "right"raw_utf8, 7i32)
+  /std/collections/map/insert<string, i32>(values, "left"raw_utf8, 4i32)
+  /std/collections/map/insert<string, i32>(values, "right"raw_utf8, 7i32)
   [i32] left{try(/std/collections/map/tryAt(values, "left"raw_utf8))}
   [i32] right{try(/std/collections/map/tryAt(values, "right"raw_utf8))}
   return(Result.ok(plus(/std/collections/map/count(values), plus(left, right))))
@@ -106,7 +106,7 @@ unexpectedInferredExperimentalMapReturnError([ContainerError] err) {
 [return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedInferredExperimentalMapReturnError>]
 main() {
   [Map<string, i32> mut] values{buildValues()}
-  mapInsert<string, i32>(values, "extra"raw_utf8, 9i32)
+  /std/collections/map/insert<string, i32>(values, "extra"raw_utf8, 9i32)
   [i32] left{try(/std/collections/map/tryAt(values, "left"raw_utf8))}
   [i32] extra{try(/std/collections/map/tryAt(values, "extra"raw_utf8))}
   return(Result.ok(plus(/std/collections/map/count(values), plus(left, extra))))
@@ -159,7 +159,7 @@ unexpectedBlockExperimentalMapReturnError([ContainerError] err) {
 [return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedBlockExperimentalMapReturnError>]
 main() {
   [Map<string, i32> mut] values{buildValues(true)}
-  mapInsert<string, i32>(values, "extra"raw_utf8, 9i32)
+  /std/collections/map/insert<string, i32>(values, "extra"raw_utf8, 9i32)
   [i32] left{try(/std/collections/map/tryAt(values, "left"raw_utf8))}
   [i32] extra{try(/std/collections/map/tryAt(values, "extra"raw_utf8))}
   return(Result.ok(plus(/std/collections/map/count(values), plus(left, extra))))
@@ -203,7 +203,7 @@ buildValues([bool] useCanonical) {
   if(useCanonical,
      then() {
        [auto mut] values{/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
-       mapInsert<string, i32>(values, "extra"raw_utf8, 9i32)
+       /std/collections/map/insert<string, i32>(values, "extra"raw_utf8, 9i32)
        values
      },
      else() {

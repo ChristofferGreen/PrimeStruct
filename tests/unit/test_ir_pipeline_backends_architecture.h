@@ -284,8 +284,6 @@ TEST_CASE("stdlib surface registry stays source locked") {
   CHECK(collectionManifest.find("import_alias_spelling = /map") == std::string::npos);
   CHECK(collectionManifest.find("compatibility_spelling = /map/count") ==
         std::string::npos);
-  CHECK(collectionManifest.find("lowering_spelling = /std/collections/mapInsert") ==
-        std::string::npos);
   CHECK(collectionManifest.find(
             "lowering_spelling = /std/collections/experimental_map/mapInsertRef") ==
         std::string::npos);

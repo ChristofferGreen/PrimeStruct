@@ -245,9 +245,9 @@ wrapMap<K, V>([K] key, [V] value) {
 
 [return<int>]
 main() {
-  [i32] first{mapAt<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8)}
-  [i32] second{mapAtUnsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8)}
-  [i32] count{mapCount<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32))}
+  [i32] first{/std/collections/map/at<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8)}
+  [i32] second{/std/collections/map/at_unsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8)}
+  [i32] count{/std/collections/map/count<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32))}
   return(plus(plus(first, second), count))
 }
 )";

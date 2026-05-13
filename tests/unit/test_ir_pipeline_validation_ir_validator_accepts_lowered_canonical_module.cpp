@@ -1745,7 +1745,7 @@ TEST_CASE("stdlib surface metadata resolves collection alias paths") {
   CHECK(primec::resolveStdlibSurfaceMemberName(
             *mapRefMetadata, "/std/collections/map/tryAt_ref") == "tryAt_ref");
   CHECK(primec::findStdlibSurfaceMetadataByResolvedPath(
-            "/std/collections/mapTryAtRef") == nullptr);
+            "/std/collections/map/tryAt_ref") == nullptr);
 }
 
 TEST_CASE("emitter cpp keeps canonical vector count builtin fallback") {

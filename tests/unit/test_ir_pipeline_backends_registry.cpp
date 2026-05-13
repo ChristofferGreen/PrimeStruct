@@ -4800,7 +4800,7 @@ TEST_CASE("semantic-product local-auto call paths accept stdlib surface equivale
       primec::StdlibSurfaceId::CollectionsMapHelpers;
   semanticProgram.localAutoFacts.back().initializerDirectCallResolvedPathId =
       primec::semanticProgramInternCallTargetString(
-          semanticProgram, "/std/collections/mapContains__t25a78a513414c3bf");
+          semanticProgram, "/std/collections/map/contains__t25a78a513414c3bf");
   CHECK_FALSE(primec::ir_lowerer::validateSemanticProductLocalAutoCoverage(
       program, &semanticProgram, error));
   CHECK(error ==

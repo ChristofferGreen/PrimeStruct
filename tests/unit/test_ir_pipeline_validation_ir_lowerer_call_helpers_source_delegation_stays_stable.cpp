@@ -490,13 +490,13 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(inlineDispatchSource.find("bool isMapTryAtHelperName(const Expr &expr)") !=
         std::string::npos);
-  CHECK(inlineDispatchSource.find("matchesHelper(\"/std/collections/mapContains\")") ==
+  CHECK(inlineDispatchSource.find("matchesHelper(\"/std/collections/map/contains\")") ==
         std::string::npos);
   CHECK(inlineDispatchSource.find("matchesHelper(\"/std/collections/experimental_map/mapContainsRef\")") ==
         std::string::npos);
-  CHECK(inlineDispatchSource.find("matchesHelper(\"/std/collections/mapTryAt\")") ==
+  CHECK(inlineDispatchSource.find("matchesHelper(\"/std/collections/map/tryAt\")") ==
         std::string::npos);
-  CHECK(inlineDispatchSource.find("matchesHelper(\"/std/collections/mapInsert\")") ==
+  CHECK(inlineDispatchSource.find("matchesHelper(\"/std/collections/map/insert\")") ==
         std::string::npos);
   CHECK(inlineDispatchSource.find("bool isVectorTarget(const Expr &expr, const LocalMap &localsIn)") !=
         std::string::npos);
@@ -4479,9 +4479,9 @@ TEST_CASE("ir lowerer call helpers keep rooted map alias def families under same
 
 TEST_CASE("ir lowerer call helpers keep lowered collection helper paths reachable via published surface ids") {
   primec::Definition loweredMapContainsDef;
-  loweredMapContainsDef.fullPath = "/std/collections/mapContains";
+  loweredMapContainsDef.fullPath = "/std/collections/map/contains";
   const std::unordered_map<std::string, const primec::Definition *> defMap = {
-      {"/std/collections/mapContains", &loweredMapContainsDef},
+      {"/std/collections/map/contains", &loweredMapContainsDef},
   };
   const std::unordered_map<std::string, std::string> importAliases = {};
 
@@ -4493,7 +4493,7 @@ TEST_CASE("ir lowerer call helpers keep lowered collection helper paths reachabl
       .sourceColumn = 4,
       .semanticNodeId = 81,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(
-          semanticProgram, "/std/collections/mapContains"),
+          semanticProgram, "/std/collections/map/contains"),
       .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsMapHelpers,
   });
   semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.insert_or_assign(
@@ -4509,17 +4509,17 @@ TEST_CASE("ir lowerer call helpers keep lowered collection helper paths reachabl
 
   primec::Expr callExpr;
   callExpr.kind = primec::Expr::Kind::Call;
-  callExpr.name = "/std/collections/mapContains";
+  callExpr.name = "/std/collections/map/contains";
   callExpr.semanticNodeId = 81;
 
-  CHECK(resolveExprPath(callExpr) == "/std/collections/mapContains");
+  CHECK(resolveExprPath(callExpr) == "/std/collections/map/contains");
   CHECK(primec::ir_lowerer::resolveDefinitionCall(callExpr, defMap, resolveExprPath) ==
         &loweredMapContainsDef);
 }
 
 TEST_CASE("ir lowerer call helpers classify lowered map helper overloads through semantic surface ids") {
   primec::Definition loweredMapContainsOverloadDef;
-  loweredMapContainsOverloadDef.fullPath = "/std/collections/mapContains__ov1";
+  loweredMapContainsOverloadDef.fullPath = "/std/collections/map/contains__ov1";
   const std::unordered_map<std::string, const primec::Definition *> defMap = {
       {loweredMapContainsOverloadDef.fullPath, &loweredMapContainsOverloadDef},
   };
@@ -4662,7 +4662,7 @@ TEST_CASE("ir lowerer bridge coverage uses published collection surface ids for 
   mainDef.fullPath = "/main";
   primec::Expr callExpr;
   callExpr.kind = primec::Expr::Kind::Call;
-  callExpr.name = "/std/collections/mapContains";
+  callExpr.name = "/std/collections/map/contains";
   callExpr.semanticNodeId = 82;
   mainDef.statements.push_back(callExpr);
   program.definitions.push_back(mainDef);
@@ -4675,7 +4675,7 @@ TEST_CASE("ir lowerer bridge coverage uses published collection surface ids for 
       .sourceColumn = 7,
       .semanticNodeId = 82,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(
-          semanticProgram, "/std/collections/mapContains"),
+          semanticProgram, "/std/collections/map/contains"),
       .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsMapHelpers,
   });
   semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.insert_or_assign(
@@ -4686,7 +4686,7 @@ TEST_CASE("ir lowerer bridge coverage uses published collection surface ids for 
   std::string error;
   CHECK_FALSE(primec::ir_lowerer::validateSemanticProductBridgePathCoverage(
       program, &semanticProgram, error));
-  CHECK(error.find("missing semantic-product bridge-path choice: /main -> /std/collections/mapContains") !=
+  CHECK(error.find("missing semantic-product bridge-path choice: /main -> /std/collections/map/contains") !=
         std::string::npos);
 }
 

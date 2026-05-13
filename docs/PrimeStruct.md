@@ -3810,24 +3810,27 @@ re-defining it piecemeal.
   and direct experimental vector source imports are rejected by import
   validation. Old rooted map helper aliases, `mapCount`-style wrapper
   spellings, and experimental map helper spellings are also absent from that
-  metadata; TODO-4438 and TODO-4439 delete the remaining direct-import and
-  adapter-level map compatibility seams.
+  metadata; direct experimental map imports and public `mapCount`-style
+  wrapper bridges are rejected or retired, and TODO-4441 deletes the remaining
+  production C++ adapter-level map compatibility seams.
 - **Migration-only seams:** rooted `/map/*` spellings plus
-  `mapCount`-style lowering names remain temporary compatibility seams. Rooted
+  internal `mapCount`-style lowering names remain temporary compatibility
+  seams. Rooted
   `/vector/*` helper spellings no longer act as builtin vector compatibility
   aliases; explicit user definitions under those paths remain ordinary
   definitions. The vector/map adapter cutover is complete for semantic and
   template-monomorph helper decisions; direct experimental vector source
   imports are rejected, map surface metadata is now stdlib-owned, and the
   surface manifest no longer advertises map compatibility spellings.
-  Direct experimental map source imports are also rejected; TODO-4439 owns the
-  remaining adapter-level map seam deletion.
+  Direct experimental map source imports are also rejected, and public
+  `mapCount`-style wrapper bridges are retired; TODO-4441 owns the remaining
+  production C++ adapter-level map seam deletion.
 - **Compatibility adapter inventory:** map insert helper compatibility no
   longer lives in the central surface manifest; the `CollectionsMapHelpers`
   registry metadata now classifies only canonical `/std/collections/map/*`
   helpers. Remaining map compatibility behavior is limited to follow-up-owned
-  source imports, compatibility diagnostics, and lowerer/semantic adapters
-  until TODO-4439 removes them. Template monomorphization still
+  compatibility diagnostics and lowerer/semantic adapters until TODO-4441
+  removes them. Template monomorphization still
   asks the registry for preferred experimental vector/SoA helper spellings
   instead of carrying bespoke canonical-to-experimental helper maps. SoA helper
   compatibility is routed through
@@ -4503,11 +4506,11 @@ bad_set() {
     wildcard-import surface for readable vector examples and loop/index code, while explicit
     `vector<T>{...}` construction remains available when examples want to emphasize constructor
     spelling.
-  - Map helpers: `count(value)`, `contains(value, key)`, `value.at(key)`, `value[key]`, `value.at_unsafe(key)` plus
-    stdlib wrapper imports such as `mapCount`, `mapContains`, `mapTryAt`, `mapAt`, and `mapAtUnsafe`. `mapTryAt` routes
-    misses to `Result<ContainerError>` / `Result<T, ContainerError>` instead of the checked missing-key abort path and,
-    on IR-backed backends, currently supports the same `i32`/`bool`/`f32`/`string` plus single-slot int-backed stdlib
-    error-struct value subset as `Result.ok(value)`.
+  - Map helpers: `/std/collections/map/count(value)`, `/std/collections/map/contains(value, key)`,
+    `/std/collections/map/tryAt(value, key)`, `value.at(key)`, `value[key]`, and `value.at_unsafe(key)`.
+    `tryAt` routes misses to `Result<ContainerError>` / `Result<T, ContainerError>` instead of the checked
+    missing-key abort path and, on IR-backed backends, currently supports the same `i32`/`bool`/`f32`/`string` plus
+    single-slot int-backed stdlib error-struct value subset as `Result.ok(value)`.
   - Planned stdlib-owned map constructor surface: the internal map backing module now uses `map(entries...)`
     where each item is an `Entry<K, V>`/`entry(key, value)` pair, and the remaining migration work is to move the
     canonical imported constructor surface off the fixed-arity wrapper helpers onto that same entry-based variadic
@@ -5318,7 +5321,7 @@ read-only path.
     still follow ordinary definition argument rules such as named-argument
     support.
   - When any `/std...` import is present, the stdlib also provides canonical `.prime` wrappers at
-    `/std/collections/map/*` over the current stdlib `mapNew` / `mapCount` / `mapTryAt` helper surface. That imported
+    `/std/collections/map/*` over the current internal map helper substrate. That imported
     path is now the sole public namespaced map contract; the internal map module remains the backing seam while the
     experimental map namespace is a compatibility shim rather than a peer public API. Imported
     `/std/collections/map/map(...)`, `/std/collections/map/count(...)`, `/std/collections/map/contains(...)`,
@@ -5339,11 +5342,9 @@ read-only path.
     internal map/vector substrate. Canonical `insert` and `insert_ref`
     wrappers on canonical map bindings now also stay on the internal `.prime`
     insert substrate instead of the stale flat-map builtin rewrite.
-    Wrapper-layer `/std/collections/mapCount|mapContains|mapTryAt|mapAt|mapAtUnsafe`
-    calls on those same value receivers now rewrite onto the corresponding compatibility helpers as well, and
-    direct canonical or wrapper-layer helper receivers built from canonical `/std/collections/map/map(...)` or
-    wrapper-layer `/std/collections/mapNew|mapSingle|mapDouble|mapPair|...` constructor expressions now also rewrite
-    those inner constructors onto `/std/collections/internal_map/mapNew|mapSingle|mapDouble|mapPair|...`; direct
+    Direct canonical helper receivers built from canonical `/std/collections/map/map(...)`
+    constructor expressions now rewrite those inner constructors onto
+    `/std/collections/internal_map/mapNew|mapSingle|mapDouble|mapPair|...`; direct
     method-call receivers built from those same constructor expressions now do the same before method lowering; explicit
     `[Map<K, V>]` bindings, explicit `return<Map<K, V>>` definitions, direct arguments flowing into explicit `[Map<K,
     V>]` parameters plus inferred `[auto]` parameters backed by experimental-map default initializers, helper-wrapped
@@ -5356,14 +5357,11 @@ read-only path.
     those inferred-return definitions, helper-wrapped return-path expressions inside those explicit or inferred
     experimental-map definitions, `auto` bindings nested inside those returned blocks, and direct method-call receivers
     produced by those inferred experimental-map definitions can initialize from either canonical
-    `/std/collections/map/map(...)` or wrapper-layer `/std/collections/mapNew|mapSingle|mapDouble|mapPair|...`
-    constructor aliases, which rewrite onto or infer
+    `/std/collections/map/map(...)`, which rewrites onto or infers
     `/std/collections/internal_map/mapNew|mapSingle|mapDouble|mapPair|...` plus the compatibility `Map<K, V>`
     type during template monomorphization; and borrowed `Reference<Map<K, V>>` receivers use the overload-free canonical
-    spellings `/std/collections/map/count_ref|contains_ref|tryAt_ref|at_ref|at_unsafe_ref`. Wrapper-layer helper names
-    on builtin `map<K, V>` receivers and broader inference-driven constructor routing outside those explicit or
-    first-step inferred experimental destinations still stay on `collections.prime` until the broader
-    constructor/type-surface migration is ready. Bare builtin map method sugar now follows the same import-driven path:
+    spellings `/std/collections/map/count_ref|contains_ref|tryAt_ref|at_ref|at_unsafe_ref`. Bare builtin map method
+    sugar now follows the same import-driven path:
     `values.count()`, `values.contains(...)`, and `values.tryAt(...)` require imported canonical
     `/std/collections/map/count`, `/std/collections/map/contains`, and `/std/collections/map/tryAt` wrappers or explicit
     `/map/count`, `/map/contains`, and `/map/tryAt` definitions, while `values.at(...)` plus `values.at_unsafe(...)`

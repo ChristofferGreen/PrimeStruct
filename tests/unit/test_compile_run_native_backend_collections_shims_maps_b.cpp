@@ -16,7 +16,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{mapTriple<i32, i32>(1i32, 10i32, 2i32, 20i32, 3i32, 30i32)}
-  return(plus(mapAt<i32, i32>(values, 2i32), mapCount<i32, i32>(values)))
+  return(plus(/std/collections/map/at<i32, i32>(values, 2i32), /std/collections/map/count<i32, i32>(values)))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_map_at.prime", source);
@@ -35,7 +35,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<string, i32>] values{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
-  return(plus(mapAt<string, i32>(values, "right"raw_utf8), mapCount<string, i32>(values)))
+  return(plus(/std/collections/map/at<string, i32>(values, "right"raw_utf8), /std/collections/map/count<string, i32>(values)))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_map_at_string_key.prime", source);
@@ -55,7 +55,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{mapTriple<i32, i32>(1i32, 10i32, 2i32, 20i32, 3i32, 30i32)}
-  return(mapAt<bool, i32>(values, true))
+  return(/std/collections/map/at<bool, i32>(values, true))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_map_at_mismatch.prime", source);
@@ -70,7 +70,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<string, i32>] values{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
-  return(mapAt<string, i32>(values, 1i32))
+  return(/std/collections/map/at<string, i32>(values, 1i32))
 }
 )";
   const std::string srcPath =
@@ -86,7 +86,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{mapTriple<i32, i32>(1i32, 10i32, 2i32, 20i32, 3i32, 30i32)}
-  return(plus(mapAtUnsafe<i32, i32>(values, 3i32), mapCount<i32, i32>(values)))
+  return(plus(/std/collections/map/at_unsafe<i32, i32>(values, 3i32), /std/collections/map/count<i32, i32>(values)))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_map_at_unsafe.prime", source);
@@ -105,7 +105,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<string, i32>] values{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
-  return(plus(mapAtUnsafe<string, i32>(values, "left"raw_utf8), mapCount<string, i32>(values)))
+  return(plus(/std/collections/map/at_unsafe<string, i32>(values, "left"raw_utf8), /std/collections/map/count<string, i32>(values)))
 }
 )";
   const std::string srcPath =
@@ -126,7 +126,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{mapTriple<i32, i32>(1i32, 10i32, 2i32, 20i32, 3i32, 30i32)}
-  return(mapAtUnsafe<bool, i32>(values, true))
+  return(/std/collections/map/at_unsafe<bool, i32>(values, true))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_map_at_unsafe_mismatch.prime", source);
@@ -141,7 +141,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<string, i32>] values{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
-  return(mapAtUnsafe<string, i32>(values, 1i32))
+  return(/std/collections/map/at_unsafe<string, i32>(values, 1i32))
 }
 )";
   const std::string srcPath =
@@ -212,9 +212,9 @@ main() {
   [map<string, i32>] viaCall{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
   [map<string, i32>] viaMethod{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
   return(plus(
-      plus(mapAt<string, i32>(viaCall, "right"raw_utf8), viaMethod.at("right"raw_utf8)),
-      plus(mapAtUnsafe<string, i32>(viaCall, "left"raw_utf8),
-          plus(viaMethod.at_unsafe("left"raw_utf8), plus(mapCount<string, i32>(viaCall), viaMethod.count())))))
+      plus(/std/collections/map/at<string, i32>(viaCall, "right"raw_utf8), viaMethod.at("right"raw_utf8)),
+      plus(/std/collections/map/at_unsafe<string, i32>(viaCall, "left"raw_utf8),
+          plus(viaMethod.at_unsafe("left"raw_utf8), plus(/std/collections/map/count<string, i32>(viaCall), viaMethod.count())))))
 }
 )";
   const std::string srcPath =
@@ -235,7 +235,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<string, i32>] values{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
-  return(plus(mapAt<string, i32>(values, 1i32), values.at(1i32)))
+  return(plus(/std/collections/map/at<string, i32>(values, 1i32), values.at(1i32)))
 }
 )";
   const std::string srcPath =
@@ -251,7 +251,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<string, i32>] values{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
-  return(plus(mapAtUnsafe<string, i32>(values, 1i32), values.at_unsafe(1i32)))
+  return(plus(/std/collections/map/at_unsafe<string, i32>(values, 1i32), values.at_unsafe(1i32)))
 }
 )";
   const std::string srcPath = writeTemp(
@@ -267,8 +267,8 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<string, i32>] values{mapSingle<string, i32>("only"raw_utf8, 21i32)}
-  return(plus(plus(mapAt<string, i32>(values, "only"raw_utf8), mapAtUnsafe<string, i32>(values, "only"raw_utf8)),
-      mapCount<string, i32>(values)))
+  return(plus(plus(/std/collections/map/at<string, i32>(values, "only"raw_utf8), /std/collections/map/at_unsafe<string, i32>(values, "only"raw_utf8)),
+      /std/collections/map/count<string, i32>(values)))
 }
 )";
   const std::string srcPath =
@@ -289,7 +289,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{mapSingle<i32, i32>("oops"raw_utf8, 4i32)}
-  return(mapCount<i32, i32>(values))
+  return(/std/collections/map/count<i32, i32>(values))
 }
 )";
   const std::string srcPath =
@@ -305,7 +305,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{mapPair<i32, i32>(1i32, 7i32, 2i32, 10i32)}
-  return(plus(plus(mapAt<i32, i32>(values, 2i32), mapAtUnsafe<i32, i32>(values, 1i32)), mapCount<i32, i32>(values)))
+  return(plus(plus(/std/collections/map/at<i32, i32>(values, 2i32), /std/collections/map/at_unsafe<i32, i32>(values, 1i32)), /std/collections/map/count<i32, i32>(values)))
 }
 )";
   const std::string srcPath =
@@ -325,7 +325,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{mapPair<i32, i32>(1i32, 2i32, 3i32, false)}
-  return(mapCount<i32, i32>(values))
+  return(/std/collections/map/count<i32, i32>(values))
 }
 )";
   const std::string srcPath =
@@ -341,8 +341,8 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<string, i32>] values{mapPair<string, i32>("alpha"raw_utf8, 12i32, "beta"raw_utf8, 20i32)}
-  return(plus(plus(mapAt<string, i32>(values, "beta"raw_utf8), mapAtUnsafe<string, i32>(values, "alpha"raw_utf8)),
-      mapCount<string, i32>(values)))
+  return(plus(plus(/std/collections/map/at<string, i32>(values, "beta"raw_utf8), /std/collections/map/at_unsafe<string, i32>(values, "alpha"raw_utf8)),
+      /std/collections/map/count<string, i32>(values)))
 }
 )";
   const std::string srcPath =
@@ -363,7 +363,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{mapPair<i32, i32>(1i32, 2i32, "oops"raw_utf8, 4i32)}
-  return(mapCount<i32, i32>(values))
+  return(/std/collections/map/count<i32, i32>(values))
 }
 )";
   const std::string srcPath =
@@ -379,8 +379,8 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<string, i32>] values{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
-  return(plus(plus(mapAt<string, i32>(values, "right"raw_utf8), mapAtUnsafe<string, i32>(values, "left"raw_utf8)),
-      mapCount<string, i32>(values)))
+  return(plus(plus(/std/collections/map/at<string, i32>(values, "right"raw_utf8), /std/collections/map/at_unsafe<string, i32>(values, "left"raw_utf8)),
+      /std/collections/map/count<string, i32>(values)))
 }
 )";
   const std::string srcPath =
@@ -401,7 +401,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{mapDouble<i32, i32>(1i32, 2i32, "oops"raw_utf8, 4i32)}
-  return(mapCount<i32, i32>(values))
+  return(/std/collections/map/count<i32, i32>(values))
 }
 )";
   const std::string srcPath =
@@ -418,8 +418,8 @@ import /std/collections/*
 main() {
   [map<string, i32>] values{
     mapTriple<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32, "c"raw_utf8, 3i32)}
-  return(plus(plus(mapAt<string, i32>(values, "c"raw_utf8), mapAtUnsafe<string, i32>(values, "a"raw_utf8)),
-      mapCount<string, i32>(values)))
+  return(plus(plus(/std/collections/map/at<string, i32>(values, "c"raw_utf8), /std/collections/map/at_unsafe<string, i32>(values, "a"raw_utf8)),
+      /std/collections/map/count<string, i32>(values)))
 }
 )";
   const std::string srcPath =
@@ -440,7 +440,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{mapTriple<i32, i32>(1i32, 2i32, 3i32, 4i32, "oops"raw_utf8, 6i32)}
-  return(mapCount<i32, i32>(values))
+  return(/std/collections/map/count<i32, i32>(values))
 }
 )";
   const std::string srcPath =
@@ -457,7 +457,7 @@ import /std/collections/*
 main() {
   [map<i32, i32>] values{
     mapQuad<i32, i32>(1i32, 3i32, 2i32, 5i32, 3i32, 7i32, 4i32, 11i32)}
-  return(plus(plus(mapAt<i32, i32>(values, 4i32), mapAtUnsafe<i32, i32>(values, 1i32)), mapCount<i32, i32>(values)))
+  return(plus(plus(/std/collections/map/at<i32, i32>(values, 4i32), /std/collections/map/at_unsafe<i32, i32>(values, 1i32)), /std/collections/map/count<i32, i32>(values)))
 }
 )";
   const std::string srcPath =
@@ -479,8 +479,8 @@ import /std/collections/*
 main() {
   [map<string, i32>] values{
     mapQuad<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32, "c"raw_utf8, 3i32, "d"raw_utf8, 4i32)}
-  return(plus(plus(mapAt<string, i32>(values, "d"raw_utf8), mapAtUnsafe<string, i32>(values, "a"raw_utf8)),
-      mapCount<string, i32>(values)))
+  return(plus(plus(/std/collections/map/at<string, i32>(values, "d"raw_utf8), /std/collections/map/at_unsafe<string, i32>(values, "a"raw_utf8)),
+      /std/collections/map/count<string, i32>(values)))
 }
 )";
   const std::string srcPath =
@@ -502,7 +502,7 @@ import /std/collections/*
 main() {
   [map<i32, i32>] values{
     mapQuad<i32, i32>(1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, false)}
-  return(mapCount<i32, i32>(values))
+  return(/std/collections/map/count<i32, i32>(values))
 }
 )";
   const std::string srcPath =
@@ -518,7 +518,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{mapQuad<i32, i32>(1i32, 2i32, 3i32, 4i32, 5i32, 6i32, "oops"raw_utf8, 8i32)}
-  return(mapCount<i32, i32>(values))
+  return(/std/collections/map/count<i32, i32>(values))
 }
 )";
   const std::string srcPath =
@@ -535,7 +535,7 @@ import /std/collections/*
 main() {
   [map<i32, i32>] values{
     mapQuint<i32, i32>(1i32, 3i32, 2i32, 5i32, 3i32, 7i32, 4i32, 11i32, 5i32, 13i32)}
-  return(plus(plus(mapAt<i32, i32>(values, 5i32), mapAtUnsafe<i32, i32>(values, 1i32)), mapCount<i32, i32>(values)))
+  return(plus(plus(/std/collections/map/at<i32, i32>(values, 5i32), /std/collections/map/at_unsafe<i32, i32>(values, 1i32)), /std/collections/map/count<i32, i32>(values)))
 }
 )";
   const std::string srcPath =
@@ -558,8 +558,8 @@ main() {
   [map<string, i32>] values{
     mapQuint<string, i32>(
         "a"raw_utf8, 1i32, "b"raw_utf8, 2i32, "c"raw_utf8, 3i32, "d"raw_utf8, 4i32, "e"raw_utf8, 5i32)}
-  return(plus(plus(mapAt<string, i32>(values, "e"raw_utf8), mapAtUnsafe<string, i32>(values, "a"raw_utf8)),
-      mapCount<string, i32>(values)))
+  return(plus(plus(/std/collections/map/at<string, i32>(values, "e"raw_utf8), /std/collections/map/at_unsafe<string, i32>(values, "a"raw_utf8)),
+      /std/collections/map/count<string, i32>(values)))
 }
 )";
   const std::string srcPath =
@@ -581,7 +581,7 @@ import /std/collections/*
 main() {
   [map<i32, i32>] values{
     mapQuint<i32, i32>(1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, 8i32, 9i32, false)}
-  return(mapCount<i32, i32>(values))
+  return(/std/collections/map/count<i32, i32>(values))
 }
 )";
   const std::string srcPath =
@@ -598,7 +598,7 @@ import /std/collections/*
 main() {
   [map<i32, i32>] values{
     mapQuint<i32, i32>(1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, 8i32, "oops"raw_utf8, 10i32)}
-  return(mapCount<i32, i32>(values))
+  return(/std/collections/map/count<i32, i32>(values))
 }
 )";
   const std::string srcPath =
@@ -615,7 +615,7 @@ import /std/collections/*
 main() {
   [map<i32, i32>] values{
     mapSext<i32, i32>(1i32, 3i32, 2i32, 5i32, 3i32, 7i32, 4i32, 11i32, 5i32, 13i32, 6i32, 17i32)}
-  return(plus(plus(mapAt<i32, i32>(values, 6i32), mapAtUnsafe<i32, i32>(values, 1i32)), mapCount<i32, i32>(values)))
+  return(plus(plus(/std/collections/map/at<i32, i32>(values, 6i32), /std/collections/map/at_unsafe<i32, i32>(values, 1i32)), /std/collections/map/count<i32, i32>(values)))
 }
 )";
   const std::string srcPath =
@@ -639,8 +639,8 @@ main() {
     mapSext<string, i32>(
         "a"raw_utf8, 1i32, "b"raw_utf8, 2i32, "c"raw_utf8, 3i32, "d"raw_utf8, 4i32, "e"raw_utf8, 5i32,
         "f"raw_utf8, 6i32)}
-  return(plus(plus(mapAt<string, i32>(values, "f"raw_utf8), mapAtUnsafe<string, i32>(values, "a"raw_utf8)),
-      mapCount<string, i32>(values)))
+  return(plus(plus(/std/collections/map/at<string, i32>(values, "f"raw_utf8), /std/collections/map/at_unsafe<string, i32>(values, "a"raw_utf8)),
+      /std/collections/map/count<string, i32>(values)))
 }
 )";
   const std::string srcPath =
@@ -662,7 +662,7 @@ import /std/collections/*
 main() {
   [map<i32, i32>] values{
     mapSext<i32, i32>(1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, 8i32, 9i32, 10i32, 11i32, false)}
-  return(mapCount<i32, i32>(values))
+  return(/std/collections/map/count<i32, i32>(values))
 }
 )";
   const std::string srcPath =
@@ -679,7 +679,7 @@ import /std/collections/*
 main() {
   [map<i32, i32>] values{
     mapSext<i32, i32>(1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, 8i32, 9i32, 10i32, "oops"raw_utf8, 12i32)}
-  return(mapCount<i32, i32>(values))
+  return(/std/collections/map/count<i32, i32>(values))
 }
 )";
   const std::string srcPath =

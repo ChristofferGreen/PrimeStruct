@@ -6967,9 +6967,11 @@ TEST_CASE("ir lowerer statement call emission source delegation stays stable") {
         std::string::npos);
   CHECK(source.find("matchesRegistrySpellingSet(metadata->loweringSpellings, resolvedPath)") !=
         std::string::npos);
-  CHECK(source.find("isPublishedWrapperStatementVectorMutatorAliasPath(") !=
+  CHECK(source.find("isPublishedWrapperStatementVectorMutatorAliasPath(") ==
         std::string::npos);
-  CHECK(source.find("explicitVectorMutatorHelperCall && !explicitWrapperVectorMutatorHelperPath") !=
+  CHECK(source.find("explicitVectorMutatorHelperCall && !explicitWrapperVectorMutatorHelperPath") ==
+        std::string::npos);
+  CHECK(source.find("explicitVectorHelperUsesBuiltinVectorReceiver") !=
         std::string::npos);
   CHECK(source.find("emitExperimentalVectorHeaderSetter") == std::string::npos);
   CHECK(source.find("resolveStatementExperimentalVectorReceiverFromSemanticFacts") ==

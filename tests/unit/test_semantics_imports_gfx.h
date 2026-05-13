@@ -70,7 +70,7 @@ import /std/collections/internal_map/*
 [return<int> effects(heap_alloc)]
 main() {
   [Map<i32, i32>] values{mapPair<i32, i32>(1i32, 7i32, 2i32, 11i32)}
-  return(plus(mapCount<i32, i32>(values), mapAt<i32, i32>(values, 2i32)))
+  return(plus(/std/collections/map/count<i32, i32>(values), /std/collections/map/at<i32, i32>(values, 2i32)))
 }
 )";
   std::string error;

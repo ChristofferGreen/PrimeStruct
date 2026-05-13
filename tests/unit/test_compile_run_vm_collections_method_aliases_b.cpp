@@ -617,7 +617,7 @@ wrapMapUnknownKey([string] key, [i32] value) {
 [effects(heap_alloc), return<int>]
 main() {
   [map<string, i32>] values{wrapMapUnknownKey("only"raw_utf8, 3i32)}
-  return(mapCount<string, i32>(values))
+  return(/std/collections/map/count<string, i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_templated_return_map_bad_key.prime", source);
@@ -642,7 +642,7 @@ wrapMapUnknownValue([string] key, [i32] value) {
 [effects(heap_alloc), return<int>]
 main() {
   [map<string, i32>] values{wrapMapUnknownValue("only"raw_utf8, 3i32)}
-  return(mapCount<string, i32>(values))
+  return(/std/collections/map/count<string, i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_templated_return_map_bad_value.prime", source);
@@ -690,7 +690,7 @@ wrapMapNestedValue([string] key, [i32] value) {
 [effects(heap_alloc), return<int>]
 main() {
   [map<string, i32>] values{wrapMapNestedValue("only"raw_utf8, 3i32)}
-  return(mapCount<string, i32>(values))
+  return(/std/collections/map/count<string, i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_templated_return_map_nested_arg.prime", source);
@@ -740,7 +740,7 @@ wrapMap([string] key, [i32] value) {
 [effects(heap_alloc), return<int>]
 main() {
   [map<string, i32>] values{wrapMap("only"raw_utf8, 3i32)}
-  return(mapCount<string, i32>(values))
+  return(/std/collections/map/count<string, i32>(values))
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_templated_return_map_arity.prime", source);

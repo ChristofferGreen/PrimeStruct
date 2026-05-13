@@ -738,10 +738,10 @@ unexpectedExperimentalMapAutoError([ContainerError] err) {
 [return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapAutoError>]
 main() {
   [auto mut] values{/std/collections/map/map("seed"raw_utf8, 1i32)}
-  mapInsert<string, i32>(values, "left"raw_utf8, 4i32)
-  mapInsert<string, i32>(values, "right"raw_utf8, 7i32)
+  /std/collections/map/insert<string, i32>(values, "left"raw_utf8, 4i32)
+  /std/collections/map/insert<string, i32>(values, "right"raw_utf8, 7i32)
   [auto mut] built{buildValues()}
-  mapInsert<string, i32>(built, "extra"raw_utf8, 9i32)
+  /std/collections/map/insert<string, i32>(built, "extra"raw_utf8, 9i32)
   [i32] left{try(/std/collections/map/tryAt(values, "left"raw_utf8))}
   [i32] extra{try(/std/collections/map/tryAt(built, "extra"raw_utf8))}
   return(Result.ok(plus(plus(/std/collections/map/count(values), /std/collections/map/count(built)), plus(left, extra))))

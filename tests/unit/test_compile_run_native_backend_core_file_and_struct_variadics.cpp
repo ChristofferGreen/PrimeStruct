@@ -420,7 +420,7 @@ main() {
     ),
     plus(
       plus(convert<int>(x), convert<int>(y)),
-      plus(count(arr), plus(/std/collections/vector/count<i32>(vec), plus(mapCount<i32, i32>(table), count(text))))
+      plus(count(arr), plus(/std/collections/vector/count<i32>(vec), plus(/std/collections/map/count<i32, i32>(table), count(text))))
     )
   ))
 }

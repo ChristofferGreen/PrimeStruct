@@ -365,7 +365,7 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
   mapMethodContainsCall.args = {mapReceiver, indexArg};
 
   primec::Definition mapContainsCallee;
-  mapContainsCallee.fullPath = "/std/collections/mapContains";
+  mapContainsCallee.fullPath = "/std/collections/map/contains";
 
   int mapContainsResolveMethodCalls = 0;
   int mapContainsEmitCalls = 0;

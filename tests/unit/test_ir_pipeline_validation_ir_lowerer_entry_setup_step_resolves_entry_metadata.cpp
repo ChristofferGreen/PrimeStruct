@@ -136,7 +136,7 @@ TEST_CASE("ir lowerer entry setup step rejects missing routing completeness") {
 
   primec::Expr bridgeCallExpr;
   bridgeCallExpr.kind = primec::Expr::Kind::Call;
-  bridgeCallExpr.name = "/std/collections/mapContains";
+  bridgeCallExpr.name = "/std/collections/map/contains";
   bridgeCallExpr.semanticNodeId = 43;
   entryDef.statements.push_back(bridgeCallExpr);
 

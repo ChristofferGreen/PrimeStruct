@@ -16934,3 +16934,49 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     moved positive map conformance sources to canonical map or `internal_map`
     imports, refreshed docs/source locks, and validated focused release
     targets. Broad release validation was skipped under the lite workflow.
+
+- [x] TODO-4439: Split map compatibility adapter cleanup
+  - owner: ai
+  - created_at: 2026-05-13
+  - finished_at: 2026-05-13
+  - phase: Map stdlib ownership cutover
+  - scope: Right-size the former combined map compatibility cleanup into
+    closable leaves before implementation.
+  - acceptance:
+    - Public wrapper bridge deletion is tracked separately from production C++
+      adapter deletion.
+    - Active queues contain only leaf work after the split.
+  - stop_rule: Stop once the umbrella is removed from active queues and the
+    split leaves have explicit finish lines.
+  - evidence: Split public wrapper bridge deletion into completed TODO-4440
+    and moved remaining production C++ adapter cleanup to TODO-4441.
+
+- [x] TODO-4440: Delete public map wrapper bridge names
+  - owner: ai
+  - created_at: 2026-05-13
+  - finished_at: 2026-05-13
+  - phase: Map stdlib ownership cutover
+  - split_from: TODO-4439
+  - scope: Remove public `mapCount` / `mapContains` / `mapTryAt` /
+    `mapAt` / `mapInsert` bridge names and public fixed-arity constructor
+    bridge names from the stdlib map surface.
+  - implementation_notes:
+    - Keep canonical `/std/collections/map/*` helpers, exact/wildcard map
+      imports, method sugar, and documented `map(...)` construction syntax.
+    - Leave production C++ rooted `/map/*`, internal `mapCount`-style
+      lowering adapters, and the zero-trace audit to TODO-4441 and TODO-4304.
+  - acceptance:
+    - Public stdlib source no longer defines `mapCount`-style wrapper bridge
+      helpers or public fixed-arity constructor bridge names.
+    - Public docs, examples, and conformance sources use canonical
+      `/std/collections/map/*` helper paths or method sugar instead of
+      prefixed helper names.
+    - Active TODO queues promote TODO-4441 as the remaining production C++
+      adapter cleanup before TODO-4304.
+  - stop_rule: Stop once the public map helper surface is canonical-only while
+    remaining internal production adapter work is tracked by TODO-4441.
+  - evidence: Retired `collections.prime` as a compatibility umbrella,
+    removed public `/std/collections/mapNew` and fixed-arity constructor
+    bridge definitions from `map.prime`, migrated map conformance sources and
+    docs to canonical `/std/collections/map/*` helper paths, and updated queue
+    bookkeeping. Broad release validation was skipped under the lite workflow.

@@ -69,14 +69,14 @@ Holder() {}
 
 [return<int> effects(heap_alloc)]
 scoreValues([auto mut] values{mapNew<string, i32>()}) {
-  mapInsert<string, i32>(values, "extra"raw_utf8, 9i32)
+  /std/collections/map/insert<string, i32>(values, "extra"raw_utf8, 9i32)
   return(plus(/std/collections/map/count(values),
               /std/collections/map/at(values, "left"raw_utf8)))
 }
 
 [return<int> effects(heap_alloc)]
 /Holder/score([Holder] self, [auto mut] values{mapNew<string, i32>()}) {
-  mapInsert<string, i32>(values, "bonus"raw_utf8, 5i32)
+  /std/collections/map/insert<string, i32>(values, "bonus"raw_utf8, 5i32)
   return(plus(/std/collections/map/count(values),
               /std/collections/map/at(values, "extra"raw_utf8)))
 }
@@ -100,7 +100,7 @@ import /std/collections/internal_map/*
 
 [return<int> effects(heap_alloc)]
 scoreValues([auto mut] values{mapNew<string, i32>()}) {
-  mapInsert<string, i32>(values, "extra"raw_utf8, 9i32)
+  /std/collections/map/insert<string, i32>(values, "extra"raw_utf8, 9i32)
   return(/std/collections/map/count(values))
 }
 
@@ -128,14 +128,14 @@ wrapValues<T>([T] values) {
 
 [return<int> effects(heap_alloc)]
 scoreValues([auto mut] values{mapNew<string, i32>()}) {
-  mapInsert<string, i32>(values, "extra"raw_utf8, 9i32)
+  /std/collections/map/insert<string, i32>(values, "extra"raw_utf8, 9i32)
   return(plus(/std/collections/map/count(values),
               /std/collections/map/at(values, "left"raw_utf8)))
 }
 
 [return<int> effects(heap_alloc)]
 /Holder/score([Holder] self, [auto mut] values{mapNew<string, i32>()}) {
-  mapInsert<string, i32>(values, "bonus"raw_utf8, 5i32)
+  /std/collections/map/insert<string, i32>(values, "bonus"raw_utf8, 5i32)
   return(plus(/std/collections/map/count(values),
               /std/collections/map/at(values, "extra"raw_utf8)))
 }
@@ -164,7 +164,7 @@ wrapValues<T>([T] values) {
 
 [return<int> effects(heap_alloc)]
 scoreValues([auto mut] values{mapNew<string, i32>()}) {
-  mapInsert<string, i32>(values, "extra"raw_utf8, 9i32)
+  /std/collections/map/insert<string, i32>(values, "extra"raw_utf8, 9i32)
   return(/std/collections/map/count(values))
 }
 
@@ -193,14 +193,14 @@ wrapValues<T>([T] values) {
 
 [return<int> effects(heap_alloc)]
 scoreValues([auto mut] values{wrapValues(mapNew<string, i32>())}) {
-  mapInsert<string, i32>(values, "extra"raw_utf8, 9i32)
+  /std/collections/map/insert<string, i32>(values, "extra"raw_utf8, 9i32)
   return(plus(/std/collections/map/count(values),
               /std/collections/map/at(values, "left"raw_utf8)))
 }
 
 [return<int> effects(heap_alloc)]
 /Holder/score([Holder] self, [auto mut] values{wrapValues(mapNew<string, i32>())}) {
-  mapInsert<string, i32>(values, "bonus"raw_utf8, 5i32)
+  /std/collections/map/insert<string, i32>(values, "bonus"raw_utf8, 5i32)
   return(plus(/std/collections/map/count(values),
               /std/collections/map/at(values, "extra"raw_utf8)))
 }
@@ -230,7 +230,7 @@ wrapValues<T>([T] values) {
 
 [return<int> effects(heap_alloc)]
 scoreValues([auto mut] values{wrapValues(mapNew<string, i32>())}) {
-  mapInsert<string, i32>(values, "extra"raw_utf8, 9i32)
+  /std/collections/map/insert<string, i32>(values, "extra"raw_utf8, 9i32)
   return(/std/collections/map/count(values))
 }
 
@@ -559,8 +559,8 @@ Holder() {
 [effects(heap_alloc), return<int>]
 main() {
   [Holder] holder{Holder()}
-  return(plus(/std/collections/mapCount(holder.values),
-              /std/collections/mapAt(holder.values, "left"raw_utf8)))
+  return(plus(/std/collections/map/count(holder.values),
+              /std/collections/map/at(holder.values, "left"raw_utf8)))
 }
 )";
   std::string error;

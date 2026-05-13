@@ -331,10 +331,10 @@ log_file_error([FileError] err) {
 [return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
 main() {
   [map<i32, i32>] direct{try(make_values())}
-  print_line(mapCount<i32, i32>(direct))
-  print_line(mapAtUnsafe<i32, i32>(direct, 1i32))
-  print_line(mapAtUnsafe<i32, i32>(direct, 3i32))
-  return(plus(mapAtUnsafe<i32, i32>(direct, 1i32), mapAtUnsafe<i32, i32>(direct, 3i32)))
+  print_line(/std/collections/map/count<i32, i32>(direct))
+  print_line(/std/collections/map/at_unsafe<i32, i32>(direct, 1i32))
+  print_line(/std/collections/map/at_unsafe<i32, i32>(direct, 3i32))
+  return(plus(/std/collections/map/at_unsafe<i32, i32>(direct, 1i32), /std/collections/map/at_unsafe<i32, i32>(direct, 3i32)))
 }
 )";
   const std::string srcPath = writeTemp("vm_result_map_payload_ir_backed.prime", source);

@@ -21,177 +21,12 @@ import /std/collections/internal_map/*
 
 [public effects(heap_alloc), return<map<K, V>>]
 /std/collections/map/map<K, V>([K] firstKey, [V] firstValue) {
-  return(/std/collections/mapSingle<K, V>(firstKey, firstValue))
+  return(/std/collections/internal_map/mapSingle<K, V>(firstKey, firstValue))
 }
 
 [public effects(heap_alloc), return<map<K, V>>]
 /std/collections/map/map<K, V>([K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue) {
-  return(/std/collections/mapPair<K, V>(firstKey, firstValue, secondKey, secondValue))
-}
-
-[public effects(heap_alloc), return<map<K, V>>]
-/std/collections/mapNew<K, V>() {
-  return(/std/collections/internal_map/mapNew<K, V>())
-}
-
-[public effects(heap_alloc), return<map<K, V>>]
-/std/collections/mapSingle<K, V>([K] key, [V] value) {
-  return(/std/collections/internal_map/mapSingle<K, V>(key, value))
-}
-
-[public effects(heap_alloc), return<map<K, V>>]
-/std/collections/mapDouble<K, V>([K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue) {
-  return(/std/collections/internal_map/mapDouble<K, V>(firstKey, firstValue, secondKey, secondValue))
-}
-
-[public effects(heap_alloc), return<map<K, V>>]
-/std/collections/mapPair<K, V>([K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue) {
   return(/std/collections/internal_map/mapPair<K, V>(firstKey, firstValue, secondKey, secondValue))
-}
-
-[public effects(heap_alloc), return<map<K, V>>]
-/std/collections/mapTriple<K, V>(
-    [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue) {
-  return(/std/collections/internal_map/mapTriple<K, V>(
-      firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue))
-}
-
-[public effects(heap_alloc), return<map<K, V>>]
-/std/collections/mapQuad<K, V>(
-    [K] firstKey,
-    [V] firstValue,
-    [K] secondKey,
-    [V] secondValue,
-    [K] thirdKey,
-    [V] thirdValue,
-    [K] fourthKey,
-    [V] fourthValue) {
-  return(/std/collections/internal_map/mapQuad<K, V>(
-      firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue, fourthKey, fourthValue))
-}
-
-[public effects(heap_alloc), return<map<K, V>>]
-/std/collections/mapQuint<K, V>(
-    [K] firstKey,
-    [V] firstValue,
-    [K] secondKey,
-    [V] secondValue,
-    [K] thirdKey,
-    [V] thirdValue,
-    [K] fourthKey,
-    [V] fourthValue,
-    [K] fifthKey,
-    [V] fifthValue) {
-  return(/std/collections/internal_map/mapQuint<K, V>(
-      firstKey,
-      firstValue,
-      secondKey,
-      secondValue,
-      thirdKey,
-      thirdValue,
-      fourthKey,
-      fourthValue,
-      fifthKey,
-      fifthValue))
-}
-
-[public effects(heap_alloc), return<map<K, V>>]
-/std/collections/mapSext<K, V>(
-    [K] firstKey,
-    [V] firstValue,
-    [K] secondKey,
-    [V] secondValue,
-    [K] thirdKey,
-    [V] thirdValue,
-    [K] fourthKey,
-    [V] fourthValue,
-    [K] fifthKey,
-    [V] fifthValue,
-    [K] sixthKey,
-    [V] sixthValue) {
-  return(/std/collections/internal_map/mapSext<K, V>(
-      firstKey,
-      firstValue,
-      secondKey,
-      secondValue,
-      thirdKey,
-      thirdValue,
-      fourthKey,
-      fourthValue,
-      fifthKey,
-      fifthValue,
-      sixthKey,
-      sixthValue))
-}
-
-[public effects(heap_alloc), return<map<K, V>>]
-/std/collections/mapSept<K, V>(
-    [K] firstKey,
-    [V] firstValue,
-    [K] secondKey,
-    [V] secondValue,
-    [K] thirdKey,
-    [V] thirdValue,
-    [K] fourthKey,
-    [V] fourthValue,
-    [K] fifthKey,
-    [V] fifthValue,
-    [K] sixthKey,
-    [V] sixthValue,
-    [K] seventhKey,
-    [V] seventhValue) {
-  return(/std/collections/internal_map/mapSept<K, V>(
-      firstKey,
-      firstValue,
-      secondKey,
-      secondValue,
-      thirdKey,
-      thirdValue,
-      fourthKey,
-      fourthValue,
-      fifthKey,
-      fifthValue,
-      sixthKey,
-      sixthValue,
-      seventhKey,
-      seventhValue))
-}
-
-[public effects(heap_alloc), return<map<K, V>>]
-/std/collections/mapOct<K, V>(
-    [K] firstKey,
-    [V] firstValue,
-    [K] secondKey,
-    [V] secondValue,
-    [K] thirdKey,
-    [V] thirdValue,
-    [K] fourthKey,
-    [V] fourthValue,
-    [K] fifthKey,
-    [V] fifthValue,
-    [K] sixthKey,
-    [V] sixthValue,
-    [K] seventhKey,
-    [V] seventhValue,
-    [K] eighthKey,
-    [V] eighthValue) {
-  return(/std/collections/internal_map/mapOct<K, V>(
-      firstKey,
-      firstValue,
-      secondKey,
-      secondValue,
-      thirdKey,
-      thirdValue,
-      fourthKey,
-      fourthValue,
-      fifthKey,
-      fifthValue,
-      sixthKey,
-      sixthValue,
-      seventhKey,
-      seventhValue,
-      eighthKey,
-      eighthValue))
 }
 
 [public return<i32>]
@@ -245,7 +80,7 @@ import /std/collections/internal_map/*
 }
 
 [public effects(heap_alloc), return<void> Comparable<K>]
-/std/collections/map/insert<K, V>([Map<K, V> mut] values, [K] key, [V] value) {
+/std/collections/map/insert<K, V>([map<K, V> mut] values, [K] key, [V] value) {
   /std/collections/internal_map/insertImpl<K, V>(values, key, value)
 }
 
