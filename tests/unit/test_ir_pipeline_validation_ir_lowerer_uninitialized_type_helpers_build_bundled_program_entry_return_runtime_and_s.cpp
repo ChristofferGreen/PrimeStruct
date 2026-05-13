@@ -499,6 +499,8 @@ TEST_CASE("ir lowerer setup type helper resolves method receiver struct paths fr
       {"Ctor", "/imports/Ctor"},
       {"MapCanonicalAlias", "std/collections/map/at"},
       {"MapCompatAlias", "map/at"},
+      {"MapCanonicalCountRefAlias", "std/collections/map/count_ref"},
+      {"MapCompatCountRefAlias", "map/count_ref"},
   };
 
   CHECK(primec::ir_lowerer::resolveMethodReceiverStructTypePathFromCallExpr(
@@ -535,6 +537,22 @@ TEST_CASE("ir lowerer setup type helper resolves method receiver struct paths fr
   receiverCall.name = "MapCanonicalAlias";
   CHECK(primec::ir_lowerer::resolveMethodReceiverStructTypePathFromCallExpr(
             receiverCall, "/not-struct/MapCanonicalAlias", importAliases, compatOnlyStructNames)
+        .empty());
+
+  const std::unordered_set<std::string> canonicalOnlyCountRefStructNames = {
+      "/std/collections/map/count_ref",
+  };
+  receiverCall.name = "MapCompatCountRefAlias";
+  CHECK(primec::ir_lowerer::resolveMethodReceiverStructTypePathFromCallExpr(
+            receiverCall, "/not-struct/MapCompatCountRefAlias", importAliases, canonicalOnlyCountRefStructNames)
+        .empty());
+
+  const std::unordered_set<std::string> compatOnlyCountRefStructNames = {
+      "/map/count_ref",
+  };
+  receiverCall.name = "MapCanonicalCountRefAlias";
+  CHECK(primec::ir_lowerer::resolveMethodReceiverStructTypePathFromCallExpr(
+            receiverCall, "/not-struct/MapCanonicalCountRefAlias", importAliases, compatOnlyCountRefStructNames)
         .empty());
 }
 

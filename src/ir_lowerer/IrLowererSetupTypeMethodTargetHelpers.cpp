@@ -152,24 +152,6 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
         }
       }
     }
-    if (path.rfind("/map/", 0) == 0) {
-      const std::string stdlibAlias = "/std/collections/map/" + path.substr(std::string("/map/").size());
-      defIt = defMap.find(stdlibAlias);
-      if (defIt != defMap.end()) {
-        return defIt->second;
-      }
-    }
-    if (path.rfind("/std/collections/map/", 0) == 0) {
-      const std::string suffix = path.substr(std::string("/std/collections/map/").size());
-      if (suffix != "map" && suffix != "count" && suffix != "contains" && suffix != "tryAt" &&
-          suffix != "at" && suffix != "at_unsafe" && suffix != "insert") {
-        const std::string mapAlias = "/map/" + suffix;
-        defIt = defMap.find(mapAlias);
-        if (defIt != defMap.end()) {
-          return defIt->second;
-        }
-      }
-    }
     if (path.rfind("/soa_vector/", 0) == 0) {
       const std::string suffix = path.substr(std::string("/soa_vector/").size());
       const std::string canonicalAlias = "/std/collections/soa_vector/" + suffix;

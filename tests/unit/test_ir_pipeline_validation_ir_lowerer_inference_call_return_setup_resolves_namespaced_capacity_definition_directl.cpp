@@ -1446,7 +1446,7 @@ TEST_CASE("ir lowerer inference call-return setup keeps unresolved compatibility
   CHECK(resolveMethodCalls == 0);
 }
 
-TEST_CASE("ir lowerer inference call-return setup resolves explicit map helper aliases against canonical-only defs") {
+TEST_CASE("ir lowerer inference call-return setup rejects explicit map access aliases against canonical-only defs") {
   primec::Definition canonicalCountDef;
   canonicalCountDef.fullPath = "/std/collections/map/count";
   primec::Definition canonicalAtDef;
@@ -1536,8 +1536,8 @@ TEST_CASE("ir lowerer inference call-return setup resolves explicit map helper a
 
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(state.inferCallExprDirectReturnKind(aliasAtCall, locals, kindOut) ==
-        primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+        primec::ir_lowerer::CallExpressionReturnKindResolution::NotResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
   primec::Expr aliasAtUnsafeCall;
   aliasAtUnsafeCall.kind = primec::Expr::Kind::Call;
@@ -1546,8 +1546,8 @@ TEST_CASE("ir lowerer inference call-return setup resolves explicit map helper a
 
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(state.inferCallExprDirectReturnKind(aliasAtUnsafeCall, locals, kindOut) ==
-        primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+        primec::ir_lowerer::CallExpressionReturnKindResolution::NotResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
   primec::Expr canonicalCountCall;
   canonicalCountCall.kind = primec::Expr::Kind::Call;

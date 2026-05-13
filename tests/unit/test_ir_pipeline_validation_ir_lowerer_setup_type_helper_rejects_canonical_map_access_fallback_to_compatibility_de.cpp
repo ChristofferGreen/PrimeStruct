@@ -63,7 +63,7 @@ TEST_CASE("ir lowerer setup type helper rejects canonical map access fallback to
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
-TEST_CASE("ir lowerer setup type helper resolves explicit map access aliases through canonical defs") {
+TEST_CASE("ir lowerer setup type helper rejects explicit map access aliases through canonical defs") {
   primec::Definition canonicalCountDef;
   canonicalCountDef.fullPath = "/std/collections/map/count";
   primec::Definition canonicalAtDef;
@@ -120,7 +120,7 @@ TEST_CASE("ir lowerer setup type helper resolves explicit map access aliases thr
       [&](const primec::Expr &methodExpr, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
         ++aliasCountResolveCalls;
         CHECK(methodExpr.isMethodCall);
-        CHECK(methodExpr.name == "count");
+        CHECK(methodExpr.name == "/map/count");
         return &canonicalCountDef;
       },
       getReturnInfo,
@@ -129,7 +129,7 @@ TEST_CASE("ir lowerer setup type helper resolves explicit map access aliases thr
       &methodResolved));
   CHECK_FALSE(methodResolved);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
-  CHECK(aliasCountResolveCalls == 0);
+  CHECK(aliasCountResolveCalls == 1);
 
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   methodResolved = false;
@@ -139,7 +139,7 @@ TEST_CASE("ir lowerer setup type helper resolves explicit map access aliases thr
   aliasAtCall.args = {receiverExpr, keyExpr};
 
   int aliasAtResolveCalls = 0;
-  CHECK(primec::ir_lowerer::resolveCountMethodCallReturnKind(
+  CHECK_FALSE(primec::ir_lowerer::resolveCountMethodCallReturnKind(
       aliasAtCall,
       {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
@@ -147,15 +147,15 @@ TEST_CASE("ir lowerer setup type helper resolves explicit map access aliases thr
       [&](const primec::Expr &methodExpr, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
         ++aliasAtResolveCalls;
         CHECK(methodExpr.isMethodCall);
-        CHECK(methodExpr.name == "at");
+        CHECK(methodExpr.name == "/map/at");
         return &canonicalAtDef;
       },
       getReturnInfo,
       false,
       kindOut,
       &methodResolved));
-  CHECK(methodResolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK_FALSE(methodResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
   CHECK(aliasAtResolveCalls == 1);
 
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
@@ -166,7 +166,7 @@ TEST_CASE("ir lowerer setup type helper resolves explicit map access aliases thr
   aliasAtUnsafeCall.args = {receiverExpr, keyExpr};
 
   int aliasAtUnsafeResolveCalls = 0;
-  CHECK(primec::ir_lowerer::resolveCountMethodCallReturnKind(
+  CHECK_FALSE(primec::ir_lowerer::resolveCountMethodCallReturnKind(
       aliasAtUnsafeCall,
       {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
@@ -174,15 +174,15 @@ TEST_CASE("ir lowerer setup type helper resolves explicit map access aliases thr
       [&](const primec::Expr &methodExpr, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
         ++aliasAtUnsafeResolveCalls;
         CHECK(methodExpr.isMethodCall);
-        CHECK(methodExpr.name == "at_unsafe");
+        CHECK(methodExpr.name == "/map/at_unsafe");
         return &canonicalAtUnsafeDef;
       },
       getReturnInfo,
       false,
       kindOut,
       &methodResolved));
-  CHECK(methodResolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK_FALSE(methodResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
   CHECK(aliasAtUnsafeResolveCalls == 1);
 }
 

@@ -17082,3 +17082,54 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     explicit rooted-map method fallback, refreshed source locks, and updated
     queue bookkeeping. Broad release validation was skipped under the lite
     workflow.
+
+- [x] TODO-4445: Split remaining map lowerer cleanup
+  - owner: ai
+  - created_at: 2026-05-13
+  - finished_at: 2026-05-13
+  - phase: Map stdlib ownership cutover
+  - scope: Split the remaining lowerer/raw-path map compatibility cleanup into
+    closable leaves before implementation.
+  - acceptance:
+    - Lowerer helper path-candidate adapter deletion is tracked separately
+      from inline/native raw-path dispatch and internal lowering-name cleanup.
+    - Active queues contain only leaf work after the split.
+  - stop_rule: Stop once lowerer path-candidate adapter deletion and remaining
+    inline/native cleanup have separate TODO IDs with explicit finish lines.
+  - evidence: Split the broad TODO-4445 into completed TODO-4446 for lowerer
+    helper path-candidate adapters and active TODO-4447 for remaining
+    inline/native raw-path, rooted `/map/*`, internal lowering-name, semantic
+    helper rewrite, and generated-alias cleanup.
+
+- [x] TODO-4446: Delete map lowerer path-candidate adapters
+  - owner: ai
+  - created_at: 2026-05-13
+  - finished_at: 2026-05-13
+  - phase: Map stdlib ownership cutover
+  - split_from: TODO-4445
+  - scope: Remove lowerer helper path-candidate adapters that silently
+    switched between rooted `/map/*` and canonical `/std/collections/map/*`
+    paths during setup-type, method-target, and struct-return inference.
+  - implementation_notes:
+    - Target `IrLowererSetupTypeCollectionHelpers.cpp`,
+      `IrLowererSetupTypeMethodCallResolution.cpp`,
+      `IrLowererSetupTypeMethodTargetHelpers.cpp`,
+      `IrLowererSetupTypeStructPathHelpers.cpp`, and
+      `IrLowererStructReturnPathHelpers.cpp`.
+    - Preserve vector and SoA compatibility behavior; leave inline/native
+      dispatch, semantic helper rewrites, internal `mapCount`-style lowering
+      names, and generated-alias cleanup to TODO-4447.
+  - acceptance:
+    - `collectionHelperPathCandidates` no longer adds `/map/*` candidates for
+      canonical map helpers or canonical map candidates for rooted aliases.
+    - Struct-return and setup-type helpers no longer need special removed-map
+      pruning to undo generated map compatibility candidates.
+    - Focused tests lock that rooted map access aliases stay separated from
+      canonical return-kind and receiver-struct fallback.
+  - stop_rule: Stop once lowerer path-candidate map fallback logic is removed
+    and the remaining map production adapter work is tracked by TODO-4447.
+  - evidence: Removed map fallback branches from lowerer helper candidates,
+    method-target lookup, setup-type receiver resolution, setup-type struct
+    path resolution, and struct-return inference; refreshed source and
+    behavior locks; updated queue bookkeeping. Broad release validation was
+    skipped under the lite workflow.

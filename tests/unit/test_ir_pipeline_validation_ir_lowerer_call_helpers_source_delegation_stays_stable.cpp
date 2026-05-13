@@ -991,6 +991,8 @@ TEST_CASE("ir lowerer vector type layout traces use generic collection helpers")
       readText(lowererRoot / "IrLowererStructSlotLayoutHelpers.cpp");
   const std::string structReturnPathSource =
       readText(lowererRoot / "IrLowererStructReturnPathHelpers.cpp");
+  const std::string setupStructPathSource =
+      readText(lowererRoot / "IrLowererSetupTypeStructPathHelpers.cpp");
   const std::string methodTargetSource =
       readText(lowererRoot / "IrLowererSetupTypeMethodTargetHelpers.cpp");
   const std::string methodCallSource =
@@ -1039,6 +1041,24 @@ TEST_CASE("ir lowerer vector type layout traces use generic collection helpers")
         std::string::npos);
   CHECK(declaredCollectionSource.find(
             "collectionMemberPath(\"vector\", \"vector\", false)") !=
+        std::string::npos);
+  CHECK(setupCollectionSource.find(
+            "appendUnique(\"/std/collections/map/\" +") == std::string::npos);
+  CHECK(setupCollectionSource.find(
+            "appendUnique(\"/map/\" +") == std::string::npos);
+  CHECK(structReturnPathSource.find("isRemovedMapCompatibilityHelper") ==
+        std::string::npos);
+  CHECK(structReturnPathSource.find(
+            "const std::string mapAlias = \"/map/\" + suffix") ==
+        std::string::npos);
+  CHECK(setupStructPathSource.find("eraseCandidate(\"/std/collections/map/\" + suffix)") ==
+        std::string::npos);
+  CHECK(setupStructPathSource.find("eraseCandidate(\"/map/\" + suffix)") ==
+        std::string::npos);
+  CHECK(methodTargetSource.find(
+            "const std::string mapAlias = \"/map/\" + suffix") ==
+        std::string::npos);
+  CHECK(methodCallSource.find("pruneRemovedMapCompatibilityReceiverPaths") ==
         std::string::npos);
 
   checkNoDirectVectorSurfaceTrace(setupCollectionSource);
