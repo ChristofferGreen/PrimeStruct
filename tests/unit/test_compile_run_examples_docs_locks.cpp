@@ -1300,10 +1300,12 @@ TEST_CASE("status-only result bridge docs stay source locked") {
   CHECK(syntaxSpec.find("propagation remains a hybrid compiler/runtime bridge "
                         "until its migration TODO lands") ==
         std::string::npos);
-  CHECK(todo.find("SyntaxSpec now documents the landed IR-backed status-only\n"
-                  "      `try(...)`, postfix") != std::string::npos);
+  CHECK(todo.find("TODO-4313") == std::string::npos);
   CHECK(todoFinished.find("TODO-4313: Align status-only Result bridge docs") !=
         std::string::npos);
+  CHECK(todoFinished.find("Aligned SyntaxSpec with the status-only Result helper and\n"
+                          "    propagation support that already landed for "
+                          "IR-backed paths") != std::string::npos);
 }
 
 TEST_CASE("Result helper compatibility adapter inventory stays source locked") {
@@ -1354,6 +1356,7 @@ TEST_CASE("Result helper compatibility adapter inventory stays source locked") {
       "src/ir_lowerer/IrLowererStatementBindingStatementEmit.cpp",
       "src/semantics/SemanticsValidatorExprResultFile.cpp",
       "src/semantics/SemanticsValidatorExprSumConstructors.cpp",
+      "src/semantics/SemanticsValidatorResultHelpers.cpp",
       "src/semantics/SemanticsValidatorStatementReturns.cpp",
   };
   CHECK(productionFilesContainingAny(repoRoot,
