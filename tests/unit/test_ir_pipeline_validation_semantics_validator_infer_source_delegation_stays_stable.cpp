@@ -873,6 +873,15 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferPreDispatchCallsSource.find("std::function<ReturnKind(const Expr &)> pointerTargetKind =") !=
         std::string::npos);
+  CHECK(semanticsInferPreDispatchCallsSource.find(
+            "auto isRemovedMapCompatibilityHelper = [](std::string_view helperName) {") ==
+        std::string::npos);
+  CHECK(semanticsInferPreDispatchCallsSource.find("normalizedPath.rfind(\"map/\", 0) == 0") ==
+        std::string::npos);
+  CHECK(semanticsInferPreDispatchCallsSource.find("appendUnique(\"/std/collections/map/\" + suffix)") ==
+        std::string::npos);
+  CHECK(semanticsInferPreDispatchCallsSource.find("appendUnique(\"/map/\" + suffix)") ==
+        std::string::npos);
   CHECK(semanticsInferPreDispatchCallsSource.find("const std::string directRemovedMapCompatibilityPath =") !=
         std::string::npos);
   CHECK(semanticsInferPreDispatchCallsSource.find("if (getVectorStatementHelperName(expr, vectorHelper) && !expr.args.empty()) {") !=

@@ -51,16 +51,6 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
     (void)failExprDiagnostic(expr, std::move(message));
     return finish(ReturnKind::Unknown);
   };
-  auto isRemovedMapCompatibilityHelper = [](std::string_view helperName) {
-    return helperName == "count" || helperName == "count_ref" ||
-           helperName == "size" ||
-           helperName == "contains" || helperName == "contains_ref" ||
-           helperName == "tryAt" || helperName == "tryAt_ref" ||
-           helperName == "at" || helperName == "at_ref" ||
-           helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
-           helperName == "insert" || helperName == "insert_ref";
-  };
-
   Expr rewrittenCanonicalExperimentalVectorHelperCall;
   if (tryRewriteCanonicalExperimentalVectorHelperCall(
           expr,
@@ -203,7 +193,6 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
     if (!normalizedPath.empty() && normalizedPath.front() != '/') {
       if (normalizedPath.rfind("array/", 0) == 0 ||
           isUnrootedCanonicalVectorCompatibilityPath(normalizedPath) ||
-          normalizedPath.rfind("map/", 0) == 0 ||
           normalizedPath.rfind("std/collections/map/", 0) == 0) {
         normalizedPath.insert(normalizedPath.begin(), '/');
       }
@@ -223,18 +212,6 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
     } else if (isCanonicalVectorCompatibilityPath(normalizedPath)) {
       // Keep explicit canonical vector helper calls isolated so canonical
       // paths no longer fall back through array aliases.
-    } else if (normalizedPath.rfind("/map/", 0) == 0) {
-      const std::string suffix =
-          normalizedPath.substr(std::string("/map/").size());
-      if (!isRemovedMapCompatibilityHelper(suffix)) {
-        appendUnique("/std/collections/map/" + suffix);
-      }
-    } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
-      const std::string suffix = normalizedPath.substr(
-          std::string("/std/collections/map/").size());
-      if (suffix != "map" && !isRemovedMapCompatibilityHelper(suffix)) {
-        appendUnique("/map/" + suffix);
-      }
     }
     return candidates;
   };

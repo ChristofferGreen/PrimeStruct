@@ -361,7 +361,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map namespaced access alias chained method uses canonical helper definition") {
+TEST_CASE("map namespaced access alias rejects canonical struct-return forwarding") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -384,11 +384,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /Marker/tag parameter self") !=
+        std::string::npos);
+  CHECK(error.find("expected /Marker got i32") != std::string::npos);
 }
 
-TEST_CASE("map namespaced access alias chained method keeps downstream tag diagnostics") {
+TEST_CASE("map namespaced access alias reports current receiver diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -412,11 +414,12 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /Marker/tag parameter marker") !=
+  CHECK(error.find("argument type mismatch for /Marker/tag parameter self") !=
         std::string::npos);
+  CHECK(error.find("expected /Marker got i32") != std::string::npos);
 }
 
-TEST_CASE("map namespaced unsafe access alias chained method uses canonical helper definition") {
+TEST_CASE("map namespaced unsafe access alias rejects canonical struct-return forwarding") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -439,11 +442,13 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /Marker/tag parameter self") !=
+        std::string::npos);
+  CHECK(error.find("expected /Marker got i32") != std::string::npos);
 }
 
-TEST_CASE("map namespaced unsafe access alias chained method keeps downstream tag diagnostics") {
+TEST_CASE("map namespaced unsafe access alias reports current receiver diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value

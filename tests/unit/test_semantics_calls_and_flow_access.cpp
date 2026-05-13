@@ -337,6 +337,50 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("map pre-dispatch inference keeps rooted and canonical helper paths isolated") {
+  const std::string canonicalSource = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/map/custom([map<i32, i32>] values) {
+  return(Marker(7i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] items{map<i32, i32>(1i32, 2i32)}
+  [auto] marker{/std/collections/map/custom(items)}
+  return(marker.value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(canonicalSource, "/main", error));
+  CHECK(error.empty());
+
+  const std::string rootedSource = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/std/collections/map/custom([map<i32, i32>] values) {
+  return(Marker(7i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] items{map<i32, i32>(1i32, 2i32)}
+  [auto] marker{/map/custom(items)}
+  return(marker.value)
+}
+)";
+  error.clear();
+  CHECK_FALSE(validateProgram(rootedSource, "/main", error));
+  CHECK(error.find("unknown call target: /map/custom") != std::string::npos);
+}
+
 TEST_CASE("vector method calls resolve to definitions") {
   const std::string source = R"(
 import /std/collections/*

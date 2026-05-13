@@ -3811,7 +3811,7 @@ re-defining it piecemeal.
   validation. Old rooted map helper aliases, `mapCount`-style wrapper
   spellings, and experimental map helper spellings are also absent from that
   metadata; direct experimental map imports and public `mapCount`-style
-  wrapper bridges are rejected or retired, and TODO-4453 deletes the remaining
+  wrapper bridges are rejected or retired, and TODO-4455 deletes the remaining
   production C++ adapter-level map compatibility seams.
 - **Migration-only seams:** rooted `/map/*` spellings plus
   internal `mapCount`-style lowering names remain temporary compatibility
@@ -3824,15 +3824,16 @@ re-defining it piecemeal.
   stdlib-owned, and the surface manifest no longer advertises map compatibility
   spellings.
   Direct experimental map source imports are also rejected, and public
-  `mapCount`-style wrapper bridges are retired; TODO-4453 owns the remaining
+  `mapCount`-style wrapper bridges are retired; TODO-4455 owns the remaining
   production C++ adapter-level map seam deletion.
 - **Compatibility adapter inventory:** map insert helper compatibility no
   longer lives in the central surface manifest; the `CollectionsMapHelpers`
   registry metadata now classifies only canonical `/std/collections/map/*`
   helpers. Definition/execution intra-body diagnostics no longer carry special
-  removed-map helper classification branches; remaining map compatibility
-  behavior is limited to follow-up-owned inline/native and semantic adapters
-  until TODO-4453 removes them. Template monomorphization still
+  removed-map helper classification branches, and semantic pre-dispatch helper
+  path candidates no longer mirror rooted and canonical map helpers. Remaining
+  map compatibility behavior is limited to follow-up-owned inline/native and
+  semantic adapters until TODO-4455 removes them. Template monomorphization still
   asks the registry for preferred experimental vector/SoA helper spellings
   instead of carrying bespoke canonical-to-experimental helper maps. SoA helper
   compatibility is routed through

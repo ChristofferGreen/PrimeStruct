@@ -17289,3 +17289,56 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     `/map/` exact-family checks from definition and execution intra-body
     diagnostics, kept non-map namespaced helper classification intact, added
     source-lock coverage, and refreshed active queue bookkeeping.
+
+- [x] TODO-4453: Split remaining map raw/lowering adapters
+  - owner: ai
+  - created_at: 2026-05-13
+  - finished_at: 2026-05-13
+  - phase: Map stdlib ownership cutover
+  - split_from: TODO-4451
+  - scope: Split the remaining semantic helper rewrite, semantic
+    pre-dispatch, inline/native raw-path, and internal lowering-name cleanup
+    into closable leaves before implementation.
+  - acceptance:
+    - Semantic pre-dispatch map path-candidate adapter deletion is tracked
+      separately from remaining raw dispatch and lowering-name cleanup.
+    - Active queues contain only leaf work after the split.
+  - stop_rule: Stop once semantic pre-dispatch path-candidate deletion and
+    remaining production raw/lowering cleanup have separate TODO IDs with
+    explicit finish lines.
+  - evidence: Split the broad TODO-4453 into completed TODO-4454 for semantic
+    pre-dispatch map path-candidate adapters and active TODO-4455 for
+    remaining semantic rewrites, inline/native raw-path checks, and internal
+    lowering-name cleanup.
+
+- [x] TODO-4454: Delete semantic pre-dispatch map candidates
+  - owner: ai
+  - created_at: 2026-05-13
+  - finished_at: 2026-05-13
+  - phase: Map stdlib ownership cutover
+  - split_from: TODO-4453
+  - scope: Remove semantic pre-dispatch call inference path candidates that
+    mirrored rooted `/map/*` helper paths to canonical
+    `/std/collections/map/*` paths, or mirrored canonical helper paths back to
+    rooted map aliases.
+  - implementation_notes:
+    - Target `SemanticsValidatorInferPreDispatchCalls.cpp` and semantic
+      source-lock coverage.
+    - Preserve vector compatibility behavior and exact canonical
+      `/std/collections/map/*` helper probing; leave remaining raw-path and
+      lowering-name cleanup to TODO-4455.
+  - acceptance:
+    - `inferPreDispatchCallReturnKind(...)` no longer adds rooted map aliases
+      for canonical map helpers or canonical map helpers for rooted aliases.
+    - Exact canonical `/std/collections/map/*` helper calls continue to infer
+      struct-return values, while rooted `/map/*` helper calls no longer borrow
+      canonical pre-dispatch return metadata.
+    - Source-lock coverage rejects reintroducing the semantic pre-dispatch map
+      candidate adapter.
+  - stop_rule: Stop once semantic pre-dispatch inference considers only the
+    call path itself, its normalized canonical spelling, and existing vector
+    compatibility candidates.
+  - evidence: Removed rooted/canonical map helper mirroring from semantic
+    pre-dispatch inference, added behavior coverage for canonical-only
+    struct-return helpers versus rooted aliases, added source-lock coverage,
+    and refreshed active queue bookkeeping.

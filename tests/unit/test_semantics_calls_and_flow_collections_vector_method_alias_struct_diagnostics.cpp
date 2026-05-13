@@ -210,7 +210,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map method access prefers canonical struct-return over alias helper") {
+TEST_CASE("map method access keeps alias struct-return isolated from canonical helper") {
   const std::string source = R"(
 CanonicalMarker {
   [i32] value
@@ -247,8 +247,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /AliasMarker/tag") != std::string::npos);
 }
 
 TEST_CASE("map method access reports canonical builtin result type over alias helper") {
