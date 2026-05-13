@@ -628,12 +628,65 @@
                  structPath == vectorTypePath ||
                  structPath.rfind(vectorTypePath + "__", 0) == 0;
         };
+        auto publishedMapAccessHelperReturnsString =
+            [&](std::string_view helperName) {
+          if (semanticProgram == nullptr ||
+              (helperName != "at" && helperName != "at_unsafe")) {
+            return false;
+          }
+          const std::string helperPath =
+              "/std/collections/map/" + std::string(helperName);
+          const auto helperPathId =
+              semanticProgramLookupCallTargetStringId(*semanticProgram, helperPath);
+          if (!helperPathId.has_value()) {
+            return false;
+          }
+          const SemanticProgramReturnFact *returnFact =
+              semanticProgramLookupPublishedReturnFactByDefinitionPathId(
+                  *semanticProgram, *helperPathId);
+          if (returnFact == nullptr) {
+            return false;
+          }
+          auto resolveReturnTypeText = [&](const std::string &text,
+                                           SymbolId textId) {
+            if (textId != InvalidSymbolId) {
+              const std::string_view resolved =
+                  semanticProgramResolveCallTargetString(*semanticProgram,
+                                                         textId);
+              if (!resolved.empty()) {
+                return ir_lowerer::trimTemplateTypeText(std::string(resolved));
+              }
+            }
+            return ir_lowerer::trimTemplateTypeText(text);
+          };
+          const std::string structPath =
+              resolveReturnTypeText(returnFact->structPath,
+                                    returnFact->structPathId);
+          const std::string bindingType =
+              resolveReturnTypeText(returnFact->bindingTypeText,
+                                    returnFact->bindingTypeTextId);
+          return structPath == "string" || structPath == "/string" ||
+                 bindingType == "string" || bindingType == "/string";
+        };
+        auto hasExplicitStdMapHelperSpelling = [](const Expr &callExpr) {
+          auto hasStdMapPrefix = [](std::string_view text) {
+            return text.rfind("/std/collections/map/", 0) == 0 ||
+                   text.rfind("std/collections/map/", 0) == 0;
+          };
+          return hasStdMapPrefix(callExpr.name) ||
+                 hasStdMapPrefix(callExpr.namespacePrefix);
+        };
         auto rewriteExplicitMapHelperBuiltinExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
           std::string helperName;
           if (!resolveBuiltinMapHelperName(callExpr, false, helperName) ||
               (helperName != "count" && helperName != "contains" &&
                helperName != "tryAt" && helperName != "at" &&
                helperName != "at_unsafe")) {
+            return false;
+          }
+          if (callExpr.sourceIsMethodCall &&
+              !hasExplicitStdMapHelperSpelling(callExpr) &&
+              publishedMapAccessHelperReturnsString(helperName)) {
             return false;
           }
           const SemanticProductIndex explicitMapHelperSemanticIndex =
@@ -662,9 +715,15 @@
                ir_lowerer::isCanonicalPublishedStdlibSurfaceHelperPath(
                    resolveExprPath(callExpr),
                    primec::StdlibSurfaceId::CollectionsMapHelpers));
+          const bool explicitCanonicalDirectMapAccess =
+              !callExpr.isMethodCall &&
+              hasExplicitStdMapHelperSpelling(callExpr) &&
+              (helperName == "at" || helperName == "at_unsafe");
           const bool preserveCanonicalStdMapHelperPath =
               isCanonicalStdMapHelperPath &&
-              (!mapTargetInfo.isMapTarget || mapTargetInfo.isWrappedMapTarget);
+              (!mapTargetInfo.isMapTarget ||
+               (mapTargetInfo.isWrappedMapTarget &&
+                !explicitCanonicalDirectMapAccess));
           if (preserveCanonicalStdMapHelperPath) {
             // Keep canonical stdlib helper calls intact so direct overrides on
             // /std/collections/map/* are honored.

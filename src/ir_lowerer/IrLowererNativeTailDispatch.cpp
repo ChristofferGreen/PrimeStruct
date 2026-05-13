@@ -8,6 +8,7 @@
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
+#include <algorithm>
 #include <optional>
 #include <string_view>
 #include <utility>
@@ -223,7 +224,90 @@ bool semanticMapAccessHelperKeepsBuiltinReturn(
     return true;
   }
   return structPath == "map" || structPath == "vector" ||
-         structPath == "array" || structPath == "string";
+         structPath == "array";
+}
+
+const SemanticProgramQueryFact *findSourceMapAccessAliasQueryFact(
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex,
+    const Expr &expr) {
+  if (semanticProgram == nullptr) {
+    return nullptr;
+  }
+  if (semanticIndex != nullptr) {
+    if (const auto *queryFact =
+            findSemanticProductQueryFact(semanticProgram, *semanticIndex, expr);
+        queryFact != nullptr) {
+      return queryFact;
+    }
+  }
+  std::vector<std::pair<int, int>> sourcePositions;
+  if (expr.sourceLine != 0 && expr.sourceColumn != 0) {
+    sourcePositions.emplace_back(expr.sourceLine, expr.sourceColumn);
+  }
+  if (!expr.args.empty() && expr.args.front().sourceLine != 0 &&
+      expr.args.front().sourceColumn != 0) {
+    sourcePositions.emplace_back(expr.args.front().sourceLine,
+                                 expr.args.front().sourceColumn);
+  }
+  for (const auto &queryFact : semanticProgram->queryFacts) {
+    const bool sameSourcePosition =
+        std::any_of(sourcePositions.begin(), sourcePositions.end(),
+                    [&](const auto &sourcePosition) {
+                      return queryFact.sourceLine == sourcePosition.first &&
+                             queryFact.sourceColumn == sourcePosition.second;
+                    });
+    if (!sameSourcePosition) {
+      continue;
+    }
+    const std::string_view callName =
+        queryFact.callNameId != InvalidSymbolId
+            ? semanticProgramResolveCallTargetString(*semanticProgram,
+                                                     queryFact.callNameId)
+            : std::string_view(queryFact.callName);
+    if (callName == expr.name ||
+        (!expr.sourceName.empty() && callName == expr.sourceName)) {
+      return &queryFact;
+    }
+  }
+  return nullptr;
+}
+
+bool isStringReturningMapAccessAlias(
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex,
+    const Expr &expr) {
+  const auto *queryFact =
+      findSourceMapAccessAliasQueryFact(semanticProgram, semanticIndex, expr);
+  if (queryFact == nullptr || queryFact->resolvedPathId == InvalidSymbolId) {
+    return false;
+  }
+  const std::string resolvedPath =
+      std::string(semanticProgramResolveCallTargetString(
+          *semanticProgram, queryFact->resolvedPathId));
+  if (resolvedPath != "/at" && resolvedPath != "/at_unsafe") {
+    return false;
+  }
+  const std::string queryType = trimTemplateTypeText(std::string(
+      queryFact->queryTypeTextId != InvalidSymbolId
+          ? semanticProgramResolveCallTargetString(*semanticProgram,
+                                                   queryFact->queryTypeTextId)
+          : std::string_view(queryFact->queryTypeText)));
+  const std::string bindingType = trimTemplateTypeText(std::string(
+      queryFact->bindingTypeTextId != InvalidSymbolId
+          ? semanticProgramResolveCallTargetString(*semanticProgram,
+                                                   queryFact->bindingTypeTextId)
+          : std::string_view(queryFact->bindingTypeText)));
+  return queryType == "string" || queryType == "/string" ||
+         bindingType == "string" || bindingType == "/string";
+}
+
+bool hasExplicitStdMapSourceSpelling(const Expr &expr) {
+  const auto hasStdMapPrefix = [](std::string_view text) {
+    return text.rfind("/std/collections/map/", 0) == 0 ||
+           text.rfind("std/collections/map/", 0) == 0;
+  };
+  return hasStdMapPrefix(expr.name) || hasStdMapPrefix(expr.namespacePrefix);
 }
 
 } // namespace
@@ -530,6 +614,21 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     return NativeCallTailDispatchResult::Error;
   }
 
+  if (expr.args.size() == 1 &&
+      (count_access_detail::isVectorBuiltinName(expr, "count") ||
+       count_access_detail::isMapBuiltinName(expr, "count") ||
+       isSimpleCallName(expr, "count") ||
+       resolveNativeTailCallPathWithoutFallbackProbes(expr) == "/string/count")) {
+    const Expr &target = expr.args.front();
+    std::string accessName;
+    if (target.kind == Expr::Kind::Call && target.sourceIsMethodCall &&
+        target.args.size() == 2 &&
+        getBuiltinArrayAccessName(target, accessName) &&
+        accessName == "at_unsafe") {
+      return NativeCallTailDispatchResult::NotHandled;
+    }
+  }
+
   if (expr.isMethodCall && expr.name == "contains") {
     if (expr.args.size() != 2) {
       error = "contains requires exactly two arguments";
@@ -827,6 +926,19 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       if (mapTargetInfo.isMapTarget) {
         error = "unknown call target: /std/collections/map/" + accessName;
         return NativeCallTailDispatchResult::Error;
+      }
+    }
+    if (!expr.isMethodCall && !expr.args.empty()) {
+      const auto mapTargetInfo = resolveMapAccessTargetInfo(
+          expr.args.front(), localsIn, resolveCallMapAccessTargetInfo);
+      if (mapTargetInfo.isMapTarget &&
+          (isStringReturningMapAccessAlias(
+               semanticProgram, semanticIndexPtr, expr) ||
+           (expr.name.find('/') == std::string::npos &&
+            !hasExplicitStdMapSourceSpelling(expr) &&
+            !semanticMapAccessHelperKeepsBuiltinReturn(
+                semanticProgram, "/std/collections/map/" + accessName)))) {
+        return NativeCallTailDispatchResult::NotHandled;
       }
     }
     if (!emitBuiltinArrayAccess(accessName,

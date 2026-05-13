@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 
+#include <algorithm>
 #include <array>
 #include <cctype>
 #include <functional>
@@ -668,6 +669,50 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
         }
       }
     }
+    auto inferNonTemplateDefinitionReturnType =
+        [&](const std::string &candidatePath,
+            std::string &typeTextOut) -> bool {
+      typeTextOut.clear();
+      const Definition *definition = nullptr;
+      auto defIt = defMap_.find(candidatePath);
+      if (defIt != defMap_.end() && defIt->second != nullptr) {
+        definition = defIt->second;
+      } else {
+        for (const Definition &candidateDefinition : program_.definitions) {
+          if (candidateDefinition.fullPath != candidatePath &&
+              candidateDefinition.fullPath.rfind(candidatePath + "__", 0) != 0 &&
+              candidateDefinition.fullPath.rfind(candidatePath + "<", 0) != 0) {
+            continue;
+          }
+          definition = &candidateDefinition;
+          break;
+        }
+      }
+      if (definition == nullptr) {
+        return false;
+      }
+      for (const auto &transform : definition->transforms) {
+        if (transform.name != "return" || transform.templateArgs.size() != 1 ||
+            transform.templateArgs.front() == "auto") {
+          continue;
+        }
+        const std::string normalizedReturnType =
+            normalizeBindingTypeName(transform.templateArgs.front());
+        const bool returnsTemplateParameter =
+            std::any_of(definition->templateArgs.begin(),
+                        definition->templateArgs.end(),
+                        [&](const std::string &templateArg) {
+          return normalizeBindingTypeName(templateArg) == normalizedReturnType;
+        });
+        if (returnsTemplateParameter) {
+          return false;
+        }
+        typeTextOut = transform.templateArgs.front();
+        return !typeTextOut.empty();
+      }
+      return false;
+    };
+
     std::string builtinAccessName;
     if (getBuiltinArrayAccessName(candidate, builtinAccessName) && candidate.args.size() == 2) {
       std::string normalizedAccessName = candidate.name;
@@ -686,6 +731,22 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       std::string elemType;
       std::string keyType;
       std::string valueType;
+      if (candidate.isMethodCall && !isExplicitAccessAlias &&
+          (builtinAccessName == "at" || builtinAccessName == "at_unsafe")) {
+        std::string resolvedMethodTarget;
+        bool isBuiltinMethod = false;
+        if (resolveMethodTarget(params, locals, candidate.namespacePrefix,
+                                receiver, candidate.name,
+                                resolvedMethodTarget, isBuiltinMethod) &&
+            resolvedMethodTarget.rfind("/std/collections/vector/", 0) == 0) {
+          std::string declaredReturnType;
+          if (inferNonTemplateDefinitionReturnType(resolvedMethodTarget,
+                                                   declaredReturnType)) {
+            currentTypeTextOut = declaredReturnType;
+            return true;
+          }
+        }
+      }
       if (builtinCollectionDispatchResolvers.resolveVectorTarget(receiver, elemType) ||
           builtinCollectionDispatchResolvers.resolveArgsPackAccessTarget(receiver, elemType) ||
           builtinCollectionDispatchResolvers.resolveArrayTarget(receiver, elemType) ||
@@ -717,6 +778,16 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       }
       if (!isExplicitAccessAlias &&
           builtinCollectionDispatchResolvers.resolveMapTarget(receiver, keyType, valueType)) {
+        if (!candidate.isMethodCall &&
+            (builtinAccessName == "at" || builtinAccessName == "at_unsafe")) {
+          std::string declaredReturnType;
+          if (inferNonTemplateDefinitionReturnType(
+                  "/std/collections/map/" + builtinAccessName,
+                  declaredReturnType)) {
+            currentTypeTextOut = declaredReturnType;
+            return true;
+          }
+        }
         currentTypeTextOut = normalizeBindingTypeName(valueType);
         return !currentTypeTextOut.empty();
       }

@@ -88,6 +88,18 @@ bool extractBuiltinSoaVectorElementTypeFromTypeText(const std::string &typeText,
   }
 }
 
+bool definitionReturnTypeTextForArgumentValidation(const Definition &definition,
+                                                   std::string &typeTextOut) {
+  typeTextOut.clear();
+  for (const auto &transform : definition.transforms) {
+    if (transform.name == "return" && transform.templateArgs.size() == 1) {
+      typeTextOut = transform.templateArgs.front();
+      return true;
+    }
+  }
+  return false;
+}
+
 } // namespace
 
 bool SemanticsValidator::isBuiltinCollectionLiteralExpr(const Expr &candidate) const {
@@ -112,17 +124,6 @@ bool SemanticsValidator::isStringExprForArgumentValidation(
     const std::string resolvedPath = resolveCalleePath(arg);
     const std::string resolvedBasePath = stripGeneratedHelperSuffix(resolvedPath);
     auto methodMapAccessDefinitionReturnsString = [&]() {
-      auto definitionReturnTypeText = [](const Definition &definition,
-                                         std::string &typeTextOut) {
-        typeTextOut.clear();
-        for (const auto &transform : definition.transforms) {
-          if (transform.name == "return" && transform.templateArgs.size() == 1) {
-            typeTextOut = transform.templateArgs.front();
-            return true;
-          }
-        }
-        return false;
-      };
       if (arg.args.size() != 2) {
         return false;
       }
@@ -151,7 +152,8 @@ bool SemanticsValidator::isStringExprForArgumentValidation(
         auto receiverDefIt = defMap_.find(receiverPath);
         if (receiverDefIt != defMap_.end() && receiverDefIt->second != nullptr) {
           std::string receiverReturnType;
-          if (definitionReturnTypeText(*receiverDefIt->second, receiverReturnType)) {
+          if (definitionReturnTypeTextForArgumentValidation(*receiverDefIt->second,
+                                                            receiverReturnType)) {
             receiverIsMap =
                 extractMapKeyValueTypesFromTypeText(receiverReturnType, keyType, valueType);
           }
@@ -174,10 +176,43 @@ bool SemanticsValidator::isStringExprForArgumentValidation(
         return false;
       }
       std::string returnTypeText;
-      return definitionReturnTypeText(*defIt->second, returnTypeText) &&
+      return definitionReturnTypeTextForArgumentValidation(*defIt->second, returnTypeText) &&
              normalizeBindingTypeName(returnTypeText) == "string";
     };
     if (methodMapAccessDefinitionReturnsString()) {
+      return true;
+    }
+    auto methodVectorAccessDefinitionReturnsString = [&]() {
+      if (arg.args.size() != 2) {
+        return false;
+      }
+      std::string helperName = arg.name;
+      if (!helperName.empty() && helperName.front() == '/') {
+        helperName.erase(helperName.begin());
+      }
+      const size_t helperLeaf = helperName.find_last_of('/');
+      if (helperLeaf != std::string::npos) {
+        helperName = helperName.substr(helperLeaf + 1);
+      }
+      helperName = stripGeneratedHelperSuffix(std::move(helperName));
+      if (helperName != "at_unsafe") {
+        return false;
+      }
+      std::string elemType;
+      if (dispatchResolvers.resolveVectorTarget == nullptr ||
+          !dispatchResolvers.resolveVectorTarget(arg.args.front(), elemType)) {
+        return false;
+      }
+      auto defIt = defMap_.find("/std/collections/vector/at_unsafe");
+      if (defIt == defMap_.end()) {
+        return false;
+      }
+      std::string returnTypeText;
+      return defIt->second != nullptr &&
+             definitionReturnTypeTextForArgumentValidation(*defIt->second, returnTypeText) &&
+             normalizeBindingTypeName(returnTypeText) == "string";
+    };
+    if (methodVectorAccessDefinitionReturnsString()) {
       return true;
     }
     const bool isExplicitMapAccessPath =
