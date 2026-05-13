@@ -966,6 +966,34 @@ void applyDirectResultValueMetadata(const Expr &valueExpr,
       out.valueStructType.clear();
       return;
     }
+    if (auto localIt = localsIn.find(valueExpr.name);
+        localIt != localsIn.end()) {
+      const LocalInfo &localInfo = localIt->second;
+      if (isSupportedPackedResultCollectionKind(localInfo.kind)) {
+        out.valueCollectionKind = localInfo.kind;
+        out.valueKind = localInfo.valueKind;
+        out.valueMapKeyKind = localInfo.mapKeyKind;
+        out.valueStructType.clear();
+        out.valueIsFileHandle = false;
+        return;
+      }
+      if (!localInfo.structTypeName.empty()) {
+        out.valueCollectionKind = LocalInfo::Kind::Value;
+        out.valueKind = LocalInfo::ValueKind::Unknown;
+        out.valueMapKeyKind = LocalInfo::ValueKind::Unknown;
+        out.valueStructType = localInfo.structTypeName;
+        out.valueIsFileHandle = false;
+        return;
+      }
+      if (localInfo.valueKind != LocalInfo::ValueKind::Unknown) {
+        out.valueCollectionKind = LocalInfo::Kind::Value;
+        out.valueKind = localInfo.valueKind;
+        out.valueMapKeyKind = LocalInfo::ValueKind::Unknown;
+        out.valueStructType.clear();
+        out.valueIsFileHandle = false;
+        return;
+      }
+    }
     return;
   }
   if (valueExpr.kind == Expr::Kind::Name) {
