@@ -1686,8 +1686,7 @@ bool rewriteExpr(Expr &expr,
       return false;
     }
     if (!expr.templateArgs.empty() && !resolvedWasTemplate) {
-      if (!shouldPreserveCompatibilityTemplatePath(resolvedPath, ctx) &&
-          !shouldPreserveCanonicalMapTemplatePath(resolvedPath, ctx)) {
+      if (!shouldPreserveCompatibilityTemplatePath(resolvedPath, ctx)) {
         const std::string templatePreferredPath = preferVectorStdlibTemplatePath(resolvedPath, ctx);
         if (templatePreferredPath != resolvedPath) {
           resolvedPath = templatePreferredPath;
@@ -2022,8 +2021,7 @@ bool rewriteExpr(Expr &expr,
       }
       const bool methodWasTemplate = ctx.templateDefs.count(methodPath) > 0;
       if (!expr.templateArgs.empty() && !methodWasTemplate) {
-        if (!shouldPreserveCompatibilityTemplatePath(methodPath, ctx) &&
-            !shouldPreserveCanonicalMapTemplatePath(methodPath, ctx)) {
+        if (!shouldPreserveCompatibilityTemplatePath(methodPath, ctx)) {
           methodPath = preferVectorStdlibTemplatePath(methodPath, ctx);
         }
       }

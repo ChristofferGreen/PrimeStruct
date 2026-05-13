@@ -17031,3 +17031,54 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     normalization and IR lowerer map builtin matching, added diagnostic
     coverage for original unknown targets, added source locks for the deleted
     lowerer matchers, and refreshed active TODO bookkeeping.
+
+- [x] TODO-4443: Split remaining map production adapter cleanup
+  - owner: ai
+  - created_at: 2026-05-13
+  - finished_at: 2026-05-13
+  - phase: Map stdlib ownership cutover
+  - scope: Split the former remaining production C++ map compatibility cleanup
+    into closable leaves before implementation.
+  - acceptance:
+    - Template-monomorph path adapter deletion is tracked separately from
+      remaining lowerer raw-path and internal lowering-name adapter cleanup.
+    - Active queues contain only leaf work after the split.
+  - stop_rule: Stop once template-monomorph path adapter deletion and remaining
+    production cleanup have separate TODO IDs with explicit finish lines.
+  - evidence: Split the broad TODO-4443 into completed TODO-4444 for
+    template-monomorph map path adapters and active TODO-4445 for remaining
+    lowerer raw-path, rooted `/map/*`, internal lowering-name, and
+    generated-alias cleanup.
+
+- [x] TODO-4444: Delete map template-monomorph path adapters
+  - owner: ai
+  - created_at: 2026-05-13
+  - finished_at: 2026-05-13
+  - phase: Map stdlib ownership cutover
+  - split_from: TODO-4443
+  - scope: Remove template-monomorph compatibility paths that silently
+    switched between rooted `/map/*` and canonical `/std/collections/map/*`
+    helpers during helper path and template path selection.
+  - implementation_notes:
+    - Target `TemplateMonomorphCollectionCompatibilityPaths.h`,
+      `TemplateMonomorphExpressionRewrite.h`,
+      `TemplateMonomorphFallbackTypeInference.h`, and
+      `TemplateMonomorphMethodTargets.h`.
+    - Preserve vector and SoA compatibility behavior; leave lowerer raw-path
+      dispatch, internal `mapCount`-style lowering names, and generated-alias
+      cleanup to TODO-4445.
+  - acceptance:
+    - Template-monomorph helper/template path selection no longer maps
+      `/map/*` to `/std/collections/map/*` or the reverse.
+    - Explicit template handling no longer preserves canonical map helper
+      paths because a rooted `/map/*` helper happens to exist.
+    - Source-lock coverage records that the map template fallback adapters
+      are gone while vector/SoA compatibility path handling remains.
+  - stop_rule: Stop once template-monomorph map fallback/preservation logic is
+    removed and the remaining map production adapter work is tracked by
+    TODO-4445.
+  - evidence: Removed map fallback branches from helper/template path
+    preference, deleted canonical-map template preservation, removed the
+    explicit rooted-map method fallback, refreshed source locks, and updated
+    queue bookkeeping. Broad release validation was skipped under the lite
+    workflow.

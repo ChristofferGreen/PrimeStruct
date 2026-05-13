@@ -683,19 +683,18 @@ std::string preferVectorStdlibImplicitTemplatePath(const Expr &expr,
     return path;
   }
   const bool preserveCompatibilityTemplatePath = isCollectionCompatibilityTemplateFallbackPath(path);
-  const bool preserveCanonicalMapTemplatePath = shouldPreserveCanonicalMapTemplatePath(path, ctx);
   const bool acceptsCallShape = definitionAcceptsCallShape(defIt->second, expr);
-  if (!acceptsCallShape && (preserveCompatibilityTemplatePath || preserveCanonicalMapTemplatePath) &&
+  if (!acceptsCallShape && preserveCompatibilityTemplatePath &&
       (hasNamedCallArguments(expr) || definitionHasArgumentCountMismatch(defIt->second, expr))) {
-    // Keep diagnostics on explicit compatibility helpers and canonical map
-    // helpers when named arguments or argument counts do not match.
+    // Keep diagnostics on explicit compatibility helpers when named arguments
+    // or argument counts do not match.
     return path;
   }
   const bool prefersTypeMismatchFallback = shouldPreferTemplatedVectorFallbackForTypeMismatch(
       defIt->second, expr, locals, params, allowMathBare, ctx, namespacePrefix);
-  if ((preserveCompatibilityTemplatePath || preserveCanonicalMapTemplatePath) && prefersTypeMismatchFallback) {
-    // Keep diagnostics on explicit compatibility helpers and canonical map
-    // helpers when argument types mismatch the declared helper shape.
+  if (preserveCompatibilityTemplatePath && prefersTypeMismatchFallback) {
+    // Keep diagnostics on explicit compatibility helpers when argument types
+    // mismatch the declared helper shape.
     return path;
   }
   const std::string preferred = preferVectorStdlibTemplatePath(path, ctx);

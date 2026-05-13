@@ -104,25 +104,6 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
       }
     }
   }
-  if (preferred.rfind("/map/", 0) == 0 && defs.count(preferred) == 0) {
-    const std::string suffix = preferred.substr(std::string("/map/").size());
-    if (!isRemovedMapCompatibilityHelper(mapCompatibilityHelperBase(suffix))) {
-      const std::string stdlibAlias = "/std/collections/map/" + suffix;
-      if (defs.count(stdlibAlias) > 0) {
-        preferred = stdlibAlias;
-      }
-    }
-  }
-  if (preferred.rfind("/std/collections/map/", 0) == 0 && defs.count(preferred) == 0) {
-    const std::string suffix = preferred.substr(std::string("/std/collections/map/").size());
-    const std::string_view helperBase = mapCompatibilityHelperBase(suffix);
-    if (helperBase != "map" && !isRemovedMapCompatibilityHelper(helperBase)) {
-      const std::string mapAlias = "/map/" + suffix;
-      if (defs.count(mapAlias) > 0) {
-        preferred = mapAlias;
-      }
-    }
-  }
   return preferred;
 }
 
@@ -153,25 +134,6 @@ std::string preferVectorStdlibTemplatePath(const std::string &path, const Contex
       }
     }
     return path;
-  }
-  if (path.rfind("/map/", 0) == 0) {
-    const std::string suffix = path.substr(std::string("/map/").size());
-    if (!isRemovedMapCompatibilityHelper(mapCompatibilityHelperBase(suffix))) {
-      const std::string stdlibPath = "/std/collections/map/" + suffix;
-      if (ctx.sourceDefs.count(stdlibPath) > 0 && ctx.templateDefs.count(stdlibPath) > 0) {
-        return stdlibPath;
-      }
-    }
-  }
-  if (path.rfind("/std/collections/map/", 0) == 0) {
-    const std::string suffix = path.substr(std::string("/std/collections/map/").size());
-    const std::string_view helperBase = mapCompatibilityHelperBase(suffix);
-    if (helperBase != "map" && !isRemovedMapCompatibilityHelper(helperBase)) {
-      const std::string mapPath = "/map/" + suffix;
-      if (ctx.sourceDefs.count(mapPath) > 0 && ctx.templateDefs.count(mapPath) > 0) {
-        return mapPath;
-      }
-    }
   }
   return path;
 }
@@ -223,43 +185,24 @@ bool hasNamedCallArguments(const Expr &expr) {
 }
 
 bool isCollectionCompatibilityTemplateFallbackPath(const std::string &path) {
-  return path == "/map/map" || path == "/map/count" || path == "/map/at" ||
-         path == "/map/at_unsafe";
+  (void)path;
+  return false;
 }
 
 bool isExplicitCollectionCompatibilityAliasPath(std::string path) {
   if (path.empty()) {
     return false;
   }
-  if (path.front() != '/' &&
-      (path.rfind("array/", 0) == 0 || path.rfind("map/", 0) == 0)) {
+  if (path.front() != '/' && path.rfind("array/", 0) == 0) {
     path.insert(path.begin(), '/');
   }
-  return isCollectionCompatibilityTemplateFallbackPath(path) || path == "/array/count" ||
-         path == "/array/capacity" || path == "/array/at" || path == "/array/at_unsafe";
+  return path == "/array/count" || path == "/array/capacity" ||
+         path == "/array/at" || path == "/array/at_unsafe";
 }
 
 bool shouldPreserveCompatibilityTemplatePath(const std::string &path, const Context &ctx) {
   return isCollectionCompatibilityTemplateFallbackPath(path) && ctx.sourceDefs.count(path) > 0 &&
          ctx.templateDefs.count(path) == 0;
-}
-
-bool shouldPreserveCanonicalMapTemplatePath(const std::string &path, const Context &ctx) {
-  constexpr std::string_view canonicalMapPrefix = "/std/collections/map/";
-  if (path.rfind(canonicalMapPrefix, 0) != 0) {
-    return false;
-  }
-  if (ctx.sourceDefs.count(path) == 0 || ctx.templateDefs.count(path) > 0) {
-    return false;
-  }
-  const std::string helper = path.substr(canonicalMapPrefix.size());
-  const std::string_view helperBase = mapCompatibilityHelperBase(helper);
-  if (helperBase != "map" && helperBase != "count" &&
-      helperBase != "at" && helperBase != "at_unsafe") {
-    return false;
-  }
-  const std::string compatibilityPath = "/map/" + std::string(helperBase);
-  return ctx.sourceDefs.count(compatibilityPath) > 0;
 }
 
 std::string normalizeCollectionReceiverTypeName(std::string value) {

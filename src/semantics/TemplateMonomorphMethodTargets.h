@@ -596,17 +596,6 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   }
   const std::string samePathMethodTarget = resolvedType + "/" + normalizedMethodName;
   const std::string receiverHelperLeaf = receiverHelperFamilyLeaf(resolvedType);
-  if (!expr.templateArgs.empty() && receiverHelperLeaf == "map") {
-    const std::string rootedHelperTarget = "/map/" + normalizedMethodName;
-    if (samePathMethodTarget != rootedHelperTarget &&
-        hasDefinitionFamilyPath(rootedHelperTarget) &&
-        ctx.templateDefs.count(rootedHelperTarget) == 0 &&
-        isRemovedMapCompatibilityHelper(
-            mapCompatibilityHelperBase(normalizedMethodName))) {
-      pathOut = selectHelperOverloadPath(expr, rootedHelperTarget, ctx);
-      return true;
-    }
-  }
   if (!receiverHelperLeaf.empty()) {
     const std::string rootedHelperTarget = "/" + receiverHelperLeaf + "/" + normalizedMethodName;
     if (samePathMethodTarget != rootedHelperTarget &&
