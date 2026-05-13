@@ -1121,6 +1121,9 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       return inferred;
     }
   }
+  if (hasSemanticTargetFact) {
+    return info;
+  }
 
   if (target.kind == Expr::Kind::Name) {
     if (target.semanticNodeId != 0 && resolveCallArrayVectorAccessTargetInfo) {

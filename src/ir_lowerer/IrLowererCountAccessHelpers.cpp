@@ -1390,16 +1390,10 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     return CountAccessCallEmitResult::Emitted;
   }
   if (explicitPublishedVectorCountCall &&
-      !namedArgVectorTemporaryCountCall &&
-      !(expr.args.size() == 1 &&
-        isDynamicCollectionCountTargetFn != nullptr &&
-        isDynamicCollectionCountTargetFn(expr.args.front(), localsIn))) {
+      !namedArgVectorTemporaryCountCall) {
     return CountAccessCallEmitResult::NotHandled;
   }
-  if (explicitPublishedVectorCapacityCall &&
-      !(expr.args.size() == 1 &&
-        isDynamicVectorCapacityTargetFn != nullptr &&
-        isDynamicVectorCapacityTargetFn(expr.args.front(), localsIn))) {
+  if (explicitPublishedVectorCapacityCall) {
     return CountAccessCallEmitResult::NotHandled;
   }
   if (isExplicitRemovedCountLikeAliasCall(expr, "count") ||

@@ -272,9 +272,9 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            error) == Result::Emitted);
+            error) == Result::NotHandled);
   CHECK(error == "stale");
-  CHECK_FALSE(instructions.empty());
+  CHECK(instructions.empty());
 
   primec::Expr soaGetCall;
   soaGetCall.kind = primec::Expr::Kind::Call;

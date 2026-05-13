@@ -358,6 +358,7 @@ bool hasExplicitStdMapSourceSpelling(const Expr &expr) {
 bool isMapContainsHelperName(const Expr &expr);
 bool isMapTryAtHelperName(const Expr &expr);
 bool isVectorTarget(const Expr &expr, const LocalMap &localsIn);
+bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn);
 MapAccessLookupEmitResult tryEmitMapContainsLookup(
     const Expr &targetExpr,
     const Expr &lookupKeyExpr,
@@ -507,6 +508,51 @@ UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnosticImpl(
     }
     return isVectorTarget(target, localsIn);
   };
+  const auto isDiagnosticPublishedVectorMetadataTarget = [&](const Expr &target) {
+    if (const auto semanticTarget =
+            classifyNativeTailSemanticVectorTarget(target, semanticProgram, semanticIndex);
+        semanticTarget.has_value()) {
+      return *semanticTarget;
+    }
+    return isVectorTarget(target, localsIn) || isSoaVectorTarget(target, localsIn);
+  };
+  const auto diagnosticTargetName = [&]() {
+    if (expr.args.empty()) {
+      return std::string("<none>");
+    }
+    if (!expr.args.front().name.empty()) {
+      return expr.args.front().name;
+    }
+    return std::string("<expr>");
+  };
+  std::string publishedVectorHelperName;
+  const std::string directHelperPath =
+      resolveNativeTailCallPathWithoutFallbackProbes(expr);
+  const bool isPublishedVectorMetadataCall =
+      expr.kind == Expr::Kind::Call &&
+      !expr.isMethodCall &&
+      expr.args.size() == 1 &&
+      resolvePublishedNativeTailVectorHelperName(
+          semanticProgram, expr, publishedVectorHelperName) &&
+      (isCanonicalPublishedNativeTailVectorHelperPath(directHelperPath) ||
+       semanticDirectCallMatchesVectorHelperSurface(semanticProgram, expr));
+  if (isPublishedVectorMetadataCall &&
+      publishedVectorHelperName == "count") {
+    if (isDiagnosticPublishedVectorMetadataTarget(expr.args.front())) {
+      return UnsupportedNativeCallResult::NotHandled;
+    }
+    error = "count requires array, vector, map, or string target (target=" +
+            diagnosticTargetName() + ")";
+    return UnsupportedNativeCallResult::Error;
+  }
+  if (isPublishedVectorMetadataCall &&
+      publishedVectorHelperName == "capacity") {
+    if (isDiagnosticPublishedVectorMetadataTarget(expr.args.front())) {
+      return UnsupportedNativeCallResult::NotHandled;
+    }
+    error = "capacity requires vector target";
+    return UnsupportedNativeCallResult::Error;
+  }
   if (isBareSimpleCountLikeCall("count") &&
       !isDiagnosticVectorTarget(expr.args.front())) {
     return UnsupportedNativeCallResult::NotHandled;
@@ -526,15 +572,8 @@ UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnosticImpl(
         !isDiagnosticVectorTarget(expr.args.front())) {
       return UnsupportedNativeCallResult::NotHandled;
     }
-    std::string targetName = "<none>";
-    if (!expr.args.empty()) {
-      if (!expr.args.front().name.empty()) {
-        targetName = expr.args.front().name;
-      } else {
-        targetName = "<expr>";
-      }
-    }
-    error = "count requires array, vector, map, or string target (target=" + targetName + ")";
+    error = "count requires array, vector, map, or string target (target=" +
+            diagnosticTargetName() + ")";
     return UnsupportedNativeCallResult::Error;
   }
   if (!expr.isMethodCall && count_access_detail::isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
