@@ -512,52 +512,96 @@ namespace std {
     return(/std/collections/experimental_map/mapNew<K, V>())
   }
 
+  [return<i32> Comparable<K>]
+  findIndexImpl<K, V>([/std/collections/experimental_map/Map<K, V>] entries, [K] key) {
+    [i32 mut] index{0i32}
+    [Vector<K>] keys{entries.keys}
+    [i32] limit{/std/collections/internal_vector/vectorCount<K>(keys)}
+    while(less_than(index, limit), do() {
+      if(/std/collections/internal_vector/vectorAt<K>(keys, index).equal(key),
+         then() { return(index) },
+         else() { })
+      increment(index)
+    })
+    return(limit)
+  }
+
+  [return<i32> Comparable<K>]
+  borrowedFindIndexImpl<K, V>([Reference</std/collections/experimental_map/Map<K, V>>] entries, [K] key) {
+    [i32 mut] index{0i32}
+    [Vector<K>] keys{entries.keys}
+    [i32] limit{/std/collections/internal_vector/vectorCount<K>(keys)}
+    while(less_than(index, limit), do() {
+      if(/std/collections/internal_vector/vectorAt<K>(keys, index).equal(key),
+         then() { return(index) },
+         else() { })
+      increment(index)
+    })
+    return(limit)
+  }
+
+  [return<void>]
+  overwriteSlotImpl<T>([Vector<T> mut] values, [i32] index, [T] value) {
+    [Pointer<uninitialized<T>> mut] slot{
+        /std/collections/internal_buffer_unchecked/bufferOffsetUnsafe<uninitialized<T>>(values.data, index)}
+    drop(dereference(slot))
+    init(dereference(slot), value)
+  }
+
   [public effects(heap_alloc), return</std/collections/experimental_map/Map<K, V>> Comparable<K>]
   mapSingle<K, V>([K] key, [V] value) {
-    return(/std/collections/experimental_map/mapSingle<K, V>(key, value))
+    [mut] out{mapNew<K, V>()}
+    /std/collections/internal_map/insertImpl<K, V>(out, key, value)
+    return(out)
   }
 
   [public effects(heap_alloc), return</std/collections/experimental_map/Map<K, V>> Comparable<K>]
   mapDouble<K, V>([K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue) {
-    return(/std/collections/experimental_map/mapDouble<K, V>(firstKey, firstValue, secondKey, secondValue))
+    [mut] out{mapSingle<K, V>(firstKey, firstValue)}
+    /std/collections/internal_map/insertImpl<K, V>(out, secondKey, secondValue)
+    return(out)
   }
 
   [public effects(heap_alloc), return</std/collections/experimental_map/Map<K, V>> Comparable<K>]
   mapPair<K, V>([K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue) {
-    return(/std/collections/experimental_map/mapPair<K, V>(firstKey, firstValue, secondKey, secondValue))
+    return(mapDouble<K, V>(firstKey, firstValue, secondKey, secondValue))
   }
 
   [public effects(heap_alloc), return</std/collections/experimental_map/Map<K, V>> Comparable<K>]
   mapTriple<K, V>(
       [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue) {
-    return(/std/collections/experimental_map/mapTriple<K, V>(
-        firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue))
+    [mut] out{mapDouble<K, V>(firstKey, firstValue, secondKey, secondValue)}
+    /std/collections/internal_map/insertImpl<K, V>(out, thirdKey, thirdValue)
+    return(out)
   }
 
   [public effects(heap_alloc), return</std/collections/experimental_map/Map<K, V>> Comparable<K>]
   mapQuad<K, V>(
       [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue, [K] fourthKey,
       [V] fourthValue) {
-    return(/std/collections/experimental_map/mapQuad<K, V>(
-        firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue, fourthKey, fourthValue))
+    [mut] out{mapTriple<K, V>(firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue)}
+    /std/collections/internal_map/insertImpl<K, V>(out, fourthKey, fourthValue)
+    return(out)
   }
 
   [public effects(heap_alloc), return</std/collections/experimental_map/Map<K, V>> Comparable<K>]
   mapQuint<K, V>(
       [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue, [K] fourthKey,
       [V] fourthValue, [K] fifthKey, [V] fifthValue) {
-    return(/std/collections/experimental_map/mapQuint<K, V>(
-        firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue, fourthKey, fourthValue, fifthKey,
-        fifthValue))
+    [mut] out{mapQuad<K, V>(firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue, fourthKey, fourthValue)}
+    /std/collections/internal_map/insertImpl<K, V>(out, fifthKey, fifthValue)
+    return(out)
   }
 
   [public effects(heap_alloc), return</std/collections/experimental_map/Map<K, V>> Comparable<K>]
   mapSext<K, V>(
       [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue, [K] fourthKey,
       [V] fourthValue, [K] fifthKey, [V] fifthValue, [K] sixthKey, [V] sixthValue) {
-    return(/std/collections/experimental_map/mapSext<K, V>(
+    [mut] out{mapQuint<K, V>(
         firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue, fourthKey, fourthValue, fifthKey,
-        fifthValue, sixthKey, sixthValue))
+        fifthValue)}
+    /std/collections/internal_map/insertImpl<K, V>(out, sixthKey, sixthValue)
+    return(out)
   }
 
   [public effects(heap_alloc), return</std/collections/experimental_map/Map<K, V>> Comparable<K>]
@@ -565,9 +609,11 @@ namespace std {
       [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue, [K] fourthKey,
       [V] fourthValue, [K] fifthKey, [V] fifthValue, [K] sixthKey, [V] sixthValue, [K] seventhKey,
       [V] seventhValue) {
-    return(/std/collections/experimental_map/mapSept<K, V>(
+    [mut] out{mapSext<K, V>(
         firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue, fourthKey, fourthValue, fifthKey,
-        fifthValue, sixthKey, sixthValue, seventhKey, seventhValue))
+        fifthValue, sixthKey, sixthValue)}
+    /std/collections/internal_map/insertImpl<K, V>(out, seventhKey, seventhValue)
+    return(out)
   }
 
   [public effects(heap_alloc), return</std/collections/experimental_map/Map<K, V>> Comparable<K>]
@@ -575,69 +621,125 @@ namespace std {
       [K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue, [K] thirdKey, [V] thirdValue, [K] fourthKey,
       [V] fourthValue, [K] fifthKey, [V] fifthValue, [K] sixthKey, [V] sixthValue, [K] seventhKey, [V] seventhValue,
       [K] eighthKey, [V] eighthValue) {
-    return(/std/collections/experimental_map/mapOct<K, V>(
+    [mut] out{mapSept<K, V>(
         firstKey, firstValue, secondKey, secondValue, thirdKey, thirdValue, fourthKey, fourthValue, fifthKey,
-        fifthValue, sixthKey, sixthValue, seventhKey, seventhValue, eighthKey, eighthValue))
+        fifthValue, sixthKey, sixthValue, seventhKey, seventhValue)}
+    /std/collections/internal_map/insertImpl<K, V>(out, eighthKey, eighthValue)
+    return(out)
   }
 
   [public return<i32>]
   countImpl<K, V>([/std/collections/experimental_map/Map<K, V>] entries) {
-    return(/std/collections/experimental_map/mapCount<K, V>(entries))
+    [Vector<K>] keys{entries.keys}
+    return(/std/collections/internal_vector/vectorCount<K>(keys))
   }
 
   [public return<i32>]
   countRefImpl<K, V>([Reference</std/collections/experimental_map/Map<K, V>>] entries) {
-    return(/std/collections/experimental_map/mapCountRef<K, V>(entries))
+    [Vector<K>] keys{entries.keys}
+    return(/std/collections/internal_vector/vectorCount<K>(keys))
   }
 
   [public return<bool> Comparable<K>]
   containsImpl<K, V>([/std/collections/experimental_map/Map<K, V>] entries, [K] key) {
-    return(/std/collections/experimental_map/mapContains<K, V>(entries, key))
+    return(less_than(
+        /std/collections/internal_map/findIndexImpl<K, V>(entries, key),
+        /std/collections/internal_map/countImpl<K, V>(entries)))
   }
 
   [public return<bool> Comparable<K>]
   containsRefImpl<K, V>([Reference</std/collections/experimental_map/Map<K, V>>] entries, [K] key) {
-    return(/std/collections/experimental_map/mapContainsRef<K, V>(entries, key))
+    return(less_than(
+        /std/collections/internal_map/borrowedFindIndexImpl<K, V>(entries, key),
+        /std/collections/internal_map/countRefImpl<K, V>(entries)))
   }
 
   [public return<Result<V, ContainerError>> Comparable<K>]
   tryAtImpl<K, V>([/std/collections/experimental_map/Map<K, V>] entries, [K] key) {
-    return(/std/collections/experimental_map/mapTryAt<K, V>(entries, key))
+    [i32] index{/std/collections/internal_map/findIndexImpl<K, V>(entries, key)}
+    [Vector<V>] payloads{entries.payloads}
+    if(less_than(index, /std/collections/internal_map/countImpl<K, V>(entries)),
+       then() { return(Result.ok(/std/collections/internal_vector/vectorAtUnsafe<V>(payloads, index))) },
+       else() { return(containerErrorResult<V>(containerMissingKey())) })
   }
 
   [public return<Result<V, ContainerError>> Comparable<K>]
   tryAtRefImpl<K, V>([Reference</std/collections/experimental_map/Map<K, V>>] entries, [K] key) {
-    return(/std/collections/experimental_map/mapTryAtRef<K, V>(entries, key))
+    [i32] index{/std/collections/internal_map/borrowedFindIndexImpl<K, V>(entries, key)}
+    [Vector<V>] payloads{entries.payloads}
+    if(less_than(index, /std/collections/internal_map/countRefImpl<K, V>(entries)),
+       then() { return(Result.ok(/std/collections/internal_vector/vectorAtUnsafe<V>(payloads, index))) },
+       else() { return(containerErrorResult<V>(containerMissingKey())) })
   }
 
   [public return<V> Comparable<K>]
   atImpl<K, V>([/std/collections/experimental_map/Map<K, V>] entries, [K] key) {
-    return(/std/collections/experimental_map/mapAt<K, V>(entries, key))
+    [i32] index{/std/collections/internal_map/findIndexImpl<K, V>(entries, key)}
+    [Vector<V>] payloads{entries.payloads}
+    if(less_than(index, /std/collections/internal_map/countImpl<K, V>(entries)),
+       then() { return(/std/collections/internal_vector/vectorAtUnsafe<V>(payloads, index)) },
+       else() { return(/std/collections/internal_vector/vectorAt<V>(payloads, index)) })
   }
 
   [public return<V> Comparable<K>]
   atRefImpl<K, V>([Reference</std/collections/experimental_map/Map<K, V>>] entries, [K] key) {
-    return(/std/collections/experimental_map/mapAtRef<K, V>(entries, key))
+    [i32] index{/std/collections/internal_map/borrowedFindIndexImpl<K, V>(entries, key)}
+    [Vector<V>] payloads{entries.payloads}
+    if(less_than(index, /std/collections/internal_map/countRefImpl<K, V>(entries)),
+       then() { return(/std/collections/internal_vector/vectorAtUnsafe<V>(payloads, index)) },
+       else() { return(/std/collections/internal_vector/vectorAt<V>(payloads, index)) })
   }
 
   [public return<V> Comparable<K>]
   atUnsafeImpl<K, V>([/std/collections/experimental_map/Map<K, V>] entries, [K] key) {
-    return(/std/collections/experimental_map/mapAtUnsafe<K, V>(entries, key))
+    [Vector<V>] payloads{entries.payloads}
+    return(/std/collections/internal_vector/vectorAtUnsafe<V>(
+        payloads,
+        /std/collections/internal_map/findIndexImpl<K, V>(entries, key)))
   }
 
   [public return<V> Comparable<K>]
   atUnsafeRefImpl<K, V>([Reference</std/collections/experimental_map/Map<K, V>>] entries, [K] key) {
-    return(/std/collections/experimental_map/mapAtUnsafeRef<K, V>(entries, key))
+    [Vector<V>] payloads{entries.payloads}
+    return(/std/collections/internal_vector/vectorAtUnsafe<V>(
+        payloads,
+        /std/collections/internal_map/borrowedFindIndexImpl<K, V>(entries, key)))
   }
 
   [public effects(heap_alloc), return<void> Comparable<K>]
   insertImpl<K, V>([/std/collections/experimental_map/Map<K, V> mut] entries, [K] key, [V] value) {
-    /std/collections/experimental_map/mapInsert<K, V>(entries, key, value)
+    [i32] index{/std/collections/internal_map/findIndexImpl<K, V>(entries, key)}
+    [Vector<K> mut] keys{entries.keys}
+    [Vector<V> mut] payloads{entries.payloads}
+    if(less_than(index, /std/collections/internal_map/countImpl<K, V>(entries)),
+       then() {
+         /std/collections/internal_map/overwriteSlotImpl<V>(payloads, index, value)
+         assign(entries.payloads, payloads)
+       },
+       else() {
+         /std/collections/internal_vector/vectorPush<K>(keys, key)
+         /std/collections/internal_vector/vectorPush<V>(payloads, value)
+         assign(entries.keys, keys)
+         assign(entries.payloads, payloads)
+       })
   }
 
   [public effects(heap_alloc), return<void> Comparable<K>]
   insertRefImpl<K, V>([Reference</std/collections/experimental_map/Map<K, V>> mut] entries, [K] key, [V] value) {
-    /std/collections/experimental_map/mapInsertRef<K, V>(entries, key, value)
+    [i32] index{/std/collections/internal_map/borrowedFindIndexImpl<K, V>(entries, key)}
+    [Vector<K> mut] keys{entries.keys}
+    [Vector<V> mut] payloads{entries.payloads}
+    if(less_than(index, /std/collections/internal_map/countRefImpl<K, V>(entries)),
+       then() {
+         /std/collections/internal_map/overwriteSlotImpl<V>(payloads, index, value)
+         assign(entries.payloads, payloads)
+       },
+       else() {
+         /std/collections/internal_vector/vectorPush<K>(keys, key)
+         /std/collections/internal_vector/vectorPush<V>(payloads, value)
+         assign(entries.keys, keys)
+         assign(entries.payloads, payloads)
+       })
   }
   }
   }

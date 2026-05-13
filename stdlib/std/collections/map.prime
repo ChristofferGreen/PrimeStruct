@@ -200,7 +200,7 @@ import /std/collections/internal_map/*
 }
 
 [public return<i32>]
-/std/collections/map/count_ref<K, V>([Reference<Map<K, V>>] values) {
+/std/collections/map/count_ref<K, V>([Reference<map<K, V>>] values) {
   return(/std/collections/internal_map/countRefImpl<K, V>(values))
 }
 
@@ -210,7 +210,7 @@ import /std/collections/internal_map/*
 }
 
 [public return<bool> Comparable<K>]
-/std/collections/map/contains_ref<K, V>([Reference<Map<K, V>>] values, [K] key) {
+/std/collections/map/contains_ref<K, V>([Reference<map<K, V>>] values, [K] key) {
   return(/std/collections/internal_map/containsRefImpl<K, V>(values, key))
 }
 
@@ -220,7 +220,7 @@ import /std/collections/internal_map/*
 }
 
 [public return<Result<V, /std/collections/ContainerError>> Comparable<K>]
-/std/collections/map/tryAt_ref<K, V>([Reference<Map<K, V>>] values, [K] key) {
+/std/collections/map/tryAt_ref<K, V>([Reference<map<K, V>>] values, [K] key) {
   return(/std/collections/internal_map/tryAtRefImpl<K, V>(values, key))
 }
 
@@ -230,7 +230,7 @@ import /std/collections/internal_map/*
 }
 
 [public return<V> Comparable<K>]
-/std/collections/map/at_ref<K, V>([Reference<Map<K, V>>] values, [K] key) {
+/std/collections/map/at_ref<K, V>([Reference<map<K, V>>] values, [K] key) {
   return(/std/collections/internal_map/atRefImpl<K, V>(values, key))
 }
 
@@ -240,7 +240,7 @@ import /std/collections/internal_map/*
 }
 
 [public return<V> Comparable<K>]
-/std/collections/map/at_unsafe_ref<K, V>([Reference<Map<K, V>>] values, [K] key) {
+/std/collections/map/at_unsafe_ref<K, V>([Reference<map<K, V>>] values, [K] key) {
   return(/std/collections/internal_map/atUnsafeRefImpl<K, V>(values, key))
 }
 
@@ -255,6 +255,6 @@ import /std/collections/internal_map/*
 }
 
 [public effects(heap_alloc), return<void> Comparable<K>]
-/std/collections/map/insert_ref<K, V>([Reference<Map<K, V>> mut] values, [K] key, [V] value) {
+/std/collections/map/insert_ref<K, V>([Reference<map<K, V>> mut] values, [K] key, [V] value) {
   /std/collections/internal_map/insertRefImpl<K, V>(values, key, value)
 }

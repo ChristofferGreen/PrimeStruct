@@ -5573,9 +5573,37 @@ bool isBuiltinCanonicalMapConstructorExpr(
   if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
     return false;
   }
-  if (expr.name == "map" ||
-      expr.name == "/std/collections/map/map" ||
-      expr.name.rfind("/std/collections/map/map__", 0) == 0) {
+  auto isCanonicalConstructorPath = [](std::string path) {
+    const size_t specializationSuffix = path.find("__");
+    if (specializationSuffix != std::string::npos) {
+      path.erase(specializationSuffix);
+    }
+    if (!path.empty() && path.front() != '/') {
+      return path == "map" ||
+             path == "mapNew" ||
+             path == "mapSingle" ||
+             path == "mapDouble" ||
+             path == "mapPair" ||
+             path == "mapTriple" ||
+             path == "mapQuad" ||
+             path == "mapQuint" ||
+             path == "mapSext" ||
+             path == "mapSept" ||
+             path == "mapOct";
+    }
+    return path == "/std/collections/map/map" ||
+           path == "/std/collections/mapNew" ||
+           path == "/std/collections/mapSingle" ||
+           path == "/std/collections/mapDouble" ||
+           path == "/std/collections/mapPair" ||
+           path == "/std/collections/mapTriple" ||
+           path == "/std/collections/mapQuad" ||
+           path == "/std/collections/mapQuint" ||
+           path == "/std/collections/mapSext" ||
+           path == "/std/collections/mapSept" ||
+           path == "/std/collections/mapOct";
+  };
+  if (expr.name == "map" || isCanonicalConstructorPath(expr.name)) {
     return true;
   }
   if (expr.namespacePrefix == "/std/collections/map" &&
@@ -5584,16 +5612,14 @@ bool isBuiltinCanonicalMapConstructorExpr(
   }
   for (const std::string &candidatePath :
        candidateDefinitionPaths(expr, definitionNamespace)) {
-    if (candidatePath == "/std/collections/map/map" ||
-        candidatePath.rfind("/std/collections/map/map__", 0) == 0) {
+    if (isCanonicalConstructorPath(candidatePath)) {
       return true;
     }
     auto defIt = definitionMap.find(candidatePath);
     if (defIt == definitionMap.end() || defIt->second == nullptr) {
       continue;
     }
-    if (defIt->second->fullPath == "/std/collections/map/map" ||
-        defIt->second->fullPath.rfind("/std/collections/map/map__", 0) == 0) {
+    if (isCanonicalConstructorPath(defIt->second->fullPath)) {
       return true;
     }
   }
@@ -5905,12 +5931,26 @@ void rewriteBuiltinMapInsertStatements(
     if (stmt.isBinding) {
       if (auto binding = extractParsedBindingInfo(stmt, &structPaths); binding.has_value()) {
         bindings[stmt.name] = *binding;
+        auto isConstructorBackedMapInitializer = [&](const Expr &initializer) {
+          if (isBuiltinCanonicalMapConstructorExpr(
+                  initializer,
+                  definitionMap,
+                  definitionNamespace)) {
+            return true;
+          }
+          if (initializer.kind == Expr::Kind::Name) {
+            return constructorBackedBuiltinMapBindings.count(initializer.name) != 0;
+          }
+          if (semantics::isSimpleCallName(initializer, "location") &&
+              initializer.args.size() == 1 &&
+              initializer.args.front().kind == Expr::Kind::Name) {
+            return constructorBackedBuiltinMapBindings.count(initializer.args.front().name) != 0;
+          }
+          return false;
+        };
         if (stmt.args.size() == 1 &&
             isBuiltinMapMutationBinding(*binding) &&
-            isBuiltinCanonicalMapConstructorExpr(
-                stmt.args.front(),
-                definitionMap,
-                definitionNamespace)) {
+            isConstructorBackedMapInitializer(stmt.args.front())) {
           constructorBackedBuiltinMapBindings.insert(stmt.name);
         } else {
           constructorBackedBuiltinMapBindings.erase(stmt.name);

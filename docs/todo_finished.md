@@ -16658,3 +16658,44 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     `experimental_map.prime` with a shim, and added a stdlib ownership lock in
     `PrimeStruct_misc_tests`. Broad release validation was skipped under the
     lite workflow.
+
+- [x] TODO-4300: Stabilize map lookup and insertion substrate
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-13
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4299
+  - scope: Make map lookup, miss reporting, overwrite, and insertion behavior
+    expressible as ordinary `.prime` code over canonical vector/generic
+    storage plus the stdlib `Result<ContainerError>` contract.
+  - implementation_notes:
+    - `stdlib/std/collections/internal_map.prime` now owns direct
+      `findIndexImpl`, `borrowedFindIndexImpl`, `overwriteSlotImpl`,
+      `containsImpl`, `tryAtImpl`, `atImpl`, `atUnsafeImpl`, `insertImpl`,
+      and `insertRefImpl` policy.
+    - Canonical fixed-arity map constructors build through internal insert
+      policy instead of delegating lookup/insertion behavior through
+      experimental-map helper names.
+    - Canonical map reference helper receivers use the public
+      `Reference<map<K, V>>` spelling.
+  - acceptance:
+    - Map lookup and insertion fixtures execute through `.prime` helpers over
+      canonical vector/generic storage without relying on experimental vector
+      or experimental map public imports.
+    - Duplicate-key insertion overwrites the payload with ownership-sensitive
+      drop/init behavior and keeps key/value counts aligned.
+    - `contains`, `tryAt`, checked `at`, unchecked `at_unsafe`, direct
+      `insert`, method `insert`, and `insert_ref` behavior are covered on the
+      supported VM/native paths.
+    - `tryAt` remains the compatibility spelling for miss-result lookup until
+      the later compatibility-deletion TODO.
+  - stop_rule: Stop once map lookup/insertion policy is executable through
+    ordinary `.prime` substrate and documented; leave semantic/lowering
+    fast-path deletion to TODO-4301.
+  - evidence: Moved canonical map lookup, overwrite, miss-result, checked and
+    unchecked access, direct insert, method insert, and reference insert policy
+    into the `internal_map` namespace; updated semantic/lowering rewrites so
+    constructor-backed map bindings stay on imported `.prime` insert helpers;
+    extended the stdlib ownership lock; and validated one VM/native policy
+    smoke plus the focused `PrimeStruct_misc_tests` ownership suite. Broad
+    release validation was skipped under the lite workflow.

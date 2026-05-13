@@ -3136,26 +3136,21 @@ for(
     public contract while preserving the current compatibility `Map<K, V>` identity. The backing helpers
     (`Entry<K, V>`, `entry(key, value)`,
     `map<K, V>(entries...)`, `mapNew`, `mapSingle`, `mapDouble`, `mapPair`, `mapTriple`, `mapQuad`, `mapQuint`,
-    `mapSext`, `mapSept`, `mapOct`, `mapInsert`, `mapCount`, `mapContains`, `mapTryAt`, `mapAt`, `mapAtUnsafe`,
-    `mapInsertRef`, `mapCountRef`, `mapContainsRef`, `mapTryAtRef`, `mapAtRef`, `mapAtUnsafeRef`) returns the current
+    `mapSext`, `mapSept`, `mapOct`, `insertImpl`, `countImpl`, `containsImpl`, `tryAtImpl`, `atImpl`, `atUnsafeImpl`,
+    `insertRefImpl`, `countRefImpl`, `containsRefImpl`, `tryAtRefImpl`, `atRefImpl`, `atUnsafeRefImpl`) return the current
     `.prime` `Map<K, V>` struct backed by parallel vector storage, but user-facing
     docs/examples should prefer the canonical wrappers in `stdlib/std/collections/map.prime` instead of treating the
     experimental compatibility shim as a peer public API. The current constructor surface includes a real variadic `.prime`
     `map(entries...)` helper over trailing `[args<Entry<K, V>>]` parameters, with the older fixed-arity helper names
-    retained as backing compatibility forwarders. Lookup follows `Comparable<K>` instead of the canonical builtin map
-    runtime, checked experimental `mapAt(...)` reuses the canonical `map key not found` runtime contract on misses,
-    literal-backed `Map<string, V>` helper flows now work across C++/VM/native, VM/native non-literal string-key
-    constructors/lookups preserve the canonical string-key reject diagnostics, and the backing map values support
-    `mapInsert(...)` plus `values.insert(...)` updates together with `.count()`/`.contains()`/`.tryAt()`/`.at()`/
-    `.at_unsafe()` method sugar on ownership-sensitive element flows. Explicit experimental `Map<K, V>` bindings now
-    also support canonical `/std/collections/map/insert(...)` on that same overwrite/update path, builtin canonical
-    `map<K, V>` bindings now route both `.insert(...)` method sugar and direct canonical `/std/collections/map/insert(...)`
-    calls through a helper that performs the real in-place overwrite path when the numeric key already exists and
-    otherwise grows through one generic arbitrary-`n` grow/copy/repoint path for owning local, borrowed/pointer, and
-    non-local field/lvalue numeric map receivers without retaining the old count-by-count lowerer staircase, borrowed
-    references also support canonical `/std/collections/map/insert_ref(...)`, and overwrite/update plus scope-exit
-    cleanup now run through the same pointer-backed uninitialized-slot ownership flow as experimental vectors by
-    explicitly `drop(...)`ing and `init(...)`ing payload slots. Borrowed `Reference<Map<K, V>>` values now support
+    retained as backing compatibility forwarders. Lookup follows `Comparable<K>` inside the internal `.prime`
+    substrate: `findIndexImpl` and `borrowedFindIndexImpl` scan the parallel key vector, `containsImpl` compares the
+    found index with the key count, `tryAtImpl` returns `Result<ContainerError>` with `containerMissingKey()` for misses,
+    `atImpl` preserves the checked missing-key trap path, and `atUnsafeImpl` keeps the unchecked payload access path.
+    `insertImpl` and `insertRefImpl` overwrite duplicate keys by `drop(...)`ing and `init(...)`ing the payload slot, or
+    grow the parallel key/value vectors through internal vector pushes when the key is new. Constructor-backed
+    canonical `map<K, V>` bindings now route direct `/std/collections/map/insert(...)`, `.insert(...)`, and
+    `/std/collections/map/insert_ref(...)` through those `.prime` helper bodies on VM/native instead of the stale
+    flat builtin insert rewrite. Borrowed `Reference<map<K, V>>` values now support
     distinct `*Ref` free-helper calls plus `.count()`/`.contains()`/`.tryAt()`/`.at()`/`.at_unsafe()`/`.insert()`
     method-call sugar through `.prime` `/Reference/*` helpers, and both value plus borrowed-reference experimental maps
     now participate in shared `value[key]` bracket access with the same key/type diagnostics as other map helper forms.
@@ -5332,7 +5327,9 @@ read-only path.
     `/map/at`, or `/map/at_unsafe` definitions. Legacy compatibility or conformance imports of `/std/collections/experimental_map/*` now extend canonical
     namespaced helper calls in three distinct ways: value `Map<K, V>` receivers can use call-form
     `/std/collections/map/count|contains|tryAt|at|at_unsafe`, which rewrites through the internal map
-    `.prime` helper implementation; wrapper-layer `/std/collections/mapCount|mapContains|mapTryAt|mapAt|mapAtUnsafe`
+    `.prime` helper implementation; canonical `insert` and `insert_ref` wrappers on constructor-backed canonical map
+    bindings now also stay on the internal `.prime` insert substrate instead of the stale flat-map builtin rewrite.
+    Wrapper-layer `/std/collections/mapCount|mapContains|mapTryAt|mapAt|mapAtUnsafe`
     calls on those same value receivers now rewrite onto the corresponding compatibility helpers as well, and
     direct canonical or wrapper-layer helper receivers built from canonical `/std/collections/map/map(...)` or
     wrapper-layer `/std/collections/mapNew|mapSingle|mapDouble|mapPair|...` constructor expressions now also rewrite

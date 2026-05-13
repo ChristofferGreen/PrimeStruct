@@ -72,11 +72,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4300: Stabilize map lookup and insertion substrate
+- TODO-4301: Lower map helpers through ordinary `.prime`
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4301: Lower map helpers through ordinary `.prime`
 - TODO-4302: Move map surface metadata out of C++
 - TODO-4303: Delete map compatibility seams
 - TODO-4304: Add zero C++ map-surface audit
@@ -86,6 +85,7 @@ Task template:
 - TODO-4308: Move SoA surface metadata out of C++
 - TODO-4309: Delete `soa_vector` compatibility seams
 - TODO-4310: Add zero C++ SoA collection-surface audit
+- TODO-4268: Add heterogeneous type-pack syntax and metadata
 
 ### Priority Lanes (Current)
 
@@ -93,7 +93,7 @@ Task template:
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
 - Vector stdlib ownership cutover: none active
-- Map stdlib ownership cutover: TODO-4300 -> TODO-4301 -> TODO-4302
+- Map stdlib ownership cutover: TODO-4301 -> TODO-4302
   -> TODO-4303 -> TODO-4304
 - SoA public surface rename and ownership cutover: TODO-4305 -> TODO-4306
   -> TODO-4307 -> TODO-4308 -> TODO-4309 -> TODO-4310
@@ -111,7 +111,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4300: Stabilize map lookup and insertion substrate
 - TODO-4301: Lower map helpers through ordinary `.prime`
 - TODO-4302: Move map surface metadata out of C++
 - TODO-4303: Delete map compatibility seams
@@ -172,7 +171,7 @@ Task template:
 | Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4305 |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Validator entrypoint and benchmark-plumbing split | none |
@@ -180,7 +179,7 @@ Task template:
 | Semantic-product public API factoring and versioning | none |
 | IR lowerer compile-unit breakup | none |
 | Backend validation/build ergonomics | none |
-| Emitter/semantics map-helper parity | TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| Emitter/semantics map-helper parity | TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
 | VM debug-session argv ownership | none |
 | Debugger/source-map provenance parity | none |
 | Debug trace replay robustness | none |
@@ -239,9 +238,8 @@ Task template:
   registry no longer advertises vector compatibility spellings through that
   manifest. Direct experimental vector source imports are now rejected, and
   the vector production C++ zero-trace audit is now mechanically enforced.
-  TODO-4300 through TODO-4304 continue the same ownership model for map while
-  keeping map-specific lookup, insertion, `Result<ContainerError>`, and key
-  comparability policy explicit.
+  TODO-4301 through TODO-4304 continue the same ownership model for map after
+  the internal-map lookup/insertion substrate moved into `.prime` helper code.
 - Compatibility adapter inventory: map insert helper compatibility is migrated
   through `StdlibSurfaceRegistry::CollectionsMapHelpers` for canonical
   `/std/collections/map/insert(_ref)`, compatibility `/map/insert(_ref)`,
@@ -267,8 +265,9 @@ Task template:
   rename remain separate boundaries tracked by TODO-4305 through TODO-4310.
   Generic contiguous-storage coverage needed before vector ordinary `.prime`
   lowering is complete and recorded in `docs/todo_finished.md`. Map-specific
-  lookup/insertion substrate work is tracked in TODO-4300 instead of being
-  folded into vector storage work.
+  lookup/insertion substrate work is complete; remaining map work focuses on
+  ordinary helper lowering, metadata deletion, compatibility deletion, and the
+  final zero-trace audit.
 - End-state rule for vector: production C++ under `src/` and
   `include/` must not contain PrimeStruct-vector-specific paths, helper names,
   type names, diagnostics, parser/lowering branches, or metadata tables.
@@ -1637,47 +1636,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
-
-- [ ] TODO-4300: Stabilize map lookup and insertion substrate
-  - owner: ai
-  - created_at: 2026-04-28
-  - phase: Map stdlib ownership cutover
-  - depends_on: TODO-4299
-  - scope: Make map lookup, miss reporting, overwrite, and insertion behavior
-    expressible as ordinary `.prime` code over canonical vector/generic storage
-    plus the stdlib `Result<ContainerError>` contract.
-  - implementation_notes:
-    - Start from `stdlib/std/collections/internal_map.prime`,
-      `stdlib/std/collections/errors.prime`, canonical vector helpers,
-      Maybe/Result migration notes in `docs/PrimeStruct.md`, and
-      map compile-run tests covering `contains`, `tryAt`, `at`, `at_unsafe`,
-      and `insert`.
-    - Keep key comparability policy explicit: `Comparable<K>` or its successor
-      should be a documented requirement of lookup/insertion, not a hidden C++
-      classifier.
-    - Decide and document whether the canonical miss-result helper remains
-      `tryAt` for compatibility or migrates to a CodeExamples-aligned spelling
-      such as `try_at`; keep any old spelling as a compatibility shim until
-      TODO-4303.
-    - Map may reuse vector/generic storage substrate, but map-specific policy
-      such as duplicate-key overwrite, key equality, checked missing-key
-      behavior, and `ContainerError` payloads belongs in this task.
-  - acceptance:
-    - Map lookup and insertion fixtures execute through `.prime` helpers over
-      canonical vector/generic storage without relying on experimental vector
-      or experimental map public imports.
-    - Duplicate-key insertion overwrites the payload with ownership-sensitive
-      drop/init behavior and keeps key/value counts aligned.
-    - `contains`, miss-result lookup, checked `at`, unchecked `at_unsafe`, and
-      `insert` behavior are documented for supported key/value kinds.
-    - `Result<ContainerError>` miss behavior is stdlib-owned and covered on the
-      supported VM/native paths without map-specific C++ result shims.
-    - Existing map behavior and diagnostics remain stable unless the task
-      intentionally updates them with docs and tests.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once map lookup/insertion policy is executable through
-    ordinary `.prime` substrate and documented; leave semantic/lowering
-    fast-path deletion to TODO-4301.
 
 - [ ] TODO-4301: Lower map helpers through ordinary `.prime`
   - owner: ai
