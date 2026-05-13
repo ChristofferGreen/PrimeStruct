@@ -209,8 +209,7 @@ bool hasSemanticMapAccessHelperDefinition(const SemanticProgram *semanticProgram
   auto importsMapHelpers = [](const std::vector<std::string> &imports) {
     for (const std::string &importPath : imports) {
       if (importPath == "/std/collections/*" ||
-          importPath == "/std/collections/map/*" ||
-          importPath == "/map/*") {
+          importPath == "/std/collections/map/*") {
         return true;
       }
     }
@@ -230,11 +229,8 @@ bool hasSemanticMapAccessHelperDefinition(const SemanticProgram *semanticProgram
     }
     const std::string canonicalPath =
         "/std/collections/map/" + std::string(accessName);
-    const std::string samePathAlias = "/map/" + std::string(accessName);
     if (path == canonicalPath ||
-        path == samePathAlias ||
-        path == canonicalPath + "_ref" ||
-        path == samePathAlias + "_ref") {
+        path == canonicalPath + "_ref") {
       return true;
     }
   }

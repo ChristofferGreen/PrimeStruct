@@ -17342,3 +17342,52 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     pre-dispatch inference, added behavior coverage for canonical-only
     struct-return helpers versus rooted aliases, added source-lock coverage,
     and refreshed active queue bookkeeping.
+
+- [x] TODO-4455: Split remaining map raw/lowering adapters
+  - owner: ai
+  - created_at: 2026-05-13
+  - finished_at: 2026-05-13
+  - phase: Map stdlib ownership cutover
+  - split_from: TODO-4453
+  - scope: Split the remaining semantic helper rewrite, inline/native
+    raw-path, and internal lowering-name cleanup into closable leaves before
+    implementation.
+  - acceptance:
+    - Native tail map-access helper availability probe deletion is tracked
+      separately from remaining semantic, inline, and lowering-name cleanup.
+    - Active queues contain only leaf work after the split.
+  - stop_rule: Stop once native tail raw-path probe deletion and remaining
+    production raw/lowering cleanup have separate TODO IDs with explicit
+    finish lines.
+  - evidence: Split the broad TODO-4455 into completed TODO-4456 for native
+    tail map-access helper availability probes and active TODO-4457 for
+    remaining semantic rewrites, inline/native raw-path checks, and internal
+    lowering-name cleanup.
+
+- [x] TODO-4456: Delete native map access raw probes
+  - owner: ai
+  - created_at: 2026-05-13
+  - finished_at: 2026-05-13
+  - phase: Map stdlib ownership cutover
+  - split_from: TODO-4455
+  - scope: Remove native tail map-access helper availability probes that treated
+    rooted `/map/*` imports or rooted `/map/at*` definitions as evidence that
+    canonical `/std/collections/map/at*` helpers were available.
+  - implementation_notes:
+    - Target `IrLowererNativeTailDispatch.cpp` and source-lock coverage.
+    - Preserve canonical `/std/collections/map/*` import and definition
+      recognition; leave remaining semantic rewrites, inline raw-path checks,
+      constructor rewrites, and internal `mapCount`-style lowering spellings to
+      TODO-4457.
+  - acceptance:
+    - `hasSemanticMapAccessHelperDefinition(...)` no longer treats `/map/*`
+      imports or rooted `/map/at*` definitions as canonical map helper
+      availability.
+    - Source-lock coverage rejects reintroducing the native tail rooted map
+      import or same-path alias probes.
+  - stop_rule: Stop once native tail access-helper availability checks only
+    recognize canonical map helper imports/definitions for map access.
+  - evidence: Removed rooted `/map/*` import recognition and same-path
+    `/map/at*` definition probes from native tail map access helper
+    availability, added source-lock coverage, and refreshed active queue
+    bookkeeping.

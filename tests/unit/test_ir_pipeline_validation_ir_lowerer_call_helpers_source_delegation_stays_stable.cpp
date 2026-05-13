@@ -1551,6 +1551,13 @@ TEST_CASE("soa field-view backend cleanup stays stable") {
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("soaVectorGet") == std::string::npos);
   CHECK(nativeTailDispatchSource.find("soaVectorRef") == std::string::npos);
+  CHECK(nativeTailDispatchSource.find("importPath == \"/map/*\"") ==
+        std::string::npos);
+  CHECK(nativeTailDispatchSource.find("const std::string samePathAlias = "
+                                      "\"/map/\" + std::string(accessName);") ==
+        std::string::npos);
+  CHECK(nativeTailDispatchSource.find("path == samePathAlias") ==
+        std::string::npos);
 }
 
 TEST_CASE("vm heap helpers source delegation stays stable") {
