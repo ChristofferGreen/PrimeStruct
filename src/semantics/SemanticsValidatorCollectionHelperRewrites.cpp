@@ -598,6 +598,13 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalMapHelperCall(
     if (!canonicalExperimentalMapHelperPath(resolvedOrExplicitPath, canonicalPath, helperName)) {
       return false;
     }
+    const bool alreadyCanonicalDirectCall =
+        (resolvedOrExplicitPath == canonicalPath ||
+         resolvedOrExplicitPath.rfind(canonicalPath + "__t", 0) == 0) &&
+        !directExperimentalMapHelperSpelling;
+    if (alreadyCanonicalDirectCall) {
+      return false;
+    }
   }
   const size_t receiverIndex =
       candidate.isMethodCall ? 0 : mapHelperReceiverIndex(canonicalCandidate, dispatchResolvers);

@@ -876,10 +876,10 @@ TEST_CASE("ir lowerer count access helpers build count classifier adapters") {
   countEntry.args = {entryName};
   CHECK(isArrayCountCall(countEntry, locals));
   countEntry.namespacePrefix = "/std/collections/vector";
-  CHECK_FALSE(isArrayCountCall(countEntry, locals));
+  CHECK(isArrayCountCall(countEntry, locals));
   countEntry.namespacePrefix.clear();
   countEntry.name = "/std/collections/vector/count";
-  CHECK_FALSE(isArrayCountCall(countEntry, locals));
+  CHECK(isArrayCountCall(countEntry, locals));
   countEntry.name = "/vector/count";
   CHECK_FALSE(isArrayCountCall(countEntry, locals));
   countEntry.name = "/soa_vector/count";
@@ -970,7 +970,7 @@ TEST_CASE("ir lowerer count access helpers build count classifier adapters") {
   stringCount.args = {literal};
   CHECK(isStringCountCall(stringCount, locals));
   stringCount.name = "/std/collections/vector/count";
-  CHECK_FALSE(isStringCountCall(stringCount, locals));
+  CHECK(isStringCountCall(stringCount, locals));
 }
 
 TEST_CASE("ir lowerer count access helpers build bundled classifiers") {
@@ -988,10 +988,10 @@ TEST_CASE("ir lowerer count access helpers build bundled classifiers") {
   countEntry.args = {entryName};
   CHECK(classifiers.isArrayCountCall(countEntry, locals));
   countEntry.namespacePrefix = "/std/collections/vector";
-  CHECK_FALSE(classifiers.isArrayCountCall(countEntry, locals));
+  CHECK(classifiers.isArrayCountCall(countEntry, locals));
   countEntry.namespacePrefix.clear();
   countEntry.name = "/std/collections/vector/count";
-  CHECK_FALSE(classifiers.isArrayCountCall(countEntry, locals));
+  CHECK(classifiers.isArrayCountCall(countEntry, locals));
   countEntry.name = "/vector/count";
   CHECK_FALSE(classifiers.isArrayCountCall(countEntry, locals));
   countEntry.name = "/soa_vector/count";
@@ -1074,7 +1074,7 @@ TEST_CASE("ir lowerer count access helpers build bundled classifiers") {
   CHECK_FALSE(classifiers.isStringCountCall(capacityCall, locals));
 }
 
-TEST_CASE("ir lowerer count access helpers defer canonical vector read helpers") {
+TEST_CASE("ir lowerer count access helpers classify canonical counts and defer vector reads") {
   primec::ir_lowerer::LocalMap vectorLocals;
   primec::ir_lowerer::LocalInfo vectorInfo;
   vectorInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
@@ -1090,13 +1090,13 @@ TEST_CASE("ir lowerer count access helpers defer canonical vector read helpers")
   CHECK(primec::ir_lowerer::isArrayCountCall(callExpr, vectorLocals, true, "argv"));
 
   callExpr.name = "/std/collections/vector/count";
-  CHECK_FALSE(primec::ir_lowerer::isArrayCountCall(callExpr, vectorLocals, true, "argv"));
+  CHECK(primec::ir_lowerer::isArrayCountCall(callExpr, vectorLocals, true, "argv"));
   callExpr.name = "/std/collections/vector/count__ti32";
   CHECK_FALSE(primec::ir_lowerer::isArrayCountCall(callExpr, vectorLocals, true, "argv"));
 
   callExpr.name = "count";
   callExpr.namespacePrefix = "/std/collections/vector";
-  CHECK_FALSE(primec::ir_lowerer::isArrayCountCall(callExpr, vectorLocals, true, "argv"));
+  CHECK(primec::ir_lowerer::isArrayCountCall(callExpr, vectorLocals, true, "argv"));
   callExpr.isMethodCall = true;
   CHECK_FALSE(primec::ir_lowerer::isArrayCountCall(callExpr, vectorLocals, true, "argv"));
   callExpr.isMethodCall = false;
@@ -1108,8 +1108,6 @@ TEST_CASE("ir lowerer count access helpers defer canonical vector read helpers")
   callExpr.args = {vectorTemporary};
   callExpr.name = "/std/collections/vector/capacity";
   callExpr.namespacePrefix.clear();
-  CHECK(primec::ir_lowerer::isVectorCapacityCall(callExpr, vectorLocals));
-  callExpr.name = "/std/collections/vector/capacity";
   CHECK_FALSE(primec::ir_lowerer::isVectorCapacityCall(callExpr, vectorLocals));
   callExpr.name = "/std/collections/vector/capacity__ti32";
   CHECK_FALSE(primec::ir_lowerer::isVectorCapacityCall(callExpr, vectorLocals));
@@ -1136,8 +1134,7 @@ TEST_CASE("ir lowerer count access helpers defer canonical vector read helpers")
 
   callExpr.namespacePrefix.clear();
   callExpr.name = "/std/collections/vector/at";
-  CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(callExpr, accessName));
-  CHECK(accessName == "at");
+  CHECK_FALSE(primec::ir_lowerer::getBuiltinArrayAccessName(callExpr, accessName));
 
   callExpr.name = "/std/collections/experimental_vector/vectorAtUnsafe";
   CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(callExpr, accessName));

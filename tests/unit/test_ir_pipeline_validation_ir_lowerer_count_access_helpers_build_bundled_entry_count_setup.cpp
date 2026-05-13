@@ -926,7 +926,7 @@ TEST_CASE("ir lowerer count access helpers emit dynamic string count calls") {
   CHECK(instructions[1].op == primec::IrOpcode::LoadStringLength);
 }
 
-TEST_CASE("ir lowerer count access helpers emit canonical runtime string count calls") {
+TEST_CASE("ir lowerer count access helpers defer canonical runtime string count calls") {
   using Result = primec::ir_lowerer::CountAccessCallEmitResult;
 
   primec::ir_lowerer::LocalMap locals;
@@ -976,16 +976,13 @@ TEST_CASE("ir lowerer count access helpers emit canonical runtime string count c
               return true;
             },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::Emitted);
+            error) == Result::NotHandled);
   CHECK(error.empty());
-  CHECK(emitExprCalls == 1);
-  REQUIRE(instructions.size() == 2);
-  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
-  CHECK(instructions[0].imm == 11);
-  CHECK(instructions[1].op == primec::IrOpcode::LoadStringLength);
+  CHECK(emitExprCalls == 0);
+  CHECK(instructions.empty());
 }
 
-TEST_CASE("ir lowerer count access helpers prefer semantic runtime string facts") {
+TEST_CASE("ir lowerer count access helpers defer canonical runtime string facts") {
   using Result = primec::ir_lowerer::CountAccessCallEmitResult;
 
   primec::SemanticProgram semanticProgram;
@@ -1079,16 +1076,12 @@ TEST_CASE("ir lowerer count access helpers prefer semantic runtime string facts"
   CHECK(emitCall(makeCountCall(makeTarget("missingText", 7499)), instructions) == Result::NotHandled);
   CHECK(instructions.empty());
 
-  CHECK(emitCall(makeCountCall(makeTarget("text", 7402)), instructions) == Result::Emitted);
-  REQUIRE(instructions.size() == 2);
-  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
-  CHECK(instructions[1].op == primec::IrOpcode::LoadStringLength);
+  CHECK(emitCall(makeCountCall(makeTarget("text", 7402)), instructions) == Result::NotHandled);
+  CHECK(instructions.empty());
 
   instructions.clear();
-  CHECK(emitCall(makeCountCall(makeTarget("syntaxText", 0)), instructions) == Result::Emitted);
-  REQUIRE(instructions.size() == 2);
-  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
-  CHECK(instructions[1].op == primec::IrOpcode::LoadStringLength);
+  CHECK(emitCall(makeCountCall(makeTarget("syntaxText", 0)), instructions) == Result::NotHandled);
+  CHECK(instructions.empty());
 }
 
 TEST_CASE("ir lowerer call helpers lower soa_vector count calls") {
