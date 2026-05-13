@@ -132,13 +132,8 @@ bool isExplicitSamePathPublishedMapHelperCall(const Expr &expr,
   if (rawPath.empty() || rawPath.front() != '/') {
     return false;
   }
-  std::string helperName;
-  if (!resolveMapHelperAliasName(expr, helperName) &&
-      rawPath.rfind("/map/", 0) != 0 &&
-      rawPath.rfind("/std/collections/map/", 0) != 0 &&
-      rawPath.rfind("/std/collections/experimental_map/", 0) != 0 &&
-      resolvedPath.rfind("/std/collections/map/", 0) != 0 &&
-      resolvedPath.rfind("/std/collections/experimental_map/", 0) != 0) {
+  if (rawPath.rfind("/std/collections/map/", 0) != 0 ||
+      resolvedPath.rfind("/std/collections/map/", 0) != 0) {
     return false;
   }
   return normalizeCollectionHelperPath(rawPath) ==
@@ -169,9 +164,7 @@ bool isExplicitSamePathMapCountLikeDefinitionCall(const Expr &expr,
   }
   const std::string normalizedCalleePath =
       normalizeCollectionHelperPath(callee.fullPath);
-  if (normalizedCalleePath.rfind("/map/", 0) != 0 &&
-      normalizedCalleePath.rfind("/std/collections/map/", 0) != 0 &&
-      normalizedCalleePath.rfind("/std/collections/experimental_map/", 0) != 0) {
+  if (normalizedCalleePath.rfind("/std/collections/map/", 0) != 0) {
     return false;
   }
   const size_t slash = callee.fullPath.find_last_of('/');
@@ -185,21 +178,8 @@ bool isExplicitSamePathMapCountLikeDefinitionCall(const Expr &expr,
       helperName != "contains_ref" && helperName != "tryAt_ref") {
     return false;
   }
-  const auto normalizeCountLikeHelperPath = [](const std::string &path) {
-    std::string normalized = normalizeCollectionHelperPath(path);
-    const auto rewriteCanonicalPrefix = [&](std::string_view prefix) {
-      if (normalized.rfind(prefix, 0) != 0) {
-        return false;
-      }
-      normalized = "/map/" + normalized.substr(prefix.size());
-      return true;
-    };
-    rewriteCanonicalPrefix("/std/collections/map/");
-    rewriteCanonicalPrefix("/std/collections/experimental_map/");
-    return normalized;
-  };
-  return normalizeCountLikeHelperPath(rawPath) ==
-         normalizeCountLikeHelperPath(callee.fullPath);
+  return normalizeCollectionHelperPath(rawPath) ==
+         normalizeCollectionHelperPath(callee.fullPath);
 }
 
 bool isDirectMapAccessHelperCall(const Expr &expr) {

@@ -134,11 +134,9 @@
         };
         auto isDirectCollectionHelperPath = [&](const std::string &path) {
           return path.rfind("/array/", 0) == 0 ||
-                 path.rfind("/map/", 0) == 0 ||
                  path.rfind(collectionMemberRoot("vector"), 0) == 0 ||
                  path.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0 ||
-                 path.rfind("/std/collections/map/", 0) == 0 ||
-                 path.rfind("/std/collections/experimental_map/", 0) == 0;
+                 path.rfind("/std/collections/map/", 0) == 0;
         };
         auto hasMapEntryCtorArgs = [](const Expr &callExpr) {
           auto isMapEntryCallExpr = [](const Expr &candidate) {
@@ -281,7 +279,7 @@
           const std::string rawPath = resolveDirectHelperPath(callExpr);
           const std::string normalizedRawPath =
               normalizeCollectionHelperPath(rawPath);
-          if (normalizedRawPath != "/map/map") {
+          if (normalizedRawPath != "/std/collections/map/map") {
             return nullptr;
           }
           for (const auto &[path, def] : defMap) {
@@ -474,9 +472,7 @@
           }
           if (directCallee == nullptr &&
               hasMapEntryCtorArgs(expr) &&
-              (rawPath.rfind("/map/", 0) == 0 ||
-               rawPath.rfind("/std/collections/map/", 0) == 0 ||
-               rawPath.rfind("/std/collections/experimental_map/", 0) == 0)) {
+              rawPath.rfind("/std/collections/map/", 0) == 0) {
             directCallee = findDirectEntryMapConstructorDefinition(expr);
           }
           if (directCallee == nullptr &&
@@ -708,12 +704,8 @@
             if (hasMapEntryCtorArgs(expr) &&
                 extractHelperTail(normalizeCollectionHelperPath(directCallee->fullPath)) ==
                     "map" &&
-                (rawPath.rfind("/map/", 0) == 0 ||
-                 rawPath.rfind("/std/collections/map/", 0) == 0 ||
-                 rawPath.rfind("/std/collections/experimental_map/", 0) == 0 ||
-                 resolvedExprPath.rfind("/map/", 0) == 0 ||
-                 resolvedExprPath.rfind("/std/collections/map/", 0) == 0 ||
-                 resolvedExprPath.rfind("/std/collections/experimental_map/", 0) == 0) &&
+                (rawPath.rfind("/std/collections/map/", 0) == 0 ||
+                 resolvedExprPath.rfind("/std/collections/map/", 0) == 0) &&
                 isDirectHelperDefinitionFamily(expr, *directCallee)) {
               if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
                 return false;
@@ -752,12 +744,8 @@
                  helperName == "tryAt" || helperName == "at" ||
                  helperName == "at_unsafe" || helperName == "insert" ||
                  helperName == "insert_ref") &&
-                (rawPath.rfind("/map/", 0) == 0 ||
-                 rawPath.rfind("/std/collections/map/", 0) == 0 ||
-                 rawPath.rfind("/std/collections/experimental_map/", 0) == 0 ||
-                 directCallee->fullPath.rfind("/map/", 0) == 0 ||
-                 directCallee->fullPath.rfind("/std/collections/map/", 0) == 0 ||
-                 directCallee->fullPath.rfind("/std/collections/experimental_map/", 0) == 0) &&
+                (rawPath.rfind("/std/collections/map/", 0) == 0 ||
+                 directCallee->fullPath.rfind("/std/collections/map/", 0) == 0) &&
                 isDirectHelperDefinitionFamily(expr, *directCallee)) {
               if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
                 return false;
@@ -777,8 +765,7 @@
                   explicitMapAccessHelperName == "at_unsafe" ||
                   explicitMapAccessHelperName == "at_unsafe_ref") &&
                  expr.args.size() == 2 &&
-                 (rawPath.rfind("/std/collections/map/", 0) == 0 ||
-                  rawPath.rfind("/map/", 0) == 0));
+                 rawPath.rfind("/std/collections/map/", 0) == 0);
             if (isExplicitCanonicalMapAccess &&
                 isDirectHelperDefinitionFamily(expr, *directCallee)) {
               error =
@@ -1076,7 +1063,8 @@
           error = priorError;
         }
         if (!expr.isMethodCall && hasMapEntryCtorArgs(expr) &&
-            normalizeCollectionHelperPath(resolveExprPath(expr)) == "/map/map") {
+            normalizeCollectionHelperPath(resolveExprPath(expr)) ==
+                "/std/collections/map/map") {
           error = "native backend does not support variadic entry map constructors";
           return false;
         }
@@ -1126,8 +1114,7 @@
         if (!expr.isMethodCall &&
             (resolveExprPath(expr) == "/std/collections/map/insert" ||
              resolveExprPath(expr) == "/std/collections/map/insert_ref" ||
-             resolveExprPath(expr).rfind("/std/collections/internal_map/insert", 0) == 0 ||
-             resolveExprPath(expr).rfind("/std/collections/experimental_map/mapInsert", 0) == 0)) {
+             resolveExprPath(expr).rfind("/std/collections/internal_map/insert", 0) == 0)) {
           if (const Definition *directCallee = resolveDirectHelperDefinition(expr);
               directCallee != nullptr) {
             if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {

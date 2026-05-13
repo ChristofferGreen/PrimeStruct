@@ -17475,3 +17475,30 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     canonical map helper selection for map and borrowed-map receivers, updated
     native compile-run expectation coverage, refreshed source locks, and moved
     the ready queue to TODO-4460.
+
+- [x] TODO-4460: Delete inline/native map raw-path dispatch checks
+  - owner: ai
+  - created_at: 2026-05-13
+  - finished_at: 2026-05-13
+  - phase: Map stdlib ownership cutover
+  - split_from: TODO-4457
+  - depends_on: TODO-4459
+  - scope: Remove inline/native lowerer raw-path dispatch checks that still
+    recognize rooted `/map/*` or experimental map helper paths as compatibility
+    aliases for canonical `/std/collections/map/*` calls.
+  - implementation_notes:
+    - Target `IrLowererInlineNativeCallDispatch.cpp`,
+      `IrLowererLowerStatementsExpr.h`, and nearby source-lock coverage.
+    - Preserve canonical `/std/collections/map/*` helper lowering and the
+      current internal-map implementation substrate.
+  - acceptance:
+    - Inline/native dispatch no longer treats rooted `/map/*` helper paths as
+      canonical map helper aliases.
+    - Source-lock or behavior coverage rejects reintroducing the removed raw
+      path checks.
+  - stop_rule: Stop once inline/native raw-path map compatibility is removed;
+    leave internal lowering-name deletion to TODO-4461.
+  - evidence: Narrowed inline/native map helper dispatch checks to canonical
+    `/std/collections/map/*` raw paths, removed experimental-map helper raw
+    path admission from statement-expression map dispatch, source-locked the
+    removed raw-path branches, and advanced the ready queue to TODO-4461.

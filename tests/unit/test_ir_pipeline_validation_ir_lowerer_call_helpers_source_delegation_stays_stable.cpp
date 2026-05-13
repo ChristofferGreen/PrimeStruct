@@ -491,6 +491,16 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(inlineDispatchSource.find("isInlineMapBuiltinHelperName(resolvedHelperName)") !=
         std::string::npos);
+  CHECK(inlineDispatchSource.find("rawPath.rfind(\"/map/\", 0)") ==
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("normalizedCalleePath.rfind(\"/map/\", 0)") ==
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("rewriteCanonicalPrefix(\"/std/collections/map/\")") ==
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("rewriteCanonicalPrefix(\"/std/collections/experimental_map/\")") ==
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("normalized = \"/map/\" +") ==
+        std::string::npos);
   CHECK(inlineDispatchSource.find(
             "    const std::string scopedExprPath = resolveInlineCallPathWithoutFallbackProbes(expr);") !=
         std::string::npos);
@@ -940,6 +950,25 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(lowerStatementsExprSource.find("std/collections/vector/") ==
         std::string::npos);
   CHECK(lowerStatementsExprSource.find("std/collections/experimental_vector") ==
+        std::string::npos);
+  CHECK(lowerStatementsExprSource.find("path.rfind(\"/map/\", 0) == 0") ==
+        std::string::npos);
+  CHECK(lowerStatementsExprSource.find(
+            "path.rfind(\"/std/collections/experimental_map/\", 0) == 0") ==
+        std::string::npos);
+  CHECK(lowerStatementsExprSource.find("rawPath.rfind(\"/map/\", 0) == 0") ==
+        std::string::npos);
+  CHECK(lowerStatementsExprSource.find(
+            "rawPath.rfind(\"/std/collections/experimental_map/\", 0) == 0") ==
+        std::string::npos);
+  CHECK(lowerStatementsExprSource.find("resolvedExprPath.rfind(\"/map/\", 0) == 0") ==
+        std::string::npos);
+  CHECK(lowerStatementsExprSource.find("directCallee->fullPath.rfind(\"/map/\", 0) == 0") ==
+        std::string::npos);
+  CHECK(lowerStatementsExprSource.find(
+            "directCallee->fullPath.rfind(\"/std/collections/experimental_map/\", 0) == 0") ==
+        std::string::npos);
+  CHECK(lowerStatementsExprSource.find("/std/collections/experimental_map/mapInsert") ==
         std::string::npos);
   CHECK(lowerStatementsLoopsSource.find("std/collections/experimental_vector") ==
         std::string::npos);
