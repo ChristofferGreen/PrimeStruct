@@ -3154,9 +3154,10 @@ TEST_CASE("emitter collection fallback helpers stay scoped path aware") {
 
   const std::string fallbackHelpersSource = readText(fallbackHelpersPath);
 
-  CHECK(fallbackHelpersSource.find("std::string normalized = resolveExprPath(candidate);") !=
-        std::string::npos);
-  CHECK(fallbackHelpersSource.find("const std::string resolvedPath = resolveExprPath(candidate);") !=
+  CHECK(fallbackHelpersSource.find(
+            "resolvePublishedCollectionSurfacePathMemberName(\n"
+            "            resolveExprPath(candidate),\n"
+            "            CollectionFallbackVectorHelperSurfaceBridgeKey") !=
         std::string::npos);
   CHECK(fallbackHelpersSource.find("std::string normalized = candidate.name;") ==
         std::string::npos);

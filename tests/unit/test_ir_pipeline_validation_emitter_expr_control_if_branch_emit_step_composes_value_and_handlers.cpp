@@ -1009,7 +1009,14 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "      canonicalizeResolvedPath(resolvedCallPath);\n") !=
         std::string::npos);
   CHECK(buildInitializerInferenceCallsSource.find(
-            "canonicalResolvedCallPath == \"/std/collections/vector/at\"") !=
+            "  const bool isVectorCompatibilityResolvedCall =\n"
+            "      resolveVectorCompatibilityHelperNameFromResolvedPath(\n"
+            "          canonicalResolvedCallPath, vectorCompatibilityHelperName);\n") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
+            "       (isVectorCompatibilityResolvedCall &&\n"
+            "        (vectorCompatibilityHelperName == \"at\" ||\n"
+            "         vectorCompatibilityHelperName == \"at_unsafe\")))") !=
         std::string::npos);
   CHECK(buildInitializerInferenceCallsSource.find(
             "  const bool isCountLike =\n"
