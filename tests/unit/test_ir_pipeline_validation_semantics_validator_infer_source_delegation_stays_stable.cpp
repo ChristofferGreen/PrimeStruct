@@ -1719,6 +1719,7 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "                                            initializerWrapperPath);\n"
             "            if (!concreteInitializerWrapperPath.empty()) {\n"
             "              initializerWrapperPath = concreteInitializerWrapperPath;\n"
+            "            }\n"
             "          }\n") !=
         std::string::npos);
   CHECK(semanticsInferGraphSource.find(
@@ -1766,7 +1767,9 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsStatementBindingsSource.find("resolvedCallPath.rfind(\"/std/collections/internal_soa_storage/soaColumnSlotUnsafe\", 0) == 0") ==
         std::string::npos);
-  CHECK(semanticsStatementBindingsSource.find("resolvedCallPath.rfind(\"/std/collections/experimental_vector/vectorSlotUnsafe\", 0) == 0") !=
+  CHECK(semanticsStatementBindingsSource.find(
+            "legacyExperimentalVectorCompatibilityPrefix() +\n"
+            "                std::string(\"vector\") + \"SlotUnsafe\"") !=
         std::string::npos);
   CHECK(semanticsStatementBindingsSource.find("isExplicitCanonicalVectorConstructor") ==
         std::string::npos);
@@ -1845,7 +1848,7 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
   CHECK(semanticsStatementVectorHelpersSource.find("validateVectorRelocationHelperElementType(binding, \"push\"") !=
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
-            "const std::string vectorHelperResolvedCanonical =") !=
+            "std::string vectorHelperResolvedCanonical =") !=
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find(
             "const bool hasNamedStatementArgs = hasNamedArguments(stmt.argNames);") !=

@@ -1,18 +1,14 @@
 #include "SemanticsValidator.h"
 
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+
 #include <string>
+#include <string_view>
 #include <unordered_set>
 #include <vector>
 
 namespace primec::semantics {
 namespace {
-
-std::string bindingTypeText(const BindingInfo &binding) {
-  if (binding.typeTemplateArg.empty()) {
-    return binding.typeName;
-  }
-  return binding.typeName + "<" + binding.typeTemplateArg + ">";
-}
 
 bool templateArgsContainTypeName(const std::vector<std::string> *templateArgs, const std::string &typeName) {
   if (templateArgs == nullptr) {
@@ -25,6 +21,12 @@ bool templateArgsContainTypeName(const std::vector<std::string> *templateArgs, c
     }
   }
   return false;
+}
+
+bool isLegacyExperimentalVectorValidationContext(std::string_view definitionPath,
+                                                 std::string_view namespacePrefix) {
+  return definitionPath.rfind(legacyExperimentalVectorCompatibilityPrefix(), 0) == 0 ||
+         namespacePrefix.rfind(legacyExperimentalVectorCompatibilityRoot(), 0) == 0;
 }
 
 } // namespace
@@ -223,8 +225,9 @@ bool SemanticsValidator::validateVectorIndexedRemovalHelperElementType(
   std::string experimentalElemType;
   const bool requiresDropTrivial = helperName != "remove_swap" && helperName != "remove_at";
   if (requiresDropTrivial && !extractExperimentalVectorElementType(binding, experimentalElemType) &&
-      currentValidationState_.context.definitionPath.rfind("/std/collections/experimental_vector/", 0) != 0 &&
-      namespacePrefix.rfind("/std/collections/experimental_vector", 0) != 0 &&
+      !isLegacyExperimentalVectorValidationContext(
+          currentValidationState_.context.definitionPath,
+          namespacePrefix) &&
       !binding.typeTemplateArg.empty()) {
     std::unordered_set<std::string> visitingStructs;
     if (!isDropTrivialContainerElementType(binding.typeTemplateArg,
@@ -258,8 +261,9 @@ bool SemanticsValidator::validateVectorRelocationHelperElementType(
   if (extractExperimentalVectorElementType(binding, experimentalElemType)) {
     return true;
   }
-  if (currentValidationState_.context.definitionPath.rfind("/std/collections/experimental_vector/", 0) == 0 ||
-      namespacePrefix.rfind("/std/collections/experimental_vector", 0) == 0) {
+  if (isLegacyExperimentalVectorValidationContext(
+          currentValidationState_.context.definitionPath,
+          namespacePrefix)) {
     return true;
   }
   if (binding.typeTemplateArg.empty()) {

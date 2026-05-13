@@ -857,7 +857,8 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
   const bool isCanonicalStdVectorMutatorMethodCall =
       stmt.isMethodCall && isResolvedStdNamespacedVectorMutatorHelper;
   const bool isResolvedExperimentalVectorHelper =
-      vectorHelperResolved.rfind("/std/collections/experimental_vector/", 0) == 0;
+      vectorHelperResolved.rfind(
+          legacyExperimentalVectorCompatibilityPrefix(), 0) == 0;
   const bool isResolvedSoaHelper =
       vectorHelperResolved.rfind("/std/collections/soa_vector/", 0) == 0 ||
       vectorHelperResolved.rfind("/soa_vector/", 0) == 0;

@@ -1,5 +1,7 @@
 #include "SemanticsValidator.h"
 
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+
 #include <functional>
 #include <optional>
 #include <string>
@@ -240,7 +242,9 @@ bool SemanticsValidator::isStringStatementExpr(const Expr &arg,
       const std::string resolvedPath = resolveCalleePath(candidate);
       const bool treatAsBuiltinAccess =
           defMap_.find(resolvedPath) == defMap_.end() ||
-          resolvedPath.rfind("/std/collections/vector/at", 0) == 0 ||
+          isStdNamespacedVectorCompatibilityHelperPath(resolvedPath, "at") ||
+          isStdNamespacedVectorCompatibilityHelperPath(resolvedPath,
+                                                       "at_unsafe") ||
           resolvedPath == "/map/at" ||
           resolvedPath == "/map/at_unsafe" ||
           resolvedPath == "/std/collections/map/at" ||

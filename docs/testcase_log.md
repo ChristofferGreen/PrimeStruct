@@ -4,6 +4,8 @@
 - none
 
 ## Recent Test Runs
+- 2026-05-13 11:22 local | pass | mode: release | command: `cmake --build build-release --target PrimeStruct_backend_ir_tests && cd build-release && ./PrimeStruct_backend_ir_tests -tc="semantics validator statement source delegation stays stable"` | failures: none | notes: statement source-delegation lock now matches helper-routed vector slot unsafe and canonicalized helper snippets
+- 2026-05-13 11:22 local | fail | mode: release | command: `cd build-release && ./PrimeStruct_backend_ir_tests -tc="semantics validator statement source delegation stays stable"` | failures: stale statement source-delegation lock | notes: expected direct experimental vector slot path and stale snippet spellings before refreshing source-lock assertions
 - 2026-05-13 11:01 local | pass | mode: release | command: `cmake --build build-release --target PrimeStruct_backend_ir_tests && cd build-release && ./PrimeStruct_backend_ir_tests -tc="semantics validator infer source delegation stays stable"` | failures: none | notes: stale infer source-delegation lock now matches the current `definition.namespacePrefix` return-transform routing
 - 2026-05-13 11:01 local | fail | mode: release | command: `cd build-release && ./PrimeStruct_backend_ir_tests -tc="semantics validator infer source delegation stays stable"` | failures: stale infer source-delegation lock | notes: source lock still expected the removed `directDefIt->second->namespacePrefix` spelling before rebuilding the corrected expectation
 - 2026-05-13 11:00 local | pass | mode: release | command: `cd build-release && ctest --output-on-failure -R 'PrimeStruct_vector_surface_traces'` | failures: none | notes: CTest vector surface trace target passes with the ratcheted 208-trace baseline
@@ -42,6 +44,7 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- stale statement source-delegation lock now passes after matching helper-routed vector slot unsafe and canonicalized helper snippets.
 - stale infer source-delegation lock now passes after matching the current `definition.namespacePrefix` return-transform routing.
 - Vector surface trace gate now passes after semantic vector access probes use registry-backed canonical helper lookups and shared vector helper-path predicates.
 - native vector/map count-shadow shard now passes after semantic string-return inference for stdlib vector/map access helpers, native count-source target routing, and inline lowering for string-returning slash-method map access

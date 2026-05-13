@@ -1,5 +1,7 @@
 #include "SemanticsValidator.h"
 
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+
 #include <algorithm>
 #include <string>
 #include <string_view>
@@ -50,17 +52,20 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
   }
 
   auto shouldPreserveBodyArgumentTarget = [&](const std::string &path) -> bool {
-    auto helperSuffix = [](const std::string &candidate, const char *prefix) -> std::string_view {
-      const size_t prefixLen = std::char_traits<char>::length(prefix);
+    auto helperSuffix = [](std::string_view candidate,
+                           std::string_view prefix) -> std::string_view {
+      const size_t prefixLen = prefix.size();
       if (candidate.rfind(prefix, 0) != 0 || candidate.size() <= prefixLen) {
         return std::string_view();
       }
-      return std::string_view(candidate).substr(prefixLen);
+      return candidate.substr(prefixLen);
     };
 
     std::string_view helper = helperSuffix(path, "/array/");
     if (helper.empty()) {
-      helper = helperSuffix(path, "/std/collections/vector/");
+      const std::string canonicalVectorPrefix =
+          canonicalVectorCompatibilityPrefixOrFallback() + "/";
+      helper = helperSuffix(path, canonicalVectorPrefix);
     }
     if (!helper.empty()) {
       return isRemovedVectorCompatibilityHelper(helper);

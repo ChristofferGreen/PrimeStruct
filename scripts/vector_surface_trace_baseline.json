@@ -120,41 +120,6 @@
       "count": 1
     },
     {
-      "path": "src/semantics/SemanticsValidatorStatementBindings.cpp",
-      "pattern": "experimental-vector-path",
-      "count": 5
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorStatementBodyArguments.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 1
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorStatementContainerHelpers.cpp",
-      "pattern": "experimental-vector-path",
-      "count": 4
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorStatementPrintability.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 1
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorStatementReturns.cpp",
-      "pattern": "canonical-vector-path",
-      "count": 2
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorStatementReturns.cpp",
-      "pattern": "experimental-vector-path",
-      "count": 2
-    },
-    {
-      "path": "src/semantics/SemanticsValidatorStatementVectorHelpers.cpp",
-      "pattern": "experimental-vector-path",
-      "count": 1
-    },
-    {
       "path": "src/semantics/TemplateMonomorphBindingCallInference.h",
       "pattern": "experimental-vector-path",
       "count": 6

@@ -16466,3 +16466,33 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     `scripts/vector_surface_trace_baseline.json` from 208 to 155 production
     traces. Focused release target build, source-lock validation, direct vector
     trace check, and vector trace CTest validation passed.
+
+- [x] TODO-4432: Route semantic statement vector traces
+  - owner: ai
+  - created_at: 2026-05-13
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4431
+  - scope: Replace remaining semantic statement binding, body-argument,
+    container-helper, printability, return, and vector-helper traces with
+    generic collection predicates or registry-backed vector helper queries.
+  - implementation_notes:
+    - Start from the `SemanticsValidatorStatement*` entries in
+      `scripts/vector_surface_trace_baseline.json` after TODO-4431.
+    - Keep ordinary C++ `std::vector` container usage allowed.
+  - acceptance:
+    - Statement-side semantic vector traces are removed or routed through
+      semantic facts, generic collection helpers, or registry metadata.
+    - Focused semantic source-lock or behavior coverage remains aligned.
+    - The vector surface trace baseline decreases for the selected statement
+      files and does not increase elsewhere.
+  - stop_rule: Stop after statement-side semantic vector traces that can be
+    routed before layout/snapshot work are removed and the baseline ratchets
+    downward.
+  - finished_at: 2026-05-13
+  - evidence: Routed statement binding, body-argument, container-helper,
+    printability, return, and vector-helper vector traces through shared
+    compatibility helpers and registry-backed metadata; updated statement
+    source-lock coverage; and ratcheted
+    `scripts/vector_surface_trace_baseline.json` from 155 to 139 production
+    traces. Focused release target build, statement source-lock validation,
+    direct vector trace check, and vector trace CTest validation passed.

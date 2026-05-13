@@ -1,4 +1,7 @@
 #include "SemanticsValidator.h"
+
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+
 #include <functional>
 #include <optional>
 
@@ -492,11 +495,10 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     if (base == "vector") {
       return "builtin_vector";
     }
-    if (base == "Vector" || base == "/std/collections/experimental_vector/Vector" ||
-        base == "std/collections/experimental_vector/Vector" ||
-        base.rfind("/std/collections/experimental_vector/Vector__", 0) == 0 ||
-        base.rfind("std/collections/experimental_vector/Vector__", 0) == 0) {
-      return "experimental_vector";
+    if (base == "Vector" ||
+        isLegacyExperimentalVectorCompatibilityTypePath(base) ||
+        isLegacyExperimentalVectorCompatibilityTypePath("/" + base)) {
+      return legacyExperimentalVectorCompatibilityFamilyName();
     }
     return {};
   };
@@ -508,8 +510,10 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
         }
         const bool isVectorRepresentationPair =
             (expectedRepresentation == "builtin_vector" &&
-             actualRepresentation == "experimental_vector") ||
-            (expectedRepresentation == "experimental_vector" &&
+             actualRepresentation ==
+                 legacyExperimentalVectorCompatibilityFamilyName()) ||
+            (expectedRepresentation ==
+                 legacyExperimentalVectorCompatibilityFamilyName() &&
              actualRepresentation == "builtin_vector");
         return isVectorRepresentationPair;
       };
@@ -726,7 +730,10 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     const bool isSoaColumnSlotUnsafe =
         isExperimentalSoaColumnSlotHelperPath(resolvedCallPath);
     const bool isVectorSlotUnsafe =
-        resolvedCallPath.rfind("/std/collections/experimental_vector/vectorSlotUnsafe", 0) == 0;
+        resolvedCallPath.rfind(
+            legacyExperimentalVectorCompatibilityPrefix() +
+                std::string("vector") + "SlotUnsafe",
+            0) == 0;
     if ((isSoaColumnSlotUnsafe || isVectorSlotUnsafe) && !expr.args.empty()) {
       std::string storageRoot;
       if (!resolveStorageRootExpr(expr.args.front(), storageRoot) || storageRoot.empty()) {

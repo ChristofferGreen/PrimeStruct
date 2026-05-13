@@ -1,5 +1,7 @@
 #include "SemanticsValidator.h"
 
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+
 #include <cctype>
 #include <functional>
 #include <limits>
@@ -945,15 +947,19 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
             if (normalizedTypePath.rfind("std/collections/experimental_map/Map__", 0) == 0) {
               return "/map";
             }
-            if (normalizedTypePath == "std/collections/experimental_vector/Vector" ||
-                normalizedTypePath.rfind("std/collections/experimental_vector/Vector__", 0) == 0) {
+            if (isLegacyExperimentalVectorCompatibilityTypePath(
+                    normalizedTypePath) ||
+                isLegacyExperimentalVectorCompatibilityTypePath(
+                    "/" + normalizedTypePath)) {
               return "/vector";
             }
             if (typePath == "/array" || typePath == "array") {
               return "/array";
             }
-            if (typePath == "/vector" || typePath == "vector" || typePath == "/std/collections/vector" ||
-                typePath == "std/collections/vector") {
+            if (typePath == "/vector" || typePath == "vector" ||
+                trimLeadingSlash(typePath) ==
+                    trimLeadingSlash(
+                        canonicalVectorCompatibilityPrefixOrFallback())) {
               return "/vector";
             }
             if (typePath == "/soa_vector" || typePath == "soa_vector") {
