@@ -199,6 +199,20 @@ bool isExplicitDirectMapAccessHelperCall(const Expr &expr) {
   return !rawPath.empty() && rawPath.front() == '/';
 }
 
+bool isExplicitRemovedMapAccessHelperCall(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
+    return false;
+  }
+  std::string rawPath = resolveInlineCallPathWithoutFallbackProbes(expr);
+  if (!rawPath.empty() && rawPath.front() == '/') {
+    rawPath.erase(rawPath.begin());
+  }
+  return rawPath == "map/at" ||
+         rawPath == "map/at_unsafe" ||
+         rawPath == "map/at_ref" ||
+         rawPath == "map/at_unsafe_ref";
+}
+
 bool isSemanticBarePreferredMapHelperDefinitionCall(const Expr &expr,
                                                     const Definition &callee) {
   std::string helperName;
@@ -769,7 +783,8 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
         directCallee->fullPath.rfind("/std/collections/experimental_map/map", 0) == 0;
     if (directCallee != nullptr && isCollectionAccessReceiverExpr &&
         !expr.args.empty() && isCollectionAccessReceiverExpr(expr.args.front()) &&
-        isExplicitDirectMapAccessHelperCall(expr) &&
+        (isExplicitDirectMapAccessHelperCall(expr) ||
+         isExplicitRemovedMapAccessHelperCall(expr)) &&
         !isExplicitDirectExperimentalMapAccessHelperCall) {
       return InlineCallDispatchResult::NotHandled;
     }

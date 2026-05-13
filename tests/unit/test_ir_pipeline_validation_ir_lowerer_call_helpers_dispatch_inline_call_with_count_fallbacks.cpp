@@ -674,6 +674,15 @@ TEST_CASE("ir lowerer call helpers prefer direct same-path map count-like defs")
   primec::Definition rootedTryAt;
   rootedTryAt.fullPath = "/map/tryAt";
 
+  primec::Definition canonicalCount;
+  canonicalCount.fullPath = "/std/collections/map/count";
+
+  primec::Definition canonicalContains;
+  canonicalContains.fullPath = "/std/collections/map/contains";
+
+  primec::Definition canonicalTryAt;
+  canonicalTryAt.fullPath = "/std/collections/map/tryAt";
+
   auto expectDirectDefWins = [&](primec::Expr callExpr, const primec::Definition &expectedCallee) {
     int resolveMethodCalls = 0;
     int resolveDefinitionCalls = 0;
@@ -715,13 +724,13 @@ TEST_CASE("ir lowerer call helpers prefer direct same-path map count-like defs")
   expectDirectDefWins(makeDirectCall("/map/tryAt", {valuesName, keyLiteral}), rootedTryAt);
   expectDirectDefWins(
       makeNamespacedDirectCall("/std/collections/map", "count", {valuesName}),
-      rootedCount);
+      canonicalCount);
   expectDirectDefWins(
       makeNamespacedDirectCall("/std/collections/map", "contains", {valuesName, keyLiteral}),
-      rootedContains);
+      canonicalContains);
   expectDirectDefWins(
       makeNamespacedDirectCall("/std/collections/map", "tryAt", {valuesName, keyLiteral}),
-      rootedTryAt);
+      canonicalTryAt);
 }
 
 TEST_CASE("ir lowerer call helpers keep direct map access defs on builtin fallback") {

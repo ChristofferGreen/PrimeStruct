@@ -249,6 +249,26 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
            matchesCollectionRoot("array") ||
            matchesCollectionRoot("soa_vector");
   };
+  auto isExplicitRemovedMapHelperAliasCall = [&]() {
+    if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
+      return false;
+    }
+    const std::string directHelperPath = resolveDirectHelperPath();
+    auto matchesMapRoot = [&](std::string_view helperName) {
+      const std::string unrooted = "map/" + std::string(helperName);
+      return directHelperPath == unrooted || directHelperPath == "/" + unrooted;
+    };
+    return matchesMapRoot("count") ||
+           matchesMapRoot("contains") ||
+           matchesMapRoot("tryAt") ||
+           matchesMapRoot("at") ||
+           matchesMapRoot("at_unsafe") ||
+           matchesMapRoot("count_ref") ||
+           matchesMapRoot("contains_ref") ||
+           matchesMapRoot("tryAt_ref") ||
+           matchesMapRoot("at_ref") ||
+           matchesMapRoot("at_unsafe_ref");
+  };
   if (!expr.isMethodCall) {
     const std::string directHelperPath = resolveDirectHelperPath();
     if (directHelperPath.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0 ||
@@ -256,7 +276,8 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
       return CountMethodFallbackResult::NotHandled;
     }
     if (isExplicitRemovedCountLikeAliasCall("count") ||
-        isExplicitRemovedCountLikeAliasCall("capacity")) {
+        isExplicitRemovedCountLikeAliasCall("capacity") ||
+        isExplicitRemovedMapHelperAliasCall()) {
       return CountMethodFallbackResult::NotHandled;
     }
   }

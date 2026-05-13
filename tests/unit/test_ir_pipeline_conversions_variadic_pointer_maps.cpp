@@ -146,13 +146,15 @@ main() {
   CHECK(result == 39);
 }
 
-TEST_CASE("ir lowerer materializes variadic pointer map packs with indexed count methods") {
+TEST_CASE("ir lowerer materializes variadic pointer map packs with indexed count_ref helpers") {
   const std::string source = R"(
 import /std/collections/*
+import /std/collections/map/*
 
 [return<int>]
 score_ptrs([args<Pointer</std/collections/map<i32, i32>>>] values) {
-  return(plus(values[0i32].count(), values[2i32].count()))
+  return(plus(/std/collections/map/count_ref<i32, i32>(values[0i32]),
+              /std/collections/map/count_ref<i32, i32>(values[2i32])))
 }
 
 [return<int>]
@@ -217,6 +219,7 @@ main() {
 TEST_CASE("ir lowerer materializes variadic pointer map packs with indexed dereference count methods") {
   const std::string source = R"(
 import /std/collections/*
+import /std/collections/map/*
 
 [return<int>]
 score_ptrs([args<Pointer</std/collections/map<i32, i32>>>] values) {
@@ -283,15 +286,16 @@ main() {
   CHECK(result == 11);
 }
 
-TEST_CASE("ir lowerer materializes variadic pointer map packs with indexed lookup helpers") {
+TEST_CASE("ir lowerer materializes variadic pointer map packs with indexed lookup_ref helpers") {
   const std::string source = R"(
 import /std/collections/*
+import /std/collections/map/*
 
 [return<int>]
 score_ptrs([args<Pointer</std/collections/map<i32, i32>>>] values) {
-  [auto] head{at(values, 0i32).at_unsafe(3i32)}
-  if(at(values, 2i32).contains(11i32),
-     then(){ return(plus(head, at(values, 2i32).at(11i32))) },
+  [auto] head{/std/collections/map/at_unsafe_ref<i32, i32>(at(values, 0i32), 3i32)}
+  if(/std/collections/map/contains_ref<i32, i32>(at(values, 2i32), 11i32),
+     then(){ return(plus(head, /std/collections/map/at_ref<i32, i32>(at(values, 2i32), 11i32))) },
      else(){ return(0i32) })
 }
 
@@ -357,6 +361,7 @@ main() {
 TEST_CASE("ir lowerer materializes variadic pointer map packs with indexed dereference lookup helpers") {
   const std::string source = R"(
 import /std/collections/*
+import /std/collections/map/*
 
 [return<int>]
 score_ptrs([args<Pointer</std/collections/map<i32, i32>>>] values) {
@@ -425,6 +430,7 @@ main() {
 TEST_CASE("ir lowerer rejects variadic pointer map packs with indexed helper inference") {
   const std::string source = R"(
 import /std/collections/*
+import /std/collections/map/*
 
 [return<int>]
 score_ptrs([args<Pointer</std/collections/map<i32, i32>>>] values) {

@@ -65,13 +65,7 @@ main() {
 TEST_CASE("mapTryAt helper validates for supported i32 container result payloads") {
   const std::string source = R"(
 import /std/collections/*
-
-[return<Result<V, ContainerError>>]
-/std/collections/map/tryAt<K, V>([map<K, V>] values, [K] key) {
-  if(/std/collections/map/contains(values, key),
-     then() { return(Result.ok(/std/collections/map/at_unsafe(values, key))) },
-     else() { return(containerErrorResult<V>(containerMissingKey())) })
-}
+import /std/collections/map/*
 
 [return<Result<i32, ContainerError>>]
 main() {
@@ -87,13 +81,7 @@ main() {
 TEST_CASE("mapTryAt helper validates for supported bool container result payloads") {
   const std::string source = R"(
 import /std/collections/*
-
-[return<Result<V, ContainerError>>]
-/std/collections/map/tryAt<K, V>([map<K, V>] values, [K] key) {
-  if(/std/collections/map/contains(values, key),
-     then() { return(Result.ok(/std/collections/map/at_unsafe(values, key))) },
-     else() { return(containerErrorResult<V>(containerMissingKey())) })
-}
+import /std/collections/map/*
 
 [return<Result<bool, ContainerError>>]
 main() {
@@ -109,13 +97,7 @@ main() {
 TEST_CASE("mapTryAt helper validates for supported string container result payloads") {
   const std::string source = R"(
 import /std/collections/*
-
-[return<Result<V, ContainerError>>]
-/std/collections/map/tryAt<K, V>([map<K, V>] values, [K] key) {
-  if(/std/collections/map/contains(values, key),
-     then() { return(Result.ok(/std/collections/map/at_unsafe(values, key))) },
-     else() { return(containerErrorResult<V>(containerMissingKey())) })
-}
+import /std/collections/map/*
 
 [return<Result<string, ContainerError>>]
 main() {

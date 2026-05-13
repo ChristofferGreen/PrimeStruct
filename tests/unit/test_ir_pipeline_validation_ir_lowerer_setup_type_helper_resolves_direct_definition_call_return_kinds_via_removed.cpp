@@ -2,7 +2,7 @@
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
-TEST_CASE("ir lowerer setup type helper resolves direct definition call return kinds via removed map aliases") {
+TEST_CASE("ir lowerer setup type helper rejects removed map alias return-kind fallback") {
   std::unordered_map<std::string, const primec::Definition *> defMap;
   primec::Definition canonicalCountDef;
   canonicalCountDef.fullPath = "/std/collections/map/count";
@@ -57,7 +57,7 @@ TEST_CASE("ir lowerer setup type helper resolves direct definition call return k
 
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   bool definitionMatched = false;
-  CHECK(primec::ir_lowerer::resolveDefinitionCallReturnKind(
+  CHECK_FALSE(primec::ir_lowerer::resolveDefinitionCallReturnKind(
       countCall,
       defMap,
       [](const primec::Expr &expr) { return expr.name; },
@@ -65,8 +65,8 @@ TEST_CASE("ir lowerer setup type helper resolves direct definition call return k
       false,
       kindOut,
       &definitionMatched));
-  CHECK(definitionMatched);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
+  CHECK_FALSE(definitionMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
   primec::Expr containsCall;
   containsCall.kind = primec::Expr::Kind::Call;
@@ -74,7 +74,7 @@ TEST_CASE("ir lowerer setup type helper resolves direct definition call return k
 
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   definitionMatched = false;
-  CHECK(primec::ir_lowerer::resolveDefinitionCallReturnKind(
+  CHECK_FALSE(primec::ir_lowerer::resolveDefinitionCallReturnKind(
       containsCall,
       defMap,
       [](const primec::Expr &expr) { return expr.name; },
@@ -82,8 +82,8 @@ TEST_CASE("ir lowerer setup type helper resolves direct definition call return k
       false,
       kindOut,
       &definitionMatched));
-  CHECK(definitionMatched);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+  CHECK_FALSE(definitionMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
   primec::Expr tryAtCall;
   tryAtCall.kind = primec::Expr::Kind::Call;
@@ -91,7 +91,7 @@ TEST_CASE("ir lowerer setup type helper resolves direct definition call return k
 
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   definitionMatched = false;
-  CHECK(primec::ir_lowerer::resolveDefinitionCallReturnKind(
+  CHECK_FALSE(primec::ir_lowerer::resolveDefinitionCallReturnKind(
       tryAtCall,
       defMap,
       [](const primec::Expr &expr) { return expr.name; },
@@ -99,8 +99,8 @@ TEST_CASE("ir lowerer setup type helper resolves direct definition call return k
       false,
       kindOut,
       &definitionMatched));
-  CHECK(definitionMatched);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK_FALSE(definitionMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
   primec::Expr atCall;
   atCall.kind = primec::Expr::Kind::Call;
@@ -108,7 +108,7 @@ TEST_CASE("ir lowerer setup type helper resolves direct definition call return k
 
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   definitionMatched = false;
-  CHECK(primec::ir_lowerer::resolveDefinitionCallReturnKind(
+  CHECK_FALSE(primec::ir_lowerer::resolveDefinitionCallReturnKind(
       atCall,
       defMap,
       [](const primec::Expr &expr) { return expr.name; },
@@ -116,8 +116,8 @@ TEST_CASE("ir lowerer setup type helper resolves direct definition call return k
       false,
       kindOut,
       &definitionMatched));
-  CHECK(definitionMatched);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK_FALSE(definitionMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
 TEST_CASE("ir lowerer setup type helper rejects canonical map count fallback while keeping direct access defs") {
