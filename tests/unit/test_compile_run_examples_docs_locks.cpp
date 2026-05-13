@@ -1376,7 +1376,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4449: Delete remaining map semantic/raw-path adapters") !=
+                  "- TODO-4451: Delete remaining map raw/lowering adapters") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
                   "- TODO-4304: Add zero C++ map-surface audit") !=
@@ -1395,7 +1395,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4449: Delete remaining map semantic/raw-path adapters") !=
+                  "- TODO-4451: Delete remaining map raw/lowering adapters") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
       "TODO-4268: Add heterogeneous type-pack syntax and metadata",
@@ -1737,9 +1737,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Compile-time macro hooks and AST transform ownership | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4449, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |") !=
+  CHECK(todo.find("| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4451, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |") !=
         std::string::npos);
-  CHECK(todo.find("| Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4449, TODO-4304 |") !=
+  CHECK(todo.find("| Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4451, TODO-4304 |") !=
         std::string::npos);
   CHECK(todo.find("| Release benchmark/example suite stability and doctest governance | none |") !=
         std::string::npos);
@@ -1747,11 +1747,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Test-suite audit follow-up and release-gate stability | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4449, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |") !=
+  CHECK(todo.find("| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4451, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |") !=
         std::string::npos);
   CHECK(todo.find("| SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |") !=
         std::string::npos);
-  CHECK(todo.find("| De-experimentalization surface and namespace parity | TODO-4430, TODO-4449, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |") !=
+  CHECK(todo.find("| De-experimentalization surface and namespace parity | TODO-4430, TODO-4451, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |") !=
         std::string::npos);
   CHECK(todo.find("| `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |") !=
         std::string::npos);
@@ -1777,7 +1777,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Lowerer/source-composition contract coverage | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4449, TODO-4304 |") !=
+  CHECK(todo.find("| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4451, TODO-4304 |") !=
         std::string::npos);
   CHECK(todo.find("### Skipped Doctest Debt Summary") != std::string::npos);
   CHECK(todo.find("Retained `doctest::skip(true)` coverage is currently absent from the active") !=

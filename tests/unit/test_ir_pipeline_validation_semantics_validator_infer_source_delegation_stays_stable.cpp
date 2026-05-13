@@ -1070,6 +1070,15 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferStructReturnHelpersSource.find(
             "isUnrootedVectorHelperPath(normalizedPath)") !=
         std::string::npos);
+  CHECK(semanticsInferStructReturnHelpersSource.find(
+            "appendUnique(\"/std/collections/map/\" + suffix)") ==
+        std::string::npos);
+  CHECK(semanticsInferStructReturnHelpersSource.find(
+            "appendUnique(\"/map/\" + suffix)") ==
+        std::string::npos);
+  CHECK(semanticsInferStructReturnSource.find(
+            "pruneInferStructReturnMapAccessCompatibilityCandidates(") ==
+        std::string::npos);
   CHECK(semanticsInferStructReturnHelpersSource.find("normalizeStructReturnHelperPath(") ==
         std::string::npos);
   CHECK(semanticsInferStructReturnHelpersSource.find("normalizedPath.rfind(\"vector/\", 0)") ==

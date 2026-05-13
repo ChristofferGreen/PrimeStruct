@@ -72,7 +72,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4449: Delete remaining map semantic/raw-path adapters
+- TODO-4451: Delete remaining map raw/lowering adapters
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -90,7 +90,7 @@ Task template:
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
 - Vector stdlib ownership cutover: none active
-- Map stdlib ownership cutover: TODO-4449 -> TODO-4304
+- Map stdlib ownership cutover: TODO-4451 -> TODO-4304
 - SoA public surface rename and ownership cutover: TODO-4305 -> TODO-4306
   -> TODO-4307 -> TODO-4308 -> TODO-4309 -> TODO-4310
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
@@ -107,7 +107,7 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4449: Delete remaining map semantic/raw-path adapters
+- TODO-4451: Delete remaining map raw/lowering adapters
 - TODO-4304: Add zero C++ map-surface audit
 - TODO-4305: Rename and style canonical `.prime` SoA surface
 - TODO-4306: Stabilize generic SoA substrate boundaries
@@ -164,16 +164,16 @@ Task template:
 | Compile-pipeline stage and publication-boundary contracts | none |
 | Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4305 |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4449, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4449, TODO-4304 |
-| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4449, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
+| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4451, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4451, TODO-4304 |
+| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4451, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
 | Semantic-product public API factoring and versioning | none |
 | IR lowerer compile-unit breakup | none |
 | Backend validation/build ergonomics | none |
-| Emitter/semantics map-helper parity | TODO-4449, TODO-4304 |
+| Emitter/semantics map-helper parity | TODO-4451, TODO-4304 |
 | VM debug-session argv ownership | none |
 | Debugger/source-map provenance parity | none |
 | Debug trace replay robustness | none |
@@ -195,12 +195,12 @@ Task template:
 | Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
-| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4449, TODO-4304 |
-| De-experimentalization surface and namespace parity | TODO-4430, TODO-4449, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
+| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4451, TODO-4304 |
+| De-experimentalization surface and namespace parity | TODO-4430, TODO-4451, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
-| Emitter map-helper canonicalization parity | TODO-4449, TODO-4304 |
+| Emitter map-helper canonicalization parity | TODO-4451, TODO-4304 |
 | VM debug-session argv lifetime coverage | none |
 | Debugger/source-map provenance parity | none |
 | Debug trace replay malformed-input coverage | none |
@@ -233,7 +233,7 @@ Task template:
   registry no longer advertises vector compatibility spellings through that
   manifest. Direct experimental vector source imports are now rejected, and
   the vector production C++ zero-trace audit is now mechanically enforced.
-  TODO-4449 and TODO-4304 continue the same ownership model for map after
+  TODO-4451 and TODO-4304 continue the same ownership model for map after
   the internal-map lookup/insertion substrate moved into `.prime` helper code,
   canonical read/access/insert wrappers stopped routing through builtin/native
   map fast paths, canonical map surface metadata moved into
@@ -244,7 +244,7 @@ Task template:
   recognizes only canonical `/std/collections/map/*` helper spellings.
   Direct experimental map source imports are now rejected, public map wrapper
   bridge names are gone, lowerer helper path-candidate adapters are retired,
-  and TODO-4449 owns the remaining production C++ adapter-level map
+  and TODO-4451 owns the remaining production C++ adapter-level map
   compatibility cleanup. Template
   monomorphization now asks the registry for preferred experimental vector/SoA
   helper spellings instead of carrying bespoke canonical-to-experimental maps.
@@ -1640,19 +1640,20 @@ Task template:
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
 
-- [ ] TODO-4449: Delete remaining map semantic/raw-path adapters
+- [ ] TODO-4451: Delete remaining map raw/lowering adapters
   - owner: ai
   - created_at: 2026-05-13
   - phase: Map stdlib ownership cutover
-  - split_from: TODO-4447
-  - depends_on: TODO-4448
+  - split_from: TODO-4449
+  - depends_on: TODO-4450
   - scope: Remove the remaining production C++ compatibility adapters for old
-    rooted map helper/constructor spellings, semantic helper rewrites, inline
-    and native raw-path dispatch checks, internal `mapCount`-style lowering
-    names, and rooted `/map/*` compatibility diagnostics now that public
-    wrapper bridge names, template-monomorph path adapters, lowerer helper
-    path-candidate adapters, and generated experimental-map helper-family
-    fallback are retired.
+    rooted map helper/constructor spellings, semantic helper rewrites outside
+    struct-return inference, inline and native raw-path dispatch checks,
+    internal `mapCount`-style lowering names, and rooted `/map/*`
+    compatibility diagnostics now that public wrapper bridge names,
+    template-monomorph path adapters, lowerer helper path-candidate adapters,
+    generated experimental-map helper-family fallback, and semantic
+    struct-return helper path adapters are retired.
   - implementation_notes:
     - Target semantic helper rewrites, inline/native raw-path dispatch checks,
       internal `mapCount` / `mapContains` / `mapTryAt` / `mapAt` /
@@ -1677,7 +1678,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-28
   - phase: Map stdlib ownership cutover
-  - depends_on: TODO-4449
+  - depends_on: TODO-4451
   - scope: Add a deterministic validation gate that proves the PrimeStruct map
     surface is fully `.prime`/stdlib-owned and absent from production C++
     source.

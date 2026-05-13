@@ -17183,3 +17183,57 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     call resolution, updated behavior coverage to reject unspecialized
     experimental-map helper fallback, added a source lock for the removed
     helper, and refreshed active queue bookkeeping.
+
+- [x] TODO-4449: Split remaining map semantic/raw-path adapters
+  - owner: ai
+  - created_at: 2026-05-13
+  - finished_at: 2026-05-13
+  - phase: Map stdlib ownership cutover
+  - scope: Split the remaining semantic helper rewrite, rooted-path,
+    inline/native raw-path, and internal lowering-name cleanup into closable
+    leaves before implementation.
+  - acceptance:
+    - Semantic struct-return map path-candidate adapter deletion is tracked
+      separately from remaining raw-path, diagnostic, and lowering-name
+      adapter cleanup.
+    - Active queues contain only leaf work after the split.
+  - stop_rule: Stop once semantic struct-return path-candidate deletion and
+    remaining production cleanup have separate TODO IDs with explicit finish
+    lines.
+  - evidence: Split the broad TODO-4449 into completed TODO-4450 for semantic
+    struct-return map path-candidate adapters and active TODO-4451 for
+    remaining semantic rewrites, inline/native raw-path checks, rooted
+    `/map/*` diagnostics, and internal lowering-name cleanup.
+
+- [x] TODO-4450: Delete semantic struct-return map adapters
+  - owner: ai
+  - created_at: 2026-05-13
+  - finished_at: 2026-05-13
+  - phase: Map stdlib ownership cutover
+  - split_from: TODO-4449
+  - scope: Remove semantic struct-return inference path candidates that
+    mirrored rooted `/map/*` helper paths to canonical
+    `/std/collections/map/*` paths, or mirrored canonical helper paths back to
+    rooted map aliases.
+  - implementation_notes:
+    - Target `SemanticsValidatorInferStructReturn.cpp`,
+      `SemanticsValidatorInferStructReturnHelpers.cpp`, and
+      `SemanticsValidatorPrivateExprInference.h`.
+    - Preserve vector compatibility behavior and exact canonical
+      `/std/collections/map/*` helper probing; leave remaining raw-path,
+      diagnostic, and lowering-name cleanup to TODO-4451.
+  - acceptance:
+    - `inferStructReturnCollectionHelperPathCandidates(...)` no longer adds
+      rooted map aliases for canonical map helpers or canonical map helpers
+      for rooted aliases.
+    - The special map-access candidate pruning hook is removed because map
+      cross-root candidates are no longer generated.
+    - Source-lock coverage rejects reintroducing the semantic struct-return
+      map candidate adapter.
+  - stop_rule: Stop once semantic struct-return inference considers only the
+    call path itself, its normalized canonical spelling, and existing vector
+    compatibility candidates.
+  - evidence: Removed map cross-root candidate generation from semantic
+    struct-return inference, deleted the map-access pruning hook and private
+    declaration, added source locks for the removed adapter, and refreshed
+    active queue bookkeeping.

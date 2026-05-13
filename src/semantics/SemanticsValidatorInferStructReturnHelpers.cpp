@@ -10,15 +10,6 @@ namespace primec::semantics {
 
 namespace {
 
-bool isRemovedMapCompatibilitySuffix(std::string_view suffix) {
-  return suffix == "count" || suffix == "count_ref" ||
-         suffix == "contains" || suffix == "contains_ref" ||
-         suffix == "tryAt" || suffix == "tryAt_ref" ||
-         suffix == "at" || suffix == "at_ref" ||
-         suffix == "at_unsafe" || suffix == "at_unsafe_ref" ||
-         suffix == "insert" || suffix == "insert_ref";
-}
-
 void eraseStructReturnCandidate(std::vector<std::string> &candidates, const std::string &candidate) {
   for (auto it = candidates.begin(); it != candidates.end();) {
     if (*it == candidate) {
@@ -205,7 +196,7 @@ std::string SemanticsValidator::normalizeInferStructReturnHelperPath(const std::
   std::string normalizedPath = path;
   if (!normalizedPath.empty() && normalizedPath.front() != '/') {
     if (normalizedPath.rfind("array/", 0) == 0 || isUnrootedVectorHelperPath(normalizedPath) ||
-        isUnrootedCanonicalVectorCompatibilityPath(normalizedPath) || normalizedPath.rfind("map/", 0) == 0 ||
+        isUnrootedCanonicalVectorCompatibilityPath(normalizedPath) ||
         normalizedPath.rfind("std/collections/map/", 0) == 0) {
       normalizedPath.insert(normalizedPath.begin(), '/');
     }
@@ -235,39 +226,8 @@ std::vector<std::string> SemanticsValidator::inferStructReturnCollectionHelperPa
         suffix != "remove_at" && suffix != "remove_swap") {
       appendUnique(canonicalVectorCompatibilityHelperPathOrFallback(suffix));
     }
-  } else if (normalizedPath.rfind("/map/", 0) == 0) {
-    const std::string suffix = normalizedPath.substr(std::string("/map/").size());
-    if (!isRemovedMapCompatibilitySuffix(suffix)) {
-      appendUnique("/std/collections/map/" + suffix);
-    }
-  } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
-    const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
-    if (suffix != "map" && !isRemovedMapCompatibilitySuffix(suffix)) {
-      appendUnique("/map/" + suffix);
-    }
   }
   return candidates;
-}
-
-void SemanticsValidator::pruneInferStructReturnMapAccessCompatibilityCandidates(
-    const std::string &path,
-    std::vector<std::string> &candidates) const {
-  const std::string normalizedPath = normalizeInferStructReturnHelperPath(path);
-  if (normalizedPath.rfind("/map/", 0) == 0) {
-    const std::string suffix = normalizedPath.substr(std::string("/map/").size());
-    if (suffix == "at" || suffix == "at_ref" ||
-        suffix == "at_unsafe" || suffix == "at_unsafe_ref") {
-      eraseStructReturnCandidate(candidates, "/std/collections/map/" + suffix);
-    }
-    return;
-  }
-  if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
-    const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
-    if (suffix == "at" || suffix == "at_ref" ||
-        suffix == "at_unsafe" || suffix == "at_unsafe_ref") {
-      eraseStructReturnCandidate(candidates, "/map/" + suffix);
-    }
-  }
 }
 
 void SemanticsValidator::pruneInferStructReturnBuiltinVectorAccessCandidates(

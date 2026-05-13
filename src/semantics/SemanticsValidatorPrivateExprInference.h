@@ -29,9 +29,6 @@
   std::string normalizeInferStructReturnHelperPath(const std::string &path) const;
   std::vector<std::string> inferStructReturnCollectionHelperPathCandidates(
       const std::string &path) const;
-  void pruneInferStructReturnMapAccessCompatibilityCandidates(
-      const std::string &path,
-      std::vector<std::string> &candidates) const;
   void pruneInferStructReturnBuiltinVectorAccessCandidates(
       const Expr &candidate,
       const std::string &path,
