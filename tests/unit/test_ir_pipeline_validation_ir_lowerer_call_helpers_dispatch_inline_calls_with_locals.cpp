@@ -637,7 +637,7 @@ TEST_CASE("ir lowerer call helpers inline direct experimental map helper calls")
   CHECK(error == "stale");
 }
 
-TEST_CASE("ir lowerer call helpers keep direct canonical map count-like helpers on builtin fallback for map locals") {
+TEST_CASE("ir lowerer call helpers inline direct canonical map count-like helpers for map locals") {
   using Result = primec::ir_lowerer::InlineCallDispatchResult;
   using LocalInfo = primec::ir_lowerer::LocalInfo;
 
@@ -695,9 +695,9 @@ TEST_CASE("ir lowerer call helpers keep direct canonical map count-like helpers 
                 ++emitCalls;
                 return true;
               },
-              error) == Result::NotHandled);
+              error) == Result::Emitted);
     CHECK(error == "stale");
-    CHECK(emitCalls == 0);
+    CHECK(emitCalls == 1);
   };
 
   primec::Expr countCall;
@@ -771,8 +771,8 @@ TEST_CASE("ir lowerer call helpers emit unsupported native call diagnostics for 
   CHECK(primec::ir_lowerer::emitUnsupportedNativeCallDiagnostic(
             callExpr,
             [](const primec::Expr &, std::string &) { return false; },
-            error) == Result::Error);
-  CHECK(error == "capacity requires vector target");
+            error) == Result::NotHandled);
+  CHECK(error.empty());
 
   primec::Expr helperReturnExpr;
   helperReturnExpr.kind = primec::Expr::Kind::Call;

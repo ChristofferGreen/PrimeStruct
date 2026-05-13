@@ -441,12 +441,15 @@ bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee) {
   if (slash == std::string::npos || slash == 0) {
     return false;
   }
+  const std::string helperName =
+      canonicalInlineMapHelperName(callee.fullPath.substr(slash + 1));
+  if (callee.fullPath.rfind("/std/collections/experimental_map/map", 0) == 0) {
+    return isInlineMapBuiltinHelperName(helperName);
+  }
   const std::string receiverPath = callee.fullPath.substr(0, slash);
   if (receiverPath.rfind("/std/collections/experimental_map/Map__", 0) != 0) {
     return false;
   }
-  const std::string helperName =
-      canonicalInlineMapHelperName(callee.fullPath.substr(slash + 1));
   return isInlineMapBuiltinHelperName(helperName);
 }
 

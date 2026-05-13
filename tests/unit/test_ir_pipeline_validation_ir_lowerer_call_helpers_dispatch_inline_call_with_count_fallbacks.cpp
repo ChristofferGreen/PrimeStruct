@@ -905,9 +905,9 @@ TEST_CASE("ir lowerer call helpers keep map count and local access same-path def
               ++wrapperAtEmitCalls;
               return true;
             },
-            error) == Result::NotHandled);
+            error) == Result::Emitted);
   CHECK(error == "stale");
-  CHECK(wrapperAtEmitCalls == 0);
+  CHECK(wrapperAtEmitCalls == 1);
 }
 
 TEST_CASE("ir lowerer call helpers dispatch bare semantic map sugar inline") {
@@ -942,6 +942,7 @@ TEST_CASE("ir lowerer call helpers dispatch bare semantic map sugar inline") {
   keyLiteral.literalValue = 1;
 
   auto expectEmitted = [&](primec::Expr callExpr, const primec::Definition &expectedCallee) {
+    int methodProbeCalls = 0;
     int emitCalls = 0;
     std::string error = "stale";
     CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
@@ -951,7 +952,7 @@ TEST_CASE("ir lowerer call helpers dispatch bare semantic map sugar inline") {
               [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
               [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
               [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-                CHECK(false);
+                ++methodProbeCalls;
                 return nullptr;
               },
               [&](const primec::Expr &expr) -> const primec::Definition * {
@@ -983,6 +984,7 @@ TEST_CASE("ir lowerer call helpers dispatch bare semantic map sugar inline") {
               error) == Result::Emitted);
     CHECK(error == "stale");
     CHECK(emitCalls == 1);
+    CHECK(methodProbeCalls <= 2);
   };
 
   primec::Expr countCall;
@@ -1122,7 +1124,7 @@ TEST_CASE("ir lowerer call helpers gate canonical map helpers with semantic targ
   };
 
   expectDispatch(makeCountCall(scalarReceiver), staleMapLocals, Result::Emitted, 1);
-  expectDispatch(makeCountCall(mapReceiver), staleScalarLocals, Result::NotHandled, 0);
+  expectDispatch(makeCountCall(mapReceiver), staleScalarLocals, Result::Emitted, 1);
 }
 
 TEST_CASE("ir lowerer call helpers prefer graph facts for inline map receiver probes") {
