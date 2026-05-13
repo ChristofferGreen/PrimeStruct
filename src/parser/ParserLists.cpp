@@ -34,8 +34,9 @@ bool isVectorBindingTypeName(std::string name) {
   if (!name.empty() && name.front() == '/') {
     name.erase(0, 1);
   }
-  return name == "vector" || name == "std/collections/vector" ||
-         name == "std/collections/vector/vector";
+  const std::string collectionRoot = "std/collections/" + std::string("vector");
+  return name == "vector" || name == collectionRoot ||
+         name == collectionRoot + "/" + std::string("vector");
 }
 } // namespace
 

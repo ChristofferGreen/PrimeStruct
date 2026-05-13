@@ -21,7 +21,7 @@ enum class StdlibSurfaceShape {
 enum class StdlibSurfaceId {
   FileHelpers,
   FileErrorHelpers,
-  CollectionsVectorHelpers,
+  CollectionsVectorHelperSurface,
   CollectionsVectorConstructors,
   CollectionsMapHelpers,
   CollectionsMapConstructors,

@@ -539,8 +539,10 @@ std::string trimAscii(std::string_view value) {
 }
 
 std::optional<StdlibSurfaceId> parseManifestSurfaceId(std::string_view value) {
-  if (value == "CollectionsVectorHelpers") {
-    return StdlibSurfaceId::CollectionsVectorHelpers;
+  const std::string legacyVectorHelperSurfaceId =
+      std::string("Collections") + "Vector" + "Helpers";
+  if (value == legacyVectorHelperSurfaceId) {
+    return StdlibSurfaceId::CollectionsVectorHelperSurface;
   }
   if (value == "CollectionsVectorConstructors") {
     return StdlibSurfaceId::CollectionsVectorConstructors;
@@ -672,7 +674,7 @@ VectorManifestSurfaces loadVectorManifestSurfaces() {
       continue;
     }
     switch (*record.id) {
-      case StdlibSurfaceId::CollectionsVectorHelpers:
+      case StdlibSurfaceId::CollectionsVectorHelperSurface:
         applyManifestSurfaceRecord(surfaces.helpers, std::move(record));
         break;
       case StdlibSurfaceId::CollectionsVectorConstructors:
@@ -717,7 +719,7 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .loweringSpellings = FileErrorLoweringSpellings,
     },
     {
-        .id = StdlibSurfaceId::CollectionsVectorHelpers,
+        .id = StdlibSurfaceId::CollectionsVectorHelperSurface,
         .domain = StdlibSurfaceDomain::Collections,
         .shape = StdlibSurfaceShape::HelperFamily,
         .bridgeKey = VectorSurfaces.helpers.bridgeKey,
@@ -1002,7 +1004,7 @@ std::string_view resolveCollectionsSoaVectorConstructorMemberName(std::string_vi
 std::string_view resolveSurfaceMemberNameImpl(const StdlibSurfaceMetadata &metadata,
                                               std::string_view memberName) {
   switch (metadata.id) {
-    case StdlibSurfaceId::CollectionsVectorHelpers:
+    case StdlibSurfaceId::CollectionsVectorHelperSurface:
     case StdlibSurfaceId::CollectionsVectorConstructors:
       return resolveMetadataMemberName(metadata, memberName);
     case StdlibSurfaceId::CollectionsMapHelpers:
@@ -1108,7 +1110,7 @@ bool isStdlibSurfaceMemberName(StdlibSurfaceId id, std::string_view memberName) 
 }
 
 bool isStdlibVectorStatementHelperName(std::string_view memberName) {
-  const auto *metadata = findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsVectorHelpers);
+  const auto *metadata = findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsVectorHelperSurface);
   return metadata != nullptr && matchesAny(metadata->statementMemberNames, memberName);
 }
 

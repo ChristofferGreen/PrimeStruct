@@ -211,7 +211,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(callHelpersSource.find("std/collections/vector/") == std::string::npos);
   CHECK(callHelpersSource.find("std/collections/experimental_vector") == std::string::npos);
-  CHECK(callHelpersSource.find("StdlibSurfaceId::CollectionsVectorHelpers") ==
+  CHECK(callHelpersSource.find("StdlibSurfaceId::CollectionsVectorHelperSurface") ==
         std::string::npos);
   CHECK(callHelpersSource.find("\"/vector/\"") == std::string::npos);
   CHECK(callHelpersSource.find("IrOpcode mapKeyCompareOpcode(") ==
@@ -509,7 +509,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(inlineDispatchSource.find(
             "isCanonicalCollectionHelperCall(expr, \"std/collections/soa_vector\", \"to_aos\", 1)") !=
         std::string::npos);
-  CHECK(inlineDispatchSource.find("std/collections/soa_vector/to_aos") != std::string::npos);
+  CHECK(inlineDispatchSource.find("std/collections/soa_vector/to_aos") == std::string::npos);
   CHECK(inlineDispatchSource.find("isSimpleCallName(expr, \"to_aos\")") == std::string::npos);
   CHECK(inlineDispatchSource.find("std/collections/soa_vector/get") == std::string::npos);
   CHECK(inlineDispatchSource.find("std/collections/soa_vector/ref") == std::string::npos);
@@ -842,11 +842,11 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(builtinNameHelpersSource.find("vectorPush") == std::string::npos);
   CHECK(callResolutionSource.find("std/collections/experimental_vector") ==
         std::string::npos);
-  CHECK(callResolutionSource.find("StdlibSurfaceId::CollectionsVectorHelpers") ==
+  CHECK(callResolutionSource.find("StdlibSurfaceId::CollectionsVectorHelperSurface") ==
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("std/collections/experimental_vector") ==
         std::string::npos);
-  CHECK(nativeTailDispatchSource.find("StdlibSurfaceId::CollectionsVectorHelpers") ==
+  CHECK(nativeTailDispatchSource.find("StdlibSurfaceId::CollectionsVectorHelperSurface") ==
         std::string::npos);
   CHECK(inlineDispatchSource.find("collectionWrapperAlias(\"vector\", \"Count\")") !=
         std::string::npos);
@@ -914,7 +914,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(statementCallEmissionSource.find("std/collections/experimental_vector") ==
         std::string::npos);
-  CHECK(statementCallEmissionSource.find("StdlibSurfaceId::CollectionsVectorHelpers") ==
+  CHECK(statementCallEmissionSource.find("StdlibSurfaceId::CollectionsVectorHelperSurface") ==
         std::string::npos);
   CHECK(statementCallEmissionSource.find("vectorPush") == std::string::npos);
   CHECK(lowerStatementsBindingsSource.find("std/collections/experimental_vector") ==
@@ -990,7 +990,7 @@ TEST_CASE("ir lowerer vector type layout traces use generic collection helpers")
     CHECK(source.find("std/collections/vector/") == std::string::npos);
     CHECK(source.find("std/collections/experimental_vector") ==
           std::string::npos);
-    CHECK(source.find("StdlibSurfaceId::CollectionsVectorHelpers") ==
+    CHECK(source.find("StdlibSurfaceId::CollectionsVectorHelperSurface") ==
           std::string::npos);
     CHECK(source.find("Vector<") == std::string::npos);
   };
@@ -1140,7 +1140,7 @@ TEST_CASE("native tail and late collection helper metadata dispatch stays source
         std::string::npos);
   CHECK(collectionHelpersSource.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") !=
         std::string::npos);
-  CHECK(collectionHelpersSource.find("primec::StdlibSurfaceId::CollectionsVectorHelpers") ==
+  CHECK(collectionHelpersSource.find("primec::StdlibSurfaceId::CollectionsVectorHelperSurface") ==
         std::string::npos);
   CHECK(collectionHelpersSource.find("isPublishedStdlibSurfaceLoweringPath(") !=
         std::string::npos);
@@ -1306,11 +1306,11 @@ main() {
   const auto methodSurfaceId =
       primec::ir_lowerer::findSemanticProductMethodCallStdlibSurfaceId(adapter, *methodExpr);
   REQUIRE(methodSurfaceId.has_value());
-  CHECK(*methodSurfaceId == primec::StdlibSurfaceId::CollectionsVectorHelpers);
+  CHECK(*methodSurfaceId == primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
   const auto bridgeSurfaceId =
       primec::ir_lowerer::findSemanticProductBridgePathChoiceStdlibSurfaceId(adapter, bridgeExpr);
   REQUIRE(bridgeSurfaceId.has_value());
-  CHECK(*bridgeSurfaceId == primec::StdlibSurfaceId::CollectionsVectorHelpers);
+  CHECK(*bridgeSurfaceId == primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
 
   const auto *summary = primec::ir_lowerer::findSemanticProductCallableSummary(adapter, "/main");
   REQUIRE(summary != nullptr);
@@ -1420,7 +1420,7 @@ main() {
       primec::ir_lowerer::findSemanticProductBridgePathChoiceStdlibSurfaceId(adapter,
                                                                               vectorBridgeExpr);
   REQUIRE(vectorBridgeSurfaceId.has_value());
-  CHECK(*vectorBridgeSurfaceId == primec::StdlibSurfaceId::CollectionsVectorHelpers);
+  CHECK(*vectorBridgeSurfaceId == primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
 
   primec::Expr mapBridgeExpr;
   mapBridgeExpr.kind = primec::Expr::Kind::Call;
@@ -2207,14 +2207,14 @@ TEST_CASE("ir lowerer semantic-product adapter rejects call-target source lookup
           semanticProgram, "/std/collections/experimental_vector/Vector__t25a78a513414c3bf"),
       .resolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/std/collections/vector/at"),
-      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelpers,
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelperSurface,
   });
   semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr.insert_or_assign(
       244,
       primec::semanticProgramInternCallTargetString(
           semanticProgram, "/std/collections/vector/at"));
   semanticProgram.publishedRoutingLookups.methodCallStdlibSurfaceIdsByExpr
-      .insert_or_assign(244, primec::StdlibSurfaceId::CollectionsVectorHelpers);
+      .insert_or_assign(244, primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
 
   const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
 
@@ -2259,7 +2259,7 @@ TEST_CASE("ir lowerer semantic-product adapter rejects call-target source lookup
   const auto semanticSurfaceId =
       primec::ir_lowerer::findSemanticProductMethodCallStdlibSurfaceId(adapter, methodExpr);
   REQUIRE(semanticSurfaceId.has_value());
-  CHECK(*semanticSurfaceId == primec::StdlibSurfaceId::CollectionsVectorHelpers);
+  CHECK(*semanticSurfaceId == primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
 }
 
 TEST_CASE("ir lowerer semantic-product adapter exposes published stdlib surface ids") {

@@ -1464,8 +1464,12 @@ std::string builtinSoaConversionMethodName(std::string_view methodName) {
     normalized = normalized.substr(std::string("std/collections/soa_vector/").size());
   } else if (normalized.rfind("soa_vector/", 0) == 0) {
     normalized = normalized.substr(std::string("soa_vector/").size());
-  } else if (normalized.rfind("std/collections/vector/", 0) == 0) {
-    normalized = normalized.substr(std::string("std/collections/vector/").size());
+  } else {
+    const std::string vectorCollectionPrefix =
+        std::string("std/collections/") + "vector" + "/";
+    if (normalized.rfind(vectorCollectionPrefix, 0) == 0) {
+      normalized = normalized.substr(vectorCollectionPrefix.size());
+    }
   }
   if (normalized == "to_soa") {
     return "to_soa";

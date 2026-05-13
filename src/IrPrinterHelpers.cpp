@@ -2,6 +2,7 @@
 
 #include <cctype>
 #include <sstream>
+#include <string_view>
 
 namespace primec::ir_printer {
 
@@ -376,6 +377,27 @@ const char *returnTypeName(ReturnKind kind) {
   return "i32";
 }
 
+std::string experimentalCollectionTypePath(std::string_view collectionName,
+                                           std::string_view typeName,
+                                           bool leadingSlash = false) {
+  std::string path = leadingSlash ? "/" : "";
+  path += "std/collections/experimental_";
+  path += std::string(collectionName);
+  path += "/";
+  path += std::string(typeName);
+  return path;
+}
+
+bool isExperimentalCollectionTypeBase(const std::string &base,
+                                      std::string_view collectionName,
+                                      std::string_view typeName) {
+  const std::string bare = experimentalCollectionTypePath(collectionName, typeName);
+  const std::string rooted = experimentalCollectionTypePath(collectionName, typeName, true);
+  return base == typeName || base == bare || base == rooted ||
+         base.rfind(bare + "__", 0) == 0 ||
+         base.rfind(rooted + "__", 0) == 0;
+}
+
 ReturnKind returnKindForTypeName(const std::string &name) {
   if (name == "int" || name == "i32") {
     return ReturnKind::Int;
@@ -410,10 +432,7 @@ ReturnKind returnKindForTypeName(const std::string &name) {
     }
     const bool isCollectionLike =
         ((base == "array" || base == "vector" || base == "soa_vector" || base == "Buffer" ||
-          base == "Vector" || base == "std/collections/experimental_vector/Vector" ||
-          base == "/std/collections/experimental_vector/Vector" ||
-          base.rfind("std/collections/experimental_vector/Vector__", 0) == 0 ||
-          base.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) &&
+          isExperimentalCollectionTypeBase(base, "vector", "Vector")) &&
          args.size() == 1) ||
         ((base == "map" || base == "Map" || base == "std/collections/experimental_map/Map" ||
           base == "/std/collections/experimental_map/Map" ||

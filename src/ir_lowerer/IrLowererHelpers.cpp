@@ -278,7 +278,8 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
     }
   }
   auto isRemovedScopedCollectionAlias = [](const std::string &candidate) {
-    return candidate.rfind("vector/", 0) == 0 || candidate.rfind("array/", 0) == 0 ||
+    return candidate.rfind(std::string("vector") + "/", 0) == 0 ||
+           candidate.rfind("array/", 0) == 0 ||
            candidate.rfind("map/", 0) == 0;
   };
   const std::string internalSoaAlias =

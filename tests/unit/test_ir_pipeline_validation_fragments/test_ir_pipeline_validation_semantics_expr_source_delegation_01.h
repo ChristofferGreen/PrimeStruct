@@ -1531,7 +1531,7 @@
             "inline bool isStdNamespacedVectorCompatibilityHelperPath(") !=
         std::string::npos);
   CHECK(semanticsCollectionCompatibilityInternalSource.find(
-            "findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsVectorHelpers)") !=
+            "findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsVectorHelperSurface)") !=
         std::string::npos);
   CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "metadata->canonicalPath) + \"/\" +\n"
@@ -1540,7 +1540,7 @@
   CHECK(semanticsCollectionHelperRewritesSource.find(
             "if (helperName == \"at\" || helperName == \"at_unsafe\") {\n"
             "    return canonicalCollectionHelperPath(\n"
-            "        StdlibSurfaceId::CollectionsVectorHelpers, helperName);\n"
+            "        StdlibSurfaceId::CollectionsVectorHelperSurface, helperName);\n"
             "  }") !=
         std::string::npos);
   CHECK(semanticsCollectionCompatibilityInternalSource.find(

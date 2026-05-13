@@ -92,7 +92,7 @@ TEST_CASE("ir lowerer materialized collection receivers use published helper que
         std::string::npos);
   CHECK(source.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") !=
         std::string::npos);
-  CHECK(source.find("primec::StdlibSurfaceId::CollectionsVectorHelpers") ==
+  CHECK(source.find("primec::StdlibSurfaceId::CollectionsVectorHelperSurface") ==
         std::string::npos);
   CHECK(source.find("auto resolvePublishedLateVectorMemberName =") !=
         std::string::npos);
@@ -107,7 +107,7 @@ TEST_CASE("ir lowerer materialized collection receivers use published helper que
   CHECK(source.find("helperName = callExpr.name;") !=
         std::string::npos);
   CHECK(source.find(
-            "primec::StdlibSurfaceId::CollectionsVectorHelpers,\n"
+            "primec::StdlibSurfaceId::CollectionsVectorHelperSurface,\n"
             "                    helperName)) {\n"
             "              helperName = callExpr.name;") ==
         std::string::npos);

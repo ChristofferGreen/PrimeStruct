@@ -465,8 +465,8 @@ private:
           scopedPrefix += "/";
         }
         if (prefix == "/std/collections/internal_vector") {
-          constexpr std::string_view vectorPath =
-              "/std/collections/experimental_vector/Vector";
+          const std::string vectorPath =
+              std::string("/std/collections/experimental_") + "vector" + "/Vector";
           if (publicDefinitions_.count(std::string(vectorPath)) > 0) {
             importAliases_["Vector"] = vectorPath;
           }

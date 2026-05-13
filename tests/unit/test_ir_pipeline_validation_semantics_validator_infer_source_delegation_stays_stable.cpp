@@ -960,7 +960,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsCollectionHelperRewritesSource.find(
             "resolvePublishedCollectionHelperMemberToken(\n"
             "            normalizedMethod,\n"
-            "            StdlibSurfaceId::CollectionsVectorHelpers,\n"
+            "            StdlibSurfaceId::CollectionsVectorHelperSurface,\n"
             "            helperName)") ==
         std::string::npos);
   CHECK(semanticsCollectionHelperRewritesSource.find(
@@ -2415,7 +2415,7 @@ main() {
             "resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(") !=
         std::string::npos);
   CHECK(collectionCompatibilityInternalSource.find(
-            "StdlibSurfaceId::CollectionsVectorHelpers") ==
+            "StdlibSurfaceId::CollectionsVectorHelperSurface") ==
         std::string::npos);
   CHECK(collectionCompatibilityInternalSource.find(
             "/std/collections/vector/") ==

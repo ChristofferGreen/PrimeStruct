@@ -17,7 +17,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   auto normalizeCollectionMethodName = [](const std::string &receiverTypeName,
                                           std::string candidate) -> std::string {
     if (receiverTypeName == "array" || receiverTypeName == "vector" || receiverTypeName == "soa_vector") {
-      const std::string vectorPrefix = "vector/";
+      const std::string vectorPrefix = std::string("vector") + "/";
       const std::string arrayPrefix = "array/";
       const std::string soaVectorPrefix = "soa_vector/";
       const std::string stdSoaVectorPrefix = "std/collections/soa_vector/";

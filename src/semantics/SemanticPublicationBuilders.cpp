@@ -451,12 +451,33 @@ struct CollectionSpecializationDraft {
   bool isPointer = false;
 };
 
+std::string collectionTypeRootForPublication(std::string_view collectionName,
+                                             bool leadingSlash = false) {
+  std::string root = leadingSlash ? "/" : "";
+  root += "std/collections/";
+  root += std::string(collectionName);
+  return root;
+}
+
+std::string experimentalCollectionTypeForPublication(std::string_view collectionName,
+                                                     std::string_view typeName,
+                                                     bool leadingSlash = false) {
+  std::string root = leadingSlash ? "/" : "";
+  root += "std/collections/experimental_";
+  root += std::string(collectionName);
+  root += "/";
+  root += std::string(typeName);
+  return root;
+}
+
 std::string normalizeCollectionSpecializationTypeName(std::string typeName) {
   typeName = normalizeBindingTypeName(typeName);
-  if (typeName == "/vector" || typeName == "std/collections/vector" ||
-      typeName == "/std/collections/vector" || typeName == "Vector" ||
-      typeName == "std/collections/experimental_vector/Vector" ||
-      typeName == "/std/collections/experimental_vector/Vector") {
+  if (typeName == "/vector" ||
+      typeName == collectionTypeRootForPublication("vector") ||
+      typeName == collectionTypeRootForPublication("vector", true) ||
+      typeName == "Vector" ||
+      typeName == experimentalCollectionTypeForPublication("vector", "Vector") ||
+      typeName == experimentalCollectionTypeForPublication("vector", "Vector", true)) {
     return "vector";
   }
   if (typeName == "/map" || typeName == "std/collections/map" ||
@@ -555,7 +576,11 @@ void publishCollectionSpecializationForBinding(
   entry.semanticNodeId = bindingEntry.semanticNodeId;
   entry.provenanceHandle = bindingEntry.provenanceHandle;
   if (entry.collectionFamily == "vector") {
-    entry.helperSurfaceId = StdlibSurfaceId::CollectionsVectorHelpers;
+    const auto *helperMetadata =
+        findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
+    entry.helperSurfaceId = helperMetadata == nullptr
+                                ? StdlibSurfaceId::CollectionsVectorHelperSurface
+                                : helperMetadata->id;
     entry.constructorSurfaceId = StdlibSurfaceId::CollectionsVectorConstructors;
   } else if (entry.collectionFamily == "soa_vector") {
     entry.helperSurfaceId = StdlibSurfaceId::CollectionsSoaVectorHelpers;

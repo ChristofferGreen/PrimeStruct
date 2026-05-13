@@ -152,7 +152,7 @@ TEST_CASE("ir lowerer setup type helper requires semantic-product method targets
       .chosenPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram,
                                                         "/std/collections/soa_vector/push"),
-      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelpers,
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelperSurface,
   });
   std::string error;
   const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(

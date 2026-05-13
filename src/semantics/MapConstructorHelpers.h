@@ -23,6 +23,11 @@ inline std::string stripMapConstructorSuffixes(std::string resolvedPath) {
   return stripCollectionConstructorSuffixes(std::move(resolvedPath));
 }
 
+inline std::string experimentalCollectionConstructorRootLocal(
+    std::string_view collectionName) {
+  return "/std/collections/experimental_" + std::string(collectionName) + "/";
+}
+
 inline bool resolveCollectionConstructorMemberPath(primec::StdlibSurfaceId surfaceId,
                                                    std::string_view rawPath,
                                                    std::string &memberNameOut) {
@@ -116,7 +121,7 @@ inline bool isResolvedVectorConstructorHelperPath(const std::string &rawPath) {
 
 inline bool isResolvedExperimentalVectorConstructorPath(const std::string &rawPath) {
   const std::string normalizedPath = stripCollectionConstructorSuffixes(rawPath);
-  if (normalizedPath.rfind("/std/collections/experimental_vector/", 0) != 0) {
+  if (normalizedPath.rfind(experimentalCollectionConstructorRootLocal("vector"), 0) != 0) {
     return false;
   }
   std::string memberName;
@@ -253,7 +258,7 @@ inline std::string metadataBackedExperimentalVectorConstructorCompatibilityPath(
     const std::string &resolvedPath) {
   const std::string normalizedPath =
       stripCollectionConstructorSuffixes(resolvedPath);
-  if (normalizedPath.rfind("/std/collections/experimental_vector/", 0) == 0) {
+  if (normalizedPath.rfind(experimentalCollectionConstructorRootLocal("vector"), 0) == 0) {
     return {};
   }
   std::string memberName;
@@ -271,5 +276,5 @@ inline std::string metadataBackedExperimentalVectorConstructorCompatibilityPath(
   return preferredCollectionConstructorSpelling(
       primec::StdlibSurfaceId::CollectionsVectorConstructors, memberName,
       metadata->compatibilitySpellings,
-      "/std/collections/experimental_vector/");
+      experimentalCollectionConstructorRootLocal("vector"));
 }

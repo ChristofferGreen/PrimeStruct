@@ -94,6 +94,30 @@ bool parseMemoryName(const std::string &name, std::string &out) {
   return false;
 }
 
+std::string collectionMemberRootLocal(std::string_view collectionName,
+                                      bool leadingSlash = false) {
+  std::string root = leadingSlash ? "/" : "";
+  root += "std/collections/";
+  root += std::string(collectionName);
+  root += "/";
+  return root;
+}
+
+std::string experimentalCollectionMemberRootLocal(
+    std::string_view collectionName,
+    bool leadingSlash = false) {
+  std::string root = leadingSlash ? "/" : "";
+  root += "std/collections/experimental_";
+  root += std::string(collectionName);
+  root += "/";
+  return root;
+}
+
+std::string collectionAliasLocal(std::string_view collectionName,
+                                 std::string_view suffix) {
+  return std::string(collectionName) + std::string(suffix);
+}
+
 } // namespace
 
 bool getBuiltinOperatorName(const Expr &expr, std::string &out) {
@@ -283,8 +307,11 @@ bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverPath, std
   if (isVectorFamilyReceiver) {
     if (rawMethodName.rfind("array/", 0) == 0) {
       helperName = std::string_view(rawMethodName).substr(std::string_view("array/").size());
-    } else if (rawMethodName.rfind("std/collections/vector/", 0) == 0) {
-      helperName = std::string_view(rawMethodName).substr(std::string_view("std/collections/vector/").size());
+    } else {
+      const std::string stdVectorRoot = collectionMemberRootLocal("vector");
+      if (rawMethodName.rfind(stdVectorRoot, 0) == 0) {
+        helperName = std::string_view(rawMethodName).substr(stdVectorRoot.size());
+      }
     }
     return !helperName.empty() && isRemovedVectorCompatibilityHelper(helperName);
   }
@@ -431,7 +458,7 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
   }
-  if (name.rfind("std/collections/vector/", 0) == 0) {
+  if (name.rfind(collectionMemberRootLocal("vector"), 0) == 0) {
     return false;
   }
   if (name.rfind("map/", 0) == 0) {
@@ -790,13 +817,13 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   auto accessAliasFromMemberName = [&](std::string memberName) -> bool {
     memberName = stripGeneratedSuffix(stripTemplateSpecializationSuffix(std::move(memberName)));
     if (memberName == "at" || memberName == "at_ref" || memberName == "At" ||
-        memberName == "vectorAt" || memberName == "mapAt" ||
+        memberName == collectionAliasLocal("vector", "At") || memberName == "mapAt" ||
         memberName == "mapAtRef") {
       out = "at";
       return true;
     }
     if (memberName == "at_unsafe" || memberName == "at_unsafe_ref" ||
-        memberName == "AtUnsafe" || memberName == "vectorAtUnsafe" ||
+        memberName == "AtUnsafe" || memberName == collectionAliasLocal("vector", "AtUnsafe") ||
         memberName == "mapAtUnsafe" || memberName == "mapAtUnsafeRef") {
       out = "at_unsafe";
       return true;
@@ -823,12 +850,13 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
            accessAliasFromMemberName(memberName);
   };
   if (matchStdlibLegacyAccessAlias("std/collections/") ||
-      matchStdlibLegacyAccessAlias("std/collections/experimental_vector/") ||
+      matchStdlibLegacyAccessAlias(experimentalCollectionMemberRootLocal("vector")) ||
       matchStdlibLegacyAccessAlias("std/collections/experimental_map/")) {
     return true;
   }
-  if (name.rfind("std/collections/vector/", 0) == 0) {
-    std::string alias = stripTemplateSpecializationSuffix(name.substr(std::string("std/collections/vector/").size()));
+  const std::string stdVectorRoot = collectionMemberRootLocal("vector");
+  if (name.rfind(stdVectorRoot, 0) == 0) {
+    std::string alias = stripTemplateSpecializationSuffix(name.substr(stdVectorRoot.size()));
     if (accessAliasFromMemberName(alias)) {
       return true;
     }
@@ -898,7 +926,7 @@ bool getNamespacedCollectionHelperName(const Expr &expr, std::string &collection
     return !helperOut.empty();
   };
 
-  if (extractHelper("std/collections/vector/", "vector") || extractHelper("map/", "map") ||
+  if (extractHelper(collectionMemberRootLocal("vector"), "vector") || extractHelper("map/", "map") ||
       extractHelper("std/collections/map/", "map")) {
     return true;
   }

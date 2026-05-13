@@ -641,7 +641,7 @@ TEST_CASE("published target lookups ignore raw routing facts without maps") {
           primec::semanticProgramInternCallTargetString(semanticProgram,
                                                         "vector<i32>"),
       .resolvedPathId = methodPathId,
-      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelpers,
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelperSurface,
   });
   semanticProgram.bridgePathChoices.push_back(primec::SemanticProgramBridgePathChoice{
       .scopePath = "/main",
@@ -657,7 +657,7 @@ TEST_CASE("published target lookups ignore raw routing facts without maps") {
       .helperNameId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "count"),
       .chosenPathId = bridgePathId,
-      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelpers,
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelperSurface,
   });
 
   CHECK_FALSE(
@@ -724,9 +724,9 @@ TEST_CASE("published target lookups ignore raw routing facts without maps") {
   semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr
       .insert_or_assign(11, primec::StdlibSurfaceId::CollectionsMapHelpers);
   semanticProgram.publishedRoutingLookups.methodCallStdlibSurfaceIdsByExpr
-      .insert_or_assign(12, primec::StdlibSurfaceId::CollectionsVectorHelpers);
+      .insert_or_assign(12, primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
   semanticProgram.publishedRoutingLookups.bridgePathChoiceStdlibSurfaceIdsByExpr
-      .insert_or_assign(13, primec::StdlibSurfaceId::CollectionsVectorHelpers);
+      .insert_or_assign(13, primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
 
   CHECK(primec::semanticProgramLookupPublishedDirectCallTargetId(
             semanticProgram, 11)
@@ -742,10 +742,10 @@ TEST_CASE("published target lookups ignore raw routing facts without maps") {
         primec::StdlibSurfaceId::CollectionsMapHelpers);
   CHECK(primec::semanticProgramLookupPublishedMethodCallTargetStdlibSurfaceId(
             semanticProgram, 12) ==
-        primec::StdlibSurfaceId::CollectionsVectorHelpers);
+        primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
   CHECK(primec::semanticProgramLookupPublishedBridgePathChoiceStdlibSurfaceId(
             semanticProgram, 13) ==
-        primec::StdlibSurfaceId::CollectionsVectorHelpers);
+        primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
 
   const auto publishedLookupAdapter =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
@@ -758,12 +758,12 @@ TEST_CASE("published target lookups ignore raw routing facts without maps") {
             publishedLookupAdapter, methodExpr) == "/vector/count");
   CHECK(primec::ir_lowerer::findSemanticProductMethodCallStdlibSurfaceId(
             publishedLookupAdapter, methodExpr) ==
-        primec::StdlibSurfaceId::CollectionsVectorHelpers);
+        primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
   CHECK(primec::ir_lowerer::findSemanticProductBridgePathChoice(
             publishedLookupAdapter, bridgeExpr) == "/vector/count");
   CHECK(primec::ir_lowerer::findSemanticProductBridgePathChoiceStdlibSurfaceId(
             publishedLookupAdapter, bridgeExpr) ==
-        primec::StdlibSurfaceId::CollectionsVectorHelpers);
+        primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
 }
 
 TEST_CASE("semantic-product coverage validators ignore raw routing facts without maps") {
@@ -877,12 +877,12 @@ TEST_CASE("semantic-product coverage validators ignore raw routing facts without
         .semanticNodeId = 6301,
         .resolvedPathId =
             primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"),
-        .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelpers,
+        .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelperSurface,
     });
     semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr
         .insert_or_assign(6301, semanticProgram.directCallTargets.back().resolvedPathId);
     semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr
-        .insert_or_assign(6301, primec::StdlibSurfaceId::CollectionsVectorHelpers);
+        .insert_or_assign(6301, primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
     semanticProgram.bridgePathChoices.push_back(primec::SemanticProgramBridgePathChoice{
         .scopePath = "/main",
         .collectionFamily = "vector",
@@ -892,7 +892,7 @@ TEST_CASE("semantic-product coverage validators ignore raw routing facts without
         .helperNameId = primec::InvalidSymbolId,
         .chosenPathId = primec::semanticProgramInternCallTargetString(
             semanticProgram, "/vector/count"),
-        .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelpers,
+        .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelperSurface,
     });
 
     std::string error;
@@ -3660,12 +3660,12 @@ TEST_CASE("ir lowerer rejects missing semantic-product bridge-path choices") {
       .sourceColumn = 1,
       .semanticNodeId = 52,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"),
-      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelpers,
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelperSurface,
   });
   semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.insert_or_assign(
       52, semanticProgram.directCallTargets.back().resolvedPathId);
   semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr.insert_or_assign(
-      52, primec::StdlibSurfaceId::CollectionsVectorHelpers);
+      52, primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
@@ -3714,7 +3714,7 @@ TEST_CASE("bridge-path coverage rejects missing helper name ids before lookup ga
       .semanticNodeId = 5201,
       .helperNameId = primec::InvalidSymbolId,
       .chosenPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"),
-      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelpers,
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelperSurface,
   });
   semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr.insert_or_assign(
       5201, semanticProgram.bridgePathChoices.back().chosenPathId);
@@ -3754,7 +3754,7 @@ TEST_CASE("bridge-path coverage rejects helper name ids before direct-call targe
       .semanticNodeId = 5202,
       .helperNameId = primec::InvalidSymbolId,
       .chosenPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"),
-      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelpers,
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelperSurface,
   });
   semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr.insert_or_assign(
       5202, semanticProgram.bridgePathChoices.back().chosenPathId);
@@ -3847,7 +3847,7 @@ TEST_CASE("bridge-path coverage rejects invalid helper name ids before lookup ga
       .helperNameId =
           static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size() + 1u),
       .chosenPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"),
-      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelpers,
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelperSurface,
   });
   semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr.insert_or_assign(
       5203, semanticProgram.bridgePathChoices.back().chosenPathId);
@@ -3894,7 +3894,7 @@ TEST_CASE("ir lowerer rejects stale semantic-product bridge-path metadata") {
           primec::semanticProgramInternCallTargetString(semanticProgram, "count"),
       .chosenPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"),
-      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelpers,
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelperSurface,
   });
 
   auto resetBridgeMetadata = [&]() {
@@ -4773,9 +4773,9 @@ TEST_CASE("semantic-product local-auto call paths accept stdlib surface equivale
       "/std/collections/vectorAt__t25a78a513414c3bf";
   localAutoFact.initializerDirectCallReturnKind = "i32";
   localAutoFact.initializerStdlibSurfaceId =
-      primec::StdlibSurfaceId::CollectionsVectorHelpers;
+      primec::StdlibSurfaceId::CollectionsVectorHelperSurface;
   localAutoFact.initializerDirectCallStdlibSurfaceId =
-      primec::StdlibSurfaceId::CollectionsVectorHelpers;
+      primec::StdlibSurfaceId::CollectionsVectorHelperSurface;
   localAutoFact.semanticNodeId = 47;
   localAutoFact.bindingTypeTextId =
       primec::semanticProgramInternCallTargetString(semanticProgram, "i32");

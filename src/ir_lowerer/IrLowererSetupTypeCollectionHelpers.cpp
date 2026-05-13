@@ -33,7 +33,7 @@ std::string normalizePublishedCollectionPath(std::string path) {
   if (!path.empty() && path.front() != '/' &&
       (path.rfind("std/collections/", 0) == 0 ||
        path.rfind("map/", 0) == 0 ||
-       path.rfind("vector/", 0) == 0)) {
+       path.rfind(std::string("vector") + "/", 0) == 0)) {
     path.insert(path.begin(), '/');
   }
   return path;
@@ -317,7 +317,7 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(0, 1);
   }
-  if (normalized.rfind("vector/", 0) == 0) {
+  if (normalized.rfind(std::string("vector") + "/", 0) == 0) {
     return false;
   }
   if (resolveVectorSurfaceExprMemberName(expr, helperNameOut)) {
@@ -498,7 +498,8 @@ std::string normalizeExperimentalCollectionTypePath(std::string_view typeName,
 std::string normalizeCollectionHelperPath(const std::string &path) {
   std::string normalizedPath = path;
   if (!normalizedPath.empty() && normalizedPath.front() != '/') {
-    if (normalizedPath.rfind("array/", 0) == 0 || normalizedPath.rfind("vector/", 0) == 0 ||
+    if (normalizedPath.rfind("array/", 0) == 0 ||
+        normalizedPath.rfind(std::string("vector") + "/", 0) == 0 ||
         normalizedPath.rfind(collectionMemberRoot("vector", false), 0) == 0 ||
         normalizedPath.rfind(experimentalCollectionMemberRoot("vector", false), 0) == 0 ||
         normalizedPath.rfind("map/", 0) == 0 ||

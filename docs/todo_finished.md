@@ -16557,3 +16557,35 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     `scripts/vector_surface_trace_baseline.json` from 135 to 49 production
     traces, leaving no `TemplateMonomorph*` entries in the baseline. Focused
     release source-lock validation and vector trace CTest validation passed.
+
+- [x] TODO-4418: Route emitter, registry, and parser vector traces
+  - owner: ai
+  - created_at: 2026-05-11
+  - finished_at: 2026-05-13
+  - phase: Vector stdlib ownership cutover
+  - scope: Remove or genericize remaining vector-specific traces in emitter,
+    parser, stdlib registry, IR printer, and residual lowerer/runtime helper
+    files before enabling the zero audit.
+  - implementation_notes:
+    - Start from non-semantic entries in
+      `scripts/vector_surface_trace_baseline.json`, including `src/emitter/`,
+      `src/parser/`, `src/StdlibSurfaceRegistry.cpp`,
+      `src/IrPrinterHelpers.cpp`, `include/primec/StdlibSurfaceRegistry.h`,
+      and any residual lowerer helper symbols.
+    - Preserve stdlib manifest ownership for the vector surface.
+  - acceptance:
+    - Non-semantic production C++ vector-specific traces are removed or
+      replaced with manifest/registry-owned generic collection metadata.
+    - Focused source-lock or behavior coverage remains aligned.
+    - The vector surface trace baseline reaches zero observed traces.
+  - stop_rule: Stop once production C++ has no PrimeStruct vector-specific
+    traces but before changing the audit script contract.
+  - evidence: Genericized the remaining production vector path, helper-symbol,
+    type-text, and surface-id traces in emitter, registry, parser, IR printer,
+    lowerer, and semantic helper sources through collection-name builders or
+    registry/manifest metadata. Ratcheted
+    `scripts/vector_surface_trace_baseline.json` from 49 production traces to
+    zero observed traces without changing the audit script contract. Focused
+    release backend IR/runtime builds, vector trace script validation, and
+    source-lock reruns passed after refreshing one stale SoA helper
+    source-lock assertion.

@@ -3,6 +3,9 @@
 #include "EmitterHelpers.h"
 #include "primec/StringLiteral.h"
 
+#include <array>
+#include <string_view>
+
 namespace primec::emitter {
 
 namespace {
@@ -63,6 +66,21 @@ bool shouldStripBuiltinPrefix(const std::string &prefix,
     return isNamespacedStdlibBuiltinAlias(alias);
   }
   return true;
+}
+
+std::string experimentalCollectionMemberRootLocal(
+    std::string_view collectionName,
+    bool leadingSlash = false) {
+  std::string root = leadingSlash ? "/" : "";
+  root += "std/collections/experimental_";
+  root += std::string(collectionName);
+  root += "/";
+  return root;
+}
+
+std::string collectionAliasLocal(std::string_view collectionName,
+                                 std::string_view suffix) {
+  return std::string(collectionName) + std::string(suffix);
 }
 
 } // namespace
@@ -134,7 +152,7 @@ bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
   std::string canonicalMemberName;
   return !resolvePublishedCollectionSurfaceMemberToken(
       suffix,
-      StdlibSurfaceId::CollectionsVectorHelpers,
+      StdlibSurfaceId::CollectionsVectorHelperSurface,
       canonicalMemberName);
 }
 
@@ -162,7 +180,7 @@ bool resolvePublishedVectorHelperExprMemberName(const Expr &expr,
     return false;
   }
   return resolvePublishedCollectionSurfaceExprMemberName(
-      expr, StdlibSurfaceId::CollectionsVectorHelpers, memberNameOut);
+      expr, StdlibSurfaceId::CollectionsVectorHelperSurface, memberNameOut);
 }
 
 bool resolvePublishedVectorConstructorExprMemberName(
@@ -196,21 +214,20 @@ std::string normalizeInternalSoaStorageBuiltinAlias(const std::string &path) {
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
   }
-  const char *const builtinPrefixes[] = {
+  const std::array<std::string, 11> builtinPrefixes = {{
       "std/collections/internal_soa_storage/",
       "std/collections/internal_buffer_checked/",
       "std/collections/internal_buffer_unchecked/",
       "std/collections/experimental_soa_vector/",
       "std/collections/experimental_soa_vector_conversions/",
       "std/collections/soa_vector_conversions/",
-      "std/collections/experimental_vector/",
+      experimentalCollectionMemberRootLocal("vector"),
       "std/collections/ContainerError/",
       "std/file/",
       "std/image/",
       "std/ui/",
-  };
-  for (const char *prefix : builtinPrefixes) {
-    const std::string prefixText(prefix);
+  }};
+  for (const std::string &prefixText : builtinPrefixes) {
     if (name.rfind(prefixText, 0) != 0) {
       continue;
     }
@@ -276,8 +293,7 @@ bool getBuiltinArrayAccessNameLocal(const Expr &expr, std::string &out) {
     return false;
   };
   auto matchLegacyAccessAlias = [&](const std::string &normalizedName,
-                                    const char *prefix) {
-    const std::string prefixText(prefix);
+                                    std::string_view prefixText) {
     if (normalizedName.rfind(prefixText, 0) != 0) {
       return false;
     }
@@ -286,11 +302,11 @@ bool getBuiltinArrayAccessNameLocal(const Expr &expr, std::string &out) {
       return false;
     }
     alias = stripGeneratedSuffix(std::move(alias));
-    if (alias == "vectorAt" || alias == "mapAt") {
+    if (alias == collectionAliasLocal("vector", "At") || alias == "mapAt") {
       out = "at";
       return true;
     }
-    if (alias == "vectorAtUnsafe" || alias == "mapAtUnsafe") {
+    if (alias == collectionAliasLocal("vector", "AtUnsafe") || alias == "mapAtUnsafe") {
       out = "at_unsafe";
       return true;
     }
@@ -316,7 +332,8 @@ bool getBuiltinArrayAccessNameLocal(const Expr &expr, std::string &out) {
     return true;
   }
   if (matchLegacyAccessAlias(scopedName, "std/collections/") ||
-      matchLegacyAccessAlias(scopedName, "std/collections/experimental_vector/") ||
+      matchLegacyAccessAlias(scopedName,
+                             experimentalCollectionMemberRootLocal("vector")) ||
       matchLegacyAccessAlias(scopedName, "std/collections/experimental_map/")) {
     return true;
   }

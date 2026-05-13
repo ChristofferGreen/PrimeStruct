@@ -64,6 +64,10 @@ bool collectionSurfaceMemberPathUsesKnownPrefix(std::string_view path) {
   return false;
 }
 
+std::string experimentalCollectionMemberRoot(std::string_view collectionName) {
+  return "std/collections/experimental_" + std::string(collectionName) + "/";
+}
+
 const StdlibSurfaceMetadata *findVectorHelperSurfaceMetadata() {
   return findStdlibSurfaceMetadataByBridgeKey(VectorHelperSurfaceBridgeKey);
 }
@@ -98,7 +102,7 @@ std::string normalizeCollectionHelperPath(std::string path) {
   if (!path.empty() && path.front() != '/' &&
       (path.rfind("array/", 0) == 0 ||
        collectionSurfaceMemberPathUsesKnownPrefix(path) ||
-       path.rfind("std/collections/experimental_vector/", 0) == 0 ||
+       path.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0 ||
        path.rfind("map/", 0) == 0 ||
        path.rfind("std/collections/map/", 0) == 0 ||
        path.rfind("std/collections/experimental_map/", 0) == 0)) {

@@ -953,7 +953,7 @@
   CHECK(semanticsCollectionHelperRewritesSource.find(
             "resolvePublishedCollectionHelperMemberToken(\n"
             "            normalizedMethod,\n"
-            "            StdlibSurfaceId::CollectionsVectorHelpers,\n"
+            "            StdlibSurfaceId::CollectionsVectorHelperSurface,\n"
             "            helperName)") ==
         std::string::npos);
   CHECK(semanticsCollectionHelperRewritesSource.find(

@@ -1219,7 +1219,7 @@ TEST_CASE("ir lowerer stdlib surface metadata recognizes experimental map loweri
 
 TEST_CASE("stdlib surface metadata resolves collection helper member tokens") {
   const auto *vectorMetadata =
-      primec::findStdlibSurfaceMetadata(primec::StdlibSurfaceId::CollectionsVectorHelpers);
+      primec::findStdlibSurfaceMetadata(primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
   REQUIRE(vectorMetadata != nullptr);
   CHECK(primec::resolveStdlibSurfaceMemberName(*vectorMetadata, "count") == "count");
   CHECK(primec::resolveStdlibSurfaceMemberName(*vectorMetadata, "remove_swap") ==
@@ -1257,13 +1257,13 @@ TEST_CASE("stdlib surface metadata resolves collection helper member tokens") {
 
 TEST_CASE("stdlib surface metadata classifies collection helper categories") {
   CHECK(primec::isStdlibSurfaceMemberName(
-      primec::StdlibSurfaceId::CollectionsVectorHelpers, "capacity"));
+      primec::StdlibSurfaceId::CollectionsVectorHelperSurface, "capacity"));
   CHECK(primec::isStdlibSurfaceMemberName(
       primec::StdlibSurfaceId::CollectionsMapHelpers, "tryAt_ref"));
   CHECK(primec::isStdlibSurfaceMemberName(
       primec::StdlibSurfaceId::CollectionsSoaVectorHelpers, "ref_ref"));
   CHECK_FALSE(primec::isStdlibSurfaceMemberName(
-      primec::StdlibSurfaceId::CollectionsVectorHelpers, "insert"));
+      primec::StdlibSurfaceId::CollectionsVectorHelperSurface, "insert"));
 
   CHECK(primec::isStdlibVectorStatementHelperName("push"));
   CHECK(primec::isStdlibVectorStatementHelperName("remove_swap"));
@@ -1703,7 +1703,7 @@ TEST_CASE("stdlib surface metadata resolves collection alias paths") {
   const auto *vectorMetadata =
       primec::findStdlibSurfaceMetadataByResolvedPath("/std/collections/vector/push");
   REQUIRE(vectorMetadata != nullptr);
-  CHECK(vectorMetadata->id == primec::StdlibSurfaceId::CollectionsVectorHelpers);
+  CHECK(vectorMetadata->id == primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
   CHECK(primec::resolveStdlibSurfaceMemberName(
             *vectorMetadata, "/std/collections/vector/push") == "push");
   CHECK(primec::findStdlibSurfaceMetadataByResolvedPath(

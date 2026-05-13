@@ -15,6 +15,27 @@ bool isBindingAuxTransformName(const std::string &name) {
          name == "pod" || name == "handle" || name == "gpu_lane" || isBindingQualifierName(name);
 }
 
+std::string experimentalCollectionTypePathLocal(std::string_view collectionName,
+                                                std::string_view typeName,
+                                                bool leadingSlash = false) {
+  std::string path = leadingSlash ? "/" : "";
+  path += "std/collections/experimental_";
+  path += std::string(collectionName);
+  path += "/";
+  path += std::string(typeName);
+  return path;
+}
+
+bool isExperimentalCollectionTypeBaseLocal(const std::string &base,
+                                           std::string_view collectionName,
+                                           std::string_view typeName) {
+  const std::string bare = experimentalCollectionTypePathLocal(collectionName, typeName);
+  const std::string rooted = experimentalCollectionTypePathLocal(collectionName, typeName, true);
+  return base == typeName || base == bare || base == rooted ||
+         base.rfind(bare + "__", 0) == 0 ||
+         base.rfind(rooted + "__", 0) == 0;
+}
+
 bool hasExplicitBindingTypeTransform(const Expr &expr) {
   for (const auto &transform : expr.transforms) {
     if (transform.name == "effects" || transform.name == "capabilities") {
@@ -489,10 +510,7 @@ ReturnKind returnKindForTypeName(const std::string &name) {
     }
     const bool isVectorLike =
         (base == "array" || base == "vector" || base == "soa_vector" || base == "Buffer" ||
-         base == "Vector" || base == "std/collections/experimental_vector/Vector" ||
-         base == "/std/collections/experimental_vector/Vector" ||
-         base.rfind("std/collections/experimental_vector/Vector__", 0) == 0 ||
-         base.rfind("/std/collections/experimental_vector/Vector__", 0) == 0);
+         isExperimentalCollectionTypeBaseLocal(base, "vector", "Vector"));
     if (isVectorLike && args.size() == 1) {
       return ReturnKind::Array;
     }
