@@ -98,9 +98,13 @@ TEST_CASE("canonical map surface owns implementation through internal map module
   CHECK(surfacesSource.find("id = CollectionsMapHelpers") != std::string::npos);
   CHECK(surfacesSource.find("id = CollectionsMapConstructors") != std::string::npos);
   CHECK(surfacesSource.find("member_name = at_unsafe_ref") != std::string::npos);
-  CHECK(surfacesSource.find("member_alias = mapInsertRef -> insert_ref") !=
+  CHECK(surfacesSource.find("member_alias = mapInsertRef -> insert_ref") ==
         std::string::npos);
-  CHECK(surfacesSource.find("lowering_spelling = /std/collections/mapInsertRef") !=
+  CHECK(surfacesSource.find("compatibility_spelling = /map/count") == std::string::npos);
+  CHECK(surfacesSource.find("lowering_spelling = /std/collections/mapInsertRef") ==
+        std::string::npos);
+  CHECK(surfacesSource.find(
+            "lowering_spelling = /std/collections/experimental_map/mapInsertRef") ==
         std::string::npos);
   CHECK(registrySource.find("CollectionsMapHelperMembers") == std::string::npos);
   CHECK(registrySource.find("CollectionsMapConstructorMembers") == std::string::npos);

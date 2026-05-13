@@ -16860,3 +16860,43 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     validation for canonical helper path construction, refreshed
     ownership/source-lock/registry tests, and validated focused release
     targets. Broad release validation was skipped under the lite workflow.
+
+- [x] TODO-4437: Remove map compatibility spellings from the surface manifest
+  - owner: ai
+  - created_at: 2026-05-13
+  - finished_at: 2026-05-13
+  - phase: Map stdlib ownership cutover
+  - split_from: TODO-4303
+  - scope: Remove old map compatibility spellings from
+    `stdlib/std/collections/surfaces.psmeta` so registry metadata recognizes
+    only the canonical `/std/collections/map/*` helper/constructor surface and
+    the supported exact/wildcard import aliases.
+  - implementation_notes:
+    - Deleted rooted `/map/*` registry compatibility spellings, wrapper
+      `mapCount` / `mapContains` / `mapTryAt` / `mapAt` / `mapInsert`
+      metadata aliases, and experimental-map lowering/constructor spellings
+      from the collection surface manifest.
+    - Kept `import /std/collections/map`, wildcard
+      `import /std/collections/*`, and canonical `/std/collections/map/*`
+      member metadata intact.
+    - Left direct experimental map source import rejection to TODO-4438 and
+      remaining C++ compatibility adapter deletion to TODO-4439.
+  - acceptance:
+    - `StdlibSurfaceRegistry` no longer resolves map helper metadata for
+      rooted `/map/*`, `/std/collections/mapCount`-style wrappers, or
+      `/std/collections/experimental_map/map*` helper/constructor spellings.
+    - Canonical map helper and constructor metadata still resolves for
+      `/std/collections/map/*`, exact map import, and collection wildcard
+      import.
+    - Source-lock tests prove map compatibility spellings are absent from the
+      manifest while vector and SoA compatibility metadata remains unchanged.
+    - Docs state that manifest-level map compatibility spellings are gone and
+      that direct-import and C++ adapter deletion are handled by follow-ups.
+  - stop_rule: Stop once the surface manifest and registry tests recognize
+    only canonical map metadata; leave direct experimental import rejection to
+    TODO-4438 and remaining C++ compatibility adapter deletion to TODO-4439.
+  - evidence: Removed map compatibility spellings, wrapper aliases, and
+    experimental map lowering/constructor metadata from
+    `surfaces.psmeta`; updated registry metadata tests to assert legacy map
+    spellings no longer resolve; refreshed ownership and vector/map bridge
+    docs. Broad release validation was skipped under the lite workflow.

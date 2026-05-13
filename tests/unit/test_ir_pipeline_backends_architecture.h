@@ -58,21 +58,25 @@ TEST_CASE("design doc records vector map bridge contract") {
 
   const std::string design = readTextFile(designPath);
   CHECK(design.find("### Vector/Map Bridge Contract") != std::string::npos);
-  CHECK(design.find("scope reference for the vector/map ownership-cutover lane") !=
+  CHECK(design.find("scope reference for future vector/map ownership-cutover\n"
+                    "TODOs") !=
         std::string::npos);
   CHECK(design.find("Bridge-owned public contract:") != std::string::npos);
   CHECK(design.find("exact and wildcard `/std/collections`") != std::string::npos);
   CHECK(design.find("Migration-only seams:") != std::string::npos);
-  CHECK(design.find("rooted `/vector/*` and `/map/*` spellings") != std::string::npos);
+  CHECK(design.find("rooted `/map/*` spellings plus") != std::string::npos);
   CHECK(design.find("Compatibility adapter inventory:") != std::string::npos);
   CHECK(design.find("map insert helper compatibility is the\n"
                     "  first migrated family") == std::string::npos);
-  CHECK(design.find("map insert helper compatibility was the\n"
-                    "  first migrated family") != std::string::npos);
-  CHECK(design.find("Template monomorphization now asks the same registry") !=
+  CHECK(design.find("map insert helper compatibility no\n"
+                    "  longer lives in the central surface manifest") !=
         std::string::npos);
-  CHECK(design.find("SoA helper compatibility is routed\n"
-                    "  through `StdlibSurfaceRegistry::CollectionsSoaVectorHelpers`") !=
+  CHECK(design.find("Template monomorphization still\n"
+                    "  asks the registry for preferred experimental vector/SoA") !=
+        std::string::npos);
+  CHECK(design.find("SoA helper\n"
+                    "  compatibility is routed through\n"
+                    "  `StdlibSurfaceRegistry::CollectionsSoaVectorHelpers`") !=
         std::string::npos);
   CHECK(design.find("Gfx Buffer helper compatibility is routed through\n"
                     "  `StdlibSurfaceRegistry::GfxBufferHelpers`") !=
@@ -98,9 +102,9 @@ TEST_CASE("design doc records stdlib de-experimentalization policy") {
   CHECK(design.find("sole public namespaced vector contract") != std::string::npos);
   CHECK(design.find("sole public namespaced map contract") != std::string::npos);
   CHECK(design.find("/std/collections/experimental_vector/*") != std::string::npos);
-  CHECK(design.find("Internal implementation module behind the canonical `/std/collections/vector/*` public contract") !=
+  CHECK(design.find("Internal vector backing adapter used by canonical `/std/collections/vector/*`") !=
         std::string::npos);
-  CHECK(design.find("Internal implementation module behind the canonical `/std/collections/map/*` public contract") !=
+  CHECK(design.find("Internal map backing module used by canonical `/std/collections/map/*`") !=
         std::string::npos);
   CHECK(design.find("/std/gfx/experimental/*") != std::string::npos);
   CHECK(design.find("Legacy compatibility shim over canonical `/std/gfx/*`") != std::string::npos);
@@ -275,12 +279,15 @@ TEST_CASE("stdlib surface registry stays source locked") {
         std::string::npos);
   CHECK(collectionManifest.find("member_name = count_ref") != std::string::npos);
   CHECK(collectionManifest.find("member_name = insert_ref") != std::string::npos);
-  CHECK(collectionManifest.find("member_alias = mapAtUnsafe -> at_unsafe") !=
+  CHECK(collectionManifest.find("member_alias = mapAtUnsafe -> at_unsafe") ==
         std::string::npos);
-  CHECK(collectionManifest.find("compatibility_spelling = /map/count") !=
+  CHECK(collectionManifest.find("import_alias_spelling = /map") == std::string::npos);
+  CHECK(collectionManifest.find("compatibility_spelling = /map/count") ==
+        std::string::npos);
+  CHECK(collectionManifest.find("lowering_spelling = /std/collections/mapInsert") ==
         std::string::npos);
   CHECK(collectionManifest.find(
-            "lowering_spelling = /std/collections/experimental_map/mapInsertRef") !=
+            "lowering_spelling = /std/collections/experimental_map/mapInsertRef") ==
         std::string::npos);
   CHECK(collectionManifest.find("id = CollectionsMapConstructors") !=
         std::string::npos);
@@ -288,9 +295,11 @@ TEST_CASE("stdlib surface registry stays source locked") {
         std::string::npos);
   CHECK(collectionManifest.find("canonical_path = /std/collections/map/map") !=
         std::string::npos);
-  CHECK(collectionManifest.find("member_name = mapOct") != std::string::npos);
+  CHECK(collectionManifest.find("member_name = mapOct") == std::string::npos);
+  CHECK(collectionManifest.find("lowering_spelling = /std/collections/mapNew") ==
+        std::string::npos);
   CHECK(collectionManifest.find(
-            "compatibility_spelling = /std/collections/experimental_map/mapOct") !=
+            "compatibility_spelling = /std/collections/experimental_map/mapOct") ==
         std::string::npos);
 
   CHECK(source.find("StdlibSurfaceId::CollectionsSoaVectorHelpers") != std::string::npos);
@@ -337,31 +346,35 @@ TEST_CASE("stdlib surface registry stays source locked") {
   CHECK(source.find("\"frame_present_failed\"") != std::string::npos);
 }
 
-TEST_CASE("map insert surface registry resolves legacy compatibility spellings") {
+TEST_CASE("map insert surface registry rejects legacy compatibility spellings") {
   const primec::StdlibSurfaceMetadata *metadata =
       primec::findStdlibSurfaceMetadata(primec::StdlibSurfaceId::CollectionsMapHelpers);
   REQUIRE(metadata != nullptr);
 
   CHECK(primec::resolveStdlibSurfaceMemberName(*metadata, "insert") == "insert");
-  CHECK(primec::resolveStdlibSurfaceMemberName(*metadata, "/map/insert") == "insert");
-  CHECK(primec::resolveStdlibSurfaceMemberName(*metadata, "/std/collections/mapInsert") ==
+  CHECK(primec::resolveStdlibSurfaceMemberName(*metadata, "/std/collections/map/insert") ==
         "insert");
+  CHECK(primec::resolveStdlibSurfaceMemberName(*metadata, "/map/insert").empty());
+  CHECK(primec::resolveStdlibSurfaceMemberName(*metadata, "/std/collections/mapInsert").empty());
   CHECK(primec::resolveStdlibSurfaceMemberName(
-            *metadata, "/std/collections/experimental_map/mapInsert") == "insert");
+            *metadata, "/std/collections/experimental_map/mapInsert").empty());
   CHECK(primec::resolveStdlibSurfaceMemberName(*metadata, "insert_ref") == "insert_ref");
-  CHECK(primec::resolveStdlibSurfaceMemberName(*metadata, "/map/insert_ref") ==
+  CHECK(primec::resolveStdlibSurfaceMemberName(*metadata, "/std/collections/map/insert_ref") ==
         "insert_ref");
-  CHECK(primec::resolveStdlibSurfaceMemberName(*metadata, "/std/collections/mapInsertRef") ==
-        "insert_ref");
+  CHECK(primec::resolveStdlibSurfaceMemberName(*metadata, "/map/insert_ref").empty());
+  CHECK(primec::resolveStdlibSurfaceMemberName(*metadata, "/std/collections/mapInsertRef").empty());
   CHECK(primec::resolveStdlibSurfaceMemberName(
-            *metadata, "/std/collections/experimental_map/mapInsertRef") == "insert_ref");
+            *metadata, "/std/collections/experimental_map/mapInsertRef").empty());
 
   CHECK(primec::stdlibSurfaceCanonicalHelperPath(
             primec::StdlibSurfaceId::CollectionsMapHelpers, "insert") ==
         "/std/collections/map/insert");
   CHECK(primec::stdlibSurfaceCanonicalHelperPath(
-            primec::StdlibSurfaceId::CollectionsMapHelpers, "/std/collections/mapInsertRef") ==
-        "/std/collections/map/insert_ref");
+            primec::StdlibSurfaceId::CollectionsMapHelpers,
+            "/std/collections/map/insert_ref") == "/std/collections/map/insert_ref");
+  CHECK(primec::stdlibSurfaceCanonicalHelperPath(
+            primec::StdlibSurfaceId::CollectionsMapHelpers,
+            "/std/collections/mapInsertRef") == "");
 }
 
 TEST_CASE("collection helper surface registry resolves preferred compatibility spellings") {
@@ -378,13 +391,11 @@ TEST_CASE("collection helper surface registry resolves preferred compatibility s
   CHECK(primec::stdlibSurfacePreferredSpellingForMember(
             primec::StdlibSurfaceId::CollectionsMapHelpers,
             "/std/collections/map/contains_ref",
-            "/std/collections/experimental_map/") ==
-        "/std/collections/experimental_map/mapContainsRef");
+            "/std/collections/experimental_map/") == "");
   CHECK(primec::stdlibSurfacePreferredSpellingForMember(
             primec::StdlibSurfaceId::CollectionsMapHelpers,
             "/std/collections/mapAtUnsafe",
-            "/std/collections/experimental_map/") ==
-        "/std/collections/experimental_map/mapAtUnsafe");
+            "/std/collections/experimental_map/") == "");
   CHECK(primec::stdlibSurfacePreferredSpellingForMember(
             primec::StdlibSurfaceId::CollectionsMapHelpers,
             "/not_map/count",

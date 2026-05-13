@@ -3808,32 +3808,35 @@ re-defining it piecemeal.
   live with the stdlib collection source. Old vector compatibility spellings are
   intentionally absent from that metadata; rooted helper aliases are removed,
   and direct experimental vector source imports are rejected by import
-  validation. Map compatibility spellings remain in the manifest until
-  TODO-4303 deletes or intentionally rejects those seams.
+  validation. Old rooted map helper aliases, `mapCount`-style wrapper
+  spellings, and experimental map helper spellings are also absent from that
+  metadata; TODO-4438 and TODO-4439 delete the remaining direct-import and
+  adapter-level map compatibility seams.
 - **Migration-only seams:** rooted `/map/*` spellings plus
   `mapCount`-style lowering names remain temporary compatibility seams. Rooted
   `/vector/*` helper spellings no longer act as builtin vector compatibility
   aliases; explicit user definitions under those paths remain ordinary
   definitions. The vector/map adapter cutover is complete for semantic and
   template-monomorph helper decisions; direct experimental vector source
-  imports are rejected, map surface metadata is now stdlib-owned, and
-  TODO-4303 owns the later map seam deletion.
-- **Compatibility adapter inventory:** map insert helper compatibility was the
-  first migrated family. The semantic map-insert rewrite asks the
-  `StdlibSurfaceRegistry` `CollectionsMapHelpers` adapter to classify
-  canonical `/std/collections/map/insert(_ref)`, compatibility
-  `/map/insert(_ref)`, wrapper `/std/collections/mapInsert(_Ref)`, and
-  experimental `/std/collections/experimental_map/mapInsert(_Ref)` spellings
-  before it rewrites value and borrowed-reference receivers to the canonical
-  `.prime` helper surface.
-  Template monomorphization now asks the same registry for preferred
-  experimental vector/map/SoA helper spellings instead of carrying bespoke
-  canonical-to-experimental helper maps. SoA helper compatibility is routed
-  through `StdlibSurfaceRegistry::CollectionsSoaVectorHelpers` for canonical
+  imports are rejected, map surface metadata is now stdlib-owned, and the
+  surface manifest no longer advertises map compatibility spellings.
+  TODO-4438 owns direct experimental map import rejection, and TODO-4439 owns
+  the remaining adapter-level map seam deletion.
+- **Compatibility adapter inventory:** map insert helper compatibility no
+  longer lives in the central surface manifest; the `CollectionsMapHelpers`
+  registry metadata now classifies only canonical `/std/collections/map/*`
+  helpers. Remaining map compatibility behavior is limited to follow-up-owned
+  source imports, compatibility diagnostics, and lowerer/semantic adapters
+  until TODO-4438 and TODO-4439 remove them. Template monomorphization still
+  asks the registry for preferred experimental vector/SoA helper spellings
+  instead of carrying bespoke canonical-to-experimental helper maps. SoA helper
+  compatibility is routed through
+  `StdlibSurfaceRegistry::CollectionsSoaVectorHelpers` for canonical
   `/std/collections/soa_vector/*`, same-path `/soa_vector/*`, mixed
   `/std/collections/{count,get,ref,reserve,push}`, experimental helper wrapper,
   and conversion-helper spellings. Vector/map and SoA constructor
-  compatibility is already metadata-backed by the constructor surface adapters.
+  compatibility is already metadata-backed by the constructor surface adapters
+  outside the removed map compatibility spellings.
   Gfx Buffer helper compatibility is routed through
   `StdlibSurfaceRegistry::GfxBufferHelpers` for canonical `/std/gfx/Buffer/*`,
   legacy `/std/gfx/experimental/Buffer/*`, and rooted `/Buffer/*` helper
@@ -3886,7 +3889,7 @@ Current `stdlib/std` experimental and internal module classification:
 | `/std/collections/internal_vector/*` | Internal substrate/helper namespace | Internal vector backing adapter used by canonical `/std/collections/vector/*`; it preserves the current compatibility `Vector<T>` type identity until the final vector surface audit. | TODO-4373 |
 | `/std/collections/experimental_vector/*` | Rejected compatibility namespace | Direct source imports are rejected; the shim remains only as legacy forwarding storage identity behind `/std/collections/internal_vector/*` until the final vector surface audit. | TODO-4373 |
 | `/std/collections/internal_map/*` | Internal substrate/helper namespace | Internal map backing module used by canonical `/std/collections/map/*`; it preserves the current compatibility `Map<K, V>` type identity until the final map surface audit. | TODO-4304 |
-| `/std/collections/experimental_map/*` | Temporary compatibility namespace | Direct-import shim over `/std/collections/internal_map/*`; retained only for targeted compatibility or conformance coverage while the residual map seam remains importable. | TODO-4303 |
+| `/std/collections/experimental_map/*` | Temporary compatibility namespace | Direct-import shim over `/std/collections/internal_map/*`; retained only for targeted compatibility or conformance coverage while the residual map seam remains importable. | TODO-4438 |
 | `/std/gfx/experimental/*` | Temporary compatibility namespace | Legacy compatibility shim over canonical `/std/gfx/*`; no longer part of the public gfx contract and retained only for targeted compatibility coverage while the residual seam remains importable. | none |
 | `/std/collections/experimental_soa_vector/*` | Accepted compatibility namespace | Compatibility module behind the promoted canonical `/std/collections/soa_vector/*` public surface; direct imports are accepted only for targeted compatibility or conformance coverage. C++/VM/native compile-run coverage locks this compatibility seam; ordinary public examples should use `/std/collections/soa_vector/*`. | none |
 | `/std/collections/experimental_soa_vector_conversions/*` | Accepted compatibility namespace | Compatibility conversion module for direct experimental SoA conversion imports; canonical conversions route through `/std/collections/internal_soa_vector_conversions/*`, and direct imports remain only for targeted compatibility or conformance coverage. | none |

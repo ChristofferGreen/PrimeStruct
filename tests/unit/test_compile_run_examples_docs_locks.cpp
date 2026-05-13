@@ -531,7 +531,8 @@ TEST_CASE("vector map bridge boundary docs stay source locked") {
   CHECK(primeStructDoc.find("### Vector/Map Bridge Contract") != std::string::npos);
   CHECK(primeStructDoc.find("**Bridge-owned public contract:** exact and wildcard `/std/collections`") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("**Stdlib-owned surface metadata:** canonical vector helper/import/constructor") !=
+  CHECK(primeStructDoc.find("**Stdlib-owned surface metadata:** canonical vector and map\n"
+                            "  helper/import/constructor metadata") !=
         std::string::npos);
   CHECK(primeStructDoc.find("`stdlib/std/collections/surfaces.psmeta`") !=
         std::string::npos);
@@ -546,13 +547,15 @@ TEST_CASE("vector map bridge boundary docs stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("Compatibility adapter inventory:") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("map insert helper compatibility was the\n"
-                            "  first migrated family") !=
+  CHECK(primeStructDoc.find("map insert helper compatibility no\n"
+                            "  longer lives in the central surface manifest") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("Template monomorphization now asks the same registry") !=
+  CHECK(primeStructDoc.find("Template monomorphization still\n"
+                            "  asks the registry for preferred experimental vector/SoA") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("SoA helper compatibility is routed\n"
-                            "  through `StdlibSurfaceRegistry::CollectionsSoaVectorHelpers`") !=
+  CHECK(primeStructDoc.find("SoA helper\n"
+                            "  compatibility is routed through\n"
+                            "  `StdlibSurfaceRegistry::CollectionsSoaVectorHelpers`") !=
         std::string::npos);
   CHECK(primeStructDoc.find("Gfx Buffer helper compatibility is routed through\n"
                             "  `StdlibSurfaceRegistry::GfxBufferHelpers`") !=
@@ -566,18 +569,21 @@ TEST_CASE("vector map bridge boundary docs stay source locked") {
         std::string::npos);
   CHECK(todo.find("metadata is now owned by `stdlib/std/collections/surfaces.psmeta`") !=
         std::string::npos);
+  CHECK(todo.find("map compatibility spellings\n"
+                  "  were removed from that manifest") !=
+        std::string::npos);
   CHECK(todo.find("Direct experimental vector source imports are now rejected") !=
         std::string::npos);
   CHECK(todo.find("Migration-only seams: rooted `/map/*` spellings,") !=
         std::string::npos);
   CHECK(todo.find("The vector/map adapter cutover is complete for semantic and") !=
         std::string::npos);
-  CHECK(todo.find("Compatibility adapter inventory: map insert helper compatibility is migrated") !=
+  CHECK(todo.find("Compatibility adapter inventory: map insert helper compatibility no longer") !=
         std::string::npos);
-  CHECK(todo.find("through `StdlibSurfaceRegistry::CollectionsMapHelpers`") !=
+  CHECK(todo.find("lives in `StdlibSurfaceRegistry::CollectionsMapHelpers`") !=
         std::string::npos);
   CHECK(todo.find("Template\n"
-                  "  monomorphization now asks the registry for preferred experimental vector/map/SoA") !=
+                  "  monomorphization now asks the registry for preferred experimental vector/SoA") !=
         std::string::npos);
   CHECK(todo.find("SoA helper compatibility is routed through\n"
                   "  `StdlibSurfaceRegistry::CollectionsSoaVectorHelpers`") !=
@@ -626,7 +632,8 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
             "`/std/collections/internal_vector/*` family owns the internal backing adapter behind that") !=
         std::string::npos);
   CHECK(primeStructDoc.find(
-            "`/std/collections/experimental_map/*` family now remains only as the internal implementation seam behind that") !=
+            "`/std/collections/experimental_map/*` remains a\n"
+            "  direct-import shim for targeted compatibility or conformance coverage") !=
         std::string::npos);
   CHECK(primeStructDoc.find("no `experimental` namespace counts as canonical public API") !=
         std::string::npos);
@@ -634,7 +641,7 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("| `/std/collections/experimental_vector/*` | Rejected compatibility namespace | Direct source imports are rejected; the shim remains only as legacy forwarding storage identity behind `/std/collections/internal_vector/*` until the final vector surface audit. | TODO-4373 |") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("| `/std/collections/experimental_map/*` | Internal substrate/helper namespace | Internal implementation module behind the canonical `/std/collections/map/*` public contract; direct imports remain only for targeted compatibility or conformance coverage. | none |") !=
+  CHECK(primeStructDoc.find("| `/std/collections/experimental_map/*` | Temporary compatibility namespace | Direct-import shim over `/std/collections/internal_map/*`; retained only for targeted compatibility or conformance coverage while the residual map seam remains importable. | TODO-4438 |") !=
         std::string::npos);
   CHECK(primeStructDoc.find("| `/std/gfx/experimental/*` | Temporary compatibility namespace | Legacy compatibility shim over canonical `/std/gfx/*`; no longer part of the public gfx contract and retained only for targeted compatibility coverage while the residual seam remains importable. | none |") !=
         std::string::npos);
@@ -668,7 +675,7 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
   CHECK(todo.find("Vector compatibility shim: direct\n"
                   "  `/std/collections/experimental_vector/*` source imports are rejected") !=
         std::string::npos);
-  CHECK(todo.find("/std/collections/experimental_map/*` remains the implementation-owned seam") !=
+  CHECK(todo.find("/std/collections/experimental_map/*` remains a direct-import compatibility") !=
         std::string::npos);
   CHECK(todo.find("Stdlib de-experimentalization: TODO-4059") == std::string::npos);
   CHECK(todo.find("TODO-4103: Rename the remaining experimental SoA storage namespace") ==
@@ -1368,10 +1375,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4297: Add zero C++ vector-surface audit") !=
+                  "- TODO-4438: Reject direct experimental map source imports") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
-                  "- TODO-4299: Promote and style canonical `.prime` map implementation") !=
+                  "- TODO-4439: Delete map compatibility adapters and wrapper bridges") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4308: Move SoA surface metadata out of C++") !=
         std::string::npos);
@@ -1387,7 +1394,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4297: Add zero C++ vector-surface audit") !=
+                  "- TODO-4438: Reject direct experimental map source imports") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
       "TODO-4268: Add heterogeneous type-pack syntax and metadata",
@@ -1729,9 +1736,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Compile-time macro hooks and AST transform ownership | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4297, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |") !=
+  CHECK(todo.find("| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4438, TODO-4439, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |") !=
         std::string::npos);
-  CHECK(todo.find("| Vector/map stdlib ownership cutover and collection surface authority | TODO-4297, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |") !=
+  CHECK(todo.find("| Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4438, TODO-4439, TODO-4304 |") !=
         std::string::npos);
   CHECK(todo.find("| Release benchmark/example suite stability and doctest governance | none |") !=
         std::string::npos);
@@ -1739,11 +1746,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Test-suite audit follow-up and release-gate stability | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4297, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |") !=
+  CHECK(todo.find("| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4438, TODO-4439, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |") !=
         std::string::npos);
   CHECK(todo.find("| SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |") !=
         std::string::npos);
-  CHECK(todo.find("| De-experimentalization surface and namespace parity | TODO-4297, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |") !=
+  CHECK(todo.find("| De-experimentalization surface and namespace parity | TODO-4430, TODO-4438, TODO-4439, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |") !=
         std::string::npos);
   CHECK(todo.find("| `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |") !=
         std::string::npos);
@@ -1769,7 +1776,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Lowerer/source-composition contract coverage | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4297, TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |") !=
+  CHECK(todo.find("| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4438, TODO-4439, TODO-4304 |") !=
         std::string::npos);
   CHECK(todo.find("### Skipped Doctest Debt Summary") != std::string::npos);
   CHECK(todo.find("Retained `doctest::skip(true)` coverage is currently absent from the active") !=
@@ -2704,6 +2711,8 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
       std::filesystem::path("..") / "stdlib" / "std" / "collections" / "collections.prime";
   std::filesystem::path mapStdlibPath =
       std::filesystem::path("..") / "stdlib" / "std" / "collections" / "map.prime";
+  std::filesystem::path internalMapStdlibPath =
+      std::filesystem::path("..") / "stdlib" / "std" / "collections" / "internal_map.prime";
   std::filesystem::path experimentalVectorStdlibPath =
       std::filesystem::path("..") / "stdlib" / "std" / "collections" / "experimental_vector.prime";
   std::filesystem::path internalVectorStdlibPath =
@@ -2737,6 +2746,10 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   }
   if (!std::filesystem::exists(mapStdlibPath)) {
     mapStdlibPath = std::filesystem::current_path() / "stdlib" / "std" / "collections" / "map.prime";
+  }
+  if (!std::filesystem::exists(internalMapStdlibPath)) {
+    internalMapStdlibPath =
+        std::filesystem::current_path() / "stdlib" / "std" / "collections" / "internal_map.prime";
   }
   if (!std::filesystem::exists(experimentalVectorStdlibPath)) {
     experimentalVectorStdlibPath =
@@ -2781,6 +2794,7 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   REQUIRE(std::filesystem::exists(vectorStdlibPath));
   REQUIRE(std::filesystem::exists(collectionsStdlibPath));
   REQUIRE(std::filesystem::exists(mapStdlibPath));
+  REQUIRE(std::filesystem::exists(internalMapStdlibPath));
   REQUIRE(std::filesystem::exists(experimentalVectorStdlibPath));
   REQUIRE(std::filesystem::exists(internalVectorStdlibPath));
   REQUIRE(std::filesystem::exists(experimentalMapStdlibPath));
@@ -2796,6 +2810,7 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   const std::string vectorStdlib = readFile(vectorStdlibPath.string());
   const std::string collectionsStdlib = readFile(collectionsStdlibPath.string());
   const std::string mapStdlib = readFile(mapStdlibPath.string());
+  const std::string internalMapStdlib = readFile(internalMapStdlibPath.string());
   const std::string experimentalVectorStdlib = readFile(experimentalVectorStdlibPath.string());
   const std::string internalVectorStdlib = readFile(internalVectorStdlibPath.string());
   const std::string experimentalMapStdlib = readFile(experimentalMapStdlibPath.string());
@@ -2875,14 +2890,14 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(collectionsStdlib.find("mapCount<K, V>") != std::string::npos);
 
   CHECK(mapStdlib.find(
-            "// Canonical public wrapper layer over the internal experimental_map implementation module.") !=
+            "// Canonical public wrapper layer over the internal_map implementation module.") !=
         std::string::npos);
-  CHECK(mapStdlib.find("[mut] out{/std/collections/experimental_map/mapNew<K, V>()}") !=
+  CHECK(mapStdlib.find("[mut] out{/std/collections/internal_map/mapNew<K, V>()}") !=
         std::string::npos);
   CHECK(mapStdlib.find("entryCount{count(entries)}") != std::string::npos);
   CHECK(mapStdlib.find("[mut] index{0i32}") != std::string::npos);
   CHECK(mapStdlib.find("current{entries[index]}") != std::string::npos);
-  CHECK(mapStdlib.find("[map<K, V> mut] out{/std/collections/experimental_map/mapNew<K, V>()}") ==
+  CHECK(mapStdlib.find("[map<K, V> mut] out{/std/collections/internal_map/mapNew<K, V>()}") ==
         std::string::npos);
   CHECK(mapStdlib.find("[i32] entryCount{count(entries)}") == std::string::npos);
   CHECK(mapStdlib.find("[Entry<K, V>] current{entries[index]}") == std::string::npos);
@@ -2900,13 +2915,22 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(internalVectorStdlib.find("[public struct]\n  Vector<T>()") != std::string::npos);
   CHECK(internalVectorStdlib.find("/std/collections/internal_vector/vectorPush<T>(values, value)") ==
         std::string::npos);
-  CHECK(experimentalMapStdlib.find("[Vector<K>] keys{this.keys}") != std::string::npos);
-  CHECK(experimentalMapStdlib.find("// Internal implementation module behind canonical /std/collections/map/*.") !=
+  CHECK(experimentalMapStdlib.find("// Direct-import compatibility shim for the legacy experimental map namespace.") !=
         std::string::npos);
   CHECK(experimentalMapStdlib.find(
+            "// Canonical wrappers route through /std/collections/internal_map/*.") !=
+        std::string::npos);
+  CHECK(experimentalMapStdlib.find("import /std/collections/internal_map/*") !=
+        std::string::npos);
+  CHECK(experimentalMapStdlib.find("[Vector<K>] keys{this.keys}") == std::string::npos);
+  CHECK(internalMapStdlib.find("[Vector<K>] keys{this.keys}") != std::string::npos);
+  CHECK(internalMapStdlib.find(
+            "// Internal map backing implementation behind canonical /std/collections/map/*.") !=
+        std::string::npos);
+  CHECK(internalMapStdlib.find(
             "// Vector storage comes from the internal vector backing module.") !=
         std::string::npos);
-  CHECK(experimentalMapStdlib.find("return(/std/collections/internal_vector/vectorCount<K>(keys))") !=
+  CHECK(internalMapStdlib.find("return(/std/collections/internal_vector/vectorCount<K>(keys))") !=
         std::string::npos);
   CHECK(experimentalMapStdlib.find("import /std/collections/experimental_vector/*") ==
         std::string::npos);

@@ -1186,27 +1186,25 @@ TEST_CASE("ir lowerer access helper recognizes namespaced canonical access helpe
   CHECK(helperName.empty());
 }
 
-TEST_CASE("ir lowerer stdlib surface metadata recognizes experimental map lowering helpers") {
+TEST_CASE("ir lowerer stdlib surface metadata rejects experimental map lowering helpers") {
   const auto *countMetadata = primec::findStdlibSurfaceMetadataByResolvedPath(
       "/std/collections/experimental_map/mapCount");
-  REQUIRE(countMetadata != nullptr);
-  CHECK(countMetadata->id == primec::StdlibSurfaceId::CollectionsMapHelpers);
-  CHECK(primec::resolveStdlibSurfaceMemberName(
-            *countMetadata, "/std/collections/experimental_map/mapCount") == "count");
+  CHECK(countMetadata == nullptr);
 
   const auto *insertMetadata = primec::findStdlibSurfaceMetadataByResolvedPath(
       "/std/collections/experimental_map/mapInsert");
-  REQUIRE(insertMetadata != nullptr);
-  CHECK(insertMetadata->id == primec::StdlibSurfaceId::CollectionsMapHelpers);
-  CHECK(primec::resolveStdlibSurfaceMemberName(
-            *insertMetadata, "/std/collections/experimental_map/mapInsert") == "insert");
+  CHECK(insertMetadata == nullptr);
 
   const auto *atUnsafeMetadata = primec::findStdlibSurfaceMetadataByResolvedPath(
       "/std/collections/experimental_map/mapAtUnsafe");
-  REQUIRE(atUnsafeMetadata != nullptr);
-  CHECK(atUnsafeMetadata->id == primec::StdlibSurfaceId::CollectionsMapHelpers);
+  CHECK(atUnsafeMetadata == nullptr);
+
+  const auto *canonicalMapMetadata = primec::findStdlibSurfaceMetadataByResolvedPath(
+      "/std/collections/map/at_unsafe");
+  REQUIRE(canonicalMapMetadata != nullptr);
+  CHECK(canonicalMapMetadata->id == primec::StdlibSurfaceId::CollectionsMapHelpers);
   CHECK(primec::resolveStdlibSurfaceMemberName(
-            *atUnsafeMetadata, "/std/collections/experimental_map/mapAtUnsafe") == "at_unsafe");
+            *canonicalMapMetadata, "/std/collections/map/at_unsafe") == "at_unsafe");
 
   const auto *soaGetRefMetadata = primec::findStdlibSurfaceMetadataByResolvedPath(
       "/std/collections/experimental_soa_vector/soaVectorGetRef");
@@ -1242,11 +1240,14 @@ TEST_CASE("stdlib surface metadata resolves collection helper member tokens") {
   const auto *mapMetadata =
       primec::findStdlibSurfaceMetadata(primec::StdlibSurfaceId::CollectionsMapHelpers);
   REQUIRE(mapMetadata != nullptr);
-  CHECK(primec::resolveStdlibSurfaceMemberName(*mapMetadata, "mapAtUnsafeRef") ==
+  CHECK(primec::resolveStdlibSurfaceMemberName(*mapMetadata, "at_unsafe_ref") ==
         "at_unsafe_ref");
-  CHECK(primec::resolveStdlibSurfaceMemberName(*mapMetadata, "Insert") == "insert");
-  CHECK(primec::resolveStdlibSurfaceMemberName(*mapMetadata, "MapInsertRef") ==
+  CHECK(primec::resolveStdlibSurfaceMemberName(
+            *mapMetadata, "/std/collections/map/insert_ref") ==
         "insert_ref");
+  CHECK(primec::resolveStdlibSurfaceMemberName(*mapMetadata, "mapAtUnsafeRef").empty());
+  CHECK(primec::resolveStdlibSurfaceMemberName(*mapMetadata, "Insert").empty());
+  CHECK(primec::resolveStdlibSurfaceMemberName(*mapMetadata, "MapInsertRef").empty());
 
   const auto *soaMetadata =
       primec::findStdlibSurfaceMetadata(primec::StdlibSurfaceId::CollectionsSoaVectorHelpers);
@@ -1713,7 +1714,7 @@ TEST_CASE("stdlib surface metadata resolves collection alias paths") {
   CHECK(primec::findStdlibSurfaceMetadataByResolvedPath(
             "/std/collections/experimental_vector/vectorPush") == nullptr);
   const auto *vectorWrapperMetadata = primec::findStdlibSurfaceMetadataByResolvedPath(
-      "/std/collections/vector/push");
+      "/std/collections/vectorPush");
   CHECK(vectorWrapperMetadata == nullptr);
 
   const auto *vectorCtorMetadata = primec::findStdlibSurfaceMetadataByResolvedPath(
@@ -1727,19 +1728,24 @@ TEST_CASE("stdlib surface metadata resolves collection alias paths") {
   CHECK(primec::resolveStdlibSurfaceMemberName(
             *vectorCtorMetadata, "/std/collections/vectorSingle__tabcd").empty());
 
-  const auto *mapCtorMetadata = primec::findStdlibSurfaceMetadataByResolvedPath("/map/map");
+  CHECK(primec::findStdlibSurfaceMetadataByResolvedPath("/map/map") == nullptr);
+  const auto *mapCtorMetadata = primec::findStdlibSurfaceMetadataByResolvedPath(
+      "/std/collections/map/map");
   REQUIRE(mapCtorMetadata != nullptr);
   CHECK(mapCtorMetadata->id == primec::StdlibSurfaceId::CollectionsMapConstructors);
-  CHECK(primec::resolveStdlibSurfaceMemberName(*mapCtorMetadata, "/map/map") == "map");
   CHECK(primec::resolveStdlibSurfaceMemberName(
-            *mapCtorMetadata, "/std/collections/mapPair__t1234") == "mapPair");
+            *mapCtorMetadata, "/std/collections/map/map") == "map");
+  CHECK(primec::resolveStdlibSurfaceMemberName(
+            *mapCtorMetadata, "/std/collections/mapPair__t1234").empty());
 
   const auto *mapRefMetadata = primec::findStdlibSurfaceMetadataByResolvedPath(
-      "/std/collections/mapTryAtRef");
+      "/std/collections/map/tryAt_ref");
   REQUIRE(mapRefMetadata != nullptr);
   CHECK(mapRefMetadata->id == primec::StdlibSurfaceId::CollectionsMapHelpers);
   CHECK(primec::resolveStdlibSurfaceMemberName(
-            *mapRefMetadata, "/std/collections/mapTryAtRef") == "tryAt_ref");
+            *mapRefMetadata, "/std/collections/map/tryAt_ref") == "tryAt_ref");
+  CHECK(primec::findStdlibSurfaceMetadataByResolvedPath(
+            "/std/collections/mapTryAtRef") == nullptr);
 }
 
 TEST_CASE("emitter cpp keeps canonical vector count builtin fallback") {

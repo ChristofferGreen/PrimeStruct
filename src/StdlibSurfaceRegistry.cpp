@@ -753,6 +753,19 @@ bool matchesResolvedRootedMemberPath(std::string_view path,
   return matchesAny(memberNames, memberName);
 }
 
+bool matchesResolvedSurfaceMemberPath(const StdlibSurfaceMetadata &metadata,
+                                      std::string_view path) {
+  if (stdlibSurfaceMatchesSpelling(metadata, path) ||
+      matchesResolvedRootedMemberPath(path, metadata.canonicalPath, metadata.memberNames)) {
+    return true;
+  }
+  return std::any_of(metadata.importAliasSpellings.begin(),
+                     metadata.importAliasSpellings.end(),
+                     [&](std::string_view aliasSpelling) {
+                       return matchesResolvedRootedMemberPath(path, aliasSpelling, metadata.memberNames);
+                     });
+}
+
 std::string_view pathLeaf(std::string_view path) {
   const std::size_t slash = path.find_last_of('/');
   return slash == std::string_view::npos ? path : path.substr(slash + 1);
@@ -1000,6 +1013,10 @@ const StdlibSurfaceMetadata *findStdlibSurfaceMetadataByResolvedPath(std::string
 std::string_view resolveStdlibSurfaceMemberName(const StdlibSurfaceMetadata &metadata,
                                                 std::string_view path) {
   const std::string_view normalizedPath = stripResolvedPathSpecializationSuffix(path);
+  if (normalizedPath.find('/') != std::string_view::npos &&
+      !matchesResolvedSurfaceMemberPath(metadata, normalizedPath)) {
+    return {};
+  }
   const std::string_view memberName = pathLeaf(normalizedPath);
   return resolveSurfaceMemberNameImpl(metadata, memberName);
 }
