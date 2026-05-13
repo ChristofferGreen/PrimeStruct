@@ -72,11 +72,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4419: Enable zero vector trace gate
+- TODO-4299: Promote and style canonical `.prime` map implementation
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4299: Promote and style canonical `.prime` map implementation
 - TODO-4300: Stabilize map lookup and insertion substrate
 - TODO-4301: Lower map helpers through ordinary `.prime`
 - TODO-4302: Move map surface metadata out of C++
@@ -86,13 +85,14 @@ Task template:
 - TODO-4306: Stabilize generic SoA substrate boundaries
 - TODO-4307: Lower SoA helpers through ordinary `.prime`
 - TODO-4308: Move SoA surface metadata out of C++
+- TODO-4309: Delete `soa_vector` compatibility seams
 
 ### Priority Lanes (Current)
 
 - Semantic ownership authority: none active; future semantic-authority work
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
-- Vector stdlib ownership cutover: TODO-4419
+- Vector stdlib ownership cutover: none active
 - Map stdlib ownership cutover: TODO-4299 -> TODO-4300 -> TODO-4301
   -> TODO-4302 -> TODO-4303 -> TODO-4304
 - SoA public surface rename and ownership cutover: TODO-4305 -> TODO-4306
@@ -111,7 +111,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4419: Enable zero vector trace gate
 - TODO-4299: Promote and style canonical `.prime` map implementation
 - TODO-4300: Stabilize map lookup and insertion substrate
 - TODO-4301: Lower map helpers through ordinary `.prime`
@@ -173,9 +172,9 @@ Task template:
 | Compile-pipeline stage and publication-boundary contracts | none |
 | Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4299, TODO-4305 |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4419, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4419, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
-| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4419, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
+| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
@@ -204,8 +203,8 @@ Task template:
 | Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
-| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4419, TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
-| De-experimentalization surface and namespace parity | TODO-4430, TODO-4419, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
+| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| De-experimentalization surface and namespace parity | TODO-4430, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
@@ -240,7 +239,7 @@ Task template:
   metadata is now owned by `stdlib/std/collections/surfaces.psmeta`, and the
   registry no longer advertises vector compatibility spellings through that
   manifest. Direct experimental vector source imports are now rejected, and
-  TODO-4419 handles the remaining final zero-vector audit tightening.
+  the vector production C++ zero-trace audit is now mechanically enforced.
   TODO-4299 through TODO-4304 apply the same ownership model to map while
   keeping map-specific lookup, insertion, `Result<ContainerError>`, and key
   comparability policy explicit.
@@ -271,7 +270,7 @@ Task template:
   lowering is complete and recorded in `docs/todo_finished.md`. Map-specific
   lookup/insertion substrate work is tracked in TODO-4300 instead of being
   folded into vector storage work.
-- End-state rule for vector: after TODO-4419, production C++ under `src/` and
+- End-state rule for vector: production C++ under `src/` and
   `include/` must not contain PrimeStruct-vector-specific paths, helper names,
   type names, diagnostics, parser/lowering branches, or metadata tables.
   `std::vector` as the C++ standard-library container remains allowed; tests,
@@ -1639,34 +1638,10 @@ Task template:
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
 
-- [ ] TODO-4419: Enable zero vector trace gate
-  - owner: ai
-  - created_at: 2026-05-11
-  - phase: Vector stdlib ownership cutover
-  - scope: Convert `scripts/check_vector_surface_traces.py` and CTest wiring
-    from a baseline-regression check into a zero-tolerance production C++ gate.
-  - implementation_notes:
-    - Start from `scripts/check_vector_surface_traces.py`,
-      `scripts/vector_surface_trace_baseline.json`, and `CMakeLists.txt`.
-    - Preserve allowance for ordinary C++ `std::vector`, tests, docs, stdlib
-      `.prime`, and generated source-lock fixtures outside production
-      `src/`/`include/`.
-  - acceptance:
-    - The audit fails on any PrimeStruct-vector-specific production C++ trace
-      and no longer needs a non-zero baseline file.
-    - Production C++ under `src/` and `include/` contains no PrimeStruct vector
-      paths, helper aliases, type-name recognizers, diagnostics, special
-      parser/text-transform cases, semantic rewrites, lowering dispatches, or
-      metadata tables.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once the release gate mechanically enforces zero
-    PrimeStruct-vector-specific production C++ traces.
-
 - [ ] TODO-4299: Promote and style canonical `.prime` map implementation
   - owner: ai
   - created_at: 2026-04-28
   - phase: Map stdlib ownership cutover
-  - depends_on: TODO-4419
   - scope: Move the real `Map<K, V>` and `Entry<K, V>` implementation out of
     the public `/std/collections/experimental_map/*` namespace and make the
     canonical `/std/collections/map/*` surface, or a non-public
@@ -1738,8 +1713,8 @@ Task template:
     plus the stdlib `Result<ContainerError>` contract.
   - implementation_notes:
     - Start from `stdlib/std/collections/experimental_map.prime`,
-      `stdlib/std/collections/errors.prime`, canonical vector helpers after
-      TODO-4419, Maybe/Result migration notes in `docs/PrimeStruct.md`, and
+      `stdlib/std/collections/errors.prime`, canonical vector helpers,
+      Maybe/Result migration notes in `docs/PrimeStruct.md`, and
       map compile-run tests covering `contains`, `tryAt`, `at`, `at_unsafe`,
       and `insert`.
     - Keep key comparability policy explicit: `Comparable<K>` or its successor
@@ -1935,7 +1910,6 @@ Task template:
   - owner: ai
   - created_at: 2026-04-28
   - phase: SoA public surface rename and ownership cutover
-  - depends_on: TODO-4419
   - scope: Rename the public SoA collection surface from `soa_vector<T>` to
     `soa<T>` and from `/std/collections/soa_vector/*` to
     `/std/collections/soa/*`, while keeping the public `.prime` source aligned

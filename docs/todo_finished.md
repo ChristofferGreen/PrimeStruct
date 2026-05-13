@@ -16589,3 +16589,35 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     release backend IR/runtime builds, vector trace script validation, and
     source-lock reruns passed after refreshing one stale SoA helper
     source-lock assertion.
+
+- [x] TODO-4419: Enable zero vector trace gate
+  - owner: ai
+  - created_at: 2026-05-11
+  - finished_at: 2026-05-13
+  - phase: Vector stdlib ownership cutover
+  - scope: Convert `scripts/check_vector_surface_traces.py` and CTest wiring
+    from a baseline-regression check into a zero-tolerance production C++ gate.
+  - implementation_notes:
+    - Start from `scripts/check_vector_surface_traces.py`,
+      `scripts/vector_surface_trace_baseline.json`, and `CMakeLists.txt`.
+    - Preserve allowance for ordinary C++ `std::vector`, tests, docs, stdlib
+      `.prime`, and generated source-lock fixtures outside production
+      `src/`/`include/`.
+  - acceptance:
+    - The audit fails on any PrimeStruct-vector-specific production C++ trace
+      and no longer needs a non-zero baseline file.
+    - Production C++ under `src/` and `include/` contains no PrimeStruct vector
+      paths, helper aliases, type-name recognizers, diagnostics, special
+      parser/text-transform cases, semantic rewrites, lowering dispatches, or
+      metadata tables.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once the release gate mechanically enforces zero
+    PrimeStruct-vector-specific production C++ traces.
+  - evidence: Removed the vector trace baseline JSON and rewrote
+    `scripts/check_vector_surface_traces.py` as a zero-tolerance production
+    C++ gate that fails on any observed trace. Updated CTest wiring to invoke
+    the checker without a baseline and added a Python self-test covering a
+    clean `std::vector` source and a rejected PrimeStruct vector path in
+    `src/`. Direct checker validation, checker self-test validation, and the
+    focused `PrimeStruct_vector_surface_trace*` CTest targets passed; broad
+    release validation was skipped under the lite workflow.

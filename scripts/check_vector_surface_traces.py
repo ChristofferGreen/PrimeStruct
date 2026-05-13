@@ -3,14 +3,12 @@
 from __future__ import annotations
 
 import argparse
-import json
 import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 
 
-SCHEMA = "primestruct_vector_surface_trace_baseline_v1"
 SCANNED_SUFFIXES = {".h", ".hpp", ".cpp", ".cc", ".cxx"}
 
 
@@ -63,8 +61,9 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Check production C++ for PrimeStruct vector-surface traces. "
-            "Existing traces are tracked as a baseline; new or increased "
-            "traces fail the check."
+            "Any trace in include/ or src/ fails the check; tests, docs, "
+            "stdlib .prime files, and ordinary C++ std::vector uses are not "
+            "scanned."
         )
     )
     parser.add_argument(
@@ -72,17 +71,6 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=Path(__file__).resolve().parents[1],
         help="repository root",
-    )
-    parser.add_argument(
-        "--baseline",
-        type=Path,
-        default=Path(__file__).resolve().with_name("vector_surface_trace_baseline.json"),
-        help="JSON baseline of currently known production vector traces",
-    )
-    parser.add_argument(
-        "--update-baseline",
-        action="store_true",
-        help="rewrite the baseline to the current observed trace counts",
     )
     return parser.parse_args()
 
@@ -119,107 +107,22 @@ def collect_counts(root: Path) -> dict[tuple[str, str], int]:
     return counts
 
 
-def counts_to_json(counts: dict[tuple[str, str], int]) -> dict:
-    descriptions = {
-        pattern.id: pattern.description
-        for pattern in TRACE_PATTERNS
-    }
-    entries = [
-        {"path": path, "pattern": pattern_id, "count": count}
-        for (path, pattern_id), count in sorted(counts.items())
-        if count > 0
-    ]
-    return {
-        "schema": SCHEMA,
-        "patterns": descriptions,
-        "entries": entries,
-    }
-
-
-def load_baseline(path: Path) -> dict[tuple[str, str], int]:
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError as exc:
-        raise SystemExit(f"Vector trace baseline is missing: {path}") from exc
-    except json.JSONDecodeError as exc:
-        raise SystemExit(f"Vector trace baseline is invalid JSON: {path}: {exc}") from exc
-    if data.get("schema") != SCHEMA:
-        raise SystemExit(f"Vector trace baseline has unsupported schema: {data.get('schema')!r}")
-    counts: dict[tuple[str, str], int] = {}
-    known_patterns = {pattern.id for pattern in TRACE_PATTERNS}
-    for index, entry in enumerate(data.get("entries", []), 1):
-        path_text = entry.get("path")
-        pattern_id = entry.get("pattern")
-        count = entry.get("count")
-        if not isinstance(path_text, str) or not isinstance(pattern_id, str) or not isinstance(count, int):
-            raise SystemExit(f"Vector trace baseline entry {index} is malformed: {entry!r}")
-        if pattern_id not in known_patterns:
-            raise SystemExit(f"Vector trace baseline entry {index} uses unknown pattern: {pattern_id}")
-        if count < 1:
-            raise SystemExit(f"Vector trace baseline entry {index} must have a positive count")
-        counts[(path_text, pattern_id)] = count
-    return counts
-
-
 def main() -> int:
     args = parse_args()
     root = args.root.resolve()
-    baseline_path = args.baseline.resolve()
     observed = collect_counts(root)
 
-    if args.update_baseline:
-        baseline_path.write_text(
-            json.dumps(counts_to_json(observed), indent=2, sort_keys=False) + "\n",
-            encoding="utf-8",
-        )
-        print(f"Updated vector trace baseline: {baseline_path}")
-        return 0
-
-    expected = load_baseline(baseline_path)
-    violations: list[str] = []
-    reductions: list[str] = []
-
-    for key, observed_count in sorted(observed.items()):
-        expected_count = expected.get(key, 0)
-        if observed_count > expected_count:
-            path, pattern_id = key
-            violations.append(
-                f"{path}: pattern {pattern_id} has {observed_count} traces; "
-                f"baseline allows {expected_count}"
-            )
-        elif observed_count < expected_count:
-            path, pattern_id = key
-            reductions.append(
-                f"{path}: pattern {pattern_id} dropped from {expected_count} to {observed_count}"
-            )
-
-    for key, expected_count in sorted(expected.items()):
-        if key not in observed:
-            path, pattern_id = key
-            reductions.append(
-                f"{path}: pattern {pattern_id} dropped from {expected_count} to 0"
-            )
-
-    if violations:
+    if observed:
         print("Vector surface trace check failed:", file=sys.stderr)
-        for violation in violations:
-            print(f"  - {violation}", file=sys.stderr)
-        if reductions:
-            print("Observed trace reductions; update the baseline after confirming them:", file=sys.stderr)
-            for reduction in reductions:
-                print(f"  - {reduction}", file=sys.stderr)
+        for (path, pattern_id), count in sorted(observed.items()):
+            print(f"  - {path}: pattern {pattern_id} has {count} traces", file=sys.stderr)
         return 1
 
     observed_total = sum(observed.values())
-    expected_total = sum(expected.values())
     print(
         "Vector surface trace check passed. "
-        f"{observed_total} production traces observed; baseline ceiling is {expected_total}."
+        f"{observed_total} production traces observed."
     )
-    if reductions:
-        print("Observed trace reductions; update the baseline when the removal is intentional:")
-        for reduction in reductions:
-            print(f"  - {reduction}")
     return 0
 
 
