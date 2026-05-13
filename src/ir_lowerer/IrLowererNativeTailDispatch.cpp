@@ -888,8 +888,14 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
         explicitHelperName == "at_unsafe" &&
         !isCanonicalPublishedNativeTailVectorHelperPath(directHelperPath) &&
         !semanticDirectCallMatchesVectorHelperSurface(semanticProgram, expr);
+    const bool isDirectExperimentalVectorAtUnsafeImplementationCall =
+        !expr.isMethodCall &&
+        accessName == "at_unsafe" &&
+        (directHelperPath.rfind("/std/collections/experimental_vector/", 0) == 0 ||
+         directHelperPath.rfind("std/collections/experimental_vector/", 0) == 0);
     if (((isExplicitVectorAccessCall && explicitHelperName == "at_unsafe") ||
-         isPublishedVectorAtUnsafeImplementationCall) &&
+         isPublishedVectorAtUnsafeImplementationCall ||
+         isDirectExperimentalVectorAtUnsafeImplementationCall) &&
         arrayVectorTargetInfo.isVectorTarget) {
       return NativeCallTailDispatchResult::NotHandled;
     }
