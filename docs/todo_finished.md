@@ -16900,3 +16900,37 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     `surfaces.psmeta`; updated registry metadata tests to assert legacy map
     spellings no longer resolve; refreshed ownership and vector/map bridge
     docs. Broad release validation was skipped under the lite workflow.
+
+- [x] TODO-4438: Reject direct experimental map source imports
+  - owner: ai
+  - created_at: 2026-05-13
+  - finished_at: 2026-05-13
+  - phase: Map stdlib ownership cutover
+  - scope: Reject direct user imports of
+    `/std/collections/experimental_map/*` and migrate conformance coverage to
+    canonical map imports or explicit rejection assertions.
+  - implementation_notes:
+    - Mirrored the rejected experimental-vector import policy for map imports
+      while preserving `/std/collections/experimental_map/Map` compatibility
+      type identity behind `/std/collections/internal_map/*`.
+    - Moved positive map conformance source helpers from direct
+      `/std/collections/experimental_map/*` imports to canonical map imports
+      or the internal map substrate import where they intentionally exercise
+      compatibility storage.
+    - Left remaining map compatibility adapters, wrapper bridges, and C++
+      lowerer/semantic cleanup to TODO-4439.
+  - acceptance:
+    - Direct wildcard and exact experimental map source imports fail with a
+      stable diagnostic that points users to `/std/collections/map/*`.
+    - Existing positive map conformance sources use canonical map imports or
+      internal substrate imports when intentionally testing implementation
+      internals.
+    - Docs and source locks record the rejected direct-import policy.
+  - stop_rule: Stop once direct experimental map source imports reject
+    intentionally and positive map tests no longer depend on importing that
+    namespace.
+  - evidence: Added direct experimental map import diagnostics in semantic
+    import alias construction, added exact and wildcard negative import tests,
+    moved positive map conformance sources to canonical map or `internal_map`
+    imports, refreshed docs/source locks, and validated focused release
+    targets. Broad release validation was skipped under the lite workflow.

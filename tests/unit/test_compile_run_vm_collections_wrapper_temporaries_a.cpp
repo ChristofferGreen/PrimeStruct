@@ -2971,7 +2971,7 @@ TEST_CASE("runs vm experimental map bracket access") {
 TEST_CASE("runs vm experimental map custom comparable struct keys") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [struct]
 Key() {

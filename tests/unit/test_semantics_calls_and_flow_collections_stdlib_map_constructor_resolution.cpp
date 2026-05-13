@@ -97,7 +97,7 @@ main() {
 TEST_CASE("canonical namespaced map helpers reject borrowed experimental map receivers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<Reference<Map<string, i32>>>]
 borrowExperimentalMap([Reference<Map<string, i32>>] values) {
@@ -119,7 +119,7 @@ main() {
 TEST_CASE("canonical namespaced map _ref helpers accept borrowed experimental map receivers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<Reference<Map<string, i32>>>]
 borrowExperimentalMap([Reference<Map<string, i32>>] values) {
@@ -160,7 +160,7 @@ TEST_CASE("canonical namespaced map access helpers accept experimental map value
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [effects(heap_alloc), return<i32>]
 main() {
@@ -178,7 +178,7 @@ main() {
 TEST_CASE("canonical namespaced map helpers keep unknown-call diagnostics for borrowed experimental map receivers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [struct]
 Key() {
@@ -213,7 +213,7 @@ main() {
 TEST_CASE("canonical namespaced map _ref helpers include builtin map key rejects for borrowed experimental map receivers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [struct]
 Key() {
@@ -459,7 +459,7 @@ main() {
 TEST_CASE("stdlib namespaced map helpers accept experimental map value receivers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [effects(io_err)]
 unexpectedCanonicalExperimentalMapValueError([ContainerError] err) {
@@ -488,7 +488,7 @@ main() {
 TEST_CASE("stdlib wrapper map helpers accept experimental map value receivers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [effects(io_err)]
 unexpectedWrapperExperimentalMapValueError([ContainerError] err) {
@@ -517,7 +517,7 @@ main() {
 TEST_CASE("stdlib wrapper map helpers accept experimental constructor receivers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [effects(io_err)]
 unexpectedWrapperExperimentalMapReceiverError([ContainerError] err) {
@@ -545,7 +545,7 @@ main() {
 TEST_CASE("stdlib wrapper map helpers keep constructor mismatch diagnostics on experimental constructor receivers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -561,7 +561,7 @@ main() {
 TEST_CASE("stdlib namespaced map constructor accepts explicit experimental map bindings") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [effects(io_err)]
 unexpectedCanonicalExperimentalMapConstructorError([ContainerError] err) {
@@ -591,7 +591,7 @@ main() {
 TEST_CASE("stdlib namespaced map constructor keeps mismatch diagnostics on explicit experimental map bindings") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -608,7 +608,7 @@ main() {
 TEST_CASE("stdlib namespaced map constructor accepts explicit experimental map returns") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [effects(io_err)]
 unexpectedCanonicalExperimentalMapReturnError([ContainerError] err) {
@@ -643,7 +643,7 @@ main() {
 TEST_CASE("stdlib namespaced map constructor keeps mismatch diagnostics on explicit experimental map returns") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<Map<string, i32>> effects(heap_alloc)]
 buildValues() {
@@ -665,7 +665,7 @@ main() {
 TEST_CASE("stdlib namespaced map constructor accepts explicit experimental map parameters") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [effects(io_err)]
 unexpectedCanonicalExperimentalMapParameterError([ContainerError] err) {
@@ -698,7 +698,7 @@ main() {
 TEST_CASE("stdlib namespaced map constructor keeps mismatch diagnostics on explicit experimental map parameters") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [effects(heap_alloc), return<int>]
 scoreValues([Map<string, i32>] values) {
@@ -719,7 +719,7 @@ main() {
 TEST_CASE("helper-wrapped map constructors accept explicit experimental map parameters") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 Holder() {}
 

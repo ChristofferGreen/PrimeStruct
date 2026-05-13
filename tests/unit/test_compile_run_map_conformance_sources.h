@@ -163,7 +163,7 @@ inline std::string makeMapOverwriteConformanceSource(const std::string &importPa
 
 inline std::string makeExperimentalMapVariadicConstructorConformanceSource() {
   std::string source;
-  source += "import /std/collections/experimental_map/*\n\n";
+  source += "import /std/collections/map/*\n\n";
   source += "[effects(heap_alloc), return<Map<K, V>> Comparable<K>]\n";
   source += "wrapMap<K, V>([args<Entry<K, V>>] entries) {\n";
   source += "  [Map<K, V>] values{map<K, V>([spread] entries)}\n";
@@ -189,7 +189,7 @@ inline std::string makeExperimentalMapVariadicConstructorConformanceSource() {
 
 inline std::string makeExperimentalMapVariadicConstructorMismatchSource() {
   std::string source;
-  source += "import /std/collections/experimental_map/*\n\n";
+  source += "import /std/collections/internal_map/*\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source +=
@@ -240,7 +240,7 @@ inline std::string makeExperimentalMapMethodConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/map/*\n";
-  source += "import /std/collections/experimental_map/*\n\n";
+  source += "import /std/collections/internal_map/*\n\n";
   source += "[effects(io_err)]\n";
   source += "unexpectedExperimentalMapMethodError([ContainerError] err) {\n";
   source += "  [Result<ContainerError>] status{err.code}\n";
@@ -249,7 +249,8 @@ inline std::string makeExperimentalMapMethodConformanceSource() {
   source +=
       "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapMethodError>]\n";
   source += "main() {\n";
-  source += "  [Map<string, i32>] values{mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+  source +=
+      "  [map<string, i32>] values{/std/collections/map/map<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
   source += "  [i32] found{try(values.tryAt(\"left\"raw_utf8))}\n";
   source += "  [Result<i32, ContainerError>] missing{values.tryAt(\"missing\"raw_utf8)}\n";
   source += "  [i32 mut] total{plus(values.count(), found)}\n";
@@ -271,7 +272,7 @@ inline std::string makeExperimentalMapReferenceHelperConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/map/*\n";
-  source += "import /std/collections/experimental_map/*\n\n";
+  source += "import /std/collections/map/*\n\n";
   source += "[effects(io_err)]\n";
   source += "unexpectedExperimentalMapReferenceHelperError([ContainerError] err) {\n";
   source += "  [Result<ContainerError>] status{err.code}\n";
@@ -303,7 +304,7 @@ inline std::string makePublicMapReferenceWrapperConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/map/*\n";
-  source += "import /std/collections/experimental_map/*\n\n";
+  source += "import /std/collections/internal_map/*\n\n";
   source += "[effects(io_err)]\n";
   source += "unexpectedPublicMapReferenceWrapperError([ContainerError] err) {\n";
   source += "  [Result<ContainerError>] status{err.code}\n";
@@ -337,7 +338,7 @@ inline std::string makeExperimentalMapReferenceMethodConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/map/*\n";
-  source += "import /std/collections/experimental_map/*\n\n";
+  source += "import /std/collections/internal_map/*\n\n";
   source += "[struct]\n";
   source += "Owned() {\n";
   source += "  [i32 mut] value{0i32}\n\n";
@@ -390,7 +391,7 @@ inline std::string makeExperimentalMapInsertConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/map/*\n";
-  source += "import /std/collections/experimental_map/*\n\n";
+  source += "import /std/collections/internal_map/*\n\n";
   source += "[effects(io_out, heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [Map<string, i32> mut] values{mapSingle<string, i32>(\"left\"raw_utf8, 4i32)}\n";
@@ -416,7 +417,7 @@ inline std::string makeExperimentalMapStorageReferenceConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/map/*\n";
-  source += "import /std/collections/experimental_map/*\n\n";
+  source += "import /std/collections/internal_map/*\n\n";
   source += "[effects(io_out, heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [uninitialized<Map<string, i32>> mut] storage{uninitialized<Map<string, i32>>()}\n";
@@ -437,7 +438,7 @@ inline std::string makeExperimentalMapOwnershipConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/map/*\n";
-  source += "import /std/collections/experimental_map/*\n\n";
+  source += "import /std/collections/internal_map/*\n\n";
   source += "[struct]\n";
   source += "Tracked() {\n";
   source += "  [i32 mut] value{0i32}\n";
@@ -465,7 +466,7 @@ inline std::string makeCanonicalMapNamespaceExperimentalInsertConformanceSource(
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/map/*\n";
-  source += "import /std/collections/experimental_map/*\n\n";
+  source += "import /std/collections/internal_map/*\n\n";
   source += "[struct]\n";
   source += "Tracked() {\n";
   source += "  [i32 mut] value{0i32}\n";
@@ -924,7 +925,7 @@ inline std::string makeExperimentalMapOwnershipMethodConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/map/*\n";
-  source += "import /std/collections/experimental_map/*\n\n";
+  source += "import /std/collections/internal_map/*\n\n";
   source += "[struct]\n";
   source += "Tracked() {\n";
   source += "  [i32 mut] value{0i32}\n";
@@ -972,7 +973,7 @@ inline std::string makeExperimentalMapIndexConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/map/*\n";
-  source += "import /std/collections/experimental_map/*\n\n";
+  source += "import /std/collections/internal_map/*\n\n";
   source += "[return<Reference<Map<string, i32>>>]\n";
   source += "borrowExperimentalMap([Reference<Map<string, i32>>] values) {\n";
   source += "  return(values)\n";
@@ -1055,7 +1056,7 @@ inline std::string makeCanonicalMapNamespaceExperimentalReferenceConformanceSour
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/map/*\n";
-  source += "import /std/collections/experimental_map/*\n\n";
+  source += "import /std/collections/internal_map/*\n\n";
   source += "[return<Reference<Map<string, i32>>>]\n";
   source += "borrowExperimentalMap([Reference<Map<string, i32>>] values) {\n";
   source += "  return(values)\n";
@@ -1072,8 +1073,7 @@ inline std::string makeCanonicalMapNamespaceExperimentalReferenceConformanceSour
 inline std::string makeCanonicalMapNamespaceExperimentalValueConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
-  source += "import /std/collections/map/*\n";
-  source += "import /std/collections/experimental_map/*\n\n";
+  source += "import /std/collections/map/*\n\n";
   source += "[effects(io_err)]\n";
   source += "unexpectedCanonicalExperimentalMapValueError([ContainerError] err) {\n";
   source += "  [Result<ContainerError>] status{err.code}\n";
@@ -1082,7 +1082,8 @@ inline std::string makeCanonicalMapNamespaceExperimentalValueConformanceSource()
   source +=
       "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedCanonicalExperimentalMapValueError>]\n";
   source += "main() {\n";
-  source += "  [Map<string, i32>] values{mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+  source +=
+      "  [map<string, i32>] values{/std/collections/map/map<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
   source += "  [i32] found{try(/std/collections/map/tryAt<string, i32>(values, \"left\"raw_utf8))}\n";
   source +=
       "  [Result<i32, ContainerError>] missing{/std/collections/map/tryAt<string, i32>(values, \"missing\"raw_utf8)}\n";
@@ -1116,8 +1117,7 @@ inline std::string makeCanonicalMapNamespaceExperimentalValueConformanceSource()
 inline std::string makeCanonicalMapNamespaceExperimentalConstructorConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
-  source += "import /std/collections/map/*\n";
-  source += "import /std/collections/experimental_map/*\n\n";
+  source += "import /std/collections/map/*\n\n";
   source += "[effects(io_err)]\n";
   source += "unexpectedCanonicalExperimentalMapConstructorError([ContainerError] err) {\n";
   source += "  [Result<ContainerError>] status{err.code}\n";
@@ -1127,7 +1127,7 @@ inline std::string makeCanonicalMapNamespaceExperimentalConstructorConformanceSo
       "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedCanonicalExperimentalMapConstructorError>]\n";
   source += "main() {\n";
   source +=
-      "  [Map<string, i32>] values{/std/collections/map/map<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+      "  [map<string, i32>] values{/std/collections/map/map<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
   source += "  [i32] found{try(/std/collections/map/tryAt<string, i32>(values, \"left\"raw_utf8))}\n";
   source +=
       "  [Result<i32, ContainerError>] missing{/std/collections/map/tryAt<string, i32>(values, \"missing\"raw_utf8)}\n";
@@ -1161,23 +1161,22 @@ inline std::string makeCanonicalMapNamespaceExperimentalConstructorConformanceSo
 inline std::string makeCanonicalMapNamespaceExperimentalReturnConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
-  source += "import /std/collections/map/*\n";
-  source += "import /std/collections/experimental_map/*\n\n";
+  source += "import /std/collections/map/*\n\n";
   source += "[effects(io_err)]\n";
   source += "unexpectedCanonicalExperimentalMapReturnError([ContainerError] err) {\n";
   source += "  [Result<ContainerError>] status{err.code}\n";
   source += "  print_line_error(Result.why(status))\n";
   source += "}\n\n";
-  source += "[return<Map<string, i32>> effects(heap_alloc)]\n";
+  source += "[return<map<string, i32>> effects(heap_alloc)]\n";
   source += "buildValues() {\n";
   source +=
-      "  [Map<string, i32>] out{/std/collections/map/map<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+      "  [map<string, i32>] out{/std/collections/map/map<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
   source += "  return(out)\n";
   source += "}\n\n";
   source +=
       "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedCanonicalExperimentalMapReturnError>]\n";
   source += "main() {\n";
-  source += "  [Map<string, i32>] values{buildValues()}\n";
+  source += "  [map<string, i32>] values{buildValues()}\n";
   source += "  [i32] found{try(/std/collections/map/tryAt<string, i32>(values, \"left\"raw_utf8))}\n";
   source += "  [i32] count{/std/collections/map/count<string, i32>(values)}\n";
   source += "  [i32] left{/std/collections/map/at<string, i32>(values, \"left\"raw_utf8)}\n";
@@ -1204,7 +1203,7 @@ inline std::string makeCanonicalMapNamespaceExperimentalParameterConformanceSour
   std::string source;
   source += "import /std/collections/*\n";
   source += "import /std/collections/map/*\n";
-  source += "import /std/collections/experimental_map/*\n\n";
+  source += "import /std/collections/internal_map/*\n\n";
   source += "[effects(io_err)]\n";
   source += "unexpectedCanonicalExperimentalMapParameterError([ContainerError] err) {\n";
   source += "  [Result<ContainerError>] status{err.code}\n";

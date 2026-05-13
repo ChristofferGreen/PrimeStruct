@@ -66,7 +66,7 @@ main() {
 
 TEST_CASE("import resolves std collections experimental map wildcard surface") {
   const std::string source = R"(
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 [return<int> effects(heap_alloc)]
 main() {
   [Map<i32, i32>] values{mapPair<i32, i32>(1i32, 7i32, 2i32, 11i32)}

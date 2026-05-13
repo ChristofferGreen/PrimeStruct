@@ -19,7 +19,7 @@ void checkImplicitMapPairConflict(const std::string& error) {
 TEST_CASE("helper-wrapped map constructors infer experimental auto locals") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -52,7 +52,7 @@ main() {
 TEST_CASE("helper-wrapped map constructor auto inference keeps template conflict diagnostics") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -74,7 +74,7 @@ main() {
 TEST_CASE("implicit map constructor auto inference keeps template conflict diagnostics") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -90,7 +90,7 @@ main() {
 TEST_CASE("inferred experimental map returns rewrite canonical constructors") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<auto> effects(heap_alloc)]
 buildValues() {
@@ -120,7 +120,7 @@ main() {
 TEST_CASE("inferred experimental map returns keep constructor mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<auto> effects(heap_alloc)]
 buildValues() {
@@ -141,7 +141,7 @@ main() {
 TEST_CASE("block-bodied inferred experimental map returns rewrite constructors") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<auto> effects(heap_alloc)]
 buildValues([bool] useCanonical) {
@@ -173,7 +173,7 @@ main() {
 TEST_CASE("block-bodied inferred experimental map returns keep mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<auto> effects(heap_alloc)]
 buildValues([bool] useCanonical) {
@@ -196,7 +196,7 @@ main() {
 TEST_CASE("auto bindings inside inferred experimental map return blocks rewrite constructors") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<auto> effects(heap_alloc)]
 buildValues([bool] useCanonical) {
@@ -234,7 +234,7 @@ main() {
 TEST_CASE("auto bindings inside inferred experimental map return blocks keep mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<auto> effects(heap_alloc)]
 buildValues([bool] useCanonical) {
@@ -263,7 +263,7 @@ main() {
 TEST_CASE("helper-wrapped inferred experimental map returns rewrite nested constructor arguments") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -300,7 +300,7 @@ main() {
 TEST_CASE("helper-wrapped inferred experimental map returns keep nested constructor mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -326,7 +326,7 @@ main() {
 TEST_CASE("double helper-wrapped inferred experimental map returns rewrite nested constructor arguments") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<T> effects(heap_alloc)]
 wrapOnce<T>([T] values) {
@@ -369,7 +369,7 @@ main() {
 TEST_CASE("double helper-wrapped inferred experimental map returns keep nested constructor mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<T> effects(heap_alloc)]
 wrapOnce<T>([T] values) {
@@ -400,7 +400,7 @@ main() {
 TEST_CASE("inferred experimental map call receivers resolve method sugar") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<auto> effects(heap_alloc)]
 buildValues([bool] useCanonical) {
@@ -433,7 +433,7 @@ main() {
 TEST_CASE("inferred experimental map call receivers keep mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<auto> effects(heap_alloc)]
 buildValues([bool] useCanonical) {
@@ -455,7 +455,7 @@ main() {
 TEST_CASE("stdlib map constructors accept explicit experimental map struct fields") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [struct]
 Holder() {
@@ -486,7 +486,7 @@ main() {
 TEST_CASE("stdlib map constructors keep mismatch diagnostics on experimental map struct fields") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [struct]
 Holder() {
@@ -507,7 +507,7 @@ main() {
 TEST_CASE("stdlib map constructors accept inferred experimental map struct fields") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [struct]
 Holder() {
@@ -531,7 +531,7 @@ main() {
 TEST_CASE("stdlib map constructors keep mismatch diagnostics on inferred experimental map struct fields") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [struct]
 Holder() {
@@ -553,7 +553,7 @@ main() {
 TEST_CASE("helper-wrapped inferred experimental map struct fields validate") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -583,7 +583,7 @@ main() {
 TEST_CASE("helper-wrapped inferred experimental map struct fields keep mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -611,7 +611,7 @@ main() {
 TEST_CASE("helper-wrapped inferred experimental result map struct fields validate") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<T> effects(heap_alloc)]
 wrapStatus<T>([T] status) {
@@ -639,7 +639,7 @@ main() {
 TEST_CASE("helper-wrapped inferred experimental result map struct fields keep mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<T> effects(heap_alloc)]
 wrapStatus<T>([T] status) {

@@ -104,6 +104,36 @@ main() {
                    "use /std/collections/vector/*") != std::string::npos);
 }
 
+TEST_CASE("direct experimental map wildcard import is rejected") {
+  const std::string source = R"(
+import /std/collections/experimental_map/*
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("direct import of /std/collections/experimental_map/* is not supported; "
+                   "use /std/collections/map/*") != std::string::npos);
+}
+
+TEST_CASE("direct experimental map exact import is rejected") {
+  const std::string source = R"(
+import /std/collections/experimental_map/map
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("direct import of /std/collections/experimental_map/* is not supported; "
+                   "use /std/collections/map/*") != std::string::npos);
+}
+
 TEST_CASE("internal vector wildcard import preserves backing Vector identity") {
   const std::string source = R"(
 import /std/collections/internal_vector/*

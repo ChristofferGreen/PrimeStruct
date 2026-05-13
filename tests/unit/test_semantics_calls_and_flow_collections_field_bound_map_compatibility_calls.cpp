@@ -15,10 +15,10 @@ TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
 TEST_CASE("field-bound experimental map compatibility count calls require alias helpers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/map/*
 
 Holder() {
-  [Map<string, i32>] values{mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
+  [map<string, i32>] values{/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
 }
 
 [effects(heap_alloc), return<int>]
@@ -35,10 +35,10 @@ main() {
 TEST_CASE("field-bound experimental map stdlib namespaced count methods validate") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/map/*
 
 Holder() {
-  [Map<string, i32>] values{mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
+  [map<string, i32>] values{/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
 }
 
 [effects(heap_alloc), return<int>]
@@ -55,7 +55,7 @@ main() {
 TEST_CASE("stdlib map constructor assignments accept explicit experimental map struct fields") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 Holder() {
   [Map<string, i32> mut] primary{mapNew<string, i32>()}
@@ -79,7 +79,7 @@ main() {
 TEST_CASE("stdlib map constructor assignments keep mismatch diagnostics on experimental map struct fields") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 Holder() {
   [Map<string, i32> mut] values{mapNew<string, i32>()}
@@ -100,7 +100,7 @@ main() {
 TEST_CASE("helper-wrapped map constructor assignments accept inferred experimental map struct fields") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -126,7 +126,7 @@ main() {
 TEST_CASE("helper-wrapped map constructor assignments keep mismatch diagnostics on inferred experimental map struct fields") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -152,7 +152,7 @@ main() {
 TEST_CASE("helper-wrapped Result.ok payload assignments accept explicit experimental map result struct fields") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<T> effects(heap_alloc)]
 wrapStatus<T>([T] status) {
@@ -189,7 +189,7 @@ main() {
 TEST_CASE("helper-wrapped Result.ok payload assignments keep mismatch diagnostics on explicit experimental map result struct fields") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<T> effects(heap_alloc)]
 wrapStatus<T>([T] status) {
@@ -224,7 +224,7 @@ main() {
 TEST_CASE("helper-wrapped map constructor assignments accept dereferenced experimental map struct fields") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -258,7 +258,7 @@ main() {
 TEST_CASE("helper-wrapped dereferenced map field assignments keep mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -292,7 +292,7 @@ main() {
 TEST_CASE("helper-wrapped Result.ok assignments accept dereferenced experimental result map struct fields") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<T> effects(heap_alloc)]
 wrapStatus<T>([T] status) {
@@ -335,7 +335,7 @@ main() {
 TEST_CASE("helper-wrapped dereferenced Result.ok field assignments keep mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<T> effects(heap_alloc)]
 wrapStatus<T>([T] status) {
@@ -376,7 +376,7 @@ main() {
 TEST_CASE("stdlib namespaced map helpers keep Comparable diagnostics on experimental map value receivers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [struct]
 Key() {

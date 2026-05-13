@@ -98,7 +98,7 @@ main() {
 
 TEST_CASE("dump ast-semantic shows experimental map destroy cleanup") {
   const std::string source = R"(
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<int>]
 main() {

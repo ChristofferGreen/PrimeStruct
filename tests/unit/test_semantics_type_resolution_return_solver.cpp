@@ -438,7 +438,7 @@ main() {
 TEST_CASE("graph type resolver answers map receiver queries through shared type-text helper") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<auto> effects(heap_alloc)]
 selectValues() {
@@ -460,7 +460,7 @@ main() {
 TEST_CASE("graph type resolver infers map value return kinds through shared infer helper") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<auto> effects(heap_alloc)]
 selectValues() {

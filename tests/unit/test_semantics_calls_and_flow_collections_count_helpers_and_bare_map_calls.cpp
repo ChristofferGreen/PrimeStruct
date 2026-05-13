@@ -301,7 +301,7 @@ main() {
 
 TEST_CASE("experimental map custom comparable struct keys validate through canonical map helpers") {
   const std::string source = R"(
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [struct]
 Key() {
@@ -337,7 +337,7 @@ main() {
 
 TEST_CASE("experimental map method-call sugar validates on the real Map struct") {
   const std::string source = R"(
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<int> effects(heap_alloc)]
 main() {
@@ -352,7 +352,7 @@ main() {
 
 TEST_CASE("experimental map Ref helper calls accept borrowed Map references") {
   const std::string source = R"(
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<int> effects(heap_alloc)]
 main() {
@@ -375,7 +375,7 @@ main() {
 TEST_CASE("public stdlib map Ref wrappers validate through canonical borrowed helpers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<int> effects(heap_alloc)]
 main() {
@@ -404,7 +404,7 @@ main() {
 
 TEST_CASE("experimental map borrowed method-call sugar rejects missing canonical count helper") {
   const std::string source = R"(
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<int> effects(heap_alloc)]
 main() {
@@ -421,7 +421,7 @@ main() {
 
 TEST_CASE("experimental map insert helpers validate on value and borrowed mutation surfaces") {
   const std::string source = R"(
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -442,7 +442,7 @@ main() {
 
 TEST_CASE("experimental map ownership-sensitive values validate through experimental storage") {
   const std::string source = R"(
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [struct]
 Owned() {
@@ -479,7 +479,7 @@ main() {
 TEST_CASE("canonical namespaced map insert validates on explicit experimental map bindings") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [struct]
 Owned() {
@@ -601,7 +601,7 @@ main() {
 TEST_CASE("experimental map value methods validate ownership-sensitive values through Map helpers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [struct]
 Owned() {
@@ -651,7 +651,7 @@ main() {
 TEST_CASE("experimental map borrowed methods validate ownership-sensitive values through reference helpers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [struct]
 Owned() {
@@ -1126,7 +1126,7 @@ TEST_CASE("experimental map Ref helpers route through borrowed implementations")
 
 TEST_CASE("experimental map bracket access stays unsupported on value and borrowed call receivers") {
   const std::string source = R"(
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<Reference<Map<string, i32>>>]
 borrowExperimentalMap([Reference<Map<string, i32>>] values) {
@@ -1147,7 +1147,7 @@ main() {
 
 TEST_CASE("wrapper-returned experimental map bracket access stays unsupported") {
   const std::string source = R"(
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [effects(heap_alloc), return<Map<i32, string>>]
 wrapMap() {
@@ -1167,7 +1167,7 @@ main() {
 
 TEST_CASE("experimental map bracket access on borrowed calls fails before key diagnostics") {
   const std::string source = R"(
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<Reference<Map<string, i32>>>]
 borrowExperimentalMap([Reference<Map<string, i32>>] values) {
@@ -1187,7 +1187,7 @@ main() {
 
 TEST_CASE("experimental map missing comparable trait includes builtin map key rejects") {
   const std::string source = R"(
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [struct]
 Key() {
@@ -1213,7 +1213,7 @@ main() {
 
 TEST_CASE("experimental map methods include builtin map key rejects on the real Map struct") {
   const std::string source = R"(
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [struct]
 Key() {
@@ -1241,7 +1241,7 @@ main() {
 
 TEST_CASE("experimental map Ref helper calls include builtin map key rejects") {
   const std::string source = R"(
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [struct]
 Key() {
@@ -1270,7 +1270,7 @@ main() {
 
 TEST_CASE("experimental map borrowed methods include builtin map key rejects") {
   const std::string source = R"(
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [struct]
 Key() {
@@ -1304,7 +1304,7 @@ main() {
 
 TEST_CASE("experimental map insert helper calls include builtin map key rejects") {
   const std::string source = R"(
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [struct]
 Key() {
@@ -1331,7 +1331,7 @@ main() {
 
 TEST_CASE("experimental map borrowed insert methods include builtin map key rejects") {
   const std::string source = R"(
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [struct]
 Key() {

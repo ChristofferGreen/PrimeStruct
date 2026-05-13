@@ -320,6 +320,10 @@ stripUnrootedCanonicalVectorCompatibilityPrefix(std::string_view path) {
   return "/std/collections/experimental_" + std::string("vector") + "/";
 }
 
+[[maybe_unused]] std::string legacyExperimentalMapCompatibilityPrefix() {
+  return "/std/collections/experimental_" + std::string("map") + "/";
+}
+
 [[maybe_unused]] std::string legacyExperimentalVectorCompatibilityRoot() {
   std::string root = legacyExperimentalVectorCompatibilityPrefix();
   if (!root.empty() && root.back() == '/') {
@@ -544,6 +548,21 @@ legacyExperimentalVectorCompatibilityShorthandTypeText(
       canonicalVectorCompatibilityPrefixOrFallback() + "/";
   return "direct import of " + legacyRoot +
          "* is not supported; use " + canonicalRoot + "*";
+}
+
+[[maybe_unused]] bool isDirectExperimentalMapImportPath(
+    std::string_view importPath) {
+  const std::string root = legacyExperimentalMapCompatibilityPrefix();
+  const std::string normalizedRoot = root.substr(0, root.size() - 1);
+  return importPath == normalizedRoot || importPath == root + "*" ||
+         (importPath.size() > normalizedRoot.size() &&
+          importPath.rfind(normalizedRoot, 0) == 0 &&
+          importPath[normalizedRoot.size()] == '/');
+}
+
+[[maybe_unused]] std::string directExperimentalMapImportDiagnostic() {
+  return "direct import of " + legacyExperimentalMapCompatibilityPrefix() +
+         "* is not supported; use /std/collections/map/*";
 }
 
 [[maybe_unused]] bool resolveExplicitPublishedMapHelperExprMemberName(

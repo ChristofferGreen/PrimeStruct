@@ -15,7 +15,7 @@ void checkMapPairTemplateConflict(const std::string &error) {
 TEST_CASE("stdlib map constructors accept experimental map method-call parameters") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 Holder() {}
 
@@ -40,7 +40,7 @@ main() {
 TEST_CASE("stdlib map constructors keep mismatch diagnostics on experimental map method-call parameters") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 Holder() {}
 
@@ -63,7 +63,7 @@ main() {
 TEST_CASE("stdlib map constructors accept inferred experimental map default parameters") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 Holder() {}
 
@@ -96,7 +96,7 @@ main() {
 TEST_CASE("stdlib map constructors keep mismatch diagnostics on inferred experimental map default parameters") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<int> effects(heap_alloc)]
 scoreValues([auto mut] values{mapNew<string, i32>()}) {
@@ -117,7 +117,7 @@ main() {
 TEST_CASE("helper-wrapped map constructors accept inferred experimental map default parameters") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 Holder() {}
 
@@ -155,7 +155,7 @@ main() {
 TEST_CASE("helper-wrapped map constructors keep mismatch diagnostics on inferred experimental map default parameters") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -182,7 +182,7 @@ main() {
 TEST_CASE("helper-wrapped inferred experimental map default parameters validate") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 Holder() {}
 
@@ -221,7 +221,7 @@ main() {
 TEST_CASE("helper-wrapped inferred experimental map default parameters keep mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -247,7 +247,7 @@ main() {
 TEST_CASE("canonical map helpers accept direct experimental constructor receivers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [effects(io_err)]
 unexpectedExperimentalMapHelperReceiverError([ContainerError] err) {
@@ -280,7 +280,7 @@ main() {
 TEST_CASE("canonical map helpers keep mismatch diagnostics on direct constructor receivers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -295,7 +295,7 @@ main() {
 TEST_CASE("helper-wrapped inferred experimental result map default parameters validate") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<T> effects(heap_alloc)]
 wrapStatus<T>([T] status) {
@@ -322,7 +322,7 @@ main() {
 TEST_CASE("helper-wrapped inferred experimental result map default parameters keep mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<T> effects(heap_alloc)]
 wrapStatus<T>([T] status) {
@@ -349,7 +349,7 @@ main() {
 TEST_CASE("helper-wrapped canonical map helpers accept direct experimental constructor receivers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -393,7 +393,7 @@ main() {
 TEST_CASE("helper-wrapped canonical map helpers keep mismatch diagnostics on direct constructor receivers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -414,7 +414,7 @@ main() {
 TEST_CASE("experimental map methods keep removed helper diagnostics on direct constructor receivers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [effects(io_err)]
 unexpectedExperimentalMapMethodReceiverError([ContainerError] err) {
@@ -443,7 +443,7 @@ main() {
 TEST_CASE("experimental map methods keep mismatch diagnostics on direct constructor receivers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -458,7 +458,7 @@ main() {
 TEST_CASE("helper-wrapped experimental map helpers accept direct constructor receivers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -500,7 +500,7 @@ main() {
 TEST_CASE("helper-wrapped experimental map methods keep mismatch diagnostics on direct constructor receivers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -520,7 +520,7 @@ main() {
 TEST_CASE("field-bound experimental map helpers accept struct field receivers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [effects(io_err)]
 unexpectedFieldExperimentalMapMethodReceiverError([ContainerError] err) {
@@ -550,7 +550,7 @@ main() {
 TEST_CASE("field-bound experimental map wrapper helpers accept struct field receivers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 Holder() {
   [Map<string, i32>] values{mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
@@ -571,7 +571,7 @@ main() {
 TEST_CASE("field-bound experimental map bare count fallback validates") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 Holder() {
   [Map<string, i32>] values{mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
@@ -591,7 +591,7 @@ main() {
 TEST_CASE("field-bound experimental map explicit at body arguments validate") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 Holder() {
   [Map<string, i32>] values{mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
@@ -612,7 +612,7 @@ main() {
 TEST_CASE("field-bound experimental map explicit at expression body arguments validate") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 Holder() {
   [Map<string, i32>] values{mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
@@ -632,7 +632,7 @@ main() {
 TEST_CASE("field-bound experimental map explicit at expression body arguments keep mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 Holder() {
   [Map<string, i32>] values{mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}

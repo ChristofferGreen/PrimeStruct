@@ -250,11 +250,78 @@ bool SemanticsValidator::buildImportAliases() {
         importAliases_["Vector"] = vectorPath;
         return true;
       };
+  auto registerInternalMapWildcardAliases =
+      [&](const std::string &prefix,
+          std::unordered_map<std::string, std::string> &targetAliases) {
+        if (prefix != "/std/collections/internal_map") {
+          return false;
+        }
+        const std::string scopedPrefix = legacyExperimentalMapCompatibilityPrefix();
+        bool sawAlias = false;
+        for (const std::string_view familyName : std::array<std::string_view, 2>{"Entry", "Map"}) {
+          targetAliases[std::string(familyName)] =
+              scopedPrefix + std::string(familyName);
+          importAliases_[std::string(familyName)] =
+              scopedPrefix + std::string(familyName);
+          sawAlias = true;
+        }
+        std::vector<std::string> matchingPaths;
+        matchingPaths.reserve(defMap_.size());
+        for (const auto &[path, defPtr] : defMap_) {
+          if (defPtr == nullptr || path.rfind(scopedPrefix, 0) != 0) {
+            continue;
+          }
+          matchingPaths.push_back(path);
+        }
+        std::sort(matchingPaths.begin(), matchingPaths.end());
+        for (const std::string &path : matchingPaths) {
+          if (publicDefinitions_.count(path) == 0) {
+            continue;
+          }
+          const std::string remainder = path.substr(scopedPrefix.size());
+          if (remainder.empty() || remainder.find('/') != std::string::npos) {
+            continue;
+          }
+          if (isGeneratedTemplateSpecializationName(remainder)) {
+            const std::string familyName =
+                genericTypeFamilyNameForInternalName(remainder);
+            if (!familyName.empty()) {
+              targetAliases[familyName] = scopedPrefix + familyName;
+              importAliases_[familyName] = scopedPrefix + familyName;
+              sawAlias = true;
+            }
+            continue;
+          }
+          if (const std::string familyName =
+                  genericTypeFamilyNameForInternalName(remainder);
+              !familyName.empty()) {
+            targetAliases[familyName] = scopedPrefix + familyName;
+            importAliases_[familyName] = scopedPrefix + familyName;
+            sawAlias = true;
+            continue;
+          }
+          targetAliases[remainder] = path;
+          importAliases_[remainder] = path;
+          sawAlias = true;
+        }
+        return sawAlias;
+      };
   auto shouldPublishMergedImportAlias = [&](std::string_view aliasName,
                                             std::string_view targetPath) {
     return !(targetPath.rfind("/std/collections/soa_vector/", 0) == 0 &&
              isCanonicalSoaVectorHelperAliasName(aliasName));
   };
+  auto isInternalMapLegacyWildcardAliasDefinition =
+      [&](const std::string &prefix,
+          const std::string &aliasName,
+          const std::string &existingAliasPath,
+          const std::string &candidatePath) {
+        if (prefix != "/std/collections/internal_map") {
+          return false;
+        }
+        return existingAliasPath == legacyExperimentalMapCompatibilityPrefix() + aliasName &&
+               candidatePath == "/std/collections/internal_map/" + aliasName;
+      };
   auto isMetadataBackedWildcardAliasDefinition =
       [&](const std::string &prefix,
           const std::string &aliasName,
@@ -271,6 +338,12 @@ bool SemanticsValidator::buildImportAliases() {
   for (const auto &importPath : importPaths) {
     if (isDirectExperimentalVectorImportPath(importPath)) {
       if (!addImportDiagnostic(directExperimentalVectorImportDiagnostic())) {
+        return false;
+      }
+      continue;
+    }
+    if (isDirectExperimentalMapImportPath(importPath)) {
+      if (!addImportDiagnostic(directExperimentalMapImportDiagnostic())) {
         return false;
       }
       continue;
@@ -302,9 +375,12 @@ bool SemanticsValidator::buildImportAliases() {
           registerCanonicalSoaVectorWildcardAliases(prefix, directImportAliases_);
       bool sawInternalVectorWildcardAliases =
           registerInternalVectorWildcardAliases(prefix, directImportAliases_);
+      bool sawInternalMapWildcardAliases =
+          registerInternalMapWildcardAliases(prefix, directImportAliases_);
       const std::string scopedPrefix = prefix + "/";
       bool sawImmediateDefinition =
-          sawCanonicalSoaVectorWildcardAliases || sawInternalVectorWildcardAliases;
+          sawCanonicalSoaVectorWildcardAliases || sawInternalVectorWildcardAliases ||
+          sawInternalMapWildcardAliases;
       bool importError = false;
       std::vector<std::string> matchingPaths;
       matchingPaths.reserve(defMap_.size());
@@ -368,6 +444,10 @@ bool SemanticsValidator::buildImportAliases() {
         }
         auto [it, inserted] = directImportAliases_.emplace(remainder, path);
         if (!inserted && it->second != path) {
+          if (isInternalMapLegacyWildcardAliasDefinition(
+                  prefix, remainder, it->second, path)) {
+            continue;
+          }
           if (isMetadataBackedWildcardAliasDefinition(
                   prefix, remainder, it->second, path)) {
             continue;
@@ -489,6 +569,7 @@ bool SemanticsValidator::buildImportAliases() {
         if (registerInternalVectorWildcardAliases(prefix, transitiveImportAliases_)) {
           return;
         }
+        registerInternalMapWildcardAliases(prefix, transitiveImportAliases_);
         const std::string scopedPrefix = prefix + "/";
         std::vector<std::string> matchingPaths;
         matchingPaths.reserve(defMap_.size());

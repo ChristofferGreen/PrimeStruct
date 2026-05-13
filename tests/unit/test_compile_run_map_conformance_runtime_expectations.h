@@ -34,9 +34,8 @@ inline void expectNativeMapConformanceProgramRunsOrCompileRejectWithOutput(
 }
 
 inline void expectCanonicalMapNamespaceExperimentalValueConformance(const std::string &emitMode) {
-  const std::string expectedOutput =
-      (emitMode == "exe" || emitMode == "native") ? "4\ncontainer missing key\n2\n4\n7\n1\n2\n"
-                                                  : "4\n\n2\n4\n7\n1\n2\n";
+  (void)emitMode;
+  const std::string expectedOutput = "4\ncontainer missing key\n2\n4\n7\n1\n2\n";
   expectMapConformanceProgramRunsWithOutput(makeCanonicalMapNamespaceExperimentalValueConformanceSource(),
                                             "map_namespace_canonical_experimental_value",
                                             emitMode,
@@ -45,9 +44,8 @@ inline void expectCanonicalMapNamespaceExperimentalValueConformance(const std::s
 }
 
 inline void expectCanonicalMapNamespaceExperimentalConstructorConformance(const std::string &emitMode) {
-  const std::string expectedOutput =
-      (emitMode == "exe" || emitMode == "native") ? "4\ncontainer missing key\n2\n4\n7\n1\n2\n"
-                                                  : "4\n\n2\n4\n7\n1\n2\n";
+  (void)emitMode;
+  const std::string expectedOutput = "4\ncontainer missing key\n2\n4\n7\n1\n2\n";
   expectMapConformanceProgramRunsWithOutput(makeCanonicalMapNamespaceExperimentalConstructorConformanceSource(),
                                             "map_namespace_canonical_experimental_constructor",
                                             emitMode,
@@ -595,7 +593,7 @@ inline void expectCanonicalMapNamespaceAccessShadow(const std::string &emitMode)
 inline std::string makeExperimentalMapTryAtStringConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
-  source += "import /std/collections/experimental_map/*\n\n";
+  source += "import /std/collections/internal_map/*\n\n";
   source += "[effects(io_err)]\n";
   source += "unexpectedMapTryAtStringError([ContainerError] err) {\n";
   source += "  [Result<ContainerError>] status{err.code}\n";
@@ -642,7 +640,7 @@ inline void expectExperimentalMapTryAtStringConformance(const std::string &emitM
 
 inline std::string makeExperimentalMapAtMissingConformanceSource() {
   std::string source;
-  source += "import /std/collections/experimental_map/*\n\n";
+  source += "import /std/collections/internal_map/*\n\n";
   source += "[return<int>]\n";
   source += "main() {\n";
   source += "  [Map<i32, i32>] values{mapPair<i32, i32>(11i32, 7i32, 22i32, 9i32)}\n";
@@ -679,7 +677,7 @@ inline void expectExperimentalMapAtMissingConformance(const std::string &emitMod
 
 inline std::string makeExperimentalMapStringKeyRejectSource(const std::string &mode) {
   std::string source;
-  source += "import /std/collections/experimental_map/*\n\n";
+  source += "import /std/collections/internal_map/*\n\n";
   source += "[return<int>]\n";
   source += "main([array<string>] args) {\n";
   source += "  [string] key{args[0i32]}\n";

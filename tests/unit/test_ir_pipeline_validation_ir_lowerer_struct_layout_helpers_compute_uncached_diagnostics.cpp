@@ -586,7 +586,7 @@ TEST_CASE("ir lowerer call helpers collect packed variadic inline call arguments
 TEST_CASE("ir lowerer call helpers build inline arguments for inferred experimental map receiver methods") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<auto> effects(heap_alloc)]
 buildValues([bool] useCanonical) {

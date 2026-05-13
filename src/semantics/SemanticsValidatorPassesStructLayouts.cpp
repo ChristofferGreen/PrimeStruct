@@ -326,7 +326,11 @@ bool SemanticsValidator::validateStructLayouts() {
       layoutOut = {8u, 8u};
       return true;
     }
-    if (normalized == "array" || normalized == "vector" || normalized == "map" || normalized == "soa_vector") {
+    if (normalized == "array" || normalized == "vector" ||
+        normalized == "map" || normalized == "Map" ||
+        normalized == "std/collections/experimental_map/Map" ||
+        normalized == "/std/collections/experimental_map/Map" ||
+        normalized == "soa_vector") {
       layoutOut = {8u, 8u};
       return true;
     }

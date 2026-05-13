@@ -21,7 +21,7 @@ TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
 TEST_CASE("helper-wrapped map constructors keep template conflict diagnostics on explicit experimental map parameters") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -47,7 +47,7 @@ main() {
 TEST_CASE("helper-wrapped Result.ok payloads accept explicit experimental map parameters") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapStatus<T>([T] status) {
@@ -84,7 +84,7 @@ main() {
 TEST_CASE("helper-wrapped Result.ok payloads keep template conflict diagnostics on explicit experimental map parameters") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapStatus<T>([T] status) {
@@ -120,7 +120,7 @@ main() {
 TEST_CASE("stdlib wrapper mapPair constructor accepts explicit experimental map bindings") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/map/*
 
 [effects(io_err)]
 unexpectedWrapperExperimentalMapConstructorError([ContainerError] err) {
@@ -130,7 +130,7 @@ unexpectedWrapperExperimentalMapConstructorError([ContainerError] err) {
 
 [return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedWrapperExperimentalMapConstructorError>]
 main() {
-  [Map<string, i32>] values{/std/collections/mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
+  [map<string, i32>] values{/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
   [i32] found{try(/std/collections/map/tryAt(values, "left"raw_utf8))}
   [i32 mut] total{plus(/std/collections/map/count(values), found)}
   assign(total, plus(total, /std/collections/map/at(values, "left"raw_utf8)))
@@ -149,7 +149,7 @@ main() {
 TEST_CASE("stdlib wrapper mapPair constructor keeps mismatch diagnostics on explicit experimental map bindings") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/map/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -166,7 +166,7 @@ main() {
 TEST_CASE("helper-wrapped map constructors accept explicit experimental map bindings") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -182,7 +182,7 @@ unexpectedWrappedExperimentalMapBindingError([ContainerError] err) {
 [return<Result<int, ContainerError>> effects(io_out, heap_alloc)
  on_error<ContainerError, /unexpectedWrappedExperimentalMapBindingError>]
 main() {
-  [Map<string, i32>] values{wrapValues(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32))}
+  [map<string, i32>] values{wrapValues(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32))}
   [i32] found{try(/std/collections/map/tryAt(values, "left"raw_utf8))}
   [i32 mut] total{plus(/std/collections/map/count(values), found)}
   assign(total, plus(total, /std/collections/map/at(values, "right"raw_utf8)))
@@ -198,7 +198,7 @@ main() {
 TEST_CASE("helper-wrapped map constructors keep mismatch diagnostics on explicit experimental map bindings") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -220,7 +220,7 @@ main() {
 TEST_CASE("helper-wrapped Result.ok payloads accept explicit experimental map bindings") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapStatus<T>([T] status) {
@@ -252,7 +252,7 @@ main() {
 TEST_CASE("helper-wrapped Result.ok payloads keep mismatch diagnostics on explicit experimental map bindings") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapStatus<T>([T] status) {
@@ -283,7 +283,7 @@ main() {
 TEST_CASE("helper-wrapped Result.ok payload assignments accept explicit experimental map result targets") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapStatus<T>([T] status) {
@@ -316,7 +316,7 @@ main() {
 TEST_CASE("helper-wrapped Result.ok payload assignments keep mismatch diagnostics on explicit experimental map result targets") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapStatus<T>([T] status) {
@@ -347,7 +347,7 @@ main() {
 TEST_CASE("helper-wrapped map constructors accept experimental map dereference assignment targets") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -378,7 +378,7 @@ main() {
 TEST_CASE("helper-wrapped map dereference assignments keep mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -408,7 +408,7 @@ main() {
 TEST_CASE("helper-wrapped Result.ok payloads accept experimental map result dereference targets") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapStatus<T>([T] status) {
@@ -447,7 +447,7 @@ main() {
 TEST_CASE("helper-wrapped Result.ok dereference assignments keep mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapStatus<T>([T] status) {
@@ -484,7 +484,7 @@ main() {
 TEST_CASE("helper-wrapped map constructors accept experimental map uninitialized storage") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -510,7 +510,7 @@ main() {
 TEST_CASE("helper-wrapped map constructor uninitialized storage keeps mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -534,7 +534,7 @@ main() {
 TEST_CASE("helper-wrapped Result.ok payloads accept experimental map result uninitialized storage") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapStatus<T>([T] status) {
@@ -560,7 +560,7 @@ main() {
 TEST_CASE("helper-wrapped Result.ok uninitialized storage keeps mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapStatus<T>([T] status) {
@@ -585,7 +585,7 @@ main() {
 TEST_CASE("helper-wrapped map constructors accept dereferenced experimental map uninitialized storage") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -617,7 +617,7 @@ main() {
 TEST_CASE("helper-wrapped dereferenced map storage keeps mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {

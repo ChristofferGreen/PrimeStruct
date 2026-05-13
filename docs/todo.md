@@ -72,11 +72,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4438: Reject direct experimental map source imports
+- TODO-4439: Delete map compatibility adapters and wrapper bridges
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4439: Delete map compatibility adapters and wrapper bridges
 - TODO-4304: Add zero C++ map-surface audit
 - TODO-4305: Rename and style canonical `.prime` SoA surface
 - TODO-4306: Stabilize generic SoA substrate boundaries
@@ -91,7 +90,7 @@ Task template:
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
 - Vector stdlib ownership cutover: none active
-- Map stdlib ownership cutover: TODO-4438 -> TODO-4439 -> TODO-4304
+- Map stdlib ownership cutover: TODO-4439 -> TODO-4304
 - SoA public surface rename and ownership cutover: TODO-4305 -> TODO-4306
   -> TODO-4307 -> TODO-4308 -> TODO-4309 -> TODO-4310
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
@@ -108,7 +107,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4438: Reject direct experimental map source imports
 - TODO-4439: Delete map compatibility adapters and wrapper bridges
 - TODO-4304: Add zero C++ map-surface audit
 - TODO-4305: Rename and style canonical `.prime` SoA surface
@@ -166,9 +164,9 @@ Task template:
 | Compile-pipeline stage and publication-boundary contracts | none |
 | Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4305 |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4438, TODO-4439, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4438, TODO-4439, TODO-4304 |
-| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4438, TODO-4439, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
+| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4439, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4439, TODO-4304 |
+| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4439, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
@@ -197,8 +195,8 @@ Task template:
 | Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
-| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4438, TODO-4439, TODO-4304 |
-| De-experimentalization surface and namespace parity | TODO-4430, TODO-4438, TODO-4439, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
+| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4439, TODO-4304 |
+| De-experimentalization surface and namespace parity | TODO-4430, TODO-4439, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
@@ -234,7 +232,7 @@ Task template:
   registry no longer advertises vector compatibility spellings through that
   manifest. Direct experimental vector source imports are now rejected, and
   the vector production C++ zero-trace audit is now mechanically enforced.
-  TODO-4438, TODO-4439, and TODO-4304 continue the same ownership model for map after
+  TODO-4439 and TODO-4304 continue the same ownership model for map after
   the internal-map lookup/insertion substrate moved into `.prime` helper code,
   canonical read/access/insert wrappers stopped routing through builtin/native
   map fast paths, canonical map surface metadata moved into
@@ -243,7 +241,7 @@ Task template:
 - Compatibility adapter inventory: map insert helper compatibility no longer
   lives in `StdlibSurfaceRegistry::CollectionsMapHelpers`; that metadata now
   recognizes only canonical `/std/collections/map/*` helper spellings.
-  TODO-4438 owns direct experimental map import rejection, and TODO-4439 owns
+  Direct experimental map source imports are now rejected, and TODO-4439 owns
   the remaining adapter-level map compatibility cleanup. Template
   monomorphization now asks the registry for preferred experimental vector/SoA
   helper spellings instead of carrying bespoke canonical-to-experimental maps.
@@ -312,13 +310,15 @@ Task template:
   `/std/collections/internal_vector/*` owns the canonical vector backing
   adapter while preserving the current compatibility `Vector<T>` identity;
   `/std/collections/internal_map/*` owns the canonical map backing adapter
-  while preserving the current compatibility `Map<K, V>` identity;
-  `/std/collections/experimental_map/*` remains a direct-import compatibility
-  shim for targeted compatibility or conformance coverage only.
+  while preserving the current compatibility `Map<K, V>` identity.
 - Vector compatibility shim: direct
   `/std/collections/experimental_vector/*` source imports are rejected; the
   file remains only as a legacy forwarding shim behind
   `/std/collections/internal_vector/*`.
+- Map compatibility shim: direct
+  `/std/collections/experimental_map/*` source imports are rejected; the file
+  remains only as a legacy forwarding shim behind
+  `/std/collections/internal_map/*`.
 - Legacy gfx compatibility seam: `/std/gfx/experimental/*` remains importable
   only for targeted compatibility coverage and staged migration support;
   canonical `/std/gfx/*` is the only public gfx namespace.
@@ -1637,35 +1637,10 @@ Task template:
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
 
-- [ ] TODO-4438: Reject direct experimental map source imports
-  - owner: ai
-  - created_at: 2026-05-13
-  - phase: Map stdlib ownership cutover
-  - scope: Reject direct user imports of
-    `/std/collections/experimental_map/*` and migrate conformance coverage to
-    canonical map imports or explicit rejection assertions.
-  - implementation_notes:
-    - Mirror the rejected experimental-vector import policy while preserving
-      internal compatibility type identity for generated backing structs until
-      TODO-4304.
-    - Start from `experimental_map.prime`, map conformance source helpers,
-      import tests, docs locks, and compile-pipeline stdlib import expansion.
-  - acceptance:
-    - Direct wildcard and exact experimental map source imports fail with a
-      stable diagnostic that points users to `/std/collections/map/*`.
-    - Existing positive map conformance sources use canonical map imports or
-      internal substrate imports when intentionally testing implementation
-      internals.
-    - Docs and source locks record the rejected direct-import policy.
-  - stop_rule: Stop once direct experimental map source imports reject
-    intentionally and positive map tests no longer depend on importing that
-    namespace.
-
 - [ ] TODO-4439: Delete map compatibility adapters and wrapper bridges
   - owner: ai
   - created_at: 2026-05-13
   - phase: Map stdlib ownership cutover
-  - depends_on: TODO-4438
   - scope: Remove the remaining production C++ compatibility adapters and
     public wrapper bridge names for old map helper/constructor spellings.
   - implementation_notes:

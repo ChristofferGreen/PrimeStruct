@@ -644,7 +644,7 @@ TEST_CASE("explicit canonical map access helpers accept experimental map values"
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [effects(heap_alloc), return<int>]
 main() {

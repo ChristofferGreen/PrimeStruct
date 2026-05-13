@@ -316,7 +316,7 @@ main() {
 TEST_CASE("C++ emitter materializes variadic borrowed experimental map packs with indexed dereference count calls") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_map/*
+import /std/collections/internal_map/*
 
 [return<int> effects(heap_alloc)]
 score_refs([args<Reference<Map<i32, i32>>>] values) {
