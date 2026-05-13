@@ -17445,3 +17445,33 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - evidence: Removed rooted/canonical map alias fallback generation from
     effect-free collection helpers and statement helper preference, added
     source-lock coverage, and split the remaining cleanup into leaf tasks.
+
+- [x] TODO-4459: Delete semantic map method-resolution aliases
+  - owner: ai
+  - created_at: 2026-05-13
+  - finished_at: 2026-05-13
+  - phase: Map stdlib ownership cutover
+  - split_from: TODO-4457
+  - depends_on: TODO-4458
+  - scope: Remove semantic method-resolution behavior that treated explicit
+    rooted `/map/*` method targets on map receivers as canonical
+    `/std/collections/map/*` helper calls.
+  - implementation_notes:
+    - Target `SemanticsValidatorExprMethodTargetResolution.cpp` and source
+      or behavior coverage.
+    - Preserve canonical `/std/collections/map/*` helpers, ordinary bare
+      method sugar, and documented map construction syntax.
+    - Leave inline/native lowerer dispatch and internal `mapCount`-style
+      lowering names to follow-up leaves.
+  - acceptance:
+    - Explicit rooted `/map/*` method targets remain rooted targets instead
+      of borrowing canonical helper semantics.
+    - Source-lock or behavior coverage rejects reintroducing the rooted method
+      alias fallback.
+  - stop_rule: Stop once explicit rooted map method targets no longer resolve
+    through canonical helpers and the remaining cleanup is left to later
+    lowerer/lowering-name leaves.
+  - evidence: Resolved explicit rooted `/map/*` method targets before
+    canonical map helper selection for map and borrowed-map receivers, updated
+    native compile-run expectation coverage, refreshed source locks, and moved
+    the ready queue to TODO-4460.

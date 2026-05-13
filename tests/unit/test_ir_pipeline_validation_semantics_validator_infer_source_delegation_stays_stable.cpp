@@ -424,6 +424,12 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "      return true;\n"
             "    }") !=
         std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
+            "if (explicitMapHelperPath.rfind(\"/map/\", 0) == 0) {\n"
+            "      return setCollectionMethodTarget(explicitMapHelperPath);\n"
+            "    }\n"
+            "    const std::string canonicalMapHelper = \"/std/collections/map/\" + normalizedMethodName;") !=
+        std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find("resolvedOut = \"/soa_vector/get\";") ==
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(

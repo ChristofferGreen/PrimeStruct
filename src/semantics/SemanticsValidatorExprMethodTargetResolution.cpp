@@ -3303,6 +3303,9 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
        normalizedMethodName == "tryAt" || normalizedMethodName == "tryAt_ref" ||
        isCanonicalMapAccessMethodName(normalizedMethodName) ||
        normalizedMethodName == "insert" || normalizedMethodName == "insert_ref")) {
+    if (explicitMapHelperPath.rfind("/map/", 0) == 0) {
+      return setCollectionMethodTarget(explicitMapHelperPath);
+    }
     const std::string canonicalMapHelper = "/std/collections/map/" + normalizedMethodName;
     if (hasDeclaredDefinitionPath(canonicalMapHelper) || hasImportedDefinitionPath(canonicalMapHelper)) {
       resolvedOut = canonicalMapHelper;
@@ -3375,6 +3378,9 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
          normalizedMethodName == "at" ||
          normalizedMethodName == "at_unsafe" ||
          normalizedMethodName == "insert")) {
+      if (explicitMapHelperPath.rfind("/map/", 0) == 0) {
+        return setCollectionMethodTarget(explicitMapHelperPath);
+      }
       std::string borrowedHelperName = normalizedMethodName;
       if (borrowedHelperName == "count") {
         borrowedHelperName = "count_ref";

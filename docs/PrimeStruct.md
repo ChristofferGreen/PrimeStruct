@@ -3811,8 +3811,8 @@ re-defining it piecemeal.
   validation. Old rooted map helper aliases, `mapCount`-style wrapper
   spellings, and experimental map helper spellings are also absent from that
   metadata; direct experimental map imports and public `mapCount`-style
-  wrapper bridges are rejected or retired, and TODO-4459 through TODO-4461
-  delete the remaining production C++ adapter-level map compatibility seams.
+  wrapper bridges are rejected or retired, and TODO-4460 plus TODO-4461 delete
+  the remaining production C++ adapter-level map compatibility seams.
 - **Migration-only seams:** rooted `/map/*` spellings plus
   internal `mapCount`-style lowering names remain temporary compatibility
   seams. Rooted
@@ -3824,8 +3824,8 @@ re-defining it piecemeal.
   stdlib-owned, and the surface manifest no longer advertises map compatibility
   spellings.
   Direct experimental map source imports are also rejected, and public
-  `mapCount`-style wrapper bridges are retired; TODO-4459 through TODO-4461
-  own the remaining production C++ adapter-level map seam deletion.
+  `mapCount`-style wrapper bridges are retired; TODO-4460 plus TODO-4461 own
+  the remaining production C++ adapter-level map seam deletion.
 - **Compatibility adapter inventory:** map insert helper compatibility no
   longer lives in the central surface manifest; the `CollectionsMapHelpers`
   registry metadata now classifies only canonical `/std/collections/map/*`
@@ -3835,9 +3835,11 @@ re-defining it piecemeal.
   map-access helper probes no longer count rooted `/map/*` imports or
   definitions as canonical map helper availability, and semantic helper-path
   preference no longer cross-resolves rooted `/map/*` and canonical
-  `/std/collections/map/*` definitions. Remaining map compatibility behavior
-  is limited to follow-up-owned inline/native, lowering-name, and semantic
-  adapters until TODO-4459 through TODO-4461 remove them. Template
+  `/std/collections/map/*` definitions, and semantic method resolution no
+  longer treats explicit rooted `/map/*` method targets as canonical
+  `/std/collections/map/*` helper calls. Remaining map compatibility behavior
+  is limited to follow-up-owned inline/native and lowering-name adapters until
+  TODO-4460 plus TODO-4461 remove them. Template
   monomorphization still asks the registry for preferred experimental
   vector/SoA helper spellings instead of carrying bespoke
   canonical-to-experimental helper maps. SoA helper
