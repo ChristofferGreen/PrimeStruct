@@ -531,6 +531,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_import_resolver_versions.cpp
     tests/unit/test_import_errors.cpp
     tests/unit/test_import_multiple.cpp
+    tests/unit/test_stdlib_map_ownership.cpp
     tests/unit/test_ast_ir_dump.cpp
     tests/unit/test_ast_ir_dump_inference.cpp
     tests/unit/test_ast_ir_dump_namespace.cpp

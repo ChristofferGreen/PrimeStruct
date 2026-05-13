@@ -16621,3 +16621,40 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     `src/`. Direct checker validation, checker self-test validation, and the
     focused `PrimeStruct_vector_surface_trace*` CTest targets passed; broad
     release validation was skipped under the lite workflow.
+
+- [x] TODO-4299: Promote and style canonical `.prime` map implementation
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-13
+  - phase: Map stdlib ownership cutover
+  - scope: Move the real `Map<K, V>` and `Entry<K, V>` implementation out of
+    the public `/std/collections/experimental_map/*` file and make the
+    non-public `/std/collections/internal_map/*` module behind the canonical
+    surface own the implementation while keeping `map.prime` aligned with the
+    public style boundary.
+  - implementation_notes:
+    - Canonical `stdlib/std/collections/map.prime` imports
+      `/std/collections/internal_map/*` and delegates through internal helper
+      paths rather than the experimental map compatibility path.
+    - `stdlib/std/collections/experimental_map.prime` is now only a
+      direct-import compatibility shim over the internal module.
+    - The map backing implementation remains compatibility-typed as
+      `Map<K, V>` while its file/module ownership is internalized, matching
+      the current vector cutover pattern.
+  - acceptance:
+    - Canonical map imports exercise a non-experimental implementation owner in
+      `.prime`, not a public wrapper whose primary body lives in
+      `experimental_map.prime`.
+    - Direct experimental-map imports continue through a documented shim.
+    - Public docs no longer present `experimental_map` as the map
+      implementation namespace.
+    - Low-level lookup, storage, overwrite, ownership, and compatibility code
+      is quarantined in `internal_map.prime` or the compatibility shim.
+  - stop_rule: Stop once the implementation owner is canonical/internal and
+    compatibility imports are only shims; leave lookup/insertion substrate and
+    lowering extraction to TODO-4300 and TODO-4301.
+  - evidence: Added `stdlib/std/collections/internal_map.prime`, rerouted the
+    canonical map surface to internal helper paths, replaced
+    `experimental_map.prime` with a shim, and added a stdlib ownership lock in
+    `PrimeStruct_misc_tests`. Broad release validation was skipped under the
+    lite workflow.

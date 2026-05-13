@@ -447,7 +447,8 @@ legacyExperimentalVectorCompatibilityShorthandTypeText(
     std::string_view resolvedPath,
     std::string &helperNameOut) {
   helperNameOut.clear();
-  if (resolvedPath.rfind("/std/collections/experimental_map/", 0) == 0) {
+  if (resolvedPath.rfind("/std/collections/internal_map/", 0) == 0 ||
+      resolvedPath.rfind("/std/collections/experimental_map/", 0) == 0) {
     return false;
   }
   if (!resolvePublishedCollectionHelperResolvedPath(

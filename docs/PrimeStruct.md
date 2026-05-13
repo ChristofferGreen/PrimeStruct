@@ -3132,14 +3132,15 @@ for(
     definition exists, and direct `/std/collections/experimental_vector/*`
     source imports are rejected.
   - Canonical `/std/collections/map/*` is now the sole public namespaced map contract. The
-    `/std/collections/experimental_map/*` family now remains only as the internal implementation seam behind that
-    public contract. That backing namespace (`Entry<K, V>`, `entry(key, value)`,
+    `/std/collections/internal_map/*` module now owns the map backing implementation behind that
+    public contract while preserving the current compatibility `Map<K, V>` identity. The backing helpers
+    (`Entry<K, V>`, `entry(key, value)`,
     `map<K, V>(entries...)`, `mapNew`, `mapSingle`, `mapDouble`, `mapPair`, `mapTriple`, `mapQuad`, `mapQuint`,
     `mapSext`, `mapSept`, `mapOct`, `mapInsert`, `mapCount`, `mapContains`, `mapTryAt`, `mapAt`, `mapAtUnsafe`,
     `mapInsertRef`, `mapCountRef`, `mapContainsRef`, `mapTryAtRef`, `mapAtRef`, `mapAtUnsafeRef`) returns the current
-    `.prime` `Map<K, V>` struct backed by parallel experimental `Vector<K>` / `Vector<V>` storage, but user-facing
-    docs/examples should prefer the canonical wrappers in `stdlib/std/collections/map.prime` instead of treating that
-    experimental namespace as a peer public API. The current constructor surface includes a real variadic `.prime`
+    `.prime` `Map<K, V>` struct backed by parallel vector storage, but user-facing
+    docs/examples should prefer the canonical wrappers in `stdlib/std/collections/map.prime` instead of treating the
+    experimental compatibility shim as a peer public API. The current constructor surface includes a real variadic `.prime`
     `map(entries...)` helper over trailing `[args<Entry<K, V>>]` parameters, with the older fixed-arity helper names
     retained as backing compatibility forwarders. Lookup follows `Comparable<K>` instead of the canonical builtin map
     runtime, checked experimental `mapAt(...)` reuses the canonical `map key not found` runtime contract on misses,
@@ -3847,10 +3848,11 @@ re-defining it piecemeal.
   `/std/collections/experimental_vector/Vector` compatibility type identity.
   `/std/collections/experimental_vector/*` is rejected as a source import and
   remains only as a legacy forwarding shim behind the internal vector module.
-  `/std/collections/experimental_map/*` remains an implementation-owned module
-  behind the canonical map wrapper; direct imports should stay limited to
-  targeted compatibility or conformance coverage rather than ordinary public
-  API use.
+  `/std/collections/internal_map/*` owns the canonical map backing adapter
+  while preserving the current `/std/collections/experimental_map/Map`
+  compatibility type identity. `/std/collections/experimental_map/*` remains a
+  direct-import shim for targeted compatibility or conformance coverage rather
+  than ordinary public API use.
 - **Out of scope for this bridge lane:** `array<T>` core ownership, promoted
   `soa_vector<T>` implementation details, and runtime storage/allocator
   redesign stay outside the vector/map bridge contract and require separate
@@ -3884,7 +3886,8 @@ Current `stdlib/std` experimental and internal module classification:
 | --- | --- | --- | --- |
 | `/std/collections/internal_vector/*` | Internal substrate/helper namespace | Internal vector backing adapter used by canonical `/std/collections/vector/*`; it preserves the current compatibility `Vector<T>` type identity until the final vector surface audit. | TODO-4373 |
 | `/std/collections/experimental_vector/*` | Rejected compatibility namespace | Direct source imports are rejected; the shim remains only as legacy forwarding storage identity behind `/std/collections/internal_vector/*` until the final vector surface audit. | TODO-4373 |
-| `/std/collections/experimental_map/*` | Internal substrate/helper namespace | Internal implementation module behind the canonical `/std/collections/map/*` public contract; direct imports remain only for targeted compatibility or conformance coverage. | none |
+| `/std/collections/internal_map/*` | Internal substrate/helper namespace | Internal map backing module used by canonical `/std/collections/map/*`; it preserves the current compatibility `Map<K, V>` type identity until the final map surface audit. | TODO-4304 |
+| `/std/collections/experimental_map/*` | Temporary compatibility namespace | Direct-import shim over `/std/collections/internal_map/*`; retained only for targeted compatibility or conformance coverage while the residual map seam remains importable. | TODO-4303 |
 | `/std/gfx/experimental/*` | Temporary compatibility namespace | Legacy compatibility shim over canonical `/std/gfx/*`; no longer part of the public gfx contract and retained only for targeted compatibility coverage while the residual seam remains importable. | none |
 | `/std/collections/experimental_soa_vector/*` | Accepted compatibility namespace | Compatibility module behind the promoted canonical `/std/collections/soa_vector/*` public surface; direct imports are accepted only for targeted compatibility or conformance coverage. C++/VM/native compile-run coverage locks this compatibility seam; ordinary public examples should use `/std/collections/soa_vector/*`. | none |
 | `/std/collections/experimental_soa_vector_conversions/*` | Accepted compatibility namespace | Compatibility conversion module for direct experimental SoA conversion imports; canonical conversions route through `/std/collections/internal_soa_vector_conversions/*`, and direct imports remain only for targeted compatibility or conformance coverage. | none |
@@ -4503,7 +4506,7 @@ bad_set() {
     misses to `Result<ContainerError>` / `Result<T, ContainerError>` instead of the checked missing-key abort path and,
     on IR-backed backends, currently supports the same `i32`/`bool`/`f32`/`string` plus single-slot int-backed stdlib
     error-struct value subset as `Result.ok(value)`.
-  - Planned stdlib-owned map constructor surface: the temporary experimental map namespace now uses `map(entries...)`
+  - Planned stdlib-owned map constructor surface: the internal map backing module now uses `map(entries...)`
     where each item is an `Entry<K, V>`/`entry(key, value)` pair, and the remaining migration work is to move the
     canonical imported constructor surface off the fixed-arity wrapper helpers onto that same entry-based variadic
     shape. The corresponding literal rewrite target is therefore planned to become `map(entry(k1, v1), entry(k2, v2),
@@ -5314,8 +5317,8 @@ read-only path.
     support.
   - When any `/std...` import is present, the stdlib also provides canonical `.prime` wrappers at
     `/std/collections/map/*` over the current stdlib `mapNew` / `mapCount` / `mapTryAt` helper surface. That imported
-    path is now the sole public namespaced map contract; the experimental map namespace remains a backing seam rather
-    than a peer public API. Imported
+    path is now the sole public namespaced map contract; the internal map module remains the backing seam while the
+    experimental map namespace is a compatibility shim rather than a peer public API. Imported
     `/std/collections/map/map(...)`, `/std/collections/map/count(...)`, `/std/collections/map/contains(...)`,
     `/std/collections/map/tryAt(...)`, `/std/collections/map/at(...)`, and `/std/collections/map/at_unsafe(...)`
     wrappers follow ordinary definition argument rules such as named-argument support. Canonical
@@ -5328,12 +5331,12 @@ read-only path.
     canonical `/std/collections/map/*` behavior and now require explicit `/map/count`, `/map/contains`, `/map/tryAt`,
     `/map/at`, or `/map/at_unsafe` definitions. Legacy compatibility or conformance imports of `/std/collections/experimental_map/*` now extend canonical
     namespaced helper calls in three distinct ways: value `Map<K, V>` receivers can use call-form
-    `/std/collections/map/count|contains|tryAt|at|at_unsafe`, which rewrites directly onto the real experimental
+    `/std/collections/map/count|contains|tryAt|at|at_unsafe`, which rewrites through the internal map
     `.prime` helper implementation; wrapper-layer `/std/collections/mapCount|mapContains|mapTryAt|mapAt|mapAtUnsafe`
-    calls on those same value receivers now rewrite onto the corresponding experimental `.prime` helpers as well, and
+    calls on those same value receivers now rewrite onto the corresponding compatibility helpers as well, and
     direct canonical or wrapper-layer helper receivers built from canonical `/std/collections/map/map(...)` or
     wrapper-layer `/std/collections/mapNew|mapSingle|mapDouble|mapPair|...` constructor expressions now also rewrite
-    those inner constructors onto `/std/collections/experimental_map/mapNew|mapSingle|mapDouble|mapPair|...`; direct
+    those inner constructors onto `/std/collections/internal_map/mapNew|mapSingle|mapDouble|mapPair|...`; direct
     method-call receivers built from those same constructor expressions now do the same before method lowering; explicit
     `[Map<K, V>]` bindings, explicit `return<Map<K, V>>` definitions, direct arguments flowing into explicit `[Map<K,
     V>]` parameters plus inferred `[auto]` parameters backed by experimental-map default initializers, helper-wrapped
@@ -5348,7 +5351,7 @@ read-only path.
     produced by those inferred experimental-map definitions can initialize from either canonical
     `/std/collections/map/map(...)` or wrapper-layer `/std/collections/mapNew|mapSingle|mapDouble|mapPair|...`
     constructor aliases, which rewrite onto or infer
-    `/std/collections/experimental_map/mapNew|mapSingle|mapDouble|mapPair|...` plus the real experimental `Map<K, V>`
+    `/std/collections/internal_map/mapNew|mapSingle|mapDouble|mapPair|...` plus the compatibility `Map<K, V>`
     type during template monomorphization; and borrowed `Reference<Map<K, V>>` receivers use the overload-free canonical
     spellings `/std/collections/map/count_ref|contains_ref|tryAt_ref|at_ref|at_unsafe_ref`. Wrapper-layer helper names
     on builtin `map<K, V>` receivers and broader inference-driven constructor routing outside those explicit or

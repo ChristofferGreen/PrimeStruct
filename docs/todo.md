@@ -72,11 +72,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4299: Promote and style canonical `.prime` map implementation
+- TODO-4300: Stabilize map lookup and insertion substrate
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4300: Stabilize map lookup and insertion substrate
 - TODO-4301: Lower map helpers through ordinary `.prime`
 - TODO-4302: Move map surface metadata out of C++
 - TODO-4303: Delete map compatibility seams
@@ -86,6 +85,7 @@ Task template:
 - TODO-4307: Lower SoA helpers through ordinary `.prime`
 - TODO-4308: Move SoA surface metadata out of C++
 - TODO-4309: Delete `soa_vector` compatibility seams
+- TODO-4310: Add zero C++ SoA collection-surface audit
 
 ### Priority Lanes (Current)
 
@@ -93,8 +93,8 @@ Task template:
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
 - Vector stdlib ownership cutover: none active
-- Map stdlib ownership cutover: TODO-4299 -> TODO-4300 -> TODO-4301
-  -> TODO-4302 -> TODO-4303 -> TODO-4304
+- Map stdlib ownership cutover: TODO-4300 -> TODO-4301 -> TODO-4302
+  -> TODO-4303 -> TODO-4304
 - SoA public surface rename and ownership cutover: TODO-4305 -> TODO-4306
   -> TODO-4307 -> TODO-4308 -> TODO-4309 -> TODO-4310
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
@@ -111,7 +111,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4299: Promote and style canonical `.prime` map implementation
 - TODO-4300: Stabilize map lookup and insertion substrate
 - TODO-4301: Lower map helpers through ordinary `.prime`
 - TODO-4302: Move map surface metadata out of C++
@@ -171,17 +170,17 @@ Task template:
 | Semantic ownership boundary and graph/local-auto authority | none |
 | Compile-pipeline stage and publication-boundary contracts | none |
 | Compile-time macro hooks and AST transform ownership | none |
-| Stdlib surface-style alignment and public helper readability | TODO-4299, TODO-4305 |
+| Stdlib surface-style alignment and public helper readability | TODO-4305 |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
-| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
 | Semantic-product public API factoring and versioning | none |
 | IR lowerer compile-unit breakup | none |
 | Backend validation/build ergonomics | none |
-| Emitter/semantics map-helper parity | TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| Emitter/semantics map-helper parity | TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
 | VM debug-session argv ownership | none |
 | Debugger/source-map provenance parity | none |
 | Debug trace replay robustness | none |
@@ -199,16 +198,16 @@ Task template:
 | --- | --- |
 | Semantic-product-authority conformance | none |
 | AST transform hook conformance | none |
-| CodeExamples-aligned stdlib surface syntax conformance | TODO-4299, TODO-4305 |
+| CodeExamples-aligned stdlib surface syntax conformance | TODO-4305 |
 | Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
-| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
-| De-experimentalization surface and namespace parity | TODO-4430, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
+| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| De-experimentalization surface and namespace parity | TODO-4430, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
-| Emitter map-helper canonicalization parity | TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| Emitter map-helper canonicalization parity | TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
 | VM debug-session argv lifetime coverage | none |
 | Debugger/source-map provenance parity | none |
 | Debug trace replay malformed-input coverage | none |
@@ -240,7 +239,7 @@ Task template:
   registry no longer advertises vector compatibility spellings through that
   manifest. Direct experimental vector source imports are now rejected, and
   the vector production C++ zero-trace audit is now mechanically enforced.
-  TODO-4299 through TODO-4304 apply the same ownership model to map while
+  TODO-4300 through TODO-4304 continue the same ownership model for map while
   keeping map-specific lookup, insertion, `Result<ContainerError>`, and key
   comparability policy explicit.
 - Compatibility adapter inventory: map insert helper compatibility is migrated
@@ -313,9 +312,10 @@ Task template:
 - Internal collection implementation modules:
   `/std/collections/internal_vector/*` owns the canonical vector backing
   adapter while preserving the current compatibility `Vector<T>` identity;
-  `/std/collections/experimental_map/*` remains the implementation-owned seam
-  behind canonical `/std/collections/map/*`, with direct imports kept only for
-  targeted compatibility or conformance coverage.
+  `/std/collections/internal_map/*` owns the canonical map backing adapter
+  while preserving the current compatibility `Map<K, V>` identity;
+  `/std/collections/experimental_map/*` remains a direct-import compatibility
+  shim for targeted compatibility or conformance coverage only.
 - Vector compatibility shim: direct
   `/std/collections/experimental_vector/*` source imports are rejected; the
   file remains only as a legacy forwarding shim behind
@@ -1638,71 +1638,6 @@ Task template:
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
 
-- [ ] TODO-4299: Promote and style canonical `.prime` map implementation
-  - owner: ai
-  - created_at: 2026-04-28
-  - phase: Map stdlib ownership cutover
-  - scope: Move the real `Map<K, V>` and `Entry<K, V>` implementation out of
-    the public `/std/collections/experimental_map/*` namespace and make the
-    canonical `/std/collections/map/*` surface, or a non-public
-    `/std/collections/internal_map/*` module behind that surface, own the
-    implementation while bringing the public map `.prime` source up to the
-    readability bar in `docs/CodeExamples.md`.
-  - implementation_notes:
-    - Start from `stdlib/std/collections/map.prime`,
-      `stdlib/std/collections/experimental_map.prime`,
-      `stdlib/std/collections/collections.prime`,
-      `src/StdlibSurfaceRegistry.cpp`, collection import tests, map
-      compile-run suites, and docs/source-lock tests that mention
-      `experimental_map`.
-    - Cross-check `docs/CodeExamples.md`: `map.prime` is listed as
-      style-aligned surface code, while `experimental_map.prime` and
-      `internal_*` collection files are bridge/substrate-oriented. Keep
-      low-level storage, slot overwrite, lookup loops, and compatibility
-      scaffolding out of the public style-facing file when possible.
-    - Prefer CodeExamples surface style in public map code where the current
-      language supports it: descriptive names, shallow control flow, concise
-      inferred locals, method-style calls, operator syntax instead of canonical
-      helper-call noise, and lowerCamelCase member helpers.
-    - Canonical helper ownership should be path/module based, not encoded into
-      function names: prefer `/std/collections/map/count`,
-      `/std/collections/map/contains`, `/std/collections/map/tryAt` or the
-      documented final miss-result spelling, `/std/collections/map/at`,
-      `/std/collections/map/at_unsafe`, and `/std/collections/map/insert` over
-      `mapCount`, `mapContains`, `mapTryAt`, `mapAt`, or `mapInsert`.
-    - Preserve exact `import /std/collections/map`, wildcard
-      `import /std/collections/*`, constructor/literal rewrite, method sugar,
-      and fixed-arity compatibility behavior while moving the implementation
-      owner.
-    - Keep `/std/collections/experimental_map/*` only as a compatibility shim
-      for targeted tests; do not change vector or SoA public status in this
-      task.
-  - acceptance:
-    - Canonical map imports exercise a non-experimental implementation owner in
-      `.prime`, not a public wrapper whose primary body lives in
-      `experimental_map`.
-    - Direct experimental-map imports either continue through a documented shim
-      or are limited to explicitly named compatibility/conformance tests.
-    - Public docs and examples no longer present `experimental_map` as the map
-      implementation namespace.
-    - `stdlib/std/collections/map.prime` is no longer a thin low-quality wrapper
-      over experimental helpers; its public code follows the
-      `docs/CodeExamples.md` style boundary or delegates only to an explicitly
-      internal implementation module.
-    - The canonical public map implementation and examples use
-      `/std/collections/map/<helper>` / namespace-owned helper names rather than
-      `mapCount` / `mapContains` / `mapTryAt` / `mapInsert`-style prefixed
-      names.
-    - Any remaining low-level lookup, storage, overwrite, ownership, or
-      compatibility code is quarantined in `internal_*` or compatibility-shim
-      files and is not used as the public style reference.
-    - Existing map construction, lookup, insertion, Result/ContainerError,
-      lifecycle, and import conformance remains behavior-compatible.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once the implementation owner is canonical/internal and
-    compatibility imports are only shims; leave lookup/insertion substrate and
-    lowering extraction to TODO-4300 and TODO-4301.
-
 - [ ] TODO-4300: Stabilize map lookup and insertion substrate
   - owner: ai
   - created_at: 2026-04-28
@@ -1712,7 +1647,7 @@ Task template:
     expressible as ordinary `.prime` code over canonical vector/generic storage
     plus the stdlib `Result<ContainerError>` contract.
   - implementation_notes:
-    - Start from `stdlib/std/collections/experimental_map.prime`,
+    - Start from `stdlib/std/collections/internal_map.prime`,
       `stdlib/std/collections/errors.prime`, canonical vector helpers,
       Maybe/Result migration notes in `docs/PrimeStruct.md`, and
       map compile-run tests covering `contains`, `tryAt`, `at`, `at_unsafe`,

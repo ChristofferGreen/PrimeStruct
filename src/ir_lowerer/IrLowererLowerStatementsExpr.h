@@ -1185,6 +1185,19 @@
             return true;
           }
         }
+        if (!expr.isMethodCall &&
+            (resolveExprPath(expr) == "/std/collections/map/insert" ||
+             resolveExprPath(expr) == "/std/collections/map/insert_ref" ||
+             resolveExprPath(expr).rfind("/std/collections/internal_map/insert", 0) == 0 ||
+             resolveExprPath(expr).rfind("/std/collections/experimental_map/mapInsert", 0) == 0)) {
+          if (const Definition *directCallee = resolveDirectHelperDefinition(expr);
+              directCallee != nullptr) {
+            if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
+              return false;
+            }
+            return true;
+          }
+        }
         error =
             "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions (call=" +
             resolveExprPath(expr) + ", name=" + expr.name +
