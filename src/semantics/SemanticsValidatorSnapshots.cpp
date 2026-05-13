@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "SemanticsWorkerSymbolMerge.h"
 #include "primec/StdlibSurfaceRegistry.h"
 
@@ -217,21 +218,22 @@ collectionBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
   }
 
   std::string_view collectionFamily;
-  switch (metadata->id) {
-    case StdlibSurfaceId::CollectionsVectorHelpers:
-    case StdlibSurfaceId::CollectionsVectorConstructors:
-      collectionFamily = "vector";
-      break;
-    case StdlibSurfaceId::CollectionsMapHelpers:
-    case StdlibSurfaceId::CollectionsMapConstructors:
-      collectionFamily = "map";
-      break;
-    case StdlibSurfaceId::CollectionsSoaVectorHelpers:
-    case StdlibSurfaceId::CollectionsSoaVectorConstructors:
-      collectionFamily = "soa_vector";
-      break;
-    default:
-      return std::nullopt;
+  if (metadata == vectorHelperSurfaceMetadata() ||
+      metadata == vectorConstructorSurfaceMetadata()) {
+    collectionFamily = "vector";
+  } else {
+    switch (metadata->id) {
+      case StdlibSurfaceId::CollectionsMapHelpers:
+      case StdlibSurfaceId::CollectionsMapConstructors:
+        collectionFamily = "map";
+        break;
+      case StdlibSurfaceId::CollectionsSoaVectorHelpers:
+      case StdlibSurfaceId::CollectionsSoaVectorConstructors:
+        collectionFamily = "soa_vector";
+        break;
+      default:
+        return std::nullopt;
+    }
   }
 
   const std::string_view helperName = resolveStdlibSurfaceMemberName(*metadata, resolvedPath);

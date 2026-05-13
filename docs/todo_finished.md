@@ -16496,3 +16496,35 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     `scripts/vector_surface_trace_baseline.json` from 155 to 139 production
     traces. Focused release target build, statement source-lock validation,
     direct vector trace check, and vector trace CTest validation passed.
+
+- [x] TODO-4433: Route semantic layout and snapshot vector traces
+  - owner: ai
+  - created_at: 2026-05-13
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4432
+  - scope: Replace remaining semantic struct-layout, snapshot, and final
+    semantic-validator vector surface traces with semantic product facts,
+    generic collection predicates, or registry metadata.
+  - implementation_notes:
+    - Start from `SemanticsValidatorPassesStructLayouts.cpp`,
+      `SemanticsValidatorSnapshots.cpp`, and any remaining
+      `SemanticsValidator*` entries in
+      `scripts/vector_surface_trace_baseline.json` after TODO-4432.
+    - Keep ordinary C++ `std::vector` container usage allowed.
+  - acceptance:
+    - Layout/snapshot semantic vector traces are removed or routed through
+      semantic facts, generic collection helpers, or registry metadata.
+    - Focused semantic source-lock or behavior coverage remains aligned.
+    - The vector surface trace baseline has no removable
+      `SemanticsValidator*` entries before template monomorph work.
+  - stop_rule: Stop once semantic validator files no longer account for
+    removable PrimeStruct vector surface traces before template monomorph work.
+  - finished_at: 2026-05-13
+  - evidence: Routed final semantic-validator vector traces in struct-layout
+    specialization lookup, semantic snapshots, and collection-helper rewrites
+    through shared compatibility helpers and registry metadata; ratcheted
+    `scripts/vector_surface_trace_baseline.json` from 139 to 135 production
+    traces; and left no removable `SemanticsValidator*` vector trace entries
+    before template monomorph work. Focused release target build, semantic
+    source-lock validation, direct vector trace check, and vector trace CTest
+    validation passed.

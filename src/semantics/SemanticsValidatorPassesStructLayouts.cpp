@@ -1,5 +1,7 @@
 #include "SemanticsValidator.h"
 
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+
 #include <algorithm>
 #include <cctype>
 #include <functional>
@@ -140,7 +142,8 @@ bool SemanticsValidator::validateStructLayouts() {
       hash *= 1099511628211ULL;
     }
     std::ostringstream out;
-    out << "/std/collections/experimental_vector/Vector__t" << std::hex << hash;
+    out << legacyExperimentalVectorCompatibilityPrefix()
+        << "Vector__t" << std::hex << hash;
     std::string path = out.str();
     return structNames_.count(path) > 0 ? path : std::string{};
   };
@@ -186,7 +189,8 @@ bool SemanticsValidator::validateStructLayouts() {
     }
     if (typeName == "Vector") {
       const std::string vectorPath =
-          resolveUniqueSpecializedStructPath("/std/collections/experimental_vector/Vector");
+          resolveUniqueSpecializedStructPath(
+              legacyExperimentalVectorCompatibilityPrefix() + "Vector");
       if (structNames_.count(vectorPath) > 0) {
         return vectorPath;
       }

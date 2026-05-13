@@ -217,8 +217,8 @@ std::string SemanticsValidator::preferredBareVectorHelperTarget(std::string_view
            hasImportedDefinitionPath(path) ||
            hasDefinitionFamilyPath(path);
   };
-  const std::string canonical = canonicalCollectionHelperPath(
-      StdlibSurfaceId::CollectionsVectorHelpers, helperName);
+  const std::string canonical =
+      canonicalVectorCompatibilityHelperPathOrFallback(helperName);
   if (isRemovedPublishedVectorStatementHelperName(helperName)) {
     const std::string samePath = rootedVectorHelperPath(helperName);
     if (hasVisibleVectorHelperFamily(samePath)) {
