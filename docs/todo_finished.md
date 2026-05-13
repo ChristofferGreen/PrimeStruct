@@ -16734,3 +16734,47 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     extended the stdlib map ownership lock, and validated VM/native insert
     smoke coverage plus the focused ownership suite. Broad release validation
     was skipped under the lite workflow.
+
+- [x] TODO-4435: Lower map read helpers through ordinary `.prime`
+  - owner: ai
+  - created_at: 2026-05-13
+  - finished_at: 2026-05-13
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4434
+  - scope: Route canonical `count`, `count_ref`, `contains`,
+    `contains_ref`, `tryAt`, and `tryAt_ref` map helper behavior through
+    imported `.prime` helper bodies over the internal map/vector substrate
+    instead of map-specific semantic/lowering read fast paths.
+  - implementation_notes:
+    - Semantic map read normalization retargets canonical read method sugar to
+      `/std/collections/map/count`, `count_ref`, `contains`, `contains_ref`,
+      `tryAt`, or `tryAt_ref` based on receiver borrowing.
+    - Inline and native tail dispatch now defer canonical map read helpers to
+      visible `.prime` definitions instead of preserving builtin map read
+      emission.
+    - Direct canonical access helpers remain on the current checked/unsafe
+      access compatibility path for TODO-4436.
+  - acceptance:
+    - Canonical `/std/collections/map/count`, `count_ref`, `contains`,
+      `contains_ref`, `tryAt`, and `tryAt_ref` run through ordinary `.prime`
+      helper lowering on VM/native for supported key/value kinds.
+    - Production C++ no longer emits map count, contains, or miss-result
+      lookup semantics for those canonical helpers by matching map helper paths
+      or builtin map names.
+    - Map layout used by lowering comes from ordinary struct metadata and
+      canonical vector/generic storage, not a hard-coded experimental map type
+      recognizer.
+    - Remaining checked/unsafe access and compatibility map strings in
+      production C++ are listed for TODO-4436, TODO-4302, or TODO-4303.
+  - stop_rule: Stop once canonical count/contains/tryAt helpers no longer
+    depend on map-specific semantic/lowering emission; leave checked/unsafe
+    access to TODO-4436 and metadata/compatibility deletion to TODO-4302 and
+    TODO-4303.
+  - evidence: Retargeted semantic map read methods to canonical `.prime`
+    helper paths, removed read helpers from inline builtin map-helper
+    classification, deferred native tail read helpers when visible `.prime`
+    definitions exist, limited late statement-expression builtin preservation
+    to access helpers, removed redundant `experimental_map.prime` shim
+    redeclarations that duplicated the imported internal compatibility
+    namespace, expanded stdlib map ownership locks, and updated the language
+    design note. Broad release validation was skipped under the lite workflow.

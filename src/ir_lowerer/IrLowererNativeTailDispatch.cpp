@@ -101,6 +101,53 @@ bool shouldPreserveExplicitDirectMapHelperCall(
          mapTargetInfo.isWrappedMapTarget;
 }
 
+bool isMapReadHelperName(std::string_view helperName) {
+  return helperName == "count" || helperName == "count_ref" ||
+         helperName == "contains" || helperName == "contains_ref" ||
+         helperName == "tryAt" || helperName == "tryAt_ref";
+}
+
+bool importPathCoversNativeTailTarget(const std::string &importPath,
+                                      const std::string &targetPath) {
+  if (importPath.empty() || importPath.front() != '/') {
+    return false;
+  }
+  if (importPath == targetPath) {
+    return true;
+  }
+  if (importPath.size() >= 2 &&
+      importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
+    const std::string prefix = importPath.substr(0, importPath.size() - 2);
+    return targetPath == prefix || targetPath.rfind(prefix + "/", 0) == 0;
+  }
+  return false;
+}
+
+bool hasSemanticMapReadHelperDefinition(const SemanticProgram *semanticProgram,
+                                        std::string_view helperName) {
+  if (semanticProgram == nullptr || !isMapReadHelperName(helperName)) {
+    return false;
+  }
+  const std::string helperPath =
+      "/std/collections/map/" + std::string(helperName);
+  for (const auto &definition : semanticProgram->definitions) {
+    if (definition.fullPath == helperPath ||
+        definition.fullPath.rfind(helperPath + "__", 0) == 0) {
+      return true;
+    }
+  }
+  auto importsMapReadHelper = [&](const std::vector<std::string> &imports) {
+    for (const std::string &importPath : imports) {
+      if (importPathCoversNativeTailTarget(importPath, helperPath)) {
+        return true;
+      }
+    }
+    return false;
+  };
+  return importsMapReadHelper(semanticProgram->sourceImports) ||
+         importsMapReadHelper(semanticProgram->imports);
+}
+
 bool isExplicitDirectVectorCountCall(const SemanticProgram *semanticProgram,
                                      const Expr &expr) {
   if (expr.isMethodCall || expr.kind != Expr::Kind::Call) {
@@ -566,6 +613,18 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
   if (tryGetMathBuiltinName(expr, mathName) && !isSupportedMathBuiltinName(mathName)) {
     error = "native backend does not support math builtin: " + mathName;
     return NativeCallTailDispatchResult::Error;
+  }
+  std::string directMapReadHelperName;
+  if (!expr.isMethodCall &&
+      resolvePublishedNativeTailHelperName(
+          semanticProgram,
+          expr,
+          StdlibSurfaceId::CollectionsMapHelpers,
+          directMapReadHelperName) &&
+      isMapReadHelperName(directMapReadHelperName) &&
+      hasSemanticMapReadHelperDefinition(semanticProgram,
+                                         directMapReadHelperName)) {
+    return NativeCallTailDispatchResult::NotHandled;
   }
   if (!isExplicitDirectVectorCountCall(semanticProgram, expr) &&
       !expr.isMethodCall && count_access_detail::isVectorBuiltinName(expr, "count") &&

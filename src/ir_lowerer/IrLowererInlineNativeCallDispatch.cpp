@@ -268,10 +268,7 @@ bool matchesInlineMapHelperFamily(std::string_view requestedHelperName,
 }
 
 bool isInlineMapBuiltinHelperName(std::string_view helperName) {
-  return helperName == "count" || helperName == "count_ref" ||
-         helperName == "contains" || helperName == "contains_ref" ||
-         helperName == "tryAt" || helperName == "tryAt_ref" ||
-         helperName == "at" || helperName == "at_ref" ||
+  return helperName == "at" || helperName == "at_ref" ||
          helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
          helperName == "insert" || helperName == "insert_ref";
 }
@@ -1608,21 +1605,23 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       directHelperName = canonicalInlineMapHelperName(std::move(directHelperName));
       if (targetInfo.isMapTarget &&
           (directHelperName == "count" || directHelperName == "contains" ||
-           directHelperName == "tryAt" || directHelperName == "at" ||
-           directHelperName == "at_unsafe")) {
+           directHelperName == "tryAt")) {
+        if (const Definition *callee = resolveDefinitionCallFn(expr);
+            callee != nullptr) {
+          return emitCanonicalInlineDefinitionCall(expr, *callee)
+                     ? InlineCallDispatchResult::Emitted
+                     : InlineCallDispatchResult::Error;
+        }
+        return InlineCallDispatchResult::NotHandled;
+      }
+      if (targetInfo.isMapTarget &&
+          (directHelperName == "at" || directHelperName == "at_unsafe")) {
         bool preserveBuiltinMapHelper = true;
-        if (directHelperName == "count") {
-          preserveBuiltinMapHelper = expr.args.size() == 1;
-        } else if (directHelperName == "contains" ||
-                   directHelperName == "tryAt" ||
-                   directHelperName == "at" ||
-                   directHelperName == "at_unsafe") {
-          if (const Definition *callee = resolveDefinitionCallFn(expr);
-              callee != nullptr) {
-            preserveBuiltinMapHelper =
-                keepsBuiltinInlineReturnForPublishedMapHelper(directHelperName,
-                                                              *callee);
-          }
+        if (const Definition *callee = resolveDefinitionCallFn(expr);
+            callee != nullptr) {
+          preserveBuiltinMapHelper =
+              keepsBuiltinInlineReturnForPublishedMapHelper(directHelperName,
+                                                            *callee);
         }
         if (preserveBuiltinMapHelper) {
           return InlineCallDispatchResult::NotHandled;

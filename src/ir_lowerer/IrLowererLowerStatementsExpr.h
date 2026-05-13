@@ -815,11 +815,9 @@
               if (isExplicitCanonicalMapHelperPath &&
                   targetInfo.isMapTarget &&
                   !targetInfo.isWrappedMapTarget &&
-                  (helperName == "count" || helperName == "contains" ||
-                   helperName == "tryAt" || helperName == "at" ||
-                   helperName == "at_unsafe") &&
+                  (helperName == "at" || helperName == "at_unsafe") &&
                   keepsBuiltinCanonicalMapHelperReturn(helperName)) {
-                // Keep direct canonical map helpers on the builtin/native
+                // Keep direct canonical map access helpers on the builtin/native
                 // dispatch path for flat map storage receivers.
               } else if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
                 return false;

@@ -5550,6 +5550,12 @@ bool isBuiltinMapReadHelperName(std::string_view name) {
   return !resolveBuiltinMapReadSurfaceMemberName(name).empty();
 }
 
+bool isCanonicalBuiltinMapReadHelperName(std::string_view name) {
+  return name == "count" || name == "count_ref" ||
+         name == "contains" || name == "contains_ref" ||
+         name == "tryAt" || name == "tryAt_ref";
+}
+
 bool isBuiltinMapInsertValueHelperName(std::string_view name) {
   return resolveBuiltinMapInsertSurfaceMemberName(name) == "insert";
 }
@@ -5803,6 +5809,8 @@ void rewriteBuiltinMapInsertExpr(
     if (helperName.empty()) {
       return;
     }
+    const bool isCanonicalMapReadHelper =
+        isCanonicalBuiltinMapReadHelperName(helperName);
     if (helperName == "count_ref") {
       helperName = "count";
     } else if (helperName == "contains_ref") {
@@ -5822,8 +5830,15 @@ void rewriteBuiltinMapInsertExpr(
     }
     expr.isMethodCall = false;
     expr.isFieldAccess = false;
+    if (matchesBuiltinReadMethod && isCanonicalMapReadHelper &&
+        receiverIsReference) {
+      helperName += "_ref";
+    }
     if (matchesBuiltinAccessCall && receiverIsReference) {
       helperName += "_ref";
+    }
+    if (matchesBuiltinReadMethod && isCanonicalMapReadHelper) {
+      helperName = "/std/collections/map/" + helperName;
     }
     if (matchesBuiltinAccessCall) {
       helperName = "/std/collections/map/" + helperName;
