@@ -436,6 +436,8 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(callResolutionSource.find("const bool hasSemanticRootedRewrite =") !=
         std::string::npos);
+  CHECK(callResolutionSource.find("preferExplicitExperimentalMapHelperDefinition(") ==
+        std::string::npos);
   CHECK(callResolutionSource.find("const size_t rawLeafStart = rawPath.find_last_of('/');") !=
         std::string::npos);
   CHECK(callResolutionSource.find("const bool hasGeneratedRootedRawPath =") !=
@@ -4593,7 +4595,7 @@ TEST_CASE("ir lowerer call helpers classify lowered map helper overloads through
             callExpr, defMap, resolveExprPath, &semanticProgram) == nullptr);
 }
 
-TEST_CASE("ir lowerer call helpers keep experimental map helper aliases off specialized method defs") {
+TEST_CASE("ir lowerer call helpers reject generated experimental map helper family fallback") {
   primec::Definition experimentalMapCountDef;
   experimentalMapCountDef.fullPath = "/std/collections/experimental_map/mapCount";
   primec::Definition specializedMapMethodDef;
@@ -4648,7 +4650,7 @@ TEST_CASE("ir lowerer call helpers keep experimental map helper aliases off spec
 
   CHECK(primec::ir_lowerer::resolveDefinitionCall(
             explicitUnspecializedHelperCall, specializedDefMap, specializedResolveExprPath) ==
-        &specializedHelperDef);
+        nullptr);
 
   primec::Definition competingRawHelperDef;
   competingRawHelperDef.fullPath = "/std/collections/experimental_map/mapCount";

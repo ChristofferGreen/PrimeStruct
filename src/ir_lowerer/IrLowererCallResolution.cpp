@@ -416,6 +416,19 @@ bool isExactRootedMapAliasDefinitionCall(const Expr &expr) {
           helperName == "insert_ref");
 }
 
+bool isExperimentalMapHelperLeaf(std::string helperName) {
+  const size_t generatedSuffix = helperName.find("__");
+  if (generatedSuffix != std::string::npos) {
+    helperName.erase(generatedSuffix);
+  }
+  return helperName == "mapCount" || helperName == "mapCountRef" ||
+         helperName == "mapContains" || helperName == "mapContainsRef" ||
+         helperName == "mapTryAt" || helperName == "mapTryAtRef" ||
+         helperName == "mapAt" || helperName == "mapAtRef" ||
+         helperName == "mapAtUnsafe" || helperName == "mapAtUnsafeRef" ||
+         helperName == "mapInsert" || helperName == "mapInsertRef";
+}
+
 bool isExplicitExperimentalMapHelperDefinitionCall(const Expr &expr,
                                                    const std::string &resolvedPath) {
   if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
@@ -429,11 +442,16 @@ bool isExplicitExperimentalMapHelperDefinitionCall(const Expr &expr,
   if (resolvedPath.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
     return false;
   }
-  std::string helperName;
-  return resolveMapHelperAliasName(expr, helperName);
+  if (rawPath != resolvedPath) {
+    return false;
+  }
+  const size_t slash = rawPath.find_last_of('/');
+  const std::string helperName =
+      slash == std::string::npos ? rawPath : rawPath.substr(slash + 1);
+  return isExperimentalMapHelperLeaf(helperName);
 }
 
-const Definition *preferExplicitExperimentalMapHelperDefinition(
+const Definition *preferExactExplicitExperimentalMapHelperDefinition(
     const Expr &expr,
     const std::string &resolvedPath,
     const std::unordered_map<std::string, const Definition *> &defMap) {
@@ -445,26 +463,31 @@ const Definition *preferExplicitExperimentalMapHelperDefinition(
   if (rawPath.rfind("/std/collections/experimental_map/", 0) != 0) {
     return nullptr;
   }
-  std::string helperName;
-  if (!resolveMapHelperAliasName(expr, helperName)) {
+  const size_t slash = rawPath.find_last_of('/');
+  const std::string helperName =
+      slash == std::string::npos ? rawPath : rawPath.substr(slash + 1);
+  if (!isExperimentalMapHelperLeaf(helperName)) {
     return nullptr;
   }
-  if (const Definition *rawDef = resolveDefinitionByPath(defMap, rawPath);
-      rawDef != nullptr) {
-    return rawDef;
+  return resolveDefinitionByPath(defMap, rawPath);
+}
+
+bool isGeneratedExperimentalMapHelperFamilyFallback(
+    const std::string &rawPath,
+    const std::string &resolvedPath) {
+  if (rawPath == resolvedPath ||
+      rawPath.rfind("/std/collections/experimental_map/", 0) != 0 ||
+      resolvedPath.rfind("/std/collections/experimental_map/", 0) != 0) {
+    return false;
   }
-  const std::string specializedPrefix = rawPath + "__t";
-  const std::string overloadPrefix = rawPath + "__ov";
-  for (const auto &[path, def] : defMap) {
-    if (def == nullptr) {
-      continue;
-    }
-    if (path.rfind(specializedPrefix, 0) == 0 ||
-        path.rfind(overloadPrefix, 0) == 0) {
-      return def;
-    }
-  }
-  return nullptr;
+  const size_t rawSlash = rawPath.find_last_of('/');
+  const size_t resolvedSlash = resolvedPath.find_last_of('/');
+  const std::string rawLeaf =
+      rawSlash == std::string::npos ? rawPath : rawPath.substr(rawSlash + 1);
+  const std::string resolvedLeaf =
+      resolvedSlash == std::string::npos ? resolvedPath : resolvedPath.substr(resolvedSlash + 1);
+  return isExperimentalMapHelperLeaf(rawLeaf) &&
+         isExperimentalMapHelperLeaf(resolvedLeaf);
 }
 
 const Definition *preferExplicitExperimentalVectorHelperDefinition(
@@ -574,7 +597,7 @@ const Definition *resolveDefinitionCall(const Expr &callExpr,
     return rawAliasDef;
   }
   if (const Definition *explicitExperimentalMapHelperDef =
-          preferExplicitExperimentalMapHelperDefinition(callExpr, resolved, defMap);
+          preferExactExplicitExperimentalMapHelperDefinition(callExpr, resolved, defMap);
       explicitExperimentalMapHelperDef != nullptr) {
     return explicitExperimentalMapHelperDef;
   }
@@ -587,6 +610,9 @@ const Definition *resolveDefinitionCall(const Expr &callExpr,
       resolvedDef != nullptr) {
     if (isStructDefinition(*resolvedDef) &&
         !isStructConstructorCallShape(callExpr)) {
+      return nullptr;
+    }
+    if (isGeneratedExperimentalMapHelperFamilyFallback(rawPath, resolved)) {
       return nullptr;
     }
     if (!isMapBuiltinResolvedPath(semanticProgram, callExpr, resolved)) {

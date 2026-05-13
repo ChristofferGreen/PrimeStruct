@@ -17133,3 +17133,53 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     path resolution, and struct-return inference; refreshed source and
     behavior locks; updated queue bookkeeping. Broad release validation was
     skipped under the lite workflow.
+
+- [x] TODO-4447: Split remaining map inline-native adapters
+  - owner: ai
+  - created_at: 2026-05-13
+  - finished_at: 2026-05-13
+  - phase: Map stdlib ownership cutover
+  - scope: Split the remaining map inline/native, semantic, rooted-path, and
+    generated-alias adapter cleanup into closable leaves before implementation.
+  - acceptance:
+    - Generated experimental-map helper-family fallback deletion is tracked
+      separately from the remaining semantic/raw-path adapter cleanup.
+    - Active queues contain only leaf work after the split.
+  - stop_rule: Stop once generated helper-family fallback deletion and the
+    remaining production cleanup have separate TODO IDs with explicit finish
+    lines.
+  - evidence: Split the broad TODO-4447 into completed TODO-4448 for
+    generated experimental-map helper-family fallback and active TODO-4449
+    for remaining semantic helper rewrites, rooted `/map/*` diagnostics,
+    inline/native raw-path checks, and internal lowering-name cleanup.
+
+- [x] TODO-4448: Delete generated map helper-family fallback
+  - owner: ai
+  - created_at: 2026-05-13
+  - finished_at: 2026-05-13
+  - phase: Map stdlib ownership cutover
+  - split_from: TODO-4447
+  - scope: Remove call-resolution fallback that allowed explicit
+    `/std/collections/experimental_map/mapCount`-style helper calls to bind
+    to generated `mapCount__*` or `mapCount__ov*` helper families when the
+    exact helper definition was absent.
+  - implementation_notes:
+    - Target `IrLowererCallResolution.cpp` and the source-lock behavior test
+      that covers explicit experimental-map helper aliases.
+    - Preserve exact explicit helper definitions and vector generated helper
+      fallback; leave remaining rooted `/map/*`, semantic rewrite, and
+      inline/native raw-path cleanup to TODO-4449.
+  - acceptance:
+    - Explicit experimental-map helper calls no longer fall back to generated
+      helper families after exact definition lookup misses.
+    - Exact explicit experimental-map helper definitions still resolve as
+      ordinary definitions.
+    - Source-lock coverage rejects reintroducing the deleted map-specific
+      call-resolution helper-family fallback.
+  - stop_rule: Stop once the generated experimental-map helper-family adapter
+    is deleted and remaining map production adapter cleanup is tracked by
+    TODO-4449.
+  - evidence: Deleted the map-specific generated helper-family fallback from
+    call resolution, updated behavior coverage to reject unspecialized
+    experimental-map helper fallback, added a source lock for the removed
+    helper, and refreshed active queue bookkeeping.
