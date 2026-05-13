@@ -405,6 +405,18 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(callResolutionSource.find("return matchesResolvedPath(\"/std/collections/map/tryAt\") ||") !=
         std::string::npos);
+  CHECK(callResolutionSource.find("matchesResolvedPath(\"/std/collections/mapCount\")") ==
+        std::string::npos);
+  CHECK(callResolutionSource.find("matchesResolvedPath(\"/std/collections/mapContains\")") ==
+        std::string::npos);
+  CHECK(callResolutionSource.find("matchesResolvedPath(\"/std/collections/mapTryAt\")") ==
+        std::string::npos);
+  CHECK(callResolutionSource.find("matchesResolvedPath(\"/std/collections/mapAt\")") ==
+        std::string::npos);
+  CHECK(callResolutionSource.find("matchesResolvedPath(\"/std/collections/mapAtUnsafe\")") ==
+        std::string::npos);
+  CHECK(callResolutionSource.find("matchesResolvedPath(\"/std/collections/mapInsert\")") ==
+        std::string::npos);
   CHECK(callResolutionSource.find("bool isPublishedCollectionBridgeStdlibSurfaceId(") !=
         std::string::npos);
   CHECK(callResolutionSource.find("findSemanticProductDirectCallStdlibSurfaceId(semanticProgram, expr)") !=

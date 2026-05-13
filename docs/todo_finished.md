@@ -16980,3 +16980,54 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     bridge definitions from `map.prime`, migrated map conformance sources and
     docs to canonical `/std/collections/map/*` helper paths, and updated queue
     bookkeeping. Broad release validation was skipped under the lite workflow.
+
+- [x] TODO-4441: Split map production adapter cleanup
+  - owner: ai
+  - created_at: 2026-05-13
+  - finished_at: 2026-05-13
+  - phase: Map stdlib ownership cutover
+  - scope: Split the former broad production C++ map compatibility cleanup
+    into closable leaves before implementation.
+  - acceptance:
+    - Retired public wrapper-name adapter deletion is tracked separately from
+      remaining rooted `/map/*` and internal `mapCount`-style adapter cleanup.
+    - Active queues contain only leaf work after the split.
+  - stop_rule: Stop once public-wrapper adapter deletion and remaining
+    production cleanup have separate TODO IDs with explicit finish lines.
+  - evidence: Split the broad TODO-4441 into completed TODO-4442 for retired
+    public wrapper-name production adapters and active TODO-4443 for remaining
+    rooted/internal map production compatibility cleanup.
+
+- [x] TODO-4442: Delete public map wrapper-name production adapters
+  - owner: ai
+  - created_at: 2026-05-13
+  - finished_at: 2026-05-13
+  - phase: Map stdlib ownership cutover
+  - split_from: TODO-4441
+  - scope: Remove production C++ adapter checks that still treated retired
+    public `/std/collections/mapCount`-style wrapper names as canonical map
+    helper targets after the public stdlib bridge definitions were deleted.
+  - implementation_notes:
+    - Target the semantic unknown-target normalization helper and lowerer map
+      builtin recognition checks for retired public wrapper names only.
+    - Leave rooted `/map/*`, internal `mapCount`-style lowering names,
+      experimental-map substrate helpers, and generated-alias lowerer paths to
+      TODO-4443.
+  - acceptance:
+    - Direct retired public wrapper calls report the original unknown target
+      instead of being normalized to canonical `/std/collections/map/*`
+      diagnostics.
+    - Lowerer builtin recognition no longer accepts
+      `/std/collections/mapCount`, `/std/collections/mapContains`,
+      `/std/collections/mapTryAt`, `/std/collections/mapAt`,
+      `/std/collections/mapAtUnsafe`, or `/std/collections/mapInsert` as
+      canonical map helper aliases.
+    - Active TODO queues promote TODO-4443 as the remaining production C++
+      adapter cleanup before TODO-4304.
+  - stop_rule: Stop once retired public wrapper-name paths are removed from
+    production adapter decisions while the internal/rooted cleanup remains
+    explicitly tracked.
+  - evidence: Removed retired public wrapper names from semantic unknown-target
+    normalization and IR lowerer map builtin matching, added diagnostic
+    coverage for original unknown targets, added source locks for the deleted
+    lowerer matchers, and refreshed active TODO bookkeeping.

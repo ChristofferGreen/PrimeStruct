@@ -274,25 +274,6 @@ bool SemanticsValidator::inferBuiltinCollectionValueBinding(const Expr &expr,
        (isVectorCompatibilityResolvedCall &&
         (vectorCompatibilityHelperName == "count" ||
          vectorCompatibilityHelperName == "capacity")));
-  const bool isMapContainsLike =
-      !expr.isMethodCall && isSimpleCallName(expr, "contains") && expr.args.size() == 2 &&
-      (currentValidationState_.context.definitionPath == "/std/collections/mapContains" ||
-       currentValidationState_.context.definitionPath == "/std/collections/mapTryAt");
-  if (isMapContainsLike) {
-    BindingInfo collectionBinding;
-    if (!inferCollectionBindingFromExpr(expr.args.front(), params, locals, bindingOut)) {
-      return false;
-    }
-    collectionBinding = bindingOut;
-    std::string keyType;
-    std::string valueType;
-    if (!extractMapKeyValueTypes(collectionBinding, keyType, valueType)) {
-      return false;
-    }
-    bindingOut.typeName = "bool";
-    bindingOut.typeTemplateArg.clear();
-    return true;
-  }
   if (!isCountLike) {
     return false;
   }

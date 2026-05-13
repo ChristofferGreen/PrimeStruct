@@ -2,6 +2,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <vector>
 
 #include "test_semantics_helpers.h"
 
@@ -784,6 +785,30 @@ TEST_CASE("public stdlib map wrapper bridge is retired") {
   CHECK(source.find("mapAt") == std::string::npos);
   CHECK(source.find("mapInsert") == std::string::npos);
   CHECK(source.find("[public") == std::string::npos);
+}
+
+TEST_CASE("retired public stdlib map wrapper calls report their original target") {
+  const std::vector<std::pair<std::string, std::string>> cases = {
+      {"/std/collections/mapCount(1i32)", "/std/collections/mapCount"},
+      {"/std/collections/mapContains(1i32, 2i32)", "/std/collections/mapContains"},
+      {"/std/collections/mapTryAt(1i32, 2i32)", "/std/collections/mapTryAt"},
+      {"/std/collections/mapAt(1i32, 2i32)", "/std/collections/mapAt"},
+      {"/std/collections/mapAtUnsafe(1i32, 2i32)", "/std/collections/mapAtUnsafe"},
+      {"/std/collections/mapInsert(1i32, 2i32, 3i32)", "/std/collections/mapInsert"}};
+
+  for (const auto &[call, target] : cases) {
+    const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  return()" + call + R"()
+}
+)";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    INFO(call);
+    INFO(error);
+    CHECK(error.find("unknown call target: " + target) != std::string::npos);
+  }
 }
 
 TEST_CASE("canonical stdlib map slash helpers avoid wrapper recursion") {

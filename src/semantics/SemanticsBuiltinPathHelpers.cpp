@@ -846,6 +846,11 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
       return false;
     }
     const std::string memberName = name.substr(prefix.size());
+    if (prefix == std::string_view("std/collections/") &&
+        (memberName == "mapAt" || memberName == "mapAtRef" ||
+         memberName == "mapAtUnsafe" || memberName == "mapAtUnsafeRef")) {
+      return false;
+    }
     return memberName.find('/') == std::string::npos &&
            accessAliasFromMemberName(memberName);
   };

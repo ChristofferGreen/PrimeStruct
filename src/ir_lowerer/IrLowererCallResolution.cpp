@@ -228,15 +228,12 @@ bool isMapBuiltinResolvedPath(const SemanticProgram *semanticProgram,
     std::string accessName;
     if (getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2) {
       return matchesResolvedPath("/std/collections/map/at") ||
-             matchesResolvedPath("/std/collections/mapAt") ||
-             matchesResolvedPath("/std/collections/map/at_unsafe") ||
-             matchesResolvedPath("/std/collections/mapAtUnsafe");
+             matchesResolvedPath("/std/collections/map/at_unsafe");
     }
     if (resolveMapHelperAliasName(expr, aliasName)) {
       if (aliasName == "count" && expr.args.size() == 1) {
         return matchesResolvedPath("/std/collections/map/count") ||
                matchesResolvedPath("/std/collections/map/count_ref") ||
-               matchesResolvedPath("/std/collections/mapCount") ||
                matchesResolvedPath("/std/collections/experimental_map/mapCount") ||
                matchesResolvedPath("/std/collections/experimental_map/mapCountRef") ||
                matchesExperimentalMapMethodPath("count");
@@ -244,7 +241,6 @@ bool isMapBuiltinResolvedPath(const SemanticProgram *semanticProgram,
       if (aliasName == "contains" && expr.args.size() == 2) {
         return matchesResolvedPath("/std/collections/map/contains") ||
                matchesResolvedPath("/std/collections/map/contains_ref") ||
-               matchesResolvedPath("/std/collections/mapContains") ||
                matchesResolvedPath("/std/collections/experimental_map/mapContains") ||
                matchesResolvedPath("/std/collections/experimental_map/mapContainsRef") ||
                matchesExperimentalMapMethodPath("contains");
@@ -252,7 +248,6 @@ bool isMapBuiltinResolvedPath(const SemanticProgram *semanticProgram,
       if (aliasName == "tryAt" && expr.args.size() == 2) {
         return matchesResolvedPath("/std/collections/map/tryAt") ||
                matchesResolvedPath("/std/collections/map/tryAt_ref") ||
-               matchesResolvedPath("/std/collections/mapTryAt") ||
                matchesResolvedPath("/std/collections/experimental_map/mapTryAt") ||
                matchesResolvedPath("/std/collections/experimental_map/mapTryAtRef") ||
                matchesExperimentalMapMethodPath("tryAt");
@@ -260,7 +255,6 @@ bool isMapBuiltinResolvedPath(const SemanticProgram *semanticProgram,
       if (aliasName == "at" && expr.args.size() == 2) {
         return matchesResolvedPath("/std/collections/map/at") ||
                matchesResolvedPath("/std/collections/map/at_ref") ||
-               matchesResolvedPath("/std/collections/mapAt") ||
                matchesResolvedPath("/std/collections/experimental_map/mapAt") ||
                matchesResolvedPath("/std/collections/experimental_map/mapAtRef") ||
                matchesExperimentalMapMethodPath("at");
@@ -268,7 +262,6 @@ bool isMapBuiltinResolvedPath(const SemanticProgram *semanticProgram,
       if (aliasName == "at_unsafe" && expr.args.size() == 2) {
         return matchesResolvedPath("/std/collections/map/at_unsafe") ||
                matchesResolvedPath("/std/collections/map/at_unsafe_ref") ||
-               matchesResolvedPath("/std/collections/mapAtUnsafe") ||
                matchesResolvedPath("/std/collections/experimental_map/mapAtUnsafe") ||
                matchesResolvedPath("/std/collections/experimental_map/mapAtUnsafeRef") ||
                matchesExperimentalMapMethodPath("at_unsafe");
@@ -330,26 +323,22 @@ bool isMapBuiltinResolvedPath(const SemanticProgram *semanticProgram,
     if ((normalizedName == "contains" || normalizedName == "map/contains" ||
          normalizedName == "std/collections/map/contains") &&
         expr.args.size() == 2) {
-      return matchesResolvedPath("/std/collections/map/contains") ||
-             matchesResolvedPath("/std/collections/mapContains");
+      return matchesResolvedPath("/std/collections/map/contains");
     }
     if ((normalizedName == "tryAt" || normalizedName == "map/tryAt" ||
          normalizedName == "std/collections/map/tryAt") &&
         expr.args.size() == 2) {
-      return matchesResolvedPath("/std/collections/map/tryAt") ||
-             matchesResolvedPath("/std/collections/mapTryAt");
+      return matchesResolvedPath("/std/collections/map/tryAt");
     }
     if ((normalizedName == "count" || normalizedName == "map/count" ||
          normalizedName == "std/collections/map/count") &&
         expr.args.size() == 1) {
-      return matchesResolvedPath("/std/collections/map/count") ||
-             matchesResolvedPath("/std/collections/mapCount");
+      return matchesResolvedPath("/std/collections/map/count");
     }
     if ((normalizedName == "insert" || normalizedName == "map/insert" ||
          normalizedName == "std/collections/map/insert") &&
         expr.args.size() == 3) {
-      return matchesResolvedPath("/std/collections/map/insert") ||
-             matchesResolvedPath("/std/collections/mapInsert");
+      return matchesResolvedPath("/std/collections/map/insert");
     }
   }
   return false;

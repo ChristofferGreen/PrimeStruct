@@ -482,28 +482,22 @@ bool resolvesExperimentalVectorValueReceiver(const Expr *receiverExpr,
 }
 
 std::string canonicalMapHelperUnknownTargetPath(const std::string &resolvedPath) {
-  if (resolvedPath == "/std/collections/map/count" || resolvedPath == "/map/count" ||
-      resolvedPath == "/std/collections/mapCount") {
+  if (resolvedPath == "/std/collections/map/count" || resolvedPath == "/map/count") {
     return "/std/collections/map/count";
   }
-  if (resolvedPath == "/std/collections/map/contains" || resolvedPath == "/map/contains" ||
-      resolvedPath == "/std/collections/mapContains") {
+  if (resolvedPath == "/std/collections/map/contains" || resolvedPath == "/map/contains") {
     return "/std/collections/map/contains";
   }
-  if (resolvedPath == "/std/collections/map/tryAt" || resolvedPath == "/map/tryAt" ||
-      resolvedPath == "/std/collections/mapTryAt") {
+  if (resolvedPath == "/std/collections/map/tryAt" || resolvedPath == "/map/tryAt") {
     return "/std/collections/map/tryAt";
   }
-  if (resolvedPath == "/std/collections/map/at" || resolvedPath == "/map/at" ||
-      resolvedPath == "/std/collections/mapAt") {
+  if (resolvedPath == "/std/collections/map/at" || resolvedPath == "/map/at") {
     return "/std/collections/map/at";
   }
-  if (resolvedPath == "/std/collections/map/at_unsafe" || resolvedPath == "/map/at_unsafe" ||
-      resolvedPath == "/std/collections/mapAtUnsafe") {
+  if (resolvedPath == "/std/collections/map/at_unsafe" || resolvedPath == "/map/at_unsafe") {
     return "/std/collections/map/at_unsafe";
   }
-  if (resolvedPath == "/std/collections/map/insert" || resolvedPath == "/map/insert" ||
-      resolvedPath == "/std/collections/mapInsert") {
+  if (resolvedPath == "/std/collections/map/insert" || resolvedPath == "/map/insert") {
     return "/std/collections/map/insert";
   }
   return {};
