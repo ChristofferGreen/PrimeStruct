@@ -17391,3 +17391,57 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     `/map/at*` definition probes from native tail map access helper
     availability, added source-lock coverage, and refreshed active queue
     bookkeeping.
+
+- [x] TODO-4457: Split remaining map raw/lowering adapters
+  - owner: ai
+  - created_at: 2026-05-13
+  - finished_at: 2026-05-13
+  - phase: Map stdlib ownership cutover
+  - split_from: TODO-4455
+  - depends_on: TODO-4456
+  - scope: Split the remaining semantic, inline/native, and internal
+    lowering-name map cleanup into closable leaves before implementation.
+  - acceptance:
+    - Semantic helper-path preference fallback deletion is tracked separately
+      from remaining semantic method-resolution, inline/native, and
+      lowering-name cleanup.
+    - Active queues contain only leaf work after the split.
+  - stop_rule: Stop once semantic helper-path preference fallback deletion and
+    the remaining map raw/lowering cleanup have separate TODO IDs with
+    explicit finish lines.
+  - evidence: Split the broad TODO-4457 into completed TODO-4458 for
+    semantic helper-path preference fallbacks plus active TODO-4459,
+    TODO-4460, and TODO-4461 for the remaining semantic, inline/native, and
+    internal lowering-name cleanup.
+
+- [x] TODO-4458: Delete semantic map alias fallbacks
+  - owner: ai
+  - created_at: 2026-05-13
+  - finished_at: 2026-05-13
+  - phase: Map stdlib ownership cutover
+  - split_from: TODO-4457
+  - depends_on: TODO-4456
+  - scope: Remove semantic helper-path preference probes that cross-resolved
+    rooted `/map/*` helper paths and canonical `/std/collections/map/*`
+    definitions in effect-free collection analysis and statement helper path
+    preference.
+  - implementation_notes:
+    - Target `SemanticsValidatorEffectFreeCollections.cpp`,
+      `SemanticsValidatorStatementVectorHelpers.cpp`, and source-lock
+      coverage.
+    - Preserve canonical `/std/collections/map/*` helper handling and leave
+      remaining semantic method-resolution, inline/native dispatch, and
+      `mapCount`-style lowering-name cleanup to follow-up leaves.
+  - acceptance:
+    - Effect-free collection helper candidate generation no longer adds
+      rooted/canonical map aliases for each other.
+    - Statement helper path preference no longer substitutes rooted `/map/*`
+      and canonical `/std/collections/map/*` definitions for each other.
+    - Source-lock coverage rejects reintroducing those semantic fallback
+      probes.
+  - stop_rule: Stop once semantic helper-path preference only preserves
+    canonical map helper handling and no longer uses rooted map aliases as a
+    fallback.
+  - evidence: Removed rooted/canonical map alias fallback generation from
+    effect-free collection helpers and statement helper preference, added
+    source-lock coverage, and split the remaining cleanup into leaf tasks.

@@ -5,20 +5,6 @@
 
 namespace primec::semantics {
 
-namespace {
-
-bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
-  return helperName == "count" || helperName == "count_ref" ||
-         helperName == "size" ||
-         helperName == "contains" || helperName == "contains_ref" ||
-         helperName == "tryAt" || helperName == "tryAt_ref" ||
-         helperName == "at" || helperName == "at_ref" ||
-         helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
-         helperName == "insert" || helperName == "insert_ref";
-}
-
-} // namespace
-
 std::string SemanticsValidator::normalizeEffectFreeCollectionMethodName(const std::string &receiverPath,
                                                                         std::string methodName) const {
   if (!methodName.empty() && methodName.front() == '/') {
@@ -39,11 +25,7 @@ std::string SemanticsValidator::normalizeEffectFreeCollectionMethodName(const st
     }
   }
   if (receiverPath == "/map") {
-    const std::string mapPrefix = "map/";
     const std::string stdMapPrefix = "std/collections/map/";
-    if (methodName.rfind(mapPrefix, 0) == 0) {
-      return methodName.substr(mapPrefix.size());
-    }
     if (methodName.rfind(stdMapPrefix, 0) == 0) {
       return methodName.substr(stdMapPrefix.size());
     }
@@ -69,10 +51,7 @@ std::vector<std::string> SemanticsValidator::effectFreeMethodPathCandidatesForRe
             canonicalVectorCompatibilityHelperPathOrFallback(methodName)};
   }
   if (receiverPath == "/map") {
-    if (isRemovedMapCompatibilityHelper(methodName)) {
-      return {"/std/collections/map/" + methodName, "/map/" + methodName};
-    }
-    return {"/map/" + methodName, "/std/collections/map/" + methodName};
+    return {"/std/collections/map/" + methodName};
   }
   return {receiverPath + "/" + methodName};
 }
@@ -91,24 +70,6 @@ std::string SemanticsValidator::preferEffectFreeCollectionHelperPath(const std::
           canonicalVectorCompatibilityHelperPathOrFallback(suffix);
       if (defMap_.count(stdlibAlias) > 0) {
         return stdlibAlias;
-      }
-    }
-  }
-  if (preferred.rfind("/map/", 0) == 0 && defMap_.count(preferred) == 0) {
-    const std::string suffix = preferred.substr(std::string("/map/").size());
-    if (!isRemovedMapCompatibilityHelper(suffix)) {
-      const std::string stdlibAlias = "/std/collections/map/" + suffix;
-      if (defMap_.count(stdlibAlias) > 0) {
-        preferred = stdlibAlias;
-      }
-    }
-  }
-  if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap_.count(preferred) == 0) {
-    const std::string suffix = preferred.substr(std::string("/std/collections/map/").size());
-    if (suffix != "map" && !isRemovedMapCompatibilityHelper(suffix)) {
-      const std::string mapAlias = "/map/" + suffix;
-      if (defMap_.count(mapAlias) > 0) {
-        preferred = mapAlias;
       }
     }
   }
@@ -138,7 +99,6 @@ std::vector<std::string> SemanticsValidator::effectFreeCollectionHelperPathCandi
   if (!normalizedPath.empty() && normalizedPath.front() != '/') {
     if (normalizedPath.rfind("array/", 0) == 0 || isUnrootedVectorHelperPath(normalizedPath) ||
         isUnrootedCanonicalVectorCompatibilityPath(normalizedPath) ||
-        normalizedPath.rfind("map/", 0) == 0 ||
         normalizedPath.rfind("std/collections/map/", 0) == 0) {
       normalizedPath.insert(normalizedPath.begin(), '/');
     }
@@ -150,16 +110,6 @@ std::vector<std::string> SemanticsValidator::effectFreeCollectionHelperPathCandi
     const std::string suffix = normalizedPath.substr(std::string("/array/").size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
       appendUnique(canonicalVectorCompatibilityHelperPathOrFallback(suffix));
-    }
-  } else if (normalizedPath.rfind("/map/", 0) == 0) {
-    const std::string suffix = normalizedPath.substr(std::string("/map/").size());
-    if (!isRemovedMapCompatibilityHelper(suffix)) {
-      appendUnique("/std/collections/map/" + suffix);
-    }
-  } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
-    const std::string suffix = normalizedPath.substr(std::string("/std/collections/map/").size());
-    if (suffix != "map" && !isRemovedMapCompatibilityHelper(suffix)) {
-      appendUnique("/map/" + suffix);
     }
   }
   return candidates;

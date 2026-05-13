@@ -1073,6 +1073,15 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsEffectFreeCollectionsSource.find("normalizedPath.rfind(\"vector/\", 0)") ==
         std::string::npos);
+  CHECK(semanticsEffectFreeCollectionsSource.find("isRemovedMapCompatibilityHelper(") ==
+        std::string::npos);
+  CHECK(semanticsEffectFreeCollectionsSource.find("const std::string mapPrefix = \"map/\";") ==
+        std::string::npos);
+  CHECK(semanticsEffectFreeCollectionsSource.find(
+            "appendUnique(\"/std/collections/map/\" + suffix)") ==
+        std::string::npos);
+  CHECK(semanticsEffectFreeCollectionsSource.find("appendUnique(\"/map/\" + suffix)") ==
+        std::string::npos);
   CHECK(semanticsInferStructReturnHelpersSource.find(
             "std::string SemanticsValidator::normalizeInferStructReturnHelperPath") !=
         std::string::npos);
@@ -1862,6 +1871,14 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
   CHECK(semanticsStatementVectorHelpersSource.find("bool SemanticsValidator::validateVectorStatementHelper(") !=
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find("std::string SemanticsValidator::preferVectorStdlibHelperPath(") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find("isRemovedMapCompatibilityHelper(") ==
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "const std::string stdlibAlias = \"/std/collections/map/\" + suffix;") ==
+        std::string::npos);
+  CHECK(semanticsStatementVectorHelpersSource.find(
+            "const std::string mapAlias = \"/map/\" + suffix;") ==
         std::string::npos);
   CHECK(semanticsStatementVectorHelpersSource.find("auto failStatementDiagnostic = [&](std::string message) -> bool {") !=
         std::string::npos);

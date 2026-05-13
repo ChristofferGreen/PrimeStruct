@@ -14,16 +14,6 @@ bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
          suffix != "remove_at" && suffix != "remove_swap";
 }
 
-bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
-  return helperName == "count" || helperName == "count_ref" ||
-         helperName == "size" ||
-         helperName == "contains" || helperName == "contains_ref" ||
-         helperName == "tryAt" || helperName == "tryAt_ref" ||
-         helperName == "at" || helperName == "at_ref" ||
-         helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
-         helperName == "insert" || helperName == "insert_ref";
-}
-
 bool isSoaMutatorName(std::string_view helperName) {
   return helperName == "push" || helperName == "reserve";
 }
@@ -122,11 +112,6 @@ bool resolveExplicitPublishedVectorHelperExprMemberName(
 
 std::string SemanticsValidator::preferVectorStdlibHelperPath(const std::string &path) const {
   auto hasVisibleDefinitionPath = [&](const std::string &candidate) {
-    if (candidate.rfind("/map/", 0) == 0 &&
-        defMap_.count(candidate) == 0 &&
-        !hasDeclaredDefinitionPath(candidate)) {
-      return false;
-    }
     return hasImportedDefinitionPath(candidate) ||
            hasDeclaredDefinitionPath(candidate) ||
            defMap_.count(candidate) > 0;
@@ -138,24 +123,6 @@ std::string SemanticsValidator::preferVectorStdlibHelperPath(const std::string &
       const std::string stdlibAlias = canonicalPublishedVectorHelperTarget(suffix);
       if (hasVisibleDefinitionPath(stdlibAlias)) {
         return stdlibAlias;
-      }
-    }
-  }
-  if (preferred.rfind("/map/", 0) == 0 && !hasVisibleDefinitionPath(preferred)) {
-    const std::string suffix = preferred.substr(std::string("/map/").size());
-    if (!isRemovedMapCompatibilityHelper(suffix)) {
-      const std::string stdlibAlias = "/std/collections/map/" + suffix;
-      if (hasVisibleDefinitionPath(stdlibAlias)) {
-        preferred = stdlibAlias;
-      }
-    }
-  }
-  if (preferred.rfind("/std/collections/map/", 0) == 0 && !hasVisibleDefinitionPath(preferred)) {
-    const std::string suffix = preferred.substr(std::string("/std/collections/map/").size());
-    if (!isRemovedMapCompatibilityHelper(suffix)) {
-      const std::string mapAlias = "/map/" + suffix;
-      if (hasVisibleDefinitionPath(mapAlias)) {
-        preferred = mapAlias;
       }
     }
   }
