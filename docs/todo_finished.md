@@ -16699,3 +16699,38 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     extended the stdlib ownership lock; and validated one VM/native policy
     smoke plus the focused `PrimeStruct_misc_tests` ownership suite. Broad
     release validation was skipped under the lite workflow.
+
+- [x] TODO-4434: Lower map insert helpers through ordinary `.prime`
+  - owner: ai
+  - created_at: 2026-05-13
+  - finished_at: 2026-05-13
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4300
+  - scope: Split from broad TODO-4301 to route canonical `insert` and
+    `insert_ref` helper behavior through imported `.prime` helper bodies
+    instead of the semantic/lowering `insert_builtin` rewrite.
+  - implementation_notes:
+    - `stdlib/std/collections/map.prime` no longer declares the
+      `insert_builtin` trap helper.
+    - Semantic map insert normalization retargets direct and method insert
+      forms to `/std/collections/map/insert` or
+      `/std/collections/map/insert_ref` based on receiver borrowing instead
+      of `/std/collections/map/insert_builtin`.
+    - Late statement/expression lowering fallbacks that still see insert-like
+      calls also retarget to the canonical `.prime` insert helper.
+  - acceptance:
+    - Canonical direct insert, method insert, and `insert_ref` run through
+      ordinary `.prime` helper lowering on VM/native for supported primitive
+      key/value kinds.
+    - Production semantic rewriting no longer emits
+      `/std/collections/map/insert_builtin`.
+    - Source-lock coverage pins the deleted public trap helper and canonical
+      insert retargeting.
+  - stop_rule: Stop once canonical insert helpers no longer depend on the
+    map-specific `insert_builtin` semantic/lowering path; leave read/access
+    helper fast-path removal to TODO-4435 and TODO-4436.
+  - evidence: Removed the public `insert_builtin` map helper, retargeted
+    semantic and late lowerer insert rewrites to canonical `.prime` helpers,
+    extended the stdlib map ownership lock, and validated VM/native insert
+    smoke coverage plus the focused ownership suite. Broad release validation
+    was skipped under the lite workflow.

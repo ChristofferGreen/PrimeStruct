@@ -245,11 +245,6 @@ import /std/collections/internal_map/*
 }
 
 [public effects(heap_alloc), return<void> Comparable<K>]
-/std/collections/map/insert_builtin<K, V>([map<K, V> mut] values, [K] key, [V] value) {
-  [array</std/collections/ContainerError>] trap{array</std/collections/ContainerError>()}
-}
-
-[public effects(heap_alloc), return<void> Comparable<K>]
 /std/collections/map/insert<K, V>([Map<K, V> mut] values, [K] key, [V] value) {
   /std/collections/internal_map/insertImpl<K, V>(values, key, value)
 }

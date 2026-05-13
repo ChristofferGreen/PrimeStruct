@@ -453,7 +453,7 @@
           }
 
           rewrittenExpr = callExpr;
-          rewrittenExpr.name = "/std/collections/map/insert_builtin";
+          rewrittenExpr.name = "/std/collections/map/insert";
           rewrittenExpr.namespacePrefix.clear();
           rewrittenExpr.isMethodCall = false;
           rewrittenExpr.isFieldAccess = false;

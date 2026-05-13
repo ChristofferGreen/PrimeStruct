@@ -3148,9 +3148,11 @@ for(
     `atImpl` preserves the checked missing-key trap path, and `atUnsafeImpl` keeps the unchecked payload access path.
     `insertImpl` and `insertRefImpl` overwrite duplicate keys by `drop(...)`ing and `init(...)`ing the payload slot, or
     grow the parallel key/value vectors through internal vector pushes when the key is new. Constructor-backed
-    canonical `map<K, V>` bindings now route direct `/std/collections/map/insert(...)`, `.insert(...)`, and
-    `/std/collections/map/insert_ref(...)` through those `.prime` helper bodies on VM/native instead of the stale
-    flat builtin insert rewrite. Borrowed `Reference<map<K, V>>` values now support
+    canonical `map<K, V>` bindings and non-local map receivers now route direct
+    `/std/collections/map/insert(...)`, `.insert(...)`, and
+    `/std/collections/map/insert_ref(...)` through those `.prime` helper bodies
+    on VM/native instead of the stale flat builtin insert rewrite. Borrowed
+    `Reference<map<K, V>>` values now support
     distinct `*Ref` free-helper calls plus `.count()`/`.contains()`/`.tryAt()`/`.at()`/`.at_unsafe()`/`.insert()`
     method-call sugar through `.prime` `/Reference/*` helpers, and both value plus borrowed-reference experimental maps
     now participate in shared `value[key]` bracket access with the same key/type diagnostics as other map helper forms.
@@ -3820,8 +3822,8 @@ re-defining it piecemeal.
   canonical `/std/collections/map/insert(_ref)`, compatibility
   `/map/insert(_ref)`, wrapper `/std/collections/mapInsert(_Ref)`, and
   experimental `/std/collections/experimental_map/mapInsert(_Ref)` spellings
-  before it rewrites constructor-backed receivers to the canonical helper or
-  non-local/builtin receivers to `/std/collections/map/insert_builtin`.
+  before it rewrites value and borrowed-reference receivers to the canonical
+  `.prime` helper surface.
   Template monomorphization now asks the same registry for preferred
   experimental vector/map/SoA helper spellings instead of carrying bespoke
   canonical-to-experimental helper maps. SoA helper compatibility is routed
@@ -4532,8 +4534,8 @@ bad_set() {
     arguments are omitted.
     Compatibility helper alias `insert` surfaces (for example `mapInsert`) now share that same
     field-access receiver-typing inference when template arguments are omitted, so alias-resolved
-    non-local receiver forms route through `insert_builtin` instead of falling back to pending
-    runtime paths.
+    non-local receiver forms retarget to the canonical `.prime` insert helper instead of falling
+    back to pending runtime paths.
     Location-wrapped field-access and helper-return receivers (for example
     `location(holder.values)` and `location(makeValues())`) now also route through that path by
     peeling `location(...)` wrappers before canonical/helper-alias receiver-typing and helper-return
@@ -4547,7 +4549,7 @@ bad_set() {
     Dereference-wrapped non-local field-access receivers (for example
     `dereference(holder.valuesRef)`) now also share that same canonical/helper-alias callee
     receiver-typing inference when template arguments are omitted, so those non-local borrowed
-    receiver forms route through `insert_builtin` as well.
+    receiver forms retarget to the canonical `.prime` insert helper as well.
     Nested location+dereference receiver chains (for example
     `location(dereference(location(makeValuesRef())))` and
     `location(dereference(location(holder.valuesRef)))`) now route through that same path by
@@ -5327,8 +5329,9 @@ read-only path.
     `/map/at`, or `/map/at_unsafe` definitions. Legacy compatibility or conformance imports of `/std/collections/experimental_map/*` now extend canonical
     namespaced helper calls in three distinct ways: value `Map<K, V>` receivers can use call-form
     `/std/collections/map/count|contains|tryAt|at|at_unsafe`, which rewrites through the internal map
-    `.prime` helper implementation; canonical `insert` and `insert_ref` wrappers on constructor-backed canonical map
-    bindings now also stay on the internal `.prime` insert substrate instead of the stale flat-map builtin rewrite.
+    `.prime` helper implementation; canonical `insert` and `insert_ref` wrappers
+    on canonical map bindings now also stay on the internal `.prime` insert
+    substrate instead of the stale flat-map builtin rewrite.
     Wrapper-layer `/std/collections/mapCount|mapContains|mapTryAt|mapAt|mapAtUnsafe`
     calls on those same value receivers now rewrite onto the corresponding compatibility helpers as well, and
     direct canonical or wrapper-layer helper receivers built from canonical `/std/collections/map/map(...)` or

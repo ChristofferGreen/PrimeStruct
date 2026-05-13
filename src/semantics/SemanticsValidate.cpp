@@ -5456,9 +5456,6 @@ std::optional<semantics::BindingInfo> extractDefinitionReturnBinding(const Defin
   return std::nullopt;
 }
 
-constexpr std::string_view kBuiltinCanonicalMapInsertBuiltinPath =
-    "/std/collections/map/insert_builtin";
-
 std::string_view resolveBuiltinMapInsertSurfaceMemberName(std::string_view name) {
   const StdlibSurfaceMetadata *metadata =
       findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsMapHelpers);
@@ -5849,9 +5846,6 @@ void rewriteBuiltinMapInsertExpr(
   }
 
   const Expr &receiver = expr.args.front();
-  const bool receiverUsesConstructorBackedBuiltinMap =
-      receiver.kind == Expr::Kind::Name &&
-      constructorBackedBuiltinMapBindings.count(receiver.name) != 0;
   auto receiverBinding = resolveBuiltinMapInsertReceiverBinding(
       receiver, bindings, definitionMap, structPaths, definitionNamespace);
   if (!receiverBinding.has_value() || !isBuiltinMapMutationBinding(*receiverBinding)) {
@@ -5873,28 +5867,14 @@ void rewriteBuiltinMapInsertExpr(
           bindingTypeText(*receiverBinding), keyType, valueType)) {
     return;
   }
-  if (receiverUsesConstructorBackedBuiltinMap) {
-    if (!expr.isMethodCall) {
-      return;
-    }
-    const std::string canonicalInsertPath =
-        canonicalBuiltinMapInsertSurfacePath(receiverIsReference);
-    if (canonicalInsertPath.empty()) {
-      return;
-    }
-    expr.isMethodCall = false;
-    expr.isFieldAccess = false;
-    expr.name = canonicalInsertPath;
-    expr.namespacePrefix.clear();
-    if (expr.templateArgs.empty()) {
-      expr.templateArgs = {keyType, valueType};
-    }
-    expr.argNames.clear();
+  const std::string canonicalInsertPath =
+      canonicalBuiltinMapInsertSurfacePath(receiverIsReference);
+  if (canonicalInsertPath.empty()) {
     return;
   }
   expr.isMethodCall = false;
   expr.isFieldAccess = false;
-  expr.name = std::string(kBuiltinCanonicalMapInsertBuiltinPath);
+  expr.name = canonicalInsertPath;
   expr.namespacePrefix.clear();
   if (expr.templateArgs.empty()) {
     expr.templateArgs = {keyType, valueType};

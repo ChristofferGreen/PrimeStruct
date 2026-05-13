@@ -41,16 +41,20 @@ TEST_CASE("canonical map surface owns implementation through internal map module
   const std::string semanticsSource = readText(repoRoot() / "src" / "semantics" / "SemanticsValidate.cpp");
   const std::string statementLowererSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererStatementCallEmission.cpp");
+  const std::string tailDispatchSource =
+      readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h");
 
   REQUIRE(!mapSource.empty());
   REQUIRE(!experimentalSource.empty());
   REQUIRE(!internalSource.empty());
   REQUIRE(!semanticsSource.empty());
   REQUIRE(!statementLowererSource.empty());
+  REQUIRE(!tailDispatchSource.empty());
 
   CHECK(mapSource.find("import /std/collections/internal_map/*") != std::string::npos);
   CHECK(mapSource.find("/std/collections/experimental_map/") == std::string::npos);
   CHECK(mapSource.find("/std/collections/internal_map/insertImpl") != std::string::npos);
+  CHECK(mapSource.find("insert_builtin") == std::string::npos);
   CHECK(mapSource.find("Reference<Map<K, V>>") == std::string::npos);
   CHECK(mapSource.find("Reference<map<K, V>>") != std::string::npos);
 
@@ -80,9 +84,15 @@ TEST_CASE("canonical map surface owns implementation through internal map module
   CHECK(semanticsSource.find("path == \"mapSingle\"") != std::string::npos);
   CHECK(semanticsSource.find("constructorBackedBuiltinMapBindings.count(initializer.args.front().name)") !=
         std::string::npos);
+  CHECK(semanticsSource.find("kBuiltinCanonicalMapInsertBuiltinPath") == std::string::npos);
+  CHECK(semanticsSource.find("\"/std/collections/map/insert_builtin\"") == std::string::npos);
   CHECK(statementLowererSource.find("isPrimeMapInsertBody") != std::string::npos);
+  CHECK(statementLowererSource.find("rewriteMapInsertHelperStatementToCanonical") != std::string::npos);
+  CHECK(statementLowererSource.find("rewriteMapInsertHelperStatementToBuiltin") == std::string::npos);
   CHECK(statementLowererSource.find("callee->fullPath.rfind(\"/std/collections/internal_map/insertImpl__\", 0)") !=
         std::string::npos);
+  CHECK(statementLowererSource.find("rewrittenStmt.name = \"/std/collections/map/insert\"") != std::string::npos);
+  CHECK(tailDispatchSource.find("rewrittenExpr.name = \"/std/collections/map/insert\"") != std::string::npos);
 }
 
 TEST_SUITE_END();

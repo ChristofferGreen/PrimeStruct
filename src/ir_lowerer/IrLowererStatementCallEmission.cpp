@@ -711,7 +711,7 @@ static std::optional<LocalInfo::ValueKind> resolveStatementValueKindFromSemantic
   return std::nullopt;
 }
 
-static bool rewriteMapInsertHelperStatementToBuiltin(
+static bool rewriteMapInsertHelperStatementToCanonical(
     const Expr &stmt,
     const LocalMap &localsIn,
     const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinition,
@@ -1335,7 +1335,7 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
   }
 
   rewrittenStmt = stmt;
-  rewrittenStmt.name = "/std/collections/map/insert_builtin";
+  rewrittenStmt.name = "/std/collections/map/insert";
   rewrittenStmt.namespacePrefix.clear();
   rewrittenStmt.isMethodCall = false;
   rewrittenStmt.isFieldAccess = false;
@@ -1845,7 +1845,7 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
   };
   Expr directStmt = stmt;
   Expr rewrittenMapInsertStmt;
-  if (rewriteMapInsertHelperStatementToBuiltin(
+  if (rewriteMapInsertHelperStatementToCanonical(
           stmt,
           localsIn,
           resolveMethodCallDefinition,
