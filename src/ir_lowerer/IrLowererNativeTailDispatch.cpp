@@ -528,8 +528,20 @@ UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnosticImpl(
   std::string publishedVectorHelperName;
   const std::string directHelperPath =
       resolveNativeTailCallPathWithoutFallbackProbes(expr);
-  const bool isPublishedVectorMetadataCall =
-      semanticProgram != nullptr &&
+  const auto isRemovedCollectionMetadataAlias = [&](std::string_view helperName) {
+    if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
+      return false;
+    }
+    auto matchesCollectionRoot = [&](std::string_view collectionName) {
+      const std::string unrooted =
+          std::string(collectionName) + "/" + std::string(helperName);
+      return directHelperPath == unrooted || directHelperPath == "/" + unrooted;
+    };
+    return matchesCollectionRoot("vector") ||
+           matchesCollectionRoot("array") ||
+           matchesCollectionRoot("soa_vector");
+  };
+  const bool hasPublishedVectorMetadataPath =
       expr.kind == Expr::Kind::Call &&
       !expr.isMethodCall &&
       expr.args.size() == 1 &&
@@ -537,6 +549,8 @@ UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnosticImpl(
           semanticProgram, expr, publishedVectorHelperName) &&
       (isCanonicalPublishedNativeTailVectorHelperPath(directHelperPath) ||
        semanticDirectCallMatchesVectorHelperSurface(semanticProgram, expr));
+  const bool isPublishedVectorMetadataCall =
+      semanticProgram != nullptr && hasPublishedVectorMetadataPath;
   if (isPublishedVectorMetadataCall &&
       publishedVectorHelperName == "count") {
     if (isDiagnosticPublishedVectorMetadataTarget(expr.args.front())) {
@@ -553,6 +567,15 @@ UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnosticImpl(
     }
     error = "capacity requires vector target";
     return UnsupportedNativeCallResult::Error;
+  }
+  if (hasPublishedVectorMetadataPath &&
+      (publishedVectorHelperName == "count" ||
+       publishedVectorHelperName == "capacity")) {
+    return UnsupportedNativeCallResult::NotHandled;
+  }
+  if (isRemovedCollectionMetadataAlias("count") ||
+      isRemovedCollectionMetadataAlias("capacity")) {
+    return UnsupportedNativeCallResult::NotHandled;
   }
   if (isBareSimpleCountLikeCall("count") &&
       !isDiagnosticVectorTarget(expr.args.front())) {

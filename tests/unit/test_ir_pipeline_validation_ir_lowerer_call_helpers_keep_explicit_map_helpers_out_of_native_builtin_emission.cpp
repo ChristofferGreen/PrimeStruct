@@ -21,7 +21,7 @@ TEST_CASE("ir lowerer call helpers infer forwarded map access targets") {
 
   primec::Expr mapPair;
   mapPair.kind = primec::Expr::Kind::Call;
-  mapPair.name = "/std/collections/mapPair";
+  mapPair.name = "/std/collections/map/map";
   mapPair.templateArgs = {"string", "i32"};
 
   primec::Expr wrapCall;
@@ -514,7 +514,7 @@ TEST_CASE("ir lowerer call helpers lower explicit map access for args-pack recei
   expectDispatch(makeDereferencedIndexedReceiver(referenceValuesName), Result::Emitted, true);
 }
 
-TEST_CASE("ir lowerer call helpers emit explicit vector count and safe at while deferring bare count") {
+TEST_CASE("ir lowerer call helpers defer vector metadata and emit safe at while deferring bare count") {
   using Result = primec::ir_lowerer::NativeCallTailDispatchResult;
   using LocalInfo = primec::ir_lowerer::LocalInfo;
   using MapAccessTargetInfo = primec::ir_lowerer::MapAccessTargetInfo;
@@ -629,15 +629,15 @@ TEST_CASE("ir lowerer call helpers emit explicit vector count and safe at while 
                  false);
   expectDispatch("/std/collections/vector/count",
                  {valuesName},
-                 Result::Emitted,
+                 Result::NotHandled,
                  "stale",
-                 true);
+                 false);
   expectDispatch("/vector/capacity", {valuesName}, Result::NotHandled, "stale", false);
   expectDispatch("/std/collections/vector/capacity",
                  {valuesName},
-                 Result::Emitted,
+                 Result::NotHandled,
                  "stale",
-                 true);
+                 false);
   expectDispatch("/vector/at",
                  {valuesName, indexName},
                  Result::NotHandled,

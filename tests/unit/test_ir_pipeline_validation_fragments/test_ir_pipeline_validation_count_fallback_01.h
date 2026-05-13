@@ -367,10 +367,10 @@
               CHECK(resolvedCallee.fullPath == "/pkg/items/count");
               return true;
             },
-            error) == Result::Emitted);
+            error) == Result::NotHandled);
   CHECK(error.empty());
-  CHECK(aliasMapAtResolveCalls == 1);
-  CHECK(aliasMapAtEmitCalls == 1);
+  CHECK(aliasMapAtResolveCalls == 0);
+  CHECK(aliasMapAtEmitCalls == 0);
 
   primec::Expr reorderedAtCall = atCall;
   reorderedAtCall.args = {indexArg, targetArg};
