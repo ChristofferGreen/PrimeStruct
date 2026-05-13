@@ -604,7 +604,7 @@ main() {
   CHECK(readFile(outPath).empty());
 }
 
-TEST_CASE("runs vm canonical map access direct calls on wrapper slash return receiver while method sugar stays builtin") {
+TEST_CASE("runs vm canonical map access direct calls and method sugar through ordinary map helpers") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
@@ -634,7 +634,7 @@ main() {
        "primec_vm_canonical_map_access_helpers_wrapper_slash_return_receiver_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 91);
+  CHECK(runCommand(runCmd) == 16);
   CHECK(readFile(outPath).empty());
 }
 

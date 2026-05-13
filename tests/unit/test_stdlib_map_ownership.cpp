@@ -105,15 +105,17 @@ TEST_CASE("canonical map surface owns implementation through internal map module
   CHECK(statementLowererSource.find("callee->fullPath.rfind(\"/std/collections/internal_map/insertImpl__\", 0)") !=
         std::string::npos);
   CHECK(statementLowererSource.find("rewrittenStmt.name = \"/std/collections/map/insert\"") != std::string::npos);
-  CHECK(inlineNativeSource.find("return helperName == \"at\" || helperName == \"at_ref\"") != std::string::npos);
+  CHECK(inlineNativeSource.find("return helperName == \"insert\" || helperName == \"insert_ref\"") !=
+        std::string::npos);
+  CHECK(inlineNativeSource.find("return helperName == \"at\" || helperName == \"at_ref\"") ==
+        std::string::npos);
   CHECK(inlineNativeSource.find("return helperName == \"count\" || helperName == \"count_ref\"") ==
         std::string::npos);
   CHECK(inlineNativeSource.find("emitCanonicalInlineDefinitionCall(expr, *callee)") != std::string::npos);
   CHECK(nativeTailSource.find("hasSemanticMapReadHelperDefinition") != std::string::npos);
   CHECK(nativeTailSource.find("isMapReadHelperName(directMapReadHelperName)") != std::string::npos);
-  CHECK(lowerStatementsExprSource.find("helperName == \"at\" || helperName == \"at_unsafe\"") !=
-        std::string::npos);
-  CHECK(lowerStatementsExprSource.find("Keep direct canonical map access helpers") != std::string::npos);
+  CHECK(lowerStatementsExprSource.find("Keep direct canonical map access helpers") == std::string::npos);
+  CHECK(lowerStatementsExprSource.find("keepsBuiltinCanonicalMapHelperReturn") == std::string::npos);
   CHECK(tailDispatchSource.find("rewrittenExpr.name = \"/std/collections/map/insert\"") != std::string::npos);
 }
 

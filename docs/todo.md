@@ -72,11 +72,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4436: Lower map access helpers through ordinary `.prime`
+- TODO-4302: Move map surface metadata out of C++
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4302: Move map surface metadata out of C++
 - TODO-4303: Delete map compatibility seams
 - TODO-4304: Add zero C++ map-surface audit
 - TODO-4305: Rename and style canonical `.prime` SoA surface
@@ -92,8 +91,7 @@ Task template:
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
 - Vector stdlib ownership cutover: none active
-- Map stdlib ownership cutover: TODO-4436 -> TODO-4302
-  -> TODO-4303 -> TODO-4304
+- Map stdlib ownership cutover: TODO-4302 -> TODO-4303 -> TODO-4304
 - SoA public surface rename and ownership cutover: TODO-4305 -> TODO-4306
   -> TODO-4307 -> TODO-4308 -> TODO-4309 -> TODO-4310
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
@@ -110,7 +108,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4436: Lower map access helpers through ordinary `.prime`
 - TODO-4302: Move map surface metadata out of C++
 - TODO-4303: Delete map compatibility seams
 - TODO-4304: Add zero C++ map-surface audit
@@ -170,7 +167,7 @@ Task template:
 | Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4305 |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4436, TODO-4302, TODO-4303, TODO-4304 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4302, TODO-4303, TODO-4304 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Validator entrypoint and benchmark-plumbing split | none |
@@ -178,7 +175,7 @@ Task template:
 | Semantic-product public API factoring and versioning | none |
 | IR lowerer compile-unit breakup | none |
 | Backend validation/build ergonomics | none |
-| Emitter/semantics map-helper parity | TODO-4436, TODO-4302, TODO-4303, TODO-4304 |
+| Emitter/semantics map-helper parity | TODO-4302, TODO-4303, TODO-4304 |
 | VM debug-session argv ownership | none |
 | Debugger/source-map provenance parity | none |
 | Debug trace replay robustness | none |
@@ -200,12 +197,12 @@ Task template:
 | Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
-| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4436, TODO-4302, TODO-4303, TODO-4304 |
+| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4302, TODO-4303, TODO-4304 |
 | De-experimentalization surface and namespace parity | TODO-4430, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
 | `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
-| Emitter map-helper canonicalization parity | TODO-4436, TODO-4302, TODO-4303, TODO-4304 |
+| Emitter map-helper canonicalization parity | TODO-4302, TODO-4303, TODO-4304 |
 | VM debug-session argv lifetime coverage | none |
 | Debugger/source-map provenance parity | none |
 | Debug trace replay malformed-input coverage | none |
@@ -237,10 +234,10 @@ Task template:
   registry no longer advertises vector compatibility spellings through that
   manifest. Direct experimental vector source imports are now rejected, and
   the vector production C++ zero-trace audit is now mechanically enforced.
-  TODO-4436 and TODO-4302 through TODO-4304 continue the same
-  ownership model for map after the internal-map lookup/insertion substrate
-  moved into `.prime` helper code and canonical insert wrappers stopped
-  routing through `insert_builtin`.
+  TODO-4302 through TODO-4304 continue the same ownership model for map after
+  the internal-map lookup/insertion substrate moved into `.prime` helper code
+  and canonical read, access, and insert wrappers stopped routing through
+  builtin/native map fast paths.
 - Compatibility adapter inventory: map insert helper compatibility is migrated
   through `StdlibSurfaceRegistry::CollectionsMapHelpers` for canonical
   `/std/collections/map/insert(_ref)`, compatibility `/map/insert(_ref)`,
@@ -1638,44 +1635,10 @@ Task template:
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
 
-- [ ] TODO-4436: Lower map access helpers through ordinary `.prime`
-  - owner: ai
-  - created_at: 2026-05-13
-  - phase: Map stdlib ownership cutover
-  - scope: Route canonical `at`, `at_ref`, `at_unsafe`, and `at_unsafe_ref`
-    helper behavior through imported `.prime` helper bodies instead of
-    map-specific semantic/lowering checked-access fast paths.
-  - implementation_notes:
-    - Build on the direct internal-map lookup substrate from TODO-4300,
-      TODO-4434, and the completed TODO-4435 read-helper cutover.
-    - Start from map access handling in
-      `src/semantics/SemanticsValidatorExprCollectionAccess.cpp`,
-      `src/semantics/SemanticsValidatorExprLateMapAccessBuiltins.cpp`,
-      `src/ir_lowerer/IrLowererNativeTailDispatch.cpp`,
-      `src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp`, and
-      `src/ir_lowerer/IrLowererAccessLoadHelpers.cpp`.
-    - Keep bracket/indexing behavior and explicit compatibility diagnostics
-      stable until TODO-4303 deletes the remaining compatibility seams.
-  - acceptance:
-    - Canonical `/std/collections/map/at`, `at_ref`, `at_unsafe`, and
-      `at_unsafe_ref` run through ordinary `.prime` helper lowering on
-      VM/native for supported key/value kinds.
-    - Production C++ no longer emits checked or unsafe canonical map access
-      semantics by matching map helper paths or builtin map names.
-    - Bracket access, direct helper calls, method sugar, and reference helpers
-      keep their current user-visible diagnostics.
-    - Remaining map strings in production C++ are declarative surface metadata
-      or compatibility diagnostics listed for TODO-4302/TODO-4303.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once canonical checked/unsafe access helpers no longer
-    depend on map-specific semantic/lowering emission; leave metadata and
-    compatibility deletion to TODO-4302 and TODO-4303.
-
 - [ ] TODO-4302: Move map surface metadata out of C++
   - owner: ai
   - created_at: 2026-04-28
   - phase: Map stdlib ownership cutover
-  - depends_on: TODO-4436
   - scope: Remove map-specific public-surface knowledge from handwritten C++
     and generated production C++ by moving canonical map
     helper/import/constructor metadata into a stdlib-owned manifest or

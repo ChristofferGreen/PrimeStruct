@@ -268,9 +268,7 @@ bool matchesInlineMapHelperFamily(std::string_view requestedHelperName,
 }
 
 bool isInlineMapBuiltinHelperName(std::string_view helperName) {
-  return helperName == "at" || helperName == "at_ref" ||
-         helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
-         helperName == "insert" || helperName == "insert_ref";
+  return helperName == "insert" || helperName == "insert_ref";
 }
 
 bool keepsBuiltinInlineReturnForPublishedMapHelper(std::string_view helperName,
@@ -1526,67 +1524,6 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
                    : InlineCallDispatchResult::Error;
       }
     }
-    auto isStringReturningSourceMapAccess = [&]() {
-      if (semanticProgram == nullptr) {
-        return false;
-      }
-      const SemanticProgramQueryFact *queryFact = nullptr;
-      if (semanticIndexPtr != nullptr) {
-        queryFact =
-            findSemanticProductQueryFact(semanticProgram, *semanticIndexPtr,
-                                         expr);
-      }
-      if (queryFact == nullptr) {
-        std::vector<std::pair<int, int>> sourcePositions;
-        if (expr.sourceLine != 0 && expr.sourceColumn != 0) {
-          sourcePositions.emplace_back(expr.sourceLine, expr.sourceColumn);
-        }
-        if (!expr.args.empty() && expr.args.front().sourceLine != 0 &&
-            expr.args.front().sourceColumn != 0) {
-          sourcePositions.emplace_back(expr.args.front().sourceLine,
-                                       expr.args.front().sourceColumn);
-        }
-        for (const auto &candidate : semanticProgram->queryFacts) {
-          const bool sameSourcePosition =
-              std::any_of(sourcePositions.begin(), sourcePositions.end(),
-                          [&](const auto &sourcePosition) {
-                            return candidate.sourceLine == sourcePosition.first &&
-                                   candidate.sourceColumn == sourcePosition.second;
-                          });
-          if (!sameSourcePosition) {
-            continue;
-          }
-          const std::string_view callName =
-              candidate.callNameId != InvalidSymbolId
-                  ? semanticProgramResolveCallTargetString(
-                        *semanticProgram, candidate.callNameId)
-                  : std::string_view(candidate.callName);
-          if (callName == expr.name ||
-              (!expr.sourceName.empty() && callName == expr.sourceName)) {
-            queryFact = &candidate;
-            break;
-          }
-        }
-      }
-      if (queryFact == nullptr ||
-          queryFact->resolvedPathId == InvalidSymbolId) {
-        return false;
-      }
-      const std::string resolvedPath =
-          std::string(semanticProgramResolveCallTargetString(
-              *semanticProgram, queryFact->resolvedPathId));
-      if (resolvedPath != "/at" && resolvedPath != "/at_unsafe") {
-        return false;
-      }
-      const std::string queryType =
-          trimTemplateTypeText(resolveInlineSemanticTypeText(
-              queryFact->queryTypeTextId, queryFact->queryTypeText));
-      const std::string bindingType =
-          trimTemplateTypeText(resolveInlineSemanticTypeText(
-              queryFact->bindingTypeTextId, queryFact->bindingTypeText));
-      return queryType == "string" || queryType == "/string" ||
-             bindingType == "string" || bindingType == "/string";
-    };
     const bool isCanonicalStdMapHelperCall =
         rawPath.rfind("/std/collections/map/", 0) == 0 ||
         rawPath.rfind("std/collections/map/", 0) == 0;
@@ -1605,7 +1542,8 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       directHelperName = canonicalInlineMapHelperName(std::move(directHelperName));
       if (targetInfo.isMapTarget &&
           (directHelperName == "count" || directHelperName == "contains" ||
-           directHelperName == "tryAt")) {
+           directHelperName == "tryAt" || directHelperName == "at" ||
+           directHelperName == "at_unsafe")) {
         if (const Definition *callee = resolveDefinitionCallFn(expr);
             callee != nullptr) {
           return emitCanonicalInlineDefinitionCall(expr, *callee)
@@ -1613,35 +1551,6 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
                      : InlineCallDispatchResult::Error;
         }
         return InlineCallDispatchResult::NotHandled;
-      }
-      if (targetInfo.isMapTarget &&
-          (directHelperName == "at" || directHelperName == "at_unsafe")) {
-        bool preserveBuiltinMapHelper = true;
-        if (const Definition *callee = resolveDefinitionCallFn(expr);
-            callee != nullptr) {
-          preserveBuiltinMapHelper =
-              keepsBuiltinInlineReturnForPublishedMapHelper(directHelperName,
-                                                            *callee);
-        }
-        if (preserveBuiltinMapHelper) {
-          return InlineCallDispatchResult::NotHandled;
-        }
-        if ((expr.sourceIsMethodCall || isStringReturningSourceMapAccess()) &&
-            (directHelperName == "at" || directHelperName == "at_unsafe")) {
-          Expr canonicalMapHelperExpr = expr;
-          canonicalMapHelperExpr.isMethodCall = false;
-          canonicalMapHelperExpr.isFieldAccess = false;
-          canonicalMapHelperExpr.namespacePrefix.clear();
-          canonicalMapHelperExpr.name =
-              "/std/collections/map/" + directHelperName;
-          if (const Definition *callee =
-                  resolveDefinitionCallFn(canonicalMapHelperExpr);
-              callee != nullptr) {
-            return emitCanonicalInlineDefinitionCall(canonicalMapHelperExpr, *callee)
-                       ? InlineCallDispatchResult::Emitted
-                       : InlineCallDispatchResult::Error;
-          }
-        }
       }
       if (!targetInfo.isMapTarget && expr.args.size() >= 2 &&
           (directHelperName == "contains" || directHelperName == "tryAt" ||

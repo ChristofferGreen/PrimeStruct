@@ -16778,3 +16778,41 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     redeclarations that duplicated the imported internal compatibility
     namespace, expanded stdlib map ownership locks, and updated the language
     design note. Broad release validation was skipped under the lite workflow.
+
+- [x] TODO-4436: Lower map access helpers through ordinary `.prime`
+  - owner: ai
+  - created_at: 2026-05-13
+  - finished_at: 2026-05-13
+  - phase: Map stdlib ownership cutover
+  - scope: Route canonical `at`, `at_ref`, `at_unsafe`, and `at_unsafe_ref`
+    helper behavior through imported `.prime` helper bodies instead of
+    map-specific semantic/lowering checked-access fast paths.
+  - implementation_notes:
+    - Direct canonical `at` and `at_unsafe` helper calls now inline their
+      canonical `.prime` definitions instead of preserving builtin/native
+      access dispatch.
+    - Inline map builtin helper classification no longer includes `at`,
+      `at_ref`, `at_unsafe`, or `at_unsafe_ref`.
+    - Late statement-expression direct canonical map helper lowering no
+      longer keeps primitive access helpers on the builtin/native path.
+    - Canonical direct calls, reference helpers, and method sugar now share the
+      ordinary map helper surface on supported VM/native paths.
+  - acceptance:
+    - Canonical `/std/collections/map/at`, `at_ref`, `at_unsafe`, and
+      `at_unsafe_ref` run through ordinary `.prime` helper lowering on
+      VM/native for supported key/value kinds.
+    - Production C++ no longer emits checked or unsafe canonical map access
+      semantics by matching map helper paths or builtin map names.
+    - Bracket access, direct helper calls, method sugar, and reference helpers
+      keep their current user-visible diagnostics.
+    - Remaining map strings in production C++ are declarative surface metadata
+      or compatibility diagnostics listed for TODO-4302/TODO-4303.
+  - stop_rule: Stop once canonical checked/unsafe access helpers no longer
+    depend on map-specific semantic/lowering emission; leave metadata and
+    compatibility deletion to TODO-4302 and TODO-4303.
+  - evidence: Removed canonical access helpers from inline builtin map-helper
+    classification, deleted late builtin/native access preservation for direct
+    canonical map helpers, refreshed focused native/VM compile-run expectations
+    for ordinary helper routing, expanded stdlib ownership locks, and validated
+    VM/native access smokes with and without experimental compatibility import.
+    Broad release validation was skipped under the lite workflow.

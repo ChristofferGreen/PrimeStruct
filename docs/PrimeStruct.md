@@ -5328,13 +5328,11 @@ read-only path.
     canonical `/std/collections/map/*` behavior and now require explicit `/map/count`, `/map/contains`, `/map/tryAt`,
     `/map/at`, or `/map/at_unsafe` definitions. Legacy compatibility or conformance imports of `/std/collections/experimental_map/*` now extend canonical
     namespaced helper calls in three distinct ways: value `Map<K, V>` receivers can use call-form
-    `/std/collections/map/count|contains|tryAt`, which now lowers through the ordinary canonical
-    `.prime` wrapper definitions over the internal map/vector substrate, while
-    `/std/collections/map/at|at_unsafe` remains on the checked/unsafe access
-    compatibility path until the dedicated access-helper cutover. Canonical
-    `insert` and `insert_ref` wrappers on canonical map bindings now also stay
-    on the internal `.prime` insert substrate instead of the stale flat-map
-    builtin rewrite.
+    `/std/collections/map/count|contains|tryAt|at|at_unsafe`, which now lowers
+    through the ordinary canonical `.prime` wrapper definitions over the
+    internal map/vector substrate. Canonical `insert` and `insert_ref`
+    wrappers on canonical map bindings now also stay on the internal `.prime`
+    insert substrate instead of the stale flat-map builtin rewrite.
     Wrapper-layer `/std/collections/mapCount|mapContains|mapTryAt|mapAt|mapAtUnsafe`
     calls on those same value receivers now rewrite onto the corresponding compatibility helpers as well, and
     direct canonical or wrapper-layer helper receivers built from canonical `/std/collections/map/map(...)` or
