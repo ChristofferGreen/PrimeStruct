@@ -1472,8 +1472,8 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       if (resolveVectorHelperAliasName(expr, vectorHelperName) &&
           (vectorHelperName == "at" || vectorHelperName == "at_unsafe")) {
         const bool isExplicitCanonicalVectorHelper =
-            rawPath.rfind("/std/collections/vector/", 0) == 0 ||
-            rawPath.rfind("std/collections/vector/", 0) == 0;
+            rawPath.rfind(collectionMemberRoot("vector"), 0) == 0 ||
+            rawPath.rfind(collectionMemberRoot("vector", false), 0) == 0;
         if (isExplicitCanonicalVectorHelper) {
           if (const Definition *callee = resolveDefinitionCallFn(expr);
               callee != nullptr &&
