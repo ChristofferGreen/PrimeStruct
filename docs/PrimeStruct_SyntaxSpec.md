@@ -1238,9 +1238,10 @@ Draft constraints:
     surfaces do not create a new ownership domain.
   - ECS-style updates should use a two-phase loop: stable-size read/update pass, then deferred structural writes.
 
-Current implementation status: parser/text-transform support accepts surface `soa_vector<T>{...}`/`soa_vector<T>[...]`,
-and semantic validation now accepts `soa_vector` usage when constraints hold
-(`soa_vector` struct element requirement, `soa_vector` literal/return template-arity checks, and deterministic
+Current implementation status: parser/text-transform support accepts surface `soa<T>`/`soa_vector<T>` type spellings,
+including `soa_vector<T>{...}`/`soa_vector<T>[...]` compatibility syntax, and semantic validation now accepts
+`soa`/`soa_vector` usage when constraints hold
+(`soa`/`soa_vector` struct element requirement, literal/return template-arity checks, and deterministic
 `soa_vector field envelope is unsupported on /Type/field/...: ...` diagnostics for disallowed direct/nested
 element-field envelopes in literal, binding, and return validation paths). Builtin `count`/`get`/`ref` validation and
 current lowering behavior are temporary scaffolding while the language grows the generic SoA substrate needed for a
@@ -1248,9 +1249,9 @@ real stdlib-owned implementation. Method-form/call-form field-view names now rou
 `/soa_vector/field_view/<field>` helper path onto `soaVectorFieldView<Struct, Field>` (or a same-path user helper
 when visible), returning `SoaFieldView` values that can be bound with a tracked borrow root; direct builtin
 field-view call-argument/return escapes remain deterministic `field-view escapes ...` diagnostics while current IR lowering routes
-`count(...)` on `soa_vector` through the native count path for current SoA bindings
-while empty `soa_vector<T>{}` literals lower to header-only storage. The stdlib wrapper/helper surface now also covers
-direct canonical `/std/collections/soa_vector/*` helper calls plus imported wrapper `to_aos` helper/method routing
+`count(...)` on SoA bindings through the native count path for current SoA bindings
+while empty `soa<T>`/`soa_vector<T>` literals lower to header-only storage. The stdlib wrapper/helper surface now also covers
+direct canonical `/std/collections/soa/*` helper calls plus imported wrapper `to_aos` helper/method routing
 across C++/native/VM; canonical conversion helpers use `SoaVector<T>` and
 `Reference<SoaVector<T>>` receiver spellings while routing through canonical
 `/std/collections/soa_vector/*` helper paths. Valid root bare/method/old-explicit

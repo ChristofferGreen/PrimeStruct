@@ -280,6 +280,43 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("soa public spelling validates bindings returns references and pointers") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<soa<Particle>>]
+cloneValues() {
+  [soa<Particle>] values{soa<Particle>()}
+  return(values)
+}
+
+[return<Reference<soa<Particle>>>]
+borrowValues([Reference<soa<Particle>>] values) {
+  return(values)
+}
+
+[return<Pointer<soa<Particle>>>]
+pointValues([Pointer<soa<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [soa<Particle> mut] values{soa<Particle>()}
+  [soa<Particle>] empty{}
+  [soa<Particle>] cloned{cloneValues()}
+  [Reference<soa<Particle>>] borrowed{borrowValues(location(values))}
+  [Pointer<soa<Particle>>] ptr{pointValues(location(values))}
+  return(plus(count(values), plus(count(empty), count(cloned))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("soa_vector binding requires struct element type") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -291,6 +328,19 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("soa_vector requires struct element type") != std::string::npos);
+}
+
+TEST_CASE("soa public spelling requires struct element type") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [soa<i32>] values{soa<i32>()}
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("soa requires struct element type") != std::string::npos);
 }
 
 TEST_CASE("soa_vector binding rejects disallowed element field envelope") {

@@ -11,7 +11,7 @@ bool isNonTypeTransformName(const std::string &name) {
 }
 
 bool isBuiltinTemplateContainer(const std::string &name) {
-  return name == "array" || name == "vector" || name == "soa_vector" || name == "map" || name == "Result" ||
+  return name == "array" || name == "vector" || name == "soa" || name == "soa_vector" || name == "map" || name == "Result" ||
          name == "File" || isBuiltinTemplateTypeName(name);
 }
 
@@ -24,7 +24,9 @@ std::string normalizeBuiltinCollectionTemplateBase(const std::string &name) {
           trimLeadingSlash(canonicalVectorCompatibilityPrefixOrFallback())) {
     return "vector";
   }
-  if (name == "soa_vector" || name == "/soa_vector") {
+  if (name == "soa" || name == "/soa" ||
+      name == "std/collections/soa" || name == "/std/collections/soa" ||
+      name == "soa_vector" || name == "/soa_vector") {
     return "soa_vector";
   }
   if (name == "map" || name == "/map" || name == "std/collections/map" || name == "/std/collections/map") {

@@ -3747,16 +3747,17 @@ language/runtime-owned, which remain hybrid, and which should move fully into st
   Migration stance: move public constructors, helper APIs, and error-domain behavior into stdlib
   `.prime` wherever practical, then delete the old compatibility paths once the bridge is empty.
 - `stdlib-owned`
-  Public types/surfaces: `Maybe<T>`, `vector<T>`, `map<K, V>`, `soa_vector<T>`.
+  Public types/surfaces: `Maybe<T>`, `vector<T>`, `map<K, V>`, `soa<T>`.
   Ownership rule: public API should live in stdlib `.prime` on top of minimal generic substrate.
   Migration stance: prefer slices that replace type-named compiler special cases with generic
   allocation/layout/drop substrate, then delete the old compatibility paths.
 
 - `vector<T>` and `map<K, V>` therefore still appear in the portable type set today, but that
   should not be read as a permanent compiler-owned collection contract.
-- `soa_vector<T>` is a promoted stdlib-owned public collection surface; direct
-  experimental SoA imports remain targeted compatibility shims, not ordinary
-  public API.
+- `soa<T>` is the promoted stdlib-owned public collection spelling over the
+  current SoA backing identity; `soa_vector<T>` remains accepted compatibility.
+  Direct experimental SoA imports remain targeted compatibility shims, not
+  ordinary public API.
 
 ### Stdlib Surface-Style Boundary
 This boundary is the scope reference for the stdlib surface-style cleanup lane in
@@ -3925,22 +3926,23 @@ substrate helpers should be treated as explicit implementation namespaces
 rather than as candidate public APIs.
 
 ### SoA Public Collection Contract
-This section is the scope reference for the promoted `soa_vector<T>` public
+This section is the scope reference for the promoted `soa<T>` public
 surface. It remains separate from vector/map implementation details because SoA
 uses a distinct structure-of-arrays substrate and field-view invalidation model.
 
-- **Current status:** `soa_vector<T>` is a promoted stdlib-owned public
-  collection surface. Ordinary public code should use the canonical SoA
-  namespaces below instead of direct experimental imports; retained
-  experimental namespaces are compatibility shims for targeted tests and
-  migration coverage.
-- **Current user-facing surface:** `/std/collections/soa_vector/*` and
-  `/std/collections/soa_vector_conversions/*` are the canonical public
-  spellings. The canonical wrapper owns ordinary constructor, count/get/ref,
-  reserve/push, field-view, and AoS conversion helper names. The canonical
-  conversion helpers use `SoaVector<T>` and `Reference<SoaVector<T>>` receiver
-  spellings while routing through canonical `/std/collections/soa_vector/*`
-  helper paths. One source-locked wildcard canonical parity program runs
+- **Current status:** `soa<T>` is the promoted stdlib-owned public collection
+  type spelling and normalizes onto the existing SoA backing identity.
+  `soa_vector<T>` remains accepted compatibility until the compatibility seams
+  are deleted. Ordinary public code should use the canonical SoA namespaces
+  below instead of direct experimental imports; retained experimental
+  namespaces are compatibility shims for targeted tests and migration coverage.
+- **Current user-facing surface:** `/std/collections/soa/*` is the canonical
+  public helper spelling. The canonical wrapper owns ordinary constructor,
+  count/get/ref, reserve/push, field-view, and AoS conversion helper names.
+  `soa_vector<T>`, `/std/collections/soa_vector/*`, and
+  `/std/collections/soa_vector_conversions/*` remain accepted compatibility
+  spellings while routing through the same backing. One source-locked wildcard
+  canonical parity program runs
   across C++ emitter, VM, and native for construction/read/ref/mutator,
   field-view, and conversion behavior without direct experimental SoA imports
   in the test source.

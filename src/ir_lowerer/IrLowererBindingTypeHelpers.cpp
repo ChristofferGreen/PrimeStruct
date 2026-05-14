@@ -931,7 +931,12 @@ std::string normalizeCollectionBindingTypeName(const std::string &name) {
       name.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
     return "map";
   }
-  if (name == "/soa_vector" || name == "std/collections/soa_vector" ||
+  if (name == "soa" || name == "/soa" ||
+      name.rfind("soa<", 0) == 0 || name.rfind("/soa<", 0) == 0 ||
+      name == "std/collections/soa" || name == "/std/collections/soa" ||
+      name.rfind("std/collections/soa<", 0) == 0 ||
+      name.rfind("/std/collections/soa<", 0) == 0 ||
+      name == "/soa_vector" || name == "std/collections/soa_vector" ||
       name == "/std/collections/soa_vector" || name == "SoaVector" ||
       name == "/SoaVector" ||
       name == "std/collections/experimental_soa_vector/SoaVector" ||

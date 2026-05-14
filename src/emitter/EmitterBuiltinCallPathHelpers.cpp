@@ -859,8 +859,8 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
     return false;
   }
   if (rawName == "array" || rawName == "vector" || rawName == "map" ||
-      rawName == "soa_vector") {
-    out = rawName;
+      rawName == "soa_vector" || rawName == "soa") {
+    out = rawName == "soa" ? "soa_vector" : rawName;
     return true;
   }
   return false;

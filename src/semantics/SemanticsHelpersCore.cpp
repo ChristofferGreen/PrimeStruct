@@ -313,16 +313,21 @@ bool parseBindingInfo(const Expr &expr,
         error = "map requires exactly two template arguments";
         return false;
       }
-      if (transform.name == "soa_vector") {
+      if (normalizedTypeName == "soa_vector") {
+        const bool isPublicSoaSpelling =
+            transform.name == "soa" || transform.name == "/soa" ||
+            transform.name == "std/collections/soa" ||
+            transform.name == "/std/collections/soa";
+        const std::string displayType = isPublicSoaSpelling ? "soa" : "soa_vector";
         if (transform.templateArgs.size() != 1) {
-          error = "soa_vector requires exactly one template argument";
+          error = displayType + " requires exactly one template argument";
           return false;
         }
         if (!isSoaVectorStructElementType(transform.templateArgs.front(), namespacePrefix, structTypes, importAliases)) {
-          error = "soa_vector requires struct element type";
+          error = displayType + " requires struct element type";
           return false;
         }
-        typeName = transform.name;
+        typeName = normalizedTypeName;
         typeHasTemplate = true;
         info.typeTemplateArg = joinTemplateArgs(transform.templateArgs);
         continue;

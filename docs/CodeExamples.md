@@ -62,11 +62,11 @@ These files may stay helper-heavy or bridge-oriented while they define
 substrate, compatibility, migration, or benchmark behavior. Do not use them as
 the style reference for new public-facing examples.
 
-SoA public example rule: `soa_vector<T>` is a promoted stdlib-owned collection
-surface for user-facing examples. Ordinary public examples should use
-`/std/collections/soa_vector/*` and
-`/std/collections/soa_vector_conversions/*` for construction, read/ref,
-mutator, field-view, and AoS/SoA conversion flows.
+SoA public example rule: `soa<T>` is the promoted stdlib-owned collection
+type spelling for new user-facing examples. Ordinary public examples should
+use `/std/collections/soa/*` for construction, read/ref, mutator, field-view,
+and AoS/SoA conversion flows. Existing `soa_vector<T>` examples remain
+compatibility-scoped until the TODO-4509 docs/example migration completes.
 
 Retained SoA compatibility exception: direct imports of
 `/std/collections/experimental_soa_vector/*` and

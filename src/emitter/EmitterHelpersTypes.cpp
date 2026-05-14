@@ -104,6 +104,22 @@ std::string normalizeBindingTypeName(const std::string &name) {
   if (name == "float") {
     return "f32";
   }
+  if (name == "soa" || name == "/soa" || name == "std/collections/soa" ||
+      name == "/std/collections/soa") {
+    return "soa_vector";
+  }
+  if (name.rfind("soa<", 0) == 0) {
+    return "soa_vector" + name.substr(std::string("soa").size());
+  }
+  if (name.rfind("/soa<", 0) == 0) {
+    return "soa_vector" + name.substr(std::string("/soa").size());
+  }
+  if (name.rfind("std/collections/soa<", 0) == 0) {
+    return "soa_vector" + name.substr(std::string("std/collections/soa").size());
+  }
+  if (name.rfind("/std/collections/soa<", 0) == 0) {
+    return "soa_vector" + name.substr(std::string("/std/collections/soa").size());
+  }
   if (name == "/map" || name == "std/collections/map" || name == "/std/collections/map") {
     return "map";
   }

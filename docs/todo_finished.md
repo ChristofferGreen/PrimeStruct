@@ -19083,3 +19083,27 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     current `SoaVector<T>` backing, covered wildcard-imported native helper
     use and source-lock expectations, kept `soa_vector` compatibility, and
     promoted TODO-4508 as the next Ready Now leaf.
+
+- [x] TODO-4508: Add `soa<T>` public type spelling
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: SoA public surface rename and ownership cutover
+  - depends_on: TODO-4507
+  - split_from: TODO-4305
+  - scope: Teach parser/semantics/lowering type normalization to accept
+    `soa<T>` as the public spelling for the existing SoA backing identity while
+    preserving `soa_vector<T>` as compatibility.
+  - acceptance:
+    - `soa<T>` bindings, returns, references, pointers, empty literals, and
+      helper calls behave like the existing `soa_vector<T>` surface.
+    - Diagnostics prefer `soa<T>` for new canonical examples while old
+      `soa_vector<T>` tests remain explicitly compatibility-scoped.
+  - stop_rule: Stop once `soa<T>` is a working type spelling and
+    compatibility `soa_vector<T>` tests still pass.
+  - evidence: Normalized `soa<T>` and related public path spellings onto the
+    existing SoA backing identity across semantics, emitter, and IR-lowering
+    type helpers; added focused semantic and native coverage for bindings,
+    returns, references, pointers, empty literals, helper calls, and new
+    `soa` diagnostics; kept existing `soa_vector<T>` compatibility coverage;
+    and promoted TODO-4509 as the next Ready Now leaf.

@@ -486,6 +486,53 @@ main() {
   CHECK(runCommand(exePath) == 17);
 }
 
+TEST_CASE("native public soa type spelling runs through canonical helpers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/soa/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[effects(heap_alloc), return<soa<Particle>>]
+makeValues() {
+  [soa<Particle> mut] values{soa<Particle>()}
+  push(values, Particle(5i32, 7i32))
+  return(values)
+}
+
+[return<int>]
+score([Reference<soa<Particle>>] values) {
+  return(count_ref(values))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [soa<Particle> mut] values{soa<Particle>()}
+  reserve(values, 2i32)
+  push(values, Particle(9i32, 11i32))
+  [Reference<soa<Particle>>] borrowed{location(values)}
+  [Pointer<soa<Particle>>] ptr{location(values)}
+  [soa<Particle>] extra{makeValues()}
+  [Particle] first{get(values, 0i32)}
+  [vector<Particle>] unpacked{to_aos(extra)}
+  return(plus(plus(score(borrowed), count(dereference(ptr))),
+              plus(first.x, count(unpacked))))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_public_soa_type_spelling.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_public_soa_type_spelling").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 12);
+}
+
 TEST_CASE("native compiles and runs graph-solved direct local-auto vector helper shadows") {
   const std::string source = R"(
 /vector/count([vector<i32>] values) {
