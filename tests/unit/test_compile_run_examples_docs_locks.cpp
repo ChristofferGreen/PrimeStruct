@@ -3177,15 +3177,31 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
         std::string::npos);
   CHECK(internalSoaConversions.find("import /std/collections/internal_soa_vector/*") !=
         std::string::npos);
+  CHECK(internalSoaConversions.find("import /std/collections/soa/*") !=
+        std::string::npos);
+  CHECK(internalSoaConversions.find("import /std/collections/soa_vector/*") ==
+        std::string::npos);
   CHECK(internalSoaConversions.find("import /std/collections/experimental_soa_vector/*") ==
         std::string::npos);
   CHECK(internalSoaConversions.find("soaVectorToAos<T>([SoaVector<T>] values)") !=
         std::string::npos);
   CHECK(internalSoaConversions.find("soaVectorToAosRef<T>([Reference<SoaVector<T>>] values)") !=
         std::string::npos);
-  CHECK(internalSoaConversions.find("valueCount{/std/collections/soa_vector/count<T>(values)}") !=
+  CHECK(internalSoaConversions.find("valueCount{/std/collections/soa/count<T>(values)}") !=
         std::string::npos);
-  CHECK(internalSoaConversions.find("valueCount{/std/collections/soa_vector/count_ref<T>(values)}") !=
+  CHECK(internalSoaConversions.find("/std/collections/soa/get<T>(values, index)") !=
+        std::string::npos);
+  CHECK(internalSoaConversions.find("valueCount{/std/collections/soa/count_ref<T>(values)}") !=
+        std::string::npos);
+  CHECK(internalSoaConversions.find("/std/collections/soa/get_ref<T>(values, index)") !=
+        std::string::npos);
+  CHECK(internalSoaConversions.find("/std/collections/soa_vector/count<T>(values)") ==
+        std::string::npos);
+  CHECK(internalSoaConversions.find("/std/collections/soa_vector/get<T>(values, index)") ==
+        std::string::npos);
+  CHECK(internalSoaConversions.find("/std/collections/soa_vector/count_ref<T>(values)") ==
+        std::string::npos);
+  CHECK(internalSoaConversions.find("/std/collections/soa_vector/get_ref<T>(values, index)") ==
         std::string::npos);
   CHECK(internalSoaConversions.find("[vector<T> mut] out{vector<T>()}") != std::string::npos);
   CHECK(internalSoaConversions.find("[mut] index{0i32}") != std::string::npos);

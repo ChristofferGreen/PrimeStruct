@@ -19195,3 +19195,33 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     `SoaFieldView__*` borrow types, preserved recorded `referenceRoot`
     liveness across auto/specialized bindings, and promoted TODO-4307 as the
     next Ready Now leaf.
+
+- [x] TODO-4512: Route SoA conversions through public helpers
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: SoA public surface rename and ownership cutover
+  - depends_on: TODO-4511
+  - split_from: TODO-4307
+  - scope: Route the internal AoS conversion adapter used by canonical
+    `/std/collections/soa/to_aos` through `/std/collections/soa/count|get`
+    and borrowed `count_ref|get_ref` wrapper helpers instead of the
+    compatibility `/std/collections/soa_vector/*` public surface.
+  - acceptance:
+    - `stdlib/std/collections/internal_soa_vector_conversions.prime` imports
+      `/std/collections/soa/*` and no longer imports
+      `/std/collections/soa_vector/*`.
+    - `soaVectorToAos` calls `/std/collections/soa/count` and
+      `/std/collections/soa/get` for its read loop.
+    - `soaVectorToAosRef` calls `/std/collections/soa/count_ref` and
+      `/std/collections/soa/get_ref` for its borrowed read loop.
+    - Source-lock coverage rejects reintroducing the compatibility
+      `soa_vector` public paths inside the internal conversion adapter.
+  - stop_rule: Stop once the conversion adapter itself no longer depends on
+    compatibility public SoA helper paths; leave C++ conversion classifiers and
+    read/ref/mutator lowering extraction to follow-up leaves.
+  - evidence: Switched internal SoA conversion bodies and source locks to
+    canonical `/std/collections/soa/*` read helpers, split the remaining
+    TODO-4307 work into TODO-4513/TODO-4514/TODO-4515, ran
+    `git diff --check`, and skipped broad baseline validation per the lite
+    workflow.
