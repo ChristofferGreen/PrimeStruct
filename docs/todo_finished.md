@@ -18501,3 +18501,33 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     lock, removed the file from the map-surface inventory allowance, and
     verified focused source-lock, bare-map semantic, and map-surface inventory
     checks.
+
+- [x] TODO-4491: Route implicit template map helper check through metadata
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4490
+  - split_from: TODO-4464
+  - scope: Remove the hard-coded canonical map helper path prefix from
+    implicit template stdlib-collection-helper classification by routing the
+    helper path check through stdlib surface metadata.
+  - implementation_notes:
+    - Targeted `src/semantics/TemplateMonomorphImplicitTemplateInference.h`,
+      where stdlib collection-helper classification still checked
+      `def.fullPath.rfind("/std/collections/map/", 0)`.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` so the implicit
+      template inference file has no map-surface trace allowance.
+  - acceptance:
+    - Implicit template inference continues to classify canonical map helpers
+      as stdlib collection helpers.
+    - The implicit template inference file no longer contains a production C++
+      canonical map path literal or prefix check.
+    - Source-lock coverage prevents reintroducing the literal helper prefix.
+  - stop_rule: Stop once implicit template map helper classification is
+    metadata-backed, focused coverage passes, and the map-surface trace
+    inventory no longer allows traces for the target file.
+  - evidence: Replaced the hard-coded canonical map helper prefix check with a
+    `collections.map_helpers` stdlib surface lookup, updated the source lock,
+    removed the file from the map-surface inventory allowance, and verified
+    the map-surface inventory script.

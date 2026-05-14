@@ -27,6 +27,16 @@ bool inferBindingTypeForMonomorph(const Expr &initializer,
   return inferBlockBodyBindingTypeForMonomorph(initializer, params, locals, allowMathBare, ctx, infoOut);
 }
 
+bool isStdlibMapHelperDefinitionPath(std::string_view path) {
+  const StdlibSurfaceMetadata *metadata =
+      findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  const StdlibSurfaceMetadata *resolvedMetadata =
+      findStdlibSurfaceMetadataByResolvedPath(path);
+  return metadata != nullptr && resolvedMetadata != nullptr &&
+         resolvedMetadata->id == metadata->id &&
+         !resolveStdlibSurfaceMemberName(*metadata, path).empty();
+}
+
 bool inferImplicitTemplateArgs(const Definition &def,
                                const Expr &callExpr,
                                const LocalTypeMap &locals,
@@ -45,7 +55,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
       [&]() {
         if (isCanonicalVectorCompatibilityPath(def.fullPath) ||
             def.fullPath.rfind("/std/collections/soa_vector/", 0) == 0 ||
-            def.fullPath.rfind("/std/collections/map/", 0) == 0) {
+            isStdlibMapHelperDefinitionPath(def.fullPath)) {
           return true;
         }
         if (def.fullPath.rfind("/std/collections/", 0) != 0 || def.parameters.empty()) {

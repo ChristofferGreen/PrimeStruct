@@ -783,7 +783,16 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "def.fullPath.rfind(\"/map/\", 0)") == std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
-            "def.fullPath.rfind(\"/std/collections/map/\", 0)") !=
+            "def.fullPath.rfind(\"/std/collections/map/\", 0)") ==
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "findStdlibSurfaceMetadataByResolvedPath(path)") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "isStdlibMapHelperDefinitionPath(def.fullPath)") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "std::optional<std::string> builtinSoaPendingExprDiagnosticForMonomorph(") ==
