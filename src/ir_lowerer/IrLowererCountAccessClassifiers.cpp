@@ -198,6 +198,11 @@ bool isSoaVectorTargetImpl(const Expr &target, const LocalMap &localsIn) {
   return false;
 }
 
+bool isPublicOrCompatibilitySoaToAosCall(const Expr &target) {
+  return isCanonicalCollectionHelperCall(target, "std/collections/soa", "to_aos", 1) ||
+         isCanonicalCollectionHelperCall(target, "std/collections/soa_vector", "to_aos", 1);
+}
+
 bool isVectorTargetImpl(const Expr &target, const LocalMap &localsIn) {
   if (target.kind == Expr::Kind::Name) {
     auto it = localsIn.find(target.name);
@@ -215,7 +220,7 @@ bool isVectorTargetImpl(const Expr &target, const LocalMap &localsIn) {
     if (getBuiltinCollectionName(target, collection) && collection == "vector") {
       return target.templateArgs.size() == 1;
     }
-    if (isCanonicalCollectionHelperCall(target, "std/collections/soa_vector", "to_aos", 1)) {
+    if (isPublicOrCompatibilitySoaToAosCall(target)) {
       return isSoaVectorTargetImpl(target.args.front(), localsIn);
     }
   }

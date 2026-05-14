@@ -498,6 +498,34 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+TEST_CASE("public soa to_aos explicit helper is a vector target in C++ emitter") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/soa/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [soa<Particle>] values{/std/collections/soa/single<Particle>(Particle(7i32))}
+  return(/std/collections/vector/capacity(/std/collections/soa/to_aos<Particle>(values)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_public_soa_to_aos_vector_capacity_exe.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_public_soa_to_aos_vector_capacity_exe")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
 TEST_CASE("legacy soa_vector compatibility helpers run without experimental imports in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*

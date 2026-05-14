@@ -563,8 +563,8 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
     }
     const std::string resolvedCanonical =
         canonicalizeLegacySoaToAosHelperPath(resolvedPath);
-    if (resolvedCanonical != "/std/collections/soa_vector/to_aos" &&
-        resolvedCanonical != "/std/collections/soa_vector/to_aos_ref") {
+    if (!isLegacyOrCanonicalSoaHelperPath(resolvedCanonical, "to_aos") &&
+        !isLegacyOrCanonicalSoaHelperPath(resolvedCanonical, "to_aos_ref")) {
       return false;
     }
     std::string receiverTypeText;

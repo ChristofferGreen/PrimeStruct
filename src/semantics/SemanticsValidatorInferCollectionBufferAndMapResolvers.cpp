@@ -21,9 +21,10 @@ bool isNonMapSoaConversionCall(const Expr &candidate,
       isSimpleCallName(candidate, "to_aos_ref")) {
     return true;
   }
-  const std::string resolvedPath = resolveCalleePathFn(candidate);
-  return resolvedPath == "/std/collections/soa_vector/to_aos" ||
-         resolvedPath == "/std/collections/soa_vector/to_aos_ref";
+  const std::string resolvedPath =
+      canonicalizeLegacySoaToAosHelperPath(resolveCalleePathFn(candidate));
+  return isLegacyOrCanonicalSoaHelperPath(resolvedPath, "to_aos") ||
+         isLegacyOrCanonicalSoaHelperPath(resolvedPath, "to_aos_ref");
 }
 
 } // namespace

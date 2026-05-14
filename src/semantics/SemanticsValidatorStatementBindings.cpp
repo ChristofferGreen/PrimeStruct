@@ -225,14 +225,18 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
         normalizedCallName == "to_aos" || normalizedCallName == "to_aos_ref" ||
         normalizedCallName == "soa_vector/to_aos" ||
         normalizedCallName == "soa_vector/to_aos_ref" ||
+        normalizedCallName == "std/collections/soa/to_aos" ||
         normalizedCallName == "std/collections/soa_vector/to_aos" ||
         normalizedCallName == "std/collections/soa_vector/to_aos_ref" ||
+        ((normalizedCallPrefix == "soa" ||
+          normalizedCallPrefix == "std/collections/soa") &&
+         normalizedCallName == "to_aos") ||
         ((normalizedCallPrefix == "soa_vector" ||
           normalizedCallPrefix == "std/collections/soa_vector") &&
          (normalizedCallName == "to_aos" ||
           normalizedCallName == "to_aos_ref")) ||
-        resolvedCallPath == "/std/collections/soa_vector/to_aos" ||
-        resolvedCallPath == "/std/collections/soa_vector/to_aos_ref";
+        isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, "to_aos") ||
+        isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, "to_aos_ref");
     if (!isRootToAosHelper) {
       return false;
     }
@@ -250,6 +254,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
         isBorrowedToAosHelper
             ? "/std/collections/soa_vector/to_aos_ref"
             : "/std/collections/soa_vector/to_aos";
+    const std::string publicHelperPath = "/std/collections/soa/to_aos";
     auto hasExplicitSourceImportPath = [&](const std::string &path) {
       for (const auto &importPath : program_.sourceImports) {
         if (importPath == path) {
@@ -267,6 +272,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     };
     if (hasDeclaredDefinitionPath(helperPath) ||
         hasExplicitSourceImportPath(helperPath) ||
+        (!isBorrowedToAosHelper && hasExplicitSourceImportPath(publicHelperPath)) ||
         hasExplicitSourceImportPath(canonicalHelperPath)) {
       return false;
     }

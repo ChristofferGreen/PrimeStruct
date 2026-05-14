@@ -583,6 +583,9 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(inlineDispatchSource.find("bool isCanonicalSoaToAosHelperCall(const Expr &expr)") ==
         std::string::npos);
   CHECK(inlineDispatchSource.find(
+            "isCanonicalCollectionHelperCall(expr, \"std/collections/soa\", \"to_aos\", 1)") !=
+        std::string::npos);
+  CHECK(inlineDispatchSource.find(
             "isCanonicalCollectionHelperCall(expr, \"std/collections/soa_vector\", \"to_aos\", 1)") !=
         std::string::npos);
   CHECK(inlineDispatchSource.find("std/collections/soa_vector/to_aos") == std::string::npos);
@@ -612,6 +615,9 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(inlineParamHelpersSource.find(
             "matchesPath(\"/std/collections/soa_vector/ref_ref\")") !=
+        std::string::npos);
+  CHECK(inlineParamHelpersSource.find(
+            "matchesPath(\"/std/collections/soa/to_aos\")") !=
         std::string::npos);
   CHECK(inlineParamHelpersSource.find(
             "matchesPath(\"/std/collections/soa_vector/to_aos\")") !=
@@ -787,6 +793,9 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
 
   CHECK(countAccessClassifiersSource.find("bool isCanonicalSoaToAosHelperCall(const Expr &expr)") ==
+        std::string::npos);
+  CHECK(countAccessClassifiersSource.find(
+            "isCanonicalCollectionHelperCall(target, \"std/collections/soa\", \"to_aos\", 1)") !=
         std::string::npos);
   CHECK(countAccessClassifiersSource.find(
             "isCanonicalCollectionHelperCall(target, \"std/collections/soa_vector\", \"to_aos\", 1)") !=

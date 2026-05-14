@@ -19225,3 +19225,41 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     TODO-4307 work into TODO-4513/TODO-4514/TODO-4515, ran
     `git diff --check`, and skipped broad baseline validation per the lite
     workflow.
+
+- [x] TODO-4513: Route public SoA conversion classifiers
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: SoA public surface rename and ownership cutover
+  - depends_on: TODO-4512
+  - split_from: TODO-4307
+  - scope: Route canonical `/std/collections/soa/to_aos` conversion
+    classification through the public `.prime` wrapper path instead of relying
+    on `/std/collections/soa_vector/to_aos` as the public conversion spelling.
+  - implementation_notes:
+    - Started from `src/emitter/EmitterBuiltinCollectionInferenceHelpers.cpp`,
+      `src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp`,
+      `src/ir_lowerer/IrLowererInlineParamHelpers.cpp`,
+      `src/ir_lowerer/IrLowererCountAccessClassifiers.cpp`, semantic
+      `to_aos` resolution helpers, and C++/VM conversion compile-run tests.
+    - Preserved compatibility `/std/collections/soa_vector/to_aos` behavior
+      while making the canonical public wrapper the preferred surface under
+      `/std/collections/soa/*` imports.
+  - acceptance:
+    - Explicit `/std/collections/soa/to_aos` calls are classified as vector
+      targets anywhere the compatibility `soa_vector` conversion already is.
+    - Native and VM conversion tests cover the public wrapper path without
+      importing direct experimental conversion modules.
+    - Remaining `/std/collections/soa_vector/to_aos` classifier strings are
+      compatibility paths called out for TODO-4309 rather than preferred
+      public-surface behavior.
+  - stop_rule: Stop once canonical public `to_aos` conversion classification
+    uses the `/std/collections/soa` path across semantic/emitter/lowerer
+    classifiers, leaving read/ref helper extraction to TODO-4514.
+  - evidence: Added public `/std/collections/soa/to_aos` classification to
+    semantic direct-surface checks, emitter vector-target inference, lowerer
+    vector-target classifiers, and inline parameter bridge matching; added
+    C++ emitter and VM explicit-helper vector-target fixtures without direct
+    experimental conversion imports; refreshed classifier source locks; ran
+    `git diff --check`; and skipped broad baseline validation per the lite
+    workflow.

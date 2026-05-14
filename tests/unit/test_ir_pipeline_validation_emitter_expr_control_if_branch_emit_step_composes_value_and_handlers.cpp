@@ -605,6 +605,8 @@ TEST_CASE("emitter builtin collection inference source stays canonical") {
   CHECK(astCallPathHelpersSource.find("bool isCanonicalCollectionHelperCall(") != std::string::npos);
   CHECK(astCallPathHelpersSource.find("std/collections/soa_vector/to_aos") == std::string::npos);
   CHECK(source.find("bool isCanonicalSoaToAosHelperCall(const Expr &expr)") == std::string::npos);
+  CHECK(source.find("isCanonicalCollectionHelperCall(target, \"std/collections/soa\", \"to_aos\", 1)") !=
+        std::string::npos);
   CHECK(source.find("isCanonicalCollectionHelperCall(target, \"std/collections/soa_vector\", \"to_aos\", 1)") !=
         std::string::npos);
   CHECK(source.find("std/collections/soa_vector/to_aos") == std::string::npos);

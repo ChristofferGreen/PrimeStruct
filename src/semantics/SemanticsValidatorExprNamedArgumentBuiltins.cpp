@@ -100,9 +100,10 @@ bool SemanticsValidator::validateExprNamedArguments(
       isExperimentalSoaRefLikeHelperPath(resolvedWithoutSpecialization);
   const bool resolvedIsSoaConversion =
       resolvedWithoutSpecialization == "/to_soa" ||
-      resolvedSoaToAosCanonical == "/std/collections/soa_vector/to_aos" ||
-      resolvedSoaToAosCanonical ==
-          "/std/collections/soa_vector/to_aos_ref" ||
+      isLegacyOrCanonicalSoaHelperPath(resolvedSoaToAosCanonical,
+                                       "to_aos") ||
+      isLegacyOrCanonicalSoaHelperPath(resolvedSoaToAosCanonical,
+                                       "to_aos_ref") ||
       isExperimentalSoaVectorConversionFamilyPath(resolvedWithoutSpecialization);
   const bool shouldValidateDirectSoaSurface =
       ((isSimpleCallName(expr, "get") || isSimpleCallName(expr, "get_ref") ||

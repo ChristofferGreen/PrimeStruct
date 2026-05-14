@@ -160,9 +160,12 @@ std::string SemanticsValidator::preferredCollectionHelperResolvedPath(
              helperName == "to_aos" || helperName == "to_aos_ref" ||
              helperName == "push" || helperName == "reserve";
     };
-    if ((normalizedPrefix == "soa_vector" ||
-         normalizedPrefix == "std/collections/soa_vector") &&
-        isSupportedSoaHelper(normalizedName)) {
+    if (((normalizedPrefix == "soa" ||
+          normalizedPrefix == "std/collections/soa") &&
+         normalizedName == "to_aos") ||
+        ((normalizedPrefix == "soa_vector" ||
+          normalizedPrefix == "std/collections/soa_vector") &&
+         isSupportedSoaHelper(normalizedName))) {
       return normalizedName;
     }
     if (normalizedName.rfind("soa_vector/", 0) == 0) {
@@ -171,6 +174,10 @@ std::string SemanticsValidator::preferredCollectionHelperResolvedPath(
       if (isSupportedSoaHelper(helperName)) {
         return helperName;
       }
+    }
+    if (normalizedName == "soa/to_aos" ||
+        normalizedName == "std/collections/soa/to_aos") {
+      return "to_aos";
     }
     if (normalizedName.rfind("std/collections/soa_vector/", 0) == 0) {
       const std::string helperName =
@@ -263,9 +270,13 @@ std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(
       normalizedName == "soa_vector/to_soa" ||
       normalizedName == "soa_vector/to_aos" ||
       normalizedName == "soa_vector/to_aos_ref" ||
+      normalizedName == "std/collections/soa/to_aos" ||
       normalizedName == "std/collections/soa_vector/to_soa" ||
       normalizedName == "std/collections/soa_vector/to_aos" ||
       normalizedName == "std/collections/soa_vector/to_aos_ref" ||
+      ((normalizedPrefix == "soa" ||
+        normalizedPrefix == "std/collections/soa") &&
+       normalizedName == "to_aos") ||
       ((normalizedPrefix == "soa_vector" ||
         normalizedPrefix == "std/collections/soa_vector") &&
        (normalizedName == "to_soa" || normalizedName == "to_aos" ||
@@ -457,9 +468,13 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
       normalizedName == "soa_vector/to_soa" ||
       normalizedName == "soa_vector/to_aos" ||
       normalizedName == "soa_vector/to_aos_ref" ||
+      normalizedName == "std/collections/soa/to_aos" ||
       normalizedName == "std/collections/soa_vector/to_soa" ||
       normalizedName == "std/collections/soa_vector/to_aos" ||
       normalizedName == "std/collections/soa_vector/to_aos_ref" ||
+      ((normalizedPrefix == "soa" ||
+        normalizedPrefix == "std/collections/soa") &&
+       normalizedName == "to_aos") ||
       ((normalizedPrefix == "soa_vector" ||
         normalizedPrefix == "std/collections/soa_vector") &&
        (normalizedName == "to_soa" || normalizedName == "to_aos" ||

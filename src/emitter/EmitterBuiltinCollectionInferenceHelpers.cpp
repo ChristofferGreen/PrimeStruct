@@ -53,6 +53,11 @@ bool isSoaVectorValueLocal(const Expr &target,
 bool isVectorValueLocal(const Expr &target,
                         const std::unordered_map<std::string, BindingInfo> &localTypes);
 
+bool isPublicOrCompatibilitySoaToAosCall(const Expr &target) {
+  return isCanonicalCollectionHelperCall(target, "std/collections/soa", "to_aos", 1) ||
+         isCanonicalCollectionHelperCall(target, "std/collections/soa_vector", "to_aos", 1);
+}
+
 bool isSoaVectorValueLocal(const Expr &target,
                            const std::unordered_map<std::string, BindingInfo> &localTypes) {
   if (target.kind == Expr::Kind::Name) {
@@ -95,7 +100,7 @@ bool isVectorValueLocal(const Expr &target,
     if (getBuiltinCollectionName(target, collection) && collection == "vector") {
       return target.templateArgs.size() == 1;
     }
-    if (isCanonicalCollectionHelperCall(target, "std/collections/soa_vector", "to_aos", 1)) {
+    if (isPublicOrCompatibilitySoaToAosCall(target)) {
       return isSoaVectorValueLocal(target.args.front(), localTypes);
     }
   }

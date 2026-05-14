@@ -461,6 +461,11 @@ bool isMapTryAtHelperName(const Expr &expr) {
 
 bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn);
 
+bool isPublicOrCompatibilitySoaToAosCall(const Expr &expr) {
+  return isCanonicalCollectionHelperCall(expr, "std/collections/soa", "to_aos", 1) ||
+         isCanonicalCollectionHelperCall(expr, "std/collections/soa_vector", "to_aos", 1);
+}
+
 bool isExperimentalVectorStructPath(std::string_view structTypeName) {
   const std::string vectorTypePath = experimentalCollectionTypePath("vector", "Vector");
   return structTypeName == vectorTypePath ||
@@ -483,7 +488,7 @@ bool isVectorTarget(const Expr &expr, const LocalMap &localsIn) {
     if (getBuiltinCollectionName(expr, collection) && collection == "vector") {
       return !hasNamedArguments(expr.argNames);
     }
-    if (isCanonicalCollectionHelperCall(expr, "std/collections/soa_vector", "to_aos", 1)) {
+    if (isPublicOrCompatibilitySoaToAosCall(expr)) {
       return isSoaVectorTarget(expr.args.front(), localsIn);
     }
   }
