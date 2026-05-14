@@ -565,7 +565,11 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalMapHelperCall(
           StdlibSurfaceId::CollectionsMapHelpers,
           "/std/collections/experimental_map/");
       if (rewrittenOut.name.empty()) {
-        rewrittenOut.name = "/std/collections/experimental_map/mapInsertRef";
+        rewrittenOut.name = canonicalCollectionHelperPath(
+            StdlibSurfaceId::CollectionsMapHelpers, "insert_ref");
+      }
+      if (rewrittenOut.name.empty()) {
+        return false;
       }
       rewrittenOut.namespacePrefix.clear();
       if (rewrittenOut.templateArgs.empty()) {

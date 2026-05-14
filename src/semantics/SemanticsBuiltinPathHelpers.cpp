@@ -817,14 +817,12 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   auto accessAliasFromMemberName = [&](std::string memberName) -> bool {
     memberName = stripGeneratedSuffix(stripTemplateSpecializationSuffix(std::move(memberName)));
     if (memberName == "at" || memberName == "at_ref" || memberName == "At" ||
-        memberName == collectionAliasLocal("vector", "At") || memberName == "mapAt" ||
-        memberName == "mapAtRef") {
+        memberName == collectionAliasLocal("vector", "At")) {
       out = "at";
       return true;
     }
     if (memberName == "at_unsafe" || memberName == "at_unsafe_ref" ||
-        memberName == "AtUnsafe" || memberName == collectionAliasLocal("vector", "AtUnsafe") ||
-        memberName == "mapAtUnsafe" || memberName == "mapAtUnsafeRef") {
+        memberName == "AtUnsafe" || memberName == collectionAliasLocal("vector", "AtUnsafe")) {
       out = "at_unsafe";
       return true;
     }
@@ -846,11 +844,6 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
       return false;
     }
     const std::string memberName = name.substr(prefix.size());
-    if (prefix == std::string_view("std/collections/") &&
-        (memberName == "mapAt" || memberName == "mapAtRef" ||
-         memberName == "mapAtUnsafe" || memberName == "mapAtUnsafeRef")) {
-      return false;
-    }
     return memberName.find('/') == std::string::npos &&
            accessAliasFromMemberName(memberName);
   };

@@ -287,44 +287,44 @@ std::optional<semantics::BindingInfo> extractExperimentalMapReturnBinding(const 
 
 std::string borrowedExperimentalMapHelperName(std::string_view methodName) {
   if (methodName == "count") {
-    return "mapCountRef";
+    return "count_ref";
   }
   if (methodName == "contains") {
-    return "mapContainsRef";
+    return "contains_ref";
   }
   if (methodName == "tryAt") {
-    return "mapTryAtRef";
+    return "tryAt_ref";
   }
   if (methodName == "at") {
-    return "mapAtRef";
+    return "at_ref";
   }
   if (methodName == "at_unsafe") {
-    return "mapAtUnsafeRef";
+    return "at_unsafe_ref";
   }
   if (methodName == "insert") {
-    return "mapInsertRef";
+    return "insert_ref";
   }
   return {};
 }
 
 std::string experimentalMapValueHelperName(std::string_view methodName) {
   if (methodName == "count") {
-    return "mapCount";
+    return "count";
   }
   if (methodName == "contains") {
-    return "mapContains";
+    return "contains";
   }
   if (methodName == "tryAt") {
-    return "mapTryAt";
+    return "tryAt";
   }
   if (methodName == "at") {
-    return "mapAt";
+    return "at";
   }
   if (methodName == "at_unsafe") {
-    return "mapAtUnsafe";
+    return "at_unsafe";
   }
   if (methodName == "insert") {
-    return "mapInsert";
+    return "insert";
   }
   return {};
 }
@@ -5199,7 +5199,7 @@ void rewriteBorrowedExperimentalMapMethodExpr(
   }
   std::optional<semantics::BindingInfo> receiverBinding;
   const Expr &receiver = expr.args.front();
-  if ((helperName == "mapAtRef" || helperName == "mapAtUnsafeRef") &&
+  if ((helperName == "at_ref" || helperName == "at_unsafe_ref") &&
       receiver.kind == Expr::Kind::Call) {
     return;
   }
@@ -5329,7 +5329,7 @@ void rewriteExperimentalMapValueMethodExpr(
   }
   std::optional<semantics::BindingInfo> receiverBinding;
   const Expr &receiver = expr.args.front();
-  if ((helperName == "mapAt" || helperName == "mapAtUnsafe") &&
+  if ((helperName == "at" || helperName == "at_unsafe") &&
       receiver.kind == Expr::Kind::Call) {
     return;
   }
@@ -5467,8 +5467,7 @@ std::string_view resolveBuiltinMapInsertSurfaceMemberName(std::string_view name)
     return {};
   }
   if (name.find('/') == std::string_view::npos) {
-    if (name == "insert" || name == "insert_ref" ||
-        name == "mapInsert" || name == "mapInsertRef") {
+    if (name == "insert" || name == "insert_ref") {
       return memberName;
     }
     return {};
@@ -5512,36 +5511,6 @@ std::string resolveBuiltinMapReadSurfaceMemberName(std::string_view name) {
       name == "at" || name == "at_ref" ||
       name == "at_unsafe" || name == "at_unsafe_ref") {
     return name == "size" ? std::string("count") : std::string(name);
-  }
-  if (name == "mapCount") {
-    return "count";
-  }
-  if (name == "mapCountRef") {
-    return "count_ref";
-  }
-  if (name == "mapContains") {
-    return "contains";
-  }
-  if (name == "mapContainsRef") {
-    return "contains_ref";
-  }
-  if (name == "mapTryAt") {
-    return "tryAt";
-  }
-  if (name == "mapTryAtRef") {
-    return "tryAt_ref";
-  }
-  if (name == "mapAt") {
-    return "at";
-  }
-  if (name == "mapAtRef") {
-    return "at_ref";
-  }
-  if (name == "mapAtUnsafe") {
-    return "at_unsafe";
-  }
-  if (name == "mapAtUnsafeRef") {
-    return "at_unsafe_ref";
   }
   return {};
 }

@@ -17564,3 +17564,37 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     CTest release-path wiring for the lowerer/emitter adapter trace audit.
     Updated the map ownership docs and split the broader audit into
     TODO-4462, TODO-4463, and TODO-4464.
+
+- [x] TODO-4462: Delete semantic map wrapper traces
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4304
+  - split_from: TODO-4304
+  - scope: Delete the remaining semantic compatibility traces that still
+    recognize internal `mapCount` / `mapContains` / `mapTryAt` / `mapAt` /
+    `mapAtUnsafe` / `mapInsert` wrapper names or paths as special map helper
+    categories.
+  - implementation_notes:
+    - Targeted `src/semantics/SemanticsValidate.cpp`,
+      `src/semantics/SemanticsValidatorInferCollectionCompatibility.cpp`,
+      `src/semantics/SemanticsBuiltinPathHelpers.cpp`, and nearby semantic
+      method/rewrite helpers.
+    - Preserved canonical `/std/collections/map/*` helper behavior while
+      removing semantic recognition of retired wrapper names.
+  - acceptance:
+    - Semantic validation no longer contains `mapCount`-style special-case
+      helper names or paths.
+    - Canonical map construction, imports, helper calls, lookup, insertion,
+      miss-result handling, and destruction keep their existing behavior.
+    - Source-lock coverage rejects reintroducing semantic `mapCount`-style
+      branches.
+  - stop_rule: Stop once semantic wrapper-name handling is gone; leave
+    remaining lowerer/emitter map surface traces to TODO-4463.
+  - evidence: Retargeted experimental-map method rewrites to canonical helper
+    names, removed semantic wrapper-name read/insert/access aliases, changed
+    borrowed experimental-map method resolution to use canonical map helper
+    selection, and added a CTest-wired semantic map wrapper trace checker with
+    a self-test. Promoted TODO-4463 to Ready Now and skipped broad validation
+    per the lite workflow.

@@ -496,60 +496,46 @@ bool SemanticsValidator::shouldBuiltinValidateCurrentMapWrapperHelper(std::strin
   // Wrapper validation depends on the current implementation body being visited,
   // so this stays as an explicit definition-path rule rather than a surface table.
   if (helperName == "count") {
-    return definitionPathContains("/mapCount") ||
-           definitionPathContains("/Reference/count") ||
+    return definitionPathContains("/Reference/count") ||
            definitionPathContains("/count_ref");
   }
   if (helperName == "count_ref") {
-    return definitionPathContains("/mapCountRef");
+    return definitionPathContains("/count_ref");
   }
   if (helperName == "contains") {
-    return definitionPathContains("/mapContains") ||
-           definitionPathContains("/Reference/contains") ||
-           definitionPathContains("/contains_ref") ||
-           definitionPathContains("/mapTryAt");
+    return definitionPathContains("/Reference/contains") ||
+           definitionPathContains("/contains_ref");
   }
   if (helperName == "contains_ref") {
-    return definitionPathContains("/mapContainsRef") ||
-           definitionPathContains("/mapTryAtRef");
+    return definitionPathContains("/contains_ref");
   }
   if (helperName == "tryAt") {
-    return definitionPathContains("/mapTryAt") ||
-           definitionPathContains("/Reference/tryAt") ||
+    return definitionPathContains("/Reference/tryAt") ||
            definitionPathContains("/tryAt_ref");
   }
   if (helperName == "tryAt_ref") {
-    return definitionPathContains("/mapTryAtRef");
+    return definitionPathContains("/tryAt_ref");
   }
   if (helperName == "at") {
-    return definitionPathContains("/mapAt") ||
-           definitionPathContains("/mapAtUnsafe") ||
-           definitionPathContains("/mapTryAt") ||
-           definitionPathContains("/mapAtRef") ||
-           definitionPathContains("/Reference/at") ||
+    return definitionPathContains("/Reference/at") ||
            definitionPathContains("/at_ref");
   }
   if (helperName == "at_ref") {
-    return definitionPathContains("/mapAtRef");
+    return definitionPathContains("/at_ref");
   }
   if (helperName == "at_unsafe") {
-    return definitionPathContains("/mapAt") ||
-           definitionPathContains("/mapAtUnsafe") ||
-           definitionPathContains("/mapTryAt") ||
-           definitionPathContains("/mapAtRef") ||
-           definitionPathContains("/Reference/at_unsafe") ||
+    return definitionPathContains("/Reference/at_unsafe") ||
            definitionPathContains("/at_unsafe_ref");
   }
   if (helperName == "at_unsafe_ref") {
-    return definitionPathContains("/mapAtUnsafeRef");
+    return definitionPathContains("/at_unsafe_ref");
   }
   if (helperName == "insert") {
-    return definitionPathContains("/mapInsert") ||
-           definitionPathContains("/Reference/insert") ||
+    return definitionPathContains("/Reference/insert") ||
            definitionPathContains("/insert_ref");
   }
   if (helperName == "insert_ref") {
-    return definitionPathContains("/mapInsertRef");
+    return definitionPathContains("/insert_ref");
   }
   return false;
 }

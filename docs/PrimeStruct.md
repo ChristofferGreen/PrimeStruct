@@ -3825,9 +3825,11 @@ re-defining it piecemeal.
   stdlib-owned, and the surface manifest no longer advertises map compatibility
   spellings.
   Direct experimental map source imports are also rejected, public
-  `mapCount`-style wrapper bridges are retired, and a release validation gate
-  now rejects reintroduced lowerer/emitter `mapCount`-style adapter traces;
-  TODO-4464 owns the remaining broad production C++ map-surface audit.
+  `mapCount`-style wrapper bridges are retired, semantic validation no longer
+  recognizes `mapCount`-style helper names as special map branches, and release
+  validation gates reject reintroduced semantic or lowerer/emitter
+  `mapCount`-style adapter traces; TODO-4464 owns the remaining broad
+  production C++ map-surface audit.
 - **Compatibility adapter inventory:** map insert helper compatibility no
   longer lives in the central surface manifest; the `CollectionsMapHelpers`
   registry metadata now classifies only canonical `/std/collections/map/*`

@@ -541,27 +541,6 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     return false;
   };
-  auto preferredExperimentalMapReferenceMethodTarget = [&](const std::string &helperName) {
-    if (helperName == "count") {
-      return std::string("/std/collections/experimental_map/mapCountRef");
-    }
-    if (helperName == "contains") {
-      return std::string("/std/collections/experimental_map/mapContainsRef");
-    }
-    if (helperName == "tryAt") {
-      return std::string("/std/collections/experimental_map/mapTryAtRef");
-    }
-    if (helperName == "at") {
-      return std::string("/std/collections/experimental_map/mapAtRef");
-    }
-    if (helperName == "at_unsafe") {
-      return std::string("/std/collections/experimental_map/mapAtUnsafeRef");
-    }
-    if (helperName == "insert") {
-      return std::string("/std/collections/experimental_map/mapInsertRef");
-    }
-    return std::string();
-  };
   std::function<bool(const Expr &, std::string &)> resolveBorrowedVectorReceiver =
       [&](const Expr &candidate, std::string &elemTypeOut) {
     auto extractBorrowedVectorType = [&](const BindingInfo &binding) {
@@ -1254,7 +1233,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     std::string keyType;
     std::string valueType;
     if (resolveInferExperimentalMapTarget(params, locals, receiver, keyType, valueType)) {
-      resolvedOut = preferredExperimentalMapReferenceMethodTarget(normalizedMethodName);
+      resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver, normalizedMethodName);
       return returnWithMethodTargetMemo(!resolvedOut.empty());
     }
   }
