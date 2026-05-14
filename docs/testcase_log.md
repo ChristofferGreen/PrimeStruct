@@ -4,6 +4,7 @@
 - none
 
 ## Recent Test Runs
+- 2026-05-14 10:38 local | pass | mode: release | command: `cmake --build build-release --target PrimeStruct_backend_ir_tests` plus focused map entry-constructor behavior and source-lock doctest cases | failures: none | notes: final TODO-4469 focused validation passed after deleting experimental-map entry constructor aliases.
 - 2026-05-14 10:32 local | pass | mode: release | command: `cmake --build build-release --target PrimeStruct_backend_ir_tests` plus focused access-helper and source-lock doctest cases | failures: none | notes: final TODO-4467 focused validation passed after deleting experimental-map access alias probes and retargeting the stale exact canonical vector access expectation.
 - 2026-05-14 10:31 local | fail | mode: release | command: `./PrimeStruct_backend_ir_tests -tc="ir lowerer access helper recognizes namespaced canonical access helpers"` | failures: ir lowerer access helper recognizes namespaced canonical access helpers | notes: stale exact canonical vector access expectation; lowerer intentionally rejects `/std/collections/vector/at` as a builtin-access alias.
 - 2026-05-14 10:23 local | pass | mode: release | command: `cmake --build build-release --target PrimeStruct_backend_ir_tests` plus focused emitter/lowerer collection helper source-lock doctest cases | failures: none | notes: final TODO-4466 focused validation passed after deleting slashless experimental-map helper path normalization.

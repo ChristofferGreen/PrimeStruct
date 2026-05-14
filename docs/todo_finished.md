@@ -17744,3 +17744,36 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     `/std/collections/experimental_map/vectorAt__*` as builtin access,
     source-locked both deleted probes, split entry/method alias cleanup into
     TODO-4469, and skipped broad baseline validation per the lite workflow.
+
+- [x] TODO-4469: Delete experimental-map entry constructor aliases
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4467
+  - split_from: TODO-4467
+  - scope: Delete lowerer/emitter builtin-map constructor classification that
+    still treated rooted `/std/collections/experimental_map/entry` as a public
+    map entry constructor alias.
+  - implementation_notes:
+    - Targeted `getBuiltinCollectionName` in lowerer/emitter code and the
+      lower-statement helper that checks map constructor entry arguments.
+    - Left rooted experimental-map method/constructor helper paths and backing
+      type traces to TODO-4470 and TODO-4468.
+  - acceptance:
+    - Lowerer/emitter map-constructor classification no longer recognizes
+      `std/collections/experimental_map/entry` as a public map entry helper.
+    - Canonical `map/entry` and `/std/collections/map/entry` handling remains
+      unchanged.
+    - Source-lock coverage rejects reintroducing the removed entry alias in
+      lowerer/emitter production helpers.
+  - stop_rule: Stop once rooted experimental-map entry aliases are gone from
+    lowerer/emitter builtin-map constructor classification; leave method
+    helper alias deletion and backing type/layout traces to TODO-4470 and
+    TODO-4468.
+  - evidence: Removed the experimental-map entry alias from lowerer/emitter
+    builtin-map constructor classification, updated behavior coverage so
+    experimental-map entry arguments no longer count as recognized map entry
+    constructor args, source-locked the removed production strings, split
+    method/constructor helper alias cleanup into TODO-4470, and skipped broad
+    baseline validation per the lite workflow.

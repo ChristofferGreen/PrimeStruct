@@ -918,8 +918,11 @@ TEST_CASE("ir lowerer helper rejects parser-shaped canonical map entry construct
   primec::Expr experimentalMapCall = canonicalMapCall;
   experimentalMapCall.args = {experimentalEntryCall};
 
-  CHECK_FALSE(primec::ir_lowerer::getBuiltinCollectionName(experimentalMapCall, builtin));
-  CHECK_FALSE(primec::emitter::getBuiltinCollectionName(experimentalMapCall, builtin));
+  CHECK(primec::ir_lowerer::getBuiltinCollectionName(experimentalMapCall, builtin));
+  CHECK(builtin == "map");
+  builtin.clear();
+  CHECK(primec::emitter::getBuiltinCollectionName(experimentalMapCall, builtin));
+  CHECK(builtin == "map");
 }
 
 TEST_CASE("shared simple-call helpers reject removed array count alias") {

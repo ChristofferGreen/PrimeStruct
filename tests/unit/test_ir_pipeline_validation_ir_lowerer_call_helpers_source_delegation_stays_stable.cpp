@@ -888,6 +888,8 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(builtinNameHelpersSource.find(
             "matchLegacyAccessAlias(scopedName, \"std/collections/experimental_map/\")") ==
         std::string::npos);
+  CHECK(builtinNameHelpersSource.find("std/collections/experimental_map/entry") ==
+        std::string::npos);
   CHECK(builtinNameHelpersSource.find("vectorAt") == std::string::npos);
   CHECK(builtinNameHelpersSource.find("vectorPush") == std::string::npos);
   CHECK(callResolutionSource.find("std/collections/experimental_vector") ==
@@ -993,6 +995,8 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(lowerStatementsExprSource.find(
             "directCallee->fullPath.rfind(\"/std/collections/experimental_map/\", 0) == 0") ==
+        std::string::npos);
+  CHECK(lowerStatementsExprSource.find("std/collections/experimental_map/entry") ==
         std::string::npos);
   CHECK(lowerStatementsExprSource.find("/std/collections/experimental_map/mapInsert") ==
         std::string::npos);

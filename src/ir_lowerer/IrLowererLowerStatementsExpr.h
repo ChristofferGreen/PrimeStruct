@@ -160,8 +160,7 @@
               normalizedName.erase(generatedSuffix);
             }
             return normalizedName == "map/entry" ||
-                   normalizedName == "std/collections/map/entry" ||
-                   normalizedName == "std/collections/experimental_map/entry";
+                   normalizedName == "std/collections/map/entry";
           };
           for (const auto &arg : callExpr.args) {
             if (isMapEntryCallExpr(arg)) {
