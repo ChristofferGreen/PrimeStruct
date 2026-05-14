@@ -18632,3 +18632,36 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     with a shared collection backing-type helper, updated the graph-pilot
     source lock, removed the file from the map-surface inventory allowance,
     and promoted TODO-4464 for the final zero C++ map-surface audit.
+
+- [x] TODO-4495: Route collection-predicate map type checks through shared helpers
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4494
+  - split_from: TODO-4464
+  - scope: Remove the duplicate canonical map type-text recognizer from
+    semantic collection predicates by routing map-shaped type checks through
+    shared binding-type key/value extraction.
+  - implementation_notes:
+    - Targeted `src/semantics/SemanticsValidatorExprCollectionPredicates.cpp`,
+      where `isBuiltinMapReceiverTarget(...)` still used a local
+      `isCanonicalMapTypeText(...)` helper with hard-coded canonical map type
+      roots.
+    - Reused `extractMapKeyValueTypesFromTypeText(...)` so predicate
+      validation shares the existing binding-type map recognition surface.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` so the
+      collection-predicate file has no map-surface trace allowance.
+  - acceptance:
+    - Collection-predicate map receiver detection still accepts map-shaped
+      return bindings, return transforms, and inferred query type text.
+    - The collection-predicate file no longer contains a duplicate canonical
+      map type-text recognizer or hard-coded canonical map type roots.
+    - Source-lock coverage prevents reintroducing the removed literals.
+  - stop_rule: Stop once collection-predicate map type recognition delegates
+    to the shared helper, focused coverage passes, and the map-surface trace
+    inventory no longer allows traces for the target file.
+  - evidence: Replaced the local canonical map type-text detector with shared
+    key/value extraction, updated source-lock coverage, removed the file from
+    the map-surface inventory allowance, and promoted TODO-4496 for the next
+    collection-access map type check slice.

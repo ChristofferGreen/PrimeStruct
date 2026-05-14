@@ -7,30 +7,10 @@
 namespace primec::semantics {
 namespace {
 
-bool isCanonicalMapTypeText(const std::string &typeText) {
-  std::string normalizedType = normalizeBindingTypeName(typeText);
-  while (true) {
-    std::string base;
-    std::string arg;
-    if (!splitTemplateTypeName(normalizedType, base, arg)) {
-      return false;
-    }
-    base = normalizeBindingTypeName(base);
-    if (base == "map" || base == "/map" ||
-        base == "std/collections/map" || base == "/std/collections/map") {
-      std::vector<std::string> args;
-      return splitTopLevelTemplateArgs(arg, args) && args.size() == 2;
-    }
-    if (base == "Reference" || base == "Pointer") {
-      std::vector<std::string> args;
-      if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
-        return false;
-      }
-      normalizedType = normalizeBindingTypeName(args.front());
-      continue;
-    }
-    return false;
-  }
+bool hasMapKeyValueTypes(const std::string &typeText) {
+  std::string keyType;
+  std::string valueType;
+  return extractMapKeyValueTypesFromTypeText(typeText, keyType, valueType);
 }
 
 } // namespace
@@ -156,7 +136,7 @@ bool SemanticsValidator::isMapLikeBareAccessReceiver(
               ? inferredReturn.typeName
               : inferredReturn.typeName + "<" +
                     inferredReturn.typeTemplateArg + ">";
-      if (isCanonicalMapTypeText(inferredTypeText)) {
+      if (hasMapKeyValueTypes(inferredTypeText)) {
         return true;
       }
       // When a concrete return binding is available and is not map-like,
@@ -165,14 +145,14 @@ bool SemanticsValidator::isMapLikeBareAccessReceiver(
     }
     for (const auto &transform : defIt->second->transforms) {
       if (transform.name == "return" && transform.templateArgs.size() == 1 &&
-          isCanonicalMapTypeText(transform.templateArgs.front())) {
+          hasMapKeyValueTypes(transform.templateArgs.front())) {
         return true;
       }
     }
   }
   std::string receiverTypeText;
   return inferQueryExprTypeText(candidate, params, locals, receiverTypeText) &&
-         isCanonicalMapTypeText(receiverTypeText);
+         hasMapKeyValueTypes(receiverTypeText);
 }
 
 bool SemanticsValidator::isArrayNamespacedVectorCountCompatibilityCall(

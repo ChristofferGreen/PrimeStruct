@@ -72,7 +72,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4464: Add full zero C++ map-surface audit
+- TODO-4496: Route collection-access map type checks through shared helpers
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -88,7 +88,7 @@ Task template:
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
 - Vector stdlib ownership cutover: none active
-- Map stdlib ownership cutover: TODO-4464
+- Map stdlib ownership cutover: TODO-4496 -> TODO-4464
 - SoA public surface rename and ownership cutover: TODO-4305 -> TODO-4306
   -> TODO-4307 -> TODO-4308 -> TODO-4309 -> TODO-4310
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
@@ -105,7 +105,7 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4464: Add full zero C++ map-surface audit
+- TODO-4496: Route collection-access map type checks through shared helpers
 - TODO-4305: Rename and style canonical `.prime` SoA surface
 - TODO-4306: Stabilize generic SoA substrate boundaries
 - TODO-4307: Lower SoA helpers through ordinary `.prime`
@@ -1721,11 +1721,40 @@ Task template:
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
 
+- [ ] TODO-4496: Route collection-access map type checks through shared helpers
+  - owner: ai
+  - created_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4495
+  - split_from: TODO-4464
+  - scope: Remove the duplicate canonical map type-text recognizer from
+    semantic collection-access validation by routing the checks through shared
+    binding-type map key/value helpers.
+  - implementation_notes:
+    - Target `src/semantics/SemanticsValidatorExprCollectionAccessValidation.cpp`,
+      where local `isCanonicalMapTypeText(...)` logic still hard-codes
+      canonical map type roots.
+    - Preserve existing access validation behavior for direct, reference, and
+      pointer map receivers while removing production C++ canonical map type
+      literals from the target file.
+    - Tighten `scripts/check_map_surface_trace_inventory.py` for the target
+      file and add focused source-lock coverage for the delegation.
+  - acceptance:
+    - Collection-access validation still identifies map receiver type text
+      through shared key/value extraction.
+    - The target file no longer contains a duplicate canonical map type-text
+      recognizer or hard-coded canonical map type roots.
+    - The map-surface trace inventory and source-lock coverage prevent
+      reintroducing the removed literals.
+  - stop_rule: Stop once collection-access map type-text recognition delegates
+    to the shared helper, focused coverage passes, and the inventory allowance
+    for the target file is tightened.
+
 - [ ] TODO-4464: Add full zero C++ map-surface audit
   - owner: ai
   - created_at: 2026-05-14
   - phase: Map stdlib ownership cutover
-  - depends_on: TODO-4494
+  - depends_on: TODO-4496
   - split_from: TODO-4304
   - scope: Add a deterministic validation gate that proves the PrimeStruct map
     surface is fully `.prime`/stdlib-owned and absent from production C++
@@ -1825,6 +1854,10 @@ Task template:
       path prefix from semantic direct-call return binding inference, so
       `src/semantics/SemanticsValidatorBuildDirectCallBinding.cpp` should stay
       absent from the map-surface trace inventory.
+    - TODO-4495 removed the duplicate canonical map type-text recognizer from
+      semantic collection predicates, so
+      `src/semantics/SemanticsValidatorExprCollectionPredicates.cpp` should
+      stay absent from the map-surface trace inventory.
     - Tighten or replace the TODO-4473 and TODO-4472 allowed-count
       inventories as traces are deleted; the final TODO-4464 state is zero
       tolerance for all PrimeStruct-map-specific production C++ traces, not a

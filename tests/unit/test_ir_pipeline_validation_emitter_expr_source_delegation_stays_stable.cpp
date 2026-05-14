@@ -248,6 +248,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionDispatchSetup.cpp";
   const std::filesystem::path semanticsExprCountCapacityMapBuiltinsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprCountCapacityMapBuiltins.cpp";
+  const std::filesystem::path semanticsExprCollectionPredicatesPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionPredicates.cpp";
   const std::filesystem::path semanticsExprDirectCollectionFallbacksPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprDirectCollectionFallbacks.cpp";
   const std::filesystem::path semanticsExprLateCallCompatibilityPath =
@@ -264,6 +266,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprCollectionCountCapacityPath));
   REQUIRE(std::filesystem::exists(semanticsExprCollectionDispatchSetupPath));
   REQUIRE(std::filesystem::exists(semanticsExprCountCapacityMapBuiltinsPath));
+  REQUIRE(std::filesystem::exists(semanticsExprCollectionPredicatesPath));
   REQUIRE(std::filesystem::exists(semanticsExprDirectCollectionFallbacksPath));
   REQUIRE(std::filesystem::exists(semanticsExprLateCallCompatibilityPath));
   REQUIRE(std::filesystem::exists(semanticsExprMethodResolutionPath));
@@ -278,6 +281,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       readText(semanticsExprCollectionDispatchSetupPath);
   const std::string semanticsExprCountCapacityMapBuiltinsSource =
       readText(semanticsExprCountCapacityMapBuiltinsPath);
+  const std::string semanticsExprCollectionPredicatesSource =
+      readText(semanticsExprCollectionPredicatesPath);
   const std::string semanticsExprDirectCollectionFallbacksSource =
       readText(semanticsExprDirectCollectionFallbacksPath);
   const std::string semanticsExprLateCallCompatibilitySource =
@@ -330,6 +335,13 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsExprSource.find("expr.name.rfind(\"/vector/\", 0)") ==
         std::string::npos);
+  CHECK(semanticsExprCollectionPredicatesSource.find("isCanonicalMapTypeText") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionPredicatesSource.find(
+            "extractMapKeyValueTypesFromTypeText(typeText, keyType, valueType)") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionPredicatesSource.find(
+            "base == \"std/collections/map\"") == std::string::npos);
 
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(") !=
