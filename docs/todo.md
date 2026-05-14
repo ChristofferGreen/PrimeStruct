@@ -72,11 +72,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4308: Move SoA surface metadata out of C++
+- TODO-4309: Delete `soa_vector` compatibility seams
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4309: Delete `soa_vector` compatibility seams
 - TODO-4310: Add zero C++ SoA collection-surface audit
 
 ### Priority Lanes (Current)
@@ -87,7 +86,7 @@ Task template:
 - Vector stdlib ownership cutover: none active
 - Map stdlib ownership cutover: TODO-4464
 - SoA public surface rename and ownership cutover: TODO-4306 parent split as
-  TODO-4308 -> TODO-4309 -> TODO-4310
+  TODO-4309 -> TODO-4310
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
   -> TODO-4275 -> TODO-4276 -> TODO-4271 -> TODO-4272 -> TODO-4274
   -> TODO-4273 -> TODO-4277 -> TODO-4278
@@ -102,7 +101,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4308: Move SoA surface metadata out of C++
 - TODO-4309: Delete `soa_vector` compatibility seams
 - TODO-4310: Add zero C++ SoA collection-surface audit
 - TODO-4268: Add heterogeneous type-pack syntax and metadata
@@ -154,10 +152,10 @@ Task template:
 | Compile-pipeline stage and publication-boundary contracts | none |
 | Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4305 |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4464, TODO-4308, TODO-4309, TODO-4310 |
+| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4464, TODO-4309, TODO-4310 |
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4464 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4464, TODO-4305, TODO-4309, TODO-4310 |
-| SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4514, TODO-4308, TODO-4309, TODO-4310 |
+| SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4514, TODO-4309, TODO-4310 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
 | Semantic-product public API factoring and versioning | none |
@@ -187,7 +185,7 @@ Task template:
 | Lowerer/source-composition contract coverage | none |
 | Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4464 |
 | De-experimentalization surface and namespace parity | TODO-4430, TODO-4464, TODO-4305, TODO-4309, TODO-4310 |
-| `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4514, TODO-4308, TODO-4309, TODO-4310 |
+| `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4514, TODO-4309, TODO-4310 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
 | Emitter map-helper canonicalization parity | TODO-4464 |
@@ -322,17 +320,23 @@ Task template:
   Template
   monomorphization now asks the registry for preferred experimental vector/SoA
   helper spellings instead of carrying bespoke canonical-to-experimental maps.
-  SoA helper compatibility is routed through
-  `StdlibSurfaceRegistry::CollectionsSoaVectorHelpers` for canonical
-  `/std/collections/soa_vector/*`, same-path `/soa_vector/*`, mixed
-  `/std/collections/{count,get,ref,reserve,push}`, experimental helper wrapper,
-  and conversion-helper spellings. Vector/map and SoA constructor compatibility
-  is already metadata-backed by the constructor surface adapters. Gfx Buffer
-  helper compatibility is routed through
-  `StdlibSurfaceRegistry::GfxBufferHelpers` for canonical `/std/gfx/Buffer/*`,
-  legacy `/std/gfx/experimental/Buffer/*`, and rooted `/Buffer/*` helper
-  spellings before semantic gfx-buffer rewrites and GPU wrapper diagnostics
-  choose canonical builtin targets. Remaining removed-helper diagnostics,
+  SoA public helper, constructor, import-alias, field-view, conversion, and
+  retained compatibility metadata now lives in
+  `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic
+  `StdlibSurfaceRegistry` manifest path. The `soa<T>` public surface is
+  declared there alongside temporary `/std/collections/soa_vector/*`,
+  same-path `/soa_vector/*`, mixed `/std/collections/{count,get,ref,reserve,push}`,
+  experimental helper wrapper, and conversion-helper compatibility spellings
+  that TODO-4309 owns. The registry keeps surface ids and generic APIs in C++,
+  but it no longer owns SoA public collection member lists, import aliases,
+  helper aliases, constructor spellings, or conversion spellings as handwritten
+  tables. Vector/map and SoA constructor compatibility is metadata-backed by
+  the constructor surface adapters. Gfx Buffer helper compatibility is routed
+  through `StdlibSurfaceRegistry::GfxBufferHelpers` for canonical
+  `/std/gfx/Buffer/*`, legacy `/std/gfx/experimental/Buffer/*`, and rooted
+  `/Buffer/*` helper spellings before semantic gfx-buffer rewrites and GPU
+  wrapper diagnostics choose canonical builtin targets. Remaining
+  removed-helper diagnostics,
   import spellings, wildcard expansion, user-defined helper precedence,
   field-view field-name lowering, gfx constructor sugar, and lowerer raw-path
   dispatch checks are syntax/provenance-owned or lowering-owned.
@@ -444,6 +448,11 @@ Task template:
   `/std/collections/internal_soa_vector/*` and canonical conversions route
   through `/std/collections/internal_soa_vector_conversions/*` instead of
   directly importing experimental implementation modules.
+- Stdlib-owned metadata: canonical `soa` helper/import/constructor,
+  field-view, conversion, and retained compatibility metadata lives in
+  `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic
+  `StdlibSurfaceRegistry` manifest path, while generic SoA substrate metadata
+  remains separate from the public collection surface manifest.
 - Generic substrate boundary: compiler/runtime-owned SoA behavior is limited
   to field-layout/codegen/introspection, `SoaSchema*` metadata, `SoaColumn<T>`
   and `SoaFieldView<T>` storage/view carriers, borrow-root and invalidation
@@ -1998,50 +2007,10 @@ Task template:
       classification through semantic, emitter, and lowerer classifiers while
       keeping compatibility `soa_vector` conversion paths alive.
 
-- [ ] TODO-4308: Move SoA surface metadata out of C++
-  - owner: ai
-  - created_at: 2026-04-28
-  - phase: SoA public surface rename and ownership cutover
-  - depends_on: TODO-4517
-  - scope: Remove public SoA collection-surface knowledge from handwritten C++
-    and generated production C++ by moving canonical `soa`
-    helper/import/constructor/conversion metadata into stdlib-owned data
-    consumed through generic collection-surface APIs.
-  - implementation_notes:
-    - Start from `include/primec/StdlibSurfaceRegistry.h`,
-      `src/StdlibSurfaceRegistry.cpp`, `include/primec/SoaPathHelpers.h`,
-      template-monomorph compatibility paths, collection import resolution,
-      wildcard import tests, and source locks that currently assert
-      `soa_vector` registry spellings.
-    - Avoid generated C++ tables that still contain PrimeStruct `soa` or
-      `soa_vector` public-surface strings; prefer a non-C++ manifest or stdlib
-      metadata read through generic code.
-    - Keep generic SoA substrate metadata separate from public collection
-      surface metadata.
-  - acceptance:
-    - Canonical `soa` import, wildcard import, constructor, method-helper,
-      field-view, and conversion metadata is loaded from stdlib-owned data
-      rather than handwritten or generated public SoA surface lists in
-      production C++.
-    - Existing canonical SoA behavior and diagnostics stay stable across
-      repeated builds.
-    - Production `src/` and `include/` C++ no longer contain public SoA
-      collection-surface tables, path aliases, import aliases, constructor
-      spellings, conversion spellings, or helper-name lists; temporary
-      compatibility traces are limited to the deletion work tracked by
-      TODO-4309.
-    - Docs describe the boundary between public `soa` surface metadata and
-      generic SoA substrate metadata.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once canonical SoA surface metadata no longer requires
-    PrimeStruct-SoA-public-surface C++ entries; leave removal of compatibility
-    spellings and the final zero-trace audit to TODO-4309 and TODO-4310.
-
 - [ ] TODO-4309: Delete `soa_vector` compatibility seams
   - owner: ai
   - created_at: 2026-04-28
   - phase: SoA public surface rename and ownership cutover
-  - depends_on: TODO-4308
   - scope: Remove or intentionally reject the old `soa_vector` compatibility
     spellings once the canonical `soa<T>` implementation, generic substrate
     boundary, `.prime` lowering path, and data-driven surface metadata are in

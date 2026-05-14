@@ -3851,14 +3851,19 @@ re-defining it piecemeal.
   spellings. Template
   monomorphization still asks the registry for preferred experimental
   vector/SoA helper spellings instead of carrying bespoke
-  canonical-to-experimental helper maps. SoA helper
-  compatibility is routed through
-  `StdlibSurfaceRegistry::CollectionsSoaVectorHelpers` for canonical
-  `/std/collections/soa_vector/*`, same-path `/soa_vector/*`, mixed
-  `/std/collections/{count,get,ref,reserve,push}`, experimental helper wrapper,
-  and conversion-helper spellings. Vector/map and SoA constructor
-  compatibility is already metadata-backed by the constructor surface adapters
-  outside the removed map compatibility spellings.
+  canonical-to-experimental helper maps. SoA public helper, constructor,
+  import-alias, field-view, conversion, and retained compatibility metadata
+  now lives in `stdlib/std/collections/surfaces.psmeta` and is consumed through
+  the generic `StdlibSurfaceRegistry` manifest path. The `soa<T>` public
+  surface is declared there alongside temporary `/std/collections/soa_vector/*`,
+  same-path `/soa_vector/*`, mixed `/std/collections/{count,get,ref,reserve,push}`,
+  experimental helper wrapper, and conversion-helper compatibility spellings
+  that TODO-4309 owns. The registry keeps surface ids and generic APIs in C++,
+  but it no longer owns SoA public collection member lists, import aliases,
+  helper aliases, constructor spellings, or conversion spellings as handwritten
+  tables.
+  Vector/map and SoA constructor compatibility is metadata-backed by the
+  constructor surface adapters outside the removed map compatibility spellings.
   Gfx Buffer helper compatibility is routed through
   `StdlibSurfaceRegistry::GfxBufferHelpers` for canonical `/std/gfx/Buffer/*`,
   legacy `/std/gfx/experimental/Buffer/*`, and rooted `/Buffer/*` helper
@@ -3948,6 +3953,12 @@ uses a distinct structure-of-arrays substrate and field-view invalidation model.
   field-view, and conversion behavior without direct experimental SoA imports
   in the test source. The canonical ECS example lives at
   `examples/3.Surface/soa_ecs.prime`.
+- **Stdlib-owned surface metadata:** canonical `soa` helper/import/constructor,
+  field-view, and conversion metadata is declared in
+  `stdlib/std/collections/surfaces.psmeta` and loaded through the generic
+  `StdlibSurfaceRegistry` manifest code. Generic compiler/runtime SoA substrate
+  metadata remains separate and is not encoded in that public collection
+  surface manifest.
 - **Accepted compatibility seams:** `/std/collections/experimental_soa_vector/*`
   and `/std/collections/experimental_soa_vector_conversions/*` remain importable
   only for targeted compatibility and conformance coverage. Existing C++/VM/native
@@ -3996,8 +4007,9 @@ the generic layout and storage primitives that the stdlib wrapper still needs.
 - **Public collection surface:** user code should spell the collection as
   `soa<T>` and import `/std/collections/soa/*`. Public construction,
   count/get/ref, push/reserve, field-view, conversion helper names, import
-  aliases, and compatibility spellings belong in stdlib wrapper modules or
-  explicitly named compatibility shims, not in compiler-owned policy.
+  aliases, and compatibility spellings belong in stdlib wrapper modules,
+  `stdlib/std/collections/surfaces.psmeta`, or explicitly named compatibility
+  shims, not in compiler-owned policy.
 - **Allowed compiler/runtime substrate:** field-layout/codegen/introspection,
   generated `SoaSchema*` metadata, `SoaColumn<T>` column storage,
   `SoaFieldView<T>` non-owning field views, checked-buffer allocation/growth,

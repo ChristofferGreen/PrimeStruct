@@ -19384,3 +19384,50 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     fixtures without direct experimental imports; built
     `PrimeStruct_compile_run_tests`; ran the new native and VM focused cases;
     and reran the backend source-delegation stability shard.
+
+- [x] TODO-4308: Move SoA surface metadata out of C++
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-15
+  - phase: SoA public surface rename and ownership cutover
+  - depends_on: TODO-4517
+  - scope: Remove public SoA collection-surface knowledge from handwritten C++
+    and generated production C++ by moving canonical `soa`
+    helper/import/constructor/conversion metadata into stdlib-owned data
+    consumed through generic collection-surface APIs.
+  - implementation_notes:
+    - Started from `include/primec/StdlibSurfaceRegistry.h`,
+      `src/StdlibSurfaceRegistry.cpp`, `include/primec/SoaPathHelpers.h`,
+      template-monomorph compatibility paths, collection import resolution,
+      wildcard import tests, and source locks that asserted `soa_vector`
+      registry spellings.
+    - Kept generic SoA substrate metadata separate from the public collection
+      surface metadata.
+  - acceptance:
+    - Canonical `soa` import, wildcard import, constructor, method-helper,
+      field-view, and conversion metadata is loaded from stdlib-owned data
+      rather than handwritten or generated public SoA surface lists in
+      production C++.
+    - Existing canonical SoA behavior and diagnostics stay stable across
+      repeated builds.
+    - Production `src/` and `include/` C++ no longer contain public SoA
+      collection-surface tables, path aliases, import aliases, constructor
+      spellings, conversion spellings, or helper-name lists; temporary
+      compatibility traces are limited to the deletion work tracked by
+      TODO-4309.
+    - Docs describe the boundary between public `soa` surface metadata and
+      generic SoA substrate metadata.
+  - stop_rule: Stop once canonical SoA surface metadata no longer requires
+    PrimeStruct-SoA-public-surface C++ entries; leave removal of compatibility
+    spellings and the final zero-trace audit to TODO-4309 and TODO-4310.
+  - evidence: Moved SoA helper, constructor, public import, public helper,
+    field-view, conversion, and retained compatibility metadata from
+    `src/StdlibSurfaceRegistry.cpp` into
+    `stdlib/std/collections/surfaces.psmeta`; routed SoA member alias
+    resolution through generic manifest aliases; added registry tests for
+    canonical `/std/collections/soa/*` metadata; refreshed docs and source
+    locks; ran `git diff --check`; built
+    `PrimeStruct_backend_runtime_tests`, `PrimeStruct_backend_ir_tests`, and
+    `PrimeStruct_compile_run_tests`; and ran focused registry, metadata, and
+    docs-lock doctest slices while skipping broad baseline validation per the
+    lite workflow.

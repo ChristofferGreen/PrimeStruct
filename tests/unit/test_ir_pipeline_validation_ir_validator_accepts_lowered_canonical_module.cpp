@@ -1230,6 +1230,15 @@ TEST_CASE("ir lowerer stdlib surface metadata rejects experimental map lowering 
   CHECK(primec::resolveStdlibSurfaceMemberName(
             *soaGetRefMetadata,
             "/std/collections/experimental_soa_vector/soaVectorGetRef") == "get_ref");
+
+  const auto *publicSoaFieldViewMetadata =
+      primec::findStdlibSurfaceMetadataByResolvedPath("/std/collections/soa/field_view");
+  REQUIRE(publicSoaFieldViewMetadata != nullptr);
+  CHECK(publicSoaFieldViewMetadata->id ==
+        primec::StdlibSurfaceId::CollectionsSoaVectorHelpers);
+  CHECK(primec::resolveStdlibSurfaceMemberName(
+            *publicSoaFieldViewMetadata, "/std/collections/soa/field_view") ==
+        "field_view");
 }
 
 TEST_CASE("stdlib surface metadata resolves collection helper member tokens") {
@@ -1269,12 +1278,24 @@ TEST_CASE("stdlib surface metadata resolves collection helper member tokens") {
   const auto *soaMetadata =
       primec::findStdlibSurfaceMetadata(primec::StdlibSurfaceId::CollectionsSoaVectorHelpers);
   REQUIRE(soaMetadata != nullptr);
+  CHECK(primec::resolveStdlibSurfaceMemberName(*soaMetadata, "/std/collections/soa/count") ==
+        "count");
+  CHECK(primec::resolveStdlibSurfaceMemberName(*soaMetadata, "/std/collections/soa/to_aos") ==
+        "to_aos");
   CHECK(primec::resolveStdlibSurfaceMemberName(*soaMetadata, "soaVectorCountRef") ==
         "count_ref");
   CHECK(primec::resolveStdlibSurfaceMemberName(*soaMetadata, "soaVectorFieldView") ==
         "field_view");
   CHECK(primec::resolveStdlibSurfaceMemberName(*soaMetadata, "soaVectorToAos") ==
         "to_aos");
+
+  const auto *soaCtorMetadata =
+      primec::findStdlibSurfaceMetadata(primec::StdlibSurfaceId::CollectionsSoaVectorConstructors);
+  REQUIRE(soaCtorMetadata != nullptr);
+  CHECK(primec::resolveStdlibSurfaceMemberName(*soaCtorMetadata, "/std/collections/soa/soa") ==
+        "soa");
+  CHECK(primec::resolveStdlibSurfaceMemberName(*soaCtorMetadata, "/std/collections/soa/from_aos") ==
+        "from_aos");
 }
 
 TEST_CASE("stdlib surface metadata classifies collection helper categories") {

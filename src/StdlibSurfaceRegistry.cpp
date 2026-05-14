@@ -92,113 +92,6 @@ constexpr auto FileErrorLoweringSpellings = std::to_array<std::string_view>({
     "/file_error/why",
 });
 
-constexpr auto CollectionsSoaVectorHelperMembers = std::to_array<std::string_view>({
-    "count",
-    "count_ref",
-    "get",
-    "get_ref",
-    "ref",
-    "ref_ref",
-    "field_view",
-    "reserve",
-    "push",
-    "to_aos",
-    "to_aos_ref",
-});
-
-constexpr auto CollectionsSoaVectorImportAliases = std::to_array<std::string_view>({
-    "/std/collections/soa_vector",
-    "/soa_vector",
-    "soa_vector",
-});
-
-constexpr auto CollectionsSoaVectorCompatibilitySpellings = std::to_array<std::string_view>({
-    "/std/collections/count",
-    "/std/collections/get",
-    "/std/collections/ref",
-    "/std/collections/reserve",
-    "/std/collections/push",
-    "/soa_vector/count",
-    "/soa_vector/count_ref",
-    "/soa_vector/get",
-    "/soa_vector/get_ref",
-    "/soa_vector/ref",
-    "/soa_vector/ref_ref",
-    "/soa_vector/field_view",
-    "/soa_vector/reserve",
-    "/soa_vector/push",
-    "/soa_vector/to_aos",
-    "/soa_vector/to_aos_ref",
-    "/std/collections/experimental_soa_vector/soaVectorCount",
-    "/std/collections/experimental_soa_vector/soaVectorCountRef",
-    "/std/collections/experimental_soa_vector/soaVectorGet",
-    "/std/collections/experimental_soa_vector/soaVectorGetRef",
-    "/std/collections/experimental_soa_vector/soaVectorRef",
-    "/std/collections/experimental_soa_vector/soaVectorRefRef",
-    "/std/collections/experimental_soa_vector/soaVectorFieldView",
-    "/std/collections/experimental_soa_vector/soaVectorReserve",
-    "/std/collections/experimental_soa_vector/soaVectorPush",
-    "/std/collections/experimental_soa_vector_conversions/soaVectorToAos",
-    "/std/collections/experimental_soa_vector_conversions/soaVectorToAosRef",
-});
-
-constexpr auto CollectionsSoaVectorLoweringSpellings = std::to_array<std::string_view>({
-    "/std/collections/soa_vector/count",
-    "/std/collections/soa_vector/count_ref",
-    "/std/collections/soa_vector/get",
-    "/std/collections/soa_vector/get_ref",
-    "/std/collections/soa_vector/ref",
-    "/std/collections/soa_vector/ref_ref",
-    "/std/collections/soa_vector/field_view",
-    "/std/collections/soa_vector/reserve",
-    "/std/collections/soa_vector/push",
-    "/std/collections/soa_vector/soaVectorCount",
-    "/std/collections/soa_vector/soaVectorCountRef",
-    "/std/collections/soa_vector/soaVectorGet",
-    "/std/collections/soa_vector/soaVectorGetRef",
-    "/std/collections/soa_vector/soaVectorRef",
-    "/std/collections/soa_vector/soaVectorRefRef",
-    "/std/collections/soa_vector/soaVectorFieldView",
-    "/std/collections/soa_vector/soaVectorReserve",
-    "/std/collections/soa_vector/soaVectorPush",
-    "/std/collections/soa_vector/to_aos",
-    "/std/collections/soa_vector/to_aos_ref",
-    "/std/collections/soa_vector_conversions/soaVectorToAos",
-    "/std/collections/soa_vector_conversions/soaVectorToAosRef",
-});
-
-constexpr auto CollectionsSoaVectorConstructorMembers = std::to_array<std::string_view>({
-    "soa_vector",
-    "SoaVector",
-    "soaVectorNew",
-    "soaVectorSingle",
-    "soaVectorFromAos",
-});
-
-constexpr auto CollectionsSoaVectorConstructorImportAliases = std::to_array<std::string_view>({
-    "/std/collections/soa_vector",
-    "/soa_vector",
-    "soa_vector",
-});
-
-constexpr auto CollectionsSoaVectorConstructorCompatibilitySpellings = std::to_array<std::string_view>({
-    "/std/collections/experimental_soa_vector/SoaVector",
-    "/std/collections/experimental_soa_vector/soaVectorNew",
-    "/std/collections/experimental_soa_vector/soaVectorSingle",
-    "/std/collections/experimental_soa_vector/soaVectorFromAos",
-});
-
-constexpr auto CollectionsSoaVectorConstructorLoweringSpellings = std::to_array<std::string_view>({
-    "/std/collections/soa_vector/soa_vector",
-    "/std/collections/soa_vector/soaVectorNew",
-    "/std/collections/soa_vector/soaVectorSingle",
-    "/std/collections/soa_vector/soaVectorFromAos",
-    "/std/collections/experimental_soa_vector/SoaVector",
-    "/std/collections/experimental_soa_vector/soaVectorNew",
-    "/std/collections/experimental_soa_vector/soaVectorSingle",
-    "/std/collections/experimental_soa_vector/soaVectorFromAos",
-});
-
 constexpr auto CollectionsContainerErrorMembers = std::to_array<std::string_view>({
     "why",
     "status",
@@ -385,6 +278,8 @@ struct CollectionsManifestSurfaces {
   ManifestSurfaceData vectorConstructors;
   ManifestSurfaceData mapHelpers;
   ManifestSurfaceData mapConstructors;
+  ManifestSurfaceData soaHelpers;
+  ManifestSurfaceData soaConstructors;
 };
 
 std::string trimAscii(std::string_view value) {
@@ -411,6 +306,12 @@ std::optional<StdlibSurfaceId> parseManifestSurfaceId(std::string_view value) {
   }
   if (value == "CollectionsMapConstructors") {
     return StdlibSurfaceId::CollectionsMapConstructors;
+  }
+  if (value == "CollectionsSoaVectorHelpers") {
+    return StdlibSurfaceId::CollectionsSoaVectorHelpers;
+  }
+  if (value == "CollectionsSoaVectorConstructors") {
+    return StdlibSurfaceId::CollectionsSoaVectorConstructors;
   }
   return std::nullopt;
 }
@@ -551,6 +452,12 @@ CollectionsManifestSurfaces loadCollectionsManifestSurfaces() {
       case StdlibSurfaceId::CollectionsMapConstructors:
         applyManifestSurfaceRecord(surfaces.mapConstructors, std::move(record));
         break;
+      case StdlibSurfaceId::CollectionsSoaVectorHelpers:
+        applyManifestSurfaceRecord(surfaces.soaHelpers, std::move(record));
+        break;
+      case StdlibSurfaceId::CollectionsSoaVectorConstructors:
+        applyManifestSurfaceRecord(surfaces.soaConstructors, std::move(record));
+        break;
       default:
         break;
     }
@@ -649,29 +556,29 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .id = StdlibSurfaceId::CollectionsSoaVectorHelpers,
         .domain = StdlibSurfaceDomain::Collections,
         .shape = StdlibSurfaceShape::HelperFamily,
-        .bridgeKey = "collections.soa_vector_helpers",
-        .canonicalImportRoot = "/std/collections",
-        .canonicalPath = "/std/collections/soa_vector",
-        .memberNames = CollectionsSoaVectorHelperMembers,
-        .memberAliases = {},
-        .statementMemberNames = {},
-        .importAliasSpellings = CollectionsSoaVectorImportAliases,
-        .compatibilitySpellings = CollectionsSoaVectorCompatibilitySpellings,
-        .loweringSpellings = CollectionsSoaVectorLoweringSpellings,
+        .bridgeKey = CollectionsSurfaces.soaHelpers.bridgeKey,
+        .canonicalImportRoot = CollectionsSurfaces.soaHelpers.canonicalImportRoot,
+        .canonicalPath = CollectionsSurfaces.soaHelpers.canonicalPath,
+        .memberNames = CollectionsSurfaces.soaHelpers.memberNames.views,
+        .memberAliases = CollectionsSurfaces.soaHelpers.memberAliases.views,
+        .statementMemberNames = CollectionsSurfaces.soaHelpers.statementMemberNames.views,
+        .importAliasSpellings = CollectionsSurfaces.soaHelpers.importAliasSpellings.views,
+        .compatibilitySpellings = CollectionsSurfaces.soaHelpers.compatibilitySpellings.views,
+        .loweringSpellings = CollectionsSurfaces.soaHelpers.loweringSpellings.views,
     },
     {
         .id = StdlibSurfaceId::CollectionsSoaVectorConstructors,
         .domain = StdlibSurfaceDomain::Collections,
         .shape = StdlibSurfaceShape::ConstructorFamily,
-        .bridgeKey = "collections.soa_vector_constructors",
-        .canonicalImportRoot = "/std/collections",
-        .canonicalPath = "/std/collections/soa_vector/soa_vector",
-        .memberNames = CollectionsSoaVectorConstructorMembers,
-        .memberAliases = {},
-        .statementMemberNames = {},
-        .importAliasSpellings = CollectionsSoaVectorConstructorImportAliases,
-        .compatibilitySpellings = CollectionsSoaVectorConstructorCompatibilitySpellings,
-        .loweringSpellings = CollectionsSoaVectorConstructorLoweringSpellings,
+        .bridgeKey = CollectionsSurfaces.soaConstructors.bridgeKey,
+        .canonicalImportRoot = CollectionsSurfaces.soaConstructors.canonicalImportRoot,
+        .canonicalPath = CollectionsSurfaces.soaConstructors.canonicalPath,
+        .memberNames = CollectionsSurfaces.soaConstructors.memberNames.views,
+        .memberAliases = CollectionsSurfaces.soaConstructors.memberAliases.views,
+        .statementMemberNames = CollectionsSurfaces.soaConstructors.statementMemberNames.views,
+        .importAliasSpellings = CollectionsSurfaces.soaConstructors.importAliasSpellings.views,
+        .compatibilitySpellings = CollectionsSurfaces.soaConstructors.compatibilitySpellings.views,
+        .loweringSpellings = CollectionsSurfaces.soaConstructors.loweringSpellings.views,
     },
     {
         .id = StdlibSurfaceId::CollectionsContainerErrorHelpers,
@@ -787,53 +694,6 @@ std::string_view resolveMetadataMemberName(const StdlibSurfaceMetadata &metadata
   return {};
 }
 
-std::string_view resolveCollectionsSoaVectorHelperMemberName(std::string_view memberName) {
-  if (matchesAny(CollectionsSoaVectorHelperMembers, memberName)) {
-    return memberName;
-  }
-  if (memberName == "soaVectorCount") {
-    return "count";
-  }
-  if (memberName == "soaVectorCountRef") {
-    return "count_ref";
-  }
-  if (memberName == "soaVectorGet") {
-    return "get";
-  }
-  if (memberName == "soaVectorGetRef") {
-    return "get_ref";
-  }
-  if (memberName == "soaVectorRef") {
-    return "ref";
-  }
-  if (memberName == "soaVectorRefRef") {
-    return "ref_ref";
-  }
-  if (memberName == "soaVectorFieldView") {
-    return "field_view";
-  }
-  if (memberName == "soaVectorReserve") {
-    return "reserve";
-  }
-  if (memberName == "soaVectorPush") {
-    return "push";
-  }
-  if (memberName == "soaVectorToAos") {
-    return "to_aos";
-  }
-  if (memberName == "soaVectorToAosRef") {
-    return "to_aos_ref";
-  }
-  return {};
-}
-
-std::string_view resolveCollectionsSoaVectorConstructorMemberName(std::string_view memberName) {
-  if (matchesAny(CollectionsSoaVectorConstructorMembers, memberName)) {
-    return memberName;
-  }
-  return {};
-}
-
 std::string_view resolveSurfaceMemberNameImpl(const StdlibSurfaceMetadata &metadata,
                                               std::string_view memberName) {
   switch (metadata.id) {
@@ -841,11 +701,9 @@ std::string_view resolveSurfaceMemberNameImpl(const StdlibSurfaceMetadata &metad
     case StdlibSurfaceId::CollectionsVectorConstructors:
     case StdlibSurfaceId::CollectionsMapHelpers:
     case StdlibSurfaceId::CollectionsMapConstructors:
-      return resolveMetadataMemberName(metadata, memberName);
     case StdlibSurfaceId::CollectionsSoaVectorHelpers:
-      return resolveCollectionsSoaVectorHelperMemberName(memberName);
     case StdlibSurfaceId::CollectionsSoaVectorConstructors:
-      return resolveCollectionsSoaVectorConstructorMemberName(memberName);
+      return resolveMetadataMemberName(metadata, memberName);
     default:
       if (matchesAny(metadata.memberNames, memberName)) {
         return memberName;
