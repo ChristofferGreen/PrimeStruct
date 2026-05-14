@@ -29,6 +29,12 @@ bool isLegacyExperimentalVectorValidationContext(std::string_view definitionPath
          namespacePrefix.rfind(legacyExperimentalVectorCompatibilityRoot(), 0) == 0;
 }
 
+bool isExperimentalMapBackingStructPath(std::string_view structPath) {
+  const std::string_view normalizedPath = trimLeadingSlash(structPath);
+  return isExperimentalCollectionBackingTypeName("map", "Map", normalizedPath) ||
+         isExperimentalCollectionBackingTypeName("map", "Entry", normalizedPath);
+}
+
 } // namespace
 
 bool SemanticsValidator::isDropTrivialContainerElementType(const std::string &typeName,
@@ -70,7 +76,7 @@ bool SemanticsValidator::isDropTrivialContainerElementType(const std::string &ty
   }
 
   const std::string structPath = resolveStructTypePath(base, namespacePrefix, structNames_);
-  if (structPath.rfind("/std/collections/experimental_map", 0) == 0) {
+  if (isExperimentalMapBackingStructPath(structPath)) {
     return true;
   }
   if (structPath.empty() || structNames_.count(structPath) == 0) {
@@ -161,7 +167,7 @@ bool SemanticsValidator::isRelocationTrivialContainerElementType(const std::stri
   }
 
   const std::string structPath = resolveStructTypePath(base, namespacePrefix, structNames_);
-  if (structPath.rfind("/std/collections/experimental_map", 0) == 0) {
+  if (isExperimentalMapBackingStructPath(structPath)) {
     return true;
   }
   if (structPath.empty() || structNames_.count(structPath) == 0) {

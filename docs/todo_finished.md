@@ -18565,3 +18565,37 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     surface lookups, updated the source lock, removed the file from the
     map-surface inventory allowance, and verified focused source-lock,
     statement-body semantic, and map-surface inventory checks.
+
+- [x] TODO-4493: Route statement container map backing check through metadata
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4492
+  - split_from: TODO-4464
+  - scope: Remove hard-coded experimental map backing type path checks from
+    statement container drop/relocation triviality by routing backing type
+    recognition through shared map-constructor/type metadata helpers.
+  - implementation_notes:
+    - Targeted `src/semantics/SemanticsValidatorStatementContainerHelpers.cpp`,
+      where drop and relocation triviality both still checked
+      `structPath.rfind("/std/collections/experimental_map", 0)`.
+    - Extended the generic collection backing-type helper to recognize
+      generated backing specializations so the statement container helper can
+      avoid production C++ experimental-map path literals.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` so the
+      statement container helper file has no map-surface trace allowance.
+  - acceptance:
+    - Container drop and relocation triviality continue to treat current
+      experimental map backing structs as trivial internal substrate.
+    - The statement container helper file no longer contains a production C++
+      experimental map backing path literal.
+    - Source-lock coverage prevents reintroducing the literal backing path.
+  - stop_rule: Stop once statement container map backing recognition is
+    metadata-backed, focused coverage passes, and the map-surface trace
+    inventory no longer allows traces for the target file.
+  - evidence: Replaced hard-coded experimental-map path prefix checks with the
+    shared collection backing-type helper for `Map` and `Entry` backing
+    structs, updated the source lock, removed the file from the map-surface
+    inventory allowance, and promoted TODO-4494 for the next remaining
+    direct-call binding trace.

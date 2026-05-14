@@ -2255,6 +2255,8 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
       "SemanticsValidatorInferCollectionCompatibilityInternal.h";
   const std::filesystem::path semanticsInferTargetResolutionPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferTargetResolution.cpp";
+  const std::filesystem::path semanticsStatementContainerHelpersPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorStatementContainerHelpers.cpp";
   const std::filesystem::path semanticsValidatePath =
       repoRoot / "src" / "semantics" / "SemanticsValidate.cpp";
   const std::filesystem::path soaVectorStdlibPath =
@@ -2268,6 +2270,7 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
   REQUIRE(std::filesystem::exists(collectionCompatibilityPath));
   REQUIRE(std::filesystem::exists(collectionCompatibilityInternalPath));
   REQUIRE(std::filesystem::exists(semanticsInferTargetResolutionPath));
+  REQUIRE(std::filesystem::exists(semanticsStatementContainerHelpersPath));
   REQUIRE(std::filesystem::exists(semanticsValidatePath));
   REQUIRE(std::filesystem::exists(soaVectorStdlibPath));
   REQUIRE(std::filesystem::exists(experimentalSoaVectorStdlibPath));
@@ -2282,6 +2285,8 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
       readText(collectionCompatibilityInternalPath);
   const std::string semanticsInferTargetResolutionSource =
       readText(semanticsInferTargetResolutionPath);
+  const std::string semanticsStatementContainerHelpersSource =
+      readText(semanticsStatementContainerHelpersPath);
   const std::string semanticsValidateSource = readText(semanticsValidatePath);
   const std::string soaVectorStdlibSource = readText(soaVectorStdlibPath);
   const std::string experimentalSoaVectorStdlibSource = readText(experimentalSoaVectorStdlibPath);
@@ -2507,6 +2512,15 @@ main() {
         std::string::npos);
   CHECK(semanticsInferTargetResolutionSource.find(
             "isExperimentalCollectionBackingTypeName(\"map\", \"Map\", base)") !=
+        std::string::npos);
+  CHECK(semanticsStatementContainerHelpersSource.find(
+            "structPath.rfind(\"/std/collections/experimental_map\", 0)") ==
+        std::string::npos);
+  CHECK(semanticsStatementContainerHelpersSource.find(
+            "isExperimentalCollectionBackingTypeName(\"map\", \"Map\", normalizedPath)") !=
+        std::string::npos);
+  CHECK(semanticsStatementContainerHelpersSource.find(
+            "isExperimentalCollectionBackingTypeName(\"map\", \"Entry\", normalizedPath)") !=
         std::string::npos);
   CHECK(collectionCompatibilityInternalSource.find(
             "preferredPublishedCollectionLoweringPath(") !=

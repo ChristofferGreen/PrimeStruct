@@ -40,7 +40,8 @@ inline bool isExperimentalCollectionBackingTypeName(
     expected.erase(expected.begin());
   }
   expected += std::string(backingTypeName);
-  return typeName == expected;
+  const std::string specializedExpected = expected + "__";
+  return typeName == expected || typeName.rfind(specializedExpected, 0) == 0;
 }
 
 inline bool resolveCollectionConstructorMemberPath(primec::StdlibSurfaceId surfaceId,
