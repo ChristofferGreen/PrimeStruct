@@ -181,25 +181,6 @@ bool isExplicitDirectSoaAccessCall(const Expr &expr) {
          rawPath == "/std/collections/soa_vector/get_ref";
 }
 
-bool isDirectExperimentalMapAccessImplementationCall(
-    const SemanticProgram *semanticProgram,
-    const Expr &expr) {
-  if (expr.isMethodCall || expr.kind != Expr::Kind::Call) {
-    return false;
-  }
-  const std::string rawPath = resolveNativeTailCallPathWithoutFallbackProbes(expr);
-  if (rawPath.rfind("/std/collections/experimental_map/", 0) != 0) {
-    return false;
-  }
-  std::string helperName;
-  return resolvePublishedNativeTailHelperName(
-             semanticProgram,
-             expr,
-             StdlibSurfaceId::CollectionsMapHelpers,
-             helperName) &&
-         (helperName == "at" || helperName == "at_unsafe");
-}
-
 bool hasSemanticMapAccessHelperDefinition(const SemanticProgram *semanticProgram,
                                           std::string_view accessName) {
   if (semanticProgram == nullptr ||
@@ -1024,10 +1005,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
         return NativeCallTailDispatchResult::NotHandled;
       }
     }
-    const bool isExperimentalMapAccessImplementationCall =
-        isDirectExperimentalMapAccessImplementationCall(semanticProgram, expr);
-    if (isExplicitMapAccessCall && !expr.args.empty() &&
-        !isExperimentalMapAccessImplementationCall) {
+    if (isExplicitMapAccessCall && !expr.args.empty()) {
       const auto mapTargetInfo = resolveMapAccessTargetInfo(
           expr.args.front(), localsIn, resolveCallMapAccessTargetInfo);
       if (mapTargetInfo.isMapTarget &&

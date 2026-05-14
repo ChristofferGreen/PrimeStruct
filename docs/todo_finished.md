@@ -17810,3 +17810,39 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     assertion against reintroducing the removed direct-target pattern, split
     method fallback guard cleanup into TODO-4471, and skipped broad baseline
     validation per the lite workflow.
+
+- [x] TODO-4471: Delete experimental-map method fallback guards
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4470
+  - split_from: TODO-4470
+  - scope: Delete remaining lowerer/emitter rooted
+    `/std/collections/experimental_map/map*` method helper fallback guards
+    that treat explicit experimental-map helpers as public map-surface aliases,
+    while preserving backing `Map__*` layout and type traces for TODO-4468.
+  - implementation_notes:
+    - Targeted `IrLowererCallHelpers.cpp`,
+      `IrLowererLowerEmitExprCollectionHelpers.h`,
+      `IrLowererCallResolution.cpp`, `IrLowererNativeTailDispatch.cpp`, and
+      `IrLowererInlineNativeCallDispatch.cpp`.
+    - Left generated constructor/backing traces such as
+      `IrLowererInlineCallContextHelpers.cpp` `map__`, setup-type fallback
+      blocking, and `Map__*` layout/type recognition to TODO-4468.
+  - acceptance:
+    - Lowerer/emitter fallback selection no longer treats rooted
+      `/std/collections/experimental_map/map*` method helper paths as public
+      map-surface aliases.
+    - Any retained experimental-map traces are documented as backing
+      substrate for TODO-4468 rather than public map helper compatibility.
+    - Source-lock or behavior coverage rejects reintroducing the removed rooted
+      experimental-map method fallback aliases.
+  - stop_rule: Stop once rooted experimental-map method fallback aliases are
+    gone or explicitly reclassified for the backing-trace audit.
+  - evidence: Removed rooted experimental-map method helper fallback branches
+    from count fallback, late collection helper rewrite gating, same-path call
+    resolution, native tail access exceptions, and inline native map-builtin
+    classification. Added source locks for the removed lowerer dispatch
+    snippets, promoted TODO-4468 to Ready Now for the remaining backing-trace
+    inventory, and skipped broad baseline validation per the lite workflow.

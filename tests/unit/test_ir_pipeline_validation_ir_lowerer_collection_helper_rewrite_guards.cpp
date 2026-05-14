@@ -45,10 +45,9 @@ TEST_CASE("ir lowerer collection helper rewrite guards explicit map defs") {
             "              callExpr.name == helperName) {") !=
         std::string::npos);
   CHECK(source.find(
-            "if (directHelperPath.rfind(\"/std/collections/map/\", 0) == 0 ||\n"
-            "              directHelperPath.rfind(\"/std/collections/experimental_map/\", 0) == 0) {") !=
+            "if (directHelperPath.rfind(\"/std/collections/map/\", 0) == 0) {") !=
         std::string::npos);
-  CHECK(source.find("resolveDirectHelperPath(callExpr).rfind(\"/std/collections/experimental_map/\", 0) == 0") !=
+  CHECK(source.find("directHelperPath.rfind(\"/std/collections/experimental_map/\", 0)") ==
         std::string::npos);
   CHECK(source.find("if (resolveDefinitionCall(callExpr) != nullptr)") != std::string::npos);
   CHECK(source.find("rewrittenExpr.name = helperName;") != std::string::npos);

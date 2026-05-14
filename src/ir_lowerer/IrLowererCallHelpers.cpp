@@ -271,8 +271,7 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
   };
   if (!expr.isMethodCall) {
     const std::string directHelperPath = resolveDirectHelperPath();
-    if (directHelperPath.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0 ||
-        directHelperPath.rfind("/std/collections/experimental_map/", 0) == 0) {
+    if (directHelperPath.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0) {
       return CountMethodFallbackResult::NotHandled;
     }
     if (isExplicitRemovedCountLikeAliasCall("count") ||

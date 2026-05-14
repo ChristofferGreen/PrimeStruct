@@ -302,10 +302,6 @@ bool prefersPublishedMapHelperDefinition(const Expr &expr,
          helperName == "at_unsafe" || helperName == "at_unsafe_ref")) {
       return true;
     }
-    if (rawPath.rfind("/std/collections/experimental_map/", 0) == 0 &&
-        callee.fullPath.rfind("/std/collections/experimental_map/map", 0) == 0) {
-      return true;
-    }
     if (isExplicitSamePathPublishedMapHelperCall(expr, callee.fullPath)) {
       return true;
     }
@@ -335,10 +331,6 @@ bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee) {
       resolvePublishedInlineMapHelperName(callee.fullPath, resolvedHelperName);
   if (!expr.isMethodCall) {
     const std::string scopedExprPath = resolveInlineCallPathWithoutFallbackProbes(expr);
-    if (scopedExprPath.rfind("/std/collections/experimental_map/map", 0) == 0 &&
-        callee.fullPath.rfind("/std/collections/experimental_map/map", 0) == 0) {
-      return false;
-    }
     if (prefersPublishedMapHelperDefinition(expr, resolvedHelperName, callee)) {
       return false;
     }
@@ -407,9 +399,6 @@ bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee) {
   }
   const std::string helperName =
       canonicalInlineMapHelperName(callee.fullPath.substr(slash + 1));
-  if (callee.fullPath.rfind("/std/collections/experimental_map/map", 0) == 0) {
-    return isInlineMapBuiltinHelperName(helperName);
-  }
   const std::string receiverPath = callee.fullPath.substr(0, slash);
   if (receiverPath.rfind("/std/collections/experimental_map/Map__", 0) != 0) {
     return false;

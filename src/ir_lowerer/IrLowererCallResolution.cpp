@@ -290,9 +290,7 @@ bool isExplicitSamePathPublishedMapHelperCall(const Expr &expr,
   if (!resolveMapHelperAliasName(expr, helperName) &&
       rawPath.rfind("/map/", 0) != 0 &&
       rawPath.rfind("/std/collections/map/", 0) != 0 &&
-      rawPath.rfind("/std/collections/experimental_map/", 0) != 0 &&
-      resolvedPath.rfind("/std/collections/map/", 0) != 0 &&
-      resolvedPath.rfind("/std/collections/experimental_map/", 0) != 0) {
+      resolvedPath.rfind("/std/collections/map/", 0) != 0) {
     return false;
   }
   return normalizeCollectionHelperPath(rawPath) ==

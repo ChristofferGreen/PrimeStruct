@@ -409,8 +409,7 @@
             return false;
           }
           const std::string directHelperPath = resolveCollectionExprDirectPath(callExpr);
-          if (directHelperPath.rfind("/std/collections/map/", 0) == 0 ||
-              directHelperPath.rfind("/std/collections/experimental_map/", 0) == 0) {
+          if (directHelperPath.rfind("/std/collections/map/", 0) == 0) {
             return false;
           }
           if (ir_lowerer::isPublishedStdlibSurfaceLoweringPath(

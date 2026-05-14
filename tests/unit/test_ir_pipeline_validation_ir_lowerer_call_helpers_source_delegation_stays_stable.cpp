@@ -174,6 +174,9 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(callHelpersSource.find("bool isMapTryAtHelperName(const Expr &expr) {") ==
         std::string::npos);
+  CHECK(callHelpersSource.find(
+            "directHelperPath.rfind(\"/std/collections/experimental_map/\", 0) == 0") ==
+        std::string::npos);
   CHECK(callHelpersSource.find("bool isVectorTarget(const Expr &expr, const LocalMap &localsIn) {") ==
         std::string::npos);
   CHECK(callHelpersSource.find("bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn) {") ==
@@ -469,6 +472,12 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(callResolutionSource.find("rawPath.rfind(\"/map/\", 0) != 0 &&") !=
         std::string::npos);
+  CHECK(callResolutionSource.find(
+            "rawPath.rfind(\"/std/collections/experimental_map/\", 0) != 0") ==
+        std::string::npos);
+  CHECK(callResolutionSource.find(
+            "resolvedPath.rfind(\"/std/collections/experimental_map/\", 0) != 0") ==
+        std::string::npos);
   CHECK(callResolutionSource.find("return normalizeCollectionHelperPath(rawPath) ==") !=
         std::string::npos);
   CHECK(callResolutionSource.find("std::string resolveCallPathFromScopeWithoutImportAliases(") ==
@@ -511,6 +520,15 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(inlineDispatchSource.find("rewriteCanonicalPrefix(\"/std/collections/map/\")") ==
         std::string::npos);
   CHECK(inlineDispatchSource.find("rewriteCanonicalPrefix(\"/std/collections/experimental_map/\")") ==
+        std::string::npos);
+  CHECK(inlineDispatchSource.find(
+            "rawPath.rfind(\"/std/collections/experimental_map/\", 0) == 0") ==
+        std::string::npos);
+  CHECK(inlineDispatchSource.find(
+            "scopedExprPath.rfind(\"/std/collections/experimental_map/map\", 0)") ==
+        std::string::npos);
+  CHECK(inlineDispatchSource.find(
+            "callee.fullPath.rfind(\"/std/collections/experimental_map/map\", 0)") ==
         std::string::npos);
   CHECK(inlineDispatchSource.find("normalized = \"/map/\" +") ==
         std::string::npos);
@@ -1021,6 +1039,11 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(emitExprTryHelpersSource.find("std/collections/experimental_vector") ==
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("const auto unsupportedCallResult = emitUnsupportedNativeCallDiagnosticImpl(") !=
+        std::string::npos);
+  CHECK(nativeTailDispatchSource.find("isDirectExperimentalMapAccessImplementationCall") ==
+        std::string::npos);
+  CHECK(nativeTailDispatchSource.find(
+            "rawPath.rfind(\"/std/collections/experimental_map/\", 0) != 0") ==
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("if (!emitBuiltinArrayAccess(accessName,") !=
         std::string::npos);
