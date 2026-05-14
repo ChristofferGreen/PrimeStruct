@@ -19131,3 +19131,34 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     present `soa<T>` as canonical, kept `soa_vector` wording scoped to
     compatibility, refreshed source-lock expectations, and promoted TODO-4306
     as the next Ready Now leaf.
+
+- [x] TODO-4510: Lock generic SoA substrate boundary docs
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: SoA public surface rename and ownership cutover
+  - depends_on: TODO-4509
+  - split_from: TODO-4306
+  - scope: Document and source-lock the split between generic SoA substrate
+    that may remain compiler/runtime-owned and public `soa<T>` collection
+    behavior that belongs in stdlib wrappers or compatibility shims.
+  - acceptance:
+    - `docs/PrimeStruct.md`, `docs/PrimeStruct_SyntaxSpec.md`, and
+      `docs/todo.md` identify the allowed generic substrate pieces:
+      field-layout/codegen/introspection, `SoaSchema*`, `SoaColumn<T>`,
+      `SoaFieldView<T>`, borrow-root/invalidation provenance, and allocation.
+    - Source-lock coverage pins `internal_soa_storage.prime` as substrate-only
+      fixture coverage with no public `soa_vector` helper imports or
+      `soaVector*` public helper names.
+    - Existing reflection runtime coverage is locked as `SoaSchema*` /
+      `SoaSchemaStorage` substrate coverage through
+      `/std/collections/internal_soa_storage/*`.
+  - stop_rule: Stop once the substrate/public-surface boundary is documented
+    and source-locked, with canonical `soa<T>` field-view invalidation left to
+    the next split leaf.
+  - evidence: Added the `Generic SoA Substrate Boundary` doc section, mirrored
+    the boundary in the syntax spec and TODO summary, source-locked
+    `internal_soa_storage.prime` as substrate-only coverage, pinned
+    reflection `SoaSchema*` runtime tests as internal substrate fixtures, and
+    split the remaining canonical `soa<T>` field-view invalidation work into
+    TODO-4511.

@@ -1217,6 +1217,13 @@ collection. The current public spelling is the canonical
 `/std/collections/soa_vector_conversions/*` spellings remain compatibility
 coverage for targeted tests rather than ordinary public imports.
 
+Generic SoA substrate remains separate from that public collection surface:
+field-layout/codegen/introspection, generated `SoaSchema*` metadata,
+`SoaColumn<T>` storage, `SoaFieldView<T>` non-owning views, checked-buffer
+allocation, field-slot addressing, borrow-root provenance, and invalidation
+tracking may stay compiler/runtime-owned while public helper names and
+compatibility spellings stay in stdlib wrappers or compatibility shims.
+
 Draft surface shape:
 - `soa<T>{}`
 - `value.count()`

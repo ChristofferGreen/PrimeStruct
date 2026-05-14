@@ -3987,6 +3987,38 @@ uses a distinct structure-of-arrays substrate and field-view invalidation model.
     retained `/std/collections/experimental_soa_vector*/*` paths are documented
     compatibility shims with conformance coverage.
 
+### Generic SoA Substrate Boundary
+This boundary is the scope reference for keeping compiler/runtime-owned SoA
+behavior separate from the public `soa<T>` collection surface. It exists so
+future `soa` work can delete public collection special cases without deleting
+the generic layout and storage primitives that the stdlib wrapper still needs.
+
+- **Public collection surface:** user code should spell the collection as
+  `soa<T>` and import `/std/collections/soa/*`. Public construction,
+  count/get/ref, push/reserve, field-view, conversion helper names, import
+  aliases, and compatibility spellings belong in stdlib wrapper modules or
+  explicitly named compatibility shims, not in compiler-owned policy.
+- **Allowed compiler/runtime substrate:** field-layout/codegen/introspection,
+  generated `SoaSchema*` metadata, `SoaColumn<T>` column storage,
+  `SoaFieldView<T>` non-owning field views, checked-buffer allocation/growth,
+  byte-addressable field-slot addressing, borrow-root provenance, and
+  invalidation tracking may remain compiler/runtime-owned when they are generic
+  over reflected storage rather than public collection helper names.
+- **Internal `.prime` substrate fixtures:** `/std/collections/internal_soa_storage/*`
+  owns `SoaColumn<T>`, `SoaColumnsN<...>`, `SoaFieldView<T>`,
+  `soaColumnFieldSlotUnsafe<Struct, Field>(...)`, and field-view read/ref/write
+  helpers. Reflection runtime coverage imports that internal storage module to
+  exercise generated `SoaSchema*` and `SoaSchemaStorage` helpers without using
+  public `soa_vector` collection helpers.
+- **Compatibility-only names:** `soa_vector<T>`, `/std/collections/soa_vector/*`,
+  rooted `/soa_vector/*`, `SoaVector<T>`, and `soaVector*` helper names are
+  retained only for compatibility tests and shims until TODO-4309 removes or
+  intentionally rejects them.
+- **Current canonical field-view gap:** public `soa<T>` construction and helper
+  calls are covered now, while canonical `soa<T>` field-view borrow-root and
+  structural-mutation validation coverage is the next bounded leaf. Existing
+  legacy field-view tests remain compatibility coverage until that leaf lands.
+
 ### Backend Profiles
 - A definition is well-typed only with respect to a backend profile.
 - Profiles include: `vm_native`, `glsl`, `cpp`.
