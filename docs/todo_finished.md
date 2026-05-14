@@ -18142,3 +18142,37 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     slashless prefix and surviving canonical prefix, reduced the file's
     inventory allowance from three traces to two, and skipped broad release
     validation per the lite workflow.
+
+- [x] TODO-4480: Delete slashless map-count emitter inference
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4479
+  - split_from: TODO-4464
+  - scope: Delete slashless `map/count` classification from emitter builtin
+    collection inference while preserving canonical
+    `std/collections/map/count` handling.
+  - implementation_notes:
+    - Targeted
+      `src/emitter/EmitterBuiltinCollectionInferenceHelpers.cpp`, where
+      `isExplicitMapCountNameLocal` still matched slashless `map/count`.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` so the emitter
+      builtin collection inference file keeps only its canonical map-count
+      trace.
+  - acceptance:
+    - Emitter builtin collection inference no longer treats slashless
+      `map/count` as an explicit map-count helper.
+    - Source-lock coverage rejects reintroducing slashless `map/count` while
+      preserving canonical `std/collections/map/count` matching.
+    - The map-surface trace inventory allowance for
+      `src/emitter/EmitterBuiltinCollectionInferenceHelpers.cpp` decreases to
+      one canonical map-count trace.
+  - stop_rule: Stop once slashless `map/count` is gone from emitter builtin
+    collection inference and the decaying inventory is tightened for that
+    file.
+  - evidence: Removed the slashless `map/count` match from
+    `isExplicitMapCountNameLocal`, added source locks for the removed
+    slashless path and surviving canonical path, reduced the file's inventory
+    allowance from two traces to one, and skipped broad release validation per
+    the lite workflow.

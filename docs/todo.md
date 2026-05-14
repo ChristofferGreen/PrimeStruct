@@ -251,8 +251,9 @@ Task template:
   rooted `/map/*` template definitions are no longer treated as stdlib
   collection helpers by implicit template inference, and template
   monomorphization no longer strips slashless `map/` method prefixes from map
-  receiver method targets. The remaining production lowerer/emitter
-  experimental-map traces
+  receiver method targets, and emitter builtin collection inference no longer
+  recognizes slashless `map/count` as an explicit map-count helper. The
+  remaining production lowerer/emitter experimental-map traces
   are source-locked as temporary internal backing substrate by
   `test_stdlib_map_ownership.cpp`, and
   all production `src`/`include` experimental-map/`Map__*` backing traces are
@@ -291,8 +292,10 @@ Task template:
   compatibility definition families, and implicit template inference no longer
   classifies rooted `/map/*` template definitions as stdlib collection helpers,
   and template monomorphization no longer strips slashless `map/` method
-  prefixes from map receiver method targets, with release validation gates now
-  locking those retired semantic and lowerer/emitter adapter names.
+  prefixes from map receiver method targets, and emitter builtin collection
+  inference no longer recognizes slashless `map/count` as an explicit
+  map-count helper, with release validation gates now locking those retired
+  semantic and lowerer/emitter adapter names.
   Template
   monomorphization now asks the registry for preferred experimental vector/SoA
   helper spellings instead of carrying bespoke canonical-to-experimental maps.
@@ -1692,7 +1695,7 @@ Task template:
   - owner: ai
   - created_at: 2026-05-14
   - phase: Map stdlib ownership cutover
-  - depends_on: TODO-4479
+  - depends_on: TODO-4480
   - split_from: TODO-4304
   - scope: Add a deterministic validation gate that proves the PrimeStruct map
     surface is fully `.prime`/stdlib-owned and absent from production C++
@@ -1737,6 +1740,10 @@ Task template:
       template monomorphization, so
       `src/semantics/TemplateMonomorphMethodTargets.h` should keep only its
       canonical map-helper traces in the map-surface trace inventory.
+    - TODO-4480 removed slashless `map/count` matching from emitter builtin
+      collection inference, so
+      `src/emitter/EmitterBuiltinCollectionInferenceHelpers.cpp` should keep
+      only its canonical map-count trace in the map-surface trace inventory.
     - Current `experimental_map` traces are classified as temporary backing
       substrate: `Map`/`Map__*` type identity, layout, binding, result,
       access, and inference hooks; `Entry`/`Entry__*` variadic constructor

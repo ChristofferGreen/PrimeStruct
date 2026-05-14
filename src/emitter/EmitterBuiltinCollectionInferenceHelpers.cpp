@@ -149,7 +149,7 @@ bool isExplicitMapCountNameLocal(const Expr &expr) {
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
-  return normalized == "map/count" || normalized == "std/collections/map/count";
+  return normalized == "std/collections/map/count";
 }
 
 bool isVectorValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes) {
