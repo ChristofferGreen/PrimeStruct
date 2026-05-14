@@ -17640,3 +17640,40 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     stabilization, and added source locks for the removed emitter, lowerer,
     and semantic access branches. Promoted TODO-4465 to Ready Now and skipped
     broad validation per the lite workflow.
+
+- [x] TODO-4465: Delete lowerer map helper path mirroring
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4463
+  - split_from: TODO-4463
+  - scope: Delete lowerer helper-path candidate mirroring that cross-resolves
+    rooted `/map/*` helper definitions and canonical `/std/collections/map/*`
+    helper definitions during setup-type, call-resolution, return-kind, and
+    struct-return metadata lookup.
+  - implementation_notes:
+    - Target the remaining lowerer `collectionHelperPathCandidates` and
+      `normalizeMapImportAliasPath` use sites only where they provide map
+      helper fallback behavior instead of ordinary import alias slash
+      normalization.
+    - Preserve semantic-product surface-id resolution for canonical
+      `/std/collections/map/*` helpers.
+  - acceptance:
+    - Lowerer collection helper path candidates no longer add rooted
+      `/map/*` fallbacks for canonical `/std/collections/map/*` helpers or
+      canonical fallbacks for rooted `/map/*` helpers.
+    - Canonical map construction, lookup, insertion, miss-result, and
+      destruction coverage remains routed through stdlib-owned helpers.
+    - Source-lock or behavior coverage rejects reintroducing the removed
+      lowerer map helper-path mirroring.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once lowerer helper candidate generation no longer
+    mirrors rooted and canonical map helper definitions; leave
+    experimental-map type-name cleanup to TODO-4466.
+  - evidence: Confirmed the remaining lowerer setup-type, return-kind, and
+    struct-return helper candidate paths no longer synthesize rooted
+    `/map/*` fallbacks for canonical `/std/collections/map/*` helpers or the
+    reverse. Added source locks for the return-kind and struct-return
+    candidate sites, preserved slash-only import-alias normalization, and
+    promoted TODO-4466 to Ready Now.

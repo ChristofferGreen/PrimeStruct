@@ -1057,6 +1057,8 @@ TEST_CASE("ir lowerer vector type layout traces use generic collection helpers")
       readText(lowererRoot / "IrLowererStructReturnPathHelpers.cpp");
   const std::string setupStructPathSource =
       readText(lowererRoot / "IrLowererSetupTypeStructPathHelpers.cpp");
+  const std::string setupReturnKindSource =
+      readText(lowererRoot / "IrLowererSetupTypeReturnKindHelpers.cpp");
   const std::string methodTargetSource =
       readText(lowererRoot / "IrLowererSetupTypeMethodTargetHelpers.cpp");
   const std::string methodCallSource =
@@ -1115,9 +1117,22 @@ TEST_CASE("ir lowerer vector type layout traces use generic collection helpers")
   CHECK(structReturnPathSource.find(
             "const std::string mapAlias = \"/map/\" + suffix") ==
         std::string::npos);
+  CHECK(structReturnPathSource.find(
+            "appendUnique(\"/std/collections/map/\" +") ==
+        std::string::npos);
+  CHECK(structReturnPathSource.find("appendUnique(\"/map/\" +") ==
+        std::string::npos);
   CHECK(setupStructPathSource.find("eraseCandidate(\"/std/collections/map/\" + suffix)") ==
         std::string::npos);
   CHECK(setupStructPathSource.find("eraseCandidate(\"/map/\" + suffix)") ==
+        std::string::npos);
+  CHECK(setupReturnKindSource.find(
+            "appendCandidate(\"/std/collections/map/\" +") ==
+        std::string::npos);
+  CHECK(setupReturnKindSource.find("appendCandidate(\"/map/\" +") ==
+        std::string::npos);
+  CHECK(setupReturnKindSource.find(
+            "collectionHelperPathCandidates(resolveExprPath(callExpr))") !=
         std::string::npos);
   CHECK(methodTargetSource.find(
             "const std::string mapAlias = \"/map/\" + suffix") ==
@@ -1131,6 +1146,7 @@ TEST_CASE("ir lowerer vector type layout traces use generic collection helpers")
   checkNoDirectVectorSurfaceTrace(uninitializedStructSource);
   checkNoDirectVectorSurfaceTrace(structSlotLayoutSource);
   checkNoDirectVectorSurfaceTrace(structReturnPathSource);
+  checkNoDirectVectorSurfaceTrace(setupReturnKindSource);
   checkNoDirectVectorSurfaceTrace(methodTargetSource);
   checkNoDirectVectorSurfaceTrace(methodCallSource);
   checkNoDirectVectorSurfaceTrace(declaredCollectionSource);
