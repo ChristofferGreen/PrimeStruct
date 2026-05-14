@@ -1,6 +1,7 @@
 #include "SemanticsValidator.h"
 
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/StdlibSurfaceRegistry.h"
 
 #include <string_view>
 
@@ -48,10 +49,19 @@ bool isCanonicalMapAccessHelperPath(std::string_view path) {
       suffix != std::string::npos) {
     normalizedPath.erase(suffix);
   }
-  return normalizedPath == "/std/collections/map/at" ||
-         normalizedPath == "/std/collections/map/at_ref" ||
-         normalizedPath == "/std/collections/map/at_unsafe" ||
-         normalizedPath == "/std/collections/map/at_unsafe_ref";
+  const StdlibSurfaceMetadata *metadata =
+      findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  if (metadata == nullptr) {
+    return false;
+  }
+  const std::string canonicalRoot = std::string(metadata->canonicalPath) + "/";
+  if (normalizedPath.rfind(canonicalRoot, 0) != 0) {
+    return false;
+  }
+  const std::string_view helperName =
+      resolveStdlibSurfaceMemberName(*metadata, normalizedPath);
+  return helperName == "at" || helperName == "at_ref" ||
+         helperName == "at_unsafe" || helperName == "at_unsafe_ref";
 }
 
 } // namespace

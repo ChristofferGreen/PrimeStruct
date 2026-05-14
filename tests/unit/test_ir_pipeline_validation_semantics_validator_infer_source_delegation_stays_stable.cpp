@@ -1568,8 +1568,17 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
   CHECK(semanticsPassesDiagnosticsSource.find(
             "#include \"SemanticsValidatorInferCollectionCompatibilityInternal.h\"") !=
         std::string::npos);
+  CHECK(semanticsPassesDiagnosticsSource.find("#include \"primec/StdlibSurfaceRegistry.h\"") !=
+        std::string::npos);
   CHECK(semanticsExecutionDiagnosticsSource.find(
             "#include \"SemanticsValidatorInferCollectionCompatibilityInternal.h\"") !=
+        std::string::npos);
+  CHECK(semanticsPassesDiagnosticsSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+        std::string::npos);
+  CHECK(semanticsPassesDiagnosticsSource.find("resolveStdlibSurfaceMemberName(*metadata, normalizedPath)") !=
+        std::string::npos);
+  CHECK(semanticsPassesDiagnosticsSource.find("\"/std/collections/map/") ==
         std::string::npos);
   CHECK(semanticsPassesDiagnosticsSource.find("isRemovedMapCompatibilityHelper") ==
         std::string::npos);

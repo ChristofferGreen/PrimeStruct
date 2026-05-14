@@ -18836,3 +18836,38 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     target file from the map-surface inventory allowance, added source-lock
     coverage, and promoted TODO-4464 to Ready Now for the full zero C++ map
     surface audit.
+
+- [x] TODO-4501: Route pass-diagnostic map access checks through metadata
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4500
+  - split_from: TODO-4464
+  - scope: Remove the hard-coded canonical map access helper path checks from
+    definition intra-body diagnostic collection by routing visible map access
+    helper classification through stdlib surface metadata.
+  - implementation_notes:
+    - Targeted `src/semantics/SemanticsValidatorPassesDiagnostics.cpp`, where
+      `isCanonicalMapAccessHelperPath` compared directly against canonical
+      `/std/collections/map/*` access helper paths.
+    - Reused `collections.map_helpers` metadata to resolve helper member names
+      and keep canonical-surface restriction without path literals in the
+      target file.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` for the target
+      file and added focused source-lock coverage for the delegation.
+  - acceptance:
+    - Definition intra-body diagnostics still treat visible canonical map
+      access helper calls as builtins.
+    - The target file no longer contains hard-coded canonical map access path
+      literals or any map-surface inventory traces.
+    - The map-surface trace inventory and source-lock coverage prevent
+      reintroducing the removed literals.
+  - stop_rule: Stop once canonical map access diagnostic classification
+    delegates to stdlib metadata, focused coverage passes, and the inventory
+    allowance for the target file is removed.
+  - evidence: Routed canonical map access diagnostic classification through
+    stdlib surface metadata, removed
+    `src/semantics/SemanticsValidatorPassesDiagnostics.cpp` from the
+    map-surface inventory allowance, updated source-lock coverage, and
+    promoted TODO-4502 for the next semantic snapshot bridge-choice slice.
