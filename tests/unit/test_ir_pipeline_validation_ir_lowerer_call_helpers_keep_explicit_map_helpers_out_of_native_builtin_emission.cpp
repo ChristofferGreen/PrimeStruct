@@ -209,14 +209,14 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
                  {mapName, keyName},
                  Result::NotHandled,
                  "stale");
-  expectDispatch("/map/at", {mapName, keyName}, Result::Emitted, "stale");
+  expectDispatch("/map/at", {mapName, keyName}, Result::NotHandled, "stale");
   expectDispatch("/std/collections/map/at",
                  {mapName, keyName},
                  Result::NotHandled,
                  "stale");
   expectDispatch("/map/at_unsafe",
                  {mapName, keyName},
-                 Result::Emitted,
+                 Result::NotHandled,
                  "stale");
   expectDispatch("/std/collections/map/at_unsafe",
                  {mapName, keyName},

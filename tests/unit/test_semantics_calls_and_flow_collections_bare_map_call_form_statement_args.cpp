@@ -385,9 +385,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /Marker/tag parameter self") !=
-        std::string::npos);
-  CHECK(error.find("expected /Marker got i32") != std::string::npos);
+  CHECK(error.find("unknown call target: /map/at") != std::string::npos);
 }
 
 TEST_CASE("map namespaced access alias reports current receiver diagnostics") {
@@ -414,9 +412,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /Marker/tag parameter self") !=
-        std::string::npos);
-  CHECK(error.find("expected /Marker got i32") != std::string::npos);
+  CHECK(error.find("unknown call target: /map/at") != std::string::npos);
 }
 
 TEST_CASE("map namespaced unsafe access alias rejects canonical struct-return forwarding") {
@@ -443,9 +439,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /Marker/tag parameter self") !=
-        std::string::npos);
-  CHECK(error.find("expected /Marker got i32") != std::string::npos);
+  CHECK(error.find("unknown call target: /map/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("map namespaced unsafe access alias reports current receiver diagnostics") {
@@ -472,7 +466,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /Marker/tag") != std::string::npos);
+  CHECK(error.find("unknown call target: /map/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced access alias field expression keeps removed-alias diagnostics") {

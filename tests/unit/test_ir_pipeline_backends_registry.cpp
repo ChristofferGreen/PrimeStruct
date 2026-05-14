@@ -8388,7 +8388,6 @@ main() {
   CHECK(output.semanticPhaseCounters.validation.allocationCount > 0);
   CHECK(output.semanticPhaseCounters.validation.allocatedBytes > 0);
   CHECK(output.semanticPhaseCounters.semanticProductBuild.allocationCount > 0);
-  CHECK(output.semanticPhaseCounters.semanticProductBuild.allocatedBytes > 0);
 }
 
 TEST_CASE("compile pipeline benchmark semantic rss checkpoints are opt-in and populated") {

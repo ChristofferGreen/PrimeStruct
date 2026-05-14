@@ -16,6 +16,15 @@ std::string stdCollectionsRoot() {
   return "/std/collections";
 }
 
+std::string stdCollectionMemberRoot(std::string_view collectionName) {
+  return stdCollectionsRoot() + "/" + std::string(collectionName) + "/";
+}
+
+std::string stdCollectionMemberPath(std::string_view collectionName,
+                                    std::string_view memberName) {
+  return stdCollectionMemberRoot(collectionName) + std::string(memberName);
+}
+
 std::string experimentalCollectionMemberRoot(std::string_view collectionName) {
   return stdCollectionsRoot() + "/experimental_" + std::string(collectionName) + "/";
 }
@@ -201,6 +210,9 @@ bool isBuiltinPublishedMapHelperName(const Expr &expr, std::string_view helperNa
 bool isMapBuiltinResolvedPath(const SemanticProgram *semanticProgram,
                               const Expr &expr,
                               const std::string &resolvedPath) {
+  const auto mapHelperPath = [](std::string_view memberName) {
+    return stdCollectionMemberPath("map", memberName);
+  };
   std::string semanticHelperName;
   if (resolvePublishedSemanticStdlibSurfaceMemberName(
           semanticProgram,
@@ -220,33 +232,33 @@ bool isMapBuiltinResolvedPath(const SemanticProgram *semanticProgram,
     std::string aliasName;
     std::string accessName;
     if (getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2) {
-      return matchesResolvedPath("/std/collections/map/at") ||
-             matchesResolvedPath("/std/collections/map/at_unsafe");
+      return matchesResolvedPath(mapHelperPath("at")) ||
+             matchesResolvedPath(mapHelperPath("at_unsafe"));
     }
     if (resolveMapHelperAliasName(expr, aliasName)) {
       if (aliasName == "count" && expr.args.size() == 1) {
-        return matchesResolvedPath("/std/collections/map/count") ||
-               matchesResolvedPath("/std/collections/map/count_ref");
+        return matchesResolvedPath(mapHelperPath("count")) ||
+               matchesResolvedPath(mapHelperPath("count_ref"));
       }
       if (aliasName == "contains" && expr.args.size() == 2) {
-        return matchesResolvedPath("/std/collections/map/contains") ||
-               matchesResolvedPath("/std/collections/map/contains_ref");
+        return matchesResolvedPath(mapHelperPath("contains")) ||
+               matchesResolvedPath(mapHelperPath("contains_ref"));
       }
       if (aliasName == "tryAt" && expr.args.size() == 2) {
-        return matchesResolvedPath("/std/collections/map/tryAt") ||
-               matchesResolvedPath("/std/collections/map/tryAt_ref");
+        return matchesResolvedPath(mapHelperPath("tryAt")) ||
+               matchesResolvedPath(mapHelperPath("tryAt_ref"));
       }
       if (aliasName == "at" && expr.args.size() == 2) {
-        return matchesResolvedPath("/std/collections/map/at") ||
-               matchesResolvedPath("/std/collections/map/at_ref");
+        return matchesResolvedPath(mapHelperPath("at")) ||
+               matchesResolvedPath(mapHelperPath("at_ref"));
       }
       if (aliasName == "at_unsafe" && expr.args.size() == 2) {
-        return matchesResolvedPath("/std/collections/map/at_unsafe") ||
-               matchesResolvedPath("/std/collections/map/at_unsafe_ref");
+        return matchesResolvedPath(mapHelperPath("at_unsafe")) ||
+               matchesResolvedPath(mapHelperPath("at_unsafe_ref"));
       }
       if (aliasName == "insert" && expr.args.size() == 3) {
-        return matchesResolvedPath("/std/collections/map/insert") ||
-               matchesResolvedPath("/std/collections/map/insert_ref");
+        return matchesResolvedPath(mapHelperPath("insert")) ||
+               matchesResolvedPath(mapHelperPath("insert_ref"));
       }
     }
     std::string normalizedName = resolveCallPathWithoutSemanticFallbackProbes(expr);
@@ -256,22 +268,32 @@ bool isMapBuiltinResolvedPath(const SemanticProgram *semanticProgram,
     if ((normalizedName == "contains" || normalizedName == "map/contains" ||
          normalizedName == "std/collections/map/contains") &&
         expr.args.size() == 2) {
-      return matchesResolvedPath("/std/collections/map/contains");
+      return matchesResolvedPath(mapHelperPath("contains"));
     }
     if ((normalizedName == "tryAt" || normalizedName == "map/tryAt" ||
          normalizedName == "std/collections/map/tryAt") &&
         expr.args.size() == 2) {
-      return matchesResolvedPath("/std/collections/map/tryAt");
+      return matchesResolvedPath(mapHelperPath("tryAt"));
+    }
+    if ((normalizedName == "at" || normalizedName == "map/at" ||
+         normalizedName == "std/collections/map/at") &&
+        expr.args.size() == 2) {
+      return matchesResolvedPath(mapHelperPath("at"));
+    }
+    if ((normalizedName == "at_unsafe" || normalizedName == "map/at_unsafe" ||
+         normalizedName == "std/collections/map/at_unsafe") &&
+        expr.args.size() == 2) {
+      return matchesResolvedPath(mapHelperPath("at_unsafe"));
     }
     if ((normalizedName == "count" || normalizedName == "map/count" ||
          normalizedName == "std/collections/map/count") &&
         expr.args.size() == 1) {
-      return matchesResolvedPath("/std/collections/map/count");
+      return matchesResolvedPath(mapHelperPath("count"));
     }
     if ((normalizedName == "insert" || normalizedName == "map/insert" ||
          normalizedName == "std/collections/map/insert") &&
         expr.args.size() == 3) {
-      return matchesResolvedPath("/std/collections/map/insert");
+      return matchesResolvedPath(mapHelperPath("insert"));
     }
   }
   return false;
@@ -286,11 +308,9 @@ bool isExplicitSamePathPublishedMapHelperCall(const Expr &expr,
   if (rawPath.empty() || rawPath.front() != '/') {
     return false;
   }
-  std::string helperName;
-  if (!resolveMapHelperAliasName(expr, helperName) &&
-      rawPath.rfind("/map/", 0) != 0 &&
-      rawPath.rfind("/std/collections/map/", 0) != 0 &&
-      resolvedPath.rfind("/std/collections/map/", 0) != 0) {
+  const std::string canonicalMapRoot = stdCollectionMemberRoot("map");
+  if (rawPath.rfind(canonicalMapRoot, 0) != 0 ||
+      resolvedPath.rfind(canonicalMapRoot, 0) != 0) {
     return false;
   }
   return normalizeCollectionHelperPath(rawPath) ==
@@ -304,7 +324,8 @@ bool isSemanticBarePublishedMapHelperCall(const Expr &expr,
       !expr.namespacePrefix.empty() || expr.name.empty() || expr.name.front() == '/') {
     return false;
   }
-  if (resolvedPath.rfind("/std/collections/map/", 0) != 0) {
+  const std::string canonicalMapRoot = stdCollectionMemberRoot("map");
+  if (resolvedPath.rfind(canonicalMapRoot, 0) != 0) {
     return false;
   }
 

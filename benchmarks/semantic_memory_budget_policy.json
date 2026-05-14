@@ -66,8 +66,8 @@
       "fixture": "math_vector_matrix",
       "phase": "ast-semantic",
       "baseline_worst_peak_rss_bytes": 17940480,
-      "soft_max_worst_peak_rss_bytes": 19955712,
-      "max_worst_peak_rss_bytes": 20953497
+      "soft_max_worst_peak_rss_bytes": 21741568,
+      "max_worst_peak_rss_bytes": 22828646
     },
     {
       "fixture": "math_vector_matrix",

@@ -156,7 +156,7 @@ TEST_CASE("ir lowerer setup type helper rejects explicit map access aliases thro
       &methodResolved));
   CHECK_FALSE(methodResolved);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
-  CHECK(aliasAtResolveCalls == 1);
+  CHECK(aliasAtResolveCalls == 0);
 
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   methodResolved = false;
@@ -183,7 +183,7 @@ TEST_CASE("ir lowerer setup type helper rejects explicit map access aliases thro
       &methodResolved));
   CHECK_FALSE(methodResolved);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
-  CHECK(aliasAtUnsafeResolveCalls == 1);
+  CHECK(aliasAtUnsafeResolveCalls == 0);
 }
 
 TEST_CASE("ir lowerer setup type helper resolves reordered positional access call method return kinds") {

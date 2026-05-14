@@ -407,9 +407,11 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(callResolutionSource.find("isBuiltinPublishedMapHelperName(expr, semanticHelperName)") !=
         std::string::npos);
-  CHECK(callResolutionSource.find("return matchesResolvedPath(\"/std/collections/map/contains\") ||") !=
+  CHECK(callResolutionSource.find("const auto mapHelperPath = [](std::string_view memberName)") !=
         std::string::npos);
-  CHECK(callResolutionSource.find("return matchesResolvedPath(\"/std/collections/map/tryAt\") ||") !=
+  CHECK(callResolutionSource.find("return matchesResolvedPath(mapHelperPath(\"contains\")) ||") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("return matchesResolvedPath(mapHelperPath(\"tryAt\")) ||") !=
         std::string::npos);
   CHECK(callResolutionSource.find("matchesResolvedPath(\"/std/collections/mapCount\")") ==
         std::string::npos);
@@ -470,7 +472,9 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(callResolutionSource.find("(!hasSemanticRootedRewrite || hasGeneratedRootedRawPath)") !=
         std::string::npos);
-  CHECK(callResolutionSource.find("rawPath.rfind(\"/map/\", 0) != 0 &&") !=
+  CHECK(callResolutionSource.find("const std::string canonicalMapRoot = stdCollectionMemberRoot(\"map\");") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("rawPath.rfind(canonicalMapRoot, 0) != 0 ||") !=
         std::string::npos);
   CHECK(callResolutionSource.find(
             "rawPath.rfind(\"/std/collections/experimental_map/\", 0) != 0") ==
@@ -4260,7 +4264,7 @@ TEST_CASE("ir lowerer semantic-product index does not expose try operand-path fa
   CHECK(tryFact == nullptr);
 }
 
-TEST_CASE("ir lowerer call helpers resolve definition calls through slashless map import aliases") {
+TEST_CASE("ir lowerer call helpers keep slashless map import aliases raw") {
   primec::Definition canonicalMapCountDef;
   canonicalMapCountDef.fullPath = "/std/collections/map/count";
   const std::unordered_map<std::string, const primec::Definition *> defMap = {
@@ -4274,7 +4278,7 @@ TEST_CASE("ir lowerer call helpers resolve definition calls through slashless ma
   primec::Expr callExpr;
   callExpr.kind = primec::Expr::Kind::Call;
   callExpr.name = "count_alias";
-  CHECK(primec::ir_lowerer::resolveDefinitionCall(callExpr, defMap, resolveExprPath) == &canonicalMapCountDef);
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(callExpr, defMap, resolveExprPath) == nullptr);
 }
 
 TEST_CASE("ir lowerer call helpers keep explicit canonical map contains and tryAt same-path defs") {

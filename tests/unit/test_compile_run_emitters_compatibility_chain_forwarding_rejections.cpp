@@ -37,7 +37,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /Marker/tag") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /map/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects map unsafe compatibility call struct method chain canonical forwarding in C++ emitter") {
@@ -72,7 +73,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /Marker/tag parameter self") !=
+  CHECK(readFile(errPath).find("unknown call target: /map/at_unsafe") !=
         std::string::npos);
 }
 
@@ -108,7 +109,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /Marker/tag") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /map/at_unsafe") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vector alias access auto wrapper canonical struct-return forwarding in C++ emitter") {

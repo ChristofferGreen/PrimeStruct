@@ -613,7 +613,7 @@ main() {
   CHECK(runCommand(compileCmd) != 0);
 }
 
-TEST_CASE("native map namespaced at compatibility alias resolves without explicit alias") {
+TEST_CASE("native map namespaced at compatibility alias rejects without explicit alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] index) {
@@ -636,11 +636,12 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 4);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(outPath).find("unknown call target: /map/at") !=
+        std::string::npos);
 }
 
-TEST_CASE("native map namespaced at unsafe compatibility alias resolves without explicit alias") {
+TEST_CASE("native map namespaced at unsafe compatibility alias rejects without explicit alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] index) {
@@ -665,8 +666,9 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 4);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(outPath).find("unknown call target: /map/at_unsafe") !=
+        std::string::npos);
 }
 
 TEST_SUITE_END();

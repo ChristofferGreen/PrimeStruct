@@ -91,7 +91,22 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Updated: 2026-05-14
 - Tags: benchmarks, ci, memory
 - Fact: Release semantic-memory RSS budgets use runner-observed soft caps plus about five percent hard-cap headroom for noisy fixture/phase pairs.
-- Evidence: Stabilizing the release gate required refreshing imported-math and vector semantic-memory caps in `benchmarks/semantic_memory_budget_policy.json` plus `docs/semantic_memory_benchmark_policy.md`, after which the focused semantic-memory gate and full `./scripts/compile.sh --release` passed.
+- Evidence: Stabilizing the release gate required refreshing imported-math,
+  vector, and `math_vector_matrix:ast-semantic` caps in
+  `benchmarks/semantic_memory_budget_policy.json` plus
+  `docs/semantic_memory_benchmark_policy.md`, after which the focused
+  semantic-memory gate and full `./scripts/compile.sh --release` passed.
+
+### semantic-product-allocation-bytes-are-net
+- Updated: 2026-05-14
+- Tags: semantics, tests, memory
+- Fact: Semantic allocation `allocatedBytes` counters are sampled net byte
+  deltas and can be zero for semantic-product builds even when allocation
+  counts and produced facts prove the phase executed.
+- Evidence: The backend registry release shard observed
+  `semanticProductBuild.allocationCount > 0`, produced semantic facts, and
+  `semanticProductBuild.allocatedBytes == 0`; the registry test now checks the
+  allocation count instead of requiring positive net bytes.
 
 ### semantic-product-index-map-authority
 - Updated: 2026-05-06

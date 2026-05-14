@@ -651,7 +651,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /Result/tag") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /map/tryAt") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles and runs same-path direct map tryAt struct method chain through alias helper in C++ emitter") {

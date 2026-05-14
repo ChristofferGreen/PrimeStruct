@@ -403,6 +403,7 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
   mapInsertRefCallee.fullPath = "/std/collections/experimental_map/mapInsertRef";
 
   int mapInsertResolveMethodCalls = 0;
+  int mapInsertEmitCalls = 0;
   error = "stale";
   CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
             mapMethodInsertCall,
@@ -419,11 +420,12 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
               return nullptr;
             },
             [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
-              CHECK(false);
-              return false;
+              ++mapInsertEmitCalls;
+              return true;
             },
-            error) == Result::NotHandled);
+            error) == Result::Emitted);
   CHECK(mapInsertResolveMethodCalls == 1);
+  CHECK(mapInsertEmitCalls == 1);
   CHECK(error == "stale");
 
   primec::Expr explicitVectorCountCall;
@@ -635,7 +637,7 @@ TEST_CASE("ir lowerer call helpers leave direct experimental map helpers unadapt
               return true;
             },
             error) == Result::NotHandled);
-  CHECK(resolveDefinitionCalls == 0);
+  CHECK(resolveDefinitionCalls == 2);
   CHECK(emitCalls == 0);
   CHECK(error == "stale");
 }

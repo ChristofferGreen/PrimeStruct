@@ -360,7 +360,8 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("call=/map/contains") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown call target: /map/contains") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm map namespaced tryAt compatibility alias") {
@@ -409,8 +410,9 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_map_namespaced_at_compatibility_alias_reject_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 4);
-  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("unknown call target: /map/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm map namespaced at unsafe compatibility alias without explicit alias") {
@@ -433,8 +435,9 @@ main() {
                                "primec_vm_map_namespaced_at_unsafe_compatibility_alias_reject_out.txt")
                                   .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 4);
-  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("unknown call target: /map/at_unsafe") !=
+        std::string::npos);
 }
 
 TEST_CASE("runs vm explicit map helper count/contains/tryAt through same-path aliases while direct access stays builtin") {

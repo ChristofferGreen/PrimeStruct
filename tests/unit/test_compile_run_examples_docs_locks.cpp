@@ -583,8 +583,8 @@ TEST_CASE("vector map bridge boundary docs stay source locked") {
         std::string::npos);
   CHECK(todo.find("metadata is now owned by `stdlib/std/collections/surfaces.psmeta`") !=
         std::string::npos);
-  CHECK(todo.find("map compatibility spellings\n"
-                  "  were removed from that manifest") !=
+  CHECK(todo.find("map compatibility spellings were\n"
+                  "  removed from that manifest") !=
         std::string::npos);
   CHECK(todo.find("Direct experimental vector source imports are now rejected") !=
         std::string::npos);
@@ -597,19 +597,18 @@ TEST_CASE("vector map bridge boundary docs stay source locked") {
         std::string::npos);
   CHECK(todo.find("lives in `StdlibSurfaceRegistry::CollectionsMapHelpers`") !=
         std::string::npos);
-  CHECK(todo.find("definition/execution intra-body diagnostics no longer carry special\n"
+  CHECK(todo.find("definition/execution intra-body diagnostics no\n"
+                  "  longer carry special\n"
                   "  removed-map helper classification branches, and semantic pre-dispatch helper\n"
                   "  path candidates no longer mirror rooted and canonical map helpers") !=
         std::string::npos);
-  CHECK(todo.find("native\n"
-                  "  tail map-access helper probes no longer treat rooted `/map/*` imports or\n"
-                  "  definitions as canonical map helper availability, and semantic helper-path\n"
-                  "  preference no longer cross-resolves rooted `/map/*` and canonical\n"
-                  "  `/std/collections/map/*` definitions, and semantic method resolution no\n"
-                  "  longer treats explicit rooted `/map/*` method targets as canonical\n"
-                  "  `/std/collections/map/*` helper calls, and inline/native dispatch no longer\n"
-                  "  treats rooted `/map/*` or experimental map helper raw paths as canonical map\n"
-                  "  helper aliases") !=
+  CHECK(todo.find("tail map-access helper probes no longer treat rooted `/map/*` imports or\n"
+                  "  definitions as canonical map helper availability") !=
+        std::string::npos);
+  CHECK(todo.find("semantic validation no longer\n"
+                  "  recognizes `mapCount`-style wrapper names as special map helper branches,\n"
+                  "  and inline/native dispatch no longer treats rooted `/map/*` or experimental\n"
+                  "  map helper raw paths as canonical map helper aliases") !=
         std::string::npos);
   CHECK(todo.find("Template\n"
                   "  monomorphization now asks the registry for preferred experimental vector/SoA") !=
@@ -670,7 +669,7 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("| `/std/collections/experimental_vector/*` | Rejected compatibility namespace | Direct source imports are rejected; the shim remains only as legacy forwarding storage identity behind `/std/collections/internal_vector/*` until the final vector surface audit. | TODO-4373 |") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("| `/std/collections/experimental_map/*` | Rejected compatibility namespace | Direct source imports are rejected; the shim remains only as legacy forwarding storage identity behind `/std/collections/internal_map/*` until the final map surface audit. | TODO-4304 |") !=
+  CHECK(primeStructDoc.find("| `/std/collections/experimental_map/*` | Rejected compatibility namespace | Direct source imports are rejected; the shim remains only as legacy forwarding storage identity behind `/std/collections/internal_map/*` until the final map surface audit. | TODO-4464 |") !=
         std::string::npos);
   CHECK(primeStructDoc.find("| `/std/gfx/experimental/*` | Temporary compatibility namespace | Legacy compatibility shim over canonical `/std/gfx/*`; no longer part of the public gfx contract and retained only for targeted compatibility coverage while the residual seam remains importable. | none |") !=
         std::string::npos);
@@ -1397,7 +1396,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4304: Add zero C++ map-surface audit") !=
+                  "- TODO-4464: Add full zero C++ map-surface audit") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
                   "- TODO-4305: Rename and style canonical `.prime` SoA surface") !=
@@ -1416,7 +1415,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4304: Add zero C++ map-surface audit\n"
+                  "- TODO-4464: Add full zero C++ map-surface audit\n"
                   "- TODO-4305: Rename and style canonical `.prime` SoA surface") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
@@ -1759,9 +1758,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Compile-time macro hooks and AST transform ownership | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |") !=
+  CHECK(todo.find("| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4464, TODO-4308, TODO-4309, TODO-4310 |") !=
         std::string::npos);
-  CHECK(todo.find("| Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4304 |") !=
+  CHECK(todo.find("| Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4464 |") !=
         std::string::npos);
   CHECK(todo.find("| Release benchmark/example suite stability and doctest governance | none |") !=
         std::string::npos);
@@ -1769,11 +1768,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Test-suite audit follow-up and release-gate stability | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |") !=
+  CHECK(todo.find("| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4464, TODO-4305, TODO-4309, TODO-4310 |") !=
         std::string::npos);
   CHECK(todo.find("| SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |") !=
         std::string::npos);
-  CHECK(todo.find("| De-experimentalization surface and namespace parity | TODO-4430, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |") !=
+  CHECK(todo.find("| De-experimentalization surface and namespace parity | TODO-4430, TODO-4464, TODO-4305, TODO-4309, TODO-4310 |") !=
         std::string::npos);
   CHECK(todo.find("| `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |") !=
         std::string::npos);
@@ -1799,7 +1798,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Lowerer/source-composition contract coverage | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4304 |") !=
+  CHECK(todo.find("| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4464 |") !=
         std::string::npos);
   CHECK(todo.find("### Skipped Doctest Debt Summary") != std::string::npos);
   CHECK(todo.find("Retained `doctest::skip(true)` coverage is currently absent from the active") !=

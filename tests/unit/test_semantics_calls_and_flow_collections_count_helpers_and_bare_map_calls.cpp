@@ -349,7 +349,8 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: mapCount") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/map/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("canonical map Ref helper calls accept borrowed map references") {

@@ -450,7 +450,7 @@ main() {
   CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 }
 
-TEST_CASE("map compatibility contains call resolves visible canonical definition") {
+TEST_CASE("map compatibility contains call rejects visible canonical definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/map/contains([map<i32, i32>] values, [i32] key) {
@@ -465,8 +465,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/contains") != std::string::npos);
 }
 
 TEST_CASE("map compatibility contains call keeps explicit alias precedence") {
@@ -493,7 +493,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map compatibility tryAt call resolves visible canonical definition") {
+TEST_CASE("map compatibility tryAt call rejects visible canonical definition") {
   const std::string source = R"(
 [effects(heap_alloc), return<Result<i32, ContainerError>>]
 /std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
@@ -508,8 +508,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/tryAt") != std::string::npos);
 }
 
 TEST_CASE("map compatibility tryAt call keeps explicit alias precedence") {
