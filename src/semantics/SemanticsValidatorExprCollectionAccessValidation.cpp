@@ -89,32 +89,6 @@ bool getCanonicalCollectionAccessBuiltinName(const Expr &candidate,
   return false;
 }
 
-bool isCanonicalMapTypeText(const std::string &typeText) {
-  std::string normalizedType = normalizeBindingTypeName(typeText);
-  while (true) {
-    std::string base;
-    std::string arg;
-    if (!splitTemplateTypeName(normalizedType, base, arg)) {
-      return false;
-    }
-    base = normalizeBindingTypeName(base);
-    if (base == "map" || base == "/map" ||
-        base == "std/collections/map" || base == "/std/collections/map") {
-      std::vector<std::string> args;
-      return splitTopLevelTemplateArgs(arg, args) && args.size() == 2;
-    }
-    if (base == "Reference" || base == "Pointer") {
-      std::vector<std::string> args;
-      if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
-        return false;
-      }
-      normalizedType = normalizeBindingTypeName(args.front());
-      continue;
-    }
-    return false;
-  }
-}
-
 bool isExperimentalMapTypeText(const std::string &typeText) {
   std::string normalizedType = normalizeBindingTypeName(typeText);
   while (true) {
@@ -575,9 +549,10 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
              isRootMapAliasPath(explicitCallPath(receiverExpr)))) &&
           inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText) &&
           extractMapKeyValueTypesFromTypeText(receiverTypeText, mapKeyType, mapValueType)) {
-        if (isExperimentalMapTypeText(receiverTypeText)) {
+        const bool isExperimentalMapType = isExperimentalMapTypeText(receiverTypeText);
+        if (isExperimentalMapType) {
           isExperimentalMap = true;
-        } else if (isCanonicalMapTypeText(receiverTypeText)) {
+        } else {
           isMap = true;
         }
       }

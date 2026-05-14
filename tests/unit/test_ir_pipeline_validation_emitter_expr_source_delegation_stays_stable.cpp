@@ -250,6 +250,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprCountCapacityMapBuiltins.cpp";
   const std::filesystem::path semanticsExprCollectionPredicatesPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionPredicates.cpp";
+  const std::filesystem::path semanticsExprCollectionAccessValidationPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionAccessValidation.cpp";
   const std::filesystem::path semanticsExprDirectCollectionFallbacksPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprDirectCollectionFallbacks.cpp";
   const std::filesystem::path semanticsExprLateCallCompatibilityPath =
@@ -267,6 +269,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsExprCollectionDispatchSetupPath));
   REQUIRE(std::filesystem::exists(semanticsExprCountCapacityMapBuiltinsPath));
   REQUIRE(std::filesystem::exists(semanticsExprCollectionPredicatesPath));
+  REQUIRE(std::filesystem::exists(semanticsExprCollectionAccessValidationPath));
   REQUIRE(std::filesystem::exists(semanticsExprDirectCollectionFallbacksPath));
   REQUIRE(std::filesystem::exists(semanticsExprLateCallCompatibilityPath));
   REQUIRE(std::filesystem::exists(semanticsExprMethodResolutionPath));
@@ -283,6 +286,8 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
       readText(semanticsExprCountCapacityMapBuiltinsPath);
   const std::string semanticsExprCollectionPredicatesSource =
       readText(semanticsExprCollectionPredicatesPath);
+  const std::string semanticsExprCollectionAccessValidationSource =
+      readText(semanticsExprCollectionAccessValidationPath);
   const std::string semanticsExprDirectCollectionFallbacksSource =
       readText(semanticsExprDirectCollectionFallbacksPath);
   const std::string semanticsExprLateCallCompatibilitySource =
@@ -341,6 +346,13 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
             "extractMapKeyValueTypesFromTypeText(typeText, keyType, valueType)") !=
         std::string::npos);
   CHECK(semanticsExprCollectionPredicatesSource.find(
+            "base == \"std/collections/map\"") == std::string::npos);
+  CHECK(semanticsExprCollectionAccessValidationSource.find("isCanonicalMapTypeText") ==
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessValidationSource.find(
+            "extractMapKeyValueTypesFromTypeText(receiverTypeText, mapKeyType, mapValueType)") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessValidationSource.find(
             "base == \"std/collections/map\"") == std::string::npos);
 
   CHECK(semanticsExprCollectionCountCapacitySource.find(

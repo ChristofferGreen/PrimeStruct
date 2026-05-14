@@ -18665,3 +18665,36 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     key/value extraction, updated source-lock coverage, removed the file from
     the map-surface inventory allowance, and promoted TODO-4496 for the next
     collection-access map type check slice.
+
+- [x] TODO-4496: Route collection-access map type checks through shared helpers
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4495
+  - split_from: TODO-4464
+  - scope: Remove the duplicate canonical map type-text recognizer from
+    semantic collection-access validation by routing the checks through shared
+    binding-type map key/value helpers.
+  - implementation_notes:
+    - Targeted `src/semantics/SemanticsValidatorExprCollectionAccessValidation.cpp`,
+      where local `isCanonicalMapTypeText(...)` logic still hard-coded
+      canonical map type roots.
+    - Preserved existing access validation behavior by using the already
+      shared key/value extraction result and only checking whether the
+      receiver type text is experimental.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` so the target
+      file allowance drops from 35 traces to 33.
+  - acceptance:
+    - Collection-access validation still identifies map receiver type text
+      through shared key/value extraction.
+    - The target file no longer contains a duplicate canonical map type-text
+      recognizer or hard-coded canonical map type roots.
+    - Source-lock coverage prevents reintroducing the removed literals.
+  - stop_rule: Stop once collection-access map type-text recognition delegates
+    to the shared helper, focused coverage passes, and the inventory allowance
+    for the target file is tightened.
+  - evidence: Replaced the local canonical map type-text detector with shared
+    key/value extraction, updated source-lock coverage, tightened the
+    map-surface inventory allowance, and promoted TODO-4497 for the next
+    template constructor-root cleanup slice.
