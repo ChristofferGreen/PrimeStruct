@@ -18308,3 +18308,35 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     source lock for the deleted branch and surviving struct-name guard, removed
     the file from the map-surface inventory allowance, and skipped broad
     release validation per the lite workflow.
+
+- [x] TODO-4485: Route emitter map helper parsing through metadata
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4484
+  - split_from: TODO-4464
+  - scope: Remove the remaining hard-coded canonical map helper prefix from
+    emitter helper path utilities by routing helper-name extraction through the
+    stdlib surface metadata bridge.
+  - implementation_notes:
+    - Targeted `src/emitter/EmitterHelpers.h`, where
+      `mapHelperNameFromPath` still carried
+      `"std/collections/map/"` after the rooted `/map/` branch was deleted.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` so the emitter
+      helper header has no map-surface trace allowance.
+  - acceptance:
+    - `mapHelperNameFromPath` resolves canonical map helper names through the
+      stdlib surface registry instead of a production C++ path literal.
+    - Source-lock coverage rejects reintroducing the canonical map helper
+      prefix while pinning the metadata-backed bridge lookup.
+    - The map-surface trace inventory allowance for
+      `src/emitter/EmitterHelpers.h` is removed.
+  - stop_rule: Stop once emitter helper path parsing no longer stores a
+    production C++ canonical map helper prefix and the decaying inventory no
+    longer allows traces for that file.
+  - evidence: Replaced the hard-coded canonical map helper prefix with a
+    `collections.map_helpers` stdlib surface lookup, updated the source lock,
+    removed the file from the map-surface inventory allowance, and verified the
+    focused source-lock, slashless canonical metadata, and map-surface
+    inventory checks.

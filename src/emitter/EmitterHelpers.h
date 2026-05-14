@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "primec/Emitter.h"
+#include "primec/StdlibSurfaceRegistry.h"
 
 namespace primec::emitter {
 
@@ -51,14 +52,26 @@ inline bool isRemovedMapDirectCallResultCompatibilityHelperName(std::string_view
 }
 
 inline std::string_view mapHelperNameFromPath(std::string_view path) {
-  if (!path.empty() && path.front() == '/') {
-    path.remove_prefix(1);
+  const StdlibSurfaceMetadata *metadata =
+      findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  if (metadata == nullptr) {
+    return {};
   }
-  constexpr std::string_view kCanonicalMapPrefix = "std/collections/map/";
-  if (path.rfind(kCanonicalMapPrefix, 0) == 0) {
-    return path.substr(kCanonicalMapPrefix.size());
+  if (const std::string_view memberName =
+          resolveStdlibSurfaceMemberName(*metadata, path);
+      !memberName.empty()) {
+    return memberName;
   }
-  return {};
+  std::string_view canonicalPath = metadata->canonicalPath;
+  if (!canonicalPath.empty() && canonicalPath.front() == '/') {
+    canonicalPath.remove_prefix(1);
+  }
+  if (canonicalPath.empty() || path.size() <= canonicalPath.size() ||
+      !path.starts_with(canonicalPath) || path[canonicalPath.size()] != '/') {
+    return {};
+  }
+  return resolveStdlibSurfaceMemberName(
+      *metadata, path.substr(canonicalPath.size() + 1));
 }
 
 inline bool isCanonicalMapHelperPath(std::string_view path) {

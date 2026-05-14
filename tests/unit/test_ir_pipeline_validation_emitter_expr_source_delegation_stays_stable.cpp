@@ -2991,7 +2991,10 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
         std::string::npos);
   CHECK(helperHeaderSource.find("kMapPrefix") == std::string::npos);
   CHECK(helperHeaderSource.find("\"map/\"") == std::string::npos);
-  CHECK(helperHeaderSource.find("kCanonicalMapPrefix = \"std/collections/map/\"") !=
+  CHECK(helperHeaderSource.find("kCanonicalMapPrefix") == std::string::npos);
+  CHECK(helperHeaderSource.find("\"std/collections/map/\"") == std::string::npos);
+  CHECK(helperHeaderSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
         std::string::npos);
 
   CHECK(metadataHelpersSource.find("findPublishedCollectionSurfaceMetadata(") !=

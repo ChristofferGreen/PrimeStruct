@@ -295,7 +295,9 @@ Task template:
   prefixes from map receiver method targets, and emitter builtin collection
   inference no longer recognizes slashless `map/count` as an explicit
   map-count helper, with release validation gates now locking those retired
-  semantic and lowerer/emitter adapter names.
+  semantic and lowerer/emitter adapter names. The emitter helper header now
+  resolves canonical map helper path members through stdlib surface metadata
+  rather than carrying a hard-coded canonical map helper prefix.
   Template
   monomorphization now asks the registry for preferred experimental vector/SoA
   helper spellings instead of carrying bespoke canonical-to-experimental maps.
@@ -1752,9 +1754,9 @@ Task template:
       `src/semantics/SemanticsValidatorInferCollectionCallResolution.cpp`
       should stay absent from the map-surface trace inventory.
     - TODO-4483 removed rooted `/map/` helper-name parsing from emitter
-      helper path utilities, so `src/emitter/EmitterHelpers.h` should keep
-      only its canonical map-helper prefix trace in the map-surface trace
-      inventory.
+      helper path utilities, and TODO-4485 removed the remaining hard-coded
+      canonical map helper prefix from `src/emitter/EmitterHelpers.h`, so the
+      helper header should stay absent from the map-surface trace inventory.
     - TODO-4484 removed the canonical `/std/collections/map` receiver
       exclusion from semantic non-collection struct-access fallback setup, so
       `src/semantics/SemanticsValidatorExprBuiltinContextSetup.cpp` should
