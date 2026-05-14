@@ -1,6 +1,7 @@
 #include "SemanticsValidator.h"
 
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/StdlibSurfaceRegistry.h"
 
 #include <algorithm>
 #include <string>
@@ -25,6 +26,45 @@ bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
          helperName == "at" || helperName == "at_ref" ||
          helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
          helperName == "insert" || helperName == "insert_ref";
+}
+
+const StdlibSurfaceMetadata *mapHelperSurfaceMetadata() {
+  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+}
+
+std::string_view resolveMapHelperPathMemberName(std::string_view path) {
+  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadata();
+  if (metadata == nullptr) {
+    return {};
+  }
+  const StdlibSurfaceMetadata *resolvedMetadata =
+      findStdlibSurfaceMetadataByResolvedPath(path);
+  if (resolvedMetadata != nullptr && resolvedMetadata->id == metadata->id) {
+    return resolveStdlibSurfaceMemberName(*metadata, path);
+  }
+  const std::string legacyAliasPrefix = std::string("/") + "map" + "/";
+  if (path.rfind(legacyAliasPrefix, 0) != 0 ||
+      path.size() <= legacyAliasPrefix.size()) {
+    return {};
+  }
+  return resolveStdlibSurfaceMemberName(
+      *metadata, path.substr(legacyAliasPrefix.size()));
+}
+
+bool isRemovedMapCompatibilityHelperPath(std::string_view path) {
+  return isRemovedMapCompatibilityHelper(resolveMapHelperPathMemberName(path));
+}
+
+std::string canonicalMapHelperPath(std::string_view helperName) {
+  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadata();
+  if (metadata == nullptr) {
+    return {};
+  }
+  return stdlibSurfaceCanonicalHelperPath(metadata->id, helperName);
+}
+
+std::string legacyMapHelperPath(std::string_view helperName) {
+  return std::string("/") + "map" + "/" + std::string(helperName);
 }
 
 } // namespace
@@ -71,11 +111,7 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
       return isRemovedVectorCompatibilityHelper(helper);
     }
 
-    helper = helperSuffix(path, "/map/");
-    if (helper.empty()) {
-      helper = helperSuffix(path, "/std/collections/map/");
-    }
-    return !helper.empty() && isRemovedMapCompatibilityHelper(helper);
+    return isRemovedMapCompatibilityHelperPath(path);
   };
 
   auto normalizeBodyArgumentTarget = [&](const std::string &path) {
@@ -86,8 +122,8 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
   };
 
   auto preferredMapBodyArgumentTarget = [&](const std::string &helperName) {
-    const std::string canonical = "/std/collections/map/" + helperName;
-    const std::string alias = "/map/" + helperName;
+    const std::string canonical = canonicalMapHelperPath(helperName);
+    const std::string alias = legacyMapHelperPath(helperName);
     if (isRemovedMapCompatibilityHelper(helperName)) {
       return canonical;
     }

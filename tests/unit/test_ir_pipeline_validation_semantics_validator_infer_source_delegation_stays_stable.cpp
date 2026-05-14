@@ -1856,6 +1856,27 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "return failExprDiagnostic(stmt, std::move(message));") !=
         std::string::npos);
   CHECK(semanticsStatementBodyArgumentsSource.find(
+            "helperSuffix(path, \"/map/\")") ==
+        std::string::npos);
+  CHECK(semanticsStatementBodyArgumentsSource.find(
+            "helperSuffix(path, \"/std/collections/map/\")") ==
+        std::string::npos);
+  CHECK(semanticsStatementBodyArgumentsSource.find(
+            "\"/std/collections/map/\" + helperName") ==
+        std::string::npos);
+  CHECK(semanticsStatementBodyArgumentsSource.find(
+            "\"/map/\" + helperName") ==
+        std::string::npos);
+  CHECK(semanticsStatementBodyArgumentsSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+        std::string::npos);
+  CHECK(semanticsStatementBodyArgumentsSource.find(
+            "canonicalMapHelperPath(helperName)") !=
+        std::string::npos);
+  CHECK(semanticsStatementBodyArgumentsSource.find(
+            "legacyMapHelperPath(helperName)") !=
+        std::string::npos);
+  CHECK(semanticsStatementBodyArgumentsSource.find(
             "std::vector<size_t> receiverIndices;") ==
         std::string::npos);
   CHECK(semanticsStatementBodyArgumentsSource.find(

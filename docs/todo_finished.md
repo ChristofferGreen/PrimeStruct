@@ -18531,3 +18531,37 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     `collections.map_helpers` stdlib surface lookup, updated the source lock,
     removed the file from the map-surface inventory allowance, and verified
     the map-surface inventory script.
+
+- [x] TODO-4492: Route statement body map helper paths through metadata
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4491
+  - split_from: TODO-4464
+  - scope: Remove hard-coded map helper path prefixes and canonical path
+    construction from statement body-argument target preservation by routing
+    the helper suffix and preferred target decisions through stdlib surface
+    metadata.
+  - implementation_notes:
+    - Targeted `src/semantics/SemanticsValidatorStatementBodyArguments.cpp`,
+      where body-argument fallback handling still checked legacy and canonical
+      map helper prefixes and built canonical helper paths with local string
+      concatenation.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` so the statement
+      body-argument file has no map-surface trace allowance.
+  - acceptance:
+    - Statement body-argument target preservation continues to preserve removed
+      map compatibility helper targets and prefer canonical map helpers when
+      needed.
+    - The statement body-argument file no longer contains production C++ map
+      helper prefix literals or canonical helper path concatenation.
+    - Source-lock coverage prevents reintroducing those literal helper paths.
+  - stop_rule: Stop once statement body-argument map helper routing is
+    metadata-backed, focused coverage passes, and the map-surface trace
+    inventory allowance for the target file is tightened.
+  - evidence: Replaced hard-coded legacy/canonical map helper prefix handling
+    and canonical path construction with `collections.map_helpers` stdlib
+    surface lookups, updated the source lock, removed the file from the
+    map-surface inventory allowance, and verified focused source-lock,
+    statement-body semantic, and map-surface inventory checks.

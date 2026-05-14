@@ -72,7 +72,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4492: Route statement body map helper paths through metadata
+- TODO-4493: Route statement container map backing check through metadata
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -88,7 +88,7 @@ Task template:
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
 - Vector stdlib ownership cutover: none active
-- Map stdlib ownership cutover: TODO-4492 -> TODO-4464
+- Map stdlib ownership cutover: TODO-4493 -> TODO-4464
 - SoA public surface rename and ownership cutover: TODO-4305 -> TODO-4306
   -> TODO-4307 -> TODO-4308 -> TODO-4309 -> TODO-4310
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
@@ -105,7 +105,7 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4492: Route statement body map helper paths through metadata
+- TODO-4493: Route statement container map backing check through metadata
 - TODO-4305: Rename and style canonical `.prime` SoA surface
 - TODO-4306: Stabilize generic SoA substrate boundaries
 - TODO-4307: Lower SoA helpers through ordinary `.prime`
@@ -257,7 +257,9 @@ Task template:
   helper targets through stdlib surface metadata instead of concatenating a
   production C++ canonical map helper path, and implicit template inference
   now classifies canonical map helper definitions through stdlib surface
-  metadata instead of hard-coding the canonical map helper prefix. The
+  metadata instead of hard-coding the canonical map helper prefix, and
+  statement body-argument map helper target routing now uses stdlib surface
+  metadata instead of hard-coded map helper path prefixes and concatenations. The
   remaining production lowerer/emitter experimental-map traces
   are source-locked as temporary internal backing substrate by
   `test_stdlib_map_ownership.cpp`, and
@@ -1708,41 +1710,38 @@ Task template:
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
 
-- [ ] TODO-4492: Route statement body map helper paths through metadata
+- [ ] TODO-4493: Route statement container map backing check through metadata
   - owner: ai
   - created_at: 2026-05-14
   - phase: Map stdlib ownership cutover
-  - depends_on: TODO-4491
+  - depends_on: TODO-4492
   - split_from: TODO-4464
-  - scope: Remove hard-coded map helper path prefixes and canonical path
-    construction from statement body-argument target preservation by routing
-    the helper suffix and preferred target decisions through stdlib surface
-    metadata.
+  - scope: Remove hard-coded experimental map backing type path checks from
+    statement container drop/relocation triviality by routing backing type
+    recognition through shared map-constructor/type metadata helpers.
   - implementation_notes:
-    - Target `src/semantics/SemanticsValidatorStatementBodyArguments.cpp`,
-      where body-argument fallback handling still checks `"/map/"` and
-      `"/std/collections/map/"` prefixes and builds
-      `"/std/collections/map/" + helperName`.
-    - Prefer `collections.map_helpers` lookup over local literals so
-      `scripts/check_map_surface_trace_inventory.py` can reduce this file's
-      map-surface trace allowance.
+    - Target `src/semantics/SemanticsValidatorStatementContainerHelpers.cpp`,
+      where drop and relocation triviality both still check
+      `structPath.rfind("/std/collections/experimental_map", 0)`.
+    - Prefer the existing map backing-type metadata helper over another
+      literal path so `scripts/check_map_surface_trace_inventory.py` can
+      remove this file's map-surface trace allowance.
   - acceptance:
-    - Statement body-argument target preservation continues to preserve removed
-      map compatibility helper targets and prefer canonical map helpers when
-      needed.
-    - The statement body-argument file no longer contains production C++ map
-      helper prefix literals or canonical helper path concatenation.
-    - Source-lock or focused semantic coverage prevents reintroducing those
-      literal helper paths.
-  - stop_rule: Stop once statement body-argument map helper routing is
+    - Container drop and relocation triviality continue to treat current
+      experimental map backing structs as trivial internal substrate.
+    - The statement container helper file no longer contains a production C++
+      experimental map backing path literal.
+    - Source-lock or focused semantic coverage prevents reintroducing the
+      literal backing path.
+  - stop_rule: Stop once statement container map backing recognition is
     metadata-backed, focused coverage passes, and the map-surface trace
-    inventory allowance for the target file is tightened.
+    inventory no longer allows traces for the target file.
 
 - [ ] TODO-4464: Add full zero C++ map-surface audit
   - owner: ai
   - created_at: 2026-05-14
   - phase: Map stdlib ownership cutover
-  - depends_on: TODO-4492
+  - depends_on: TODO-4493
   - split_from: TODO-4304
   - scope: Add a deterministic validation gate that proves the PrimeStruct map
     surface is fully `.prime`/stdlib-owned and absent from production C++
@@ -1829,6 +1828,10 @@ Task template:
     - TODO-4491 removed the hard-coded canonical map helper prefix from
       implicit template stdlib-collection-helper classification, so
       `src/semantics/TemplateMonomorphImplicitTemplateInference.h` should stay
+      absent from the map-surface trace inventory.
+    - TODO-4492 removed the hard-coded map helper prefixes and canonical path
+      construction from statement body-argument map helper routing, so
+      `src/semantics/SemanticsValidatorStatementBodyArguments.cpp` should stay
       absent from the map-surface trace inventory.
     - Tighten or replace the TODO-4473 and TODO-4472 allowed-count
       inventories as traces are deleted; the final TODO-4464 state is zero
