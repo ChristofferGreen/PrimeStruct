@@ -2010,12 +2010,14 @@ TEST_CASE("ir lowerer call helpers resolve scoped call paths") {
 
   primec::Expr slashlessCanonicalMapAlias;
   slashlessCanonicalMapAlias.name = "map_count";
-  CHECK(primec::ir_lowerer::resolveCallPathFromScope(slashlessCanonicalMapAlias, defMap, importAliases) ==
-        "/std/collections/map/count");
+  CHECK(primec::ir_lowerer::resolveCallPathFromScope(
+            slashlessCanonicalMapAlias, defMap, importAliases) ==
+        "std/collections/map/count");
 
   primec::Expr slashlessMapAlias;
   slashlessMapAlias.name = "map_at";
-  CHECK(primec::ir_lowerer::resolveCallPathFromScope(slashlessMapAlias, defMap, importAliases) == "/map/at");
+  CHECK(primec::ir_lowerer::resolveCallPathFromScope(
+            slashlessMapAlias, defMap, importAliases) == "map/at");
 }
 
 TEST_CASE("ir lowerer call helpers build scoped call path resolver") {
@@ -2042,11 +2044,11 @@ TEST_CASE("ir lowerer call helpers build scoped call path resolver") {
 
   primec::Expr slashlessCanonicalMapAlias;
   slashlessCanonicalMapAlias.name = "map_count";
-  CHECK(resolveExprPath(slashlessCanonicalMapAlias) == "/std/collections/map/count");
+  CHECK(resolveExprPath(slashlessCanonicalMapAlias) == "std/collections/map/count");
 
   primec::Expr slashlessMapAlias;
   slashlessMapAlias.name = "map_at";
-  CHECK(resolveExprPath(slashlessMapAlias) == "/map/at");
+  CHECK(resolveExprPath(slashlessMapAlias) == "map/at");
 }
 
 TEST_CASE("ir lowerer call helpers keep alias fallback only on raw path") {
@@ -2073,7 +2075,7 @@ TEST_CASE("ir lowerer call helpers keep alias fallback only on raw path") {
 
   primec::Expr slashlessCanonicalMapAlias;
   slashlessCanonicalMapAlias.name = "map_count";
-  CHECK(rawResolveExprPath(slashlessCanonicalMapAlias) == "/std/collections/map/count");
+  CHECK(rawResolveExprPath(slashlessCanonicalMapAlias) == "std/collections/map/count");
   CHECK(semanticResolveExprPath(slashlessCanonicalMapAlias) == "/map_count");
 }
 

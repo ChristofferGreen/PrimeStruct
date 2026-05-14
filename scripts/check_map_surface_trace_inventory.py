@@ -73,7 +73,6 @@ TRACE_PATTERNS = [
 # map-specific production C++ residue does.
 ALLOWED_MAX_FILE_COUNTS: dict[str, int] = {
     "include/primec/StdlibSurfaceRegistry.h": 2,
-    "src/FrontendSyntax.cpp": 2,
     "src/IrPrinterHelpers.cpp": 6,
     "src/StdlibSurfaceRegistry.cpp": 12,
     "src/emitter/EmitterBuiltinCallPathHelpers.cpp": 27,

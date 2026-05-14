@@ -17955,3 +17955,34 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     traces within 1,589 allowed inventory slots. Promoted TODO-4464 back to
     Ready Now for the strict full zero map-surface audit and deferred broad
     release validation per the lite workflow.
+
+- [x] TODO-4474: Delete slashless map alias normalization
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4473
+  - split_from: TODO-4464
+  - scope: Delete frontend syntax normalization that rewrote slashless
+    `map/*` and `std/collections/map/*` import-alias targets into rooted
+    helper paths.
+  - implementation_notes:
+    - Targeted `normalizeSyntaxImportAliasTargetPath` and the lowerer unit
+      locks that used slashless map aliases as compatibility fixtures.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` so
+      `src/FrontendSyntax.cpp` no longer has any map-surface trace allowance.
+  - acceptance:
+    - Slashless map import-alias targets remain relative strings instead of
+      being rooted by frontend syntax normalization.
+    - Unit locks reject reintroducing the old rooted slashless map alias
+      resolution behavior.
+    - The map-surface trace inventory no longer allows map-specific traces in
+      `src/FrontendSyntax.cpp`.
+  - stop_rule: Stop once frontend syntax no longer has a map-specific alias
+    normalization branch and the decaying inventory is tightened for that
+    file.
+  - evidence: Simplified frontend import-alias target normalization to return
+    the target unchanged, updated lowerer helper tests to expect relative
+    slashless map aliases, removed the `src/FrontendSyntax.cpp` map-surface
+    inventory allowance, and skipped broad release validation per the lite
+    workflow.

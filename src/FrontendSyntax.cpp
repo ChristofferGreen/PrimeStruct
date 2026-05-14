@@ -15,12 +15,6 @@ bool isSyntaxWildcardImportPath(const std::string &path, std::string &prefixOut)
 }
 
 std::string normalizeSyntaxImportAliasTargetPath(const std::string &path) {
-  if (path.empty() || path.front() == '/') {
-    return path;
-  }
-  if (path.rfind("map/", 0) == 0 || path.rfind("std/collections/map/", 0) == 0) {
-    return "/" + path;
-  }
   return path;
 }
 

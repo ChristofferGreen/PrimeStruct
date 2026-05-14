@@ -188,9 +188,9 @@ TEST_CASE("frontend syntax helpers build setup import aliases") {
   CHECK(primec::isSyntaxWildcardImportPath("/single", prefix));
   CHECK(prefix == "/single");
   CHECK_FALSE(primec::isSyntaxWildcardImportPath("/pkg/nested", prefix));
-  CHECK(primec::normalizeSyntaxImportAliasTargetPath("map/at") == "/map/at");
+  CHECK(primec::normalizeSyntaxImportAliasTargetPath("map/at") == "map/at");
   CHECK(primec::normalizeSyntaxImportAliasTargetPath("std/collections/map/count") ==
-        "/std/collections/map/count");
+        "std/collections/map/count");
 
   primec::Definition foo;
   foo.fullPath = "/pkg/foo";
@@ -417,14 +417,15 @@ TEST_CASE("ir lowerer struct type helpers resolve setup import paths") {
   slashlessCanonicalMapAliasExpr.kind = primec::Expr::Kind::Name;
   slashlessCanonicalMapAliasExpr.name = "MapCountAlias";
   CHECK(primec::ir_lowerer::resolveStructLayoutExprPathFromScope(
-            slashlessCanonicalMapAliasExpr, defMap, importAliases) == "/std/collections/map/count");
+            slashlessCanonicalMapAliasExpr, defMap, importAliases) ==
+        "std/collections/map/count");
 
   primec::Expr slashlessMapAliasExpr;
   slashlessMapAliasExpr.kind = primec::Expr::Kind::Name;
   slashlessMapAliasExpr.name = "MapAtAlias";
   slashlessMapAliasExpr.namespacePrefix = "/pkg";
   CHECK(primec::ir_lowerer::resolveStructLayoutExprPathFromScope(
-            slashlessMapAliasExpr, defMap, importAliases) == "/map/at");
+            slashlessMapAliasExpr, defMap, importAliases) == "map/at");
 }
 
 TEST_CASE("ir lowerer struct field binding helpers resolve envelope values") {
