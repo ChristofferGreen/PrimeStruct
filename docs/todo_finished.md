@@ -18905,3 +18905,39 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     inventory allowance, updated source-lock and bridge parity coverage, and
     promoted TODO-4503 for the final one-trace template constructor metadata
     slice before the broad TODO-4464 audit.
+
+- [x] TODO-4503: Route template map constructor surface id through metadata
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4502
+  - split_from: TODO-4464
+  - scope: Remove the remaining direct map constructor surface-id enum trace
+    from template experimental collection type helper checks by resolving map
+    constructor metadata through shared stdlib surface metadata.
+  - implementation_notes:
+    - Targeted `src/semantics/TemplateMonomorphExperimentalCollectionTypeHelpers.h`,
+      where `isExperimentalMapConstructorHelperPath` still passed
+      `StdlibSurfaceId::CollectionsMapConstructors` directly into
+      `resolveCollectionConstructorMemberPath`.
+    - Added a metadata-backed map constructor member resolver that uses the
+      `collections.map_constructors` bridge key before delegating to the
+      generic collection constructor member matcher.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` for the target
+      file and added focused source-lock coverage that rejects reintroducing
+      the direct map surface-id trace.
+  - acceptance:
+    - Template monomorph experimental collection constructor helper checks
+      still recognize canonical map constructor helper paths.
+    - The target file no longer contains direct map surface-id traces.
+    - The map-surface trace inventory and source-lock coverage prevent
+      reintroducing the removed traces.
+  - stop_rule: Stop once the template experimental map constructor helper
+    path check delegates to metadata helpers, focused coverage passes, and
+    the inventory allowance for the target file is removed.
+  - evidence: Routed template experimental map constructor helper
+    classification through shared map constructor metadata, removed
+    `src/semantics/TemplateMonomorphExperimentalCollectionTypeHelpers.h` from
+    the map-surface inventory allowance, updated source-lock coverage, and
+    promoted TODO-4504 for the next focused backing-trace cleanup leaf.

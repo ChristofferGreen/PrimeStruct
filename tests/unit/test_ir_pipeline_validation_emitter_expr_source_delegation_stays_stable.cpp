@@ -2893,8 +2893,17 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphExperimentalCollectionTypeHelpersSource.find(
             "experimentalCollectionConstructorRootLocal(\"map\")") !=
         std::string::npos);
+  CHECK(mapConstructorHelpersSource.find(
+            "resolveCollectionConstructorMemberPath(const primec::StdlibSurfaceMetadata &metadata") !=
+        std::string::npos);
+  CHECK(mapConstructorHelpersSource.find(
+            "resolveMapConstructorMemberPath(std::string_view rawPath") !=
+        std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionTypeHelpersSource.find(
-            "resolveCollectionConstructorMemberPath(") !=
+            "resolveMapConstructorMemberPath(normalizedPath, memberName)") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionTypeHelpersSource.find(
+            "StdlibSurfaceId::CollectionsMapConstructors") ==
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionTypeHelpersSource.find(
             "/std/collections/experimental_map/") ==

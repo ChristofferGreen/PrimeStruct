@@ -72,7 +72,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4503: Route template map constructor surface id through metadata
+- TODO-4504: Route flow-copy map backing checks through helper
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -88,7 +88,7 @@ Task template:
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
 - Vector stdlib ownership cutover: none active
-- Map stdlib ownership cutover: TODO-4503 -> TODO-4464
+- Map stdlib ownership cutover: TODO-4504 -> TODO-4464
 - SoA public surface rename and ownership cutover: TODO-4305 -> TODO-4306
   -> TODO-4307 -> TODO-4308 -> TODO-4309 -> TODO-4310
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
@@ -105,7 +105,7 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4503: Route template map constructor surface id through metadata
+- TODO-4504: Route flow-copy map backing checks through helper
 - TODO-4305: Rename and style canonical `.prime` SoA surface
 - TODO-4306: Stabilize generic SoA substrate boundaries
 - TODO-4307: Lower SoA helpers through ordinary `.prime`
@@ -1721,41 +1721,42 @@ Task template:
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
 
-- [ ] TODO-4503: Route template map constructor surface id through metadata
+- [ ] TODO-4504: Route flow-copy map backing checks through helper
   - owner: ai
   - created_at: 2026-05-14
   - phase: Map stdlib ownership cutover
-  - depends_on: TODO-4502
+  - depends_on: TODO-4503
   - split_from: TODO-4464
-  - scope: Remove the remaining direct map constructor surface-id enum trace
-    from template experimental collection type helper checks by resolving map
-    constructor metadata through shared stdlib surface metadata.
+  - scope: Remove the direct experimental map backing type prefix check from
+    IR flow-control temporary-copy disarming by delegating to a shared lowerer
+    map backing type predicate.
   - implementation_notes:
-    - Target `src/semantics/TemplateMonomorphExperimentalCollectionTypeHelpers.h`,
-      where `isExperimentalMapConstructorHelperPath` still passes
-      `StdlibSurfaceId::CollectionsMapConstructors` directly into
-      `resolveCollectionConstructorMemberPath`.
-    - Prefer a metadata-backed helper that uses the
-      `collections.map_constructors` bridge key rather than adding another
-      enum-switch site.
+    - Target `src/ir_lowerer/IrLowererFlowControlHelpers.cpp`, where
+      `emitDisarmTemporaryStructAfterCopy` still checks
+      `/std/collections/experimental_map/Map__` directly before disarming map
+      ownership slots.
+    - Prefer `isExperimentalMapStructTypePath` from lowerer call helpers, or a
+      narrower shared helper, instead of adding another local map prefix
+      recognizer.
     - Tighten `scripts/check_map_surface_trace_inventory.py` for the target
-      file and add focused source-lock coverage that rejects reintroducing the
-      direct map surface-id trace.
+      file and add or refresh focused source-lock coverage that rejects
+      reintroducing the literal.
   - acceptance:
-    - Template monomorph experimental collection constructor helper checks
-      still recognize canonical map constructor helper paths.
-    - The target file no longer contains direct map surface-id traces.
+    - Temporary struct copy disarming still clears the map ownership slots for
+      specialized experimental map backing structs.
+    - The target file no longer contains hard-coded experimental map backing
+      path literals.
     - The map-surface trace inventory and source-lock coverage prevent
-      reintroducing the removed traces.
-  - stop_rule: Stop once the template experimental map constructor helper
-    path check delegates to metadata helpers, focused coverage passes, and
-    the inventory allowance for the target file is removed.
+      reintroducing the removed trace.
+  - stop_rule: Stop once flow-control temporary-copy disarming delegates map
+    backing detection to a shared helper, focused coverage passes, and the
+    inventory allowance for the target file is tightened or removed.
 
 - [~] TODO-4464: Add full zero C++ map-surface audit
   - owner: ai
   - created_at: 2026-05-14
   - phase: Map stdlib ownership cutover
-  - depends_on: TODO-4503
+  - depends_on: TODO-4504
   - split_from: TODO-4304
   - scope: Add a deterministic validation gate that proves the PrimeStruct map
     surface is fully `.prime`/stdlib-owned and absent from production C++
@@ -1876,6 +1877,10 @@ Task template:
       bridge-choice collection, so
       `src/semantics/SemanticsValidatorSnapshots.cpp` should stay absent from
       the map-surface trace inventory.
+    - TODO-4503 removed the remaining direct map constructor surface-id enum
+      trace from template experimental collection type helpers, so
+      `src/semantics/TemplateMonomorphExperimentalCollectionTypeHelpers.h`
+      should stay absent from the map-surface trace inventory.
     - Tighten or replace the TODO-4473 and TODO-4472 allowed-count
       inventories as traces are deleted; the final TODO-4464 state is zero
       tolerance for all PrimeStruct-map-specific production C++ traces, not a

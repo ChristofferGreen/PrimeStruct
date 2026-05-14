@@ -177,7 +177,6 @@ ALLOWED_MAX_FILE_COUNTS: dict[str, int] = {
     "src/semantics/TemplateMonomorphCoreUtilities.h": 10,
     "src/semantics/TemplateMonomorphExperimentalCollectionConstructorRewrites.h": 6,
     "src/semantics/TemplateMonomorphExperimentalCollectionReceiverResolution.h": 27,
-    "src/semantics/TemplateMonomorphExperimentalCollectionTypeHelpers.h": 1,
     "src/semantics/TemplateMonomorphExpressionRewrite.h": 32,
     "src/semantics/TemplateMonomorphFallbackTypeInference.h": 16,
 }

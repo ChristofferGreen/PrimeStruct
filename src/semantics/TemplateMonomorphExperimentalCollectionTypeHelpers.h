@@ -12,9 +12,7 @@ bool isExperimentalMapConstructorHelperPath(const std::string &resolvedPath) {
       experimentalCollectionConstructorRootLocal("map");
   std::string memberName;
   return normalizedPath.rfind(experimentalMapRoot, 0) == 0 &&
-         resolveCollectionConstructorMemberPath(
-             primec::StdlibSurfaceId::CollectionsMapConstructors,
-             normalizedPath, memberName) &&
+         resolveMapConstructorMemberPath(normalizedPath, memberName) &&
          memberName != "map";
 }
 

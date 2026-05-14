@@ -152,16 +152,10 @@ inline std::string metadataBackedCanonicalMapHelperPath(std::string_view helperN
   return std::string(metadata->canonicalPath) + "/" + memberName;
 }
 
-inline bool resolveCollectionConstructorMemberPath(primec::StdlibSurfaceId surfaceId,
+inline bool resolveCollectionConstructorMemberPath(const primec::StdlibSurfaceMetadata &metadata,
                                                    std::string_view rawPath,
                                                    std::string &memberNameOut) {
   memberNameOut.clear();
-  const primec::StdlibSurfaceMetadata *metadata =
-      primec::findStdlibSurfaceMetadata(surfaceId);
-  if (metadata == nullptr) {
-    return false;
-  }
-
   const std::string normalizedPath =
       stripCollectionConstructorSuffixes(std::string(rawPath));
   auto matchesRootedMemberPath = [&](std::string_view rootPath) {
@@ -169,10 +163,10 @@ inline bool resolveCollectionConstructorMemberPath(primec::StdlibSurfaceId surfa
            normalizedPath.rfind(std::string(rootPath) + "/", 0) == 0;
   };
 
-  if (!primec::stdlibSurfaceMatchesSpelling(*metadata, normalizedPath) &&
-      !matchesRootedMemberPath(metadata->canonicalPath)) {
+  if (!primec::stdlibSurfaceMatchesSpelling(metadata, normalizedPath) &&
+      !matchesRootedMemberPath(metadata.canonicalPath)) {
     bool matchedImportAliasRoot = false;
-    for (const std::string_view alias : metadata->importAliasSpellings) {
+    for (const std::string_view alias : metadata.importAliasSpellings) {
       if (matchesRootedMemberPath(alias)) {
         matchedImportAliasRoot = true;
         break;
@@ -184,12 +178,35 @@ inline bool resolveCollectionConstructorMemberPath(primec::StdlibSurfaceId surfa
   }
 
   const std::string_view memberName =
-      primec::resolveStdlibSurfaceMemberName(*metadata, normalizedPath);
+      primec::resolveStdlibSurfaceMemberName(metadata, normalizedPath);
   if (memberName.empty()) {
     return false;
   }
   memberNameOut.assign(memberName);
   return true;
+}
+
+inline bool resolveCollectionConstructorMemberPath(primec::StdlibSurfaceId surfaceId,
+                                                   std::string_view rawPath,
+                                                   std::string &memberNameOut) {
+  memberNameOut.clear();
+  const primec::StdlibSurfaceMetadata *metadata =
+      primec::findStdlibSurfaceMetadata(surfaceId);
+  if (metadata == nullptr) {
+    return false;
+  }
+  return resolveCollectionConstructorMemberPath(*metadata, rawPath, memberNameOut);
+}
+
+inline bool resolveMapConstructorMemberPath(std::string_view rawPath,
+                                            std::string &memberNameOut) {
+  memberNameOut.clear();
+  const primec::StdlibSurfaceMetadata *metadata =
+      mapConstructorSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return false;
+  }
+  return resolveCollectionConstructorMemberPath(*metadata, rawPath, memberNameOut);
 }
 
 inline bool isResolvedCanonicalMapConstructorPath(const std::string &rawPath) {
