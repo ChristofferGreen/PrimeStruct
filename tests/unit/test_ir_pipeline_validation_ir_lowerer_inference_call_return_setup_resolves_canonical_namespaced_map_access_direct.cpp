@@ -474,7 +474,7 @@ TEST_CASE("ir lowerer inference return-info setup infers auto returns") {
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
-TEST_CASE("ir lowerer inference return-info setup infers implicit auto map returns") {
+TEST_CASE("ir lowerer inference return-info setup infers implicit auto canonical map returns") {
   primec::Definition definition;
   definition.fullPath = "/auto_map";
   primec::Transform returnTransform;
@@ -500,12 +500,12 @@ TEST_CASE("ir lowerer inference return-info setup infers implicit auto map retur
   rightValueExpr.intWidth = 32;
   rightValueExpr.literalValue = 2;
 
-  primec::Expr mapPairCall;
-  mapPairCall.kind = primec::Expr::Kind::Call;
-  mapPairCall.name = "/std/collections/mapPair";
-  mapPairCall.args = {leftKeyExpr, leftValueExpr, rightKeyExpr, rightValueExpr};
-  mapPairCall.argNames = {std::nullopt, std::nullopt, std::nullopt, std::nullopt};
-  definition.statements.push_back(mapPairCall);
+  primec::Expr mapCall;
+  mapCall.kind = primec::Expr::Kind::Call;
+  mapCall.name = "/std/collections/map/map";
+  mapCall.args = {leftKeyExpr, leftValueExpr, rightKeyExpr, rightValueExpr};
+  mapCall.argNames = {std::nullopt, std::nullopt, std::nullopt, std::nullopt};
+  definition.statements.push_back(mapCall);
 
   primec::ir_lowerer::ReturnInfo info;
   std::string error;

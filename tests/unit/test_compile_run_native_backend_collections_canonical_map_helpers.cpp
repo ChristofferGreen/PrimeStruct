@@ -9,7 +9,7 @@
 #if PRIMESTRUCT_NATIVE_COLLECTIONS_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
-TEST_CASE("rejects native stdlib namespaced map reference access helpers during lowering") {
+TEST_CASE("compiles and runs native stdlib namespaced map reference access helpers") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -24,17 +24,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_stdlib_map_reference_helpers.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_stdlib_map_reference_helpers.err").string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_stdlib_map_reference_helpers_exe").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find(
-            "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
-        std::string::npos);
-  CHECK(diagnostics.find("call=/std/collections/map/at") != std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 11);
 }
 
 TEST_CASE("compiles and runs native canonical map method with slash return type receiver") {
@@ -68,7 +64,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 73);
+  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("native canonical map access direct calls and method sugar use ordinary map helpers") {
@@ -419,7 +415,7 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("native map namespaced count method rejects canonical helper aliasing") {
+TEST_CASE("native map namespaced count method uses builtin count through compatibility alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
@@ -443,10 +439,8 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  const std::string output = readFile(outPath);
-  CHECK((output.find("unknown method: /map/count") != std::string::npos ||
-         output.find("unknown call target: /map/count") != std::string::npos));
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("rejects native bare map count method without imported canonical helper") {
@@ -495,7 +489,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("rejects native bare map contains call without imported canonical helper") {

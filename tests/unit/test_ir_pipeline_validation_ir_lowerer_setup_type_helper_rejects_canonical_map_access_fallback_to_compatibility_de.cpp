@@ -348,7 +348,7 @@ TEST_CASE("ir lowerer setup type helper prefers graph facts for reordered access
                    ? ValueKind::String
                    : ValueKind::Unknown;
       }));
-  CHECK_FALSE(methodResolved);
+  CHECK(methodResolved);
   CHECK(kindOut == ValueKind::Int32);
 
   kindOut = ValueKind::Unknown;

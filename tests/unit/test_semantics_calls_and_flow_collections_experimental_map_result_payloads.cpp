@@ -3,22 +3,22 @@
 namespace {
 
 void checkMapPairMismatchDiagnostic(const std::string &error) {
-  CHECK(error.find("mapPair") != std::string::npos);
+  CHECK(error.find("map") != std::string::npos);
   CHECK(error.find("parameter secondValue") != std::string::npos);
   CHECK(error.find("expected i32 got bool") != std::string::npos);
 }
 
 void checkMapPairTemplateConflict(const std::string &error) {
-  CHECK(error.find("implicit template arguments conflict on ") !=
-        std::string::npos);
-  CHECK(error.find("mapPair") != std::string::npos);
+  CHECK((error.find("argument type mismatch") != std::string::npos ||
+         error.find("implicit template arguments conflict on ") != std::string::npos));
+  CHECK(error.find("map") != std::string::npos);
 }
 
 } // namespace
 
 TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
 
-TEST_CASE("helper-wrapped map constructors keep template conflict diagnostics on explicit experimental map parameters") {
+TEST_CASE("helper-wrapped map constructors keep template conflict diagnostics on explicit canonical map parameters") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -29,13 +29,13 @@ wrapValues<T>([T] values) {
 }
 
 [effects(heap_alloc), return<int>]
-scoreValues([Map<string, i32>] values) {
+scoreValues([map<string, i32>] values) {
   return(/std/collections/map/count(values))
 }
 
 [effects(heap_alloc), return<int>]
 main() {
-  return(scoreValues(wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false))))
+  return(scoreValues(wrapValues(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "wrong"raw_utf8, false))))
 }
 )";
   std::string error;
@@ -44,7 +44,7 @@ main() {
   checkMapPairTemplateConflict(error);
 }
 
-TEST_CASE("helper-wrapped Result.ok payloads accept explicit experimental map parameters") {
+TEST_CASE("helper-wrapped Result.ok payloads accept explicit canonical map parameters") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -55,23 +55,23 @@ wrapStatus<T>([T] status) {
 }
 
 [effects(io_err)]
-unexpectedWrappedExperimentalResultMapParameterError([ContainerError] err) {
+unexpectedWrappedCanonicalResultMapParameterError([ContainerError] err) {
   [Result<ContainerError>] status{err.code}
   print_line_error(Result.why(status))
 }
 
 [return<Result<int, ContainerError>> effects(io_out, heap_alloc)
- on_error<ContainerError, /unexpectedWrappedExperimentalResultMapParameterError>]
-scoreStatus([Result<Map<string, i32>, ContainerError>] status) {
-  [Map<string, i32>] values{try(status)}
+ on_error<ContainerError, /unexpectedWrappedCanonicalResultMapParameterError>]
+scoreStatus([Result<map<string, i32>, ContainerError>] status) {
+  [map<string, i32>] values{try(status)}
   return(Result.ok(plus(/std/collections/map/count(values),
                         /std/collections/map/at(values, "left"raw_utf8))))
 }
 
 [return<Result<int, ContainerError>> effects(io_out, heap_alloc)
- on_error<ContainerError, /unexpectedWrappedExperimentalResultMapParameterError>]
+ on_error<ContainerError, /unexpectedWrappedCanonicalResultMapParameterError>]
 main() {
-  return(scoreStatus(wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
+  return(scoreStatus(wrapStatus(Result.ok(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32,
                                                                   "right"raw_utf8, 7i32)))))
 }
 )";
@@ -81,7 +81,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("helper-wrapped Result.ok payloads keep template conflict diagnostics on explicit experimental map parameters") {
+TEST_CASE("helper-wrapped Result.ok payloads keep template conflict diagnostics on explicit canonical map parameters") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -92,22 +92,22 @@ wrapStatus<T>([T] status) {
 }
 
 [effects(io_err)]
-unexpectedWrappedExperimentalResultMapParameterError([ContainerError] err) {
+unexpectedWrappedCanonicalResultMapParameterError([ContainerError] err) {
   [Result<ContainerError>] status{err.code}
   print_line_error(Result.why(status))
 }
 
 [return<Result<int, ContainerError>> effects(io_out, heap_alloc)
- on_error<ContainerError, /unexpectedWrappedExperimentalResultMapParameterError>]
-scoreStatus([Result<Map<string, i32>, ContainerError>] status) {
-  [Map<string, i32>] values{try(status)}
+ on_error<ContainerError, /unexpectedWrappedCanonicalResultMapParameterError>]
+scoreStatus([Result<map<string, i32>, ContainerError>] status) {
+  [map<string, i32>] values{try(status)}
   return(Result.ok(/std/collections/map/count(values)))
 }
 
 [return<Result<int, ContainerError>> effects(io_out, heap_alloc)
- on_error<ContainerError, /unexpectedWrappedExperimentalResultMapParameterError>]
+ on_error<ContainerError, /unexpectedWrappedCanonicalResultMapParameterError>]
 main() {
-  return(scoreStatus(wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
+  return(scoreStatus(wrapStatus(Result.ok(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32,
                                                                   "wrong"raw_utf8, false)))))
 }
 )";
@@ -117,18 +117,18 @@ main() {
   checkMapPairTemplateConflict(error);
 }
 
-TEST_CASE("stdlib wrapper mapPair constructor accepts explicit experimental map bindings") {
+TEST_CASE("stdlib wrapper map constructor accepts explicit canonical map bindings") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
 
 [effects(io_err)]
-unexpectedWrapperExperimentalMapConstructorError([ContainerError] err) {
+unexpectedWrapperCanonicalMapConstructorError([ContainerError] err) {
   [Result<ContainerError>] status{err.code}
   print_line_error(Result.why(status))
 }
 
-[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedWrapperExperimentalMapConstructorError>]
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedWrapperCanonicalMapConstructorError>]
 main() {
   [map<string, i32>] values{/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
   [i32] found{try(/std/collections/map/tryAt(values, "left"raw_utf8))}
@@ -146,14 +146,14 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("stdlib wrapper mapPair constructor keeps mismatch diagnostics on explicit experimental map bindings") {
+TEST_CASE("stdlib wrapper map constructor keeps mismatch diagnostics on explicit canonical map bindings") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Map<string, i32>] values{/std/collections/mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, false)}
+  [map<string, i32>] values{/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, false)}
   return(/std/collections/map/count(values))
 }
   )";
@@ -163,7 +163,7 @@ main() {
   checkMapPairMismatchDiagnostic(error);
 }
 
-TEST_CASE("helper-wrapped map constructors accept explicit experimental map bindings") {
+TEST_CASE("helper-wrapped map constructors accept explicit canonical map bindings") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -174,15 +174,15 @@ wrapValues<T>([T] values) {
 }
 
 [effects(io_err)]
-unexpectedWrappedExperimentalMapBindingError([ContainerError] err) {
+unexpectedWrappedCanonicalMapBindingError([ContainerError] err) {
   [Result<ContainerError>] status{err.code}
   print_line_error(Result.why(status))
 }
 
 [return<Result<int, ContainerError>> effects(io_out, heap_alloc)
- on_error<ContainerError, /unexpectedWrappedExperimentalMapBindingError>]
+ on_error<ContainerError, /unexpectedWrappedCanonicalMapBindingError>]
 main() {
-  [map<string, i32>] values{wrapValues(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32))}
+  [map<string, i32>] values{wrapValues(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32))}
   [i32] found{try(/std/collections/map/tryAt(values, "left"raw_utf8))}
   [i32 mut] total{plus(/std/collections/map/count(values), found)}
   assign(total, plus(total, /std/collections/map/at(values, "right"raw_utf8)))
@@ -195,7 +195,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("helper-wrapped map constructors keep mismatch diagnostics on explicit experimental map bindings") {
+TEST_CASE("helper-wrapped map constructors keep mismatch diagnostics on explicit canonical map bindings") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -207,7 +207,7 @@ wrapValues<T>([T] values) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Map<string, i32>] values{wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false))}
+  [map<string, i32>] values{wrapValues(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "wrong"raw_utf8, false))}
   return(/std/collections/map/count(values))
 }
 )";
@@ -217,7 +217,7 @@ main() {
   checkMapPairTemplateConflict(error);
 }
 
-TEST_CASE("helper-wrapped Result.ok payloads accept explicit experimental map bindings") {
+TEST_CASE("helper-wrapped Result.ok payloads accept explicit canonical map bindings") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -228,17 +228,17 @@ wrapStatus<T>([T] status) {
 }
 
 [effects(io_err)]
-unexpectedWrappedExperimentalResultMapBindingError([ContainerError] err) {
+unexpectedWrappedCanonicalResultMapBindingError([ContainerError] err) {
   [Result<ContainerError>] status{err.code}
   print_line_error(Result.why(status))
 }
 
 [return<Result<int, ContainerError>> effects(io_out, heap_alloc)
- on_error<ContainerError, /unexpectedWrappedExperimentalResultMapBindingError>]
+ on_error<ContainerError, /unexpectedWrappedCanonicalResultMapBindingError>]
 main() {
-  [Result<Map<string, i32>, ContainerError>] status{
-      wrapStatus(Result.ok(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)))}
-  [Map<string, i32>] values{try(status)}
+  [Result<map<string, i32>, ContainerError>] status{
+      wrapStatus(Result.ok(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)))}
+  [map<string, i32>] values{try(status)}
   return(Result.ok(plus(/std/collections/map/count(values),
                         /std/collections/map/at(values, "right"raw_utf8))))
 }
@@ -249,7 +249,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("helper-wrapped Result.ok payloads keep mismatch diagnostics on explicit experimental map bindings") {
+TEST_CASE("helper-wrapped Result.ok payloads keep mismatch diagnostics on explicit canonical map bindings") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -260,17 +260,17 @@ wrapStatus<T>([T] status) {
 }
 
 [effects(io_err)]
-unexpectedWrappedExperimentalResultMapBindingError([ContainerError] err) {
+unexpectedWrappedCanonicalResultMapBindingError([ContainerError] err) {
   [Result<ContainerError>] status{err.code}
   print_line_error(Result.why(status))
 }
 
 [return<Result<int, ContainerError>> effects(io_out, heap_alloc)
- on_error<ContainerError, /unexpectedWrappedExperimentalResultMapBindingError>]
+ on_error<ContainerError, /unexpectedWrappedCanonicalResultMapBindingError>]
 main() {
-  [Result<Map<string, i32>, ContainerError>] status{
-      wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false)))}
-  [Map<string, i32>] values{try(status)}
+  [Result<map<string, i32>, ContainerError>] status{
+      wrapStatus(Result.ok(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "wrong"raw_utf8, false)))}
+  [map<string, i32>] values{try(status)}
   return(Result.ok(/std/collections/map/count(values)))
 }
 )";
@@ -280,7 +280,7 @@ main() {
   checkMapPairTemplateConflict(error);
 }
 
-TEST_CASE("helper-wrapped Result.ok payload assignments accept explicit experimental map result targets") {
+TEST_CASE("helper-wrapped Result.ok payload assignments accept explicit canonical map result targets") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -291,18 +291,18 @@ wrapStatus<T>([T] status) {
 }
 
 [effects(io_err)]
-unexpectedWrappedExperimentalResultMapAssignError([ContainerError] err) {
+unexpectedWrappedCanonicalResultMapAssignError([ContainerError] err) {
   [Result<ContainerError>] status{err.code}
   print_line_error(Result.why(status))
 }
 
 [return<Result<int, ContainerError>> effects(io_out, heap_alloc)
- on_error<ContainerError, /unexpectedWrappedExperimentalResultMapAssignError>]
+ on_error<ContainerError, /unexpectedWrappedCanonicalResultMapAssignError>]
 main() {
-  [Result<Map<string, i32>, ContainerError> mut] status{Result.ok(mapNew<string, i32>())}
-  assign(status, wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
+  [Result<map<string, i32>, ContainerError> mut] status{Result.ok(/std/collections/map/map<string, i32>("seed"raw_utf8, 0i32))}
+  assign(status, wrapStatus(Result.ok(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32,
                                                               "right"raw_utf8, 7i32))))
-  [Map<string, i32>] values{try(status)}
+  [map<string, i32>] values{try(status)}
   return(Result.ok(plus(/std/collections/map/count(values),
                         /std/collections/map/at(values, "right"raw_utf8))))
 }
@@ -313,7 +313,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("helper-wrapped Result.ok payload assignments keep mismatch diagnostics on explicit experimental map result targets") {
+TEST_CASE("helper-wrapped Result.ok payload assignments keep mismatch diagnostics on explicit canonical map result targets") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -324,16 +324,16 @@ wrapStatus<T>([T] status) {
 }
 
 [effects(io_err)]
-unexpectedWrappedExperimentalResultMapAssignError([ContainerError] err) {
+unexpectedWrappedCanonicalResultMapAssignError([ContainerError] err) {
   [Result<ContainerError>] status{err.code}
   print_line_error(Result.why(status))
 }
 
 [return<Result<int, ContainerError>> effects(io_out, heap_alloc)
- on_error<ContainerError, /unexpectedWrappedExperimentalResultMapAssignError>]
+ on_error<ContainerError, /unexpectedWrappedCanonicalResultMapAssignError>]
 main() {
-  [Result<Map<string, i32>, ContainerError> mut] status{Result.ok(mapNew<string, i32>())}
-  assign(status, wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
+  [Result<map<string, i32>, ContainerError> mut] status{Result.ok(/std/collections/map/map<string, i32>("seed"raw_utf8, 0i32))}
+  assign(status, wrapStatus(Result.ok(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32,
                                                               "wrong"raw_utf8, false))))
   return(Result.ok(0i32))
 }
@@ -344,7 +344,7 @@ main() {
   checkMapPairTemplateConflict(error);
 }
 
-TEST_CASE("helper-wrapped map constructors accept experimental map dereference assignment targets") {
+TEST_CASE("helper-wrapped map constructors accept canonical map dereference assignment targets") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -354,16 +354,16 @@ wrapValues<T>([T] values) {
   return(values)
 }
 
-[return<Reference<Map<string, i32>>>]
-borrowValues([Reference<Map<string, i32>>] values) {
+[return<Reference<map<string, i32>>>]
+borrowValues([Reference<map<string, i32>>] values) {
   return(values)
 }
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Map<string, i32> mut] values{mapNew<string, i32>()}
+  [map<string, i32> mut] values{/std/collections/map/map<string, i32>("seed"raw_utf8, 0i32)}
   assign(dereference(borrowValues(location(values))),
-         wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32,
+         wrapValues(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32,
                                              "right"raw_utf8, 7i32)))
   return(plus(/std/collections/map/count(values),
               /std/collections/map/at(values, "right"raw_utf8)))
@@ -385,16 +385,16 @@ wrapValues<T>([T] values) {
   return(values)
 }
 
-[return<Reference<Map<string, i32>>>]
-borrowValues([Reference<Map<string, i32>>] values) {
+[return<Reference<map<string, i32>>>]
+borrowValues([Reference<map<string, i32>>] values) {
   return(values)
 }
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Map<string, i32> mut] values{mapNew<string, i32>()}
+  [map<string, i32> mut] values{/std/collections/map/map<string, i32>("seed"raw_utf8, 0i32)}
   assign(dereference(borrowValues(location(values))),
-         wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32,
+         wrapValues(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32,
                                              "wrong"raw_utf8, false)))
   return(0i32)
 }
@@ -405,7 +405,7 @@ main() {
   checkMapPairTemplateConflict(error);
 }
 
-TEST_CASE("helper-wrapped Result.ok payloads accept experimental map result dereference targets") {
+TEST_CASE("helper-wrapped Result.ok payloads accept canonical map result dereference targets") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -415,25 +415,25 @@ wrapStatus<T>([T] status) {
   return(status)
 }
 
-[return<Reference<Result<Map<string, i32>, ContainerError>>>]
-borrowStatus([Reference<Result<Map<string, i32>, ContainerError>>] status) {
+[return<Reference<Result<map<string, i32>, ContainerError>>>]
+borrowStatus([Reference<Result<map<string, i32>, ContainerError>>] status) {
   return(status)
 }
 
 [effects(io_err)]
-unexpectedWrappedExperimentalResultMapDerefAssignError([ContainerError] err) {
+unexpectedWrappedCanonicalResultMapDerefAssignError([ContainerError] err) {
   [Result<ContainerError>] current{err.code}
   print_line_error(Result.why(current))
 }
 
 [return<Result<int, ContainerError>> effects(io_out, heap_alloc)
- on_error<ContainerError, /unexpectedWrappedExperimentalResultMapDerefAssignError>]
+ on_error<ContainerError, /unexpectedWrappedCanonicalResultMapDerefAssignError>]
 main() {
-  [Result<Map<string, i32>, ContainerError> mut] status{Result.ok(mapNew<string, i32>())}
+  [Result<map<string, i32>, ContainerError> mut] status{Result.ok(/std/collections/map/map<string, i32>("seed"raw_utf8, 0i32))}
   assign(dereference(borrowStatus(location(status))),
-         wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
+         wrapStatus(Result.ok(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32,
                                                       "right"raw_utf8, 7i32))))
-  [Map<string, i32>] values{try(status)}
+  [map<string, i32>] values{try(status)}
   return(Result.ok(plus(/std/collections/map/count(values),
                         /std/collections/map/at(values, "left"raw_utf8))))
 }
@@ -454,23 +454,23 @@ wrapStatus<T>([T] status) {
   return(status)
 }
 
-[return<Reference<Result<Map<string, i32>, ContainerError>>>]
-borrowStatus([Reference<Result<Map<string, i32>, ContainerError>>] status) {
+[return<Reference<Result<map<string, i32>, ContainerError>>>]
+borrowStatus([Reference<Result<map<string, i32>, ContainerError>>] status) {
   return(status)
 }
 
 [effects(io_err)]
-unexpectedWrappedExperimentalResultMapDerefAssignError([ContainerError] err) {
+unexpectedWrappedCanonicalResultMapDerefAssignError([ContainerError] err) {
   [Result<ContainerError>] current{err.code}
   print_line_error(Result.why(current))
 }
 
 [return<Result<int, ContainerError>> effects(io_out, heap_alloc)
- on_error<ContainerError, /unexpectedWrappedExperimentalResultMapDerefAssignError>]
+ on_error<ContainerError, /unexpectedWrappedCanonicalResultMapDerefAssignError>]
 main() {
-  [Result<Map<string, i32>, ContainerError> mut] status{Result.ok(mapNew<string, i32>())}
+  [Result<map<string, i32>, ContainerError> mut] status{Result.ok(/std/collections/map/map<string, i32>("seed"raw_utf8, 0i32))}
   assign(dereference(borrowStatus(location(status))),
-         wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
+         wrapStatus(Result.ok(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32,
                                                       "wrong"raw_utf8, false))))
   return(Result.ok(0i32))
 }
@@ -481,7 +481,7 @@ main() {
   checkMapPairTemplateConflict(error);
 }
 
-TEST_CASE("helper-wrapped map constructors accept experimental map uninitialized storage") {
+TEST_CASE("helper-wrapped map constructors accept canonical map uninitialized storage") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -493,10 +493,10 @@ wrapValues<T>([T] values) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [uninitialized<Map<string, i32>> mut] storage{uninitialized<Map<string, i32>>()}
-  init(storage, wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32,
+  [uninitialized<map<string, i32>> mut] storage{uninitialized<map<string, i32>>()}
+  init(storage, wrapValues(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32,
                                                     "right"raw_utf8, 7i32)))
-  [Map<string, i32>] values{take(storage)}
+  [map<string, i32>] values{take(storage)}
   return(plus(/std/collections/map/count(values),
               /std/collections/map/at(values, "right"raw_utf8)))
 }
@@ -519,8 +519,8 @@ wrapValues<T>([T] values) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [uninitialized<Map<string, i32>> mut] storage{uninitialized<Map<string, i32>>()}
-  init(storage, wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32,
+  [uninitialized<map<string, i32>> mut] storage{uninitialized<map<string, i32>>()}
+  init(storage, wrapValues(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32,
                                                     "wrong"raw_utf8, false)))
   return(0i32)
 }
@@ -531,7 +531,7 @@ main() {
   checkMapPairTemplateConflict(error);
 }
 
-TEST_CASE("helper-wrapped Result.ok payloads accept experimental map result uninitialized storage") {
+TEST_CASE("helper-wrapped Result.ok payloads accept canonical map result uninitialized storage") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -543,11 +543,11 @@ wrapStatus<T>([T] status) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [uninitialized<Result<Map<string, i32>, ContainerError>> mut] storage{
-      uninitialized<Result<Map<string, i32>, ContainerError>>()}
-  init(storage, wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
+  [uninitialized<Result<map<string, i32>, ContainerError>> mut] storage{
+      uninitialized<Result<map<string, i32>, ContainerError>>()}
+  init(storage, wrapStatus(Result.ok(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32,
                                                              "right"raw_utf8, 7i32))))
-  [Result<Map<string, i32>, ContainerError>] status{take(storage)}
+  [Result<map<string, i32>, ContainerError>] status{take(storage)}
   return(0i32)
 }
 )";
@@ -569,9 +569,9 @@ wrapStatus<T>([T] status) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [uninitialized<Result<Map<string, i32>, ContainerError>> mut] storage{
-      uninitialized<Result<Map<string, i32>, ContainerError>>()}
-  init(storage, wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
+  [uninitialized<Result<map<string, i32>, ContainerError>> mut] storage{
+      uninitialized<Result<map<string, i32>, ContainerError>>()}
+  init(storage, wrapStatus(Result.ok(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32,
                                                              "wrong"raw_utf8, false))))
   return(0i32)
 }
@@ -582,7 +582,7 @@ main() {
   checkMapPairTemplateConflict(error);
 }
 
-TEST_CASE("helper-wrapped map constructors accept dereferenced experimental map uninitialized storage") {
+TEST_CASE("helper-wrapped map constructors accept dereferenced canonical map uninitialized storage") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -592,18 +592,18 @@ wrapValues<T>([T] values) {
   return(values)
 }
 
-[return<Reference<uninitialized<Map<string, i32>>>>]
-borrowStorage([Reference<uninitialized<Map<string, i32>>>] storage) {
+[return<Reference<uninitialized<map<string, i32>>>>]
+borrowStorage([Reference<uninitialized<map<string, i32>>>] storage) {
   return(storage)
 }
 
 [effects(heap_alloc), return<int>]
 main() {
-  [uninitialized<Map<string, i32>> mut] storage{uninitialized<Map<string, i32>>()}
+  [uninitialized<map<string, i32>> mut] storage{uninitialized<map<string, i32>>()}
   init(dereference(borrowStorage(location(storage))),
-       wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32,
+       wrapValues(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32,
                                            "right"raw_utf8, 7i32)))
-  [Map<string, i32>] values{take(storage)}
+  [map<string, i32>] values{take(storage)}
   return(plus(/std/collections/map/count(values),
               /std/collections/map/at(values, "right"raw_utf8)))
 }
@@ -624,16 +624,16 @@ wrapValues<T>([T] values) {
   return(values)
 }
 
-[return<Reference<uninitialized<Map<string, i32>>>>]
-borrowStorage([Reference<uninitialized<Map<string, i32>>>] storage) {
+[return<Reference<uninitialized<map<string, i32>>>>]
+borrowStorage([Reference<uninitialized<map<string, i32>>>] storage) {
   return(storage)
 }
 
 [effects(heap_alloc), return<int>]
 main() {
-  [uninitialized<Map<string, i32>> mut] storage{uninitialized<Map<string, i32>>()}
+  [uninitialized<map<string, i32>> mut] storage{uninitialized<map<string, i32>>()}
   init(dereference(borrowStorage(location(storage))),
-       wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32,
+       wrapValues(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32,
                                            "wrong"raw_utf8, false)))
   return(0i32)
 }

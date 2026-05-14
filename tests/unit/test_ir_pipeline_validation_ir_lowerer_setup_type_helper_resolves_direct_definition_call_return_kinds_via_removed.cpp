@@ -318,7 +318,7 @@ TEST_CASE("ir lowerer setup type helper rejects canonical map tryAt fallback whi
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
-TEST_CASE("ir lowerer setup type helper prefers exact direct map count-like return info over semantic canonical paths") {
+TEST_CASE("ir lowerer setup type helper prefers canonical direct map count-like return info") {
   std::unordered_map<std::string, const primec::Definition *> defMap;
   primec::Definition aliasCountDef;
   aliasCountDef.fullPath = "/map/count";
@@ -398,13 +398,13 @@ TEST_CASE("ir lowerer setup type helper prefers exact direct map count-like retu
   };
 
   expectExactPathWins("/map/count",
-                      primec::ir_lowerer::LocalInfo::ValueKind::UInt64,
+                      primec::ir_lowerer::LocalInfo::ValueKind::Int32,
                       "/std/collections/map/count");
   expectExactPathWins("/map/contains",
-                      primec::ir_lowerer::LocalInfo::ValueKind::UInt64,
+                      primec::ir_lowerer::LocalInfo::ValueKind::Bool,
                       "/std/collections/map/contains");
   expectExactPathWins("/map/tryAt",
-                      primec::ir_lowerer::LocalInfo::ValueKind::Int64,
+                      primec::ir_lowerer::LocalInfo::ValueKind::Int32,
                       "/std/collections/map/tryAt");
 }
 

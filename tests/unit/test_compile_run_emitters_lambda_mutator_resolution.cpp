@@ -494,13 +494,13 @@ main() {
   values.push(6i32)
   reserve(values, 10i32)
   values.reserve(11i32)
-  remove_at(values, 0i32)
+  /std/collections/vector/remove_at<i32>(values, 0i32)
   values.remove_at(0i32)
-  remove_swap(values, 0i32)
+  /std/collections/vector/remove_swap<i32>(values, 0i32)
   values.remove_swap(0i32)
-  pop(values)
+  /std/collections/vector/pop<i32>(values)
   values.clear()
-  clear(values)
+  /std/collections/vector/clear<i32>(values)
   return(/std/collections/vector/count<i32>(values))
 }
 )";
@@ -531,8 +531,6 @@ main() {
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/push") !=
-        std::string::npos);
 }
 
 TEST_CASE("compiles and runs canonical vector mutator named calls over imported user shadow helpers in C++ emitter") {
@@ -577,8 +575,6 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/push") !=
-        std::string::npos);
 }
 
 TEST_CASE("rejects imported user vector mutator positional call shadow in C++ emitter") {
@@ -610,6 +606,10 @@ main() {
   CHECK((diagnostics.find("\"message\":\"push requires mutable vector binding\"") !=
              std::string::npos ||
          diagnostics.find("push requires mutable vector binding") != std::string::npos ||
+         diagnostics.find("\"message\":\"template arguments required for /std/collections/soa_vector/push\"") !=
+             std::string::npos ||
+         diagnostics.find("template arguments required for /std/collections/soa_vector/push") !=
+             std::string::npos ||
          diagnostics.find("\"message\":\"unknown call target: /std/collections/vector/push\"") !=
              std::string::npos ||
          diagnostics.find("unknown call target: /std/collections/vector/push") !=

@@ -6,6 +6,7 @@
 #include <functional>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -156,6 +157,23 @@ bool isExplicitPublishedVectorMetadataCall(const Expr &expr,
   const std::string normalizedPath =
       normalizeUnrootedHelperPath(resolveScopedCallPath(expr));
   return normalizedPath.rfind(canonicalCollectionMemberPrefix("vector"), 0) == 0;
+}
+
+bool isSemanticVectorCountBridgeCall(const Expr &expr,
+                                     const SemanticProgram *semanticProgram) {
+  if (semanticProgram == nullptr || expr.kind != Expr::Kind::Call ||
+      expr.isMethodCall || expr.semanticNodeId == 0) {
+    return false;
+  }
+  const std::optional<StdlibSurfaceId> surfaceId =
+      findSemanticProductBridgePathChoiceStdlibSurfaceId(semanticProgram, expr);
+  if (!surfaceId.has_value() ||
+      *surfaceId != StdlibSurfaceId::CollectionsVectorHelperSurface) {
+    return false;
+  }
+  const std::string bridgePath =
+      normalizeUnrootedHelperPath(findSemanticProductBridgePathChoice(semanticProgram, expr));
+  return bridgePath == canonicalCollectionMemberPrefix("vector") + "count";
 }
 
 bool isInternalVectorMetadataCall(const Expr &expr,
@@ -532,8 +550,11 @@ bool classifySemanticCollectionTarget(const SemanticProgram &semanticProgram,
       std::string(resolveSemanticProductText(semanticProgram,
                                              collectionFact.collectionFamilyId,
                                              collectionFact.collectionFamily)));
-  if (collectionFamily == "vector" || collectionFamily == "soa_vector" ||
-      collectionFamily == "map") {
+  if (collectionFamily == "array" ||
+      collectionFamily == "vector" ||
+      collectionFamily == "soa_vector" ||
+      collectionFamily == "map" ||
+      collectionFamily == "Buffer") {
     infoOut.isCollection = true;
     infoOut.isVector = collectionFamily == "vector";
   }
@@ -1006,7 +1027,11 @@ bool isArrayCountCall(const Expr &expr,
                       const std::string &entryArgsName,
                       const SemanticProgram *semanticProgram,
                       const SemanticProductIndex *semanticIndex) {
-  if (!(isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) || expr.args.size() != 1) {
+  const bool isSemanticVectorCountBridge =
+      isSemanticVectorCountBridgeCall(expr, semanticProgram);
+  if (!(isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count") ||
+        isSemanticVectorCountBridge) ||
+      expr.args.size() != 1) {
     return false;
   }
   if (isExplicitVectorCountMethodCall(expr)) {
@@ -1327,6 +1352,8 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     const SemanticProductIndex *semanticIndex) {
   const bool explicitPublishedVectorCountCall =
       isExplicitPublishedVectorMetadataCall(expr, "count");
+  const bool semanticVectorCountBridge =
+      isSemanticVectorCountBridgeCall(expr, semanticProgram);
   const bool explicitPublishedVectorCapacityCall =
       isExplicitPublishedVectorMetadataCall(expr, "capacity");
   const auto isCountLikeCall = [&]() {
@@ -1396,8 +1423,17 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     emitInstruction(IrOpcode::PushArgc, 0);
     return CountAccessCallEmitResult::Emitted;
   }
+  const bool semanticBridgeCountAccessTarget =
+      semanticVectorCountBridge &&
+      expr.args.size() == 1 &&
+      (isArrayCountCallFn(expr, localsIn) ||
+       (isDynamicCollectionCountTargetFn != nullptr &&
+        isDynamicCollectionCountTargetFn(expr.args.front(), localsIn)) ||
+       (isDynamicVectorCountTargetFn != nullptr &&
+        isDynamicVectorCountTargetFn(expr.args.front(), localsIn)));
   if (explicitPublishedVectorCountCall &&
-      !namedArgVectorTemporaryCountCall) {
+      !namedArgVectorTemporaryCountCall &&
+      !semanticBridgeCountAccessTarget) {
     return CountAccessCallEmitResult::NotHandled;
   }
   if (explicitPublishedVectorCapacityCall) {

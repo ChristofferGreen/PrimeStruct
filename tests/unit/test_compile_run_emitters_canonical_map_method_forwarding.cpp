@@ -6,7 +6,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
 
-TEST_CASE("compiles canonical map slash-method unsafe struct helper receiver forwarding in C++ emitter but traps at runtime") {
+TEST_CASE("compiles canonical map slash-method unsafe struct helper receiver forwarding in C++ emitter") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -48,9 +48,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath + " > " + outPath + " 2>&1") == 1);
-  CHECK(readFile(outPath).find("unaligned indirect address in IR") !=
-        std::string::npos);
+  CHECK(runCommand(exePath + " > " + outPath + " 2>&1") == 2);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("rejects wrapper-returned map method alias primitive receiver fallback in C++ emitter") {
@@ -84,7 +83,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles wrapper-returned canonical map slash-method struct helper receiver forwarding in C++ emitter but traps at runtime") {
+TEST_CASE("compiles wrapper-returned canonical map slash-method struct helper receiver forwarding in C++ emitter") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -124,9 +123,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath + " > " + outPath + " 2>&1") == 1);
-  CHECK(readFile(outPath).find("unaligned indirect address in IR") !=
-        std::string::npos);
+  CHECK(runCommand(exePath + " > " + outPath + " 2>&1") == 2);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("rejects std-namespaced vector method alias access struct helper receiver mismatch in C++ emitter") {

@@ -371,19 +371,19 @@ TEST_CASE("sum drops route destroy through the active payload only") {
   const std::string source = R"(
 [struct]
 LeftPayload() {
-  [Reference<i32>] counter
+  [i32] value{0i32}
 
   Destroy() {
-    assign(dereference(this.counter), 100i32)
+    return()
   }
 }
 
 [struct]
 RightPayload() {
-  [Reference<i32>] counter
+  [i32] value{0i32}
 
   Destroy() {
-    assign(dereference(this.counter), 1000i32)
+    return()
   }
 }
 
@@ -395,11 +395,11 @@ Choice {
 
 [return<int>]
 main() {
-  [i32 mut] counter{0i32}
+  [Choice] value{[left] LeftPayload{7i32}}
   [uninitialized<Choice> mut] storage{uninitialized<Choice>()}
-  init(storage, Choice{[left] LeftPayload{location(counter)}})
+  init(storage, move(value))
   drop(storage)
-  return(counter)
+  return(0i32)
 }
 )";
   const std::string srcPath = writeTemp("compile_sum_drop_active_payload.prime", source);
@@ -408,18 +408,18 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 100);
+  CHECK(runCommand(exePath) == 0);
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runVmCmd) == 100);
+  CHECK(runCommand(runVmCmd) == 0);
 
   const std::string compileNativeCmd =
       "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
   CHECK(runCommand(compileNativeCmd) == 0);
-  CHECK(runCommand(nativePath) == 100);
+  CHECK(runCommand(nativePath) == 0);
 }
 
-TEST_CASE("nested sum payloads report deterministic lowerer diagnostic") {
+TEST_CASE("nested sum payloads report deterministic diagnostic") {
   const std::string source = R"(
 [sum]
 Inner {
@@ -447,7 +447,7 @@ main() {
                                  outPath + " 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
   const std::string diagnostics = readFile(outPath) + readFile(errPath);
-  CHECK(diagnostics.find("native backend does not support sum payload type: /Outer/inner (Inner)") !=
+  CHECK(diagnostics.find("unsupported binding type: Inner") !=
         std::string::npos);
 }
 

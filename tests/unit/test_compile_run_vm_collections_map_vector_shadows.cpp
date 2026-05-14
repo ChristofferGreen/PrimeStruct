@@ -114,7 +114,8 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_user_vector_at_call_shadow_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") != std::string::npos);
+  CHECK(readFile(errPath).find("vm backend only supports at() on numeric/bool/string arrays or vectors") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm named vector at expression receiver precedence") {
@@ -142,10 +143,10 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") != std::string::npos);
+  CHECK(readFile(errPath).find("vm backend requires integer indices for at") != std::string::npos);
 }
 
-TEST_CASE("runs vm user vector at method shadow through same-path helper") {
+TEST_CASE("keeps vm builtin vector at method over user shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/at([vector<i32>] values, [i32] index) {
@@ -160,7 +161,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_user_vector_at_method_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 69);
+  CHECK(runCommand(runCmd) == 2);
 }
 
 TEST_CASE("keeps vm builtin string at_unsafe call over user shadow") {
@@ -217,11 +218,11 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_user_vector_at_unsafe_call_shadow_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at_unsafe") !=
+  CHECK(readFile(errPath).find("vm backend only supports at() on numeric/bool/string arrays or vectors") !=
         std::string::npos);
 }
 
-TEST_CASE("runs vm user vector at_unsafe method shadow through same-path helper") {
+TEST_CASE("keeps vm builtin vector at_unsafe method over user shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/at_unsafe([vector<i32>] values, [i32] index) {
@@ -236,7 +237,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_user_vector_at_unsafe_method_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 82);
+  CHECK(runCommand(runCmd) == 2);
 }
 
 TEST_CASE("keeps vm builtin string at call over user shadow") {

@@ -6204,6 +6204,13 @@ bool rewriteOmittedStructInitializers(Program &program, std::string &error) {
   };
 
   for (auto &def : program.definitions) {
+    const bool isSumDefinition =
+        std::any_of(def.transforms.begin(), def.transforms.end(), [](const Transform &transform) {
+          return transform.name == "sum";
+        });
+    if (isSumDefinition) {
+      continue;
+    }
     for (auto &stmt : def.statements) {
       if (!rewriteExpr(rewriteExpr, stmt)) {
         return false;

@@ -26,7 +26,7 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.find("argument type mismatch for /std/collections/mapTriple__") !=
+  CHECK(error.find("argument type mismatch for /std/collections/internal_map/mapTriple__") !=
         std::string::npos);
   CHECK(error.find("parameter thirdKey: expected i32") != std::string::npos);
 }
@@ -71,7 +71,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{
-    mapQuad<i32, i32>(1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, false)}
+    mapQuad<i32, i32>(1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, "bad"raw_utf8)}
   return(/std/collections/map/count<i32, i32>(values))
 }
 )";
@@ -82,7 +82,10 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/mapTriple") !=
+  const std::string error = readFile(errPath);
+  CHECK(error.find("argument type mismatch for /std/collections/internal_map/mapQuad__") !=
+        std::string::npos);
+  CHECK(error.find("parameter fourthValue: expected i32") !=
         std::string::npos);
 }
 
@@ -104,7 +107,8 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.find("argument type mismatch for /std/collections/mapQuad__") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /std/collections/internal_map/mapQuad__") !=
+        std::string::npos);
   CHECK(error.find("parameter fourthKey: expected i32") != std::string::npos);
 }
 
@@ -149,7 +153,7 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{
-    mapQuint<i32, i32>(1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, 8i32, 9i32, false)}
+    mapQuint<i32, i32>(1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, 8i32, 9i32, "bad"raw_utf8)}
   return(/std/collections/map/count<i32, i32>(values))
 }
 )";
@@ -160,8 +164,10 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map") !=
+  const std::string error = readFile(errPath);
+  CHECK(error.find("argument type mismatch for /std/collections/internal_map/mapQuint__") !=
         std::string::npos);
+  CHECK(error.find("parameter fifthValue: expected i32") != std::string::npos);
 }
 
 TEST_CASE("rejects vm stdlib collection shim map quint standalone key type mismatch") {
@@ -183,7 +189,8 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.find("argument type mismatch for /std/collections/mapQuint__") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /std/collections/internal_map/mapQuint__") !=
+        std::string::npos);
   CHECK(error.find("parameter fifthKey: expected i32") != std::string::npos);
 }
 
@@ -229,7 +236,8 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{
-    mapSext<i32, i32>(1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, 8i32, 9i32, 10i32, 11i32, false)}
+    mapSext<i32, i32>(
+        1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, 8i32, 9i32, 10i32, 11i32, "bad"raw_utf8)}
   return(/std/collections/map/count<i32, i32>(values))
 }
 )";
@@ -240,8 +248,10 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map") !=
+  const std::string error = readFile(errPath);
+  CHECK(error.find("argument type mismatch for /std/collections/internal_map/mapSext__") !=
         std::string::npos);
+  CHECK(error.find("parameter sixthValue: expected i32") != std::string::npos);
 }
 
 TEST_CASE("rejects vm stdlib collection shim map sext standalone key type mismatch") {
@@ -263,7 +273,8 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.find("argument type mismatch for /std/collections/mapSext__") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /std/collections/internal_map/mapSext__") !=
+        std::string::npos);
   CHECK(error.find("parameter sixthKey: expected i32") != std::string::npos);
 }
 
@@ -309,7 +320,8 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{
-    mapSept<i32, i32>(1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, 8i32, 9i32, 10i32, 11i32, 12i32, 13i32, false)}
+    mapSept<i32, i32>(
+        1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, 8i32, 9i32, 10i32, 11i32, 12i32, 13i32, "bad"raw_utf8)}
   return(/std/collections/map/count<i32, i32>(values))
 }
 )";
@@ -320,8 +332,10 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map") !=
+  const std::string error = readFile(errPath);
+  CHECK(error.find("argument type mismatch for /std/collections/internal_map/mapSept__") !=
         std::string::npos);
+  CHECK(error.find("parameter seventhValue: expected i32") != std::string::npos);
 }
 
 TEST_CASE("rejects vm stdlib collection shim map sept standalone key type mismatch") {
@@ -344,7 +358,8 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.find("argument type mismatch for /std/collections/mapSept__") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /std/collections/internal_map/mapSept__") !=
+        std::string::npos);
   CHECK(error.find("parameter seventhKey: expected i32") != std::string::npos);
 }
 
@@ -392,7 +407,8 @@ import /std/collections/*
 main() {
   [map<i32, i32>] values{
     mapOct<i32, i32>(
-        1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, 8i32, 9i32, 10i32, 11i32, 12i32, 13i32, 14i32, 15i32, false)}
+        1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, 8i32, 9i32, 10i32, 11i32, 12i32, 13i32, 14i32, 15i32,
+        "bad"raw_utf8)}
   return(/std/collections/map/count<i32, i32>(values))
 }
 )";
@@ -403,8 +419,10 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map") !=
+  const std::string error = readFile(errPath);
+  CHECK(error.find("argument type mismatch for /std/collections/internal_map/mapOct__") !=
         std::string::npos);
+  CHECK(error.find("parameter eighthValue: expected i32") != std::string::npos);
 }
 
 TEST_CASE("rejects vm stdlib collection shim map oct standalone key type mismatch") {
@@ -428,7 +446,8 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.find("argument type mismatch for /std/collections/mapOct__") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /std/collections/internal_map/mapOct__") !=
+        std::string::npos);
   CHECK(error.find("parameter eighthKey: expected i32") != std::string::npos);
 }
 
@@ -454,7 +473,7 @@ import /std/collections/*
 
 [return<int>]
 main() {
-  [map<i32, i32>] values{mapDouble<i32, i32>(1i32, 2i32, 3i32, false)}
+  [map<i32, i32>] values{mapDouble<i32, i32>(1i32, 2i32, 3i32, "bad"raw_utf8)}
   return(/std/collections/map/count<i32, i32>(values))
 }
 )";
@@ -464,8 +483,10 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map") !=
+  const std::string error = readFile(errPath);
+  CHECK(error.find("argument type mismatch for /std/collections/internal_map/mapDouble__") !=
         std::string::npos);
+  CHECK(error.find("parameter secondValue: expected i32") != std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim map triple") {
@@ -491,7 +512,7 @@ import /std/collections/*
 
 [return<int>]
 main() {
-  [map<i32, i32>] values{mapTriple<i32, i32>(1i32, 2i32, 3i32, 4i32, 5i32, false)}
+  [map<i32, i32>] values{mapTriple<i32, i32>(1i32, 2i32, 3i32, 4i32, 5i32, "bad"raw_utf8)}
   return(/std/collections/map/count<i32, i32>(values))
 }
 )";
@@ -501,8 +522,10 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map") !=
+  const std::string error = readFile(errPath);
+  CHECK(error.find("argument type mismatch for /std/collections/internal_map/mapTriple__") !=
         std::string::npos);
+  CHECK(error.find("parameter thirdValue: expected i32") != std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim extended constructors") {
@@ -529,7 +552,7 @@ import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [map<i32, i32>] pairs{mapTriple<i32, i32>(1i32, 10i32, 2i32, 20i32, 3i32, true)}
+  [map<i32, i32>] pairs{mapTriple<i32, i32>(1i32, 10i32, 2i32, 20i32, 3i32, "bad"raw_utf8)}
   return(/std/collections/map/count<i32, i32>(pairs))
 }
 )";
@@ -539,8 +562,10 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map") !=
+  const std::string error = readFile(errPath);
+  CHECK(error.find("argument type mismatch for /std/collections/internal_map/mapTriple__") !=
         std::string::npos);
+  CHECK(error.find("parameter thirdValue: expected i32") != std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim vector quint constructor") {
@@ -690,7 +715,7 @@ import /std/collections/*
 
 [return<int>]
 main() {
-  [map<i32, i32>] values{mapPair<i32, i32>(1i32, 2i32, 3i32, true)}
+  [map<i32, i32>] values{mapPair<i32, i32>(1i32, 2i32, 3i32, "bad"raw_utf8)}
   return(/std/collections/map/count<i32, i32>(values))
 }
 )";
@@ -701,8 +726,10 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map") !=
+  const std::string error = readFile(errPath);
+  CHECK(error.find("argument type mismatch for /std/collections/internal_map/mapPair__") !=
         std::string::npos);
+  CHECK(error.find("parameter secondValue: expected i32") != std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim map quad") {
@@ -728,7 +755,8 @@ import /std/collections/*
 
 [return<int>]
 main() {
-  [map<i32, i32>] values{mapQuad<i32, i32>(1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, false)}
+  [map<i32, i32>] values{
+    mapQuad<i32, i32>(1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, "bad"raw_utf8)}
   return(/std/collections/map/count<i32, i32>(values))
 }
 )";
@@ -739,8 +767,10 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map") !=
+  const std::string error = readFile(errPath);
+  CHECK(error.find("argument type mismatch for /std/collections/internal_map/mapQuad__") !=
         std::string::npos);
+  CHECK(error.find("parameter fourthValue: expected i32") != std::string::npos);
 }
 
 

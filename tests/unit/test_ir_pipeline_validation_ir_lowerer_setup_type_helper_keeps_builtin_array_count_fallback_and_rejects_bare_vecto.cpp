@@ -332,7 +332,7 @@ TEST_CASE("ir lowerer setup type helper keeps semantic explicit vector count hel
   CHECK(error == "semantic-product method-call target missing lowered definition: /string/count");
 }
 
-TEST_CASE("ir lowerer setup type helper prefers semantic vector method gate facts") {
+TEST_CASE("ir lowerer setup type helper requires semantic vector method ids before gate facts") {
   primec::SemanticProgram semanticProgram;
   auto addBindingFact = [&](uint64_t semanticNodeId,
                             const std::string &bindingTypeText) {
@@ -425,13 +425,14 @@ TEST_CASE("ir lowerer setup type helper prefers semantic vector method gate fact
     CHECK(resolveMethod(makeMethodCall(scalarTarget, methodName),
                         staleVectorLocals,
                         error) == nullptr);
-    CHECK(error == "stale");
+    CHECK(error == std::string("missing semantic-product method-call semantic id: ") +
+                       methodName);
 
     error = "stale";
     CHECK(resolveMethod(makeMethodCall(vectorTarget, methodName),
                         staleScalarLocals,
                         error) == nullptr);
-    CHECK(error == std::string("unknown method: /std/collections/vector/") +
+    CHECK(error == std::string("missing semantic-product method-call semantic id: ") +
                        methodName);
   }
 }

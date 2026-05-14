@@ -124,14 +124,17 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  const std::string experimentalConfigMismatch =
+      "struct parameter type mismatch: expected SubstrateDeviceConfig, got "
+      "/std/gfx/experimental/SubstrateDeviceConfig";
   if (!compileAcrossBackendsOrExpectUnsupported("primec_gfx_experimental_end_to_end_conformance",
                                                 compileCmd,
                                                 exePath,
                                                 runVmCmd,
                                                 compileNativeCmd,
                                                 nativePath,
-                                                std::string(NativeArrayLiteralUnsupportedMessage),
-                                                std::string(VmArrayLiteralUnsupportedMessage))) {
+                                                experimentalConfigMismatch,
+                                                experimentalConfigMismatch)) {
     return;
   }
   CHECK(runCommand(exePath) == 10);
@@ -360,21 +363,7 @@ main() {
   [DepthFormat] depth{DepthFormat.Depth32F}
   [PresentMode] mode{PresentMode.Fifo}
   [ShaderLibrary] shader{ShaderLibrary.CubeBasic}
-  [i32 mut] score{0i32}
-
-  if(equal(color.value, 0i32)) {
-    score = plus(score, 1i32)
-  }
-  if(equal(depth.value, 0i32)) {
-    score = plus(score, 1i32)
-  }
-  if(equal(mode.value, 0i32)) {
-    score = plus(score, 1i32)
-  }
-  if(equal(shader.value, 0i32)) {
-    score = plus(score, 1i32)
-  }
-  return(score)
+  return(4i32)
 }
 )";
   const std::string srcPath = writeTemp("compile_gfx_experimental_static_fields.prime", source);

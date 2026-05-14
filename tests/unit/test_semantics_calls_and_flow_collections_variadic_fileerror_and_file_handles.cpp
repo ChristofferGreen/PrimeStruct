@@ -643,7 +643,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map namespaced tryAt method now fails on try result diagnostics first") {
+TEST_CASE("map namespaced tryAt method validates through slash-path routing") {
   const std::string source = R"(
 [struct]
 ContainerError() {
@@ -672,11 +672,12 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("try requires Result argument") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
 }
 
-TEST_CASE("map stdlib namespaced tryAt method now fails on try result diagnostics first") {
+TEST_CASE("map stdlib namespaced tryAt method validates through slash-path routing") {
   const std::string source = R"(
 [struct]
 ContainerError() {
@@ -705,8 +706,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("try requires Result argument") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
 }
 
 TEST_CASE("map stdlib namespaced at_unsafe method now validates through slash-path routing") {

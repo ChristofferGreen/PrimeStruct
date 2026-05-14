@@ -290,7 +290,8 @@ TEST_CASE("ir lowerer indexed assign consumes semantic collection facts before s
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
 
   auto makeIndexedAssign = [](const std::string &targetName,
-                              uint64_t semanticNodeId) {
+                              uint64_t semanticNodeId,
+                              const std::string &accessName = "at") {
     primec::Expr target;
     target.kind = primec::Expr::Kind::Name;
     target.name = targetName;
@@ -302,7 +303,7 @@ TEST_CASE("ir lowerer indexed assign consumes semantic collection facts before s
 
     primec::Expr access;
     access.kind = primec::Expr::Kind::Call;
-    access.name = "at";
+    access.name = accessName;
     access.args = {target, index};
 
     primec::Expr value;
@@ -392,6 +393,17 @@ TEST_CASE("ir lowerer indexed assign consumes semantic collection facts before s
   std::vector<primec::IrInstruction> instructions;
   std::string error;
   CHECK(emitIndexedAssign(makeIndexedAssign("values", 9301), instructions, error));
+  CHECK(error.empty());
+  CHECK(std::any_of(instructions.begin(), instructions.end(), [](const primec::IrInstruction &inst) {
+    return inst.op == primec::IrOpcode::StoreIndirect;
+  }));
+
+  instructions.clear();
+  error.clear();
+  CHECK(emitIndexedAssign(
+      makeIndexedAssign("values", 9301, "/std/collections/vector/at__ti32"),
+      instructions,
+      error));
   CHECK(error.empty());
   CHECK(std::any_of(instructions.begin(), instructions.end(), [](const primec::IrInstruction &inst) {
     return inst.op == primec::IrOpcode::StoreIndirect;

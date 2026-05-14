@@ -167,7 +167,7 @@ main() {
   CHECK(error.find("omitted initializer requires effect-free zero-arg constructor: /Thing") != std::string::npos);
 }
 
-TEST_CASE("omitted initializer rejects effect-free Create with map alias call helper fallback") {
+TEST_CASE("omitted initializer keeps alias diagnostics for map call helper fallback") {
   const std::string source = R"(
 [return<i32>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
@@ -193,7 +193,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /map/count") != std::string::npos);
+  CHECK(error.find("argument count mismatch for /map/count") != std::string::npos);
+  CHECK(error.find("effect-free zero-arg constructor") == std::string::npos);
 }
 
 TEST_CASE("omitted initializer rejects wrapper-returned canonical map call helper fallback when constructor is not effect-free") {

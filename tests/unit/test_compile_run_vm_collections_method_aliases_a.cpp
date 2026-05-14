@@ -471,7 +471,8 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /map/at") != std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /Marker/tag parameter self") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm map access compatibility call struct method chain with primitive argument diagnostics") {
@@ -504,7 +505,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /map/at") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /Marker/tag") != std::string::npos);
 }
 
 TEST_CASE("rejects vm map unsafe compatibility call struct method chain with primitive receiver diagnostics") {
@@ -537,7 +538,8 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /map/at_unsafe") != std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /Marker/tag parameter self") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm map unsafe compatibility call struct method chain with primitive argument diagnostics") {
@@ -570,7 +572,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /map/at_unsafe") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /Marker/tag") != std::string::npos);
 }
 
 TEST_CASE("rejects vm vector method alias access struct method chain with array receiver diagnostics") {

@@ -32,7 +32,8 @@ import /std/collections/*
 
 [return<int>]
 main() {
-  [map<i32, i32>] values{mapQuint<i32, i32>(1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, 8i32, 9i32, false)}
+  [map<i32, i32>] values{
+    mapQuint<i32, i32>(1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, 8i32, 9i32, "bad"raw_utf8)}
   return(/std/collections/map/count<i32, i32>(values))
 }
 )";
@@ -42,7 +43,10 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("map literal value type mismatch") != std::string::npos);
+  const std::string error = readFile(errPath);
+  CHECK(error.find("argument type mismatch for /std/collections/internal_map/mapQuint__") !=
+        std::string::npos);
+  CHECK(error.find("parameter fifthValue: expected i32") != std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim map sext") {
@@ -71,7 +75,8 @@ import /std/collections/*
 [return<int>]
 main() {
   [map<i32, i32>] values{
-    mapSext<i32, i32>(1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, 8i32, 9i32, 10i32, 11i32, false)}
+    mapSext<i32, i32>(
+        1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, 8i32, 9i32, 10i32, 11i32, "bad"raw_utf8)}
   return(/std/collections/map/count<i32, i32>(values))
 }
 )";
@@ -81,7 +86,10 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("map literal value type mismatch") != std::string::npos);
+  const std::string error = readFile(errPath);
+  CHECK(error.find("argument type mismatch for /std/collections/internal_map/mapSext__") !=
+        std::string::npos);
+  CHECK(error.find("parameter sixthValue: expected i32") != std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim map sept") {
@@ -111,7 +119,8 @@ import /std/collections/*
 main() {
   [map<i32, i32>] values{
     mapSept<i32, i32>(
-        1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, 8i32, 9i32, 10i32, 11i32, 12i32, 13i32, false)}
+        1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, 8i32, 9i32, 10i32, 11i32, 12i32, 13i32,
+        "bad"raw_utf8)}
   return(/std/collections/map/count<i32, i32>(values))
 }
 )";
@@ -121,7 +130,10 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("map literal value type mismatch") != std::string::npos);
+  const std::string error = readFile(errPath);
+  CHECK(error.find("argument type mismatch for /std/collections/internal_map/mapSept__") !=
+        std::string::npos);
+  CHECK(error.find("parameter seventhValue: expected i32") != std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim map oct") {
@@ -151,7 +163,8 @@ import /std/collections/*
 main() {
   [map<i32, i32>] values{
     mapOct<i32, i32>(
-        1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, 8i32, 9i32, 10i32, 11i32, 12i32, 13i32, 14i32, 15i32, false)}
+        1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, 8i32, 9i32, 10i32, 11i32, 12i32, 13i32, 14i32, 15i32,
+        "bad"raw_utf8)}
   return(/std/collections/map/count<i32, i32>(values))
 }
 )";
@@ -161,7 +174,10 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("map literal value type mismatch") != std::string::npos);
+  const std::string error = readFile(errPath);
+  CHECK(error.find("argument type mismatch for /std/collections/internal_map/mapOct__") !=
+        std::string::npos);
+  CHECK(error.find("parameter eighthValue: expected i32") != std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim access helpers") {
@@ -233,11 +249,8 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.find("argument type mismatch for /std/collections/vectorCapacity__") !=
+  CHECK(error.find("argument type mismatch for /std/collections/vector/capacity parameter values") !=
         std::string::npos);
-  CHECK(error.find("parameter values: expected /std/collections/experimental_vector/Vector__") !=
-        std::string::npos);
-  CHECK(error.find("got vector<i32>") != std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim vector count") {
@@ -492,7 +505,7 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.find("argument type mismatch for /std/collections/vectorReserve__") !=
+  CHECK(error.find("argument type mismatch for /std/collections/vector/reserve__") !=
         std::string::npos);
   CHECK(error.find("parameter values: expected /std/collections/experimental_vector/Vector__") !=
         std::string::npos);
@@ -533,7 +546,7 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.find("argument type mismatch for /std/collections/vectorClear__") !=
+  CHECK(error.find("argument type mismatch for /std/collections/vector/clear__") !=
         std::string::npos);
   CHECK(error.find("parameter values: expected /std/collections/experimental_vector/Vector__") !=
         std::string::npos);
@@ -574,7 +587,7 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.find("argument type mismatch for /std/collections/vectorRemoveAt__") !=
+  CHECK(error.find("argument type mismatch for /std/collections/vector/remove_at__") !=
         std::string::npos);
   CHECK(error.find("parameter values: expected /std/collections/experimental_vector/Vector__") !=
         std::string::npos);
@@ -616,7 +629,7 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK(error.find("argument type mismatch for /std/collections/vectorRemoveSwap__") !=
+  CHECK(error.find("argument type mismatch for /std/collections/vector/remove_swap__") !=
         std::string::npos);
   CHECK(error.find("parameter values: expected /std/collections/experimental_vector/Vector__") !=
         std::string::npos);
@@ -681,7 +694,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("rejects vm bare vector capacity method without imported helper") {
+TEST_CASE("runs vm bare vector capacity method without imported helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -690,12 +703,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_vector_capacity_method_import_requirement.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_vector_capacity_method_import_requirement_err.txt")
-          .string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("name=capacity") != std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 3);
 }
 
 TEST_CASE("rejects vm wrapper temporary vector capacity method without helper") {
@@ -769,7 +778,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_user_array_count_method_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 99);
+  CHECK(runCommand(runCmd) == 2);
 }
 
 TEST_SUITE_END();

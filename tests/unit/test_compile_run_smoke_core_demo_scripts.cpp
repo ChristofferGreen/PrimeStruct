@@ -98,7 +98,7 @@ main() {
   CHECK(frames[6].find("\"event\":\"terminated\"") != std::string::npos);
 }
 
-TEST_CASE("primevm debug-dap exposes non-top frame locals in variables") {
+TEST_CASE("primevm debug-dap accepts instruction breakpoints and rejects post-exit locals") {
   const std::string source = R"(
 [return<int>]
 helper() {
@@ -134,7 +134,7 @@ main() {
   CHECK(framingOk);
   REQUIRE(frames.size() == 12);
   CHECK(frames[4].find("\"command\":\"setInstructionBreakpoints\"") != std::string::npos);
-  CHECK(frames[4].find("invalid breakpoint instruction pointer") != std::string::npos);
+  CHECK(frames[4].find("\"verified\":true") != std::string::npos);
   CHECK(frames[6].find("\"event\":\"exited\"") != std::string::npos);
   CHECK(frames[7].find("\"event\":\"terminated\"") != std::string::npos);
   CHECK(frames[8].find("\"command\":\"stackTrace\"") != std::string::npos);

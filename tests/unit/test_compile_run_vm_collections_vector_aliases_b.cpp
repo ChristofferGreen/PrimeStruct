@@ -488,7 +488,7 @@ main() {
   CHECK(runCommand(runCmd) == 3);
 }
 
-TEST_CASE("runs vm vector literal count method without imported helper") {
+TEST_CASE("rejects vm vector literal count method without imported helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -496,8 +496,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_vector_literal_count.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 3);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_vector_literal_count_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("call=/std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("runs vm vector method call") {

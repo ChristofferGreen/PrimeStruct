@@ -41,22 +41,24 @@ main() {
   CHECK(error.find("comparisons do not support mixed string/numeric operands") != std::string::npos);
 }
 
-TEST_CASE("builtin map at comparisons follow user-defined at precedence") {
+TEST_CASE("builtin map at comparisons prefer canonical map access over root at") {
   const std::string source = R"(
 [return<int>]
 at([map<i32, string>] values, [i32] key) {
   return(key)
 }
 
-[return<bool>]
+[effects(heap_alloc), return<bool>]
 main() {
   [map<i32, string>] values{map<i32, string>(1i32, "one"utf8)}
   return(equal(at(values, 1i32), 1i32))
 }
-)";
+  )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("comparisons do not support mixed string/numeric operands") !=
+        std::string::npos);
 }
 
 TEST_CASE("arithmetic operators reject bool operands") {

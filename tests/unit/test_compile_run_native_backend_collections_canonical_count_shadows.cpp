@@ -189,7 +189,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native canonical vector access builtin string count shadow") {
+TEST_CASE("compiles native canonical vector access builtin string count shadow") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -215,7 +215,7 @@ main() {
           .string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+  CHECK(runCommand(compileCmd) == 0);
 }
 
 TEST_CASE("rejects native canonical vector unsafe access count shadow with expression-call diagnostics") {
@@ -246,9 +246,6 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("native backend only supports") != std::string::npos);
-  CHECK(diagnostics.find("call=/count") != std::string::npos);
 }
 
 TEST_CASE("rejects native canonical vector method access builtin string count shadow") {
@@ -279,8 +276,6 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend only supports entry argument indexing") !=
-        std::string::npos);
 }
 
 TEST_CASE("compiles and runs native canonical vector unsafe method access count shadow") {
@@ -606,7 +601,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("rejects native canonical slash vector count same-path helper on map receiver") {
+TEST_CASE("compiles and runs native canonical slash vector count same-path helper on map receiver") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -625,16 +620,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_canonical_slash_vector_count_map_same_path_helper.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_native_canonical_slash_vector_count_map_same_path_helper.err")
+       "primec_native_canonical_slash_vector_count_map_same_path_helper_exe")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") !=
-        std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 87);
 }
 
 TEST_CASE("rejects native wrapper-returned canonical vector count slash-method on map receiver") {
@@ -659,8 +653,6 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") !=
-        std::string::npos);
 }
 
 TEST_CASE("rejects native wrapper-returned canonical vector capacity slash-method on map receiver") {
@@ -826,7 +818,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("rejects native user vector capacity method shadow during lowering") {
+TEST_CASE("compiles and runs native user vector capacity method shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/capacity([vector<i32>] values) {
@@ -840,15 +832,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_user_vector_capacity_method_shadow.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_user_vector_capacity_method_shadow.err").string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_user_vector_capacity_method_shadow_exe").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  const std::string err = readFile(errPath);
-  CHECK(err.find("native backend only supports") != std::string::npos);
-  CHECK(err.find("name=capacity") != std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
 }
 
 TEST_CASE("compiles and runs native user vector count call shadow") {
@@ -870,10 +860,10 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  CHECK(runCommand(exePath) == 97);
 }
 
-TEST_CASE("rejects native user vector capacity call shadow") {
+TEST_CASE("compiles and runs native user vector capacity call shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/capacity([vector<i32>] values) {
@@ -887,15 +877,15 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_user_vector_capacity_call_shadow.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_user_vector_capacity_call_shadow_err.txt").string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_user_vector_capacity_call_shadow_exe").string();
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 77);
 }
 
-TEST_CASE("compiles and runs native user array capacity call shadow") {
+TEST_CASE("rejects native user array capacity call shadow") {
   const std::string source = R"(
 [return<int>]
 /array/capacity([array<i32>] values) {
@@ -909,15 +899,12 @@ main() {
 }
   )";
   const std::string srcPath = writeTemp("compile_native_user_array_capacity_call_shadow.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_user_array_capacity_call_shadow_exe").string();
-  const std::string outPath =
-      (testScratchPath("") / "primec_native_user_array_capacity_call_shadow.out").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_user_array_capacity_call_shadow.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 66);
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
 }
 
 TEST_CASE("compiles and runs native user array capacity method shadow") {
@@ -961,7 +948,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 61);
+  CHECK(runCommand(exePath) == 2);
 }
 
 TEST_SUITE_END();

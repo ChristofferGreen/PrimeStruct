@@ -14,7 +14,7 @@ namespace std {
 
   [public return<Result<E>>]
   ok<E>() {
-    [Result<E>] result{}
+    [Result<E>] result{ok}
     return(result)
   }
 

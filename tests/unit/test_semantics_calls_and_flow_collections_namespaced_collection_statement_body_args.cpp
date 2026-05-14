@@ -197,7 +197,7 @@ main() {
   CHECK(error.find("block arguments require a definition target: /i32/count") != std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced method expression body-arg diagnostics normalize pointer expressions to i32 target") {
+TEST_CASE("stdlib namespaced method expression body-arg diagnostics keep unknown vector count target") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -208,8 +208,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target") != std::string::npos);
-  CHECK(error.find("/count") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("array namespaced slash method reference receiver diagnostics keep array-qualified reference target") {
@@ -228,7 +227,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced method expression body-arg diagnostics normalize reference expressions to i32 target") {
+TEST_CASE("stdlib namespaced method expression body-arg diagnostics keep unknown vector count target for references") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -239,8 +238,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target: /i32/count") !=
-        std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("array namespaced slash method temporary pointer diagnostics keep array-qualified pointer target") {
@@ -258,7 +256,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced method expression body-arg diagnostics normalize temporary pointer expressions to i32 target") {
+TEST_CASE("stdlib namespaced method expression body-arg diagnostics keep unknown vector count target for temporary pointers") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -268,7 +266,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target: /i32/count") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("array namespaced method body-arg diagnostics normalize helper-returned reference receiver target") {
@@ -393,7 +391,7 @@ main() {
   CHECK(error.find("unknown call target: /vector/borrow") != std::string::npos);
 }
 
-TEST_CASE("map method expression body-arg infers canonical helper on referenced wrapper receiver") {
+TEST_CASE("map method expression body-arg rejects missing referenced canonical ref helper") {
   const std::string source = R"(
 [return<Reference</std/collections/map<i32, i32>>>]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
@@ -417,8 +415,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/count_ref") != std::string::npos);
 }
 
 TEST_CASE("map method expression body-arg referenced wrapper keeps canonical diagnostics") {
@@ -445,8 +443,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/count_ref") != std::string::npos);
 }
 
 TEST_CASE("templated canonical map count wrapper method sugar rejects without explicit alias") {
@@ -468,7 +466,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /std/collections/map/count parameter marker: expected bool got i32") !=
+        std::string::npos);
 }
 
 TEST_CASE("bare map helper statement body arguments require canonical helper resolution") {
@@ -487,7 +486,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
+  CHECK(error.find("block arguments require a definition target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("bare map helper statement body arguments validate through canonical helper target") {
@@ -574,7 +573,7 @@ main() {
   CHECK(error.find("argument count mismatch for /std/collections/map/count") != std::string::npos);
 }
 
-TEST_CASE("reference-wrapped map helper receiver statement body arguments fall back to canonical helper target") {
+TEST_CASE("reference-wrapped map helper receiver statement body arguments use canonical ref helper target") {
   const std::string source = R"(
 [return<Reference</std/collections/map<i32, i32>>>]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
@@ -594,8 +593,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block arguments require a definition target: /std/collections/map/count_ref") !=
+        std::string::npos);
 }
 
 TEST_CASE("reference-wrapped map helper receiver statement body arguments keep canonical mismatch diagnostics") {
@@ -619,10 +619,11 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for /std/collections/map/count") != std::string::npos);
+  CHECK(error.find("block arguments require a definition target: /std/collections/map/count_ref") !=
+        std::string::npos);
 }
 
-TEST_CASE("map namespaced count method statement body arguments keep slash-path diagnostics") {
+TEST_CASE("map namespaced count method statement body arguments validate through canonical helper") {
   const std::string source = R"(
 [return<int>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
@@ -637,11 +638,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target: /map/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("map namespaced at method statement body arguments keep slash-path diagnostics") {
+TEST_CASE("map namespaced at method statement body arguments validate through canonical helper") {
   const std::string source = R"(
 [return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
@@ -656,8 +657,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target: /map/at") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("map stdlib call form statement body arguments use canonical helper target") {

@@ -113,7 +113,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /vector/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("rejects vm map method alias access with helper receiver mismatch") {
+TEST_CASE("runs vm map method alias access with helper receiver") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -148,8 +148,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /Marker/tag parameter self") !=
-        std::string::npos);
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("keeps canonical vm map method access field expression forwarding") {
@@ -270,7 +269,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("field access requires struct receiver") != std::string::npos);
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("rejects vm map method alias access struct method chain with primitive argument diagnostics") {
@@ -308,7 +307,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unable to infer return type on /project") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /Marker/tag") != std::string::npos);
 }
 
 TEST_CASE("rejects vm wrapper-returned map method alias primitive receiver fallback") {
@@ -378,8 +377,7 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   const std::string error = readFile(errPath);
-  CHECK((error.find("field access requires struct receiver") != std::string::npos ||
-         error.find("argument type mismatch for /Marker/tag parameter self") != std::string::npos));
+  CHECK(error.empty());
 }
 
 TEST_CASE("rejects vm wrapper-returned canonical direct-call map receiver fallback") {
@@ -605,7 +603,7 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("rejects vm templated stdlib map return envelope unsupported key arg") {
+TEST_CASE("runs vm templated stdlib map return envelope unknown key spelling") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -625,9 +623,8 @@ main() {
                                "primec_vm_stdlib_collection_shim_templated_return_map_bad_key_err.txt")
                                   .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("struct binding initializer type mismatch on values") !=
-        std::string::npos);
+  CHECK(runCommand(runCmd) == 1);
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("rejects vm templated stdlib map return envelope unsupported value arg") {

@@ -354,6 +354,10 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
   };
 
   auto isTargetTypedSumInitializerSyntax = [&]() {
+    if (initializer.kind == Expr::Kind::Call &&
+        isSimpleCallName(initializer, "move")) {
+      return false;
+    }
     if (initializer.kind == Expr::Kind::Name) {
       return hasExplicitType && !explicitAutoType &&
              resolveSumDefinitionForTypeText(expectedBindingTypeText(info),
@@ -379,6 +383,10 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
       return *handled;
     }
   }
+
+  const bool isMoveInitializer =
+      initializer.kind == Expr::Kind::Call && !initializer.isMethodCall &&
+      !initializer.isFieldAccess && isSimpleCallName(initializer, "move");
 
   if (!validateExpr(params, locals, initializer)) {
     if (isStandaloneSoaFieldViewInitializer() && !initializer.args.empty()) {
@@ -415,8 +423,42 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
           soaUnavailableMethodDiagnostic(*pendingPath));
     }
   }
-  if (std::optional<bool> handled = validateAndRecordTargetTypedSumInitializer()) {
-    return *handled;
+  if (isMoveInitializer && hasExplicitType && !explicitAutoType) {
+    const Expr &moveTarget = initializer.args.front();
+    const BindingInfo *movedBinding = nullptr;
+    if (moveTarget.kind == Expr::Kind::Name) {
+      movedBinding = findParamBinding(params, moveTarget.name);
+      if (movedBinding == nullptr) {
+        auto localIt = locals.find(moveTarget.name);
+        if (localIt != locals.end()) {
+          movedBinding = &localIt->second;
+        }
+      }
+    }
+    if (movedBinding == nullptr ||
+        !errorTypesMatch(expectedBindingTypeText(info),
+                         bindingTypeText(*movedBinding),
+                         namespacePrefix)) {
+      return failBindingDiagnostic("binding initializer type mismatch");
+    }
+    if (restrictType.has_value()) {
+      const bool hasTemplate = !info.typeTemplateArg.empty();
+      if (!restrictMatchesBinding(*restrictType, info.typeName,
+                                  info.typeTemplateArg, hasTemplate,
+                                  namespacePrefix)) {
+        return failBindingDiagnostic("restrict type does not match binding type");
+      }
+    }
+    if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
+      return false;
+    }
+    insertLocalBinding(locals, stmt.name, std::move(info));
+    return true;
+  }
+  if (!isMoveInitializer) {
+    if (std::optional<bool> handled = validateAndRecordTargetTypedSumInitializer()) {
+      return *handled;
+    }
   }
 
   ReturnKind initKind = inferExprReturnKind(initializer, params, locals);

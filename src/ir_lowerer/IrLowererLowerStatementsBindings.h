@@ -192,9 +192,37 @@
         if (transform.name != "return" || transform.templateArgs.size() != 1) {
           continue;
         }
-        return resolveSumDefinitionForTypeText(
+        if (const Definition *sumDef = resolveSumDefinitionForTypeText(
             trimTemplateTypeText(transform.templateArgs.front()),
-            defIt->second->namespacePrefix);
+            defIt->second->namespacePrefix)) {
+          return sumDef;
+        }
+        break;
+      }
+      const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
+      if (semanticTargets.hasSemanticProduct) {
+        const SemanticProgramReturnFact *returnFact =
+            findSemanticProductReturnFactByPath(semanticTargets, definitionPath);
+        if (returnFact != nullptr) {
+          auto resolveSemanticReturnSum =
+              [&](const std::string &typeText, SymbolId typeTextId) -> const Definition * {
+            return resolveSumDefinitionForTypeText(
+                resolveSemanticProductTypeText(semanticTargets.semanticProgram,
+                                               typeText,
+                                               typeTextId),
+                defIt->second->namespacePrefix);
+          };
+          if (const Definition *sumDef =
+                  resolveSemanticReturnSum(returnFact->structPath,
+                                           returnFact->structPathId)) {
+            return sumDef;
+          }
+          if (const Definition *sumDef =
+                  resolveSemanticReturnSum(returnFact->bindingTypeText,
+                                           returnFact->bindingTypeTextId)) {
+            return sumDef;
+          }
+        }
       }
       return nullptr;
     };
@@ -462,7 +490,35 @@
       const bool semanticLocalAutoBinding = bindingTypeExpr != &stmt;
       const Expr &bindingTypeExprRef = *bindingTypeExpr;
 #include "IrLowererLowerStatementsBindingLocalInfo.h"
+      auto applyWrappedStdlibResultSumBindingInfo = [&]() {
+        if (info.kind != LocalInfo::Kind::Reference &&
+            info.kind != LocalInfo::Kind::Pointer) {
+          return;
+        }
+        for (const auto &transform : bindingTypeExprRef.transforms) {
+          if ((info.kind == LocalInfo::Kind::Reference &&
+               transform.name != "Reference") ||
+              (info.kind == LocalInfo::Kind::Pointer &&
+               transform.name != "Pointer") ||
+              transform.templateArgs.size() != 1) {
+            continue;
+          }
+          const std::string targetType =
+              trimTemplateTypeText(transform.templateArgs.front());
+          if (const Definition *sumDef =
+                  resolveSumDefinitionForTypeText(targetType,
+                                                  stmt.namespacePrefix);
+              sumDef != nullptr && isStdlibResultSumDefinition(*sumDef)) {
+            applyStdlibResultSumInfoToLocal(*sumDef, info);
+          }
+          return;
+        }
+      };
+      applyWrappedStdlibResultSumBindingInfo();
       auto resolveBindingSumDefinition = [&]() -> const Definition * {
+        if (info.kind != LocalInfo::Kind::Value) {
+          return nullptr;
+        }
         if (const Definition *sumDef =
                 resolveSumDefinitionForTypeText(info.structTypeName, stmt.namespacePrefix)) {
           return sumDef;
@@ -1176,7 +1232,15 @@
                   *returnSumDef, *errorVariant, "packed Result return error tag", errorTag)) {
             return false;
           }
-          if (!okPayload.isAggregate && !errorPayload.isAggregate) {
+          const bool okPayloadTypeIsScalar =
+              !okVariant->hasPayload ||
+              valueKindFromTypeName(sumPayloadTypeText(*okVariant)) !=
+                  LocalInfo::ValueKind::Unknown;
+          const bool errorPayloadTypeIsScalar =
+              valueKindFromTypeName(sumPayloadTypeText(*errorVariant)) !=
+              LocalInfo::ValueKind::Unknown;
+          if (okPayloadTypeIsScalar && errorPayloadTypeIsScalar &&
+              !okPayload.isAggregate && !errorPayload.isAggregate) {
             const int32_t packedLocal = nextLocal++;
             function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(baseLocal + 1)});
             function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(okTag)});
@@ -1212,6 +1276,27 @@
           returnInfo.structTypeName = returnSumDef->fullPath;
           returnInfo.structSlotCount = totalSlots;
           returnInfo.index = ptrLocal;
+          applyStdlibResultSumInfoToLocal(*returnSumDef, returnInfo);
+          if (returnInlineContext.has_value()) {
+            if (returnInlineContext->returnLocal < 0) {
+              error = "native backend missing inline return local";
+              return false;
+            }
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+            function.instructions.push_back(
+                {IrOpcode::StoreLocal, static_cast<uint64_t>(returnInlineContext->returnLocal)});
+            const size_t jumpIndex = function.instructions.size();
+            function.instructions.push_back({IrOpcode::Jump, 0});
+            if (returnInlineContext->returnJumps != nullptr) {
+              returnInlineContext->returnJumps->push_back(jumpIndex);
+            }
+            return true;
+          }
+          emitFileScopeCleanupAll();
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+          function.instructions.push_back({IrOpcode::ReturnI64, 0});
+          sawReturn = true;
+          return true;
         }
         const std::string tempReturnName =
             emittedPackedResultReturn

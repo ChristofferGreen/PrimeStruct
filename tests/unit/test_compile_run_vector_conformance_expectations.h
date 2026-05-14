@@ -216,6 +216,15 @@ inline void expectStdlibWrapperVectorConstructorExplicitVectorBindingConformance
 }
 
 inline void expectStdlibWrapperVectorConstructorExplicitVectorBindingMismatchContract(const std::string &emitMode) {
+  if (emitMode == "native") {
+    expectVectorConformanceCompileReject(
+        makeStdlibWrapperVectorConstructorExplicitVectorBindingMismatchSource(),
+        "vector_wrapper_constructor_explicit_vector_binding_mismatch_" + emitMode,
+        emitMode,
+        "vector literal element type mismatch");
+    return;
+  }
+
   expectVectorConformanceProgramRuns(
       makeStdlibWrapperVectorConstructorExplicitVectorBindingMismatchSource(),
       "vector_wrapper_constructor_explicit_vector_binding_mismatch_" + emitMode,
@@ -256,6 +265,16 @@ inline void expectStdlibWrapperVectorConstructorReceiverConformance(const std::s
         "count requires array, vector, map, or string target");
     return;
   }
+
+  if (emitMode == "native") {
+    expectVectorConformanceCompileReject(
+        makeStdlibWrapperVectorConstructorReceiverConformanceSource(),
+        "vector_wrapper_constructor_receiver_" + emitMode,
+        emitMode,
+        "call=/std/collections/vector/count");
+    return;
+  }
+
   expectVectorConformanceProgramRuns(
       makeStdlibWrapperVectorConstructorReceiverConformanceSource(),
       "vector_wrapper_constructor_receiver_" + emitMode,
@@ -296,6 +315,14 @@ inline void expectCanonicalVectorNamespaceNamedArgsTemporaryReceiverConformance(
         "vector_namespace_canonical_named_args_temporary_receiver_" + emitMode,
         emitMode,
         "count requires array, vector, map, or string target");
+    return;
+  }
+  if (emitMode == "native") {
+    expectVectorConformanceCompileReject(
+        makeCanonicalVectorNamespaceNamedArgsTemporaryReceiverSource(),
+        "vector_namespace_canonical_named_args_temporary_receiver_" + emitMode,
+        emitMode,
+        "call=/std/collections/vector/count");
     return;
   }
   expectVectorConformanceProgramRuns(

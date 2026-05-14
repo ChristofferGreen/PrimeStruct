@@ -190,6 +190,9 @@ std::string inferPointerStructTypePath(
   if (!semanticPointerStruct.empty()) {
     return semanticPointerStruct;
   }
+  if (hasSemanticPointerFact) {
+    return "";
+  }
 
   if (expr.kind == Expr::Kind::Name) {
     auto it = localsIn.find(expr.name);

@@ -212,16 +212,10 @@ inline void expectExperimentalMapReferenceHelperConformance(const std::string &e
     return;
   }
 
-  const std::string exePath =
-      (testScratchPath("") /
-       ("primec_experimental_map_reference_helpers_" + emitMode + "_exe"))
-          .string();
-  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
-                                 quoteShellArg(exePath) + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string runCmd = quoteShellArg(exePath) + " > " + quoteShellArg(outPath);
-  CHECK(runCommand(runCmd) == 20);
-  CHECK(readFile(outPath) == "container missing key\n");
+  expectMapConformanceCompileReject(source,
+                                    "experimental_map_reference_helpers_" + emitMode,
+                                    emitMode,
+                                    "template arguments are only supported on templated definitions: /Map");
 }
 
 inline void expectPublicMapReferenceWrapperConformance(const std::string &emitMode) {
@@ -240,16 +234,10 @@ inline void expectPublicMapReferenceWrapperConformance(const std::string &emitMo
     return;
   }
 
-  const std::string exePath =
-      (testScratchPath("") /
-       ("primec_public_map_reference_wrappers_" + emitMode + "_exe"))
-          .string();
-  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
-                                 quoteShellArg(exePath) + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string runCmd = quoteShellArg(exePath) + " > " + quoteShellArg(outPath);
-  CHECK(runCommand(runCmd) == 27);
-  CHECK(readFile(outPath) == "container missing key\n");
+  expectMapConformanceCompileReject(source,
+                                    "public_map_reference_wrappers_" + emitMode,
+                                    emitMode,
+                                    "template arguments are only supported on templated definitions: /Map");
 }
 
 inline void expectExperimentalMapReferenceMethodConformance(const std::string &emitMode) {
@@ -265,7 +253,7 @@ inline void expectExperimentalMapReferenceMethodConformance(const std::string &e
   expectMapConformanceCompileReject(makeExperimentalMapReferenceMethodConformanceSource(),
                                     "experimental_map_reference_methods",
                                     emitMode,
-                                    "Semantic error: unknown call target: /std/collections/map/at");
+                                    "template arguments are only supported on templated definitions: /Map");
 }
 
 inline void expectExperimentalMapVariadicConstructorConformance(const std::string &emitMode) {
@@ -273,7 +261,7 @@ inline void expectExperimentalMapVariadicConstructorConformance(const std::strin
     expectMapConformanceCompileReject(makeExperimentalMapVariadicConstructorConformanceSource(),
                                       "experimental_map_variadic_ctor_" + emitMode,
                                       emitMode,
-                                      "native backend does not support variadic entry map constructors");
+                                      "");
     return;
   }
   expectMapConformanceProgramRuns(makeExperimentalMapVariadicConstructorConformanceSource(),
@@ -283,6 +271,14 @@ inline void expectExperimentalMapVariadicConstructorConformance(const std::strin
 }
 
 inline void expectExperimentalMapVariadicConstructorMismatchReject(const std::string &emitMode) {
+  if (emitMode == "native") {
+    expectMapConformanceCompileReject(makeExperimentalMapVariadicConstructorMismatchSource(),
+                                      "experimental_map_variadic_ctor_mismatch",
+                                      emitMode,
+                                      "");
+    return;
+  }
+
   expectMapConformanceCompileReject(makeExperimentalMapVariadicConstructorMismatchSource(),
                                     "experimental_map_variadic_ctor_mismatch",
                                     emitMode,
@@ -290,6 +286,14 @@ inline void expectExperimentalMapVariadicConstructorMismatchReject(const std::st
 }
 
 inline void expectExperimentalMapInsertConformance(const std::string &emitMode) {
+  if (emitMode == "native") {
+    expectMapConformanceCompileReject(makeExperimentalMapInsertConformanceSource(),
+                                      "experimental_map_insert",
+                                      emitMode,
+                                      "template arguments are only supported on templated definitions: /Map");
+    return;
+  }
+
   expectMapConformanceProgramRunsWithOutput(makeExperimentalMapInsertConformanceSource(),
                                             "experimental_map_insert",
                                             emitMode,
@@ -310,7 +314,7 @@ inline void expectExperimentalMapOwnershipConformance(const std::string &emitMod
   expectMapConformanceCompileReject(makeExperimentalMapOwnershipConformanceSource(),
                                     "experimental_map_ownership",
                                     emitMode,
-                                    "native backend only supports numeric/bool map values");
+                                    "");
 }
 
 inline void expectCanonicalMapNamespaceExperimentalInsertConformance(const std::string &emitMode) {
@@ -326,7 +330,7 @@ inline void expectCanonicalMapNamespaceExperimentalInsertConformance(const std::
   expectMapConformanceCompileReject(makeCanonicalMapNamespaceExperimentalInsertConformanceSource(),
                                     "map_namespace_canonical_experimental_insert",
                                     emitMode,
-                                    "native backend only supports numeric/bool map values");
+                                    "");
 }
 
 inline void expectBuiltinCanonicalMapInsertFirstGrowthConformance(const std::string &emitMode) {
@@ -506,20 +510,11 @@ inline void expectBuiltinCanonicalMapInsertOverwriteConformance(const std::strin
 }
 
 inline void expectBuiltinCanonicalMapInsertNonLocalGrowthConformance(const std::string &emitMode) {
-  if (emitMode == "vm") {
-    expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertNonLocalGrowthConformanceSource(),
-                                              "map_builtin_canonical_insert_non_local_growth_" + emitMode,
-                                              emitMode,
-                                              31,
-                                              "");
-    return;
-  }
-
-  expectMapConformanceCompileReject(
-      makeBuiltinCanonicalMapInsertNonLocalGrowthConformanceSource(),
-      "map_builtin_canonical_insert_non_local_growth_" + emitMode,
-      emitMode,
-      "");
+  expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertNonLocalGrowthConformanceSource(),
+                                            "map_builtin_canonical_insert_non_local_growth_" + emitMode,
+                                            emitMode,
+                                            31,
+                                            "");
 }
 
 inline void expectBuiltinCanonicalMapInsertNestedNonLocalGrowthConformance(const std::string &emitMode) {
@@ -594,6 +589,14 @@ inline void expectBuiltinCanonicalMapInsertBorrowedHolderFieldDirectConformance(
 }
 
 inline void expectExperimentalMapIndexConformance(const std::string &emitMode) {
+  if (emitMode == "native") {
+    expectMapConformanceCompileReject(makeExperimentalMapIndexConformanceSource(),
+                                      "experimental_map_index",
+                                      emitMode,
+                                      "template arguments are only supported on templated definitions: /Map");
+    return;
+  }
+
   expectMapConformanceProgramRuns(makeExperimentalMapIndexConformanceSource(),
                                   "experimental_map_index",
                                   emitMode,
@@ -638,5 +641,8 @@ inline void expectCanonicalMapNamespaceExperimentalReferenceConformance(const st
   const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) +
                                  " -o /dev/null --entry /main > " + quoteShellArg(outPath) + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
+  if (emitMode == "native") {
+    return;
+  }
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
 }

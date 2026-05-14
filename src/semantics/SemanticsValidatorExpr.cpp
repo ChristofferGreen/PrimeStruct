@@ -88,6 +88,16 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (expr.isBinding) {
       return failExprRootDiagnostic("binding not allowed in expression context");
     }
+    if (isSimpleCallName(expr, "move")) {
+      bool handledMoveBuiltin = false;
+      if (!validateExprMutationBorrowBuiltins(
+              params, locals, expr, handledMoveBuiltin)) {
+        return false;
+      }
+      if (handledMoveBuiltin) {
+        return true;
+      }
+    }
     bool handledExplicitSumConstructor = false;
     if (!validateExplicitSumConstructorExpr(params,
                                             locals,

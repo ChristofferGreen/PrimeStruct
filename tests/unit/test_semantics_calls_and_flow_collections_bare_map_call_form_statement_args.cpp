@@ -42,7 +42,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("bare map helper expression body arguments accept explicit alias helper") {
+TEST_CASE("bare map helper expression body arguments keep canonical alias diagnostics") {
   const std::string source = R"(
 [return<int>]
 /map/count([map<i32, i32>] values, [bool] marker) {
@@ -56,8 +56,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("bare map call form expression body arguments fall back to canonical helper target") {
@@ -104,7 +104,7 @@ borrowMap([Reference</std/collections/map<i32, i32>>] values) {
 }
 
 [return<int>]
-/std/collections/map/count([Reference</std/collections/map<i32, i32>>] values, [bool] marker) {
+/std/collections/map/count_ref([Reference</std/collections/map<i32, i32>>] values, [bool] marker) {
   return(90i32)
 }
 
@@ -127,7 +127,7 @@ borrowMap([Reference</std/collections/map<i32, i32>>] values) {
 }
 
 [return<int>]
-/std/collections/map/count([Reference</std/collections/map<i32, i32>>] values) {
+/std/collections/map/count_ref([Reference</std/collections/map<i32, i32>>] values) {
   return(90i32)
 }
 
@@ -139,7 +139,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for /std/collections/map/count") != std::string::npos);
+  CHECK(error.find("argument count mismatch for /std/collections/map/count_ref") != std::string::npos);
 }
 
 TEST_CASE("map namespaced count method expression body arguments validate through stdlib helper target") {

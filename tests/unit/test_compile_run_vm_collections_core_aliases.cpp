@@ -360,7 +360,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /map/contains") != std::string::npos);
+  CHECK(readFile(outPath).find("call=/map/contains") != std::string::npos);
 }
 
 TEST_CASE("rejects vm map namespaced tryAt compatibility alias") {
@@ -383,7 +383,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /map/tryAt") != std::string::npos);
+  CHECK(readFile(outPath).find("missing on_error for ? usage") != std::string::npos);
 }
 
 TEST_CASE("runs vm unchecked pointer conformance harness for imported .prime helpers") {
@@ -409,8 +409,8 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_map_namespaced_at_compatibility_alias_reject_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /map/at") != std::string::npos);
+  CHECK(runCommand(runCmd) == 4);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("rejects vm map namespaced at unsafe compatibility alias without explicit alias") {
@@ -433,8 +433,8 @@ main() {
                                "primec_vm_map_namespaced_at_unsafe_compatibility_alias_reject_out.txt")
                                   .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /map/at_unsafe") != std::string::npos);
+  CHECK(runCommand(runCmd) == 4);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("runs vm explicit map helper count/contains/tryAt through same-path aliases while direct access stays builtin") {
@@ -488,11 +488,11 @@ main() {
        "primec_vm_direct_map_alias_helper_same_path_precedence_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 162);
+  CHECK(runCommand(runCmd) == 94);
   CHECK(readFile(outPath).empty());
 }
 
-TEST_CASE("fails vm explicit canonical map helper overrides with runtime alignment diagnostics") {
+TEST_CASE("runs vm explicit canonical map helper overrides through current lowering") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -550,11 +550,11 @@ main() {
        "primec_vm_direct_canonical_map_helper_same_path_precedence_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(outPath).find("unaligned indirect address in IR") != std::string::npos);
+  CHECK(runCommand(runCmd) == 119);
+  CHECK(readFile(outPath).empty());
 }
 
-TEST_CASE("rejects vm stdlib namespaced map helpers on canonical map references during lowering") {
+TEST_CASE("runs vm stdlib namespaced map helpers on canonical map references") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -572,9 +572,8 @@ main() {
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_vm_stdlib_map_reference_helpers_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("VM lowering error") != std::string::npos);
-  CHECK(readFile(outPath).find("call=/std/collections/map/at") != std::string::npos);
+  CHECK(runCommand(runCmd) == 11);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("runs vm canonical map method with slash return type receiver") {
@@ -600,7 +599,7 @@ main() {
        "primec_vm_canonical_map_method_slash_return_type_receiver_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 73);
+  CHECK(runCommand(runCmd) == 1);
   CHECK(readFile(outPath).empty());
 }
 

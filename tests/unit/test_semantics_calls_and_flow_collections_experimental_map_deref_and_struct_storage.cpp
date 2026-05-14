@@ -8,20 +8,18 @@ void checkStdlibMapPairConstructorMismatch(const std::string &error) {
   CHECK((error.find("argument type mismatch") != std::string::npos ||
          error.find("implicit template arguments conflict") != std::string::npos));
   CHECK(error.find("/std/collections/") != std::string::npos);
-  CHECK(error.find("mapPair") != std::string::npos);
+  CHECK(error.find("map") != std::string::npos);
 }
 
 void checkCanonicalMapConstructorMismatch(const std::string &error) {
   CHECK((error.find("argument type mismatch") != std::string::npos ||
          error.find("implicit template arguments conflict") != std::string::npos));
-  CHECK((error.find("/std/collections/map/map") != std::string::npos ||
-         error.find("/std/collections/mapPair") != std::string::npos ||
-         error.find("/std/collections/experimental_map/mapPair") != std::string::npos));
+  CHECK(error.find("/std/collections/map/map") != std::string::npos);
 }
 
 } // namespace
 
-TEST_CASE("helper-wrapped Result.ok payloads accept dereferenced experimental result storage") {
+TEST_CASE("helper-wrapped Result.ok payloads accept dereferenced canonical result storage") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_map/*
@@ -31,19 +29,19 @@ wrapStatus<T>([T] status) {
   return(status)
 }
 
-[return<Reference<uninitialized<Result<Map<string, i32>, ContainerError>>>>]
-borrowStorage([Reference<uninitialized<Result<Map<string, i32>, ContainerError>>>] storage) {
+[return<Reference<uninitialized<Result<map<string, i32>, ContainerError>>>>]
+borrowStorage([Reference<uninitialized<Result<map<string, i32>, ContainerError>>>] storage) {
   return(storage)
 }
 
 [effects(heap_alloc), return<int>]
 main() {
-  [uninitialized<Result<Map<string, i32>, ContainerError>> mut] storage{
-      uninitialized<Result<Map<string, i32>, ContainerError>>()}
+  [uninitialized<Result<map<string, i32>, ContainerError>> mut] storage{
+      uninitialized<Result<map<string, i32>, ContainerError>>()}
   init(dereference(borrowStorage(location(storage))),
-       wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
+       wrapStatus(Result.ok(/std/collections/map/map("left"raw_utf8, 4i32,
                                                     "right"raw_utf8, 7i32))))
-  [Result<Map<string, i32>, ContainerError>] status{take(storage)}
+  [Result<map<string, i32>, ContainerError>] status{take(storage)}
   return(0i32)
 }
 )";
@@ -66,7 +64,7 @@ wrapValues<T>([T] values) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Map<string, i32>] values{wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32,
+  [map<string, i32>] values{wrapValues(/std/collections/map/map("left"raw_utf8, 4i32,
                                                                 "right"raw_utf8, 7i32))}
   return(plus(/std/collections/map/count(values),
               /std/collections/map/at(values, "right"raw_utf8)))
@@ -91,7 +89,7 @@ wrapValues<T>([T] values) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Map<string, i32>] values{wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32,
+  [map<string, i32>] values{wrapValues(/std/collections/map/map("left"raw_utf8, 4i32,
                                                                 "wrong"raw_utf8, false))}
   return(/std/collections/map/count(values))
 }
@@ -112,17 +110,17 @@ wrapStatus<T>([T] status) {
   return(status)
 }
 
-[return<Reference<uninitialized<Result<Map<string, i32>, ContainerError>>>>]
-borrowStorage([Reference<uninitialized<Result<Map<string, i32>, ContainerError>>>] storage) {
+[return<Reference<uninitialized<Result<map<string, i32>, ContainerError>>>>]
+borrowStorage([Reference<uninitialized<Result<map<string, i32>, ContainerError>>>] storage) {
   return(storage)
 }
 
 [effects(heap_alloc), return<int>]
 main() {
-  [uninitialized<Result<Map<string, i32>, ContainerError>> mut] storage{
-      uninitialized<Result<Map<string, i32>, ContainerError>>()}
+  [uninitialized<Result<map<string, i32>, ContainerError>> mut] storage{
+      uninitialized<Result<map<string, i32>, ContainerError>>()}
   init(dereference(borrowStorage(location(storage))),
-       wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
+       wrapStatus(Result.ok(/std/collections/map/map("left"raw_utf8, 4i32,
                                                     "wrong"raw_utf8, false))))
   return(0i32)
 }
@@ -133,7 +131,7 @@ main() {
   checkStdlibMapPairConstructorMismatch(error);
 }
 
-TEST_CASE("helper-wrapped map constructors accept experimental map struct storage fields") {
+TEST_CASE("helper-wrapped map constructors accept canonical map struct storage fields") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_map/*
@@ -144,15 +142,15 @@ wrapValues<T>([T] values) {
 }
 
 Holder() {
-  [uninitialized<Map<string, i32>> mut] storage{uninitialized<Map<string, i32>>()}
+  [uninitialized<map<string, i32>> mut] storage{uninitialized<map<string, i32>>()}
 }
 
 [effects(heap_alloc), return<int>]
 main() {
   [Holder mut] holder{Holder()}
-  init(holder.storage, wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32,
+  init(holder.storage, wrapValues(/std/collections/map/map("left"raw_utf8, 4i32,
                                                            "right"raw_utf8, 7i32)))
-  [Map<string, i32>] values{take(holder.storage)}
+  [map<string, i32>] values{take(holder.storage)}
   return(plus(/std/collections/map/count(values),
               /std/collections/map/at(values, "right"raw_utf8)))
 }
@@ -174,13 +172,13 @@ wrapValues<T>([T] values) {
 }
 
 Holder() {
-  [uninitialized<Map<string, i32>> mut] storage{uninitialized<Map<string, i32>>()}
+  [uninitialized<map<string, i32>> mut] storage{uninitialized<map<string, i32>>()}
 }
 
 [effects(heap_alloc), return<int>]
 main() {
   [Holder mut] holder{Holder()}
-  init(holder.storage, wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32,
+  init(holder.storage, wrapValues(/std/collections/map/map("left"raw_utf8, 4i32,
                                                            "wrong"raw_utf8, false)))
   return(0i32)
 }
@@ -191,7 +189,7 @@ main() {
   checkStdlibMapPairConstructorMismatch(error);
 }
 
-TEST_CASE("helper-wrapped Result.ok payloads accept experimental result struct storage fields") {
+TEST_CASE("helper-wrapped Result.ok payloads accept canonical result struct storage fields") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_map/*
@@ -202,16 +200,16 @@ wrapStatus<T>([T] status) {
 }
 
 Holder() {
-  [uninitialized<Result<Map<string, i32>, ContainerError>> mut] status{
-      uninitialized<Result<Map<string, i32>, ContainerError>>()}
+  [uninitialized<Result<map<string, i32>, ContainerError>> mut] status{
+      uninitialized<Result<map<string, i32>, ContainerError>>()}
 }
 
 [effects(heap_alloc), return<int>]
 main() {
   [Holder mut] holder{Holder()}
-  init(holder.status, wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
+  init(holder.status, wrapStatus(Result.ok(/std/collections/map/map("left"raw_utf8, 4i32,
                                                                     "right"raw_utf8, 7i32))))
-  [Result<Map<string, i32>, ContainerError>] status{take(holder.status)}
+  [Result<map<string, i32>, ContainerError>] status{take(holder.status)}
   return(0i32)
 }
 )";
@@ -232,14 +230,14 @@ wrapStatus<T>([T] status) {
 }
 
 Holder() {
-  [uninitialized<Result<Map<string, i32>, ContainerError>> mut] status{
-      uninitialized<Result<Map<string, i32>, ContainerError>>()}
+  [uninitialized<Result<map<string, i32>, ContainerError>> mut] status{
+      uninitialized<Result<map<string, i32>, ContainerError>>()}
 }
 
 [effects(heap_alloc), return<int>]
 main() {
   [Holder mut] holder{Holder()}
-  init(holder.status, wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
+  init(holder.status, wrapStatus(Result.ok(/std/collections/map/map("left"raw_utf8, 4i32,
                                                                     "wrong"raw_utf8, false))))
   return(0i32)
 }
@@ -250,7 +248,7 @@ main() {
   checkStdlibMapPairConstructorMismatch(error);
 }
 
-TEST_CASE("helper-wrapped map constructors accept dereferenced experimental map struct storage fields") {
+TEST_CASE("helper-wrapped map constructors accept dereferenced canonical map struct storage fields") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_map/*
@@ -261,7 +259,7 @@ wrapValues<T>([T] values) {
 }
 
 Holder() {
-  [uninitialized<Map<string, i32>> mut] storage{uninitialized<Map<string, i32>>()}
+  [uninitialized<map<string, i32>> mut] storage{uninitialized<map<string, i32>>()}
 }
 
 [return<Reference<Holder>>]
@@ -273,9 +271,9 @@ borrowHolder([Reference<Holder>] holder) {
 main() {
   [Holder mut] holder{Holder()}
   init(dereference(borrowHolder(location(holder))).storage,
-       wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32,
+       wrapValues(/std/collections/map/map("left"raw_utf8, 4i32,
                                            "right"raw_utf8, 7i32)))
-  [Map<string, i32>] values{take(holder.storage)}
+  [map<string, i32>] values{take(holder.storage)}
   return(plus(/std/collections/map/count(values),
               /std/collections/map/at(values, "right"raw_utf8)))
 }
@@ -297,7 +295,7 @@ wrapValues<T>([T] values) {
 }
 
 Holder() {
-  [uninitialized<Map<string, i32>> mut] storage{uninitialized<Map<string, i32>>()}
+  [uninitialized<map<string, i32>> mut] storage{uninitialized<map<string, i32>>()}
 }
 
 [return<Reference<Holder>>]
@@ -309,7 +307,7 @@ borrowHolder([Reference<Holder>] holder) {
 main() {
   [Holder mut] holder{Holder()}
   init(dereference(borrowHolder(location(holder))).storage,
-       wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32,
+       wrapValues(/std/collections/map/map("left"raw_utf8, 4i32,
                                            "wrong"raw_utf8, false)))
   return(0i32)
 }
@@ -320,18 +318,18 @@ main() {
   checkStdlibMapPairConstructorMismatch(error);
 }
 
-TEST_CASE("map constructors accept dereferenced experimental map storage references") {
+TEST_CASE("map constructors accept dereferenced canonical map storage references") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_map/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [uninitialized<Map<string, i32>> mut] storage{uninitialized<Map<string, i32>>()}
-  [Reference<uninitialized<Map<string, i32>>>] ref{location(storage)}
-  init(dereference(ref), /std/collections/mapPair("left"raw_utf8, 5i32,
+  [uninitialized<map<string, i32>> mut] storage{uninitialized<map<string, i32>>()}
+  [Reference<uninitialized<map<string, i32>>>] ref{location(storage)}
+  init(dereference(ref), /std/collections/map/map("left"raw_utf8, 5i32,
                                                   "right"raw_utf8, 8i32))
-  [Map<string, i32>] values{take(storage)}
+  [map<string, i32>] values{take(storage)}
   return(plus(/std/collections/map/count(values),
               /std/collections/map/at(values, "left"raw_utf8)))
 }
@@ -342,16 +340,16 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("dereferenced experimental map storage references keep mismatch diagnostics") {
+TEST_CASE("dereferenced canonical map storage references keep mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_map/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [uninitialized<Map<string, i32>> mut] storage{uninitialized<Map<string, i32>>()}
-  [Reference<uninitialized<Map<string, i32>>>] ref{location(storage)}
-  init(dereference(ref), /std/collections/mapPair("left"raw_utf8, 5i32,
+  [uninitialized<map<string, i32>> mut] storage{uninitialized<map<string, i32>>()}
+  [Reference<uninitialized<map<string, i32>>>] ref{location(storage)}
+  init(dereference(ref), /std/collections/map/map("left"raw_utf8, 5i32,
                                                   "wrong"raw_utf8, false))
   return(0i32)
 }
@@ -373,8 +371,8 @@ wrapStatus<T>([T] status) {
 }
 
 Holder() {
-  [uninitialized<Result<Map<string, i32>, ContainerError>> mut] status{
-      uninitialized<Result<Map<string, i32>, ContainerError>>()}
+  [uninitialized<Result<map<string, i32>, ContainerError>> mut] status{
+      uninitialized<Result<map<string, i32>, ContainerError>>()}
 }
 
 [return<Reference<Holder>>]
@@ -386,9 +384,9 @@ borrowHolder([Reference<Holder>] holder) {
 main() {
   [Holder mut] holder{Holder()}
   init(dereference(borrowHolder(location(holder))).status,
-       wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
+       wrapStatus(Result.ok(/std/collections/map/map("left"raw_utf8, 4i32,
                                                     "right"raw_utf8, 7i32))))
-  [Result<Map<string, i32>, ContainerError>] status{take(holder.status)}
+  [Result<map<string, i32>, ContainerError>] status{take(holder.status)}
   return(0i32)
 }
 )";
@@ -409,8 +407,8 @@ wrapStatus<T>([T] status) {
 }
 
 Holder() {
-  [uninitialized<Result<Map<string, i32>, ContainerError>> mut] status{
-      uninitialized<Result<Map<string, i32>, ContainerError>>()}
+  [uninitialized<Result<map<string, i32>, ContainerError>> mut] status{
+      uninitialized<Result<map<string, i32>, ContainerError>>()}
 }
 
 [return<Reference<Holder>>]
@@ -422,7 +420,7 @@ borrowHolder([Reference<Holder>] holder) {
 main() {
   [Holder mut] holder{Holder()}
   init(dereference(borrowHolder(location(holder))).status,
-       wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
+       wrapStatus(Result.ok(/std/collections/map/map("left"raw_utf8, 4i32,
                                                     "wrong"raw_utf8, false))))
   return(0i32)
 }
@@ -433,7 +431,7 @@ main() {
   checkStdlibMapPairConstructorMismatch(error);
 }
 
-TEST_CASE("helper-wrapped Result.ok payloads infer experimental result auto bindings") {
+TEST_CASE("helper-wrapped Result.ok payloads infer canonical result auto bindings") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_map/*
@@ -468,7 +466,7 @@ wrapStatus<T>([T] status) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [auto] status{wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
+  [auto] status{wrapStatus(Result.ok(/std/collections/map/map("left"raw_utf8, 4i32,
                                                              "wrong"raw_utf8, false)))}
   return(0i32)
 }
@@ -479,25 +477,25 @@ main() {
   checkStdlibMapPairConstructorMismatch(error);
 }
 
-TEST_CASE("stdlib wrapper mapPair constructor accepts explicit experimental map returns") {
+TEST_CASE("stdlib wrapper map constructor accepts explicit canonical map returns") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_map/*
 
 [effects(io_err)]
-unexpectedWrapperExperimentalMapReturnError([ContainerError] err) {
+unexpectedWrapperCanonicalMapReturnError([ContainerError] err) {
   [Result<ContainerError>] status{err.code}
   print_line_error(Result.why(status))
 }
 
-[return<Map<string, i32>> effects(heap_alloc)]
+[return<map<string, i32>> effects(heap_alloc)]
 buildValues() {
-  return(/std/collections/mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32))
+  return(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32))
 }
 
-[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedWrapperExperimentalMapReturnError>]
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedWrapperCanonicalMapReturnError>]
 main() {
-  [Map<string, i32>] values{buildValues()}
+  [map<string, i32>] values{buildValues()}
   [i32] found{try(/std/collections/map/tryAt(values, "left"raw_utf8))}
   [i32 mut] total{plus(/std/collections/map/count(values), found)}
   assign(total, plus(total, /std/collections/map/at(values, "left"raw_utf8)))
@@ -513,19 +511,19 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("stdlib wrapper mapPair constructor keeps mismatch diagnostics on explicit experimental map returns") {
+TEST_CASE("stdlib wrapper map constructor keeps mismatch diagnostics on explicit canonical map returns") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_map/*
 
-[return<Map<string, i32>> effects(heap_alloc)]
+[return<map<string, i32>> effects(heap_alloc)]
 buildValues() {
-  return(/std/collections/mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, false))
+  return(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, false))
 }
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Map<string, i32>] values{buildValues()}
+  [map<string, i32>] values{buildValues()}
   return(/std/collections/map/count(values))
 }
   )";
@@ -535,19 +533,19 @@ main() {
   checkStdlibMapPairConstructorMismatch(error);
 }
 
-TEST_CASE("stdlib wrapper mapPair constructor accepts explicit experimental map parameters") {
+TEST_CASE("stdlib wrapper map constructor accepts explicit canonical map parameters") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_map/*
 
 [effects(io_err)]
-unexpectedWrapperExperimentalMapParameterError([ContainerError] err) {
+unexpectedWrapperCanonicalMapParameterError([ContainerError] err) {
   [Result<ContainerError>] status{err.code}
   print_line_error(Result.why(status))
 }
 
-[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedWrapperExperimentalMapParameterError>]
-scoreValues([Map<string, i32>] values) {
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedWrapperCanonicalMapParameterError>]
+scoreValues([map<string, i32>] values) {
   [i32] found{try(/std/collections/map/tryAt(values, "left"raw_utf8))}
   [i32 mut] total{plus(/std/collections/map/count(values), found)}
   assign(total, plus(total, /std/collections/map/at(values, "left"raw_utf8)))
@@ -558,9 +556,9 @@ scoreValues([Map<string, i32>] values) {
   return(Result.ok(total))
 }
 
-[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedWrapperExperimentalMapParameterError>]
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedWrapperCanonicalMapParameterError>]
 main() {
-  return(scoreValues(/std/collections/mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)))
+  return(scoreValues(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)))
 }
 )";
   std::string error;
@@ -568,19 +566,19 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("stdlib wrapper mapPair constructor keeps mismatch diagnostics on explicit experimental map parameters") {
+TEST_CASE("stdlib wrapper map constructor keeps mismatch diagnostics on explicit canonical map parameters") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_map/*
 
 [effects(heap_alloc), return<int>]
-scoreValues([Map<string, i32>] values) {
+scoreValues([map<string, i32>] values) {
   return(/std/collections/map/count(values))
 }
 
 [effects(heap_alloc), return<int>]
 main() {
-  return(scoreValues(/std/collections/mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, false)))
+  return(scoreValues(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, false)))
 }
   )";
   std::string error;
@@ -589,19 +587,19 @@ main() {
   checkStdlibMapPairConstructorMismatch(error);
 }
 
-TEST_CASE("map constructor assigns into explicit experimental map targets") {
+TEST_CASE("map constructor assigns into explicit canonical map targets") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_map/*
 
 [effects(io_err)]
-unexpectedExperimentalMapAssignError([ContainerError] err) {
+unexpectedCanonicalMapAssignError([ContainerError] err) {
   [Result<ContainerError>] status{err.code}
   print_line_error(Result.why(status))
 }
 
-[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapAssignError>]
-scoreValues([Map<string, i32>] values) {
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedCanonicalMapAssignError>]
+scoreValues([map<string, i32>] values) {
   [i32] found{try(/std/collections/map/tryAt(values, "left"raw_utf8))}
   [i32 mut] total{plus(/std/collections/map/count(values), found)}
   assign(total, plus(total, /std/collections/map/at(values, "left"raw_utf8)))
@@ -612,16 +610,16 @@ scoreValues([Map<string, i32>] values) {
   return(Result.ok(total))
 }
 
-[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapAssignError>]
-replaceAndScore([Map<string, i32> mut] values) {
-  assign(values, /std/collections/mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32))
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedCanonicalMapAssignError>]
+replaceAndScore([map<string, i32> mut] values) {
+  assign(values, /std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32))
   return(scoreValues(values))
 }
 
-[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapAssignError>]
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedCanonicalMapAssignError>]
 main() {
-  [Map<string, i32> mut] values{mapNew<string, i32>()}
-  [Map<string, i32> mut] other{mapNew<string, i32>()}
+  [map<string, i32> mut] values{/std/collections/map/map<string, i32>("seed"raw_utf8, 0i32)}
+  [map<string, i32> mut] other{/std/collections/map/map<string, i32>("seed"raw_utf8, 0i32)}
   assign(values, /std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32))
   [i32] localScore{try(scoreValues(values))}
   [i32] paramScore{try(replaceAndScore(other))}
@@ -633,14 +631,14 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("canonical map constructor assignment keeps mismatch diagnostics on explicit experimental map bindings") {
+TEST_CASE("canonical map constructor assignment keeps mismatch diagnostics on explicit canonical map bindings") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_map/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Map<string, i32> mut] values{mapNew<string, i32>()}
+  [map<string, i32> mut] values{/std/collections/map/map<string, i32>("seed"raw_utf8, 0i32)}
   assign(values, /std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, false))
   return(/std/collections/map/count(values))
 }
@@ -651,20 +649,20 @@ main() {
   checkCanonicalMapConstructorMismatch(error);
 }
 
-TEST_CASE("wrapper map constructor assignment keeps mismatch diagnostics on explicit experimental map parameters") {
+TEST_CASE("wrapper map constructor assignment keeps mismatch diagnostics on explicit canonical map parameters") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_map/*
 
 [effects(heap_alloc), return<int>]
-replaceValues([Map<string, i32> mut] values) {
-  assign(values, /std/collections/mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, false))
+replaceValues([map<string, i32> mut] values) {
+  assign(values, /std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, false))
   return(/std/collections/map/count(values))
 }
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Map<string, i32> mut] values{mapNew<string, i32>()}
+  [map<string, i32> mut] values{/std/collections/map/map<string, i32>("seed"raw_utf8, 0i32)}
   return(replaceValues(values))
 }
   )";
@@ -674,7 +672,7 @@ main() {
   checkStdlibMapPairConstructorMismatch(error);
 }
 
-TEST_CASE("helper-wrapped map constructor assignments accept explicit experimental map targets") {
+TEST_CASE("helper-wrapped map constructor assignments accept explicit canonical map targets") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_map/*
@@ -686,7 +684,7 @@ wrapValues<T>([T] values) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Map<string, i32> mut] values{mapNew<string, i32>()}
+  [map<string, i32> mut] values{/std/collections/map/map<string, i32>("seed"raw_utf8, 0i32)}
   assign(values, wrapValues(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)))
   return(/std/collections/map/at(values, "left"raw_utf8))
 }
@@ -696,7 +694,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("helper-wrapped map constructor assignments keep mismatch diagnostics on explicit experimental map targets") {
+TEST_CASE("helper-wrapped map constructor assignments keep mismatch diagnostics on explicit canonical map targets") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_map/*
@@ -708,8 +706,8 @@ wrapValues<T>([T] values) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Map<string, i32> mut] values{mapNew<string, i32>()}
-  assign(values, wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false)))
+  [map<string, i32> mut] values{/std/collections/map/map<string, i32>("seed"raw_utf8, 0i32)}
+  assign(values, wrapValues(/std/collections/map/map("left"raw_utf8, 4i32, "wrong"raw_utf8, false)))
   return(0i32)
 }
 )";
@@ -719,31 +717,31 @@ main() {
   checkStdlibMapPairConstructorMismatch(error);
 }
 
-TEST_CASE("implicit map constructors infer experimental auto locals and auto returns") {
+TEST_CASE("implicit map constructors infer canonical auto locals and auto returns") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_map/*
 
 [return<auto> effects(heap_alloc)]
 buildValues() {
-  return(/std/collections/mapPair("left"raw_utf8, 4i32, "right"raw_utf8, 7i32))
+  return(/std/collections/map/map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32))
 }
 
 [effects(io_err)]
-unexpectedExperimentalMapAutoError([ContainerError] err) {
+unexpectedCanonicalMapAutoError([ContainerError] err) {
   [Result<ContainerError>] status{err.code}
   print_line_error(Result.why(status))
 }
 
-[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapAutoError>]
+[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedCanonicalMapAutoError>]
 main() {
-  [auto mut] values{/std/collections/map/map("seed"raw_utf8, 1i32)}
+  [auto mut] values{/std/collections/map/map<string, i32>("seed"raw_utf8, 1i32)}
   /std/collections/map/insert<string, i32>(values, "left"raw_utf8, 4i32)
   /std/collections/map/insert<string, i32>(values, "right"raw_utf8, 7i32)
   [auto mut] built{buildValues()}
   /std/collections/map/insert<string, i32>(built, "extra"raw_utf8, 9i32)
-  [i32] left{try(/std/collections/map/tryAt(values, "left"raw_utf8))}
-  [i32] extra{try(/std/collections/map/tryAt(built, "extra"raw_utf8))}
+  [i32] left{/std/collections/map/at(values, "left"raw_utf8)}
+  [i32] extra{/std/collections/map/at(built, "extra"raw_utf8)}
   return(Result.ok(plus(plus(/std/collections/map/count(values), /std/collections/map/count(built)), plus(left, extra))))
 }
 )";

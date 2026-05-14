@@ -6,6 +6,7 @@
 #include "IrLowererHelpers.h"
 #include "IrLowererIndexKindHelpers.h"
 #include "IrLowererSemanticProductTargetAdapters.h"
+#include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererStructFieldBindingHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "IrLowererVectorRecordLayoutHelpers.h"
@@ -29,8 +30,8 @@ std::string collectionTypePath(std::string_view collectionName) {
   return stdCollectionsRoot() + "/" + std::string(collectionName);
 }
 
-std::string experimentalCollectionTypePath(std::string_view collectionName,
-                                           std::string_view typeName) {
+std::string localExperimentalCollectionTypePath(std::string_view collectionName,
+                                                std::string_view typeName) {
   return stdCollectionsRoot() + "/experimental_" + std::string(collectionName) +
          "/" + std::string(typeName);
 }
@@ -41,7 +42,7 @@ bool matchesGeneratedSpecializedPath(std::string_view text,
 }
 
 bool isVectorStructPath(const std::string &structPath) {
-  const std::string vectorTypePath = experimentalCollectionTypePath("vector", "Vector");
+  const std::string vectorTypePath = localExperimentalCollectionTypePath("vector", "Vector");
   return structPath == "/vector" || structPath == vectorTypePath ||
          matchesGeneratedSpecializedPath(structPath, vectorTypePath);
 }
@@ -166,6 +167,21 @@ bool classifyArrayVectorFieldBinding(
           : binding.typeName + "<" + binding.typeTemplateArg + ">",
       valueKindFromTypeName,
       targetInfoOut);
+}
+
+bool resolveArrayVectorAssignmentAccessName(const Expr &expr,
+                                            std::string &accessNameOut) {
+  if (getBuiltinArrayAccessName(expr, accessNameOut)) {
+    return true;
+  }
+  std::string vectorHelperName;
+  if (!resolveVectorHelperAliasName(expr, vectorHelperName) ||
+      (vectorHelperName != "at" && vectorHelperName != "at_unsafe")) {
+    accessNameOut.clear();
+    return false;
+  }
+  accessNameOut = vectorHelperName;
+  return true;
 }
 
 bool resolveSemanticArrayVectorTargetInfo(
@@ -581,10 +597,10 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
           return false;
         }
         if (keysStructPath.empty()) {
-          keysStructPath = experimentalCollectionTypePath("vector", "Vector");
+          keysStructPath = localExperimentalCollectionTypePath("vector", "Vector");
         }
         if (payloadsStructPath.empty()) {
-          payloadsStructPath = experimentalCollectionTypePath("vector", "Vector");
+          payloadsStructPath = localExperimentalCollectionTypePath("vector", "Vector");
         }
         auto resolveVectorField =
             [&](const std::string &structPath,
@@ -1064,7 +1080,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
       return true;
     }
     std::string accessName;
-    if (getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) {
+    if (resolveArrayVectorAssignmentAccessName(target, accessName) && target.args.size() == 2) {
       const Expr &collectionTarget = target.args.front();
       const Expr &indexExpr = target.args[1];
       ArrayVectorAccessTargetInfo targetInfo;

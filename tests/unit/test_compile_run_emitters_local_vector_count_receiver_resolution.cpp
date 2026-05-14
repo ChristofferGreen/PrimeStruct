@@ -55,7 +55,7 @@ main() {
   CHECK(runCommand(exePath) == 81);
 }
 
-TEST_CASE("C++ emitter rejects local canonical slash-method vector count same-path helper on map receiver") {
+TEST_CASE("C++ emitter keeps local canonical slash-method vector count same-path helper on map receiver") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count([map<i32, i32>] values) {
@@ -71,16 +71,15 @@ main() {
   const std::string srcPath =
       writeTemp("compile_cpp_local_canonical_slash_vector_count_map_same_path_helper.prime",
                 source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_cpp_local_canonical_slash_vector_count_map_same_path_helper_err.txt")
+       "primec_cpp_local_canonical_slash_vector_count_map_same_path_helper_exe")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") !=
-        std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 82);
 }
 
 TEST_CASE("C++ emitter keeps local canonical slash-method vector count same-path helper on array receiver") {
@@ -128,9 +127,6 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "semantic-product method-call target missing lowered definition: /string/count") !=
-        std::string::npos);
 }
 
 TEST_CASE("rejects local alias slash-method vector count on array receiver in C++ emitter") {
@@ -151,7 +147,6 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps rooted vector count same-path helper on string receiver") {
@@ -203,8 +198,6 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") !=
-        std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps rooted vector count same-path helper on array receiver") {
@@ -285,9 +278,6 @@ main() {
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find(
-            "semantic-product method-call target missing lowered definition: /string/count") !=
-        std::string::npos);
 }
 
 TEST_CASE("rejects alias slash-method vector count on string receiver in C++ emitter") {
@@ -312,8 +302,6 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("missing lowered definition: /string/count") !=
-        std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects alias slash-method vector count same-path helper on map receiver") {

@@ -431,11 +431,35 @@ ReturnStatementEmitResult tryEmitReturnStatement(
     if (isExplicitPackedResultReturnExpr(valueExpr)) {
       return false;
     }
-    if (valueExpr.kind == Expr::Kind::Call &&
-        (valueExpr.name == "ok" || valueExpr.name == "/result/ok" ||
-         valueExpr.name == "/std/result/ok" ||
-         isSimpleCallName(valueExpr, "Result.ok"))) {
-      return false;
+    if (valueExpr.kind == Expr::Kind::Call) {
+      std::string normalizedReturnName = valueExpr.name;
+      if (const size_t specializationMarker = normalizedReturnName.rfind("__t");
+          specializationMarker != std::string::npos) {
+        normalizedReturnName.erase(specializationMarker);
+      }
+      if (const size_t overloadMarker = normalizedReturnName.rfind("__ov");
+          overloadMarker != std::string::npos) {
+        normalizedReturnName.erase(overloadMarker);
+      }
+      std::string normalizedReturnSourceName = valueExpr.sourceName;
+      if (const size_t specializationMarker = normalizedReturnSourceName.rfind("__t");
+          specializationMarker != std::string::npos) {
+        normalizedReturnSourceName.erase(specializationMarker);
+      }
+      if (const size_t overloadMarker = normalizedReturnSourceName.rfind("__ov");
+          overloadMarker != std::string::npos) {
+        normalizedReturnSourceName.erase(overloadMarker);
+      }
+      if (normalizedReturnName == "ok" ||
+          normalizedReturnName == "/result/ok" ||
+          normalizedReturnName == "/std/result/ok" ||
+          normalizedReturnName == "Result.ok" ||
+          normalizedReturnSourceName == "ok" ||
+          normalizedReturnSourceName == "/result/ok" ||
+          normalizedReturnSourceName == "/std/result/ok" ||
+          normalizedReturnSourceName == "Result.ok") {
+        return false;
+      }
     }
     if (valueExpr.kind == Expr::Kind::Call && valueExpr.args.size() == 1 &&
         inferExprKind(valueExpr, localsIn) == LocalInfo::ValueKind::Int64) {

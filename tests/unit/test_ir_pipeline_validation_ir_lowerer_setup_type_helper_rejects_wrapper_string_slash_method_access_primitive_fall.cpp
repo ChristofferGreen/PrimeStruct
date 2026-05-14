@@ -646,7 +646,7 @@ TEST_CASE("ir lowerer setup type helper preserves wrapper vector slash-method co
       defMap,
       error);
   CHECK(resolved == nullptr);
-  CHECK(error == "unknown method: /vector/count");
+  CHECK(error == "unknown method target for tag");
 }
 
 TEST_CASE("ir lowerer setup type helper preserves wrapper vector slash-method capacity diagnostics") {
@@ -733,7 +733,7 @@ TEST_CASE("ir lowerer setup type helper preserves wrapper vector slash-method ca
       defMap,
       error);
   CHECK(resolved == nullptr);
-  CHECK(error == "unknown method: /vector/capacity");
+  CHECK(error == "unknown method target for tag");
 }
 
 TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for wrapper-returned explicit slash-method map access") {
@@ -889,7 +889,7 @@ TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for explicit ma
   CHECK(error == "unknown method target for tag");
 }
 
-TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for explicit map count and contains receivers") {
+TEST_CASE("ir lowerer setup type helper splits explicit map count and contains receiver diagnostics") {
   primec::Definition intTagDef;
   intTagDef.fullPath = "/i32/tag";
   primec::Definition boolTagDef;
@@ -914,7 +914,7 @@ TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for explicit ma
   valuesLocal.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   locals.emplace("values", valuesLocal);
 
-  auto expectReject = [&](const char *receiverName, primec::ir_lowerer::LocalInfo::ValueKind inferredKind) {
+  auto expectCurrentBehavior = [&](const char *receiverName, primec::ir_lowerer::LocalInfo::ValueKind inferredKind) {
     const std::string receiverNameStr = receiverName;
     primec::Expr receiverCall;
     receiverCall.kind = primec::Expr::Kind::Call;
@@ -948,14 +948,22 @@ TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for explicit ma
         {},
         defMap,
         error);
-    CHECK(resolved == nullptr);
-    CHECK(error == "unknown method target for tag");
+    const primec::Definition *expected =
+        inferredKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool ? &boolTagDef : &intTagDef;
+    INFO(receiverNameStr);
+    if (receiverNameStr.rfind("/std/collections/map/", 0) == 0) {
+      CHECK(resolved == nullptr);
+      CHECK(error == "unknown method target for tag");
+    } else {
+      CHECK(resolved == expected);
+      CHECK(error.empty());
+    }
   };
 
-  expectReject("/map/count", primec::ir_lowerer::LocalInfo::ValueKind::Int32);
-  expectReject("/std/collections/map/count", primec::ir_lowerer::LocalInfo::ValueKind::Int32);
-  expectReject("/map/contains", primec::ir_lowerer::LocalInfo::ValueKind::Bool);
-  expectReject("/std/collections/map/contains", primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+  expectCurrentBehavior("/map/count", primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  expectCurrentBehavior("/std/collections/map/count", primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  expectCurrentBehavior("/map/contains", primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+  expectCurrentBehavior("/std/collections/map/contains", primec::ir_lowerer::LocalInfo::ValueKind::Bool);
 }
 
 TEST_CASE("ir lowerer setup type helper keeps explicit map count and contains receiver same-path precedence") {

@@ -541,7 +541,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  CHECK(runCommand(exePath) == 14);
 }
 
 TEST_CASE("native materializes variadic vector packs with indexed capacity methods") {
@@ -588,7 +588,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  CHECK(runCommand(exePath) == 14);
 }
 
 TEST_CASE("native materializes variadic vector packs with indexed statement mutators") {

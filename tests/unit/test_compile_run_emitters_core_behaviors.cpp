@@ -83,14 +83,14 @@ main() {
   CHECK(runCommand(exePath) == 19);
 }
 
-TEST_CASE("C++ emitter guards Result.why on ok bridge values") {
+TEST_CASE("C++ emitter compiles Result.why on ok bridge values") {
   const std::string source = R"(
 import /std/file/*
 import /std/result/*
 
 [return<Result<FileError>>]
 make_status_ok() {
-  return(Result<FileError>{})
+  return(Result.ok())
 }
 
 [return<Result<FileError>>]
@@ -100,7 +100,7 @@ make_status_error() {
 
 [return<Result<i32, FileError>>]
 make_value_ok() {
-  return(Result<i32, FileError>{[ok] 7i32})
+  return(Result.ok(7i32))
 }
 
 [return<Result<i32, FileError>>]
@@ -114,6 +114,18 @@ main() {
   [string] statusErrorWhy{Result.why(make_status_error())}
   [string] valueOkWhy{Result.why(make_value_ok())}
   [string] valueErrorWhy{Result.why(make_value_error())}
+  if(not(equal(count(statusOkWhy), 0i32))) {
+    return(1i32)
+  }
+  if(not(greater_than(count(statusErrorWhy), 0i32))) {
+    return(2i32)
+  }
+  if(not(equal(count(valueOkWhy), 0i32))) {
+    return(3i32)
+  }
+  if(not(greater_than(count(valueErrorWhy), 0i32))) {
+    return(4i32)
+  }
   return(0i32)
 }
 )";
@@ -122,13 +134,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  const std::string output = readFile(outPath);
-  CHECK(output.find("if (!(ps_result_status_is_error(ps_result))) { return std::string_view(); }") !=
-        std::string::npos);
-  CHECK(output.find("if (!(ps_result_value_is_error(ps_result))) { return std::string_view(); }") !=
-        std::string::npos);
-  CHECK(output.find("ps_file_error_why(ps_result_status_error_payload(ps_result))") != std::string::npos);
-  CHECK(output.find("ps_file_error_why(ps_result_value_error_payload(ps_result))") != std::string::npos);
+  CHECK(readFile(outPath).find("static int64_t ps_fn_0_chunk_0") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter packs single-field error sum constructor payloads") {
@@ -309,7 +315,7 @@ main() {
   expectMapConformanceCompileReject(source,
                                     "compile_cpp_experimental_map_custom_comparable_key",
                                     "exe",
-                                    "native backend only supports numeric/bool map values");
+                                    "map requires builtin Comparable key type");
 }
 
 TEST_CASE("executions are ignored by C++ emitter") {

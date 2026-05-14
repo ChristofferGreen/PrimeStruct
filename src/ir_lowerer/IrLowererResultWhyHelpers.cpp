@@ -28,6 +28,46 @@ std::string resolveSemanticQueryResultErrorTypeText(
   return trimTemplateTypeText(queryFact.resultErrorType);
 }
 
+bool resultErrorTypesMatch(std::string left, std::string right) {
+  left = trimTemplateTypeText(left);
+  right = trimTemplateTypeText(right);
+  if (left == right) {
+    return true;
+  }
+  if (!left.empty() && left.front() != '/' && "/" + left == right) {
+    return true;
+  }
+  return !right.empty() && right.front() != '/' && left == "/" + right;
+}
+
+const Expr *resultWhyValueArgument(const Expr &expr, std::string &error) {
+  const bool methodCall =
+      expr.isMethodCall && !expr.args.empty() &&
+      expr.args.front().kind == Expr::Kind::Name &&
+      expr.args.front().name == "Result" && expr.name == "why";
+  const bool receiverArgCall =
+      !expr.isMethodCall && !expr.args.empty() &&
+      expr.args.front().kind == Expr::Kind::Name &&
+      expr.args.front().name == "Result" && expr.name == "why";
+  const bool qualifiedCall =
+      !expr.isMethodCall &&
+      ((expr.name == "why" &&
+        (expr.namespacePrefix == "Result" ||
+         expr.namespacePrefix == "/result/Result" ||
+         expr.namespacePrefix == "/std/result/Result")) ||
+       expr.name == "Result.why" ||
+       expr.sourceName == "Result.why");
+  if (!methodCall && !receiverArgCall && !qualifiedCall) {
+    return nullptr;
+  }
+  const size_t expectedArgs = (methodCall || receiverArgCall) ? 2u : 1u;
+  if (expr.args.size() != expectedArgs) {
+    error = "Result.why requires exactly one argument";
+    return nullptr;
+  }
+  return &expr.args[(methodCall || receiverArgCall) ? 1u : 0u];
+}
+
 } // namespace
 
 ResultWhyMethodCallEmitResult tryEmitResultWhyCall(
@@ -51,19 +91,34 @@ ResultWhyMethodCallEmitResult tryEmitResultWhyCall(
     const SemanticProductTargetAdapter *semanticProductTargets,
     std::vector<IrInstruction> *instructionsOut,
     std::string &error) {
-  if (!(expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
-        expr.args.front().name == "Result" && expr.name == "why")) {
+  std::string matchError;
+  const Expr *valueArg = resultWhyValueArgument(expr, matchError);
+  if (valueArg == nullptr && matchError.empty()) {
     return ResultWhyMethodCallEmitResult::NotHandled;
+  }
+  if (valueArg == nullptr) {
+    error = std::move(matchError);
+    return ResultWhyMethodCallEmitResult::Error;
   }
 
   ResultExprInfo resultInfo;
-  if (!resolveResultWhyCallInfo(
-          expr, localsIn, resolveResultExprInfo, resultInfo, error)) {
+  if (!resolveResultExprInfo ||
+      !resolveResultExprInfo(*valueArg, localsIn, resultInfo) ||
+      !resultInfo.isResult) {
+    error = "Result.why requires Result argument";
     return ResultWhyMethodCallEmitResult::Error;
   }
 
   auto hasImportedStdlibResultSum = [&]() {
-    return defMap.find("/std/result/Result") != defMap.end();
+    if (defMap.find("/std/result/Result") != defMap.end()) {
+      return true;
+    }
+    for (const auto &entry : defMap) {
+      if (entry.first.rfind("/std/result/Result__", 0) == 0) {
+        return true;
+      }
+    }
+    return false;
   };
 
   auto directCallReturnsImportedStdlibResultSum =
@@ -118,7 +173,7 @@ ResultWhyMethodCallEmitResult tryEmitResultWhyCall(
 
   auto tryEmitStdlibResultSumValue = [&](bool &emittedOut) -> bool {
     emittedOut = false;
-    const Expr &valueExpr = expr.args[1];
+    const Expr &valueExpr = *valueArg;
     if (valueExpr.kind == Expr::Kind::Name) {
       auto localIt = localsIn.find(valueExpr.name);
       if (localIt != localsIn.end()) {
@@ -130,6 +185,23 @@ ResultWhyMethodCallEmitResult tryEmitResultWhyCall(
         }
       }
     }
+    if (valueExpr.kind == Expr::Kind::Call &&
+        isSimpleCallName(valueExpr, "dereference") &&
+        valueExpr.args.size() == 1 &&
+        valueExpr.args.front().kind == Expr::Kind::Name &&
+        hasImportedStdlibResultSum()) {
+      auto localIt = localsIn.find(valueExpr.args.front().name);
+      if (localIt != localsIn.end() &&
+          (localIt->second.kind == LocalInfo::Kind::Reference ||
+           localIt->second.kind == LocalInfo::Kind::Pointer) &&
+          localIt->second.isResult &&
+          resultErrorTypesMatch(localIt->second.resultErrorType,
+                                resultInfo.errorType)) {
+        emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(localIt->second.index));
+        emittedOut = true;
+        return true;
+      }
+    }
     bool directCallReturnsStdlibResult = false;
     if (!directCallReturnsImportedStdlibResultSum(
             valueExpr, directCallReturnsStdlibResult)) {
@@ -138,25 +210,6 @@ ResultWhyMethodCallEmitResult tryEmitResultWhyCall(
     if (directCallReturnsStdlibResult) {
       emittedOut = true;
       return emitExpr(valueExpr, localsIn);
-    }
-    if (valueExpr.kind == Expr::Kind::Call &&
-        isSimpleCallName(valueExpr, "dereference") &&
-        valueExpr.args.size() == 1 &&
-        valueExpr.args.front().kind == Expr::Kind::Name &&
-        !resultInfo.hasValue &&
-        hasImportedStdlibResultSum()) {
-      auto localIt = localsIn.find(valueExpr.args.front().name);
-      if (localIt != localsIn.end() &&
-          (localIt->second.kind == LocalInfo::Kind::Reference ||
-           localIt->second.kind == LocalInfo::Kind::Pointer) &&
-          localIt->second.isResult &&
-          !localIt->second.resultHasValue &&
-          trimTemplateTypeText(localIt->second.resultErrorType) ==
-              trimTemplateTypeText(resultInfo.errorType)) {
-        emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(localIt->second.index));
-        emittedOut = true;
-        return true;
-      }
     }
     return true;
   };
@@ -287,7 +340,7 @@ ResultWhyMethodCallEmitResult tryEmitResultWhyCall(
 
   int32_t errorLocal = 0;
   if (!emitResultWhyLocalsFromValueExpr(
-          expr.args[1],
+          *valueArg,
           localsIn,
           resultInfo,
           emitExpr,

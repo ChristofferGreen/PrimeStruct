@@ -1213,7 +1213,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("soa_vector field-view binding blocks structural mutation while live") {
+TEST_CASE("soa_vector field-view binding allows structural mutation with heap effect") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -1224,7 +1224,7 @@ consume<T>([T] value) {
   return(0i32)
 }
 
-[return<int>]
+[return<int> effects(heap_alloc)]
 main() {
   [soa_vector<Particle> mut] values{soa_vector<Particle>()}
   [auto] view{values.x()}
@@ -1233,8 +1233,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("borrowed binding: values") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("soa_vector field-view bindings resolve helper-return borrow roots") {
@@ -1265,7 +1265,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("soa_vector field-view helper still accepts call and return escapes through same-path helper") {
+TEST_CASE("soa_vector field-view helper rejects returned field-view arithmetic") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -1298,8 +1298,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/pick") != std::string::npos);
 }
 
 TEST_CASE("soa_vector get helper call-form accepts labeled named receiver") {

@@ -823,7 +823,7 @@ TEST_CASE("ir lowerer setup type helper resolves declared receiver aliases throu
   wrapMapDef.transforms.push_back(returnAlias);
 
   primec::Definition mapTagDef;
-  mapTagDef.fullPath = "/map/at/tag";
+  mapTagDef.fullPath = "/std/collections/map/at/tag";
 
   const std::unordered_map<std::string, std::string> importAliases = {
       {"MapAtAlias", "std/collections/map/at"},

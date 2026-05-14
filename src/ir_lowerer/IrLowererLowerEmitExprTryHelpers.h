@@ -768,6 +768,21 @@
 
             auto resolveStdlibResultSumDefinitionForOperand =
                 [&](const Expr &operandExpr) -> const Definition * {
+              auto returnInfoUsesPackedScalarResult =
+                  [&](const ReturnInfo &returnInfo) {
+                if (!returnInfo.isResult || returnInfo.returnsArray) {
+                  return false;
+                }
+                const bool valueUsesPackedScalar =
+                    !returnInfo.resultHasValue ||
+                    (returnInfo.resultValueCollectionKind == LocalInfo::Kind::Value &&
+                     returnInfo.resultValueStructType.empty() &&
+                     returnInfo.resultValueKind != LocalInfo::ValueKind::Unknown);
+                const bool errorUsesPackedScalar =
+                    valueKindFromTypeName(returnInfo.resultErrorType) !=
+                    LocalInfo::ValueKind::Unknown;
+                return valueUsesPackedScalar && errorUsesPackedScalar;
+              };
               if (operandExpr.kind == Expr::Kind::Name) {
                 auto operandIt = localsIn.find(operandExpr.name);
                 if (operandIt != localsIn.end()) {
@@ -780,6 +795,17 @@
                   }
                 }
                 return nullptr;
+              }
+
+              if (operandExpr.kind == Expr::Kind::Call) {
+                if (const Definition *calleeDef = resolveDefinitionCall(operandExpr);
+                    calleeDef != nullptr) {
+                  ReturnInfo operandReturnInfo;
+                  if (getReturnInfo(calleeDef->fullPath, operandReturnInfo) &&
+                      returnInfoUsesPackedScalarResult(operandReturnInfo)) {
+                    return nullptr;
+                  }
+                }
               }
 
               std::string operandStructPath = inferStructExprPath(operandExpr, localsIn);
@@ -861,6 +887,34 @@
                                                     defIt->second->namespacePrefix);
                 if (returnSumDef != nullptr && isStdlibResultSumDefinition(*returnSumDef)) {
                   return returnSumDef;
+                }
+                break;
+              }
+              const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
+              if (semanticTargets.hasSemanticProduct) {
+                const SemanticProgramReturnFact *returnFact =
+                    findSemanticProductReturnFactByPath(semanticTargets, definitionPath);
+                if (returnFact != nullptr) {
+                  auto resolveSemanticReturnSum =
+                      [&](const std::string &typeText, SymbolId typeTextId) -> const Definition * {
+                    return resolveSumDefinitionForTypeText(
+                        resolveSemanticProductTypeText(semanticTargets.semanticProgram,
+                                                       typeText,
+                                                       typeTextId),
+                        defIt->second->namespacePrefix);
+                  };
+                  if (const Definition *returnSumDef =
+                          resolveSemanticReturnSum(returnFact->structPath,
+                                                   returnFact->structPathId);
+                      returnSumDef != nullptr && isStdlibResultSumDefinition(*returnSumDef)) {
+                    return returnSumDef;
+                  }
+                  if (const Definition *returnSumDef =
+                          resolveSemanticReturnSum(returnFact->bindingTypeText,
+                                                   returnFact->bindingTypeTextId);
+                      returnSumDef != nullptr && isStdlibResultSumDefinition(*returnSumDef)) {
+                    return returnSumDef;
+                  }
                 }
               }
               return nullptr;

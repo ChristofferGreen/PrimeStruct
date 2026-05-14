@@ -25,7 +25,7 @@ main() {
   CHECK(error.find("template arguments are only supported on templated definitions: /map/count") != std::string::npos);
 }
 
-TEST_CASE("map compatibility explicit-template count method keeps non-templated alias diagnostics") {
+TEST_CASE("map compatibility explicit-template count method reports canonical return mismatch") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /map/count([map<i32, i32>] values, [bool] marker) {
@@ -45,8 +45,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("template arguments are only supported on templated definitions: /map/count") !=
-        std::string::npos);
+  CHECK(error.find("return type mismatch: expected i32") != std::string::npos);
 }
 
 TEST_CASE("wrapper reference templated map count method rejects missing canonical helper") {
@@ -77,7 +76,7 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
-TEST_CASE("wrapper reference templated map count method keeps canonical diagnostics") {
+TEST_CASE("wrapper reference templated map count method rejects missing canonical ref helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /Reference/count<K, V>([Reference</std/collections/map<K, V>>] self, [bool] marker) {
@@ -101,11 +100,11 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/count_ref") != std::string::npos);
 }
 
-TEST_CASE("map slash-path explicit-template count method stays on canonical unknown call target diagnostic") {
+TEST_CASE("map slash-path explicit-template count method reports canonical return mismatch") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
@@ -120,7 +119,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
+  CHECK(error.find("return type mismatch: expected i32") != std::string::npos);
 }
 
 TEST_CASE("map canonical slash-path explicit-template access method stays on canonical unknown call target diagnostic") {
@@ -640,7 +639,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("explicit canonical map access helpers accept experimental map values") {
+TEST_CASE("explicit canonical map access helpers accept canonical map values") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -648,8 +647,8 @@ import /std/collections/internal_map/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Map<string, i32>] values{/std/collections/mapPair("left"raw_utf8, 4i32,
-                                                     "right"raw_utf8, 7i32)}
+  [map<string, i32>] values{/std/collections/map/map<string, i32>("left"raw_utf8, 4i32,
+                                                                  "right"raw_utf8, 7i32)}
   [i32] left{/std/collections/map/at<string, i32>(values, "left"raw_utf8)}
   [i32] right{/std/collections/map/at_unsafe<string, i32>(values, "right"raw_utf8)}
   return(plus(left, right))

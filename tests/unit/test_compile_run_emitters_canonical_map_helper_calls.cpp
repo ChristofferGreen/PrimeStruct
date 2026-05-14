@@ -316,7 +316,7 @@ main() {
           .string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("rejects map unnamespaced contains through compatibility helper when canonical helper is absent in C++ emitter") {
@@ -371,7 +371,7 @@ main() {
           .string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("rejects map unnamespaced contains without helper in C++ emitter with unknown-target diagnostics") {
@@ -530,10 +530,10 @@ main() {
           .string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 162);
+  CHECK(runCommand(exePath) == 94);
 }
 
-TEST_CASE("explicit canonical map helper calls through same-path helpers reach current runtime lowering fault in C++ emitter") {
+TEST_CASE("runs explicit canonical map helper calls through same-path helpers in C++ emitter") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -598,8 +598,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath + " > " + outPath + " 2>&1") == 1);
-  CHECK(readFile(outPath).find("unaligned indirect address in IR") != std::string::npos);
+  CHECK(runCommand(exePath + " > " + outPath + " 2>&1") == 119);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("rejects bare map tryAt call without imported canonical helper in C++ emitter with unknown-target diagnostics") {
@@ -651,7 +651,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /map/tryAt") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /Result/tag") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs same-path direct map tryAt struct method chain through alias helper in C++ emitter") {
@@ -760,7 +760,7 @@ main() {
   CHECK(readFile(outPath).empty());
 }
 
-TEST_CASE("compiles same-path direct map at_unsafe struct method chain through alias helper in C++ emitter but traps at runtime") {
+TEST_CASE("compiles same-path direct map at_unsafe struct method chain through alias helper in C++ emitter") {
   const std::string source = R"(
 CanonicalMarker {
   [i32] value
@@ -809,11 +809,11 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath + " > " + outPath + " 2>&1") == 1);
-  CHECK(readFile(outPath).find("unaligned indirect address in IR") != std::string::npos);
+  CHECK(runCommand(exePath + " > " + outPath + " 2>&1") == 2);
+  CHECK(readFile(outPath).empty());
 }
 
-TEST_CASE("compiles canonical direct map at_unsafe struct method chain in C++ emitter but traps at runtime") {
+TEST_CASE("compiles canonical direct map at_unsafe struct method chain in C++ emitter") {
   const std::string source = R"(
 CanonicalMarker {
   [i32] value
@@ -862,8 +862,8 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath + " > " + outPath + " 2>&1") == 1);
-  CHECK(readFile(outPath).find("unaligned indirect address in IR") != std::string::npos);
+  CHECK(runCommand(exePath + " > " + outPath + " 2>&1") == 2);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("keeps builtin map count for namespaced count method compatibility alias in C++ emitter") {

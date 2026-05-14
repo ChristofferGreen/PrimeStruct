@@ -105,14 +105,17 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  const std::string experimentalConfigMismatch =
+      "struct parameter type mismatch: expected SubstrateDeviceConfig, got "
+      "/std/gfx/experimental/SubstrateDeviceConfig";
   if (!compileAcrossBackendsOrExpectUnsupported("primec_gfx_experimental_device_constructor",
                                                 compileCmd,
                                                 exePath,
                                                 runVmCmd,
                                                 compileNativeCmd,
                                                 nativePath,
-                                                std::string(IrResultOkUnsupportedMessage),
-                                                std::string(IrResultOkUnsupportedMessage))) {
+                                                experimentalConfigMismatch,
+                                                experimentalConfigMismatch)) {
     return;
   }
   CHECK(runCommand(exePath) == 2);
@@ -197,14 +200,17 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  const std::string experimentalConfigMismatch =
+      "struct parameter type mismatch: expected SubstrateDeviceConfig, got "
+      "/std/gfx/experimental/SubstrateDeviceConfig";
   if (!compileAcrossBackendsOrExpectUnsupported("primec_gfx_experimental_resource_wrappers",
                                                 compileCmd,
                                                 exePath,
                                                 runVmCmd,
                                                 compileNativeCmd,
                                                 nativePath,
-                                                std::string(NativeArrayLiteralUnsupportedMessage),
-                                                std::string(VmArrayLiteralUnsupportedMessage))) {
+                                                experimentalConfigMismatch,
+                                                experimentalConfigMismatch)) {
     return;
   }
   CHECK(runCommand(exePath) == 6);
@@ -355,14 +361,17 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  const std::string experimentalRenderPassConfigMismatch =
+      "struct parameter type mismatch: expected SubstrateRenderPassConfig, got "
+      "/std/gfx/experimental/SubstrateRenderPassConfig";
   if (!compileAcrossBackendsOrExpectUnsupported("primec_gfx_experimental_resource_wrapper_errors",
                                                 compileCmd,
                                                 exePath,
                                                 runVmCmd,
                                                 compileNativeCmd,
                                                 nativePath,
-                                                std::string(NativeArrayLiteralUnsupportedMessage),
-                                                std::string(VmArrayLiteralUnsupportedMessage))) {
+                                                experimentalRenderPassConfigMismatch,
+                                                experimentalRenderPassConfigMismatch)) {
     return;
   }
   CHECK(runCommand(exePath) == 2);

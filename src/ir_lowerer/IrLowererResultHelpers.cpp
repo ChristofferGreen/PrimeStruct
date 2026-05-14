@@ -96,14 +96,58 @@ bool applySemanticResultValueTypeText(const std::string &valueTypeText, ResultEx
   return true;
 }
 
+bool applySemanticPublishedResultSumTypeText(const SemanticProgram *semanticProgram,
+                                             const std::string &typeText,
+                                             ResultExprInfo &out) {
+  if (semanticProgram == nullptr) {
+    return false;
+  }
+  std::string normalizedType = trimTemplateTypeText(typeText);
+  if (!normalizedType.empty() && normalizedType.front() != '/') {
+    normalizedType.insert(normalizedType.begin(), '/');
+  }
+  if (normalizedType.rfind("/std/result/Result__", 0) != 0) {
+    return false;
+  }
+
+  const SemanticProgramSumVariantMetadata *okVariant = nullptr;
+  const SemanticProgramSumVariantMetadata *errorVariant = nullptr;
+  for (const auto &variant : semanticProgram->sumVariantMetadata) {
+    if (variant.sumPath != normalizedType) {
+      continue;
+    }
+    if (variant.variantName == "ok") {
+      okVariant = &variant;
+    } else if (variant.variantName == "error") {
+      errorVariant = &variant;
+    }
+  }
+  if (errorVariant == nullptr || !errorVariant->hasPayload) {
+    return false;
+  }
+
+  out = ResultExprInfo{};
+  out.isResult = true;
+  out.hasValue = okVariant != nullptr && okVariant->hasPayload;
+  out.errorType = trimTemplateTypeText(errorVariant->payloadTypeText);
+  if (!out.hasValue) {
+    return true;
+  }
+  return applySemanticResultValueTypeText(okVariant->payloadTypeText, out);
+}
+
 bool applySemanticResultTypeText(const std::string &typeText,
                                  ResultExprInfo &out,
+                                 const SemanticProgram *semanticProgram = nullptr,
                                  bool allowPointerLikeResultTarget = false) {
   const std::string trimmedType = trimTemplateTypeText(typeText);
   bool resultHasValue = false;
   LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
   std::string resultErrorType;
   if (!parseResultTypeName(trimmedType, resultHasValue, resultValueKind, resultErrorType)) {
+    if (applySemanticPublishedResultSumTypeText(semanticProgram, trimmedType, out)) {
+      return true;
+    }
     if (!allowPointerLikeResultTarget) {
       return false;
     }
@@ -117,7 +161,7 @@ bool applySemanticResultTypeText(const std::string &typeText,
         pointerBase != "Pointer" && pointerBase != "/Pointer") {
       return false;
     }
-    return applySemanticResultTypeText(pointerArgText, out, false);
+    return applySemanticResultTypeText(pointerArgText, out, semanticProgram, false);
   }
   out = ResultExprInfo{};
   out.isResult = true;
@@ -227,13 +271,13 @@ bool resolveSemanticQueryResultInfoWithPresence(const Expr &expr,
       const std::string bindingTypeText = resolveSemanticResultFactText(
           *semanticProgram, queryFact->bindingTypeText, queryFact->bindingTypeTextId);
       if (!bindingTypeText.empty() &&
-          applySemanticResultTypeText(bindingTypeText, out, true)) {
+          applySemanticResultTypeText(bindingTypeText, out, semanticProgram, true)) {
         return true;
       }
       const std::string queryTypeText = resolveSemanticResultFactText(
           *semanticProgram, queryFact->queryTypeText, queryFact->queryTypeTextId);
       if (!queryTypeText.empty() &&
-          applySemanticResultTypeText(queryTypeText, out, true)) {
+          applySemanticResultTypeText(queryTypeText, out, semanticProgram, true)) {
         return true;
       }
     }
@@ -272,6 +316,7 @@ bool resolveSemanticBindingResultInfoWithPresence(const Expr &expr,
             bindingFact->bindingTypeText,
             bindingFact->bindingTypeTextId),
         out,
+        semanticProgram,
         allowPointerLikeResultTarget);
   }
   if (const auto *localAutoFact =
@@ -283,6 +328,7 @@ bool resolveSemanticBindingResultInfoWithPresence(const Expr &expr,
             localAutoFact->bindingTypeText,
             localAutoFact->bindingTypeTextId),
         out,
+        semanticProgram,
         allowPointerLikeResultTarget);
   }
   return false;

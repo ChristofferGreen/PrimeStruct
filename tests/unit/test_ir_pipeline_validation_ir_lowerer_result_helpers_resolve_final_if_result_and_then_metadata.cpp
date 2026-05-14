@@ -863,6 +863,25 @@ TEST_CASE("ir lowerer result helpers use semantic local Result source facts") {
   addLocalAutoFact(semanticProgram, 8903, "autoStatus", "Result<FileError>");
   addBindingFact(semanticProgram, 8904, "statusRef", "Reference<Result<bool, FileError>>");
   addBindingFact(semanticProgram, 8905, "statusRef", "Reference<i32>");
+  const std::string generatedStdlibResultPath =
+      "/std/result/Result__arity2__t123456";
+  addBindingFact(semanticProgram, 8906, "stdlibStatus", generatedStdlibResultPath);
+  semanticProgram.sumVariantMetadata.push_back(primec::SemanticProgramSumVariantMetadata{
+      .sumPath = generatedStdlibResultPath,
+      .variantName = "ok",
+      .variantIndex = 0,
+      .tagValue = 0,
+      .hasPayload = true,
+      .payloadTypeText = "i32",
+  });
+  semanticProgram.sumVariantMetadata.push_back(primec::SemanticProgramSumVariantMetadata{
+      .sumPath = generatedStdlibResultPath,
+      .variantName = "error",
+      .variantIndex = 1,
+      .tagValue = 1,
+      .hasPayload = true,
+      .payloadTypeText = "MyError",
+  });
   const auto semanticIndex =
       primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
 
@@ -928,6 +947,23 @@ TEST_CASE("ir lowerer result helpers use semantic local Result source facts") {
   CHECK(out.isResult);
   CHECK_FALSE(out.hasValue);
   CHECK(out.errorType == "FileError");
+
+  out = {};
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      makeNameExpr("stdlibStatus", 8906),
+      staleLocals,
+      resolveMethodCall,
+      resolveDefinitionCall,
+      lookupReturnInfo,
+      inferExprKind,
+      out,
+      &semanticProgram,
+      &semanticIndex,
+      &error));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.valueKind == ValueKind::Int32);
+  CHECK(out.errorType == "MyError");
 
   out = {};
   CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(

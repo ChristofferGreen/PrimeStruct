@@ -121,7 +121,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_bare_map_contains_call_with_canonical_helper_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 1);
+  CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath).empty());
 }
 
@@ -701,8 +701,7 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
   const std::string diagnostics = readFile(outPath);
-  CHECK(diagnostics.find("semantic-product method-call target missing lowered definition: /string/count") !=
-        std::string::npos);
+  CHECK(diagnostics.find("unknown method: /string/count") != std::string::npos);
 }
 
 TEST_CASE("rejects vm local alias slash-method vector count on array receiver") {
@@ -720,7 +719,7 @@ main() {
                                   .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /vector/count") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown method: /array/count") != std::string::npos);
 }
 
 TEST_SUITE_END();

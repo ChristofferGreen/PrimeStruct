@@ -693,19 +693,20 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("notify accepts string map access") {
+TEST_CASE("notify rejects string map access without path inference") {
   const std::string source = R"(
 import /std/collections/*
 
-[effects(pathspace_notify)]
+[effects(heap_alloc, pathspace_notify)]
 main() {
   [map<i32, string>] values{map<i32, string>(1i32, "/events/test"utf8)}
-  notify(values[1i32], 1i32)
+  notify(/std/collections/map/at<i32, string>(values, 1i32), 1i32)
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("notify requires string path argument") != std::string::npos);
 }
 
 TEST_CASE("notify rejects template arguments") {
@@ -863,19 +864,20 @@ main() {
   CHECK(error.find("requires string path argument") != std::string::npos);
 }
 
-TEST_CASE("take accepts string map access") {
+TEST_CASE("take rejects string map access without path inference") {
   const std::string source = R"(
 import /std/collections/*
 
-[effects(pathspace_take)]
+[effects(heap_alloc, pathspace_take)]
 main() {
   [map<i32, string>] values{map<i32, string>(1i32, "/events/test"utf8)}
-  take(values[1i32])
+  take(/std/collections/map/at<i32, string>(values, 1i32))
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.find("take requires string path argument") != std::string::npos);
 }
 
 TEST_CASE("take rejects block arguments") {

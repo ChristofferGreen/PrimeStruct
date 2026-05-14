@@ -267,8 +267,8 @@ TEST_CASE("ir lowerer flow helpers validate vector statement helper diagnostics"
             [] {},
             [] {},
             [] {},
-            error) == EmitResult::Error);
-  CHECK(error == "push requires mutable vector binding");
+            error) == EmitResult::NotMatched);
+  CHECK(error.empty());
 
   primec::ir_lowerer::LocalInfo soaInfo;
   soaInfo.kind = Kind::Value;
@@ -296,7 +296,7 @@ TEST_CASE("ir lowerer flow helpers validate vector statement helper diagnostics"
             [] {},
             [] {},
             [] {},
-            error) == EmitResult::Emitted);
+            error) == EmitResult::NotMatched);
   CHECK(error.empty());
 
   primec::Expr explicitSoaPushCall = soaPushCall;
@@ -315,7 +315,7 @@ TEST_CASE("ir lowerer flow helpers validate vector statement helper diagnostics"
             [] {},
             [] {},
             [] {},
-            error) == EmitResult::Emitted);
+            error) == EmitResult::NotMatched);
   CHECK(error.empty());
 
   primec::Expr canonicalSoaPushCall = soaPushCall;
@@ -334,7 +334,7 @@ TEST_CASE("ir lowerer flow helpers validate vector statement helper diagnostics"
             [] {},
             [] {},
             [] {},
-            error) == EmitResult::Emitted);
+            error) == EmitResult::NotMatched);
   CHECK(error.empty());
 
   locals.at("v").isMutable = true;

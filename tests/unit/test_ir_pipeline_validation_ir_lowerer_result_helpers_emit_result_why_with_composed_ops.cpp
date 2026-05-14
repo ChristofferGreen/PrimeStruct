@@ -734,7 +734,7 @@ TEST_CASE("ir lowerer flow helpers wire remove_swap through removed-slot destruc
   valuesInfo.index = 3;
   valuesInfo.isMutable = true;
   valuesInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
-  valuesInfo.valueKind = ValueKind::Int32;
+  valuesInfo.valueKind = ValueKind::Unknown;
   valuesInfo.structTypeName = "/thing";
   localsIn.emplace("values", valuesInfo);
 
@@ -879,7 +879,7 @@ TEST_CASE("ir lowerer flow helpers wire remove_at through removed-slot destructi
   valuesInfo.index = 3;
   valuesInfo.isMutable = true;
   valuesInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
-  valuesInfo.valueKind = ValueKind::Int32;
+  valuesInfo.valueKind = ValueKind::Unknown;
   valuesInfo.structTypeName = "/thing";
   localsIn.emplace("values", valuesInfo);
 

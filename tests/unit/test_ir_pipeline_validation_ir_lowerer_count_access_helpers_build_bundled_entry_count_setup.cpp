@@ -184,6 +184,44 @@ TEST_CASE("ir lowerer count access classifiers prefer semantic direct-name facts
           primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
   });
   semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(7003, 0);
+  semanticProgram.collectionSpecializations.push_back(primec::SemanticProgramCollectionSpecialization{
+      .scopePath = "/main",
+      .siteKind = "local",
+      .name = "semanticArray",
+      .collectionFamily = "array",
+      .bindingTypeText = "array<i32>",
+      .elementTypeText = "i32",
+      .semanticNodeId = 7004,
+      .collectionFamilyId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "array"),
+      .bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "array<i32>"),
+      .elementTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+  });
+  semanticProgram.publishedRoutingLookups.collectionSpecializationIndicesByExpr
+      .insert_or_assign(7004, 0);
+  const primec::SymbolId vectorCountPathId =
+      primec::semanticProgramInternCallTargetString(
+          semanticProgram, "/std/collections/vector/count");
+  semanticProgram.bridgePathChoices.push_back(primec::SemanticProgramBridgePathChoice{
+      .scopePath = "/main",
+      .collectionFamily = "vector",
+      .semanticNodeId = 7005,
+      .scopePathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .collectionFamilyId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "vector"),
+      .helperNameId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "count"),
+      .chosenPathId = vectorCountPathId,
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelperSurface,
+  });
+  semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr
+      .insert_or_assign(7005, vectorCountPathId);
+  semanticProgram.publishedRoutingLookups.bridgePathChoiceStdlibSurfaceIdsByExpr
+      .insert_or_assign(7005,
+                         primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
 
   primec::ir_lowerer::EntryCountAccessSetup setup;
   std::string error;
@@ -205,6 +243,10 @@ TEST_CASE("ir lowerer count access classifiers prefer semantic direct-name facts
   staleArrayInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
   staleArrayInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   locals.emplace("scalar", staleArrayInfo);
+  primec::ir_lowerer::LocalInfo staleScalarInfo;
+  staleScalarInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  staleScalarInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals.emplace("semanticArray", staleScalarInfo);
 
   auto makeSemanticName = [](const char *name, uint64_t semanticNodeId) {
     primec::Expr expr;
@@ -232,6 +274,18 @@ TEST_CASE("ir lowerer count access classifiers prefer semantic direct-name facts
   primec::Expr scalarCount = makeCountCall(makeSemanticName("scalar", 7003));
   CHECK_FALSE(setup.classifiers.isArrayCountCall(scalarCount, locals));
   CHECK_FALSE(setup.classifiers.isStringCountCall(scalarCount, locals));
+
+  primec::Expr semanticArrayCount =
+      makeCountCall(makeSemanticName("semanticArray", 7004));
+  CHECK(setup.classifiers.isArrayCountCall(semanticArrayCount, locals));
+  CHECK_FALSE(setup.classifiers.isStringCountCall(semanticArrayCount, locals));
+
+  primec::Expr semanticVectorBridgeCount =
+      makeCountCall(makeSemanticName("semanticArray", 7004));
+  semanticVectorBridgeCount.name = "/std/collections/vector/count";
+  semanticVectorBridgeCount.semanticNodeId = 7005;
+  CHECK(setup.classifiers.isArrayCountCall(semanticVectorBridgeCount, locals));
+  CHECK_FALSE(setup.classifiers.isStringCountCall(semanticVectorBridgeCount, locals));
 
   primec::Expr missingFactCount = makeCountCall(makeSemanticName("values", 7999));
   CHECK_FALSE(setup.classifiers.isArrayCountCall(missingFactCount, locals));

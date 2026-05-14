@@ -141,7 +141,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("rejects native auto-inferred std namespaced count helper compatibility alias precedence") {
+TEST_CASE("native auto-inferred std namespaced count uses compatibility alias precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values) {
@@ -173,11 +173,11 @@ main() {
           .string();
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("return type mismatch: expected i32") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 12);
 }
 
-TEST_CASE("compiles native auto-inferred std namespaced count helper canonical fallback") {
+TEST_CASE("native auto-inferred std namespaced count canonical fallback uses builtin count") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/count([vector<i32>] values) {
@@ -205,10 +205,10 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
+  CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("rejects native std namespaced count expression compatibility alias precedence") {
+TEST_CASE("native std namespaced count expression uses compatibility alias precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values) {
@@ -239,8 +239,8 @@ main() {
           .string();
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("return type mismatch: expected i32") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 12);
 }
 
 TEST_CASE("rejects native std namespaced count without imported helper") {
@@ -429,7 +429,7 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("compiles native std namespaced count expression canonical fallback") {
+TEST_CASE("native std namespaced count expression canonical fallback uses builtin count") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/count([vector<i32>] values) {
@@ -456,10 +456,10 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
+  CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("rejects native std namespaced count non-builtin compatibility fallback") {
+TEST_CASE("native std namespaced count non-builtin compatibility fallback resolves alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values, [bool] marker) {
@@ -483,8 +483,8 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 91);
 }
 
 TEST_CASE("rejects native vector namespaced count non-builtin array fallback") {
@@ -510,7 +510,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("rejects native std namespaced capacity expression compatibility alias precedence") {
+TEST_CASE("native std namespaced capacity expression uses compatibility alias precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/capacity([vector<i32>] values) {
@@ -541,8 +541,8 @@ main() {
           .string();
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("return type mismatch: expected i32") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 12);
 }
 
 TEST_CASE("compiles and runs native std namespaced capacity expression canonical fallback") {

@@ -112,7 +112,7 @@ main() {
   CHECK(runCommand(runCmd) == 9);
 }
 
-TEST_CASE("rejects vm quaternion reference multiply and rotation during lowering") {
+TEST_CASE("runs vm quaternion multiply and rotation helpers") {
   const std::string source = R"(
 import /std/math/*
 
@@ -126,20 +126,13 @@ main() {
   [f32] total{product.z - product.x - product.y - product.w + rotated.z - rotated.x - rotated.y}
   return(convert<int>(total))
 }
-  )";
+)";
   const std::string srcPath = writeTemp("vm_math_quaternion_reference_multiply_rotation.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_math_quaternion_reference_multiply_rotation.err").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "vm backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
-        std::string::npos);
-  CHECK(readFile(errPath).find("call=/multiply, name=/std/math/quat_multiply_internal") !=
-        std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 7);
 }
 
-TEST_CASE("rejects vm matrix composition order references during lowering") {
+TEST_CASE("runs vm matrix composition order helpers") {
   const std::string source = R"(
 import /std/math/*
 
@@ -168,17 +161,10 @@ main() {
   [f32] wrongOrderError{abs(wrongOrder.x + 6.0f32) + abs(wrongOrder.y - 2.0f32) + abs(wrongOrder.z - 4.0f32)}
   return(convert<int>(nestedError <= tolerance && combinedError <= tolerance && wrongOrderError <= tolerance))
 }
-  )";
+)";
   const std::string srcPath = writeTemp("vm_math_matrix_composition_reference.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_math_matrix_composition_reference.err").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "vm backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
-        std::string::npos);
-  CHECK(readFile(errPath).find("call=/multiply, name=/std/math/mat3_mul_vec3_internal") !=
-        std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 1);
 }
 
 TEST_CASE("runs vm matrix arithmetic helpers with tolerance") {

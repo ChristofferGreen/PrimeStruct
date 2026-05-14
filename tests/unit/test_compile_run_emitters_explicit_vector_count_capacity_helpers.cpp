@@ -249,7 +249,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("C++ emitter rejects bare vector capacity methods without helper before emission") {
+TEST_CASE("C++ emitter compiles bare vector capacity methods without helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -263,13 +263,12 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
+  CHECK(runCommand(compileCmd) == 0);
   const std::string out = readFile(outPath);
-  CHECK(out.find("native backend only supports") != std::string::npos);
-  CHECK(out.find("name=capacity") != std::string::npos);
+  CHECK(out.find("native backend only supports") == std::string::npos);
 }
 
-TEST_CASE("rejects bare vector capacity methods without helper in C++ emitter") {
+TEST_CASE("runs bare vector capacity methods without helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -278,15 +277,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_bare_vector_capacity_method_deleted_stub_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_bare_vector_capacity_method_deleted_stub.err").string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_cpp_bare_vector_capacity_method_exe").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  const std::string err = readFile(errPath);
-  CHECK(err.find("native backend only supports") != std::string::npos);
-  CHECK(err.find("name=capacity") != std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
 }
 
 TEST_CASE("rejects wrapper vector capacity methods without helper in C++ emitter") {

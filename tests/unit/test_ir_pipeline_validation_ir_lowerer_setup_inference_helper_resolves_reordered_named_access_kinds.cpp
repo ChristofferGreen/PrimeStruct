@@ -334,7 +334,7 @@ TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned canonical
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
 }
 
-TEST_CASE("ir lowerer setup inference helper resolves canonical vector access string kinds") {
+TEST_CASE("ir lowerer setup inference helper defers canonical vector access string kinds") {
   using Resolution = primec::ir_lowerer::ArrayMapAccessElementKindResolution;
 
   primec::ir_lowerer::LocalMap locals;
@@ -361,8 +361,8 @@ TEST_CASE("ir lowerer setup inference helper resolves canonical vector access st
             accessExpr,
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            kindOut) == Resolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
+            kindOut) == Resolution::NotMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
   accessExpr.name = "/std/collections/vector/at_unsafe";
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
@@ -370,8 +370,8 @@ TEST_CASE("ir lowerer setup inference helper resolves canonical vector access st
             accessExpr,
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            kindOut) == Resolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
+            kindOut) == Resolution::NotMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
 TEST_CASE("ir lowerer setup inference helper resolves bare vector method access string kinds") {
@@ -415,7 +415,7 @@ TEST_CASE("ir lowerer setup inference helper resolves bare vector method access 
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
 }
 
-TEST_CASE("ir lowerer setup inference helper resolves std-namespaced vector method access string kinds") {
+TEST_CASE("ir lowerer setup inference helper defers std-namespaced vector method access string kinds") {
   using Resolution = primec::ir_lowerer::ArrayMapAccessElementKindResolution;
 
   primec::ir_lowerer::LocalMap locals;
@@ -443,8 +443,8 @@ TEST_CASE("ir lowerer setup inference helper resolves std-namespaced vector meth
             accessExpr,
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            kindOut) == Resolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
+            kindOut) == Resolution::NotMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
   accessExpr.name = "/std/collections/vector/at_unsafe";
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
@@ -452,8 +452,8 @@ TEST_CASE("ir lowerer setup inference helper resolves std-namespaced vector meth
             accessExpr,
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            kindOut) == Resolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
+            kindOut) == Resolution::NotMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
 TEST_CASE("ir lowerer setup inference helper resolves slash-method vector access string kinds") {
@@ -502,8 +502,8 @@ TEST_CASE("ir lowerer setup inference helper resolves slash-method vector access
             accessExpr,
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            kindOut) == Resolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
+            kindOut) == Resolution::NotMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
   accessExpr.name = "/std/collections/vector/at_unsafe";
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
@@ -511,8 +511,8 @@ TEST_CASE("ir lowerer setup inference helper resolves slash-method vector access
             accessExpr,
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            kindOut) == Resolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
+            kindOut) == Resolution::NotMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
 TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned vector access kinds") {

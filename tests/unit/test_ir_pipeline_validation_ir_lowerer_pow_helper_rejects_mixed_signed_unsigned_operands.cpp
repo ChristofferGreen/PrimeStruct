@@ -823,7 +823,7 @@ TEST_CASE("ir lowerer conversions helper emits vector record from layout fields"
   CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
   CHECK(instructions[3].imm == 6);
   CHECK(instructions[4].op == primec::IrOpcode::PushI32);
-  CHECK(instructions[4].imm == 256);
+  CHECK(instructions[4].imm == 1024);
   CHECK(instructions[5].op == primec::IrOpcode::HeapAlloc);
   CHECK(instructions[6].op == primec::IrOpcode::StoreLocal);
   CHECK(instructions[6].imm == 7);

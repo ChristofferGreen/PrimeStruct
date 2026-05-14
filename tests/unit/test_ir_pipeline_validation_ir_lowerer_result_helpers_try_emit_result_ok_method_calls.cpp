@@ -872,7 +872,7 @@ TEST_CASE("ir lowerer result helpers use semantic binding facts for direct Resul
                                                             &missingTargets));
   CHECK(out.isResult);
   CHECK(out.hasValue);
-  CHECK(out.valueKind == ValueKind::Unknown);
+  CHECK(out.valueKind == ValueKind::Int64);
   CHECK_FALSE(fallbackCalled);
 }
 

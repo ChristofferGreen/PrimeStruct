@@ -63,10 +63,73 @@
 
     auto isStdlibResultVariantHelperCall =
         [&](const Expr &expr, const std::string &variantName) {
-      if (expr.kind != Expr::Kind::Call || expr.isMethodCall ||
-          expr.isFieldAccess || expr.hasBodyArguments ||
+      if (expr.kind != Expr::Kind::Call || expr.hasBodyArguments ||
           !expr.bodyArguments.empty() || hasNamedArguments(expr.argNames)) {
         return false;
+      }
+      const std::string normalizedExprName =
+          stripGeneratedResultHelperSuffix(expr.name);
+      const std::string normalizedSourceName =
+          stripGeneratedResultHelperSuffix(expr.sourceName);
+      const std::string resultVariantCallName = "Result." + variantName;
+      if ((normalizedExprName == resultVariantCallName ||
+           normalizedSourceName == resultVariantCallName) &&
+          !expr.isMethodCall) {
+        return true;
+      }
+      if (normalizedExprName == "/std/result/" + variantName ||
+          normalizedExprName == "/result/" + variantName ||
+          normalizedSourceName == "/std/result/" + variantName ||
+          normalizedSourceName == "/result/" + variantName) {
+        return true;
+      }
+      if (!expr.isMethodCall &&
+          (normalizedExprName == variantName ||
+           normalizedSourceName == variantName) &&
+          (expr.namespacePrefix == "Result" ||
+           expr.namespacePrefix == "/result/Result" ||
+           expr.namespacePrefix == "/std/result/Result")) {
+        return true;
+      }
+      if (!expr.isMethodCall &&
+          (normalizedExprName == variantName ||
+           normalizedSourceName == variantName) &&
+          expr.templateArgs.size() == 2) {
+        return true;
+      }
+      if (expr.isMethodCall &&
+          (normalizedExprName == variantName ||
+           normalizedSourceName == variantName) &&
+          !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
+          (expr.args.front().name == "Result" ||
+           expr.args.front().name == "/result/Result" ||
+           expr.args.front().name == "/std/result/Result")) {
+        return true;
+      }
+      const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
+      auto semanticResolvedPathMatches = [&](SymbolId resolvedPathId) {
+        if (!semanticTargets.hasSemanticProduct ||
+            semanticTargets.semanticProgram == nullptr ||
+            resolvedPathId == InvalidSymbolId) {
+          return false;
+        }
+        const std::string resolvedPath =
+            std::string(semanticProgramResolveCallTargetString(
+                *semanticTargets.semanticProgram, resolvedPathId));
+        return resolvedPath == "/std/result/" + variantName ||
+               resolvedPath == "/result/" + variantName;
+      };
+      if (const SemanticProgramBindingFact *bindingFact =
+              findSemanticProductBindingFact(semanticTargets, expr);
+          bindingFact != nullptr &&
+          semanticResolvedPathMatches(bindingFact->resolvedPathId)) {
+        return true;
+      }
+      if (const SemanticProgramQueryFact *queryFact =
+              findSemanticProductQueryFact(semanticTargets, expr);
+          queryFact != nullptr &&
+          semanticResolvedPathMatches(queryFact->resolvedPathId)) {
+        return true;
       }
       const Definition *callee = resolveDefinitionCall(expr);
       if (callee == nullptr) {
@@ -74,7 +137,14 @@
       }
       const std::string calleePath =
           stripGeneratedResultHelperSuffix(callee->fullPath);
-      return calleePath == "/std/result/" + variantName;
+      return calleePath == "/std/result/" + variantName ||
+             calleePath == "/result/" + variantName;
+    };
+    auto stdlibResultVariantHelperPayloadIndex = [](const Expr &expr) {
+      return !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
+                     expr.args.front().name == "Result"
+                 ? 1u
+                 : 0u;
     };
 
     auto isLegacyResultMapCall = [](const Expr &expr) {
@@ -522,7 +592,10 @@
           if (variant == nullptr) {
             return false;
           }
-          if (variant->hasPayload != (initializer.args.size() == 1)) {
+          const size_t payloadIndex =
+              stdlibResultVariantHelperPayloadIndex(initializer);
+          if (variant->hasPayload !=
+              (initializer.args.size() == payloadIndex + 1)) {
             return false;
           }
           LoweredSumPayloadStorageInfo payloadInfo;
@@ -533,7 +606,7 @@
           selectionOut.sumDef = &targetSum;
           selectionOut.variant = variant;
           selectionOut.payloadExpr =
-              variant->hasPayload ? &initializer.args.front() : nullptr;
+              variant->hasPayload ? &initializer.args[payloadIndex] : nullptr;
           selectionOut.payloadKind = payloadInfo.valueKind;
           selectionOut.payloadStructPath = std::move(payloadInfo.structPath);
           selectionOut.payloadSlotCount = payloadInfo.slotCount;
@@ -965,6 +1038,20 @@
             return true;
           }
         }
+        if (valueExpr.kind == Expr::Kind::Call && !valueExpr.isMethodCall &&
+            !valueExpr.isFieldAccess) {
+          if (const Definition *callee = resolveDefinitionCall(valueExpr);
+              callee != nullptr) {
+            for (const Transform &transform : callee->transforms) {
+              if (transform.name == "return" &&
+                  transform.templateArgs.size() == 1 &&
+                  typeTextResolvesToTargetSum(transform.templateArgs.front(),
+                                              InvalidSymbolId)) {
+                return true;
+              }
+            }
+          }
+        }
         const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
         if (semanticTargets.hasSemanticProduct && valueExpr.semanticNodeId != 0) {
           if (const SemanticProgramBindingFact *bindingFact =
@@ -1074,7 +1161,11 @@
           return true;
         };
         if (!initializerIsExistingSumLocal()) {
-          return emitPackedResultValueIntoLocal();
+          const std::optional<bool> packedResultEmitResult =
+              emitPackedResultValueIntoLocal();
+          if (packedResultEmitResult.has_value()) {
+            return packedResultEmitResult;
+          }
         }
         if (!emitExpr(initializer, valueLocals)) {
           return false;

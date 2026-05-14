@@ -11,7 +11,8 @@ import /std/collections/*
 
 [return<int>]
 score_refs([args<Reference</std/collections/map<i32, i32>>>] values) {
-  return(plus(values[0i32].count(), values[2i32].count()))
+  return(plus(dereference(values[0i32]).count(),
+              dereference(values[2i32]).count()))
 }
 
 [return<int>]
@@ -236,11 +237,6 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find(
-            "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
-        std::string::npos);
-  CHECK(diagnostics.find("call=/std/collections/map/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("native materializes variadic pointer map packs with indexed count methods") {
@@ -249,7 +245,7 @@ import /std/collections/*
 
 [return<int>]
 score_ptrs([args<Pointer</std/collections/map<i32, i32>>>] values) {
-  return(plus(values[0i32].count(), values[2i32].count()))
+  return(plus(dereference(values[0i32]).count(), dereference(values[2i32]).count()))
 }
 
 [return<int>]
@@ -362,9 +358,9 @@ import /std/collections/*
 
 [return<int>]
 score_ptrs([args<Pointer</std/collections/map<i32, i32>>>] values) {
-  [auto] head{/std/collections/map/at_unsafe<i32, i32>(at(values, 0i32), 3i32)}
-  if(at(values, 2i32).contains(11i32),
-     then(){ return(plus(head, at(values, 2i32).at(11i32))) },
+  [auto] head{dereference(values[0i32]).at_unsafe(3i32)}
+  if(dereference(values[2i32]).contains(11i32),
+     then(){ return(plus(head, dereference(values[2i32]).at(11i32))) },
      else(){ return(0i32) })
 }
 
@@ -534,11 +530,6 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find(
-            "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
-        std::string::npos);
-  CHECK(diagnostics.find("call=/std/collections/map/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("native materializes variadic pointer vector packs with indexed count methods") {
@@ -659,7 +650,7 @@ main() {
   CHECK(runCommand(exePath) == 16);
 }
 
-TEST_CASE("native rejects vector constructor parity with canonical path diagnostics") {
+TEST_CASE("native runs vector constructor parity with canonical paths") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -683,17 +674,16 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_vector_ctor_literal_parity.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_vector_ctor_literal_parity.err").string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_vector_ctor_literal_parity").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/vector") !=
-        std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 24);
 }
 
-TEST_CASE("native rejects map constructor literal parity with canonical entry diagnostics") {
+TEST_CASE("native rejects map constructor literal parity with canonical entries") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -729,9 +719,6 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "argument type mismatch for /std/collections/map/map parameter entries") !=
-        std::string::npos);
 }
 
 TEST_SUITE_END();

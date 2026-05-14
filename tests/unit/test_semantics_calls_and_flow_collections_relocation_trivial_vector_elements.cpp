@@ -155,7 +155,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("canonical vector pop method routes experimental vector receivers onto experimental helpers") {
+TEST_CASE("canonical vector pop method requires visible canonical helper") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_vector/*
@@ -184,11 +184,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/vector/pop") != std::string::npos);
 }
 
-TEST_CASE("canonical vector indexed removal helpers accept ownership-sensitive explicit Vector bindings") {
+TEST_CASE("canonical vector indexed removal helpers require visible canonical helpers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_vector/*
@@ -222,11 +222,11 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/vector/remove_at") != std::string::npos);
 }
 
-TEST_CASE("canonical vector helpers still require stdlib imports for experimental vector receivers") {
+TEST_CASE("canonical vector count helper validates with internal vector import") {
   const std::string source = R"(
 import /std/collections/internal_vector/*
 
@@ -237,8 +237,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("push on mutable vector field access validates through canonical helper routing") {

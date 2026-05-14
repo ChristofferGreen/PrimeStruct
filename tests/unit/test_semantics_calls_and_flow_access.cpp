@@ -273,11 +273,11 @@ TEST_CASE("map method calls resolve to definitions") {
 }
 
 [return<int>]
-/std/collections/map/count([map<i32, i32>] items) {
+/std/collections/map/count<K, V>([map<K, V>] items) {
   return(1i32)
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [map<i32, i32>] items{map<i32, i32>(1i32, 2i32)}
   return(items.size())
@@ -285,6 +285,7 @@ main() {
 )";
   std::string error;
   CHECK(validateProgram(source, "/main", error));
+  INFO(error);
   CHECK(error.empty());
 }
 

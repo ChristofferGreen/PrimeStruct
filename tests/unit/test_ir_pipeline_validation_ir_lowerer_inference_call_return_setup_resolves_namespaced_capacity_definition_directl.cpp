@@ -1443,7 +1443,7 @@ TEST_CASE("ir lowerer inference call-return setup keeps unresolved compatibility
   CHECK(state.inferCallExprDirectReturnKind(callExpr, {}, kindOut) ==
         primec::ir_lowerer::CallExpressionReturnKindResolution::NotResolved);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
-  CHECK(resolveMethodCalls == 0);
+  CHECK(resolveMethodCalls == 1);
 }
 
 TEST_CASE("ir lowerer inference call-return setup rejects explicit map access aliases against canonical-only defs") {

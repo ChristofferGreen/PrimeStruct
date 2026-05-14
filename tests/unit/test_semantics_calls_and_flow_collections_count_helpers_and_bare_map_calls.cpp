@@ -85,7 +85,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("imported canonical map count validates borrowed args pack indexed receivers") {
+TEST_CASE("imported canonical map count keeps borrowed args pack count_ref diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -114,8 +114,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/count_ref") != std::string::npos);
 }
 
 TEST_CASE("bare map count call still validates when only compatibility alias is present") {
@@ -300,7 +300,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("experimental map custom comparable struct keys validate through canonical map helpers") {
+TEST_CASE("experimental map custom comparable struct keys keep canonical map helper diagnostics") {
   const std::string source = R"(
 import /std/collections/internal_map/*
 
@@ -332,11 +332,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("map requires builtin Comparable key type (i32, i64, u64, f32, f64, bool, or string): Key") !=
+        std::string::npos);
 }
 
-TEST_CASE("experimental map method-call sugar validates on the real Map struct") {
+TEST_CASE("experimental map method-call sugar keeps missing Map helper diagnostics") {
   const std::string source = R"(
 import /std/collections/internal_map/*
 
@@ -347,18 +348,18 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: mapCount") != std::string::npos);
 }
 
-TEST_CASE("experimental map Ref helper calls accept borrowed Map references") {
+TEST_CASE("canonical map Ref helper calls accept borrowed map references") {
   const std::string source = R"(
-import /std/collections/internal_map/*
+import /std/collections/*
 
 [return<int> effects(heap_alloc)]
 main() {
-  [Map<string, i32>] values{mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
-  [Reference<Map<string, i32>>] ref{location(values)}
+  [map<string, i32>] values{map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
+  [Reference<map<string, i32>>] ref{location(values)}
   [i32 mut] total{/std/collections/map/count_ref<string, i32>(ref)}
   assign(total, plus(total, /std/collections/map/at_ref<string, i32>(ref, "left"raw_utf8)))
   assign(total, plus(total, /std/collections/map/at_unsafe_ref<string, i32>(ref, "right"raw_utf8)))
@@ -380,9 +381,9 @@ import /std/collections/internal_map/*
 
 [return<int> effects(heap_alloc)]
 main() {
-  [Map<string, i32> mut] values{mapSingle<string, i32>("left"raw_utf8, 4i32)}
+  [map<string, i32> mut] values{map<string, i32>("left"raw_utf8, 4i32)}
   /std/collections/map/insert<string, i32>(values, "right"raw_utf8, 7i32)
-  [Reference<Map<string, i32>> mut] ref{location(values)}
+  [Reference<map<string, i32>> mut] ref{location(values)}
   /std/collections/map/insert_ref<string, i32>(ref, "third"raw_utf8, 11i32)
   [Result<i32, ContainerError>] found{/std/collections/map/tryAt_ref<string, i32>(ref, "left"raw_utf8)}
   [Result<i32, ContainerError>] missing{/std/collections/map/tryAt_ref<string, i32>(ref, "missing"raw_utf8)}
@@ -403,32 +404,32 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental map borrowed method-call sugar rejects missing canonical count helper") {
+TEST_CASE("canonical map borrowed method-call sugar rejects missing ref template inference") {
   const std::string source = R"(
-import /std/collections/internal_map/*
+import /std/collections/*
 
 [return<int> effects(heap_alloc)]
 main() {
-  [Map<string, i32>] values{mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
-  [Reference<Map<string, i32>>] ref{location(values)}
+  [map<string, i32>] values{map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
+  [Reference<map<string, i32>>] ref{location(values)}
   return(ref.count())
 }
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/map/count") !=
+  CHECK(error.find("unknown call target: /std/collections/map/count_ref") !=
         std::string::npos);
 }
 
-TEST_CASE("experimental map insert helpers validate on value and borrowed mutation surfaces") {
+TEST_CASE("canonical map insert helpers validate on value and borrowed mutation surfaces") {
   const std::string source = R"(
-import /std/collections/internal_map/*
+import /std/collections/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Map<string, i32> mut] values{mapSingle<string, i32>("left"raw_utf8, 4i32)}
+  [map<string, i32> mut] values{map<string, i32>("left"raw_utf8, 4i32)}
   /std/collections/map/insert<string, i32>(values, "right"raw_utf8, 7i32)
-  [Reference<Map<string, i32>> mut] ref{location(values)}
+  [Reference<map<string, i32>> mut] ref{location(values)}
   /std/collections/map/insert_ref<string, i32>(ref, "third"raw_utf8, 11i32)
   return(plus(/std/collections/map/count<string, i32>(values),
               plus(/std/collections/map/at<string, i32>(values, "left"raw_utf8),
@@ -441,9 +442,9 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental map ownership-sensitive values validate through experimental storage") {
+TEST_CASE("canonical map ownership-sensitive values validate through canonical helpers") {
   const std::string source = R"(
-import /std/collections/internal_map/*
+import /std/collections/*
 
 [struct]
 Owned() {
@@ -461,10 +462,11 @@ Owned() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Map<string, Owned> mut] values{mapSingle<string, Owned>("left"raw_utf8, Owned{4i32})}
+  [map<string, Owned> mut] values{map<string, Owned>()}
+  /std/collections/map/insert<string, Owned>(values, "left"raw_utf8, Owned{4i32})
   /std/collections/map/insert<string, Owned>(values, "right"raw_utf8, Owned{7i32})
   /std/collections/map/insert<string, Owned>(values, "left"raw_utf8, Owned{9i32})
-  [Reference<Map<string, Owned>> mut] ref{location(values)}
+  [Reference<map<string, Owned>> mut] ref{location(values)}
   /std/collections/map/insert_ref<string, Owned>(ref, "third"raw_utf8, Owned{11i32})
   return(plus(/std/collections/map/count<string, Owned>(values),
               plus(/std/collections/map/at<string, Owned>(values, "left"raw_utf8).value,
@@ -599,10 +601,9 @@ main() {
                      }));
 }
 
-TEST_CASE("experimental map value methods validate ownership-sensitive values through Map helpers") {
+TEST_CASE("canonical map value methods validate ownership-sensitive values through map helpers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
 
 [struct]
 Owned() {
@@ -626,7 +627,8 @@ unexpectedExperimentalMapValueMethodError([ContainerError] err) {
 
 [return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapValueMethodError>]
 main() {
-  [Map<string, Owned> mut] values{mapSingle<string, Owned>("left"raw_utf8, Owned{4i32})}
+  [map<string, Owned> mut] values{map<string, Owned>()}
+  values.insert("left"raw_utf8, Owned{4i32})
   values.insert("right"raw_utf8, Owned{7i32})
   values.insert("left"raw_utf8, Owned{9i32})
   values.insert("third"raw_utf8, Owned{11i32})
@@ -649,10 +651,9 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental map borrowed methods validate ownership-sensitive values through reference helpers") {
+TEST_CASE("canonical map borrowed helper calls validate ownership-sensitive values through ref helpers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/internal_map/*
 
 [struct]
 Owned() {
@@ -668,8 +669,8 @@ Owned() {
   }
 }
 
-[return<Reference<Map<string, Owned>>>]
-borrowExperimentalMap([Reference<Map<string, Owned>>] values) {
+[return<Reference<map<string, Owned>>>]
+borrowMap([Reference<map<string, Owned>>] values) {
   return(values)
 }
 
@@ -681,20 +682,21 @@ unexpectedExperimentalMapReferenceMethodError([ContainerError] err) {
 
 [return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapReferenceMethodError>]
 main() {
-  [Map<string, Owned> mut] values{mapSingle<string, Owned>("left"raw_utf8, Owned{4i32})}
-  [Reference<Map<string, Owned>> mut] ref{borrowExperimentalMap(location(values))}
-  ref.insert("right"raw_utf8, Owned{7i32})
-  ref.insert("left"raw_utf8, Owned{9i32})
-  ref.insert("third"raw_utf8, Owned{11i32})
-  [Owned] found{try(ref.tryAt("left"raw_utf8))}
-  [Result<Owned, ContainerError>] missing{ref.tryAt("missing"raw_utf8)}
-  [i32 mut] total{plus(ref.count(), found.value)}
-  assign(total, plus(total, ref.at("right"raw_utf8).value))
-  assign(total, plus(total, ref.at_unsafe("third"raw_utf8).value))
-  if(ref.contains("right"raw_utf8),
+  [map<string, Owned> mut] values{map<string, Owned>()}
+  values.insert("left"raw_utf8, Owned{4i32})
+  [Reference<map<string, Owned>> mut] ref{borrowMap(location(values))}
+  /std/collections/map/insert_ref<string, Owned>(ref, "right"raw_utf8, Owned{7i32})
+  /std/collections/map/insert_ref<string, Owned>(ref, "left"raw_utf8, Owned{9i32})
+  /std/collections/map/insert_ref<string, Owned>(ref, "third"raw_utf8, Owned{11i32})
+  [Owned] found{try(/std/collections/map/tryAt_ref<string, Owned>(ref, "left"raw_utf8))}
+  [Result<Owned, ContainerError>] missing{/std/collections/map/tryAt_ref<string, Owned>(ref, "missing"raw_utf8)}
+  [i32 mut] total{plus(/std/collections/map/count_ref<string, Owned>(ref), found.value)}
+  assign(total, plus(total, /std/collections/map/at_ref<string, Owned>(ref, "right"raw_utf8).value))
+  assign(total, plus(total, /std/collections/map/at_unsafe_ref<string, Owned>(ref, "third"raw_utf8).value))
+  if(/std/collections/map/contains_ref<string, Owned>(ref, "right"raw_utf8),
      then() { assign(total, plus(total, 1i32)) },
      else() { })
-  if(not(ref.contains("missing"raw_utf8)),
+  if(not(/std/collections/map/contains_ref<string, Owned>(ref, "missing"raw_utf8)),
      then() { assign(total, plus(total, 2i32)) },
      else() { })
   return(Result.ok(total))
@@ -705,7 +707,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("canonical map wrappers reject non-relocation-trivial value growth") {
+TEST_CASE("canonical map wrappers accept ownership-sensitive value growth") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -727,10 +729,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find(
-            "map literal requires relocation-trivial map value type until container move/reallocation semantics "
-            "are implemented: Owned") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("canonical stdlib map wrappers resolve through explicit namespaced helpers") {
@@ -975,7 +975,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental map Ref helpers route through borrowed implementations") {
+TEST_CASE("experimental map direct-import shim stays retired") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
     CHECK(file.is_open());
@@ -996,42 +996,13 @@ TEST_CASE("experimental map Ref helpers route through borrowed implementations")
   REQUIRE(std::filesystem::exists(experimentalMapStdlibPath));
   const std::string source = readText(experimentalMapStdlibPath);
 
-  CHECK(source.find(
-            "  /std/collections/map/insert<K, V>([Map<K, V> mut] entries, [K] key, [V] value) {\n"
-            "    [i32] index{/std/collections/experimental_map/mapFindIndex<K, V>(entries, key)}") !=
-        std::string::npos);
-  CHECK(source.find(
-            "  /std/collections/map/count_ref<K, V>([Reference<Map<K, V>>] entries) {\n"
-            "    return(/std/collections/experimental_map/mapBorrowedCount<K, V>(entries))") !=
-        std::string::npos);
-  CHECK(source.find(
-            "  /std/collections/map/contains_ref<K, V>([Reference<Map<K, V>>] entries, [K] key) {\n"
-            "    return(/std/collections/experimental_map/mapBorrowedContains<K, V>(entries, key))") !=
-        std::string::npos);
-  CHECK(source.find(
-            "  /std/collections/map/tryAt_ref<K, V>([Reference<Map<K, V>>] entries, [K] key) {\n"
-            "    return(/std/collections/experimental_map/mapBorrowedTryAt<K, V>(entries, key))") !=
-        std::string::npos);
-  CHECK(source.find(
-            "  /std/collections/map/at_ref<K, V>([Reference<Map<K, V>>] entries, [K] key) {\n"
-            "    return(/std/collections/experimental_map/mapBorrowedAt<K, V>(entries, key))") !=
-        std::string::npos);
-  CHECK(source.find(
-            "  /std/collections/map/at_unsafe_ref<K, V>([Reference<Map<K, V>>] entries, [K] key) {\n"
-            "    return(/std/collections/experimental_map/mapBorrowedAtUnsafe<K, V>(entries, key))") !=
-        std::string::npos);
-  CHECK(source.find(
-            "  /std/collections/map/insert_ref<K, V>([Reference<Map<K, V>> mut] entries, [K] key, [V] value) {\n"
-            "    /std/collections/experimental_map/mapBorrowedInsert<K, V>(entries, key, value)") !=
-        std::string::npos);
-  CHECK(source.find(
-            "  /Reference/count<K, V>([Reference<Map<K, V>>] self) {\n"
-            "    return(/std/collections/experimental_map/mapCountRef<K, V>(self))") !=
-        std::string::npos);
-  CHECK(source.find(
-            "  /Reference/insert<K, V>([Reference<Map<K, V>> mut] self, [K] key, [V] value) {\n"
-            "    /std/collections/experimental_map/mapInsertRef<K, V>(self, key, value)") !=
-        std::string::npos);
+  CHECK(source.find("Rejected direct-import shim") != std::string::npos);
+  CHECK(source.find("import /std/collections/internal_map/*") != std::string::npos);
+  CHECK(source.find("[public struct]") == std::string::npos);
+  CHECK(source.find("/std/collections/map/count_ref") == std::string::npos);
+  CHECK(source.find("/std/collections/map/insert_ref") == std::string::npos);
+  CHECK(source.find("/Reference/count") == std::string::npos);
+  CHECK(source.find("/Reference/insert") == std::string::npos);
 
   CHECK(source.find("/std/collections/map/count_ref<K, V>([Reference<Map<K, V>>] entries) {\n"
                     "    [Map<K, V>] values{dereference(entries)}\n"
@@ -1146,9 +1117,9 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("experimental map missing comparable trait includes builtin map key rejects") {
+TEST_CASE("canonical map missing comparable trait reports builtin key rejection") {
   const std::string source = R"(
-import /std/collections/internal_map/*
+import /std/collections/*
 
 [struct]
 Key() {
@@ -1162,19 +1133,19 @@ Key() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Map<Key, i32>] values{mapSingle<Key, i32>(Key{1i32}, 4i32)}
+  [map<Key, i32>] values{map<Key, i32>(Key{1i32}, 4i32)}
   return(/std/collections/map/count<Key, i32>(values))
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("trait constraint not satisfied") != std::string::npos);
-  CHECK(error.find("Comparable</Key> requires less_than(/Key, /Key) -> bool") != std::string::npos);
+  CHECK(error.find("map requires builtin Comparable key type (i32, i64, u64, f32, f64, bool, or string): Key") !=
+        std::string::npos);
 }
 
-TEST_CASE("experimental map methods include builtin map key rejects on the real Map struct") {
+TEST_CASE("canonical map methods include builtin key rejection") {
   const std::string source = R"(
-import /std/collections/internal_map/*
+import /std/collections/*
 
 [struct]
 Key() {
@@ -1188,7 +1159,7 @@ Key() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Map<Key, i32>] values{mapNew<Key, i32>()}
+  [map<Key, i32>] values{map<Key, i32>()}
   if(values.contains(Key{1i32}),
      then() { return(1i32) },
      else() { return(0i32) })
@@ -1196,13 +1167,13 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("trait constraint not satisfied") != std::string::npos);
-  CHECK(error.find("Comparable</Key> requires less_than(/Key, /Key) -> bool") != std::string::npos);
+  CHECK(error.find("map requires builtin Comparable key type (i32, i64, u64, f32, f64, bool, or string): Key") !=
+        std::string::npos);
 }
 
-TEST_CASE("experimental map Ref helper calls include builtin map key rejects") {
+TEST_CASE("canonical map Ref helper calls include builtin key rejection") {
   const std::string source = R"(
-import /std/collections/internal_map/*
+import /std/collections/*
 
 [struct]
 Key() {
@@ -1216,8 +1187,8 @@ Key() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Map<Key, i32>] values{mapNew<Key, i32>()}
-  [Reference<Map<Key, i32>>] ref{location(values)}
+  [map<Key, i32>] values{map<Key, i32>()}
+  [Reference<map<Key, i32>>] ref{location(values)}
   if(/std/collections/map/contains_ref<Key, i32>(ref, Key{1i32}),
      then() { return(1i32) },
      else() { return(0i32) })
@@ -1225,13 +1196,13 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("trait constraint not satisfied") != std::string::npos);
-  CHECK(error.find("Comparable</Key> requires less_than(/Key, /Key) -> bool") != std::string::npos);
+  CHECK(error.find("map requires builtin Comparable key type (i32, i64, u64, f32, f64, bool, or string): Key") !=
+        std::string::npos);
 }
 
-TEST_CASE("experimental map borrowed methods include builtin map key rejects") {
+TEST_CASE("canonical map borrowed methods include builtin key rejection") {
   const std::string source = R"(
-import /std/collections/internal_map/*
+import /std/collections/*
 
 [struct]
 Key() {
@@ -1243,15 +1214,15 @@ Key() {
   return(equal(left.value, right.value))
 }
 
-[return<Reference<Map<Key, i32>>>]
-borrowExperimentalMap([Reference<Map<Key, i32>>] values) {
+[return<Reference<map<Key, i32>>>]
+borrowMap([Reference<map<Key, i32>>] values) {
   return(values)
 }
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Map<Key, i32>] values{mapNew<Key, i32>()}
-  [Reference<Map<Key, i32>>] ref{borrowExperimentalMap(location(values))}
+  [map<Key, i32>] values{map<Key, i32>()}
+  [Reference<map<Key, i32>>] ref{borrowMap(location(values))}
   if(ref.contains(Key{1i32}),
      then() { return(1i32) },
      else() { return(0i32) })
@@ -1259,13 +1230,13 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("trait constraint not satisfied") != std::string::npos);
-  CHECK(error.find("Comparable</Key> requires less_than(/Key, /Key) -> bool") != std::string::npos);
+  CHECK(error.find("map requires builtin Comparable key type (i32, i64, u64, f32, f64, bool, or string): Key") !=
+        std::string::npos);
 }
 
-TEST_CASE("experimental map insert helper calls include builtin map key rejects") {
+TEST_CASE("canonical map insert helper calls include builtin key rejection") {
   const std::string source = R"(
-import /std/collections/internal_map/*
+import /std/collections/*
 
 [struct]
 Key() {
@@ -1279,20 +1250,20 @@ Key() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Map<Key, i32> mut] values{mapNew<Key, i32>()}
+  [map<Key, i32> mut] values{map<Key, i32>()}
   /std/collections/map/insert<Key, i32>(values, Key{1i32}, 4i32)
   return(0i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("trait constraint not satisfied") != std::string::npos);
-  CHECK(error.find("Comparable</Key> requires less_than(/Key, /Key) -> bool") != std::string::npos);
+  CHECK(error.find("map requires builtin Comparable key type (i32, i64, u64, f32, f64, bool, or string): Key") !=
+        std::string::npos);
 }
 
-TEST_CASE("experimental map borrowed insert methods include builtin map key rejects") {
+TEST_CASE("canonical map borrowed insert methods include builtin key rejection") {
   const std::string source = R"(
-import /std/collections/internal_map/*
+import /std/collections/*
 
 [struct]
 Key() {
@@ -1306,16 +1277,16 @@ Key() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Map<Key, i32> mut] values{mapNew<Key, i32>()}
-  [Reference<Map<Key, i32>> mut] ref{location(values)}
+  [map<Key, i32> mut] values{map<Key, i32>()}
+  [Reference<map<Key, i32>> mut] ref{location(values)}
   ref.insert(Key{1i32}, 4i32)
   return(0i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("trait constraint not satisfied") != std::string::npos);
-  CHECK(error.find("Comparable</Key> requires less_than(/Key, /Key) -> bool") != std::string::npos);
+  CHECK(error.find("map requires builtin Comparable key type (i32, i64, u64, f32, f64, bool, or string): Key") !=
+        std::string::npos);
 }
 
 TEST_SUITE_END();
