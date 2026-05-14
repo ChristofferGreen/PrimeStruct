@@ -248,7 +248,9 @@ Task template:
   rooted `/map/*` direct calls as receiver candidates, and semantic call
   validation no longer strips rooted `/map/*` specialization or overload
   suffixes to recover removed compatibility definition families. The remaining
-  production lowerer/emitter experimental-map traces
+  rooted `/map/*` template definitions are no longer treated as stdlib
+  collection helpers by implicit template inference. The remaining production
+  lowerer/emitter experimental-map traces
   are source-locked as temporary internal backing substrate by
   `test_stdlib_map_ownership.cpp`, and
   all production `src`/`include` experimental-map/`Map__*` backing traces are
@@ -284,8 +286,10 @@ Task template:
   receiver-query collection no longer treats rooted `/map/*` direct calls as
   receiver candidates, and semantic call validation no longer strips rooted
   `/map/*` specialization or overload suffixes to recover removed
-  compatibility definition families, with release validation gates now locking
-  those retired semantic and lowerer/emitter adapter names.
+  compatibility definition families, and implicit template inference no longer
+  classifies rooted `/map/*` template definitions as stdlib collection helpers,
+  with release validation gates now locking those retired semantic and
+  lowerer/emitter adapter names.
   Template
   monomorphization now asks the registry for preferred experimental vector/SoA
   helper spellings instead of carrying bespoke canonical-to-experimental maps.
@@ -1685,7 +1689,7 @@ Task template:
   - owner: ai
   - created_at: 2026-05-14
   - phase: Map stdlib ownership cutover
-  - depends_on: TODO-4477
+  - depends_on: TODO-4478
   - split_from: TODO-4304
   - scope: Add a deterministic validation gate that proves the PrimeStruct map
     surface is fully `.prime`/stdlib-owned and absent from production C++
@@ -1722,6 +1726,10 @@ Task template:
       recovery from semantic call validation, so
       `src/semantics/SemanticsValidatorExpr.cpp` should stay absent from the
       map-surface trace inventory.
+    - TODO-4478 removed rooted `/map/*` stdlib-helper classification from
+      implicit template inference, so
+      `src/semantics/TemplateMonomorphImplicitTemplateInference.h` should keep
+      only its canonical map-helper trace in the map-surface trace inventory.
     - Current `experimental_map` traces are classified as temporary backing
       substrate: `Map`/`Map__*` type identity, layout, binding, result,
       access, and inference hooks; `Entry`/`Entry__*` variadic constructor

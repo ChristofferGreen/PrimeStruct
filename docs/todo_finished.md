@@ -18076,3 +18076,37 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     and its definition/parameter lookup branches, added source locks for
     semantic expression validation, removed the file's map-surface inventory
     allowance, and skipped broad release validation per the lite workflow.
+
+- [x] TODO-4478: Delete rooted map implicit-template helper
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4477
+  - split_from: TODO-4464
+  - scope: Delete rooted `/map/*` stdlib collection-helper classification
+    from implicit template inference while preserving canonical
+    `/std/collections/map/*` helper inference.
+  - implementation_notes:
+    - Targeted `src/semantics/TemplateMonomorphImplicitTemplateInference.h`,
+      whose `isStdlibCollectionHelper` predicate still classified rooted
+      `/map/*` template definitions as stdlib collection helpers.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` so the
+      implicit-template inference file keeps only its canonical map-helper
+      trace allowance.
+  - acceptance:
+    - Implicit template inference no longer treats rooted `/map/*` definitions
+      as stdlib collection helpers.
+    - Source-lock coverage rejects reintroducing rooted `/map/*` helper-path
+      classification in implicit template inference.
+    - The map-surface trace inventory allowance for
+      `src/semantics/TemplateMonomorphImplicitTemplateInference.h` decreases
+      to one canonical map-helper trace.
+  - stop_rule: Stop once rooted `/map/*` is gone from implicit template
+    helper classification and the decaying inventory is tightened for that
+    file.
+  - evidence: Removed the rooted `/map/*` predicate from
+    `isStdlibCollectionHelper`, added source locks for the removed rooted path
+    and surviving canonical path, reduced the file's inventory allowance from
+    two traces to one, and skipped broad release validation per the lite
+    workflow.

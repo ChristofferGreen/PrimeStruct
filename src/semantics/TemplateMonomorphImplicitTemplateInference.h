@@ -45,8 +45,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
       [&]() {
         if (isCanonicalVectorCompatibilityPath(def.fullPath) ||
             def.fullPath.rfind("/std/collections/soa_vector/", 0) == 0 ||
-            def.fullPath.rfind("/std/collections/map/", 0) == 0 ||
-            def.fullPath.rfind("/map/", 0) == 0) {
+            def.fullPath.rfind("/std/collections/map/", 0) == 0) {
           return true;
         }
         if (def.fullPath.rfind("/std/collections/", 0) != 0 || def.parameters.empty()) {
