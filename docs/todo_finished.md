@@ -17531,3 +17531,36 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     `mapInsert` helper spellings into canonical map operations. Updated source
     locks and map ownership docs so TODO-4304 can own the broad zero-trace
     production C++ audit.
+
+- [x] TODO-4304: Add map adapter zero-trace audit
+  - owner: ai
+  - created_at: 2026-04-28
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - scope: Add a deterministic release-path validation gate that proves
+    lowerer/emitter production C++ does not reintroduce the retired internal
+    `mapCount` / `mapContains` / `mapTryAt` / `mapAt` / `mapAtUnsafe` /
+    `mapInsert` wrapper adapter spellings.
+  - implementation_notes:
+    - The original full zero C++ map-surface audit was oversized because
+      semantic and lowerer/emitter map-surface traces still remain in
+      production C++.
+    - Split the remaining work into TODO-4462, TODO-4463, and TODO-4464 before
+      coding, then completed the highest-priority closable validation leaf.
+  - acceptance:
+    - The adapter trace check runs in the release validation path and fails
+      when retired `mapCount`-style lowerer/emitter adapter symbols or paths
+      are reintroduced.
+    - Ordinary C++ `std::map` usage, generic mapping terms, source-map
+      infrastructure, docs, tests, stdlib `.prime` files, and currently
+      unresolved semantic compatibility diagnostics remain outside this narrow
+      audit.
+    - The full production C++ zero-trace audit remains tracked by
+      TODO-4462 through TODO-4464.
+  - stop_rule: Stop once the release gate mechanically enforces the retired
+    lowerer/emitter `mapCount`-style adapter boundary and follow-up leaves own
+    the remaining production map traces.
+  - evidence: Added `scripts/check_map_adapter_traces.py`, a self-test, and
+    CTest release-path wiring for the lowerer/emitter adapter trace audit.
+    Updated the map ownership docs and split the broader audit into
+    TODO-4462, TODO-4463, and TODO-4464.

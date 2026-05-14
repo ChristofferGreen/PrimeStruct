@@ -3824,9 +3824,10 @@ re-defining it piecemeal.
   experimental vector source imports are rejected, map surface metadata is now
   stdlib-owned, and the surface manifest no longer advertises map compatibility
   spellings.
-  Direct experimental map source imports are also rejected, and public
-  `mapCount`-style wrapper bridges are retired; TODO-4304 owns the remaining
-  broad production C++ map-surface audit.
+  Direct experimental map source imports are also rejected, public
+  `mapCount`-style wrapper bridges are retired, and a release validation gate
+  now rejects reintroduced lowerer/emitter `mapCount`-style adapter traces;
+  TODO-4464 owns the remaining broad production C++ map-surface audit.
 - **Compatibility adapter inventory:** map insert helper compatibility no
   longer lives in the central surface manifest; the `CollectionsMapHelpers`
   registry metadata now classifies only canonical `/std/collections/map/*`
@@ -3904,8 +3905,8 @@ Current `stdlib/std` experimental and internal module classification:
 | --- | --- | --- | --- |
 | `/std/collections/internal_vector/*` | Internal substrate/helper namespace | Internal vector backing adapter used by canonical `/std/collections/vector/*`; it preserves the current compatibility `Vector<T>` type identity until the final vector surface audit. | TODO-4373 |
 | `/std/collections/experimental_vector/*` | Rejected compatibility namespace | Direct source imports are rejected; the shim remains only as legacy forwarding storage identity behind `/std/collections/internal_vector/*` until the final vector surface audit. | TODO-4373 |
-| `/std/collections/internal_map/*` | Internal substrate/helper namespace | Internal map backing module used by canonical `/std/collections/map/*`; it preserves the current compatibility `Map<K, V>` type identity until the final map surface audit. | TODO-4304 |
-| `/std/collections/experimental_map/*` | Rejected compatibility namespace | Direct source imports are rejected; the shim remains only as legacy forwarding storage identity behind `/std/collections/internal_map/*` until the final map surface audit. | TODO-4304 |
+| `/std/collections/internal_map/*` | Internal substrate/helper namespace | Internal map backing module used by canonical `/std/collections/map/*`; it preserves the current compatibility `Map<K, V>` type identity until the final map surface audit. | TODO-4464 |
+| `/std/collections/experimental_map/*` | Rejected compatibility namespace | Direct source imports are rejected; the shim remains only as legacy forwarding storage identity behind `/std/collections/internal_map/*` until the final map surface audit. | TODO-4464 |
 | `/std/gfx/experimental/*` | Temporary compatibility namespace | Legacy compatibility shim over canonical `/std/gfx/*`; no longer part of the public gfx contract and retained only for targeted compatibility coverage while the residual seam remains importable. | none |
 | `/std/collections/experimental_soa_vector/*` | Accepted compatibility namespace | Compatibility module behind the promoted canonical `/std/collections/soa_vector/*` public surface; direct imports are accepted only for targeted compatibility or conformance coverage. C++/VM/native compile-run coverage locks this compatibility seam; ordinary public examples should use `/std/collections/soa_vector/*`. | none |
 | `/std/collections/experimental_soa_vector_conversions/*` | Accepted compatibility namespace | Compatibility conversion module for direct experimental SoA conversion imports; canonical conversions route through `/std/collections/internal_soa_vector_conversions/*`, and direct imports remain only for targeted compatibility or conformance coverage. | none |

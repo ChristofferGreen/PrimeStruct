@@ -1432,6 +1432,20 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_vector_surface_trace_checker_self_test PROPERTIES TIMEOUT 60)
 
+  add_test(
+    NAME PrimeStruct_map_adapter_traces
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_map_adapter_traces.py
+            --root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_map_adapter_traces PROPERTIES TIMEOUT 60)
+
+  add_test(
+    NAME PrimeStruct_map_adapter_trace_checker_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_check_map_adapter_traces.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_map_adapter_trace_checker_self_test PROPERTIES TIMEOUT 60)
+
   add_custom_target(
     primestruct_graph_budget_check
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_graph_budget.py
