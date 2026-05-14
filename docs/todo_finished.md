@@ -17846,3 +17846,41 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     classification. Added source locks for the removed lowerer dispatch
     snippets, promoted TODO-4468 to Ready Now for the remaining backing-trace
     inventory, and skipped broad baseline validation per the lite workflow.
+
+- [x] TODO-4468: Classify remaining experimental-map backing traces
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4471
+  - split_from: TODO-4466
+  - scope: Audit the remaining lowerer/emitter
+    `/std/collections/experimental_map/Map__*`, `entry`, constructor, and
+    backing-storage traces, deleting any public-surface recognition and
+    documenting only the minimal internal substrate traces that must survive
+    until the zero C++ map-surface audit removes or allowlists them.
+  - implementation_notes:
+    - Used the TODO-4471 residue plus current `experimental_map` matches under
+      production `src/ir_lowerer/` and `src/emitter`.
+    - Classified retained traces as internal backing substrate, not public map
+      surface compatibility.
+  - acceptance:
+    - Remaining production lowerer/emitter `experimental_map` traces are either
+      deleted or source-locked as temporary internal backing substrate.
+    - No retained trace recognizes `experimental_map` as a public import,
+      helper, method, or user-facing map surface.
+    - The follow-up zero C++ audit scope in TODO-4464 has a complete residue
+      inventory to enforce.
+  - stop_rule: Stop once the remaining lowerer/emitter experimental-map traces
+    are classified or deleted and TODO-4464 can enforce the final zero-trace
+    state.
+  - evidence: Added a production source scan in
+    `tests/unit/test_stdlib_map_ownership.cpp` that rejects unclassified
+    `experimental_map` traces under `src/ir_lowerer` and `src/emitter`. The
+    allowed residue is limited to temporary backing substrate: `Map`/`Map__*`
+    type identity, layout, binding, result, access, and inference hooks;
+    `Entry`/`Entry__*` variadic constructor support;
+    canonical-constructor-to-backing-helper rewrites; generated `map__`
+    constructor reentry; and broad backing fallback blockers. Updated
+    TODO-4464 with that inventory and skipped broad baseline validation per
+    the lite workflow.

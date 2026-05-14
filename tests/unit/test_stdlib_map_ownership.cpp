@@ -1,9 +1,11 @@
 #include "third_party/doctest.h"
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <vector>
 
 namespace {
 
@@ -28,6 +30,100 @@ std::string readText(const std::filesystem::path &path) {
 
 std::filesystem::path collectionsFile(const std::string &name) {
   return repoRoot() / "stdlib" / "std" / "collections" / name;
+}
+
+std::string relativePathString(const std::filesystem::path &path) {
+  return std::filesystem::relative(path, repoRoot()).generic_string();
+}
+
+bool isSourceFile(const std::filesystem::path &path) {
+  const std::string extension = path.extension().string();
+  return extension == ".cpp" || extension == ".h" || extension == ".hpp";
+}
+
+std::vector<std::filesystem::path> productionMapTraceFiles() {
+  std::vector<std::filesystem::path> files;
+  for (const auto &root :
+       {repoRoot() / "src" / "ir_lowerer", repoRoot() / "src" / "emitter"}) {
+    for (const auto &entry : std::filesystem::recursive_directory_iterator(root)) {
+      if (entry.is_regular_file() && isSourceFile(entry.path())) {
+        files.push_back(entry.path());
+      }
+    }
+  }
+  std::sort(files.begin(), files.end());
+  return files;
+}
+
+bool isAllowedMapBackingFile(const std::string &relativePath) {
+  static const std::vector<std::string> files = {
+      "src/emitter/EmitterBuiltinCallPathHelpers.cpp",
+      "src/emitter/EmitterHelpersTypes.cpp",
+      "src/ir_lowerer/IrLowererAccessLoadHelpers.cpp",
+      "src/ir_lowerer/IrLowererAccessTargetResolution.cpp",
+      "src/ir_lowerer/IrLowererBindingTypeHelpers.cpp",
+      "src/ir_lowerer/IrLowererCallHelpers.cpp",
+      "src/ir_lowerer/IrLowererFlowControlHelpers.cpp",
+      "src/ir_lowerer/IrLowererInlineCallContextHelpers.cpp",
+      "src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp",
+      "src/ir_lowerer/IrLowererInlinePackedArgs.cpp",
+      "src/ir_lowerer/IrLowererInlineParamHelpers.cpp",
+      "src/ir_lowerer/IrLowererLowerEmitExprCollectionHelpers.h",
+      "src/ir_lowerer/IrLowererLowerEmitExprTailDispatch.h",
+      "src/ir_lowerer/IrLowererLowerEmitExprTryHelpers.h",
+      "src/ir_lowerer/IrLowererLowerInferenceBaseKindHelpers.cpp",
+      "src/ir_lowerer/IrLowererLowerInferenceDispatchSetup.cpp",
+      "src/ir_lowerer/IrLowererLowerInferenceFallbackSetup.cpp",
+      "src/ir_lowerer/IrLowererLowerInlineCalls.h",
+      "src/ir_lowerer/IrLowererLowerStatementsExpr.h",
+      "src/ir_lowerer/IrLowererOperatorCollectionMutationHelpers.cpp",
+      "src/ir_lowerer/IrLowererPackedResultHelpers.cpp",
+      "src/ir_lowerer/IrLowererResultMetadataHelpers.cpp",
+      "src/ir_lowerer/IrLowererSetupTypeCollectionHelpers.cpp",
+      "src/ir_lowerer/IrLowererSetupTypeDeclaredCollectionInference.cpp",
+      "src/ir_lowerer/IrLowererSetupTypeMethodTargetHelpers.cpp",
+      "src/ir_lowerer/IrLowererStatementBindingHelpers.cpp",
+      "src/ir_lowerer/IrLowererStatementBindingTypeMetadata.cpp",
+      "src/ir_lowerer/IrLowererStatementCallEmission.cpp",
+      "src/ir_lowerer/IrLowererStructFieldBindingHelpers.cpp",
+      "src/ir_lowerer/IrLowererStructLayoutHelpers.cpp",
+      "src/ir_lowerer/IrLowererStructSlotLayoutHelpers.cpp",
+      "src/ir_lowerer/IrLowererStructTypeHelpers.cpp",
+      "src/ir_lowerer/IrLowererUninitializedStructInference.cpp",
+  };
+  return std::find(files.begin(), files.end(), relativePath) != files.end();
+}
+
+bool isAllowedExperimentalMapTrace(const std::string &relativePath,
+                                   const std::string &line) {
+  auto contains = [&](const std::string &needle) {
+    return line.find(needle) != std::string::npos;
+  };
+
+  if (contains("std/collections/experimental_map/Map")) {
+    return isAllowedMapBackingFile(relativePath);
+  }
+  if (contains("std/collections/experimental_map/Entry")) {
+    return relativePath ==
+           "src/ir_lowerer/IrLowererLowerEmitExprCollectionHelpers.h";
+  }
+  if (relativePath == "src/ir_lowerer/IrLowererCallHelpers.cpp" &&
+      contains("rewrittenExpr.name = \"/std/collections/experimental_map/\" + helperLeaf;")) {
+    return true;
+  }
+  if (relativePath == "src/ir_lowerer/IrLowererSetupTypeMethodCallResolution.cpp" &&
+      contains("normalized.rfind(\"/std/collections/experimental_map/\", 0) == 0")) {
+    return true;
+  }
+  if (relativePath == "src/ir_lowerer/IrLowererLowerEmitExprCollectionHelpers.h" &&
+      contains("receiverDef->fullPath.rfind(\"/std/collections/experimental_map/\", 0) == 0")) {
+    return true;
+  }
+  if (relativePath == "src/ir_lowerer/IrLowererInlineCallContextHelpers.cpp" &&
+      contains("isSinglePathSegmentWithPrefix(path, \"/std/collections/experimental_map/map__\")")) {
+    return true;
+  }
+  return false;
 }
 
 } // namespace
@@ -135,6 +231,33 @@ TEST_CASE("canonical map surface owns implementation through internal map module
   CHECK(lowerStatementsExprSource.find("Keep direct canonical map access helpers") == std::string::npos);
   CHECK(lowerStatementsExprSource.find("keepsBuiltinCanonicalMapHelperReturn") == std::string::npos);
   CHECK(tailDispatchSource.find("rewrittenExpr.name = \"/std/collections/map/insert\"") != std::string::npos);
+}
+
+TEST_CASE("experimental map production traces are classified as backing substrate") {
+  std::vector<std::string> unclassified;
+  for (const auto &file : productionMapTraceFiles()) {
+    std::ifstream input(file);
+    REQUIRE(input.is_open());
+    const std::string relativePath = relativePathString(file);
+    std::string line;
+    size_t lineNumber = 0;
+    while (std::getline(input, line)) {
+      ++lineNumber;
+      if (line.find("experimental_map") == std::string::npos) {
+        continue;
+      }
+      if (!isAllowedExperimentalMapTrace(relativePath, line)) {
+        unclassified.push_back(relativePath + ":" + std::to_string(lineNumber) +
+                               ": " + line);
+      }
+    }
+  }
+
+  INFO("unclassified production experimental_map traces:");
+  for (const auto &trace : unclassified) {
+    INFO(trace);
+  }
+  CHECK(unclassified.empty());
 }
 
 TEST_SUITE_END();
