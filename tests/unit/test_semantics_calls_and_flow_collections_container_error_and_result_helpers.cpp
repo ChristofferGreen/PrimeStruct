@@ -1865,7 +1865,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector stdlib field-view method reports pending diagnostic") {
+TEST_CASE("experimental soa_vector stdlib field-view method reports escape diagnostic") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -1882,11 +1882,10 @@ main() {
   )";
   std::string error;
   CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") !=
-        std::string::npos);
+  CHECK(error.find("field-view escapes via return") != std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector borrowed local field-view method reports pending diagnostic") {
+TEST_CASE("experimental soa_vector borrowed local field-view method reports escape diagnostic") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -1904,11 +1903,10 @@ main() {
   )";
   std::string error;
   CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") !=
-        std::string::npos);
+  CHECK(error.find("field-view escapes via return") != std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector borrowed local field-view call-form reports pending diagnostic") {
+TEST_CASE("experimental soa_vector borrowed local field-view call-form validates") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -1927,11 +1925,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector inline location field-view methods report pending diagnostic") {
+TEST_CASE("experimental soa_vector inline location field-view methods validate") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -1952,11 +1950,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector inline location borrowed helper-return field-view methods report pending diagnostic") {
+TEST_CASE("experimental soa_vector inline location borrowed helper-return field-view methods validate") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -1981,11 +1979,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector borrowed helper-return field-view call-form reports pending diagnostic") {
+TEST_CASE("experimental soa_vector borrowed helper-return field-view call-form validates") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -2008,11 +2006,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector method-like borrowed helper-return field-view methods report pending diagnostic") {
+TEST_CASE("experimental soa_vector method-like borrowed helper-return field-view methods validate") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -2041,8 +2039,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("experimental soa_vector mutating field-view index validates") {
@@ -2111,7 +2109,7 @@ main() {
 )";
   std::string error;
   CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") !=
+  CHECK(error.find("unknown method: /std/collections/soa/field_view/x") !=
         std::string::npos);
 }
 
@@ -2133,7 +2131,7 @@ main() {
 )";
   std::string error;
   CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") !=
+  CHECK(error.find("unknown method: /std/collections/soa/field_view/x") !=
         std::string::npos);
 }
 
@@ -2189,7 +2187,7 @@ main() {
 )";
   std::string error;
   CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") !=
+  CHECK(error.find("unknown method: /std/collections/soa/field_view/x") !=
         std::string::npos);
 }
 
@@ -2290,7 +2288,7 @@ main() {
 )";
   std::string error;
   CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") !=
+  CHECK(error.find("unknown method: /std/collections/soa/field_view/x") !=
         std::string::npos);
 }
 
@@ -2324,7 +2322,7 @@ main() {
 )";
   std::string error;
   CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") !=
+  CHECK(error.find("unknown method: /std/collections/soa/field_view/x") !=
         std::string::npos);
 }
 
@@ -3878,7 +3876,7 @@ main() {
   std::string error;
   const bool valid = validateProgram(source, "/main", error);
   if (!valid) {
-    CHECK(error.find("unknown method: /std/collections/soa_vector/ref") !=
+    CHECK(error.find("unknown method: /std/collections/soa/ref") !=
           std::string::npos);
   } else {
     CHECK(error.empty());
@@ -4132,7 +4130,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("ref call fallback keeps same-path helper shadow for auto inference through struct helper return receivers") {
+TEST_CASE("ref call fallback auto inference reports public helper mismatch through struct helper return receivers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -4163,8 +4161,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK(!validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch: expected i32") != std::string::npos);
 }
 
 TEST_CASE("ref call fallback keeps same-path helper shadow for direct returns through struct helper return receivers") {
@@ -4251,7 +4249,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("get call fallback keeps same-path helper shadow for auto inference through struct helper return receivers") {
+TEST_CASE("get call fallback auto inference reports public helper mismatch through struct helper return receivers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -4282,8 +4280,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK(!validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch: expected i32") != std::string::npos);
 }
 
 TEST_CASE("get call fallback keeps same-path helper shadow for direct returns through struct helper return receivers") {

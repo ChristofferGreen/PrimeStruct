@@ -1088,6 +1088,10 @@ bool rewriteExpr(Expr &expr,
     if ((path.rfind("/std/collections/soa_vector/", 0) == 0 ||
          path.rfind("/std/collections/soa/", 0) == 0) &&
         helperReceiverExpr != nullptr) {
+      if (path == "/std/collections/soa/to_aos" ||
+          path == "/std/collections/soa/to_aos_ref") {
+        return true;
+      }
       const bool directArgsPackReceiver =
           inferCollectionReceiverFamilyForRewrite(helperReceiverExpr) == "args";
       const bool directBuiltinSoaReceiver =

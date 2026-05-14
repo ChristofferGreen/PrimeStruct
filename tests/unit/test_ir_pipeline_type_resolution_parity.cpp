@@ -669,7 +669,7 @@ main() {
   return(0i32)
 }
 )",
-          false,
+          true,
       },
   };
 

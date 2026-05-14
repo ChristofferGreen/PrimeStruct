@@ -16,10 +16,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   map count fallback surfaces.
 
 ### compile-run-tests-shell-out-to-build-binaries
-- Updated: 2026-04-28
+- Updated: 2026-05-15
 - Tags: tests, build, tooling
-- Fact: Compile-run suites invoke `./primec` and `./primevm` from the active build directory, so focused reruns need fresh standalone tool binaries and should use release-build helpers such as `scripts/rerun_backend_shard.sh`.
-- Evidence: `tests/unit/test_compile_run_smoke_core_basic.cpp` and many other compile-run suites build shell commands like `./primec --emit=...` and `./primevm ...`; `scripts/rerun_backend_shard.sh vm-math` prints the required `build-release/` cwd, CTest regex, and `PrimeStruct_compile_run_tests` command.
+- Fact: Compile-run suites invoke `./primec` and `./primevm` from the active build directory, so focused reruns need fresh standalone tool binaries as well as the doctest binary.
+- Evidence: Stale `build-release/primec` made SoA helper-return compile-run reruns keep failing after the doctest binary was rebuilt; rebuilding `primec` with `PrimeStruct_compile_run_tests` made the same focused cases pass.
 
 ### cpp-emitter-wrapper-map-direct-count-diagnostics
 - Updated: 2026-04-20
@@ -56,6 +56,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Tags: semantics, collections, compatibility
 - Fact: Removed map aliases such as `/map/count` should count as available only when an explicit source definition family exists, not when template monomorphization has generated a `__...` specialization.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated map helper specializations could mask missing `/map/count` aliases unless removed-alias checks ignored generated-only definition paths.
+
+### native-map-values-must-be-scalars
+- Updated: 2026-05-15
+- Tags: native, collections, lowering
+- Fact: Native map lowering only supports numeric, bool, and string value kinds, so map specializations with unknown semantic-product value kinds must reject before lowering.
+- Evidence: The ownership-sensitive experimental map value fixture compiled into a native crash until entry setup validated semantic-product map value kinds and rejected unsupported values before map lowering.
 
 ### maybe-method-helpers-use-rooted-families
 - Updated: 2026-05-01
@@ -184,6 +190,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
   direct public field-view wrapper indexing and canonical field syntax after
   the AST rewrite stopped materializing temporary `SoaFieldView` carriers in
   `/main`.
+
+### soa-vector-struct-access-needs-paths
+- Updated: 2026-05-15
+- Tags: ir, collections, soa
+- Fact: Native array/vector access semantic facts for `vector<Struct>` must carry specialized vector struct paths so stale local vector fallback blocking does not reject public SoA `from_aos` wrappers.
+- Evidence: Public SoA `from_aos` and field-view wrapper compile-run shards failed until `IrLowererAccessTargetResolution` recovered specialized vector struct paths for unknown element-kind vectors.
 
 ### soa-storage-temporaries-own-nested-buffers
 - Updated: 2026-04-28

@@ -2125,7 +2125,10 @@ main() {
          error.find("semantic-product method-call target missing lowered definition: "
                     "/std/collections/soa/ref_ref") != std::string::npos ||
          error.find("unknown call target: /soa_vector/ref_ref") !=
-             std::string::npos));
+             std::string::npos ||
+         error.find("native backend only supports arithmetic/comparison/clamp/min/max/"
+                    "abs/sign/saturate/convert/pointer/assign/increment/decrement "
+                    "calls in expressions (call=/ref_ref") != std::string::npos));
 }
 
 TEST_CASE("compiles and runs helper-return experimental soa_vector method shadows in C++ emitter") {

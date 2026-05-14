@@ -1353,7 +1353,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/pick") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/soa/field_view/pick") != std::string::npos);
 }
 
 TEST_CASE("soa_vector get helper call-form accepts labeled named receiver") {

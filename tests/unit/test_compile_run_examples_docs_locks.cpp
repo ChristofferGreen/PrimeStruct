@@ -1228,7 +1228,7 @@ TEST_CASE("generic soa substrate boundary stays source locked") {
         std::string::npos);
   CHECK(todo.find("Generic substrate boundary: compiler/runtime-owned SoA behavior is limited") !=
         std::string::npos);
-  CHECK(todo.find("- [ ] TODO-4307: Lower SoA helpers through ordinary `.prime`") !=
+  CHECK(todo.find("- [~] TODO-4306: Stabilize generic SoA substrate boundaries") !=
         std::string::npos);
 
   CHECK(internalStorage.find("[public struct]\n  SoaColumn<T>()") !=

@@ -2,6 +2,7 @@
 #include "MapConstructorHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
+#include <algorithm>
 #include <limits>
 
 namespace primec::semantics {
@@ -20,15 +21,10 @@ bool isPublicSoaReadRefHelper(std::string_view helperName) {
          helperName == "ref" || helperName == "ref_ref";
 }
 
-bool isPublicSoaSurfaceHelper(std::string_view helperName) {
-  return isPublicSoaReadRefHelper(helperName) ||
-         helperName == "to_aos" || helperName == "soa" ||
-         helperName == "single" || helperName == "from_aos" ||
-         helperName == "field_view";
-}
-
 bool isExplicitPublicSoaSurfaceHelper(std::string_view helperName) {
-  return isPublicSoaSurfaceHelper(helperName);
+  return isPublicSoaReadRefHelper(helperName) ||
+         helperName == "soa" || helperName == "single" ||
+         helperName == "from_aos" || helperName == "field_view";
 }
 
 } // namespace
@@ -677,9 +673,6 @@ std::optional<std::string> SemanticsValidator::builtinSoaDirectPendingHelperPath
         suffix != std::string::npos) {
       resolvedPathBase.erase(suffix);
     }
-    if (resolvedPathBase == "/std/collections/soa/field_view") {
-      return std::nullopt;
-    }
     if (!isExperimentalSoaFieldViewHelperPath(resolvedPath)) {
       return std::nullopt;
     }
@@ -913,7 +906,8 @@ std::string SemanticsValidator::preferredSoaHelperTargetForCurrentImports(
     std::string_view helperName) const {
   const std::string helper(helperName);
   const std::string samePath = preferredSamePathSoaHelperTarget(helper);
-  if (hasVisibleDefinitionPathForCurrentImports(samePath)) {
+  if (hasVisibleDefinitionPathForCurrentImports(samePath) ||
+      hasDefinitionFamilyPath(samePath)) {
     return samePath;
   }
   const std::string publicPath = "/std/collections/soa/" + helper;
@@ -938,6 +932,7 @@ bool SemanticsValidator::hasVisibleSoaHelperTargetForCurrentImports(
   const std::string canonicalPath = "/std/collections/soa_vector/" + helper;
   const std::string publicPath = "/std/collections/soa/" + helper;
   return hasVisibleDefinitionPathForCurrentImports(samePath) ||
+         hasDefinitionFamilyPath(samePath) ||
          hasVisibleDefinitionPathForCurrentImports(canonicalPath) ||
          (isPublicSoaReadRefHelper(helper) &&
           hasVisibleDefinitionPathForCurrentImports(publicPath));
@@ -950,11 +945,6 @@ std::string SemanticsValidator::preferredSoaHelperTargetForCollectionType(
   const std::string samePath = preferredSamePathSoaHelperTarget(helper);
   const std::string canonicalPath = "/std/collections/soa_vector/" + helper;
   const std::string publicPath = "/std/collections/soa/" + helper;
-  if (collectionTypePath == "/soa_vector" &&
-      isPublicSoaSurfaceHelper(helper) &&
-      hasVisibleDefinitionPathForCurrentImports(publicPath)) {
-    return publicPath;
-  }
   const std::string preferredTarget =
       preferredSoaHelperTargetForCurrentImports(helperName);
   if (preferredTarget != samePath) {
@@ -963,7 +953,26 @@ std::string SemanticsValidator::preferredSoaHelperTargetForCollectionType(
     }
     return preferredTarget;
   }
+  const bool hasVisibleSamePathHelper =
+      hasVisibleDefinitionPathForCurrentImports(samePath) ||
+      hasDefinitionFamilyPath(samePath);
+  if (collectionTypePath == "/soa_vector" && hasVisibleSamePathHelper) {
+    return samePath;
+  }
   auto paramsIt = paramsByDef_.find(samePath);
+  if (paramsIt == paramsByDef_.end() && hasDefinitionFamilyPath(samePath)) {
+    const std::string templatedPrefix = samePath + "<";
+    const std::string specializedPrefix = samePath + "__t";
+    const std::string overloadPrefix = samePath + "__ov";
+    paramsIt = std::find_if(paramsByDef_.begin(),
+                            paramsByDef_.end(),
+                            [&](const auto &entry) {
+                              return entry.first == samePath ||
+                                     entry.first.rfind(templatedPrefix, 0) == 0 ||
+                                     entry.first.rfind(specializedPrefix, 0) == 0 ||
+                                     entry.first.rfind(overloadPrefix, 0) == 0;
+                            });
+  }
   if (paramsIt == paramsByDef_.end() || paramsIt->second.empty()) {
     return canonicalPath;
   }
@@ -982,6 +991,11 @@ std::string SemanticsValidator::preferredSoaHelperTargetForCollectionType(
   }
   if (resolvedCollectionType == collectionTypePath) {
     return samePath;
+  }
+  if (collectionTypePath == "/soa_vector" &&
+      isPublicSoaReadRefHelper(helper) &&
+      hasVisibleDefinitionPathForCurrentImports(publicPath)) {
+    return publicPath;
   }
   return canonicalPath;
 }

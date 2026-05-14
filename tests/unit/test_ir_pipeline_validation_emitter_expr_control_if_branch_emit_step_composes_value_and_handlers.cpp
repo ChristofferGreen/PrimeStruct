@@ -1430,12 +1430,12 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(buildInitializerInferenceSource.find(
             "return soaFieldViewHelperPath(fieldName);") !=
         std::string::npos);
-  CHECK((buildInitializerInferenceSource.find(
-            "return std::string(\"/std/collections/soa_vector/ref\");") !=
-         std::string::npos ||
-         buildInitializerInferenceSource.find(
-             "return std::string(\"/std/collections/soa_vector/\") + *soaAccessHelper;") !=
-             std::string::npos));
+  CHECK(buildInitializerInferenceSource.find(
+            "const std::string publicPath = \"/std/collections/soa/\" + helper;\n"
+            "  if (isPublicSoaReadRefHelper(helper) &&\n"
+            "      hasVisibleDefinitionPathForCurrentImports(publicPath)) {\n"
+            "    return publicPath;\n"
+            "  }") != std::string::npos);
   CHECK(buildInitializerInferenceSource.find("soaFieldViewOrUnknownMethodDiagnostic(") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(

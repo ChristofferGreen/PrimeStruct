@@ -357,6 +357,10 @@ bool runLowerEntrySetup(const Program &program,
        !validateNoRuntimeReflectionQueriesForBackendSurface(semanticProgram, "native backend", error))) {
     return false;
   }
+  if (useNativeEffectSurface &&
+      !validateNativeMapValueKinds(semanticProgram, error)) {
+    return false;
+  }
   if (!validateSemanticProductCompletenessMatrix(
           program, *entryDefOut, semanticProgram, error)) {
     return false;

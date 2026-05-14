@@ -47,6 +47,23 @@ std::string inferExperimentalSoaVectorStructPathFromTypeName(
   return specializedExperimentalSoaVectorStructPathForElementType(normalizedArg);
 }
 
+std::string inferExperimentalVectorStructPathFromTypeName(
+    const std::string &typeName) {
+  const size_t first = typeName.find_first_not_of(" \t\r\n");
+  if (first == std::string::npos) {
+    return "";
+  }
+  const size_t last = typeName.find_last_not_of(" \t\r\n");
+  std::string normalizedArg = typeName.substr(first, last - first + 1);
+  if (normalizedArg.empty()) {
+    return "";
+  }
+  if (!normalizedArg.empty() && normalizedArg.front() == '/') {
+    normalizedArg.erase(normalizedArg.begin());
+  }
+  return specializedExperimentalVectorStructPathForElementType(normalizedArg);
+}
+
 bool hasInferredTypedWrappedMap(const LocalInfo &localInfo, LocalInfo::Kind kind) {
   return (kind == LocalInfo::Kind::Reference || kind == LocalInfo::Kind::Pointer) &&
          localInfo.mapKeyKind != LocalInfo::ValueKind::Unknown &&
@@ -117,6 +134,15 @@ std::string normalizeAccessCollectionFamily(std::string family) {
 
 bool classifySemanticArrayVectorAccessTypeText(const std::string &typeText,
                                                ArrayVectorAccessTargetInfo &targetInfoOut) {
+  std::string normalizedDirectType = trimTemplateTypeText(typeText);
+  if (isExperimentalVectorStructPath(normalizedDirectType)) {
+    targetInfoOut = {};
+    targetInfoOut.isArrayOrVectorTarget = true;
+    targetInfoOut.isVectorTarget = true;
+    targetInfoOut.structTypeName = normalizedDirectType;
+    return true;
+  }
+
   std::string base;
   std::string argText;
   if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argText)) {
@@ -139,7 +165,10 @@ bool classifySemanticArrayVectorAccessTypeText(const std::string &typeText,
     return false;
   }
   std::vector<std::string> elementArgs;
-  if (!splitTemplateArgs(elementText, elementArgs) || elementArgs.size() != 1) {
+  if (!splitTemplateArgs(elementText, elementArgs) || elementArgs.empty()) {
+    elementArgs = {elementText};
+  }
+  if (elementArgs.size() != 1) {
     return false;
   }
 
@@ -151,6 +180,10 @@ bool classifySemanticArrayVectorAccessTypeText(const std::string &typeText,
   if (targetInfoOut.isSoaVector) {
     targetInfoOut.structTypeName =
         inferExperimentalSoaVectorStructPathFromTypeName(elementArgs.front());
+  } else if (base == "vector" &&
+             targetInfoOut.elemKind == LocalInfo::ValueKind::Unknown) {
+    targetInfoOut.structTypeName =
+        inferExperimentalVectorStructPathFromTypeName(elementArgs.front());
   }
   return true;
 }
@@ -216,11 +249,11 @@ bool resolveSemanticArrayVectorAccessTargetInfo(
           findSemanticProductCollectionSpecialization(*semanticIndex, targetExpr);
       collectionFact != nullptr) {
     hasSemanticFactOut = true;
-    const std::string family = normalizeAccessCollectionFamily(
-        resolveAccessSemanticTypeText(
-            semanticProgram,
-            collectionFact->collectionFamily,
-            collectionFact->collectionFamilyId));
+    const std::string rawFamily = resolveAccessSemanticTypeText(
+        semanticProgram,
+        collectionFact->collectionFamily,
+        collectionFact->collectionFamilyId);
+    const std::string family = normalizeAccessCollectionFamily(rawFamily);
     if (family != "array" && family != "vector" && family != "Buffer" &&
         family != "soa_vector") {
       return false;
@@ -232,13 +265,19 @@ bool resolveSemanticArrayVectorAccessTargetInfo(
     const std::string elementTypeText = resolveAccessSemanticTypeText(
         semanticProgram, collectionFact->elementTypeText, collectionFact->elementTypeTextId);
     targetInfoOut.elemKind = valueKindFromTypeName(elementTypeText);
-    if (targetInfoOut.elemKind == LocalInfo::ValueKind::Unknown &&
-        !targetInfoOut.isSoaVector) {
-      return false;
-    }
     if (targetInfoOut.isSoaVector) {
       targetInfoOut.structTypeName =
           inferExperimentalSoaVectorStructPathFromTypeName(elementTypeText);
+    } else if (family == "vector" &&
+               targetInfoOut.elemKind == LocalInfo::ValueKind::Unknown) {
+      targetInfoOut.structTypeName = elementTypeText.empty() &&
+                                             isExperimentalVectorStructPath(rawFamily)
+                                         ? rawFamily
+                                         : inferExperimentalVectorStructPathFromTypeName(elementTypeText);
+    }
+    if (targetInfoOut.elemKind == LocalInfo::ValueKind::Unknown &&
+        targetInfoOut.structTypeName.empty()) {
+      return false;
     }
     return true;
   }
@@ -1118,10 +1157,8 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       return inferred;
     }
   }
-  if (hasSemanticTargetFact &&
-      (info.elemKind != LocalInfo::ValueKind::Unknown ||
-       !info.structTypeName.empty())) {
-    return info;
+  if (hasSemanticTargetFact) {
+    return {};
   }
 
   if (target.kind == Expr::Kind::Name) {

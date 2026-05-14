@@ -2196,8 +2196,27 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           !returnBase.empty()) {
         normalizedReturnBaseType = normalizeBindingTypeName(returnBase);
       }
-      if (normalizedReturnType.empty() || normalizedReturnBaseType == "auto" ||
-          !normalizeCollectionTypePath(normalizedReturnType).empty()) {
+      const std::string normalizedReturnCollectionType =
+          normalizeCollectionTypePath(normalizedReturnType);
+      if (!normalizedReturnCollectionType.empty()) {
+        if (normalizedReturnCollectionType == "/soa_vector" &&
+            (canonicalCollectionHelperName == "count" ||
+             canonicalCollectionHelperName == "count_ref" ||
+             canonicalCollectionHelperName == "get" ||
+             canonicalCollectionHelperName == "get_ref" ||
+             canonicalCollectionHelperName == "ref" ||
+             canonicalCollectionHelperName == "ref_ref" ||
+             canonicalCollectionHelperName == "to_aos" ||
+             canonicalCollectionHelperName == "to_aos_ref" ||
+             canonicalCollectionHelperName == "push" ||
+             canonicalCollectionHelperName == "reserve")) {
+          return setCollectionMethodTarget(
+              preferredSoaHelperTargetForCollectionType(
+                  canonicalCollectionHelperName, "/soa_vector"));
+        }
+        return false;
+      }
+      if (normalizedReturnType.empty() || normalizedReturnBaseType == "auto") {
         return false;
       }
       if (normalizedReturnBaseType == "Reference" ||
