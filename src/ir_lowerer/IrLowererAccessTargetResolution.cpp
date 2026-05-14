@@ -53,11 +53,6 @@ bool hasInferredTypedWrappedMap(const LocalInfo &localInfo, LocalInfo::Kind kind
          localInfo.mapValueKind != LocalInfo::ValueKind::Unknown;
 }
 
-bool isExperimentalMapStructPath(const std::string &structPath) {
-  return structPath == "/std/collections/experimental_map/Map" ||
-         structPath.rfind("/std/collections/experimental_map/Map__", 0) == 0;
-}
-
 std::string mapKindTypeName(LocalInfo::ValueKind kind) {
   switch (kind) {
   case LocalInfo::ValueKind::Int32:
@@ -645,10 +640,10 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
     const std::string resolvedStructTypeName =
         resolvedExperimentalMapStructPath(localInfo.structTypeName);
     const bool preserveDirectExperimentalMapStruct =
-        isDirectMapStorage && isExperimentalMapStructPath(resolvedStructTypeName);
+        isDirectMapStorage && isExperimentalMapStructTypePath(resolvedStructTypeName);
     if (((!info.isWrappedMapTarget || dereferenced) &&
          (!isDirectMapStorage || preserveDirectExperimentalMapStruct)) ||
-        (info.isWrappedMapTarget && isExperimentalMapStructPath(resolvedStructTypeName))) {
+        (info.isWrappedMapTarget && isExperimentalMapStructTypePath(resolvedStructTypeName))) {
       info.structTypeName = resolvedStructTypeName;
     }
     return true;
@@ -697,10 +692,10 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
     const std::string resolvedStructTypeName =
         resolvedExperimentalMapStructPath(localInfo.structTypeName);
     const bool preserveDirectExperimentalMapStruct =
-        isDirectMapStorage && isExperimentalMapStructPath(resolvedStructTypeName);
+        isDirectMapStorage && isExperimentalMapStructTypePath(resolvedStructTypeName);
     if (((!info.isWrappedMapTarget || dereferenced) &&
          (!isDirectMapStorage || preserveDirectExperimentalMapStruct)) ||
-        (info.isWrappedMapTarget && isExperimentalMapStructPath(resolvedStructTypeName))) {
+        (info.isWrappedMapTarget && isExperimentalMapStructTypePath(resolvedStructTypeName))) {
       info.structTypeName = resolvedStructTypeName;
     }
     return true;

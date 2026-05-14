@@ -1128,6 +1128,14 @@ TEST_CASE("ir lowerer vector type layout traces use generic collection helpers")
   CHECK(accessTargetSource.find(
             "isExperimentalCollectionTypeName(structTypeName, \"vector\", \"Vector\")") !=
         std::string::npos);
+  CHECK(accessTargetSource.find(
+            "isExperimentalMapStructTypePath(resolvedStructTypeName)") !=
+        std::string::npos);
+  CHECK(accessTargetSource.find("bool isExperimentalMapStructPath(") ==
+        std::string::npos);
+  CHECK(accessTargetSource.find(
+            "structPath.rfind(\"/std/collections/experimental_map/Map__\", 0)") ==
+        std::string::npos);
   CHECK(bindingTypeSource.find(
             "isBuiltinCollectionTypeName(name, \"vector\")") !=
         std::string::npos);

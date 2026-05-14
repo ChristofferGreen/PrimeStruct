@@ -1396,10 +1396,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4506: Route access-target map backing predicate through helper") !=
+                  "- TODO-4305: Rename and style canonical `.prime` SoA surface") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
-                  "- TODO-4305: Rename and style canonical `.prime` SoA surface") !=
+                  "- TODO-4306: Stabilize generic SoA substrate boundaries") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4308: Move SoA surface metadata out of C++") !=
         std::string::npos);
@@ -1415,8 +1415,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4506: Route access-target map backing predicate through helper\n"
-                  "- TODO-4305: Rename and style canonical `.prime` SoA surface") !=
+                  "- TODO-4305: Rename and style canonical `.prime` SoA surface\n"
+                  "- TODO-4306: Stabilize generic SoA substrate boundaries") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
       "TODO-4268: Add heterogeneous type-pack syntax and metadata",

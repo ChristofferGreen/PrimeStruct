@@ -19012,3 +19012,39 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     coverage, removed `src/ir_lowerer/IrLowererAccessLoadHelpers.cpp` from
     both map trace inventories and ownership allowlists, and promoted
     TODO-4506 for the next focused access-target backing predicate cleanup.
+
+- [x] TODO-4506: Route access-target map backing predicate through helper
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4505
+  - split_from: TODO-4464
+  - scope: Remove the local experimental map backing type predicate from IR
+    access-target resolution by delegating preservation checks to the shared
+    lowerer map backing type predicate.
+  - implementation_notes:
+    - Targeted `src/ir_lowerer/IrLowererAccessTargetResolution.cpp`, where
+      the file-local `isExperimentalMapStructPath` still checked
+      `/std/collections/experimental_map/Map` and `Map__` directly before
+      preserving specialized direct/wrapped map target struct paths.
+    - Reused the shared `isExperimentalMapStructTypePath` helper for
+      preservation checks, while leaving type-construction helpers for later
+      bounded leaves if they remain necessary.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` and
+      `scripts/check_map_backing_traces.py` for the removed predicate traces
+      and refreshed focused source-lock coverage.
+  - acceptance:
+    - Access-target resolution still preserves specialized direct and wrapped
+      map target struct paths.
+    - The target file no longer contains the target-local experimental map
+      backing type predicate.
+    - The map-surface trace inventory and source-lock coverage prevent
+      reintroducing the removed trace.
+  - stop_rule: Stop once access-target map backing preservation delegates to
+    the shared helper, focused coverage passes, and the target file inventory
+    allowance is tightened for the removed predicate traces.
+  - evidence: Routed access-target map backing preservation through the shared
+    lowerer map backing predicate, tightened the access-target map trace
+    allowances by the removed predicate traces, refreshed the source lock, and
+    promoted TODO-4305 as the next Ready Now leaf.
