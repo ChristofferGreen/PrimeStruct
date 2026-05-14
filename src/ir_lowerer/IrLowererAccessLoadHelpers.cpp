@@ -966,9 +966,13 @@ void emitArrayVectorAccessLoad(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm) {
-  if (accessName == "at") {
+  if (accessName == "at" || (accessName == "at_unsafe" && isVectorTarget)) {
     const int32_t countLocal = allocTempLocal();
     emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal));
+    if (accessName == "at_unsafe") {
+      emitInstruction(IrOpcode::PushI64, static_cast<uint64_t>(IrSlotBytes));
+      emitInstruction(IrOpcode::AddI64, 0);
+    }
     emitInstruction(IrOpcode::LoadIndirect, 0);
     emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal));
 

@@ -63,6 +63,14 @@ main() {
     INFO("xcrun not available; skipping macOS metal/metallib shader compile smoke");
     return;
   }
+  if (runCommand("xcrun --find metal > /dev/null 2>&1") != 0) {
+    INFO("xcrun metal not available; skipping macOS metal shader compile smoke");
+    return;
+  }
+  if (runCommand("xcrun --find metallib > /dev/null 2>&1") != 0) {
+    INFO("xcrun metallib not available; skipping macOS metallib link smoke");
+    return;
+  }
 
   const std::filesystem::path outDir =
       testScratchPath("") / "primec_spinning_cube_metal_shader_path";

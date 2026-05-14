@@ -18,7 +18,7 @@ TEST_CASE("native bare vector mutator methods reject without imported helpers") 
   expectBareVectorMutatorMethodImportRequirement("native", "remove_swap", "1i32");
 }
 
-TEST_CASE("compiles and runs native user array count method shadow") {
+TEST_CASE("compiles and runs native builtin array count before user method shadow") {
   const std::string source = R"(
 [return<int>]
 /array/count([array<i32>] values) {
@@ -37,7 +37,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 99);
+  CHECK(runCommand(exePath) == 2);
 }
 
 TEST_CASE("compiles and runs native builtin array count before user call shadow") {

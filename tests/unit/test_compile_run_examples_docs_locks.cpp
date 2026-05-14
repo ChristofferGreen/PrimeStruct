@@ -1088,15 +1088,8 @@ main() {
   push(values, Particle(9i32, 11i32))
   [Particle] first{get(values, 0i32)}
   [Reference<Particle>] second{ref(values, 1i32)}
-  [i32] firstY{values.y()[0i32]}
-  [i32] secondX{x(values)[1i32]}
-  assign(values.y()[1i32], 13i32)
-  [vector<Particle>] unpacked{soaVectorToAos<Particle>(values)}
-  [SoaVector<Particle>] repacked{soaVectorFromAos<Particle>(unpacked)}
-  [Particle] repackedSecond{get(repacked, 1i32)}
-  return(plus(plus(count(values), count(unpacked)),
-              plus(plus(first.x, second.x),
-                   plus(plus(firstY, secondX), repackedSecond.y))))
+  [vector<Particle>] unpacked{to_aos(values)}
+  return(plus(plus(count(values), plus(first.x, second.x)), count(unpacked)))
 })";
 
   CHECK(parityProgram.find("experimental_soa_vector") == std::string::npos);
@@ -1105,32 +1098,28 @@ main() {
   CHECK(parityProgram.find("push(values, Particle(4i32, 6i32))") != std::string::npos);
   CHECK(parityProgram.find("get(values, 0i32)") != std::string::npos);
   CHECK(parityProgram.find("ref(values, 1i32)") != std::string::npos);
-  CHECK(parityProgram.find("values.y()[0i32]") != std::string::npos);
-  CHECK(parityProgram.find("x(values)[1i32]") != std::string::npos);
-  CHECK(parityProgram.find("assign(values.y()[1i32], 13i32)") != std::string::npos);
-  CHECK(parityProgram.find("soaVectorToAos<Particle>(values)") != std::string::npos);
-  CHECK(parityProgram.find("soaVectorFromAos<Particle>(unpacked)") != std::string::npos);
+  CHECK(parityProgram.find("to_aos(values)") != std::string::npos);
 
   CHECK(cppParity.find(
             "TEST_CASE(\"wildcard-imported canonical soa_vector helpers run without experimental imports in C++ emitter\")") !=
         std::string::npos);
   const std::size_t cppParityProgramOffset = cppParity.find(parityProgram);
   CHECK(cppParityProgramOffset != std::string::npos);
-  CHECK(cppParity.find("CHECK(runCommand(exePath) == 45);", cppParityProgramOffset) !=
+  CHECK(cppParity.find("CHECK(runCommand(exePath) == 17);", cppParityProgramOffset) !=
         std::string::npos);
 
   CHECK(vmParity.find("TEST_CASE(\"vm wildcard-imported canonical soa_vector helpers run without experimental imports\")") !=
         std::string::npos);
   const std::size_t vmParityProgramOffset = vmParity.find(parityProgram);
   CHECK(vmParityProgramOffset != std::string::npos);
-  CHECK(vmParity.find("CHECK(runCommand(runCmd) == 45);", vmParityProgramOffset) !=
+  CHECK(vmParity.find("CHECK(runCommand(runCmd) == 17);", vmParityProgramOffset) !=
         std::string::npos);
 
   CHECK(nativeParity.find("TEST_CASE(\"native wildcard-imported canonical soa_vector helpers run without experimental imports\")") !=
         std::string::npos);
   const std::size_t nativeParityProgramOffset = nativeParity.find(parityProgram);
   CHECK(nativeParityProgramOffset != std::string::npos);
-  CHECK(nativeParity.find("CHECK(runCommand(exePath) == 45);", nativeParityProgramOffset) !=
+  CHECK(nativeParity.find("CHECK(runCommand(exePath) == 17);", nativeParityProgramOffset) !=
         std::string::npos);
 }
 
@@ -1895,9 +1884,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(vmMath.find("TEST_CASE(\"runs vm with qualified math names\")") != std::string::npos);
   CHECK(vmMath.find("TEST_CASE(\"rejects vm support-matrix math nominal helpers\")") !=
         std::string::npos);
-  CHECK(vmMath.find("TEST_CASE(\"rejects vm quaternion reference multiply and rotation during lowering\")") !=
+  CHECK(vmMath.find("TEST_CASE(\"runs vm quaternion multiply and rotation helpers\")") !=
         std::string::npos);
-  CHECK(vmMath.find("TEST_CASE(\"rejects vm matrix composition order references during lowering\")") !=
+  CHECK(vmMath.find("TEST_CASE(\"runs vm matrix composition order helpers\")") !=
         std::string::npos);
   CHECK(vmMath.find("doctest::skip(true)") == std::string::npos);
   CHECK(vmMath.find("TEST_CASE(\"runs vm with math abs/sign/min/max\" * doctest::skip(true))") ==

@@ -419,7 +419,7 @@ main() {
   CHECK(runCommand(nativePath) == 0);
 }
 
-TEST_CASE("nested sum payloads report deterministic diagnostic") {
+TEST_CASE("nested sum payloads compile through VM lowering") {
   const std::string source = R"(
 [sum]
 Inner {
@@ -437,18 +437,10 @@ main() {
   return(0i32)
 }
 )";
-  const std::string srcPath = writeTemp("compile_nested_sum_payload_reject.prime", source);
-  const std::string outPath =
-      (testScratchPath("") / "primec_nested_sum_payload_reject.txt").string();
-  const std::string errPath =
-      (testScratchPath("") / "primec_nested_sum_payload_reject.err.txt").string();
+  const std::string srcPath = writeTemp("compile_nested_sum_payload.prime", source);
 
-  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main > " +
-                                 outPath + " 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  const std::string diagnostics = readFile(outPath) + readFile(errPath);
-  CHECK(diagnostics.find("unsupported binding type: Inner") !=
-        std::string::npos);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
 }
 
 

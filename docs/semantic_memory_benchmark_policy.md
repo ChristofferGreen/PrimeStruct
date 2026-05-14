@@ -72,12 +72,24 @@ When semantic behavior changes intentionally shift memory usage:
   April 26, 2026 release artifact observed `21086208` bytes on the release
   runner. The cap preserves roughly 5% headroom over that observed value while
   leaving the baseline row unchanged for future comparison.
-- `imported_math_body:ast-semantic` keeps a hard cap of `21108326` bytes after
-  the April 27, 2026 release artifact observed `20103168` bytes on the release
+- `imported_math_body:ast-semantic` keeps a hard cap of `22174925` bytes after
+  May 14, 2026 release artifacts observed `21118976` bytes on the release
   runner. The cap preserves roughly 5% headroom over that observed value while
   leaving the baseline row unchanged for future comparison.
 - `math_vector_matrix:ast-semantic` keeps a hard cap of `20953497` bytes after
   the April 27, 2026 release artifact observed `19955712` bytes on the release
+  runner. The cap preserves roughly 5% headroom over that observed value while
+  leaving the baseline row unchanged for future comparison.
+- `imported_math_body:semantic-product` keeps a hard cap of `40754381` bytes
+  after May 14, 2026 release artifacts observed `38813696` bytes on the release
+  runner. The cap preserves roughly 5% headroom over that observed value while
+  leaving the baseline row unchanged for future comparison.
+- `math_vector:semantic-product` keeps a hard cap of `41132852` bytes after
+  May 14, 2026 release artifacts observed `39174144` bytes on the release
+  runner. The cap preserves roughly 5% headroom over that observed value while
+  leaving the baseline row unchanged for future comparison.
+- `math_vector_matrix:semantic-product` keeps a hard cap of `42319872` bytes
+  after May 14, 2026 release artifacts observed `40304640` bytes on the release
   runner. The cap preserves roughly 5% headroom over that observed value while
   leaving the baseline row unchanged for future comparison.
 

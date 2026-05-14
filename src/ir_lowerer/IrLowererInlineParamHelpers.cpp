@@ -87,7 +87,16 @@ bool isStdUiStructAliasMatch(const std::string &expectedStruct,
 bool isStructParamMatch(const std::string &calleePath,
                         const std::string &expectedStruct,
                         const std::string &argStruct) {
-  return expectedStruct == argStruct ||
+  auto matchesOptionalRootSlash = [](const std::string &left, const std::string &right) {
+    if (left == right) {
+      return true;
+    }
+    if (!left.empty() && left.front() == '/' && left.substr(1) == right) {
+      return true;
+    }
+    return !right.empty() && right.front() == '/' && right.substr(1) == left;
+  };
+  return matchesOptionalRootSlash(expectedStruct, argStruct) ||
          isBuiltinVectorStructMatch(expectedStruct, argStruct) ||
          isBuiltinSoaToAosStructMatch(calleePath, expectedStruct, argStruct) ||
          isStdUiStructAliasMatch(expectedStruct, argStruct);
@@ -837,17 +846,22 @@ bool emitInlineDefinitionCallParameters(
                 (argStruct.empty() ? std::string("<unknown>") : argStruct);
         return false;
       }
+      LocalInfo copiedParamInfo = paramInfo;
+      if (!argStruct.empty() && argStruct.front() == '/' &&
+          argStruct.substr(1) == paramInfo.structTypeName) {
+        copiedParamInfo.structTypeName = argStruct;
+      }
       if (paramInfo.isMutable) {
         if (!emitExpr(*orderedArg, callerLocals)) {
           return false;
         }
-        emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(paramInfo.index));
-        calleeLocals.emplace(param.name, paramInfo);
+        emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(copiedParamInfo.index));
+        calleeLocals.emplace(param.name, copiedParamInfo);
         continue;
       }
 
       StructSlotLayoutInfo layout;
-      if (!resolveStructSlotLayout(paramInfo.structTypeName, layout)) {
+      if (!resolveStructSlotLayout(copiedParamInfo.structTypeName, layout)) {
         return false;
       }
       const int32_t baseLocal = nextLocal;
@@ -909,9 +923,9 @@ bool emitInlineDefinitionCallParameters(
       }
       if (!builtinSoaToAosStructBridge &&
           shouldDisarmStructCopySourceExpr(*orderedArg)) {
-        emitDisarmTemporaryStructAfterCopy(emitInstruction, srcPtrLocal, paramInfo.structTypeName);
+        emitDisarmTemporaryStructAfterCopy(emitInstruction, srcPtrLocal, copiedParamInfo.structTypeName);
       }
-      calleeLocals.emplace(param.name, paramInfo);
+      calleeLocals.emplace(param.name, copiedParamInfo);
       continue;
     }
 

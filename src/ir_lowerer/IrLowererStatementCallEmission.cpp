@@ -1819,6 +1819,21 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     emitArrayIndexOutOfBounds();
     instructions[okJump].imm = instructions.size();
   };
+  auto isInternalSoaMetadataSetterCallee = [](const Definition &callee) {
+    return callee.fullPath.rfind(
+               "/std/collections/internal_soa_storage/SoaColumn", 0) == 0 ||
+           callee.fullPath.rfind(
+               "/std/collections/internal_soa_storage/SoaFieldView", 0) == 0;
+  };
+  auto isInternalVectorMetadataSetterCallee = [](const Definition &callee) {
+    return isExperimentalVectorTypePath(callee.fullPath);
+  };
+  auto metadataCountSlotOffset = [&](const Definition &callee) {
+    return isInternalVectorMetadataSetterCallee(callee) ? 0 : 1;
+  };
+  auto metadataCapacitySlotOffset = [&](const Definition &callee) {
+    return isInternalVectorMetadataSetterCallee(callee) ? 1 : 2;
+  };
   auto rewriteBareVectorMethodMutatorToDirectCall = [&](const Expr &callExpr, Expr &rewrittenExpr) {
     if (callExpr.kind != Expr::Kind::Call || !callExpr.isMethodCall || callExpr.args.empty() ||
         !callExpr.namespacePrefix.empty() || callExpr.name.find('/') != std::string::npos) {
@@ -1911,16 +1926,16 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
   }
 
   if (!directStmt.isMethodCall && directStmt.args.size() == 2) {
-    if (const Definition *callee = resolveDefinitionCall(directStmt);
+	if (const Definition *callee = resolveDefinitionCall(directStmt);
         callee != nullptr &&
         (isSimpleCallName(directStmt, "set_field_count") ||
          isSimpleCallName(directStmt, "set_field_capacity")) &&
-        (callee->fullPath.rfind(
-             "/std/collections/internal_soa_storage/SoaColumn", 0) == 0 ||
-         callee->fullPath.rfind(
-             "/std/collections/internal_soa_storage/SoaFieldView", 0) == 0)) {
+        (isInternalSoaMetadataSetterCallee(*callee) ||
+         isInternalVectorMetadataSetterCallee(*callee))) {
       const Expr &receiver = directStmt.args.front();
       const Expr &value = directStmt.args[1];
+      const int32_t countSlotOffset = metadataCountSlotOffset(*callee);
+      const int32_t capacitySlotOffset = metadataCapacitySlotOffset(*callee);
       if (!emitExpr(value, localsIn)) {
         return DirectCallStatementEmitResult::Error;
       }
@@ -1930,17 +1945,17 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
 
       if (isSimpleCallName(directStmt, "set_field_count")) {
         if (!emitExpr(value, localsIn) ||
-            !emitVectorHeaderFieldLoad(receiver, 2)) {
+            !emitVectorHeaderFieldLoad(receiver, capacitySlotOffset)) {
           return DirectCallStatementEmitResult::Error;
         }
         instructions.push_back({IrOpcode::CmpGtI32, 0});
         emitBoundsTrapIfStackTrue();
-        if (!emitVectorHeaderFieldAddress(receiver, 1) ||
+        if (!emitVectorHeaderFieldAddress(receiver, countSlotOffset) ||
             !emitExpr(value, localsIn)) {
           return DirectCallStatementEmitResult::Error;
         }
       } else {
-        if (!emitVectorHeaderFieldLoad(receiver, 1) ||
+        if (!emitVectorHeaderFieldLoad(receiver, countSlotOffset) ||
             !emitExpr(value, localsIn)) {
           return DirectCallStatementEmitResult::Error;
         }
@@ -1952,7 +1967,7 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
         instructions.push_back({IrOpcode::PushI32, 1073741823});
         instructions.push_back({IrOpcode::CmpGtI32, 0});
         emitBoundsTrapIfStackTrue();
-        if (!emitVectorHeaderFieldAddress(receiver, 2) ||
+        if (!emitVectorHeaderFieldAddress(receiver, capacitySlotOffset) ||
             !emitExpr(value, localsIn)) {
           return DirectCallStatementEmitResult::Error;
         }
@@ -2003,7 +2018,9 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     const std::string priorError = error;
     const Definition *callee = resolveMethodCallDefinition(directStmt, localsIn);
     if (callee != nullptr && isVectorMetadataSetterMethod &&
-        isStructDefinitionCallee(*callee)) {
+        isStructDefinitionCallee(*callee) &&
+        !isInternalVectorMetadataSetterCallee(*callee) &&
+        !isInternalSoaMetadataSetterCallee(*callee)) {
       error = priorError;
       return DirectCallStatementEmitResult::NotMatched;
     }
@@ -2015,17 +2032,17 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
       return DirectCallStatementEmitResult::Error;
     }
     if (callee) {
-      const bool isInternalSoaMetadataSetter =
+      const bool isInternalMetadataSetter =
           directStmt.args.size() == 2 &&
           (isSimpleCallName(directStmt, "set_field_count") ||
            isSimpleCallName(directStmt, "set_field_capacity")) &&
-          (callee->fullPath.rfind(
-               "/std/collections/internal_soa_storage/SoaColumn", 0) == 0 ||
-           callee->fullPath.rfind(
-               "/std/collections/internal_soa_storage/SoaFieldView", 0) == 0);
-      if (isInternalSoaMetadataSetter) {
+          (isInternalSoaMetadataSetterCallee(*callee) ||
+           isInternalVectorMetadataSetterCallee(*callee));
+      if (isInternalMetadataSetter) {
         const Expr &receiver = directStmt.args.front();
         const Expr &value = directStmt.args[1];
+        const int32_t countSlotOffset = metadataCountSlotOffset(*callee);
+        const int32_t capacitySlotOffset = metadataCapacitySlotOffset(*callee);
         if (!emitExpr(value, localsIn)) {
           return DirectCallStatementEmitResult::Error;
         }
@@ -2035,12 +2052,12 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
 
         if (isSimpleCallName(directStmt, "set_field_count")) {
           if (!emitExpr(value, localsIn) ||
-              !emitVectorHeaderFieldLoad(receiver, 2)) {
+              !emitVectorHeaderFieldLoad(receiver, capacitySlotOffset)) {
             return DirectCallStatementEmitResult::Error;
           }
           instructions.push_back({IrOpcode::CmpGtI32, 0});
           emitBoundsTrapIfStackTrue();
-          if (!emitVectorHeaderFieldAddress(receiver, 1) ||
+          if (!emitVectorHeaderFieldAddress(receiver, countSlotOffset) ||
               !emitExpr(value, localsIn)) {
             return DirectCallStatementEmitResult::Error;
           }
@@ -2050,7 +2067,7 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
           return DirectCallStatementEmitResult::Emitted;
         }
 
-        if (!emitVectorHeaderFieldLoad(receiver, 1) ||
+        if (!emitVectorHeaderFieldLoad(receiver, countSlotOffset) ||
             !emitExpr(value, localsIn)) {
           return DirectCallStatementEmitResult::Error;
         }
@@ -2062,7 +2079,7 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
         instructions.push_back({IrOpcode::PushI32, 1073741823});
         instructions.push_back({IrOpcode::CmpGtI32, 0});
         emitBoundsTrapIfStackTrue();
-        if (!emitVectorHeaderFieldAddress(receiver, 2) ||
+        if (!emitVectorHeaderFieldAddress(receiver, capacitySlotOffset) ||
             !emitExpr(value, localsIn)) {
           return DirectCallStatementEmitResult::Error;
         }

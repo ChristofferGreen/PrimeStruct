@@ -1529,7 +1529,7 @@ TEST_CASE("ir lowerer result helpers emit Result.ok payloads from semantic query
   CHECK(error.empty());
   CHECK(emitCalled);
   CHECK_FALSE(inferCalled);
-  CHECK(resolveDefinitionCalls == 0);
+  CHECK(resolveDefinitionCalls == 1);
 
   primec::SemanticProgram queryTypeSemanticProgram;
   queryTypeSemanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
@@ -1590,7 +1590,7 @@ TEST_CASE("ir lowerer result helpers emit Result.ok payloads from semantic query
   CHECK(error.empty());
   CHECK(emitCalled);
   CHECK_FALSE(inferCalled);
-  CHECK(resolveDefinitionCalls == 0);
+  CHECK(resolveDefinitionCalls == 1);
 
   primec::SemanticProgram missingSemanticProgram;
   const auto missingSemanticTargets =

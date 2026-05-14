@@ -87,6 +87,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: Semantic-product return-info precomputation enumerates callable definitions only through `callableSummaryIndicesByPathId`, so tests that manually create callable summaries must seed that published map.
 - Evidence: `precomputeSemanticProductReturnInfoCache(...)` now fails closed for raw callable summaries without the map, and inference get-return-info setup tests pin both mapped and raw-only paths.
 
+### semantic-memory-policy-uses-runner-headroom
+- Updated: 2026-05-14
+- Tags: benchmarks, ci, memory
+- Fact: Release semantic-memory RSS budgets use runner-observed soft caps plus about five percent hard-cap headroom for noisy fixture/phase pairs.
+- Evidence: Stabilizing the release gate required refreshing imported-math and vector semantic-memory caps in `benchmarks/semantic_memory_budget_policy.json` plus `docs/semantic_memory_benchmark_policy.md`, after which the focused semantic-memory gate and full `./scripts/compile.sh --release` passed.
+
 ### semantic-product-index-map-authority
 - Updated: 2026-05-06
 - Tags: semantics, ir, tests

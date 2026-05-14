@@ -81,6 +81,31 @@ bool buildCallableDefinitionCallContext(
     addGpuLocal(kGpuGlobalIdZName);
   }
 
+  auto resolveStructLayoutForLocal = [&](LocalInfo &info) {
+    if (info.isFileHandle) {
+      info.structTypeName.clear();
+      return true;
+    }
+    if (info.structTypeName.empty() || info.structSlotCount > 0) {
+      return true;
+    }
+    StructSlotLayoutInfo layout;
+    if (!resolveStructSlotLayout(info.structTypeName, layout)) {
+      if (info.structTypeName.empty() || info.structTypeName.front() == '/') {
+        error = "internal error: missing struct slot layout for " + info.structTypeName;
+        return false;
+      }
+      const std::string rootedStructTypeName = "/" + info.structTypeName;
+      if (!resolveStructSlotLayout(rootedStructTypeName, layout)) {
+        error = "internal error: missing struct slot layout for " + info.structTypeName;
+        return false;
+      }
+      info.structTypeName = rootedStructTypeName;
+    }
+    info.structSlotCount = layout.totalSlots;
+    return true;
+  };
+
   std::string helperParent;
   if (isStructHelperDefinition(def, structNames, helperParent) &&
       !definitionHasTransform(def, "static")) {
@@ -92,16 +117,8 @@ bool buildCallableDefinitionCallContext(
     if (!inferParameterLocalInfo(thisParam, definitionLocals, thisInfo, error)) {
       return false;
     }
-    if (thisInfo.isFileHandle) {
-      thisInfo.structTypeName.clear();
-    } else if (!thisInfo.structTypeName.empty() &&
-               thisInfo.structSlotCount <= 0) {
-      StructSlotLayoutInfo layout;
-      if (!resolveStructSlotLayout(thisInfo.structTypeName, layout)) {
-        error = "internal error: missing struct slot layout for " + thisInfo.structTypeName;
-        return false;
-      }
-      thisInfo.structSlotCount = layout.totalSlots;
+    if (!resolveStructLayoutForLocal(thisInfo)) {
+      return false;
     }
     definitionLocals.emplace(thisParam.name, thisInfo);
 
@@ -118,15 +135,8 @@ bool buildCallableDefinitionCallContext(
     if (!inferParameterLocalInfo(param, definitionLocals, info, error)) {
       return false;
     }
-    if (info.isFileHandle) {
-      info.structTypeName.clear();
-    } else if (!info.structTypeName.empty() && info.structSlotCount <= 0) {
-      StructSlotLayoutInfo layout;
-      if (!resolveStructSlotLayout(info.structTypeName, layout)) {
-        error = "internal error: missing struct slot layout for " + info.structTypeName;
-        return false;
-      }
-      info.structSlotCount = layout.totalSlots;
+    if (!resolveStructLayoutForLocal(info)) {
+      return false;
     }
     if (info.isArgsPack && info.argsPackElementCount < 0) {
       // Synthetic callable lowering has no concrete caller, but mixed forwarding still

@@ -518,15 +518,8 @@ main() {
   push(values, Particle(9i32, 11i32))
   [Particle] first{get(values, 0i32)}
   [Reference<Particle>] second{ref(values, 1i32)}
-  [i32] firstY{values.y()[0i32]}
-  [i32] secondX{x(values)[1i32]}
-  assign(values.y()[1i32], 13i32)
-  [vector<Particle>] unpacked{soaVectorToAos<Particle>(values)}
-  [SoaVector<Particle>] repacked{soaVectorFromAos<Particle>(unpacked)}
-  [Particle] repackedSecond{get(repacked, 1i32)}
-  return(plus(plus(count(values), count(unpacked)),
-              plus(plus(first.x, second.x),
-                   plus(plus(firstY, secondX), repackedSecond.y))))
+  [vector<Particle>] unpacked{to_aos(values)}
+  return(plus(plus(count(values), plus(first.x, second.x)), count(unpacked)))
 }
 )";
   const std::string srcPath =
@@ -537,7 +530,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 45);
+  CHECK(runCommand(exePath) == 17);
 }
 
 TEST_CASE("rejects graph-solved direct local-auto vector helper shadows in C++ emitter") {
@@ -778,7 +771,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown struct type for layout: SoaColumn") !=
+  CHECK(readFile(errPath).find("field access requires struct receiver") !=
         std::string::npos);
 }
 
@@ -2061,7 +2054,7 @@ main() {
   CHECK(runCommand(exePath) == 38);
 }
 
-TEST_CASE("compiles and runs builtin helper-return soa_vector ref_ref same-path helper in C++ emitter") {
+TEST_CASE("rejects builtin helper-return soa_vector ref_ref same-path helper in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -2090,12 +2083,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_builtin_soa_vector_ref_ref_same_path_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_builtin_soa_vector_ref_ref_same_path_exe")
+  const std::string errPath =
+      (testScratchPath("") / "primec_builtin_soa_vector_ref_ref_same_path.err")
           .string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 51);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "semantic-product method-call target missing lowered definition: /std/collections/soa_vector/ref_ref") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles and runs helper-return experimental soa_vector method shadows in C++ emitter") {

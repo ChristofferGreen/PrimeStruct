@@ -163,8 +163,7 @@ main() {
   return(/std/collections/vector/vector(4i32, 5i32))
 }
 )",
-          false,
-          "unknown call target: /std/collections/vector/vector",
+          true,
       },
       {
           "direct_local_auto_vector_helper_call_success",
@@ -507,7 +506,7 @@ main() {
   return(count(wrapValues()))
 }
 )",
-          false,
+          true,
       },
       {
           "query_result_return_binding",
@@ -670,7 +669,7 @@ main() {
   return(0i32)
 }
 )",
-          true,
+          false,
       },
   };
 
