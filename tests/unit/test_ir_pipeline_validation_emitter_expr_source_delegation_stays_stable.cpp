@@ -2929,6 +2929,8 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
       repoRoot / "src" / "emitter" / "EmitterExprCollectionFallbackHelpers.h";
   const std::filesystem::path helperBuiltinsPath =
       repoRoot / "src" / "emitter" / "EmitterHelpersBuiltins.cpp";
+  const std::filesystem::path helperHeaderPath =
+      repoRoot / "src" / "emitter" / "EmitterHelpers.h";
   const std::filesystem::path helperTypesPath =
       repoRoot / "src" / "emitter" / "EmitterHelpersTypes.cpp";
   const std::filesystem::path exprControlCallPathStepPath =
@@ -2947,6 +2949,7 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
   REQUIRE(std::filesystem::exists(exprCollectionTypeHelpersPath));
   REQUIRE(std::filesystem::exists(exprCollectionFallbackHelpersPath));
   REQUIRE(std::filesystem::exists(helperBuiltinsPath));
+  REQUIRE(std::filesystem::exists(helperHeaderPath));
   REQUIRE(std::filesystem::exists(helperTypesPath));
   REQUIRE(std::filesystem::exists(exprControlCallPathStepPath));
 
@@ -2967,6 +2970,7 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
   const std::string exprCollectionFallbackHelpersSource =
       readText(exprCollectionFallbackHelpersPath);
   const std::string helperBuiltinsSource = readText(helperBuiltinsPath);
+  const std::string helperHeaderSource = readText(helperHeaderPath);
   const std::string helperTypesSource = readText(helperTypesPath);
   const std::string exprControlCallPathStepSource = readText(exprControlCallPathStepPath);
 
@@ -2984,6 +2988,10 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
   CHECK(metadataHeaderSource.find("bool isRemovedCollectionMethodAliasPath(") !=
         std::string::npos);
   CHECK(metadataHeaderSource.find("bool removedCollectionAliasNeedsDefinitionPath(") !=
+        std::string::npos);
+  CHECK(helperHeaderSource.find("kMapPrefix") == std::string::npos);
+  CHECK(helperHeaderSource.find("\"map/\"") == std::string::npos);
+  CHECK(helperHeaderSource.find("kCanonicalMapPrefix = \"std/collections/map/\"") !=
         std::string::npos);
 
   CHECK(metadataHelpersSource.find("findPublishedCollectionSurfaceMetadata(") !=

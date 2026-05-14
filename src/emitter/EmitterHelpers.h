@@ -54,11 +54,7 @@ inline std::string_view mapHelperNameFromPath(std::string_view path) {
   if (!path.empty() && path.front() == '/') {
     path.remove_prefix(1);
   }
-  constexpr std::string_view kMapPrefix = "map/";
   constexpr std::string_view kCanonicalMapPrefix = "std/collections/map/";
-  if (path.rfind(kMapPrefix, 0) == 0) {
-    return path.substr(kMapPrefix.size());
-  }
   if (path.rfind(kCanonicalMapPrefix, 0) == 0) {
     return path.substr(kCanonicalMapPrefix.size());
   }

@@ -82,7 +82,7 @@ ALLOWED_MAX_FILE_COUNTS: dict[str, int] = {
     "src/emitter/EmitterBuiltinMethodResolutionTypeInferenceHelpers.cpp": 10,
     "src/emitter/EmitterEmitSetupReturnInferenceCollections.h": 31,
     "src/emitter/EmitterExprCollectionTypeHelpers.h": 10,
-    "src/emitter/EmitterHelpers.h": 2,
+    "src/emitter/EmitterHelpers.h": 1,
     "src/emitter/EmitterHelpersTypes.cpp": 10,
     "src/ir_lowerer/IrLowererAccessLoadHelpers.cpp": 2,
     "src/ir_lowerer/IrLowererAccessTargetResolution.cpp": 37,

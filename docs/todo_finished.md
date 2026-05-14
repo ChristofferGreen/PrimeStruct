@@ -18246,3 +18246,32 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     constructor visibility probe, added a source lock for the consolidated
     rooted-alias rejection, removed the file from the map-surface inventory
     allowance, and skipped broad release validation per the lite workflow.
+
+- [x] TODO-4483: Delete emitter rooted map helper parsing
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4482
+  - split_from: TODO-4464
+  - scope: Delete rooted `/map/` helper-name parsing from emitter helper path
+    utilities while preserving canonical `std/collections/map/` helper-name
+    parsing.
+  - implementation_notes:
+    - Targeted `src/emitter/EmitterHelpers.h`, where
+      `mapHelperNameFromPath` still accepted rooted `/map/...` helper paths
+      after stripping the leading slash.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` so the emitter
+      helper header keeps only its canonical map-helper prefix trace.
+  - acceptance:
+    - `mapHelperNameFromPath` no longer recognizes rooted `/map/` helper paths.
+    - Source-lock coverage rejects reintroducing the rooted map prefix while
+      preserving canonical `std/collections/map/` helper parsing.
+    - The map-surface trace inventory allowance for
+      `src/emitter/EmitterHelpers.h` decreases to one canonical trace.
+  - stop_rule: Stop once rooted map helper parsing is gone from emitter helper
+    path utilities and the decaying inventory is tightened for that file.
+  - evidence: Removed the `kMapPrefix` branch from `mapHelperNameFromPath`,
+    added a source lock for the deleted rooted prefix and surviving canonical
+    prefix, reduced the file's inventory allowance from two traces to one, and
+    skipped broad release validation per the lite workflow.
