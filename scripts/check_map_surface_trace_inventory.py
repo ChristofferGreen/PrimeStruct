@@ -183,7 +183,6 @@ ALLOWED_MAX_FILE_COUNTS: dict[str, int] = {
     "src/semantics/SemanticsValidatorPassesDiagnostics.cpp": 4,
     "src/semantics/SemanticsValidatorPassesStructLayouts.cpp": 2,
     "src/semantics/SemanticsValidatorResultHelpers.cpp": 5,
-    "src/semantics/SemanticsValidatorSnapshotLocals.cpp": 1,
     "src/semantics/SemanticsValidatorSnapshots.cpp": 2,
     "src/semantics/SemanticsValidatorStatement.cpp": 4,
     "src/semantics/SemanticsValidatorStatementBodyArguments.cpp": 4,

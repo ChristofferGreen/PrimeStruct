@@ -244,7 +244,9 @@ Task template:
   fallback guards were removed from lowerer dispatch, and frontend
   import-alias normalization no longer roots slashless map helper paths. The
   emitter collection fallback path no longer carries a dead slashless map path
-  normalizer. The remaining production lowerer/emitter experimental-map traces
+  normalizer, and semantic snapshot receiver-query collection no longer treats
+  rooted `/map/*` direct calls as receiver candidates. The remaining production
+  lowerer/emitter experimental-map traces
   are source-locked as temporary internal backing substrate by
   `test_stdlib_map_ownership.cpp`, and
   all production `src`/`include` experimental-map/`Map__*` backing traces are
@@ -276,8 +278,10 @@ Task template:
   `/map/at*` calls as builtin map access helpers without same-path
   definitions, and lowerer setup-type, return-kind, and struct-return helper
   path candidates no longer mirror rooted `/map/*` and canonical
-  `/std/collections/map/*` helper definitions, with release validation gates
-  now locking those retired semantic and lowerer/emitter adapter names.
+  `/std/collections/map/*` helper definitions, and semantic snapshot
+  receiver-query collection no longer treats rooted `/map/*` direct calls as
+  receiver candidates, with release validation gates now locking those retired
+  semantic and lowerer/emitter adapter names.
   Template
   monomorphization now asks the registry for preferred experimental vector/SoA
   helper spellings instead of carrying bespoke canonical-to-experimental maps.
@@ -1677,7 +1681,7 @@ Task template:
   - owner: ai
   - created_at: 2026-05-14
   - phase: Map stdlib ownership cutover
-  - depends_on: TODO-4475
+  - depends_on: TODO-4476
   - split_from: TODO-4304
   - scope: Add a deterministic validation gate that proves the PrimeStruct map
     surface is fully `.prime`/stdlib-owned and absent from production C++
@@ -1705,6 +1709,10 @@ Task template:
     - TODO-4475 removed the dead slashless map path normalizer from emitter
       collection fallback helpers, so
       `src/emitter/EmitterExprCollectionFallbackHelpers.h` should stay absent
+      from the map-surface trace inventory.
+    - TODO-4476 removed rooted `/map/*` receiver-query candidate treatment
+      from semantic snapshot locals, so
+      `src/semantics/SemanticsValidatorSnapshotLocals.cpp` should stay absent
       from the map-surface trace inventory.
     - Current `experimental_map` traces are classified as temporary backing
       substrate: `Map`/`Map__*` type identity, layout, binding, result,

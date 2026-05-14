@@ -2129,6 +2129,7 @@ TEST_CASE("semantic snapshot shared traversal keeps call and try ordering keys")
   CHECK(callTryCacheHelperBody.find("return left.callName < right.callName;") != std::string::npos);
   CHECK(callTryCacheHelperBody.find("return left.operandResolvedPath < right.operandResolvedPath;") !=
         std::string::npos);
+  CHECK(semanticsSnapshotLocals.find("out.resolvedPath.rfind(\"/map/\", 0)") == std::string::npos);
 
   CHECK(semanticsHeader.find("tryValueSnapshotForTesting") == std::string::npos);
   CHECK(semanticsValidate.find("validator.tryFactSnapshotForSemanticProduct()") != std::string::npos);

@@ -18017,3 +18017,32 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     `std/collections/map/` out of that helper, removed the file's map-surface
     inventory allowance, and skipped broad release validation per the lite
     workflow.
+
+- [x] TODO-4476: Delete map snapshot alias candidate
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4475
+  - split_from: TODO-4464
+  - scope: Delete rooted `/map/*` direct-call receiver-query candidate
+    treatment from semantic snapshot local collection.
+  - implementation_notes:
+    - Targeted `src/semantics/SemanticsValidatorSnapshotLocals.cpp`, whose
+      receiver-query candidate predicate still treated rooted `/map/*` helper
+      paths as collection receiver calls.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` so semantic
+      snapshot locals no longer have any map-surface trace allowance.
+  - acceptance:
+    - Semantic snapshot receiver-query collection no longer contains a rooted
+      `/map/*` compatibility branch.
+    - Source-lock coverage rejects reintroducing rooted `/map/*` candidate
+      detection in semantic snapshot locals.
+    - The map-surface trace inventory no longer allows map-specific traces in
+      `src/semantics/SemanticsValidatorSnapshotLocals.cpp`.
+  - stop_rule: Stop once the snapshot candidate branch is gone and the
+    decaying inventory is tightened for semantic snapshot locals.
+  - evidence: Removed the rooted `/map/*` branch from receiver-query
+    candidate detection, added a source lock for semantic snapshot locals,
+    removed the file's map-surface inventory allowance, and skipped broad
+    release validation per the lite workflow.
