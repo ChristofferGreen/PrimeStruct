@@ -1,7 +1,7 @@
-// Accepted compatibility module behind canonical /std/collections/soa_vector/*.
+// Accepted compatibility module behind canonical /std/collections/soa/*.
 // Direct imports remain only for targeted compatibility or conformance coverage.
 // Canonical wrappers route through /std/collections/internal_soa_vector/*.
-// Ordinary public examples should import /std/collections/soa_vector/* instead.
+// Ordinary public examples should import /std/collections/soa/* instead.
 import /std/collections/internal_soa_storage/*
 
 namespace std {

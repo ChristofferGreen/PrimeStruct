@@ -29,7 +29,7 @@ semantics after canonicalization.
   demonstrating canonical post-transform forms.
 - Keep examples aligned with the ownership model documented in `docs/PrimeStruct.md`:
   treat `array<T>`, `string`, `Pointer<T>`, and `Reference<T>` as language-core;
-  treat `Maybe<T>`, `vector<T>`, `map<K, V>`, and `soa_vector<T>` as
+  treat `Maybe<T>`, `vector<T>`, `map<K, V>`, and `soa<T>` as
   stdlib-owned surfaces; and treat `Result<T, Error>`, `File<Mode>`, `Buffer<T>`,
   plus `/std/gfx/*` as hybrid surfaces with minimal builtin substrate.
 - Prefer unsuffixed numeric literals in surface examples (`1280`, `0.0166667`).

@@ -1132,8 +1132,8 @@ Architectural direction for type ownership:
 - `array<T>` remains a core language/runtime envelope.
 - `vector<T>` and `map<K, V>` remain portable surface envelopes today, but their public constructor/helper behavior
   should converge on stdlib `.prime` implementations over generic substrate.
-- `soa_vector<T>` is a promoted stdlib-owned public collection surface over
-  generic SoA substrate.
+- `soa<T>` is the promoted stdlib-owned public collection surface over generic
+  SoA substrate. `soa_vector<T>` remains accepted compatibility.
 - `Maybe<T>` is stdlib-owned, imported `Result<Error>` and value-carrying `Result<T, Error>` construction have stdlib
   sum surfaces, and legacy source C++ emitter `Result` helpers, `File<Mode>`, `Buffer<T>`, and `/std/gfx/*` remain
   hybrid surfaces with minimal builtin/runtime substrate.
@@ -1205,19 +1205,20 @@ come from string literals or bindings backed by literals. Within that numeric-ke
 `map<K, V>` insert growth now covers local bindings, borrowed/pointer mutation surfaces, and non-local field/lvalue
 receivers through one shared grow/copy/repoint plus write-back path instead of the older local-only runtime special case.
 
-### 8.4 SoA Vectors (Draft)
+### 8.4 SoA Collections (Draft)
 
-`soa_vector<T>` is a distinct structure-of-arrays container and is not interchangeable with
-`vector<T>`. The language must not perform implicit AoS/SoA rewriting. The target implementation
-model is a stdlib `.prime` container on top of generic SoA substrate; `soa_vector` should not
-remain a permanent compiler-owned collection. The current public spellings are
-the canonical `/std/collections/soa_vector/*` and
-`/std/collections/soa_vector_conversions/*` surfaces; the experimental SoA
-namespaces are retained compatibility shims for targeted tests rather than
-ordinary public imports.
+`soa<T>` is a distinct structure-of-arrays container and is not interchangeable
+with `vector<T>`. The language must not perform implicit AoS/SoA rewriting.
+The target implementation model is a stdlib `.prime` container on top of
+generic SoA substrate; `soa` should not remain a permanent compiler-owned
+collection. The current public spelling is the canonical
+`/std/collections/soa/*` surface. The old `soa_vector<T>`,
+`/std/collections/soa_vector/*`, and
+`/std/collections/soa_vector_conversions/*` spellings remain compatibility
+coverage for targeted tests rather than ordinary public imports.
 
 Draft surface shape:
-- `soa_vector<T>{}`
+- `soa<T>{}`
 - `value.count()`
 - `value.push(item)` / `value.reserve(capacity)` (requires `effects(heap_alloc)`)
 - Field-wise access for struct fields: `value.field_name()[index]`
@@ -1226,7 +1227,7 @@ Draft surface shape:
 Draft constraints:
 - `T` must be a SoA-safe struct type under backend policy (initially fixed-size fields; no
   pointer/reference/string/template fields unless explicitly allowed).
-- AoS/SoA conversions are explicit helpers only (`to_soa(vector<T>)`, `to_aos(soa_vector<T>)`).
+- AoS/SoA conversions are explicit helpers only (`to_soa(vector<T>)`, `to_aos(soa<T>)`).
 - Reallocation invalidates SoA field views/proxies.
 - Draft ownership/invalidation contract:
   - `get(...)` is value-style element access.
@@ -1570,10 +1571,9 @@ instead of emitting the former direct unsupported diagnostic boundary.
 These compiler-owned `soa_vector` materialization paths are transitional and
 should be deleted once generic SoA substrate owns the remaining backend storage
 work behind the promoted stdlib wrapper surface.
-Canonical example source: `examples/3.Surface/soa_vector_ecs.prime` imports
-`/std/collections/soa_vector/*` and
-`/std/collections/soa_vector_conversions/*` for the supported wrapper flow.
-That wrapper flow is the promoted public shape for `soa_vector<T>`; direct
+Canonical example source: `examples/3.Surface/soa_ecs.prime` imports
+`/std/collections/soa/*` for the supported wrapper flow. That wrapper flow is
+the promoted public shape for `soa<T>`; old `soa_vector<T>` imports and direct
 experimental SoA imports remain compatibility shims for targeted tests only.
 
 ### 8.5 Matrix and Quaternion Types (Draft)

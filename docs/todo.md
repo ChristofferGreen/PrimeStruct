@@ -72,11 +72,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4509: Migrate SoA docs and examples to `soa`
+- TODO-4306: Stabilize generic SoA substrate boundaries
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4306: Stabilize generic SoA substrate boundaries
 - TODO-4307: Lower SoA helpers through ordinary `.prime`
 - TODO-4308: Move SoA surface metadata out of C++
 - TODO-4309: Delete `soa_vector` compatibility seams
@@ -89,8 +88,7 @@ Task template:
 - Vector stdlib ownership cutover: none active
 - Map stdlib ownership cutover: TODO-4464
 - SoA public surface rename and ownership cutover: TODO-4305 parent split as
-  TODO-4509 -> TODO-4306 -> TODO-4307
-  -> TODO-4308 -> TODO-4309 -> TODO-4310
+  TODO-4306 -> TODO-4307 -> TODO-4308 -> TODO-4309 -> TODO-4310
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
   -> TODO-4275 -> TODO-4276 -> TODO-4271 -> TODO-4272 -> TODO-4274
   -> TODO-4273 -> TODO-4277 -> TODO-4278
@@ -105,7 +103,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4509: Migrate SoA docs and examples to `soa`
 - TODO-4306: Stabilize generic SoA substrate boundaries
 - TODO-4307: Lower SoA helpers through ordinary `.prime`
 - TODO-4308: Move SoA surface metadata out of C++
@@ -383,7 +380,7 @@ Task template:
 - Accepted compatibility namespaces:
   `/std/collections/experimental_soa_vector/*` remains importable only for
   targeted compatibility and conformance coverage. Ordinary public examples
-  should use `/std/collections/soa_vector/*`.
+  should use `/std/collections/soa/*`.
   `/std/collections/experimental_soa_vector_conversions/*` remains a bridge
   for direct experimental imports. Canonical conversion helpers now route
   through `/std/collections/internal_soa_vector_conversions/*`. These direct
@@ -423,8 +420,8 @@ Task template:
   surface unless TODO-4305 deliberately chooses a separate
   `/std/collections/soa_conversions/*` namespace.
 - Current compatibility spellings are `/std/collections/soa_vector/*` and
-  `/std/collections/soa_vector_conversions/*`; ordinary new public examples
-  should move to the `soa` spelling once TODO-4305 lands.
+  `/std/collections/soa_vector_conversions/*`; ordinary public examples use
+  the `soa` spelling and `/std/collections/soa/*`.
 - Accepted compatibility seams: `/std/collections/experimental_soa_vector/*`
   and `/std/collections/experimental_soa_vector_conversions/*` remain importable
   only for targeted compatibility and conformance coverage; C++/VM/native
@@ -444,7 +441,7 @@ Task template:
   names, bound field-view borrow-root invalidation, and canonical-only
   C++/VM/native helper, field-view, and conversion parity coverage. Conversion
   receiver contracts are spelled through canonical `SoaVector<T>` surfaces, the
-  checked-in ECS example uses canonical wrapper/conversion imports, and ordinary
+  checked-in ECS example uses canonical `soa` imports, and ordinary
   public code no longer needs `experimental_soa_vector` or
   `experimental_soa_vector_conversions` imports. The canonical wrapper routes through
   `/std/collections/internal_soa_vector/*` and canonical conversions route
@@ -1947,31 +1944,14 @@ Task template:
       `soa_vector` compatibility.
     - TODO-4508 added the user-facing `soa<T>` type spelling once the helper
       namespace existed.
-    - TODO-4509 migrates public docs and examples to the new `soa` spelling
+    - TODO-4509 migrated public docs and examples to the new `soa` spelling
       now that the helper namespace and type spelling are both available.
-
-- [ ] TODO-4509: Migrate SoA docs and examples to `soa`
-  - owner: ai
-  - created_at: 2026-05-14
-  - phase: SoA public surface rename and ownership cutover
-  - depends_on: TODO-4508
-  - split_from: TODO-4305
-  - scope: Update public SoA docs, style guidance, examples, and source-locks
-    to present `soa<T>` and `/std/collections/soa/*` as canonical, with
-    `soa_vector` documented only as compatibility.
-  - acceptance:
-    - Public examples and docs use `soa<T>` and `/std/collections/soa/*`.
-    - Compatibility documentation and tests explicitly name `soa_vector` as
-      legacy/compatibility coverage rather than the preferred surface.
-  - stop_rule: Stop once docs/examples/source-locks consistently present the
-    new SoA public surface and leave remaining lowering/substrate work to
-    TODO-4306 and TODO-4307.
 
 - [ ] TODO-4306: Stabilize generic SoA substrate boundaries
   - owner: ai
   - created_at: 2026-04-28
   - phase: SoA public surface rename and ownership cutover
-  - depends_on: TODO-4305
+  - depends_on: TODO-4509
   - scope: Make the remaining compiler/runtime-owned SoA behavior explicit as
     generic substrate rather than public `soa` collection semantics.
   - implementation_notes:

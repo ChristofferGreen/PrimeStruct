@@ -19107,3 +19107,27 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     returns, references, pointers, empty literals, helper calls, and new
     `soa` diagnostics; kept existing `soa_vector<T>` compatibility coverage;
     and promoted TODO-4509 as the next Ready Now leaf.
+
+- [x] TODO-4509: Migrate SoA docs and examples to `soa`
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: SoA public surface rename and ownership cutover
+  - depends_on: TODO-4508
+  - split_from: TODO-4305
+  - scope: Update public SoA docs, style guidance, examples, and source-locks
+    to present `soa<T>` and `/std/collections/soa/*` as canonical, with
+    `soa_vector` documented only as compatibility.
+  - acceptance:
+    - Public examples and docs use `soa<T>` and `/std/collections/soa/*`.
+    - Compatibility documentation and tests explicitly name `soa_vector` as
+      legacy/compatibility coverage rather than the preferred surface.
+  - stop_rule: Stop once docs/examples/source-locks consistently present the
+    new SoA public surface and leave remaining lowering/substrate work to
+    TODO-4306 and TODO-4307.
+  - evidence: Renamed the checked-in ECS example to
+    `examples/3.Surface/soa_ecs.prime`, switched it to `soa<Particle>` plus
+    `/std/collections/soa/*`, updated public SoA docs and style guidance to
+    present `soa<T>` as canonical, kept `soa_vector` wording scoped to
+    compatibility, refreshed source-lock expectations, and promoted TODO-4306
+    as the next Ready Now leaf.

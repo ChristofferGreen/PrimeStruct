@@ -420,7 +420,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("native wildcard-imported canonical soa_vector helpers run without experimental imports") {
+TEST_CASE("native legacy soa_vector compatibility helpers run without experimental imports") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa_vector/*

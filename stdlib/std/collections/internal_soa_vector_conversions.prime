@@ -1,4 +1,4 @@
-// Internal conversion adapter behind canonical /std/collections/soa_vector_conversions/*.
+// Internal conversion adapter behind canonical /std/collections/soa/*.
 // It owns ordinary AoS conversion behavior while the experimental conversion
 // namespace remains a targeted compatibility surface.
 import /std/collections/*

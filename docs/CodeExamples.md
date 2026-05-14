@@ -63,10 +63,11 @@ substrate, compatibility, migration, or benchmark behavior. Do not use them as
 the style reference for new public-facing examples.
 
 SoA public example rule: `soa<T>` is the promoted stdlib-owned collection
-type spelling for new user-facing examples. Ordinary public examples should
-use `/std/collections/soa/*` for construction, read/ref, mutator, field-view,
-and AoS/SoA conversion flows. Existing `soa_vector<T>` examples remain
-compatibility-scoped until the TODO-4509 docs/example migration completes.
+type spelling for user-facing examples. Ordinary public examples should use
+`/std/collections/soa/*` for construction, read/ref, mutator, field-view, and
+AoS/SoA conversion flows. Existing `soa_vector<T>` examples are
+compatibility-scoped and should be named as legacy coverage rather than
+ordinary example style.
 
 Retained SoA compatibility exception: direct imports of
 `/std/collections/experimental_soa_vector/*` and

@@ -402,7 +402,7 @@ TEST_CASE("coding guidelines avoid inactive surface status pointers") {
   const std::string todo = readFile(todoPath.string());
   const std::string todoFinished = readFile(todoFinishedPath.string());
 
-  CHECK(codingGuidelines.find("treat `Maybe<T>`, `vector<T>`, `map<K, V>`, and `soa_vector<T>` as") !=
+  CHECK(codingGuidelines.find("treat `Maybe<T>`, `vector<T>`, `map<K, V>`, and `soa<T>` as") !=
         std::string::npos);
   CHECK(codingGuidelines.find("stdlib-owned surfaces") != std::string::npos);
   CHECK(codingGuidelines.find("No active TODO currently tracks broader backend") !=
@@ -466,11 +466,11 @@ TEST_CASE("stdlib style boundary docs stay source locked") {
   CHECK(codeExamples.find("`stdlib/std/gfx/experimental.prime`") != std::string::npos);
   CHECK(codeExamples.find("SoA public example rule: `soa<T>` is the promoted") !=
         std::string::npos);
-  CHECK(codeExamples.find("type spelling for new user-facing examples") !=
+  CHECK(codeExamples.find("type spelling for user-facing examples") !=
         std::string::npos);
-  CHECK(codeExamples.find("use `/std/collections/soa/*` for construction") !=
+  CHECK(codeExamples.find("`/std/collections/soa/*` for construction") !=
         std::string::npos);
-  CHECK(codeExamples.find("Existing `soa_vector<T>` examples remain") !=
+  CHECK(codeExamples.find("Existing `soa_vector<T>` examples are") !=
         std::string::npos);
   CHECK(codeExamples.find("Retained SoA compatibility exception: direct imports of") !=
         std::string::npos);
@@ -810,7 +810,7 @@ TEST_CASE("soa public collection docs stay source locked") {
   std::filesystem::path experimentalSoaVectorPath =
       std::filesystem::path("..") / "stdlib" / "std" / "collections" / "experimental_soa_vector.prime";
   std::filesystem::path soaExamplePath =
-      std::filesystem::path("..") / "examples" / "3.Surface" / "soa_vector_ecs.prime";
+      std::filesystem::path("..") / "examples" / "3.Surface" / "soa_ecs.prime";
   std::filesystem::path cppCompatTestPath =
       std::filesystem::path("..") / "tests" / "unit" / "test_compile_run_imports_operations.cpp";
   std::filesystem::path vmCompatTestPath =
@@ -837,7 +837,7 @@ TEST_CASE("soa public collection docs stay source locked") {
         std::filesystem::current_path() / "stdlib" / "std" / "collections" / "experimental_soa_vector.prime";
   }
   if (!std::filesystem::exists(soaExamplePath)) {
-    soaExamplePath = std::filesystem::current_path() / "examples" / "3.Surface" / "soa_vector_ecs.prime";
+    soaExamplePath = std::filesystem::current_path() / "examples" / "3.Surface" / "soa_ecs.prime";
   }
   if (!std::filesystem::exists(cppCompatTestPath)) {
     cppCompatTestPath =
@@ -884,7 +884,7 @@ TEST_CASE("soa public collection docs stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("One source-locked wildcard\n  canonical parity program runs") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("`examples/3.Surface/soa_vector_ecs.prime`") !=
+  CHECK(primeStructDoc.find("`examples/3.Surface/soa_ecs.prime`") !=
         std::string::npos);
   CHECK(primeStructDoc.find("| `/std/collections/experimental_soa_vector/*` | Accepted compatibility namespace |") !=
         std::string::npos);
@@ -1011,13 +1011,13 @@ TEST_CASE("soa public collection docs stay source locked") {
   CHECK(todoFinished.find("TODO-4194: Align SoA compiler-cleanup docs") !=
         std::string::npos);
 
-  CHECK(syntaxSpecDoc.find("The current public spellings are") !=
+  CHECK(syntaxSpecDoc.find("The current public spelling is the canonical") !=
         std::string::npos);
   CHECK(syntaxSpecDoc.find("/std/collections/soa_vector_conversions/*") !=
         std::string::npos);
-  CHECK(syntaxSpecDoc.find("namespaces are retained compatibility shims") !=
+  CHECK(syntaxSpecDoc.find("coverage for targeted tests rather than ordinary public imports") !=
         std::string::npos);
-  CHECK(syntaxSpecDoc.find("promoted public shape for `soa_vector<T>`") !=
+  CHECK(syntaxSpecDoc.find("promoted public shape for `soa<T>`") !=
         std::string::npos);
   CHECK(syntaxSpecDoc.find("incubating canonical experiment") ==
         std::string::npos);
@@ -1027,21 +1027,23 @@ TEST_CASE("soa public collection docs stay source locked") {
         std::string::npos);
   CHECK(codeExamples.find("compatibility\nshims for targeted tests only, not ordinary example style") !=
         std::string::npos);
-  CHECK(soaExample.find("import /std/collections/soa_vector/*") != std::string::npos);
-  CHECK(soaExample.find("import /std/collections/soa_vector_conversions/*") !=
+  CHECK(soaExample.find("import /std/collections/soa/*") != std::string::npos);
+  CHECK(soaExample.find("import /std/collections/soa_vector/*") ==
+        std::string::npos);
+  CHECK(soaExample.find("import /std/collections/soa_vector_conversions/*") ==
         std::string::npos);
   CHECK(soaExample.find("import /std/collections/experimental_soa_vector/*") ==
         std::string::npos);
   CHECK(soaExample.find("import /std/collections/experimental_soa_vector_conversions/*") ==
         std::string::npos);
   CHECK(experimentalSoaVector.find(
-            "// Accepted compatibility module behind canonical /std/collections/soa_vector/*.") !=
+            "// Accepted compatibility module behind canonical /std/collections/soa/*.") !=
         std::string::npos);
   CHECK(experimentalSoaVector.find(
             "// Canonical wrappers route through /std/collections/internal_soa_vector/*.") !=
         std::string::npos);
   CHECK(experimentalSoaVector.find(
-            "// Ordinary public examples should import /std/collections/soa_vector/* instead.") !=
+            "// Ordinary public examples should import /std/collections/soa/* instead.") !=
         std::string::npos);
   CHECK(cppCompatTest.find("TEST_CASE(\"compiles and runs experimental soa_vector stdlib get helper in C++ emitter\")") !=
         std::string::npos);
@@ -1057,7 +1059,7 @@ TEST_CASE("soa public collection docs stay source locked") {
         std::string::npos);
 }
 
-TEST_CASE("canonical soa_vector backend parity matrix stays source locked") {
+TEST_CASE("legacy soa_vector compatibility backend parity matrix stays source locked") {
   const std::filesystem::path cppParityPath =
       resolveRepoPath(std::filesystem::path("tests") / "unit" / "test_compile_run_imports_operations.cpp");
   const std::filesystem::path vmParityPath = resolveRepoPath(
@@ -1103,21 +1105,21 @@ main() {
   CHECK(parityProgram.find("to_aos(values)") != std::string::npos);
 
   CHECK(cppParity.find(
-            "TEST_CASE(\"wildcard-imported canonical soa_vector helpers run without experimental imports in C++ emitter\")") !=
+            "TEST_CASE(\"legacy soa_vector compatibility helpers run without experimental imports in C++ emitter\")") !=
         std::string::npos);
   const std::size_t cppParityProgramOffset = cppParity.find(parityProgram);
   CHECK(cppParityProgramOffset != std::string::npos);
   CHECK(cppParity.find("CHECK(runCommand(exePath) == 17);", cppParityProgramOffset) !=
         std::string::npos);
 
-  CHECK(vmParity.find("TEST_CASE(\"vm wildcard-imported canonical soa_vector helpers run without experimental imports\")") !=
+  CHECK(vmParity.find("TEST_CASE(\"vm legacy soa_vector compatibility helpers run without experimental imports\")") !=
         std::string::npos);
   const std::size_t vmParityProgramOffset = vmParity.find(parityProgram);
   CHECK(vmParityProgramOffset != std::string::npos);
   CHECK(vmParity.find("CHECK(runCommand(runCmd) == 17);", vmParityProgramOffset) !=
         std::string::npos);
 
-  CHECK(nativeParity.find("TEST_CASE(\"native wildcard-imported canonical soa_vector helpers run without experimental imports\")") !=
+  CHECK(nativeParity.find("TEST_CASE(\"native legacy soa_vector compatibility helpers run without experimental imports\")") !=
         std::string::npos);
   const std::size_t nativeParityProgramOffset = nativeParity.find(parityProgram);
   CHECK(nativeParityProgramOffset != std::string::npos);
@@ -1181,20 +1183,20 @@ TEST_CASE("arg-pack docs do not point at inactive TODO slices") {
         std::string::npos);
 }
 
-TEST_CASE("canonical soa_vector example stays source locked") {
+TEST_CASE("canonical soa example stays source locked") {
   std::filesystem::path examplePath =
-      std::filesystem::path("..") / "examples" / "3.Surface" / "soa_vector_ecs.prime";
+      std::filesystem::path("..") / "examples" / "3.Surface" / "soa_ecs.prime";
   std::filesystem::path oldExamplePath =
-      std::filesystem::path("..") / "examples" / "3.Surface" / "soa_vector_ecs_draft.prime";
+      std::filesystem::path("..") / "examples" / "3.Surface" / "soa_vector_ecs.prime";
   std::filesystem::path examplesReadmePath = std::filesystem::path("..") / "examples" / "README.md";
   std::filesystem::path exampleSweepPath =
       std::filesystem::path("..") / "tests" / "unit" / "test_compile_run_bindings_and_examples.cpp";
   if (!std::filesystem::exists(examplePath)) {
-    examplePath = std::filesystem::current_path() / "examples" / "3.Surface" / "soa_vector_ecs.prime";
+    examplePath = std::filesystem::current_path() / "examples" / "3.Surface" / "soa_ecs.prime";
   }
   if (!std::filesystem::exists(oldExamplePath)) {
     oldExamplePath =
-        std::filesystem::current_path() / "examples" / "3.Surface" / "soa_vector_ecs_draft.prime";
+        std::filesystem::current_path() / "examples" / "3.Surface" / "soa_vector_ecs.prime";
   }
   if (!std::filesystem::exists(examplesReadmePath)) {
     examplesReadmePath = std::filesystem::current_path() / "examples" / "README.md";
@@ -1212,22 +1214,25 @@ TEST_CASE("canonical soa_vector example stays source locked") {
   const std::string examplesReadme = readFile(examplesReadmePath.string());
   const std::string exampleSweep = readFile(exampleSweepPath.string());
 
-  CHECK(example.find("import /std/collections/soa_vector/*") != std::string::npos);
-  CHECK(example.find("import /std/collections/soa_vector_conversions/*") !=
+  CHECK(example.find("import /std/collections/soa/*") != std::string::npos);
+  CHECK(example.find("import /std/collections/soa_vector/*") ==
+        std::string::npos);
+  CHECK(example.find("import /std/collections/soa_vector_conversions/*") ==
         std::string::npos);
   CHECK(example.find("[struct reflect]") != std::string::npos);
-  CHECK(example.find("[auto mut] particles{soaVectorNew<Particle>()}") !=
+  CHECK(example.find("[auto mut] particles{soa<Particle>()}") !=
         std::string::npos);
   CHECK(example.find("particles.reserve(plus(particles.count(), spawnQueue.count()))") !=
         std::string::npos);
-  CHECK(example.find("soaVectorNew<Particle>()") != std::string::npos);
-  CHECK(example.find("soaVectorToAos<Particle>(particles)") != std::string::npos);
+  CHECK(example.find("soaVectorNew<Particle>()") == std::string::npos);
+  CHECK(example.find("soaVectorToAos<Particle>(particles)") == std::string::npos);
+  CHECK(example.find("to_aos(particles)") != std::string::npos);
   CHECK(example.find("experimental_soa_vector") == std::string::npos);
-  CHECK(example.find("soa_vector_ecs_draft") == std::string::npos);
-  CHECK(examplesReadme.find("examples/3.Surface/soa_vector_ecs.prime") !=
+  CHECK(example.find("soa_vector_ecs") == std::string::npos);
+  CHECK(examplesReadme.find("examples/3.Surface/soa_ecs.prime") !=
         std::string::npos);
-  CHECK(examplesReadme.find("soa_vector_ecs_draft.prime") == std::string::npos);
-  CHECK(exampleSweep.find("soa_vector_ecs_draft.prime") == std::string::npos);
+  CHECK(examplesReadme.find("soa_vector_ecs.prime") == std::string::npos);
+  CHECK(exampleSweep.find("soa_vector_ecs.prime") == std::string::npos);
 }
 
 TEST_CASE("source lock inventory keeps replacement surfaces explicit") {
@@ -1399,10 +1404,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4509: Migrate SoA docs and examples to `soa`") !=
+                  "- TODO-4306: Stabilize generic SoA substrate boundaries") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
-                  "- TODO-4306: Stabilize generic SoA substrate boundaries") !=
+                  "- TODO-4307: Lower SoA helpers through ordinary `.prime`") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4308: Move SoA surface metadata out of C++") !=
         std::string::npos);
@@ -1418,8 +1423,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4509: Migrate SoA docs and examples to `soa`\n"
-                  "- TODO-4306: Stabilize generic SoA substrate boundaries") !=
+                  "- TODO-4306: Stabilize generic SoA substrate boundaries\n"
+                  "- TODO-4307: Lower SoA helpers through ordinary `.prime`") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
       "TODO-4268: Add heterogeneous type-pack syntax and metadata",
@@ -3038,7 +3043,7 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
         std::string::npos);
 
   CHECK(internalSoaVector.find(
-            "// Internal implementation adapter behind canonical /std/collections/soa_vector/*.") !=
+            "// Internal implementation adapter behind canonical /std/collections/soa/*.") !=
         std::string::npos);
   CHECK(internalSoaVector.find(
             "// targeted compatibility surface.") !=
@@ -3090,7 +3095,7 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(soaConversions.find("/std/collections/experimental_soa_vector/SoaVector<T>") ==
         std::string::npos);
   CHECK(internalSoaConversions.find(
-            "// Internal conversion adapter behind canonical /std/collections/soa_vector_conversions/*.") !=
+            "// Internal conversion adapter behind canonical /std/collections/soa/*.") !=
         std::string::npos);
   CHECK(internalSoaConversions.find("namespace internal_soa_vector_conversions") !=
         std::string::npos);
@@ -3109,7 +3114,7 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(internalSoaConversions.find("[vector<T> mut] out{vector<T>()}") != std::string::npos);
   CHECK(internalSoaConversions.find("[mut] index{0i32}") != std::string::npos);
   CHECK(experimentalSoaVector.find(
-            "// Accepted compatibility module behind canonical /std/collections/soa_vector/*.") !=
+            "// Accepted compatibility module behind canonical /std/collections/soa/*.") !=
         std::string::npos);
   CHECK(experimentalSoaVector.find(
             "// Direct imports remain only for targeted compatibility or conformance coverage.") !=
@@ -3118,7 +3123,7 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
             "// Canonical wrappers route through /std/collections/internal_soa_vector/*.") !=
         std::string::npos);
   CHECK(experimentalSoaVector.find(
-            "// Ordinary public examples should import /std/collections/soa_vector/* instead.") !=
+            "// Ordinary public examples should import /std/collections/soa/* instead.") !=
         std::string::npos);
   CHECK(experimentalSoaConversions.find(
             "// Compatibility conversion module for direct experimental SoA conversion imports.") !=

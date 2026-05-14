@@ -1,4 +1,4 @@
-// Internal implementation adapter behind canonical /std/collections/soa_vector/*.
+// Internal implementation adapter behind canonical /std/collections/soa/*.
 // It owns ordinary wrapper behavior while the experimental namespace remains a
 // targeted compatibility surface.
 import /std/collections/internal_soa_storage/*

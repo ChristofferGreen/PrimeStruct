@@ -1,6 +1,5 @@
 import /std/collections/*
-import /std/collections/soa_vector/*
-import /std/collections/soa_vector_conversions/*
+import /std/collections/soa/*
 
 [struct reflect]
 Particle() {
@@ -10,7 +9,7 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [auto mut] particles{soaVectorNew<Particle>()}
+  [auto mut] particles{soa<Particle>()}
   particles.push(Particle(3i32, 4i32))
   particles.push(Particle(5i32, 6i32))
 
@@ -26,6 +25,6 @@ main() {
   }
 
   particles.reserve(plus(particles.count(), spawnQueue.count()))
-  [vector<Particle>] packed{soaVectorToAos<Particle>(particles)}
+  [vector<Particle>] packed{to_aos(particles)}
   return(plus(totalX, packed.count()))
 }

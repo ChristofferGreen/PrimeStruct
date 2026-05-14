@@ -3702,7 +3702,7 @@ sum_two_files([string] a, [string] b) {
 
 ### Type Grammar (canonical)
 - **Atomic:** `bool`, `i32`, `i64`, `u64`, `f32`, `f64`, `string`, `void`, `Self`.
-- **Composite:** `array<T>`, `vector<T>`, `map<K, V>`, `Pointer<T>`, `Reference<T>`, stdlib-owned `soa_vector<T>`,
+- **Composite:** `array<T>`, `vector<T>`, `map<K, V>`, `Pointer<T>`, `Reference<T>`, stdlib-owned `soa<T>`,
   and draft math value types (`Mat2`, `Mat3`, `Mat4`, `Quat`).
 - **User types:** struct definitions and named aliases.
 - **Template applications:** `Name<T1, T2, ...>`.
@@ -3710,9 +3710,10 @@ sum_two_files([string] a, [string] b) {
 ### Core Type Set (portable)
 - `bool`, `i32`, `i64`, `u64`, `f32`, `f64`, `string`.
 - `array<T>`, `vector<T>`, `map<K, V>` where parameters are core types.
-- `soa_vector<T>` for explicit structure-of-arrays storage of SoA-safe struct `T`.
+- `soa<T>` for explicit structure-of-arrays storage of SoA-safe struct `T`.
   The public API is stdlib-owned on top of generic language/runtime SoA
-  substrate rather than a compiler-owned collection contract.
+  substrate rather than a compiler-owned collection contract. `soa_vector<T>`
+  remains an accepted compatibility spelling.
 - Draft extension: `Mat2`, `Mat3`, `Mat4`, and `Quat` with explicit conversion-only interaction rules (not yet portable
   across backends).
 - `Pointer<T>`, `Reference<T>` where `T` is primitive or a struct type.
@@ -3912,12 +3913,12 @@ Current `stdlib/std` experimental and internal module classification:
 | `/std/collections/internal_map/*` | Internal substrate/helper namespace | Internal map backing module used by canonical `/std/collections/map/*`; it preserves the current compatibility `Map<K, V>` type identity until the final map surface audit. | TODO-4464 |
 | `/std/collections/experimental_map/*` | Rejected compatibility namespace | Direct source imports are rejected; the shim remains only as legacy forwarding storage identity behind `/std/collections/internal_map/*` until the final map surface audit. | TODO-4464 |
 | `/std/gfx/experimental/*` | Temporary compatibility namespace | Legacy compatibility shim over canonical `/std/gfx/*`; no longer part of the public gfx contract and retained only for targeted compatibility coverage while the residual seam remains importable. | none |
-| `/std/collections/experimental_soa_vector/*` | Accepted compatibility namespace | Compatibility module behind the promoted canonical `/std/collections/soa_vector/*` public surface; direct imports are accepted only for targeted compatibility or conformance coverage. C++/VM/native compile-run coverage locks this compatibility seam; ordinary public examples should use `/std/collections/soa_vector/*`. | none |
-| `/std/collections/experimental_soa_vector_conversions/*` | Accepted compatibility namespace | Compatibility conversion module for direct experimental SoA conversion imports; canonical conversions route through `/std/collections/internal_soa_vector_conversions/*`, and direct imports remain only for targeted compatibility or conformance coverage. | none |
+| `/std/collections/experimental_soa_vector/*` | Accepted compatibility namespace | Compatibility module behind the canonical `/std/collections/soa/*` public surface; direct imports are accepted only for targeted compatibility or conformance coverage. C++/VM/native compile-run coverage locks this compatibility seam; ordinary public examples should use `/std/collections/soa/*`. | none |
+| `/std/collections/experimental_soa_vector_conversions/*` | Accepted compatibility namespace | Compatibility conversion module for direct experimental SoA conversion imports; canonical conversions route through `/std/collections/soa/*` and the internal conversion adapter, and direct imports remain only for targeted compatibility or conformance coverage. | none |
 | `/std/collections/internal_buffer_checked/*` | Internal substrate/helper namespace | Explicitly internal checked buffer plumbing for container conformance and memory-wrapper flows, not a stable user-facing stdlib API. | none |
 | `/std/collections/internal_buffer_unchecked/*` | Internal substrate/helper namespace | Explicitly internal unchecked buffer plumbing for container conformance and memory-wrapper flows, not a stable user-facing stdlib API. | none |
-| `/std/collections/internal_soa_vector/*` | Internal substrate/helper namespace | Internal SoA wrapper implementation adapter used by canonical `/std/collections/soa_vector/*`; it is not a public import surface. It still preserves the current compatibility `SoaVector<T>` type identity behind the promoted public wrapper surface. | none |
-| `/std/collections/internal_soa_vector_conversions/*` | Internal substrate/helper namespace | Internal SoA conversion implementation adapter used by canonical `/std/collections/soa_vector_conversions/*` and `/std/collections/soa_vector/to_aos*`; it is not a public import surface. | none |
+| `/std/collections/internal_soa_vector/*` | Internal substrate/helper namespace | Internal SoA wrapper implementation adapter used by canonical `/std/collections/soa/*`; it is not a public import surface. It still preserves the current compatibility `SoaVector<T>` type identity behind the promoted public wrapper surface. | none |
+| `/std/collections/internal_soa_vector_conversions/*` | Internal substrate/helper namespace | Internal SoA conversion implementation adapter used by canonical `/std/collections/soa/*` conversion helpers and compatibility `/std/collections/soa_vector*/*` helpers; it is not a public import surface. | none |
 | `/std/collections/internal_soa_storage/*` | Internal substrate/helper namespace | Explicitly internal SoA storage/layout plumbing used by wrappers and lowering bridges, not a canonical surface contract. | none |
 
 The policy implication is immediate: vector/map/gfx/SoA work should prefer
@@ -3945,14 +3946,14 @@ uses a distinct structure-of-arrays substrate and field-view invalidation model.
   canonical parity program runs
   across C++ emitter, VM, and native for construction/read/ref/mutator,
   field-view, and conversion behavior without direct experimental SoA imports
-  in the test source.
+  in the test source. The canonical ECS example lives at
+  `examples/3.Surface/soa_ecs.prime`.
 - **Accepted compatibility seams:** `/std/collections/experimental_soa_vector/*`
   and `/std/collections/experimental_soa_vector_conversions/*` remain importable
   only for targeted compatibility and conformance coverage. Existing C++/VM/native
   direct-import tests are the contract for these seams. They are not
-  user-facing contracts, and ordinary public examples should continue to use
-  `/std/collections/soa_vector/*` and
-  `/std/collections/soa_vector_conversions/*`.
+  user-facing contracts, and ordinary public examples should use
+  `/std/collections/soa/*`.
 - **Internal substrate namespaces:** `/std/collections/internal_soa_vector/*`
   owns ordinary canonical wrapper implementation forwarding,
   `/std/collections/internal_soa_vector_conversions/*` owns ordinary canonical
@@ -3967,13 +3968,13 @@ uses a distinct structure-of-arrays substrate and field-view invalidation model.
   and the remaining compiler/runtime pieces are generic substrate rather than
   SoA-specific compatibility paths:
   - Construction, read/ref, mutator, and field-view helpers are spelled through
-    `/std/collections/soa_vector/*` with `SoaVector<T>` and
-    `Reference<SoaVector<T>>` receivers; method sugar lowers to those same
-    canonical helpers and preserves deterministic user-helper shadowing.
-  - AoS/SoA conversions are spelled through
-    `/std/collections/soa_vector_conversions/*` and canonical
-    `/std/collections/soa_vector/to_aos*` helpers; conversion receivers do not
-    require direct imports of experimental conversion modules in ordinary code.
+    `/std/collections/soa/*` with `soa<T>` public type spelling; method sugar
+    lowers to those same canonical helpers and preserves deterministic
+    user-helper shadowing.
+  - AoS/SoA conversions are spelled through `/std/collections/soa/*`;
+    conversion receivers do not require direct imports of experimental
+    conversion modules or the legacy `/std/collections/soa_vector*/*`
+    compatibility modules in ordinary code.
   - Borrowed `ref(...)` values, field views, structural mutation, explicit
     conversions, owner destroy, and scope exit share one documented
     invalidation model, and invalid escapes fail with deterministic diagnostics.
@@ -4596,17 +4597,18 @@ bad_set() {
   - Vector binding forms:
     - `[vector<T> mut] v{vector<T>{}}` and `[mut] v{vector<T>{}}` are both valid.
     - `[vector<T> mut] v{}` is shorthand for zero-arg construction and rewrites to `[vector<T> mut] v{vector<T>{}}`.
-  - `soa_vector<T>` is an explicit structure-of-arrays container (SoA). It is separate from `vector<T>`; the compiler
-    must not silently rewrite AoS (`vector`) to SoA (`soa_vector`).
+  - `soa<T>` is an explicit structure-of-arrays container (SoA). It is separate
+    from `vector<T>`; the compiler must not silently rewrite AoS (`vector`) to
+    SoA (`soa`). `soa_vector<T>` remains accepted compatibility only.
   - Intended usage: data-oriented loops and ECS-style component storage where field-wise contiguous iteration is
     preferred.
-  - Implementation model: the public `soa_vector` API lives in stdlib `.prime`
+  - Implementation model: the public `soa` API lives in stdlib `.prime`
     files, with compiler/runtime code reduced to generic SoA substrate only
     (field-layout/codegen/introspection, column storage, field-view
     borrowing/invalidation, and allocation primitives). The end-state is that
-    C++ source does not contain `soa_vector`-named collection semantics.
-  - Public `soa_vector<T>` surface:
-    - Construction/growth mirrors vector (`soa_vector<T>{}`, `push`, `reserve`, `count`) and allocation still requires
+    C++ source does not contain public SoA collection semantics.
+  - Public `soa<T>` surface:
+    - Construction/growth mirrors vector (`soa<T>{}`, `push`, `reserve`, `count`) and allocation still requires
       `effects(heap_alloc)`.
     - Indexing/access is explicit and SoA-aware (`value.field()[i]`, `value.get(i)`, and optionally `value.ref(i)` proxy
       access).
@@ -4626,11 +4628,13 @@ bad_set() {
       followed by `particles.reserve(plus(particles.count(), spawnQueue.count()))`.
   - SoA eligibility (v1 draft): `T` must be a struct with SoA-safe fields (fixed-size,
     non-pointer/reference/string/template envelopes unless explicitly allowed by backend policy).
-  - AoS/SoA conversions are explicit only (`to_soa(vector<T>)`, `to_aos(soa_vector<T>)`); no implicit interop.
-  - Canonical example source lives at `examples/3.Surface/soa_vector_ecs.prime` and imports
-    `/std/collections/soa_vector/*` plus `/std/collections/soa_vector_conversions/*`.
-  - **Current implementation status:** `soa_vector<T>` surface parsing is recognized, and semantic validation now
-    accepts `soa_vector` bindings/literals/returns when type constraints hold (`soa_vector` struct element requirement,
+  - AoS/SoA conversions are explicit only (`to_soa(vector<T>)`, `to_aos(soa<T>)`); no implicit interop.
+  - Canonical example source lives at `examples/3.Surface/soa_ecs.prime` and
+    imports `/std/collections/soa/*`. Compatibility tests retain
+    `/std/collections/soa_vector/*` and
+    `/std/collections/soa_vector_conversions/*`.
+  - **Current implementation status:** `soa<T>` surface parsing is recognized, and semantic validation now
+    accepts `soa` bindings/literals/returns when type constraints hold (`soa` struct element requirement,
     template-arity checks, and deterministic element-field envelope diagnostics such as `soa_vector field envelope is
     unsupported on /Type/field/...: ...` for disallowed direct or nested fields). Builtin `count`/`get`/`ref` validation
     and current lowering behavior remain compatibility scaffolding around the
@@ -4688,12 +4692,13 @@ bad_set() {
     emission, so future SoA stdlib code can derive column schemas from `T` without adding new compiler-owned
     collection-specific reflection primitives.
   - **Current canonical SoA public surface:** public docs/examples should use
-    `/std/collections/soa_vector/*` with `SoaVector<T>`, `soaVectorNew<T>()`,
-    `soaVectorSingle<T>()`, `soaVectorFromAos<T>()`, `soaVectorCount<T>()`, `soaVectorGet<T>()`,
-    `soaVectorReserve<T>()`, and `soaVectorPush<T>()`, plus wrapper method sugar for `.count()`,
-    `.get(i)`, `.reserve(...)`, and `.push(...)`. The explicit AoS conversion surface now lives in
-    the canonical `/std/collections/soa_vector_conversions/*` module with `soaVectorToAos<T>()`,
-    canonical `SoaVector<T>` / `Reference<SoaVector<T>>` receiver spellings.
+    `/std/collections/soa/*` with `soa<T>`, `soa<T>()`, `single(...)`,
+    `from_aos(...)`, `count(...)`, `get(...)`, `reserve(...)`, `push(...)`,
+    `to_aos(...)`, plus wrapper method sugar for `.count()`, `.get(i)`,
+    `.reserve(...)`, and `.push(...)`. Legacy `SoaVector<T>` /
+    `Reference<SoaVector<T>>` receiver spellings and `soaVector*` helper names
+    are compatibility implementation details, not ordinary public example
+    style.
     `/std/collections/internal_soa_vector/*` is the internal adapter behind
     construction/read/ref/mutator and field-view wrappers,
     `/std/collections/internal_soa_vector_conversions/*` is the internal
