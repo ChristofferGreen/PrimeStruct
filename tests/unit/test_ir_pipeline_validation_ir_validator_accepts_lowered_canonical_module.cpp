@@ -1037,16 +1037,16 @@ TEST_CASE("ir lowerer access helper rejects removed rooted vector access aliases
   CHECK(helperName.empty());
 }
 
-TEST_CASE("ir lowerer access helper recognizes namespaced canonical access helpers") {
+TEST_CASE("ir lowerer access helper classifies namespaced access helpers") {
   primec::Expr namespacedVectorAccessCall;
   namespacedVectorAccessCall.kind = primec::Expr::Kind::Call;
   namespacedVectorAccessCall.namespacePrefix = "/std/collections/vector";
   namespacedVectorAccessCall.name = "at";
 
   std::string helperName;
-  CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(
+  CHECK_FALSE(primec::ir_lowerer::getBuiltinArrayAccessName(
       namespacedVectorAccessCall, helperName));
-  CHECK(helperName == "at");
+  CHECK(helperName.empty());
 
   primec::Expr namespacedMapAccessCall;
   namespacedMapAccessCall.kind = primec::Expr::Kind::Call;
@@ -1145,6 +1145,20 @@ TEST_CASE("ir lowerer access helper recognizes namespaced canonical access helpe
   CHECK(primec::emitter::getBuiltinArrayAccessNameLocal(
       rootedLegacyVectorUnsafeAccessCall, helperName));
   CHECK(helperName == "at_unsafe");
+
+  primec::Expr removedExperimentalMapVectorAccessAliasCall;
+  removedExperimentalMapVectorAccessAliasCall.kind = primec::Expr::Kind::Call;
+  removedExperimentalMapVectorAccessAliasCall.name =
+      "/std/collections/experimental_map/vectorAt__t12345678";
+
+  helperName.clear();
+  CHECK_FALSE(primec::ir_lowerer::getBuiltinArrayAccessName(
+      removedExperimentalMapVectorAccessAliasCall, helperName));
+  CHECK(helperName.empty());
+  helperName.clear();
+  CHECK_FALSE(primec::emitter::getBuiltinArrayAccessNameLocal(
+      removedExperimentalMapVectorAccessAliasCall, helperName));
+  CHECK(helperName.empty());
 
   primec::Expr rootedInternalVectorAccessCall;
   rootedInternalVectorAccessCall.kind = primec::Expr::Kind::Call;

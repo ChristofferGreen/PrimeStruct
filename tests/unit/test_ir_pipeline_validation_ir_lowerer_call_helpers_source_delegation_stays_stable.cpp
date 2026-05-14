@@ -885,6 +885,9 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(builtinNameHelpersSource.find("std/collections/vector/") == std::string::npos);
   CHECK(builtinNameHelpersSource.find("std/collections/experimental_vector") ==
         std::string::npos);
+  CHECK(builtinNameHelpersSource.find(
+            "matchLegacyAccessAlias(scopedName, \"std/collections/experimental_map/\")") ==
+        std::string::npos);
   CHECK(builtinNameHelpersSource.find("vectorAt") == std::string::npos);
   CHECK(builtinNameHelpersSource.find("vectorPush") == std::string::npos);
   CHECK(callResolutionSource.find("std/collections/experimental_vector") ==

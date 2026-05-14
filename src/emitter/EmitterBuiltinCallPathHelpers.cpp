@@ -332,8 +332,7 @@ bool getBuiltinArrayAccessNameLocal(const Expr &expr, std::string &out) {
   }
   if (matchLegacyAccessAlias(scopedName, "std/collections/") ||
       matchLegacyAccessAlias(scopedName,
-                             experimentalCollectionMemberRootLocal("vector")) ||
-      matchLegacyAccessAlias(scopedName, "std/collections/experimental_map/")) {
+                             experimentalCollectionMemberRootLocal("vector"))) {
     return true;
   }
   if (scopedName.rfind("std/collections/internal_soa_storage/", 0) == 0) {

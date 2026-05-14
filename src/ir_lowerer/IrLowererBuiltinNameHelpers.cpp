@@ -583,9 +583,6 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   if (matchAccessAlias(scopedName, "std/collections/map/", "Map")) {
     return true;
   }
-  if (matchLegacyAccessAlias(scopedName, "std/collections/experimental_map/")) {
-    return true;
-  }
   if (scopedName.rfind("std/collections/map/", 0) == 0) {
     return false;
   }

@@ -3030,6 +3030,9 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
             "scopedName.rfind(\"std/collections/vector/\", 0) == 0") ==
         std::string::npos);
   CHECK(callPathHelpersSource.find(
+            "matchLegacyAccessAlias(scopedName, \"std/collections/experimental_map/\")") ==
+        std::string::npos);
+  CHECK(callPathHelpersSource.find(
             "const std::string stdlibAlias = \"/std/collections/vector/\" + suffix;") ==
         std::string::npos);
   CHECK(callPathHelpersSource.find("bool allowsVectorStdlibCompatibilitySuffix(") ==

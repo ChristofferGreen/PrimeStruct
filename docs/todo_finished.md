@@ -17713,3 +17713,34 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     TODO-4468, rebuilt `PrimeStruct_backend_ir_tests`, and ran the focused
     source-lock doctest cases. Broad baseline validation was skipped per the
     lite workflow.
+
+- [x] TODO-4467: Delete experimental-map access helper alias probes
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4466
+  - split_from: TODO-4466
+  - scope: Delete lowerer/emitter builtin-access classification probes that
+    still treated rooted `/std/collections/experimental_map/*` names as a
+    legacy access-helper namespace.
+  - implementation_notes:
+    - Targeted `getBuiltinArrayAccessName` in lowerer code and
+      `getBuiltinArrayAccessNameLocal` in emitter code.
+    - Left rooted experimental-map entry, method, constructor, and backing
+      type traces to TODO-4469 and TODO-4468.
+  - acceptance:
+    - Lowerer/emitter builtin-access classification no longer probes
+      `std/collections/experimental_map/` as a legacy access-helper prefix.
+    - A rooted experimental-map legacy vector access spelling is rejected by
+      both lowerer and emitter access classifiers.
+    - Source-lock coverage rejects reintroducing the removed access-helper
+      prefix probe.
+  - stop_rule: Stop once rooted experimental-map access-helper prefix probes
+    are gone; leave entry/method alias deletion and backing type/layout traces
+    to TODO-4469 and TODO-4468.
+  - evidence: Removed the lowerer/emitter experimental-map legacy access
+    prefix probes, added behavior coverage for rejecting
+    `/std/collections/experimental_map/vectorAt__*` as builtin access,
+    source-locked both deleted probes, split entry/method alias cleanup into
+    TODO-4469, and skipped broad baseline validation per the lite workflow.
