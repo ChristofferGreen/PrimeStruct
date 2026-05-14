@@ -18801,3 +18801,38 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     target file from the map-surface inventory allowance, updated source-lock
     coverage, and promoted TODO-4500 for the next template type-resolution
     constructor alias slice.
+
+- [x] TODO-4500: Route template map constructor aliases through metadata
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4499
+  - split_from: TODO-4464
+  - scope: Remove hard-coded canonical and rooted map constructor alias
+    checks from template callee type resolution by routing map constructor
+    alias rewriting through shared stdlib surface metadata helpers.
+  - implementation_notes:
+    - Targeted `src/semantics/TemplateMonomorphTypeResolution.h`, where
+      builtin map constructor alias rewriting compared against
+      `/std/collections/map` and `/std/collections/map/map` directly, and
+      removed rooted map helper filtering checked `/map/` locally.
+    - Added shared metadata-backed constructor alias and rooted helper alias
+      normalization helpers in `MapConstructorHelpers.h`.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` for the target
+      file and added focused source-lock coverage for the delegation.
+  - acceptance:
+    - Template callee resolution still rewrites visible canonical map
+      constructor aliases and still rejects removed rooted map helper aliases.
+    - The target file no longer contains hard-coded canonical map constructor
+      or rooted map helper path literals.
+    - The map-surface trace inventory and source-lock coverage prevent
+      reintroducing the removed literals.
+  - stop_rule: Stop once template map constructor alias handling delegates to
+    shared metadata helpers, focused coverage passes, and the inventory
+    allowance for the target file is tightened.
+  - evidence: Replaced target-local canonical map constructor alias literals
+    and rooted helper alias parsing with shared metadata helpers, removed the
+    target file from the map-surface inventory allowance, added source-lock
+    coverage, and promoted TODO-4464 to Ready Now for the full zero C++ map
+    surface audit.

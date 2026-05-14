@@ -48,6 +48,11 @@ inline const primec::StdlibSurfaceMetadata *mapHelperSurfaceMetadataLocal() {
   return primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
 }
 
+inline const primec::StdlibSurfaceMetadata *mapConstructorSurfaceMetadataLocal() {
+  return primec::findStdlibSurfaceMetadataByBridgeKey(
+      "collections.map_constructors");
+}
+
 inline bool stripStdlibSurfaceRootedMemberName(std::string_view rawPath,
                                                 std::string_view rawRoot,
                                                 std::string &memberNameOut) {
@@ -109,6 +114,25 @@ inline std::string metadataBackedMapHelperMethodName(std::string_view methodName
     }
   }
   return std::string(methodName);
+}
+
+inline std::string metadataBackedMapHelperRootAliasMethodName(
+    std::string_view methodName) {
+  const primec::StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return {};
+  }
+  std::string strippedMemberName;
+  for (const std::string_view alias : metadata->importAliasSpellings) {
+    if (alias.find('/') != std::string_view::npos) {
+      continue;
+    }
+    if (stripStdlibSurfaceRootedMemberName(methodName, alias,
+                                           strippedMemberName)) {
+      return strippedMemberName;
+    }
+  }
+  return {};
 }
 
 inline std::string metadataBackedCanonicalMapHelperPath(std::string_view helperName) {
@@ -295,6 +319,21 @@ inline std::string canonicalMapConstructorHelperPath(size_t argumentCount) {
   return preferredCollectionConstructorSpelling(
       primec::StdlibSurfaceId::CollectionsMapConstructors, memberName,
       metadata->loweringSpellings, "/std/collections/");
+}
+
+inline std::string metadataBackedMapConstructorAliasRewritePath(
+    std::string_view resolvedPath) {
+  const primec::StdlibSurfaceMetadata *metadata =
+      mapConstructorSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return {};
+  }
+  const std::string normalizedPath =
+      stripCollectionConstructorSuffixes(std::string(resolvedPath));
+  if (!primec::stdlibSurfaceMatchesSpelling(*metadata, normalizedPath)) {
+    return {};
+  }
+  return std::string(metadata->canonicalPath);
 }
 
 inline std::string metadataBackedCanonicalMapConstructorRewritePath(

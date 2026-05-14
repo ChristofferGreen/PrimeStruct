@@ -810,6 +810,30 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(mapConstructorHelpersSource.find(
             "std::string metadataBackedCanonicalMapHelperPath(std::string_view helperName)") !=
         std::string::npos);
+  CHECK(templateMonomorphTypeResolutionSource.find(
+            "metadataBackedMapConstructorAliasRewritePath(resolvedPath)") !=
+        std::string::npos);
+  CHECK(templateMonomorphTypeResolutionSource.find(
+            "metadataBackedMapHelperRootAliasMethodName(path)") !=
+        std::string::npos);
+  CHECK(templateMonomorphTypeResolutionSource.find(
+            "resolvedPath == \"/std/collections/map\"") ==
+        std::string::npos);
+  CHECK(templateMonomorphTypeResolutionSource.find(
+            "resolvedPath == \"/std/collections/map/map\"") ==
+        std::string::npos);
+  CHECK(templateMonomorphTypeResolutionSource.find("\"/std/collections/map") ==
+        std::string::npos);
+  CHECK(templateMonomorphTypeResolutionSource.find("\"/map/") ==
+        std::string::npos);
+  CHECK(templateMonomorphTypeResolutionSource.find(
+            "path.rfind(\"/map/\", 0)") == std::string::npos);
+  CHECK(mapConstructorHelpersSource.find(
+            "std::string metadataBackedMapConstructorAliasRewritePath(") !=
+        std::string::npos);
+  CHECK(mapConstructorHelpersSource.find(
+            "std::string metadataBackedMapHelperRootAliasMethodName(") !=
+        std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
             "auto normalizeFileErrorMethodName = [](std::string_view methodName)") !=
         std::string::npos);

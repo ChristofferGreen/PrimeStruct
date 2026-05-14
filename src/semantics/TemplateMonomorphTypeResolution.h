@@ -329,8 +329,10 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
     if (expr.name != builtinCollection) {
       return resolvedPath;
     }
-    if (resolvedPath == "/std/collections/map") {
-      return "/std/collections/map/map";
+    if (std::string constructorPath =
+            metadataBackedMapConstructorAliasRewritePath(resolvedPath);
+        !constructorPath.empty()) {
+      return constructorPath;
     }
     return resolvedPath;
   };
@@ -338,7 +340,7 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
     if (expr.isMethodCall) {
       return resolvedPath;
     }
-    if (resolvedPath == "/std/collections/map/map" &&
+    if (metadataBackedMapConstructorAliasRewritePath(resolvedPath) == resolvedPath &&
         (ctx.sourceDefs.count(resolvedPath) > 0 || ctx.helperOverloads.count(resolvedPath) > 0)) {
       return resolvedPath;
     }
@@ -439,22 +441,13 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
   if (expr.name.empty()) {
     return "";
   }
-  auto isExplicitRemovedMapCompatibilityPath =
-      [&](std::string path) -> bool {
-        if (!path.empty() && path.front() != '/') {
-          path.insert(path.begin(), '/');
-        }
-        if (path.rfind("/map/", 0) != 0) {
-          return false;
-        }
-        std::string helperName = path.substr(std::string("/map/").size());
-        const size_t specializationSuffix = helperName.find("__");
-        if (specializationSuffix != std::string::npos) {
-          helperName.erase(specializationSuffix);
-        }
-        return isRemovedMapCompatibilityHelper(
-            mapCompatibilityHelperBase(helperName));
-      };
+  auto isExplicitRemovedMapCompatibilityPath = [&](std::string_view path) -> bool {
+    const std::string helperName =
+        metadataBackedMapHelperRootAliasMethodName(path);
+    return !helperName.empty() &&
+           isRemovedMapCompatibilityHelper(
+               mapCompatibilityHelperBase(helperName));
+  };
   std::string builtinCollection;
   if (!expr.isMethodCall &&
       getBuiltinCollectionName(expr, builtinCollection) &&

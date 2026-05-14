@@ -72,7 +72,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4500: Route template map constructor aliases through metadata
+- TODO-4464: Add full zero C++ map-surface audit
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -88,7 +88,7 @@ Task template:
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
 - Vector stdlib ownership cutover: none active
-- Map stdlib ownership cutover: TODO-4500 -> TODO-4464
+- Map stdlib ownership cutover: TODO-4464
 - SoA public surface rename and ownership cutover: TODO-4305 -> TODO-4306
   -> TODO-4307 -> TODO-4308 -> TODO-4309 -> TODO-4310
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
@@ -105,7 +105,7 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4500: Route template map constructor aliases through metadata
+- TODO-4464: Add full zero C++ map-surface audit
 - TODO-4305: Rename and style canonical `.prime` SoA surface
 - TODO-4306: Stabilize generic SoA substrate boundaries
 - TODO-4307: Lower SoA helpers through ordinary `.prime`
@@ -1720,36 +1720,6 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
-
-- [ ] TODO-4500: Route template map constructor aliases through metadata
-  - owner: ai
-  - created_at: 2026-05-14
-  - phase: Map stdlib ownership cutover
-  - depends_on: TODO-4499
-  - split_from: TODO-4464
-  - scope: Remove hard-coded canonical and rooted map constructor alias
-    checks from template callee type resolution by routing map constructor
-    alias rewriting through shared stdlib surface metadata helpers.
-  - implementation_notes:
-    - Target `src/semantics/TemplateMonomorphTypeResolution.h`, where builtin
-      map constructor alias rewriting still compares against
-      `/std/collections/map` and `/std/collections/map/map` directly, and
-      removed rooted map helper filtering still checks `/map/` locally.
-    - Prefer reusing or extending `MapConstructorHelpers.h` metadata-backed
-      constructor/helper helpers instead of adding new path literals in the
-      template type-resolution header.
-    - Tighten `scripts/check_map_surface_trace_inventory.py` for the target
-      file and add focused source-lock coverage for the delegation.
-  - acceptance:
-    - Template callee resolution still rewrites visible canonical map
-      constructor aliases and still rejects removed rooted map helper aliases.
-    - The target file no longer contains hard-coded canonical map constructor
-      or rooted map helper path literals.
-    - The map-surface trace inventory and source-lock coverage prevent
-      reintroducing the removed literals.
-  - stop_rule: Stop once template map constructor alias handling delegates to
-    shared metadata helpers, focused coverage passes, and the inventory
-    allowance for the target file is tightened.
 
 - [ ] TODO-4464: Add full zero C++ map-surface audit
   - owner: ai
