@@ -18275,3 +18275,36 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     added a source lock for the deleted rooted prefix and surviving canonical
     prefix, reduced the file's inventory allowance from two traces to one, and
     skipped broad release validation per the lite workflow.
+
+- [x] TODO-4484: Delete semantic canonical map receiver guard
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4483
+  - split_from: TODO-4464
+  - scope: Delete the canonical `/std/collections/map` receiver exclusion from
+    semantic non-collection struct-access fallback setup while preserving the
+    generic struct-name check.
+  - implementation_notes:
+    - Targeted
+      `src/semantics/SemanticsValidatorExprBuiltinContextSetup.cpp`, where
+      `isNonCollectionStructAccessTarget` had a hardcoded canonical map
+      receiver exclusion before checking `structNames_`.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` so the semantic
+      builtin-context setup file has no map-surface trace allowance.
+  - acceptance:
+    - Semantic non-collection struct-access fallback setup no longer mentions
+      canonical `/std/collections/map` as a special receiver exclusion.
+    - Source-lock coverage rejects reintroducing the canonical receiver
+      exclusion while preserving the generic `structNames_` guard.
+    - The map-surface trace inventory allowance for
+      `src/semantics/SemanticsValidatorExprBuiltinContextSetup.cpp` is
+      removed.
+  - stop_rule: Stop once the canonical map receiver exclusion is gone from the
+    semantic builtin-context setup file and the decaying inventory no longer
+    allows traces for that file.
+  - evidence: Removed the `/std/collections/map` receiver-path branch, added a
+    source lock for the deleted branch and surviving struct-name guard, removed
+    the file from the map-surface inventory allowance, and skipped broad
+    release validation per the lite workflow.

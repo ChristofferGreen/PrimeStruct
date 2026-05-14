@@ -135,7 +135,6 @@ void SemanticsValidator::prepareExprLateFallbackBuiltinContext(
         if (receiverPath == "/array" || receiverPath == "/vector" ||
             receiverPath == canonicalVectorCompatibilityPrefixOrFallback() ||
             receiverPath == "/soa_vector" || receiverPath == "/map" ||
-            receiverPath == "/std/collections/map" ||
             receiverPath == "/string") {
           return false;
         }

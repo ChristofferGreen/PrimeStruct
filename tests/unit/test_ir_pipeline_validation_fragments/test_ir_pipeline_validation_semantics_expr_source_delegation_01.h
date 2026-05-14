@@ -252,6 +252,12 @@
         std::string::npos);
   CHECK(semanticsExprSource.find("resolved.rfind(\"/map/\", 0)") ==
         std::string::npos);
+  CHECK(semanticsExprBuiltinContextSetupSource.find("receiverPath == \"/std/collections/map\"") ==
+        std::string::npos);
+  CHECK(semanticsExprBuiltinContextSetupSource.find("receiverPath == \"/map\"") !=
+        std::string::npos);
+  CHECK(semanticsExprBuiltinContextSetupSource.find("return structNames_.count(receiverPath) > 0;") !=
+        std::string::npos);
   CHECK(semanticsExprSource.find("bool SemanticsValidator::validateExpr") != std::string::npos);
   CHECK(semanticsExprSource.find("return validateLambdaExpr(params, locals, expr, enclosingStatements, statementIndex);") !=
         std::string::npos);
