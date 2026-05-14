@@ -55,11 +55,6 @@
     return memberName == helper;
   };
   auto preferStructReturningCollectionHelperPath = [&](const std::string &path) {
-    std::string normalizedPath = path;
-    if (!normalizedPath.empty() && normalizedPath.front() != '/' &&
-        normalizedPath.rfind("std/collections/map/", 0) == 0) {
-      normalizedPath.insert(normalizedPath.begin(), '/');
-    }
     std::string firstExisting;
     for (const auto &candidate : collectionHelperPathCandidates(path)) {
       if (nameMap.count(candidate) == 0) {

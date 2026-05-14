@@ -3179,6 +3179,8 @@ TEST_CASE("emitter collection fallback helpers stay scoped path aware") {
             "            resolveExprPath(candidate),\n"
             "            CollectionFallbackVectorHelperSurfaceBridgeKey") !=
         std::string::npos);
+  CHECK(fallbackHelpersSource.find("std/collections/map/") ==
+        std::string::npos);
   CHECK(fallbackHelpersSource.find("std::string normalized = candidate.name;") ==
         std::string::npos);
 }

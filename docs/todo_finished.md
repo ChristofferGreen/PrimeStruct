@@ -17986,3 +17986,34 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     slashless map aliases, removed the `src/FrontendSyntax.cpp` map-surface
     inventory allowance, and skipped broad release validation per the lite
     workflow.
+
+- [x] TODO-4475: Delete emitter fallback map normalizer
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4474
+  - split_from: TODO-4464
+  - scope: Delete the unused emitter collection fallback branch that still
+    normalized slashless `std/collections/map/*` helper paths while choosing
+    struct-returning collection helpers.
+  - implementation_notes:
+    - Targeted `src/emitter/EmitterExprCollectionFallbackHelpers.h`, which had
+      one remaining map-surface trace from a local `normalizedPath` value that
+      was not consumed by the candidate selection loop.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` so the emitter
+      fallback helper file no longer has any map-surface trace allowance.
+  - acceptance:
+    - Emitter collection fallback helper selection no longer contains the dead
+      slashless map path normalizer.
+    - Source-lock coverage rejects reintroducing
+      `std/collections/map/` in the emitter fallback helper file.
+    - The map-surface trace inventory no longer allows map-specific traces in
+      `src/emitter/EmitterExprCollectionFallbackHelpers.h`.
+  - stop_rule: Stop once the unused normalizer is gone and the decaying
+    inventory is tightened for the emitter fallback helper file.
+  - evidence: Removed the unused `normalizedPath` branch from emitter
+    collection fallback helpers, added a source lock that keeps
+    `std/collections/map/` out of that helper, removed the file's map-surface
+    inventory allowance, and skipped broad release validation per the lite
+    workflow.

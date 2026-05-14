@@ -243,8 +243,9 @@ Task template:
   deleted from setup-type method-call resolution, and experimental-map method
   fallback guards were removed from lowerer dispatch, and frontend
   import-alias normalization no longer roots slashless map helper paths. The
-  remaining production lowerer/emitter experimental-map traces are
-  source-locked as temporary internal backing substrate by
+  emitter collection fallback path no longer carries a dead slashless map path
+  normalizer. The remaining production lowerer/emitter experimental-map traces
+  are source-locked as temporary internal backing substrate by
   `test_stdlib_map_ownership.cpp`, and
   all production `src`/`include` experimental-map/`Map__*` backing traces are
   capped by the decaying `scripts/check_map_backing_traces.py` release gate.
@@ -1676,7 +1677,7 @@ Task template:
   - owner: ai
   - created_at: 2026-05-14
   - phase: Map stdlib ownership cutover
-  - depends_on: TODO-4474
+  - depends_on: TODO-4475
   - split_from: TODO-4304
   - scope: Add a deterministic validation gate that proves the PrimeStruct map
     surface is fully `.prime`/stdlib-owned and absent from production C++
@@ -1701,6 +1702,10 @@ Task template:
     - TODO-4474 removed frontend syntax normalization for slashless map helper
       import aliases, so `src/FrontendSyntax.cpp` should stay absent from the
       map-surface trace inventory.
+    - TODO-4475 removed the dead slashless map path normalizer from emitter
+      collection fallback helpers, so
+      `src/emitter/EmitterExprCollectionFallbackHelpers.h` should stay absent
+      from the map-surface trace inventory.
     - Current `experimental_map` traces are classified as temporary backing
       substrate: `Map`/`Map__*` type identity, layout, binding, result,
       access, and inference hooks; `Entry`/`Entry__*` variadic constructor
