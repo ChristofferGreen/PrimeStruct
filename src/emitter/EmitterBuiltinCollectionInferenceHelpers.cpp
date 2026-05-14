@@ -145,11 +145,14 @@ bool isExplicitMapCountNameLocal(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  std::string normalized = resolveExprPath(expr);
-  if (!normalized.empty() && normalized.front() == '/') {
-    normalized.erase(normalized.begin());
+  std::string resolved = resolveExprPath(expr);
+  if (!resolved.empty() && resolved.front() != '/') {
+    resolved.insert(resolved.begin(), '/');
   }
-  return normalized == "std/collections/map/count";
+  const StdlibSurfaceMetadata *metadata =
+      findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  return metadata != nullptr &&
+         resolveStdlibSurfaceMemberName(*metadata, resolved) == "count";
 }
 
 bool isVectorValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes) {

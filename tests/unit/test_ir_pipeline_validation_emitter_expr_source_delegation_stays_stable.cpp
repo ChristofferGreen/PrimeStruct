@@ -2909,6 +2909,8 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
       repoRoot / "src" / "emitter" / "EmitterBuiltinMethodResolutionMetadataHelpers.cpp";
   const std::filesystem::path callPathHelpersPath =
       repoRoot / "src" / "emitter" / "EmitterBuiltinCallPathHelpers.cpp";
+  const std::filesystem::path collectionInferenceHelpersPath =
+      repoRoot / "src" / "emitter" / "EmitterBuiltinCollectionInferenceHelpers.cpp";
   const std::filesystem::path methodResolutionHelpersPath =
       repoRoot / "src" / "emitter" / "EmitterBuiltinMethodResolutionHelpers.cpp";
   const std::filesystem::path methodResolutionTypeInferenceHelpersPath =
@@ -2939,6 +2941,7 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
   REQUIRE(std::filesystem::exists(metadataHeaderPath));
   REQUIRE(std::filesystem::exists(metadataHelpersPath));
   REQUIRE(std::filesystem::exists(callPathHelpersPath));
+  REQUIRE(std::filesystem::exists(collectionInferenceHelpersPath));
   REQUIRE(std::filesystem::exists(methodResolutionHelpersPath));
   REQUIRE(std::filesystem::exists(methodResolutionTypeInferenceHelpersPath));
   REQUIRE(std::filesystem::exists(emitBodyVectorHelpersPath));
@@ -2956,6 +2959,8 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
   const std::string metadataHeaderSource = readText(metadataHeaderPath);
   const std::string metadataHelpersSource = readText(metadataHelpersPath);
   const std::string callPathHelpersSource = readText(callPathHelpersPath);
+  const std::string collectionInferenceHelpersSource =
+      readText(collectionInferenceHelpersPath);
   const std::string methodResolutionHelpersSource = readText(methodResolutionHelpersPath);
   const std::string methodResolutionTypeInferenceHelpersSource =
       readText(methodResolutionTypeInferenceHelpersPath);
@@ -2994,6 +2999,11 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
   CHECK(helperHeaderSource.find("kCanonicalMapPrefix") == std::string::npos);
   CHECK(helperHeaderSource.find("\"std/collections/map/\"") == std::string::npos);
   CHECK(helperHeaderSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+        std::string::npos);
+  CHECK(collectionInferenceHelpersSource.find("\"std/collections/map/count\"") ==
+        std::string::npos);
+  CHECK(collectionInferenceHelpersSource.find(
             "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
         std::string::npos);
 

@@ -18340,3 +18340,36 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     removed the file from the map-surface inventory allowance, and verified the
     focused source-lock, slashless canonical metadata, and map-surface
     inventory checks.
+
+- [x] TODO-4486: Route emitter map-count inference through metadata
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4485
+  - split_from: TODO-4464
+  - scope: Remove the remaining hard-coded canonical map-count path from
+    emitter builtin collection inference by resolving the explicit count check
+    through stdlib surface metadata.
+  - implementation_notes:
+    - Targeted `src/emitter/EmitterBuiltinCollectionInferenceHelpers.cpp`,
+      where `isExplicitMapCountNameLocal` still carried the
+      `"std/collections/map/count"` path after slashless `map/count` matching
+      was deleted.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` so the emitter
+      builtin collection inference file has no map-surface trace allowance.
+  - acceptance:
+    - Explicit canonical map-count detection is metadata-backed instead of
+      comparing against a production C++ map path literal.
+    - Source-lock coverage rejects reintroducing the canonical map-count path
+      literal while pinning the metadata-backed bridge lookup.
+    - The map-surface trace inventory allowance for
+      `src/emitter/EmitterBuiltinCollectionInferenceHelpers.cpp` is removed.
+  - stop_rule: Stop once emitter builtin collection inference no longer stores
+    a production C++ canonical map-count path and the decaying inventory no
+    longer allows traces for that file.
+  - evidence: Replaced the hard-coded canonical map-count path with a
+    `collections.map_helpers` stdlib surface lookup, updated the source lock,
+    removed the file from the map-surface inventory allowance, and verified the
+    focused source-lock, explicit map-count inference, and map-surface
+    inventory checks.

@@ -294,10 +294,11 @@ Task template:
   and template monomorphization no longer strips slashless `map/` method
   prefixes from map receiver method targets, and emitter builtin collection
   inference no longer recognizes slashless `map/count` as an explicit
-  map-count helper, with release validation gates now locking those retired
-  semantic and lowerer/emitter adapter names. The emitter helper header now
-  resolves canonical map helper path members through stdlib surface metadata
-  rather than carrying a hard-coded canonical map helper prefix.
+  map-count helper and now resolves its canonical explicit map-count check
+  through stdlib surface metadata, with release validation gates now locking
+  those retired semantic and lowerer/emitter adapter names. The emitter helper
+  header now resolves canonical map helper path members through stdlib surface
+  metadata rather than carrying a hard-coded canonical map helper prefix.
   Template
   monomorphization now asks the registry for preferred experimental vector/SoA
   helper spellings instead of carrying bespoke canonical-to-experimental maps.
@@ -1743,9 +1744,10 @@ Task template:
       `src/semantics/TemplateMonomorphMethodTargets.h` should keep only its
       canonical map-helper traces in the map-surface trace inventory.
     - TODO-4480 removed slashless `map/count` matching from emitter builtin
-      collection inference, so
-      `src/emitter/EmitterBuiltinCollectionInferenceHelpers.cpp` should keep
-      only its canonical map-count trace in the map-surface trace inventory.
+      collection inference, and TODO-4486 removed the remaining hard-coded
+      canonical map-count path from that file, so
+      `src/emitter/EmitterBuiltinCollectionInferenceHelpers.cpp` should stay
+      absent from the map-surface trace inventory.
     - TODO-4481 removed map-specific import-alias normalization from emitter
       struct-type helpers, so `src/emitter/EmitterHelpersStructTypes.cpp`
       should stay absent from the map-surface trace inventory.
