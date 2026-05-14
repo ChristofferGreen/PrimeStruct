@@ -72,11 +72,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4514: Route public SoA read helpers
+- TODO-4515: Route public SoA mutators and construction
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4515: Route public SoA mutators and construction
 - TODO-4308: Move SoA surface metadata out of C++
 - TODO-4309: Delete `soa_vector` compatibility seams
 
@@ -88,7 +87,7 @@ Task template:
 - Vector stdlib ownership cutover: none active
 - Map stdlib ownership cutover: TODO-4464
 - SoA public surface rename and ownership cutover: TODO-4306 parent split as
-  TODO-4514 -> TODO-4515 -> TODO-4308 -> TODO-4309 -> TODO-4310
+  TODO-4515 -> TODO-4308 -> TODO-4309 -> TODO-4310
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
   -> TODO-4275 -> TODO-4276 -> TODO-4271 -> TODO-4272 -> TODO-4274
   -> TODO-4273 -> TODO-4277 -> TODO-4278
@@ -103,7 +102,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4514: Route public SoA read helpers
 - TODO-4515: Route public SoA mutators and construction
 - TODO-4308: Move SoA surface metadata out of C++
 - TODO-4309: Delete `soa_vector` compatibility seams
@@ -2000,33 +1998,6 @@ Task template:
     - TODO-4513 routed canonical `/std/collections/soa/to_aos`
       classification through semantic, emitter, and lowerer classifiers while
       keeping compatibility `soa_vector` conversion paths alive.
-
-- [ ] TODO-4514: Route public SoA read helpers
-  - owner: ai
-  - created_at: 2026-05-14
-  - phase: SoA public surface rename and ownership cutover
-  - depends_on: TODO-4513
-  - split_from: TODO-4307
-  - scope: Route canonical `/std/collections/soa/count`, `count_ref`, `get`,
-    `get_ref`, `ref`, and `ref_ref` helper behavior through public `.prime`
-    wrapper definitions instead of `soa_vector`-specific public-surface
-    semantic/lowering shortcuts.
-  - implementation_notes:
-    - Start from `include/primec/SoaPathHelpers.h`, semantic SoA access/ref
-      validators, template-monomorph SoA helper rewrites,
-      `src/ir_lowerer/IrLowererNativeTailDispatch.cpp`, and read/ref
-      compile-run/source-lock tests.
-    - Preserve rooted `/soa_vector/*` and
-      `/std/collections/soa_vector/*` compatibility until TODO-4309.
-  - acceptance:
-    - Canonical public count/get/ref helper calls and method sugar run through
-      `/std/collections/soa/*` wrapper paths on native and VM.
-    - Production C++ no longer needs to match `soa_vector` helper paths for
-      canonical public read/ref behavior.
-    - Remaining `soa_vector` read/ref matches are compatibility diagnostics or
-      old-surface paths listed for TODO-4309.
-  - stop_rule: Stop once canonical public SoA read/ref helpers no longer
-    depend on `soa_vector`-specific public-surface emission.
 
 - [ ] TODO-4515: Route public SoA mutators and construction
   - owner: ai

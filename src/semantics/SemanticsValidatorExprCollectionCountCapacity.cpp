@@ -202,8 +202,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         if (specializationSuffix != std::string::npos) {
           canonicalResolved.erase(specializationSuffix);
         }
-        if (canonicalResolved == "/std/collections/soa_vector/count" ||
-            canonicalResolved == "/std/collections/soa_vector/count_ref") {
+        if (isCanonicalStdlibSoaHelperPath(canonicalResolved, "count") ||
+            isCanonicalStdlibSoaHelperPath(canonicalResolved, "count_ref")) {
           return canonicalResolved;
         }
         return {};
@@ -214,7 +214,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   }
   if (const std::string canonicalDirectSoaCountPath =
           canonicalizeDirectSoaCountHelperResolved();
-      canonicalDirectSoaCountPath == "/std/collections/soa_vector/count_ref") {
+      isCanonicalStdlibSoaHelperPath(canonicalDirectSoaCountPath, "count_ref")) {
     handledOut = true;
     resolved = canonicalDirectSoaCountPath;
     resolvedMethod = false;
@@ -294,9 +294,11 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
              visibleCountHelperTarget == canonicalVectorHelperPath("count") ||
              visibleCountHelperTarget == "/soa_vector/count" ||
              visibleCountHelperTarget == "/std/collections/soa_vector/count" ||
+             visibleCountHelperTarget == "/std/collections/soa/count" ||
              visibleCountHelperTarget == "/soa_vector/count_ref" ||
              visibleCountHelperTarget ==
-                 "/std/collections/soa_vector/count_ref");
+                 "/std/collections/soa_vector/count_ref" ||
+             visibleCountHelperTarget == "/std/collections/soa/count_ref");
         const bool receiverLooksLikeBuiltinCountTarget =
             resolvesVisibleCollectionCountHelper ||
             (context.resolveMapTarget != nullptr &&
@@ -545,7 +547,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
               countHelperName,
               hasImportedDefinitionPath(
                   countHelperName == "count_ref"
-                      ? "/std/collections/soa_vector/count_ref"
+                      ? preferredSoaHelperTargetForCollectionType("count_ref",
+                                                                  "/soa_vector")
                       : canonicalVectorHelperPath("count")));
   const bool countMethodSurfaceHasNoArguments = expr.args.empty();
   const bool violatesCountMethodSurfacePreconditions =

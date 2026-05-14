@@ -769,6 +769,13 @@ bool rewriteExpr(Expr &expr,
     return inferFromTypeText(
         inferExprTypeTextForTemplatedVectorFallback(*receiverExpr, locals, namespacePrefix, ctx, allowMathBare));
   };
+  auto preferredBorrowedPathForPublicOrCompatibility =
+      [](const std::string &canonicalPath, std::string_view borrowedHelper) {
+        if (canonicalPath.rfind("/std/collections/soa/", 0) == 0) {
+          return "/std/collections/soa/" + std::string(borrowedHelper);
+        }
+        return "/std/collections/soa_vector/" + std::string(borrowedHelper);
+      };
   auto isCanonicalSoaBorrowedWrapperHelper = [&](const std::string &path) {
     auto canonicalizeSoaHelperPath = [](std::string canonicalPath) {
       const size_t specializationSuffix = canonicalPath.find("__");
@@ -817,13 +824,16 @@ bool rewriteExpr(Expr &expr,
       return std::string("/std/collections/soa_vector/to_aos_ref");
     }
     if (isLegacyOrCanonicalSoaHelperPath(canonicalSoaCountPath, "count")) {
-      return std::string("/std/collections/soa_vector/count_ref");
+      return preferredBorrowedPathForPublicOrCompatibility(canonicalSoaCountPath,
+                                                           "count_ref");
     }
     if (isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get")) {
-      return std::string("/std/collections/soa_vector/get_ref");
+      return preferredBorrowedPathForPublicOrCompatibility(canonicalSoaGetPath,
+                                                           "get_ref");
     }
     if (isLegacyOrCanonicalSoaHelperPath(canonicalSoaRefPath, "ref")) {
-      return std::string("/std/collections/soa_vector/ref_ref");
+      return preferredBorrowedPathForPublicOrCompatibility(canonicalSoaRefPath,
+                                                           "ref_ref");
     }
     if (isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosPath, "to_aos")) {
       return std::string("/std/collections/soa_vector/to_aos_ref");
@@ -1248,7 +1258,9 @@ bool rewriteExpr(Expr &expr,
       }
       const bool usesCanonicalSoaSurface =
           normalizedName.rfind("std/collections/soa_vector/", 0) == 0 ||
-          normalizedPrefix == "std/collections/soa_vector";
+          normalizedName.rfind("std/collections/soa/", 0) == 0 ||
+          normalizedPrefix == "std/collections/soa_vector" ||
+          normalizedPrefix == "std/collections/soa";
       if (!usesCanonicalSoaSurface) {
         return std::string{};
       }
@@ -1257,23 +1269,33 @@ bool rewriteExpr(Expr &expr,
         return normalizedName;
       }
       if (normalizedName == "soa_vector/get" ||
-          normalizedName == "std/collections/soa_vector/get") {
+          normalizedName == "std/collections/soa_vector/get" ||
+          normalizedName == "soa/get" ||
+          normalizedName == "std/collections/soa/get") {
         return std::string("get");
       }
       if (normalizedName == "soa_vector/get_ref" ||
-          normalizedName == "std/collections/soa_vector/get_ref") {
+          normalizedName == "std/collections/soa_vector/get_ref" ||
+          normalizedName == "soa/get_ref" ||
+          normalizedName == "std/collections/soa/get_ref") {
         return std::string("get_ref");
       }
       if (normalizedName == "soa_vector/ref" ||
-          normalizedName == "std/collections/soa_vector/ref") {
+          normalizedName == "std/collections/soa_vector/ref" ||
+          normalizedName == "soa/ref" ||
+          normalizedName == "std/collections/soa/ref") {
         return std::string("ref");
       }
       if (normalizedName == "soa_vector/ref_ref" ||
-          normalizedName == "std/collections/soa_vector/ref_ref") {
+          normalizedName == "std/collections/soa_vector/ref_ref" ||
+          normalizedName == "soa/ref_ref" ||
+          normalizedName == "std/collections/soa/ref_ref") {
         return std::string("ref_ref");
       }
       if ((normalizedPrefix == "soa_vector" ||
-           normalizedPrefix == "std/collections/soa_vector") &&
+           normalizedPrefix == "std/collections/soa_vector" ||
+           normalizedPrefix == "soa" ||
+           normalizedPrefix == "std/collections/soa") &&
           (normalizedName == "get" || normalizedName == "get_ref" ||
            normalizedName == "ref" || normalizedName == "ref_ref")) {
         return normalizedName;

@@ -276,7 +276,8 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
                                           const ParameterInfo &param) -> bool {
     if (const auto pendingPath =
             builtinSoaDirectPendingHelperPath(arg, params, locals)) {
-      if (pendingPath->find("/std/collections/soa_vector/ref") == 0) {
+      if (pendingPath->find("/std/collections/soa_vector/ref") == 0 ||
+          pendingPath->find("/std/collections/soa/ref") == 0) {
         return failResolvedCallArgumentDiagnostic(
             soaUnavailableMethodDiagnostic(*pendingPath));
       }

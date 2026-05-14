@@ -177,8 +177,10 @@ bool isExplicitDirectSoaAccessCall(const Expr &expr) {
   const std::string rawPath = resolveNativeTailCallPathWithoutFallbackProbes(expr);
   return rawPath == "/soa_vector/get" ||
          rawPath == "/std/collections/soa_vector/get" ||
+         rawPath == "/std/collections/soa/get" ||
          rawPath == "/soa_vector/get_ref" ||
-         rawPath == "/std/collections/soa_vector/get_ref";
+         rawPath == "/std/collections/soa_vector/get_ref" ||
+         rawPath == "/std/collections/soa/get_ref";
 }
 
 bool hasSemanticMapAccessHelperDefinition(const SemanticProgram *semanticProgram,

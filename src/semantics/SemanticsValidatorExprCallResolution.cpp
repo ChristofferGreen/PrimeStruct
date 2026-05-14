@@ -341,16 +341,15 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
     }
     const std::string canonicalGetPath =
         canonicalizeLegacySoaGetHelperPath(strippedPath);
-    if (canonicalGetPath == "/std/collections/soa_vector/count" ||
-        canonicalGetPath == "/std/collections/soa_vector/count_ref" ||
-        canonicalGetPath == "/std/collections/soa_vector/get" ||
-        canonicalGetPath == "/std/collections/soa_vector/get_ref") {
+    if (isCanonicalStdlibSoaHelperPath(canonicalGetPath, "count") ||
+        isCanonicalStdlibSoaHelperPath(canonicalGetPath, "count_ref") ||
+        isCanonicalStdlibSoaHelperPath(canonicalGetPath, "get") ||
+        isCanonicalStdlibSoaHelperPath(canonicalGetPath, "get_ref")) {
       return canonicalGetPath;
     }
     const std::string canonicalRefPath =
         canonicalizeLegacySoaRefHelperPath(strippedPath);
-    if (canonicalRefPath == "/std/collections/soa_vector/ref" ||
-        canonicalRefPath == "/std/collections/soa_vector/ref_ref") {
+    if (isCanonicalSoaRefLikeHelperPath(canonicalRefPath)) {
       return canonicalRefPath;
     }
     if (strippedPath == "/soa_vector/push" ||

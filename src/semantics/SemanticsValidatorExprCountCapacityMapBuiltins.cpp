@@ -66,9 +66,8 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     return canonicalPath;
   };
   auto isCanonicalSoaCountHelperPath = [](const std::string &candidate) {
-    return candidate.rfind("/std/collections/soa_vector/", 0) == 0 &&
-           (isLegacyOrCanonicalSoaHelperPath(candidate, "count") ||
-            isLegacyOrCanonicalSoaHelperPath(candidate, "count_ref"));
+    return isCanonicalStdlibSoaHelperPath(candidate, "count") ||
+           isCanonicalStdlibSoaHelperPath(candidate, "count_ref");
   };
   const std::string resolvedSoaCountCanonical =
       canonicalizeSoaCountHelperPath(resolved);

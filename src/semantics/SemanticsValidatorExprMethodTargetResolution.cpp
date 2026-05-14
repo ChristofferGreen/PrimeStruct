@@ -212,13 +212,17 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (normalizedPrefix == "vector" ||
         isCanonicalVectorCompatibilityNamespace(normalizedPrefix) ||
         normalizedPrefix == "soa_vector" ||
-        normalizedPrefix == "std/collections/soa_vector") {
+        normalizedPrefix == "std/collections/soa_vector" ||
+        normalizedPrefix == "soa" ||
+        normalizedPrefix == "std/collections/soa") {
       return "/" + normalizedPrefix + "/" + candidate;
     }
     if (startsWithRootVectorMethodPrefix(candidate) ||
         isUnrootedCanonicalVectorCompatibilityPath(candidate) ||
         candidate.rfind("soa_vector/", 0) == 0 ||
-        candidate.rfind("std/collections/soa_vector/", 0) == 0) {
+        candidate.rfind("std/collections/soa_vector/", 0) == 0 ||
+        candidate.rfind("soa/", 0) == 0 ||
+        candidate.rfind("std/collections/soa/", 0) == 0) {
       return "/" + candidate;
     }
     return "";
@@ -255,6 +259,12 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   } else if (normalizedMethodName.rfind("std/collections/soa_vector/", 0) == 0) {
     normalizedMethodName =
         normalizedMethodName.substr(std::string("std/collections/soa_vector/").size());
+  } else if (normalizedMethodName.rfind("soa/", 0) == 0) {
+    normalizedMethodName =
+        normalizedMethodName.substr(std::string("soa/").size());
+  } else if (normalizedMethodName.rfind("std/collections/soa/", 0) == 0) {
+    normalizedMethodName =
+        normalizedMethodName.substr(std::string("std/collections/soa/").size());
   } else if (isUnrootedCanonicalVectorCompatibilityPath(normalizedMethodName)) {
     normalizedMethodName = std::string(
         stripUnrootedCanonicalVectorCompatibilityPrefix(normalizedMethodName));
@@ -1995,7 +2005,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (isCanonicalVectorCompatibilityPath(explicitVectorHelperPath)) {
       return resolveExperimentalVectorValueTarget(receiverExpr, elemType);
     }
-    if (explicitVectorHelperPath.rfind("/std/collections/soa_vector/", 0) == 0) {
+    if (explicitVectorHelperPath.rfind("/std/collections/soa_vector/", 0) == 0 ||
+        explicitVectorHelperPath.rfind("/std/collections/soa/", 0) == 0) {
       return resolveSoaVectorTarget(receiverExpr, elemType);
     }
     return false;

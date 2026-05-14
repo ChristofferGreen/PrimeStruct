@@ -19263,3 +19263,39 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     experimental conversion imports; refreshed classifier source locks; ran
     `git diff --check`; and skipped broad baseline validation per the lite
     workflow.
+
+- [x] TODO-4514: Route public SoA read helpers
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: SoA public surface rename and ownership cutover
+  - depends_on: TODO-4513
+  - split_from: TODO-4307
+  - scope: Route canonical `/std/collections/soa/count`, `count_ref`, `get`,
+    `get_ref`, `ref`, and `ref_ref` helper behavior through public `.prime`
+    wrapper definitions instead of `soa_vector`-specific public-surface
+    semantic/lowering shortcuts.
+  - implementation_notes:
+    - Started from semantic SoA helper resolution, pending access/ref
+      validators, template-monomorph borrowed helper rewrites,
+      `src/ir_lowerer/IrLowererNativeTailDispatch.cpp`,
+      `src/ir_lowerer/IrLowererInlineParamHelpers.cpp`, and read/ref
+      compile-run/source-lock coverage.
+    - Preserved rooted `/soa_vector/*` and
+      `/std/collections/soa_vector/*` compatibility paths until TODO-4309.
+  - acceptance:
+    - Canonical public count/get/ref helper calls and imported method sugar run
+      through `/std/collections/soa/*` wrapper paths on native and VM.
+    - Production C++ no longer needs to match only `soa_vector` helper paths for
+      canonical public read/ref behavior.
+    - Remaining `soa_vector` read/ref matches are compatibility diagnostics or
+      old-surface paths listed for TODO-4309.
+  - stop_rule: Stop once canonical public SoA read/ref helpers no longer depend
+    on `soa_vector`-specific public-surface emission.
+  - evidence: Added public `/std/collections/soa/count`, `count_ref`, `get`,
+    `get_ref`, `ref`, and `ref_ref` classification to semantic direct-surface,
+    pending-helper, template-monomorph borrowed-wrapper, native-tail, and inline
+    parameter bridge paths; added native and VM public read/ref compile-run
+    fixtures without direct experimental imports; built
+    `PrimeStruct_compile_run_tests`; ran the new native and VM focused cases;
+    and reran the backend source-delegation stability shard.

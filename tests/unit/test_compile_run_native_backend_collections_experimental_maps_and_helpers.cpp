@@ -533,6 +533,46 @@ main() {
   CHECK(runCommand(exePath) == 12);
 }
 
+TEST_CASE("native public soa read helpers route through wrapper paths") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/soa/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [auto mut] values{soa<Particle>()}
+  push(values, Particle(3i32, 5i32))
+  push(values, Particle(7i32, 11i32))
+  [auto] borrowed{location(values)}
+  [Particle] direct{/std/collections/soa/get<Particle>(values, 1i32)}
+  [Particle] borrowedValue{/std/collections/soa/get_ref<Particle>(borrowed, 0i32)}
+  [Reference<Particle>] directRef{/std/collections/soa/ref<Particle>(values, 0i32)}
+  [Reference<Particle>] borrowedRef{/std/collections/soa/ref_ref<Particle>(borrowed, 1i32)}
+  [i32] methodCount{values.count()}
+  return(plus(plus(/std/collections/soa/count<Particle>(values),
+                   /std/collections/soa/count_ref<Particle>(borrowed)),
+              plus(methodCount,
+                   plus(plus(direct.x, borrowedValue.x),
+                        plus(directRef.y, borrowedRef.y)))))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_public_soa_read_helpers.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_public_soa_read_helpers").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 32);
+}
+
 TEST_CASE("native compiles and runs graph-solved direct local-auto vector helper shadows") {
   const std::string source = R"(
 /vector/count([vector<i32>] values) {

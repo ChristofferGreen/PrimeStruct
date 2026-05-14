@@ -360,6 +360,40 @@ main() {
   CHECK(runCommand(runCmd) == 1);
 }
 
+TEST_CASE("vm public soa read helpers route through wrapper paths") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/soa/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [auto mut] values{soa<Particle>()}
+  push(values, Particle(3i32, 5i32))
+  push(values, Particle(7i32, 11i32))
+  [auto] borrowed{location(values)}
+  [Particle] direct{/std/collections/soa/get<Particle>(values, 1i32)}
+  [Particle] borrowedValue{/std/collections/soa/get_ref<Particle>(borrowed, 0i32)}
+  [Reference<Particle>] directRef{/std/collections/soa/ref<Particle>(values, 0i32)}
+  [Reference<Particle>] borrowedRef{/std/collections/soa/ref_ref<Particle>(borrowed, 1i32)}
+  return(plus(plus(/std/collections/soa/count<Particle>(values),
+                   /std/collections/soa/count_ref<Particle>(borrowed)),
+              plus(values.count(),
+                   plus(plus(direct.x, borrowedValue.x),
+                        plus(directRef.y, borrowedRef.y)))))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_public_soa_read_helpers.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 32);
+}
+
 TEST_CASE("vm legacy soa_vector compatibility helpers run without experimental imports") {
   const std::string source = R"(
 import /std/collections/*

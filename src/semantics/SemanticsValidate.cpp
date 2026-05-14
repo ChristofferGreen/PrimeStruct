@@ -3801,8 +3801,12 @@ bool normalizeExperimentalSoaBorrowedHelperMethodCall(
     if (!name.empty() && name.front() == '/') {
       name.erase(name.begin());
     }
-    if (name.rfind("std/collections/soa_vector/", 0) == 0) {
+    if (name.rfind("std/collections/soa/", 0) == 0) {
+      name = name.substr(std::string("std/collections/soa/").size());
+    } else if (name.rfind("std/collections/soa_vector/", 0) == 0) {
       name = name.substr(std::string("std/collections/soa_vector/").size());
+    } else if (name.rfind("soa/", 0) == 0) {
+      name = name.substr(std::string("soa/").size());
     } else if (name.rfind("soa_vector/", 0) == 0) {
       name = name.substr(std::string("soa_vector/").size());
     }
@@ -3832,6 +3836,21 @@ bool normalizeExperimentalSoaBorrowedHelperMethodCall(
   if (auto borrowedReceiver = normalizedBorrowedReceiver(expr.args.front());
       borrowedReceiver.has_value()) {
     const auto borrowedElemType = borrowedReceiverElementType(expr.args.front());
+    const bool usesPublicSoaPath =
+        expr.namespacePrefix == "/std/collections/soa" ||
+        expr.namespacePrefix == "std/collections/soa" ||
+        expr.name == "/std/collections/soa/count" ||
+        expr.name == "/std/collections/soa/count_ref" ||
+        expr.name == "/std/collections/soa/get" ||
+        expr.name == "/std/collections/soa/get_ref" ||
+        expr.name == "/std/collections/soa/ref" ||
+        expr.name == "/std/collections/soa/ref_ref" ||
+        expr.name == "/soa/count" ||
+        expr.name == "/soa/count_ref" ||
+        expr.name == "/soa/get" ||
+        expr.name == "/soa/get_ref" ||
+        expr.name == "/soa/ref" ||
+        expr.name == "/soa/ref_ref";
     expr.isMethodCall = false;
     expr.isFieldAccess = false;
     expr.namespacePrefix.clear();
@@ -3840,19 +3859,22 @@ bool normalizeExperimentalSoaBorrowedHelperMethodCall(
       expr.templateArgs.clear();
       expr.templateArgs.push_back(*borrowedElemType);
     }
+    const std::string borrowedHelperRoot =
+        usesPublicSoaPath ? "/std/collections/soa/"
+                          : "/std/collections/soa_vector/";
     if (normalizedMethodName == "count" ||
         normalizedMethodName == "count_ref") {
-      expr.name = "/std/collections/soa_vector/count_ref";
+      expr.name = borrowedHelperRoot + "count_ref";
       return true;
     }
     if (normalizedMethodName == "get" ||
         normalizedMethodName == "get_ref") {
-      expr.name = "/std/collections/soa_vector/get_ref";
+      expr.name = borrowedHelperRoot + "get_ref";
       return true;
     }
     if (normalizedMethodName == "ref" ||
         normalizedMethodName == "ref_ref") {
-      expr.name = "/std/collections/soa_vector/ref_ref";
+      expr.name = borrowedHelperRoot + "ref_ref";
       return true;
     }
     expr.name = "/std/collections/soa_vector/to_aos_ref";
@@ -5108,11 +5130,19 @@ void rewriteExperimentalSoaFieldViewAssignTargetsExpr(Expr &expr) {
              specializationText;
       return true;
     }
+    if (canonicalGetPath == "/std/collections/soa/get") {
+      path = "/std/collections/soa/ref" + specializationText;
+      return true;
+    }
     if (canonicalGetPath == "/std/collections/soa_vector/get_ref") {
       path =
           (basePath.rfind("/soa_vector/", 0) == 0 ? "/soa_vector/ref_ref"
                                                   : "/std/collections/soa_vector/ref_ref") +
           specializationText;
+      return true;
+    }
+    if (canonicalGetPath == "/std/collections/soa/get_ref") {
+      path = "/std/collections/soa/ref_ref" + specializationText;
       return true;
     }
     return false;
