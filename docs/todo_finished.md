@@ -18110,3 +18110,35 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     and surviving canonical path, reduced the file's inventory allowance from
     two traces to one, and skipped broad release validation per the lite
     workflow.
+
+- [x] TODO-4479: Delete slashless map monomorph method prefix
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4478
+  - split_from: TODO-4464
+  - scope: Delete slashless `map/` method-target prefix stripping from
+    template monomorphization while preserving canonical
+    `std/collections/map/` method-target normalization.
+  - implementation_notes:
+    - Targeted `src/semantics/TemplateMonomorphMethodTargets.h`, where
+      `normalizeCollectionMethodName("map", ...)` still stripped slashless
+      `map/` prefixes before selecting helper paths.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` so the
+      monomorph method-target file keeps only canonical map-helper traces.
+  - acceptance:
+    - Template monomorphization no longer strips slashless `map/` prefixes
+      from map receiver method targets.
+    - Source-lock coverage rejects reintroducing the slashless `map/` prefix
+      branch while preserving canonical `std/collections/map/` normalization.
+    - The map-surface trace inventory allowance for
+      `src/semantics/TemplateMonomorphMethodTargets.h` decreases to two
+      canonical map-helper traces.
+  - stop_rule: Stop once the slashless map-prefix branch is gone and the
+    decaying inventory is tightened for the monomorph method-target file.
+  - evidence: Removed the slashless `map/` prefix strip from
+    `normalizeCollectionMethodName`, added source locks for the removed
+    slashless prefix and surviving canonical prefix, reduced the file's
+    inventory allowance from three traces to two, and skipped broad release
+    validation per the lite workflow.

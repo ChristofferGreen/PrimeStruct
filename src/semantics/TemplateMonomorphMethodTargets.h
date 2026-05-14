@@ -38,11 +38,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
       }
     }
     if (receiverTypeName == "map") {
-      const std::string mapPrefix = "map/";
       const std::string stdMapPrefix = "std/collections/map/";
-      if (candidate.rfind(mapPrefix, 0) == 0) {
-        return candidate.substr(mapPrefix.size());
-      }
       if (candidate.rfind(stdMapPrefix, 0) == 0) {
         return candidate.substr(stdMapPrefix.size());
       }

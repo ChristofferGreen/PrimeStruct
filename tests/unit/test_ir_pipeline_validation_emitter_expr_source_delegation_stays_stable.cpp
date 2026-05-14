@@ -770,6 +770,11 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "const std::string normalizedHelperName = normalizeFileMethodName(helperName);") !=
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
+            "const std::string mapPrefix = \"map/\";") == std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "const std::string stdMapPrefix = \"std/collections/map/\";") !=
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
             "auto normalizeFileErrorMethodName = [](std::string_view methodName)") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
