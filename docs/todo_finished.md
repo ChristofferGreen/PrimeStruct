@@ -17918,3 +17918,40 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     within 308 allowed inventory slots. Promoted TODO-4464 back to Ready Now
     for the strict full zero map-surface audit and deferred broad release
     validation per the lite workflow.
+
+- [x] TODO-4473: Add map surface trace inventory gate
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4472
+  - split_from: TODO-4464
+  - scope: Add a deterministic validation gate that scans production
+    `src`/`include` C++ for the full current PrimeStruct map-surface trace
+    inventory and caps that residue before the final zero C++ audit deletes or
+    migrates it.
+  - implementation_notes:
+    - Targeted canonical `/std/collections/map/*`, rooted `/map/*`,
+      `experimental_map`, `Map__`, `Entry__`, `CollectionsMap*`, `Map<K, V>`,
+      and map helper-symbol trace classes.
+    - Used per-file maximum allowed counts so deleting existing residue passes
+      without updating the audit, while new files or count increases fail.
+  - acceptance:
+    - Release validation runs a production `src`/`include` map surface trace
+      inventory gate and a checker self-test.
+    - The checker allows ordinary C++ `std::map`, generic mapping names, and
+      source-map infrastructure by not matching those forms.
+    - Any added PrimeStruct map-surface production trace beyond the checked-in
+      per-file inventory fails the gate.
+  - stop_rule: Stop once the current full production map-surface residue is
+    mechanically capped and TODO-4464 remains as the strict zero-trace audit
+    follow-up.
+  - evidence: Added `scripts/check_map_surface_trace_inventory.py` with a
+    decaying per-file maximum-count inventory over production `src` and
+    `include` files, wired it into CTest as
+    `PrimeStruct_map_surface_trace_inventory`, and added
+    `tests/scripts/test_check_map_surface_trace_inventory.py` as a checker
+    self-test. The script currently observes 1,589 production map-surface
+    traces within 1,589 allowed inventory slots. Promoted TODO-4464 back to
+    Ready Now for the strict full zero map-surface audit and deferred broad
+    release validation per the lite workflow.

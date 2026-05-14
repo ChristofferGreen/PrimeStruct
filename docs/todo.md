@@ -246,6 +246,9 @@ Task template:
   internal backing substrate by `test_stdlib_map_ownership.cpp`, and
   all production `src`/`include` experimental-map/`Map__*` backing traces are
   capped by the decaying `scripts/check_map_backing_traces.py` release gate.
+  The broader `scripts/check_map_surface_trace_inventory.py` release gate now
+  caps all current production map-surface trace classes until TODO-4464 deletes
+  or migrates them to reach the strict zero-trace state.
 - Compatibility adapter inventory: map insert helper compatibility no longer
   lives in `StdlibSurfaceRegistry::CollectionsMapHelpers`; that metadata now
   recognizes only canonical `/std/collections/map/*` helper spellings.
@@ -1671,7 +1674,7 @@ Task template:
   - owner: ai
   - created_at: 2026-05-14
   - phase: Map stdlib ownership cutover
-  - depends_on: TODO-4472
+  - depends_on: TODO-4473
   - split_from: TODO-4304
   - scope: Add a deterministic validation gate that proves the PrimeStruct map
     surface is fully `.prime`/stdlib-owned and absent from production C++
@@ -1688,19 +1691,21 @@ Task template:
       files outside production `src/` and `include/`.
     - If generic collection code needs examples or fixtures, place them in
       tests/docs or stdlib-owned manifests rather than production C++ strings.
-    - Start from the TODO-4472 decaying backing-trace inventory in
-      `scripts/check_map_backing_traces.py` plus the narrower TODO-4468
-      source-lock in `tests/unit/test_stdlib_map_ownership.cpp`. Those
-      checks classify current production `experimental_map` traces as
-      temporary backing substrate: `Map`/`Map__*` type identity, layout,
-      binding, result, access, and inference hooks; `Entry`/`Entry__*`
-      variadic constructor support; canonical-constructor-to-backing-helper
-      rewrites; generated `map__` constructor reentry; and broad backing
-      fallback blockers in setup-type/later collection-expression lowering.
-    - Tighten or replace the TODO-4472 allowed-count inventory as traces are
-      deleted; the final TODO-4464 state is zero tolerance for all
-      PrimeStruct-map-specific production C++ traces, not a permanent
-      allowlist.
+    - Start from the TODO-4473 decaying full-trace inventory in
+      `scripts/check_map_surface_trace_inventory.py`, the TODO-4472
+      backing-trace inventory in `scripts/check_map_backing_traces.py`, and
+      the narrower TODO-4468 source-lock in
+      `tests/unit/test_stdlib_map_ownership.cpp`.
+    - Current `experimental_map` traces are classified as temporary backing
+      substrate: `Map`/`Map__*` type identity, layout, binding, result,
+      access, and inference hooks; `Entry`/`Entry__*` variadic constructor
+      support; canonical-constructor-to-backing-helper rewrites; generated
+      `map__` constructor reentry; and broad backing fallback blockers in
+      setup-type/later collection-expression lowering.
+    - Tighten or replace the TODO-4473 and TODO-4472 allowed-count
+      inventories as traces are deleted; the final TODO-4464 state is zero
+      tolerance for all PrimeStruct-map-specific production C++ traces, not a
+      permanent allowlist.
   - acceptance:
     - The audit runs in the release validation path and fails when a
       PrimeStruct-map-specific production C++ trace is reintroduced.
