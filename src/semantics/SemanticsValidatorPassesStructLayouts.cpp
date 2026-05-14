@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 
+#include "MapConstructorHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <algorithm>
@@ -327,9 +328,8 @@ bool SemanticsValidator::validateStructLayouts() {
       return true;
     }
     if (normalized == "array" || normalized == "vector" ||
-        normalized == "map" || normalized == "Map" ||
-        normalized == "std/collections/experimental_map/Map" ||
-        normalized == "/std/collections/experimental_map/Map" ||
+        normalized == "map" ||
+        isExperimentalCollectionBackingTypeName("map", "Map", normalized) ||
         normalized == "soa_vector") {
       layoutOut = {8u, 8u};
       return true;

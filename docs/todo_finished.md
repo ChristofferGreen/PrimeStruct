@@ -18732,3 +18732,36 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     constructor-root and constructor-member metadata lookups, updated
     source-lock coverage, tightened the map-surface inventory allowance, and
     promoted TODO-4498 for the next struct-layout backing check slice.
+
+- [x] TODO-4498: Route struct-layout map backing checks through metadata
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4497
+  - split_from: TODO-4464
+  - scope: Remove hard-coded experimental map backing type checks from
+    semantic struct-layout validation by routing backing recognition through
+    shared collection backing metadata helpers.
+  - implementation_notes:
+    - Targeted `src/semantics/SemanticsValidatorPassesStructLayouts.cpp`,
+      where map backing type recognition still compared normalized type names
+      with `std/collections/experimental_map/Map` spellings directly.
+    - Preserved current struct-layout behavior for experimental map backing
+      structs while removing production C++ experimental-map type literals.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` for the target
+      file and added focused source-lock coverage for the delegation.
+  - acceptance:
+    - Struct-layout validation still recognizes current experimental map
+      backing structs where needed.
+    - The target file no longer contains hard-coded experimental map backing
+      type path literals.
+    - The map-surface trace inventory and source-lock coverage prevent
+      reintroducing the removed literals.
+  - stop_rule: Stop once struct-layout map backing recognition delegates to
+    shared helpers, focused coverage passes, and the inventory allowance for
+    the target file is tightened.
+  - evidence: Replaced direct experimental-map backing path comparisons with
+    shared backing-type helper metadata, removed the target file from the
+    map-surface inventory allowance, added source-lock coverage, and promoted
+    TODO-4499 for the next template map method target slice.

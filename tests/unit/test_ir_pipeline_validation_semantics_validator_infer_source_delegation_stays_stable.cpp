@@ -1537,6 +1537,12 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsPassesStructLayoutsSource.find("return failPassesStructLayoutsDiagnostic(error_);") !=
         std::string::npos);
+  CHECK(semanticsPassesStructLayoutsSource.find(
+            "std/collections/experimental_map/Map") ==
+        std::string::npos);
+  CHECK(semanticsPassesStructLayoutsSource.find(
+            "isExperimentalCollectionBackingTypeName(\"map\", \"Map\", normalized)") !=
+        std::string::npos);
   CHECK(semanticsTraitsSource.find(
             "auto failTraitDiagnostic = [&](const Definition &defContext,") !=
         std::string::npos);

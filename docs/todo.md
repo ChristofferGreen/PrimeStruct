@@ -72,7 +72,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4498: Route struct-layout map backing checks through metadata
+- TODO-4499: Route template map method targets through metadata
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -88,7 +88,7 @@ Task template:
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
 - Vector stdlib ownership cutover: none active
-- Map stdlib ownership cutover: TODO-4498 -> TODO-4464
+- Map stdlib ownership cutover: TODO-4499 -> TODO-4464
 - SoA public surface rename and ownership cutover: TODO-4305 -> TODO-4306
   -> TODO-4307 -> TODO-4308 -> TODO-4309 -> TODO-4310
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
@@ -105,7 +105,7 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4498: Route struct-layout map backing checks through metadata
+- TODO-4499: Route template map method targets through metadata
 - TODO-4305: Rename and style canonical `.prime` SoA surface
 - TODO-4306: Stabilize generic SoA substrate boundaries
 - TODO-4307: Lower SoA helpers through ordinary `.prime`
@@ -1721,39 +1721,41 @@ Task template:
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
 
-- [ ] TODO-4498: Route struct-layout map backing checks through metadata
+- [ ] TODO-4499: Route template map method targets through metadata
   - owner: ai
   - created_at: 2026-05-14
   - phase: Map stdlib ownership cutover
-  - depends_on: TODO-4497
+  - depends_on: TODO-4498
   - split_from: TODO-4464
-  - scope: Remove hard-coded experimental map backing type checks from
-    semantic struct-layout validation by routing backing recognition through
-    shared collection backing metadata helpers.
+  - scope: Remove hard-coded canonical map helper prefix/path construction
+    from template method-target resolution by routing map method target
+    qualification through shared stdlib surface metadata helpers.
   - implementation_notes:
-    - Target `src/semantics/SemanticsValidatorPassesStructLayouts.cpp`,
-      where map backing type recognition still compares normalized type names
-      with `std/collections/experimental_map/Map` spellings directly.
-    - Preserve current struct-layout behavior for experimental map backing
-      structs while removing production C++ experimental-map type literals.
+    - Target `src/semantics/TemplateMonomorphMethodTargets.h`, where indexed
+      args-pack map method resolution still strips
+      `std/collections/map/` from method names and builds
+      `/std/collections/map/` helper paths directly.
+    - Prefer adding a narrow shared helper near existing map helper metadata
+      utilities instead of introducing another local map-path recognizer in the
+      template monomorphization header.
     - Tighten `scripts/check_map_surface_trace_inventory.py` for the target
       file and add focused source-lock coverage for the delegation.
   - acceptance:
-    - Struct-layout validation still recognizes current experimental map
-      backing structs where needed.
-    - The target file no longer contains hard-coded experimental map backing
-      type path literals.
+    - Indexed args-pack map method target resolution still handles canonical
+      map helper names and borrowed receiver helper variants.
+    - The target file no longer contains hard-coded canonical map helper path
+      prefix literals.
     - The map-surface trace inventory and source-lock coverage prevent
       reintroducing the removed literals.
-  - stop_rule: Stop once struct-layout map backing recognition delegates to
-    shared helpers, focused coverage passes, and the inventory allowance for
-    the target file is tightened.
+  - stop_rule: Stop once template map method target construction delegates to
+    shared metadata helpers, focused coverage passes, and the inventory
+    allowance for the target file is tightened.
 
 - [ ] TODO-4464: Add full zero C++ map-surface audit
   - owner: ai
   - created_at: 2026-05-14
   - phase: Map stdlib ownership cutover
-  - depends_on: TODO-4498
+  - depends_on: TODO-4499
   - split_from: TODO-4304
   - scope: Add a deterministic validation gate that proves the PrimeStruct map
     surface is fully `.prime`/stdlib-owned and absent from production C++
@@ -1863,6 +1865,10 @@ Task template:
     - TODO-4497 removed hard-coded experimental map constructor root literals
       from template monomorph experimental collection type helpers, so only
       shared metadata enum references remain in that helper.
+    - TODO-4498 removed hard-coded experimental map backing type literals from
+      semantic struct-layout validation, so
+      `src/semantics/SemanticsValidatorPassesStructLayouts.cpp` should stay
+      absent from the map-surface trace inventory.
     - Tighten or replace the TODO-4473 and TODO-4472 allowed-count
       inventories as traces are deleted; the final TODO-4464 state is zero
       tolerance for all PrimeStruct-map-specific production C++ traces, not a
