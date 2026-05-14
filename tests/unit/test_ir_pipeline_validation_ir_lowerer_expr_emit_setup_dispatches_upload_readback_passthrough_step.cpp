@@ -533,10 +533,12 @@ TEST_CASE("emitter expr control call-path step rewrites non-method call names") 
       {}).has_value());
 }
 
-TEST_CASE("emitter helpers types normalize slashless map import aliases") {
+TEST_CASE("emitter helpers types require explicit slashes for map import aliases") {
   const std::unordered_map<std::string, std::string> importAliases = {
-      {"MapCanonicalAlias", "std/collections/map/at"},
-      {"MapCompatAlias", "map/at"},
+      {"MapCanonicalAlias", "/std/collections/map/at"},
+      {"SlashlessCanonicalMapAlias", "std/collections/map/at"},
+      {"MapCompatAlias", "/map/at"},
+      {"SlashlessCompatMapAlias", "map/at"},
       {"NonMapAlias", "pkg/Thing"},
   };
   const std::unordered_map<std::string, std::string> structTypeMap = {
@@ -547,9 +549,36 @@ TEST_CASE("emitter helpers types normalize slashless map import aliases") {
 
   CHECK(primec::emitter::bindingTypeToCpp("MapCanonicalAlias", "/pkg", importAliases, structTypeMap) ==
         "CanonicalMapAtType");
+  CHECK(primec::emitter::bindingTypeToCpp(
+            "SlashlessCanonicalMapAlias", "/pkg", importAliases, structTypeMap) == "int");
   CHECK(primec::emitter::bindingTypeToCpp("MapCompatAlias", "/pkg", importAliases, structTypeMap) ==
         "CompatMapAtType");
+  CHECK(primec::emitter::bindingTypeToCpp(
+            "SlashlessCompatMapAlias", "/pkg", importAliases, structTypeMap) == "int");
   CHECK(primec::emitter::bindingTypeToCpp("NonMapAlias", "/pkg", importAliases, structTypeMap) == "int");
+}
+
+TEST_CASE("emitter helpers struct types source stays free of map alias normalization") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+  const std::filesystem::path emitterStructTypesPath =
+      repoRoot / "src" / "emitter" / "EmitterHelpersStructTypes.cpp";
+  REQUIRE(std::filesystem::exists(emitterStructTypesPath));
+
+  const std::string source = readText(emitterStructTypesPath);
+  CHECK(source.find("normalize_map_import_alias_path") == std::string::npos);
+  CHECK(source.find("path.rfind(\"map/\", 0)") == std::string::npos);
+  CHECK(source.find("path.rfind(\"std/collections/map/\", 0)") == std::string::npos);
+  CHECK(source.find("return resolveFromMap(importIt->second);") != std::string::npos);
 }
 
 TEST_CASE("emitter helpers expose source Result cpp bridge types") {

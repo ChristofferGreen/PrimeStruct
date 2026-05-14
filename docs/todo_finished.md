@@ -18176,3 +18176,36 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     slashless path and surviving canonical path, reduced the file's inventory
     allowance from two traces to one, and skipped broad release validation per
     the lite workflow.
+
+- [x] TODO-4481: Delete emitter struct map alias normalizer
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4480
+  - split_from: TODO-4464
+  - scope: Delete map-specific import-alias normalization from emitter
+    struct-type helpers so struct type resolution uses import alias paths
+    exactly as provided.
+  - implementation_notes:
+    - Targeted `src/emitter/EmitterHelpersStructTypes.cpp`, where
+      `resolveStructTypeName` still added leading slashes to slashless
+      `map/` and `std/collections/map/` import alias targets before probing
+      `structTypeMap`.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` so the emitter
+      struct-type helper file has no map-surface trace allowance.
+  - acceptance:
+    - Emitter struct-type resolution no longer normalizes slashless map import
+      alias targets before resolving struct C++ types.
+    - Source-lock coverage rejects reintroducing the map-specific import-alias
+      normalizer while preserving exact explicit alias path resolution.
+    - The map-surface trace inventory allowance for
+      `src/emitter/EmitterHelpersStructTypes.cpp` is removed.
+  - stop_rule: Stop once map-specific import-alias normalization is gone from
+    emitter struct-type helpers and the decaying inventory no longer allows
+    traces for that file.
+  - evidence: Removed `normalize_map_import_alias_path`, retargeted the
+    helper test to require explicit slash-prefixed map alias paths, added a
+    source lock for the deleted normalizer, removed the file from the map
+    surface inventory allowance, and skipped broad release validation per the
+    lite workflow.

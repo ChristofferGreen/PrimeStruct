@@ -1695,7 +1695,7 @@ Task template:
   - owner: ai
   - created_at: 2026-05-14
   - phase: Map stdlib ownership cutover
-  - depends_on: TODO-4480
+  - depends_on: TODO-4481
   - split_from: TODO-4304
   - scope: Add a deterministic validation gate that proves the PrimeStruct map
     surface is fully `.prime`/stdlib-owned and absent from production C++
@@ -1744,6 +1744,9 @@ Task template:
       collection inference, so
       `src/emitter/EmitterBuiltinCollectionInferenceHelpers.cpp` should keep
       only its canonical map-count trace in the map-surface trace inventory.
+    - TODO-4481 removed map-specific import-alias normalization from emitter
+      struct-type helpers, so `src/emitter/EmitterHelpersStructTypes.cpp`
+      should stay absent from the map-surface trace inventory.
     - Current `experimental_map` traces are classified as temporary backing
       substrate: `Map`/`Map__*` type identity, layout, binding, result,
       access, and inference hooks; `Entry`/`Entry__*` variadic constructor

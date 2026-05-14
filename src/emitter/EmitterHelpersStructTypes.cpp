@@ -10,15 +10,6 @@ std::string resolveStructTypeName(const std::string &typeName,
                                   const std::string &namespacePrefix,
                                   const std::unordered_map<std::string, std::string> &importAliases,
                                   const std::unordered_map<std::string, std::string> &structTypeMap) {
-  auto normalize_map_import_alias_path = [](const std::string &path) {
-    if (path.empty() || path.front() == '/') {
-      return path;
-    }
-    if (path.rfind("map/", 0) == 0 || path.rfind("std/collections/map/", 0) == 0) {
-      return "/" + path;
-    }
-    return path;
-  };
   if (typeName.empty()) {
     return "";
   }
@@ -69,7 +60,7 @@ std::string resolveStructTypeName(const std::string &typeName,
   }
   auto importIt = importAliases.find(typeName);
   if (importIt != importAliases.end()) {
-    return resolveFromMap(normalize_map_import_alias_path(importIt->second));
+    return resolveFromMap(importIt->second);
   }
   return "";
 }
