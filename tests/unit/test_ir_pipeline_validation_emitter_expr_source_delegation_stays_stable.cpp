@@ -2855,6 +2855,15 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "metadataBackedExperimentalMapConstructorRewritePath(resolvedPath, 0)") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionTypeHelpersSource.find(
+            "experimentalCollectionConstructorRootLocal(\"map\")") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionTypeHelpersSource.find(
+            "resolveCollectionConstructorMemberPath(") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionTypeHelpersSource.find(
+            "/std/collections/experimental_map/") ==
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionTypeHelpersSource.find(
             "normalizedPath == \"/std/collections/mapNew\"") ==
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionTypeHelpersSource.find(

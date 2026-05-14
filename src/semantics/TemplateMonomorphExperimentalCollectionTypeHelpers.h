@@ -8,9 +8,14 @@ std::string experimentalMapConstructorInferencePath(const std::string &resolvedP
 
 bool isExperimentalMapConstructorHelperPath(const std::string &resolvedPath) {
   const std::string normalizedPath = stripMapConstructorSuffixes(resolvedPath);
-  return normalizedPath.rfind("/std/collections/experimental_map/", 0) == 0 &&
-         isResolvedPublishedMapConstructorPath(normalizedPath) &&
-         normalizedPath != "/std/collections/experimental_map/map";
+  const std::string experimentalMapRoot =
+      experimentalCollectionConstructorRootLocal("map");
+  std::string memberName;
+  return normalizedPath.rfind(experimentalMapRoot, 0) == 0 &&
+         resolveCollectionConstructorMemberPath(
+             primec::StdlibSurfaceId::CollectionsMapConstructors,
+             normalizedPath, memberName) &&
+         memberName != "map";
 }
 
 std::string experimentalVectorConstructorInferencePath(const std::string &resolvedPath) {

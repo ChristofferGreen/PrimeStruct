@@ -18698,3 +18698,37 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     key/value extraction, updated source-lock coverage, tightened the
     map-surface inventory allowance, and promoted TODO-4497 for the next
     template constructor-root cleanup slice.
+
+- [x] TODO-4497: Route template map constructor root through metadata
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4496
+  - split_from: TODO-4464
+  - scope: Remove hard-coded experimental map constructor root literals from
+    template monomorph experimental collection type helpers by routing the
+    prefix checks through shared constructor metadata helpers.
+  - implementation_notes:
+    - Targeted `src/semantics/TemplateMonomorphExperimentalCollectionTypeHelpers.h`,
+      where experimental map constructor classification still compared
+      against `/std/collections/experimental_map/` and
+      `/std/collections/experimental_map/map` directly.
+    - Preserved constructor-helper recognition by pairing the shared
+      experimental collection root helper with
+      `resolveCollectionConstructorMemberPath(...)` metadata lookup.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` so the target
+      file allowance drops from 2 traces to 1.
+  - acceptance:
+    - Experimental map constructor helper classification still excludes the
+      raw backing `map` constructor and accepts published helper paths.
+    - The target file no longer contains hard-coded experimental map
+      constructor root or raw constructor path literals.
+    - Source-lock coverage prevents reintroducing the removed literals.
+  - stop_rule: Stop once template experimental map constructor root
+    recognition delegates to shared helpers, focused coverage passes, and the
+    inventory allowance for the target file is tightened.
+  - evidence: Replaced the local experimental-map path literals with shared
+    constructor-root and constructor-member metadata lookups, updated
+    source-lock coverage, tightened the map-surface inventory allowance, and
+    promoted TODO-4498 for the next struct-layout backing check slice.
