@@ -18373,3 +18373,35 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     removed the file from the map-surface inventory allowance, and verified the
     focused source-lock, explicit map-count inference, and map-surface
     inventory checks.
+
+- [x] TODO-4487: Route lowerer map access return kind through metadata
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4486
+  - split_from: TODO-4464
+  - scope: Remove the remaining hard-coded canonical map access helper path
+    from lowerer setup-type return-kind inference by resolving the string
+    access override path through stdlib surface metadata.
+  - implementation_notes:
+    - Targeted `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`,
+      where `resolveCanonicalMapAccessStringOverride` still built
+      `"/std/collections/map/" + normalizedName`.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` so the lowerer
+      setup-type return-kind helper file has no map-surface trace allowance.
+  - acceptance:
+    - Canonical map access return-kind override lookup is metadata-backed
+      instead of concatenating a production C++ map path literal.
+    - Source-lock coverage rejects reintroducing the canonical map access path
+      concatenation while pinning the metadata-backed bridge lookup.
+    - The map-surface trace inventory allowance for
+      `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp` is removed.
+  - stop_rule: Stop once setup-type return-kind inference no longer stores a
+    production C++ canonical map access path and the decaying inventory no
+    longer allows traces for that file.
+  - evidence: Replaced the hard-coded canonical map access path concatenation
+    with a `collections.map_helpers` stdlib surface lookup, updated the source
+    lock, removed the file from the map-surface inventory allowance, and
+    verified focused source-lock, access return-kind, and map-surface
+    inventory checks.

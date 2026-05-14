@@ -10,6 +10,7 @@
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeReceiverTargetHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/StdlibSurfaceRegistry.h"
 
 namespace primec::ir_lowerer {
 
@@ -39,6 +40,14 @@ bool prefersExactDirectMapCountLikeReturnPath(const Expr &callExpr) {
   return resolveMapHelperAliasName(callExpr, helperName) &&
          (helperName == "count" || helperName == "count_ref" || helperName == "contains" ||
           helperName == "tryAt");
+}
+
+std::string canonicalMapHelperPath(std::string_view helperName) {
+  const auto *metadata = findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  if (metadata == nullptr) {
+    return {};
+  }
+  return stdlibSurfaceCanonicalHelperPath(metadata->id, helperName);
 }
 
 struct SemanticReturnKindTargetInfo {
@@ -348,9 +357,11 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
           if (normalizedName != "at" && normalizedName != "at_unsafe") {
             return false;
           }
+          const std::string canonicalAccessPath =
+              canonicalMapHelperPath(normalizedName);
           ReturnInfo info;
-          if (!getReturnInfo ||
-              !getReturnInfo("/std/collections/map/" + normalizedName, info) ||
+          if (!getReturnInfo || canonicalAccessPath.empty() ||
+              !getReturnInfo(canonicalAccessPath, info) ||
               info.returnsVoid || info.returnsArray ||
               info.kind != LocalInfo::ValueKind::String) {
             return false;

@@ -1173,6 +1173,11 @@ TEST_CASE("ir lowerer vector type layout traces use generic collection helpers")
   CHECK(setupReturnKindSource.find(
             "appendCandidate(\"/std/collections/map/\" +") ==
         std::string::npos);
+  CHECK(setupReturnKindSource.find("\"/std/collections/map/\" + normalizedName") ==
+        std::string::npos);
+  CHECK(setupReturnKindSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+        std::string::npos);
   CHECK(setupReturnKindSource.find("appendCandidate(\"/map/\" +") ==
         std::string::npos);
   CHECK(setupReturnKindSource.find(
