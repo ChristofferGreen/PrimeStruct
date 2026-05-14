@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/StdlibSurfaceRegistry.h"
 
 #include <functional>
 #include <string>
@@ -17,6 +18,15 @@ bool isCanonicalMapMethodHelper(std::string_view helperName) {
          helperName == "at" || helperName == "at_ref" ||
          helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
          helperName == "insert" || helperName == "insert_ref";
+}
+
+std::string canonicalMapMethodHelperTarget(std::string_view helperName) {
+  const StdlibSurfaceMetadata *metadata =
+      findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  if (metadata == nullptr) {
+    return {};
+  }
+  return stdlibSurfaceCanonicalHelperPath(metadata->id, helperName);
 }
 
 bool isCanonicalVectorAccessMethodHelper(std::string_view helperName) {
@@ -115,7 +125,7 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
         params, locals, expr.args.front(), normalizedMethodName);
     if (rewrittenMapMethodCall.name.empty()) {
       rewrittenMapMethodCall.name =
-          "/std/collections/map/" + normalizedMethodName;
+          canonicalMapMethodHelperTarget(normalizedMethodName);
     }
     handledOut = true;
     return validateExpr(params, locals, rewrittenMapMethodCall);

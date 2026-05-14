@@ -18470,3 +18470,34 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     removed the file from the map-surface inventory allowance, and verified
     focused source-lock, map inference semantic, and map-surface inventory
     checks.
+
+- [x] TODO-4490: Route late unknown map path through metadata
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4489
+  - split_from: TODO-4464
+  - scope: Remove the hard-coded canonical map helper path concatenation from
+    late unknown-target fallback inference by routing the helper path through
+    stdlib surface metadata.
+  - implementation_notes:
+    - Targeted `src/semantics/SemanticsValidatorExprLateUnknownTargetFallbacks.cpp`,
+      where canonical map method fallback still built
+      `"/std/collections/map/" + normalizedMethodName`.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` so the semantic
+      late unknown-target fallback file has no map-surface trace allowance.
+  - acceptance:
+    - Late unknown-target fallback inference continues to probe canonical map
+      helpers for eligible map method names.
+    - The semantic late unknown-target fallback file no longer contains a
+      production C++ canonical map path literal or concatenation.
+    - Source-lock coverage prevents reintroducing the literal helper path.
+  - stop_rule: Stop once late unknown-target map helper fallback is
+    metadata-backed, focused semantic coverage passes, and the map-surface
+    trace inventory no longer allows traces for the target file.
+  - evidence: Replaced the hard-coded canonical map helper path concatenation
+    with a `collections.map_helpers` stdlib surface lookup, updated the source
+    lock, removed the file from the map-surface inventory allowance, and
+    verified focused source-lock, bare-map semantic, and map-surface inventory
+    checks.

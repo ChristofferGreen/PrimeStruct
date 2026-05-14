@@ -288,6 +288,15 @@
   CHECK(semanticsExprLateUnknownTargetFallbacksSource.find(
             "rewrittenMapMethodCall.name = preferredMapMethodTargetForCall(") !=
         std::string::npos);
+  CHECK(semanticsExprLateUnknownTargetFallbacksSource.find(
+            "\"/std/collections/map/\" + normalizedMethodName") ==
+        std::string::npos);
+  CHECK(semanticsExprLateUnknownTargetFallbacksSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+        std::string::npos);
+  CHECK(semanticsExprLateUnknownTargetFallbacksSource.find(
+            "canonicalMapMethodHelperTarget(normalizedMethodName)") !=
+        std::string::npos);
   CHECK(semanticsExprSource.find(
             "return failLateUnknownTargetDiagnostic(\"unknown call target: \" +") ==
         std::string::npos);
@@ -592,6 +601,9 @@
         std::string::npos);
   CHECK(semanticsExprLateUnknownTargetFallbacksSource.find(
             "if (rewrittenMapMethodCall.name.empty()) {") !=
+        std::string::npos);
+  CHECK(semanticsExprLateUnknownTargetFallbacksSource.find(
+            "canonicalMapMethodHelperTarget(normalizedMethodName);") !=
         std::string::npos);
   CHECK(semanticsExprStructConstructorsSource.find(
             "bool SemanticsValidator::validateExprResolvedStructConstructorCall") !=
