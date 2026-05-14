@@ -49,18 +49,24 @@ inline bool isLegacyOrCanonicalSoaHelperPath(std::string_view path,
                                              std::string_view helperName) {
   constexpr std::string_view LegacyPrefix = "/soa_vector/";
   constexpr std::string_view CanonicalPrefix = "/std/collections/soa_vector/";
+  constexpr std::string_view PublicPrefix = "/std/collections/soa/";
   if (path.starts_with(LegacyPrefix)) {
     return path.substr(LegacyPrefix.size()) == helperName;
   }
   if (path.starts_with(CanonicalPrefix)) {
     return path.substr(CanonicalPrefix.size()) == helperName;
   }
+  if (path.starts_with(PublicPrefix)) {
+    return path.substr(PublicPrefix.size()) == helperName;
+  }
   return false;
 }
 
 inline bool isCanonicalSoaRefLikeHelperPath(std::string_view path) {
   return path == "/std/collections/soa_vector/ref" ||
-         path == "/std/collections/soa_vector/ref_ref";
+         path == "/std/collections/soa_vector/ref_ref" ||
+         path == "/std/collections/soa/ref" ||
+         path == "/std/collections/soa/ref_ref";
 }
 
 inline bool isExperimentalSoaRefLikeHelperPath(std::string_view path) {

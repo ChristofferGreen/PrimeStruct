@@ -72,10 +72,11 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4305: Rename and style canonical `.prime` SoA surface
+- TODO-4508: Add `soa<T>` public type spelling
 
 ### Immediate Next 10 (After Ready Now)
 
+- TODO-4509: Migrate SoA docs and examples to `soa`
 - TODO-4306: Stabilize generic SoA substrate boundaries
 - TODO-4307: Lower SoA helpers through ordinary `.prime`
 - TODO-4308: Move SoA surface metadata out of C++
@@ -88,8 +89,9 @@ Task template:
 - Deferred stdlib ADT migration: none active
 - Vector stdlib ownership cutover: none active
 - Map stdlib ownership cutover: TODO-4464
-- SoA public surface rename and ownership cutover: TODO-4305 -> TODO-4306
-  -> TODO-4307 -> TODO-4308 -> TODO-4309 -> TODO-4310
+- SoA public surface rename and ownership cutover: TODO-4305 parent split as
+  TODO-4508 -> TODO-4509 -> TODO-4306 -> TODO-4307
+  -> TODO-4308 -> TODO-4309 -> TODO-4310
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
   -> TODO-4275 -> TODO-4276 -> TODO-4271 -> TODO-4272 -> TODO-4274
   -> TODO-4273 -> TODO-4277 -> TODO-4278
@@ -104,7 +106,8 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4305: Rename and style canonical `.prime` SoA surface
+- TODO-4508: Add `soa<T>` public type spelling
+- TODO-4509: Migrate SoA docs and examples to `soa`
 - TODO-4306: Stabilize generic SoA substrate boundaries
 - TODO-4307: Lower SoA helpers through ordinary `.prime`
 - TODO-4308: Move SoA surface metadata out of C++
@@ -1882,7 +1885,7 @@ Task template:
     fully stdlib-owned and no PrimeStruct-map-specific production C++ traces
     remain.
 
-- [ ] TODO-4305: Rename and style canonical `.prime` SoA surface
+- [~] TODO-4305: Rename and style canonical `.prime` SoA surface
   - owner: ai
   - created_at: 2026-04-28
   - phase: SoA public surface rename and ownership cutover
@@ -1937,6 +1940,51 @@ Task template:
   - stop_rule: Stop once the target public spelling is `soa<T>` /
     `/std/collections/soa/*` with `soa_vector` isolated as compatibility; leave
     generic substrate and lowering extraction to TODO-4306 and TODO-4307.
+  - notes:
+    - Split into bounded implementation leaves because the full rename spans
+      public wrapper modules, type spelling support, examples/docs migration,
+      compatibility shims, and later C++ surface cleanup.
+    - TODO-4507 introduces the canonical `/std/collections/soa/*` wrapper
+      namespace over the existing `SoaVector<T>` backing without removing
+      `soa_vector` compatibility.
+    - TODO-4508 adds the user-facing `soa<T>` type spelling once the helper
+      namespace exists.
+    - TODO-4509 migrates public docs and examples to the new `soa` spelling
+      after the helper namespace and type spelling are both available.
+
+- [ ] TODO-4508: Add `soa<T>` public type spelling
+  - owner: ai
+  - created_at: 2026-05-14
+  - phase: SoA public surface rename and ownership cutover
+  - depends_on: TODO-4507
+  - split_from: TODO-4305
+  - scope: Teach parser/semantics/lowering type normalization to accept
+    `soa<T>` as the public spelling for the existing SoA backing identity while
+    preserving `soa_vector<T>` as compatibility.
+  - acceptance:
+    - `soa<T>` bindings, returns, references, pointers, empty literals, and
+      helper calls behave like the existing `soa_vector<T>` surface.
+    - Diagnostics prefer `soa<T>` for new canonical examples while old
+      `soa_vector<T>` tests remain explicitly compatibility-scoped.
+  - stop_rule: Stop once `soa<T>` is a working type spelling and
+    compatibility `soa_vector<T>` tests still pass.
+
+- [ ] TODO-4509: Migrate SoA docs and examples to `soa`
+  - owner: ai
+  - created_at: 2026-05-14
+  - phase: SoA public surface rename and ownership cutover
+  - depends_on: TODO-4508
+  - split_from: TODO-4305
+  - scope: Update public SoA docs, style guidance, examples, and source-locks
+    to present `soa<T>` and `/std/collections/soa/*` as canonical, with
+    `soa_vector` documented only as compatibility.
+  - acceptance:
+    - Public examples and docs use `soa<T>` and `/std/collections/soa/*`.
+    - Compatibility documentation and tests explicitly name `soa_vector` as
+      legacy/compatibility coverage rather than the preferred surface.
+  - stop_rule: Stop once docs/examples/source-locks consistently present the
+    new SoA public surface and leave remaining lowering/substrate work to
+    TODO-4306 and TODO-4307.
 
 - [ ] TODO-4306: Stabilize generic SoA substrate boundaries
   - owner: ai

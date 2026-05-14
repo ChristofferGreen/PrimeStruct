@@ -257,7 +257,8 @@ bool rewriteExpr(Expr &expr,
     };
     auto isCanonicalSoaHelperPath = [](const std::string &candidate,
                                        std::string_view helperName) {
-      return candidate.rfind("/std/collections/soa_vector/", 0) == 0 &&
+      return (candidate.rfind("/std/collections/soa_vector/", 0) == 0 ||
+              candidate.rfind("/std/collections/soa/", 0) == 0) &&
              isLegacyOrCanonicalSoaHelperPath(candidate, helperName);
     };
     const std::string canonicalSoaCountPath = canonicalizeSoaHelperPath(path);
@@ -1063,20 +1064,28 @@ bool rewriteExpr(Expr &expr,
         resolvesBorrowedExperimentalSoaVectorReceiver(helperReceiverExpr);
     const bool isCanonicalNonBorrowedSoaHelperPath =
         path == "/std/collections/soa_vector/count" ||
+        path == "/std/collections/soa/count" ||
         path == "/std/collections/soa_vector/get" ||
+        path == "/std/collections/soa/get" ||
         path == "/std/collections/soa_vector/ref" ||
-        path == "/std/collections/soa_vector/to_aos";
+        path == "/std/collections/soa/ref" ||
+        path == "/std/collections/soa_vector/to_aos" ||
+        path == "/std/collections/soa/to_aos";
     if (borrowedExperimentalSoaReceiver &&
         isCanonicalNonBorrowedSoaHelperPath) {
       return true;
     }
-    if (path.rfind("/std/collections/soa_vector/", 0) == 0 &&
+    if ((path.rfind("/std/collections/soa_vector/", 0) == 0 ||
+         path.rfind("/std/collections/soa/", 0) == 0) &&
         helperReceiverExpr != nullptr) {
+      const bool directArgsPackReceiver =
+          inferCollectionReceiverFamilyForRewrite(helperReceiverExpr) == "args";
       const bool directBuiltinSoaReceiver =
           inferCollectionReceiverFamily(helperReceiverExpr) == "soa_vector";
       const bool directExperimentalSoaReceiver =
           resolvesExperimentalSoaVectorReceiver(helperReceiverExpr);
-      if (directBuiltinSoaReceiver || directExperimentalSoaReceiver ||
+      if (directArgsPackReceiver || directBuiltinSoaReceiver ||
+          directExperimentalSoaReceiver ||
           borrowedExperimentalSoaReceiver) {
         return true;
       }

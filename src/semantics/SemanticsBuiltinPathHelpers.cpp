@@ -542,11 +542,15 @@ std::string canonicalizeLegacySoaGetHelperPath(std::string_view path) {
 bool isLegacyOrCanonicalSoaHelperPath(std::string_view path, std::string_view helperName) {
   constexpr std::string_view kLegacyPrefix = "/soa_vector/";
   constexpr std::string_view kCanonicalPrefix = "/std/collections/soa_vector/";
+  constexpr std::string_view kPublicPrefix = "/std/collections/soa/";
   if (path.starts_with(kLegacyPrefix)) {
     return path.substr(kLegacyPrefix.size()) == helperName;
   }
   if (path.starts_with(kCanonicalPrefix)) {
     return path.substr(kCanonicalPrefix.size()) == helperName;
+  }
+  if (path.starts_with(kPublicPrefix)) {
+    return path.substr(kPublicPrefix.size()) == helperName;
   }
   return false;
 }
@@ -557,13 +561,16 @@ bool isCanonicalStdlibSoaHelperPath(std::string_view path, std::string_view help
   if (specializationSuffix != std::string::npos) {
     canonicalPath.erase(specializationSuffix);
   }
-  return canonicalPath.rfind("/std/collections/soa_vector/", 0) == 0 &&
+  return (canonicalPath.rfind("/std/collections/soa_vector/", 0) == 0 ||
+          canonicalPath.rfind("/std/collections/soa/", 0) == 0) &&
          isLegacyOrCanonicalSoaHelperPath(canonicalPath, helperName);
 }
 
 bool isCanonicalSoaRefLikeHelperPath(std::string_view path) {
   return path == "/std/collections/soa_vector/ref" ||
-         path == "/std/collections/soa_vector/ref_ref";
+         path == "/std/collections/soa_vector/ref_ref" ||
+         path == "/std/collections/soa/ref" ||
+         path == "/std/collections/soa/ref_ref";
 }
 
 bool isExperimentalSoaCountLikeHelperPath(std::string_view path) {

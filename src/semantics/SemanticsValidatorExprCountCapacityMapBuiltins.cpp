@@ -448,6 +448,12 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
             soaUnavailableMethodDiagnostic("/soa_vector/" +
                                            soaCountHelperName));
       }
+      std::string argsPackElemType;
+      if ((*dispatchResolvers).resolveArgsPackAccessTarget != nullptr &&
+          (*dispatchResolvers).resolveArgsPackAccessTarget(expr.args.front(),
+                                                          argsPackElemType)) {
+        return validateVectorCountBuiltinCall();
+      }
       std::string elemType;
       if (!(*dispatchResolvers).resolveSoaVectorTarget(expr.args.front(),
                                                        elemType)) {

@@ -454,6 +454,38 @@ main() {
   CHECK(runCommand(exePath) == 17);
 }
 
+TEST_CASE("native wildcard-imported canonical soa helpers run without experimental imports") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/soa/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [auto mut] values{single<Particle>(Particle(4i32, 6i32))}
+  reserve(values, 2i32)
+  push(values, Particle(9i32, 11i32))
+  [Particle] first{get(values, 0i32)}
+  [Reference<Particle>] second{ref(values, 1i32)}
+  [vector<Particle>] unpacked{to_aos(values)}
+  return(plus(plus(count(values), plus(first.x, second.x)), count(unpacked)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_wildcard_canonical_soa_helpers.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_wildcard_canonical_soa_helpers").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 17);
+}
+
 TEST_CASE("native compiles and runs graph-solved direct local-auto vector helper shadows") {
   const std::string source = R"(
 /vector/count([vector<i32>] values) {

@@ -19048,3 +19048,38 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     lowerer map backing predicate, tightened the access-target map trace
     allowances by the removed predicate traces, refreshed the source lock, and
     promoted TODO-4305 as the next Ready Now leaf.
+
+- [x] TODO-4507: Add canonical `/std/collections/soa/*` wrappers
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: SoA public surface rename and ownership cutover
+  - split_from: TODO-4305
+  - scope: Add a public `.prime` wrapper module under
+    `/std/collections/soa/*` that delegates construction, count/get/ref,
+    push/reserve, field-view, and AoS conversion helpers to the existing
+    `SoaVector<T>` implementation-backed public surface.
+  - implementation_notes:
+    - Added `stdlib/std/collections/soa.prime` as the first canonical helper
+      namespace, keeping `to_aos` directly under
+      `/std/collections/soa/*`.
+    - Kept return and receiver types as `SoaVector<T>` so existing
+      backing/lowering behavior and compatibility imports remain unchanged
+      until TODO-4508 teaches the public type spelling.
+    - Preserved `stdlib/std/collections/soa_vector*.prime` and
+      `/std/collections/soa_vector/*` compatibility behavior.
+  - acceptance:
+    - Wildcard-importing `/std/collections/soa/*` exposes public call-form
+      construction, count/get/ref, push/reserve, and to_aos helpers over
+      existing `SoaVector<T>` storage.
+    - Existing `/std/collections/soa_vector/*` imports remain supported as
+      compatibility.
+    - Source-lock coverage records the new canonical wrapper module and keeps
+      it free of direct experimental SoA imports.
+  - stop_rule: Stop once the new `/std/collections/soa/*` wrapper namespace is
+    present, covered by focused compile-run/source-lock tests, and the next
+    leaf is the `soa<T>` type spelling.
+  - evidence: Added the canonical SoA helper wrapper namespace over the
+    current `SoaVector<T>` backing, covered wildcard-imported native helper
+    use and source-lock expectations, kept `soa_vector` compatibility, and
+    promoted TODO-4508 as the next Ready Now leaf.

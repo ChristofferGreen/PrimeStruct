@@ -449,6 +449,7 @@ TEST_CASE("stdlib style boundary docs stay source locked") {
   CHECK(codeExamples.find("`stdlib/std/collections/vector.prime`") != std::string::npos);
   CHECK(codeExamples.find("`stdlib/std/collections/map.prime`") != std::string::npos);
   CHECK(codeExamples.find("`stdlib/std/collections/errors.prime`") != std::string::npos);
+  CHECK(codeExamples.find("`stdlib/std/collections/soa.prime`") != std::string::npos);
   CHECK(codeExamples.find("`stdlib/std/collections/soa_vector.prime`") != std::string::npos);
   CHECK(codeExamples.find("`stdlib/std/collections/soa_vector_conversions.prime`") != std::string::npos);
   CHECK(codeExamples.find("`stdlib/std/gfx/gfx.prime`") != std::string::npos);
@@ -484,6 +485,7 @@ TEST_CASE("stdlib style boundary docs stay source locked") {
   CHECK(primeStructDoc.find("This boundary is the scope reference for the stdlib surface-style cleanup lane in") !=
         std::string::npos);
   CHECK(primeStructDoc.find("`stdlib/std/collections/vector.prime`") != std::string::npos);
+  CHECK(primeStructDoc.find("`stdlib/std/collections/soa.prime`") != std::string::npos);
   CHECK(primeStructDoc.find("`stdlib/std/collections/collections.prime`") != std::string::npos);
   CHECK(primeStructDoc.find("`stdlib/std/collections/experimental_vector.prime`") != std::string::npos);
   CHECK(primeStructDoc.find("`stdlib/std/collections/experimental_map.prime`") != std::string::npos);
@@ -496,6 +498,7 @@ TEST_CASE("stdlib style boundary docs stay source locked") {
 
   CHECK(agents.find("For stdlib style work, follow the exact file-level boundary in") !=
         std::string::npos);
+  CHECK(agents.find("`stdlib/std/collections/soa.prime`,") != std::string::npos);
   CHECK(agents.find("`stdlib/std/collections/collections.prime`,") != std::string::npos);
   CHECK(agents.find("`stdlib/std/collections/experimental_vector.prime`,") != std::string::npos);
   CHECK(agents.find("`stdlib/std/collections/experimental_map.prime`,") != std::string::npos);
@@ -1396,14 +1399,14 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4305: Rename and style canonical `.prime` SoA surface") !=
+                  "- TODO-4508: Add `soa<T>` public type spelling") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
-                  "- TODO-4306: Stabilize generic SoA substrate boundaries") !=
+                  "- TODO-4509: Migrate SoA docs and examples to `soa`") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4308: Move SoA surface metadata out of C++") !=
         std::string::npos);
-  CHECK(todo.find("- TODO-4305: Rename and style canonical `.prime` SoA surface") !=
+  CHECK(todo.find("- [~] TODO-4305: Rename and style canonical `.prime` SoA surface") !=
         std::string::npos);
   CHECK(todo.find("- Semantic phase contract hardening:") == std::string::npos);
   CHECK(todo.find("- Deferred graph and inference hardening: TODO-4239") ==
@@ -1415,8 +1418,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4305: Rename and style canonical `.prime` SoA surface\n"
-                  "- TODO-4306: Stabilize generic SoA substrate boundaries") !=
+                  "- TODO-4508: Add `soa<T>` public type spelling\n"
+                  "- TODO-4509: Migrate SoA docs and examples to `soa`") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
       "TODO-4268: Add heterogeneous type-pack syntax and metadata",
@@ -2743,6 +2746,8 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
       std::filesystem::path("..") / "stdlib" / "std" / "collections" / "experimental_map.prime";
   std::filesystem::path soaWrapperPath =
       std::filesystem::path("..") / "stdlib" / "std" / "collections" / "soa_vector.prime";
+  std::filesystem::path soaPublicPath =
+      std::filesystem::path("..") / "stdlib" / "std" / "collections" / "soa.prime";
   std::filesystem::path soaConversionsPath =
       std::filesystem::path("..") / "stdlib" / "std" / "collections" / "soa_vector_conversions.prime";
   std::filesystem::path internalSoaVectorPath =
@@ -2789,6 +2794,10 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
     soaWrapperPath =
         std::filesystem::current_path() / "stdlib" / "std" / "collections" / "soa_vector.prime";
   }
+  if (!std::filesystem::exists(soaPublicPath)) {
+    soaPublicPath =
+        std::filesystem::current_path() / "stdlib" / "std" / "collections" / "soa.prime";
+  }
   if (!std::filesystem::exists(soaConversionsPath)) {
     soaConversionsPath =
         std::filesystem::current_path() / "stdlib" / "std" / "collections" / "soa_vector_conversions.prime";
@@ -2821,6 +2830,7 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   REQUIRE(std::filesystem::exists(internalVectorStdlibPath));
   REQUIRE(std::filesystem::exists(experimentalMapStdlibPath));
   REQUIRE(std::filesystem::exists(soaWrapperPath));
+  REQUIRE(std::filesystem::exists(soaPublicPath));
   REQUIRE(std::filesystem::exists(soaConversionsPath));
   REQUIRE(std::filesystem::exists(internalSoaVectorPath));
   REQUIRE(std::filesystem::exists(internalSoaConversionsPath));
@@ -2837,6 +2847,7 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   const std::string internalVectorStdlib = readFile(internalVectorStdlibPath.string());
   const std::string experimentalMapStdlib = readFile(experimentalMapStdlibPath.string());
   const std::string soaWrapper = readFile(soaWrapperPath.string());
+  const std::string soaPublic = readFile(soaPublicPath.string());
   const std::string soaConversions = readFile(soaConversionsPath.string());
   const std::string internalSoaVector = readFile(internalSoaVectorPath.string());
   const std::string internalSoaConversions = readFile(internalSoaConversionsPath.string());
@@ -2975,7 +2986,7 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
         std::string::npos);
   CHECK(soaWrapper.find("import /std/collections/experimental_soa_vector/*") ==
         std::string::npos);
-  CHECK(soaWrapper.find("valueCount{values.count()}") != std::string::npos);
+  CHECK(soaWrapper.find("valueCount{/count(values)}") != std::string::npos);
   CHECK(soaWrapper.find("/std/collections/internal_soa_vector/soaVectorNew<T>()") !=
         std::string::npos);
   CHECK(soaWrapper.find("/std/collections/internal_soa_vector/soaVectorPush<T>(out, /at(values, index))") !=
@@ -2994,6 +3005,36 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(soaWrapper.find("/std/collections/soa_vector/soaVectorFieldView<Struct, Field>(") !=
         std::string::npos);
   CHECK(soaWrapper.find("/std/collections/soa_vector/soaVectorPush<T>([SoaVector<T> mut] values, [T] value)") !=
+        std::string::npos);
+
+  CHECK(soaPublic.find(
+            "// Canonical public SoA helper namespace over the current SoaVector backing.") !=
+        std::string::npos);
+  CHECK(soaPublic.find("import /std/collections/internal_soa_vector") !=
+        std::string::npos);
+  CHECK(soaPublic.find("import /std/collections/experimental_soa_vector/*") ==
+        std::string::npos);
+  CHECK(soaPublic.find("/std/collections/soa/soa<T>([args<T>] values)") !=
+        std::string::npos);
+  CHECK(soaPublic.find("/std/collections/internal_soa_vector/soaVectorPush<T>(out, /at(values, index))") !=
+        std::string::npos);
+  CHECK(soaPublic.find("/std/collections/soa/single<T>([T] value)") !=
+        std::string::npos);
+  CHECK(soaPublic.find("/std/collections/soa/from_aos<T>([vector<T>] values)") !=
+        std::string::npos);
+  CHECK(soaPublic.find("/std/collections/soa/count<T>([SoaVector<T>] values)") !=
+        std::string::npos);
+  CHECK(soaPublic.find("/std/collections/soa/get<T>([SoaVector<T>] values, [i32] index)") !=
+        std::string::npos);
+  CHECK(soaPublic.find("/std/collections/soa/ref<T>([SoaVector<T>] values, [i32] index)") !=
+        std::string::npos);
+  CHECK(soaPublic.find("/std/collections/soa/reserve<T>([SoaVector<T> mut] values, [i32] capacity)") !=
+        std::string::npos);
+  CHECK(soaPublic.find("/std/collections/soa/push<T>([SoaVector<T> mut] values, [T] value)") !=
+        std::string::npos);
+  CHECK(soaPublic.find("/std/collections/soa/to_aos<T>([SoaVector<T>] values)") !=
+        std::string::npos);
+  CHECK(soaPublic.find("return(/std/collections/internal_soa_vector_conversions/soaVectorToAos<T>(values))") !=
         std::string::npos);
 
   CHECK(internalSoaVector.find(

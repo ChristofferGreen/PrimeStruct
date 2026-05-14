@@ -3770,6 +3770,7 @@ flight.
   `stdlib/std/collections/vector.prime`,
   `stdlib/std/collections/map.prime`,
   `stdlib/std/collections/errors.prime`,
+  `stdlib/std/collections/soa.prime`,
   `stdlib/std/collections/soa_vector.prime`,
   `stdlib/std/collections/soa_vector_conversions.prime`, and
   `stdlib/std/gfx/gfx.prime`.
