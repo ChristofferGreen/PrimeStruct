@@ -483,17 +483,25 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
 }
 
 std::string soaFieldViewHelperPath(std::string_view fieldName) {
-  return "/std/collections/soa_vector/field_view/" + std::string(fieldName);
+  return "/std/collections/soa/field_view/" + std::string(fieldName);
 }
 
 bool splitSoaFieldViewHelperPath(std::string_view path, std::string *fieldNameOut) {
-  constexpr std::string_view kCanonicalSoaFieldViewPrefix =
+  constexpr std::string_view kPublicSoaFieldViewPrefix =
+      "/std/collections/soa/field_view/";
+  constexpr std::string_view kCompatibilitySoaFieldViewPrefix =
       "/std/collections/soa_vector/field_view/";
-  if (path.starts_with(kCanonicalSoaFieldViewPrefix)) {
+  auto splitWithPrefix = [&](std::string_view prefix) {
     if (fieldNameOut != nullptr) {
-      *fieldNameOut = std::string(path.substr(kCanonicalSoaFieldViewPrefix.size()));
+      *fieldNameOut = std::string(path.substr(prefix.size()));
     }
     return true;
+  };
+  if (path.starts_with(kPublicSoaFieldViewPrefix)) {
+    return splitWithPrefix(kPublicSoaFieldViewPrefix);
+  }
+  if (path.starts_with(kCompatibilitySoaFieldViewPrefix)) {
+    return splitWithPrefix(kCompatibilitySoaFieldViewPrefix);
   }
   return false;
 }
@@ -628,18 +636,26 @@ bool isExperimentalSoaGetLikeHelperPath(std::string_view path) {
 bool isExperimentalSoaGrowthHelperPath(std::string_view path) {
   constexpr std::string_view kExperimentalSoaVectorPrefix =
       "/std/collections/experimental_soa_vector/";
+  constexpr std::string_view kCompatibilitySoaVectorPrefix =
+      "/std/collections/soa_vector/";
   std::string canonicalPath(path);
   const size_t specializationSuffix = canonicalPath.find("__");
   if (specializationSuffix != std::string::npos) {
     canonicalPath.erase(specializationSuffix);
   }
-  if (!canonicalPath.starts_with(kExperimentalSoaVectorPrefix)) {
-    return false;
+  if (canonicalPath.starts_with(kCompatibilitySoaVectorPrefix)) {
+    const std::string_view helperName =
+        std::string_view(canonicalPath).substr(kCompatibilitySoaVectorPrefix.size());
+    return helperName == "push" || helperName == "reserve" ||
+           helperName == "soaVectorPush" || helperName == "soaVectorReserve";
   }
-  const std::string_view helperName =
-      std::string_view(canonicalPath).substr(kExperimentalSoaVectorPrefix.size());
-  return helperName == "push" || helperName == "reserve" ||
-         helperName == "soaVectorPush" || helperName == "soaVectorReserve";
+  if (canonicalPath.starts_with(kExperimentalSoaVectorPrefix)) {
+    const std::string_view helperName =
+        std::string_view(canonicalPath).substr(kExperimentalSoaVectorPrefix.size());
+    return helperName == "push" || helperName == "reserve" ||
+           helperName == "soaVectorPush" || helperName == "soaVectorReserve";
+  }
+  return false;
 }
 
 bool isExperimentalSoaFieldViewHelperPath(std::string_view path) {
@@ -647,6 +663,8 @@ bool isExperimentalSoaFieldViewHelperPath(std::string_view path) {
       "/std/collections/experimental_soa_vector/soaVectorFieldView";
   constexpr std::string_view kCanonicalSoaFieldViewPrefix =
       "/std/collections/soa_vector/soaVectorFieldView";
+  constexpr std::string_view kPublicSoaFieldViewPath =
+      "/std/collections/soa/field_view";
   constexpr std::string_view kExperimentalSoaColumnFieldViewUnsafePrefix =
       "/std/collections/internal_soa_storage/soaColumnFieldViewUnsafe";
   std::string canonicalPath(path);
@@ -656,6 +674,7 @@ bool isExperimentalSoaFieldViewHelperPath(std::string_view path) {
   }
   return canonicalPath.rfind(kExperimentalSoaFieldViewPrefix, 0) == 0 ||
          canonicalPath.rfind(kCanonicalSoaFieldViewPrefix, 0) == 0 ||
+         canonicalPath == kPublicSoaFieldViewPath ||
          canonicalPath.rfind(kExperimentalSoaColumnFieldViewUnsafePrefix, 0) == 0;
 }
 

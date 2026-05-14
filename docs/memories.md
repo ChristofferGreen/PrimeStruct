@@ -172,6 +172,17 @@ This file stores durable session-derived facts that are useful in later work. Ke
   ordinary pointer-root borrows remained excluded from reference conflict
   scans.
 
+### soa-public-wrapper-lowering-gaps
+- Updated: 2026-05-14
+- Tags: semantics, ir, collections, soa
+- Fact: Public `/std/collections/soa/soa`, `single`, `reserve`, and `push`
+  wrappers lower on VM/native, but public `from_aos` still reaches unsupported
+  `vector<Struct>` indexing and direct `field_view(...)[index]` still reaches
+  lowerer indexing on a temporary `SoaFieldView`.
+- Evidence: TODO-4515 added focused public construction/mutator compile-run
+  coverage and split the remaining conversion/field-view wrapper lowering work
+  into TODO-4516 after focused probes reproduced those two lowerer gaps.
+
 ### soa-storage-temporaries-own-nested-buffers
 - Updated: 2026-04-28
 - Tags: ir, native, collections

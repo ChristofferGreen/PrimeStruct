@@ -1811,6 +1811,31 @@ bool rewriteExpr(Expr &expr,
       expr.name = latePreferredBorrowedSoaPath;
       expr.namespacePrefix.clear();
     }
+    auto publicSoaMutatorBasePath = [](std::string path) {
+      if (const size_t specializationSuffix = path.find("__");
+          specializationSuffix != std::string::npos) {
+        path.erase(specializationSuffix);
+      }
+      if (path == "/std/collections/soa/push" ||
+          path == "/std/collections/soa/reserve") {
+        return path;
+      }
+      return std::string{};
+    };
+    if (const std::string publicSoaMutatorPath =
+            publicSoaMutatorBasePath(resolvedPath);
+        !publicSoaMutatorPath.empty() &&
+        resolvedReceiverFamily == "vector") {
+      const std::string helperName = publicSoaMutatorPath.substr(
+          std::string("/std/collections/soa/").size());
+      const std::string vectorPath =
+          canonicalVectorCompatibilityHelperPathOrFallback(helperName);
+      if (ctx.sourceDefs.count(vectorPath) > 0) {
+        resolvedPath = vectorPath;
+        expr.name = vectorPath;
+        expr.namespacePrefix.clear();
+      }
+    }
     const bool isTemplateDef = ctx.templateDefs.count(resolvedPath) > 0;
     if (isTemplateDef) {
       auto defIt = ctx.sourceDefs.find(resolvedPath);

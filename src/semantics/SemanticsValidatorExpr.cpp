@@ -294,6 +294,20 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (!hasNamedArguments(expr.argNames)) {
       if (const auto pendingFieldName =
               pendingFieldViewNameFromRewrittenHelper()) {
+        std::string fieldViewPath = resolveCalleePath(expr);
+        if (const size_t suffix = fieldViewPath.find("__");
+            suffix != std::string::npos) {
+          fieldViewPath.erase(suffix);
+        }
+        if (fieldViewPath == "/std/collections/soa/field_view") {
+          for (const Expr &arg : expr.args) {
+            if (!validateExpr(params, locals, arg, enclosingStatements,
+                              statementIndex)) {
+              return false;
+            }
+          }
+          return true;
+        }
         if (!expr.args.empty() && expr.args.front().kind == Expr::Kind::Call) {
           const auto elementAccessHelper =
               builtinSoaAccessHelperName(expr.args.front(), params, locals);

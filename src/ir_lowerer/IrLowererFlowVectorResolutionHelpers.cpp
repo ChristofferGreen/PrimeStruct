@@ -205,6 +205,7 @@ bool resolveVectorMutatorAliasName(const Expr &expr, std::string &helperNameOut)
   }
   const std::string soaVectorPrefix = "soa_vector/";
   const std::string stdSoaVectorPrefix = "std/collections/soa_vector/";
+  const std::string stdSoaPrefix = "std/collections/soa/";
   const std::string experimentalVectorPrefix =
       trimLeadingSlash(experimentalCollectionMemberRoot("vector"));
   const std::string experimentalSoaVectorPrefix = "std/collections/experimental_soa_vector/";
@@ -229,6 +230,15 @@ bool resolveVectorMutatorAliasName(const Expr &expr, std::string &helperNameOut)
       helperNameOut =
           helperName == "soaVectorPush" ? "push" :
           helperName == "soaVectorReserve" ? "reserve" : helperName;
+      return true;
+    }
+    return false;
+  }
+  if (normalized.rfind(stdSoaPrefix, 0) == 0) {
+    const std::string helperName =
+        stripGeneratedHelperSuffix(normalized.substr(stdSoaPrefix.size()));
+    if (helperName == "push" || helperName == "reserve") {
+      helperNameOut = helperName;
       return true;
     }
     return false;
@@ -779,6 +789,8 @@ VectorStatementHelperPrepareResult prepareVectorStatementHelperCall(
        qualifiedHelperName.rfind("std/collections/soa_vector/soaVectorReserve", 0) == 0 ||
        qualifiedHelperName.rfind("std/collections/soa_vector/push", 0) == 0 ||
        qualifiedHelperName.rfind("std/collections/soa_vector/reserve", 0) == 0 ||
+       qualifiedHelperName.rfind("std/collections/soa/push", 0) == 0 ||
+       qualifiedHelperName.rfind("std/collections/soa/reserve", 0) == 0 ||
        qualifiedHelperName.rfind("std/collections/experimental_soa_vector/soaVectorPush", 0) == 0 ||
        qualifiedHelperName.rfind("std/collections/experimental_soa_vector/soaVectorReserve", 0) == 0 ||
        qualifiedHelperName.rfind("std/collections/experimental_soa_vector/push", 0) == 0 ||

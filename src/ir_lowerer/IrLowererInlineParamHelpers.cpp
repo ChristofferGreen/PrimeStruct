@@ -33,6 +33,9 @@ bool isCanonicalBuiltinSoaBridgePath(const std::string &calleePath) {
          matchesPath("/std/collections/soa/ref") ||
          matchesPath("/std/collections/soa_vector/ref_ref") ||
          matchesPath("/std/collections/soa/ref_ref") ||
+         matchesPath("/std/collections/soa/push") ||
+         matchesPath("/std/collections/soa/reserve") ||
+         matchesPath("/std/collections/soa/field_view") ||
          matchesPath("/std/collections/soa/to_aos") ||
          matchesPath("/std/collections/soa_vector/to_aos") ||
          matchesPath("/std/collections/soa_vector/to_aos_ref");

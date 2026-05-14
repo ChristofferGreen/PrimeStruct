@@ -72,7 +72,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4515: Route public SoA mutators and construction
+- TODO-4516: Lower public SoA conversion and field-view wrappers
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -87,7 +87,7 @@ Task template:
 - Vector stdlib ownership cutover: none active
 - Map stdlib ownership cutover: TODO-4464
 - SoA public surface rename and ownership cutover: TODO-4306 parent split as
-  TODO-4515 -> TODO-4308 -> TODO-4309 -> TODO-4310
+  TODO-4516 -> TODO-4308 -> TODO-4309 -> TODO-4310
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
   -> TODO-4275 -> TODO-4276 -> TODO-4271 -> TODO-4272 -> TODO-4274
   -> TODO-4273 -> TODO-4277 -> TODO-4278
@@ -102,7 +102,7 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4515: Route public SoA mutators and construction
+- TODO-4516: Lower public SoA conversion and field-view wrappers
 - TODO-4308: Move SoA surface metadata out of C++
 - TODO-4309: Delete `soa_vector` compatibility seams
 - TODO-4310: Add zero C++ SoA collection-surface audit
@@ -158,7 +158,7 @@ Task template:
 | Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4464, TODO-4308, TODO-4309, TODO-4310 |
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4464 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4464, TODO-4305, TODO-4309, TODO-4310 |
-| SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4514, TODO-4515, TODO-4308, TODO-4309, TODO-4310 |
+| SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4514, TODO-4516, TODO-4308, TODO-4309, TODO-4310 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
 | Semantic-product public API factoring and versioning | none |
@@ -188,7 +188,7 @@ Task template:
 | Lowerer/source-composition contract coverage | none |
 | Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4464 |
 | De-experimentalization surface and namespace parity | TODO-4430, TODO-4464, TODO-4305, TODO-4309, TODO-4310 |
-| `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4514, TODO-4515, TODO-4308, TODO-4309, TODO-4310 |
+| `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4514, TODO-4516, TODO-4308, TODO-4309, TODO-4310 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
 | Emitter map-helper canonicalization parity | TODO-4464 |
@@ -1939,7 +1939,7 @@ Task template:
   - stop_rule: Stop once the target public spelling is `soa<T>` /
     `/std/collections/soa/*` with `soa_vector` isolated as compatibility; leave
     generic substrate and lowering extraction to TODO-4306 and the
-    TODO-4514/TODO-4515 sequence.
+    TODO-4514/TODO-4516 sequence.
   - notes:
     - Split into bounded implementation leaves because the full rename spans
       public wrapper modules, type spelling support, examples/docs migration,
@@ -1983,7 +1983,7 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once generic SoA substrate boundaries are documented and
     covered independently of the old `soa_vector` public surface; leave helper
-    lowering extraction to TODO-4514/TODO-4515.
+    lowering extraction to TODO-4514/TODO-4516.
   - notes:
     - Split because the docs/source-lock boundary and canonical field-view
       invalidation coverage are separable.
@@ -1994,45 +1994,57 @@ Task template:
       invalidation surface before helper lowering extraction continues.
     - TODO-4512 moved the internal AoS conversion adapter loop onto
       `/std/collections/soa/*` read helpers and split the remaining lowering
-      extraction into TODO-4513/TODO-4514/TODO-4515.
+      extraction into TODO-4513/TODO-4514/TODO-4516.
     - TODO-4513 routed canonical `/std/collections/soa/to_aos`
       classification through semantic, emitter, and lowerer classifiers while
       keeping compatibility `soa_vector` conversion paths alive.
 
-- [ ] TODO-4515: Route public SoA mutators and construction
+- [ ] TODO-4516: Lower public SoA conversion and field-view wrappers
   - owner: ai
   - created_at: 2026-05-14
   - phase: SoA public surface rename and ownership cutover
-  - depends_on: TODO-4514
+  - depends_on: TODO-4515
   - split_from: TODO-4307
-  - scope: Route canonical `/std/collections/soa/soa`, `single`, `from_aos`,
-    `reserve`, `push`, and field-view helper behavior through public `.prime`
-    wrappers over the generic SoA substrate instead of `soaVector*` or
-    `soa_vector`-specific public behavior in production C++.
+  - scope: Finish the remaining public-wrapper lowering gaps for
+    `/std/collections/soa/from_aos` on `vector<Struct>` inputs and direct
+    `/std/collections/soa/field_view(...)[index]` or canonical
+    `soa<T>.field()[index]` field-view consumption, without reintroducing
+    `soa_vector`-specific public collection behavior.
   - implementation_notes:
-    - Start from SoA helper/field-view semantic validators,
-      `src/semantics/TemplateMonomorphCollectionCompatibilityPaths.h`,
-      `src/ir_lowerer/IrLowererStatementBindingHelpers.cpp`, SoA
-      construction/mutator/field-view compile-run tests, and source locks.
+    - Start from `stdlib/std/collections/soa.prime`,
+      `stdlib/std/collections/internal_soa_vector.prime`,
+      `src/semantics/SemanticsValidate.cpp`,
+      `src/semantics/SemanticsValidatorExpr.cpp`,
+      `src/ir_lowerer/IrLowererIndexedAccessEmit.cpp`, SoA `from_aos`
+      compile-run coverage, field-view index rewrite passes, and the failed
+      direct public-wrapper probes documented by TODO-4515.
+    - `from_aos` currently reaches backend vector indexing on
+      `vector<Struct>` through the internal adapter; direct public
+      `field_view(...)[index]` currently reaches the lowerer as a temporary
+      `SoaFieldView` indexed access instead of the existing substrate
+      `soaFieldViewRead` path.
     - Keep direct experimental imports working only as targeted compatibility
       until TODO-4309.
   - acceptance:
-    - Canonical construction, reserve/push, and field-view wrappers lower
-      through ordinary `.prime` helper definitions on VM/native for supported
-      reflected element kinds.
+    - Canonical `/std/collections/soa/from_aos<T>` lowers and runs on
+      VM/native for supported reflected struct element kinds without relying
+      on a public `soa_vector` helper target.
+    - Direct public field-view wrapper consumption and canonical
+      `soa<T>.field()[index]` consumption lower and run on VM/native through
+      public wrapper routing plus generic field-view substrate reads.
     - Any remaining C++ SoA code is classified as generic substrate,
       borrow/invalidation machinery, or compatibility diagnostics rather than
       public collection-surface behavior.
     - The next open SoA ownership leaf is TODO-4308 metadata extraction.
-  - stop_rule: Stop once canonical construction, mutator, and field-view
-    helper behavior no longer depends on `soa_vector`-specific public-surface
-    semantic/lowering emission.
+  - stop_rule: Stop once public `from_aos` and field-view wrapper/index
+    behavior no longer depends on `soa_vector`-specific public-surface
+    semantic/lowering emission and has VM/native compile-run coverage.
 
 - [ ] TODO-4308: Move SoA surface metadata out of C++
   - owner: ai
   - created_at: 2026-04-28
   - phase: SoA public surface rename and ownership cutover
-  - depends_on: TODO-4515
+  - depends_on: TODO-4516
   - scope: Remove public SoA collection-surface knowledge from handwritten C++
     and generated production C++ by moving canonical `soa`
     helper/import/constructor/conversion metadata into stdlib-owned data

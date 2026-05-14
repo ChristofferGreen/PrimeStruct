@@ -697,6 +697,46 @@ std::string preferVectorStdlibImplicitTemplatePath(const Expr &expr,
     // mismatch the declared helper shape.
     return path;
   }
+  std::string pathBase = path;
+  if (const size_t specializationSuffix = pathBase.find("__");
+      specializationSuffix != std::string::npos) {
+    pathBase.erase(specializationSuffix);
+  }
+  if (pathBase.rfind("/std/collections/soa/", 0) == 0 &&
+      (pathBase == "/std/collections/soa/push" ||
+       pathBase == "/std/collections/soa/reserve") &&
+      !expr.args.empty()) {
+    auto inferFirstArgFamily = [&]() -> std::string {
+      BindingInfo receiverBinding;
+      std::string receiverTypeText;
+      if (inferBindingTypeForMonomorph(expr.args.front(), params, locals,
+                                       allowMathBare, ctx, receiverBinding)) {
+        receiverTypeText = bindingTypeToString(receiverBinding);
+      }
+      if (receiverTypeText.empty()) {
+        receiverTypeText = inferExprTypeTextForTemplatedVectorFallback(
+            expr.args.front(), locals, namespacePrefix, ctx, allowMathBare);
+      }
+      receiverTypeText = normalizeBindingTypeName(receiverTypeText);
+      std::string base;
+      std::string argText;
+      if (splitTemplateTypeName(receiverTypeText, base, argText) &&
+          !base.empty()) {
+        receiverTypeText = normalizeBindingTypeName(base);
+      }
+      return normalizeCollectionReceiverTypeName(receiverTypeText);
+    };
+    if (inferFirstArgFamily() == "vector") {
+      const std::string helperName =
+          pathBase.substr(std::string("/std/collections/soa/").size());
+      const std::string vectorPath =
+          canonicalVectorCompatibilityHelperPathOrFallback(helperName);
+      if (ctx.sourceDefs.count(vectorPath) > 0 &&
+          ctx.templateDefs.count(vectorPath) > 0) {
+        return vectorPath;
+      }
+    }
+  }
   const std::string preferred = preferVectorStdlibTemplatePath(path, ctx);
   if (acceptsCallShape && !prefersTypeMismatchFallback) {
     return path;

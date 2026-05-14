@@ -4728,7 +4728,7 @@ void rewriteExperimentalSoaFieldViewHelperExpr(
   Expr fieldViewCall;
   fieldViewCall.kind = Expr::Kind::Call;
   fieldViewCall.name = receiverUsesCanonicalSoaVector
-                           ? "/std/collections/soa_vector/soaVectorFieldView"
+                           ? "/std/collections/soa/field_view"
                            : "/std/collections/experimental_soa_vector/soaVectorFieldView";
   fieldViewCall.templateArgs = {receiverElemType, fieldIt->second.typeText};
   auto appendReceiverValueExpr = [&](Expr &callExpr) {

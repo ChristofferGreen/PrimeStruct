@@ -5,6 +5,37 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Completion (May 14, 2026)**
+- [x] TODO-4515: Route public SoA mutators and construction
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: SoA public surface rename and ownership cutover
+  - depends_on: TODO-4514
+  - split_from: TODO-4307
+  - scope: Route canonical `/std/collections/soa/soa`, `single`, `reserve`,
+    `push`, and field-view helper resolution through public `.prime` wrappers
+    over the generic SoA substrate instead of `soaVector*` or
+    `soa_vector`-specific public behavior in production C++.
+  - acceptance:
+    - Canonical `soa`, `single`, `reserve`, and `push` wrappers lower through
+      ordinary public `.prime` helper definitions on VM/native for reflected
+      struct element kinds.
+    - Public SoA mutator and constructor path classification reaches the
+      public `/std/collections/soa/*` wrappers while compatibility
+      `soa_vector` paths stay targeted until TODO-4309.
+    - Remaining `from_aos` and direct field-view/index lowering gaps are split
+      into TODO-4516 before TODO-4308 metadata extraction.
+  - stop_rule: Stop once canonical construction and mutator behavior no
+    longer depends on `soa_vector`-specific public-surface semantic/lowering
+    emission.
+  - evidence: Routed public SoA construction/mutator paths through semantic
+    and lowerer wrapper classifiers, shifted canonical field-view helper
+    rewrite targets to `/std/collections/soa/field_view`, added native and VM
+    compile-run coverage for public `soa`/`single`/`reserve`/`push`, split
+    public `from_aos` and direct field-view indexing follow-up as TODO-4516,
+    and ran focused release compile-run shards.
+
 **Todo Completion (May 7, 2026)**
 - [x] TODO-4298: Prefer runtime count string facts
   - owner: ai

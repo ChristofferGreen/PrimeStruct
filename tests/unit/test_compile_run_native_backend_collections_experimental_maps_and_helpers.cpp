@@ -573,6 +573,42 @@ main() {
   CHECK(runCommand(exePath) == 32);
 }
 
+TEST_CASE("native public soa construction and mutators use wrappers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/soa/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [auto mut] values{/std/collections/soa/soa<Particle>(Particle(1i32, 2i32),
+                                                       Particle(3i32, 5i32))}
+  /std/collections/soa/reserve<Particle>(values, 4i32)
+  /std/collections/soa/push<Particle>(values, Particle(7i32, 11i32))
+  [auto] singleton{/std/collections/soa/single<Particle>(Particle(13i32, 17i32))}
+  return(plus(plus(count(values),
+                   /std/collections/soa/get<Particle>(values, 2i32).y),
+              count(singleton)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_public_soa_construction_mutators.prime",
+                source);
+  const std::string exePath =
+      (testScratchPath("") /
+       "primec_native_public_soa_construction_mutators").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 15);
+}
+
 TEST_CASE("native compiles and runs graph-solved direct local-auto vector helper shadows") {
   const std::string source = R"(
 /vector/count([vector<i32>] values) {

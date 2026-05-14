@@ -610,6 +610,10 @@ main() {
              std::string::npos ||
          diagnostics.find("template arguments required for /std/collections/soa_vector/push") !=
              std::string::npos ||
+         diagnostics.find("\"message\":\"template arguments required for /std/collections/soa/push\"") !=
+             std::string::npos ||
+         diagnostics.find("template arguments required for /std/collections/soa/push") !=
+             std::string::npos ||
          diagnostics.find("\"message\":\"unknown call target: /std/collections/vector/push\"") !=
              std::string::npos ||
          diagnostics.find("unknown call target: /std/collections/vector/push") !=

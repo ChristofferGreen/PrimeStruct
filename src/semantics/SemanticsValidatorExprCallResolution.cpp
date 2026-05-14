@@ -354,8 +354,10 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
     }
     if (strippedPath == "/soa_vector/push" ||
         strippedPath == "/std/collections/soa_vector/push" ||
+        strippedPath == "/std/collections/soa/push" ||
         strippedPath == "/soa_vector/reserve" ||
-        strippedPath == "/std/collections/soa_vector/reserve") {
+        strippedPath == "/std/collections/soa_vector/reserve" ||
+        strippedPath == "/std/collections/soa/reserve") {
       return strippedPath;
     }
     return {};

@@ -2118,9 +2118,14 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "semantic-product method-call target missing lowered definition: /std/collections/soa_vector/ref_ref") !=
-        std::string::npos);
+  const std::string error = readFile(errPath);
+  INFO(error);
+  CHECK((error.find("semantic-product method-call target missing lowered definition: "
+                    "/std/collections/soa_vector/ref_ref") != std::string::npos ||
+         error.find("semantic-product method-call target missing lowered definition: "
+                    "/std/collections/soa/ref_ref") != std::string::npos ||
+         error.find("unknown call target: /soa_vector/ref_ref") !=
+             std::string::npos));
 }
 
 TEST_CASE("compiles and runs helper-return experimental soa_vector method shadows in C++ emitter") {

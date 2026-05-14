@@ -269,6 +269,8 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
        callStmt.name.rfind("/std/collections/soa_vector/soaVectorReserve", 0) == 0 ||
        callStmt.name.rfind("/std/collections/soa_vector/push", 0) == 0 ||
        callStmt.name.rfind("/std/collections/soa_vector/reserve", 0) == 0 ||
+       callStmt.name.rfind("/std/collections/soa/push", 0) == 0 ||
+       callStmt.name.rfind("/std/collections/soa/reserve", 0) == 0 ||
        callStmt.name.rfind("/std/collections/experimental_soa_vector/soaVectorPush", 0) == 0 ||
        callStmt.name.rfind("/std/collections/experimental_soa_vector/soaVectorReserve", 0) == 0 ||
        callStmt.name.rfind("/std/collections/experimental_soa_vector/push", 0) == 0 ||
