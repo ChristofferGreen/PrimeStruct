@@ -1133,30 +1133,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     auto it = defMap_.find(resolved);
     const Definition *resolvedDefinition =
         it != defMap_.end() ? it->second : nullptr;
-    const std::string strippedRemovedMapCompatibilityResolved = [&]() {
-      if (resolved.rfind("/map/", 0) != 0) {
-        return std::string{};
-      }
-      const size_t specializationSuffix = resolved.find("__");
-      if (specializationSuffix == std::string::npos) {
-        return std::string{};
-      }
-      return resolved.substr(0, specializationSuffix);
-    }();
     if (resolvedDefinition == nullptr && hasDefinitionFamilyPath(resolved)) {
       for (const auto &def : program_.definitions) {
         if (matchesResolvedFamilyPath(def.fullPath, resolved)) {
-          resolvedDefinition = &def;
-          break;
-        }
-      }
-    }
-    if (resolvedDefinition == nullptr &&
-        !strippedRemovedMapCompatibilityResolved.empty() &&
-        hasDefinitionFamilyPath(strippedRemovedMapCompatibilityResolved)) {
-      for (const auto &def : program_.definitions) {
-        if (matchesResolvedFamilyPath(def.fullPath,
-                                      strippedRemovedMapCompatibilityResolved)) {
           resolvedDefinition = &def;
           break;
         }
@@ -1168,19 +1147,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
            candidateIt != paramsByDef_.end();
            ++candidateIt) {
         if (matchesResolvedFamilyPath(candidateIt->first, resolved)) {
-          calleeParamsIt = candidateIt;
-          break;
-        }
-      }
-    }
-    if (calleeParamsIt == paramsByDef_.end() &&
-        !strippedRemovedMapCompatibilityResolved.empty() &&
-        hasDefinitionFamilyPath(strippedRemovedMapCompatibilityResolved)) {
-      for (auto candidateIt = paramsByDef_.begin();
-           candidateIt != paramsByDef_.end();
-           ++candidateIt) {
-        if (matchesResolvedFamilyPath(
-                candidateIt->first, strippedRemovedMapCompatibilityResolved)) {
           calleeParamsIt = candidateIt;
           break;
         }

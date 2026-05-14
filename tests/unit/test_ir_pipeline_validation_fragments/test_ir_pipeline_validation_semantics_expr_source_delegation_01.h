@@ -248,6 +248,10 @@
       readText(semanticsCollectionCompatibilityInternalPath);
   const std::string semanticsExprPrivateValidationSource =
       readText(semanticsExprPrivateValidationPath);
+  CHECK(semanticsExprSource.find("strippedRemovedMapCompatibilityResolved") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("resolved.rfind(\"/map/\", 0)") ==
+        std::string::npos);
   CHECK(semanticsExprSource.find("bool SemanticsValidator::validateExpr") != std::string::npos);
   CHECK(semanticsExprSource.find("return validateLambdaExpr(params, locals, expr, enclosingStatements, statementIndex);") !=
         std::string::npos);

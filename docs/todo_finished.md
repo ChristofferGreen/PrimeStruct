@@ -18046,3 +18046,33 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     candidate detection, added a source lock for semantic snapshot locals,
     removed the file's map-surface inventory allowance, and skipped broad
     release validation per the lite workflow.
+
+- [x] TODO-4477: Delete map family suffix fallback
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4476
+  - split_from: TODO-4464
+  - scope: Delete semantic call-validation fallback logic that stripped
+    specialization or overload suffixes from rooted `/map/*` compatibility
+    calls to recover removed helper definition families.
+  - implementation_notes:
+    - Targeted `src/semantics/SemanticsValidatorExpr.cpp`, which had one
+      remaining rooted `/map/*` trace in removed-map compatibility family
+      recovery for `__t` and `__ov` resolved calls.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` so semantic
+      expression validation no longer has any map-surface trace allowance.
+  - acceptance:
+    - Semantic expression validation no longer contains the removed-map
+      compatibility family suffix fallback.
+    - Source-lock coverage rejects reintroducing the rooted `/map/*` suffix
+      stripping helper in semantic expression validation.
+    - The map-surface trace inventory no longer allows map-specific traces in
+      `src/semantics/SemanticsValidatorExpr.cpp`.
+  - stop_rule: Stop once the suffix fallback is gone and the decaying
+    inventory is tightened for semantic expression validation.
+  - evidence: Removed the `strippedRemovedMapCompatibilityResolved` fallback
+    and its definition/parameter lookup branches, added source locks for
+    semantic expression validation, removed the file's map-surface inventory
+    allowance, and skipped broad release validation per the lite workflow.
