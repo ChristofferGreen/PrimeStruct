@@ -221,6 +221,12 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
     }
     return defMap_.find("/" + normalized) == defMap_.end();
   };
+  if (!expr.isMethodCall && isMapNamespacedAccessCompatibilityCall(expr)) {
+    const std::string removedPath = explicitCallPath(expr);
+    return failCollectionAccessTargetDiagnostic(
+        "unknown call target: " +
+        (removedPath.empty() ? std::string("/map/") + context.namespacedHelper : removedPath));
+  }
   const bool isResolvedMapAccessCall =
       !expr.isMethodCall && isMapCanonicalAccessPath(resolved) &&
       !isMapNamespacedAccessCompatibilityCall(expr);

@@ -437,17 +437,6 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
         candidates,
         "/soa_vector/" +
             normalizedPath.substr(std::string("/std/collections/soa_vector/").size()));
-  } else if (normalizedPath.rfind("/map/", 0) == 0) {
-    const std::string suffix = normalizedPath.substr(std::string("/map/").size());
-    if (!isCanonicalMapHelperName(suffix)) {
-      appendUniqueCandidate(candidates, "/std/collections/map/" + suffix);
-    }
-  } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
-    const std::string suffix =
-        normalizedPath.substr(std::string("/std/collections/map/").size());
-    if (!isCanonicalMapHelperName(suffix)) {
-      appendUniqueCandidate(candidates, "/map/" + suffix);
-    }
   }
   return candidates;
 }

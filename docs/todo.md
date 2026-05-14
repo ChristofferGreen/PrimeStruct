@@ -72,10 +72,11 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4463: Delete remaining lowerer/emitter map surface traces
+- TODO-4465: Delete lowerer map helper path mirroring
 
 ### Immediate Next 10 (After Ready Now)
 
+- TODO-4466: Delete lowerer experimental-map type traces
 - TODO-4464: Add full zero C++ map-surface audit
 - TODO-4305: Rename and style canonical `.prime` SoA surface
 - TODO-4306: Stabilize generic SoA substrate boundaries
@@ -89,7 +90,7 @@ Task template:
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
 - Vector stdlib ownership cutover: none active
-- Map stdlib ownership cutover: TODO-4463 -> TODO-4464
+- Map stdlib ownership cutover: TODO-4465 -> TODO-4466 -> TODO-4464
 - SoA public surface rename and ownership cutover: TODO-4305 -> TODO-4306
   -> TODO-4307 -> TODO-4308 -> TODO-4309 -> TODO-4310
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
@@ -106,7 +107,8 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4463: Delete remaining lowerer/emitter map surface traces
+- TODO-4465: Delete lowerer map helper path mirroring
+- TODO-4466: Delete lowerer experimental-map type traces
 - TODO-4464: Add full zero C++ map-surface audit
 - TODO-4305: Rename and style canonical `.prime` SoA surface
 - TODO-4306: Stabilize generic SoA substrate boundaries
@@ -163,16 +165,16 @@ Task template:
 | Compile-pipeline stage and publication-boundary contracts | none |
 | Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4305 |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4463, TODO-4464, TODO-4308, TODO-4309, TODO-4310 |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4463, TODO-4464 |
-| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4463, TODO-4464, TODO-4305, TODO-4309, TODO-4310 |
+| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4465, TODO-4466, TODO-4464, TODO-4308, TODO-4309, TODO-4310 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4465, TODO-4466, TODO-4464 |
+| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4465, TODO-4466, TODO-4464, TODO-4305, TODO-4309, TODO-4310 |
 | SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
 | Semantic-product public API factoring and versioning | none |
 | IR lowerer compile-unit breakup | none |
 | Backend validation/build ergonomics | none |
-| Emitter/semantics map-helper parity | TODO-4463 |
+| Emitter/semantics map-helper parity | TODO-4465 |
 | VM debug-session argv ownership | none |
 | Debugger/source-map provenance parity | none |
 | Debug trace replay robustness | none |
@@ -194,12 +196,12 @@ Task template:
 | Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
-| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4463, TODO-4464 |
-| De-experimentalization surface and namespace parity | TODO-4430, TODO-4463, TODO-4464, TODO-4305, TODO-4309, TODO-4310 |
+| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4465, TODO-4466, TODO-4464 |
+| De-experimentalization surface and namespace parity | TODO-4430, TODO-4465, TODO-4466, TODO-4464, TODO-4305, TODO-4309, TODO-4310 |
 | `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
-| Emitter map-helper canonicalization parity | TODO-4463, TODO-4464 |
+| Emitter map-helper canonicalization parity | TODO-4465, TODO-4464 |
 | VM debug-session argv lifetime coverage | none |
 | Debugger/source-map provenance parity | none |
 | Debug trace replay malformed-input coverage | none |
@@ -232,8 +234,9 @@ Task template:
   registry no longer advertises vector compatibility spellings through that
   manifest. Direct experimental vector source imports are now rejected, and
   the vector production C++ zero-trace audit is now mechanically enforced.
-  TODO-4463 and TODO-4464 continue the same ownership model for map after
-  the internal-map lookup/insertion substrate moved into `.prime` helper code,
+  TODO-4465, TODO-4466, and TODO-4464 continue the same ownership model for
+  map after the internal-map lookup/insertion substrate moved into `.prime`
+  helper code,
   canonical read/access/insert wrappers stopped routing through builtin/native
   map fast paths, canonical map surface metadata moved into
   `stdlib/std/collections/surfaces.psmeta`, and map compatibility spellings
@@ -242,8 +245,8 @@ Task template:
   lives in `StdlibSurfaceRegistry::CollectionsMapHelpers`; that metadata now
   recognizes only canonical `/std/collections/map/*` helper spellings.
   Direct experimental map source imports are now rejected, public map wrapper
-  bridge names are gone, lowerer helper path-candidate adapters are retired,
-  and definition/execution intra-body diagnostics no longer carry special
+  bridge names are gone, and definition/execution intra-body diagnostics no
+  longer carry special
   removed-map helper classification branches, and semantic pre-dispatch helper
   path candidates no longer mirror rooted and canonical map helpers, and native
   tail map-access helper probes no longer treat rooted `/map/*` imports or
@@ -256,8 +259,12 @@ Task template:
   and inline/native dispatch no longer treats rooted `/map/*` or experimental
   map helper raw paths as canonical map helper aliases, and lowerer/emitter
   code no longer adapts internal `mapCount`-style helper names as canonical map
-  operations, with release validation gates now locking those retired semantic
-  and lowerer/emitter adapter names.
+  operations, emitter helper candidate generation no longer mirrors rooted
+  `/map/*` and canonical `/std/collections/map/*` helpers, and semantic,
+  lowerer, and emitter access-helper classification no longer treat rooted
+  `/map/at*` calls as builtin map access helpers without same-path
+  definitions, with release validation gates now locking those retired
+  semantic and lowerer/emitter adapter names.
   Template
   monomorphization now asks the registry for preferred experimental vector/SoA
   helper spellings instead of carrying bespoke canonical-to-experimental maps.
@@ -1653,43 +1660,70 @@ Task template:
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
 
-- [ ] TODO-4463: Delete remaining lowerer/emitter map surface traces
+- [ ] TODO-4465: Delete lowerer map helper path mirroring
   - owner: ai
   - created_at: 2026-05-14
   - phase: Map stdlib ownership cutover
-  - depends_on: TODO-4462
-  - split_from: TODO-4304
-  - scope: Delete the remaining lowerer and emitter map-surface raw-path,
-    experimental-map, and rooted `/map/*` traces that are not required for the
-    already-retired `mapCount`-style adapter check.
+  - depends_on: TODO-4463
+  - split_from: TODO-4463
+  - scope: Delete lowerer helper-path candidate mirroring that cross-resolves
+    rooted `/map/*` helper definitions and canonical `/std/collections/map/*`
+    helper definitions during setup-type, call-resolution, return-kind, and
+    struct-return metadata lookup.
   - implementation_notes:
-    - Use the current production matches under `src/ir_lowerer/` and
+    - Target the remaining lowerer `collectionHelperPathCandidates` and
+      `normalizeMapImportAliasPath` use sites only where they provide map
+      helper fallback behavior instead of ordinary import alias slash
+      normalization.
+    - Preserve semantic-product surface-id resolution for canonical
+      `/std/collections/map/*` helpers.
+  - acceptance:
+    - Lowerer collection helper path candidates no longer add rooted
+      `/map/*` fallbacks for canonical `/std/collections/map/*` helpers or
+      canonical fallbacks for rooted `/map/*` helpers.
+    - Canonical map construction, lookup, insertion, miss-result, and
+      destruction coverage remains routed through stdlib-owned helpers.
+    - Source-lock or behavior coverage rejects reintroducing the removed
+      lowerer map helper-path mirroring.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once lowerer helper candidate generation no longer
+    mirrors rooted and canonical map helper definitions; leave
+    experimental-map type-name cleanup to TODO-4466.
+
+- [ ] TODO-4466: Delete lowerer experimental-map type traces
+  - owner: ai
+  - created_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4465
+  - split_from: TODO-4463
+  - scope: Delete remaining lowerer/emitter experimental-map type-path and
+    raw helper traces that are no longer required after canonical map helpers
+    moved into stdlib `.prime` code.
+  - implementation_notes:
+    - Use the current `experimental_map` matches under `src/ir_lowerer/` and
       `src/emitter/` as the cleanup inventory, but split further before coding
       if one compile-safe leaf cannot remove them all.
-    - Preserve canonical `/std/collections/map/*` behavior only through
-      ordinary `.prime` helper lowering, stdlib-owned metadata, or generic
-      collection infrastructure.
-    - Keep ordinary C++ `std::map`, generic mapping variable names, and
-      source-map infrastructure outside the cleanup target.
+    - Preserve canonical map behavior through ordinary stdlib-owned metadata
+      and generic collection infrastructure.
   - acceptance:
-    - Lowerer/emitter production C++ no longer contains map-specific raw-path
-      dispatch, experimental-map type recognizers, rooted `/map/*` fallbacks,
-      or map-specific diagnostics that should be owned by stdlib `.prime`
-      helpers or generic metadata.
-    - Existing map construction, lookup, insertion, miss-result, and
-      destruction coverage still passes through the canonical stdlib surface.
+    - Production lowerer/emitter code no longer recognizes
+      `/std/collections/experimental_map/*` as a public map surface or method
+      helper alias.
+    - Existing canonical map behavior and internal backing-adapter coverage
+      still pass without experimental-map public-surface fallbacks.
     - Source-lock or behavior coverage rejects reintroducing the removed
-      lowerer/emitter map traces.
+      experimental-map map-surface traces.
     - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once lowerer/emitter C++ has no remaining PrimeStruct
-    map-surface traces except ordinary generic mapping/source-map terms; leave
-    the full production audit to TODO-4464.
+  - stop_rule: Stop once lowerer/emitter C++ no longer carries
+    experimental-map public-surface traces except ordinary internal backing
+    substrate references that must remain until the final audit classifies or
+    removes them.
 
 - [ ] TODO-4464: Add full zero C++ map-surface audit
   - owner: ai
   - created_at: 2026-05-14
   - phase: Map stdlib ownership cutover
-  - depends_on: TODO-4463
+  - depends_on: TODO-4466
   - split_from: TODO-4304
   - scope: Add a deterministic validation gate that proves the PrimeStruct map
     surface is fully `.prime`/stdlib-owned and absent from production C++

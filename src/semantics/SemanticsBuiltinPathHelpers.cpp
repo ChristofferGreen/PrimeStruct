@@ -863,13 +863,6 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   if (name.rfind("array/", 0) == 0) {
     return false;
   }
-  if (name.rfind("map/", 0) == 0) {
-    std::string alias = stripTemplateSpecializationSuffix(name.substr(std::string("map/").size()));
-    if (accessAliasFromMemberName(alias)) {
-      return true;
-    }
-    return false;
-  }
   if (name.rfind("std/collections/map/", 0) == 0) {
     std::string alias = stripTemplateSpecializationSuffix(name.substr(std::string("std/collections/map/").size()));
     if (accessAliasFromMemberName(alias)) {

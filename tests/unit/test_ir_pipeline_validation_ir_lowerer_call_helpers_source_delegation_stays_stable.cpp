@@ -142,6 +142,9 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   const std::string builtinNameHelpersSource = readText(builtinNameHelpersPath);
   const std::string astCallPathHelpersSource = readText(astCallPathHelpersPath);
 
+  CHECK(builtinNameHelpersSource.find("matchAccessAlias(scopedName, \"map/\", \"Map\")") ==
+        std::string::npos);
+
   CHECK(callHelpersSource.find("const Definition *resolveDefinitionCall(const Expr &callExpr,") ==
         std::string::npos);
   CHECK(callHelpersSource.find("ResolveDefinitionCallFn makeResolveDefinitionCall(") ==

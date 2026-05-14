@@ -316,8 +316,7 @@ bool getBuiltinArrayAccessNameLocal(const Expr &expr, std::string &out) {
   if (resolvePublishedVectorHelperExprMemberName(expr, out)) {
     return out == "at" || out == "at_unsafe";
   }
-  if ((resolvedPath.rfind("/map/", 0) == 0 ||
-       resolvedPath.rfind("/std/collections/map/", 0) == 0) &&
+  if (resolvedPath.rfind("/std/collections/map/", 0) == 0 &&
       resolvePublishedCollectionSurfaceExprMemberName(
           expr, StdlibSurfaceId::CollectionsMapHelpers, out)) {
     return isCanonicalMapAccessHelperName(out);

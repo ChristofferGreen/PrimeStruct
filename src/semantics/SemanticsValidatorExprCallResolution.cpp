@@ -245,6 +245,15 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
     }
     return prefix + "/" + callExpr.name;
   };
+  const std::string directExplicitCallPath = explicitCallPath(expr);
+  if (!expr.isMethodCall &&
+      (directExplicitCallPath == "/map/at" ||
+       directExplicitCallPath == "/map/at_ref" ||
+       directExplicitCallPath == "/map/at_unsafe" ||
+       directExplicitCallPath == "/map/at_unsafe_ref") &&
+      !hasDefinitionFamilyPath(directExplicitCallPath)) {
+    return directExplicitCallPath;
+  }
   auto isMapEntryConstructorExpr = [&](const Expr &argExpr) {
     if (argExpr.kind != Expr::Kind::Call || argExpr.isMethodCall) {
       return false;

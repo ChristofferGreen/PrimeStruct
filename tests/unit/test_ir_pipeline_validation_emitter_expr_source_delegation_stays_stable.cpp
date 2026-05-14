@@ -2998,6 +2998,12 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
         std::string::npos);
   CHECK(metadataHelpersSource.find("bool removedCollectionAliasNeedsDefinitionPath(") !=
         std::string::npos);
+  CHECK(metadataHelpersSource.find(
+            "appendUniqueCandidate(candidates, \"/std/collections/map/\" + suffix)") ==
+        std::string::npos);
+  CHECK(metadataHelpersSource.find(
+            "appendUniqueCandidate(candidates, \"/map/\" + suffix)") ==
+        std::string::npos);
 
   CHECK(callPathHelpersSource.find("resolvePublishedCollectionSurfaceMemberToken(") !=
         std::string::npos);
@@ -3024,6 +3030,12 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
             "const std::string stdlibAlias = \"/std/collections/vector/\" + suffix;") ==
         std::string::npos);
   CHECK(callPathHelpersSource.find("bool allowsVectorStdlibCompatibilitySuffix(") ==
+        std::string::npos);
+  CHECK(callPathHelpersSource.find(
+            "if ((resolvedPath.rfind(\"/map/\", 0) == 0 ||\n"
+            "       resolvedPath.rfind(\"/std/collections/map/\", 0) == 0) &&\n"
+            "      resolvePublishedCollectionSurfaceExprMemberName(\n"
+            "          expr, StdlibSurfaceId::CollectionsMapHelpers, out))") ==
         std::string::npos);
 
   CHECK(methodResolutionHelpersSource.find("isRemovedCollectionMethodAliasPath(") !=

@@ -577,9 +577,6 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   if (scopedName.rfind(builtinVectorPrefix, 0) == 0) {
     return false;
   }
-  if (matchAccessAlias(scopedName, "map/", "Map")) {
-    return true;
-  }
   if (scopedName.rfind("map/", 0) == 0) {
     return false;
   }

@@ -639,10 +639,6 @@ std::string SemanticsValidator::directMapHelperCompatibilityPath(
           resolvedExperimentalHelperName)) {
     return "";
   }
-  if (resolvedCompatibilityHelper &&
-      matchesResolvedPath(resolvedPath, canonicalPath)) {
-    return "";
-  }
   if (resolvedCompatibilityHelper && spellsCurrentMapWrapperSurface) {
     return "";
   }
@@ -653,6 +649,10 @@ std::string SemanticsValidator::directMapHelperCompatibilityPath(
   }
   if (explicitPath.rfind("/map/", 0) == 0) {
     return removedPath;
+  }
+  if (resolvedCompatibilityHelper &&
+      matchesResolvedPath(resolvedPath, canonicalPath)) {
+    return "";
   }
   auto canonicalAccessHelperReturnsStruct = [&]() {
     if (helperName != "at" && helperName != "at_unsafe" &&

@@ -17598,3 +17598,45 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     selection, and added a CTest-wired semantic map wrapper trace checker with
     a self-test. Promoted TODO-4463 to Ready Now and skipped broad validation
     per the lite workflow.
+
+- [x] TODO-4463: Delete emitter map helper path mirroring
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4462
+  - split_from: TODO-4304
+  - scope: Delete emitter helper-path candidate mirroring that cross-resolves
+    rooted `/map/*` helper definitions and canonical `/std/collections/map/*`
+    helper definitions during method metadata, return inference, and
+    collection helper fallback lookup.
+  - implementation_notes:
+    - Target the emitter `collectionHelperPathCandidates` path-candidate
+      helper and the source locks/behavior tests that currently assert
+      canonical-to-rooted and rooted-to-canonical map helper fallback
+      candidates.
+    - Preserve canonical `/std/collections/map/*` behavior only through
+      ordinary `.prime` helper lowering, stdlib-owned metadata, or generic
+      collection infrastructure.
+    - Keep ordinary C++ `std::map`, generic mapping variable names, and
+      source-map infrastructure outside the cleanup target.
+  - acceptance:
+    - Emitter collection helper path candidates no longer add rooted
+      `/map/*` fallbacks for canonical `/std/collections/map/*` helpers or
+      canonical fallbacks for rooted `/map/*` helpers.
+    - Existing map construction, lookup, insertion, miss-result, and
+      destruction coverage still passes through the canonical stdlib surface.
+    - Source-lock or behavior coverage rejects reintroducing the removed
+      emitter map helper-path mirroring.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once emitter helper candidate generation stops mirroring
+    rooted and canonical map helpers; leave lowerer mirroring,
+    experimental-map type recognizers, and the full production audit to
+    TODO-4465, TODO-4466, and TODO-4464.
+  - evidence: Split the oversized remaining map trace cleanup into bounded
+    TODO-4463/TODO-4465/TODO-4466/TODO-4464 leaves, removed emitter
+    helper-path candidate mirroring, removed the rooted `/map/at*`
+    access-helper raw-path fallbacks discovered by focused map-alias
+    stabilization, and added source locks for the removed emitter, lowerer,
+    and semantic access branches. Promoted TODO-4465 to Ready Now and skipped
+    broad validation per the lite workflow.

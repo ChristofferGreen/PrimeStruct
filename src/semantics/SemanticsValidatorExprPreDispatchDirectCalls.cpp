@@ -209,8 +209,25 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
   if (expr.isFieldAccess) {
     return true;
   }
-  const std::string removedMapCompatibilityHelper =
+  const std::string explicitCallPath = [&]() {
+    if (expr.isMethodCall || expr.name.empty()) {
+      return std::string{};
+    }
+    if (expr.name.front() == '/') {
+      return expr.name;
+    }
+    std::string prefix = expr.namespacePrefix;
+    if (!prefix.empty() && prefix.front() != '/') {
+      prefix.insert(prefix.begin(), '/');
+    }
+    return prefix.empty() ? "/" + expr.name : prefix + "/" + expr.name;
+  }();
+  std::string removedMapCompatibilityHelper =
       removedMapCompatibilityHelperFromPath(resolvedOut);
+  if (removedMapCompatibilityHelper.empty()) {
+    removedMapCompatibilityHelper =
+        removedMapCompatibilityHelperFromPath(explicitCallPath);
+  }
   auto hasExactRemovedMapAliasDefinition = [&](const std::string &path) {
     if (defMap_.count(path) > 0 || paramsByDef_.count(path) > 0) {
       return true;

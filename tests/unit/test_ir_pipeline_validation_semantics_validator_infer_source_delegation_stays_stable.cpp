@@ -249,6 +249,11 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsBuiltinPathHelpersSource.find(
             "parseMemoryName(resolveTypePath(expr.name, expr.namespacePrefix), out)") !=
         std::string::npos);
+  CHECK(semanticsBuiltinPathHelpersSource.find(
+            "if (name.rfind(\"map/\", 0) == 0) {\n"
+            "    std::string alias = stripTemplateSpecializationSuffix(name.substr(std::string(\"map/\").size()));\n"
+            "    if (accessAliasFromMemberName(alias))") ==
+        std::string::npos);
   CHECK(semanticsInferCombinedSource.find("const auto &resolveSoaVectorTarget = builtinCollectionDispatchResolvers.resolveSoaVectorTarget;") !=
         std::string::npos);
   CHECK(semanticsInferCombinedSource.find("const auto &resolveBufferTarget = builtinCollectionDispatchResolvers.resolveBufferTarget;") !=
@@ -428,7 +433,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
             "if (explicitMapHelperPath.rfind(\"/map/\", 0) == 0) {\n"
             "      return setCollectionMethodTarget(explicitMapHelperPath);\n"
             "    }\n"
-            "    const std::string canonicalMapHelper = \"/std/collections/map/\" + normalizedMethodName;") !=
+            "    const std::string canonicalMapHelper = \"/std/collections/map/\" + normalizedMethodName;") ==
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find("resolvedOut = \"/soa_vector/get\";") ==
         std::string::npos);
