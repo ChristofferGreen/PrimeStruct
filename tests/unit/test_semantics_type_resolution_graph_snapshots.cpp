@@ -4030,10 +4030,20 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("semantic product keeps exact-import vector and map bridge parity") {
+TEST_CASE("semantic product keeps vector and map bridge parity") {
   const std::string source = R"(
 import /std/collections/vector
 import /std/collections/map
+
+[return<i32>]
+/std/collections/vector/count<T>([vector<T>] values) {
+  return(1i32)
+}
+
+[return<i32>]
+/std/collections/map/count<K, V>([map<K, V>] values) {
+  return(2i32)
+}
 
 [effects(heap_alloc), return<i32>]
 main() {
@@ -4050,9 +4060,13 @@ main() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   const std::vector<std::string> defaults = {"io_out", "io_err"};
-  REQUIRE(
+  CHECK_MESSAGE(
       semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false,
-                         &semanticProgram));
+                         &semanticProgram),
+      error);
+  if (!error.empty()) {
+    return;
+  }
   CHECK(error.empty());
 
   const auto *valuesEntry = findSemanticEntry(
@@ -4081,15 +4095,34 @@ main() {
   CHECK(*pairsEntry->initializerDirectCallStdlibSurfaceId ==
         primec::StdlibSurfaceId::CollectionsMapConstructors);
 
+  auto resolveBridgeScopePath =
+      [&semanticProgram](const primec::SemanticProgramBridgePathChoice &entry) {
+        const std::string_view resolvedScope =
+            primec::semanticProgramResolveCallTargetString(semanticProgram, entry.scopePathId);
+        return resolvedScope.empty() ? std::string_view(entry.scopePath) : resolvedScope;
+      };
+  auto resolveBridgeCollectionFamily =
+      [&semanticProgram](const primec::SemanticProgramBridgePathChoice &entry) {
+        const std::string_view resolvedFamily =
+            primec::semanticProgramResolveCallTargetString(semanticProgram,
+                                                           entry.collectionFamilyId);
+        return resolvedFamily.empty() ? std::string_view(entry.collectionFamily)
+                                      : resolvedFamily;
+      };
+
   const auto *vectorBridgeEntry = findSemanticEntry(
       primec::semanticProgramBridgePathChoiceView(semanticProgram),
-      [&semanticProgram](const primec::SemanticProgramBridgePathChoice &entry) {
-        return entry.scopePath == "/main" &&
-               primec::semanticProgramBridgePathChoiceHelperName(semanticProgram, entry) == "count" &&
-               primec::semanticProgramResolveCallTargetString(semanticProgram, entry.chosenPathId) ==
-                   "/std/collections/vector/count";
+      [&semanticProgram, &resolveBridgeScopePath, &resolveBridgeCollectionFamily](
+          const primec::SemanticProgramBridgePathChoice &entry) {
+        return resolveBridgeScopePath(entry) == "/main" &&
+               resolveBridgeCollectionFamily(entry) == "vector" &&
+               primec::semanticProgramBridgePathChoiceHelperName(semanticProgram, entry) == "count";
       });
   REQUIRE(vectorBridgeEntry != nullptr);
+  CHECK(resolveBridgeCollectionFamily(*vectorBridgeEntry) == "vector");
+  CHECK(primec::semanticProgramResolveCallTargetString(semanticProgram,
+                                                       vectorBridgeEntry->chosenPathId) ==
+        "/std/collections/vector/count");
   REQUIRE(vectorBridgeEntry->stdlibSurfaceId.has_value());
   CHECK(*vectorBridgeEntry->stdlibSurfaceId ==
         primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
@@ -4101,8 +4134,10 @@ main() {
 
   const auto *mapBridgeEntry = findSemanticEntry(
       primec::semanticProgramBridgePathChoiceView(semanticProgram),
-      [&semanticProgram](const primec::SemanticProgramBridgePathChoice &entry) {
-        return entry.scopePath == "/main" &&
+      [&semanticProgram, &resolveBridgeScopePath, &resolveBridgeCollectionFamily](
+          const primec::SemanticProgramBridgePathChoice &entry) {
+        return resolveBridgeScopePath(entry) == "/main" &&
+               resolveBridgeCollectionFamily(entry) == "map" &&
                primec::semanticProgramBridgePathChoiceHelperName(semanticProgram, entry) == "count" &&
                primec::semanticProgramResolveCallTargetString(semanticProgram, entry.chosenPathId) ==
                    "/std/collections/map/count";

@@ -123,6 +123,16 @@ std::string snapshotKey(std::string_view first,
          "\x1f" + std::string(fifth);
 }
 
+bool matchesStdlibSurfaceBridgeKey(const StdlibSurfaceMetadata &metadata,
+                                   std::string_view bridgeKey) {
+  return &metadata == findStdlibSurfaceMetadataByBridgeKey(bridgeKey);
+}
+
+bool isMapCollectionSurfaceMetadata(const StdlibSurfaceMetadata &metadata) {
+  return matchesStdlibSurfaceBridgeKey(metadata, "collections.map_helpers") ||
+         matchesStdlibSurfaceBridgeKey(metadata, "collections.map_constructors");
+}
+
 std::optional<std::pair<std::string, std::string>>
 collectionBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
   auto stripSpecializationSuffix = [](std::string_view path) {
@@ -221,12 +231,10 @@ collectionBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
   if (metadata == vectorHelperSurfaceMetadata() ||
       metadata == vectorConstructorSurfaceMetadata()) {
     collectionFamily = "vector";
+  } else if (isMapCollectionSurfaceMetadata(*metadata)) {
+    collectionFamily = "map";
   } else {
     switch (metadata->id) {
-      case StdlibSurfaceId::CollectionsMapHelpers:
-      case StdlibSurfaceId::CollectionsMapConstructors:
-        collectionFamily = "map";
-        break;
       case StdlibSurfaceId::CollectionsSoaVectorHelpers:
       case StdlibSurfaceId::CollectionsSoaVectorConstructors:
         collectionFamily = "soa_vector";

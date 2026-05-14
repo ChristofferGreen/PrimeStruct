@@ -18871,3 +18871,37 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     `src/semantics/SemanticsValidatorPassesDiagnostics.cpp` from the
     map-surface inventory allowance, updated source-lock coverage, and
     promoted TODO-4502 for the next semantic snapshot bridge-choice slice.
+
+- [x] TODO-4502: Route snapshot map bridge choices through metadata
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4501
+  - split_from: TODO-4464
+  - scope: Remove direct map surface-id cases from semantic snapshot bridge
+    choice collection by classifying map helper and constructor bridge choices
+    through shared stdlib surface metadata.
+  - implementation_notes:
+    - Targeted `src/semantics/SemanticsValidatorSnapshots.cpp`, where
+      `collectionBridgeChoiceFromResolvedPath` switched explicitly on
+      `CollectionsMapHelpers` and `CollectionsMapConstructors`.
+    - Preserved map bridge snapshot output while removing direct map surface
+      enum traces from the target file.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` for the target
+      file and added focused source-lock coverage.
+  - acceptance:
+    - Semantic snapshot bridge choices still classify map helper and
+      constructor paths as map family entries.
+    - The target file no longer contains direct map surface-id traces.
+    - The map-surface trace inventory and source-lock coverage prevent
+      reintroducing the removed traces.
+  - stop_rule: Stop once snapshot map bridge classification delegates to
+    metadata helpers, focused coverage passes, and the inventory allowance for
+    the target file is removed.
+  - evidence: Routed snapshot map helper and constructor bridge classification
+    through `collections.map_*` stdlib surface metadata bridge keys, removed
+    `src/semantics/SemanticsValidatorSnapshots.cpp` from the map-surface
+    inventory allowance, updated source-lock and bridge parity coverage, and
+    promoted TODO-4503 for the final one-trace template constructor metadata
+    slice before the broad TODO-4464 audit.

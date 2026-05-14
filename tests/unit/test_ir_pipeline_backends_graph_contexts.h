@@ -1053,7 +1053,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticProduct.find("std::vector<SemanticProgramLocalAutoFact> localAutoFacts = {};") != std::string::npos);
   CHECK(semanticProduct.find("std::vector<SemanticProgramQueryFact> queryFacts = {};") != std::string::npos);
   CHECK(semanticProduct.find("std::vector<SemanticProgramTryFact> tryFacts = {};") != std::string::npos);
-  CHECK(semanticProduct.find("std::vector<SemanticProgramOnErrorFact> onErrorFacts;") != std::string::npos);
+  CHECK(semanticProduct.find("std::vector<SemanticProgramOnErrorFact> onErrorFacts = {};") != std::string::npos);
   CHECK(semanticProduct.find("semanticProgramLookupPublishedLowererSoftwareNumericType(") !=
         std::string::npos);
   CHECK(semanticProduct.find("semanticProgramLookupPublishedLowererRuntimeReflectionPath(") !=
@@ -1347,7 +1347,21 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticsSnapshots.find("findStdlibSurfaceMetadataByResolvedPath(resolvedPath)") !=
         std::string::npos);
+  CHECK(semanticsSnapshots.find("isMapCollectionSurfaceMetadata(*metadata)") !=
+        std::string::npos);
+  CHECK(semanticsSnapshots.find("findStdlibSurfaceMetadataByBridgeKey(bridgeKey)") !=
+        std::string::npos);
+  CHECK(semanticsSnapshots.find(
+            "matchesStdlibSurfaceBridgeKey(metadata, \"collections.map_helpers\")") !=
+        std::string::npos);
+  CHECK(semanticsSnapshots.find(
+            "matchesStdlibSurfaceBridgeKey(metadata, \"collections.map_constructors\")") !=
+        std::string::npos);
   CHECK(semanticsSnapshots.find("resolveStdlibSurfaceMemberName(*metadata, resolvedPath)") !=
+        std::string::npos);
+  CHECK(semanticsSnapshots.find("StdlibSurfaceId::CollectionsMapHelpers") ==
+        std::string::npos);
+  CHECK(semanticsSnapshots.find("StdlibSurfaceId::CollectionsMapConstructors") ==
         std::string::npos);
   CHECK(semanticsSnapshots.find("return std::pair<std::string, std::string>(\"soa_vector\"") !=
         std::string::npos);
@@ -1432,7 +1446,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irCallResolution.find("resolvePublishedSemanticStdlibSurfaceMemberName(") !=
         std::string::npos);
-  CHECK(irCallResolution.find("StdlibSurfaceId::CollectionsVectorHelperSurface") !=
+  CHECK(irCallResolution.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") !=
         std::string::npos);
   CHECK(irCallResolution.find("StdlibSurfaceId::CollectionsMapHelpers") !=
         std::string::npos);
