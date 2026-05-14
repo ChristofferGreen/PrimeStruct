@@ -17884,3 +17884,37 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     constructor reentry; and broad backing fallback blockers. Updated
     TODO-4464 with that inventory and skipped broad baseline validation per
     the lite workflow.
+
+- [x] TODO-4472: Add map backing trace inventory gate
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4468
+  - split_from: TODO-4464
+  - scope: Add a deterministic validation gate that scans production
+    `src`/`include` C++ for current experimental-map backing traces and caps
+    the classified residue before the final zero C++ map-surface audit.
+  - implementation_notes:
+    - Targeted `experimental_map`, `Map__`, `Entry__`, and `Map<K, V>`-style
+      backing traces rather than the broader canonical map surface paths that
+      remain for TODO-4464.
+    - Used maximum allowed counts so deleting existing residue passes without
+      updating the audit, while new backing traces or count increases fail.
+  - acceptance:
+    - Release validation runs a production `src`/`include` map backing trace
+      gate and a checker self-test.
+    - The checker allows ordinary C++ `std::map`, generic mapping names, and
+      source-map infrastructure by not matching those forms.
+    - Any added experimental-map/`Map__*`/`Entry__*`/`Map<K, V>` backing trace
+      beyond the checked-in inventory fails the gate.
+  - stop_rule: Stop once the current backing-trace residue is mechanically
+    capped and TODO-4464 remains as the strict zero-trace audit follow-up.
+  - evidence: Added `scripts/check_map_backing_traces.py` with a decaying
+    maximum-count inventory over production `src` and `include` files, wired
+    it into CTest as `PrimeStruct_map_backing_traces`, and added
+    `tests/scripts/test_check_map_backing_traces.py` as a checker self-test.
+    The script currently observes 308 classified production backing traces
+    within 308 allowed inventory slots. Promoted TODO-4464 back to Ready Now
+    for the strict full zero map-surface audit and deferred broad release
+    validation per the lite workflow.
