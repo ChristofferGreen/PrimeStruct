@@ -146,6 +146,26 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
+TEST_CASE("graph type resolver infers direct-call auto binding from imported map-return helper") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<auto>]
+makeValues() {
+  return(map<i32, i32>(1i32, 7i32, 2i32, 11i32))
+}
+
+[return<i32>]
+main() {
+  [auto] values{makeValues()}
+  return(at_unsafe(values, 2i32))
+}
+  )";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("graph type resolver infers direct-call auto binding from collection-return helper") {
   const std::string source = R"(
 [return<array<i32>>]

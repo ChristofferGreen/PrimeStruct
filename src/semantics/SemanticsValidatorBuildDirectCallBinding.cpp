@@ -1,6 +1,20 @@
 #include "SemanticsValidator.h"
+#include "MapConstructorHelpers.h"
+
+#include <string_view>
 
 namespace primec::semantics {
+namespace {
+
+bool isExperimentalMapBackingReturnStruct(std::string_view typeName) {
+  std::string_view normalizedTypeName = typeName;
+  if (!normalizedTypeName.empty() && normalizedTypeName.front() == '/') {
+    normalizedTypeName.remove_prefix(1);
+  }
+  return isExperimentalCollectionBackingTypeName("map", "Map", normalizedTypeName);
+}
+
+} // namespace
 
 bool SemanticsValidator::inferResolvedDirectCallBindingType(const std::string &resolvedPath,
                                                             BindingInfo &bindingOut) const {
@@ -61,7 +75,7 @@ bool SemanticsValidator::inferResolvedDirectCallBindingType(const std::string &r
 
   const auto directStructIt = returnStructs_.find(resolvedPath);
   if (directStructIt != returnStructs_.end() && !directStructIt->second.empty()) {
-    if (directStructIt->second.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
+    if (isExperimentalMapBackingReturnStruct(directStructIt->second)) {
       bindingOut.typeName = directStructIt->second;
       bindingOut.typeTemplateArg.clear();
       return true;

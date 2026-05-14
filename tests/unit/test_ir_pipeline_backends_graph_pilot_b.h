@@ -141,6 +141,14 @@
         std::string::npos);
   CHECK(validatorBuild.find("bool SemanticsValidator::inferResolvedDirectCallBindingType(") !=
         std::string::npos);
+  CHECK(validatorBuild.find("#include \"MapConstructorHelpers.h\"") !=
+        std::string::npos);
+  CHECK(validatorBuild.find(
+            "directStructIt->second.rfind(\"/std/collections/experimental_map/Map__\", 0)") ==
+        std::string::npos);
+  CHECK(validatorBuild.find(
+            "isExperimentalCollectionBackingTypeName(\"map\", \"Map\", normalizedTypeName)") !=
+        std::string::npos);
   CHECK(validatorCore.find("return inferQueryExprTypeText(receiverExpr, params, locals, typeTextOut);") !=
         std::string::npos);
   CHECK(validatorCore.find("auto isEnvelopeValueExpr = [&](const Expr &candidate, bool allowAnyName) -> bool {") ==

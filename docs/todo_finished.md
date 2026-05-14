@@ -18599,3 +18599,36 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     structs, updated the source lock, removed the file from the map-surface
     inventory allowance, and promoted TODO-4494 for the next remaining
     direct-call binding trace.
+
+- [x] TODO-4494: Route direct-call map backing check through metadata
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4493
+  - split_from: TODO-4464
+  - scope: Remove the hard-coded experimental map backing specialization path
+    check from semantic direct-call return binding inference by routing backing
+    type recognition through shared map-constructor/type metadata helpers.
+  - implementation_notes:
+    - Targeted `src/semantics/SemanticsValidatorBuildDirectCallBinding.cpp`,
+      where direct return-struct binding inference still checked
+      `directStructIt->second.rfind("/std/collections/experimental_map/Map__", 0)`.
+    - Reused the shared collection backing-type helper so the direct-call
+      binding file can stay free of production C++ experimental-map path
+      literals.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` so the
+      direct-call binding file has no map-surface trace allowance.
+  - acceptance:
+    - Direct-call return binding inference continues to recognize current
+      experimental map backing specializations as map-shaped return bindings.
+    - The direct-call binding file no longer contains a production C++
+      experimental map backing specialization path literal.
+    - Source-lock coverage prevents reintroducing the literal backing path.
+  - stop_rule: Stop once direct-call map backing recognition is
+    metadata-backed, focused coverage passes, and the map-surface trace
+    inventory no longer allows traces for the target file.
+  - evidence: Replaced the hard-coded experimental-map `Map__` prefix check
+    with a shared collection backing-type helper, updated the graph-pilot
+    source lock, removed the file from the map-surface inventory allowance,
+    and promoted TODO-4464 for the final zero C++ map-surface audit.
