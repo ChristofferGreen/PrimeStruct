@@ -6,6 +6,35 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 14, 2026)**
+- [x] TODO-4517: Lower public SoA field-view wrappers
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: SoA public surface rename and ownership cutover
+  - depends_on: TODO-4516
+  - split_from: TODO-4307
+  - scope: Finish the remaining public-wrapper lowering gap for direct
+    `/std/collections/soa/field_view(...)[index]` and canonical
+    `soa<T>.field()[index]` field-view consumption without reintroducing
+    `soa_vector`-specific public collection behavior.
+  - acceptance:
+    - Direct public field-view wrapper consumption and canonical
+      `soa<T>.field()[index]` consumption lower and run on VM/native through
+      public wrapper routing.
+    - Any remaining C++ SoA code is classified as generic substrate,
+      borrow/invalidation machinery, or compatibility diagnostics rather than
+      public collection-surface behavior.
+    - The next open SoA ownership leaf is TODO-4308 metadata extraction.
+  - stop_rule: Stop once public field-view wrapper/index behavior no longer
+    depends on `soa_vector`-specific public-surface semantic/lowering
+    emission and has VM/native compile-run coverage.
+  - evidence: Taught SoA field-view rewrite passes to infer public
+    `SoaVector<T>` locals from public wrapper initializers, route canonical
+    `values.field()[index]` through `/std/collections/soa/get`, and rewrite
+    direct public `field_view<Struct, Field>(values, literalField)[index]` to
+    public `soa/get(...).field`; added native and VM compile-run coverage for
+    both direct public wrapper indexing and canonical field syntax.
+
 - [x] TODO-4516: Lower public SoA from_aos wrapper
   - owner: ai
   - created_at: 2026-05-14

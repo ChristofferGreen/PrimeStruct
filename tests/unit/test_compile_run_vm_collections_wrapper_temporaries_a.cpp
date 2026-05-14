@@ -449,6 +449,34 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+TEST_CASE("vm public soa field-view wrappers use public reads") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/soa/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<Particle> mut] items{vector<Particle>()}
+  items.push(Particle(3i32, 5i32))
+  items.push(Particle(7i32, 11i32))
+  [auto] values{/std/collections/soa/from_aos<Particle>(items)}
+  return(plus(plus(count(values),
+                   /std/collections/soa/field_view<Particle, i32>(values, 1i32)[1i32]),
+              values.y()[0i32]))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_public_soa_field_view_wrappers.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 18);
+}
+
 TEST_CASE("vm legacy soa_vector compatibility helpers run without experimental imports") {
   const std::string source = R"(
 import /std/collections/*

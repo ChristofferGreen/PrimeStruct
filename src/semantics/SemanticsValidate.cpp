@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <exception>
 #include <functional>
+#include <limits>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -648,6 +649,17 @@ Expr makeI32LiteralExpr(uint64_t value, int sourceLine, int sourceColumn) {
   expr.sourceLine = sourceLine;
   expr.sourceColumn = sourceColumn;
   return expr;
+}
+
+std::optional<size_t> extractNonNegativeI32LiteralIndex(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Literal || expr.isUnsigned ||
+      (expr.intWidth != 0 && expr.intWidth != 32)) {
+    return std::nullopt;
+  }
+  if (expr.literalValue > static_cast<uint64_t>(std::numeric_limits<int32_t>::max())) {
+    return std::nullopt;
+  }
+  return static_cast<size_t>(expr.literalValue);
 }
 
 bool extractSoaFieldViewElementTypeText(std::string typeText, std::string &elemTypeOut) {
@@ -1347,6 +1359,38 @@ std::optional<semantics::BindingInfo> extractParsedOrExperimentalSoaBindingInfo(
     const Expr &expr,
     const std::unordered_set<std::string> *structTypes = nullptr) {
   if (auto parsed = extractParsedBindingInfo(expr, structTypes); parsed.has_value()) {
+    const std::string normalizedType =
+        semantics::normalizeBindingTypeName(parsed->typeName);
+    if (expr.isBinding && normalizedType == "auto" && expr.args.size() == 1) {
+      const Expr &initializer = expr.args.front();
+      if (initializer.kind == Expr::Kind::Call && !initializer.isBinding &&
+          !initializer.templateArgs.empty()) {
+        std::string initPath = initializer.name;
+        if (!initPath.empty() && initPath.front() != '/') {
+          initPath.insert(initPath.begin(), '/');
+        }
+        const size_t leafStart = initPath.find_last_of('/');
+        const size_t generatedSuffix =
+            initPath.find("__", leafStart == std::string::npos ? 0 : leafStart + 1);
+        if (generatedSuffix != std::string::npos) {
+          initPath.erase(generatedSuffix);
+        }
+        if (initPath == "/std/collections/soa/soa" ||
+            initPath == "/std/collections/soa/single" ||
+            initPath == "/std/collections/soa/from_aos" ||
+            initPath == "/std/collections/internal_soa_vector/soaVectorNew" ||
+            initPath == "/std/collections/internal_soa_vector/soaVectorSingle" ||
+            initPath == "/std/collections/internal_soa_vector/soaVectorFromAos" ||
+            initPath == "/std/collections/experimental_soa_vector/soaVectorNew" ||
+            initPath == "/std/collections/experimental_soa_vector/soaVectorSingle" ||
+            initPath == "/std/collections/experimental_soa_vector/soaVectorFromAos") {
+          semantics::BindingInfo inferred = *parsed;
+          inferred.typeName = "SoaVector";
+          inferred.typeTemplateArg = initializer.templateArgs.front();
+          return inferred;
+        }
+      }
+    }
     return parsed;
   }
   if (!expr.isBinding) {
@@ -4135,6 +4179,7 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
 
   std::string receiverElemType;
   bool receiverNeedsDereference = false;
+  bool receiverUsesCanonicalSoaVector = false;
   const Expr &receiver = fieldViewExpr.args.front();
   std::optional<Expr> canonicalReceiverExpr;
   const Expr *getReceiverExpr = &receiver;
@@ -4142,6 +4187,37 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
     receiverNeedsDereference =
         semantics::normalizeBindingTypeName(binding.typeName) == "Reference" ||
         semantics::normalizeBindingTypeName(binding.typeName) == "Pointer";
+    auto markCanonicalSoaVector = [&](std::string typeText) {
+      while (true) {
+        std::string base;
+        std::string argText;
+        if (!semantics::splitTemplateTypeName(
+                semantics::normalizeBindingTypeName(typeText), base, argText)) {
+          base = semantics::normalizeBindingTypeName(typeText);
+        } else {
+          base = semantics::normalizeBindingTypeName(base);
+        }
+        if (base == "Reference" || base == "Pointer") {
+          std::vector<std::string> args;
+          if (!semantics::splitTopLevelTemplateArgs(argText, args) ||
+              args.size() != 1) {
+            return;
+          }
+          typeText = args.front();
+          continue;
+        }
+        receiverUsesCanonicalSoaVector =
+            base == "SoaVector" ||
+            base == "soa_vector" || base == "/soa_vector" ||
+            base == "std/collections/soa_vector" ||
+            base == "/std/collections/soa_vector";
+        return;
+      }
+    };
+    markCanonicalSoaVector(
+        binding.typeTemplateArg.empty()
+            ? binding.typeName
+            : binding.typeName + "<" + binding.typeTemplateArg + ">");
     return extractExperimentalSoaVectorElementTypeForFieldViewRewrite(
         binding, specializedSoaVectorElementTypes, receiverElemType);
   };
@@ -4287,8 +4363,11 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
   getCall.kind = Expr::Kind::Call;
   const bool useBorrowedGetHelper = receiverNeedsDereference;
   getCall.name =
-      useBorrowedGetHelper ? "/std/collections/soa_vector/get_ref"
-                           : "/std/collections/soa_vector/get";
+      receiverUsesCanonicalSoaVector
+          ? (useBorrowedGetHelper ? "/std/collections/soa/get_ref"
+                                  : "/std/collections/soa/get")
+          : (useBorrowedGetHelper ? "/std/collections/soa_vector/get_ref"
+                                  : "/std/collections/soa_vector/get");
   getCall.templateArgs = {receiverElemType};
   auto appendReceiverValueExpr = [&](Expr &callExpr) {
     if (!useBorrowedGetHelper) {
@@ -4571,6 +4650,7 @@ void rewriteExperimentalSoaFieldViewHelperExpr(
           continue;
         }
         receiverUsesCanonicalSoaVector =
+            base == "SoaVector" ||
             base == "soa_vector" || base == "/soa_vector" ||
             base == "std/collections/soa_vector" ||
             base == "/std/collections/soa_vector";
@@ -4901,21 +4981,23 @@ bool rewriteExperimentalSoaFieldViewHelpers(Program &program, std::string &error
 void rewriteExperimentalSoaFieldViewCarrierIndexExpr(
     Expr &expr,
     const std::unordered_map<std::string, std::string> &fieldViewBindings,
+    const std::unordered_map<std::string, std::vector<std::string>> &structFieldNames,
     const std::unordered_set<std::string> &structPaths,
     const std::string &definitionNamespace);
 
 void rewriteExperimentalSoaFieldViewCarrierIndexStatements(
     std::vector<Expr> &statements,
     std::unordered_map<std::string, std::string> fieldViewBindings,
+    const std::unordered_map<std::string, std::vector<std::string>> &structFieldNames,
     const std::unordered_set<std::string> &structPaths,
     const std::string &definitionNamespace) {
   for (Expr &stmt : statements) {
     rewriteExperimentalSoaFieldViewCarrierIndexExpr(
-        stmt, fieldViewBindings, structPaths, definitionNamespace);
+        stmt, fieldViewBindings, structFieldNames, structPaths, definitionNamespace);
     if (!stmt.bodyArguments.empty()) {
       auto bodyBindings = fieldViewBindings;
       rewriteExperimentalSoaFieldViewCarrierIndexStatements(
-          stmt.bodyArguments, bodyBindings, structPaths, definitionNamespace);
+          stmt.bodyArguments, bodyBindings, structFieldNames, structPaths, definitionNamespace);
     }
     if (stmt.isBinding) {
       if (auto parsed = extractParsedBindingInfo(stmt, &structPaths); parsed.has_value()) {
@@ -4948,13 +5030,14 @@ void rewriteExperimentalSoaFieldViewCarrierIndexStatements(
 void rewriteExperimentalSoaFieldViewCarrierIndexExpr(
     Expr &expr,
     const std::unordered_map<std::string, std::string> &fieldViewBindings,
+    const std::unordered_map<std::string, std::vector<std::string>> &structFieldNames,
     const std::unordered_set<std::string> &structPaths,
     const std::string &definitionNamespace) {
   for (Expr &arg : expr.args) {
     rewriteExperimentalSoaFieldViewCarrierIndexExpr(
-        arg, fieldViewBindings, structPaths, definitionNamespace);
+        arg, fieldViewBindings, structFieldNames, structPaths, definitionNamespace);
   }
-  if (expr.kind != Expr::Kind::Call || expr.isMethodCall ||
+  if (expr.kind != Expr::Kind::Call ||
       expr.templateArgs.size() != 0 || expr.hasBodyArguments ||
       !expr.bodyArguments.empty() || semantics::hasNamedArguments(expr.argNames) ||
       expr.args.size() != 2) {
@@ -4978,6 +5061,40 @@ void rewriteExperimentalSoaFieldViewCarrierIndexExpr(
     std::string callPath = fieldViewExpr.name;
     if (!callPath.empty() && callPath.front() != '/') {
       callPath.insert(callPath.begin(), '/');
+    }
+    if (callPath == "/std/collections/soa/field_view" &&
+        fieldViewExpr.templateArgs.size() >= 2 &&
+        fieldViewExpr.args.size() == 2 &&
+        !semantics::hasNamedArguments(fieldViewExpr.argNames)) {
+      const std::string structPath = semantics::resolveStructTypePath(
+          fieldViewExpr.templateArgs.front(), definitionNamespace, structPaths);
+      auto fieldsIt = structFieldNames.find(structPath);
+      const auto fieldIndex =
+          extractNonNegativeI32LiteralIndex(fieldViewExpr.args[1]);
+      if (fieldsIt != structFieldNames.end() && fieldIndex.has_value() &&
+          *fieldIndex < fieldsIt->second.size()) {
+        Expr getCall;
+        getCall.kind = Expr::Kind::Call;
+        getCall.name = "/std/collections/soa/get";
+        getCall.templateArgs = {fieldViewExpr.templateArgs.front()};
+        getCall.args.push_back(fieldViewExpr.args.front());
+        getCall.args.push_back(expr.args[1]);
+        getCall.argNames.resize(getCall.args.size());
+        getCall.sourceLine = fieldViewExpr.sourceLine;
+        getCall.sourceColumn = fieldViewExpr.sourceColumn;
+
+        Expr fieldAccess;
+        fieldAccess.kind = Expr::Kind::Call;
+        fieldAccess.name = fieldsIt->second[*fieldIndex];
+        fieldAccess.isMethodCall = true;
+        fieldAccess.isFieldAccess = true;
+        fieldAccess.args.push_back(std::move(getCall));
+        fieldAccess.argNames.resize(fieldAccess.args.size());
+        fieldAccess.sourceLine = fieldViewExpr.sourceLine;
+        fieldAccess.sourceColumn = fieldViewExpr.sourceColumn;
+        expr = std::move(fieldAccess);
+        return;
+      }
     }
     if (semantics::isExperimentalSoaFieldViewHelperPath(callPath)) {
       if (fieldViewExpr.templateArgs.size() >= 2) {
@@ -5006,9 +5123,27 @@ void rewriteExperimentalSoaFieldViewCarrierIndexExpr(
 bool rewriteExperimentalSoaFieldViewCarrierIndexes(Program &program, std::string &error) {
   error.clear();
   std::unordered_set<std::string> structPaths;
+  std::unordered_map<std::string, std::vector<std::string>> structFieldNames;
   for (const Definition &def : program.definitions) {
     if (isStructLikeDefinition(def)) {
       structPaths.insert(def.fullPath);
+      auto isStaticField = [](const Expr &stmt) {
+        for (const auto &transform : stmt.transforms) {
+          if (transform.name == "static") {
+            return true;
+          }
+        }
+        return false;
+      };
+      std::vector<std::string> fields;
+      for (const Expr &stmt : def.statements) {
+        if (stmt.isBinding && !isStaticField(stmt)) {
+          fields.push_back(stmt.name);
+        }
+      }
+      if (!fields.empty()) {
+        structFieldNames.emplace(def.fullPath, std::move(fields));
+      }
     }
   }
   for (Definition &def : program.definitions) {
@@ -5027,10 +5162,10 @@ bool rewriteExperimentalSoaFieldViewCarrierIndexes(Program &program, std::string
       definitionNamespace = def.fullPath.substr(0, slash);
     }
     rewriteExperimentalSoaFieldViewCarrierIndexStatements(
-        def.statements, fieldViewBindings, structPaths, definitionNamespace);
+        def.statements, fieldViewBindings, structFieldNames, structPaths, definitionNamespace);
     if (def.returnExpr.has_value()) {
       rewriteExperimentalSoaFieldViewCarrierIndexExpr(
-          *def.returnExpr, fieldViewBindings, structPaths, definitionNamespace);
+          *def.returnExpr, fieldViewBindings, structFieldNames, structPaths, definitionNamespace);
     }
   }
   for (auto &exec : program.executions) {
@@ -5042,11 +5177,11 @@ bool rewriteExperimentalSoaFieldViewCarrierIndexes(Program &program, std::string
     }
     for (Expr &arg : exec.arguments) {
       rewriteExperimentalSoaFieldViewCarrierIndexExpr(
-          arg, fieldViewBindings, structPaths, definitionNamespace);
+          arg, fieldViewBindings, structFieldNames, structPaths, definitionNamespace);
     }
     for (Expr &arg : exec.bodyArguments) {
       rewriteExperimentalSoaFieldViewCarrierIndexExpr(
-          arg, fieldViewBindings, structPaths, definitionNamespace);
+          arg, fieldViewBindings, structFieldNames, structPaths, definitionNamespace);
     }
   }
   return true;

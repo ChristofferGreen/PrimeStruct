@@ -1480,12 +1480,12 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4517: Lower public SoA field-view wrappers") !=
-        std::string::npos);
-  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
                   "- TODO-4308: Move SoA surface metadata out of C++") !=
         std::string::npos);
-  CHECK(todo.find("- TODO-4309: Delete `soa_vector` compatibility seams") !=
+  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
+                  "- TODO-4309: Delete `soa_vector` compatibility seams") !=
+        std::string::npos);
+  CHECK(todo.find("- TODO-4310: Add zero C++ SoA collection-surface audit") !=
         std::string::npos);
   CHECK(todo.find("- [~] TODO-4305: Rename and style canonical `.prime` SoA surface") !=
         std::string::npos);
@@ -1499,8 +1499,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4517: Lower public SoA field-view wrappers\n"
-                  "- TODO-4308: Move SoA surface metadata out of C++") !=
+                  "- TODO-4308: Move SoA surface metadata out of C++\n"
+                  "- TODO-4309: Delete `soa_vector` compatibility seams") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
       "TODO-4268: Add heterogeneous type-pack syntax and metadata",
@@ -1854,11 +1854,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4464, TODO-4305, TODO-4309, TODO-4310 |") !=
         std::string::npos);
-  CHECK(todo.find("| SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4514, TODO-4517, TODO-4308, TODO-4309, TODO-4310 |") !=
+  CHECK(todo.find("| SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4514, TODO-4308, TODO-4309, TODO-4310 |") !=
         std::string::npos);
   CHECK(todo.find("| De-experimentalization surface and namespace parity | TODO-4430, TODO-4464, TODO-4305, TODO-4309, TODO-4310 |") !=
         std::string::npos);
-  CHECK(todo.find("| `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4514, TODO-4517, TODO-4308, TODO-4309, TODO-4310 |") !=
+  CHECK(todo.find("| `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4514, TODO-4308, TODO-4309, TODO-4310 |") !=
         std::string::npos);
   CHECK(todo.find("| Validator entrypoint and benchmark-plumbing split | none |") !=
         std::string::npos);

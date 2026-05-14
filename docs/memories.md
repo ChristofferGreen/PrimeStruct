@@ -175,14 +175,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
 ### soa-public-wrapper-lowering-gaps
 - Updated: 2026-05-14
 - Tags: semantics, ir, collections, soa
-- Fact: Public `/std/collections/soa/soa`, `single`, `reserve`, and `push`
-  wrappers lower on VM/native, and public `from_aos` now lowers
-  `vector<Struct>` indexing through the IR lowerer struct-slot path. Direct
-  `field_view(...)[index]` still reaches lowerer indexing on a temporary
-  `SoaFieldView`.
-- Evidence: TODO-4516 added focused public `from_aos` compile-run coverage for
-  native and VM, then split the remaining field-view wrapper/indexing work into
-  TODO-4517 after focused probes reproduced the separate field-view gap.
+- Fact: Public `/std/collections/soa/soa`, `single`, `reserve`, `push`,
+  `from_aos`, and literal-indexed direct `field_view<Struct, Field>(...)[i]`
+  wrappers lower on VM/native. Canonical `soa<T>.field()[i]` rewrites through
+  the public `soa/get(...).field` path for public `SoaVector<T>` locals
+  inferred from wrapper initializers.
+- Evidence: TODO-4517 added focused native and VM compile-run coverage for
+  direct public field-view wrapper indexing and canonical field syntax after
+  the AST rewrite stopped materializing temporary `SoaFieldView` carriers in
+  `/main`.
 
 ### soa-storage-temporaries-own-nested-buffers
 - Updated: 2026-04-28
