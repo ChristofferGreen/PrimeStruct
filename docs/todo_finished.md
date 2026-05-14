@@ -17677,3 +17677,39 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     reverse. Added source locks for the return-kind and struct-return
     candidate sites, preserved slash-only import-alias normalization, and
     promoted TODO-4466 to Ready Now.
+
+- [x] TODO-4466: Delete slashless experimental-map path normalization
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4465
+  - split_from: TODO-4463
+  - scope: Delete slashless `std/collections/experimental_map/*` helper path
+    normalization in lowerer/emitter helper lookup so import aliases or helper
+    probes no longer promote that rejected public namespace by adding a leading
+    slash.
+  - implementation_notes:
+    - Targeted lowerer/emitter `normalizeCollectionHelperPath` and lowerer
+      `normalizeMapImportAliasPath` handling for slashless
+      `std/collections/experimental_map/*` strings only.
+    - Preserved explicit rooted `/std/collections/experimental_map/*` internal
+      backing paths and helper/type traces for TODO-4467 and TODO-4468.
+  - acceptance:
+    - Slashless `std/collections/experimental_map/*` no longer becomes
+      `/std/collections/experimental_map/*` through lowerer/emitter helper
+      normalization.
+    - Canonical map helper behavior and explicit internal backing paths remain
+      unchanged.
+    - Source-lock coverage rejects reintroducing slashless experimental-map
+      helper normalization.
+  - stop_rule: Stop once slashless public-path normalization is gone; leave
+    public helper alias deletion and backing type trace classification to
+    TODO-4467 and TODO-4468.
+  - evidence: Removed the lowerer/emitter slashless
+    `std/collections/experimental_map/*` normalization clauses, added
+    source-lock assertions for the deleted snippets, split the remaining
+    public helper alias and backing-trace cleanup into TODO-4467 and
+    TODO-4468, rebuilt `PrimeStruct_backend_ir_tests`, and ran the focused
+    source-lock doctest cases. Broad baseline validation was skipped per the
+    lite workflow.

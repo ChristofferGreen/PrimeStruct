@@ -503,8 +503,7 @@ std::string normalizeCollectionHelperPath(const std::string &path) {
         normalizedPath.rfind(collectionMemberRoot("vector", false), 0) == 0 ||
         normalizedPath.rfind(experimentalCollectionMemberRoot("vector", false), 0) == 0 ||
         normalizedPath.rfind("map/", 0) == 0 ||
-        normalizedPath.rfind("std/collections/map/", 0) == 0 ||
-        normalizedPath.rfind("std/collections/experimental_map/", 0) == 0) {
+        normalizedPath.rfind("std/collections/map/", 0) == 0) {
       normalizedPath.insert(normalizedPath.begin(), '/');
     }
   }
@@ -948,8 +947,7 @@ std::string normalizeMapImportAliasPath(const std::string &path) {
   if (path.empty() || path.front() == '/') {
     return path;
   }
-  if (path.rfind("map/", 0) == 0 || path.rfind("std/collections/map/", 0) == 0 ||
-      path.rfind("std/collections/experimental_map/", 0) == 0) {
+  if (path.rfind("map/", 0) == 0 || path.rfind("std/collections/map/", 0) == 0) {
     return "/" + path;
   }
   return path;

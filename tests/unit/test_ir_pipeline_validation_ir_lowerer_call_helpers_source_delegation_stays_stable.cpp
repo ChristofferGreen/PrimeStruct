@@ -1112,6 +1112,12 @@ TEST_CASE("ir lowerer vector type layout traces use generic collection helpers")
             "appendUnique(\"/std/collections/map/\" +") == std::string::npos);
   CHECK(setupCollectionSource.find(
             "appendUnique(\"/map/\" +") == std::string::npos);
+  CHECK(setupCollectionSource.find(
+            "normalizedPath.rfind(\"std/collections/experimental_map/\", 0) == 0") ==
+        std::string::npos);
+  CHECK(setupCollectionSource.find(
+            "path.rfind(\"std/collections/experimental_map/\", 0) == 0") ==
+        std::string::npos);
   CHECK(structReturnPathSource.find("isRemovedMapCompatibilityHelper") ==
         std::string::npos);
   CHECK(structReturnPathSource.find(

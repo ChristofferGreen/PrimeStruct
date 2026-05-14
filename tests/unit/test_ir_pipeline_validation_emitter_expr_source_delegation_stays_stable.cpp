@@ -3004,6 +3004,9 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
   CHECK(metadataHelpersSource.find(
             "appendUniqueCandidate(candidates, \"/map/\" + suffix)") ==
         std::string::npos);
+  CHECK(metadataHelpersSource.find(
+            "path.rfind(\"std/collections/experimental_map/\", 0) == 0") ==
+        std::string::npos);
 
   CHECK(callPathHelpersSource.find("resolvePublishedCollectionSurfaceMemberToken(") !=
         std::string::npos);

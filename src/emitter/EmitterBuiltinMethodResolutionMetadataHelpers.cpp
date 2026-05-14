@@ -104,8 +104,7 @@ std::string normalizeCollectionHelperPath(std::string path) {
        collectionSurfaceMemberPathUsesKnownPrefix(path) ||
        path.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0 ||
        path.rfind("map/", 0) == 0 ||
-       path.rfind("std/collections/map/", 0) == 0 ||
-       path.rfind("std/collections/experimental_map/", 0) == 0)) {
+       path.rfind("std/collections/map/", 0) == 0)) {
     path.insert(path.begin(), '/');
   }
   return path;
