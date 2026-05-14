@@ -1396,7 +1396,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4504: Route flow-copy map backing checks through helper") !=
+                  "- TODO-4505: Route access-load map backing checks through helper") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
                   "- TODO-4305: Rename and style canonical `.prime` SoA surface") !=
@@ -1415,7 +1415,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4504: Route flow-copy map backing checks through helper\n"
+                  "- TODO-4505: Route access-load map backing checks through helper\n"
                   "- TODO-4305: Rename and style canonical `.prime` SoA surface") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {

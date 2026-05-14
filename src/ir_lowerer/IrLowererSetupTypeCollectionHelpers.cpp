@@ -476,6 +476,11 @@ bool isExperimentalCollectionTypeName(std::string_view typeName,
          normalized.rfind(rooted + "__", 0) == 0;
 }
 
+bool isExperimentalMapStructTypePath(std::string_view path) {
+  const std::string rooted = experimentalCollectionTypePath("map", "Map");
+  return path == rooted || path.rfind(rooted + "__", 0) == 0;
+}
+
 std::string normalizeBuiltinCollectionStructPath(std::string_view collectionName) {
   return "/" + std::string(collectionName);
 }

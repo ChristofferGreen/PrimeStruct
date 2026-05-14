@@ -18941,3 +18941,38 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     `src/semantics/TemplateMonomorphExperimentalCollectionTypeHelpers.h` from
     the map-surface inventory allowance, updated source-lock coverage, and
     promoted TODO-4504 for the next focused backing-trace cleanup leaf.
+
+- [x] TODO-4504: Route flow-copy map backing checks through helper
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4503
+  - split_from: TODO-4464
+  - scope: Remove the direct experimental map backing type prefix check from
+    IR flow-control temporary-copy disarming by delegating to a shared lowerer
+    map backing type predicate.
+  - implementation_notes:
+    - Targeted `src/ir_lowerer/IrLowererFlowControlHelpers.cpp`, where
+      `emitDisarmTemporaryStructAfterCopy` still checked
+      `/std/collections/experimental_map/Map__` directly before disarming map
+      ownership slots.
+    - Moved `isExperimentalMapStructTypePath` into shared setup-type
+      collection helpers and reused it from flow-control disarming.
+    - Tightened both map-surface and map-backing trace inventories for the
+      target file and refreshed focused ownership/source-lock coverage.
+  - acceptance:
+    - Temporary struct copy disarming still clears the map ownership slots for
+      specialized experimental map backing structs.
+    - The target file no longer contains hard-coded experimental map backing
+      path literals.
+    - The map-surface trace inventory and source-lock coverage prevent
+      reintroducing the removed trace.
+  - stop_rule: Stop once flow-control temporary-copy disarming delegates map
+    backing detection to a shared helper, focused coverage passes, and the
+    inventory allowance for the target file is tightened or removed.
+  - evidence: Routed flow-copy map backing detection through the shared
+    lowerer map backing predicate, added direct disarm coverage for map
+    ownership slots, removed `src/ir_lowerer/IrLowererFlowControlHelpers.cpp`
+    from both map trace inventories and ownership allowlists, and promoted
+    TODO-4505 for the next focused access-load backing trace cleanup.

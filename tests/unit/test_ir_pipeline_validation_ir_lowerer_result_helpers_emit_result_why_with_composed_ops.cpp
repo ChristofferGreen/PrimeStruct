@@ -467,6 +467,15 @@ TEST_CASE("ir lowerer flow helpers disarm soa storage temporaries after copy") {
       "/std/collections/experimental_soa_vector/SoaVector__tParticle");
   REQUIRE(instructions.size() == 6);
   checkDisarmAt(instructions, 0, 5u * primec::IrSlotBytes);
+
+  instructions.clear();
+  primec::ir_lowerer::emitDisarmTemporaryStructAfterCopy(
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      12,
+      "/std/collections/experimental_map/Map__tstring_i32");
+  REQUIRE(instructions.size() == 12);
+  checkDisarmAt(instructions, 0, 3u * primec::IrSlotBytes);
+  checkDisarmAt(instructions, 6, 7u * primec::IrSlotBytes);
 }
 
 TEST_CASE("ir lowerer flow helpers classify borrowed struct copy sources") {

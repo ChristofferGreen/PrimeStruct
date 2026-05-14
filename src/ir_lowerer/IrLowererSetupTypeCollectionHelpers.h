@@ -55,6 +55,7 @@ bool isBuiltinCollectionTypeName(std::string_view typeName,
 bool isExperimentalCollectionTypeName(std::string_view typeName,
                                       std::string_view collectionName,
                                       std::string_view experimentalTypeName);
+bool isExperimentalMapStructTypePath(std::string_view path);
 std::string normalizeBuiltinCollectionStructPath(std::string_view collectionName);
 std::string normalizeExperimentalCollectionTypePath(std::string_view typeName,
                                                     std::string_view collectionName,

@@ -234,7 +234,7 @@ void emitDisarmTemporaryStructAfterCopy(const std::function<void(IrOpcode, uint6
     return;
   }
 
-  if (structPath.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
+  if (isExperimentalMapStructTypePath(structPath)) {
     emitStoreFalseAtOffset(3ull * IrSlotBytes);
     emitStoreFalseAtOffset(7ull * IrSlotBytes);
   }

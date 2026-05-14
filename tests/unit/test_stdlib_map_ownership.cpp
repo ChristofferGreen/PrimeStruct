@@ -63,7 +63,6 @@ bool isAllowedMapBackingFile(const std::string &relativePath) {
       "src/ir_lowerer/IrLowererAccessTargetResolution.cpp",
       "src/ir_lowerer/IrLowererBindingTypeHelpers.cpp",
       "src/ir_lowerer/IrLowererCallHelpers.cpp",
-      "src/ir_lowerer/IrLowererFlowControlHelpers.cpp",
       "src/ir_lowerer/IrLowererInlineCallContextHelpers.cpp",
       "src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp",
       "src/ir_lowerer/IrLowererInlinePackedArgs.cpp",

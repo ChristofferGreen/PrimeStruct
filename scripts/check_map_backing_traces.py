@@ -61,8 +61,6 @@ ALLOWED_MAX_COUNTS: dict[tuple[str, str], int] = {
     ("src/ir_lowerer/IrLowererBindingTypeHelpers.cpp", "map-backing-type-symbol"): 2,
     ("src/ir_lowerer/IrLowererCallHelpers.cpp", "experimental-map-path"): 4,
     ("src/ir_lowerer/IrLowererCallHelpers.cpp", "map-backing-type-symbol"): 2,
-    ("src/ir_lowerer/IrLowererFlowControlHelpers.cpp", "experimental-map-path"): 1,
-    ("src/ir_lowerer/IrLowererFlowControlHelpers.cpp", "map-backing-type-symbol"): 1,
     ("src/ir_lowerer/IrLowererInlineCallContextHelpers.cpp", "experimental-map-path"): 2,
     ("src/ir_lowerer/IrLowererInlineCallContextHelpers.cpp", "map-backing-type-symbol"): 1,
     ("src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp", "experimental-map-path"): 5,

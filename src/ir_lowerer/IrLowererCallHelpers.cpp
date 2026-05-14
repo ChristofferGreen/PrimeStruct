@@ -149,11 +149,6 @@ std::string experimentalMapConstructorLeafForCall(const Expr &callExpr,
 
 } // namespace
 
-bool isExperimentalMapStructTypePath(std::string_view path) {
-  return path == "/std/collections/experimental_map/Map" ||
-         path.rfind("/std/collections/experimental_map/Map__", 0) == 0;
-}
-
 bool rewritePublishedMapConstructorForExperimentalMapStruct(
     const Expr &callExpr,
     const ResolveDefinitionCallFn &resolveDefinitionCall,
