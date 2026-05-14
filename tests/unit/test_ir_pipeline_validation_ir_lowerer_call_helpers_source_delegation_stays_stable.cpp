@@ -316,6 +316,13 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(accessLoadHelpersSource.find("bool emitMapLookupTryAt(") !=
         std::string::npos);
+  CHECK(accessLoadHelpersSource.find(
+            "isExperimentalMapStructTypePath(mapStructTypeName)") !=
+        std::string::npos);
+  CHECK(accessLoadHelpersSource.find("bool isExperimentalMapStructPath(") ==
+        std::string::npos);
+  CHECK(accessLoadHelpersSource.find("/std/collections/experimental_map/Map__") ==
+        std::string::npos);
   CHECK(accessLoadHelpersSource.find("void emitStringAccessLoad(") !=
         std::string::npos);
   CHECK(accessLoadHelpersSource.find("void emitArrayVectorAccessLoad(") !=

@@ -18976,3 +18976,39 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     ownership slots, removed `src/ir_lowerer/IrLowererFlowControlHelpers.cpp`
     from both map trace inventories and ownership allowlists, and promoted
     TODO-4505 for the next focused access-load backing trace cleanup.
+
+- [x] TODO-4505: Route access-load map backing checks through helper
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4504
+  - split_from: TODO-4464
+  - scope: Remove the local experimental map backing type prefix predicate
+    from IR access-load helper selection by delegating to the shared lowerer
+    map backing type predicate.
+  - implementation_notes:
+    - Targeted `src/ir_lowerer/IrLowererAccessLoadHelpers.cpp`, where the
+      file-local `isExperimentalMapStructPath` still checked
+      `/std/collections/experimental_map/Map__` directly before choosing map
+      vector-slot offsets.
+    - Reused the shared `isExperimentalMapStructTypePath` helper instead of
+      keeping a target-local map prefix recognizer.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` and
+      `scripts/check_map_backing_traces.py` for the target file and refreshed
+      focused ownership/source-lock coverage.
+  - acceptance:
+    - Map access-load helper selection still uses the map-specific vector
+      slot offsets for specialized experimental map backing structs.
+    - The target file no longer contains hard-coded experimental map backing
+      path literals or a target-local map backing type recognizer.
+    - The map-surface trace inventory and source-lock coverage prevent
+      reintroducing the removed trace.
+  - stop_rule: Stop once access-load map backing detection delegates to the
+    shared helper, focused coverage passes, and the target file inventory
+    allowance is tightened or removed.
+  - evidence: Routed access-load map backing detection through the shared
+    lowerer map backing predicate, added focused map access-load offset
+    coverage, removed `src/ir_lowerer/IrLowererAccessLoadHelpers.cpp` from
+    both map trace inventories and ownership allowlists, and promoted
+    TODO-4506 for the next focused access-target backing predicate cleanup.

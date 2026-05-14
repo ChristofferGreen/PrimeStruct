@@ -198,6 +198,53 @@ TEST_CASE("ir lowerer call helpers emit map lookup access") {
   CHECK(instructions[43].op == primec::IrOpcode::LoadIndirect);
 
   instructions.clear();
+  nextLocal = 60;
+  emitExprCalls = 0;
+  inferCalls = 0;
+  keyNotFoundCalls = 0;
+  error.clear();
+  CHECK(primec::ir_lowerer::emitMapLookupAccess(
+      "at",
+      Kind::Int32,
+      "/std/collections/experimental_map/Map__tstring_i32",
+      targetExpr,
+      keyExpr,
+      locals,
+      [&]() { return nextLocal++; },
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        ++emitExprCalls;
+        return true;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        ++inferCalls;
+        return Kind::Int32;
+      },
+      [&]() { ++keyNotFoundCalls; },
+      [&]() { return instructions.size(); },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
+      error));
+  CHECK(emitExprCalls == 2);
+  CHECK(inferCalls == 1);
+  CHECK(keyNotFoundCalls == 1);
+  CHECK(error.empty());
+  bool loadedKeyVectorSlot = false;
+  bool loadedPayloadVectorSlot = false;
+  for (const auto &instruction : instructions) {
+    if (instruction.op == primec::IrOpcode::PushI64 &&
+        instruction.imm == 2u * primec::IrSlotBytes) {
+      loadedKeyVectorSlot = true;
+    }
+    if (instruction.op == primec::IrOpcode::PushI64 &&
+        instruction.imm == 6u * primec::IrSlotBytes) {
+      loadedPayloadVectorSlot = true;
+    }
+  }
+  CHECK(loadedKeyVectorSlot);
+  CHECK(loadedPayloadVectorSlot);
+
+  instructions.clear();
   nextLocal = 40;
   emitExprCalls = 0;
   inferCalls = 0;

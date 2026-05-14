@@ -6,10 +6,6 @@ namespace primec::ir_lowerer {
 
 namespace {
 
-bool isExperimentalMapStructPath(const std::string &mapStructTypeName) {
-  return mapStructTypeName.rfind("/std/collections/experimental_map/Map__", 0) == 0;
-}
-
 void emitExperimentalMapVectorDataPtrLoad(
     int32_t ptrLocal,
     int32_t vectorSlotOffset,
@@ -484,7 +480,7 @@ bool emitMapLookupAccess(
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error) {
-  if (isExperimentalMapStructPath(mapStructTypeName)) {
+  if (isExperimentalMapStructTypePath(mapStructTypeName)) {
     return emitExperimentalMapLookupAccess(
         accessName,
         mapKeyKind,
@@ -557,7 +553,7 @@ bool emitMapLookupContains(
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error) {
-  if (isExperimentalMapStructPath(mapStructTypeName)) {
+  if (isExperimentalMapStructTypePath(mapStructTypeName)) {
     return emitExperimentalMapLookupContains(
         mapKeyKind,
         targetExpr,
@@ -620,7 +616,7 @@ bool emitMapLookupTryAt(
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error) {
-  if (isExperimentalMapStructPath(mapStructTypeName)) {
+  if (isExperimentalMapStructTypePath(mapStructTypeName)) {
     return emitExperimentalMapLookupTryAt(
         mapKeyKind,
         targetExpr,
