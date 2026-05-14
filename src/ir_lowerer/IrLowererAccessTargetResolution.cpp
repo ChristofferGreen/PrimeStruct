@@ -1107,7 +1107,9 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
 
   bool hasSemanticTargetFact = false;
   if (resolveSemanticArrayVectorAccessTargetInfo(
-          target, semanticProgram, semanticIndex, info, hasSemanticTargetFact)) {
+          target, semanticProgram, semanticIndex, info, hasSemanticTargetFact) &&
+      (info.elemKind != LocalInfo::ValueKind::Unknown ||
+       !info.structTypeName.empty())) {
     return info;
   }
   if (hasSemanticTargetFact && resolveCallArrayVectorAccessTargetInfo) {
@@ -1116,7 +1118,9 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       return inferred;
     }
   }
-  if (hasSemanticTargetFact) {
+  if (hasSemanticTargetFact &&
+      (info.elemKind != LocalInfo::ValueKind::Unknown ||
+       !info.structTypeName.empty())) {
     return info;
   }
 

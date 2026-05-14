@@ -176,12 +176,13 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Updated: 2026-05-14
 - Tags: semantics, ir, collections, soa
 - Fact: Public `/std/collections/soa/soa`, `single`, `reserve`, and `push`
-  wrappers lower on VM/native, but public `from_aos` still reaches unsupported
-  `vector<Struct>` indexing and direct `field_view(...)[index]` still reaches
-  lowerer indexing on a temporary `SoaFieldView`.
-- Evidence: TODO-4515 added focused public construction/mutator compile-run
-  coverage and split the remaining conversion/field-view wrapper lowering work
-  into TODO-4516 after focused probes reproduced those two lowerer gaps.
+  wrappers lower on VM/native, and public `from_aos` now lowers
+  `vector<Struct>` indexing through the IR lowerer struct-slot path. Direct
+  `field_view(...)[index]` still reaches lowerer indexing on a temporary
+  `SoaFieldView`.
+- Evidence: TODO-4516 added focused public `from_aos` compile-run coverage for
+  native and VM, then split the remaining field-view wrapper/indexing work into
+  TODO-4517 after focused probes reproduced the separate field-view gap.
 
 ### soa-storage-temporaries-own-nested-buffers
 - Updated: 2026-04-28

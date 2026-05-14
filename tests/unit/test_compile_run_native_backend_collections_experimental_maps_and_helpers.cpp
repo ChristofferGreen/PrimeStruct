@@ -609,6 +609,39 @@ main() {
   CHECK(runCommand(exePath) == 15);
 }
 
+TEST_CASE("native public soa from-aos uses wrapper") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/soa/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<Particle> mut] items{vector<Particle>()}
+  items.push(Particle(3i32, 5i32))
+  items.push(Particle(7i32, 11i32))
+  [auto] values{/std/collections/soa/from_aos<Particle>(items)}
+  return(count(values))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_public_soa_from_aos.prime",
+                source);
+  const std::string exePath =
+      (testScratchPath("") /
+       "primec_native_public_soa_from_aos").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
+}
+
 TEST_CASE("native compiles and runs graph-solved direct local-auto vector helper shadows") {
   const std::string source = R"(
 /vector/count([vector<i32>] values) {

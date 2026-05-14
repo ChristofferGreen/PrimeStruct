@@ -339,12 +339,14 @@ bool validateArrayVectorAccessTargetInfo(const ArrayVectorAccessTargetInfo &targ
       targetInfo.isSoaVector;
   const bool isDirectSoaVectorStructTarget =
       !targetInfo.isArgsPackTarget && targetInfo.isSoaVector && !targetInfo.structTypeName.empty();
+  const bool isDirectVectorStructTarget =
+      !targetInfo.isArgsPackTarget && targetInfo.isVectorTarget && !targetInfo.structTypeName.empty();
   if (!targetInfo.isArrayOrVectorTarget ||
       (targetInfo.elemKind == LocalInfo::ValueKind::Unknown && !isStructArgsPackTarget &&
        !isWrappedStructArgsPackTarget && !isMapArgsPackTarget && !isWrappedMapArgsPackTarget &&
        !isVectorArgsPackTarget && !isPointerVectorArgsPackTarget && !isPointerSoaVectorArgsPackTarget &&
        !isBorrowedVectorArgsPackTarget && !isBorrowedSoaVectorArgsPackTarget &&
-       !isDirectSoaVectorStructTarget)) {
+       !isDirectSoaVectorStructTarget && !isDirectVectorStructTarget)) {
     error =
         "native backend only supports at() on numeric/bool/string arrays or vectors, plus "
         "args<Struct>/args<map<K, V>>/args<Pointer<T>>/args<Reference<T>>/"

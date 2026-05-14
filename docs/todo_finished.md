@@ -6,6 +6,31 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 14, 2026)**
+- [x] TODO-4516: Lower public SoA from_aos wrapper
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: SoA public surface rename and ownership cutover
+  - depends_on: TODO-4515
+  - split_from: TODO-4307
+  - scope: Finish the public-wrapper lowering gap for
+    `/std/collections/soa/from_aos` on `vector<Struct>` inputs without
+    reintroducing `soa_vector`-specific public collection behavior.
+  - acceptance:
+    - Canonical `/std/collections/soa/from_aos<T>` lowers and runs on
+      VM/native for supported reflected struct element kinds without relying
+      on a public `soa_vector` helper target.
+    - The remaining direct public field-view wrapper/indexing gap is split as
+      TODO-4517 before TODO-4308 metadata extraction.
+  - stop_rule: Stop once public `from_aos` no longer depends on
+    `soa_vector`-specific public-surface semantic/lowering emission and has
+    VM/native compile-run coverage.
+  - evidence: Allowed direct `vector<Struct>` indexed access to use the
+    lowerer struct-slot path when semantic facts do not publish a value kind,
+    added native and VM compile-run coverage for public
+    `/std/collections/soa/from_aos`, recorded the field-view failure, and
+    split field-view wrapper indexing into TODO-4517.
+
 - [x] TODO-4515: Route public SoA mutators and construction
   - owner: ai
   - created_at: 2026-05-14
