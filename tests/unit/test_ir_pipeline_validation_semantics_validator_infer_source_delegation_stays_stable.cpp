@@ -183,6 +183,8 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
       readText(semanticsInferCollectionCompatibilityPath);
   const std::string semanticsInferCollectionReturnInferenceSource =
       readText(semanticsInferCollectionReturnInferencePath);
+  const std::string semanticsInferCollectionCallResolutionSource =
+      readText(semanticsInferCollectionCallResolutionPath);
   const std::string semanticsInferControlFlowSource = readText(semanticsInferControlFlowPath);
   const std::string semanticsInferDefinitionSource = readText(semanticsInferDefinitionPath);
   const std::string semanticsInferStructReturnSource = readText(semanticsInferStructReturnPath);
@@ -265,6 +267,17 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferCollectionsSource.find("bool SemanticsValidator::resolveCallCollectionTypePath(") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find("bool SemanticsValidator::resolveCallCollectionTemplateArgs(") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionCallResolutionSource.find("hasVisibleCanonicalMapConstructor") ==
+        std::string::npos);
+  CHECK(semanticsInferCollectionCallResolutionSource.find("allowRootMapConstructorAlias") ==
+        std::string::npos);
+  CHECK(semanticsInferCollectionCallResolutionSource.find(
+            "hasVisibleDefinitionPathForCurrentImports(\"/std/collections/map/map\")") ==
+        std::string::npos);
+  CHECK(semanticsInferCollectionCallResolutionSource.find(
+            "const bool targetIsRootMapAlias =\n"
+            "      isRootMapAliasPath(resolvedTarget) || isRootMapAliasPath(explicitTarget);") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find(
             "const std::string resolvedTarget = resolveCalleePath(target);") !=

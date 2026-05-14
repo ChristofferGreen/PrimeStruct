@@ -282,20 +282,16 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
   }
   inferredNonCollectionTargetType = !targetTypeText.empty();
 
-  const bool hasVisibleCanonicalMapConstructor =
-      hasVisibleDefinitionPathForCurrentImports("/std/collections/map/map");
-  const bool allowRootMapConstructorAlias =
-      hasVisibleCanonicalMapConstructor && !hasDeclaredDefinitionPath("/map");
   const std::string resolvedTarget = resolvedCallPath(target);
   const std::string explicitTarget = explicitCallPath(target);
+  const bool targetIsRootMapAlias =
+      isRootMapAliasPath(resolvedTarget) || isRootMapAliasPath(explicitTarget);
   std::string collectionName;
   if (!inferredNonCollectionTargetType &&
       getBuiltinCollectionName(target, collectionName) && collectionName == expectedBase) {
     const size_t expectedArgCount = expectedBase == "map" ? 2u : 1u;
     if (target.templateArgs.size() == expectedArgCount &&
-        (expectedBase != "map" ||
-         ((!isRootMapAliasPath(resolvedTarget) && !isRootMapAliasPath(explicitTarget)) ||
-          allowRootMapConstructorAlias))) {
+        (expectedBase != "map" || !targetIsRootMapAlias)) {
       argsOut = target.templateArgs;
       return true;
     }
@@ -312,19 +308,17 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
   }
 
   if (expectedBase == "map" &&
-      ((isDirectMapConstructorPath(resolvedTarget) &&
-        (!isRootMapAliasPath(resolvedTarget) || allowRootMapConstructorAlias)) ||
-       (isDirectMapConstructorPath(explicitTarget) &&
-        (!isRootMapAliasPath(explicitTarget) || allowRootMapConstructorAlias))) &&
+      !targetIsRootMapAlias &&
+      (isDirectMapConstructorPath(resolvedTarget) ||
+       isDirectMapConstructorPath(explicitTarget)) &&
       target.templateArgs.size() == 2) {
     argsOut = target.templateArgs;
     return true;
   }
   if (expectedBase == "map" &&
-      ((isDirectMapConstructorPath(resolvedTarget) &&
-        (!isRootMapAliasPath(resolvedTarget) || allowRootMapConstructorAlias)) ||
-       (isDirectMapConstructorPath(explicitTarget) &&
-        (!isRootMapAliasPath(explicitTarget) || allowRootMapConstructorAlias))) &&
+      !targetIsRootMapAlias &&
+      (isDirectMapConstructorPath(resolvedTarget) ||
+       isDirectMapConstructorPath(explicitTarget)) &&
       target.templateArgs.empty() && !target.args.empty() &&
       target.args.size() % 2 == 0) {
     auto inferArgTypeText = [&](const Expr &arg, std::string &typeTextOut) {

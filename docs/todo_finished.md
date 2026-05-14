@@ -18209,3 +18209,40 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     source lock for the deleted normalizer, removed the file from the map
     surface inventory allowance, and skipped broad release validation per the
     lite workflow.
+
+- [x] TODO-4482: Delete semantic map ctor alias inference
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4481
+  - split_from: TODO-4464
+  - scope: Delete the canonical-constructor-gated rooted `/map` constructor
+    alias allowance from semantic collection call template-argument
+    resolution.
+  - implementation_notes:
+    - Targeted
+      `src/semantics/SemanticsValidatorInferCollectionCallResolution.cpp`,
+      where `resolveCallCollectionTemplateArgs` still allowed rooted `/map`
+      constructor aliases when `/std/collections/map/map` was visible and no
+      root map definition existed.
+    - Preserved canonical map constructor inference while rejecting rooted
+      `/map` aliases through a single explicit target-path check.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` so the semantic
+      collection call-resolution file has no map-surface trace allowance.
+  - acceptance:
+    - Semantic collection call template-argument resolution no longer checks
+      canonical map constructor visibility to permit rooted `/map` constructor
+      aliases.
+    - Source-lock coverage rejects reintroducing the root alias allowance while
+      preserving the explicit rooted-alias blocker.
+    - The map-surface trace inventory allowance for
+      `src/semantics/SemanticsValidatorInferCollectionCallResolution.cpp` is
+      removed.
+  - stop_rule: Stop once the rooted map constructor alias allowance is gone
+    from semantic collection call resolution and the decaying inventory no
+    longer allows traces for that file.
+  - evidence: Removed the `allowRootMapConstructorAlias` path and canonical
+    constructor visibility probe, added a source lock for the consolidated
+    rooted-alias rejection, removed the file from the map-surface inventory
+    allowance, and skipped broad release validation per the lite workflow.
