@@ -17777,3 +17777,36 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     constructor args, source-locked the removed production strings, split
     method/constructor helper alias cleanup into TODO-4470, and skipped broad
     baseline validation per the lite workflow.
+
+- [x] TODO-4470: Delete experimental-map constructor direct targets
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4469
+  - split_from: TODO-4469
+  - scope: Delete setup-type lowerer recognition of rooted
+    `/std/collections/experimental_map/map*` constructor helper paths as
+    direct public map constructor targets, while preserving canonical
+    constructor paths and internal backing definitions.
+  - implementation_notes:
+    - Targeted `isMapConstructorDirectTargetPath` in
+      `src/ir_lowerer/IrLowererSetupTypeMethodCallResolution.cpp`.
+    - Left emit-time method fallback guards and backing `Map__*` traces to
+      TODO-4471 and TODO-4468.
+  - acceptance:
+    - Setup-type method-call resolution no longer lists rooted
+      `/std/collections/experimental_map/map*` constructors as direct map
+      constructor targets.
+    - Canonical map constructor target recognition remains available through
+      `/std/collections/map/*` spellings.
+    - Source-lock coverage rejects reintroducing rooted experimental-map
+      constructor direct-target aliases.
+  - stop_rule: Stop once rooted experimental-map constructor aliases are gone
+    from setup-type direct-target recognition.
+  - evidence: Removed rooted experimental-map constructor spellings from the
+    setup-type direct-target list while keeping canonical
+    `/std/collections/map/*` constructor targets, added a source-lock
+    assertion against reintroducing the removed direct-target pattern, split
+    method fallback guard cleanup into TODO-4471, and skipped broad baseline
+    validation per the lite workflow.

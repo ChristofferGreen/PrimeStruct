@@ -1112,6 +1112,10 @@ TEST_CASE("ir lowerer vector type layout traces use generic collection helpers")
   CHECK(methodCallSource.find(
             "normalizeBuiltinCollectionStructPath(\"vector\") + \"/count\"") !=
         std::string::npos);
+  CHECK(methodCallSource.find("\"/std/collections/map/map\"") !=
+        std::string::npos);
+  CHECK(methodCallSource.find("path == \"/std/collections/experimental_map/map") ==
+        std::string::npos);
   CHECK(declaredCollectionSource.find(
             "collectionMemberPath(\"vector\", \"vector\", false)") !=
         std::string::npos);

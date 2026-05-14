@@ -52,18 +52,7 @@ bool isMapConstructorDirectTargetPath(std::string path) {
          path == "/std/collections/mapQuint" ||
          path == "/std/collections/mapSext" ||
          path == "/std/collections/mapSept" ||
-         path == "/std/collections/mapOct" ||
-         path == "/std/collections/experimental_map/map" ||
-         path == "/std/collections/experimental_map/mapNew" ||
-         path == "/std/collections/experimental_map/mapSingle" ||
-         path == "/std/collections/experimental_map/mapDouble" ||
-         path == "/std/collections/experimental_map/mapPair" ||
-         path == "/std/collections/experimental_map/mapTriple" ||
-         path == "/std/collections/experimental_map/mapQuad" ||
-         path == "/std/collections/experimental_map/mapQuint" ||
-         path == "/std/collections/experimental_map/mapSext" ||
-         path == "/std/collections/experimental_map/mapSept" ||
-         path == "/std/collections/experimental_map/mapOct";
+         path == "/std/collections/mapOct";
 }
 
 std::string findMapConstructorBridgePathChoiceBySource(
