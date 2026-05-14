@@ -44,6 +44,90 @@ inline bool isExperimentalCollectionBackingTypeName(
   return typeName == expected || typeName.rfind(specializedExpected, 0) == 0;
 }
 
+inline const primec::StdlibSurfaceMetadata *mapHelperSurfaceMetadataLocal() {
+  return primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+}
+
+inline bool stripStdlibSurfaceRootedMemberName(std::string_view rawPath,
+                                                std::string_view rawRoot,
+                                                std::string &memberNameOut) {
+  if (rawPath.empty() || rawRoot.empty()) {
+    return false;
+  }
+  std::string path(rawPath);
+  if (!path.empty() && path.front() == '/') {
+    path.erase(path.begin());
+  }
+  std::string root(rawRoot);
+  if (!root.empty() && root.front() == '/') {
+    root.erase(root.begin());
+  }
+  if (path.size() <= root.size() || path.rfind(root, 0) != 0 ||
+      path[root.size()] != '/') {
+    return false;
+  }
+  std::string memberName = path.substr(root.size() + 1);
+  if (memberName.empty() || memberName.find('/') != std::string::npos) {
+    return false;
+  }
+  memberNameOut = std::move(memberName);
+  return true;
+}
+
+inline std::string metadataBackedMapHelperMethodName(std::string_view methodName) {
+  const primec::StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return std::string(methodName);
+  }
+  std::array<std::string, 2> candidates = {
+      std::string(methodName),
+      std::string{},
+  };
+  if (!methodName.empty() && methodName.front() != '/' &&
+      methodName.find('/') != std::string_view::npos) {
+    candidates[1] = "/" + std::string(methodName);
+  }
+  for (const std::string &candidate : candidates) {
+    if (candidate.empty()) {
+      continue;
+    }
+    const std::string_view memberName =
+        primec::resolveStdlibSurfaceMemberName(*metadata, candidate);
+    if (!memberName.empty()) {
+      return std::string(memberName);
+    }
+  }
+  std::string strippedMemberName;
+  if (stripStdlibSurfaceRootedMemberName(methodName, metadata->canonicalPath,
+                                         strippedMemberName)) {
+    return strippedMemberName;
+  }
+  for (const std::string_view alias : metadata->importAliasSpellings) {
+    if (stripStdlibSurfaceRootedMemberName(methodName, alias,
+                                           strippedMemberName)) {
+      return strippedMemberName;
+    }
+  }
+  return std::string(methodName);
+}
+
+inline std::string metadataBackedCanonicalMapHelperPath(std::string_view helperName) {
+  const primec::StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return {};
+  }
+  const std::string memberName = metadataBackedMapHelperMethodName(helperName);
+  if (memberName.empty()) {
+    return {};
+  }
+  std::string canonicalPath =
+      primec::stdlibSurfaceCanonicalHelperPath(metadata->id, memberName);
+  if (!canonicalPath.empty()) {
+    return canonicalPath;
+  }
+  return std::string(metadata->canonicalPath) + "/" + memberName;
+}
+
 inline bool resolveCollectionConstructorMemberPath(primec::StdlibSurfaceId surfaceId,
                                                    std::string_view rawPath,
                                                    std::string &memberNameOut) {

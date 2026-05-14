@@ -72,7 +72,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4499: Route template map method targets through metadata
+- TODO-4500: Route template map constructor aliases through metadata
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -88,7 +88,7 @@ Task template:
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
 - Vector stdlib ownership cutover: none active
-- Map stdlib ownership cutover: TODO-4499 -> TODO-4464
+- Map stdlib ownership cutover: TODO-4500 -> TODO-4464
 - SoA public surface rename and ownership cutover: TODO-4305 -> TODO-4306
   -> TODO-4307 -> TODO-4308 -> TODO-4309 -> TODO-4310
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
@@ -105,7 +105,7 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4499: Route template map method targets through metadata
+- TODO-4500: Route template map constructor aliases through metadata
 - TODO-4305: Rename and style canonical `.prime` SoA surface
 - TODO-4306: Stabilize generic SoA substrate boundaries
 - TODO-4307: Lower SoA helpers through ordinary `.prime`
@@ -1721,33 +1721,33 @@ Task template:
   - stop_rule: Stop once the generic design direction is documented through
     runnable examples rather than only prose.
 
-- [ ] TODO-4499: Route template map method targets through metadata
+- [ ] TODO-4500: Route template map constructor aliases through metadata
   - owner: ai
   - created_at: 2026-05-14
   - phase: Map stdlib ownership cutover
-  - depends_on: TODO-4498
+  - depends_on: TODO-4499
   - split_from: TODO-4464
-  - scope: Remove hard-coded canonical map helper prefix/path construction
-    from template method-target resolution by routing map method target
-    qualification through shared stdlib surface metadata helpers.
+  - scope: Remove hard-coded canonical and rooted map constructor alias
+    checks from template callee type resolution by routing map constructor
+    alias rewriting through shared stdlib surface metadata helpers.
   - implementation_notes:
-    - Target `src/semantics/TemplateMonomorphMethodTargets.h`, where indexed
-      args-pack map method resolution still strips
-      `std/collections/map/` from method names and builds
-      `/std/collections/map/` helper paths directly.
-    - Prefer adding a narrow shared helper near existing map helper metadata
-      utilities instead of introducing another local map-path recognizer in the
-      template monomorphization header.
+    - Target `src/semantics/TemplateMonomorphTypeResolution.h`, where builtin
+      map constructor alias rewriting still compares against
+      `/std/collections/map` and `/std/collections/map/map` directly, and
+      removed rooted map helper filtering still checks `/map/` locally.
+    - Prefer reusing or extending `MapConstructorHelpers.h` metadata-backed
+      constructor/helper helpers instead of adding new path literals in the
+      template type-resolution header.
     - Tighten `scripts/check_map_surface_trace_inventory.py` for the target
       file and add focused source-lock coverage for the delegation.
   - acceptance:
-    - Indexed args-pack map method target resolution still handles canonical
-      map helper names and borrowed receiver helper variants.
-    - The target file no longer contains hard-coded canonical map helper path
-      prefix literals.
+    - Template callee resolution still rewrites visible canonical map
+      constructor aliases and still rejects removed rooted map helper aliases.
+    - The target file no longer contains hard-coded canonical map constructor
+      or rooted map helper path literals.
     - The map-surface trace inventory and source-lock coverage prevent
       reintroducing the removed literals.
-  - stop_rule: Stop once template map method target construction delegates to
+  - stop_rule: Stop once template map constructor alias handling delegates to
     shared metadata helpers, focused coverage passes, and the inventory
     allowance for the target file is tightened.
 
@@ -1755,7 +1755,7 @@ Task template:
   - owner: ai
   - created_at: 2026-05-14
   - phase: Map stdlib ownership cutover
-  - depends_on: TODO-4499
+  - depends_on: TODO-4500
   - split_from: TODO-4304
   - scope: Add a deterministic validation gate that proves the PrimeStruct map
     surface is fully `.prime`/stdlib-owned and absent from production C++
@@ -1797,9 +1797,12 @@ Task template:
       `src/semantics/TemplateMonomorphImplicitTemplateInference.h` should keep
       only its canonical map-helper trace in the map-surface trace inventory.
     - TODO-4479 removed slashless `map/` method-target prefix stripping from
-      template monomorphization, so
-      `src/semantics/TemplateMonomorphMethodTargets.h` should keep only its
-      canonical map-helper traces in the map-surface trace inventory.
+      template monomorphization, leaving only the canonical map-helper traces
+      later removed by TODO-4499.
+    - TODO-4499 removed the remaining hard-coded canonical map helper path
+      construction from template method-target resolution, so
+      `src/semantics/TemplateMonomorphMethodTargets.h` should stay absent from
+      the map-surface trace inventory.
     - TODO-4480 removed slashless `map/count` matching from emitter builtin
       collection inference, and TODO-4486 removed the remaining hard-coded
       canonical map-count path from that file, so

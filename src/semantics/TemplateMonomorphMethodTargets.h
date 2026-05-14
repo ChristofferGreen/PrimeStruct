@@ -38,10 +38,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
       }
     }
     if (receiverTypeName == "map") {
-      const std::string stdMapPrefix = "std/collections/map/";
-      if (candidate.rfind(stdMapPrefix, 0) == 0) {
-        return candidate.substr(stdMapPrefix.size());
-      }
+      return metadataBackedMapHelperMethodName(candidate);
     }
     return candidate;
   };
@@ -285,7 +282,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
       }
     }
     pathOut = selectHelperOverloadPath(
-        expr, "/std/collections/map/" + helperName, ctx);
+        expr, metadataBackedCanonicalMapHelperPath(helperName), ctx);
     return true;
   };
   bool isBorrowedSoaReceiver = false;

@@ -18765,3 +18765,39 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     shared backing-type helper metadata, removed the target file from the
     map-surface inventory allowance, added source-lock coverage, and promoted
     TODO-4499 for the next template map method target slice.
+
+- [x] TODO-4499: Route template map method targets through metadata
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4498
+  - split_from: TODO-4464
+  - scope: Remove hard-coded canonical map helper prefix/path construction
+    from template method-target resolution by routing map method target
+    qualification through shared stdlib surface metadata helpers.
+  - implementation_notes:
+    - Targeted `src/semantics/TemplateMonomorphMethodTargets.h`, where indexed
+      args-pack map method resolution still stripped
+      `std/collections/map/` from method names and built
+      `/std/collections/map/` helper paths directly.
+    - Added narrow shared helper-path utilities in `MapConstructorHelpers.h`
+      so template method-target resolution can normalize map helper methods and
+      construct canonical helper paths through surface metadata.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` for the target
+      file and added focused source-lock coverage for the delegation.
+  - acceptance:
+    - Indexed args-pack map method target resolution still handles canonical
+      map helper names and borrowed receiver helper variants.
+    - The target file no longer contains hard-coded canonical map helper path
+      prefix literals.
+    - The map-surface trace inventory and source-lock coverage prevent
+      reintroducing the removed literals.
+  - stop_rule: Stop once template map method target construction delegates to
+    shared metadata helpers, focused coverage passes, and the inventory
+    allowance for the target file is tightened.
+  - evidence: Replaced target-local canonical map helper prefix stripping and
+    path concatenation with metadata-backed helper utilities, removed the
+    target file from the map-surface inventory allowance, updated source-lock
+    coverage, and promoted TODO-4500 for the next template type-resolution
+    constructor alias slice.
