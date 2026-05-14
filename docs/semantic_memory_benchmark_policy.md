@@ -68,8 +68,8 @@ When semantic behavior changes intentionally shift memory usage:
 
 ### Current Budget Notes
 
-- `math_vector:ast-semantic` keeps a hard cap of `22140518` bytes after the
-  April 26, 2026 release artifact observed `21086208` bytes on the release
+- `math_vector:ast-semantic` keeps a hard cap of `24979046` bytes after the
+  May 14, 2026 release artifact observed `23789568` bytes on the release
   runner. The cap preserves roughly 5% headroom over that observed value while
   leaving the baseline row unchanged for future comparison.
 - `imported_math_body:ast-semantic` keeps a hard cap of `22174925` bytes after
@@ -92,6 +92,10 @@ When semantic behavior changes intentionally shift memory usage:
   after May 14, 2026 release artifacts observed `40304640` bytes on the release
   runner. The cap preserves roughly 5% headroom over that observed value while
   leaving the baseline row unchanged for future comparison.
+- `non_math_large_include:semantic-product` keeps a hard cap of `53209498`
+  bytes after May 14, 2026 release artifacts observed `50675712` bytes on the
+  release runner. The cap preserves roughly 5% headroom over that observed
+  value while leaving the baseline row unchanged for future comparison.
 
 ### Canonical Regeneration Command and Expected Rows
 

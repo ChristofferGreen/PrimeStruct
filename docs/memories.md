@@ -159,6 +159,19 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: `tests/unit/test_compile_run_examples_docs_locks.cpp` source-locks both the skipped-debt queue shape in `docs/todo*.md` and the current active `vm_math` and `vm_maps` surfaces, so resolving skipped-doctest lanes requires updating the queue docs and that lock file together.
 - Evidence: Refreshing the `examples_docs_locks` shard after landing the VM math/map skip cleanups required retiring `TODO-4110`, `TODO-4117`, and `TODO-4118` from `docs/todo.md`, archiving them in `docs/todo_finished.md`, and updating the queue/surface assertions in `tests/unit/test_compile_run_examples_docs_locks.cpp` before the focused release rerun passed.
 
+### soa-field-view-borrows-use-reference-root
+- Updated: 2026-05-14
+- Tags: semantics, collections, soa
+- Fact: SoA field-view borrow liveness must honor `BindingInfo::referenceRoot`
+  for recognized `SoaFieldView` spellings and `[auto]` bindings that recorded a
+  field-view root, while keeping pointer aliases on their pointer-specific
+  paths.
+- Evidence: TODO-4511 canonical `soa<T>` field-view invalidation passed only
+  after semantic borrow helpers recognized specialized `SoaFieldView__*`
+  paths, active-borrow checks honored recorded auto field-view roots, and
+  ordinary pointer-root borrows remained excluded from reference conflict
+  scans.
+
 ### soa-storage-temporaries-own-nested-buffers
 - Updated: 2026-04-28
 - Tags: ir, native, collections

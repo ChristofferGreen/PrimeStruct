@@ -134,6 +134,7 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out);
 bool getNamespacedCollectionHelperName(const Expr &expr, std::string &collectionOut, std::string &helperOut);
 std::string soaFieldViewHelperPath(std::string_view fieldName);
 bool splitSoaFieldViewHelperPath(std::string_view path, std::string *fieldNameOut = nullptr);
+bool isSoaFieldViewTypePath(std::string_view typeText);
 std::string canonicalizeLegacySoaToAosHelperPath(std::string_view path);
 std::string canonicalizeLegacySoaRefHelperPath(std::string_view path);
 std::string canonicalizeLegacySoaGetHelperPath(std::string_view path);

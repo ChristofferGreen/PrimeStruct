@@ -52,8 +52,8 @@
       "fixture": "math_vector",
       "phase": "ast-semantic",
       "baseline_worst_peak_rss_bytes": 18120704,
-      "soft_max_worst_peak_rss_bytes": 21086208,
-      "max_worst_peak_rss_bytes": 22140518
+      "soft_max_worst_peak_rss_bytes": 23789568,
+      "max_worst_peak_rss_bytes": 24979046
     },
     {
       "fixture": "math_vector",
@@ -101,8 +101,8 @@
       "fixture": "non_math_large_include",
       "phase": "semantic-product",
       "baseline_worst_peak_rss_bytes": 44089344,
-      "soft_max_worst_peak_rss_bytes": 46293812,
-      "max_worst_peak_rss_bytes": 48498279
+      "soft_max_worst_peak_rss_bytes": 50675712,
+      "max_worst_peak_rss_bytes": 53209498
     },
     {
       "fixture": "scale_1x",

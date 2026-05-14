@@ -82,7 +82,7 @@ namespace std {
   SoaFieldView<T>() {
     [public i32] count
     [public i32] capacity
-    [public Pointer<uninitialized<T>>] data
+    [public Pointer<uninitialized<T>>] data{/std/collections/internal_buffer_checked/bufferAlloc<uninitialized<T>>(1i32)}
     [public i32] stride
 
     [return<i32>]

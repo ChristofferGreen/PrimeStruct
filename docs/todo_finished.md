@@ -19162,3 +19162,36 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     reflection `SoaSchema*` runtime tests as internal substrate fixtures, and
     split the remaining canonical `soa<T>` field-view invalidation work into
     TODO-4511.
+
+- [x] TODO-4511: Cover canonical `soa<T>` field-view invalidation
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: SoA public surface rename and ownership cutover
+  - depends_on: TODO-4510
+  - split_from: TODO-4306
+  - scope: Add canonical `/std/collections/soa/*` field-view borrow-root and
+    structural-mutation validation coverage on `soa<T>` values, without using
+    the legacy `soa_vector<T>` spelling in the new public-surface fixtures.
+  - implementation_notes:
+    - Started from
+      `tests/unit/test_semantics_calls_and_flow_collections_soa_vector_builtins_named_args.cpp`
+      and the existing field-view borrow-root diagnostics.
+    - Kept broad SoA helper lowering extraction deferred to TODO-4307.
+  - acceptance:
+    - Positive canonical `soa<T>` field-view binding coverage validates through
+      `/std/collections/soa/*` imports.
+    - Structural mutation after a live canonical `soa<T>` borrowed view reports
+      the same deterministic borrow-root/invalidation diagnostic as legacy
+      compatibility coverage.
+    - Existing `soa_vector<T>` compatibility field-view tests remain explicitly
+      named as legacy coverage.
+  - stop_rule: Stop once canonical `soa<T>` field-view borrow-root and
+    structural-mutation boundaries are covered; leave ordinary helper lowering
+    extraction to TODO-4307.
+  - evidence: Added canonical public-import `soa<T>` field-view borrow-root
+    coverage, tightened live field-view structural mutation diagnostics for
+    canonical and legacy SoA surfaces, recognized specialized
+    `SoaFieldView__*` borrow types, preserved recorded `referenceRoot`
+    liveness across auto/specialized bindings, and promoted TODO-4307 as the
+    next Ready Now leaf.

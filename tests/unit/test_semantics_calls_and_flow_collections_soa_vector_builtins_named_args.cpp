@@ -153,6 +153,7 @@ TEST_CASE("soa_vector conversion and access builtins reject template arguments")
 
 TEST_CASE("soa_vector canonical get_ref rejects explicit element template argument in expressions") {
   const std::string source = R"(
+[struct reflect]
 Particle() {
   [i32] x{1i32}
 }
@@ -257,6 +258,7 @@ TEST_CASE("soa_vector conversion and access builtins enforce argument counts") {
 
 TEST_CASE("soa_vector builtin construction allows empty constructor and empty braces") {
   const std::string source = R"(
+[struct reflect]
 Particle() {
   [i32] x{1i32}
 }
@@ -269,7 +271,7 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
   CHECK(error.empty());
 }
 
@@ -354,7 +356,7 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
   CHECK(error.empty());
 }
 
@@ -490,6 +492,7 @@ TEST_CASE("soa_vector helper-return ref/ref_ref return escapes use pending diagn
 
 TEST_CASE("soa_vector ref helper still accepts call and return escapes through same-path helper") {
   const std::string source = R"(
+[struct reflect]
 Particle() {
   [i32] x{1i32}
 }
@@ -1194,7 +1197,7 @@ TEST_CASE("soa_vector builtin field view return escapes report escape diagnostic
   checkReject("values.x()");
 }
 
-TEST_CASE("soa_vector builtin field-view bindings track canonical borrow roots") {
+TEST_CASE("legacy soa_vector builtin field-view bindings track compatibility borrow roots") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -1213,7 +1216,58 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("soa_vector field-view binding allows structural mutation with heap effect") {
+TEST_CASE("canonical soa field-view bindings track borrow roots through public imports") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/soa/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa<Particle>] values{soa<Particle>()}
+  [auto] methodView{values.x()}
+  [auto] callView{x(values)}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+  CHECK(error.empty());
+}
+
+TEST_CASE("canonical soa field-view binding blocks structural mutation while live") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/soa/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+consume<T>([T] value) {
+  return(0i32)
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [soa<Particle> mut] values{soa<Particle>()}
+  [auto] view{values.x()}
+  values.push(Particle(2i32))
+  return(consume(view))
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(!validateProgram(source, "/main", error), error);
+  CHECK(error.find("borrowed binding: values") != std::string::npos);
+}
+
+TEST_CASE("legacy soa_vector field-view binding blocks structural mutation while live") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -1233,11 +1287,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_MESSAGE(!validateProgram(source, "/main", error), error);
+  CHECK(error.find("borrowed binding: values") != std::string::npos);
 }
 
-TEST_CASE("soa_vector field-view bindings resolve helper-return borrow roots") {
+TEST_CASE("legacy soa_vector field-view bindings resolve helper-return borrow roots") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}

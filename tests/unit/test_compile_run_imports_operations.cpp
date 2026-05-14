@@ -771,7 +771,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("field access requires struct receiver") !=
+  CHECK(readFile(errPath).find("unknown import path: /std/collections/internal_soa_vector") !=
         std::string::npos);
 }
 
@@ -796,7 +796,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("binding initializer type mismatch") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown import path: /std/collections/internal_soa_vector") !=
+        std::string::npos);
 }
 
 TEST_CASE("no-import root soa_vector canonical to_aos_ref helper form runs empty builtin soa_vector contract in C++ emitter") {

@@ -209,22 +209,13 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     }
   }
   auto isSoaFieldViewBindingType = [&](const BindingInfo &binding) -> bool {
-    std::string normalized = normalizeBindingTypeName(binding.typeName);
-    if (normalized.empty()) {
-      return false;
-    }
-    std::string base;
-    std::string arg;
-    if (splitTemplateTypeName(normalized, base, arg)) {
-      normalized = normalizeBindingTypeName(base);
-    }
-    return normalized == "SoaFieldView" ||
-           normalized == "std/collections/internal_soa_storage/SoaFieldView";
+    return isSoaFieldViewTypePath(binding.typeName);
   };
   auto referenceRootForBorrowBinding =
       [&](const std::string &bindingName, const BindingInfo &binding) -> std::string {
         if (binding.typeName != "Reference" &&
-            !isSoaFieldViewBindingType(binding)) {
+            !isSoaFieldViewBindingType(binding) &&
+            !(binding.typeName == "auto" && !binding.referenceRoot.empty())) {
           return "";
         }
         if (!binding.referenceRoot.empty()) {
@@ -415,7 +406,8 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     vectorHelperResolvedCanonical =
         canonicalizeSoaMutatorHelperPath(vectorHelperResolved);
     isStdNamespacedSoaCanonicalMutatorHelperCall =
-        vectorHelperResolvedCanonical.rfind("/std/collections/soa_vector/", 0) == 0 &&
+        (vectorHelperResolvedCanonical.rfind("/std/collections/soa_vector/", 0) == 0 ||
+         vectorHelperResolvedCanonical.rfind("/std/collections/soa/", 0) == 0) &&
         (isLegacyOrCanonicalSoaHelperPath(vectorHelperResolvedCanonical, "push") ||
          isLegacyOrCanonicalSoaHelperPath(vectorHelperResolvedCanonical, "reserve"));
     isStdNamespacedCanonicalBuiltinHelperCall =
@@ -828,6 +820,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
           legacyExperimentalVectorCompatibilityPrefix(), 0) == 0;
   const bool isResolvedSoaHelper =
       vectorHelperResolved.rfind("/std/collections/soa_vector/", 0) == 0 ||
+      vectorHelperResolved.rfind("/std/collections/soa/", 0) == 0 ||
       vectorHelperResolved.rfind("/soa_vector/", 0) == 0;
   const bool isBareCanonicalIndexedRemovalExperimentalVectorBridgeCall =
       !stmt.isMethodCall &&
@@ -973,7 +966,8 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     }
     const std::string borrowSink =
         !ignoreBorrowName.empty() ? ignoreBorrowName : borrowRoot;
-    return failBorrowedBindingDiagnostic(borrowRoot, borrowSink);
+    (void)failBorrowedBindingDiagnostic(borrowRoot, borrowSink);
+    return true;
   };
   const size_t builtinReceiverIndex = shouldUseCanonicalBuiltinCompatibilityFallback
                                           ? canonicalBuiltinCompatibilityReceiverIndex

@@ -4014,10 +4014,10 @@ the generic layout and storage primitives that the stdlib wrapper still needs.
   rooted `/soa_vector/*`, `SoaVector<T>`, and `soaVector*` helper names are
   retained only for compatibility tests and shims until TODO-4309 removes or
   intentionally rejects them.
-- **Current canonical field-view gap:** public `soa<T>` construction and helper
-  calls are covered now, while canonical `soa<T>` field-view borrow-root and
-  structural-mutation validation coverage is the next bounded leaf. Existing
-  legacy field-view tests remain compatibility coverage until that leaf lands.
+- **Current helper-lowering gap:** canonical `soa<T>` construction, helper
+  calls, field-view borrow roots, and live structural-mutation invalidation
+  are covered now. Remaining SoA public-surface work should move helper
+  behavior through ordinary `.prime` bodies before compatibility cleanup.
 
 ### Backend Profiles
 - A definition is well-typed only with respect to a backend profile.
@@ -4679,7 +4679,7 @@ bad_set() {
     conversion helper names and forwards through the internal
     `/std/collections/internal_soa_vector_conversions/*` adapter. Today,
     explicit AoS/SoA conversion helpers validate in both call and method form
-    (`to_soa(vector<T>)`, `to_aos(soa_vector<T>)`, `vector<T>.to_soa()`, `soa_vector<T>.to_aos()`), method-form/call-form field-view names now route through the shared
+    (`to_soa(vector<T>)`, `to_aos(soa<T>)`, `vector<T>.to_soa()`, `soa<T>.to_aos()`), method-form/call-form field-view names now route through the shared
     `/soa_vector/field_view/<field>` helper path onto `soaVectorFieldView<Struct, Field>` (or a same-path user helper
     when visible), returning `SoaFieldView` values that can be bound with a tracked borrow root instead of stopping on a
     pending diagnostic; direct call-argument and return escapes remain deterministic `field-view escapes ...`

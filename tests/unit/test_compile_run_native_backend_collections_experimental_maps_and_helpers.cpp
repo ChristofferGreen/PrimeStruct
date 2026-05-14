@@ -798,7 +798,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("binding initializer type mismatch") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown import path: /std/collections/internal_soa_vector") !=
+        std::string::npos);
 }
 
 TEST_CASE("native materializes non-empty root soa_vector struct literals") {

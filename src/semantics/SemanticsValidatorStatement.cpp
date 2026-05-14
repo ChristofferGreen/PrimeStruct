@@ -411,9 +411,9 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       if (splitTemplateTypeName(normalized, base, arg)) {
         normalized = normalizeBindingTypeName(base);
       }
-      const bool isSoaFieldView = normalized == "SoaFieldView" ||
-                                  normalized == "std/collections/internal_soa_storage/SoaFieldView";
-      if (binding.typeName != "Reference" && !isSoaFieldView) {
+      const bool isSoaFieldView = isSoaFieldViewTypePath(normalized);
+      if (binding.typeName != "Reference" && !isSoaFieldView &&
+          !(binding.typeName == "auto" && !binding.referenceRoot.empty())) {
         return "";
       }
       if (!binding.referenceRoot.empty()) {

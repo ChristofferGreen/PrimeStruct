@@ -239,16 +239,7 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     return true;
   };
   auto isSoaFieldViewTypeText = [&](const std::string &typeText) -> bool {
-    std::string base;
-    std::string argText;
-    const std::string normalized = normalizeBindingTypeName(typeText);
-    if (splitTemplateTypeName(normalized, base, argText)) {
-      const std::string normalizedBase = normalizeBindingTypeName(base);
-      return normalizedBase == "SoaFieldView" ||
-             normalizedBase == "std/collections/internal_soa_storage/SoaFieldView";
-    }
-    return normalized == "SoaFieldView" ||
-           normalized == "std/collections/internal_soa_storage/SoaFieldView";
+    return isSoaFieldViewTypePath(typeText);
   };
   auto isStandaloneSoaFieldViewCall = [&](const Expr &arg,
                                           const Expr *&receiverOut) -> bool {

@@ -9,17 +9,12 @@ namespace primec::semantics {
 namespace {
 
 bool isSoaFieldViewBindingType(const BindingInfo &binding) {
-  std::string normalized = normalizeBindingTypeName(binding.typeName);
-  if (normalized.empty()) {
-    return false;
-  }
-  std::string base;
-  std::string arg;
-  if (splitTemplateTypeName(normalized, base, arg)) {
-    normalized = normalizeBindingTypeName(base);
-  }
-  return normalized == "SoaFieldView" ||
-         normalized == "std/collections/internal_soa_storage/SoaFieldView";
+  return isSoaFieldViewTypePath(binding.typeName);
+}
+
+bool isBorrowTrackedBindingType(const BindingInfo &binding) {
+  return binding.typeName == "Reference" || isSoaFieldViewBindingType(binding) ||
+         (binding.typeName == "auto" && !binding.referenceRoot.empty());
 }
 
 bool isExperimentalSoaColumnBindingType(const BindingInfo &binding) {
@@ -42,13 +37,13 @@ bool isExperimentalSoaColumnBindingType(const BindingInfo &binding) {
 }
 
 std::string referenceRootForBorrowBinding(const std::string &bindingName, const BindingInfo &binding) {
-  if (binding.typeName == "Reference" || isSoaFieldViewBindingType(binding)) {
-    if (!binding.referenceRoot.empty()) {
-      return binding.referenceRoot;
-    }
-    return bindingName;
+  if (!isBorrowTrackedBindingType(binding)) {
+    return "";
   }
-  return "";
+  if (!binding.referenceRoot.empty()) {
+    return binding.referenceRoot;
+  }
+  return bindingName;
 }
 
 } // namespace
@@ -1326,8 +1321,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
           auto referenceRootForBorrowBinding =
               [&](const std::string &bindingName,
                   const BindingInfo &binding) -> std::string {
-            if (binding.typeName != "Reference" &&
-                !isSoaFieldViewBindingType(binding)) {
+            if (!isBorrowTrackedBindingType(binding)) {
               return "";
             }
             if (!binding.referenceRoot.empty()) {
@@ -1600,7 +1594,8 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
       fieldViewBinding = std::move(inferredBinding);
     }
   }
-  if (isSoaFieldViewBindingType(fieldViewBinding)) {
+  if (isSoaFieldViewBindingType(fieldViewBinding) ||
+      isStandaloneSoaFieldViewInitializer()) {
     auto hasBorrowConflictForRoot =
         [&](const std::string &borrowRoot, bool requestMutable) -> bool {
           if (borrowRoot.empty() ||
@@ -1647,8 +1642,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     auto resolveBorrowRootName = [&](const std::string &name,
                                      std::string &rootOut) -> bool {
       if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
-        if (paramBinding->typeName == "Reference" ||
-            isSoaFieldViewBindingType(*paramBinding)) {
+        if (isBorrowTrackedBindingType(*paramBinding)) {
           rootOut = referenceRootForBorrowBinding(name, *paramBinding);
         } else {
           rootOut = name;
@@ -1659,8 +1653,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
       if (it == locals.end()) {
         return false;
       }
-      if (it->second.typeName == "Reference" ||
-          isSoaFieldViewBindingType(it->second)) {
+      if (isBorrowTrackedBindingType(it->second)) {
         rootOut = referenceRootForBorrowBinding(it->first, it->second);
       } else {
         rootOut = name;
@@ -1826,7 +1819,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
                 binding = &localIt->second;
               }
             }
-            if (binding != nullptr && isSoaFieldViewBindingType(*binding)) {
+            if (binding != nullptr && isBorrowTrackedBindingType(*binding)) {
               rootOut = referenceRootForBorrowBinding(expr.name, *binding);
               return !rootOut.empty();
             }

@@ -498,6 +498,27 @@ bool splitSoaFieldViewHelperPath(std::string_view path, std::string *fieldNameOu
   return false;
 }
 
+bool isSoaFieldViewTypePath(std::string_view typeText) {
+  std::string normalized = normalizeBindingTypeName(std::string(typeText));
+  if (normalized.empty()) {
+    return false;
+  }
+  std::string base;
+  std::string arg;
+  if (splitTemplateTypeName(normalized, base, arg)) {
+    normalized = normalizeBindingTypeName(base);
+  }
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  const size_t specializationSuffix = normalized.find("__");
+  if (specializationSuffix != std::string::npos) {
+    normalized.erase(specializationSuffix);
+  }
+  return normalized == "SoaFieldView" ||
+         normalized == "std/collections/internal_soa_storage/SoaFieldView";
+}
+
 std::string canonicalizeLegacySoaToAosHelperPath(std::string_view path) {
   std::string canonicalPath(path);
   const size_t templateSuffix = canonicalPath.find("__t");

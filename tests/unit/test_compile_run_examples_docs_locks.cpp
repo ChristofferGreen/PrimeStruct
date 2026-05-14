@@ -1220,7 +1220,7 @@ TEST_CASE("generic soa substrate boundary stays source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("Public construction,\n  count/get/ref, push/reserve, field-view") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("**Current canonical field-view gap:**") !=
+  CHECK(primeStructDoc.find("**Current helper-lowering gap:**") !=
         std::string::npos);
   CHECK(syntaxSpecDoc.find("Generic SoA substrate remains separate from that public collection surface") !=
         std::string::npos);
@@ -1228,7 +1228,7 @@ TEST_CASE("generic soa substrate boundary stays source locked") {
         std::string::npos);
   CHECK(todo.find("Generic substrate boundary: compiler/runtime-owned SoA behavior is limited") !=
         std::string::npos);
-  CHECK(todo.find("- [ ] TODO-4511: Cover canonical `soa<T>` field-view invalidation") !=
+  CHECK(todo.find("- [ ] TODO-4307: Lower SoA helpers through ordinary `.prime`") !=
         std::string::npos);
 
   CHECK(internalStorage.find("[public struct]\n  SoaColumn<T>()") !=
@@ -1480,12 +1480,12 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4511: Cover canonical `soa<T>` field-view invalidation") !=
-        std::string::npos);
-  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
                   "- TODO-4307: Lower SoA helpers through ordinary `.prime`") !=
         std::string::npos);
-  CHECK(todo.find("- TODO-4308: Move SoA surface metadata out of C++") !=
+  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
+                  "- TODO-4308: Move SoA surface metadata out of C++") !=
+        std::string::npos);
+  CHECK(todo.find("- TODO-4309: Delete `soa_vector` compatibility seams") !=
         std::string::npos);
   CHECK(todo.find("- [~] TODO-4305: Rename and style canonical `.prime` SoA surface") !=
         std::string::npos);
@@ -1499,8 +1499,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4511: Cover canonical `soa<T>` field-view invalidation\n"
-                  "- TODO-4307: Lower SoA helpers through ordinary `.prime`") !=
+                  "- TODO-4307: Lower SoA helpers through ordinary `.prime`\n"
+                  "- TODO-4308: Move SoA surface metadata out of C++") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
       "TODO-4268: Add heterogeneous type-pack syntax and metadata",
@@ -1854,11 +1854,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4464, TODO-4305, TODO-4309, TODO-4310 |") !=
         std::string::npos);
-  CHECK(todo.find("| SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4511, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |") !=
+  CHECK(todo.find("| SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |") !=
         std::string::npos);
   CHECK(todo.find("| De-experimentalization surface and namespace parity | TODO-4430, TODO-4464, TODO-4305, TODO-4309, TODO-4310 |") !=
         std::string::npos);
-  CHECK(todo.find("| `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4511, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |") !=
+  CHECK(todo.find("| `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |") !=
         std::string::npos);
   CHECK(todo.find("| Validator entrypoint and benchmark-plumbing split | none |") !=
         std::string::npos);

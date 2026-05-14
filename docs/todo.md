@@ -72,11 +72,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4511: Cover canonical `soa<T>` field-view invalidation
+- TODO-4307: Lower SoA helpers through ordinary `.prime`
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4307: Lower SoA helpers through ordinary `.prime`
 - TODO-4308: Move SoA surface metadata out of C++
 - TODO-4309: Delete `soa_vector` compatibility seams
 
@@ -88,7 +87,7 @@ Task template:
 - Vector stdlib ownership cutover: none active
 - Map stdlib ownership cutover: TODO-4464
 - SoA public surface rename and ownership cutover: TODO-4306 parent split as
-  TODO-4511 -> TODO-4307 -> TODO-4308 -> TODO-4309 -> TODO-4310
+  TODO-4307 -> TODO-4308 -> TODO-4309 -> TODO-4310
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
   -> TODO-4275 -> TODO-4276 -> TODO-4271 -> TODO-4272 -> TODO-4274
   -> TODO-4273 -> TODO-4277 -> TODO-4278
@@ -103,7 +102,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4511: Cover canonical `soa<T>` field-view invalidation
 - TODO-4307: Lower SoA helpers through ordinary `.prime`
 - TODO-4308: Move SoA surface metadata out of C++
 - TODO-4309: Delete `soa_vector` compatibility seams
@@ -160,7 +158,7 @@ Task template:
 | Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4464, TODO-4308, TODO-4309, TODO-4310 |
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4464 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4464, TODO-4305, TODO-4309, TODO-4310 |
-| SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4511, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
+| SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
 | Semantic-product public API factoring and versioning | none |
@@ -190,7 +188,7 @@ Task template:
 | Lowerer/source-composition contract coverage | none |
 | Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4464 |
 | De-experimentalization surface and namespace parity | TODO-4430, TODO-4464, TODO-4305, TODO-4309, TODO-4310 |
-| `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4511, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
+| `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
 | Emitter map-helper canonicalization parity | TODO-4464 |
@@ -1991,38 +1989,8 @@ Task template:
     - TODO-4510 documented and source-locked the generic substrate/public
       collection boundary, with internal storage and reflection fixtures pinned
       as substrate coverage.
-    - TODO-4511 covers the remaining canonical `soa<T>` field-view
+    - TODO-4511 completed the remaining canonical `soa<T>` field-view
       invalidation surface before helper lowering extraction continues.
-
-- [ ] TODO-4511: Cover canonical `soa<T>` field-view invalidation
-  - owner: ai
-  - created_at: 2026-05-14
-  - phase: SoA public surface rename and ownership cutover
-  - depends_on: TODO-4510
-  - split_from: TODO-4306
-  - scope: Add canonical `/std/collections/soa/*` field-view borrow-root and
-    structural-mutation validation coverage on `soa<T>` values, without using
-    the legacy `soa_vector<T>` spelling in the new public-surface fixtures.
-  - implementation_notes:
-    - Start from
-      `tests/unit/test_semantics_calls_and_flow_collections_soa_vector_builtins_named_args.cpp`,
-      `tests/unit/test_semantics_calls_and_flow_collections_container_error_and_result_helpers.cpp`,
-      and the existing field-view borrow-root diagnostics.
-    - If canonical `soa<T>` field-view sugar still routes through legacy
-      compatibility-only paths, fix the smallest semantic/helper-routing gap
-      needed for canonical coverage and leave broad lowering extraction to
-      TODO-4307.
-  - acceptance:
-    - Positive canonical `soa<T>` field-view binding coverage validates through
-      `/std/collections/soa/*` imports.
-    - Structural mutation after a live canonical `soa<T>` borrowed view reports
-      the same deterministic borrow-root/invalidation diagnostic as legacy
-      compatibility coverage.
-    - Existing `soa_vector<T>` compatibility field-view tests remain explicitly
-      named as legacy coverage.
-  - stop_rule: Stop once canonical `soa<T>` field-view borrow-root and
-    structural-mutation boundaries are covered; leave ordinary helper lowering
-    extraction to TODO-4307.
 
 - [ ] TODO-4307: Lower SoA helpers through ordinary `.prime`
   - owner: ai

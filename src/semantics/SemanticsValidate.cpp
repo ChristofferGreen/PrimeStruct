@@ -668,8 +668,7 @@ bool extractSoaFieldViewElementTypeText(std::string typeText, std::string &elemT
       normalized = semantics::normalizeBindingTypeName(args.front());
       continue;
     }
-    if (base == "SoaFieldView" ||
-        base == "std/collections/internal_soa_storage/SoaFieldView") {
+    if (semantics::isSoaFieldViewTypePath(base)) {
       std::vector<std::string> args;
       if (!semantics::splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
         return false;
