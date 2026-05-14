@@ -2,9 +2,28 @@
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace primec::semantics {
+namespace {
+
+bool isCanonicalMapAccessHelperResolvedPath(std::string_view resolvedPath) {
+  const auto *metadata =
+      findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  if (metadata == nullptr) {
+    return false;
+  }
+  const auto *resolvedMetadata = findStdlibSurfaceMetadataByResolvedPath(resolvedPath);
+  if (resolvedMetadata == nullptr || resolvedMetadata->id != metadata->id) {
+    return false;
+  }
+  const std::string_view helperName =
+      resolveStdlibSurfaceMemberName(*metadata, resolvedPath);
+  return helperName == "at" || helperName == "at_unsafe";
+}
+
+} // namespace
 
 bool SemanticsValidator::validateExprNamedArguments(
     const std::vector<ParameterInfo> &params,
@@ -159,7 +178,7 @@ bool SemanticsValidator::validateExprNamedArgumentBuiltins(
     const std::string resolvedPath = resolveCalleePath(expr);
     if (isStdNamespacedVectorCompatibilityHelperPath(resolvedPath, "at") ||
         isStdNamespacedVectorCompatibilityHelperPath(resolvedPath, "at_unsafe") ||
-        resolvedPath.rfind("/std/collections/map/at", 0) == 0) {
+        isCanonicalMapAccessHelperResolvedPath(resolvedPath)) {
       return false;
     }
     if (defMap_.find(resolved) == defMap_.end() && !expr.args.empty()) {

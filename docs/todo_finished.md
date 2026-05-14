@@ -18405,3 +18405,34 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     lock, removed the file from the map-surface inventory allowance, and
     verified focused source-lock, access return-kind, and map-surface
     inventory checks.
+
+- [x] TODO-4488: Route named map access guard through metadata
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4487
+  - split_from: TODO-4464
+  - scope: Remove the hard-coded canonical map access path prefix from
+    semantic named-argument builtin access filtering by resolving the relevant
+    `at`/`at_unsafe` helper paths through stdlib surface metadata.
+  - implementation_notes:
+    - Targeted `src/semantics/SemanticsValidatorExprNamedArgumentBuiltins.cpp`,
+      where legacy array-access builtin filtering still checked
+      `resolvedPath.rfind("/std/collections/map/at", 0)`.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` so the semantic
+      named-argument builtin file has no map-surface trace allowance.
+  - acceptance:
+    - Named-argument array-access fallback filtering continues to reject
+      canonical map `at` and `at_unsafe` helper calls.
+    - The semantic named-argument builtin file no longer contains a production
+      C++ canonical map path literal.
+    - Source-lock coverage prevents reintroducing the literal prefix path.
+  - stop_rule: Stop once the named-argument builtin guard is metadata-backed,
+    focused semantic coverage passes, and the map-surface trace inventory no
+    longer allows traces for the target file.
+  - evidence: Replaced the hard-coded canonical map access path prefix guard
+    with a `collections.map_helpers` stdlib surface lookup, updated the source
+    lock, removed the file from the map-surface inventory allowance, and
+    verified focused source-lock, named-argument semantic, and map-surface
+    inventory checks.

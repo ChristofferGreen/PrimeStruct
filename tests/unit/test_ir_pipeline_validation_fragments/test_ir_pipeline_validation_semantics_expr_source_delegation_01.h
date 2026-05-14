@@ -5973,6 +5973,15 @@
             "resolveCanonicalVectorHelperNameFromResolvedPath(") !=
         std::string::npos);
   CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
+            "resolvedPath.rfind(\"/std/collections/map/at\", 0)") ==
+        std::string::npos);
+  CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+        std::string::npos);
+  CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
+            "isCanonicalMapAccessHelperResolvedPath(resolvedPath)") !=
+        std::string::npos);
+  CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
             "isStdNamespacedVectorCompatibilityHelperPath(resolvedPath, \"count\")") !=
         std::string::npos);
   CHECK(semanticsExprNamedArgumentBuiltinsSource.find("std/collections/vector/") ==
