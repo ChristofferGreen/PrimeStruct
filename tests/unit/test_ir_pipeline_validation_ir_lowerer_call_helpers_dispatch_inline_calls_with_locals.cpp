@@ -576,7 +576,7 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
             error) == Result::NotHandled);
 }
 
-TEST_CASE("ir lowerer call helpers inline direct experimental map helper calls") {
+TEST_CASE("ir lowerer call helpers leave direct experimental map helpers unadapted") {
   using Result = primec::ir_lowerer::InlineCallDispatchResult;
   using LocalInfo = primec::ir_lowerer::LocalInfo;
 
@@ -611,6 +611,7 @@ TEST_CASE("ir lowerer call helpers inline direct experimental map helper calls")
   directCall.args = {valuesName, keyName};
 
   std::string error = "stale";
+  int resolveDefinitionCalls = 0;
   int emitCalls = 0;
   CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
             directCall,
@@ -623,8 +624,9 @@ TEST_CASE("ir lowerer call helpers inline direct experimental map helper calls")
               return nullptr;
             },
             [&](const primec::Expr &expr) -> const primec::Definition * {
+              ++resolveDefinitionCalls;
               CHECK(expr.name == "/std/collections/experimental_map/mapAt__td48f7c0fb764e3c0");
-              return &callee;
+              return nullptr;
             },
             [&](const primec::Expr &, const primec::Definition &resolvedCallee, const primec::ir_lowerer::LocalMap &) {
               ++emitCalls;
@@ -632,8 +634,9 @@ TEST_CASE("ir lowerer call helpers inline direct experimental map helper calls")
                     "/std/collections/experimental_map/mapAt__td48f7c0fb764e3c0");
               return true;
             },
-            error) == Result::Emitted);
-  CHECK(emitCalls == 1);
+            error) == Result::NotHandled);
+  CHECK(resolveDefinitionCalls == 0);
+  CHECK(emitCalls == 0);
   CHECK(error == "stale");
 }
 

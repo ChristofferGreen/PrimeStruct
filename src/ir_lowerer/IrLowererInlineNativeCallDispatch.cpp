@@ -57,42 +57,6 @@ bool matchesCollectionTypeText(std::string_view text,
 
 std::string canonicalInlineMapHelperName(std::string helperName) {
   helperName = stripGeneratedInlineHelperSuffix(std::move(helperName));
-  if (helperName == "mapCount") {
-    return "count";
-  }
-  if (helperName == "mapCountRef") {
-    return "count_ref";
-  }
-  if (helperName == "mapContains") {
-    return "contains";
-  }
-  if (helperName == "mapContainsRef") {
-    return "contains_ref";
-  }
-  if (helperName == "mapTryAt") {
-    return "tryAt";
-  }
-  if (helperName == "mapTryAtRef") {
-    return "tryAt_ref";
-  }
-  if (helperName == "mapAt") {
-    return "at";
-  }
-  if (helperName == "mapAtRef") {
-    return "at_ref";
-  }
-  if (helperName == "mapAtUnsafe") {
-    return "at_unsafe";
-  }
-  if (helperName == "mapAtUnsafeRef") {
-    return "at_unsafe_ref";
-  }
-  if (helperName == "mapInsert") {
-    return "insert";
-  }
-  if (helperName == "mapInsertRef") {
-    return "insert_ref";
-  }
   return helperName;
 }
 
@@ -780,15 +744,10 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
         }
       }
     }
-    const bool isExplicitDirectExperimentalMapAccessHelperCall =
-        directCallee != nullptr &&
-        directCallPath.rfind("/std/collections/experimental_map/map", 0) == 0 &&
-        directCallee->fullPath.rfind("/std/collections/experimental_map/map", 0) == 0;
     if (directCallee != nullptr && isCollectionAccessReceiverExpr &&
         !expr.args.empty() && isCollectionAccessReceiverExpr(expr.args.front()) &&
         (isExplicitDirectMapAccessHelperCall(expr) ||
-         isExplicitRemovedMapAccessHelperCall(expr)) &&
-        !isExplicitDirectExperimentalMapAccessHelperCall) {
+         isExplicitRemovedMapAccessHelperCall(expr))) {
       return InlineCallDispatchResult::NotHandled;
     }
     if (directCallee != nullptr &&

@@ -137,42 +137,6 @@ bool isPublishedCanonicalStatementVectorHelperPath(std::string_view resolvedPath
 
 std::string canonicalStatementMapHelperName(std::string helperName) {
   helperName = stripGeneratedHelperSuffix(std::move(helperName));
-  if (helperName == "mapCount") {
-    return "count";
-  }
-  if (helperName == "mapCountRef") {
-    return "count_ref";
-  }
-  if (helperName == "mapContains") {
-    return "contains";
-  }
-  if (helperName == "mapContainsRef") {
-    return "contains_ref";
-  }
-  if (helperName == "mapTryAt") {
-    return "tryAt";
-  }
-  if (helperName == "mapTryAtRef") {
-    return "tryAt_ref";
-  }
-  if (helperName == "mapAt") {
-    return "at";
-  }
-  if (helperName == "mapAtRef") {
-    return "at_ref";
-  }
-  if (helperName == "mapAtUnsafe") {
-    return "at_unsafe";
-  }
-  if (helperName == "mapAtUnsafeRef") {
-    return "at_unsafe_ref";
-  }
-  if (helperName == "mapInsert") {
-    return "insert";
-  }
-  if (helperName == "mapInsertRef") {
-    return "insert_ref";
-  }
   return helperName;
 }
 
@@ -760,9 +724,7 @@ static bool rewriteMapInsertHelperStatementToCanonical(
     }
     helperName = stripGeneratedHelperSuffix(std::move(helperName));
     return helperName == "insert" || helperName == "insert_ref" ||
-           helperName == "Insert" || helperName == "InsertRef" ||
-           helperName == "mapInsert" || helperName == "mapInsertRef" ||
-           helperName == "MapInsert" || helperName == "MapInsertRef";
+           helperName == "Insert" || helperName == "InsertRef";
   };
 
   size_t receiverIndex = 0;
@@ -779,9 +741,7 @@ static bool rewriteMapInsertHelperStatementToCanonical(
     normalizedName = stripGeneratedHelperSuffix(std::move(normalizedName));
     const bool isMethodInsertStem =
         normalizedName == "insert" || normalizedName == "insert_ref" ||
-        normalizedName == "Insert" || normalizedName == "InsertRef" ||
-        normalizedName == "mapInsert" || normalizedName == "mapInsertRef" ||
-        normalizedName == "MapInsert" || normalizedName == "MapInsertRef";
+        normalizedName == "Insert" || normalizedName == "InsertRef";
     if (!isMethodInsertStem) {
       return false;
     }
@@ -829,9 +789,7 @@ static bool rewriteMapInsertHelperStatementToCanonical(
         return true;
       }
       if (helperStem == "insert" || helperStem == "insert_ref" ||
-          helperStem == "Insert" || helperStem == "InsertRef" ||
-          helperStem == "mapInsert" || helperStem == "mapInsertRef" ||
-          helperStem == "MapInsert" || helperStem == "MapInsertRef") {
+          helperStem == "Insert" || helperStem == "InsertRef") {
         return true;
       }
       Expr calleeExpr;
@@ -1108,9 +1066,7 @@ static bool rewriteMapInsertHelperStatementToCanonical(
       };
       if (expr.isMethodCall) {
         if (isMapArgsPackMethodStem("at") || isMapArgsPackMethodStem("at_unsafe") ||
-            isMapArgsPackMethodStem("mapAt") || isMapArgsPackMethodStem("mapAtUnsafe") ||
             isMapArgsPackMethodStem("at_ref") || isMapArgsPackMethodStem("at_unsafe_ref") ||
-            isMapArgsPackMethodStem("mapAtRef") || isMapArgsPackMethodStem("mapAtUnsafeRef") ||
             isMapArgsPackMethodStem("At") || isMapArgsPackMethodStem("AtUnsafe") ||
             isMapArgsPackMethodStem("AtRef") || isMapArgsPackMethodStem("AtUnsafeRef")) {
           return true;
@@ -1118,8 +1074,6 @@ static bool rewriteMapInsertHelperStatementToCanonical(
       }
       if (isDirectMapArgsPackStem("at") || isDirectMapArgsPackStem("at_unsafe") ||
           isDirectMapArgsPackStem("at_ref") || isDirectMapArgsPackStem("at_unsafe_ref") ||
-          isDirectMapArgsPackStem("mapAt") || isDirectMapArgsPackStem("mapAtUnsafe") ||
-          isDirectMapArgsPackStem("mapAtRef") || isDirectMapArgsPackStem("mapAtUnsafeRef") ||
           isDirectMapArgsPackStem("At") || isDirectMapArgsPackStem("AtUnsafe") ||
           isDirectMapArgsPackStem("AtRef") || isDirectMapArgsPackStem("AtUnsafeRef")) {
         return true;

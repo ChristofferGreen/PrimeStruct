@@ -417,6 +417,16 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(callResolutionSource.find("matchesResolvedPath(\"/std/collections/mapInsert\")") ==
         std::string::npos);
+  CHECK(callResolutionSource.find("/std/collections/experimental_map/mapCount") ==
+        std::string::npos);
+  CHECK(callResolutionSource.find("/std/collections/experimental_map/mapContains") ==
+        std::string::npos);
+  CHECK(callResolutionSource.find("/std/collections/experimental_map/mapTryAt") ==
+        std::string::npos);
+  CHECK(callResolutionSource.find("/std/collections/experimental_map/mapAt") ==
+        std::string::npos);
+  CHECK(callResolutionSource.find("/std/collections/experimental_map/mapInsert") ==
+        std::string::npos);
   CHECK(callResolutionSource.find("bool isPublishedCollectionBridgeStdlibSurfaceId(") !=
         std::string::npos);
   CHECK(callResolutionSource.find("findSemanticProductDirectCallStdlibSurfaceId(semanticProgram, expr)") !=
@@ -517,6 +527,16 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(inlineDispatchSource.find("matchesHelper(\"/std/collections/map/contains\")") ==
         std::string::npos);
   CHECK(inlineDispatchSource.find("matchesHelper(\"/std/collections/experimental_map/mapContainsRef\")") ==
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("/std/collections/experimental_map/mapCount") ==
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("/std/collections/experimental_map/mapContains") ==
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("/std/collections/experimental_map/mapTryAt") ==
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("/std/collections/experimental_map/mapAt") ==
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("/std/collections/experimental_map/mapInsert") ==
         std::string::npos);
   CHECK(inlineDispatchSource.find("matchesHelper(\"/std/collections/map/tryAt\")") ==
         std::string::npos);
@@ -977,6 +997,16 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(operatorCollectionMutationHelpersSource.find("std/collections/experimental_vector") ==
         std::string::npos);
   CHECK(tailDispatchSource.find("std/collections/experimental_vector") ==
+        std::string::npos);
+  CHECK(tailDispatchSource.find("/std/collections/experimental_map/mapCount") ==
+        std::string::npos);
+  CHECK(tailDispatchSource.find("/std/collections/experimental_map/mapContains") ==
+        std::string::npos);
+  CHECK(tailDispatchSource.find("/std/collections/experimental_map/mapTryAt") ==
+        std::string::npos);
+  CHECK(tailDispatchSource.find("/std/collections/experimental_map/mapAt") ==
+        std::string::npos);
+  CHECK(tailDispatchSource.find("/std/collections/experimental_map/mapInsert") ==
         std::string::npos);
   CHECK(emitExprTryHelpersSource.find("std/collections/experimental_vector") ==
         std::string::npos);
@@ -4630,7 +4660,7 @@ TEST_CASE("ir lowerer call helpers classify lowered map helper overloads through
         &loweredMapContainsOverloadDef);
 }
 
-TEST_CASE("ir lowerer call helpers reject generated experimental map helper family fallback") {
+TEST_CASE("ir lowerer call helpers leave experimental map helper calls ordinary") {
   primec::Definition experimentalMapCountDef;
   experimentalMapCountDef.fullPath = "/std/collections/experimental_map/mapCount";
   primec::Definition specializedMapMethodDef;
@@ -4653,12 +4683,13 @@ TEST_CASE("ir lowerer call helpers reject generated experimental map helper fami
   countCall.args.push_back(valuesArg);
 
   CHECK(primec::ir_lowerer::resolveDefinitionCall(countCall, defMap, resolveExprPath) ==
-        &experimentalMapCountDef);
+        &specializedMapMethodDef);
 
   primec::Expr bareCountCall = countCall;
   bareCountCall.name = "mapCount";
 
-  CHECK(primec::ir_lowerer::resolveDefinitionCall(bareCountCall, defMap, resolveExprPath) == nullptr);
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(bareCountCall, defMap, resolveExprPath) ==
+        &specializedMapMethodDef);
 
   primec::Definition specializedHelperDef;
   specializedHelperDef.fullPath = "/std/collections/experimental_map/mapCount__t1234";
@@ -4685,7 +4716,7 @@ TEST_CASE("ir lowerer call helpers reject generated experimental map helper fami
 
   CHECK(primec::ir_lowerer::resolveDefinitionCall(
             explicitUnspecializedHelperCall, specializedDefMap, specializedResolveExprPath) ==
-        nullptr);
+        &specializedHelperDef);
 
   primec::Definition competingRawHelperDef;
   competingRawHelperDef.fullPath = "/std/collections/experimental_map/mapCount";
@@ -4697,7 +4728,7 @@ TEST_CASE("ir lowerer call helpers reject generated experimental map helper fami
 
   CHECK(primec::ir_lowerer::resolveDefinitionCall(
             explicitUnspecializedHelperCall, competingDefMap, resolveExprPath) ==
-        &competingRawHelperDef);
+        &specializedMapMethodDef);
 }
 
 TEST_CASE("ir lowerer call helpers prefer specialized rooted raw defs when semantic rooted rewrites miss") {

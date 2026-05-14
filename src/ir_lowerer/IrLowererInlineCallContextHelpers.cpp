@@ -109,11 +109,7 @@ bool prepareInlineDefinitionCallContext(
       callee.fullPath == "/std/collections/internal_map/insertImpl" ||
       callee.fullPath.rfind("/std/collections/internal_map/insertImpl__", 0) == 0 ||
       callee.fullPath == "/std/collections/internal_map/insertRefImpl" ||
-      callee.fullPath.rfind("/std/collections/internal_map/insertRefImpl__", 0) == 0 ||
-      callee.fullPath == "/std/collections/experimental_map/mapInsert" ||
-      callee.fullPath.rfind("/std/collections/experimental_map/mapInsert__", 0) == 0 ||
-      callee.fullPath == "/std/collections/experimental_map/mapInsertRef" ||
-      callee.fullPath.rfind("/std/collections/experimental_map/mapInsertRef__", 0) == 0;
+      callee.fullPath.rfind("/std/collections/internal_map/insertRefImpl__", 0) == 0;
   if (out.returnInfo.returnsVoid && requireValue && !out.structDefinition &&
       !isGeneratedMapInsertHelper) {
     error = "void call not allowed in expression context: " + callee.fullPath;

@@ -302,11 +302,11 @@ bool getBuiltinArrayAccessNameLocal(const Expr &expr, std::string &out) {
       return false;
     }
     alias = stripGeneratedSuffix(std::move(alias));
-    if (alias == collectionAliasLocal("vector", "At") || alias == "mapAt") {
+    if (alias == collectionAliasLocal("vector", "At")) {
       out = "at";
       return true;
     }
-    if (alias == collectionAliasLocal("vector", "AtUnsafe") || alias == "mapAtUnsafe") {
+    if (alias == collectionAliasLocal("vector", "AtUnsafe")) {
       out = "at_unsafe";
       return true;
     }

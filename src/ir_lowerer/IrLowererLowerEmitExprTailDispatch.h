@@ -404,9 +404,7 @@
             }
             helperName = stripGeneratedHelperSuffix(std::move(helperName));
             return helperName == "insert" || helperName == "insert_ref" ||
-                   helperName == "Insert" || helperName == "InsertRef" ||
-                   helperName == "mapInsert" || helperName == "mapInsertRef" ||
-                   helperName == "MapInsert" || helperName == "MapInsertRef";
+                   helperName == "Insert" || helperName == "InsertRef";
           };
 
           size_t receiverIndex = 0;
@@ -561,41 +559,10 @@
             }
             return std::string{};
           };
-          auto buildExperimentalMapHelperPath = [&](const std::string &structPath) {
-            if (structPath.rfind("/std/collections/experimental_map/Map__", 0) != 0) {
-              return std::string{};
-            }
-            const size_t suffixStart = structPath.find("__");
-            if (suffixStart == std::string::npos) {
-              return std::string{};
-            }
-            std::string helperStem;
-            if (helperName == "count") {
-              helperStem = "mapCount";
-            } else if (helperName == "contains") {
-              helperStem = "mapContains";
-            } else if (helperName == "tryAt") {
-              helperStem = "mapTryAt";
-            } else if (helperName == "at") {
-              helperStem = "mapAt";
-            } else if (helperName == "at_unsafe") {
-              helperStem = "mapAtUnsafe";
-            } else {
-              return std::string{};
-            }
-            return "/std/collections/experimental_map/" + helperStem + structPath.substr(suffixStart);
-          };
-
-          const std::string receiverStructPath = inferExperimentalMapStructPath(callExpr.args.front());
-          const std::string directExperimentalHelperPath = buildExperimentalMapHelperPath(receiverStructPath);
-          if (!directExperimentalHelperPath.empty() && defMap.find(directExperimentalHelperPath) != defMap.end()) {
-            rewrittenExpr = callExpr;
-            rewrittenExpr.name = directExperimentalHelperPath;
-            rewrittenExpr.namespacePrefix.clear();
-            rewrittenExpr.isMethodCall = false;
-            rewrittenExpr.semanticNodeId = 0;
-            rewrittenExpr.templateArgs.clear();
-            return true;
+          const std::string receiverStructPath =
+              inferExperimentalMapStructPath(callExpr.args.front());
+          if (receiverStructPath.empty()) {
+            return false;
           }
 
           Expr methodExpr = callExpr;
@@ -607,8 +574,7 @@
             return false;
           }
           const bool isExperimentalMapHelper =
-              callee->fullPath.rfind("/std/collections/experimental_map/Map__", 0) == 0 ||
-              callee->fullPath.rfind("/std/collections/experimental_map/map", 0) == 0;
+              callee->fullPath.rfind("/std/collections/experimental_map/Map__", 0) == 0;
           if (!isExperimentalMapHelper) {
             return false;
           }

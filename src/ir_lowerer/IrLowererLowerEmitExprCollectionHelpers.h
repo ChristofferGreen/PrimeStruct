@@ -586,40 +586,16 @@
               if (generatedSuffix != std::string::npos) {
                 helperName.erase(generatedSuffix);
               }
-              if (helperName == "mapCount") {
+              if (helperName == "count_ref") {
                 helperName = "count";
-              } else if (helperName == "mapCountRef") {
-                helperName = "count";
-              } else if (helperName == "count_ref") {
-                helperName = "count";
-              } else if (helperName == "mapContains") {
-                helperName = "contains";
-              } else if (helperName == "mapContainsRef") {
-                helperName = "contains";
               } else if (helperName == "contains_ref") {
                 helperName = "contains";
-              } else if (helperName == "mapTryAt") {
-                helperName = "tryAt";
-              } else if (helperName == "mapTryAtRef") {
-                helperName = "tryAt";
               } else if (helperName == "tryAt_ref") {
                 helperName = "tryAt";
-              } else if (helperName == "mapAt") {
-                helperName = "at";
-              } else if (helperName == "mapAtRef") {
-                helperName = "at";
               } else if (helperName == "at_ref") {
                 helperName = "at";
-              } else if (helperName == "mapAtUnsafe") {
-                helperName = "at_unsafe";
-              } else if (helperName == "mapAtUnsafeRef") {
-                helperName = "at_unsafe";
               } else if (helperName == "at_unsafe_ref") {
                 helperName = "at_unsafe";
-              } else if (helperName == "mapInsert") {
-                helperName = "insert";
-              } else if (helperName == "mapInsertRef") {
-                helperName = "insert";
               } else if (helperName == "insert_ref") {
                 helperName = "insert";
               }

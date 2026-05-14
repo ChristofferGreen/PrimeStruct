@@ -491,14 +491,11 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
       return false;
     }
     alias = stripGeneratedSuffix(std::move(alias));
-    if (alias == collectionWrapperAlias("vector", "At") ||
-        alias == "mapAt" || alias == "mapAtRef") {
+    if (alias == collectionWrapperAlias("vector", "At")) {
       out = "at";
       return true;
     }
-    if (alias == collectionWrapperAlias("vector", "AtUnsafe") ||
-        alias == "mapAtUnsafe" ||
-        alias == "mapAtUnsafeRef") {
+    if (alias == collectionWrapperAlias("vector", "AtUnsafe")) {
       out = "at_unsafe";
       return true;
     }

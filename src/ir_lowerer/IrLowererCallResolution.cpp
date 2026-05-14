@@ -216,13 +216,6 @@ bool isMapBuiltinResolvedPath(const SemanticProgram *semanticProgram,
            resolvedPath.rfind(std::string(basePath) + "__t", 0) == 0 ||
            resolvedPath.rfind(std::string(basePath) + "__ov", 0) == 0;
   };
-  auto matchesExperimentalMapMethodPath = [&](std::string_view helperName) {
-    const std::string prefix = "/std/collections/experimental_map/Map__";
-    const std::string suffix = "/" + std::string(helperName);
-    return resolvedPath.rfind(prefix, 0) == 0 &&
-           resolvedPath.size() > suffix.size() &&
-           resolvedPath.ends_with(suffix);
-  };
   if (!expr.isMethodCall) {
     std::string aliasName;
     std::string accessName;
@@ -233,38 +226,23 @@ bool isMapBuiltinResolvedPath(const SemanticProgram *semanticProgram,
     if (resolveMapHelperAliasName(expr, aliasName)) {
       if (aliasName == "count" && expr.args.size() == 1) {
         return matchesResolvedPath("/std/collections/map/count") ||
-               matchesResolvedPath("/std/collections/map/count_ref") ||
-               matchesResolvedPath("/std/collections/experimental_map/mapCount") ||
-               matchesResolvedPath("/std/collections/experimental_map/mapCountRef") ||
-               matchesExperimentalMapMethodPath("count");
+               matchesResolvedPath("/std/collections/map/count_ref");
       }
       if (aliasName == "contains" && expr.args.size() == 2) {
         return matchesResolvedPath("/std/collections/map/contains") ||
-               matchesResolvedPath("/std/collections/map/contains_ref") ||
-               matchesResolvedPath("/std/collections/experimental_map/mapContains") ||
-               matchesResolvedPath("/std/collections/experimental_map/mapContainsRef") ||
-               matchesExperimentalMapMethodPath("contains");
+               matchesResolvedPath("/std/collections/map/contains_ref");
       }
       if (aliasName == "tryAt" && expr.args.size() == 2) {
         return matchesResolvedPath("/std/collections/map/tryAt") ||
-               matchesResolvedPath("/std/collections/map/tryAt_ref") ||
-               matchesResolvedPath("/std/collections/experimental_map/mapTryAt") ||
-               matchesResolvedPath("/std/collections/experimental_map/mapTryAtRef") ||
-               matchesExperimentalMapMethodPath("tryAt");
+               matchesResolvedPath("/std/collections/map/tryAt_ref");
       }
       if (aliasName == "at" && expr.args.size() == 2) {
         return matchesResolvedPath("/std/collections/map/at") ||
-               matchesResolvedPath("/std/collections/map/at_ref") ||
-               matchesResolvedPath("/std/collections/experimental_map/mapAt") ||
-               matchesResolvedPath("/std/collections/experimental_map/mapAtRef") ||
-               matchesExperimentalMapMethodPath("at");
+               matchesResolvedPath("/std/collections/map/at_ref");
       }
       if (aliasName == "at_unsafe" && expr.args.size() == 2) {
         return matchesResolvedPath("/std/collections/map/at_unsafe") ||
-               matchesResolvedPath("/std/collections/map/at_unsafe_ref") ||
-               matchesResolvedPath("/std/collections/experimental_map/mapAtUnsafe") ||
-               matchesResolvedPath("/std/collections/experimental_map/mapAtUnsafeRef") ||
-               matchesExperimentalMapMethodPath("at_unsafe");
+               matchesResolvedPath("/std/collections/map/at_unsafe_ref");
       }
       if (aliasName == "insert" && expr.args.size() == 3) {
         return matchesResolvedPath("/std/collections/map/insert") ||
@@ -274,51 +252,6 @@ bool isMapBuiltinResolvedPath(const SemanticProgram *semanticProgram,
     std::string normalizedName = resolveCallPathWithoutSemanticFallbackProbes(expr);
     if (!normalizedName.empty() && normalizedName.front() == '/') {
       normalizedName.erase(normalizedName.begin());
-    }
-    if ((normalizedName == "mapCount" ||
-         normalizedName == "std/collections/experimental_map/mapCount" ||
-         normalizedName == "mapCountRef" ||
-         normalizedName == "std/collections/experimental_map/mapCountRef") &&
-        expr.args.size() == 1) {
-      return matchesResolvedPath("/std/collections/experimental_map/mapCount") ||
-             matchesResolvedPath("/std/collections/experimental_map/mapCountRef") ||
-             matchesExperimentalMapMethodPath("count");
-    }
-    if ((normalizedName == "mapContains" ||
-         normalizedName == "std/collections/experimental_map/mapContains" ||
-         normalizedName == "mapContainsRef" ||
-         normalizedName == "std/collections/experimental_map/mapContainsRef") &&
-        expr.args.size() == 2) {
-      return matchesResolvedPath("/std/collections/experimental_map/mapContains") ||
-             matchesResolvedPath("/std/collections/experimental_map/mapContainsRef") ||
-             matchesExperimentalMapMethodPath("contains");
-    }
-    if ((normalizedName == "mapTryAt" ||
-         normalizedName == "std/collections/experimental_map/mapTryAt" ||
-         normalizedName == "mapTryAtRef" ||
-         normalizedName == "std/collections/experimental_map/mapTryAtRef") &&
-        expr.args.size() == 2) {
-      return matchesResolvedPath("/std/collections/experimental_map/mapTryAt") ||
-             matchesResolvedPath("/std/collections/experimental_map/mapTryAtRef") ||
-             matchesExperimentalMapMethodPath("tryAt");
-    }
-    if ((normalizedName == "mapAt" ||
-         normalizedName == "std/collections/experimental_map/mapAt" ||
-         normalizedName == "mapAtRef" ||
-         normalizedName == "std/collections/experimental_map/mapAtRef") &&
-        expr.args.size() == 2) {
-      return matchesResolvedPath("/std/collections/experimental_map/mapAt") ||
-             matchesResolvedPath("/std/collections/experimental_map/mapAtRef") ||
-             matchesExperimentalMapMethodPath("at");
-    }
-    if ((normalizedName == "mapAtUnsafe" ||
-         normalizedName == "std/collections/experimental_map/mapAtUnsafe" ||
-         normalizedName == "mapAtUnsafeRef" ||
-         normalizedName == "std/collections/experimental_map/mapAtUnsafeRef") &&
-        expr.args.size() == 2) {
-      return matchesResolvedPath("/std/collections/experimental_map/mapAtUnsafe") ||
-             matchesResolvedPath("/std/collections/experimental_map/mapAtUnsafeRef") ||
-             matchesExperimentalMapMethodPath("at_unsafe");
     }
     if ((normalizedName == "contains" || normalizedName == "map/contains" ||
          normalizedName == "std/collections/map/contains") &&
@@ -414,80 +347,6 @@ bool isExactRootedMapAliasDefinitionCall(const Expr &expr) {
           helperName == "tryAt" || helperName == "at" ||
           helperName == "at_unsafe" || helperName == "insert" ||
           helperName == "insert_ref");
-}
-
-bool isExperimentalMapHelperLeaf(std::string helperName) {
-  const size_t generatedSuffix = helperName.find("__");
-  if (generatedSuffix != std::string::npos) {
-    helperName.erase(generatedSuffix);
-  }
-  return helperName == "mapCount" || helperName == "mapCountRef" ||
-         helperName == "mapContains" || helperName == "mapContainsRef" ||
-         helperName == "mapTryAt" || helperName == "mapTryAtRef" ||
-         helperName == "mapAt" || helperName == "mapAtRef" ||
-         helperName == "mapAtUnsafe" || helperName == "mapAtUnsafeRef" ||
-         helperName == "mapInsert" || helperName == "mapInsertRef";
-}
-
-bool isExplicitExperimentalMapHelperDefinitionCall(const Expr &expr,
-                                                   const std::string &resolvedPath) {
-  if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
-    return false;
-  }
-  const std::string rawPath = resolveCallPathWithoutSemanticFallbackProbes(expr);
-  if (rawPath.rfind("/std/collections/experimental_map/", 0) != 0 ||
-      resolvedPath.rfind("/std/collections/experimental_map/", 0) != 0) {
-    return false;
-  }
-  if (resolvedPath.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
-    return false;
-  }
-  if (rawPath != resolvedPath) {
-    return false;
-  }
-  const size_t slash = rawPath.find_last_of('/');
-  const std::string helperName =
-      slash == std::string::npos ? rawPath : rawPath.substr(slash + 1);
-  return isExperimentalMapHelperLeaf(helperName);
-}
-
-const Definition *preferExactExplicitExperimentalMapHelperDefinition(
-    const Expr &expr,
-    const std::string &resolvedPath,
-    const std::unordered_map<std::string, const Definition *> &defMap) {
-  if (expr.kind != Expr::Kind::Call || expr.isMethodCall ||
-      resolvedPath.rfind("/std/collections/experimental_map/Map__", 0) != 0) {
-    return nullptr;
-  }
-  const std::string rawPath = resolveCallPathWithoutSemanticFallbackProbes(expr);
-  if (rawPath.rfind("/std/collections/experimental_map/", 0) != 0) {
-    return nullptr;
-  }
-  const size_t slash = rawPath.find_last_of('/');
-  const std::string helperName =
-      slash == std::string::npos ? rawPath : rawPath.substr(slash + 1);
-  if (!isExperimentalMapHelperLeaf(helperName)) {
-    return nullptr;
-  }
-  return resolveDefinitionByPath(defMap, rawPath);
-}
-
-bool isGeneratedExperimentalMapHelperFamilyFallback(
-    const std::string &rawPath,
-    const std::string &resolvedPath) {
-  if (rawPath == resolvedPath ||
-      rawPath.rfind("/std/collections/experimental_map/", 0) != 0 ||
-      resolvedPath.rfind("/std/collections/experimental_map/", 0) != 0) {
-    return false;
-  }
-  const size_t rawSlash = rawPath.find_last_of('/');
-  const size_t resolvedSlash = resolvedPath.find_last_of('/');
-  const std::string rawLeaf =
-      rawSlash == std::string::npos ? rawPath : rawPath.substr(rawSlash + 1);
-  const std::string resolvedLeaf =
-      resolvedSlash == std::string::npos ? resolvedPath : resolvedPath.substr(resolvedSlash + 1);
-  return isExperimentalMapHelperLeaf(rawLeaf) &&
-         isExperimentalMapHelperLeaf(resolvedLeaf);
 }
 
 const Definition *preferExplicitExperimentalVectorHelperDefinition(
@@ -596,11 +455,6 @@ const Definition *resolveDefinitionCall(const Expr &callExpr,
           normalizeCollectionHelperPath(resolved)) {
     return rawAliasDef;
   }
-  if (const Definition *explicitExperimentalMapHelperDef =
-          preferExactExplicitExperimentalMapHelperDefinition(callExpr, resolved, defMap);
-      explicitExperimentalMapHelperDef != nullptr) {
-    return explicitExperimentalMapHelperDef;
-  }
   if (const Definition *explicitExperimentalVectorHelperDef =
           preferExplicitExperimentalVectorHelperDefinition(callExpr, resolved, defMap);
       explicitExperimentalVectorHelperDef != nullptr) {
@@ -612,13 +466,7 @@ const Definition *resolveDefinitionCall(const Expr &callExpr,
         !isStructConstructorCallShape(callExpr)) {
       return nullptr;
     }
-    if (isGeneratedExperimentalMapHelperFamilyFallback(rawPath, resolved)) {
-      return nullptr;
-    }
     if (!isMapBuiltinResolvedPath(semanticProgram, callExpr, resolved)) {
-      return resolvedDef;
-    }
-    if (isExplicitExperimentalMapHelperDefinitionCall(callExpr, resolved)) {
       return resolvedDef;
     }
     if (isExplicitSamePathPublishedMapHelperCall(callExpr, resolved)) {

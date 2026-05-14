@@ -17502,3 +17502,32 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     `/std/collections/map/*` raw paths, removed experimental-map helper raw
     path admission from statement-expression map dispatch, source-locked the
     removed raw-path branches, and advanced the ready queue to TODO-4461.
+
+- [x] TODO-4461: Delete internal map lowering-name adapters
+  - owner: ai
+  - created_at: 2026-05-13
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - split_from: TODO-4457
+  - depends_on: TODO-4460
+  - scope: Delete production C++ adapter handling for internal `mapCount` /
+    `mapContains` / `mapTryAt` / `mapAt` / `mapInsert`-style lowering names
+    once canonical map helpers and the internal-map substrate no longer need
+    those spelling bridges.
+  - implementation_notes:
+    - Target lowerer/emitter builtin-name helpers and source-lock tests that
+      still pin `mapCount`-style names.
+    - Preserve ordinary C++ `std::map` usage and `.prime` internal map helper
+      implementation names that are not compatibility adapters.
+  - acceptance:
+    - Production C++ no longer contains `mapCount`-style compatibility
+      adapter names.
+    - The remaining map compatibility status is documented so TODO-4304 can
+      add the mechanical zero-trace audit next.
+  - stop_rule: Stop once internal map lowering-name adapters are gone and
+    TODO-4304 can own the broad production C++ trace audit.
+  - evidence: Removed the lowerer/emitter adapter branches that translated
+    `mapCount`, `mapContains`, `mapTryAt`, `mapAt`, `mapAtUnsafe`, and
+    `mapInsert` helper spellings into canonical map operations. Updated source
+    locks and map ownership docs so TODO-4304 can own the broad zero-trace
+    production C++ audit.

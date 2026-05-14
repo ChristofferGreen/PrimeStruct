@@ -722,21 +722,12 @@
               if (generatedSuffix != std::string::npos) {
                 helperLeaf.erase(generatedSuffix);
               }
-              if (helperLeaf == "mapCount" || helperLeaf == "mapCountRef") {
-                helperName = "count";
-              } else if (helperLeaf == "mapContains" || helperLeaf == "mapContainsRef") {
-                helperName = "contains";
-              } else if (helperLeaf == "mapTryAt" || helperLeaf == "mapTryAtRef" ||
-                         helperLeaf == "tryAt" || helperLeaf == "tryAt_ref") {
+              if (helperLeaf == "tryAt" || helperLeaf == "tryAt_ref") {
                 helperName = "tryAt";
-              } else if (helperLeaf == "mapAt" || helperLeaf == "mapAtRef" ||
-                         helperLeaf == "at" || helperLeaf == "at_ref") {
+              } else if (helperLeaf == "at" || helperLeaf == "at_ref") {
                 helperName = "at";
-              } else if (helperLeaf == "mapAtUnsafe" || helperLeaf == "mapAtUnsafeRef" ||
-                         helperLeaf == "at_unsafe" || helperLeaf == "at_unsafe_ref") {
+              } else if (helperLeaf == "at_unsafe" || helperLeaf == "at_unsafe_ref") {
                 helperName = "at_unsafe";
-              } else if (helperLeaf == "mapInsert" || helperLeaf == "mapInsertRef") {
-                helperName = "insert";
               }
             }
             if (!helperName.empty() &&
@@ -1095,19 +1086,6 @@
             function.instructions.push_back({IrOpcode::PushI64, IrSlotBytes});
             function.instructions.push_back({IrOpcode::AddI64, 0});
             function.instructions.push_back({IrOpcode::LoadIndirect, 0});
-            return true;
-          }
-        }
-        if (!expr.isMethodCall &&
-            (resolveExprPath(expr).find("mapCount") != std::string::npos ||
-             resolveExprPath(expr).find("mapContains") != std::string::npos ||
-             resolveExprPath(expr).find("mapTryAt") != std::string::npos ||
-             resolveExprPath(expr).find("mapAt") != std::string::npos)) {
-          if (const Definition *directCallee = resolveDirectHelperDefinition(expr);
-              directCallee != nullptr) {
-            if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
-              return false;
-            }
             return true;
           }
         }
