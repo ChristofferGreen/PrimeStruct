@@ -28,6 +28,21 @@ inline std::string experimentalCollectionConstructorRootLocal(
   return "/std/collections/experimental_" + std::string(collectionName) + "/";
 }
 
+inline bool isExperimentalCollectionBackingTypeName(
+    std::string_view collectionName,
+    std::string_view backingTypeName,
+    std::string_view typeName) {
+  if (typeName == backingTypeName) {
+    return true;
+  }
+  std::string expected = experimentalCollectionConstructorRootLocal(collectionName);
+  if (!expected.empty() && expected.front() == '/') {
+    expected.erase(expected.begin());
+  }
+  expected += std::string(backingTypeName);
+  return typeName == expected;
+}
+
 inline bool resolveCollectionConstructorMemberPath(primec::StdlibSurfaceId surfaceId,
                                                    std::string_view rawPath,
                                                    std::string &memberNameOut) {

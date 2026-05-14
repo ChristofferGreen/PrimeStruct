@@ -18436,3 +18436,37 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     lock, removed the file from the map-surface inventory allowance, and
     verified focused source-lock, named-argument semantic, and map-surface
     inventory checks.
+
+- [x] TODO-4489: Route infer target map type check through metadata
+  - owner: ai
+  - created_at: 2026-05-14
+  - finished_at: 2026-05-14
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4488
+  - split_from: TODO-4464
+  - scope: Remove the hard-coded experimental map backing type path from
+    semantic infer target field-type extraction by routing the map backing type
+    recognition through the shared map-constructor/type metadata helpers.
+  - implementation_notes:
+    - Targeted `src/semantics/SemanticsValidatorInferTargetResolution.cpp`,
+      where `extractInferExperimentalMapFieldTypes` still recognized
+      `std/collections/experimental_map/Map` directly.
+    - Added a generic collection backing-type helper in
+      `src/semantics/MapConstructorHelpers.h` so the infer target file can stay
+      free of map path literals.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` so the semantic
+      infer target resolution file has no map-surface trace allowance.
+  - acceptance:
+    - Infer target field-type extraction continues to recognize map backing
+      bindings needed by current map inference behavior.
+    - The semantic infer target resolution file no longer contains a production
+      C++ experimental map backing path literal.
+    - Source-lock coverage prevents reintroducing the literal backing path.
+  - stop_rule: Stop once infer target map type recognition is metadata-backed,
+    focused semantic coverage passes, and the map-surface trace inventory no
+    longer allows traces for the target file.
+  - evidence: Replaced the hard-coded experimental map backing type comparison
+    with a generic collection backing-type helper, updated the source lock,
+    removed the file from the map-surface inventory allowance, and verified
+    focused source-lock, map inference semantic, and map-surface inventory
+    checks.

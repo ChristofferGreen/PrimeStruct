@@ -51,7 +51,7 @@ bool SemanticsValidator::extractInferExperimentalMapFieldTypes(const BindingInfo
           normalizedType = normalizeBindingTypeName(args.front());
           continue;
         }
-        if (base == "Map" || base == "std/collections/experimental_map/Map") {
+        if (isExperimentalCollectionBackingTypeName("map", "Map", base)) {
           std::vector<std::string> args;
           if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 2) {
             return false;

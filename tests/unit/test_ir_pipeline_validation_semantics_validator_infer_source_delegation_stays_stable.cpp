@@ -2232,6 +2232,8 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
   const std::filesystem::path collectionCompatibilityInternalPath =
       repoRoot / "src" / "semantics" /
       "SemanticsValidatorInferCollectionCompatibilityInternal.h";
+  const std::filesystem::path semanticsInferTargetResolutionPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorInferTargetResolution.cpp";
   const std::filesystem::path semanticsValidatePath =
       repoRoot / "src" / "semantics" / "SemanticsValidate.cpp";
   const std::filesystem::path soaVectorStdlibPath =
@@ -2244,6 +2246,7 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
   REQUIRE(std::filesystem::exists(exprMethodTargetPath));
   REQUIRE(std::filesystem::exists(collectionCompatibilityPath));
   REQUIRE(std::filesystem::exists(collectionCompatibilityInternalPath));
+  REQUIRE(std::filesystem::exists(semanticsInferTargetResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsValidatePath));
   REQUIRE(std::filesystem::exists(soaVectorStdlibPath));
   REQUIRE(std::filesystem::exists(experimentalSoaVectorStdlibPath));
@@ -2256,6 +2259,8 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
       readText(collectionCompatibilityPath);
   const std::string collectionCompatibilityInternalSource =
       readText(collectionCompatibilityInternalPath);
+  const std::string semanticsInferTargetResolutionSource =
+      readText(semanticsInferTargetResolutionPath);
   const std::string semanticsValidateSource = readText(semanticsValidatePath);
   const std::string soaVectorStdlibSource = readText(soaVectorStdlibPath);
   const std::string experimentalSoaVectorStdlibSource = readText(experimentalSoaVectorStdlibPath);
@@ -2268,13 +2273,13 @@ import /std/gfx/*
 [effects(heap_alloc), return<i32>]
 main() {
   [FileError] fileErr{FileError.eof()}
-  [Result<FileError>] fileStatus{FileError.status(fileErr)}
+  [Result<FileError>] fileStatus{/std/file/FileError/status(fileErr)}
   [ContainerError] containerErr{ContainerError.missingKey()}
   [Result<ContainerError>] containerStatus{containerErr.status()}
   [GfxError] gfxErr{deviceCreateFailed()}
   [Result<GfxError>] gfxStatus{gfxErr.status()}
   [map<string, i32>] values{map<string, i32>("left"raw_utf8, 4i32)}
-  [Result<i32, ContainerError>] found{values.tryAt("left"raw_utf8)}
+  [Result<i32, ContainerError>] found{/std/collections/map/tryAt<string, i32>(values, "left"raw_utf8)}
   return(plus(count(Result.why(fileStatus)),
       plus(count(Result.why(containerStatus)), count(Result.why(gfxStatus)))))
 }
@@ -2292,7 +2297,7 @@ main() {
   const auto *fileDirectEntry = findSemanticInferEntry(
       primec::semanticProgramDirectCallTargetView(routingSemanticProgram),
       [&routingSemanticProgram](const primec::SemanticProgramDirectCallTarget &entry) {
-        return entry.scopePath == "/main" && entry.callName == "status" &&
+        return entry.scopePath == "/main" && entry.callName == "/std/file/FileError/status" &&
                primec::semanticProgramDirectCallTargetResolvedPath(routingSemanticProgram, entry) ==
                    "/std/file/FileError/status";
       });
@@ -2323,16 +2328,17 @@ main() {
   REQUIRE(gfxMethodEntry->stdlibSurfaceId.has_value());
   CHECK(*gfxMethodEntry->stdlibSurfaceId == primec::StdlibSurfaceId::GfxErrorHelpers);
 
-  const auto *mapMethodEntry = findSemanticInferEntry(
-      primec::semanticProgramMethodCallTargetView(routingSemanticProgram),
-      [&routingSemanticProgram](const primec::SemanticProgramMethodCallTarget &entry) {
-        return entry.scopePath == "/main" && entry.methodName == "tryAt" &&
-               primec::semanticProgramMethodCallTargetResolvedPath(routingSemanticProgram, entry) ==
-                   "/std/collections/map/tryAt";
+  const auto *mapCollectionEntry = findSemanticInferEntry(
+      primec::semanticProgramCollectionSpecializationView(routingSemanticProgram),
+      [](const primec::SemanticProgramCollectionSpecialization &entry) {
+        return entry.scopePath == "/main" && entry.name == "values";
       });
-  REQUIRE(mapMethodEntry != nullptr);
-  REQUIRE(mapMethodEntry->stdlibSurfaceId.has_value());
-  CHECK(*mapMethodEntry->stdlibSurfaceId == primec::StdlibSurfaceId::CollectionsMapHelpers);
+  REQUIRE(mapCollectionEntry != nullptr);
+  REQUIRE(mapCollectionEntry->helperSurfaceId.has_value());
+  CHECK(*mapCollectionEntry->helperSurfaceId == primec::StdlibSurfaceId::CollectionsMapHelpers);
+  REQUIRE(mapCollectionEntry->constructorSurfaceId.has_value());
+  CHECK(*mapCollectionEntry->constructorSurfaceId ==
+        primec::StdlibSurfaceId::CollectionsMapConstructors);
 
   CHECK(helperSource.find("#include \"primec/StdlibSurfaceRegistry.h\"") !=
         std::string::npos);
@@ -2439,7 +2445,7 @@ main() {
   CHECK(exprMethodTargetSource.find("preferredFileHelperTarget(normalizedMethodName,") !=
         std::string::npos);
   CHECK(exprMethodTargetSource.find(
-            "this->preferredCanonicalExperimentalMapHelperTarget(helperName)") !=
+            "this->preferredCanonicalExperimentalMapHelperTarget(resolvedHelperName)") !=
         std::string::npos);
   CHECK(exprMethodTargetSource.find(
             "this->preferredCanonicalExperimentalMapHelperTarget(") !=
@@ -2474,6 +2480,12 @@ main() {
         std::string::npos);
   CHECK(collectionCompatibilityInternalSource.find(
             "return isResolvedMapConstructorPath(std::string(resolvedCandidate));") !=
+        std::string::npos);
+  CHECK(semanticsInferTargetResolutionSource.find(
+            "std/collections/experimental_map/Map") ==
+        std::string::npos);
+  CHECK(semanticsInferTargetResolutionSource.find(
+            "isExperimentalCollectionBackingTypeName(\"map\", \"Map\", base)") !=
         std::string::npos);
   CHECK(collectionCompatibilityInternalSource.find(
             "preferredPublishedCollectionLoweringPath(") !=
@@ -2586,7 +2598,7 @@ main() {
             "  } else if (normalized.rfind(\"soa_vector/\", 0) == 0) {") !=
         std::string::npos);
   CHECK(semanticsValidateSource.find(
-            "  } else if (normalized.rfind(\"std/collections/soa_vector/\", 0) == 0) {\n"
+            "if (normalized.rfind(\"std/collections/soa_vector/\", 0) == 0) {\n"
             "    normalized = normalized.substr(std::string(\"std/collections/soa_vector/\").size());\n"
             "  } else if (normalized.rfind(\"soa_vector/\", 0) == 0) {") !=
         std::string::npos);
@@ -2628,7 +2640,7 @@ main() {
             "const bool preserveCountRefHelper = hasVisibleRootSoaHelper(program, \"count_ref\");") !=
         std::string::npos);
   CHECK(semanticsValidateSource.find(
-            "(helperName == \"count_ref\" && preserveCountRefHelper)") !=
+            "(resolvedHelperName == \"count_ref\" && preserveCountRefHelper)") !=
         std::string::npos);
   CHECK(semanticsValidateSource.find(
             "if (helperName != \"count\" && helperName != \"count_ref\" &&\n"
