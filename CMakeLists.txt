@@ -1488,6 +1488,20 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_map_surface_trace_inventory_self_test PROPERTIES TIMEOUT 60)
 
+  add_test(
+    NAME PrimeStruct_soa_surface_trace_inventory
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_soa_surface_trace_inventory.py
+            --root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_soa_surface_trace_inventory PROPERTIES TIMEOUT 60)
+
+  add_test(
+    NAME PrimeStruct_soa_surface_trace_inventory_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_check_soa_surface_trace_inventory.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_soa_surface_trace_inventory_self_test PROPERTIES TIMEOUT 60)
+
   add_custom_target(
     primestruct_graph_budget_check
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_graph_budget.py

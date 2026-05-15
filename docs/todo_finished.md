@@ -6,6 +6,53 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 15, 2026)**
+- [x] TODO-4520: Add SoA surface trace inventory gate
+  - owner: ai
+  - created_at: 2026-05-15
+  - finished_at: 2026-05-15
+  - phase: SoA public surface rename and ownership cutover
+  - split_from: TODO-4310
+  - depends_on: TODO-4519
+  - scope: Add a deterministic validation gate that inventories current
+    production C++ SoA public-surface residue under `src/` and `include/`
+    without pretending the zero state is already reachable.
+  - implementation_notes:
+    - A TODO-4310 probe found 2,683 candidate SoA public-surface traces across
+      124 production files, including `soa_vector`,
+      `/std/collections/soa_vector`, `/std/collections/soa`,
+      `experimental_soa_vector`, `SoaVector`, `soaVector`, and `to_aos`
+      spellings.
+    - Start from the existing map trace inventory scripts and CTest wiring.
+      Add a SoA-specific script or check that records per-file residue counts
+      and fails when new disallowed files or increased counts appear.
+    - Keep generic SoA substrate terms allowed where they are not public
+      collection surface names: `SoaColumn`, `SoaFieldView`, `SoaSchema`,
+      field-layout/codegen/introspection helpers, field-view borrow and
+      invalidation machinery, and allocation primitives.
+    - Do not require zero residue in this leaf. This leaf is the safety rail
+      that lets subsequent cleanup leaves reduce the inventory deterministically.
+  - acceptance:
+    - The release validation path includes a deterministic SoA public-surface
+      trace inventory check for production C++ under `src/` and `include/`.
+    - The check allows documented generic SoA substrate terms but records the
+      remaining public-surface residue by file and term family.
+    - The check fails when a new production file or increased count
+      reintroduces SoA public collection traces beyond the checked-in
+      inventory.
+    - Docs/TODO notes explain that TODO-4521 through TODO-4523 reduce the
+      inventory before TODO-4524 tightens it to zero.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once current SoA public-surface production C++ residue is
+    mechanically inventoried and capped in the release gate; leave deletion of
+    residue families and the final zero assertion to follow-up leaves.
+  - evidence: Added `scripts/check_soa_surface_trace_inventory.py`, the
+    checked-in `scripts/soa_surface_trace_inventory.txt` inventory, release
+    CTest wiring, and a self-test. The gate records 1,992 current production
+    C++ public-surface traces across 125 files by file and term family, while
+    excluding generic SoA substrate names such as `SoaColumn`, `SoaFieldView`,
+    and `SoaSchema`; TODO-4521 through TODO-4523 remain open to reduce the
+    inventory before TODO-4524 tightens it to zero.
+
 - [x] TODO-4519: Delete `soa_vector` compatibility seams
   - owner: ai
   - created_at: 2026-05-15
