@@ -205,7 +205,8 @@ std::string SemanticsValidator::preferredCollectionHelperResolvedPath(
         usesExplicitPublicSoaHelperPath) {
       return publicPath;
     }
-    return preferredSoaHelperTargetForCollectionType(helperName, "/soa_vector");
+    return preferredSoaHelperTargetForCollectionType(
+        helperName, internalSoaCollectionTypePath(true));
   }
 
   return {};
@@ -808,13 +809,15 @@ std::string SemanticsValidator::preferredSoaHelperTargetForCollectionType(
     std::string_view helperName,
     std::string_view collectionTypePath) const {
   const std::string helper(helperName);
+  const bool wantsInternalSoaCollection =
+      isInternalSoaCollectionTypePath(collectionTypePath);
   const std::string samePath = samePathSoaHelperTargetPath(helper);
   const std::string canonicalPath = compatibilitySoaHelperTargetPath(helper);
   const std::string publicPath = publicSoaHelperTargetPath(helper);
   const std::string preferredTarget =
       preferredSoaHelperTargetForCurrentImports(helperName);
   if (preferredTarget != samePath) {
-    if (preferredTarget == publicPath && collectionTypePath != "/soa_vector") {
+    if (preferredTarget == publicPath && !wantsInternalSoaCollection) {
       return canonicalPath;
     }
     return preferredTarget;
@@ -822,7 +825,7 @@ std::string SemanticsValidator::preferredSoaHelperTargetForCollectionType(
   const bool hasVisibleSamePathHelper =
       hasVisibleDefinitionPathForCurrentImports(samePath) ||
       hasDefinitionFamilyPath(samePath);
-  if (collectionTypePath == "/soa_vector" && hasVisibleSamePathHelper) {
+  if (wantsInternalSoaCollection && hasVisibleSamePathHelper) {
     return samePath;
   }
   auto paramsIt = paramsByDef_.find(samePath);
@@ -849,17 +852,18 @@ std::string SemanticsValidator::preferredSoaHelperTargetForCollectionType(
           : receiverBinding.typeName + "<" + receiverBinding.typeTemplateArg + ">";
   std::string resolvedCollectionType =
       inferMethodCollectionTypePathFromTypeText(receiverTypeText);
-  if (resolvedCollectionType.empty() && collectionTypePath == "/soa_vector") {
+  if (resolvedCollectionType.empty() && wantsInternalSoaCollection) {
     std::string elemType;
     if (extractExperimentalSoaVectorElementType(receiverBinding, elemType)) {
-      resolvedCollectionType = "/soa_vector";
+      resolvedCollectionType = internalSoaCollectionTypePath(true);
     }
   }
-  if (resolvedCollectionType == collectionTypePath) {
+  if (resolvedCollectionType == collectionTypePath ||
+      (wantsInternalSoaCollection &&
+       isInternalSoaCollectionTypePath(resolvedCollectionType))) {
     return samePath;
   }
-  if (collectionTypePath == "/soa_vector" &&
-      isSoaReadRefHelperName(helper) &&
+  if (wantsInternalSoaCollection && isSoaReadRefHelperName(helper) &&
       hasVisibleDefinitionPathForCurrentImports(publicPath)) {
     return publicPath;
   }

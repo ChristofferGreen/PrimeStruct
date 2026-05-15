@@ -86,15 +86,15 @@ Task template:
 - TODO-4275: Expand type packs into struct storage | track:
   tuple-type-packs | primary surface: parser, AST, semantic validation,
   and generic struct storage layout
-- TODO-4526: Delete semantic SoA zero-audit residue | track:
-  soa-zero-audit | primary surface: semantic validation source-lock
-  inventory and shared SoA helper routing
+- TODO-4527: Delete template-monomorph SoA zero-audit residue | track:
+  soa-zero-audit | primary surface: template monomorphization trace inventory
+  and shared SoA helper routing
 
 ### Parallel Work Tracks (Current)
 
-- `soa-zero-audit`: ready TODO-4526 after TODO-4530 completed the shared
-  semantic builtin-helper slice; serial successors remain TODO-4527
-  -> TODO-4528 -> TODO-4529.
+- `soa-zero-audit`: ready TODO-4527 after TODO-4526 deleted the semantic
+  validation source-lock residue; serial successors remain TODO-4528
+  -> TODO-4529.
 - `map-zero-audit`: TODO-4532 reduced the lowerer native-dispatch slice;
   TODO-4464 remains the parent for future bounded trace-reduction splits
   and the final strict zero map-surface audit.
@@ -108,7 +108,6 @@ Task template:
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
-- TODO-4527: Delete template-monomorph SoA zero-audit residue
 - TODO-4528: Delete emitter/lowerer SoA zero-audit residue
 - TODO-4529: Replace SoA inventory with strict zero audit
 - TODO-4276: Expand type packs in helpers and lifecycle hooks
@@ -127,9 +126,9 @@ Task template:
 - Map stdlib ownership cutover: TODO-4464 remains in progress for future
   bounded trace-reduction splits and the final strict zero audit
 - SoA public surface rename and ownership cutover: TODO-4306 parent split;
-  TODO-4530 removed semantic builtin path helper inventory residue, and
-  TODO-4526 is ready to finish the semantic-validation residue before
-  TODO-4527 -> TODO-4528 -> TODO-4529
+  TODO-4526 removed semantic-validation inventory residue after TODO-4530
+  reduced the shared semantic builtin path helper boundary; TODO-4527 is
+  ready before TODO-4528 -> TODO-4529
 - Deferred generic tuple substrate: ready TODO-4275 after TODO-4270, followed
   by TODO-4276 -> TODO-4271 -> TODO-4272
   -> TODO-4274 -> TODO-4273 -> TODO-4277 -> TODO-4278
@@ -145,7 +144,6 @@ Task template:
 ### Execution Queue (Recommended Track Order)
 
 - TODO-4275: Expand type packs into struct storage
-- TODO-4526: Delete semantic SoA zero-audit residue
 - TODO-4527: Delete template-monomorph SoA zero-audit residue
 - TODO-4528: Delete emitter/lowerer SoA zero-audit residue
 - TODO-4529: Replace SoA inventory with strict zero audit
@@ -1990,50 +1988,11 @@ Task template:
       lowerer routing. Keep the parent open until TODO-4529 replaces the
       inventory cap with a strict zero-production-trace audit.
 
-- [ ] TODO-4526: Delete semantic SoA zero-audit residue
-  - owner: ai
-  - created_at: 2026-05-15
-  - phase: SoA public surface rename and ownership cutover
-  - parallel_track: soa-zero-audit
-  - split_from: TODO-4524
-  - depends_on: TODO-4525
-  - scope: Remove the remaining semantic-validation SoA public-surface trace
-    inventory entries that encode old helper paths, compatibility type names,
-    direct diagnostics, or semantic product metadata.
-  - implementation_notes:
-    - Start from the highest-count `src/semantics/SemanticsValidate.cpp`,
-      `src/semantics/SemanticsBuiltinPathHelpers.cpp`,
-      `src/semantics/SemanticsValidatorBuildInitializerInference.cpp`,
-      and related `SemanticsValidator*` inventory rows.
-    - Preserve generic SoA substrate facts and canonical `soa<T>` behavior
-      through shared helper APIs rather than public-surface string literals.
-    - Current initializer slice reduces
-      `src/semantics/SemanticsValidatorBuildInitializerInference.cpp` to the
-      explicit cap (`soa-conversion-helper` 1, `soa-vector-token` 6);
-      `src/semantics/SemanticsValidate.cpp`,
-      `src/semantics/SemanticsBuiltinPathHelpers.cpp`, and related validators
-      remain in scope for the rest of TODO-4526.
-    - Current SemanticsValidate slice routes remaining SoA helper/type
-      spellings through shared helpers and reduces
-      `src/semantics/SemanticsValidate.cpp` to the explicit cap
-      (`experimental-soa-vector-path` 7, `experimental-soa-vector-token` 7,
-      `legacy-soa-vector-path` 22, `root-soa-vector-path` 20,
-      `soa-vector-token` 1, `soa-vector-type-symbol` 1);
-      `src/semantics/SemanticsBuiltinPathHelpers.cpp` and related validators
-      remain in scope for the rest of TODO-4526.
-  - acceptance:
-    - Semantic inventory rows for public SoA collection-surface traces are
-      deleted or reduced to the next explicit cap.
-    - Existing canonical `soa<T>` semantic product and rejection coverage stays
-      stable.
-    - Focused semantic and source-lock tests pass.
-  - stop_rule: Stop once semantic validation no longer owns direct public SoA
-    collection-surface traces outside the agreed generic substrate boundary.
-
 - [ ] TODO-4527: Delete template-monomorph SoA zero-audit residue
   - owner: ai
   - created_at: 2026-05-15
   - phase: SoA public surface rename and ownership cutover
+  - parallel_track: soa-zero-audit
   - split_from: TODO-4524
   - depends_on: TODO-4526
   - scope: Remove remaining template-monomorph SoA public-surface trace

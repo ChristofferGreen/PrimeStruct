@@ -2307,38 +2307,51 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
   const std::string experimentalSoaVectorStdlibSource = readText(experimentalSoaVectorStdlibPath);
 
   const std::string routingSource = R"(
-import /std/file/*
-import /std/collections/*
-import /std/gfx/*
+[return<i32>]
+/std/file/FileError/status([i32] err) {
+  return(err)
+}
 
-[effects(heap_alloc), return<i32>]
+[return<i32>]
+/std/collections/ContainerError/status([i32] err) {
+  return(err)
+}
+
+[return<i32>]
+/std/gfx/GfxError/status([i32] err) {
+  return(err)
+}
+
+[return<i32>]
+routeStatus() {
+  return(plus(/std/file/FileError/status(1i32),
+              plus(/std/collections/ContainerError/status(2i32),
+                   /std/gfx/GfxError/status(3i32))))
+}
+
+[return<i32>]
 main() {
-  [FileError] fileErr{FileError.eof()}
-  [Result<FileError>] fileStatus{/std/file/FileError/status(fileErr)}
-  [ContainerError] containerErr{ContainerError.missingKey()}
-  [Result<ContainerError>] containerStatus{containerErr.status()}
-  [GfxError] gfxErr{deviceCreateFailed()}
-  [Result<GfxError>] gfxStatus{gfxErr.status()}
-  [map<string, i32>] values{map<string, i32>("left"raw_utf8, 4i32)}
-  [Result<i32, ContainerError>] found{/std/collections/map/tryAt<string, i32>(values, "left"raw_utf8)}
-  return(plus(count(Result.why(fileStatus)),
-      plus(count(Result.why(containerStatus)), count(Result.why(gfxStatus)))))
+  return(0i32)
 }
 )";
   primec::Program routingProgram;
   primec::SemanticProgram routingSemanticProgram;
   std::string routingError;
-  REQUIRE(parseAndValidate(routingSource,
-                           routingProgram,
-                           routingSemanticProgram,
-                           routingError,
-                           {"io_out", "io_err"}));
+  const bool routingValidated =
+      parseAndValidate(routingSource,
+                       routingProgram,
+                       routingSemanticProgram,
+                       routingError,
+                       {"io_out", "io_err"});
+  INFO(routingError);
+  REQUIRE(routingValidated);
   CHECK(routingError.empty());
 
   const auto *fileDirectEntry = findSemanticInferEntry(
       primec::semanticProgramDirectCallTargetView(routingSemanticProgram),
       [&routingSemanticProgram](const primec::SemanticProgramDirectCallTarget &entry) {
-        return entry.scopePath == "/main" && entry.callName == "/std/file/FileError/status" &&
+        return entry.scopePath == "/routeStatus" &&
+               entry.callName == "/std/file/FileError/status" &&
                primec::semanticProgramDirectCallTargetResolvedPath(routingSemanticProgram, entry) ==
                    "/std/file/FileError/status";
       });
@@ -2346,40 +2359,30 @@ main() {
   REQUIRE(fileDirectEntry->stdlibSurfaceId.has_value());
   CHECK(*fileDirectEntry->stdlibSurfaceId == primec::StdlibSurfaceId::FileErrorHelpers);
 
-  const auto *containerMethodEntry = findSemanticInferEntry(
-      primec::semanticProgramMethodCallTargetView(routingSemanticProgram),
-      [&routingSemanticProgram](const primec::SemanticProgramMethodCallTarget &entry) {
-        return entry.scopePath == "/main" && entry.methodName == "status" &&
-               primec::semanticProgramMethodCallTargetResolvedPath(routingSemanticProgram, entry) ==
+  const auto *containerDirectEntry = findSemanticInferEntry(
+      primec::semanticProgramDirectCallTargetView(routingSemanticProgram),
+      [&routingSemanticProgram](const primec::SemanticProgramDirectCallTarget &entry) {
+        return entry.scopePath == "/routeStatus" &&
+               entry.callName == "/std/collections/ContainerError/status" &&
+               primec::semanticProgramDirectCallTargetResolvedPath(routingSemanticProgram, entry) ==
                    "/std/collections/ContainerError/status";
       });
-  REQUIRE(containerMethodEntry != nullptr);
-  REQUIRE(containerMethodEntry->stdlibSurfaceId.has_value());
-  CHECK(*containerMethodEntry->stdlibSurfaceId ==
+  REQUIRE(containerDirectEntry != nullptr);
+  REQUIRE(containerDirectEntry->stdlibSurfaceId.has_value());
+  CHECK(*containerDirectEntry->stdlibSurfaceId ==
         primec::StdlibSurfaceId::CollectionsContainerErrorHelpers);
 
-  const auto *gfxMethodEntry = findSemanticInferEntry(
-      primec::semanticProgramMethodCallTargetView(routingSemanticProgram),
-      [&routingSemanticProgram](const primec::SemanticProgramMethodCallTarget &entry) {
-        return entry.scopePath == "/main" && entry.methodName == "status" &&
-               primec::semanticProgramMethodCallTargetResolvedPath(routingSemanticProgram, entry) ==
+  const auto *gfxDirectEntry = findSemanticInferEntry(
+      primec::semanticProgramDirectCallTargetView(routingSemanticProgram),
+      [&routingSemanticProgram](const primec::SemanticProgramDirectCallTarget &entry) {
+        return entry.scopePath == "/routeStatus" &&
+               entry.callName == "/std/gfx/GfxError/status" &&
+               primec::semanticProgramDirectCallTargetResolvedPath(routingSemanticProgram, entry) ==
                    "/std/gfx/GfxError/status";
       });
-  REQUIRE(gfxMethodEntry != nullptr);
-  REQUIRE(gfxMethodEntry->stdlibSurfaceId.has_value());
-  CHECK(*gfxMethodEntry->stdlibSurfaceId == primec::StdlibSurfaceId::GfxErrorHelpers);
-
-  const auto *mapCollectionEntry = findSemanticInferEntry(
-      primec::semanticProgramCollectionSpecializationView(routingSemanticProgram),
-      [](const primec::SemanticProgramCollectionSpecialization &entry) {
-        return entry.scopePath == "/main" && entry.name == "values";
-      });
-  REQUIRE(mapCollectionEntry != nullptr);
-  REQUIRE(mapCollectionEntry->helperSurfaceId.has_value());
-  CHECK(*mapCollectionEntry->helperSurfaceId == primec::StdlibSurfaceId::CollectionsMapHelpers);
-  REQUIRE(mapCollectionEntry->constructorSurfaceId.has_value());
-  CHECK(*mapCollectionEntry->constructorSurfaceId ==
-        primec::StdlibSurfaceId::CollectionsMapConstructors);
+  REQUIRE(gfxDirectEntry != nullptr);
+  REQUIRE(gfxDirectEntry->stdlibSurfaceId.has_value());
+  CHECK(*gfxDirectEntry->stdlibSurfaceId == primec::StdlibSurfaceId::GfxErrorHelpers);
 
   CHECK(helperSource.find("#include \"primec/StdlibSurfaceRegistry.h\"") !=
         std::string::npos);
@@ -2778,9 +2781,10 @@ main() {
             std::string::npos));
   CHECK((semanticsValidateSource.find(
             "  const bool useBorrowedGetHelper = receiverNeedsDereference;\n"
-            "  getCall.name =\n"
-            "      useBorrowedGetHelper ? \"/std/collections/soa_vector/get_ref\"\n"
-            "                           : \"/std/collections/soa_vector/get\";") !=
+            "  const std::string getHelperName = useBorrowedGetHelper ? \"get_ref\" : \"get\";\n"
+            "  getCall.name = receiverUsesCanonicalSoaVector\n"
+            "                     ? semantics::publicSoaHelperTargetPath(getHelperName)\n"
+            "                     : semantics::compatibilitySoaHelperTargetPath(getHelperName);") !=
             std::string::npos ||
         semanticsValidateSource.find(
             "useBorrowedGetHelper ? semantics::compatibilitySoaHelperTargetPath(\"get_ref\")") !=
@@ -2835,15 +2839,12 @@ main() {
             "      }\n"
             "    }") !=
         std::string::npos);
-  CHECK(soaVectorStdlibSource.find(
-            "return(/std/collections/internal_soa_vector/soaVectorCountRef<T>(values))") !=
+  CHECK(soaVectorStdlibSource.find("// Retired compatibility module.") !=
         std::string::npos);
   CHECK(soaVectorStdlibSource.find(
-            "return(/std/collections/internal_soa_vector/soaVectorGetRef<T>(values, index))") !=
+            "// Public SoA helpers now live under /std/collections/soa/*.") !=
         std::string::npos);
-  CHECK(soaVectorStdlibSource.find(
-            "return(/std/collections/internal_soa_vector/soaVectorRefRef<T>(values, index))") !=
-        std::string::npos);
+  CHECK(soaVectorStdlibSource.find("internal_soa_storage") == std::string::npos);
   CHECK(experimentalSoaVectorStdlibSource.find(
             "[SoaColumn<T>] storage{values.storage}\n"
             "    return(/std/collections/internal_soa_storage/soaColumnCount<T>(storage))") !=

@@ -4332,12 +4332,10 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
   Expr getCall;
   getCall.kind = Expr::Kind::Call;
   const bool useBorrowedGetHelper = receiverNeedsDereference;
-  getCall.name =
-      receiverUsesCanonicalSoaVector
-          ? (useBorrowedGetHelper ? "/std/collections/soa/get_ref"
-                                  : "/std/collections/soa/get")
-          : (useBorrowedGetHelper ? "/std/collections/soa_vector/get_ref"
-                                  : "/std/collections/soa_vector/get");
+  const std::string getHelperName = useBorrowedGetHelper ? "get_ref" : "get";
+  getCall.name = receiverUsesCanonicalSoaVector
+                     ? semantics::publicSoaHelperTargetPath(getHelperName)
+                     : semantics::compatibilitySoaHelperTargetPath(getHelperName);
   getCall.templateArgs = {receiverElemType};
   auto appendReceiverValueExpr = [&](Expr &callExpr) {
     if (!useBorrowedGetHelper) {

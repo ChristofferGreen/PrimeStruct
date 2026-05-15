@@ -1314,10 +1314,12 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "candidate.kind != Expr::Kind::Call || !isResolvedMapConstructorPath(resolveCalleePath(candidate))") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
-            "preferredSoaHelperTargetForCollectionType(helperName, \"/soa_vector\")") !=
+            "return preferredSoaHelperTargetForCollectionType(\n"
+            "        helperName, internalSoaCollectionTypePath(true));") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
-            "preferredSoaHelperTargetForCollectionType(helperName, \"/soa_vector\")") !=
+            "const bool wantsInternalSoaCollection =\n"
+            "      isInternalSoaCollectionTypePath(collectionTypePath);") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
             "const std::string resolvedPath = resolveCalleePath(candidate);\n"
@@ -2035,7 +2037,11 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
             "preferredSoaHelperTargetForCollectionType(normalizedMethodName,\n"
-            "                                                      \"/soa_vector\")") !=
+            "                                                      internalSoaCollectionTypePath(true))") !=
+        std::string::npos);
+  CHECK(exprMethodTargetResolutionSource.find(
+            "preferredSoaHelperTargetForCollectionType(normalizedMethodName,\n"
+            "                                                      \"/soa_vector\")") ==
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
             "preferredSoaHelperTargetForCollectionType(normalizedMethodName, \"/vector\")") !=
@@ -2256,7 +2262,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             std::string::npos));
   CHECK(buildInitializerInferenceSource.find(
             "preferredSoaHelperTargetForCollectionType(helperName, "
-            "\"/soa_vector\")") !=
+            "\"/soa_vector\")") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
             "resolvedCanonical == \"/std/collections/soa_vector/get_ref\"") ==

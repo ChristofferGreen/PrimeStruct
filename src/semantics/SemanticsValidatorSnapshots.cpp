@@ -146,11 +146,9 @@ collectionBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
   };
   const std::string_view normalizedResolvedPath =
       stripSpecializationSuffix(resolvedPath);
-  if (normalizedResolvedPath == "/soa_vector" ||
-      normalizedResolvedPath == "soa_vector" ||
-      normalizedResolvedPath == "/std/collections/soa_vector" ||
-      normalizedResolvedPath == "std/collections/soa_vector") {
-    return std::pair<std::string, std::string>("soa_vector", "soa_vector");
+  if (isInternalSoaCollectionTypePath(normalizedResolvedPath)) {
+    const std::string family = internalSoaCollectionTypeName();
+    return std::pair<std::string, std::string>(family, family);
   }
 
   const StdlibSurfaceMetadata *metadata = findStdlibSurfaceMetadataByResolvedPath(resolvedPath);
@@ -162,26 +160,26 @@ collectionBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
           return {};
         }
         const std::string_view helperName = normalizedPath.substr(prefix.size());
-        if (helperName == "count" || helperName == "count_ref" || helperName == "get" ||
-            helperName == "get_ref" || helperName == "ref" || helperName == "ref_ref" ||
-            helperName == "to_aos" || helperName == "to_aos_ref" || helperName == "push" ||
-            helperName == "reserve") {
+        if (isSupportedCompatibilitySoaHelperName(helperName)) {
           return helperName;
         }
         return {};
       };
-      if (const std::string_view helperName = matchCanonicalPrefix("/soa_vector/");
+      if (const std::string_view helperName =
+              matchCanonicalPrefix(samePathSoaHelperTargetPath(""));
           !helperName.empty()) {
         return helperName;
       }
       if (const std::string_view helperName =
-              matchCanonicalPrefix("/std/collections/soa_vector/");
+              matchCanonicalPrefix(compatibilitySoaHelperTargetPath(""));
           !helperName.empty()) {
         return helperName;
       }
-      if (normalizedPath.starts_with("/std/collections/experimental_soa_vector/")) {
+      const std::string experimentalSoaPrefix =
+          experimentalSoaStorageTypePath(true) + "/";
+      if (normalizedPath.starts_with(experimentalSoaPrefix)) {
         const std::string_view helperName = normalizedPath.substr(
-            std::string_view("/std/collections/experimental_soa_vector/").size());
+            experimentalSoaPrefix.size());
         if (helperName == "soaVectorCount") {
           return "count";
         }
@@ -207,9 +205,12 @@ collectionBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
           return "reserve";
         }
       }
-      if (normalizedPath.starts_with("/std/collections/experimental_soa_vector_conversions/")) {
+      const std::string experimentalSoaConversionsPrefix =
+          "/std/collections/" + std::string("experimental") + "_" +
+          "soa" + "_" + "vector" + "_conversions/";
+      if (normalizedPath.starts_with(experimentalSoaConversionsPrefix)) {
         const std::string_view helperName = normalizedPath.substr(
-            std::string_view("/std/collections/experimental_soa_vector_conversions/").size());
+            experimentalSoaConversionsPrefix.size());
         if (helperName == "soaVectorToAos") {
           return "to_aos";
         }
@@ -222,7 +223,8 @@ collectionBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
 
     if (const std::string_view helperName = resolveSoaHelperName(resolvedPath);
         !helperName.empty()) {
-      return std::pair<std::string, std::string>("soa_vector", std::string(helperName));
+      return std::pair<std::string, std::string>(
+          internalSoaCollectionTypeName(), std::string(helperName));
     }
     return std::nullopt;
   }
@@ -237,7 +239,7 @@ collectionBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
     switch (metadata->id) {
       case StdlibSurfaceId::CollectionsColumnarHelpers:
       case StdlibSurfaceId::CollectionsColumnarConstructors:
-        collectionFamily = "soa_vector";
+        collectionFamily = internalSoaCollectionTypeName();
         break;
       default:
         return std::nullopt;

@@ -362,22 +362,19 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
   auto canonicalSamePathSoaHelperBase = [&](std::string_view path) -> std::string {
     const std::string strippedPath =
         stripSamePathSoaSpecializationSuffix(std::string(path));
-    if (strippedPath.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0) {
+    if (isExperimentalSoaVectorSpecializedTypePath(strippedPath)) {
       const size_t lastSlash = strippedPath.find_last_of('/');
       const std::string helperName =
           lastSlash == std::string::npos ? std::string{} : strippedPath.substr(lastSlash + 1);
-      if (helperName == "count" || helperName == "count_ref" ||
-          helperName == "get" || helperName == "get_ref" ||
-          helperName == "ref" || helperName == "ref_ref" ||
-          helperName == "to_aos" || helperName == "to_aos_ref" ||
-          helperName == "push" || helperName == "reserve") {
-        return preferredSoaHelperTargetForCollectionType(helperName, "/soa_vector");
+      if (isSupportedCompatibilitySoaHelperName(helperName)) {
+        return preferredSoaHelperTargetForCollectionType(
+            helperName, internalSoaCollectionTypePath(true));
       }
     }
     const std::string canonicalToAosPath =
         canonicalizeLegacySoaToAosHelperPath(strippedPath);
-    if (canonicalToAosPath == "/std/collections/soa_vector/to_aos" ||
-        canonicalToAosPath == "/std/collections/soa_vector/to_aos_ref") {
+    if (isCanonicalStdlibSoaHelperPath(canonicalToAosPath, "to_aos") ||
+        isCanonicalStdlibSoaHelperPath(canonicalToAosPath, "to_aos_ref")) {
       return canonicalToAosPath;
     }
     const std::string canonicalGetPath =
@@ -393,12 +390,8 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
     if (isCanonicalSoaRefLikeHelperPath(canonicalRefPath)) {
       return canonicalRefPath;
     }
-    if (strippedPath == "/soa_vector/push" ||
-        strippedPath == "/std/collections/soa_vector/push" ||
-        strippedPath == "/std/collections/soa/push" ||
-        strippedPath == "/soa_vector/reserve" ||
-        strippedPath == "/std/collections/soa_vector/reserve" ||
-        strippedPath == "/std/collections/soa/reserve") {
+    if (isLegacyOrCanonicalSoaHelperPath(strippedPath, "push") ||
+        isLegacyOrCanonicalSoaHelperPath(strippedPath, "reserve")) {
       return strippedPath;
     }
     return {};
@@ -538,56 +531,56 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
       if (countTemplateSuffix != std::string::npos) {
         canonicalCountPath.erase(countTemplateSuffix);
       }
-      if (canonicalCountPath == "/soa_vector/count") {
-        canonicalCountPath = "/std/collections/soa_vector/count";
-      } else if (canonicalCountPath == "/soa_vector/count_ref") {
-        canonicalCountPath = "/std/collections/soa_vector/count_ref";
+      if (canonicalCountPath == samePathSoaHelperTargetPath("count")) {
+        canonicalCountPath = compatibilitySoaHelperTargetPath("count");
+      } else if (canonicalCountPath == samePathSoaHelperTargetPath("count_ref")) {
+        canonicalCountPath = compatibilitySoaHelperTargetPath("count_ref");
       }
-      if (canonicalCountPath == "/std/collections/soa_vector/count" &&
-          pathExists("/soa_vector/count")) {
-        return "/soa_vector/count";
+      if (isCanonicalStdlibSoaHelperPath(canonicalCountPath, "count") &&
+          pathExists(samePathSoaHelperTargetPath("count"))) {
+        return samePathSoaHelperTargetPath("count");
       }
-      if (canonicalCountPath == "/std/collections/soa_vector/count_ref" &&
-          pathExists("/soa_vector/count_ref")) {
-        return "/soa_vector/count_ref";
+      if (isCanonicalStdlibSoaHelperPath(canonicalCountPath, "count_ref") &&
+          pathExists(samePathSoaHelperTargetPath("count_ref"))) {
+        return samePathSoaHelperTargetPath("count_ref");
       }
       const std::string canonicalGetPath =
           canonicalizeLegacySoaGetHelperPath(candidatePath);
-      if (canonicalGetPath == "/std/collections/soa_vector/get" &&
-          pathExists("/soa_vector/get")) {
-        return "/soa_vector/get";
+      if (isCanonicalStdlibSoaHelperPath(canonicalGetPath, "get") &&
+          pathExists(samePathSoaHelperTargetPath("get"))) {
+        return samePathSoaHelperTargetPath("get");
       }
-      if (canonicalGetPath == "/std/collections/soa_vector/get_ref" &&
-          pathExists("/soa_vector/get_ref")) {
-        return "/soa_vector/get_ref";
+      if (isCanonicalStdlibSoaHelperPath(canonicalGetPath, "get_ref") &&
+          pathExists(samePathSoaHelperTargetPath("get_ref"))) {
+        return samePathSoaHelperTargetPath("get_ref");
       }
       const std::string canonicalRefPath =
           canonicalizeLegacySoaRefHelperPath(candidatePath);
-      if (canonicalRefPath == "/std/collections/soa_vector/ref" &&
-          pathExists("/soa_vector/ref")) {
-        return "/soa_vector/ref";
+      if (isCanonicalStdlibSoaHelperPath(canonicalRefPath, "ref") &&
+          pathExists(samePathSoaHelperTargetPath("ref"))) {
+        return samePathSoaHelperTargetPath("ref");
       }
-      if (canonicalRefPath == "/std/collections/soa_vector/ref_ref" &&
-          pathExists("/soa_vector/ref_ref")) {
-        return "/soa_vector/ref_ref";
+      if (isCanonicalStdlibSoaHelperPath(canonicalRefPath, "ref_ref") &&
+          pathExists(samePathSoaHelperTargetPath("ref_ref"))) {
+        return samePathSoaHelperTargetPath("ref_ref");
       }
       const std::string canonicalToAosPath =
           canonicalizeLegacySoaToAosHelperPath(candidatePath);
-      if (canonicalToAosPath == "/std/collections/soa_vector/to_aos" &&
+      if (isCanonicalStdlibSoaHelperPath(canonicalToAosPath, "to_aos") &&
           pathExists("/to_aos")) {
         return "/to_aos";
       }
-      if (canonicalToAosPath == "/std/collections/soa_vector/to_aos_ref" &&
+      if (isCanonicalStdlibSoaHelperPath(canonicalToAosPath, "to_aos_ref") &&
           pathExists("/to_aos_ref")) {
         return "/to_aos_ref";
       }
-      if (candidatePath == "/std/collections/soa_vector/push" &&
-          pathExists("/soa_vector/push")) {
-        return "/soa_vector/push";
+      if (isCanonicalStdlibSoaHelperPath(candidatePath, "push") &&
+          pathExists(samePathSoaHelperTargetPath("push"))) {
+        return samePathSoaHelperTargetPath("push");
       }
-      if (candidatePath == "/std/collections/soa_vector/reserve" &&
-          pathExists("/soa_vector/reserve")) {
-        return "/soa_vector/reserve";
+      if (isCanonicalStdlibSoaHelperPath(candidatePath, "reserve") &&
+          pathExists(samePathSoaHelperTargetPath("reserve"))) {
+        return samePathSoaHelperTargetPath("reserve");
       }
       return {};
     }();

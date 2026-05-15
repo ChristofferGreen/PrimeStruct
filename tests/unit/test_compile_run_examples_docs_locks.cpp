@@ -1617,27 +1617,22 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "- TODO-4275: Expand type packs into struct storage | track:\n"
                   "  tuple-type-packs | primary surface: parser, AST, semantic validation,\n"
                   "  and generic struct storage layout\n"
-                  "- TODO-4526: Delete semantic SoA zero-audit residue | track:\n"
-                  "  soa-zero-audit | primary surface: semantic validation source-lock\n"
-                  "  inventory and shared SoA helper routing\n"
-                  "- TODO-4532: Reduce map lowerer native-dispatch traces | track:\n"
-                  "  map-zero-audit | primary surface:\n"
-                  "  `src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp` and map\n"
-                  "  surface/backing trace inventories") !=
+                  "- TODO-4527: Delete template-monomorph SoA zero-audit residue | track:\n"
+                  "  soa-zero-audit | primary surface: template monomorphization trace inventory\n"
+                  "  and shared SoA helper routing") !=
         std::string::npos);
   CHECK(todo.find("### Parallel Work Tracks (Current)\n\n"
-                  "- `soa-zero-audit`: ready TODO-4526 after TODO-4530 completed the shared\n"
-                  "  semantic builtin-helper slice; serial successors remain TODO-4527") !=
+                  "- `soa-zero-audit`: ready TODO-4527 after TODO-4526 deleted the semantic\n"
+                  "  validation source-lock residue; serial successors remain TODO-4528") !=
         std::string::npos);
-  CHECK(todo.find("- `map-zero-audit`: ready TODO-4532 reduces the next bounded lowerer\n"
-                  "  native-dispatch slice; TODO-4464 remains the parent for the final strict\n"
-                  "  zero map-surface audit.") !=
+  CHECK(todo.find("- `map-zero-audit`: TODO-4532 reduced the lowerer native-dispatch slice;\n"
+                  "  TODO-4464 remains the parent for future bounded trace-reduction splits\n"
+                  "  and the final strict zero map-surface audit.") !=
         std::string::npos);
   CHECK(todo.find("- `tuple-type-packs`: ready TODO-4275 after TODO-4270 completed integer\n"
                   "  template arguments, then serial successors TODO-4276 -> TODO-4271 -> TODO-4272") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)\n\n"
-                  "- TODO-4527: Delete template-monomorph SoA zero-audit residue\n"
                   "- TODO-4528: Delete emitter/lowerer SoA zero-audit residue\n"
                   "- TODO-4529: Replace SoA inventory with strict zero audit\n"
                   "- TODO-4276: Expand type packs in helpers and lifecycle hooks") !=
@@ -1655,8 +1650,6 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended Track Order)\n\n"
                   "- TODO-4275: Expand type packs into struct storage\n"
-                  "- TODO-4526: Delete semantic SoA zero-audit residue\n"
-                  "- TODO-4532: Reduce map lowerer native-dispatch traces\n"
                   "- TODO-4527: Delete template-monomorph SoA zero-audit residue\n"
                   "- TODO-4528: Delete emitter/lowerer SoA zero-audit residue\n"
                   "- TODO-4529: Replace SoA inventory with strict zero audit\n"
@@ -1690,15 +1683,13 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
       "TODO-4275: Expand type packs into struct storage",
-      "TODO-4532: Reduce map lowerer native-dispatch traces",
+      "TODO-4527: Delete template-monomorph SoA zero-audit residue",
   };
   for (const std::string &entry : semanticPhaseQueue) {
     CHECK(todo.find("- " + entry) != std::string::npos);
     CHECK(todo.find("- [ ] " + entry) != std::string::npos);
   }
   CHECK(todo.find("  - parallel_track: tuple-type-packs") !=
-        std::string::npos);
-  CHECK(todo.find("  - parallel_track: map-zero-audit") !=
         std::string::npos);
   CHECK(todo.find("  - parallel_track: soa-zero-audit") !=
         std::string::npos);

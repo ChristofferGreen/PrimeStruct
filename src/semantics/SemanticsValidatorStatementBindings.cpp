@@ -96,7 +96,8 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     return failBindingDiagnostic("duplicate binding name: " + stmt.name);
   }
   for (const auto &transform : stmt.transforms) {
-    if (transform.name != "soa_vector" || transform.templateArgs.size() != 1) {
+    if (!isInternalSoaCollectionTypeName(transform.name) ||
+        transform.templateArgs.size() != 1) {
       continue;
     }
     if (!isSoaVectorStructElementType(transform.templateArgs.front(), namespacePrefix, structNames_, importAliases_)) {
@@ -159,13 +160,13 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
   const Expr &initializer = stmt.args.front();
   if (initializer.kind == Expr::Kind::Call && !initializer.isMethodCall) {
     const bool explicitOldGetRef =
-        initializer.name == "/soa_vector/get_ref" ||
-        initializer.name == "soa_vector/get_ref" ||
-        ((initializer.namespacePrefix == "/soa_vector" ||
-          initializer.namespacePrefix == "soa_vector") &&
+        initializer.name == samePathSoaHelperTargetPath("get_ref") ||
+        initializer.name == internalSoaCollectionTypeName() + "/get_ref" ||
+        (isCompatibilitySoaSurfaceNamespace(initializer.namespacePrefix) &&
          initializer.name == "get_ref");
     if (explicitOldGetRef &&
-        !hasVisibleDefinitionPathForCurrentImports("/soa_vector/get_ref")) {
+        !hasVisibleDefinitionPathForCurrentImports(
+            samePathSoaHelperTargetPath("get_ref"))) {
       return failBindingDiagnostic("get_ref is only supported as a statement");
     }
   }
@@ -184,7 +185,8 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
       initializer.isBraceConstructor && hasNamedArguments(initializer.argNames)) {
     return failBindingDiagnostic("sum construction requires target sum type");
   }
-  if ((normalizedBindingType == "vector" || normalizedBindingType == "soa_vector") &&
+  if ((normalizedBindingType == "vector" ||
+       isInternalSoaCollectionTypeName(normalizedBindingType)) &&
       isEmptyBuiltinBlockInitializer(initializer)) {
     if (!validateOmittedBindingInitializer(stmt, info, namespacePrefix)) {
       return false;
@@ -222,39 +224,22 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     resolvedCallPath = canonicalizeLegacySoaToAosHelperPath(
         resolveExprConcreteCallPath(params, locals, initializer, resolvedCallPath));
     const bool isRootToAosHelper =
-        normalizedCallName == "to_aos" || normalizedCallName == "to_aos_ref" ||
-        normalizedCallName == "soa_vector/to_aos" ||
-        normalizedCallName == "soa_vector/to_aos_ref" ||
-        normalizedCallName == "std/collections/soa/to_aos" ||
-        normalizedCallName == "std/collections/soa_vector/to_aos" ||
-        normalizedCallName == "std/collections/soa_vector/to_aos_ref" ||
-        ((normalizedCallPrefix == "soa" ||
-          normalizedCallPrefix == "std/collections/soa") &&
-         normalizedCallName == "to_aos") ||
-        ((normalizedCallPrefix == "soa_vector" ||
-          normalizedCallPrefix == "std/collections/soa_vector") &&
-         (normalizedCallName == "to_aos" ||
-          normalizedCallName == "to_aos_ref")) ||
+        isSoaConversionSurfaceSpelling(normalizedCallPrefix,
+                                       normalizedCallName) ||
         isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, "to_aos") ||
         isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, "to_aos_ref");
     if (!isRootToAosHelper) {
       return false;
     }
     const bool isBorrowedToAosHelper =
-        normalizedCallName == "to_aos_ref" ||
-        normalizedCallName == "soa_vector/to_aos_ref" ||
-        normalizedCallName == "std/collections/soa_vector/to_aos_ref" ||
-        (((normalizedCallPrefix == "std/collections/soa_vector" ||
-           normalizedCallPrefix == "soa_vector") &&
-          normalizedCallName == "to_aos_ref")) ||
-        resolvedCallPath == "/std/collections/soa_vector/to_aos_ref";
+        isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, "to_aos_ref");
     const std::string helperPath =
         isBorrowedToAosHelper ? "/to_aos_ref" : "/to_aos";
     const std::string canonicalHelperPath =
         isBorrowedToAosHelper
-            ? "/std/collections/soa_vector/to_aos_ref"
-            : "/std/collections/soa_vector/to_aos";
-    const std::string publicHelperPath = "/std/collections/soa/to_aos";
+            ? compatibilitySoaHelperTargetPath("to_aos_ref")
+            : compatibilitySoaHelperTargetPath("to_aos");
+    const std::string publicHelperPath = publicSoaHelperTargetPath("to_aos");
     auto hasExplicitSourceImportPath = [&](const std::string &path) {
       for (const auto &importPath : program_.sourceImports) {
         if (importPath == path) {
@@ -288,7 +273,8 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
       }
     }
     return receiverBinding != nullptr &&
-           normalizeBindingTypeName(receiverBinding->typeName) == "soa_vector" &&
+           isInternalSoaCollectionTypeName(
+               normalizeBindingTypeName(receiverBinding->typeName)) &&
            !receiverBinding->typeTemplateArg.empty();
   };
   if (normalizedBindingType == "vector" &&

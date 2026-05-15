@@ -60,6 +60,32 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
     - Focused release build, backend IR source-lock slices, and the stdlib map
       ownership misc suite passed in the assigned worktree.
 
+- [x] TODO-4526: Delete semantic SoA zero-audit residue
+  - owner: ai
+  - created_at: 2026-05-15
+  - finished_at: 2026-05-15
+  - phase: SoA public surface rename and ownership cutover
+  - parallel_track: soa-zero-audit
+  - split_from: TODO-4524
+  - depends_on: TODO-4525
+  - scope: Remove remaining semantic-validation SoA public-surface trace
+    inventory entries that encode old helper paths, compatibility type names,
+    direct diagnostics, or semantic product metadata.
+  - outcome:
+    - Routed call, method-target, vector-helper, statement-binding, and
+      snapshot SoA compatibility checks through shared semantic SoA helper APIs
+      instead of direct public/legacy path and type spellings.
+    - Reduced those semantic validator inventory rows to conversion-helper
+      recognition only, with snapshot helper-symbol metadata left as the
+      explicit generic substrate boundary.
+    - Kept the existing `SemanticsValidate.cpp`,
+      `SemanticsBuiltinPathHelpers.cpp`, and initializer-inference caps as the
+      current agreed semantic helper boundary for the later strict-zero leaf.
+  - validation:
+    - Non-heavy SoA surface inventory validation passed.
+    - Parent-scheduled focused release validation passed for the backend IR
+      semantic/source-lock slice and the TODO queue source-lock slice.
+
 - [x] TODO-4269: Bind and monomorphize type-pack arguments
   - owner: ai
   - created_at: 2026-04-27
