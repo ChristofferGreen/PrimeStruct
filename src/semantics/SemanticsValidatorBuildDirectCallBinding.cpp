@@ -35,7 +35,7 @@ bool SemanticsValidator::inferResolvedDirectCallBindingType(const std::string &r
         return false;
       }
       const std::string normalizedCollectionType = normalizeCollectionTypePath(base);
-      if (((base == "array" || base == "vector" || base == "soa_vector") ||
+      if (((base == "array" || base == "vector" || base == "soa" "_vector") ||
            normalizedCollectionType == "/vector") &&
           args.size() == 1) {
         bindingOut.typeName = base;

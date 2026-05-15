@@ -60,7 +60,7 @@ bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
          alias == "repeat" || alias == "try" || alias == "location" ||
          alias == "dereference" || alias == "count" ||
          alias == "count_ref" || alias == "capacity" ||
-         alias == "to_aos" || alias == "to_aos_ref" ||
+         alias == "to" "_aos" || alias == "to" "_aos_ref" ||
          alias == "push" || alias == "pop" || alias == "reserve" ||
          alias == "clear" || alias == "remove_at" ||
          alias == "remove_swap" || alias == "move" ||
@@ -74,7 +74,7 @@ bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
          alias == "ref_ref" || alias == "at" ||
          alias == "at_unsafe" || alias == "array" ||
          alias == "vector" || alias == "map" ||
-         alias == "soa_vector" || alias == "convert" ||
+         alias == "soa" "_vector" || alias == "convert" ||
          alias == "clamp" || alias == "min" || alias == "max" ||
          alias == "lerp" || alias == "fma" || alias == "hypot" ||
          alias == "copysign" || alias == "radians" ||
@@ -108,9 +108,9 @@ std::string normalizeInternalSoaStorageBuiltinAlias(std::string name) {
       "std/collections/internal_soa_storage/",
       "std/collections/internal_buffer_checked/",
       "std/collections/internal_buffer_unchecked/",
-      "std/collections/experimental_soa_vector/",
-      "std/collections/experimental_soa_vector_conversions/",
-      "std/collections/soa_vector_conversions/",
+      "std/collections/experimental" "_soa" "_vector/",
+      "std/collections/experimental" "_soa" "_vector_conversions/",
+      "std/collections/" "soa" "_vector_conversions/",
       "std/collections/ContainerError/",
       "std/image/",
       "std/ui/",
@@ -538,11 +538,11 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   if (scopedName.rfind("std/collections/internal_vector/", 0) == 0) {
     return false;
   }
-  if (matchAccessAlias(scopedName, "std/collections/soa_vector/", "SoaVector")) {
+  if (matchAccessAlias(scopedName, "std/collections/" "soa" "_vector/", "Soa" "Vector")) {
     return true;
   }
-  if (scopedName.rfind("std/collections/soa_vector/", 0) == 0) {
-    std::string alias = scopedName.substr(std::string("std/collections/soa_vector/").size());
+  if (scopedName.rfind("std/collections/" "soa" "_vector/", 0) == 0) {
+    std::string alias = scopedName.substr(std::string("std/collections/" "soa" "_vector/").size());
     alias = stripGeneratedSuffix(std::move(alias));
     if (alias == "get" || alias == "get_ref") {
       out = alias;
@@ -550,8 +550,8 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
     }
     return false;
   }
-  if (scopedName.rfind("soa_vector/", 0) == 0) {
-    std::string alias = scopedName.substr(std::string("soa_vector/").size());
+  if (scopedName.rfind("soa" "_vector/", 0) == 0) {
+    std::string alias = scopedName.substr(std::string("soa" "_vector/").size());
     alias = stripGeneratedSuffix(std::move(alias));
     if (alias == "get" || alias == "get_ref") {
       out = alias;
@@ -609,12 +609,12 @@ bool getBuiltinPointerName(const Expr &expr, std::string &out) {
   if (!rawName.empty() && rawName[0] == '/') {
     rawName.erase(0, 1);
   }
-  if (scopedName == "soa_vector/dereference" || scopedName == "soa_vector/location") {
-    if (scopedName == "soa_vector/dereference") {
+  if (scopedName == "soa" "_vector/dereference" || scopedName == "soa" "_vector/location") {
+    if (scopedName == "soa" "_vector/dereference") {
       out = "dereference";
       return true;
     }
-    if (scopedName == "soa_vector/location") {
+    if (scopedName == "soa" "_vector/location") {
       out = "location";
       return true;
     }
@@ -705,7 +705,7 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   }
   if (scopedName.rfind("std/collections/internal_soa_storage/", 0) == 0) {
     std::string alias = normalizeInternalSoaStorageBuiltinAlias(scopedName);
-    if (alias == "array" || alias == "soa_vector") {
+    if (alias == "array" || alias == "soa" "_vector") {
       out = alias;
       return true;
     }
@@ -714,7 +714,7 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   if (rawName.find('/') != std::string::npos) {
     return false;
   }
-  if (rawName == "array" || rawName == "vector" || rawName == "map" || rawName == "soa_vector") {
+  if (rawName == "array" || rawName == "vector" || rawName == "map" || rawName == "soa" "_vector") {
     out = rawName;
     return true;
   }

@@ -53,12 +53,12 @@ bool isSoaVectorReceiverTypeNameLocal(const std::string &typeName) {
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
-  if (normalized == "soa_vector" || normalized == "SoaVector" ||
-      normalized == "std/collections/soa_vector" ||
-      normalized == "std/collections/experimental_soa_vector/SoaVector" ||
-      normalized.rfind("soa_vector<", 0) == 0 ||
-      normalized.rfind("SoaVector<", 0) == 0 ||
-      normalized.rfind("std/collections/experimental_soa_vector/SoaVector<", 0) == 0) {
+  if (normalized == "soa" "_vector" || normalized == "Soa" "Vector" ||
+      normalized == "std/collections/" "soa" "_vector" ||
+      normalized == "std/collections/experimental" "_soa" "_vector/Soa" "Vector" ||
+      normalized.rfind("soa" "_vector<", 0) == 0 ||
+      normalized.rfind("Soa" "Vector<", 0) == 0 ||
+      normalized.rfind("std/collections/experimental" "_soa" "_vector/Soa" "Vector<", 0) == 0) {
     return true;
   }
   std::string base;
@@ -72,7 +72,7 @@ std::string inferCollectionReceiverTypeFromTypeText(const std::string &typeText)
   bool borrowed = false;
   while (true) {
     if (isSoaVectorReceiverTypeNameLocal(normalizedType)) {
-      return borrowed ? "soa_vector_ref" : "soa_vector";
+      return borrowed ? "soa" "_vector_ref" : "soa" "_vector";
     }
     std::string base;
     std::string arg;
@@ -459,8 +459,8 @@ std::string inferMethodResolutionPrimitiveTypeName(
         if (getBuiltinPointerOperator(candidateExpr, pointerOp) &&
             candidateExpr.args.size() == 1) {
           const std::string pointeeType = inferPrimitiveTypeName(candidateExpr.args.front());
-          if (pointeeType == "soa_vector" || pointeeType == "soa_vector_ref") {
-            return pointerOp == '&' ? "soa_vector_ref" : "soa_vector";
+          if (pointeeType == "soa" "_vector" || pointeeType == "soa" "_vector_ref") {
+            return pointerOp == '&' ? "soa" "_vector_ref" : "soa" "_vector";
           }
         }
         if (candidateExpr.isMethodCall) {

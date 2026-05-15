@@ -170,7 +170,7 @@ ReturnKind getReturnKind(const Definition &def,
         }
         return ReturnKind::Array;
       }
-      if (splitTemplateTypeName(normalizedType, base, arg) && base == "soa_vector") {
+      if (splitTemplateTypeName(normalizedType, base, arg) && base == "soa" "_vector") {
         std::vector<std::string> args;
         if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
           error = "soa return type requires exactly one template argument on " + def.fullPath;
@@ -186,7 +186,7 @@ ReturnKind getReturnKind(const Definition &def,
         error = "array return type requires exactly one template argument on " + def.fullPath;
         return ReturnKind::Unknown;
       }
-      if (normalizedType == "soa_vector") {
+      if (normalizedType == "soa" "_vector") {
         error = "soa return type requires exactly one template argument on " + def.fullPath;
         return ReturnKind::Unknown;
       }

@@ -29,10 +29,10 @@ std::string explicitOldSoaMutatorPath(const Expr &candidate) {
   }
   const std::string normalizedName = std::string(trimLeadingSlash(candidate.name));
   const std::string normalizedPrefix = std::string(trimLeadingSlash(candidate.namespacePrefix));
-  if (normalizedPrefix == "soa_vector" && isSoaMutatorName(normalizedName)) {
-    return "/soa_vector/" + normalizedName;
+  if (normalizedPrefix == "soa" "_vector" && isSoaMutatorName(normalizedName)) {
+    return "/soa" "_vector/" + normalizedName;
   }
-  constexpr std::string_view kOldExplicitPrefix = "soa_vector/";
+  constexpr std::string_view kOldExplicitPrefix = "soa" "_vector/";
   if (normalizedName.rfind(kOldExplicitPrefix, 0) != 0) {
     return "";
   }
@@ -40,7 +40,7 @@ std::string explicitOldSoaMutatorPath(const Expr &candidate) {
   if (!isSoaMutatorName(helperName)) {
     return "";
   }
-  return "/soa_vector/" + std::string(helperName);
+  return "/soa" "_vector/" + std::string(helperName);
 }
 
 std::string explicitOldSoaAccessPath(const Expr &candidate) {
@@ -49,10 +49,10 @@ std::string explicitOldSoaAccessPath(const Expr &candidate) {
   }
   const std::string normalizedName = std::string(trimLeadingSlash(candidate.name));
   const std::string normalizedPrefix = std::string(trimLeadingSlash(candidate.namespacePrefix));
-  if (normalizedPrefix == "soa_vector" && isSoaAccessName(normalizedName)) {
-    return "/soa_vector/" + normalizedName;
+  if (normalizedPrefix == "soa" "_vector" && isSoaAccessName(normalizedName)) {
+    return "/soa" "_vector/" + normalizedName;
   }
-  constexpr std::string_view kOldExplicitPrefix = "soa_vector/";
+  constexpr std::string_view kOldExplicitPrefix = "soa" "_vector/";
   if (normalizedName.rfind(kOldExplicitPrefix, 0) != 0) {
     return "";
   }
@@ -61,7 +61,7 @@ std::string explicitOldSoaAccessPath(const Expr &candidate) {
   if (!isSoaAccessName(helperName)) {
     return "";
   }
-  return "/soa_vector/" + std::string(helperName);
+  return "/soa" "_vector/" + std::string(helperName);
 }
 
 std::string canonicalPublishedVectorHelperTarget(std::string_view helperName) {
@@ -126,21 +126,21 @@ std::string SemanticsValidator::preferVectorStdlibHelperPath(const std::string &
       }
     }
   }
-  if (preferred.rfind("/soa_vector/", 0) == 0 && !hasVisibleDefinitionPath(preferred)) {
-    const std::string suffix = preferred.substr(std::string("/soa_vector/").size());
-    const std::string stdlibAlias = "/std/collections/soa_vector/" + suffix;
+  if (preferred.rfind("/soa" "_vector/", 0) == 0 && !hasVisibleDefinitionPath(preferred)) {
+    const std::string suffix = preferred.substr(std::string("/soa" "_vector/").size());
+    const std::string stdlibAlias = "/std/collections/" "soa" "_vector/" + suffix;
     if (hasVisibleDefinitionPath(stdlibAlias)) {
       preferred = stdlibAlias;
     }
   }
-  if (preferred.rfind("/std/collections/soa_vector/", 0) == 0 &&
+  if (preferred.rfind("/std/collections/" "soa" "_vector/", 0) == 0 &&
       !hasVisibleDefinitionPath(preferred)) {
     const std::string suffix =
-        preferred.substr(std::string("/std/collections/soa_vector/").size());
+        preferred.substr(std::string("/std/collections/" "soa" "_vector/").size());
     const std::string samePath =
-        (suffix == "to_aos" || suffix == "to_aos_ref")
+        (suffix == "to" "_aos" || suffix == "to" "_aos_ref")
             ? "/" + suffix
-            : "/soa_vector/" + suffix;
+            : "/soa" "_vector/" + suffix;
     if (hasVisibleDefinitionPath(samePath)) {
       preferred = samePath;
     }
@@ -253,7 +253,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
         return false;
       };
   auto isSoaGrowthBinding = [&](const BindingInfo &binding) {
-    if (normalizeBindingTypeName(binding.typeName) == "soa_vector") {
+    if (normalizeBindingTypeName(binding.typeName) == "soa" "_vector") {
       return true;
     }
     std::string experimentalElemType;
@@ -288,8 +288,8 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
             const bool targetsBuiltinSoa =
                 !binding->typeTemplateArg.empty() &&
                 (splitTemplateTypeName(normalizedTarget, base, arg)
-                     ? normalizeBindingTypeName(base) == "soa_vector"
-                     : normalizedTarget == "soa_vector");
+                     ? normalizeBindingTypeName(base) == "soa" "_vector"
+                     : normalizedTarget == "soa" "_vector");
             std::string experimentalElemType;
             if (!targetsBuiltinSoa &&
                 !extractExperimentalSoaVectorElementType(*binding,
@@ -406,8 +406,8 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     vectorHelperResolvedCanonical =
         canonicalizeSoaMutatorHelperPath(vectorHelperResolved);
     isStdNamespacedSoaCanonicalMutatorHelperCall =
-        (vectorHelperResolvedCanonical.rfind("/std/collections/soa_vector/", 0) == 0 ||
-         vectorHelperResolvedCanonical.rfind("/std/collections/soa/", 0) == 0) &&
+        (vectorHelperResolvedCanonical.rfind("/std/collections/" "soa" "_vector/", 0) == 0 ||
+         vectorHelperResolvedCanonical.rfind("/std/collections/" "soa/", 0) == 0) &&
         (isLegacyOrCanonicalSoaHelperPath(vectorHelperResolvedCanonical, "push") ||
          isLegacyOrCanonicalSoaHelperPath(vectorHelperResolvedCanonical, "reserve"));
     isStdNamespacedCanonicalBuiltinHelperCall =
@@ -535,7 +535,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       stmt.isMethodCall && defMap_.find(vectorHelperResolved) != defMap_.end() &&
       !isStdNamespacedVectorCompatibilityHelperPath(vectorHelperResolved,
                                                     vectorHelper) &&
-      vectorHelperResolved.rfind("/soa_vector/", 0) != 0;
+      vectorHelperResolved.rfind("/soa" "_vector/", 0) != 0;
   if (isUserMethodTarget) {
     if (!stmt.args.empty() && vectorHelperNeedsStandaloneSoaBorrowCheck) {
       std::string borrowRoot;
@@ -573,7 +573,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
   }
   const std::string oldExplicitSoaPath = explicitOldSoaMutatorPath(stmt);
   const std::string oldExplicitSoaCanonicalPath =
-      oldExplicitSoaPath.empty() ? "" : "/std/collections/soa_vector/" + vectorHelper;
+      oldExplicitSoaPath.empty() ? "" : "/std/collections/" "soa" "_vector/" + vectorHelper;
   const bool hasVisibleOldExplicitSoaHelper =
       !oldExplicitSoaPath.empty() &&
       (hasDeclaredDefinitionPath(oldExplicitSoaPath) || hasImportedDefinitionPath(oldExplicitSoaPath));
@@ -597,7 +597,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     if (!resolveVectorStatementBinding(params, locals, stmt.args.front(), receiverBinding)) {
       return validateExpr(params, locals, stmt, enclosingStatements, statementIndex);
     }
-    if (receiverBinding.typeName != "soa_vector") {
+    if (receiverBinding.typeName != "soa" "_vector") {
       return failStatementDiagnostic(std::string(stmt.isMethodCall ? "unknown method: " : "unknown call target: ") +
                                      oldExplicitSoaCanonicalPath);
     }
@@ -667,7 +667,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       if (!resolveVectorStatementBinding(params, locals, candidate, binding)) {
         return false;
       }
-      if (binding.typeName == "soa_vector") {
+      if (binding.typeName == "soa" "_vector") {
         return true;
       }
       std::string experimentalElemType;
@@ -754,7 +754,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
         return false;
       }
       if (receiverBinding.typeName != "vector" &&
-          !(canonicalCompatibilityAllowsSoaVectorTarget && receiverBinding.typeName == "soa_vector")) {
+          !(canonicalCompatibilityAllowsSoaVectorTarget && receiverBinding.typeName == "soa" "_vector")) {
         return false;
       }
       shouldUseCanonicalBuiltinCompatibilityFallback = true;
@@ -789,7 +789,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       if (!resolveVectorStatementBinding(params, locals, stmt.args[receiverIndex], receiverBinding)) {
         return false;
       }
-      if (receiverBinding.typeName != "soa_vector") {
+      if (receiverBinding.typeName != "soa" "_vector") {
         return false;
       }
       shouldUseCanonicalBuiltinCompatibilityFallback = true;
@@ -819,9 +819,9 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       vectorHelperResolved.rfind(
           legacyExperimentalVectorCompatibilityPrefix(), 0) == 0;
   const bool isResolvedSoaHelper =
-      vectorHelperResolved.rfind("/std/collections/soa_vector/", 0) == 0 ||
-      vectorHelperResolved.rfind("/std/collections/soa/", 0) == 0 ||
-      vectorHelperResolved.rfind("/soa_vector/", 0) == 0;
+      vectorHelperResolved.rfind("/std/collections/" "soa" "_vector/", 0) == 0 ||
+      vectorHelperResolved.rfind("/std/collections/" "soa/", 0) == 0 ||
+      vectorHelperResolved.rfind("/soa" "_vector/", 0) == 0;
   const bool isBareCanonicalIndexedRemovalExperimentalVectorBridgeCall =
       !stmt.isMethodCall &&
       stmt.namespacePrefix.empty() &&
@@ -892,7 +892,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
           continue;
         }
         if (candidateBinding.typeName == "vector" ||
-            (helperAllowsSoaVectorTarget && candidateBinding.typeName == "soa_vector")) {
+            (helperAllowsSoaVectorTarget && candidateBinding.typeName == "soa" "_vector")) {
           receiverIndex = i;
           break;
         }

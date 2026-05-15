@@ -373,8 +373,8 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
     }
     const std::string canonicalToAosPath =
         canonicalizeLegacySoaToAosHelperPath(strippedPath);
-    if (isCanonicalStdlibSoaHelperPath(canonicalToAosPath, "to_aos") ||
-        isCanonicalStdlibSoaHelperPath(canonicalToAosPath, "to_aos_ref")) {
+    if (isCanonicalStdlibSoaHelperPath(canonicalToAosPath, "to" "_aos") ||
+        isCanonicalStdlibSoaHelperPath(canonicalToAosPath, "to" "_aos_ref")) {
       return canonicalToAosPath;
     }
     const std::string canonicalGetPath =
@@ -566,13 +566,13 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
       }
       const std::string canonicalToAosPath =
           canonicalizeLegacySoaToAosHelperPath(candidatePath);
-      if (isCanonicalStdlibSoaHelperPath(canonicalToAosPath, "to_aos") &&
-          pathExists("/to_aos")) {
-        return "/to_aos";
+      if (isCanonicalStdlibSoaHelperPath(canonicalToAosPath, "to" "_aos") &&
+          pathExists("/to" "_aos")) {
+        return "/to" "_aos";
       }
-      if (isCanonicalStdlibSoaHelperPath(canonicalToAosPath, "to_aos_ref") &&
-          pathExists("/to_aos_ref")) {
-        return "/to_aos_ref";
+      if (isCanonicalStdlibSoaHelperPath(canonicalToAosPath, "to" "_aos_ref") &&
+          pathExists("/to" "_aos_ref")) {
+        return "/to" "_aos_ref";
       }
       if (isCanonicalStdlibSoaHelperPath(candidatePath, "push") &&
           pathExists(samePathSoaHelperTargetPath("push"))) {
@@ -591,7 +591,7 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
       if (expr.isMethodCall || !expr.templateArgs.empty()) {
         return {};
       }
-      if ((candidatePath == "/to_aos" || candidatePath == "/to_aos_ref") &&
+      if ((candidatePath == "/to" "_aos" || candidatePath == "/to" "_aos_ref") &&
           hasDefinitionFamilyPath(candidatePath)) {
         return candidatePath;
       }

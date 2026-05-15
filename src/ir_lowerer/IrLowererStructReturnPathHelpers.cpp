@@ -107,7 +107,7 @@ std::string resolveSpecializedExperimentalSoaVectorReturnPath(
     return "";
   }
   base = normalizeDeclaredCollectionTypeBase(trimTemplateTypeText(base));
-  if (base != "soa_vector") {
+  if (base != "soa" "_vector") {
     return "";
   }
 

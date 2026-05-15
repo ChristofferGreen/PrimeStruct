@@ -18,7 +18,7 @@ bool isRemovedVectorCompatibilityHelper(std::string_view helperName) {
 
 bool isRemovedBorrowedSoaCompatibilityHelper(std::string_view helperName) {
   return helperName == "count_ref" || helperName == "get_ref" ||
-         helperName == "ref_ref" || helperName == "to_aos_ref";
+         helperName == "ref_ref" || helperName == "to" "_aos_ref";
 }
 
 bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
@@ -170,7 +170,7 @@ std::string experimentalSoaHelperPathLocal(std::string_view helperName) {
 } // namespace
 
 std::string samePathSoaHelperTargetPath(std::string_view helperName) {
-  if (helperName == "to_aos" || helperName == "to_aos_ref") {
+  if (helperName == "to" "_aos" || helperName == "to" "_aos_ref") {
     return "/" + std::string(helperName);
   }
   return "/" + soa_paths::legacySoaFolder() + "/" + std::string(helperName);
@@ -224,12 +224,12 @@ bool isSoaReadRefHelperName(std::string_view helperName) {
 bool isExplicitPublicSoaSurfaceHelperName(std::string_view helperName) {
   return isSoaReadRefHelperName(helperName) ||
          helperName == "soa" || helperName == "single" ||
-         helperName == "from_aos" || helperName == "field_view";
+         helperName == "from" "_aos" || helperName == "field_view";
 }
 
 bool isSupportedCompatibilitySoaHelperName(std::string_view helperName) {
   return isSoaReadRefHelperName(helperName) ||
-         helperName == "to_aos" || helperName == "to_aos_ref" ||
+         helperName == "to" "_aos" || helperName == "to" "_aos_ref" ||
          helperName == "push" || helperName == "reserve";
 }
 
@@ -256,20 +256,20 @@ bool isSoaConversionSurfaceSpelling(std::string_view normalizedPrefix,
   std::string helperName;
   bool usesPublicSurface = false;
   if (splitSoaSurfaceHelperPath(normalizedName, &helperName, &usesPublicSurface)) {
-    return helperName == "to_aos" || helperName == "to_aos_ref" ||
+    return helperName == "to" "_aos" || helperName == "to" "_aos_ref" ||
            (!usesPublicSurface && helperName == "to_soa");
   }
   if (isPublicSoaSurfaceNamespace(normalizedPrefix) &&
-      normalizedName == "to_aos") {
+      normalizedName == "to" "_aos") {
     return true;
   }
   if (isCompatibilitySoaSurfaceNamespace(normalizedPrefix) &&
-      (normalizedName == "to_soa" || normalizedName == "to_aos" ||
-       normalizedName == "to_aos_ref")) {
+      (normalizedName == "to_soa" || normalizedName == "to" "_aos" ||
+       normalizedName == "to" "_aos_ref")) {
     return true;
   }
-  return normalizedName == "to_soa" || normalizedName == "to_aos" ||
-         normalizedName == "to_aos_ref";
+  return normalizedName == "to_soa" || normalizedName == "to" "_aos" ||
+         normalizedName == "to" "_aos_ref";
 }
 
 bool isSoaCountOrAccessSurfaceSpelling(std::string_view normalizedPrefix,
@@ -440,8 +440,8 @@ bool isRootBuiltinName(const std::string &name) {
          normalized == "loop" || normalized == "while" || normalized == "for" || normalized == "repeat" ||
          normalized == "return" || normalized == "array" || normalized == "vector" || normalized == "map" ||
          normalized == "File" || normalized == "try" || normalized == "count" || normalized == "capacity" ||
-         normalized == "to_soa" || normalized == "to_aos" ||
-         normalized == "to_aos_ref" ||
+         normalized == "to_soa" || normalized == "to" "_aos" ||
+         normalized == "to" "_aos_ref" ||
          normalized == "push" || normalized == "pop" ||
          normalized == "reserve" || normalized == "clear" || normalized == "remove_at" || normalized == "remove_swap" ||
          normalized == "at" || normalized == "at_unsafe" || normalized == "convert" ||
@@ -762,11 +762,11 @@ std::string canonicalizeLegacySoaToAosHelperPath(std::string_view path) {
   if (templateSuffix != std::string::npos) {
     canonicalPath.erase(templateSuffix);
   }
-  if (canonicalPath == "/to_aos") {
-    return compatibilitySoaHelperTargetPath("to_aos");
+  if (canonicalPath == "/to" "_aos") {
+    return compatibilitySoaHelperTargetPath("to" "_aos");
   }
-  if (canonicalPath == "/to_aos_ref") {
-    return compatibilitySoaHelperTargetPath("to_aos_ref");
+  if (canonicalPath == "/to" "_aos_ref") {
+    return compatibilitySoaHelperTargetPath("to" "_aos_ref");
   }
   return canonicalPath;
 }

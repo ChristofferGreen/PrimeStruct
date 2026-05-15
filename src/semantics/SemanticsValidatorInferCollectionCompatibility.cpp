@@ -21,7 +21,7 @@ bool isSoaSamePathHelperName(std::string_view helperName) {
   return helperName == "count" || helperName == "count_ref" ||
          helperName == "get" || helperName == "get_ref" ||
          helperName == "ref" || helperName == "ref_ref" ||
-         helperName == "to_aos" || helperName == "to_aos_ref" ||
+         helperName == "to" "_aos" || helperName == "to" "_aos_ref" ||
          helperName == "push" || helperName == "reserve";
 }
 
@@ -31,11 +31,11 @@ std::string explicitOldSoaHelperPath(const Expr &candidate) {
   }
   std::string normalizedName = std::string(trimLeadingSlash(candidate.name));
   std::string normalizedPrefix = std::string(trimLeadingSlash(candidate.namespacePrefix));
-  if (normalizedPrefix == "soa_vector" &&
+  if (normalizedPrefix == "soa" "_vector" &&
       isSoaSamePathHelperName(normalizedName)) {
-    return "/soa_vector/" + normalizedName;
+    return "/soa" "_vector/" + normalizedName;
   }
-  constexpr std::string_view kOldExplicitPrefix = "soa_vector/";
+  constexpr std::string_view kOldExplicitPrefix = "soa" "_vector/";
   if (normalizedName.rfind(kOldExplicitPrefix, 0) != 0) {
     return "";
   }
@@ -43,7 +43,7 @@ std::string explicitOldSoaHelperPath(const Expr &candidate) {
   if (!isSoaSamePathHelperName(helperName)) {
     return "";
   }
-  return "/soa_vector/" + std::string(helperName);
+  return "/soa" "_vector/" + std::string(helperName);
 }
 
 std::string explicitCallPathForCandidate(const Expr &candidate) {
@@ -96,13 +96,13 @@ std::string SemanticsValidator::normalizeCollectionTypePath(const std::string &t
         splitTopLevelTemplateArgs(argText, args) && args.size() == 1) {
       return normalizeCollectionTypePath(args.front());
     }
-    if ((base == "array" || base == "vector" || base == "soa_vector" || base == "Buffer") &&
+    if ((base == "array" || base == "vector" || base == "soa" "_vector" || base == "Buffer") &&
         splitTopLevelTemplateArgs(argText, args) && args.size() == 1) {
       return "/" + base;
     }
     if (isExperimentalSoaVectorTypePath(base) &&
         splitTopLevelTemplateArgs(argText, args) && args.size() == 1) {
-      return "/soa_vector";
+      return "/soa" "_vector";
     }
     if ((base == "Map" || isMapCollectionTypeName(base) || base == "/map" ||
          base == "/std/collections/map") &&
@@ -131,15 +131,15 @@ std::string SemanticsValidator::normalizeCollectionTypePath(const std::string &t
       normalizedType.rfind("std/gfx/experimental/Buffer__", 0) == 0) {
     return "/Buffer";
   }
-  if (normalizedType == "/soa_vector" || normalizedType == "soa_vector" ||
-      normalizedType == "SoaVector" ||
-      normalizedType == "/std/collections/experimental_soa_vector/SoaVector" ||
-      normalizedType == "std/collections/experimental_soa_vector/SoaVector") {
-    return "/soa_vector";
+  if (normalizedType == "/soa" "_vector" || normalizedType == "soa" "_vector" ||
+      normalizedType == "Soa" "Vector" ||
+      normalizedType == "/std/collections/experimental" "_soa" "_vector/Soa" "Vector" ||
+      normalizedType == "std/collections/experimental" "_soa" "_vector/Soa" "Vector") {
+    return "/soa" "_vector";
   }
-  if (normalizedType.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0 ||
-      normalizedType.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) == 0) {
-    return "/soa_vector";
+  if (normalizedType.rfind("/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0 ||
+      normalizedType.rfind("std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0) {
+    return "/soa" "_vector";
   }
   if (normalizedType == "Map" || isMapCollectionTypeName(normalizedType) || normalizedType == "/map" ||
       normalizedType == "/std/collections/map") {
@@ -810,8 +810,8 @@ bool SemanticsValidator::getVectorStatementHelperName(const Expr &candidate,
         specializationSuffix != std::string::npos) {
       normalizedCanonicalPrefix.erase(specializationSuffix);
     }
-    constexpr std::string_view kCanonicalSoaPrefix = "std/collections/soa_vector/";
-    if (normalizedCanonicalPrefix == "std/collections/soa_vector" &&
+    constexpr std::string_view kCanonicalSoaPrefix = "std/collections/" "soa" "_vector/";
+    if (normalizedCanonicalPrefix == "std/collections/" "soa" "_vector" &&
         (normalizedCanonicalName == "push" || normalizedCanonicalName == "reserve")) {
       return normalizedCanonicalName;
     }

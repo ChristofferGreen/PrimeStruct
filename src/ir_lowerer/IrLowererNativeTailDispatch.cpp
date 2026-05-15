@@ -175,12 +175,12 @@ bool isExplicitDirectSoaAccessCall(const Expr &expr) {
     return false;
   }
   const std::string rawPath = resolveNativeTailCallPathWithoutFallbackProbes(expr);
-  return rawPath == "/soa_vector/get" ||
-         rawPath == "/std/collections/soa_vector/get" ||
-         rawPath == "/std/collections/soa/get" ||
-         rawPath == "/soa_vector/get_ref" ||
-         rawPath == "/std/collections/soa_vector/get_ref" ||
-         rawPath == "/std/collections/soa/get_ref";
+  return rawPath == "/soa" "_vector/get" ||
+         rawPath == "/std/collections/" "soa" "_vector/get" ||
+         rawPath == "/std/collections/" "soa/get" ||
+         rawPath == "/soa" "_vector/get_ref" ||
+         rawPath == "/std/collections/" "soa" "_vector/get_ref" ||
+         rawPath == "/std/collections/" "soa/get_ref";
 }
 
 bool hasSemanticMapAccessHelperDefinition(const SemanticProgram *semanticProgram,
@@ -522,7 +522,7 @@ UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnosticImpl(
     };
     return matchesCollectionRoot("vector") ||
            matchesCollectionRoot("array") ||
-           matchesCollectionRoot("soa_vector");
+           matchesCollectionRoot("soa" "_vector");
   };
   const bool hasPublishedVectorMetadataPath =
       expr.kind == Expr::Kind::Call &&

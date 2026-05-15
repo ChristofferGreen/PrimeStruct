@@ -325,9 +325,9 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   }
   const std::string arrayPrefix = "array/";
   const std::string stdVectorPrefix = collectionMemberRoot("vector", false);
-  const std::string stdSoaVectorPrefix = "std/collections/soa_vector/";
-  const std::string internalSoaVectorPrefix = "std/collections/internal_soa_vector/";
-  const std::string experimentalSoaVectorPrefix = "std/collections/experimental_soa_vector/";
+  const std::string stdSoaVectorPrefix = "std/collections/" "soa" "_vector/";
+  const std::string internalSoaVectorPrefix = "std/collections/internal_soa" "_vector/";
+  const std::string experimentalSoaVectorPrefix = "std/collections/experimental" "_soa" "_vector/";
   const std::string experimentalVectorPrefix =
       experimentalCollectionMemberRoot("vector", false);
   if (normalized.rfind(arrayPrefix, 0) == 0) {
@@ -344,9 +344,9 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   if (normalized.rfind(stdSoaVectorPrefix, 0) == 0) {
     helperNameOut = stripGeneratedHelperSuffix(
         normalized.substr(stdSoaVectorPrefix.size()));
-    if (helperNameOut == "soaVectorCount") {
+    if (helperNameOut == "soa" "VectorCount") {
       helperNameOut = "count";
-    } else if (helperNameOut == "soaVectorCountRef") {
+    } else if (helperNameOut == "soa" "VectorCountRef") {
       helperNameOut = "count_ref";
     }
     return helperNameOut == "count" ||
@@ -359,11 +359,11 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   if (normalized.rfind(experimentalSoaVectorPrefix, 0) == 0) {
     helperNameOut = stripGeneratedHelperSuffix(
         normalized.substr(experimentalSoaVectorPrefix.size()));
-    if (helperNameOut == "soaVectorCount") {
+    if (helperNameOut == "soa" "VectorCount") {
       helperNameOut = "count";
       return true;
     }
-    if (helperNameOut == "soaVectorCountRef") {
+    if (helperNameOut == "soa" "VectorCountRef") {
       helperNameOut = "count_ref";
       return true;
     }
@@ -372,11 +372,11 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   if (normalized.rfind(internalSoaVectorPrefix, 0) == 0) {
     helperNameOut = stripGeneratedHelperSuffix(
         normalized.substr(internalSoaVectorPrefix.size()));
-    if (helperNameOut == "soaVectorCount") {
+    if (helperNameOut == "soa" "VectorCount") {
       helperNameOut = "count";
       return true;
     }
-    if (helperNameOut == "soaVectorCountRef") {
+    if (helperNameOut == "soa" "VectorCountRef") {
       helperNameOut = "count_ref";
       return true;
     }

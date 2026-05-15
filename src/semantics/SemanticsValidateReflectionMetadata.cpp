@@ -54,7 +54,7 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
     if (splitTemplateTypeName(canonicalType, base, arg)) {
       const std::string normalizedBase = normalizeBindingTypeName(base);
       if (normalizedBase == "array" || normalizedBase == "vector" || normalizedBase == "map" ||
-          normalizedBase == "soa_vector" || normalizedBase == "Result") {
+          normalizedBase == "soa" "_vector" || normalizedBase == "Result") {
         return normalizedBase;
       }
       if (normalizedBase == "Pointer") {

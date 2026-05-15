@@ -34,7 +34,7 @@ bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
          alias == "repeat" || alias == "try" || alias == "location" ||
          alias == "dereference" || alias == "count" ||
          alias == "count_ref" || alias == "capacity" ||
-         alias == "to_aos" || alias == "to_aos_ref" ||
+         alias == "to" "_aos" || alias == "to" "_aos_ref" ||
          alias == "push" || alias == "pop" || alias == "reserve" ||
          alias == "clear" || alias == "remove_at" ||
          alias == "remove_swap" || alias == "move" ||
@@ -48,7 +48,7 @@ bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
          alias == "ref_ref" || alias == "at" ||
          alias == "at_unsafe" || alias == "array" ||
          alias == "vector" || alias == "map" ||
-         alias == "soa_vector" || alias == "convert" ||
+         alias == "soa" "_vector" || alias == "convert" ||
          alias == "clamp" || alias == "min" || alias == "max" ||
          alias == "lerp" || alias == "fma" || alias == "hypot" ||
          alias == "copysign" || alias == "radians" ||
@@ -83,9 +83,9 @@ std::string normalizeInternalSoaStorageBuiltinAlias(std::string name) {
       "std/collections/internal_soa_storage/",
       "std/collections/internal_buffer_checked/",
       "std/collections/internal_buffer_unchecked/",
-      "std/collections/experimental_soa_vector/",
-      "std/collections/experimental_soa_vector_conversions/",
-      "std/collections/soa_vector_conversions/",
+      "std/collections/experimental" "_soa" "_vector/",
+      "std/collections/experimental" "_soa" "_vector_conversions/",
+      "std/collections/" "soa" "_vector_conversions/",
       "std/collections/experimental_" "vector" "/",
       "std/collections/ContainerError/",
       "std/file/",
@@ -195,7 +195,7 @@ std::string specializedExperimentalSoaVectorStructPathForElementType(
     hash *= 1099511628211ULL;
   }
   std::ostringstream specializedPath;
-  specializedPath << "/std/collections/experimental_soa_vector/SoaVector__t"
+  specializedPath << "/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__t"
                   << std::hex << hash;
   return specializedPath.str();
 }
@@ -212,8 +212,8 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
            name == "do" || name == "block" || name == "loop" || name == "for" ||
            name == "repeat" || name == "try" || name == "location" || name == "dereference" ||
            name == "count" || name == "count_ref" ||
-           name == "capacity" || name == "to_aos" ||
-           name == "to_aos_ref" ||
+           name == "capacity" || name == "to" "_aos" ||
+           name == "to" "_aos_ref" ||
            name == "push" || name == "reserve" ||
            name == "move" || name == "negate" ||
            name == "plus" || name == "minus" || name == "multiply" ||

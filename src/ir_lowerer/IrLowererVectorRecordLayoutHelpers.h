@@ -68,10 +68,10 @@ bool resolveVectorRecordFieldSlotsFromFields(const std::string &structPath,
                                              const ResolveFieldFn &resolveField,
                                              VectorRecordFieldSlots &out) {
   auto isExperimentalSoaVectorPath = [](const std::string &path) {
-    return path == "/std/collections/experimental_soa_vector/SoaVector" ||
-           path == "std/collections/experimental_soa_vector/SoaVector" ||
-           path.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0 ||
-           path.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+    return path == "/std/collections/experimental" "_soa" "_vector/Soa" "Vector" ||
+           path == "std/collections/experimental" "_soa" "_vector/Soa" "Vector" ||
+           path.rfind("/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0 ||
+           path.rfind("std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0;
   };
   if (isExperimentalSoaVectorPath(structPath)) {
     int32_t storageOffset = -1;

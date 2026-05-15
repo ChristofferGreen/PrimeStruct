@@ -86,14 +86,11 @@ Task template:
 - TODO-4276: Expand type packs in helpers and lifecycle hooks | track:
   tuple-type-packs | primary surface: generic helper signatures, helper
   bodies, return envelopes, and lifecycle behavior
-- TODO-4529: Replace SoA inventory with strict zero audit | track:
-  soa-zero-audit | primary surface: final production C++ SoA trace gate
 
 ### Parallel Work Tracks (Current)
 
-- `soa-zero-audit`: TODO-4528 removed lowerer count/access trace
-  residue; ready TODO-4529 replaces the remaining SoA inventory with a
-  strict zero-production-trace audit.
+- `soa-zero-audit`: TODO-4529 replaced the residue inventory with a strict
+  zero-production-trace audit; no SoA zero-audit leaf is ready.
 - `map-zero-audit`: TODO-4532 reduced the lowerer native-dispatch slice;
   TODO-4464 remains the parent for future bounded trace-reduction splits
   and the final strict zero map-surface audit.
@@ -126,7 +123,7 @@ Task template:
   reduced the shared semantic builtin path helper boundary; TODO-4527 removed
   template-monomorph residue; TODO-4533 removed lowerer call-resolution
   residual bridge traces; TODO-4528 removed lowerer count/access residue; and
-  TODO-4529 is ready for the strict zero audit
+  TODO-4529 replaced the residue inventory with a strict zero audit
 - Deferred generic tuple substrate: ready TODO-4276 after TODO-4275
   completed pack-expanded storage, followed by TODO-4271 -> TODO-4272
   -> TODO-4274 -> TODO-4273 -> TODO-4277 -> TODO-4278
@@ -142,7 +139,6 @@ Task template:
 ### Execution Queue (Recommended Track Order)
 
 - TODO-4276: Expand type packs in helpers and lifecycle hooks
-- TODO-4529: Replace SoA inventory with strict zero audit
 - TODO-4271: Add compile-time pack indexing
 - TODO-4272: Add stdlib `tuple<Ts...>`
 - TODO-4274: Add tuple bracket indexing sugar
@@ -1950,29 +1946,6 @@ Task template:
   - notes:
     - Split after TODO-4525 because the remaining inventory still spans
       semantic validation, template monomorphization, emitter helpers, and IR
-      lowerer routing. Keep the parent open until TODO-4529 replaces the
-      inventory cap with a strict zero-production-trace audit.
-
-- [ ] TODO-4529: Replace SoA inventory with strict zero audit
-  - owner: ai
-  - created_at: 2026-05-15
-  - phase: SoA public surface rename and ownership cutover
-  - parallel_track: soa-zero-audit
-  - split_from: TODO-4524
-  - depends_on: TODO-4528
-  - scope: Replace the decaying SoA trace inventory with a strict
-    zero-production-trace release gate.
-  - implementation_notes:
-    - Remove `scripts/soa_surface_trace_inventory.txt` once production C++
-      public-surface traces are gone.
-    - Keep checker self-tests that prove generic substrate terms are allowed
-      and any reintroduced public SoA collection path, helper alias, type
-      spelling, diagnostic, or registry metadata fails immediately.
-  - acceptance:
-    - The SoA checker reports zero public-surface production traces in `src/`
-      and `include/`.
-    - The release CTest gate fails when a bad public SoA collection trace is
-      added to production C++.
-    - Existing canonical `soa<T>` behavior and docs/source-lock tests pass.
-  - stop_rule: Stop once the release gate has no checked-in residue inventory
-    and enforces strict zero tolerance for public SoA collection-surface traces.
+      lowerer routing. TODO-4529 replaced the inventory cap with a strict
+      zero-production-trace audit; keep this parent for root release-gate
+      reconciliation.

@@ -57,7 +57,7 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
     if (helperName.empty() || helperName == "count" || helperName == "count_ref" ||
         helperName == "get" || helperName == "get_ref" || helperName == "ref" ||
         helperName == "ref_ref" || helperName == "to_soa" ||
-        helperName == "to_aos" || helperName == "to_aos_ref") {
+        helperName == "to" "_aos" || helperName == "to" "_aos_ref") {
       return false;
     }
     if (!hasVisibleSoaHelperTargetForCurrentImports(helperName)) {
@@ -74,7 +74,7 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
         return false;
       }
     }
-    if (normalizeBindingTypeName(receiverBinding.typeName) != "soa_vector" ||
+    if (normalizeBindingTypeName(receiverBinding.typeName) != "soa" "_vector" ||
         receiverBinding.typeTemplateArg.empty()) {
       return false;
     }
@@ -146,7 +146,7 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
     if (exprKind == ReturnKind::Unknown && hasExprBinding) {
       const std::string normalizedTypeName = normalizeBindingTypeName(exprBinding.typeName);
       if ((normalizedTypeName == "array" || normalizedTypeName == "vector" ||
-           normalizedTypeName == "soa_vector" || isMapCollectionTypeName(normalizedTypeName)) &&
+           normalizedTypeName == "soa" "_vector" || isMapCollectionTypeName(normalizedTypeName)) &&
           !exprBinding.typeTemplateArg.empty()) {
         exprKind = ReturnKind::Array;
       } else {

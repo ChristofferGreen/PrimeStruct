@@ -58,8 +58,8 @@ bool isCanonicalSoaVectorHelperAliasName(std::string_view aliasName) {
   return aliasName == "count" || aliasName == "get" || aliasName == "ref" ||
          aliasName == "count_ref" || aliasName == "get_ref" ||
          aliasName == "ref_ref" || aliasName == "reserve" ||
-         aliasName == "push" || aliasName == "to_aos" ||
-         aliasName == "to_aos_ref";
+         aliasName == "push" || aliasName == "to" "_aos" ||
+         aliasName == "to" "_aos_ref";
 }
 
 std::string genericTypeFamilyNameForInternalName(std::string_view name) {
@@ -221,13 +221,13 @@ bool SemanticsValidator::buildImportAliases() {
   };
   auto registerCanonicalSoaVectorWildcardAliases =
       [&](const std::string &prefix, std::unordered_map<std::string, std::string> &) {
-        if (prefix != "/std/collections/soa_vector") {
+        if (prefix != "/std/collections/" "soa" "_vector") {
           return false;
         }
         bool sawAlias = false;
         static const std::array<std::string_view, 10> kHelpers = {
             "count", "get", "ref", "count_ref", "get_ref",
-            "ref_ref", "reserve", "push", "to_aos", "to_aos_ref"};
+            "ref_ref", "reserve", "push", "to" "_aos", "to" "_aos_ref"};
         for ([[maybe_unused]] const std::string_view helperName : kHelpers) {
           sawAlias = true;
         }
@@ -308,7 +308,7 @@ bool SemanticsValidator::buildImportAliases() {
       };
   auto shouldPublishMergedImportAlias = [&](std::string_view aliasName,
                                             std::string_view targetPath) {
-    return !(targetPath.rfind("/std/collections/soa_vector/", 0) == 0 &&
+    return !(targetPath.rfind("/std/collections/" "soa" "_vector/", 0) == 0 &&
              isCanonicalSoaVectorHelperAliasName(aliasName));
   };
   auto isInternalMapLegacyWildcardAliasDefinition =

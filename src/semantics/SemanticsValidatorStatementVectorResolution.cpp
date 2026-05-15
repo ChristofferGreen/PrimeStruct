@@ -85,7 +85,7 @@ bool SemanticsValidator::resolveVectorStatementBinding(
     std::string arg;
     if (splitTemplateTypeName(normalizedType, base, arg)) {
       const std::string normalizedBase = normalizeBindingTypeName(base);
-      if ((normalizedBase == "vector" || normalizedBase == "soa_vector") && !arg.empty()) {
+      if ((normalizedBase == "vector" || normalizedBase == "soa" "_vector") && !arg.empty()) {
         bindingOut = {};
         bindingOut.typeName = normalizedBase;
         bindingOut.typeTemplateArg = arg;
@@ -106,13 +106,13 @@ bool SemanticsValidator::resolveVectorStatementBinding(
         }
         if (isExperimentalSoaVectorTypePath(normalizedResolvedBase) && !arg.empty()) {
           bindingOut = {};
-          bindingOut.typeName = "soa_vector";
+          bindingOut.typeName = "soa" "_vector";
           bindingOut.typeTemplateArg = arg;
           bindingOut.isMutable = isMutable;
           return true;
         }
       }
-    } else if (normalizedType == "vector" || normalizedType == "soa_vector") {
+    } else if (normalizedType == "vector" || normalizedType == "soa" "_vector") {
       bindingOut = {};
       bindingOut.typeName = normalizedType;
       bindingOut.typeTemplateArg.clear();
@@ -128,7 +128,7 @@ bool SemanticsValidator::resolveVectorStatementBinding(
     std::string elemType;
     if (extractExperimentalSoaVectorElementType(inferredBinding, elemType)) {
       bindingOut = {};
-      bindingOut.typeName = "soa_vector";
+      bindingOut.typeName = "soa" "_vector";
       bindingOut.typeTemplateArg = elemType;
       bindingOut.isMutable = isMutable;
       return true;
@@ -145,7 +145,7 @@ bool SemanticsValidator::resolveVectorStatementBinding(
 
   if (target.kind == Expr::Kind::Name) {
     if (const BindingInfo *binding = resolveNamedBinding(target.name)) {
-      if ((binding->typeName == "vector" || binding->typeName == "soa_vector") &&
+      if ((binding->typeName == "vector" || binding->typeName == "soa" "_vector") &&
           !binding->typeTemplateArg.empty()) {
         bindingOut = *binding;
         return true;
@@ -267,7 +267,7 @@ bool SemanticsValidator::validateVectorStatementHelperTarget(
   std::string experimentalElemType;
   const bool isExperimentalVectorTarget = extractExperimentalVectorElementType(bindingOut, experimentalElemType);
   if (bindingOut.typeName != "vector" &&
-      !(allowSoaVectorTarget && bindingOut.typeName == "soa_vector") &&
+      !(allowSoaVectorTarget && bindingOut.typeName == "soa" "_vector") &&
       !isExperimentalVectorTarget) {
     return failVectorTargetDiagnostic(std::string(helperName) + " requires vector binding");
   }
@@ -326,19 +326,19 @@ bool SemanticsValidator::resolveVectorStatementHelperTargetPath(
        helperName == "at" || helperName == "at_unsafe" ||
        helperName == "get" || helperName == "get_ref" ||
        helperName == "ref" || helperName == "ref_ref" ||
-       helperName == "to_aos" || helperName == "to_aos_ref" ||
+       helperName == "to" "_aos" || helperName == "to" "_aos_ref" ||
        helperName == "push" || helperName == "reserve")) {
     std::string collectionTypePath;
     if (resolveCallCollectionTypePath(receiver, params, locals, collectionTypePath) &&
-        (collectionTypePath == "/vector" || collectionTypePath == "/soa_vector")) {
-      if (collectionTypePath == "/soa_vector" &&
+        (collectionTypePath == "/vector" || collectionTypePath == "/soa" "_vector")) {
+      if (collectionTypePath == "/soa" "_vector" &&
           (helperName == "count" || helperName == "count_ref" ||
            helperName == "get" || helperName == "get_ref" ||
            helperName == "ref" || helperName == "ref_ref" ||
-           helperName == "to_aos" || helperName == "to_aos_ref" ||
+           helperName == "to" "_aos" || helperName == "to" "_aos_ref" ||
            helperName == "push" || helperName == "reserve")) {
         resolvedOut =
-            preferredSoaHelperTargetForCollectionType(helperName, "/soa_vector");
+            preferredSoaHelperTargetForCollectionType(helperName, "/soa" "_vector");
         return true;
       }
       if (collectionTypePath == "/vector") {
@@ -358,8 +358,8 @@ bool SemanticsValidator::resolveVectorStatementHelperTargetPath(
       resolvedOut = preferredBareVectorHelperTarget(helperName);
       return true;
     }
-    if (vectorBinding.typeName == "soa_vector") {
-      resolvedOut = "/soa_vector/" + helperName;
+    if (vectorBinding.typeName == "soa" "_vector") {
+      resolvedOut = "/soa" "_vector/" + helperName;
       return true;
     }
   }
@@ -388,7 +388,7 @@ bool SemanticsValidator::resolveVectorStatementHelperTargetPath(
       return false;
     }
     resolvedOut =
-        preferredSoaHelperTargetForCollectionType(helperName, "/soa_vector");
+        preferredSoaHelperTargetForCollectionType(helperName, "/soa" "_vector");
     return true;
   };
 

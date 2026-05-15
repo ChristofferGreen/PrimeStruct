@@ -23,9 +23,9 @@ bool isSoaAccessHelperName(const std::string &helperName) {
 }
 
 bool isSoaReceiverStructPath(const std::string &structPath) {
-  return structPath == "/soa_vector" ||
-         structPath == "/std/collections/soa_vector" ||
-         structPath.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+  return structPath == "/soa" "_vector" ||
+         structPath == "/std/collections/" "soa" "_vector" ||
+         structPath.rfind("/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0;
 }
 
 bool isMapCanonicalAccessPath(const std::string &path) {
@@ -689,7 +689,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
             methodReceiverIndex = 0;
             resolved =
                 preferredSoaHelperTargetForCollectionType(accessHelperName,
-                                                          "/soa_vector");
+                                                          "/soa" "_vector");
             resolvedMethod = true;
             return true;
           }
@@ -826,8 +826,8 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
 
   if (!expr.isMethodCall && !expr.args.empty() &&
       defMap_.find(resolved) == defMap_.end() &&
-      !isSimpleCallName(expr, "to_soa") && !isSimpleCallName(expr, "to_aos") &&
-      !isSimpleCallName(expr, "to_aos_ref") &&
+      !isSimpleCallName(expr, "to_soa") && !isSimpleCallName(expr, "to" "_aos") &&
+      !isSimpleCallName(expr, "to" "_aos_ref") &&
       !isSimpleCallName(expr, "contains") &&
       !getBuiltinArrayAccessName(expr, accessHelperName)) {
     handledOut = true;

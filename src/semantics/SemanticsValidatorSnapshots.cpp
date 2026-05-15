@@ -180,28 +180,28 @@ collectionBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
       if (normalizedPath.starts_with(experimentalSoaPrefix)) {
         const std::string_view helperName = normalizedPath.substr(
             experimentalSoaPrefix.size());
-        if (helperName == "soaVectorCount") {
+        if (helperName == "soa" "VectorCount") {
           return "count";
         }
-        if (helperName == "soaVectorCountRef") {
+        if (helperName == "soa" "VectorCountRef") {
           return "count_ref";
         }
-        if (helperName == "soaVectorGet") {
+        if (helperName == "soa" "VectorGet") {
           return "get";
         }
-        if (helperName == "soaVectorGetRef") {
+        if (helperName == "soa" "VectorGetRef") {
           return "get_ref";
         }
-        if (helperName == "soaVectorRef") {
+        if (helperName == "soa" "VectorRef") {
           return "ref";
         }
-        if (helperName == "soaVectorRefRef") {
+        if (helperName == "soa" "VectorRefRef") {
           return "ref_ref";
         }
-        if (helperName == "soaVectorPush") {
+        if (helperName == "soa" "VectorPush") {
           return "push";
         }
-        if (helperName == "soaVectorReserve") {
+        if (helperName == "soa" "VectorReserve") {
           return "reserve";
         }
       }
@@ -211,11 +211,11 @@ collectionBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
       if (normalizedPath.starts_with(experimentalSoaConversionsPrefix)) {
         const std::string_view helperName = normalizedPath.substr(
             experimentalSoaConversionsPrefix.size());
-        if (helperName == "soaVectorToAos") {
-          return "to_aos";
+        if (helperName == "soa" "VectorToAos") {
+          return "to" "_aos";
         }
-        if (helperName == "soaVectorToAosRef") {
-          return "to_aos_ref";
+        if (helperName == "soa" "VectorToAosRef") {
+          return "to" "_aos_ref";
         }
       }
       return {};

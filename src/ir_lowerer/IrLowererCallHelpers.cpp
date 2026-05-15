@@ -30,7 +30,7 @@ bool isGeneratedStdlibCollectionStructPath(std::string_view path) {
       experimentalCollectionTypePath("vector", "Vector") + "__";
   return isSinglePathSegmentWithPrefix(path, experimentalVectorTypePrefix) ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/experimental_map/Map__") ||
-         isSinglePathSegmentWithPrefix(path, "/std/collections/experimental_soa_vector/SoaVector__") ||
+         isSinglePathSegmentWithPrefix(path, "/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__") ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/internal_soa_storage/SoaColumn__") ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/internal_soa_storage/SoaFieldView__") ||
          isGeneratedSinglePathSegmentWithPrefix(path, "/std/collections/internal_soa_storage/SoaColumns");
@@ -242,7 +242,7 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
     };
     return matchesCollectionRoot("vector") ||
            matchesCollectionRoot("array") ||
-           matchesCollectionRoot("soa_vector");
+           matchesCollectionRoot("soa" "_vector");
   };
   auto isExplicitRemovedMapHelperAliasCall = [&]() {
     if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {

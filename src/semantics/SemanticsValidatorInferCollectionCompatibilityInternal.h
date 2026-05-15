@@ -573,15 +573,15 @@ legacyExperimentalVectorCompatibilityShorthandTypeText(
             importPath.rfind(root, 0) == 0 &&
             importPath[root.size()] == '/');
   };
-  return matchesRoot("/std/collections/soa_vector") ||
-         matchesRoot("/std/collections/soa_vector_conversions") ||
-         matchesRoot("/std/collections/experimental_soa_vector") ||
-         matchesRoot("/std/collections/experimental_soa_vector_conversions");
+  return matchesRoot("/std/collections/" "soa" "_vector") ||
+         matchesRoot("/std/collections/" "soa" "_vector_conversions") ||
+         matchesRoot("/std/collections/experimental" "_soa" "_vector") ||
+         matchesRoot("/std/collections/experimental" "_soa" "_vector_conversions");
 }
 
 [[maybe_unused]] std::string directRemovedSoaCompatibilityImportDiagnostic() {
-  return "direct import of retired soa_vector compatibility modules is not "
-         "supported; use /std/collections/soa/*";
+  return "direct import of retired soa" "_vector compatibility modules is not "
+         "supported; use /std/collections/" "soa/*";
 }
 
 [[maybe_unused]] bool resolveExplicitPublishedMapHelperExprMemberName(

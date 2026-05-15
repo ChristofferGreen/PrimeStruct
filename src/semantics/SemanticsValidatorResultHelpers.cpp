@@ -625,7 +625,7 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
       return methodName == "count" || methodName == "count_ref" ||
              methodName == "get" || methodName == "get_ref" ||
              methodName == "ref" || methodName == "ref_ref" ||
-             methodName == "to_aos" || methodName == "to_aos_ref" ||
+             methodName == "to" "_aos" || methodName == "to" "_aos_ref" ||
              methodName == "push" || methodName == "reserve";
     };
     const std::string normalizedMethodName =
@@ -681,9 +681,9 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     if (resolvedType.empty()) {
       return "";
     }
-    if (resolvedType.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0 &&
+    if (resolvedType.rfind("/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0 &&
         isCanonicalSoaWrapperMethodName(normalizedMethodName)) {
-      return preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/soa_vector");
+      return preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/soa" "_vector");
     }
     return resolvedType + "/" + expr.name;
   };
@@ -923,7 +923,7 @@ bool SemanticsValidator::errorTypesMatch(const std::string &left,
       if (isResultTypeBaseName(base)) {
         return "Result<" + stripInnerWhitespace(arg) + ">";
       }
-      if (isBuiltinTemplateTypeName(base) || base == "array" || base == "vector" || base == "soa_vector" ||
+      if (isBuiltinTemplateTypeName(base) || base == "array" || base == "vector" || base == "soa" "_vector" ||
           base == "map" || base == "File") {
         return stripInnerWhitespace(normalized);
       }

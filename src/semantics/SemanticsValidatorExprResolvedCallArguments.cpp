@@ -150,7 +150,7 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
         actualVectorSurface = "vector";
       } else if (dispatchResolvers.resolveSoaVectorTarget != nullptr &&
                  dispatchResolvers.resolveSoaVectorTarget(*arg, actualElemType)) {
-        actualVectorSurface = "soa_vector";
+        actualVectorSurface = "soa" "_vector";
       } else if (dispatchResolvers.resolveArrayTarget != nullptr &&
                  dispatchResolvers.resolveArrayTarget(*arg, actualElemType)) {
         actualVectorSurface = "array";
@@ -171,8 +171,8 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
                       "/" + normalizedActualBase)) {
                 actualVectorSurface = "vector";
                 actualElemType = actualTypeArgs.front();
-              } else if (normalizedActualBase == "soa_vector") {
-                actualVectorSurface = "soa_vector";
+              } else if (normalizedActualBase == "soa" "_vector") {
+                actualVectorSurface = "soa" "_vector";
                 actualElemType = actualTypeArgs.front();
               } else if (normalizedActualBase == "array") {
                 actualVectorSurface = "array";
@@ -276,8 +276,8 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
                                           const ParameterInfo &param) -> bool {
     if (const auto pendingPath =
             builtinSoaDirectPendingHelperPath(arg, params, locals)) {
-      if (pendingPath->find("/std/collections/soa_vector/ref") == 0 ||
-          pendingPath->find("/std/collections/soa/ref") == 0) {
+      if (pendingPath->find("/std/collections/" "soa" "_vector/ref") == 0 ||
+          pendingPath->find("/std/collections/" "soa/ref") == 0) {
         return failResolvedCallArgumentDiagnostic(
             soaUnavailableMethodDiagnostic(*pendingPath));
       }

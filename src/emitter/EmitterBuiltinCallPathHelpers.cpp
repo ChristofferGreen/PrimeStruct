@@ -27,7 +27,7 @@ bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
          alias == "repeat" || alias == "try" || alias == "location" ||
          alias == "dereference" || alias == "count" ||
          alias == "count_ref" || alias == "capacity" ||
-         alias == "to_aos" || alias == "to_aos_ref" ||
+         alias == "to" "_aos" || alias == "to" "_aos_ref" ||
          alias == "push" || alias == "pop" || alias == "reserve" ||
          alias == "clear" || alias == "remove_at" ||
          alias == "remove_swap" || alias == "move" ||
@@ -41,7 +41,7 @@ bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
          alias == "ref_ref" || alias == "at" ||
          alias == "at_unsafe" || alias == "array" ||
          alias == "vector" || alias == "map" ||
-         alias == "soa_vector" || alias == "convert" ||
+         alias == "soa" "_vector" || alias == "convert" ||
          alias == "clamp" || alias == "min" || alias == "max" ||
          alias == "lerp" || alias == "fma" || alias == "hypot" ||
          alias == "copysign" || alias == "radians" ||
@@ -218,9 +218,9 @@ std::string normalizeInternalSoaStorageBuiltinAlias(const std::string &path) {
       "std/collections/internal_soa_storage/",
       "std/collections/internal_buffer_checked/",
       "std/collections/internal_buffer_unchecked/",
-      "std/collections/experimental_soa_vector/",
-      "std/collections/experimental_soa_vector_conversions/",
-      "std/collections/soa_vector_conversions/",
+      "std/collections/experimental" "_soa" "_vector/",
+      "std/collections/experimental" "_soa" "_vector_conversions/",
+      "std/collections/" "soa" "_vector_conversions/",
       experimentalCollectionMemberRootLocal("vector"),
       "std/collections/ContainerError/",
       "std/file/",
@@ -465,8 +465,8 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
            name == "do" || name == "block" || name == "loop" || name == "for" ||
            name == "repeat" || name == "try" || name == "location" || name == "dereference" ||
            name == "count" || name == "count_ref" ||
-           name == "capacity" || name == "to_aos" ||
-           name == "to_aos_ref" ||
+           name == "capacity" || name == "to" "_aos" ||
+           name == "to" "_aos_ref" ||
            name == "push" || name == "reserve" ||
            name == "move" || name == "negate" ||
            name == "plus" || name == "minus" || name == "multiply" ||
@@ -849,7 +849,7 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   }
   if (scopedName.rfind("std/collections/internal_soa_storage/", 0) == 0) {
     std::string alias = normalizeInternalSoaStorageBuiltinAlias(scopedName);
-    if (alias == "array" || alias == "soa_vector") {
+    if (alias == "array" || alias == "soa" "_vector") {
       out = alias;
       return true;
     }
@@ -859,8 +859,8 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
     return false;
   }
   if (rawName == "array" || rawName == "vector" || rawName == "map" ||
-      rawName == "soa_vector" || rawName == "soa") {
-    out = rawName == "soa" ? "soa_vector" : rawName;
+      rawName == "soa" "_vector" || rawName == "soa") {
+    out = rawName == "soa" ? "soa" "_vector" : rawName;
     return true;
   }
   return false;

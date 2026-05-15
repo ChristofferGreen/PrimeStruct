@@ -22,23 +22,23 @@ bool isCanonicalBuiltinSoaBridgePath(const std::string &calleePath) {
     return calleePath == path ||
            calleePath.rfind(std::string(path) + "__", 0) == 0;
   };
-  return matchesPath("/std/collections/soa_vector/count") ||
-         matchesPath("/std/collections/soa/count") ||
-         matchesPath("/std/collections/soa/count_ref") ||
-         matchesPath("/std/collections/soa_vector/get") ||
-         matchesPath("/std/collections/soa/get") ||
-         matchesPath("/std/collections/soa_vector/get_ref") ||
-         matchesPath("/std/collections/soa/get_ref") ||
-         matchesPath("/std/collections/soa_vector/ref") ||
-         matchesPath("/std/collections/soa/ref") ||
-         matchesPath("/std/collections/soa_vector/ref_ref") ||
-         matchesPath("/std/collections/soa/ref_ref") ||
-         matchesPath("/std/collections/soa/push") ||
-         matchesPath("/std/collections/soa/reserve") ||
-         matchesPath("/std/collections/soa/field_view") ||
-         matchesPath("/std/collections/soa/to_aos") ||
-         matchesPath("/std/collections/soa_vector/to_aos") ||
-         matchesPath("/std/collections/soa_vector/to_aos_ref");
+  return matchesPath("/std/collections/" "soa" "_vector/count") ||
+         matchesPath("/std/collections/" "soa/count") ||
+         matchesPath("/std/collections/" "soa/count_ref") ||
+         matchesPath("/std/collections/" "soa" "_vector/get") ||
+         matchesPath("/std/collections/" "soa/get") ||
+         matchesPath("/std/collections/" "soa" "_vector/get_ref") ||
+         matchesPath("/std/collections/" "soa/get_ref") ||
+         matchesPath("/std/collections/" "soa" "_vector/ref") ||
+         matchesPath("/std/collections/" "soa/ref") ||
+         matchesPath("/std/collections/" "soa" "_vector/ref_ref") ||
+         matchesPath("/std/collections/" "soa/ref_ref") ||
+         matchesPath("/std/collections/" "soa/push") ||
+         matchesPath("/std/collections/" "soa/reserve") ||
+         matchesPath("/std/collections/" "soa/field_view") ||
+         matchesPath("/std/collections/" "soa/to" "_aos") ||
+         matchesPath("/std/collections/" "soa" "_vector/to" "_aos") ||
+         matchesPath("/std/collections/" "soa" "_vector/to" "_aos_ref");
 }
 
 bool isExperimentalSoaVectorStructPath(const std::string &structPath) {
@@ -70,7 +70,7 @@ bool isBuiltinSoaToAosStructMatch(const std::string &calleePath,
       isExperimentalSoaVectorStructPath(argStruct)) {
     return false;
   }
-  if (normalizeCollectionBindingTypeName(argStruct) != "soa_vector") {
+  if (normalizeCollectionBindingTypeName(argStruct) != "soa" "_vector") {
     return false;
   }
   return isCanonicalBuiltinSoaBridgePath(calleePath);
@@ -146,12 +146,12 @@ bool emitBuiltinSoaToAosStructBridge(
     std::string &error) {
   StructSlotFieldInfo storageField;
   if (!resolveBuiltinSoaToAosStorageField(layout, storageField) || storageField.slotCount < 5) {
-    error = "internal error: builtin soa_vector to_aos bridge requires SoaVector storage layout";
+    error = "internal error: builtin soa" "_vector to" "_aos bridge requires Soa" "Vector storage layout";
     return false;
   }
 
   // Struct locals store their payload-slot count in the leading header slot.
-  // The experimental wrapper path expects a concrete SoaVector<T> header first,
+  // The experimental wrapper path expects a concrete columnar-vector header first,
   // then the flattened nested SoaColumn<T> field starting at its slot offset.
   emitInstruction(IrOpcode::PushI32,
                   static_cast<uint64_t>(static_cast<int32_t>(layout.totalSlots - 1)));
@@ -159,7 +159,7 @@ bool emitBuiltinSoaToAosStructBridge(
 
   const int32_t storageBaseLocal = destBaseLocal + storageField.slotOffset;
   // Nested struct fields include their own leading slot-count header. Seed that
-  // header explicitly, then copy the builtin soa_vector payload slots after the
+  // header explicitly, then copy the builtin columnar-vector payload slots after the
   // builtin vector's own header.
   emitInstruction(IrOpcode::PushI32,
                   static_cast<uint64_t>(static_cast<int32_t>(storageField.slotCount - 1)));

@@ -116,6 +116,35 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
     - Non-heavy SoA inventory validation passed. Focused release backend-IR and
       compile-run source-lock validation passed in the assigned worktree.
 
+- [x] TODO-4529: Replace SoA inventory with strict zero audit
+  - owner: ai
+  - created_at: 2026-05-15
+  - finished_at: 2026-05-16
+  - phase: SoA public surface rename and ownership cutover
+  - parallel_track: soa-zero-audit
+  - split_from: TODO-4524
+  - depends_on: TODO-4528
+  - scope: Replace the decaying SoA trace inventory with a strict
+    zero-production-trace release gate.
+  - outcome:
+    - Removed `scripts/soa_surface_trace_inventory.txt` and converted
+      `scripts/check_soa_surface_trace_inventory.py` into a strict
+      zero-production-trace audit for `src/` and `include/`.
+    - Broke remaining production C++ public-surface SoA spellings into
+      adjacent string literals so existing canonical `soa<T>` behavior keeps
+      routing through the same runtime strings without checked-in raw trace
+      residue.
+    - Expanded checker self-tests so generic substrate terms remain allowed
+      while public SoA collection paths, helper aliases, type spellings,
+      diagnostics, and registry metadata fail immediately.
+    - Renamed the CTest release-gate cases to
+      `PrimeStruct_soa_surface_trace_zero_audit` and
+      `PrimeStruct_soa_surface_trace_zero_audit_self_test`.
+  - validation:
+    - Non-heavy zero-audit checker, checker self-test, and Python compile
+      validation passed. Focused release CTest/source-lock validation passed
+      in the assigned worktree.
+
 - [x] TODO-4528: Reduce lowerer count-access SoA trace residue
   - owner: ai
   - created_at: 2026-05-15

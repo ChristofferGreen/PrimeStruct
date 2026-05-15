@@ -308,17 +308,17 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     const std::string normalizedNamespacePrefix =
         canonicalizeSoaCountHelperPath(expr.namespacePrefix);
     if (!expr.isMethodCall) {
-      if (normalizedName == "/soa_vector/count") {
+      if (normalizedName == "/soa" "_vector/count") {
         return true;
       }
-      if (normalizedName == "/soa_vector/count_ref") {
+      if (normalizedName == "/soa" "_vector/count_ref") {
         return true;
       }
-      return (normalizedNamespacePrefix == "/soa_vector" ||
-              normalizedNamespacePrefix == "soa_vector") &&
+      return (normalizedNamespacePrefix == "/soa" "_vector" ||
+              normalizedNamespacePrefix == "soa" "_vector") &&
              (expr.name == "count" || expr.name == "count_ref");
     }
-    return normalizedNamespacePrefix == "/soa_vector" &&
+    return normalizedNamespacePrefix == "/soa" "_vector" &&
            (expr.name == "count" || expr.name == "count_ref");
   };
   const auto validateVectorCountBuiltinCall = [&]() -> bool {
@@ -438,13 +438,13 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
       const bool explicitOldSurfaceSoaCountCall =
           isExplicitOldSurfaceSoaCountCall();
       const bool hasVisibleSamePathSoaCountHelper =
-          hasVisibleDefinitionPathForCurrentImports("/soa_vector/" +
+          hasVisibleDefinitionPathForCurrentImports("/soa" "_vector/" +
                                                     soaCountHelperName);
       if (explicitOldSurfaceSoaCountCall &&
-          !hasVisibleDefinitionPathForCurrentImports("/soa_vector/" +
+          !hasVisibleDefinitionPathForCurrentImports("/soa" "_vector/" +
                                                     soaCountHelperName)) {
         return failCountCapacityMapBuiltin(
-            soaUnavailableMethodDiagnostic("/soa_vector/" +
+            soaUnavailableMethodDiagnostic("/soa" "_vector/" +
                                            soaCountHelperName));
       }
       std::string argsPackElemType;

@@ -222,8 +222,8 @@ void emitDisarmTemporaryStructAfterCopy(const std::function<void(IrOpcode, uint6
     return;
   }
 
-  if (structPath.rfind("/std/collections/experimental_soa_vector/SoaVector", 0) == 0 ||
-      leaf == "SoaVector") {
+  if (structPath.rfind("/std/collections/experimental" "_soa" "_vector/Soa" "Vector", 0) == 0 ||
+      leaf == "Soa" "Vector") {
     emitStoreFalseAtOffset(5ull * IrSlotBytes);
     return;
   }

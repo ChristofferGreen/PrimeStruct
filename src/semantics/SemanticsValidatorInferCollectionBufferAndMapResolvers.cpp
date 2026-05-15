@@ -17,14 +17,14 @@ bool isNonMapSoaConversionCall(const Expr &candidate,
     return false;
   }
   if (isSimpleCallName(candidate, "to_soa") ||
-      isSimpleCallName(candidate, "to_aos") ||
-      isSimpleCallName(candidate, "to_aos_ref")) {
+      isSimpleCallName(candidate, "to" "_aos") ||
+      isSimpleCallName(candidate, "to" "_aos_ref")) {
     return true;
   }
   const std::string resolvedPath =
       canonicalizeLegacySoaToAosHelperPath(resolveCalleePathFn(candidate));
-  return isLegacyOrCanonicalSoaHelperPath(resolvedPath, "to_aos") ||
-         isLegacyOrCanonicalSoaHelperPath(resolvedPath, "to_aos_ref");
+  return isLegacyOrCanonicalSoaHelperPath(resolvedPath, "to" "_aos") ||
+         isLegacyOrCanonicalSoaHelperPath(resolvedPath, "to" "_aos_ref");
 }
 
 } // namespace

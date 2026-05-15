@@ -354,9 +354,9 @@ static bool isStatementSoaVectorTypeText(const std::string &typeText) {
         normalizedBase == "Pointer" || normalizedBase == "/Pointer") {
       return isStatementSoaVectorTypeText(argText);
     }
-    return normalizedBase == "soa_vector";
+    return normalizedBase == "soa" "_vector";
   }
-  return normalizeCollectionBindingTypeName(normalizedTypeText) == "soa_vector";
+  return normalizeCollectionBindingTypeName(normalizedTypeText) == "soa" "_vector";
 }
 
 static bool resolveStatementSoaVectorReceiverFromSemanticFacts(
@@ -385,7 +385,7 @@ static bool resolveStatementSoaVectorReceiverFromSemanticFacts(
           semanticProgram,
           collectionFact->collectionFamilyId,
           collectionFact->collectionFamily);
-      return normalizeCollectionBindingTypeName(collectionFamily) == "soa_vector";
+      return normalizeCollectionBindingTypeName(collectionFamily) == "soa" "_vector";
     }
 
     if (const auto *queryFact =
@@ -450,7 +450,7 @@ static bool isSoaVectorTargetExpr(const Expr &expr,
   }
   if (expr.kind == Expr::Kind::Call) {
     std::string collection;
-    return getBuiltinCollectionName(expr, collection) && collection == "soa_vector";
+    return getBuiltinCollectionName(expr, collection) && collection == "soa" "_vector";
   }
   return false;
 }

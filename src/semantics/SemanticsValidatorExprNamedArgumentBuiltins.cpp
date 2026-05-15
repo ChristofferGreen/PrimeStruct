@@ -101,17 +101,17 @@ bool SemanticsValidator::validateExprNamedArguments(
   const bool resolvedIsSoaConversion =
       resolvedWithoutSpecialization == "/to_soa" ||
       isLegacyOrCanonicalSoaHelperPath(resolvedSoaToAosCanonical,
-                                       "to_aos") ||
+                                       "to" "_aos") ||
       isLegacyOrCanonicalSoaHelperPath(resolvedSoaToAosCanonical,
-                                       "to_aos_ref") ||
+                                       "to" "_aos_ref") ||
       isExperimentalSoaVectorConversionFamilyPath(resolvedWithoutSpecialization);
   const bool shouldValidateDirectSoaSurface =
       ((isSimpleCallName(expr, "get") || isSimpleCallName(expr, "get_ref") ||
         isSimpleCallName(expr, "ref") || isSimpleCallName(expr, "ref_ref")) &&
        resolvedIsSoaAccess) ||
       ((isSimpleCallName(expr, "to_soa") ||
-        isSimpleCallName(expr, "to_aos") ||
-        isSimpleCallName(expr, "to_aos_ref")) &&
+        isSimpleCallName(expr, "to" "_aos") ||
+        isSimpleCallName(expr, "to" "_aos_ref")) &&
        resolvedIsSoaConversion);
   if (defMap_.find(resolved) == defMap_.end() || resolvedMethod ||
       shouldValidateDirectSoaSurface) {
@@ -377,8 +377,8 @@ bool SemanticsValidator::validateExprNamedArgumentBuiltins(
       expr.name == "try" || isLegacyCountRefBuiltinCall() ||
       isLegacyCapacityBuiltinCall() ||
       isLegacySoaAccessBuiltinCall() || isLegacyVectorHelperBuiltin ||
-      isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos") ||
-      isSimpleCallName(expr, "to_aos_ref") ||
+      isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to" "_aos") ||
+      isSimpleCallName(expr, "to" "_aos_ref") ||
       isSimpleCallName(expr, "dispatch") || isSimpleCallName(expr, "buffer") ||
       isSimpleCallName(expr, "upload") || isSimpleCallName(expr, "readback") ||
       isSimpleCallName(expr, "buffer_load") ||

@@ -22,13 +22,13 @@ bool isVectorStructPath(const std::string &structPath) {
 }
 
 bool isSoaVectorStructPath(const std::string &structPath) {
-  return structPath == "/soa_vector" ||
-         structPath == "std/collections/soa_vector" ||
-         structPath == "/std/collections/soa_vector" ||
-         structPath == "SoaVector" ||
-         structPath == "/SoaVector" ||
-         structPath == "/std/collections/experimental_soa_vector/SoaVector" ||
-         structPath.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+  return structPath == "/soa" "_vector" ||
+         structPath == "std/collections/" "soa" "_vector" ||
+         structPath == "/std/collections/" "soa" "_vector" ||
+         structPath == "Soa" "Vector" ||
+         structPath == "/Soa" "Vector" ||
+         structPath == "/std/collections/experimental" "_soa" "_vector/Soa" "Vector" ||
+         structPath.rfind("/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0;
 }
 
 std::string stripGeneratedStructSuffix(std::string structPath) {

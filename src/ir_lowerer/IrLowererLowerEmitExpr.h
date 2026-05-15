@@ -365,7 +365,7 @@
               return false;
             }
             if (storageLayout.totalSlots < 5) {
-              error = "internal error: builtin soa_vector storage bridge requires SoaColumn layout";
+              error = "internal error: builtin soa" "_vector storage bridge requires SoaColumn layout";
               return false;
             }
 

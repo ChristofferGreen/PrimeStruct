@@ -120,7 +120,7 @@ std::string SemanticsValidator::effectFreeCollectionPathFromType(const std::stri
   if (typeName == "string") {
     return "/string";
   }
-  if ((typeName == "array" || typeName == "vector" || typeName == "soa_vector") && !typeTemplateArg.empty()) {
+  if ((typeName == "array" || typeName == "vector" || typeName == "soa" "_vector") && !typeTemplateArg.empty()) {
     return "/" + typeName;
   }
   if (isMapCollectionTypeName(typeName) && !typeTemplateArg.empty()) {
@@ -135,7 +135,7 @@ std::string SemanticsValidator::effectFreeCollectionPathFromType(const std::stri
   if (!splitTopLevelTemplateArgs(argsText, args)) {
     return "";
   }
-  if ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) {
+  if ((base == "array" || base == "vector" || base == "soa" "_vector") && args.size() == 1) {
     return "/" + base;
   }
   if (isMapCollectionTypeName(base) && args.size() == 2) {
@@ -163,7 +163,7 @@ std::string SemanticsValidator::effectFreeCollectionPathFromCallExpr(const Expr 
     if (builtinCollection == "string") {
       return "/string";
     }
-    if ((builtinCollection == "array" || builtinCollection == "vector" || builtinCollection == "soa_vector") &&
+    if ((builtinCollection == "array" || builtinCollection == "vector" || builtinCollection == "soa" "_vector") &&
         callExpr.templateArgs.size() == 1) {
       return "/" + builtinCollection;
     }

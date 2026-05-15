@@ -366,8 +366,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           helperName = "get_ref";
         } else if (helperName == "ref") {
           helperName = "ref_ref";
-        } else if (helperName == "to_aos") {
-          helperName = "to_aos_ref";
+        } else if (helperName == "to" "_aos") {
+          helperName = "to" "_aos_ref";
         }
         return preferredSoaHelperTargetForCollectionType(
             helperName, internalSoaCollectionTypePath(true));
@@ -855,8 +855,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       helperName = "get_ref";
     } else if (helperName == "ref") {
       helperName = "ref_ref";
-    } else if (helperName == "to_aos") {
-      helperName = "to_aos_ref";
+    } else if (helperName == "to" "_aos") {
+      helperName = "to" "_aos_ref";
     }
     return preferredSoaHelperTargetForCollectionType(
         helperName, internalSoaCollectionTypePath(true));
@@ -877,7 +877,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
                                                  ignoredElemType);
   };
   auto preferredSoaToAosHelperTargetForReceiver = [&](const Expr &receiverExpr) {
-    if (normalizedMethodName == "to_aos" &&
+    if (normalizedMethodName == "to" "_aos" &&
         resolvesBorrowedExperimentalSoaReceiver(receiverExpr)) {
       return preferredBorrowedSoaAccessHelperTarget(normalizedMethodName);
     }
@@ -1119,13 +1119,13 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       }
       const std::string resolvedTarget = resolveCalleePath(target);
       const bool matchesSoaToAosTarget =
-          ((target.isMethodCall && target.name == "to_aos") ||
-           (!target.isMethodCall && isSimpleCallName(target, "to_aos"))) ||
-          isCanonicalStdlibSoaHelperPath(resolvedTarget, "to_aos");
+          ((target.isMethodCall && target.name == "to" "_aos") ||
+           (!target.isMethodCall && isSimpleCallName(target, "to" "_aos"))) ||
+          isCanonicalStdlibSoaHelperPath(resolvedTarget, "to" "_aos");
       const bool matchesBorrowedSoaToAosTarget =
-          ((target.isMethodCall && target.name == "to_aos_ref") ||
-           (!target.isMethodCall && isSimpleCallName(target, "to_aos_ref"))) ||
-          isCanonicalStdlibSoaHelperPath(resolvedTarget, "to_aos_ref");
+          ((target.isMethodCall && target.name == "to" "_aos_ref") ||
+           (!target.isMethodCall && isSimpleCallName(target, "to" "_aos_ref"))) ||
+          isCanonicalStdlibSoaHelperPath(resolvedTarget, "to" "_aos_ref");
       if ((matchesSoaToAosTarget || matchesBorrowedSoaToAosTarget) &&
           target.args.size() == 1) {
         std::string sourceElemType;
@@ -1797,9 +1797,9 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     const std::string resolvedSoaGetCanonical =
         canonicalizeLegacySoaGetHelperPath(resolvedOut);
     const bool matchesSoaToAosHelperPath =
-        isCanonicalStdlibSoaHelperPath(resolvedOut, "to_aos");
+        isCanonicalStdlibSoaHelperPath(resolvedOut, "to" "_aos");
     const bool matchesBorrowedSoaToAosHelperPath =
-        isCanonicalStdlibSoaHelperPath(resolvedOut, "to_aos_ref");
+        isCanonicalStdlibSoaHelperPath(resolvedOut, "to" "_aos_ref");
     const bool matchesBuiltinSoaCollectionHelper =
         isCanonicalSoaHelperPath(resolvedSoaCountCanonical, "count") ||
         isCanonicalSoaHelperPath(resolvedSoaCountCanonical, "count_ref") ||
@@ -2205,7 +2205,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
             normalizedMethodName == "get" || normalizedMethodName == "get_ref" ||
             normalizedMethodName == "ref" || normalizedMethodName == "ref_ref" ||
-            normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref";
+            normalizedMethodName == "to" "_aos" || normalizedMethodName == "to" "_aos_ref";
         if (isInternalSoaCollectionTypePath(normalizedReturnCollectionType) &&
             isBorrowedSoaWrapperMethod) {
           return setCollectionMethodTarget(
@@ -2372,7 +2372,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (normalizedMethodName == "to_soa" && collectionTypePath == "/vector") {
       return setCollectionMethodTarget("/to_soa");
     }
-    if ((normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref") &&
+    if ((normalizedMethodName == "to" "_aos" || normalizedMethodName == "to" "_aos_ref") &&
         (isInternalSoaCollectionTypePath(collectionTypePath) ||
          collectionTypePath == "/vector")) {
       return setCollectionMethodTarget(
@@ -2778,7 +2778,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           preferredSoaToAosHelperTargetForReceiver(receiver));
     }
   }
-  if (normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref") {
+  if (normalizedMethodName == "to" "_aos" || normalizedMethodName == "to" "_aos_ref") {
     if (resolveVectorTarget(receiver, elemType)) {
       return setCollectionMethodTarget(
           preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/vector"));
@@ -3283,7 +3283,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       normalizedCollectionTypePath == "/vector") {
     return setCollectionMethodTarget("/to_soa");
   }
-  if ((normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref") &&
+  if ((normalizedMethodName == "to" "_aos" || normalizedMethodName == "to" "_aos_ref") &&
       (isInternalSoaCollectionTypePath(normalizedCollectionTypePath) ||
        normalizedCollectionTypePath == "/vector")) {
     return setCollectionMethodTarget(
@@ -3366,8 +3366,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         canonicalCollectionHelperName == "get_ref" ||
         canonicalCollectionHelperName == "ref" ||
         canonicalCollectionHelperName == "ref_ref" ||
-        canonicalCollectionHelperName == "to_aos" ||
-        canonicalCollectionHelperName == "to_aos_ref";
+        canonicalCollectionHelperName == "to" "_aos" ||
+        canonicalCollectionHelperName == "to" "_aos_ref";
     if (normalizedPointeeCollectionTypePath == "/map" &&
         (normalizedMethodName == "count" ||
          normalizedMethodName == "contains" ||

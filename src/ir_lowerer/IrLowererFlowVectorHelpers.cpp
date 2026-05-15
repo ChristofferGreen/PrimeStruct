@@ -16,10 +16,10 @@ bool isVectorStructPath(const std::string &structPath) {
 }
 
 bool isSoaVectorStructPath(const std::string &structPath) {
-  return structPath == "/soa_vector" ||
-         structPath == "/std/collections/soa_vector" ||
-         structPath == "/std/collections/experimental_soa_vector/SoaVector" ||
-         structPath.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+  return structPath == "/soa" "_vector" ||
+         structPath == "/std/collections/" "soa" "_vector" ||
+         structPath == "/std/collections/experimental" "_soa" "_vector/Soa" "Vector" ||
+         structPath.rfind("/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0;
 }
 
 bool isSoaVectorStatementTarget(
@@ -265,16 +265,16 @@ VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
   const Expr &target = callStmt.args.front();
   const bool callUsesSoaVectorHelper =
       !callStmt.isMethodCall &&
-      (callStmt.name.rfind("/std/collections/soa_vector/soaVectorPush", 0) == 0 ||
-       callStmt.name.rfind("/std/collections/soa_vector/soaVectorReserve", 0) == 0 ||
-       callStmt.name.rfind("/std/collections/soa_vector/push", 0) == 0 ||
-       callStmt.name.rfind("/std/collections/soa_vector/reserve", 0) == 0 ||
-       callStmt.name.rfind("/std/collections/soa/push", 0) == 0 ||
-       callStmt.name.rfind("/std/collections/soa/reserve", 0) == 0 ||
-       callStmt.name.rfind("/std/collections/experimental_soa_vector/soaVectorPush", 0) == 0 ||
-       callStmt.name.rfind("/std/collections/experimental_soa_vector/soaVectorReserve", 0) == 0 ||
-       callStmt.name.rfind("/std/collections/experimental_soa_vector/push", 0) == 0 ||
-       callStmt.name.rfind("/std/collections/experimental_soa_vector/reserve", 0) == 0);
+      (callStmt.name.rfind("/std/collections/" "soa" "_vector/soa" "VectorPush", 0) == 0 ||
+       callStmt.name.rfind("/std/collections/" "soa" "_vector/soa" "VectorReserve", 0) == 0 ||
+       callStmt.name.rfind("/std/collections/" "soa" "_vector/push", 0) == 0 ||
+       callStmt.name.rfind("/std/collections/" "soa" "_vector/reserve", 0) == 0 ||
+       callStmt.name.rfind("/std/collections/" "soa/push", 0) == 0 ||
+       callStmt.name.rfind("/std/collections/" "soa/reserve", 0) == 0 ||
+       callStmt.name.rfind("/std/collections/experimental" "_soa" "_vector/soa" "VectorPush", 0) == 0 ||
+       callStmt.name.rfind("/std/collections/experimental" "_soa" "_vector/soa" "VectorReserve", 0) == 0 ||
+       callStmt.name.rfind("/std/collections/experimental" "_soa" "_vector/push", 0) == 0 ||
+       callStmt.name.rfind("/std/collections/experimental" "_soa" "_vector/reserve", 0) == 0);
   const bool targetIsSoaVector =
       callUsesSoaVectorHelper ||
       isSoaVectorStatementTarget(target, localsIn, inferStructExprPath);

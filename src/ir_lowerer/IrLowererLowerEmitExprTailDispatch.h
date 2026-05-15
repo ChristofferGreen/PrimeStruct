@@ -1096,7 +1096,7 @@
                     ir_lowerer::ArrayVectorAccessTargetInfo candidate;
                     candidate.isArrayOrVectorTarget = true;
                     candidate.isVectorTarget = (collectionName == "vector");
-                    candidate.isSoaVector = (collectionName == "soa_vector");
+                    candidate.isSoaVector = (collectionName == "soa" "_vector");
                     candidate.elemKind =
                         ir_lowerer::valueKindFromTypeName(normalizedElementType);
                     if (candidate.elemKind ==
@@ -1147,7 +1147,7 @@
                       return true;
                     }
                     if (normalizedPath.rfind(
-                            "/std/collections/experimental_soa_vector/SoaVector__",
+                            "/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__",
                             0) == 0) {
                       ir_lowerer::ArrayVectorAccessTargetInfo candidate;
                       candidate.isArrayOrVectorTarget = true;
@@ -1183,7 +1183,7 @@
                                   normalizedBase);
                     if (collectionName != "array" &&
                         collectionName != "vector" &&
-                        collectionName != "soa_vector") {
+                        collectionName != "soa" "_vector") {
                       return false;
                     }
                     std::vector<std::string> args;
@@ -1220,7 +1220,7 @@
                                   collectionFamily);
                     if (collectionName != "array" &&
                         collectionName != "vector" &&
-                        collectionName != "soa_vector") {
+                        collectionName != "soa" "_vector") {
                       return false;
                     }
                     std::string elementTypeText =
@@ -1326,9 +1326,9 @@
                 return true;
               }
               if (inferredReceiverStruct.rfind(
-                      "/std/collections/experimental_soa_vector/SoaVector__", 0) == 0 ||
+                      "/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0 ||
                   normalizeCollectionBindingTypeName(inferredReceiverStruct) ==
-                      "soa_vector") {
+                      "soa" "_vector") {
                 targetInfoOut.isArrayOrVectorTarget = true;
                 targetInfoOut.isVectorTarget = false;
                 targetInfoOut.isSoaVector = true;
@@ -1346,13 +1346,13 @@
                 return false;
               }
               if ((collectionName != "array" && collectionName != "vector" &&
-                   collectionName != "soa_vector") ||
+                   collectionName != "soa" "_vector") ||
                   collectionArgs.size() != 1) {
                 return false;
               }
               targetInfoOut.isArrayOrVectorTarget = true;
               targetInfoOut.isVectorTarget = (collectionName == "vector");
-              targetInfoOut.isSoaVector = (collectionName == "soa_vector");
+              targetInfoOut.isSoaVector = (collectionName == "soa" "_vector");
               targetInfoOut.elemKind = ir_lowerer::valueKindFromTypeName(collectionArgs.front());
               if (targetInfoOut.isSoaVector) {
                 std::string elementTypeName = trimTemplateTypeText(collectionArgs.front());

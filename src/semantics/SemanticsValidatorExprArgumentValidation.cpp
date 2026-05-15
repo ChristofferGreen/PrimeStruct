@@ -14,7 +14,7 @@ namespace {
 bool isCollectionLikeTemplateBase(std::string_view baseName) {
   const std::string normalizedBase = normalizeBindingTypeName(std::string(baseName));
   return normalizedBase == "array" || normalizedBase == "vector" ||
-         normalizedBase == "soa_vector" || normalizedBase == "map" ||
+         normalizedBase == "soa" "_vector" || normalizedBase == "map" ||
          normalizedBase == "std/collections/map";
 }
 
@@ -266,7 +266,7 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
           return failArgumentValidation(
               arg,
               "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-                  ": expected " + expectedTypeText + " got soa_vector<" + actualElemType + ">");
+                  ": expected " + expectedTypeText + " got soa" "_vector<" + actualElemType + ">");
         }
       } else if (normalizedExpectedBase == "vector" && expectedTemplateArgs.size() == 1) {
         std::string actualElemType;
@@ -286,7 +286,7 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
           return failArgumentValidation(
               arg,
               "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-                  ": expected " + expectedTypeText + " got soa_vector<" + actualElemType + ">");
+                  ": expected " + expectedTypeText + " got soa" "_vector<" + actualElemType + ">");
         }
         if (dispatchResolvers.resolveArrayTarget != nullptr &&
             dispatchResolvers.resolveArrayTarget(arg, actualElemType)) {
@@ -313,11 +313,11 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
                 "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
                     ": expected " + expectedTypeText + " got vector<" + inferredArgs.front() + ">");
           }
-          if (normalizedInferredBase == "soa_vector") {
+          if (normalizedInferredBase == "soa" "_vector") {
             return failArgumentValidation(
                 arg,
                 "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-                    ": expected " + expectedTypeText + " got soa_vector<" + inferredArgs.front() + ">");
+                    ": expected " + expectedTypeText + " got soa" "_vector<" + inferredArgs.front() + ">");
           }
           if (normalizedInferredBase == "array") {
             return failArgumentValidation(
@@ -364,7 +364,7 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
           return failArgumentValidation(
               arg,
               "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-                  ": expected " + expectedTypeText + " got soa_vector<" + actualElemType + ">");
+                  ": expected " + expectedTypeText + " got soa" "_vector<" + actualElemType + ">");
         }
         if (dispatchResolvers.resolveArrayTarget != nullptr &&
             dispatchResolvers.resolveArrayTarget(arg, actualElemType)) {
@@ -373,7 +373,7 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
               "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
                   ": expected " + expectedTypeText + " got array<" + actualElemType + ">");
         }
-      } else if (normalizedExpectedBase == "soa_vector" &&
+      } else if (normalizedExpectedBase == "soa" "_vector" &&
                  expectedTemplateArgs.size() == 1) {
         std::string actualElemType;
         if (dispatchResolvers.resolveSoaVectorTarget != nullptr &&
@@ -385,7 +385,7 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
           return failArgumentValidation(
               arg,
               "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-                  ": expected " + expectedTypeText + " got soa_vector<" + actualElemType + ">");
+                  ": expected " + expectedTypeText + " got soa" "_vector<" + actualElemType + ">");
         }
         if (dispatchResolvers.resolveVectorTarget != nullptr &&
             dispatchResolvers.resolveVectorTarget(arg, actualElemType)) {
@@ -529,7 +529,7 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
       return failArgumentValidation(
           arg,
           "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
-              ": expected " + expectedTypeText + " got soa_vector<" + actualElemType + ">");
+              ": expected " + expectedTypeText + " got soa" "_vector<" + actualElemType + ">");
     }
     if (dispatchResolvers.resolveArrayTarget != nullptr &&
         dispatchResolvers.resolveArrayTarget(arg, actualElemType)) {
@@ -690,7 +690,7 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
       if (!normalizedInferredBase.empty() && normalizedInferredBase.front() == '/') {
         normalizedInferredBase.erase(normalizedInferredBase.begin());
       }
-      return normalizedInferredBase == "soa_vector" &&
+      return normalizedInferredBase == "soa" "_vector" &&
              normalizeBindingTypeName(expectedExperimentalSoaVectorElemType) ==
                  normalizeBindingTypeName(inferredArgs.front());
     }

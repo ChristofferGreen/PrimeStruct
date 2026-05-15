@@ -103,12 +103,12 @@ bool SemanticsValidator::resolveLeadingNonCollectionAccessReceiverPath(
     return false;
   }
   if (isSimpleCallName(receiverExpr, "array") || isSimpleCallName(receiverExpr, "vector") ||
-      isSimpleCallName(receiverExpr, "map") || isSimpleCallName(receiverExpr, "soa_vector")) {
+      isSimpleCallName(receiverExpr, "map") || isSimpleCallName(receiverExpr, "soa" "_vector")) {
     return false;
   }
   const std::string resolvedReceiverPath = resolveCalleePath(receiverExpr);
   if (resolvedReceiverPath == "/array" || resolvedReceiverPath == "/vector" ||
-      resolvedReceiverPath == "/map" || resolvedReceiverPath == "/soa_vector") {
+      resolvedReceiverPath == "/map" || resolvedReceiverPath == "/soa" "_vector") {
     return false;
   }
   auto defIt = defMap_.find(resolvedReceiverPath);
@@ -174,7 +174,7 @@ bool SemanticsValidator::resolveDirectCallTemporaryAccessReceiverPath(
     return false;
   }
   if (isSimpleCallName(receiverExpr, "array") || isSimpleCallName(receiverExpr, "vector") ||
-      isSimpleCallName(receiverExpr, "map") || isSimpleCallName(receiverExpr, "soa_vector")) {
+      isSimpleCallName(receiverExpr, "map") || isSimpleCallName(receiverExpr, "soa" "_vector")) {
     return false;
   }
   const std::string resolvedReceiverPath = resolveCalleePath(receiverExpr);

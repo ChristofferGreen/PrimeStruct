@@ -17,7 +17,7 @@ bool extractBuiltinSoaVectorElementTypeFromTypeText(const std::string &typeText,
     return false;
   }
   base = normalizeBindingTypeName(base);
-  if (base == "soa_vector" && !argText.empty()) {
+  if (base == "soa" "_vector" && !argText.empty()) {
     elemTypeOut = argText;
     return true;
   }
@@ -30,7 +30,7 @@ bool extractBuiltinSoaVectorElementTypeFromTypeText(const std::string &typeText,
     return false;
   }
   wrappedBase = normalizeBindingTypeName(wrappedBase);
-  if (wrappedBase != "soa_vector" || wrappedArgText.empty()) {
+  if (wrappedBase != "soa" "_vector" || wrappedArgText.empty()) {
     return false;
   }
   elemTypeOut = wrappedArgText;
@@ -93,7 +93,7 @@ bool SemanticsValidator::inferCollectionBindingFromExpr(const Expr &expr,
   }
   std::string collection;
   if (getBuiltinCollectionName(expr, collection)) {
-    if ((collection == "array" || collection == "vector" || collection == "soa_vector") &&
+    if ((collection == "array" || collection == "vector" || collection == "soa" "_vector") &&
         expr.templateArgs.size() == 1) {
       bindingOut.typeName = collection;
       bindingOut.typeTemplateArg = expr.templateArgs.front();
@@ -124,7 +124,7 @@ bool SemanticsValidator::inferCollectionBindingFromExpr(const Expr &expr,
     if (!splitTopLevelTemplateArgs(argText, args)) {
       return false;
     }
-    if ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) {
+    if ((base == "array" || base == "vector" || base == "soa" "_vector") && args.size() == 1) {
       bindingOut.typeName = base;
       bindingOut.typeTemplateArg = argText;
       return true;
@@ -156,7 +156,7 @@ bool SemanticsValidator::inferBuiltinCollectionValueBinding(const Expr &expr,
     const bool isBuiltinOrExperimentalVector =
         normalizedTypeName == "array" ||
         normalizedTypeName == "vector" ||
-        normalizedTypeName == "soa_vector" ||
+        normalizedTypeName == "soa" "_vector" ||
         normalizedTypeName == "Vector" ||
         isLegacyExperimentalVectorCompatibilityPath(normalizedTypeName) ||
         isLegacyExperimentalVectorCompatibilityPath("/" + normalizedTypeName);
@@ -175,7 +175,7 @@ bool SemanticsValidator::inferBuiltinCollectionValueBinding(const Expr &expr,
       const bool isWrappedBuiltinOrExperimentalVector =
           base == "array" ||
           base == "vector" ||
-          base == "soa_vector" ||
+          base == "soa" "_vector" ||
           base == "Vector" ||
           isLegacyExperimentalVectorCompatibilityPath(base) ||
           isLegacyExperimentalVectorCompatibilityPath("/" + base);
@@ -558,13 +558,13 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
         resolvedPath = concreteResolvedPath;
       }
     }
-    if (resolvedPath == "/to_aos" || resolvedPath == "/to_aos_ref") {
+    if (resolvedPath == "/to" "_aos" || resolvedPath == "/to" "_aos_ref") {
       return false;
     }
     const std::string resolvedCanonical =
         canonicalizeLegacySoaToAosHelperPath(resolvedPath);
-    if (!isLegacyOrCanonicalSoaHelperPath(resolvedCanonical, "to_aos") &&
-        !isLegacyOrCanonicalSoaHelperPath(resolvedCanonical, "to_aos_ref")) {
+    if (!isLegacyOrCanonicalSoaHelperPath(resolvedCanonical, "to" "_aos") &&
+        !isLegacyOrCanonicalSoaHelperPath(resolvedCanonical, "to" "_aos_ref")) {
       return false;
     }
     std::string receiverTypeText;
@@ -658,7 +658,7 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
       if (!inferReceiverBinding(receiver, receiverBinding)) {
         return false;
       }
-      if (normalizeBindingTypeName(receiverBinding.typeName) == "soa_vector" &&
+      if (normalizeBindingTypeName(receiverBinding.typeName) == "soa" "_vector" &&
           !receiverBinding.typeTemplateArg.empty()) {
         elemTypeOut = receiverBinding.typeTemplateArg;
         return true;
@@ -992,7 +992,7 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
         std::string collectionName;
         if (initializerExprForInference != nullptr &&
             getBuiltinCollectionName(*initializerExprForInference, collectionName)) {
-          if ((collectionName == "array" || collectionName == "vector" || collectionName == "soa_vector") &&
+          if ((collectionName == "array" || collectionName == "vector" || collectionName == "soa" "_vector") &&
               initializerExprForInference->templateArgs.size() == 1) {
             bindingOut.typeName = collectionName;
             bindingOut.typeTemplateArg = initializerExprForInference->templateArgs.front();

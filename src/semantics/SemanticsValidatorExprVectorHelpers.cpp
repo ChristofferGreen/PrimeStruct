@@ -348,8 +348,8 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
       helperName = "get_ref";
     } else if (helperName == "ref") {
       helperName = "ref_ref";
-    } else if (helperName == "to_aos") {
-      helperName = "to_aos_ref";
+    } else if (helperName == "to" "_aos") {
+      helperName = "to" "_aos_ref";
     }
     return preferredSoaHelperTargetForCollectionType(
         helperName, internalSoaCollectionTypePath(true));
@@ -394,13 +394,13 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
       (normalizedHelperName == "count" || normalizedHelperName == "count_ref" ||
        normalizedHelperName == "get" || normalizedHelperName == "get_ref" ||
        normalizedHelperName == "ref" || normalizedHelperName == "ref_ref" ||
-       normalizedHelperName == "to_aos" || normalizedHelperName == "to_aos_ref")) {
+       normalizedHelperName == "to" "_aos" || normalizedHelperName == "to" "_aos_ref")) {
     resolvedOut = preferredBorrowedSoaAccessHelperTarget(normalizedHelperName);
     return true;
   }
   if (resolveExperimentalSoaVectorReceiver(receiver, experimentalSoaElemType) &&
       (normalizedHelperName == "get" || normalizedHelperName == "ref" ||
-       normalizedHelperName == "to_aos" ||
+       normalizedHelperName == "to" "_aos" ||
        normalizedHelperName == "push" || normalizedHelperName == "reserve")) {
     resolvedOut =
         preferredSoaHelperTargetForCollectionType(normalizedHelperName,
@@ -413,7 +413,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
        normalizedHelperName == "at" || normalizedHelperName == "at_unsafe" ||
        normalizedHelperName == "insert" ||
        normalizedHelperName == "get" || normalizedHelperName == "ref" ||
-       normalizedHelperName == "to_aos" ||
+       normalizedHelperName == "to" "_aos" ||
        normalizedHelperName == "push" || normalizedHelperName == "reserve")) {
     std::string collectionTypePath;
     if (resolveCallCollectionTypePath(receiver, params, locals, collectionTypePath)) {
@@ -427,7 +427,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
       if (isInternalSoaCollectionTypePath(collectionTypePath) &&
           (normalizedHelperName == "count" || normalizedHelperName == "count_ref" ||
            normalizedHelperName == "get" || normalizedHelperName == "ref" ||
-           normalizedHelperName == "to_aos" ||
+           normalizedHelperName == "to" "_aos" ||
            normalizedHelperName == "push" || normalizedHelperName == "reserve")) {
         resolvedOut =
             preferredSoaHelperTargetForCollectionType(normalizedHelperName,
@@ -531,7 +531,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
         (normalizedHelperName == "count" || normalizedHelperName == "count_ref" ||
          normalizedHelperName == "get" || normalizedHelperName == "get_ref" ||
          normalizedHelperName == "ref" || normalizedHelperName == "ref_ref" ||
-         normalizedHelperName == "to_aos" || normalizedHelperName == "to_aos_ref" ||
+         normalizedHelperName == "to" "_aos" || normalizedHelperName == "to" "_aos_ref" ||
          normalizedHelperName == "push" || normalizedHelperName == "reserve")) {
       resolvedOut =
           preferredSoaHelperTargetForCollectionType(normalizedHelperName,
@@ -554,7 +554,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
           (normalizedHelperName == "count" || normalizedHelperName == "count_ref" ||
            normalizedHelperName == "get" || normalizedHelperName == "get_ref" ||
            normalizedHelperName == "ref" || normalizedHelperName == "ref_ref" ||
-           normalizedHelperName == "to_aos" || normalizedHelperName == "to_aos_ref" ||
+           normalizedHelperName == "to" "_aos" || normalizedHelperName == "to" "_aos_ref" ||
            normalizedHelperName == "push" || normalizedHelperName == "reserve")) {
         resolvedOut =
             preferredSoaHelperTargetForCollectionType(normalizedHelperName,

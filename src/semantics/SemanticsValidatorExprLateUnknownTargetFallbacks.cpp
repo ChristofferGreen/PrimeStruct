@@ -39,8 +39,8 @@ bool isExplicitVectorCompatibilityMethodNamespace(std::string_view namespacePref
 }
 
 bool isVectorFamilyHelperPath(const std::string &path) {
-  return path.rfind("/soa_vector/", 0) == 0 ||
-         path.rfind("/std/collections/soa_vector/", 0) == 0 ||
+  return path.rfind("/soa" "_vector/", 0) == 0 ||
+         path.rfind("/std/collections/" "soa" "_vector/", 0) == 0 ||
          isCanonicalVectorCompatibilityPath(path) ||
          path.rfind(legacyExperimentalVectorCompatibilityPrefix(), 0) == 0;
 }
@@ -158,7 +158,7 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
         hasCollectionReceiver = receiverCollectionTypePath == "/vector" ||
                                 receiverCollectionTypePath == "/array" ||
                                 receiverCollectionTypePath == "/string" ||
-                                receiverCollectionTypePath == "/soa_vector";
+                                receiverCollectionTypePath == "/soa" "_vector";
       }
       if (!hasCollectionReceiver) {
         std::string receiverTypeText;
@@ -169,7 +169,7 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
           hasCollectionReceiver = normalizedCollectionType == "/vector" ||
                                   normalizedCollectionType == "/array" ||
                                   normalizedCollectionType == "/string" ||
-                                  normalizedCollectionType == "/soa_vector";
+                                  normalizedCollectionType == "/soa" "_vector";
         }
       }
       if (!hasCollectionReceiver) {
@@ -205,8 +205,8 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
       !requestsExplicitVectorCompatibilityMethod &&
       (normalizedMethodName == "get" || normalizedMethodName == "get_ref" ||
        normalizedMethodName == "ref" || normalizedMethodName == "ref_ref" ||
-       normalizedMethodName == "to_aos" ||
-       normalizedMethodName == "to_aos_ref") &&
+       normalizedMethodName == "to" "_aos" ||
+       normalizedMethodName == "to" "_aos_ref") &&
       !expr.args.empty()) {
     std::string collectionMethodTarget;
     if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(),
@@ -226,7 +226,7 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
       expr.name.find('/') == std::string::npos &&
       (normalizedMethodName == "get" || normalizedMethodName == "get_ref" ||
        normalizedMethodName == "ref" || normalizedMethodName == "ref_ref")) {
-    const std::string samePathHelper = "/soa_vector/" + normalizedMethodName;
+    const std::string samePathHelper = "/soa" "_vector/" + normalizedMethodName;
     if (hasVisibleDefinitionPathForCurrentImports(samePathHelper)) {
       std::function<bool(const Expr &)> isVectorOrSoaLikeReceiver =
           [&](const Expr &receiverExpr) {
@@ -244,7 +244,7 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
         if (resolveCallCollectionTypePath(receiverExpr, params, locals,
                                           collectionTypePath)) {
           if (collectionTypePath == "/vector" ||
-              collectionTypePath == "/soa_vector") {
+              collectionTypePath == "/soa" "_vector") {
             return true;
           }
         }
@@ -258,7 +258,7 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
         const std::string directCollectionType =
             normalizeCollectionTypePath(normalizedReceiverType);
         if (directCollectionType == "/vector" ||
-            directCollectionType == "/soa_vector") {
+            directCollectionType == "/soa" "_vector") {
           return true;
         }
         std::string base;
@@ -269,7 +269,7 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
           const std::string pointeeCollectionType =
               normalizeCollectionTypePath(argText);
           return pointeeCollectionType == "/vector" ||
-                 pointeeCollectionType == "/soa_vector";
+                 pointeeCollectionType == "/soa" "_vector";
         }
         return false;
       };

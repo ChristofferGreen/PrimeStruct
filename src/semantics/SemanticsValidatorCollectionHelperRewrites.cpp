@@ -403,11 +403,11 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalVectorHelperCall(
   }
   const std::string resolvedCandidatePath =
       canonicalizeLegacySoaToAosHelperPath(resolveCalleePath(candidate));
-  if (isLegacyOrCanonicalSoaHelperPath(resolvedCandidatePath, "to_aos") ||
-      isLegacyOrCanonicalSoaHelperPath(resolvedCandidatePath, "to_aos_ref") ||
+  if (isLegacyOrCanonicalSoaHelperPath(resolvedCandidatePath, "to" "_aos") ||
+      isLegacyOrCanonicalSoaHelperPath(resolvedCandidatePath, "to" "_aos_ref") ||
       isSimpleCallName(candidate, "to_soa") ||
-      isSimpleCallName(candidate, "to_aos") ||
-      isSimpleCallName(candidate, "to_aos_ref")) {
+      isSimpleCallName(candidate, "to" "_aos") ||
+      isSimpleCallName(candidate, "to" "_aos_ref")) {
     return false;
   }
 

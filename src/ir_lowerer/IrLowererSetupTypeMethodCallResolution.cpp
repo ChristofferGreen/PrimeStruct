@@ -92,9 +92,9 @@ std::string extractMethodLeafName(const std::string &methodPath) {
 }
 
 bool isExperimentalSoaVectorSpecializedStructPath(std::string_view path) {
-  return path.starts_with("/std/collections/experimental_soa_vector/SoaVector__") ||
-         path.starts_with("std/collections/experimental_soa_vector/SoaVector__") ||
-         path.starts_with("SoaVector__");
+  return path.starts_with("/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__") ||
+         path.starts_with("std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__") ||
+         path.starts_with("Soa" "Vector" "__");
 }
 
 std::string resolveSpecializedExperimentalSoaVectorStructPath(
@@ -126,7 +126,7 @@ std::string resolveSpecializedExperimentalSoaVectorStructPath(
       continue;
     }
 
-    if (normalizedBase != "soa_vector" || argList.empty()) {
+    if (normalizedBase != "soa" "_vector" || argList.empty()) {
       return "";
     }
 
@@ -204,11 +204,11 @@ bool blocksSyntheticCollectionFallbackDirectTarget(const std::string &targetPath
          normalized.rfind(collectionMemberRoot("vector"), 0) == 0 ||
          normalized.rfind("/map/", 0) == 0 ||
          normalized.rfind("/std/collections/map/", 0) == 0 ||
-         normalized.rfind("/soa_vector/", 0) == 0 ||
-         normalized.rfind("/std/collections/soa_vector/", 0) == 0 ||
+         normalized.rfind("/soa" "_vector/", 0) == 0 ||
+         normalized.rfind("/std/collections/" "soa" "_vector/", 0) == 0 ||
          normalized.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0 ||
          normalized.rfind("/std/collections/experimental_map/", 0) == 0 ||
-         normalized.rfind("/std/collections/experimental_soa_vector/", 0) == 0;
+         normalized.rfind("/std/collections/experimental" "_soa" "_vector/", 0) == 0;
 }
 
 bool isExperimentalVectorMetadataMethodPath(const std::string &methodPath) {

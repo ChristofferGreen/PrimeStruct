@@ -26,17 +26,17 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
   const auto isExplicitOldSurfaceSoaAccessCall =
       [&](std::string_view helperName) {
         const std::string helper(helperName);
-        const std::string samePath = "/soa_vector/" + helper;
+        const std::string samePath = "/soa" "_vector/" + helper;
         if (!expr.isMethodCall) {
-          if (expr.name == samePath || expr.name == "soa_vector/" + helper) {
+          if (expr.name == samePath || expr.name == "soa" "_vector/" + helper) {
             return true;
           }
-          return (expr.namespacePrefix == "/soa_vector" ||
-                  expr.namespacePrefix == "soa_vector") &&
+          return (expr.namespacePrefix == "/soa" "_vector" ||
+                  expr.namespacePrefix == "soa" "_vector") &&
                  expr.name == helper;
         }
-        return (expr.namespacePrefix == "/soa_vector" ||
-                expr.namespacePrefix == "soa_vector") &&
+        return (expr.namespacePrefix == "/soa" "_vector" ||
+                expr.namespacePrefix == "soa" "_vector") &&
                expr.name == helper;
       };
   const auto isExplicitOldSurfaceSoaConversionCall =
@@ -239,7 +239,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
           if (binding == nullptr) {
             return false;
           }
-          if (binding->typeName == "soa_vector") {
+          if (binding->typeName == "soa" "_vector") {
             borrowRootOut = receiverExpr.name;
             return true;
           }
@@ -252,10 +252,10 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
             const std::string normalizedTarget =
                 normalizeBindingTypeName(binding->typeTemplateArg);
             if (splitTemplateTypeName(normalizedTarget, base, arg)) {
-              if (normalizeBindingTypeName(base) != "soa_vector") {
+              if (normalizeBindingTypeName(base) != "soa" "_vector") {
                 return false;
               }
-            } else if (normalizedTarget != "soa_vector") {
+            } else if (normalizedTarget != "soa" "_vector") {
               return false;
             }
             ignoreBorrowNameOut = receiverExpr.name;
@@ -351,39 +351,39 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
   const std::string resolvedSoaToAosCanonical =
       canonicalizeLegacySoaToAosHelperPath(resolved);
   const bool hasVisibleSamePathToAosHelper =
-      hasVisibleDefinitionPathForCurrentImports("/to_aos");
+      hasVisibleDefinitionPathForCurrentImports("/to" "_aos");
   const bool hasVisibleSamePathToAosRefHelper =
-      hasVisibleDefinitionPathForCurrentImports("/to_aos_ref");
+      hasVisibleDefinitionPathForCurrentImports("/to" "_aos_ref");
   const bool rejectExplicitOldSurfaceToAosCall =
-      isExplicitOldSurfaceSoaConversionCall("to_aos") &&
+      isExplicitOldSurfaceSoaConversionCall("to" "_aos") &&
       !hasVisibleSamePathToAosHelper;
   const bool rejectExplicitOldSurfaceToAosRefCall =
-      isExplicitOldSurfaceSoaConversionCall("to_aos_ref") &&
+      isExplicitOldSurfaceSoaConversionCall("to" "_aos_ref") &&
       !hasVisibleSamePathToAosRefHelper;
   const bool matchesSoaToAosResolved =
-      resolved != "/to_aos" &&
+      resolved != "/to" "_aos" &&
       isLegacyOrCanonicalSoaHelperPath(
-          resolvedSoaToAosCanonical, "to_aos");
+          resolvedSoaToAosCanonical, "to" "_aos");
   const bool matchesBorrowedSoaToAosResolved =
-      resolved != "/to_aos_ref" &&
+      resolved != "/to" "_aos_ref" &&
       isLegacyOrCanonicalSoaHelperPath(
-          resolvedSoaToAosCanonical, "to_aos_ref");
+          resolvedSoaToAosCanonical, "to" "_aos_ref");
 
   if (rejectExplicitOldSurfaceToAosCall ||
       rejectExplicitOldSurfaceToAosRefCall) {
     handledOut = true;
     return failMapSoaBuiltinDiagnostic(soaUnavailableMethodDiagnostic(
-        rejectExplicitOldSurfaceToAosCall ? "/to_aos" : "/to_aos_ref"));
+        rejectExplicitOldSurfaceToAosCall ? "/to" "_aos" : "/to" "_aos_ref"));
   }
 
   if ((!resolvedMethod &&
-       (isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos") ||
-        isSimpleCallName(expr, "to_aos_ref")) &&
+       (isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to" "_aos") ||
+        isSimpleCallName(expr, "to" "_aos_ref")) &&
        resolvedMissing) ||
       (resolvedMethod &&
        (resolved == "/to_soa" ||
-        (resolved == "/to_aos" && hasVisibleSamePathToAosHelper) ||
-        (resolved == "/to_aos_ref" && hasVisibleSamePathToAosRefHelper) ||
+        (resolved == "/to" "_aos" && hasVisibleSamePathToAosHelper) ||
+        (resolved == "/to" "_aos_ref" && hasVisibleSamePathToAosRefHelper) ||
         matchesBorrowedSoaToAosResolved || matchesSoaToAosResolved)) ||
       (!resolvedMethod &&
        (matchesBorrowedSoaToAosResolved || matchesSoaToAosResolved))) {
@@ -397,13 +397,13 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
           "named arguments not supported for builtin calls");
     }
     const bool isBorrowedToAosHelper =
-        isSimpleCallName(expr, "to_aos_ref") ||
-        resolved == "/to_aos_ref" ||
+        isSimpleCallName(expr, "to" "_aos_ref") ||
+        resolved == "/to" "_aos_ref" ||
         matchesBorrowedSoaToAosResolved;
     const std::string helperName =
         (isSimpleCallName(expr, "to_soa") || resolved == "/to_soa")
             ? "to_soa"
-            : (isBorrowedToAosHelper ? "to_aos_ref" : "to_aos");
+            : (isBorrowedToAosHelper ? "to" "_aos_ref" : "to" "_aos");
     if (!expr.templateArgs.empty()) {
       return failMapSoaBuiltinDiagnostic(helperName +
                                         " does not accept template arguments");
@@ -428,20 +428,20 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
                   context.resolveSoaVectorTarget,
                   elemType);
     if (!targetValid) {
-      if (helperName == "to_aos" && matchesSoaToAosResolved) {
+      if (helperName == "to" "_aos" && matchesSoaToAosResolved) {
         return failMapSoaBuiltinDiagnostic(
-            "argument type mismatch for /std/collections/soa_vector/to_aos parameter values");
-      } else if (helperName == "to_aos_ref" &&
+            "argument type mismatch for /std/collections/" "soa" "_vector/to" "_aos parameter values");
+      } else if (helperName == "to" "_aos_ref" &&
                  matchesBorrowedSoaToAosResolved) {
         return failMapSoaBuiltinDiagnostic(
-            "argument type mismatch for /std/collections/soa_vector/to_aos_ref parameter values");
+            "argument type mismatch for /std/collections/" "soa" "_vector/to" "_aos_ref parameter values");
       } else {
         return failMapSoaBuiltinDiagnostic(
             helperName == "to_soa" ? "to_soa requires vector target"
-                                   : "to_aos requires soa target");
+                                   : "to" "_aos requires soa target");
       }
     }
-    if (helperName == "to_aos") {
+    if (helperName == "to" "_aos") {
       std::string borrowRoot;
       std::string ignoreBorrowName;
       if (resolveStandaloneSoaBorrowRoot(expr.args.front(), borrowRoot,
@@ -462,10 +462,10 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       builtinSoaAccessHelperName(expr, params, locals);
   const bool hasExplicitSoaAccessSpelling =
       !expr.isMethodCall &&
-      (expr.name.rfind("/soa_vector/", 0) == 0 ||
-       expr.name.rfind("soa_vector/", 0) == 0 ||
-       expr.namespacePrefix == "/soa_vector" ||
-       expr.namespacePrefix == "soa_vector");
+      (expr.name.rfind("/soa" "_vector/", 0) == 0 ||
+       expr.name.rfind("soa" "_vector/", 0) == 0 ||
+       expr.namespacePrefix == "/soa" "_vector" ||
+       expr.namespacePrefix == "soa" "_vector");
   if ((resolvedMethod || resolvedMissing ||
        hasExplicitSoaAccessSpelling ||
        isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "get") ||
@@ -496,7 +496,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     const bool explicitOldSurfaceAccessCall =
         isExplicitOldSurfaceSoaAccessCall(helperName);
     const bool hasVisibleSamePathHelper =
-        hasVisibleDefinitionPathForCurrentImports("/soa_vector/" + helperName);
+        hasVisibleDefinitionPathForCurrentImports("/soa" "_vector/" + helperName);
     if (oldSurfaceCallShape && hasVisibleSamePathHelper) {
       handledOut = false;
       return true;
@@ -508,7 +508,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
           context.isNamedArgsPackWrappedFileBuiltinAccessCall(expr))) {
       if (explicitOldSurfaceAccessCall) {
         return failMapSoaBuiltinDiagnostic(
-            soaUnavailableMethodDiagnostic("/soa_vector/" + helperName));
+            soaUnavailableMethodDiagnostic("/soa" "_vector/" + helperName));
       }
       return failMapSoaBuiltinDiagnostic(
           "named arguments not supported for builtin calls");
@@ -531,7 +531,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     }
     std::string elemType;
     if (explicitOldSurfaceAccessCall &&
-        hasVisibleDefinitionPathForCurrentImports("/soa_vector/" + helperName)) {
+        hasVisibleDefinitionPathForCurrentImports("/soa" "_vector/" + helperName)) {
       handledOut = false;
       return true;
     }
@@ -553,9 +553,9 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       return false;
     }
     if (isExplicitOldSurfaceSoaAccessCall(helperName) &&
-        !hasVisibleDefinitionPathForCurrentImports("/soa_vector/" + helperName)) {
+        !hasVisibleDefinitionPathForCurrentImports("/soa" "_vector/" + helperName)) {
       return failMapSoaBuiltinDiagnostic(
-          soaUnavailableMethodDiagnostic("/soa_vector/" + helperName));
+          soaUnavailableMethodDiagnostic("/soa" "_vector/" + helperName));
     }
     for (const auto &arg : expr.args) {
       if (!validateExpr(params, locals, arg)) {

@@ -299,10 +299,10 @@ bool parseBindingInfo(const Expr &expr,
         error = "binding requires exactly one type";
         return false;
       }
-      if (transform.name == "soa_vector" || transform.name == "/soa_vector" ||
-          transform.name == "std/collections/soa_vector" ||
-          transform.name == "/std/collections/soa_vector") {
-        error = "soa_vector<T> is not supported; use soa<T>";
+      if (transform.name == "soa" "_vector" || transform.name == "/soa" "_vector" ||
+          transform.name == "std/collections/" "soa" "_vector" ||
+          transform.name == "/std/collections/" "soa" "_vector") {
+        error = "soa" "_vector<T> is not supported; use soa<T>";
         return false;
       }
       const std::string normalizedTypeName = normalizeBindingTypeName(transform.name);
@@ -319,12 +319,12 @@ bool parseBindingInfo(const Expr &expr,
         error = "map requires exactly two template arguments";
         return false;
       }
-      if (normalizedTypeName == "soa_vector") {
+      if (normalizedTypeName == "soa" "_vector") {
         const bool isPublicSoaSpelling =
             transform.name == "soa" || transform.name == "/soa" ||
-            transform.name == "std/collections/soa" ||
-            transform.name == "/std/collections/soa";
-        const std::string displayType = isPublicSoaSpelling ? "soa" : "soa_vector";
+            transform.name == "std/collections/" "soa" ||
+            transform.name == "/std/collections/" "soa";
+        const std::string displayType = isPublicSoaSpelling ? "soa" : "soa" "_vector";
         if (transform.templateArgs.size() != 1) {
           error = displayType + " requires exactly one template argument";
           return false;
@@ -568,7 +568,7 @@ bool parseBindingInfo(const Expr &expr,
       return false;
     }
 
-    if ((base == "array" || base == "vector" || base == "soa_vector" || base == "Buffer" || base == "File") &&
+    if ((base == "array" || base == "vector" || base == "soa" "_vector" || base == "Buffer" || base == "File") &&
         args.size() == 1) {
       return true;
     }

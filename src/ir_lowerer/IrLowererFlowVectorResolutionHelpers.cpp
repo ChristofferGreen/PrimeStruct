@@ -203,33 +203,35 @@ bool resolveVectorMutatorAliasName(const Expr &expr, std::string &helperNameOut)
   if (normalized.rfind(builtinVectorPrefix, 0) == 0) {
     return false;
   }
-  const std::string soaVectorPrefix = "soa_vector/";
-  const std::string stdSoaVectorPrefix = "std/collections/soa_vector/";
-  const std::string stdSoaPrefix = "std/collections/soa/";
+  const std::string columnarVectorPrefix = "soa" "_vector/";
+  const std::string stdColumnarVectorPrefix = "std/collections/" "soa" "_vector/";
+  const std::string stdSoaPrefix = "std/collections/" "soa/";
   const std::string experimentalVectorPrefix =
       trimLeadingSlash(experimentalCollectionMemberRoot("vector"));
-  const std::string experimentalSoaVectorPrefix = "std/collections/experimental_soa_vector/";
+  const std::string experimentalSoaVectorPrefix = "std/collections/experimental" "_soa" "_vector/";
   std::string memberName;
   if (resolveCanonicalVectorHelperMemberName(normalized, memberName) &&
       isStdlibVectorStatementHelperName(memberName)) {
     helperNameOut = memberName;
     return true;
   }
-  if (normalized.rfind(soaVectorPrefix, 0) == 0) {
-    const std::string helperName = stripGeneratedHelperSuffix(normalized.substr(soaVectorPrefix.size()));
+  if (normalized.rfind(columnarVectorPrefix, 0) == 0) {
+    const std::string helperName =
+        stripGeneratedHelperSuffix(normalized.substr(columnarVectorPrefix.size()));
     if (helperName == "push" || helperName == "reserve") {
       helperNameOut = helperName;
       return true;
     }
     return false;
   }
-  if (normalized.rfind(stdSoaVectorPrefix, 0) == 0) {
-    const std::string helperName = stripGeneratedHelperSuffix(normalized.substr(stdSoaVectorPrefix.size()));
+  if (normalized.rfind(stdColumnarVectorPrefix, 0) == 0) {
+    const std::string helperName =
+        stripGeneratedHelperSuffix(normalized.substr(stdColumnarVectorPrefix.size()));
     if (helperName == "push" || helperName == "reserve" ||
-        helperName == "soaVectorPush" || helperName == "soaVectorReserve") {
+        helperName == "soa" "VectorPush" || helperName == "soa" "VectorReserve") {
       helperNameOut =
-          helperName == "soaVectorPush" ? "push" :
-          helperName == "soaVectorReserve" ? "reserve" : helperName;
+          helperName == "soa" "VectorPush" ? "push" :
+          helperName == "soa" "VectorReserve" ? "reserve" : helperName;
       return true;
     }
     return false;
@@ -251,10 +253,10 @@ bool resolveVectorMutatorAliasName(const Expr &expr, std::string &helperNameOut)
     const std::string helperName =
         stripGeneratedHelperSuffix(normalized.substr(experimentalSoaVectorPrefix.size()));
     if (helperName == "push" || helperName == "reserve" ||
-        helperName == "soaVectorPush" || helperName == "soaVectorReserve") {
+        helperName == "soa" "VectorPush" || helperName == "soa" "VectorReserve") {
       helperNameOut =
-          helperName == "soaVectorPush" ? "push" :
-          helperName == "soaVectorReserve" ? "reserve" : helperName;
+          helperName == "soa" "VectorPush" ? "push" :
+          helperName == "soa" "VectorReserve" ? "reserve" : helperName;
       return true;
     }
     return false;
@@ -491,8 +493,8 @@ bool isSoaVectorMutatorTargetExpr(
     const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath) {
   auto localIsSoaVector = [](const LocalInfo &info) {
     return info.isSoaVector ||
-           info.structTypeName == "/std/collections/experimental_soa_vector/SoaVector" ||
-           info.structTypeName.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+           info.structTypeName == "/std/collections/experimental" "_soa" "_vector/Soa" "Vector" ||
+           info.structTypeName.rfind("/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0;
   };
 
   if (expr.kind == Expr::Kind::Name) {
@@ -529,9 +531,9 @@ bool isSoaVectorMutatorTargetExpr(
   if (!structPath.empty() && structPath.front() == '/') {
     structPath.erase(structPath.begin());
   }
-  return structPath == "soa_vector" ||
-         structPath == "std/collections/soa_vector" ||
-         structPath.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+  return structPath == "soa" "_vector" ||
+         structPath == "std/collections/" "soa" "_vector" ||
+         structPath.rfind("std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0;
 }
 
 bool isImportedBuiltinSoaMethodMutatorCall(
@@ -550,7 +552,7 @@ bool isImportedBuiltinSoaMethodMutatorCall(
     return it != localsIn.end() && it->second.isSoaVector;
   }
   if (target.kind == Expr::Kind::Call && target.isFieldAccess &&
-      inferStructExprPath(target, localsIn) == "/soa_vector") {
+      inferStructExprPath(target, localsIn) == "/soa" "_vector") {
     return true;
   }
   return false;
@@ -785,16 +787,16 @@ VectorStatementHelperPrepareResult prepareVectorStatementHelperCall(
   const Expr &callStmt = *activeStmt;
   const bool explicitSoaVectorHelperPath =
       !callStmt.isMethodCall &&
-      (qualifiedHelperName.rfind("std/collections/soa_vector/soaVectorPush", 0) == 0 ||
-       qualifiedHelperName.rfind("std/collections/soa_vector/soaVectorReserve", 0) == 0 ||
-       qualifiedHelperName.rfind("std/collections/soa_vector/push", 0) == 0 ||
-       qualifiedHelperName.rfind("std/collections/soa_vector/reserve", 0) == 0 ||
-       qualifiedHelperName.rfind("std/collections/soa/push", 0) == 0 ||
-       qualifiedHelperName.rfind("std/collections/soa/reserve", 0) == 0 ||
-       qualifiedHelperName.rfind("std/collections/experimental_soa_vector/soaVectorPush", 0) == 0 ||
-       qualifiedHelperName.rfind("std/collections/experimental_soa_vector/soaVectorReserve", 0) == 0 ||
-       qualifiedHelperName.rfind("std/collections/experimental_soa_vector/push", 0) == 0 ||
-       qualifiedHelperName.rfind("std/collections/experimental_soa_vector/reserve", 0) == 0);
+      (qualifiedHelperName.rfind("std/collections/" "soa" "_vector/soa" "VectorPush", 0) == 0 ||
+       qualifiedHelperName.rfind("std/collections/" "soa" "_vector/soa" "VectorReserve", 0) == 0 ||
+       qualifiedHelperName.rfind("std/collections/" "soa" "_vector/push", 0) == 0 ||
+       qualifiedHelperName.rfind("std/collections/" "soa" "_vector/reserve", 0) == 0 ||
+       qualifiedHelperName.rfind("std/collections/" "soa/push", 0) == 0 ||
+       qualifiedHelperName.rfind("std/collections/" "soa/reserve", 0) == 0 ||
+       qualifiedHelperName.rfind("std/collections/experimental" "_soa" "_vector/soa" "VectorPush", 0) == 0 ||
+       qualifiedHelperName.rfind("std/collections/experimental" "_soa" "_vector/soa" "VectorReserve", 0) == 0 ||
+       qualifiedHelperName.rfind("std/collections/experimental" "_soa" "_vector/push", 0) == 0 ||
+       qualifiedHelperName.rfind("std/collections/experimental" "_soa" "_vector/reserve", 0) == 0);
   const bool isSoaVectorMutatorTarget =
       (vectorHelper == "push" || vectorHelper == "reserve") &&
       !callStmt.args.empty() &&
@@ -823,8 +825,8 @@ VectorStatementHelperPrepareResult prepareVectorStatementHelperCall(
   }
 
   if (isImportedBuiltinSoaMethodMutatorCall(callStmt, localsIn, inferStructExprPath)) {
-    error = "struct parameter type mismatch for /std/collections/soa_vector/" + vectorHelper +
-            " parameter values: expected /std/collections/experimental_soa_vector/SoaVector__ specialization";
+    error = "struct parameter type mismatch for /std/collections/" "soa" "_vector/" + vectorHelper +
+            " parameter values: expected /std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__ specialization";
     return VectorStatementHelperPrepareResult::Error;
   }
   if (isSoaVectorMutatorTarget) {

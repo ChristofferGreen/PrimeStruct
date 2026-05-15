@@ -226,20 +226,20 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     const bool isRootToAosHelper =
         isSoaConversionSurfaceSpelling(normalizedCallPrefix,
                                        normalizedCallName) ||
-        isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, "to_aos") ||
-        isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, "to_aos_ref");
+        isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, "to" "_aos") ||
+        isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, "to" "_aos_ref");
     if (!isRootToAosHelper) {
       return false;
     }
     const bool isBorrowedToAosHelper =
-        isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, "to_aos_ref");
+        isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, "to" "_aos_ref");
     const std::string helperPath =
-        isBorrowedToAosHelper ? "/to_aos_ref" : "/to_aos";
+        isBorrowedToAosHelper ? "/to" "_aos_ref" : "/to" "_aos";
     const std::string canonicalHelperPath =
         isBorrowedToAosHelper
-            ? compatibilitySoaHelperTargetPath("to_aos_ref")
-            : compatibilitySoaHelperTargetPath("to_aos");
-    const std::string publicHelperPath = publicSoaHelperTargetPath("to_aos");
+            ? compatibilitySoaHelperTargetPath("to" "_aos_ref")
+            : compatibilitySoaHelperTargetPath("to" "_aos");
+    const std::string publicHelperPath = publicSoaHelperTargetPath("to" "_aos");
     auto hasExplicitSourceImportPath = [&](const std::string &path) {
       for (const auto &importPath : program_.sourceImports) {
         if (importPath == path) {

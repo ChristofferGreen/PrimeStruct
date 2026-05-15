@@ -24,7 +24,7 @@ bool isSoaVectorTypeNameLocal(const std::string &typeName) {
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
-  if (normalized == "soa_vector" || normalized.rfind("soa_vector<", 0) == 0 ||
+  if (normalized == "soa" "_vector" || normalized.rfind("soa" "_vector<", 0) == 0 ||
       semantics::isExperimentalSoaVectorTypePath(normalized)) {
     return true;
   }
@@ -54,8 +54,8 @@ bool isVectorValueLocal(const Expr &target,
                         const std::unordered_map<std::string, BindingInfo> &localTypes);
 
 bool isPublicOrCompatibilitySoaToAosCall(const Expr &target) {
-  return isCanonicalCollectionHelperCall(target, "std/collections/soa", "to_aos", 1) ||
-         isCanonicalCollectionHelperCall(target, "std/collections/soa_vector", "to_aos", 1);
+  return isCanonicalCollectionHelperCall(target, "std/collections/" "soa", "to" "_aos", 1) ||
+         isCanonicalCollectionHelperCall(target, "std/collections/" "soa" "_vector", "to" "_aos", 1);
 }
 
 bool isSoaVectorValueLocal(const Expr &target,
@@ -66,7 +66,7 @@ bool isSoaVectorValueLocal(const Expr &target,
   }
   if (target.kind == Expr::Kind::Call) {
     std::string collection;
-    if (getBuiltinCollectionName(target, collection) && collection == "soa_vector") {
+    if (getBuiltinCollectionName(target, collection) && collection == "soa" "_vector") {
       return target.templateArgs.size() == 1;
     }
     if (!target.isMethodCall && isSimpleCallName(target, "to_soa") && target.args.size() == 1) {

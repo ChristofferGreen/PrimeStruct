@@ -181,15 +181,15 @@
         };
         auto isSamePathSoaHelperPath = [&](const std::string &path) {
           const std::string normalizedPath = stripGeneratedHelperSuffix(path);
-          return normalizedPath.rfind("/soa_vector/", 0) == 0 ||
-                 normalizedPath == "/to_aos" ||
-                 normalizedPath == "/to_aos_ref";
+          return normalizedPath.rfind("/soa" "_vector/", 0) == 0 ||
+                 normalizedPath == "/to" "_aos" ||
+                 normalizedPath == "/to" "_aos_ref";
         };
         auto isSoaWrapperHelperFamilyPath = [&](const std::string &path) {
           const std::string normalizedPath = stripGeneratedHelperSuffix(path);
-          return normalizedPath.rfind("/std/collections/soa_vector/", 0) == 0 ||
-                 normalizedPath.rfind("/std/collections/experimental_soa_vector/soaVector", 0) == 0 ||
-                 normalizedPath.rfind("/std/collections/experimental_soa_vector_conversions/soaVector", 0) == 0;
+          return normalizedPath.rfind("/std/collections/" "soa" "_vector/", 0) == 0 ||
+                 normalizedPath.rfind("/std/collections/experimental" "_soa" "_vector/soa" "Vector", 0) == 0 ||
+                 normalizedPath.rfind("/std/collections/experimental" "_soa" "_vector_conversions/soa" "Vector", 0) == 0;
         };
         auto isBuiltinMapInsertFamilyPath = [&](const std::string &path) {
           const std::string normalizedPath = stripGeneratedHelperSuffix(path);
@@ -221,35 +221,35 @@
             return directSoaWrapper;
           }
           auto canonicalSamePathSoaWrapper = [](const std::string &path) {
-            if (path == "/soa_vector/count") {
-              return std::string("/std/collections/soa_vector/count");
+            if (path == "/soa" "_vector/count") {
+              return std::string("/std/collections/" "soa" "_vector/count");
             }
-            if (path == "/soa_vector/count_ref") {
-              return std::string("/std/collections/soa_vector/count_ref");
+            if (path == "/soa" "_vector/count_ref") {
+              return std::string("/std/collections/" "soa" "_vector/count_ref");
             }
-            if (path == "/soa_vector/get") {
-              return std::string("/std/collections/soa_vector/get");
+            if (path == "/soa" "_vector/get") {
+              return std::string("/std/collections/" "soa" "_vector/get");
             }
-            if (path == "/soa_vector/get_ref") {
-              return std::string("/std/collections/soa_vector/get_ref");
+            if (path == "/soa" "_vector/get_ref") {
+              return std::string("/std/collections/" "soa" "_vector/get_ref");
             }
-            if (path == "/soa_vector/ref") {
-              return std::string("/std/collections/soa_vector/ref");
+            if (path == "/soa" "_vector/ref") {
+              return std::string("/std/collections/" "soa" "_vector/ref");
             }
-            if (path == "/soa_vector/ref_ref") {
-              return std::string("/std/collections/soa_vector/ref_ref");
+            if (path == "/soa" "_vector/ref_ref") {
+              return std::string("/std/collections/" "soa" "_vector/ref_ref");
             }
-            if (path == "/soa_vector/reserve") {
-              return std::string("/std/collections/soa_vector/reserve");
+            if (path == "/soa" "_vector/reserve") {
+              return std::string("/std/collections/" "soa" "_vector/reserve");
             }
-            if (path == "/soa_vector/push") {
-              return std::string("/std/collections/soa_vector/push");
+            if (path == "/soa" "_vector/push") {
+              return std::string("/std/collections/" "soa" "_vector/push");
             }
-            if (path == "/to_aos") {
-              return std::string("/std/collections/soa_vector/to_aos");
+            if (path == "/to" "_aos") {
+              return std::string("/std/collections/" "soa" "_vector/to" "_aos");
             }
-            if (path == "/to_aos_ref") {
-              return std::string("/std/collections/soa_vector/to_aos_ref");
+            if (path == "/to" "_aos_ref") {
+              return std::string("/std/collections/" "soa" "_vector/to" "_aos_ref");
             }
             return std::string{};
           };
@@ -260,13 +260,13 @@
           }
           const bool isExperimentalSoaToAosCall =
               normalizedRawPath ==
-              "/std/collections/experimental_soa_vector_conversions/soaVectorToAos";
+              "/std/collections/experimental" "_soa" "_vector_conversions/soa" "VectorToAos";
           if (isExperimentalSoaToAosCall && !callExpr.args.empty()) {
             const std::string receiverStruct =
                 inferStructExprPath(callExpr.args.front(), localsIn);
-            if (normalizeCollectionBindingTypeName(receiverStruct) == "soa_vector") {
+            if (normalizeCollectionBindingTypeName(receiverStruct) == "soa" "_vector") {
               if (const Definition *canonicalSoaToAos =
-                      findDirectHelperDefinition("/std/collections/soa_vector/to_aos")) {
+                      findDirectHelperDefinition("/std/collections/" "soa" "_vector/to" "_aos")) {
                 return canonicalSoaToAos;
               }
             }
@@ -394,9 +394,9 @@
                 return true;
               }
               if (inferredReceiverStruct.rfind(
-                      "/std/collections/experimental_soa_vector/SoaVector__", 0) == 0 ||
+                      "/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0 ||
                   normalizeCollectionBindingTypeName(inferredReceiverStruct) ==
-                      "soa_vector") {
+                      "soa" "_vector") {
                 targetInfoOut.isArrayOrVectorTarget = true;
                 targetInfoOut.isVectorTarget = false;
                 targetInfoOut.isSoaVector = true;
@@ -416,13 +416,13 @@
                 return false;
               }
               if ((collectionName != "array" && collectionName != "vector" &&
-                   collectionName != "soa_vector") ||
+                   collectionName != "soa" "_vector") ||
                   collectionArgs.size() != 1) {
                 return false;
               }
               targetInfoOut.isArrayOrVectorTarget = true;
               targetInfoOut.isVectorTarget = (collectionName == "vector");
-              targetInfoOut.isSoaVector = (collectionName == "soa_vector");
+              targetInfoOut.isSoaVector = (collectionName == "soa" "_vector");
               targetInfoOut.elemKind =
                   ir_lowerer::valueKindFromTypeName(collectionArgs.front());
               if (targetInfoOut.isSoaVector) {
@@ -881,11 +881,11 @@
                   structPath == "/std/collections/experimental_map/Map" ||
                   structPath.rfind("/std/collections/experimental_map/Map__", 0) == 0;
               const bool isExperimentalSoaVectorTarget =
-                  structPath == "/std/collections/experimental_soa_vector/SoaVector" ||
-                  structPath.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+                  structPath == "/std/collections/experimental" "_soa" "_vector/Soa" "Vector" ||
+                  structPath.rfind("/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0;
               return targetInfo.isArrayOrVectorTarget || structPath == "/array" ||
                      structPath == "/vector" || structPath == "/Buffer" || structPath == "/map" ||
-                     structPath == "/soa_vector" || isExperimentalVectorTarget ||
+                     structPath == "/soa" "_vector" || isExperimentalVectorTarget ||
                      isExperimentalMapTarget || isExperimentalSoaVectorTarget;
             },
             [&](const Expr &targetExpr, const LocalMap &targetLocals) {

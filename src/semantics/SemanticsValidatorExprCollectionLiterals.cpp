@@ -48,7 +48,7 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
   if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
     return failCollectionLiteralDiagnostic(builtinName + " literal does not accept block arguments");
   }
-  if (builtinName == "soa_vector") {
+  if (builtinName == "soa" "_vector") {
     if (expr.templateArgs.size() != 1) {
       return failCollectionLiteralDiagnostic(
           "soa literal requires exactly one template argument");
@@ -72,7 +72,7 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
     }
   }
   if (builtinName == "array" || builtinName == "vector" ||
-      builtinName == "soa_vector") {
+      builtinName == "soa" "_vector") {
     if (expr.templateArgs.size() != 1) {
       if (builtinName == "array" && expr.templateArgs.size() > 1) {
         return failCollectionLiteralDiagnostic(
@@ -113,7 +113,7 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
     }
   };
   if ((builtinName == "array" || builtinName == "vector" ||
-       builtinName == "soa_vector") &&
+       builtinName == "soa" "_vector") &&
       !expr.templateArgs.empty()) {
     const std::string &elemType = expr.templateArgs.front();
     const std::vector<std::string> *definitionTemplateArgs = nullptr;

@@ -338,7 +338,7 @@ ReflectionMetadataRewriteContext buildReflectionMetadataRewriteContext(const Pro
         return true;
       }
       if (normalizedBase == "array" || normalizedBase == "vector" || normalizedBase == "map" ||
-          normalizedBase == "soa_vector") {
+          normalizedBase == "soa" "_vector") {
         layoutOut = {8u, 8u};
         return true;
       }

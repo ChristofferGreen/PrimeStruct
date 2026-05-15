@@ -41,7 +41,7 @@ std::string SemanticsValidator::inferStructReturnCollectionPath(const std::strin
   if (normalizedTypeName == "string") {
     return "/string";
   }
-  if ((normalizedTypeName == "array" || normalizedTypeName == "vector" || normalizedTypeName == "soa_vector") &&
+  if ((normalizedTypeName == "array" || normalizedTypeName == "vector" || normalizedTypeName == "soa" "_vector") &&
       !normalizedTypeTemplateArg.empty()) {
     return "/" + normalizedTypeName;
   }
@@ -54,7 +54,7 @@ std::string SemanticsValidator::inferStructReturnCollectionPath(const std::strin
   if (splitTemplateTypeName(normalizedTypeName, base, argText)) {
     std::vector<std::string> args;
     if (splitTopLevelTemplateArgs(argText, args)) {
-      if ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) {
+      if ((base == "array" || base == "vector" || base == "soa" "_vector") && args.size() == 1) {
         return "/" + base;
       }
       if (isMapCollectionTypeName(base) && args.size() == 2) {

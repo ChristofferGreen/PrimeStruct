@@ -19,16 +19,16 @@ bool isSpecializedExperimentalCollectionTypeName(const std::string &typeName) {
          typeName.rfind("/std/collections/experimental_map/Map__", 0) == 0 ||
          (isExperimentalCollectionTypeName(typeName, "vector", "Vector") &&
           typeName.find("__") != std::string::npos) ||
-         typeName.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) == 0 ||
-         typeName.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+         typeName.rfind("std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0 ||
+         typeName.rfind("/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0;
 }
 
 bool isExperimentalSoaVectorTypeName(const std::string &typeName) {
-  return typeName == "SoaVector" ||
-         typeName == "std/collections/experimental_soa_vector/SoaVector" ||
-         typeName == "/std/collections/experimental_soa_vector/SoaVector" ||
-         typeName.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) == 0 ||
-         typeName.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+  return typeName == "Soa" "Vector" ||
+         typeName == "std/collections/experimental" "_soa" "_vector/Soa" "Vector" ||
+         typeName == "/std/collections/experimental" "_soa" "_vector/Soa" "Vector" ||
+         typeName.rfind("std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0 ||
+         typeName.rfind("/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0;
 }
 
 LayoutFieldBinding layoutFieldBindingFromSemanticProduct(

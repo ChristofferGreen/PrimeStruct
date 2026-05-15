@@ -486,12 +486,12 @@ std::string normalizeCollectionSpecializationTypeName(std::string typeName) {
       typeName == "/std/collections/experimental_map/Map") {
     return "map";
   }
-  if (typeName == "/soa_vector" || typeName == "std/collections/soa_vector" ||
-      typeName == "/std/collections/soa_vector" || typeName == "SoaVector" ||
-      typeName == "/SoaVector" ||
-      typeName == "std/collections/experimental_soa_vector/SoaVector" ||
-      typeName == "/std/collections/experimental_soa_vector/SoaVector") {
-    return "soa_vector";
+  if (typeName == "/soa" "_vector" || typeName == "std/collections/" "soa" "_vector" ||
+      typeName == "/std/collections/" "soa" "_vector" || typeName == "Soa" "Vector" ||
+      typeName == "/Soa" "Vector" ||
+      typeName == "std/collections/experimental" "_soa" "_vector/Soa" "Vector" ||
+      typeName == "/std/collections/experimental" "_soa" "_vector/Soa" "Vector") {
+    return "soa" "_vector";
   }
   return typeName;
 }
@@ -527,12 +527,12 @@ bool classifyCollectionSpecialization(std::string typeText,
       draftOut.valueTypeText = draftOut.elementTypeText;
       return true;
     }
-    if (base == "soa_vector") {
+    if (base == "soa" "_vector") {
       std::vector<std::string> args;
       if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
         return false;
       }
-      draftOut.collectionFamily = "soa_vector";
+      draftOut.collectionFamily = "soa" "_vector";
       draftOut.elementTypeText = normalizeBindingTypeName(args.front());
       draftOut.valueTypeText = draftOut.elementTypeText;
       return true;
@@ -582,7 +582,7 @@ void publishCollectionSpecializationForBinding(
                                 ? StdlibSurfaceId::CollectionsVectorHelperSurface
                                 : helperMetadata->id;
     entry.constructorSurfaceId = StdlibSurfaceId::CollectionsVectorConstructors;
-  } else if (entry.collectionFamily == "soa_vector") {
+  } else if (entry.collectionFamily == "soa" "_vector") {
     entry.helperSurfaceId = StdlibSurfaceId::CollectionsColumnarHelpers;
     entry.constructorSurfaceId = StdlibSurfaceId::CollectionsColumnarConstructors;
   } else if (entry.collectionFamily == "map") {

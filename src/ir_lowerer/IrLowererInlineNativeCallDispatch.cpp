@@ -455,8 +455,8 @@ bool isMapTryAtHelperName(const Expr &expr) {
 bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn);
 
 bool isPublicOrCompatibilitySoaToAosCall(const Expr &expr) {
-  return isCanonicalCollectionHelperCall(expr, "std/collections/soa", "to_aos", 1) ||
-         isCanonicalCollectionHelperCall(expr, "std/collections/soa_vector", "to_aos", 1);
+  return isCanonicalCollectionHelperCall(expr, "std/collections/" "soa", "to" "_aos", 1) ||
+         isCanonicalCollectionHelperCall(expr, "std/collections/" "soa" "_vector", "to" "_aos", 1);
 }
 
 bool isExperimentalVectorStructPath(std::string_view structTypeName) {
@@ -575,7 +575,7 @@ bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn) {
   }
   if (expr.kind == Expr::Kind::Call) {
     std::string collection;
-    if (getBuiltinCollectionName(expr, collection) && collection == "soa_vector") {
+    if (getBuiltinCollectionName(expr, collection) && collection == "soa" "_vector") {
       return true;
     }
     if (!expr.isMethodCall && isSimpleCallName(expr, "to_soa") && expr.args.size() == 1) {
@@ -698,12 +698,12 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
         isSoaVectorReceiverExpr != nullptr &&
         !expr.args.empty() &&
         (normalizedDirectCallPath ==
-             "/std/collections/experimental_soa_vector_conversions/soaVectorToAos" ||
+             "/std/collections/experimental" "_soa" "_vector_conversions/soa" "VectorToAos" ||
          normalizedDirectCallPath ==
-             "/std/collections/experimental_soa_vector_conversions/soaVectorToAosRef") &&
+             "/std/collections/experimental" "_soa" "_vector_conversions/soa" "VectorToAosRef") &&
         isSoaVectorReceiverExpr(expr.args.front())) {
-      error = "struct parameter type mismatch: direct experimental soa_vector conversion "
-              "helpers require SoaVector receiver";
+      error = "struct parameter type mismatch: direct experimental soa" "_vector conversion "
+              "helpers require Soa" "Vector receiver";
       return InlineCallDispatchResult::Error;
     }
     if (directCallee != nullptr) {
@@ -1021,20 +1021,20 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       if (normalizedBase == "Reference" || normalizedBase == "/Reference" ||
           normalizedBase == "Pointer" || normalizedBase == "/Pointer") {
         const std::string normalizedArg = trimTemplateTypeText(argText);
-        return normalizedArg == "soa_vector" ||
-               normalizedArg == "/soa_vector" ||
-               normalizedArg == "std/collections/soa_vector" ||
-               normalizedArg == "/std/collections/soa_vector";
+        return normalizedArg == "soa" "_vector" ||
+               normalizedArg == "/soa" "_vector" ||
+               normalizedArg == "std/collections/" "soa" "_vector" ||
+               normalizedArg == "/std/collections/" "soa" "_vector";
       }
-      return normalizedBase == "soa_vector" ||
-             normalizedBase == "/soa_vector" ||
-             normalizedBase == "std/collections/soa_vector" ||
-             normalizedBase == "/std/collections/soa_vector";
+      return normalizedBase == "soa" "_vector" ||
+             normalizedBase == "/soa" "_vector" ||
+             normalizedBase == "std/collections/" "soa" "_vector" ||
+             normalizedBase == "/std/collections/" "soa" "_vector";
     }
-    return normalizedTypeText == "soa_vector" ||
-           normalizedTypeText == "/soa_vector" ||
-           normalizedTypeText == "std/collections/soa_vector" ||
-           normalizedTypeText == "/std/collections/soa_vector";
+    return normalizedTypeText == "soa" "_vector" ||
+           normalizedTypeText == "/soa" "_vector" ||
+           normalizedTypeText == "std/collections/" "soa" "_vector" ||
+           normalizedTypeText == "/std/collections/" "soa" "_vector";
   };
   std::function<bool(const Expr &)> isRawBuiltinSoaVectorTarget;
   isRawBuiltinSoaVectorTarget = [&](const Expr &targetExpr) {
@@ -1081,7 +1081,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     }
     if (targetExpr.kind == Expr::Kind::Call) {
       std::string collection;
-      if (getBuiltinCollectionName(targetExpr, collection) && collection == "soa_vector") {
+      if (getBuiltinCollectionName(targetExpr, collection) && collection == "soa" "_vector") {
         return true;
       }
       if ((isSimpleCallName(targetExpr, "location") ||

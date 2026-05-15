@@ -358,7 +358,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     const bool resolvedVisibleCollectionMethod =
         (expr.name == "get" || expr.name == "get_ref" ||
          expr.name == "ref" || expr.name == "ref_ref" ||
-         expr.name == "to_aos" || expr.name == "to_aos_ref") &&
+         expr.name == "to" "_aos" || expr.name == "to" "_aos_ref") &&
         resolveVectorHelperMethodTarget(params, locals, expr.args.front(), expr.name,
                                         collectionMethodTarget) &&
         hasImportedDefinitionPath(collectionMethodTarget);

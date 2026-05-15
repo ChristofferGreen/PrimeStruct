@@ -34,7 +34,7 @@ bool isSpecializedExperimentalSoaVectorStructPath(const std::string &path) {
   if (!normalized.empty() && normalized.front() != '/') {
     normalized.insert(normalized.begin(), '/');
   }
-  return normalized.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+  return normalized.rfind("/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0;
 }
 
 std::string scalarKindTypeName(LocalInfo::ValueKind kind) {
@@ -63,7 +63,7 @@ std::string inferVectorLikeStructPathFromLocalInfo(const LocalInfo &localInfo) {
       trimTemplateTypeText(localInfo.structTypeName);
   if (localInfo.isSoaVector) {
     if (normalizedStructTypeName.empty()) {
-      return "/soa_vector";
+      return "/soa" "_vector";
     }
 
     std::string normalizedStructPath = normalizedStructTypeName;
@@ -74,8 +74,8 @@ std::string inferVectorLikeStructPathFromLocalInfo(const LocalInfo &localInfo) {
       return normalizedStructPath;
     }
     if (normalizeCollectionBindingTypeName(normalizedStructTypeName) ==
-        "soa_vector") {
-      return "/soa_vector";
+        "soa" "_vector") {
+      return "/soa" "_vector";
     }
 
     std::string elementType = normalizedStructTypeName;

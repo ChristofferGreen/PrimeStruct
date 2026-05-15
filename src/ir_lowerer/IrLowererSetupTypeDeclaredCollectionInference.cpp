@@ -13,12 +13,12 @@ std::string normalizeDeclaredCollectionTypeBase(const std::string &base) {
   if (isExperimentalCollectionTypeName(base, "vector", "Vector")) {
     return "vector";
   }
-  if (base == "SoaVector" ||
-      base == "std/collections/experimental_soa_vector/SoaVector" ||
-      base == "/std/collections/experimental_soa_vector/SoaVector" ||
-      base.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) == 0 ||
-      base.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0) {
-    return "soa_vector";
+  if (base == "Soa" "Vector" ||
+      base == "std/collections/experimental" "_soa" "_vector/Soa" "Vector" ||
+      base == "/std/collections/experimental" "_soa" "_vector/Soa" "Vector" ||
+      base.rfind("std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0 ||
+      base.rfind("/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0) {
+    return "soa" "_vector";
   }
   if (base == "/map" || base == "std/collections/map" || base == "/std/collections/map" ||
       base == "Map" || base == "std/collections/experimental_map/Map" ||
@@ -47,7 +47,7 @@ bool inferDeclaredReturnCollection(const Definition &definition,
     if (!splitTemplateArgs(argText, args)) {
       return false;
     }
-    if ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) {
+    if ((base == "array" || base == "vector" || base == "soa" "_vector") && args.size() == 1) {
       collectionNameOut = base;
       collectionArgsOut = std::move(args);
       return true;
@@ -145,7 +145,7 @@ bool inferDeclaredReturnCollection(const Definition &definition,
     }
     std::string collection;
     if (getBuiltinCollectionName(candidate, collection)) {
-      if ((collection == "array" || collection == "vector" || collection == "soa_vector") &&
+      if ((collection == "array" || collection == "vector" || collection == "soa" "_vector") &&
           candidate.templateArgs.size() == 1) {
         nameOut = collection;
         argsOut = candidate.templateArgs;

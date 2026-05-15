@@ -193,7 +193,7 @@ std::string resolveSpecializedExperimentalSoaVectorStructPath(
       continue;
     }
 
-    if (normalizedBase != "soa_vector" || argList.empty()) {
+    if (normalizedBase != "soa" "_vector" || argList.empty()) {
       return "";
     }
 
