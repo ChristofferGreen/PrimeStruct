@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdint>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -30,6 +31,11 @@ using SubstMap = std::unordered_map<std::string, std::string>;
 struct TemplateRootInfo {
   std::string fullPath;
   std::vector<std::string> params;
+};
+
+struct TemplateArgumentBinding {
+  SubstMap mapping;
+  std::vector<TemplatePackBinding> packBindings;
 };
 
 struct HelperOverloadEntry {
@@ -127,6 +133,9 @@ ResolvedType resolveTypeStringImpl(std::string input,
 
 bool isGeneratedTemplateSpecializationPath(std::string_view path);
 bool isEnclosingTemplateParamName(const std::string &name,
+                                  const std::string &namespacePrefix,
+                                  const Context &ctx);
+bool isEnclosingTypePackParamName(const std::string &name,
                                   const std::string &namespacePrefix,
                                   const Context &ctx);
 
@@ -328,12 +337,16 @@ bool instantiateTemplate(const std::string &basePath,
             helperOverloadDisplayPath(basePath, ctx);
     return false;
   }
-  if (definitionHasTypePackParameter(baseDef)) {
-    error = "type-pack template binding is deferred to TODO-4269: " +
-            helperOverloadDisplayPath(basePath, ctx);
+  TemplateArgumentBinding templateBinding;
+  if (!bindTemplateArguments(baseDef,
+                             resolvedArgs,
+                             helperOverloadDisplayPath(basePath, ctx),
+                             templateBinding,
+                             error)) {
     return false;
   }
-  if (baseDef.templateArgs.size() != resolvedArgs.size()) {
+  if (!definitionHasTypePackParameter(baseDef) &&
+      baseDef.templateArgs.size() != resolvedArgs.size()) {
     std::ostringstream out;
     out << "template argument count mismatch for " << helperOverloadDisplayPath(basePath, ctx) << ": expected "
         << baseDef.templateArgs.size()
@@ -361,7 +374,7 @@ bool instantiateTemplate(const std::string &basePath,
   }
   ctx.specializationCache.emplace(key, specializedBasePath);
   if (!specializeTemplateDefinitionFamily(
-          basePath, baseDef.templateArgs, resolvedArgs, specializedBasePath, specializedName, key, ctx, error)) {
+          basePath, templateBinding, specializedBasePath, specializedName, key, ctx, error)) {
     return false;
   }
 

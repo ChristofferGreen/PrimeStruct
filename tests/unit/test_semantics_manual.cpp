@@ -5,6 +5,8 @@
 
 #include "third_party/doctest.h"
 
+#include <algorithm>
+
 namespace {
 primec::Expr makeLiteral(int value) {
   primec::Expr expr;

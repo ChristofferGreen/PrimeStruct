@@ -140,6 +140,14 @@ ProgramHeapEstimateStats estimateProgramHeap(const Program &program) {
       addStringEstimate(templateArg, stats);
     }
     addVectorStorageEstimate(definition.templateArgIsPack, stats);
+    addVectorStorageEstimate(definition.templatePackBindings, stats);
+    for (const TemplatePackBinding &binding : definition.templatePackBindings) {
+      addStringEstimate(binding.parameterName, stats);
+      addVectorStorageEstimate(binding.arguments, stats);
+      for (const std::string &argument : binding.arguments) {
+        addStringEstimate(argument, stats);
+      }
+    }
     accumulateExprVectorEstimate(definition.parameters, stats);
     accumulateExprVectorEstimate(definition.statements, stats);
     if (definition.returnExpr.has_value()) {

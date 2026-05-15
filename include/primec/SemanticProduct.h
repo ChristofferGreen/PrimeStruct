@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "primec/Ast.h"
 #include "primec/StdlibSurfaceRegistry.h"
 #include "primec/SymbolInterner.h"
 #include "primec/semantic_product/DirectCallFacts.h"
@@ -67,6 +68,7 @@ struct SemanticProgramDefinition {
   uint64_t provenanceHandle = 0;
   std::vector<std::string> templateParameters = {};
   std::vector<bool> templateParameterIsPack = {};
+  std::vector<TemplatePackBinding> templatePackBindings = {};
 };
 
 struct SemanticProgramExecution {

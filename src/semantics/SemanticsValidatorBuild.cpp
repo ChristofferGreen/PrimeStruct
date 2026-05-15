@@ -184,6 +184,18 @@ bool SemanticsValidator::buildDefinitionMaps() {
         return failDefinitionDiagnostic(def, "type pack parameter must be last");
       }
     }
+    std::unordered_set<std::string> seenPackBindings;
+    for (const TemplatePackBinding &binding : def.templatePackBindings) {
+      if (binding.parameterName.empty()) {
+        return failDefinitionDiagnostic(def,
+                                        "template pack binding is missing a parameter name");
+      }
+      if (!seenPackBindings.insert(binding.parameterName).second) {
+        return failDefinitionDiagnostic(def,
+                                        "duplicate template pack binding: " +
+                                            binding.parameterName);
+      }
+    }
     return true;
   };
   std::vector<SemanticDiagnosticRecord> transformDiagnosticRecords;

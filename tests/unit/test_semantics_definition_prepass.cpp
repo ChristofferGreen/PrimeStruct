@@ -243,10 +243,13 @@ TEST_CASE("semantic product formatting distinguishes type-pack parameters") {
   definition.name = "Tuple";
   definition.templateParameters = {"T", "Ts"};
   definition.templateParameterIsPack = {false, true};
+  definition.templatePackBindings.push_back({"Ts", {"i32", "bool"}});
   semanticProgram.definitions.push_back(std::move(definition));
 
   const std::string formatted = primec::formatSemanticProgram(semanticProgram);
   CHECK(formatted.find("template_params=[\"T\", \"Ts...\"]") !=
+        std::string::npos);
+  CHECK(formatted.find("template_pack_bindings=[Ts=[\"i32\", \"bool\"]]") !=
         std::string::npos);
 }
 

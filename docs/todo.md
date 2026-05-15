@@ -83,9 +83,9 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4269: Bind and monomorphize type-pack arguments | track:
-  tuple-type-packs | primary surface: template monomorphization, type
-  binding, diagnostics, and tuple/type-pack tests
+- TODO-4270: Add compile-time integer template arguments | track:
+  tuple-type-packs | primary surface: parser, AST, semantic validation,
+  and template argument representation
 
 ### Parallel Work Tracks (Current)
 
@@ -96,8 +96,8 @@ Task template:
 - `map-zero-audit`: no ready leaf after TODO-4531; TODO-4464 remains the
   parent for the final strict zero map-surface audit and should be split again
   only when the next bounded trace-reduction slice is clear.
-- `tuple-type-packs`: ready TODO-4269, then serial successors TODO-4270
-  -> TODO-4275 -> TODO-4276 -> TODO-4271 -> TODO-4272
+- `tuple-type-packs`: ready TODO-4270, then serial successors TODO-4275
+  -> TODO-4276 -> TODO-4271 -> TODO-4272
   -> TODO-4274 -> TODO-4273 -> TODO-4277 -> TODO-4278.
 - `procedural-genericity`: blocked by TODO-4270 before TODO-4331 can start.
 - `generic-requirements`: blocked by TODO-4331 and TODO-4334 before
@@ -108,12 +108,12 @@ Task template:
 - TODO-4527: Delete template-monomorph SoA zero-audit residue
 - TODO-4528: Delete emitter/lowerer SoA zero-audit residue
 - TODO-4529: Replace SoA inventory with strict zero audit
-- TODO-4270: Add compile-time integer template arguments
 - TODO-4275: Expand type packs into struct storage
 - TODO-4276: Expand type packs in helpers and lifecycle hooks
 - TODO-4271: Add compile-time pack indexing
 - TODO-4272: Add stdlib `tuple<Ts...>`
 - TODO-4274: Add tuple bracket indexing sugar
+- TODO-4273: Add heterogeneous value-pack inference
 
 ### Priority Lanes (Current)
 
@@ -127,8 +127,8 @@ Task template:
   TODO-4530 removed semantic builtin path helper inventory residue, and
   TODO-4526 remains pending parent reconciliation or another semantic child
   slice before TODO-4527 -> TODO-4528 -> TODO-4529
-- Deferred generic tuple substrate: ready TODO-4269, followed by TODO-4270
-  -> TODO-4275 -> TODO-4276 -> TODO-4271 -> TODO-4272
+- Deferred generic tuple substrate: ready TODO-4270, followed by TODO-4275
+  -> TODO-4276 -> TODO-4271 -> TODO-4272
   -> TODO-4274 -> TODO-4273 -> TODO-4277 -> TODO-4278
 - Procedural compile-time genericity: TODO-4331 -> TODO-4332
   -> TODO-4333 -> TODO-4334 -> TODO-4335 -> TODO-4336 -> TODO-4337
@@ -141,11 +141,10 @@ Task template:
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4269: Bind and monomorphize type-pack arguments
+- TODO-4270: Add compile-time integer template arguments
 - TODO-4527: Delete template-monomorph SoA zero-audit residue
 - TODO-4528: Delete emitter/lowerer SoA zero-audit residue
 - TODO-4529: Replace SoA inventory with strict zero audit
-- TODO-4270: Add compile-time integer template arguments
 - TODO-4275: Expand type packs into struct storage
 - TODO-4276: Expand type packs in helpers and lifecycle hooks
 - TODO-4271: Add compile-time pack indexing
@@ -209,7 +208,7 @@ Task template:
 | Test-suite audit follow-up and release-gate stability | none |
 | Algebraic sum types and brace-only construction | none |
 | Stdlib ADT migration for `Maybe` and `Result` | none |
-| Generic type packs and tuple stdlib surface | TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
+| Generic type packs and tuple stdlib surface | TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity and local type facts | TODO-4331, TODO-4332, TODO-4333, TODO-4334, TODO-4335, TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
 | Generic constraints and compile-time flow control | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
@@ -236,7 +235,7 @@ Task template:
 | Release benchmark/example suite stability and doctest governance | none |
 | Sum-type and brace-construction conformance | none |
 | Maybe/Result sum migration conformance | none |
-| Generic type-pack and tuple conformance | TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
+| Generic type-pack and tuple conformance | TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity conformance | TODO-4331, TODO-4332, TODO-4333, TODO-4334, TODO-4335, TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
 | Generic constraint and compile-time flow conformance | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
@@ -512,46 +511,12 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4269: Bind and monomorphize type-pack arguments
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Deferred generic tuple substrate
-  - parallel_track: tuple-type-packs
-  - depends_on: TODO-4268
-  - scope: Add template binding and monomorphization support for an arbitrary
-    number of type arguments bound to a type-pack parameter, without expanding
-    pack fields or helper bodies yet.
-  - implementation_notes:
-    - Build on the pack metadata from TODO-4268 and the existing template
-      monomorphization path; avoid generating source-level `tuple1`/`tuple2`
-      families.
-    - Keep the output as monomorphized pack metadata and deterministic
-      specialized names that later expansion tasks can consume.
-    - Treat pack argument order as source-order and deterministic because tuple
-      layout will depend on it.
-  - acceptance:
-    - A definition or struct with `Ts...` can be specialized with zero, one, or
-      multiple concrete type arguments and records the bound pack contents
-      deterministically.
-    - Specialized names, semantic-product metadata, and serialized diagnostics
-      preserve pack argument order across repeated builds and import order.
-    - Ordinary non-pack template parameters continue to monomorphize exactly as
-      before.
-    - Monomorphized names and serialized diagnostics are deterministic across
-      repeated builds and import order.
-    - Negative tests cover missing pack arguments where disallowed, conflicting
-      pack inference, unsupported multiple packs, and attempts to use pack
-      expansion before TODO-4275.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once type-pack arguments bind and monomorphize
-    deterministically; leave field expansion to TODO-4275 and helper/lifecycle
-    expansion to TODO-4276.
-
 - [ ] TODO-4270: Add compile-time integer template arguments
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred generic tuple substrate
-  - depends_on: TODO-4268
+  - parallel_track: tuple-type-packs
+  - depends_on: TODO-4268, TODO-4269
   - scope: Extend template arguments to support compile-time integer values
     needed by APIs such as `get<0>(tuple)` and
     `tuple_element<1, tuple<...>>()`.
@@ -583,12 +548,13 @@ Task template:
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred generic tuple substrate
-  - depends_on: TODO-4269
+  - depends_on: TODO-4269, TODO-4270
   - scope: Add `.prime` struct-field expansion for heterogeneous type packs so
     a generic struct can store one field per bound type, without adding helper
     body expansion or tuple-specific APIs yet.
   - implementation_notes:
-    - Build on type-pack monomorphization from TODO-4269.
+    - Build on type-pack monomorphization from TODO-4269 and the typed
+      template-argument representation from TODO-4270.
     - The expansion syntax should stay generic and documented in
       `docs/PrimeStruct_SyntaxSpec.md`; `tuple<Ts...>` is only the first known
       consumer.

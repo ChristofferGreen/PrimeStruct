@@ -49,22 +49,62 @@ bool isGeneratedTemplateSpecializationPath(std::string_view path) {
 bool isEnclosingTemplateParamName(const std::string &name,
                                   const std::string &namespacePrefix,
                                   const Context &ctx) {
-  std::string prefix = namespacePrefix;
+  auto matchesDefinitionParams = [&](const std::string &path) {
+    auto it = ctx.sourceDefs.find(path);
+    if (it == ctx.sourceDefs.end()) {
+      return false;
+    }
+    return std::find(it->second.templateArgs.begin(), it->second.templateArgs.end(), name) !=
+           it->second.templateArgs.end();
+  };
+  std::string prefix =
+      namespacePrefix.empty() ? ctx.currentDefinitionPath : namespacePrefix;
   while (!prefix.empty()) {
-    auto matchesDefinitionParams = [&](const std::string &path) {
-      auto it = ctx.sourceDefs.find(path);
-      if (it == ctx.sourceDefs.end()) {
-        return false;
-      }
-      return std::find(it->second.templateArgs.begin(), it->second.templateArgs.end(), name) !=
-             it->second.templateArgs.end();
-    };
     if (matchesDefinitionParams(prefix)) {
       return true;
     }
     if (isGeneratedTemplateSpecializationPath(prefix)) {
       const size_t marker = prefix.rfind("__t");
       if (marker != std::string::npos && matchesDefinitionParams(prefix.substr(0, marker))) {
+        return true;
+      }
+    }
+    const size_t slash = prefix.find_last_of('/');
+    if (slash == std::string::npos) {
+      break;
+    }
+    prefix.erase(slash);
+  }
+  return false;
+}
+
+bool isEnclosingTypePackParamName(const std::string &name,
+                                  const std::string &namespacePrefix,
+                                  const Context &ctx) {
+  auto matchesDefinitionPackParam = [&](const std::string &path) {
+    auto it = ctx.sourceDefs.find(path);
+    if (it == ctx.sourceDefs.end()) {
+      return false;
+    }
+    const Definition &def = it->second;
+    for (size_t i = 0; i < def.templateArgs.size(); ++i) {
+      if (def.templateArgs[i] != name) {
+        continue;
+      }
+      return i < def.templateArgIsPack.size() && def.templateArgIsPack[i];
+    }
+    return false;
+  };
+  std::string prefix =
+      namespacePrefix.empty() ? ctx.currentDefinitionPath : namespacePrefix;
+  while (!prefix.empty()) {
+    if (matchesDefinitionPackParam(prefix)) {
+      return true;
+    }
+    if (isGeneratedTemplateSpecializationPath(prefix)) {
+      const size_t marker = prefix.rfind("__t");
+      if (marker != std::string::npos &&
+          matchesDefinitionPackParam(prefix.substr(0, marker))) {
         return true;
       }
     }

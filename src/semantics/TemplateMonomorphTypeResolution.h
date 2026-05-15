@@ -34,6 +34,13 @@ ResolvedType resolveTypeStringImpl(std::string input,
     substitutionStack.erase(trimmed);
     return resolved;
   }
+  if (isEnclosingTypePackParamName(trimmed, namespacePrefix, ctx)) {
+    error = "type-pack parameter requires expansion support from TODO-4275: " +
+            trimmed;
+    result.text.clear();
+    result.concrete = false;
+    return result;
+  }
   std::string base;
   std::string argText;
   if (!splitTemplateTypeName(trimmed, base, argText)) {

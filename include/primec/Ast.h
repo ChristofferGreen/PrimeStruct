@@ -65,6 +65,11 @@ struct SumVariant {
   uint64_t semanticNodeId = 0;
 };
 
+struct TemplatePackBinding {
+  std::string parameterName;
+  std::vector<std::string> arguments;
+};
+
 struct Definition {
   std::string name;
   std::string fullPath;
@@ -72,6 +77,7 @@ struct Definition {
   std::vector<Transform> transforms;
   std::vector<std::string> templateArgs;
   std::vector<bool> templateArgIsPack;
+  std::vector<TemplatePackBinding> templatePackBindings;
   std::vector<Expr> parameters;
   std::vector<Expr> statements;
   std::vector<SumVariant> sumVariants;

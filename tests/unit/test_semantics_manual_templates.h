@@ -55,6 +55,117 @@ TEST_CASE("template arguments required for templated calls") {
   CHECK(error.find("template arguments required") != std::string::npos);
 }
 
+TEST_CASE("type pack specializations bind zero one and many arguments") {
+  primec::Program program;
+  primec::Definition stamp =
+      makeDefinition("/stamp",
+                     {makeTransform("return", std::string("i32"))},
+                     {makeCall("/return", {makeLiteral(7)})});
+  stamp.templateArgs = {"Ts"};
+  stamp.templateArgIsPack = {true};
+  program.definitions.push_back(stamp);
+
+  primec::Expr zeroCall = makeCall("/stamp");
+  primec::Expr oneCall = makeCall("/stamp");
+  oneCall.templateArgs = {"i32"};
+  primec::Expr manyCall = makeCall("/stamp");
+  manyCall.templateArgs = {"i32", "bool", "string"};
+  program.definitions.push_back(
+      makeDefinition("/main",
+                     {makeTransform("return", std::string("i32"))},
+                     {zeroCall,
+                      oneCall,
+                      manyCall,
+                      makeCall("/return", {makeLiteral(0)})}));
+
+  std::string error;
+  primec::SemanticProgram semanticProgram;
+  primec::Semantics semantics;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program,
+                             "/main",
+                             error,
+                             defaults,
+                             defaults,
+                             {},
+                             nullptr,
+                             false,
+                             &semanticProgram));
+
+  std::vector<std::vector<std::string>> observedPackArgs;
+  for (const primec::Definition &def : program.definitions) {
+    if (def.fullPath.rfind("/stamp__t", 0) != 0) {
+      continue;
+    }
+    REQUIRE(def.templatePackBindings.size() == 1);
+    CHECK(def.templatePackBindings.front().parameterName == "Ts");
+    observedPackArgs.push_back(def.templatePackBindings.front().arguments);
+  }
+  REQUIRE(observedPackArgs.size() == 3);
+  CHECK(std::find(observedPackArgs.begin(),
+                  observedPackArgs.end(),
+                  std::vector<std::string>{}) != observedPackArgs.end());
+  CHECK(std::find(observedPackArgs.begin(),
+                  observedPackArgs.end(),
+                  std::vector<std::string>{"i32"}) != observedPackArgs.end());
+  CHECK(std::find(observedPackArgs.begin(),
+                  observedPackArgs.end(),
+                  std::vector<std::string>{"i32", "bool", "string"}) !=
+        observedPackArgs.end());
+
+  const std::string formatted = primec::formatSemanticProgram(semanticProgram);
+  CHECK(formatted.find("template_pack_bindings=[Ts=[]]") != std::string::npos);
+  CHECK(formatted.find("template_pack_bindings=[Ts=[\"i32\"]]") !=
+        std::string::npos);
+  CHECK(formatted.find("template_pack_bindings=[Ts=[\"i32\", \"bool\", \"string\"]]") !=
+        std::string::npos);
+}
+
+TEST_CASE("type pack specialization requires ordinary arguments before pack") {
+  primec::Program program;
+  primec::Definition stamp =
+      makeDefinition("/stamp",
+                     {makeTransform("return", std::string("i32"))},
+                     {makeCall("/return", {makeLiteral(7)})});
+  stamp.templateArgs = {"T", "Ts"};
+  stamp.templateArgIsPack = {false, true};
+  program.definitions.push_back(stamp);
+
+  primec::Expr call = makeCall("/stamp");
+  program.definitions.push_back(
+      makeDefinition("/main",
+                     {makeTransform("return", std::string("i32"))},
+                     {makeCall("/return", {call})}));
+
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("template arguments required") != std::string::npos);
+}
+
+TEST_CASE("type pack parameters cannot be used as scalar types before expansion") {
+  primec::Program program;
+  primec::Definition bad =
+      makeDefinition("/bad",
+                     {makeTransform("return", std::string("i32"))},
+                     {makeCall("/return", {makeLiteral(7)})},
+                     {makeParameter("value", "Ts")});
+  bad.templateArgs = {"Ts"};
+  bad.templateArgIsPack = {true};
+  program.definitions.push_back(bad);
+
+  primec::Expr call = makeCall("/bad", {makeLiteral(1)});
+  call.templateArgs = {"i32"};
+  program.definitions.push_back(
+      makeDefinition("/main",
+                     {makeTransform("return", std::string("i32"))},
+                     {makeCall("/return", {call})}));
+
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("type-pack parameter requires expansion support from TODO-4275: Ts") !=
+        std::string::npos);
+}
+
 TEST_CASE("implicit auto template inference for calls") {
   primec::Program program;
   primec::Definition identity =
@@ -247,4 +358,3 @@ TEST_CASE("match rejects incompatible case patterns") {
   CHECK_FALSE(validateProgram(program, "/main", error));
   CHECK(error.find("comparisons do not support mixed string/numeric operands") != std::string::npos);
 }
-

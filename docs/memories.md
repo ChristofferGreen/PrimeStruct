@@ -269,11 +269,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: The wrapper-temporary collect-diagnostics coverage in `tests/unit/test_compile_run_text_filters_diagnostics_c.cpp` currently locks the stdlib fallback messages `unknown call target: /std/collections/map/at` and `unknown method: /vector/capacity` rather than the older user-helper arg-mismatch wording.
 - Evidence: Release reruns from `build-release/PrimeStruct_compile_run_tests --source-file=*test_compile_run_text_filters_diagnostics_c.cpp` plus direct `./primec --emit-diagnostics --collect-diagnostics` reproductions against the same sources emitted those messages.
 
-### type-pack-declarations-are-metadata-only
+### type-pack-declarations-bind-specialization-metadata
 - Updated: 2026-05-15
 - Tags: parser, semantics, generics
-- Fact: Heterogeneous type-pack declarations currently record final `Ts...` template metadata only; binding a pack argument is rejected until TODO-4269 and expansion remains deferred to TODO-4275/TODO-4276.
-- Evidence: `Parser::parseTemplateParameterList` records `templateArgIsPack`, semantic-product formatting publishes pack metadata, and template monomorphization rejects type-pack bindings with the TODO-4269 diagnostic.
+- Fact: Heterogeneous type-pack declarations record final `Ts...` metadata and monomorphized specializations now bind trailing type arguments into deterministic pack metadata, while field/helper expansion remains deferred to TODO-4275/TODO-4276.
+- Evidence: `Parser::parseTemplateParameterList` records `templateArgIsPack`, `bindTemplateArguments` captures trailing pack arguments in `TemplatePackBinding`, and semantic-product formatting publishes `template_pack_bindings`.
 
 ### variadic-borrowed-pointer-packs-are-supported
 - Updated: 2026-05-01

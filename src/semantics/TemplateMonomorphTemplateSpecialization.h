@@ -45,14 +45,63 @@ std::vector<TemplateRootInfo> collectNestedTemplateRoots(const std::string &base
   return nestedTemplates;
 }
 
-SubstMap buildTemplateSpecializationMapping(const std::vector<std::string> &templateParams,
-                                            const std::vector<std::string> &resolvedArgs) {
-  SubstMap baseMapping;
-  baseMapping.reserve(templateParams.size());
-  for (size_t i = 0; i < templateParams.size(); ++i) {
-    baseMapping.emplace(templateParams[i], resolvedArgs[i]);
+std::optional<size_t> finalTypePackParameterIndex(const Definition &def) {
+  for (size_t i = 0; i < def.templateArgIsPack.size(); ++i) {
+    if (def.templateArgIsPack[i]) {
+      return i;
+    }
   }
-  return baseMapping;
+  return std::nullopt;
+}
+
+bool definitionAllowsEmptyTypePackSpecialization(const Definition &def) {
+  const std::optional<size_t> packIndex = finalTypePackParameterIndex(def);
+  return packIndex.has_value() && *packIndex == 0;
+}
+
+bool bindTemplateArguments(const Definition &baseDef,
+                           const std::vector<std::string> &resolvedArgs,
+                           const std::string &displayPath,
+                           TemplateArgumentBinding &bindingOut,
+                           std::string &error) {
+  bindingOut = {};
+  const std::optional<size_t> packIndex = finalTypePackParameterIndex(baseDef);
+  if (!packIndex.has_value()) {
+    if (baseDef.templateArgs.size() != resolvedArgs.size()) {
+      std::ostringstream out;
+      out << "template argument count mismatch for " << displayPath
+          << ": expected " << baseDef.templateArgs.size()
+          << ", got " << resolvedArgs.size();
+      error = out.str();
+      return false;
+    }
+    bindingOut.mapping.reserve(baseDef.templateArgs.size());
+    for (size_t i = 0; i < baseDef.templateArgs.size(); ++i) {
+      bindingOut.mapping.emplace(baseDef.templateArgs[i], resolvedArgs[i]);
+    }
+    return true;
+  }
+
+  const size_t ordinaryParameterCount = *packIndex;
+  if (resolvedArgs.size() < ordinaryParameterCount) {
+    std::ostringstream out;
+    out << "template argument count mismatch for " << displayPath
+        << ": expected at least " << ordinaryParameterCount
+        << ", got " << resolvedArgs.size();
+    error = out.str();
+    return false;
+  }
+  bindingOut.mapping.reserve(ordinaryParameterCount);
+  for (size_t i = 0; i < ordinaryParameterCount; ++i) {
+    bindingOut.mapping.emplace(baseDef.templateArgs[i], resolvedArgs[i]);
+  }
+  TemplatePackBinding packBinding;
+  packBinding.parameterName = baseDef.templateArgs[*packIndex];
+  packBinding.arguments.assign(resolvedArgs.begin() +
+                                   static_cast<std::ptrdiff_t>(ordinaryParameterCount),
+                               resolvedArgs.end());
+  bindingOut.packBindings.push_back(std::move(packBinding));
+  return true;
 }
 
 std::unordered_set<std::string> collectShadowedTemplateParams(const std::string &definitionPath,
@@ -83,8 +132,7 @@ bool isUnderNestedTemplateRoot(const std::string &basePath,
 }
 
 bool specializeTemplateDefinitionFamily(const std::string &basePath,
-                                        const std::vector<std::string> &baseTemplateParams,
-                                        const std::vector<std::string> &resolvedArgs,
+                                        const TemplateArgumentBinding &templateBinding,
                                         const std::string &specializedBasePath,
                                         const std::string &specializedName,
                                         const std::string &cacheKey,
@@ -92,7 +140,6 @@ bool specializeTemplateDefinitionFamily(const std::string &basePath,
                                         std::string &error) {
   const std::vector<Definition> family = collectTemplateSpecializationFamily(basePath, ctx);
   const std::vector<TemplateRootInfo> nestedTemplates = collectNestedTemplateRoots(basePath, family);
-  const SubstMap baseMapping = buildTemplateSpecializationMapping(baseTemplateParams, resolvedArgs);
   std::vector<Definition> clones;
   clones.reserve(family.size());
   std::vector<bool> cloneOutputs;
@@ -114,6 +161,9 @@ bool specializeTemplateDefinitionFamily(const std::string &basePath,
       clone.templateArgs.clear();
       clone.templateArgIsPack.clear();
     }
+    if (!templateBinding.packBindings.empty() && shouldOutputClone) {
+      clone.templatePackBindings = templateBinding.packBindings;
+    }
     if (!clonePaths.insert(clone.fullPath).second) {
       error = "template specialization conflicts with existing definition: " + clone.fullPath;
       ctx.specializationCache.erase(cacheKey);
@@ -130,7 +180,7 @@ bool specializeTemplateDefinitionFamily(const std::string &basePath,
 
     const std::unordered_set<std::string> shadowedParams =
         collectShadowedTemplateParams(def.fullPath, nestedTemplates);
-    SubstMap mapping = baseMapping;
+    SubstMap mapping = templateBinding.mapping;
     for (const auto &param : shadowedParams) {
       mapping.erase(param);
     }

@@ -6,6 +6,31 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 15, 2026)**
+- [x] TODO-4269: Bind and monomorphize type-pack arguments
+  - owner: ai
+  - created_at: 2026-04-27
+  - finished_at: 2026-05-15
+  - phase: Deferred generic tuple substrate
+  - parallel_track: tuple-type-packs
+  - depends_on: TODO-4268
+  - scope: Add template binding and monomorphization support for an arbitrary
+    number of type arguments bound to a type-pack parameter, without expanding
+    pack fields or helper bodies yet.
+  - outcome:
+    - Bound trailing explicit template arguments to final `Ts...` type-pack
+      parameters during template monomorphization, while preserving exact
+      argument-count behavior for ordinary non-pack templates.
+    - Recorded zero, one, and multi-argument pack contents on specialized
+      definitions through deterministic `TemplatePackBinding` metadata.
+    - Published semantic-product `template_pack_bindings` output and kept
+      unsupported scalar pack usage rejected with a TODO-4275 expansion
+      diagnostic.
+  - validation:
+    - Focused release validation passed for the new manual template pack
+      binding tests, template-count regressions, semantic definition-prepass
+      product formatting, and TODO source-lock update. Full
+      `./scripts/compile.sh --release` was deferred by the lite workflow.
+
 - [x] TODO-4268: Add heterogeneous type-pack syntax and metadata
   - owner: ai
   - created_at: 2026-04-27

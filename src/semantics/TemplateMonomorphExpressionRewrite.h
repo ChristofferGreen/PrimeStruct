@@ -1868,13 +1868,17 @@ bool rewriteExpr(Expr &expr,
             return false;
           }
         }
-      }
+        }
         if (expr.templateArgs.empty()) {
-          if (shouldDeferStdlibCollectionHelperTemplateRewrite(resolvedPath)) {
+          if (defIt != ctx.sourceDefs.end() &&
+              definitionAllowsEmptyTypePackSpecialization(defIt->second)) {
+            allConcrete = true;
+          } else if (shouldDeferStdlibCollectionHelperTemplateRewrite(resolvedPath)) {
             return true;
+          } else {
+            error = "template arguments required for " + helperOverloadDisplayPath(resolvedPath, ctx);
+            return false;
           }
-          error = "template arguments required for " + helperOverloadDisplayPath(resolvedPath, ctx);
-          return false;
         }
       if (allConcrete) {
         std::string specializedPath;
@@ -2281,11 +2285,15 @@ bool rewriteExpr(Expr &expr,
           }
         }
         if (expr.templateArgs.empty()) {
-          if (shouldDeferStdlibCollectionHelperTemplateRewrite(methodPath)) {
+          if (defIt != ctx.sourceDefs.end() &&
+              definitionAllowsEmptyTypePackSpecialization(defIt->second)) {
+            allConcrete = true;
+          } else if (shouldDeferStdlibCollectionHelperTemplateRewrite(methodPath)) {
             return true;
+          } else {
+            error = "template arguments required for " + helperOverloadDisplayPath(methodPath, ctx);
+            return false;
           }
-          error = "template arguments required for " + helperOverloadDisplayPath(methodPath, ctx);
-          return false;
         }
         if (allConcrete) {
           std::string specializedPath;

@@ -22,11 +22,10 @@ PrimeStruct uses a single canonical form called an **Envelope** for definitions 
 
 Definition and struct headers parse `<...>` as template parameters. Ordinary
 parameters use `T`; one heterogeneous type-pack parameter may appear last using
-`Ts...`. Type-pack declarations are metadata only in this slice: binding
-template arguments to a pack is deferred to TODO-4269, and expanding packs in
-struct storage or helper bodies is deferred to TODO-4275/TODO-4276. The
-homogeneous `args<T>` value-pack envelope is not a heterogeneous type-pack
-declaration.
+`Ts...`. Type-pack declarations bind any trailing template arguments into
+deterministic specialization metadata; expanding packs in struct storage or
+helper bodies is deferred to TODO-4275/TODO-4276. The homogeneous `args<T>`
+value-pack envelope is not a heterogeneous type-pack declaration.
 
 Executions are call-style forms with mandatory parentheses and no body. In the canonical AST they are envelopes with an
 implicit empty body. Executions model behavior, not value construction:
@@ -711,9 +710,9 @@ Rules:
 - Definition and struct declarations may reserve one heterogeneous type-pack
   parameter using final `Ts...` syntax, such as `tuple<T, Ts...>`. Pack
   parameters are distinct from ordinary template parameters in AST and
-  semantic-product metadata. Pack binding is deferred to TODO-4269, so calling
-  or naming a type-pack generic with arbitrary arity remains unsupported until
-  that task lands.
+  semantic-product metadata. Pack binding records zero, one, or multiple
+  trailing type arguments in source order on the generated specialization;
+  field and helper-body expansion remains deferred to TODO-4275/TODO-4276.
 - `(...)` is the runtime argument channel. A form may have compile-time
   arguments, runtime arguments, both, or neither.
 - A bare `name` in command or value position resolves to exactly one visible

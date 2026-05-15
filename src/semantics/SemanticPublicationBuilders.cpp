@@ -630,6 +630,7 @@ void initializeSemanticProgramPublicationShell(SemanticPublicationBuilderState &
         definition.templateParameterIsPack.push_back(index < def.templateArgIsPack.size() &&
                                                      def.templateArgIsPack[index]);
       }
+      definition.templatePackBindings = def.templatePackBindings;
       definition.sourceLine = def.sourceLine;
       definition.sourceColumn = def.sourceColumn;
       definition.semanticNodeId = def.semanticNodeId;

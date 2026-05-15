@@ -76,9 +76,10 @@ tuple<Ts...> {
 Only one type-pack parameter is currently accepted and it must be the final
 template parameter, for example `ResultTuple<Status, Ts...>`. The parser, AST,
 and semantic-product metadata can record that `Ts` is a heterogeneous type
-pack, but pack binding and arbitrary-arity monomorphization are deferred to
-TODO-4269. Expanding `Ts...` into struct fields, constructor initialization,
-helpers, and lifecycle hooks remains deferred to TODO-4275/TODO-4276.
+pack, and monomorphized definitions record the trailing type arguments bound
+to that pack in source order. Expanding `Ts...` into struct fields,
+constructor initialization, helpers, and lifecycle hooks remains deferred to
+TODO-4275/TODO-4276.
 `args<T>` remains the homogeneous value-pack envelope and is not a spelling for
 heterogeneous type packs.
 
@@ -402,7 +403,7 @@ expression that caused the failure.
 
 When this prototype graduates into active implementation work:
 
-- complete the remaining generic type-pack substrate tracked by TODO-4269
+- complete the remaining generic type-pack substrate tracked by TODO-4270
   through TODO-4271, including the split field/helper expansion work in
   TODO-4275 and TODO-4276
 - add `stdlib/std/tuple/tuple.prime` and a public import surface in TODO-4272

@@ -73,6 +73,21 @@ std::string formatSemanticTemplateParameterList(const std::vector<std::string> &
   return out.str();
 }
 
+std::string formatSemanticTemplatePackBindingList(
+    const std::vector<TemplatePackBinding> &values) {
+  std::ostringstream out;
+  out << "[";
+  for (size_t i = 0; i < values.size(); ++i) {
+    if (i != 0) {
+      out << ", ";
+    }
+    out << values[i].parameterName << "="
+        << formatSemanticStringList(values[i].arguments);
+  }
+  out << "]";
+  return out.str();
+}
+
 std::string formatSemanticStdlibSurfaceId(StdlibSurfaceId id) {
   if (const auto *metadata = findStdlibSurfaceMetadata(id); metadata != nullptr) {
     return std::string(metadata->bridgeKey);
@@ -1146,6 +1161,10 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
       definitionText += " template_params=" +
                         formatSemanticTemplateParameterList(entry.templateParameters,
                                                             entry.templateParameterIsPack);
+    }
+    if (!entry.templatePackBindings.empty()) {
+      definitionText += " template_pack_bindings=" +
+                        formatSemanticTemplatePackBindingList(entry.templatePackBindings);
     }
     definitionText += " provenance_handle=" + std::to_string(entry.provenanceHandle) +
                       " source=" +
