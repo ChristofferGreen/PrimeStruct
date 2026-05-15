@@ -83,22 +83,24 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4526: Delete semantic SoA zero-audit residue | track:
-  soa-zero-audit | primary surface: semantic validation and SoA source locks
-- TODO-4464: Add full zero C++ map-surface audit | track:
-  map-zero-audit | primary surface: map trace inventories, map backing
-  substrate, and map source locks
+- TODO-4530: Reduce semantic SoA builtin path helper traces | track:
+  soa-zero-audit | primary surface: semantic helper path classifiers and SoA
+  source locks
+- TODO-4531: Reduce map lowerer tail-dispatch audit traces | track:
+  map-zero-audit | primary surface: map trace inventories, IR-lowerer tail
+  dispatch, and map source locks
 - TODO-4268: Add heterogeneous type-pack syntax and metadata | track:
   tuple-type-packs | primary surface: parser, AST, semantic product, and
   tuple/type-pack docs
 
 ### Parallel Work Tracks (Current)
 
-- `soa-zero-audit`: ready TODO-4526, then serial successors TODO-4527
-  -> TODO-4528 -> TODO-4529. Assign only one worker from this track at once
-  because each successor tightens the same SoA inventory gate.
-- `map-zero-audit`: ready/in-progress TODO-4464. Keep independent from SoA
-  work except for shared docs/source-lock and testcase-log reconciliation.
+- `soa-zero-audit`: ready TODO-4530, then remaining TODO-4526 child slices,
+  then serial successors TODO-4527 -> TODO-4528 -> TODO-4529. Assign only one
+  worker from this track at once because each successor tightens the same SoA
+  inventory gate.
+- `map-zero-audit`: ready TODO-4531 under TODO-4464. Keep independent from
+  SoA work except for shared docs/source-lock and testcase-log reconciliation.
 - `tuple-type-packs`: ready TODO-4268, then serial successors TODO-4269
   -> TODO-4270 -> TODO-4275 -> TODO-4276 -> TODO-4271 -> TODO-4272
   -> TODO-4274 -> TODO-4273 -> TODO-4277 -> TODO-4278.
@@ -125,10 +127,11 @@ Task template:
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
 - Vector stdlib ownership cutover: none active
-- Map stdlib ownership cutover: ready/in-progress TODO-4464
+- Map stdlib ownership cutover: ready TODO-4531 under in-progress TODO-4464
 - SoA public surface rename and ownership cutover: TODO-4306 parent split;
   TODO-4525 removed text-filter/IR-printer inventory residue, and the next
-  ready gate is TODO-4526, followed by TODO-4527 -> TODO-4528 -> TODO-4529
+  ready gate is TODO-4530 under TODO-4526, followed by TODO-4527 -> TODO-4528
+  -> TODO-4529 once semantic child slices finish
 - Deferred generic tuple substrate: ready TODO-4268, followed by TODO-4269
   -> TODO-4270 -> TODO-4275 -> TODO-4276 -> TODO-4271 -> TODO-4272
   -> TODO-4274 -> TODO-4273 -> TODO-4277 -> TODO-4278
@@ -143,8 +146,8 @@ Task template:
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4526: Delete semantic SoA zero-audit residue
-- TODO-4464: Add full zero C++ map-surface audit
+- TODO-4530: Reduce semantic SoA builtin path helper traces
+- TODO-4531: Reduce map lowerer tail-dispatch audit traces
 - TODO-4268: Add heterogeneous type-pack syntax and metadata
 - TODO-4527: Delete template-monomorph SoA zero-audit residue
 - TODO-4528: Delete emitter/lowerer SoA zero-audit residue
@@ -552,6 +555,41 @@ Task template:
   - stop_rule: Stop once heterogeneous type-pack declarations are parseable,
     represented, and diagnosable; leave binding and monomorphization to
     TODO-4269.
+
+- [ ] TODO-4530: Reduce semantic SoA builtin path helper traces
+  - owner: ai
+  - created_at: 2026-05-15
+  - phase: SoA public surface rename and ownership cutover
+  - parallel_track: soa-zero-audit
+  - split_from: TODO-4526
+  - depends_on: TODO-4525
+  - scope: Remove or centralize the remaining public SoA collection-surface
+    spellings owned directly by `src/semantics/SemanticsBuiltinPathHelpers.cpp`
+    while preserving that file as the shared semantic helper boundary for
+    canonical `soa<T>` and compatibility classification.
+  - implementation_notes:
+    - Start from the current inventory rows for
+      `src/semantics/SemanticsBuiltinPathHelpers.cpp`:
+      `canonical-soa-path` 7, `experimental-soa-vector-path` 17,
+      `experimental-soa-vector-token` 18, `legacy-soa-vector-path` 18,
+      `root-soa-vector-path` 15, `soa-conversion-helper` 10,
+      `soa-vector-helper-symbol` 17, `soa-vector-token` 7, and
+      `soa-vector-type-symbol` 6.
+    - Prefer generated path-builder helpers, existing public-surface
+      classifiers, and generic collection helper naming over repeated direct
+      literals in classification branches.
+    - Keep true generic substrate and compatibility-boundary facts when they
+      are the explicit shared API other semantic validators call through.
+  - acceptance:
+    - The SoA inventory cap for `SemanticsBuiltinPathHelpers.cpp` is reduced
+      to the next explicit cap without adding new files to the inventory.
+    - Existing canonical `soa<T>` helper routing and retired-spelling
+      rejection coverage stays stable.
+    - Focused semantic/source-lock validation and the SoA inventory checker
+      pass.
+  - stop_rule: Stop once `SemanticsBuiltinPathHelpers.cpp` no longer contains
+    avoidable repeated public SoA collection-surface spellings outside the
+    shared helper/classifier boundary.
 
 - [ ] TODO-4269: Bind and monomorphize type-pack arguments
   - owner: ai
@@ -1940,6 +1978,38 @@ Task template:
   - stop_rule: Stop once the release gate mechanically enforces that map is
     fully stdlib-owned and no PrimeStruct-map-specific production C++ traces
     remain.
+
+- [ ] TODO-4531: Reduce map lowerer tail-dispatch audit traces
+  - owner: ai
+  - created_at: 2026-05-15
+  - phase: Map stdlib ownership cutover
+  - parallel_track: map-zero-audit
+  - split_from: TODO-4464
+  - depends_on: TODO-4506
+  - scope: Remove or route through shared lowerer helpers the remaining
+    PrimeStruct-map-specific trace residue in
+    `src/ir_lowerer/IrLowererLowerEmitExprTailDispatch.h`.
+  - implementation_notes:
+    - Start from the current map-surface inventory cap for
+      `src/ir_lowerer/IrLowererLowerEmitExprTailDispatch.h` (49 total traces)
+      and backing inventory rows for the same file (`experimental-map-path`
+      15, `map-backing-type-symbol` 7).
+    - Prefer existing lowerer collection/backing classifiers and path helpers
+      over direct `/std/collections/map`,
+      `/std/collections/experimental_map`, `Map__`, or map helper symbol
+      checks.
+    - Keep genuinely generic collection tail-dispatch behavior shared with
+      vector/SoA intact; this slice should not broaden map semantics.
+  - acceptance:
+    - The map-surface and map-backing inventory caps for
+      `IrLowererLowerEmitExprTailDispatch.h` are reduced to the next explicit
+      cap without adding new production files to either inventory.
+    - Existing canonical map lookup, mutation, miss-result, and source-lock
+      behavior stays stable for the focused lowerer tail-dispatch surface.
+    - Focused backend-IR or compile-run coverage plus both map inventory
+      checkers pass.
+  - stop_rule: Stop once the tail-dispatch lowerer no longer owns avoidable
+    direct map-surface or map-backing spellings outside shared helper calls.
 
 - [~] TODO-4305: Rename and style canonical `.prime` SoA surface
   - owner: ai
