@@ -50,7 +50,8 @@ bool applyPass(const std::string &input,
 	    if (!enableCollections) {
 	      return false;
 	    }
-    const std::string names[] = {"array", "vector", "map", "soa_vector"};
+	    const std::string publicSoaName = std::string("soa");
+	    const std::string names[] = {"array", "vector", "map", publicSoaName};
 	    for (const auto &name : names) {
 	      const size_t nameLen = name.size();
 	      if (index + nameLen > input.size()) {

@@ -1614,9 +1614,12 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4524: Tighten SoA surface audit to zero") !=
+                  "- TODO-4526: Delete semantic SoA zero-audit residue") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
+                  "- TODO-4527: Delete template-monomorph SoA zero-audit residue\n"
+                  "- TODO-4528: Delete emitter/lowerer SoA zero-audit residue\n"
+                  "- TODO-4529: Replace SoA inventory with strict zero audit\n"
                   "- TODO-4268: Add heterogeneous type-pack syntax and metadata") !=
         std::string::npos);
   CHECK(todo.find("- [~] TODO-4305: Rename and style canonical `.prime` SoA surface") !=
@@ -1631,7 +1634,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4524: Tighten SoA surface audit to zero\n"
+                  "- TODO-4526: Delete semantic SoA zero-audit residue\n"
+                  "- TODO-4527: Delete template-monomorph SoA zero-audit residue\n"
+                  "- TODO-4528: Delete emitter/lowerer SoA zero-audit residue\n"
+                  "- TODO-4529: Replace SoA inventory with strict zero audit\n"
                   "- TODO-4268: Add heterogeneous type-pack syntax and metadata") !=
         std::string::npos);
   CHECK(todo.find("TODO-4518: Migrate SoA compatibility fixtures") ==
@@ -1647,6 +1653,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4521: Delete semantic SoA public-surface traces") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4522: Delete lowerer and emitter SoA public-surface traces") !=
+        std::string::npos);
+  CHECK(todo.find("- [~] TODO-4524: Tighten SoA surface audit to zero") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4525: Delete text-filter and IR-printer SoA zero-audit residue") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4519: Delete `soa_vector` compatibility seams") !=
         std::string::npos);

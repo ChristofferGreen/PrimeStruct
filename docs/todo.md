@@ -72,10 +72,13 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4524: Tighten SoA surface audit to zero
+- TODO-4526: Delete semantic SoA zero-audit residue
 
 ### Immediate Next 10 (After Ready Now)
 
+- TODO-4527: Delete template-monomorph SoA zero-audit residue
+- TODO-4528: Delete emitter/lowerer SoA zero-audit residue
+- TODO-4529: Replace SoA inventory with strict zero audit
 - TODO-4268: Add heterogeneous type-pack syntax and metadata
 
 ### Priority Lanes (Current)
@@ -86,8 +89,8 @@ Task template:
 - Vector stdlib ownership cutover: none active
 - Map stdlib ownership cutover: TODO-4464
 - SoA public surface rename and ownership cutover: TODO-4306 parent split;
-  TODO-4523 removed parser/header/registry inventory residue, and next gate is
-  TODO-4524
+  TODO-4525 removed text-filter/IR-printer inventory residue, and the next
+  gates are TODO-4526 -> TODO-4527 -> TODO-4528 -> TODO-4529
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
   -> TODO-4275 -> TODO-4276 -> TODO-4271 -> TODO-4272 -> TODO-4274
   -> TODO-4273 -> TODO-4277 -> TODO-4278
@@ -102,7 +105,10 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4524: Tighten SoA surface audit to zero
+- TODO-4526: Delete semantic SoA zero-audit residue
+- TODO-4527: Delete template-monomorph SoA zero-audit residue
+- TODO-4528: Delete emitter/lowerer SoA zero-audit residue
+- TODO-4529: Replace SoA inventory with strict zero audit
 - TODO-4268: Add heterogeneous type-pack syntax and metadata
 - TODO-4269: Bind and monomorphize type-pack arguments
 - TODO-4270: Add compile-time integer template arguments
@@ -372,9 +378,9 @@ Task template:
   not contain PrimeStruct-SoA-collection surface paths, helper names, type
   names, diagnostics, parser/lowering branches, or metadata tables after the
   TODO-4524 zero audit. `scripts/check_soa_surface_trace_inventory.py`
-  records the current residue inventory. TODO-4523 deleted the remaining
-  parser/header/registry source-family traces, and TODO-4524 tightens the gate
-  to zero.
+  records the current residue inventory. TODO-4523 deleted parser/header/
+  registry source-family traces, TODO-4525 deleted text-filter/IR-printer
+  traces, and TODO-4526 through TODO-4529 finish reducing and tightening it.
   Generic SoA substrate terms remain allowed where they do not encode
   the public collection surface: field-layout/codegen/introspection,
   `SoaColumn`, `SoaFieldView`, `SoaSchema*`, field-view
@@ -2012,7 +2018,7 @@ Task template:
       classification through semantic, emitter, and lowerer classifiers while
       keeping compatibility `soa_vector` conversion paths alive.
 
-- [ ] TODO-4524: Tighten SoA surface audit to zero
+- [~] TODO-4524: Tighten SoA surface audit to zero
   - owner: ai
   - created_at: 2026-05-15
   - phase: SoA public surface rename and ownership cutover
@@ -2040,3 +2046,102 @@ Task template:
   - stop_rule: Stop once the release gate mechanically enforces that the public
     SoA collection surface is `soa<T>`, fully stdlib-owned, and has no
     PrimeStruct-SoA-public-surface production C++ traces.
+  - notes:
+    - Split after TODO-4525 because the remaining inventory still spans
+      semantic validation, template monomorphization, emitter helpers, and IR
+      lowerer routing. Keep the parent open until TODO-4529 replaces the
+      inventory cap with a strict zero-production-trace audit.
+
+- [ ] TODO-4526: Delete semantic SoA zero-audit residue
+  - owner: ai
+  - created_at: 2026-05-15
+  - phase: SoA public surface rename and ownership cutover
+  - split_from: TODO-4524
+  - depends_on: TODO-4525
+  - scope: Remove the remaining semantic-validation SoA public-surface trace
+    inventory entries that encode old helper paths, compatibility type names,
+    direct diagnostics, or semantic product metadata.
+  - implementation_notes:
+    - Start from the highest-count `src/semantics/SemanticsValidate.cpp`,
+      `src/semantics/SemanticsBuiltinPathHelpers.cpp`,
+      `src/semantics/SemanticsValidatorBuildInitializerInference.cpp`,
+      and related `SemanticsValidator*` inventory rows.
+    - Preserve generic SoA substrate facts and canonical `soa<T>` behavior
+      through shared helper APIs rather than public-surface string literals.
+  - acceptance:
+    - Semantic inventory rows for public SoA collection-surface traces are
+      deleted or reduced to the next explicit cap.
+    - Existing canonical `soa<T>` semantic product and rejection coverage stays
+      stable.
+    - Focused semantic and source-lock tests pass.
+  - stop_rule: Stop once semantic validation no longer owns direct public SoA
+    collection-surface traces outside the agreed generic substrate boundary.
+
+- [ ] TODO-4527: Delete template-monomorph SoA zero-audit residue
+  - owner: ai
+  - created_at: 2026-05-15
+  - phase: SoA public surface rename and ownership cutover
+  - split_from: TODO-4524
+  - depends_on: TODO-4526
+  - scope: Remove remaining template-monomorph SoA public-surface trace
+    inventory entries from compatibility paths, method targets, implicit
+    inference, fallback inference, and expression rewrites.
+  - implementation_notes:
+    - Start from `src/semantics/TemplateMonomorph*.h` inventory rows and route
+      any still-required compatibility classification through generic shared
+      helpers.
+  - acceptance:
+    - Template monomorphization inventory rows for public SoA collection-surface
+      traces are deleted or reduced to the next explicit cap.
+    - Existing canonical `soa<T>` construction, helper call, conversion, and
+      compatibility-rejection coverage stays stable.
+    - Focused template/semantic and source-lock tests pass.
+  - stop_rule: Stop once template monomorphization no longer owns direct public
+    SoA collection-surface traces outside shared compatibility helpers.
+
+- [ ] TODO-4528: Delete emitter/lowerer SoA zero-audit residue
+  - owner: ai
+  - created_at: 2026-05-15
+  - phase: SoA public surface rename and ownership cutover
+  - split_from: TODO-4524
+  - depends_on: TODO-4527
+  - scope: Remove remaining emitter and IR-lowerer SoA public-surface trace
+    inventory entries for helper dispatch, type-name recognition, diagnostics,
+    and lowering metadata.
+  - implementation_notes:
+    - Start from `src/emitter/*`, `src/ir_lowerer/*`, and the inventory rows
+      that still mention canonical/legacy/experimental SoA collection helper
+      paths or helper aliases.
+    - Keep storage-level field layout, schema, field-view, and allocation
+      substrate terms when they do not encode public collection policy.
+  - acceptance:
+    - Emitter/lowerer inventory rows for public SoA collection-surface traces
+      are deleted or reduced to the final pre-zero cap.
+    - Existing native, VM, backend-IR, and source-lock SoA coverage stays
+      stable.
+    - Focused compile-run, backend-IR, and source-lock tests pass.
+  - stop_rule: Stop once emitter/lowerer code no longer owns direct public SoA
+    collection-surface traces outside generic substrate mechanics.
+
+- [ ] TODO-4529: Replace SoA inventory with strict zero audit
+  - owner: ai
+  - created_at: 2026-05-15
+  - phase: SoA public surface rename and ownership cutover
+  - split_from: TODO-4524
+  - depends_on: TODO-4528
+  - scope: Replace the decaying SoA trace inventory with a strict
+    zero-production-trace release gate.
+  - implementation_notes:
+    - Remove `scripts/soa_surface_trace_inventory.txt` once production C++
+      public-surface traces are gone.
+    - Keep checker self-tests that prove generic substrate terms are allowed
+      and any reintroduced public SoA collection path, helper alias, type
+      spelling, diagnostic, or registry metadata fails immediately.
+  - acceptance:
+    - The SoA checker reports zero public-surface production traces in `src/`
+      and `include/`.
+    - The release CTest gate fails when a bad public SoA collection trace is
+      added to production C++.
+    - Existing canonical `soa<T>` behavior and docs/source-lock tests pass.
+  - stop_rule: Stop once the release gate has no checked-in residue inventory
+    and enforces strict zero tolerance for public SoA collection-surface traces.

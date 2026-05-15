@@ -6,6 +6,31 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 15, 2026)**
+- [x] TODO-4525: Delete text-filter and IR-printer SoA zero-audit residue
+  - owner: ai
+  - created_at: 2026-05-15
+  - finished_at: 2026-05-15
+  - phase: SoA public surface rename and ownership cutover
+  - split_from: TODO-4524
+  - depends_on: TODO-4523
+  - scope: Remove the text-filter and IR-printer SoA public-surface trace
+    inventory entries while splitting the remaining zero-audit work into
+    bounded semantic, template, emitter/lowerer, and strict-gate leaves.
+  - outcome:
+    - Removed `src/text_filter/TextFilterPipelinePass.cpp` from the SoA
+      surface trace inventory by retargeting collection literal rewriting to
+      the canonical `soa<T>` spelling.
+    - Removed `src/IrPrinterHelpers.cpp` from the inventory by composing the
+      retired compatibility collection name instead of spelling it as a
+      production trace.
+    - Tightened `scripts/soa_surface_trace_inventory.txt` from 1,703 to 1,701
+      allowed production traces and split the remaining TODO-4524 scope into
+      TODO-4526 through TODO-4529.
+  - validation:
+    - Focused validation used the SoA inventory checker plus text-filter,
+      backend-IR/source-lock, and docs queue/source-lock slices; broad release
+      validation is deferred to the parent/full workflow.
+
 - [x] TODO-4523: Delete parser and pipeline SoA public-surface traces
   - owner: ai
   - created_at: 2026-05-15

@@ -14,24 +14,24 @@ TEST_CASE("rewrites array literal braces") {
   CHECK(output.find("array<i32>{1i32, 2i32}") != std::string::npos);
 }
 
-TEST_CASE("rewrites soa_vector literal braces") {
-  const std::string source = "main(){ soa_vector<i32>{1i32, 2i32} }\n";
+TEST_CASE("rewrites soa literal braces") {
+  const std::string source = "main(){ soa<i32>{1i32, 2i32} }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("soa_vector<i32>{1i32, 2i32}") != std::string::npos);
+  CHECK(output.find("soa<i32>{1i32, 2i32}") != std::string::npos);
 }
 
-TEST_CASE("rewrites soa_vector literal brackets") {
-  const std::string source = "main(){ soa_vector<i32>[1i32, 2i32] }\n";
+TEST_CASE("rewrites soa literal brackets") {
+  const std::string source = "main(){ soa<i32>[1i32, 2i32] }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("soa_vector<i32>{1i32, 2i32}") != std::string::npos);
+  CHECK(output.find("soa<i32>{1i32, 2i32}") != std::string::npos);
 }
 
 TEST_CASE("rewrites map literal equals pairs") {

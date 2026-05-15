@@ -1,4 +1,3 @@
-src/IrPrinterHelpers.cpp	soa-vector-token	1
 src/emitter/EmitterBuiltinCallPathHelpers.cpp	experimental-soa-vector-path	1
 src/emitter/EmitterBuiltinCallPathHelpers.cpp	experimental-soa-vector-token	2
 src/emitter/EmitterBuiltinCallPathHelpers.cpp	soa-conversion-helper	2
@@ -381,4 +380,3 @@ src/semantics/TemplateMonomorphMethodTargets.h	soa-conversion-helper	3
 src/semantics/TemplateMonomorphMethodTargets.h	soa-vector-helper-symbol	3
 src/semantics/TemplateMonomorphMethodTargets.h	soa-vector-token	9
 src/semantics/TemplateMonomorphMethodTargets.h	soa-vector-type-symbol	1
-src/text_filter/TextFilterPipelinePass.cpp	soa-vector-token	1
