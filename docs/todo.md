@@ -72,10 +72,14 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4310: Add zero C++ SoA collection-surface audit
+- TODO-4520: Add SoA surface trace inventory gate
 
 ### Immediate Next 10 (After Ready Now)
 
+- TODO-4521: Delete semantic SoA public-surface traces
+- TODO-4522: Delete lowerer and emitter SoA public-surface traces
+- TODO-4523: Delete parser and pipeline SoA public-surface traces
+- TODO-4524: Tighten SoA surface audit to zero
 - TODO-4268: Add heterogeneous type-pack syntax and metadata
 
 ### Priority Lanes (Current)
@@ -86,7 +90,8 @@ Task template:
 - Vector stdlib ownership cutover: none active
 - Map stdlib ownership cutover: TODO-4464
 - SoA public surface rename and ownership cutover: TODO-4306 parent split;
-  next gate is TODO-4310
+  next gates are TODO-4520 -> TODO-4521 -> TODO-4522 -> TODO-4523
+  -> TODO-4524
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
   -> TODO-4275 -> TODO-4276 -> TODO-4271 -> TODO-4272 -> TODO-4274
   -> TODO-4273 -> TODO-4277 -> TODO-4278
@@ -101,7 +106,11 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4310: Add zero C++ SoA collection-surface audit
+- TODO-4520: Add SoA surface trace inventory gate
+- TODO-4521: Delete semantic SoA public-surface traces
+- TODO-4522: Delete lowerer and emitter SoA public-surface traces
+- TODO-4523: Delete parser and pipeline SoA public-surface traces
+- TODO-4524: Tighten SoA surface audit to zero
 - TODO-4268: Add heterogeneous type-pack syntax and metadata
 - TODO-4269: Bind and monomorphize type-pack arguments
 - TODO-4270: Add compile-time integer template arguments
@@ -151,10 +160,10 @@ Task template:
 | Compile-pipeline stage and publication-boundary contracts | none |
 | Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4305 |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4464, TODO-4310 |
+| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4464, TODO-4520, TODO-4521, TODO-4522, TODO-4523, TODO-4524 |
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4464 |
-| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4464, TODO-4305, TODO-4310 |
-| SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4514, TODO-4310 |
+| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4464, TODO-4305, TODO-4520, TODO-4521, TODO-4522, TODO-4523, TODO-4524 |
+| SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4514, TODO-4520, TODO-4521, TODO-4522, TODO-4523, TODO-4524 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
 | Semantic-product public API factoring and versioning | none |
@@ -183,8 +192,8 @@ Task template:
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
 | Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4464 |
-| De-experimentalization surface and namespace parity | TODO-4430, TODO-4464, TODO-4305, TODO-4310 |
-| `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4514, TODO-4310 |
+| De-experimentalization surface and namespace parity | TODO-4430, TODO-4464, TODO-4305, TODO-4520, TODO-4521, TODO-4522, TODO-4523, TODO-4524 |
+| `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4514, TODO-4520, TODO-4521, TODO-4522, TODO-4523, TODO-4524 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
 | Emitter map-helper canonicalization parity | TODO-4464 |
@@ -343,7 +352,7 @@ Task template:
   dispatch checks are syntax/provenance-owned or lowering-owned.
 - Outside this lane: `array<T>` core ownership and the `soa<T>` public-surface
   rename remain separate boundaries tracked by TODO-4305, TODO-4306, and the
-  TODO-4310 audit gate.
+  TODO-4520/TODO-4521/TODO-4522/TODO-4523/TODO-4524 audit sequence.
   Generic contiguous-storage coverage needed before vector ordinary `.prime`
   lowering is complete and recorded in `docs/todo_finished.md`. Map-specific
   lookup/insertion substrate work is complete; remaining map work focuses on
@@ -362,7 +371,7 @@ Task template:
   variables, and source-map infrastructure remain allowed; tests, docs,
   generated source-lock fixtures, and stdlib `.prime` files may still mention
   the PrimeStruct map surface.
-- End-state rule for SoA: after TODO-4310, the public collection name is
+- End-state rule for SoA: after TODO-4524, the public collection name is
   `soa<T>` under `/std/collections/soa/*`. The old `soa_vector<T>`,
   `/std/collections/soa_vector/*`, `/soa_vector/*`, `SoaVector<T>`,
   `soaVector*`, and direct experimental SoA imports are rejected
@@ -370,8 +379,10 @@ Task template:
   C++ under `src/` and `include/` must
   not contain PrimeStruct-SoA-collection surface paths, helper names, type
   names, diagnostics, parser/lowering branches, or metadata tables after the
-  TODO-4310 audit. Generic SoA substrate terms remain allowed where they do not
-  encode the public collection surface: field-layout/codegen/introspection,
+  TODO-4524 zero audit. TODO-4520 first records the current residue inventory,
+  and TODO-4521 through TODO-4523 delete bounded source-family traces before
+  the zero gate lands. Generic SoA substrate terms remain allowed where they do
+  not encode the public collection surface: field-layout/codegen/introspection,
   `SoaColumn`, `SoaFieldView`, `SoaSchema*`, field-view borrowing/invalidation,
   and allocation primitives.
 
@@ -1923,7 +1934,8 @@ Task template:
       `soaVectorReserve`, or `soaVectorToAos`.
     - Treat `soa_vector<T>`, `/std/collections/soa_vector/*`, `/soa_vector/*`,
       `SoaVector<T>`, and `soaVector*` as retired public compatibility
-      spellings; TODO-4310 owns the remaining production C++ trace audit.
+      spellings; TODO-4520 through TODO-4524 own the remaining production C++
+      trace audit.
   - acceptance:
     - Docs define `soa<T>` and `/std/collections/soa/*` as the target canonical
       public SoA collection surface, with retired `soa_vector` spellings
@@ -2004,40 +2016,149 @@ Task template:
       classification through semantic, emitter, and lowerer classifiers while
       keeping compatibility `soa_vector` conversion paths alive.
 
-- [ ] TODO-4310: Add zero C++ SoA collection-surface audit
+- [ ] TODO-4520: Add SoA surface trace inventory gate
   - owner: ai
-  - created_at: 2026-04-28
+  - created_at: 2026-05-15
   - phase: SoA public surface rename and ownership cutover
+  - split_from: TODO-4310
   - depends_on: TODO-4519
-  - scope: Add a deterministic validation gate that proves the PrimeStruct SoA
-    public collection surface is fully `.prime`/stdlib-owned and absent from
-    production C++ source while allowing generic SoA substrate code.
+  - scope: Add a deterministic validation gate that inventories current
+    production C++ SoA public-surface residue under `src/` and `include/`
+    without pretending the zero state is already reachable.
   - implementation_notes:
-    - Add a script or CTest-integrated check that scans production C++ under
-      `src/` and `include/` for PrimeStruct-SoA-public-surface traces such as
-      `/soa_vector`, `/std/collections/soa_vector`, `/std/collections/soa`,
-      `experimental_soa_vector`, `SoaVector`, `soaVector`, old `to_aos`
-      compatibility shims, SoA public-surface diagnostics, and
-      collection-surface parser/semantic/lowering branch names.
-    - The check must allow generic SoA substrate terms where they are not public
+    - A TODO-4310 probe found 2,683 candidate SoA public-surface traces across
+      124 production files, including `soa_vector`,
+      `/std/collections/soa_vector`, `/std/collections/soa`,
+      `experimental_soa_vector`, `SoaVector`, `soaVector`, and `to_aos`
+      spellings.
+    - Start from the existing map trace inventory scripts and CTest wiring.
+      Add a SoA-specific script or check that records per-file residue counts
+      and fails when new disallowed files or increased counts appear.
+    - Keep generic SoA substrate terms allowed where they are not public
       collection surface names: `SoaColumn`, `SoaFieldView`, `SoaSchema`,
-      field-layout/codegen/introspection helpers, field-view borrow/invalidation
-      machinery, and allocation primitives.
-    - The check must also allow tests/docs/source-lock files outside production
-      `src/` and `include/`.
+      field-layout/codegen/introspection helpers, field-view borrow and
+      invalidation machinery, and allocation primitives.
+    - Do not require zero residue in this leaf. This leaf is the safety rail
+      that lets subsequent cleanup leaves reduce the inventory deterministically.
   - acceptance:
-    - The audit runs in the release validation path and fails when a
-      PrimeStruct-SoA-public-surface production C++ trace is reintroduced.
-    - The audit passes with canonical `soa<T>` construction, imports, helper
-      calls, field views, conversion, mutation, invalidation, destruction, and
-      direct `.prime` implementation behavior covered by existing tests.
-    - Production C++ under `src/` and `include/` contains no PrimeStruct SoA
-      public collection paths, helper aliases, type-name recognizers,
-      diagnostics, special parser/text-transform cases, semantic rewrites,
-      lowering dispatches, or metadata tables.
+    - The release validation path includes a deterministic SoA public-surface
+      trace inventory check for production C++ under `src/` and `include/`.
+    - The check allows documented generic SoA substrate terms but records the
+      remaining public-surface residue by file and term family.
+    - The check fails when a new production file or increased count
+      reintroduces SoA public collection traces beyond the checked-in
+      inventory.
+    - Docs/TODO notes explain that TODO-4521 through TODO-4523 reduce the
+      inventory before TODO-4524 tightens it to zero.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once current SoA public-surface production C++ residue is
+    mechanically inventoried and capped in the release gate; leave deletion of
+    residue families and the final zero assertion to follow-up leaves.
+
+- [ ] TODO-4521: Delete semantic SoA public-surface traces
+  - owner: ai
+  - created_at: 2026-05-15
+  - phase: SoA public surface rename and ownership cutover
+  - split_from: TODO-4310
+  - depends_on: TODO-4520
+  - scope: Remove the semantic-validator, semantic-product, and template
+    monomorphization SoA public collection-surface traces identified by the
+    inventory while preserving generic SoA substrate behavior.
+  - implementation_notes:
+    - Start from the inventory entries in `src/semantics/`, including
+      compatibility recognizers, public helper-path mirrors, type-spelling
+      recognizers, and old public diagnostic text.
+    - Preserve allowed generic substrate facts and names such as `SoaColumn`,
+      `SoaFieldView`, `SoaSchema*`, borrow roots, field-layout metadata, and
+      allocation primitives.
+  - acceptance:
+    - Semantic-layer inventory counts for SoA public collection-surface terms
+      decrease to the new checked-in cap without removing allowed substrate
+      traces.
+    - Existing canonical `soa<T>` semantic coverage and rejection coverage for
+      retired old public spellings stay stable.
+    - Focused semantic and source-lock tests pass.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once semantic-layer SoA public-surface residue is removed or
+    reduced to the next explicit cap; leave lowerer/emitter and parser/pipeline
+    residue to TODO-4522/TODO-4523.
+
+- [ ] TODO-4522: Delete lowerer and emitter SoA public-surface traces
+  - owner: ai
+  - created_at: 2026-05-15
+  - phase: SoA public surface rename and ownership cutover
+  - split_from: TODO-4310
+  - depends_on: TODO-4521
+  - scope: Remove IR-lowerer and backend-emitter SoA public collection-surface
+    path, helper, and diagnostic traces identified by the inventory.
+  - implementation_notes:
+    - Start from inventory entries under `src/ir_lowerer/` and `src/emitter/`
+      that mention old or public SoA collection paths, helper spellings,
+      conversion shims, or public collection diagnostics.
+    - Preserve generic SoA substrate lowering for field layout, schemas,
+      field-view borrowing/invalidation, and allocation primitives.
+  - acceptance:
+    - Lowerer/emitter inventory counts for SoA public collection-surface terms
+      decrease to the new checked-in cap without removing allowed substrate
+      lowering.
+    - Canonical `soa<T>` compile-run, IR, VM/native, conversion, field-view,
+      mutation, and rejection coverage stays stable.
+    - Focused backend IR and compile-run tests pass.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once lowerer/emitter SoA public-surface residue is removed
+    or reduced to the next explicit cap; leave parser/pipeline residue to
+    TODO-4523.
+
+- [ ] TODO-4523: Delete parser and pipeline SoA public-surface traces
+  - owner: ai
+  - created_at: 2026-05-15
+  - phase: SoA public surface rename and ownership cutover
+  - split_from: TODO-4310
+  - depends_on: TODO-4522
+  - scope: Remove parser, compile-pipeline, registry, and shared helper SoA
+    public collection-surface traces identified by the inventory.
+  - implementation_notes:
+    - Start from inventory entries under `src/parser/`, `src/CompilePipeline*`,
+      `src/StdlibSurfaceRegistry*`, and public headers such as
+      `include/primec/SoaPathHelpers.h` when they encode public collection
+      paths or retired compatibility spellings.
+    - Preserve generic registry or helper APIs that are not SoA public-surface
+      specific.
+  - acceptance:
+    - Parser/pipeline/registry/header inventory counts for SoA public
+      collection-surface terms decrease to the final pre-zero cap.
+    - Canonical `soa<T>` import, wildcard import, construction, conversion, and
+      rejection coverage stays stable.
+    - Focused compile-run, backend-runtime, and source-lock tests pass.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once parser/pipeline/registry/header public-surface residue
+    is removed or reduced to the final explicit cap; leave the strict zero
+    assertion to TODO-4524.
+
+- [ ] TODO-4524: Tighten SoA surface audit to zero
+  - owner: ai
+  - created_at: 2026-05-15
+  - phase: SoA public surface rename and ownership cutover
+  - split_from: TODO-4310
+  - depends_on: TODO-4523
+  - scope: Convert the SoA public-surface trace inventory gate into the final
+    zero-production-trace audit.
+  - implementation_notes:
+    - Tighten the TODO-4520 inventory so production C++ under `src/` and
+      `include/` contains no SoA public collection paths, helper aliases,
+      type-name recognizers, diagnostics, parser/text-transform cases, semantic
+      rewrites, lowering dispatches, or metadata tables.
+    - Keep allowlisted generic SoA substrate terms only where they do not encode
+      the public collection surface.
+  - acceptance:
+    - The release validation path fails when any PrimeStruct SoA public
+      collection-surface production C++ trace is reintroduced.
     - The only allowed SoA mentions after the audit are generic SoA substrate
       terms, stdlib `.prime` source, tests, docs, and explicitly
       non-production generated source-lock fixtures.
+    - Canonical `soa<T>` construction, imports, helper calls, field views,
+      conversion, mutation, invalidation, destruction, and direct `.prime`
+      implementation behavior remain covered by existing tests.
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once the release gate mechanically enforces that the public
     SoA collection surface is `soa<T>`, fully stdlib-owned, and has no
