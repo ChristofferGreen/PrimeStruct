@@ -756,6 +756,31 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(builtinPathHelpersSource.find(
             "std::string canonicalizeLegacySoaGetHelperPath(std::string_view path)") !=
         std::string::npos);
+  CHECK(builtinPathHelpersSource.find("#include \"primec/SoaPathHelpers.h\"") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find("soa_paths::collectionPath(") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
+            "soa_paths::isLegacyOrCanonicalSoaHelperPath(path, helperName)") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
+            "soa_paths::isExperimentalColumnarVectorTypePath(path)") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
+            "soa_paths::isExperimentalColumnarVectorSpecializedTypePath(path)") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find("\"/std/collections/experimental_soa_vector/") ==
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find("\"/std/collections/soa_vector/") ==
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find("\"/std/collections/soa/") ==
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find("\"/soa_vector/") == std::string::npos);
+  CHECK(builtinPathHelpersSource.find("\"soa_vector\"") == std::string::npos);
+  CHECK(builtinPathHelpersSource.find("\"experimental_soa_vector") ==
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find("\"SoaVector") == std::string::npos);
+  CHECK(builtinPathHelpersSource.find("\"soaVector") == std::string::npos);
   CHECK(builtinPathHelpersSource.find(
             "if (canonicalPath == \"/to_aos_ref\")") !=
         std::string::npos);
@@ -784,7 +809,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "canonicalizeLegacySoaGetHelperPath(normalizedResolvedPath)") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
-            "if (normalizedResolvedPath == \"/soa_vector/count\")") !=
+            "if (normalizedResolvedPath == samePathSoaHelperTargetPath(\"count\"))") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
             "bool isCanonicalSoaRefLikeHelperPath(std::string_view path)") !=
@@ -829,23 +854,23 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "bool isExperimentalSoaVectorSpecializedTypePath(std::string_view path)") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
-            "canonicalPath == \"/std/collections/experimental_soa_vector/soaVectorCountRef\"") !=
+            "canonicalPath == experimentalSoaHelperPathLocal(\"soa\" \"VectorCountRef\")") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
-            "canonicalPath == \"/std/collections/experimental_soa_vector/soaVectorGet\"") !=
+            "canonicalPath == experimentalSoaHelperPathLocal(\"soa\" \"VectorGet\")") !=
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find(
             "resolvedNoTemplate == "
             "\"/std/collections/experimental_soa_vector/soaVectorCountRef\"") ==
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
-            "canonicalPath == \"/std/collections/experimental_soa_vector/soaVectorGetRef\"") !=
+            "canonicalPath == experimentalSoaHelperPathLocal(\"soa\" \"VectorGetRef\")") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
-            "canonicalPath == \"/std/collections/experimental_soa_vector/soaVectorRefRef\"") !=
+            "canonicalPath == experimentalSoaHelperPathLocal(\"soa\" \"VectorRefRef\")") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
-            "canonicalPath == \"/std/collections/experimental_soa_vector/soaVectorRef\"") !=
+            "canonicalPath == experimentalSoaHelperPathLocal(\"soa\" \"VectorRef\")") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
             "canonicalPath == \"/std/collections/internal_soa_storage/soaColumnRef\"") !=
@@ -854,10 +879,13 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "helperName == \"push\" || helperName == \"reserve\" ||") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
-            "helperName == \"soaVectorPush\" || helperName == \"soaVectorReserve\"") !=
+            "helperName == \"soa\" \"VectorPush\" ||") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
-            "canonicalPath.rfind(kExperimentalSoaFieldViewPrefix, 0) == 0 ||") !=
+            "helperName == \"soa\" \"VectorReserve\"") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
+            "canonicalPath.rfind(experimentalSoaFieldViewPrefix, 0) == 0 ||") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
             "canonicalPath.rfind(kExperimentalSoaColumnFieldViewUnsafePrefix, 0) == 0") !=
@@ -878,22 +906,19 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "isExperimentalSoaVectorConversionFamilyPath(canonicalPath)") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
-            "canonicalPath.starts_with(kExperimentalSoaVectorPrefix) ||") !=
+            "canonicalPath.starts_with(experimentalSoaPrefix) ||") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
-            "kExperimentalSoaVectorSpecializedPrefix") !=
+            "soa_paths::isExperimentalColumnarVectorSpecializedTypePath(path)") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
-            "kExperimentalSoaVectorSpecializedPrefixNoSlash") !=
+            "soa_paths::isExperimentalColumnarVectorTypePath(path)") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
-            "kExperimentalSoaVectorSpecializedPrefixBare") !=
+            "helperName == \"soa\" \"VectorToAos\" ||") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
-            "path.starts_with(kExperimentalSoaVectorSpecializedPrefixBare)") !=
-        std::string::npos);
-  CHECK(builtinPathHelpersSource.find(
-            "helperName == \"soaVectorToAos\" || helperName == \"soaVectorToAosRef\"") !=
+            "helperName == \"soa\" \"VectorToAosRef\"") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
             "isCanonicalSoaRefLikeHelperPath(canonicalSoaRefPath)") !=

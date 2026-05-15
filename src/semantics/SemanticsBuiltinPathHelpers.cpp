@@ -1,5 +1,7 @@
 #include "SemanticsHelpers.h"
 
+#include "primec/SoaPathHelpers.h"
+
 #include <array>
 #include <string_view>
 #include <utility>
@@ -147,21 +149,39 @@ bool typePathMatchesLocal(std::string_view normalizedTypePath,
          startsWith(normalizedTypePath, fullSpecializedPrefix);
 }
 
+std::string pathWithoutLeadingSlash(std::string path) {
+  if (!path.empty() && path.front() == '/') {
+    path.erase(path.begin());
+  }
+  return path;
+}
+
+std::string collectionPathPrefixLocal(std::string_view collectionName) {
+  return pathWithoutLeadingSlash(
+             soa_paths::collectionPath(collectionName)) +
+         "/";
+}
+
+std::string experimentalSoaHelperPathLocal(std::string_view helperName) {
+  return soa_paths::collectionPath(soa_paths::experimentalSoaFolder(),
+                                   helperName);
+}
+
 } // namespace
 
 std::string samePathSoaHelperTargetPath(std::string_view helperName) {
   if (helperName == "to_aos" || helperName == "to_aos_ref") {
     return "/" + std::string(helperName);
   }
-  return "/" + collectionAliasLocal("soa_vector", "/") + std::string(helperName);
+  return "/" + soa_paths::legacySoaFolder() + "/" + std::string(helperName);
 }
 
 std::string publicSoaHelperTargetPath(std::string_view helperName) {
-  return "/" + collectionMemberRootLocal("soa") + std::string(helperName);
+  return soa_paths::collectionPath(soa_paths::publicSoaFolder(), helperName);
 }
 
 std::string compatibilitySoaHelperTargetPath(std::string_view helperName) {
-  return "/" + collectionMemberRootLocal("soa_vector") + std::string(helperName);
+  return soa_paths::collectionPath(soa_paths::legacySoaFolder(), helperName);
 }
 
 bool splitSoaSurfaceHelperPath(std::string_view path,
@@ -170,10 +190,13 @@ bool splitSoaSurfaceHelperPath(std::string_view path,
   if (!path.empty() && path.front() == '/') {
     path.remove_prefix(1);
   }
-  const std::string publicPrefix = collectionAliasLocal("soa", "/");
-  const std::string publicStdPrefix = collectionMemberRootLocal("soa");
-  const std::string compatibilityPrefix = collectionAliasLocal("soa_vector", "/");
-  const std::string compatibilityStdPrefix = collectionMemberRootLocal("soa_vector");
+  const std::string publicPrefix = soa_paths::publicSoaFolder() + "/";
+  const std::string publicStdPrefix =
+      collectionPathPrefixLocal(soa_paths::publicSoaFolder());
+  const std::string compatibilityPrefix =
+      soa_paths::legacySoaFolder() + "/";
+  const std::string compatibilityStdPrefix =
+      collectionPathPrefixLocal(soa_paths::legacySoaFolder());
   auto splitWithPrefix = [&](std::string_view prefix, bool usesPublicSurface) {
     if (!path.starts_with(prefix)) {
       return false;
@@ -222,8 +245,10 @@ bool isCompatibilitySoaSurfaceNamespace(std::string_view namespacePath) {
   if (!namespacePath.empty() && namespacePath.front() == '/') {
     namespacePath.remove_prefix(1);
   }
-  return namespacePath == "soa_vector" ||
-         namespacePath == collectionNamespaceLocal("soa_vector");
+  return namespacePath == soa_paths::legacySoaFolder() ||
+         namespacePath == pathWithoutLeadingSlash(
+                              soa_paths::collectionPath(
+                                  soa_paths::legacySoaFolder()));
 }
 
 bool isSoaConversionSurfaceSpelling(std::string_view normalizedPrefix,
@@ -274,7 +299,7 @@ bool usesExplicitPublicSoaHelperPath(std::string_view normalizedPrefix,
 }
 
 std::string internalSoaCollectionTypeName() {
-  return std::string("soa") + "_vector";
+  return soa_paths::legacySoaFolder();
 }
 
 std::string internalSoaCollectionTypePath(bool leadingSlash) {
@@ -286,7 +311,7 @@ std::string internalSoaCollectionTypePath(bool leadingSlash) {
 }
 
 std::string experimentalSoaStorageTypeName() {
-  return std::string("Soa") + "Vector";
+  return soa_paths::soaBackingTypeName();
 }
 
 std::string experimentalSoaStorageTypePath(bool leadingSlash) {
@@ -487,14 +512,17 @@ bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverPath, std
 
   std::string_view helperName;
   const bool isSoaVectorReceiver =
-      receiverPath == "/soa_vector" ||
-      receiverPath == "/std/collections/soa_vector";
+      receiverPath == "/" + soa_paths::legacySoaFolder() ||
+      receiverPath == compatibilitySoaHelperTargetPath("");
   if (isSoaVectorReceiver) {
-    if (rawMethodName.rfind("soa_vector/", 0) == 0) {
-      helperName = std::string_view(rawMethodName).substr(std::string_view("soa_vector/").size());
-    } else if (rawMethodName.rfind("std/collections/soa_vector/", 0) == 0) {
+    const std::string aliasPrefix = soa_paths::legacySoaFolder() + "/";
+    const std::string stdPrefix =
+        collectionPathPrefixLocal(soa_paths::legacySoaFolder());
+    if (rawMethodName.rfind(aliasPrefix, 0) == 0) {
+      helperName = std::string_view(rawMethodName).substr(aliasPrefix.size());
+    } else if (rawMethodName.rfind(stdPrefix, 0) == 0) {
       helperName =
-          std::string_view(rawMethodName).substr(std::string_view("std/collections/soa_vector/").size());
+          std::string_view(rawMethodName).substr(stdPrefix.size());
     }
     return !helperName.empty() && isRemovedBorrowedSoaCompatibilityHelper(helperName);
   }
@@ -529,8 +557,9 @@ bool isExplicitRemovedCollectionCallAlias(std::string rawPath) {
   }
 
   std::string_view helperName;
-  if (rawPath.rfind("soa_vector/", 0) == 0) {
-    helperName = std::string_view(rawPath).substr(std::string_view("soa_vector/").size());
+  const std::string legacySoaPrefix = soa_paths::legacySoaFolder() + "/";
+  if (rawPath.rfind(legacySoaPrefix, 0) == 0) {
+    helperName = std::string_view(rawPath).substr(legacySoaPrefix.size());
     return !helperName.empty() && isRemovedBorrowedSoaCompatibilityHelper(helperName);
   }
   if (rawPath.rfind("array/", 0) == 0) {
@@ -609,13 +638,17 @@ bool getBuiltinPointerName(const Expr &expr, std::string &out) {
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
   }
-  if (name == "dereference" || name == "location" || name == "soa_vector/dereference" ||
-      name == "soa_vector/location") {
-    if (name == "soa_vector/dereference") {
+  const std::string legacyDereference =
+      soa_paths::legacySoaFolder() + "/dereference";
+  const std::string legacyLocation =
+      soa_paths::legacySoaFolder() + "/location";
+  if (name == "dereference" || name == "location" ||
+      name == legacyDereference || name == legacyLocation) {
+    if (name == legacyDereference) {
       out = "dereference";
       return true;
     }
-    if (name == "soa_vector/location") {
+    if (name == legacyLocation) {
       out = "location";
       return true;
     }
@@ -672,32 +705,32 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
     return false;
   }
   if (name == "array" || name == "vector" || name == "map" || name == "soa") {
-    out = name == "soa" ? "soa_vector" : name;
+    out = name == "soa" ? internalSoaCollectionTypeName() : name;
     return true;
   }
   return false;
 }
 
 std::string soaFieldViewHelperPath(std::string_view fieldName) {
-  return "/std/collections/soa/field_view/" + std::string(fieldName);
+  return publicSoaHelperTargetPath("field_view") + "/" + std::string(fieldName);
 }
 
 bool splitSoaFieldViewHelperPath(std::string_view path, std::string *fieldNameOut) {
-  constexpr std::string_view kPublicSoaFieldViewPrefix =
-      "/std/collections/soa/field_view/";
-  constexpr std::string_view kCompatibilitySoaFieldViewPrefix =
-      "/std/collections/soa_vector/field_view/";
-  auto splitWithPrefix = [&](std::string_view prefix) {
+  const std::string publicSoaFieldViewPrefix =
+      publicSoaHelperTargetPath("field_view") + "/";
+  const std::string compatibilitySoaFieldViewPrefix =
+      compatibilitySoaHelperTargetPath("field_view") + "/";
+  auto splitWithPrefix = [&](const std::string &prefix) {
     if (fieldNameOut != nullptr) {
       *fieldNameOut = std::string(path.substr(prefix.size()));
     }
     return true;
   };
-  if (path.starts_with(kPublicSoaFieldViewPrefix)) {
-    return splitWithPrefix(kPublicSoaFieldViewPrefix);
+  if (path.starts_with(publicSoaFieldViewPrefix)) {
+    return splitWithPrefix(publicSoaFieldViewPrefix);
   }
-  if (path.starts_with(kCompatibilitySoaFieldViewPrefix)) {
-    return splitWithPrefix(kCompatibilitySoaFieldViewPrefix);
+  if (path.starts_with(compatibilitySoaFieldViewPrefix)) {
+    return splitWithPrefix(compatibilitySoaFieldViewPrefix);
   }
   return false;
 }
@@ -730,54 +763,24 @@ std::string canonicalizeLegacySoaToAosHelperPath(std::string_view path) {
     canonicalPath.erase(templateSuffix);
   }
   if (canonicalPath == "/to_aos") {
-    return "/std/collections/soa_vector/to_aos";
+    return compatibilitySoaHelperTargetPath("to_aos");
   }
   if (canonicalPath == "/to_aos_ref") {
-    return "/std/collections/soa_vector/to_aos_ref";
+    return compatibilitySoaHelperTargetPath("to_aos_ref");
   }
   return canonicalPath;
 }
 
 std::string canonicalizeLegacySoaRefHelperPath(std::string_view path) {
-  std::string canonicalPath(path);
-  const size_t templateSuffix = canonicalPath.find("__t");
-  if (templateSuffix != std::string::npos) {
-    canonicalPath.erase(templateSuffix);
-  }
-  if (canonicalPath == "/soa_vector/ref") {
-    return "/std/collections/soa_vector/ref";
-  }
-  if (canonicalPath == "/soa_vector/ref_ref") {
-    return "/std/collections/soa_vector/ref_ref";
-  }
-  return canonicalPath;
+  return soa_paths::canonicalizeLegacySoaRefHelperPath(path);
 }
 
 std::string canonicalizeLegacySoaGetHelperPath(std::string_view path) {
-  const std::string canonicalPath = canonicalizeLegacySoaRefHelperPath(path);
-  if (canonicalPath == "/soa_vector/get") {
-    return "/std/collections/soa_vector/get";
-  }
-  if (canonicalPath == "/soa_vector/get_ref") {
-    return "/std/collections/soa_vector/get_ref";
-  }
-  return canonicalPath;
+  return soa_paths::canonicalizeLegacySoaGetHelperPath(path);
 }
 
 bool isLegacyOrCanonicalSoaHelperPath(std::string_view path, std::string_view helperName) {
-  constexpr std::string_view kLegacyPrefix = "/soa_vector/";
-  constexpr std::string_view kCanonicalPrefix = "/std/collections/soa_vector/";
-  constexpr std::string_view kPublicPrefix = "/std/collections/soa/";
-  if (path.starts_with(kLegacyPrefix)) {
-    return path.substr(kLegacyPrefix.size()) == helperName;
-  }
-  if (path.starts_with(kCanonicalPrefix)) {
-    return path.substr(kCanonicalPrefix.size()) == helperName;
-  }
-  if (path.starts_with(kPublicPrefix)) {
-    return path.substr(kPublicPrefix.size()) == helperName;
-  }
-  return false;
+  return soa_paths::isLegacyOrCanonicalSoaHelperPath(path, helperName);
 }
 
 bool isCanonicalStdlibSoaHelperPath(std::string_view path, std::string_view helperName) {
@@ -786,16 +789,16 @@ bool isCanonicalStdlibSoaHelperPath(std::string_view path, std::string_view help
   if (specializationSuffix != std::string::npos) {
     canonicalPath.erase(specializationSuffix);
   }
-  return (canonicalPath.rfind("/std/collections/soa_vector/", 0) == 0 ||
-          canonicalPath.rfind("/std/collections/soa/", 0) == 0) &&
+  const std::string compatibilityPrefix =
+      compatibilitySoaHelperTargetPath("") + "/";
+  const std::string publicPrefix = publicSoaHelperTargetPath("") + "/";
+  return (canonicalPath.rfind(compatibilityPrefix, 0) == 0 ||
+          canonicalPath.rfind(publicPrefix, 0) == 0) &&
          isLegacyOrCanonicalSoaHelperPath(canonicalPath, helperName);
 }
 
 bool isCanonicalSoaRefLikeHelperPath(std::string_view path) {
-  return path == "/std/collections/soa_vector/ref" ||
-         path == "/std/collections/soa_vector/ref_ref" ||
-         path == "/std/collections/soa/ref" ||
-         path == "/std/collections/soa/ref_ref";
+  return soa_paths::isCanonicalSoaRefLikeHelperPath(path);
 }
 
 bool isExperimentalSoaCountLikeHelperPath(std::string_view path) {
@@ -804,8 +807,8 @@ bool isExperimentalSoaCountLikeHelperPath(std::string_view path) {
   if (specializationSuffix != std::string::npos) {
     canonicalPath.erase(specializationSuffix);
   }
-  return canonicalPath == "/std/collections/experimental_soa_vector/soaVectorCount" ||
-         canonicalPath == "/std/collections/experimental_soa_vector/soaVectorCountRef";
+  return canonicalPath == experimentalSoaHelperPathLocal("soa" "VectorCount") ||
+         canonicalPath == experimentalSoaHelperPathLocal("soa" "VectorCountRef");
 }
 
 bool isExperimentalSoaBorrowedHelperPath(std::string_view path) {
@@ -814,9 +817,9 @@ bool isExperimentalSoaBorrowedHelperPath(std::string_view path) {
   if (specializationSuffix != std::string::npos) {
     canonicalPath.erase(specializationSuffix);
   }
-  return canonicalPath == "/std/collections/experimental_soa_vector/soaVectorCountRef" ||
-         canonicalPath == "/std/collections/experimental_soa_vector/soaVectorGetRef" ||
-         canonicalPath == "/std/collections/experimental_soa_vector/soaVectorRefRef";
+  return canonicalPath == experimentalSoaHelperPathLocal("soa" "VectorCountRef") ||
+         canonicalPath == experimentalSoaHelperPathLocal("soa" "VectorGetRef") ||
+         canonicalPath == experimentalSoaHelperPathLocal("soa" "VectorRefRef");
 }
 
 bool isExperimentalSoaGetLikeHelperPath(std::string_view path) {
@@ -825,42 +828,44 @@ bool isExperimentalSoaGetLikeHelperPath(std::string_view path) {
   if (specializationSuffix != std::string::npos) {
     canonicalPath.erase(specializationSuffix);
   }
-  return canonicalPath == "/std/collections/experimental_soa_vector/soaVectorGet" ||
-         canonicalPath == "/std/collections/experimental_soa_vector/soaVectorGetRef";
+  return canonicalPath == experimentalSoaHelperPathLocal("soa" "VectorGet") ||
+         canonicalPath == experimentalSoaHelperPathLocal("soa" "VectorGetRef");
 }
 
 bool isExperimentalSoaGrowthHelperPath(std::string_view path) {
-  constexpr std::string_view kExperimentalSoaVectorPrefix =
-      "/std/collections/experimental_soa_vector/";
-  constexpr std::string_view kCompatibilitySoaVectorPrefix =
-      "/std/collections/soa_vector/";
+  const std::string experimentalSoaPrefix =
+      soa_paths::collectionPath(soa_paths::experimentalSoaFolder()) + "/";
+  const std::string compatibilitySoaPrefix =
+      compatibilitySoaHelperTargetPath("") + "/";
   std::string canonicalPath(path);
   const size_t specializationSuffix = canonicalPath.find("__");
   if (specializationSuffix != std::string::npos) {
     canonicalPath.erase(specializationSuffix);
   }
-  if (canonicalPath.starts_with(kCompatibilitySoaVectorPrefix)) {
+  if (canonicalPath.starts_with(compatibilitySoaPrefix)) {
     const std::string_view helperName =
-        std::string_view(canonicalPath).substr(kCompatibilitySoaVectorPrefix.size());
+        std::string_view(canonicalPath).substr(compatibilitySoaPrefix.size());
     return helperName == "push" || helperName == "reserve" ||
-           helperName == "soaVectorPush" || helperName == "soaVectorReserve";
+           helperName == "soa" "VectorPush" ||
+           helperName == "soa" "VectorReserve";
   }
-  if (canonicalPath.starts_with(kExperimentalSoaVectorPrefix)) {
+  if (canonicalPath.starts_with(experimentalSoaPrefix)) {
     const std::string_view helperName =
-        std::string_view(canonicalPath).substr(kExperimentalSoaVectorPrefix.size());
+        std::string_view(canonicalPath).substr(experimentalSoaPrefix.size());
     return helperName == "push" || helperName == "reserve" ||
-           helperName == "soaVectorPush" || helperName == "soaVectorReserve";
+           helperName == "soa" "VectorPush" ||
+           helperName == "soa" "VectorReserve";
   }
   return false;
 }
 
 bool isExperimentalSoaFieldViewHelperPath(std::string_view path) {
-  constexpr std::string_view kExperimentalSoaFieldViewPrefix =
-      "/std/collections/experimental_soa_vector/soaVectorFieldView";
-  constexpr std::string_view kCanonicalSoaFieldViewPrefix =
-      "/std/collections/soa_vector/soaVectorFieldView";
-  constexpr std::string_view kPublicSoaFieldViewPath =
-      "/std/collections/soa/field_view";
+  const std::string experimentalSoaFieldViewPrefix =
+      experimentalSoaHelperPathLocal("soa" "VectorFieldView");
+  const std::string canonicalSoaFieldViewPrefix =
+      compatibilitySoaHelperTargetPath("soa" "VectorFieldView");
+  const std::string publicSoaFieldViewPath =
+      publicSoaHelperTargetPath("field_view");
   constexpr std::string_view kExperimentalSoaColumnFieldViewUnsafePrefix =
       "/std/collections/internal_soa_storage/soaColumnFieldViewUnsafe";
   std::string canonicalPath(path);
@@ -868,9 +873,9 @@ bool isExperimentalSoaFieldViewHelperPath(std::string_view path) {
   if (specializationSuffix != std::string::npos) {
     canonicalPath.erase(specializationSuffix);
   }
-  return canonicalPath.rfind(kExperimentalSoaFieldViewPrefix, 0) == 0 ||
-         canonicalPath.rfind(kCanonicalSoaFieldViewPrefix, 0) == 0 ||
-         canonicalPath == kPublicSoaFieldViewPath ||
+  return canonicalPath.rfind(experimentalSoaFieldViewPrefix, 0) == 0 ||
+         canonicalPath.rfind(canonicalSoaFieldViewPrefix, 0) == 0 ||
+         canonicalPath == publicSoaFieldViewPath ||
          canonicalPath.rfind(kExperimentalSoaColumnFieldViewUnsafePrefix, 0) == 0;
 }
 
@@ -917,14 +922,14 @@ bool isExperimentalSoaColumnFieldSchemaHelperPath(std::string_view path) {
 }
 
 bool isExperimentalSoaMethodRefLikeHelperPath(std::string_view path) {
-  constexpr std::string_view kExperimentalSoaVectorPrefix =
-      "/std/collections/experimental_soa_vector/";
+  const std::string experimentalSoaPrefix =
+      soa_paths::collectionPath(soa_paths::experimentalSoaFolder()) + "/";
   std::string canonicalPath(path);
   const size_t specializationSuffix = canonicalPath.find("__");
   if (specializationSuffix != std::string::npos) {
     canonicalPath.erase(specializationSuffix);
   }
-  if (canonicalPath.rfind(kExperimentalSoaVectorPrefix, 0) != 0) {
+  if (canonicalPath.rfind(experimentalSoaPrefix, 0) != 0) {
     return false;
   }
   return std::string_view(canonicalPath).ends_with("/ref") ||
@@ -937,65 +942,48 @@ bool isExperimentalSoaRefLikeHelperPath(std::string_view path) {
   if (specializationSuffix != std::string::npos) {
     canonicalPath.erase(specializationSuffix);
   }
-  return canonicalPath == "/std/collections/experimental_soa_vector/soaVectorRef" ||
-         canonicalPath == "/std/collections/experimental_soa_vector/soaVectorRefRef" ||
+  return canonicalPath == experimentalSoaHelperPathLocal("soa" "VectorRef") ||
+         canonicalPath == experimentalSoaHelperPathLocal("soa" "VectorRefRef") ||
          canonicalPath == "/std/collections/internal_soa_storage/soaColumnRef";
 }
 
 bool isExperimentalSoaVectorHelperFamilyPath(std::string_view path) {
-  constexpr std::string_view kExperimentalSoaVectorPrefix =
-      "/std/collections/experimental_soa_vector/";
+  const std::string experimentalSoaPrefix =
+      soa_paths::collectionPath(soa_paths::experimentalSoaFolder()) + "/";
   std::string canonicalPath(path);
   const size_t specializationSuffix = canonicalPath.find("__");
   if (specializationSuffix != std::string::npos) {
     canonicalPath.erase(specializationSuffix);
   }
-  return canonicalPath.starts_with(kExperimentalSoaVectorPrefix) ||
+  return canonicalPath.starts_with(experimentalSoaPrefix) ||
          isExperimentalSoaVectorConversionFamilyPath(canonicalPath);
 }
 
 bool isExperimentalSoaVectorTypePath(std::string_view path) {
-  constexpr std::string_view kExperimentalSoaVectorTypePrefix =
-      "std/collections/experimental_soa_vector/SoaVector";
-  constexpr std::string_view kExperimentalSoaVectorTypePrefixWithSlash =
-      "/std/collections/experimental_soa_vector/SoaVector";
-  const auto matchesExperimentalSoaVectorTypePrefix =
-      [&](std::string_view prefix) {
-        return path == prefix || path.starts_with(std::string(prefix) + "<") ||
-               path.starts_with(std::string(prefix) + "__");
-      };
-  return matchesExperimentalSoaVectorTypePrefix("SoaVector") ||
-         matchesExperimentalSoaVectorTypePrefix(kExperimentalSoaVectorTypePrefix) ||
-         matchesExperimentalSoaVectorTypePrefix(kExperimentalSoaVectorTypePrefixWithSlash) ||
-         isExperimentalSoaVectorSpecializedTypePath(path);
+  return soa_paths::isExperimentalColumnarVectorTypePath(path);
 }
 
 bool isExperimentalSoaVectorSpecializedTypePath(std::string_view path) {
-  constexpr std::string_view kExperimentalSoaVectorSpecializedPrefix =
-      "/std/collections/experimental_soa_vector/SoaVector__";
-  constexpr std::string_view kExperimentalSoaVectorSpecializedPrefixNoSlash =
-      "std/collections/experimental_soa_vector/SoaVector__";
-  constexpr std::string_view kExperimentalSoaVectorSpecializedPrefixBare =
-      "SoaVector__";
-  return path.starts_with(kExperimentalSoaVectorSpecializedPrefix) ||
-         path.starts_with(kExperimentalSoaVectorSpecializedPrefixNoSlash) ||
-         path.starts_with(kExperimentalSoaVectorSpecializedPrefixBare);
+  return soa_paths::isExperimentalColumnarVectorSpecializedTypePath(path);
 }
 
 bool isExperimentalSoaVectorConversionFamilyPath(std::string_view path) {
-  constexpr std::string_view kExperimentalSoaVectorConversionsPrefix =
-      "/std/collections/experimental_soa_vector_conversions/";
+  const std::string experimentalSoaConversionsPrefix =
+      soa_paths::collectionPath(
+          soa_paths::experimentalSoaFolder() + "_conversions") +
+      "/";
   std::string canonicalPath(path);
   const size_t specializationSuffix = canonicalPath.find("__");
   if (specializationSuffix != std::string::npos) {
     canonicalPath.erase(specializationSuffix);
   }
-  if (!canonicalPath.starts_with(kExperimentalSoaVectorConversionsPrefix)) {
+  if (!canonicalPath.starts_with(experimentalSoaConversionsPrefix)) {
     return false;
   }
   const std::string_view helperName =
-      std::string_view(canonicalPath).substr(kExperimentalSoaVectorConversionsPrefix.size());
-  return helperName == "soaVectorToAos" || helperName == "soaVectorToAosRef";
+      std::string_view(canonicalPath).substr(experimentalSoaConversionsPrefix.size());
+  return helperName == "soa" "VectorToAos" ||
+         helperName == "soa" "VectorToAosRef";
 }
 
 namespace {
@@ -1023,11 +1011,11 @@ std::string canonicalSoaPendingHelperPath(std::string_view resolvedPath) {
       isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get_ref")) {
     return canonicalSoaGetPath;
   }
-  if (normalizedResolvedPath == "/soa_vector/count") {
-    return "/std/collections/soa_vector/count";
+  if (normalizedResolvedPath == samePathSoaHelperTargetPath("count")) {
+    return compatibilitySoaHelperTargetPath("count");
   }
-  if (normalizedResolvedPath == "/soa_vector/count_ref") {
-    return "/std/collections/soa_vector/count_ref";
+  if (normalizedResolvedPath == samePathSoaHelperTargetPath("count_ref")) {
+    return compatibilitySoaHelperTargetPath("count_ref");
   }
   return std::string(resolvedPath);
 }

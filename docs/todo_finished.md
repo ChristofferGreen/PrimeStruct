@@ -6,6 +6,34 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 15, 2026)**
+- [x] TODO-4530: Reduce semantic SoA builtin path helper traces
+  - owner: ai
+  - created_at: 2026-05-15
+  - finished_at: 2026-05-15
+  - phase: SoA public surface rename and ownership cutover
+  - parallel_track: soa-zero-audit
+  - split_from: TODO-4526
+  - depends_on: TODO-4525
+  - scope: Remove or centralize the remaining public SoA collection-surface
+    spellings owned directly by `src/semantics/SemanticsBuiltinPathHelpers.cpp`
+    while preserving that file as the shared semantic helper boundary for
+    canonical `soa<T>` and compatibility classification.
+  - outcome:
+    - Routed shared semantic SoA helper path/type classification through
+      `primec::soa_paths` and existing semantic path builders instead of
+      direct public collection-surface literals.
+    - Reduced `src/semantics/SemanticsBuiltinPathHelpers.cpp` inventory rows
+      from canonical, legacy, experimental, rooted, helper-symbol, token, and
+      type-symbol SoA traces down to only the remaining
+      `soa-conversion-helper` cap of 10.
+    - Tightened source-lock coverage so the helper boundary keeps using shared
+      SoA path builders and rejects reintroduced direct public SoA path/type
+      spellings.
+  - validation:
+    - Focused validation used the SoA inventory checker plus backend-IR
+      semantic/source-lock slices; broad release validation is deferred to the
+      parent/full workflow.
+
 - [x] TODO-4525: Delete text-filter and IR-printer SoA zero-audit residue
   - owner: ai
   - created_at: 2026-05-15

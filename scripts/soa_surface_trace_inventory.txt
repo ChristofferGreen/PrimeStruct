@@ -183,15 +183,7 @@ src/semantics/SemanticValidationPlan.cpp	soa-conversion-helper	2
 src/semantics/SemanticValidationPlan.cpp	soa-vector-token	13
 src/semantics/SemanticsBindingTypeHelpers.cpp	canonical-soa-path	4
 src/semantics/SemanticsBindingTypeHelpers.cpp	soa-vector-token	6
-src/semantics/SemanticsBuiltinPathHelpers.cpp	canonical-soa-path	7
-src/semantics/SemanticsBuiltinPathHelpers.cpp	experimental-soa-vector-path	17
-src/semantics/SemanticsBuiltinPathHelpers.cpp	experimental-soa-vector-token	18
-src/semantics/SemanticsBuiltinPathHelpers.cpp	legacy-soa-vector-path	18
-src/semantics/SemanticsBuiltinPathHelpers.cpp	root-soa-vector-path	15
 src/semantics/SemanticsBuiltinPathHelpers.cpp	soa-conversion-helper	10
-src/semantics/SemanticsBuiltinPathHelpers.cpp	soa-vector-helper-symbol	17
-src/semantics/SemanticsBuiltinPathHelpers.cpp	soa-vector-token	7
-src/semantics/SemanticsBuiltinPathHelpers.cpp	soa-vector-type-symbol	6
 src/semantics/SemanticsHelpersCore.cpp	canonical-soa-path	2
 src/semantics/SemanticsHelpersCore.cpp	legacy-soa-vector-path	2
 src/semantics/SemanticsHelpersCore.cpp	soa-vector-token	5
