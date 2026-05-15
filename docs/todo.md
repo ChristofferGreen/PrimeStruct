@@ -89,19 +89,15 @@ Task template:
 - TODO-4526: Delete semantic SoA zero-audit residue | track:
   soa-zero-audit | primary surface: semantic validation source-lock
   inventory and shared SoA helper routing
-- TODO-4532: Reduce map lowerer native-dispatch traces | track:
-  map-zero-audit | primary surface:
-  `src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp` and map
-  surface/backing trace inventories
 
 ### Parallel Work Tracks (Current)
 
 - `soa-zero-audit`: ready TODO-4526 after TODO-4530 completed the shared
   semantic builtin-helper slice; serial successors remain TODO-4527
   -> TODO-4528 -> TODO-4529.
-- `map-zero-audit`: ready TODO-4532 reduces the next bounded lowerer
-  native-dispatch slice; TODO-4464 remains the parent for the final strict
-  zero map-surface audit.
+- `map-zero-audit`: TODO-4532 reduced the lowerer native-dispatch slice;
+  TODO-4464 remains the parent for future bounded trace-reduction splits
+  and the final strict zero map-surface audit.
 - `tuple-type-packs`: ready TODO-4275 after TODO-4270 completed integer
   template arguments, then serial successors TODO-4276 -> TODO-4271 -> TODO-4272
   -> TODO-4274 -> TODO-4273 -> TODO-4277 -> TODO-4278.
@@ -128,9 +124,8 @@ Task template:
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
 - Vector stdlib ownership cutover: none active
-- Map stdlib ownership cutover: TODO-4532 is ready after TODO-4531;
-  TODO-4464 remains in progress for future bounded trace-reduction splits
-  and the final strict zero audit
+- Map stdlib ownership cutover: TODO-4464 remains in progress for future
+  bounded trace-reduction splits and the final strict zero audit
 - SoA public surface rename and ownership cutover: TODO-4306 parent split;
   TODO-4530 removed semantic builtin path helper inventory residue, and
   TODO-4526 is ready to finish the semantic-validation residue before
@@ -151,7 +146,6 @@ Task template:
 
 - TODO-4275: Expand type packs into struct storage
 - TODO-4526: Delete semantic SoA zero-audit residue
-- TODO-4532: Reduce map lowerer native-dispatch traces
 - TODO-4527: Delete template-monomorph SoA zero-audit residue
 - TODO-4528: Delete emitter/lowerer SoA zero-audit residue
 - TODO-4529: Replace SoA inventory with strict zero audit
@@ -200,9 +194,9 @@ Task template:
 | Compile-pipeline stage and publication-boundary contracts | none |
 | Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4305 |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4464, TODO-4532, TODO-4524 |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4464, TODO-4532 |
-| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4464, TODO-4532, TODO-4305, TODO-4524 |
+| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4464, TODO-4524 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4464 |
+| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4464, TODO-4305, TODO-4524 |
 | SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4514, TODO-4524 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
@@ -231,12 +225,12 @@ Task template:
 | Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
-| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4464, TODO-4532 |
-| De-experimentalization surface and namespace parity | TODO-4430, TODO-4464, TODO-4532, TODO-4305, TODO-4524 |
+| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4464 |
+| De-experimentalization surface and namespace parity | TODO-4430, TODO-4464, TODO-4305, TODO-4524 |
 | `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4514, TODO-4524 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
-| Emitter map-helper canonicalization parity | TODO-4464, TODO-4532 |
+| Emitter map-helper canonicalization parity | TODO-4464 |
 | VM debug-session argv lifetime coverage | none |
 | Debugger/source-map provenance parity | none |
 | Debug trace replay malformed-input coverage | none |
@@ -1843,36 +1837,6 @@ Task template:
   - stop_rule: Stop once the release gate mechanically enforces that map is
     fully stdlib-owned and no PrimeStruct-map-specific production C++ traces
     remain.
-
-- [ ] TODO-4532: Reduce map lowerer native-dispatch traces
-  - owner: ai
-  - created_at: 2026-05-15
-  - phase: Map stdlib ownership cutover
-  - parallel_track: map-zero-audit
-  - split_from: TODO-4464
-  - depends_on: TODO-4506, TODO-4531
-  - scope: Remove or route through shared lowerer helpers the next bounded
-    PrimeStruct-map-specific trace residue in
-    `src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp`.
-  - implementation_notes:
-    - Start from the current map surface/backing inventories:
-      `scripts/check_map_surface_trace_inventory.py` caps this file at 39
-      surface traces and `scripts/check_map_backing_traces.py` caps its
-      experimental-map backing residue.
-    - Preserve canonical map helper behavior by using existing shared
-      collection path, backing-type, and map access classification helpers
-      instead of adding new map-specific literals or local recognizers.
-    - Keep this slice confined to inline native dispatch and nearby
-      source-lock coverage; leave unrelated lowerer setup, result metadata,
-      and semantic map traces to later TODO-4464 child leaves.
-  - acceptance:
-    - `IrLowererInlineNativeCallDispatch.cpp` map surface/backing inventory
-      rows are deleted or reduced to the next explicit cap.
-    - Existing native map helper dispatch, miss-result, insertion, and source
-      lock coverage stays stable.
-    - Focused map inventory checks and native/lowerer source-lock tests pass.
-  - stop_rule: Stop once inline native dispatch no longer owns local
-    PrimeStruct map-surface/backing traces outside shared helper boundaries.
 
 - [~] TODO-4305: Rename and style canonical `.prime` SoA surface
   - owner: ai

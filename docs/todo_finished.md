@@ -33,6 +33,33 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
       semantics template tests, and TODO source-lock coverage. Full
       `./scripts/compile.sh --release` was deferred by the lite workflow.
 
+- [x] TODO-4532: Reduce map lowerer native-dispatch traces
+  - owner: ai
+  - created_at: 2026-05-15
+  - finished_at: 2026-05-15
+  - phase: Map stdlib ownership cutover
+  - parallel_track: map-zero-audit
+  - split_from: TODO-4464
+  - depends_on: TODO-4506, TODO-4531
+  - scope: Remove or route through shared lowerer helpers the next bounded
+    PrimeStruct-map-specific trace residue in
+    `src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp`.
+  - outcome:
+    - Routed inline native dispatch canonical map helper checks through
+      shared stdlib-surface helper classification instead of local canonical
+      path probes.
+    - Removed inline native dispatch's local semantic map type/kind
+      recognizers and uses shared `resolveMapAccessTargetInfo(...)` for map
+      target classification.
+    - Routed residual experimental-map backing checks through the shared
+      lowerer backing-type predicate, removing this file from the map backing
+      inventory rows.
+  - validation:
+    - Non-heavy map surface/backing inventory checks and checker self-tests
+      passed.
+    - Focused release build, backend IR source-lock slices, and the stdlib map
+      ownership misc suite passed in the assigned worktree.
+
 - [x] TODO-4269: Bind and monomorphize type-pack arguments
   - owner: ai
   - created_at: 2026-04-27

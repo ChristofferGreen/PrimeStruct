@@ -1303,18 +1303,16 @@ TEST_CASE("ir lowerer inline dispatch map helper deferral uses semantic receiver
         std::string::npos);
   CHECK(inlineDispatchSource.find("semanticProgramResolveCallTargetString(*semanticProgram,") !=
         std::string::npos);
-  CHECK(inlineDispatchSource.find("findSemanticProductCollectionSpecialization(*semanticIndexPtr, targetExpr)") !=
+  CHECK(inlineDispatchSource.find("collectionFact->keyTypeTextId") ==
         std::string::npos);
-  CHECK(inlineDispatchSource.find("collectionFact->keyTypeTextId") !=
+  CHECK(inlineDispatchSource.find("collectionFact->valueTypeTextId") ==
         std::string::npos);
-  CHECK(inlineDispatchSource.find("collectionFact->valueTypeTextId") !=
+  CHECK(inlineDispatchSource.find("tryPopulateMapKindsFromSemanticTypeText(") ==
         std::string::npos);
-  CHECK(inlineDispatchSource.find("findSemanticProductQueryFact(semanticProgram, *semanticIndexPtr, targetExpr)") !=
+  CHECK(inlineDispatchSource.find("tryPopulateMapTargetInfoFromSemanticFacts(") ==
         std::string::npos);
-  CHECK(inlineDispatchSource.find("tryPopulateMapKindsFromSemanticTypeText(queryFact->bindingTypeTextId,") !=
+  CHECK(inlineDispatchSource.find("resolveMapAccessTargetInfo(receiverExpr,") !=
         std::string::npos);
-  CHECK(inlineDispatchSource.find("tryPopulateMapTargetInfoFromSemanticFacts(targetExpr, targetInfoOut)") <
-        inlineDispatchSource.find("const Definition *callee = resolveDefinitionCallFn(targetExpr);"));
   CHECK(tailDispatchSource.find("error,\n"
                                 "            semanticProgram);") !=
         std::string::npos);
@@ -1473,7 +1471,7 @@ TEST_CASE("ir lowerer inline dispatch collection access fallback uses semantic r
 
   CHECK(source.find("enum class InlineCollectionAccessTargetFact") !=
         std::string::npos);
-  CHECK(source.find("auto isInlineExperimentalMapTypeName =") !=
+  CHECK(source.find("auto isInlineExperimentalMapTypeName =") ==
         std::string::npos);
   CHECK(source.find("auto classifyInlineCollectionAccessTargetFromSemanticFacts =") !=
         std::string::npos);
@@ -1493,6 +1491,9 @@ TEST_CASE("ir lowerer inline dispatch collection access fallback uses semantic r
   const size_t semanticFactUse =
       source.find("const InlineCollectionAccessTargetFact semanticFact =\n"
                   "              classifyInlineCollectionAccessTargetFromSemanticFacts(receiverExpr);");
+  const size_t nameReceiverBranch =
+      source.rfind("if (receiverExpr.kind == Expr::Kind::Name) {",
+                   semanticFactUse);
   const size_t staleLocalFallback =
       source.find("auto it = localsIn.find(receiverExpr.name);");
   const size_t legacyInferFallback =
@@ -1502,6 +1503,7 @@ TEST_CASE("ir lowerer inline dispatch collection access fallback uses semantic r
       "if (semanticFact == InlineCollectionAccessTargetFact::NonCollectionAccess) {",
       semanticFactUse);
   REQUIRE(semanticFactUse != std::string::npos);
+  REQUIRE(nameReceiverBranch != std::string::npos);
   REQUIRE(nonCollectionGate != std::string::npos);
   REQUIRE(staleLocalFallback != std::string::npos);
   REQUIRE(legacyInferFallback != std::string::npos);
@@ -1509,7 +1511,7 @@ TEST_CASE("ir lowerer inline dispatch collection access fallback uses semantic r
   CHECK(semanticFactUse < staleLocalFallback);
   CHECK(nonCollectionGate < legacyInferFallback);
   CHECK(nonCollectionGate < staleLocalFallback);
-  CHECK(source.find("isInlineExperimentalMapTypeName(collectionFamily)") !=
+  CHECK(source.find("isInlineExperimentalMapTypeName(collectionFamily)") ==
         std::string::npos);
   const size_t semanticArrayVectorFallback = source.find(
       "resolveArrayVectorAccessTargetInfo(receiverExpr,\n"
@@ -1518,23 +1520,33 @@ TEST_CASE("ir lowerer inline dispatch collection access fallback uses semantic r
       "                                               semanticProgram,\n"
       "                                               semanticIndexPtr)",
       semanticFactUse);
-  const size_t semanticMapFallback = source.find(
-      "resolveMapAccessTargetInfo(receiverExpr,\n"
-      "                                       localsIn,\n"
-      "                                       inferCallMapTargetInfo,\n"
-      "                                       semanticProgram,\n"
-      "                                       semanticIndexPtr)",
-      semanticFactUse);
+  const size_t nameSemanticMapFallback =
+      source.find("resolveMapAccessTargetInfo(receiverExpr,",
+                  nameReceiverBranch);
+  const size_t callReceiverBranch =
+      source.find("if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding) {",
+                  semanticFactUse);
+  REQUIRE(callReceiverBranch != std::string::npos);
+  const size_t callSemanticMapFallback =
+      source.find("resolveMapAccessTargetInfo(receiverExpr,",
+                  callReceiverBranch);
+  const size_t callSemanticFactUse =
+      source.find("const InlineCollectionAccessTargetFact semanticFact =\n"
+                  "            classifyInlineCollectionAccessTargetFromSemanticFacts(receiverExpr);",
+                  callReceiverBranch);
   const size_t builtinCollectionFallback =
       source.find("getBuiltinCollectionName(receiverExpr, collectionName)",
                   semanticFactUse);
   REQUIRE(semanticArrayVectorFallback != std::string::npos);
-  REQUIRE(semanticMapFallback != std::string::npos);
+  REQUIRE(nameSemanticMapFallback != std::string::npos);
+  REQUIRE(callSemanticMapFallback != std::string::npos);
+  REQUIRE(callSemanticFactUse != std::string::npos);
   REQUIRE(builtinCollectionFallback != std::string::npos);
   CHECK(nonCollectionGate < semanticArrayVectorFallback);
-  CHECK(nonCollectionGate < semanticMapFallback);
+  CHECK(nameSemanticMapFallback < semanticFactUse);
+  CHECK(callSemanticMapFallback < callSemanticFactUse);
   CHECK(semanticArrayVectorFallback < builtinCollectionFallback);
-  CHECK(semanticMapFallback < builtinCollectionFallback);
+  CHECK(callSemanticMapFallback < builtinCollectionFallback);
   CHECK(source.find("resolveMapAccessTargetInfo(receiverExpr, localsIn, inferCallMapTargetInfo).isMapTarget") ==
         std::string::npos);
 }
@@ -2106,7 +2118,9 @@ TEST_CASE("ir lowerer inline native dispatch prefers published canonical map acc
 
   CHECK(source.find("const bool isExplicitCanonicalMapHelperPath =") !=
         std::string::npos);
-  CHECK(source.find("rawPath.rfind(\"/std/collections/map/\", 0) == 0") !=
+  CHECK(source.find("isCanonicalPublishedStdlibSurfaceHelperPath(") !=
+        std::string::npos);
+  CHECK(source.find("rawPath.rfind(\"/std/collections/map/\", 0) == 0") ==
         std::string::npos);
   CHECK(source.find("helperName == \"contains\" || helperName == \"contains_ref\"") !=
         std::string::npos);

@@ -63,7 +63,6 @@ bool isAllowedMapBackingFile(const std::string &relativePath) {
       "src/ir_lowerer/IrLowererBindingTypeHelpers.cpp",
       "src/ir_lowerer/IrLowererCallHelpers.cpp",
       "src/ir_lowerer/IrLowererInlineCallContextHelpers.cpp",
-      "src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp",
       "src/ir_lowerer/IrLowererInlinePackedArgs.cpp",
       "src/ir_lowerer/IrLowererInlineParamHelpers.cpp",
       "src/ir_lowerer/IrLowererLowerEmitExprCollectionHelpers.h",
@@ -228,7 +227,8 @@ TEST_CASE("canonical map surface owns implementation through internal map module
   CHECK(nativeTailSource.find("isMapReadHelperName(directMapReadHelperName)") != std::string::npos);
   CHECK(lowerStatementsExprSource.find("Keep direct canonical map access helpers") == std::string::npos);
   CHECK(lowerStatementsExprSource.find("keepsBuiltinCanonicalMapHelperReturn") == std::string::npos);
-  CHECK(tailDispatchSource.find("rewrittenExpr.name = \"/std/collections/map/insert\"") != std::string::npos);
+  CHECK(tailDispatchSource.find("rewrittenExpr.name = ir_lowerer::collectionMemberPath(\"map\", \"insert\")") !=
+        std::string::npos);
 }
 
 TEST_CASE("experimental map production traces are classified as backing substrate") {

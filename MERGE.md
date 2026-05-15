@@ -1,4 +1,6 @@
-# TODO-4270 Merge Summary
+# Parallel TODO Merge Notes
+
+## TODO-4270 Merge Summary
 
 Branch: `codex/todo-4270-integer-template-args`
 Worktree: `/Users/chrgre01/src/PrimeStruct/workspaces/agent-integer-template-4270/PrimeStruct`
@@ -30,3 +32,34 @@ Worktree: `/Users/chrgre01/src/PrimeStruct/workspaces/agent-integer-template-427
 All focused validation above passed after test/source-lock expectation fixes.
 Broad `./scripts/compile.sh --release` validation was intentionally skipped by
 the lite workflow.
+
+## TODO-4532 Merge Notes
+
+Branch: `codex/todo-4532-map-native-dispatch`
+
+Worktree: `/Users/chrgre01/src/PrimeStruct/workspaces/agent-map-native-dispatch-4532/PrimeStruct`
+
+## Summary
+
+- Routed inline native dispatch canonical map helper checks through shared
+  stdlib-surface helper classification.
+- Removed inline native dispatch's local semantic map type/kind recognizers and
+  uses shared `resolveMapAccessTargetInfo(...)` for map target classification.
+- Removed `IrLowererInlineNativeCallDispatch.cpp` from map backing trace
+  inventory rows and ratcheted its map surface cap from 39 to 9.
+- Updated source-lock coverage and TODO/testcase bookkeeping.
+
+## Validation
+
+- `PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_map_surface_trace_inventory.py --root .`
+- `PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_map_backing_traces.py --root .`
+- `PYTHONDONTWRITEBYTECODE=1 python3 tests/scripts/test_check_map_surface_trace_inventory.py --repo-root . && PYTHONDONTWRITEBYTECODE=1 python3 tests/scripts/test_check_map_backing_traces.py --repo-root .`
+- `git diff --check`
+- `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_misc_tests`
+- `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer inline dispatch map helper deferral uses semantic receiver facts first,ir lowerer inline dispatch collection access fallback uses semantic receiver facts first,ir lowerer inline native dispatch prefers published canonical map access helpers"`
+- `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership`
+
+## Notes
+
+`docs/todo.md`, `docs/todo_finished.md`, and `docs/testcase_log.md` were
+updated provisionally for parent reconciliation in root.
