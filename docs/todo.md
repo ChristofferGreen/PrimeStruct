@@ -2110,6 +2110,12 @@ Task template:
       and related `SemanticsValidator*` inventory rows.
     - Preserve generic SoA substrate facts and canonical `soa<T>` behavior
       through shared helper APIs rather than public-surface string literals.
+    - Current initializer slice reduces
+      `src/semantics/SemanticsValidatorBuildInitializerInference.cpp` to the
+      explicit cap (`soa-conversion-helper` 1, `soa-vector-token` 6);
+      `src/semantics/SemanticsValidate.cpp`,
+      `src/semantics/SemanticsBuiltinPathHelpers.cpp`, and related validators
+      remain in scope for the rest of TODO-4526.
   - acceptance:
     - Semantic inventory rows for public SoA collection-surface traces are
       deleted or reduced to the next explicit cap.

@@ -118,7 +118,139 @@ std::string collectionAliasLocal(std::string_view collectionName,
   return std::string(collectionName) + std::string(suffix);
 }
 
+std::string collectionNamespaceLocal(std::string_view collectionName) {
+  std::string namespacePath = collectionMemberRootLocal(collectionName);
+  if (!namespacePath.empty() && namespacePath.back() == '/') {
+    namespacePath.pop_back();
+  }
+  return namespacePath;
+}
+
 } // namespace
+
+std::string samePathSoaHelperTargetPath(std::string_view helperName) {
+  if (helperName == "to_aos" || helperName == "to_aos_ref") {
+    return "/" + std::string(helperName);
+  }
+  return "/" + collectionAliasLocal("soa_vector", "/") + std::string(helperName);
+}
+
+std::string publicSoaHelperTargetPath(std::string_view helperName) {
+  return "/" + collectionMemberRootLocal("soa") + std::string(helperName);
+}
+
+std::string compatibilitySoaHelperTargetPath(std::string_view helperName) {
+  return "/" + collectionMemberRootLocal("soa_vector") + std::string(helperName);
+}
+
+bool splitSoaSurfaceHelperPath(std::string_view path,
+                               std::string *helperNameOut,
+                               bool *usesPublicSurfaceOut) {
+  if (!path.empty() && path.front() == '/') {
+    path.remove_prefix(1);
+  }
+  const std::string publicPrefix = collectionAliasLocal("soa", "/");
+  const std::string publicStdPrefix = collectionMemberRootLocal("soa");
+  const std::string compatibilityPrefix = collectionAliasLocal("soa_vector", "/");
+  const std::string compatibilityStdPrefix = collectionMemberRootLocal("soa_vector");
+  auto splitWithPrefix = [&](std::string_view prefix, bool usesPublicSurface) {
+    if (!path.starts_with(prefix)) {
+      return false;
+    }
+    if (helperNameOut != nullptr) {
+      *helperNameOut = std::string(path.substr(prefix.size()));
+    }
+    if (usesPublicSurfaceOut != nullptr) {
+      *usesPublicSurfaceOut = usesPublicSurface;
+    }
+    return true;
+  };
+  return splitWithPrefix(publicPrefix, true) ||
+         splitWithPrefix(publicStdPrefix, true) ||
+         splitWithPrefix(compatibilityPrefix, false) ||
+         splitWithPrefix(compatibilityStdPrefix, false);
+}
+
+bool isSoaReadRefHelperName(std::string_view helperName) {
+  return helperName == "count" || helperName == "count_ref" ||
+         helperName == "get" || helperName == "get_ref" ||
+         helperName == "ref" || helperName == "ref_ref";
+}
+
+bool isExplicitPublicSoaSurfaceHelperName(std::string_view helperName) {
+  return isSoaReadRefHelperName(helperName) ||
+         helperName == "soa" || helperName == "single" ||
+         helperName == "from_aos" || helperName == "field_view";
+}
+
+bool isSupportedCompatibilitySoaHelperName(std::string_view helperName) {
+  return isSoaReadRefHelperName(helperName) ||
+         helperName == "to_aos" || helperName == "to_aos_ref" ||
+         helperName == "push" || helperName == "reserve";
+}
+
+bool isPublicSoaSurfaceNamespace(std::string_view namespacePath) {
+  if (!namespacePath.empty() && namespacePath.front() == '/') {
+    namespacePath.remove_prefix(1);
+  }
+  return namespacePath == "soa" ||
+         namespacePath == collectionNamespaceLocal("soa");
+}
+
+bool isCompatibilitySoaSurfaceNamespace(std::string_view namespacePath) {
+  if (!namespacePath.empty() && namespacePath.front() == '/') {
+    namespacePath.remove_prefix(1);
+  }
+  return namespacePath == "soa_vector" ||
+         namespacePath == collectionNamespaceLocal("soa_vector");
+}
+
+bool isSoaConversionSurfaceSpelling(std::string_view normalizedPrefix,
+                                    std::string_view normalizedName) {
+  std::string helperName;
+  bool usesPublicSurface = false;
+  if (splitSoaSurfaceHelperPath(normalizedName, &helperName, &usesPublicSurface)) {
+    return helperName == "to_aos" || helperName == "to_aos_ref" ||
+           (!usesPublicSurface && helperName == "to_soa");
+  }
+  if (isPublicSoaSurfaceNamespace(normalizedPrefix) &&
+      normalizedName == "to_aos") {
+    return true;
+  }
+  if (isCompatibilitySoaSurfaceNamespace(normalizedPrefix) &&
+      (normalizedName == "to_soa" || normalizedName == "to_aos" ||
+       normalizedName == "to_aos_ref")) {
+    return true;
+  }
+  return normalizedName == "to_soa" || normalizedName == "to_aos" ||
+         normalizedName == "to_aos_ref";
+}
+
+bool isSoaCountOrAccessSurfaceSpelling(std::string_view normalizedPrefix,
+                                       std::string_view normalizedName) {
+  std::string helperName;
+  if (splitSoaSurfaceHelperPath(normalizedName, &helperName, nullptr)) {
+    return isSoaReadRefHelperName(helperName);
+  }
+  if ((isCompatibilitySoaSurfaceNamespace(normalizedPrefix) ||
+       isPublicSoaSurfaceNamespace(normalizedPrefix)) &&
+      isSoaReadRefHelperName(normalizedName)) {
+    return true;
+  }
+  return isSoaReadRefHelperName(normalizedName);
+}
+
+bool usesExplicitPublicSoaHelperPath(std::string_view normalizedPrefix,
+                                     std::string_view normalizedName) {
+  bool usesPublicSurface = false;
+  std::string ignoredHelperName;
+  if (splitSoaSurfaceHelperPath(normalizedName,
+                                &ignoredHelperName,
+                                &usesPublicSurface)) {
+    return usesPublicSurface;
+  }
+  return isPublicSoaSurfaceNamespace(normalizedPrefix);
+}
 
 bool getBuiltinOperatorName(const Expr &expr, std::string &out) {
   if (expr.name.empty()) {

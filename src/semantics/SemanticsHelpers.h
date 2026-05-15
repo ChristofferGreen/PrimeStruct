@@ -132,6 +132,20 @@ bool getBuiltinConvertName(const Expr &expr, std::string &out);
 bool getBuiltinCollectionName(const Expr &expr, std::string &out);
 bool getBuiltinArrayAccessName(const Expr &expr, std::string &out);
 bool getNamespacedCollectionHelperName(const Expr &expr, std::string &collectionOut, std::string &helperOut);
+std::string samePathSoaHelperTargetPath(std::string_view helperName);
+std::string publicSoaHelperTargetPath(std::string_view helperName);
+std::string compatibilitySoaHelperTargetPath(std::string_view helperName);
+bool splitSoaSurfaceHelperPath(std::string_view path,
+                               std::string *helperNameOut = nullptr,
+                               bool *usesPublicSurfaceOut = nullptr);
+bool isSoaReadRefHelperName(std::string_view helperName);
+bool isExplicitPublicSoaSurfaceHelperName(std::string_view helperName);
+bool isSupportedCompatibilitySoaHelperName(std::string_view helperName);
+bool isPublicSoaSurfaceNamespace(std::string_view namespacePath);
+bool isCompatibilitySoaSurfaceNamespace(std::string_view namespacePath);
+bool isSoaConversionSurfaceSpelling(std::string_view normalizedPrefix, std::string_view normalizedName);
+bool isSoaCountOrAccessSurfaceSpelling(std::string_view normalizedPrefix, std::string_view normalizedName);
+bool usesExplicitPublicSoaHelperPath(std::string_view normalizedPrefix, std::string_view normalizedName);
 std::string soaFieldViewHelperPath(std::string_view fieldName);
 bool splitSoaFieldViewHelperPath(std::string_view path, std::string *fieldNameOut = nullptr);
 bool isSoaFieldViewTypePath(std::string_view typeText);

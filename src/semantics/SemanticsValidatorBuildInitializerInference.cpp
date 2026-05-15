@@ -6,28 +6,6 @@
 #include <limits>
 
 namespace primec::semantics {
-namespace {
-
-std::string preferredSamePathSoaHelperTarget(std::string_view helperName) {
-  if (helperName == "to_aos" || helperName == "to_aos_ref") {
-    return "/" + std::string(helperName);
-  }
-  return "/soa_vector/" + std::string(helperName);
-}
-
-bool isPublicSoaReadRefHelper(std::string_view helperName) {
-  return helperName == "count" || helperName == "count_ref" ||
-         helperName == "get" || helperName == "get_ref" ||
-         helperName == "ref" || helperName == "ref_ref";
-}
-
-bool isExplicitPublicSoaSurfaceHelper(std::string_view helperName) {
-  return isPublicSoaReadRefHelper(helperName) ||
-         helperName == "soa" || helperName == "single" ||
-         helperName == "from_aos" || helperName == "field_view";
-}
-
-} // namespace
 
 bool SemanticsValidator::graphBindingIsUsable(const BindingInfo &binding) const {
   const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
@@ -166,48 +144,23 @@ std::string SemanticsValidator::preferredCollectionHelperResolvedPath(
     return {};
   };
   auto explicitStdSoaHelperName = [&]() -> std::string {
-    auto isSupportedSoaHelper = [](std::string_view helperName) {
-      return helperName == "count" || helperName == "count_ref" ||
-             helperName == "get" || helperName == "get_ref" ||
-             helperName == "ref" || helperName == "ref_ref" ||
-             helperName == "to_aos" || helperName == "to_aos_ref" ||
-             helperName == "push" || helperName == "reserve";
-    };
-    if (((normalizedPrefix == "soa" ||
-          normalizedPrefix == "std/collections/soa") &&
-         isExplicitPublicSoaSurfaceHelper(normalizedName)) ||
-        ((normalizedPrefix == "soa_vector" ||
-          normalizedPrefix == "std/collections/soa_vector") &&
-         isSupportedSoaHelper(normalizedName))) {
+    if (usesExplicitPublicSoaHelperPath(normalizedPrefix, {}) &&
+        isExplicitPublicSoaSurfaceHelperName(normalizedName)) {
       return normalizedName;
     }
-    if (normalizedName.rfind("soa_vector/", 0) == 0) {
-      const std::string helperName =
-          normalizedName.substr(std::string("soa_vector/").size());
-      if (isSupportedSoaHelper(helperName)) {
-        return helperName;
-      }
+    if (isCompatibilitySoaSurfaceNamespace(normalizedPrefix) &&
+        isSupportedCompatibilitySoaHelperName(normalizedName)) {
+      return normalizedName;
     }
-    if (normalizedName.rfind("soa/", 0) == 0) {
-      const std::string helperName =
-          normalizedName.substr(std::string("soa/").size());
-      if (isExplicitPublicSoaSurfaceHelper(helperName)) {
-        return helperName;
-      }
-    }
-    if (normalizedName.rfind("std/collections/soa/", 0) == 0) {
-      const std::string helperName =
-          normalizedName.substr(
-              std::string("std/collections/soa/").size());
-      if (isExplicitPublicSoaSurfaceHelper(helperName)) {
-        return helperName;
-      }
-    }
-    if (normalizedName.rfind("std/collections/soa_vector/", 0) == 0) {
-      const std::string helperName =
-          normalizedName.substr(
-              std::string("std/collections/soa_vector/").size());
-      if (isSupportedSoaHelper(helperName)) {
+    std::string helperName;
+    bool usesPublicSurface = false;
+    if (splitSoaSurfaceHelperPath(normalizedName,
+                                  &helperName,
+                                  &usesPublicSurface)) {
+      const bool supported = usesPublicSurface
+                                 ? isExplicitPublicSoaSurfaceHelperName(helperName)
+                                 : isSupportedCompatibilitySoaHelperName(helperName);
+      if (supported) {
         return helperName;
       }
     }
@@ -246,12 +199,9 @@ std::string SemanticsValidator::preferredCollectionHelperResolvedPath(
   if (const std::string helperName = explicitStdSoaHelperName();
       !helperName.empty()) {
     const bool usesExplicitPublicSoaHelperPath =
-        normalizedPrefix == "std/collections/soa" ||
-        normalizedPrefix == "soa" ||
-        normalizedName.rfind("std/collections/soa/", 0) == 0 ||
-        normalizedName.rfind("soa/", 0) == 0;
-    const std::string publicPath = "/std/collections/soa/" + helperName;
-    if (isExplicitPublicSoaSurfaceHelper(helperName) &&
+        semantics::usesExplicitPublicSoaHelperPath(normalizedPrefix, normalizedName);
+    const std::string publicPath = publicSoaHelperTargetPath(helperName);
+    if (isExplicitPublicSoaSurfaceHelperName(helperName) &&
         usesExplicitPublicSoaHelperPath) {
       return publicPath;
     }
@@ -299,22 +249,7 @@ std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(
     normalizedPrefix.erase(normalizedPrefix.begin());
   }
   const bool isSoaConversionSurfaceSpelling =
-      normalizedName == "to_soa" || normalizedName == "to_aos" ||
-      normalizedName == "to_aos_ref" ||
-      normalizedName == "soa_vector/to_soa" ||
-      normalizedName == "soa_vector/to_aos" ||
-      normalizedName == "soa_vector/to_aos_ref" ||
-      normalizedName == "std/collections/soa/to_aos" ||
-      normalizedName == "std/collections/soa_vector/to_soa" ||
-      normalizedName == "std/collections/soa_vector/to_aos" ||
-      normalizedName == "std/collections/soa_vector/to_aos_ref" ||
-      ((normalizedPrefix == "soa" ||
-        normalizedPrefix == "std/collections/soa") &&
-       normalizedName == "to_aos") ||
-      ((normalizedPrefix == "soa_vector" ||
-        normalizedPrefix == "std/collections/soa_vector") &&
-       (normalizedName == "to_soa" || normalizedName == "to_aos" ||
-        normalizedName == "to_aos_ref"));
+      semantics::isSoaConversionSurfaceSpelling(normalizedPrefix, normalizedName);
   if (isSoaConversionSurfaceSpelling) {
     return std::nullopt;
   }
@@ -332,18 +267,18 @@ std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(
   }
   const std::string resolvedCanonical =
       canonicalizeLegacySoaGetHelperPath(resolved);
+  auto explicitSoaHelperCall = [&](std::string_view expectedHelperName) {
+    std::string helperName;
+    if (splitSoaSurfaceHelperPath(normalizedName, &helperName, nullptr)) {
+      return helperName == expectedHelperName;
+    }
+    return !candidate.isMethodCall &&
+           isSoaCountOrAccessSurfaceSpelling(normalizedPrefix, normalizedName) &&
+           normalizedName == expectedHelperName;
+  };
 
   const bool isExplicitSoaRefCall =
-      (!candidate.isMethodCall &&
-       (normalizedPrefix == "soa_vector" ||
-        normalizedPrefix == "std/collections/soa_vector" ||
-        normalizedPrefix == "soa" ||
-        normalizedPrefix == "std/collections/soa") &&
-       normalizedName == "ref") ||
-      normalizedName == "soa_vector/ref" ||
-      normalizedName == "std/collections/soa_vector/ref" ||
-      normalizedName == "soa/ref" ||
-      normalizedName == "std/collections/soa/ref";
+      explicitSoaHelperCall("ref");
   const bool isBuiltinSoaRefMethod =
       candidate.isMethodCall && normalizedName == "ref" &&
       !candidate.args.empty() && isDirectSoaVectorTarget(candidate.args.front());
@@ -362,16 +297,7 @@ std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(
     return std::string("ref");
   }
   const bool isExplicitSoaRefRefCall =
-      (!candidate.isMethodCall &&
-       (normalizedPrefix == "soa_vector" ||
-        normalizedPrefix == "std/collections/soa_vector" ||
-        normalizedPrefix == "soa" ||
-        normalizedPrefix == "std/collections/soa") &&
-       normalizedName == "ref_ref") ||
-      normalizedName == "soa_vector/ref_ref" ||
-      normalizedName == "std/collections/soa_vector/ref_ref" ||
-      normalizedName == "soa/ref_ref" ||
-      normalizedName == "std/collections/soa/ref_ref";
+      explicitSoaHelperCall("ref_ref");
   const bool isBuiltinSoaRefRefMethod =
       candidate.isMethodCall && normalizedName == "ref_ref" &&
       !candidate.args.empty() && isDirectSoaVectorTarget(candidate.args.front());
@@ -383,16 +309,7 @@ std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(
   }
 
   const bool isExplicitSoaGetCall =
-      (!candidate.isMethodCall &&
-       (normalizedPrefix == "soa_vector" ||
-        normalizedPrefix == "std/collections/soa_vector" ||
-        normalizedPrefix == "soa" ||
-        normalizedPrefix == "std/collections/soa") &&
-       normalizedName == "get") ||
-      normalizedName == "soa_vector/get" ||
-      normalizedName == "std/collections/soa_vector/get" ||
-      normalizedName == "soa/get" ||
-      normalizedName == "std/collections/soa/get";
+      explicitSoaHelperCall("get");
   const bool isBuiltinSoaGetMethod =
       candidate.isMethodCall && normalizedName == "get" &&
       !candidate.args.empty() && isDirectSoaVectorTarget(candidate.args.front());
@@ -405,16 +322,7 @@ std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(
     return std::string("get");
   }
   const bool isExplicitSoaGetRefCall =
-      (!candidate.isMethodCall &&
-       (normalizedPrefix == "soa_vector" ||
-        normalizedPrefix == "std/collections/soa_vector" ||
-        normalizedPrefix == "soa" ||
-        normalizedPrefix == "std/collections/soa") &&
-       normalizedName == "get_ref") ||
-      normalizedName == "soa_vector/get_ref" ||
-      normalizedName == "std/collections/soa_vector/get_ref" ||
-      normalizedName == "soa/get_ref" ||
-      normalizedName == "std/collections/soa/get_ref";
+      explicitSoaHelperCall("get_ref");
   const bool isBuiltinSoaGetRefMethod =
       candidate.isMethodCall && normalizedName == "get_ref" &&
       !candidate.args.empty() && isDirectSoaVectorTarget(candidate.args.front());
@@ -513,57 +421,9 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
     normalizedPrefix.erase(normalizedPrefix.begin());
   }
   const bool isSoaConversionSurfaceSpelling =
-      normalizedName == "to_soa" || normalizedName == "to_aos" ||
-      normalizedName == "to_aos_ref" ||
-      normalizedName == "soa_vector/to_soa" ||
-      normalizedName == "soa_vector/to_aos" ||
-      normalizedName == "soa_vector/to_aos_ref" ||
-      normalizedName == "std/collections/soa/to_aos" ||
-      normalizedName == "std/collections/soa_vector/to_soa" ||
-      normalizedName == "std/collections/soa_vector/to_aos" ||
-      normalizedName == "std/collections/soa_vector/to_aos_ref" ||
-      ((normalizedPrefix == "soa" ||
-        normalizedPrefix == "std/collections/soa") &&
-       normalizedName == "to_aos") ||
-      ((normalizedPrefix == "soa_vector" ||
-        normalizedPrefix == "std/collections/soa_vector") &&
-       (normalizedName == "to_soa" || normalizedName == "to_aos" ||
-        normalizedName == "to_aos_ref"));
+      semantics::isSoaConversionSurfaceSpelling(normalizedPrefix, normalizedName);
   const bool isSoaCountOrAccessSurfaceSpelling =
-      normalizedName == "count" || normalizedName == "count_ref" ||
-      normalizedName == "get" || normalizedName == "get_ref" ||
-      normalizedName == "ref" || normalizedName == "ref_ref" ||
-      normalizedName == "soa_vector/count" ||
-      normalizedName == "soa_vector/count_ref" ||
-      normalizedName == "soa_vector/get" ||
-      normalizedName == "soa_vector/get_ref" ||
-      normalizedName == "soa_vector/ref" ||
-      normalizedName == "soa_vector/ref_ref" ||
-      normalizedName == "std/collections/soa_vector/count" ||
-      normalizedName == "std/collections/soa_vector/count_ref" ||
-      normalizedName == "std/collections/soa_vector/get" ||
-      normalizedName == "std/collections/soa_vector/get_ref" ||
-      normalizedName == "std/collections/soa_vector/ref" ||
-      normalizedName == "std/collections/soa_vector/ref_ref" ||
-      normalizedName == "std/collections/soa/count" ||
-      normalizedName == "std/collections/soa/count_ref" ||
-      normalizedName == "std/collections/soa/get" ||
-      normalizedName == "std/collections/soa/get_ref" ||
-      normalizedName == "std/collections/soa/ref" ||
-      normalizedName == "std/collections/soa/ref_ref" ||
-      normalizedName == "soa/count" ||
-      normalizedName == "soa/count_ref" ||
-      normalizedName == "soa/get" ||
-      normalizedName == "soa/get_ref" ||
-      normalizedName == "soa/ref" ||
-      normalizedName == "soa/ref_ref" ||
-      ((normalizedPrefix == "soa_vector" ||
-        normalizedPrefix == "std/collections/soa_vector" ||
-        normalizedPrefix == "soa" ||
-        normalizedPrefix == "std/collections/soa") &&
-       (normalizedName == "count" || normalizedName == "count_ref" ||
-        normalizedName == "get" || normalizedName == "get_ref" ||
-        normalizedName == "ref" || normalizedName == "ref_ref"));
+      semantics::isSoaCountOrAccessSurfaceSpelling(normalizedPrefix, normalizedName);
   if (normalizedName.empty() || isSoaCountOrAccessSurfaceSpelling ||
       isSoaConversionSurfaceSpelling) {
       return false;
@@ -573,8 +433,8 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
       return false;
     }
   } else {
-    if ((!normalizedPrefix.empty() && normalizedPrefix != "soa_vector" &&
-         normalizedPrefix != "std/collections/soa_vector") ||
+    if ((!normalizedPrefix.empty() &&
+         !isCompatibilitySoaSurfaceNamespace(normalizedPrefix)) ||
         candidate.args.size() != 1) {
       return false;
     }
@@ -863,11 +723,23 @@ std::optional<std::string> SemanticsValidator::builtinSoaDirectPendingHelperPath
                      : inferredBinding.typeName + "<" +
                            inferredBinding.typeTemplateArg + ">";
     }
-    return typeText.find("SoaVector") != std::string::npos ||
-           typeText.find("experimental_soa_vector") != std::string::npos ||
-           typeText == "soa" || typeText.rfind("soa<", 0) == 0 ||
-           typeText == "/std/collections/soa/soa" ||
-           typeText.rfind("/std/collections/soa/soa<", 0) == 0;
+    std::string normalizedTypeText = normalizeBindingTypeName(typeText);
+    std::string base;
+    std::string argText;
+    if (splitTemplateTypeName(normalizedTypeText, base, argText)) {
+      normalizedTypeText = normalizeBindingTypeName(base);
+    }
+    std::string soaSurfaceTypeHelper;
+    const bool isPublicSoaTypeText =
+        normalizedTypeText == "soa" ||
+        normalizedTypeText.rfind("soa<", 0) == 0 ||
+        (splitSoaSurfaceHelperPath(normalizedTypeText,
+                                   &soaSurfaceTypeHelper,
+                                   nullptr) &&
+         (soaSurfaceTypeHelper == "soa" ||
+          soaSurfaceTypeHelper.rfind("soa<", 0) == 0));
+    return isExperimentalSoaVectorTypePath(normalizedTypeText) ||
+           isPublicSoaTypeText;
   };
   const auto soaAccessHelper =
       builtinSoaAccessHelperName(candidate, params, locals);
@@ -875,19 +747,13 @@ std::optional<std::string> SemanticsValidator::builtinSoaDirectPendingHelperPath
       (*soaAccessHelper == "ref" || *soaAccessHelper == "ref_ref") &&
       !candidate.args.empty() &&
       !isExperimentalSoaLikeExpr(candidate.args.front()) &&
-      !hasVisibleDefinitionPathForCurrentImports("/soa_vector/" +
-                                                *soaAccessHelper)) {
+      !hasVisibleDefinitionPathForCurrentImports(
+          samePathSoaHelperTargetPath(*soaAccessHelper))) {
     const bool usesExplicitPublicSoaHelperPath =
-        candidate.namespacePrefix == "/std/collections/soa" ||
-        candidate.namespacePrefix == "std/collections/soa" ||
-        candidate.namespacePrefix == "/soa" ||
-        candidate.namespacePrefix == "soa" ||
-        candidate.name.rfind("/std/collections/soa/", 0) == 0 ||
-        candidate.name.rfind("std/collections/soa/", 0) == 0 ||
-        candidate.name.rfind("/soa/", 0) == 0 ||
-        candidate.name.rfind("soa/", 0) == 0;
+        semantics::usesExplicitPublicSoaHelperPath(candidate.namespacePrefix,
+                                                   candidate.name);
     if (usesExplicitPublicSoaHelperPath) {
-      return "/std/collections/soa/" + *soaAccessHelper;
+      return publicSoaHelperTargetPath(*soaAccessHelper);
     }
     return preferredSoaHelperTargetForCollectionType(*soaAccessHelper,
                                                      "/soa_vector");
@@ -905,36 +771,36 @@ bool SemanticsValidator::hasVisibleDefinitionPathForCurrentImports(
 std::string SemanticsValidator::preferredSoaHelperTargetForCurrentImports(
     std::string_view helperName) const {
   const std::string helper(helperName);
-  const std::string samePath = preferredSamePathSoaHelperTarget(helper);
+  const std::string samePath = samePathSoaHelperTargetPath(helper);
   if (hasVisibleDefinitionPathForCurrentImports(samePath) ||
       hasDefinitionFamilyPath(samePath)) {
     return samePath;
   }
-  const std::string publicPath = "/std/collections/soa/" + helper;
-  if (isPublicSoaReadRefHelper(helper) &&
+  const std::string publicPath = publicSoaHelperTargetPath(helper);
+  if (isSoaReadRefHelperName(helper) &&
       hasVisibleDefinitionPathForCurrentImports(publicPath)) {
     return publicPath;
   }
-  return "/std/collections/soa_vector/" + helper;
+  return compatibilitySoaHelperTargetPath(helper);
 }
 
 bool SemanticsValidator::usesSamePathSoaHelperTargetForCurrentImports(
     std::string_view helperName) const {
   const std::string helper(helperName);
-  const std::string samePath = preferredSamePathSoaHelperTarget(helper);
+  const std::string samePath = samePathSoaHelperTargetPath(helper);
   return preferredSoaHelperTargetForCurrentImports(helperName) == samePath;
 }
 
 bool SemanticsValidator::hasVisibleSoaHelperTargetForCurrentImports(
     std::string_view helperName) const {
   const std::string helper(helperName);
-  const std::string samePath = preferredSamePathSoaHelperTarget(helper);
-  const std::string canonicalPath = "/std/collections/soa_vector/" + helper;
-  const std::string publicPath = "/std/collections/soa/" + helper;
+  const std::string samePath = samePathSoaHelperTargetPath(helper);
+  const std::string canonicalPath = compatibilitySoaHelperTargetPath(helper);
+  const std::string publicPath = publicSoaHelperTargetPath(helper);
   return hasVisibleDefinitionPathForCurrentImports(samePath) ||
          hasDefinitionFamilyPath(samePath) ||
          hasVisibleDefinitionPathForCurrentImports(canonicalPath) ||
-         (isPublicSoaReadRefHelper(helper) &&
+         (isSoaReadRefHelperName(helper) &&
           hasVisibleDefinitionPathForCurrentImports(publicPath));
 }
 
@@ -942,9 +808,9 @@ std::string SemanticsValidator::preferredSoaHelperTargetForCollectionType(
     std::string_view helperName,
     std::string_view collectionTypePath) const {
   const std::string helper(helperName);
-  const std::string samePath = preferredSamePathSoaHelperTarget(helper);
-  const std::string canonicalPath = "/std/collections/soa_vector/" + helper;
-  const std::string publicPath = "/std/collections/soa/" + helper;
+  const std::string samePath = samePathSoaHelperTargetPath(helper);
+  const std::string canonicalPath = compatibilitySoaHelperTargetPath(helper);
+  const std::string publicPath = publicSoaHelperTargetPath(helper);
   const std::string preferredTarget =
       preferredSoaHelperTargetForCurrentImports(helperName);
   if (preferredTarget != samePath) {
@@ -993,7 +859,7 @@ std::string SemanticsValidator::preferredSoaHelperTargetForCollectionType(
     return samePath;
   }
   if (collectionTypePath == "/soa_vector" &&
-      isPublicSoaReadRefHelper(helper) &&
+      isSoaReadRefHelperName(helper) &&
       hasVisibleDefinitionPathForCurrentImports(publicPath)) {
     return publicPath;
   }
@@ -1004,7 +870,7 @@ bool SemanticsValidator::usesSamePathSoaHelperTargetForCollectionType(
     std::string_view helperName,
     std::string_view collectionTypePath) const {
   const std::string helper(helperName);
-  const std::string samePath = preferredSamePathSoaHelperTarget(helper);
+  const std::string samePath = samePathSoaHelperTargetPath(helper);
   return preferredSoaHelperTargetForCollectionType(helperName,
                                                    collectionTypePath) ==
          samePath;

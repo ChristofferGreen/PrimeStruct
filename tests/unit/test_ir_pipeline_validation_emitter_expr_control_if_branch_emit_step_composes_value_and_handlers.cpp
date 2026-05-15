@@ -968,13 +968,16 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(buildInitializerInferenceSource.find(
             "std::string SemanticsValidator::preferredSoaHelperTargetForCurrentImports(") !=
         std::string::npos);
-  CHECK(buildInitializerInferenceSource.find(
-            "std::string preferredSamePathSoaHelperTarget(std::string_view helperName)") !=
+  CHECK(semanticsHelpersSource.find(
+            "std::string samePathSoaHelperTargetPath(std::string_view helperName);") !=
         std::string::npos);
-  CHECK(buildInitializerInferenceSource.find(
+  CHECK(builtinPathHelpersSource.find(
+            "std::string samePathSoaHelperTargetPath(std::string_view helperName)") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
             "if (helperName == \"to_aos\" || helperName == \"to_aos_ref\")") !=
         std::string::npos);
-  CHECK(buildInitializerInferenceSource.find(
+  CHECK(builtinPathHelpersSource.find(
             "return \"/\" + std::string(helperName);") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
@@ -1397,10 +1400,14 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(buildInitializerInferenceSource.find(
             "bool SemanticsValidator::hasVisibleSoaRefHelper() const {") ==
         std::string::npos);
-  CHECK(buildInitializerInferenceSource.find(
+  CHECK((buildInitializerInferenceSource.find(
             "!hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/\" +\n"
             "                                                *soaAccessHelper)") !=
-        std::string::npos);
+        std::string::npos ||
+        buildInitializerInferenceSource.find(
+            "!hasVisibleDefinitionPathForCurrentImports(\n"
+            "          samePathSoaHelperTargetPath(*soaAccessHelper))") !=
+            std::string::npos));
   CHECK(buildInitializerInferenceSource.find(
             "hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/ref\")") ==
         std::string::npos);
@@ -1431,8 +1438,8 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "return soaFieldViewHelperPath(fieldName);") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
-            "const std::string publicPath = \"/std/collections/soa/\" + helper;\n"
-            "  if (isPublicSoaReadRefHelper(helper) &&\n"
+            "const std::string publicPath = publicSoaHelperTargetPath(helper);\n"
+            "  if (isSoaReadRefHelperName(helper) &&\n"
             "      hasVisibleDefinitionPathForCurrentImports(publicPath)) {\n"
             "    return publicPath;\n"
             "  }") != std::string::npos);
@@ -1893,7 +1900,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "preferredSoaHelperTargetForCurrentImports(helperName)") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
-            "preferredSamePathSoaHelperTarget(helper)") !=
+            "samePathSoaHelperTargetPath(helper)") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find("auto preferredSoaCountMethodTarget =") ==
         std::string::npos);
@@ -2136,60 +2143,92 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find("normalizedName == \"get_ref\"") !=
         std::string::npos);
-  CHECK(buildInitializerInferenceSource.find(
+  CHECK((buildInitializerInferenceSource.find(
             "normalizedPrefix == \"std/collections/soa_vector\"") !=
-        std::string::npos);
-  CHECK(buildInitializerInferenceSource.find(
+        std::string::npos ||
+        buildInitializerInferenceSource.find(
+            "isCompatibilitySoaSurfaceNamespace(normalizedPrefix)") !=
+            std::string::npos));
+  CHECK((buildInitializerInferenceSource.find(
             "normalizedName == \"std/collections/soa_vector/get\"") !=
-        std::string::npos);
-  CHECK(buildInitializerInferenceSource.find(
+        std::string::npos ||
+        buildInitializerInferenceSource.find(
+            "splitSoaSurfaceHelperPath(normalizedName") !=
+            std::string::npos));
+  CHECK((buildInitializerInferenceSource.find(
             "normalizedName == \"std/collections/soa_vector/get_ref\"") !=
-        std::string::npos);
-  CHECK(buildInitializerInferenceSource.find(
+        std::string::npos ||
+        builtinPathHelpersSource.find("helperName == \"get_ref\"") !=
+            std::string::npos));
+  CHECK((buildInitializerInferenceSource.find(
             "normalizedName == \"std/collections/soa_vector/ref\"") !=
-        std::string::npos);
-  CHECK(buildInitializerInferenceSource.find(
+        std::string::npos ||
+        builtinPathHelpersSource.find("helperName == \"ref\"") !=
+            std::string::npos));
+  CHECK((buildInitializerInferenceSource.find(
             "normalizedName == \"std/collections/soa_vector/ref_ref\"") !=
-        std::string::npos);
+        std::string::npos ||
+        builtinPathHelpersSource.find("helperName == \"ref_ref\"") !=
+            std::string::npos));
   CHECK(buildInitializerInferenceSource.find(
             "normalizedName == \"count_ref\"") !=
         std::string::npos);
-  CHECK(buildInitializerInferenceSource.find(
+  CHECK((buildInitializerInferenceSource.find(
             "normalizedName == \"soa_vector/count_ref\"") !=
-        std::string::npos);
-  CHECK(buildInitializerInferenceSource.find(
+        std::string::npos ||
+        buildInitializerInferenceSource.find(
+            "splitSoaSurfaceHelperPath(normalizedName") !=
+            std::string::npos));
+  CHECK((buildInitializerInferenceSource.find(
             "normalizedName == \"std/collections/soa_vector/count_ref\"") !=
-        std::string::npos);
+        std::string::npos ||
+        builtinPathHelpersSource.find("helperName == \"count_ref\"") !=
+            std::string::npos));
   CHECK(buildInitializerInferenceSource.find(
             "normalizedName == \"get_ref\"") !=
         std::string::npos);
-  CHECK(buildInitializerInferenceSource.find(
+  CHECK((buildInitializerInferenceSource.find(
             "normalizedName == \"soa_vector/get_ref\"") !=
-        std::string::npos);
-  CHECK(buildInitializerInferenceSource.find(
+        std::string::npos ||
+        buildInitializerInferenceSource.find(
+            "splitSoaSurfaceHelperPath(normalizedName") !=
+            std::string::npos));
+  CHECK((buildInitializerInferenceSource.find(
             "normalizedName == \"std/collections/soa_vector/get_ref\"") !=
-        std::string::npos);
+        std::string::npos ||
+        builtinPathHelpersSource.find("helperName == \"get_ref\"") !=
+            std::string::npos));
   CHECK(buildInitializerInferenceSource.find(
             "normalizedName == \"ref_ref\"") !=
         std::string::npos);
-  CHECK(buildInitializerInferenceSource.find(
+  CHECK((buildInitializerInferenceSource.find(
             "normalizedName == \"soa_vector/ref_ref\"") !=
-        std::string::npos);
-  CHECK(buildInitializerInferenceSource.find(
+        std::string::npos ||
+        buildInitializerInferenceSource.find(
+            "splitSoaSurfaceHelperPath(normalizedName") !=
+            std::string::npos));
+  CHECK((buildInitializerInferenceSource.find(
             "normalizedName == \"std/collections/soa_vector/ref_ref\"") !=
-        std::string::npos);
+        std::string::npos ||
+        builtinPathHelpersSource.find("helperName == \"ref_ref\"") !=
+            std::string::npos));
   CHECK(buildInitializerInferenceSource.find(
             "const bool isSoaCountOrAccessSurfaceSpelling =") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
             "auto explicitStdSoaHelperName = [&]() -> std::string {") !=
         std::string::npos);
-  CHECK(buildInitializerInferenceSource.find(
+  CHECK((buildInitializerInferenceSource.find(
             "normalizedPrefix == \"soa_vector\"") !=
-        std::string::npos);
-  CHECK(buildInitializerInferenceSource.find(
+        std::string::npos ||
+        buildInitializerInferenceSource.find(
+            "isCompatibilitySoaSurfaceNamespace(normalizedPrefix)") !=
+            std::string::npos));
+  CHECK((buildInitializerInferenceSource.find(
             "helperName == \"to_aos_ref\"") !=
-        std::string::npos);
+        std::string::npos ||
+        builtinPathHelpersSource.find("helperName == \"to_aos_ref\"") !=
+            std::string::npos));
   CHECK(buildInitializerInferenceSource.find(
             "preferredSoaHelperTargetForCollectionType(helperName, "
             "\"/soa_vector\")") !=

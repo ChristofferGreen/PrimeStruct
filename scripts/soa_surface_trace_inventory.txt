@@ -188,9 +188,9 @@ src/semantics/SemanticsBuiltinPathHelpers.cpp	experimental-soa-vector-path	17
 src/semantics/SemanticsBuiltinPathHelpers.cpp	experimental-soa-vector-token	18
 src/semantics/SemanticsBuiltinPathHelpers.cpp	legacy-soa-vector-path	18
 src/semantics/SemanticsBuiltinPathHelpers.cpp	root-soa-vector-path	15
-src/semantics/SemanticsBuiltinPathHelpers.cpp	soa-conversion-helper	3
+src/semantics/SemanticsBuiltinPathHelpers.cpp	soa-conversion-helper	10
 src/semantics/SemanticsBuiltinPathHelpers.cpp	soa-vector-helper-symbol	17
-src/semantics/SemanticsBuiltinPathHelpers.cpp	soa-vector-token	1
+src/semantics/SemanticsBuiltinPathHelpers.cpp	soa-vector-token	7
 src/semantics/SemanticsBuiltinPathHelpers.cpp	soa-vector-type-symbol	6
 src/semantics/SemanticsHelpersCore.cpp	canonical-soa-path	2
 src/semantics/SemanticsHelpersCore.cpp	legacy-soa-vector-path	2
@@ -210,13 +210,8 @@ src/semantics/SemanticsValidateReflectionMetadataContext.cpp	soa-vector-token	1
 src/semantics/SemanticsValidatorBuildDirectCallBinding.cpp	soa-vector-token	1
 src/semantics/SemanticsValidatorBuildImports.cpp	legacy-soa-vector-path	2
 src/semantics/SemanticsValidatorBuildImports.cpp	soa-conversion-helper	2
-src/semantics/SemanticsValidatorBuildInitializerInference.cpp	canonical-soa-path	35
-src/semantics/SemanticsValidatorBuildInitializerInference.cpp	experimental-soa-vector-token	1
-src/semantics/SemanticsValidatorBuildInitializerInference.cpp	legacy-soa-vector-path	30
-src/semantics/SemanticsValidatorBuildInitializerInference.cpp	root-soa-vector-path	20
-src/semantics/SemanticsValidatorBuildInitializerInference.cpp	soa-conversion-helper	16
-src/semantics/SemanticsValidatorBuildInitializerInference.cpp	soa-vector-token	15
-src/semantics/SemanticsValidatorBuildInitializerInference.cpp	soa-vector-type-symbol	1
+src/semantics/SemanticsValidatorBuildInitializerInference.cpp	soa-conversion-helper	1
+src/semantics/SemanticsValidatorBuildInitializerInference.cpp	soa-vector-token	6
 src/semantics/SemanticsValidatorBuildInitializerInferenceCalls.cpp	soa-conversion-helper	2
 src/semantics/SemanticsValidatorBuildInitializerInferenceCalls.cpp	soa-vector-token	8
 src/semantics/SemanticsValidatorBuildReturnKinds.cpp	soa-vector-token	1
