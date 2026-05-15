@@ -6,6 +6,33 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 15, 2026)**
+- [x] TODO-4270: Add compile-time integer template arguments
+  - owner: ai
+  - created_at: 2026-04-27
+  - finished_at: 2026-05-15
+  - phase: Deferred generic tuple substrate
+  - parallel_track: tuple-type-packs
+  - depends_on: TODO-4268, TODO-4269
+  - scope: Extend template arguments to support compile-time integer values
+    needed by APIs such as `get<0>(tuple)` and
+    `tuple_element<1, tuple<...>>()`.
+  - outcome:
+    - Added typed `TemplateArgument` metadata so parsed call, method-call,
+      lambda, execution, and transform template arguments can distinguish type
+      arguments from integer compile-time values.
+    - Extended template-list parsing to accept non-negative unsuffixed integer
+      literals and to reject floats, strings, bools, negative values, and
+      non-template expressions with stable diagnostics.
+    - Updated template specialization hashing and binding so integer
+      arguments monomorphize distinctly from type arguments, while rejecting
+      integer template parameters when substituted into type positions.
+    - Documented the syntax boundary and preserved existing type-template
+      behavior for collection and user-defined template calls.
+  - validation:
+    - Focused release validation covered parser template tests, manual
+      semantics template tests, and TODO source-lock coverage. Full
+      `./scripts/compile.sh --release` was deferred by the lite workflow.
+
 - [x] TODO-4269: Bind and monomorphize type-pack arguments
   - owner: ai
   - created_at: 2026-04-27

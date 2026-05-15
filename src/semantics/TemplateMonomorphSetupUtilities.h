@@ -9,8 +9,80 @@ uint64_t fnv1a64(const std::string &text) {
   return hash;
 }
 
-std::string mangleTemplateArgs(const std::vector<std::string> &args) {
-  const std::string canonical = stripWhitespace(joinTemplateArgs(args));
+bool isUnsignedIntegerTemplateArgText(std::string_view text) {
+  if (text.empty()) {
+    return false;
+  }
+  size_t index = 0;
+  if (text.size() > 2 && text[0] == '0' && (text[1] == 'x' || text[1] == 'X')) {
+    index = 2;
+    if (index == text.size()) {
+      return false;
+    }
+    for (; index < text.size(); ++index) {
+      if (text[index] == ',') {
+        continue;
+      }
+      if (!std::isxdigit(static_cast<unsigned char>(text[index]))) {
+        return false;
+      }
+    }
+    return true;
+  }
+  for (char c : text) {
+    if (c == ',') {
+      continue;
+    }
+    if (!std::isdigit(static_cast<unsigned char>(c))) {
+      return false;
+    }
+  }
+  return true;
+}
+
+TemplateArgument normalizedTemplateArgumentAt(const std::vector<std::string> &args,
+                                              const std::vector<TemplateArgument> *details,
+                                              size_t index) {
+  if (details != nullptr && index < details->size()) {
+    return (*details)[index];
+  }
+  if (index < args.size() && isUnsignedIntegerTemplateArgText(args[index])) {
+    return TemplateArgument::integer(args[index], 0);
+  }
+  return TemplateArgument::type(index < args.size() ? args[index] : std::string{});
+}
+
+const std::vector<TemplateArgument> *matchingTemplateArgumentDetails(
+    const std::vector<std::string> &args,
+    const std::vector<TemplateArgument> &details) {
+  if (args.size() != details.size()) {
+    return nullptr;
+  }
+  for (size_t i = 0; i < args.size(); ++i) {
+    if (args[i] != details[i].text) {
+      return nullptr;
+    }
+  }
+  return &details;
+}
+
+std::string joinMangledTemplateArgs(const std::vector<std::string> &args,
+                                    const std::vector<TemplateArgument> *details = nullptr) {
+  std::ostringstream out;
+  for (size_t i = 0; i < args.size(); ++i) {
+    if (i > 0) {
+      out << ",";
+    }
+    const TemplateArgument arg = normalizedTemplateArgumentAt(args, details, i);
+    out << (arg.kind == TemplateArgumentKind::Integer ? "int:" : "type:");
+    out << stripWhitespace(args[i]);
+  }
+  return out.str();
+}
+
+std::string mangleTemplateArgs(const std::vector<std::string> &args,
+                               const std::vector<TemplateArgument> *details = nullptr) {
+  const std::string canonical = joinMangledTemplateArgs(args, details);
   const uint64_t hash = fnv1a64(canonical);
   std::ostringstream out;
   out << "__t" << std::hex << hash;

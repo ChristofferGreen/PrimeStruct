@@ -228,7 +228,7 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn, std::vecto
       bool hasCallSyntax = false;
       bool sawParen = false;
       if (match(TokenKind::LAngle)) {
-        if (!parseTemplateList(callExpr.templateArgs)) {
+        if (!parseTemplateList(callExpr.templateArgs, &callExpr.templateArgDetails)) {
           return false;
         }
       }

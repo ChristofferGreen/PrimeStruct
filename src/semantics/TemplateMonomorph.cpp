@@ -35,6 +35,7 @@ struct TemplateRootInfo {
 
 struct TemplateArgumentBinding {
   SubstMap mapping;
+  std::unordered_set<std::string> integerParameters;
   std::vector<TemplatePackBinding> packBindings;
 };
 
@@ -230,6 +231,13 @@ bool extractExperimentalSoaVectorValueReceiverTemplateArgsFromTypeText(const std
 
 bool instantiateTemplate(const std::string &basePath,
                          const std::vector<std::string> &resolvedArgs,
+                         const std::vector<TemplateArgument> *resolvedArgDetails,
+                         Context &ctx,
+                         std::string &error,
+                         std::string &specializedPathOut);
+
+bool instantiateTemplate(const std::string &basePath,
+                         const std::vector<std::string> &resolvedArgs,
                          Context &ctx,
                          std::string &error,
                          std::string &specializedPathOut);
@@ -323,6 +331,7 @@ bool rewriteExecution(Execution &exec, Context &ctx, std::string &error) {
 
 bool instantiateTemplate(const std::string &basePath,
                          const std::vector<std::string> &resolvedArgs,
+                         const std::vector<TemplateArgument> *resolvedArgDetails,
                          Context &ctx,
                          std::string &error,
                          std::string &specializedPathOut) {
@@ -340,6 +349,7 @@ bool instantiateTemplate(const std::string &basePath,
   TemplateArgumentBinding templateBinding;
   if (!bindTemplateArguments(baseDef,
                              resolvedArgs,
+                             resolvedArgDetails,
                              helperOverloadDisplayPath(basePath, ctx),
                              templateBinding,
                              error)) {
@@ -354,7 +364,7 @@ bool instantiateTemplate(const std::string &basePath,
     error = out.str();
     return false;
   }
-  const std::string key = basePath + "<" + stripWhitespace(joinTemplateArgs(resolvedArgs)) + ">";
+  const std::string key = basePath + "<" + joinMangledTemplateArgs(resolvedArgs, resolvedArgDetails) + ">";
   auto cacheIt = ctx.specializationCache.find(key);
   if (cacheIt != ctx.specializationCache.end()) {
     specializedPathOut = cacheIt->second;
@@ -363,7 +373,7 @@ bool instantiateTemplate(const std::string &basePath,
 
   const size_t lastSlash = basePath.find_last_of('/');
   const std::string baseName = lastSlash == std::string::npos ? basePath : basePath.substr(lastSlash + 1);
-  const std::string suffix = mangleTemplateArgs(resolvedArgs);
+  const std::string suffix = mangleTemplateArgs(resolvedArgs, resolvedArgDetails);
   const std::string specializedName = baseName + suffix;
   const std::string specializedBasePath = (lastSlash == std::string::npos)
                                               ? specializedName
@@ -380,6 +390,14 @@ bool instantiateTemplate(const std::string &basePath,
 
   specializedPathOut = specializedBasePath;
   return true;
+}
+
+bool instantiateTemplate(const std::string &basePath,
+                         const std::vector<std::string> &resolvedArgs,
+                         Context &ctx,
+                         std::string &error,
+                         std::string &specializedPathOut) {
+  return instantiateTemplate(basePath, resolvedArgs, nullptr, ctx, error, specializedPathOut);
 }
 
 #include "TemplateMonomorphFinalOrchestration.h"

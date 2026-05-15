@@ -1614,9 +1614,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4270: Add compile-time integer template arguments | track:\n"
+                  "- TODO-4275: Expand type packs into struct storage | track:\n"
                   "  tuple-type-packs | primary surface: parser, AST, semantic validation,\n"
-                  "  and template argument representation\n"
+                  "  and generic struct storage layout\n"
                   "- TODO-4526: Delete semantic SoA zero-audit residue | track:\n"
                   "  soa-zero-audit | primary surface: semantic validation source-lock\n"
                   "  inventory and shared SoA helper routing\n"
@@ -1633,11 +1633,14 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  native-dispatch slice; TODO-4464 remains the parent for the final strict\n"
                   "  zero map-surface audit.") !=
         std::string::npos);
+  CHECK(todo.find("- `tuple-type-packs`: ready TODO-4275 after TODO-4270 completed integer\n"
+                  "  template arguments, then serial successors TODO-4276 -> TODO-4271 -> TODO-4272") !=
+        std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)\n\n"
                   "- TODO-4527: Delete template-monomorph SoA zero-audit residue\n"
                   "- TODO-4528: Delete emitter/lowerer SoA zero-audit residue\n"
                   "- TODO-4529: Replace SoA inventory with strict zero audit\n"
-                  "- TODO-4275: Expand type packs into struct storage") !=
+                  "- TODO-4276: Expand type packs in helpers and lifecycle hooks") !=
         std::string::npos);
   CHECK(todo.find("- [~] TODO-4305: Rename and style canonical `.prime` SoA surface") !=
         std::string::npos);
@@ -1651,13 +1654,15 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended Track Order)\n\n"
-                  "- TODO-4270: Add compile-time integer template arguments\n"
+                  "- TODO-4275: Expand type packs into struct storage\n"
                   "- TODO-4526: Delete semantic SoA zero-audit residue\n"
                   "- TODO-4532: Reduce map lowerer native-dispatch traces\n"
                   "- TODO-4527: Delete template-monomorph SoA zero-audit residue\n"
                   "- TODO-4528: Delete emitter/lowerer SoA zero-audit residue\n"
                   "- TODO-4529: Replace SoA inventory with strict zero audit\n"
-                  "- TODO-4275: Expand type packs into struct storage") !=
+                  "- TODO-4276: Expand type packs in helpers and lifecycle hooks") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4270: Add compile-time integer template arguments") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4269: Bind and monomorphize type-pack arguments") !=
         std::string::npos);
@@ -1684,7 +1689,6 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4519: Delete `soa_vector` compatibility seams") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4270: Add compile-time integer template arguments",
       "TODO-4275: Expand type packs into struct storage",
       "TODO-4532: Reduce map lowerer native-dispatch traces",
   };

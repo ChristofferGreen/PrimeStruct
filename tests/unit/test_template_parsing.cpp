@@ -92,6 +92,44 @@ main() {
   CHECK(mainDef.returnExpr->templateArgs[0] == "int");
 }
 
+TEST_CASE("parses integer template argument metadata on call and method call") {
+  const std::string source = R"(
+[return<i32>]
+main() {
+  [auto] value{wrap<i32>(1i32)}
+  [auto] picked{select<0>(value)}
+  return(value.get<1>())
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &mainDef = program.definitions[0];
+  REQUIRE(mainDef.statements.size() == 3);
+  REQUIRE(mainDef.statements[0].args.size() == 1);
+  const auto &wrapCall = mainDef.statements[0].args[0];
+  REQUIRE(wrapCall.templateArgs.size() == 1);
+  CHECK(wrapCall.templateArgs[0] == "i32");
+  REQUIRE(wrapCall.templateArgDetails.size() == 1);
+  CHECK(wrapCall.templateArgDetails[0].kind == primec::TemplateArgumentKind::Type);
+  REQUIRE(mainDef.statements[1].args.size() == 1);
+  const auto &selectCall = mainDef.statements[1].args[0];
+  REQUIRE(selectCall.templateArgs.size() == 1);
+  CHECK(selectCall.templateArgs[0] == "0");
+  REQUIRE(selectCall.templateArgDetails.size() == 1);
+  CHECK(selectCall.templateArgDetails[0].kind == primec::TemplateArgumentKind::Integer);
+  CHECK(selectCall.templateArgDetails[0].integerValue == 0);
+
+  REQUIRE(mainDef.returnExpr);
+  const auto &methodCall = *mainDef.returnExpr;
+  CHECK(methodCall.isMethodCall);
+  CHECK(methodCall.name == "get");
+  REQUIRE(methodCall.templateArgs.size() == 1);
+  CHECK(methodCall.templateArgs[0] == "1");
+  REQUIRE(methodCall.templateArgDetails.size() == 1);
+  CHECK(methodCall.templateArgDetails[0].kind == primec::TemplateArgumentKind::Integer);
+  CHECK(methodCall.templateArgDetails[0].integerValue == 1);
+}
+
 TEST_CASE("parses nested template arguments on call") {
   const std::string source = R"(
 [return<int>]
@@ -110,6 +148,40 @@ main() {
   CHECK(mapCall.templateArgs.size() == 2);
   CHECK(mapCall.templateArgs[0] == "i32");
   CHECK(mapCall.templateArgs[1] == "array<i32>");
+}
+
+TEST_CASE("rejects invalid non-type template arguments") {
+  CHECK(parseError(R"(
+[return<i32>]
+main() {
+  return(get<1.5>(0i32))
+}
+)").find("template integer arguments must be unsigned integer literals") !=
+        std::string::npos);
+
+  CHECK(parseError(R"(
+[return<i32>]
+main() {
+  return(get<-1>(0i32))
+}
+)").find("negative integer template arguments are not supported") !=
+        std::string::npos);
+
+  CHECK(parseError(R"(
+[return<i32>]
+main() {
+  return(get<"field">(0i32))
+}
+)").find("template arguments do not accept string literals") !=
+        std::string::npos);
+
+  CHECK(parseError(R"(
+[return<i32>]
+main() {
+  return(get<true>(0i32))
+}
+)").find("template arguments do not accept bool literals") !=
+        std::string::npos);
 }
 
 TEST_CASE("parses nested template argument on return transform") {

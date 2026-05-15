@@ -210,8 +210,9 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         }
       }
       std::vector<std::string> templateArgs;
+      std::vector<TemplateArgument> templateArgDetails;
       if (match(TokenKind::LAngle)) {
-        if (!parseTemplateList(templateArgs)) {
+        if (!parseTemplateList(templateArgs, &templateArgDetails)) {
           return false;
         }
       }
@@ -221,6 +222,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       call.sourceName = name.text;
       call.namespacePrefix = namespacePrefix;
       call.templateArgs = std::move(templateArgs);
+      call.templateArgDetails = std::move(templateArgDetails);
       call.transforms = std::move(transforms);
       if (match(TokenKind::LParen)) {
         expect(TokenKind::LParen, "expected '(' after identifier");
@@ -469,8 +471,9 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         }
       }
       std::vector<std::string> templateArgs;
+      std::vector<TemplateArgument> templateArgDetails;
       if (match(TokenKind::LAngle)) {
-        if (!parseTemplateList(templateArgs)) {
+        if (!parseTemplateList(templateArgs, &templateArgDetails)) {
           return false;
         }
       }
@@ -480,6 +483,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       call.sourceName = name.text;
       call.namespacePrefix = namespacePrefix;
       call.templateArgs = std::move(templateArgs);
+      call.templateArgDetails = std::move(templateArgDetails);
       bool hasCallSyntax = false;
       bool sawParen = false;
       if (match(TokenKind::LParen)) {
@@ -612,8 +616,9 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         return fail(nameError);
       }
       std::vector<std::string> templateArgs;
+      std::vector<TemplateArgument> templateArgDetails;
       if (match(TokenKind::LAngle)) {
-        if (!parseTemplateList(templateArgs)) {
+        if (!parseTemplateList(templateArgs, &templateArgDetails)) {
           return false;
         }
       }
@@ -627,6 +632,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         call.isMethodCall = true;
         call.sourceIsMethodCall = true;
         call.templateArgs = std::move(templateArgs);
+        call.templateArgDetails = std::move(templateArgDetails);
         if (!parseCallArgumentList(call.args, call.argNames, namespacePrefix)) {
           return false;
         }

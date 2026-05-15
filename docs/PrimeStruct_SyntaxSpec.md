@@ -27,6 +27,13 @@ deterministic specialization metadata; expanding packs in struct storage or
 helper bodies is deferred to TODO-4275/TODO-4276. The homogeneous `args<T>`
 value-pack envelope is not a heterogeneous type-pack declaration.
 
+Call, method-call, transform, and nested type template argument lists accept
+type arguments and non-negative unsuffixed integer literal arguments. Integer
+template arguments are compile-time values, not type spellings, so `get<0>(x)`
+and `x.get<1>()` carry integer arguments while `vector<i32>` carries a type
+argument. Floats, strings, bools, negative integers, and arbitrary expressions
+are rejected in template argument lists.
+
 Executions are call-style forms with mandatory parentheses and no body. In the canonical AST they are envelopes with an
 implicit empty body. Executions model behavior, not value construction:
 
@@ -35,14 +42,12 @@ foo()
 foo(arg1, arg2)
 ```
 
-Planned procedural compile-time genericity broadens the meaning of `<...>` from
-"template argument list" to a general compile-time argument channel while
+Procedural compile-time genericity broadens the meaning of `<...>` from a
+type-only template argument list to a compile-time argument channel while
 preserving existing template syntax as the first supported use of that channel.
-Under that model, `name<T>(value)` is an execution with compile-time argument
-`T` and runtime argument `value`, and `name<T>` is an execution with
-compile-time arguments and no runtime arguments. The current implementation
-still treats these forms as template syntax unless a feature section below says
-otherwise.
+`name<T>(value)` is an execution with a type compile-time argument, `name<0>(value)`
+is an execution with an integer compile-time argument, and runtime arguments
+remain inside `(...)`.
 
 Surface definitions also accept a post-parameter transform placement:
 
@@ -348,9 +353,10 @@ text_arg                  = identifier | literal ;
 // The special transform groups `text(...)` and `semantic(...)` accept a list of transforms instead.
 
 template_opt   = [ "<" template_list ">" ] ;
-template_list  = envelope_ref { [ "," | ";" ] envelope_ref } ;
+template_list  = template_arg { [ "," | ";" ] template_arg } ;
 // Commas and semicolons inside template lists are optional separators with no semantic meaning.
-envelope_ref   = identifier [ "<" envelope_ref { [ "," | ";" ] envelope_ref } ">" ] ;
+template_arg   = envelope_ref | unsigned_integer_literal ;
+envelope_ref   = identifier [ "<" template_arg { [ "," | ";" ] template_arg } ">" ] ;
 template_param_opt  = [ "<" template_param_list ">" ] ;
 template_param_list = template_param { [ "," | ";" ] template_param } ;
 template_param      = identifier [ "..." ] ;

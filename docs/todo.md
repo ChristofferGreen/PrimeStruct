@@ -83,9 +83,9 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4270: Add compile-time integer template arguments | track:
+- TODO-4275: Expand type packs into struct storage | track:
   tuple-type-packs | primary surface: parser, AST, semantic validation,
-  and template argument representation
+  and generic struct storage layout
 - TODO-4526: Delete semantic SoA zero-audit residue | track:
   soa-zero-audit | primary surface: semantic validation source-lock
   inventory and shared SoA helper routing
@@ -102,10 +102,11 @@ Task template:
 - `map-zero-audit`: ready TODO-4532 reduces the next bounded lowerer
   native-dispatch slice; TODO-4464 remains the parent for the final strict
   zero map-surface audit.
-- `tuple-type-packs`: ready TODO-4270, then serial successors TODO-4275
-  -> TODO-4276 -> TODO-4271 -> TODO-4272
+- `tuple-type-packs`: ready TODO-4275 after TODO-4270 completed integer
+  template arguments, then serial successors TODO-4276 -> TODO-4271 -> TODO-4272
   -> TODO-4274 -> TODO-4273 -> TODO-4277 -> TODO-4278.
-- `procedural-genericity`: blocked by TODO-4270 before TODO-4331 can start.
+- `procedural-genericity`: blocked by the tuple-type-packs successor chain
+  before TODO-4331 can start.
 - `generic-requirements`: blocked by TODO-4331 and TODO-4334 before
   TODO-4341 can start.
 
@@ -114,12 +115,12 @@ Task template:
 - TODO-4527: Delete template-monomorph SoA zero-audit residue
 - TODO-4528: Delete emitter/lowerer SoA zero-audit residue
 - TODO-4529: Replace SoA inventory with strict zero audit
-- TODO-4275: Expand type packs into struct storage
 - TODO-4276: Expand type packs in helpers and lifecycle hooks
 - TODO-4271: Add compile-time pack indexing
 - TODO-4272: Add stdlib `tuple<Ts...>`
 - TODO-4274: Add tuple bracket indexing sugar
 - TODO-4273: Add heterogeneous value-pack inference
+- TODO-4277: Add tuple destructuring sugar
 
 ### Priority Lanes (Current)
 
@@ -134,8 +135,8 @@ Task template:
   TODO-4530 removed semantic builtin path helper inventory residue, and
   TODO-4526 is ready to finish the semantic-validation residue before
   TODO-4527 -> TODO-4528 -> TODO-4529
-- Deferred generic tuple substrate: ready TODO-4270, followed by TODO-4275
-  -> TODO-4276 -> TODO-4271 -> TODO-4272
+- Deferred generic tuple substrate: ready TODO-4275 after TODO-4270, followed
+  by TODO-4276 -> TODO-4271 -> TODO-4272
   -> TODO-4274 -> TODO-4273 -> TODO-4277 -> TODO-4278
 - Procedural compile-time genericity: TODO-4331 -> TODO-4332
   -> TODO-4333 -> TODO-4334 -> TODO-4335 -> TODO-4336 -> TODO-4337
@@ -148,13 +149,12 @@ Task template:
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4270: Add compile-time integer template arguments
+- TODO-4275: Expand type packs into struct storage
 - TODO-4526: Delete semantic SoA zero-audit residue
 - TODO-4532: Reduce map lowerer native-dispatch traces
 - TODO-4527: Delete template-monomorph SoA zero-audit residue
 - TODO-4528: Delete emitter/lowerer SoA zero-audit residue
 - TODO-4529: Replace SoA inventory with strict zero audit
-- TODO-4275: Expand type packs into struct storage
 - TODO-4276: Expand type packs in helpers and lifecycle hooks
 - TODO-4271: Add compile-time pack indexing
 - TODO-4272: Add stdlib `tuple<Ts...>`
@@ -520,43 +520,11 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4270: Add compile-time integer template arguments
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Deferred generic tuple substrate
-  - parallel_track: tuple-type-packs
-  - depends_on: TODO-4268, TODO-4269
-  - scope: Extend template arguments to support compile-time integer values
-    needed by APIs such as `get<0>(tuple)` and
-    `tuple_element<1, tuple<...>>()`.
-  - implementation_notes:
-    - Current template arguments are parsed as envelope/type names. Add a
-      typed representation for non-type template arguments rather than
-      smuggling integer indexes through strings.
-    - Start from `include/primec/Ast.h`, parser template-list code,
-      template-argument validation, AST/IR printers, semantic diagnostics, and
-      tests that currently assume template args are strings.
-    - Keep this generic; do not special-case the name `get`.
-  - acceptance:
-    - Calls and method calls accept integer template arguments in documented
-      positions, for example `get<0>(value)` and `value.get<1>()`.
-    - Non-type template arguments are represented distinctly from type
-      template arguments through parser, AST printer, semantic validation, and
-      monomorphization.
-    - Invalid non-constant expressions, negative indexes if unsupported,
-      floats, strings, and bools produce stable diagnostics.
-    - Existing type-template behavior for collections, transforms, and
-      user-defined helpers remains source-compatible.
-    - Focused tests cover parsing, printing, semantic rejection, and at least
-      one generic helper that accepts an integer template argument.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once integer template arguments are a generic language
-    feature with diagnostics; leave pack-index lookup to TODO-4271.
-
 - [ ] TODO-4275: Expand type packs into struct storage
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred generic tuple substrate
+  - parallel_track: tuple-type-packs
   - depends_on: TODO-4269, TODO-4270
   - scope: Add `.prime` struct-field expansion for heterogeneous type packs so
     a generic struct can store one field per bound type, without adding helper

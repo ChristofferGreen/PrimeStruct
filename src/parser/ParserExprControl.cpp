@@ -307,8 +307,9 @@ bool Parser::tryParseLambdaExpr(Expr &out, const std::string &namespacePrefix, b
     return false;
   }
   std::vector<std::string> templateArgs;
+  std::vector<TemplateArgument> templateArgDetails;
   if (match(TokenKind::LAngle)) {
-    if (!parseTemplateList(templateArgs)) {
+    if (!parseTemplateList(templateArgs, &templateArgDetails)) {
       return false;
     }
   }
@@ -362,6 +363,7 @@ bool Parser::tryParseLambdaExpr(Expr &out, const std::string &namespacePrefix, b
   lambda.name = "lambda";
   lambda.namespacePrefix = namespacePrefix;
   lambda.templateArgs = std::move(templateArgs);
+  lambda.templateArgDetails = std::move(templateArgDetails);
   lambda.args = std::move(params);
   lambda.argNames.resize(lambda.args.size());
   lambda.hasBodyArguments = true;

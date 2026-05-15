@@ -4,15 +4,52 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace primec {
 
 enum class TransformPhase { Auto, Text, Semantic };
 
+enum class TemplateArgumentKind { Type, Integer };
+
+struct TemplateArgument {
+  TemplateArgumentKind kind = TemplateArgumentKind::Type;
+  std::string text;
+  uint64_t integerValue = 0;
+
+  static TemplateArgument type(std::string value) {
+    TemplateArgument arg;
+    arg.kind = TemplateArgumentKind::Type;
+    arg.text = std::move(value);
+    return arg;
+  }
+
+  static TemplateArgument integer(std::string value, uint64_t parsedValue) {
+    TemplateArgument arg;
+    arg.kind = TemplateArgumentKind::Integer;
+    arg.text = std::move(value);
+    arg.integerValue = parsedValue;
+    return arg;
+  }
+};
+
+inline TemplateArgument templateArgumentAt(const std::vector<std::string> &texts,
+                                           const std::vector<TemplateArgument> &details,
+                                           size_t index) {
+  if (index < details.size()) {
+    return details[index];
+  }
+  if (index < texts.size()) {
+    return TemplateArgument::type(texts[index]);
+  }
+  return {};
+}
+
 struct Transform {
   std::string name;
   std::vector<std::string> templateArgs = {};
+  std::vector<TemplateArgument> templateArgDetails = {};
   std::vector<std::string> arguments = {};
   TransformPhase phase = TransformPhase::Auto;
   std::string resolvedPath = {};
@@ -39,6 +76,7 @@ struct Expr {
   // True when `{ ... }` was present in the source, even if the list is empty.
   bool hasBodyArguments = false;
   std::vector<std::string> templateArgs;
+  std::vector<TemplateArgument> templateArgDetails;
   std::string namespacePrefix;
   std::vector<Transform> transforms;
   bool isBinding = false;
@@ -95,6 +133,7 @@ struct Execution {
   std::string namespacePrefix;
   std::vector<Transform> transforms;
   std::vector<std::string> templateArgs;
+  std::vector<TemplateArgument> templateArgDetails;
   std::vector<bool> templateArgIsPack;
   std::vector<Expr> arguments;
   std::vector<std::optional<std::string>> argumentNames;

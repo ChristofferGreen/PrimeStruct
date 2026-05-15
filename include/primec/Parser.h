@@ -30,7 +30,9 @@ private:
   bool parseNamespace(std::vector<Definition> &defs, std::vector<Execution> &execs);
   bool parseDefinitionOrExecution(std::vector<Definition> &defs, std::vector<Execution> &execs);
   bool parseTransformList(std::vector<Transform> &out);
-  bool parseTemplateList(std::vector<std::string> &out);
+  bool parseTemplateList(std::vector<std::string> &out,
+                         std::vector<TemplateArgument> *detailsOut = nullptr);
+  bool parseTemplateArgument(std::string &out, TemplateArgument *detailOut);
   bool parseTemplateParameterList(std::vector<std::string> &out,
                                   std::vector<bool> &outIsPack);
   bool parseTypeName(std::string &out);

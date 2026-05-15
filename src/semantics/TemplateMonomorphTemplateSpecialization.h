@@ -61,6 +61,7 @@ bool definitionAllowsEmptyTypePackSpecialization(const Definition &def) {
 
 bool bindTemplateArguments(const Definition &baseDef,
                            const std::vector<std::string> &resolvedArgs,
+                           const std::vector<TemplateArgument> *resolvedArgDetails,
                            const std::string &displayPath,
                            TemplateArgumentBinding &bindingOut,
                            std::string &error) {
@@ -78,6 +79,10 @@ bool bindTemplateArguments(const Definition &baseDef,
     bindingOut.mapping.reserve(baseDef.templateArgs.size());
     for (size_t i = 0; i < baseDef.templateArgs.size(); ++i) {
       bindingOut.mapping.emplace(baseDef.templateArgs[i], resolvedArgs[i]);
+      if (normalizedTemplateArgumentAt(resolvedArgs, resolvedArgDetails, i).kind ==
+          TemplateArgumentKind::Integer) {
+        bindingOut.integerParameters.insert(baseDef.templateArgs[i]);
+      }
     }
     return true;
   }
@@ -94,6 +99,10 @@ bool bindTemplateArguments(const Definition &baseDef,
   bindingOut.mapping.reserve(ordinaryParameterCount);
   for (size_t i = 0; i < ordinaryParameterCount; ++i) {
     bindingOut.mapping.emplace(baseDef.templateArgs[i], resolvedArgs[i]);
+    if (normalizedTemplateArgumentAt(resolvedArgs, resolvedArgDetails, i).kind ==
+        TemplateArgumentKind::Integer) {
+      bindingOut.integerParameters.insert(baseDef.templateArgs[i]);
+    }
   }
   TemplatePackBinding packBinding;
   packBinding.parameterName = baseDef.templateArgs[*packIndex];

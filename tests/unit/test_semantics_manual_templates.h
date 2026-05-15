@@ -55,6 +55,70 @@ TEST_CASE("template arguments required for templated calls") {
   CHECK(error.find("template arguments required") != std::string::npos);
 }
 
+TEST_CASE("monomorphizes integer template arguments distinctly") {
+  primec::Program program;
+  primec::Definition stamp =
+      makeDefinition("/stamp",
+                     {makeTransform("return", std::string("i32"))},
+                     {makeCall("/return", {makeLiteral(7)})});
+  stamp.templateArgs = {"Index"};
+  program.definitions.push_back(stamp);
+
+  primec::Expr call = makeCall("/stamp");
+  call.templateArgs = {"0"};
+  call.templateArgDetails = {primec::TemplateArgument::integer("0", 0)};
+  program.definitions.push_back(
+      makeDefinition("/main",
+                     {makeTransform("return", std::string("i32"))},
+                     {makeCall("/return", {call})}));
+
+  std::string error;
+  primec::SemanticProgram semanticProgram;
+  primec::Semantics semantics;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program,
+                             "/main",
+                             error,
+                             defaults,
+                             defaults,
+                             {},
+                             nullptr,
+                             false,
+                             &semanticProgram));
+  CHECK(error.empty());
+
+  const auto specialized = std::find_if(program.definitions.begin(),
+                                        program.definitions.end(),
+                                        [](const primec::Definition &def) {
+                                          return def.fullPath.rfind("/stamp__t", 0) == 0;
+                                        });
+  REQUIRE(specialized != program.definitions.end());
+  CHECK(specialized->templateArgs.empty());
+}
+
+TEST_CASE("integer template arguments cannot substitute type positions") {
+  primec::Program program;
+  primec::Definition bad =
+      makeDefinition("/bad",
+                     {makeTransform("return", std::string("Index"))},
+                     {makeCall("/return", {makeLiteral(7)})});
+  bad.templateArgs = {"Index"};
+  program.definitions.push_back(bad);
+
+  primec::Expr call = makeCall("/bad");
+  call.templateArgs = {"0"};
+  call.templateArgDetails = {primec::TemplateArgument::integer("0", 0)};
+  program.definitions.push_back(
+      makeDefinition("/main",
+                     {makeTransform("return", std::string("i32"))},
+                     {makeCall("/return", {call})}));
+
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("integer template argument cannot be used as a type: Index") !=
+        std::string::npos);
+}
+
 TEST_CASE("type pack specializations bind zero one and many arguments") {
   primec::Program program;
   primec::Definition stamp =

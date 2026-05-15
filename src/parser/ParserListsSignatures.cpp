@@ -3,6 +3,7 @@
 #include "ParserHelpers.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <sstream>
 #include <unordered_set>
 #include <utility>
@@ -138,7 +139,8 @@ bool Parser::parseLambdaCaptureList(std::vector<std::string> &captures) {
   return expectRaw(TokenKind::RBracket, "expected ']' to close lambda capture list");
 }
 
-bool Parser::parseTemplateList(std::vector<std::string> &out) {
+bool Parser::parseTemplateList(std::vector<std::string> &out,
+                               std::vector<TemplateArgument> *detailsOut) {
   auto skipCommentsOnly = [&]() {
     while (tokens_[pos_].kind == TokenKind::Comment) {
       ++pos_;
@@ -174,25 +176,213 @@ bool Parser::parseTemplateList(std::vector<std::string> &out) {
     return fail("expected template identifier");
   }
   while (true) {
-    std::string typeName;
-    if (!parseTypeName(typeName)) {
+    std::string argText;
+    TemplateArgument argDetail;
+    if (!parseTemplateArgument(argText, &argDetail)) {
       return false;
     }
     if (matchRaw(TokenKind::Ellipsis)) {
       return fail("type-pack expansion is only valid in template parameter lists");
     }
-    out.push_back(typeName);
+    out.push_back(argText);
+    if (detailsOut != nullptr) {
+      detailsOut->push_back(std::move(argDetail));
+    }
     skipSeparators();
     if (matchRaw(TokenKind::RAngle)) {
       break;
     }
-    if (matchRaw(TokenKind::Identifier)) {
+    if (matchRaw(TokenKind::Identifier) || matchRaw(TokenKind::Number) ||
+        matchRaw(TokenKind::String)) {
       continue;
     }
     return fail("expected '>'");
   }
   if (!expectRaw(TokenKind::RAngle, "expected '>'")) {
     return false;
+  }
+  return true;
+}
+
+bool Parser::parseTemplateArgument(std::string &out, TemplateArgument *detailOut) {
+  auto skipCommentsOnly = [&]() {
+    while (tokens_[pos_].kind == TokenKind::Comment) {
+      ++pos_;
+    }
+  };
+  auto matchRaw = [&](TokenKind kind) -> bool {
+    skipCommentsOnly();
+    return tokens_[pos_].kind == kind;
+  };
+  auto consumeRaw = [&](TokenKind kind, const std::string &message) -> Token {
+    if (matchRaw(TokenKind::Invalid)) {
+      fail(describeInvalidToken(tokens_[pos_]));
+      return {TokenKind::End, ""};
+    }
+    if (!matchRaw(kind)) {
+      fail(message);
+      return {TokenKind::End, ""};
+    }
+    return tokens_[pos_++];
+  };
+  auto expectRaw = [&](TokenKind kind, const std::string &message) -> bool {
+    if (matchRaw(TokenKind::Invalid)) {
+      return fail(describeInvalidToken(tokens_[pos_]));
+    }
+    if (!matchRaw(kind)) {
+      return fail(message);
+    }
+    ++pos_;
+    return true;
+  };
+  auto skipSeparators = [&]() {
+    skipCommentsOnly();
+    while (tokens_[pos_].kind == TokenKind::Comma || tokens_[pos_].kind == TokenKind::Semicolon) {
+      ++pos_;
+      skipCommentsOnly();
+    }
+  };
+  auto parseIntegerText = [](const std::string &text,
+                             std::string &normalizedOut,
+                             uint64_t &valueOut,
+                             std::string &errorOut) {
+    if (text.empty()) {
+      errorOut = "template integer arguments must be unsigned integer literals";
+      return false;
+    }
+    if (text.front() == '-') {
+      errorOut = "negative integer template arguments are not supported";
+      return false;
+    }
+    if (text.find('.') != std::string::npos || text.find('e') != std::string::npos ||
+        text.find('E') != std::string::npos || text.find('f') != std::string::npos ||
+        text.find('F') != std::string::npos || text.find("i32") != std::string::npos ||
+        text.find("i64") != std::string::npos || text.find("u64") != std::string::npos) {
+      errorOut = "template integer arguments must be unsigned integer literals";
+      return false;
+    }
+    std::string normalized;
+    normalized.reserve(text.size());
+    for (char c : text) {
+      if (c != ',') {
+        normalized.push_back(c);
+      }
+    }
+    if (normalized.size() > 2 && normalized[0] == '0' &&
+        (normalized[1] == 'x' || normalized[1] == 'X')) {
+      uint64_t value = 0;
+      for (size_t i = 2; i < normalized.size(); ++i) {
+        const char c = normalized[i];
+        uint64_t digit = 0;
+        if (c >= '0' && c <= '9') {
+          digit = static_cast<uint64_t>(c - '0');
+        } else if (c >= 'a' && c <= 'f') {
+          digit = static_cast<uint64_t>(10 + c - 'a');
+        } else if (c >= 'A' && c <= 'F') {
+          digit = static_cast<uint64_t>(10 + c - 'A');
+        } else {
+          errorOut = "template integer arguments must be unsigned integer literals";
+          return false;
+        }
+        if (value > (UINT64_MAX - digit) / 16) {
+          errorOut = "template integer argument is too large";
+          return false;
+        }
+        value = value * 16 + digit;
+      }
+      normalizedOut = normalized;
+      valueOut = value;
+      return true;
+    }
+    uint64_t value = 0;
+    for (char c : normalized) {
+      if (c < '0' || c > '9') {
+        errorOut = "template integer arguments must be unsigned integer literals";
+        return false;
+      }
+      const uint64_t digit = static_cast<uint64_t>(c - '0');
+      if (value > (UINT64_MAX - digit) / 10) {
+        errorOut = "template integer argument is too large";
+        return false;
+      }
+      value = value * 10 + digit;
+    }
+    normalizedOut = normalized;
+    valueOut = value;
+    return true;
+  };
+
+  if (matchRaw(TokenKind::Number)) {
+    Token number = consumeRaw(TokenKind::Number, "expected template argument");
+    if (number.kind == TokenKind::End) {
+      return false;
+    }
+    std::string normalized;
+    uint64_t value = 0;
+    std::string error;
+    if (!parseIntegerText(number.text, normalized, value, error)) {
+      return fail(error);
+    }
+    out = normalized;
+    if (detailOut != nullptr) {
+      *detailOut = TemplateArgument::integer(normalized, value);
+    }
+    return true;
+  }
+  if (matchRaw(TokenKind::String)) {
+    return fail("template arguments do not accept string literals");
+  }
+
+  Token name = consumeRaw(TokenKind::Identifier, "expected template identifier");
+  if (name.kind == TokenKind::End) {
+    return false;
+  }
+  if (name.text == "true" || name.text == "false") {
+    return fail("template arguments do not accept bool literals");
+  }
+  std::string nameError;
+  if (!validateIdentifierText(name.text, nameError)) {
+    return fail(nameError);
+  }
+  out = name.text;
+  if (matchRaw(TokenKind::LAngle)) {
+    expectRaw(TokenKind::LAngle, "expected '<'");
+    out += "<";
+    skipSeparators();
+    if (matchRaw(TokenKind::RAngle)) {
+      return fail("expected template identifier");
+    }
+    bool first = true;
+    while (true) {
+      std::string nested;
+      if (!parseTemplateArgument(nested, nullptr)) {
+        return false;
+      }
+      if (!first) {
+        out += ", ";
+      }
+      out += nested;
+      first = false;
+      skipSeparators();
+      if (matchRaw(TokenKind::Ellipsis)) {
+        return fail("type-pack expansion is only valid in template parameter lists");
+      }
+      if (matchRaw(TokenKind::RAngle)) {
+        break;
+      }
+      if (matchRaw(TokenKind::Identifier) || matchRaw(TokenKind::Number) ||
+          matchRaw(TokenKind::String)) {
+        continue;
+      }
+      return fail("expected '>'");
+    }
+    if (!expectRaw(TokenKind::RAngle, "expected '>'")) {
+      return false;
+    }
+    out += ">";
+  }
+  if (detailOut != nullptr) {
+    *detailOut = TemplateArgument::type(out);
   }
   return true;
 }
@@ -358,7 +548,7 @@ bool Parser::parseTypeName(std::string &out) {
     bool first = true;
     while (true) {
       std::string nested;
-      if (!parseTypeName(nested)) {
+      if (!parseTemplateArgument(nested, nullptr)) {
         return false;
       }
       if (!first) {

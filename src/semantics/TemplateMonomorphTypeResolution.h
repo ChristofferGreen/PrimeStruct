@@ -16,6 +16,11 @@ ResolvedType resolveTypeStringImpl(std::string input,
     result.concrete = true;
     return result;
   }
+  if (isUnsignedIntegerTemplateArgText(trimmed)) {
+    result.text = trimmed;
+    result.concrete = true;
+    return result;
+  }
   if (allowedParams.count(trimmed) > 0) {
     result.text = trimmed;
     result.concrete = false;
@@ -23,6 +28,12 @@ ResolvedType resolveTypeStringImpl(std::string input,
   }
   auto mapIt = mapping.find(trimmed);
   if (mapIt != mapping.end()) {
+    if (isUnsignedIntegerTemplateArgText(mapIt->second)) {
+      error = "integer template argument cannot be used as a type: " + trimmed;
+      result.text.clear();
+      result.concrete = false;
+      return result;
+    }
     const std::string mapped = trimWhitespace(mapIt->second);
     if (mapped == trimmed || !substitutionStack.insert(trimmed).second) {
       result.text = trimmed;

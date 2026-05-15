@@ -21,6 +21,7 @@ bool rewriteExecutionEntry(Execution &exec, Context &ctx, std::string &error) {
   execExpr.name = exec.name;
   execExpr.namespacePrefix = exec.namespacePrefix;
   execExpr.templateArgs = exec.templateArgs;
+  execExpr.templateArgDetails = exec.templateArgDetails;
   execExpr.args = exec.arguments;
   execExpr.argNames = exec.argumentNames;
   execExpr.bodyArguments = exec.bodyArguments;
@@ -35,6 +36,7 @@ bool rewriteExecutionEntry(Execution &exec, Context &ctx, std::string &error) {
   exec.name = execExpr.name;
   exec.namespacePrefix = execExpr.namespacePrefix;
   exec.templateArgs = execExpr.templateArgs;
+  exec.templateArgDetails = execExpr.templateArgDetails;
   exec.arguments = execExpr.args;
   exec.argumentNames = execExpr.argNames;
   exec.bodyArguments = execExpr.bodyArguments;

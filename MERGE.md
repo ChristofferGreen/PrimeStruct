@@ -1,28 +1,32 @@
-# TODO-4269 Merge Summary
+# TODO-4270 Merge Summary
 
-- Branch: `codex/todo-4269-type-pack-binding`
-- Worktree: `/Users/chrgre01/src/PrimeStruct/workspaces/agent-type-pack-binding-4269/PrimeStruct`
-- Leaf: `TODO-4269: Bind and monomorphize type-pack arguments`
-- Result: finished
+Branch: `codex/todo-4270-integer-template-args`
+Worktree: `/Users/chrgre01/src/PrimeStruct/workspaces/agent-integer-template-4270/PrimeStruct`
 
-## Changes
+## Completed
 
-- Added `TemplatePackBinding` metadata on AST definitions and semantic
-  product definitions.
-- Bound trailing explicit template arguments to final `Ts...` parameters
-  during template monomorphization.
-- Published deterministic `template_pack_bindings` output and validation.
-- Added focused manual template tests for zero, one, and many type-pack
-  arguments plus unsupported scalar pack use before expansion.
-- Archived TODO-4269, promoted TODO-4270, and updated the TODO source lock.
+- Added typed AST metadata for template arguments so parsed calls, method calls,
+  lambdas, executions, and transforms can distinguish type arguments from
+  compile-time integer values.
+- Extended template-list parsing to accept non-negative unsuffixed integer
+  literal arguments and reject floats, strings, bools, negative values, and
+  other non-template expressions with stable diagnostics.
+- Updated template specialization hashing and binding to keep integer template
+  arguments distinct from type arguments, and reject integer template
+  parameters when they are substituted into type positions.
+- Documented integer template-argument syntax and moved TODO-4270 to
+  `docs/todo_finished.md`; TODO-4275 is now the ready tuple-type-packs
+  successor.
 
-## Worker Validation
+## Focused Validation
 
-- `git diff --check`
-- `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DPRIMESTRUCT_BUILD_TESTS=ON`
-- `cmake --build build-release --target PrimeStruct_semantics_tests`
-- `cmake --build build-release --target PrimeStruct_misc_tests PrimeStruct_semantics_tests`
-- `cd build-release && ./PrimeStruct_misc_tests --test-case="monomorphizes template definition bindings,template argument count mismatch fails,template arguments required for templated calls,type pack specializations bind zero one and many arguments,type pack specialization requires ordinary arguments before pack,type pack parameters cannot be used as scalar types before expansion"`
-- `cd build-release && ./PrimeStruct_semantics_tests --test-suite=primestruct.semantics.definition_prepass`
+- `cmake --build build-release --target PrimeStruct_parser_tests`
+- `cd build-release && ./PrimeStruct_parser_tests --test-suite=primestruct.parser.templates`
+- `cmake --build build-release --target PrimeStruct_misc_tests PrimeStruct_compile_run_tests`
+- `cd build-release && ./PrimeStruct_misc_tests --test-case="monomorphizes integer template arguments distinctly,integer template arguments cannot substitute type positions"`
 - `cmake --build build-release --target PrimeStruct_compile_run_tests`
 - `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked"`
+
+All focused validation above passed after test/source-lock expectation fixes.
+Broad `./scripts/compile.sh --release` validation was intentionally skipped by
+the lite workflow.

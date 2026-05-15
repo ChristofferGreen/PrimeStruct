@@ -5,6 +5,7 @@
 #include <iomanip>
 #include <limits>
 #include <sstream>
+#include <string_view>
 
 namespace primec::semantics {
 
@@ -286,8 +287,48 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
     if (expr.templateArgs.empty()) {
       return std::string{};
     }
+    auto isUnsignedIntegerArgText = [](std::string_view text) {
+      if (text.empty()) {
+        return false;
+      }
+      if (text.size() > 2 && text[0] == '0' && (text[1] == 'x' || text[1] == 'X')) {
+        for (size_t i = 2; i < text.size(); ++i) {
+          if (text[i] == ',') {
+            continue;
+          }
+          if (!std::isxdigit(static_cast<unsigned char>(text[i]))) {
+            return false;
+          }
+        }
+        return true;
+      }
+      for (char c : text) {
+        if (c == ',') {
+          continue;
+        }
+        if (!std::isdigit(static_cast<unsigned char>(c))) {
+          return false;
+        }
+      }
+      return true;
+    };
+    auto isIntegerTemplateArg = [&](size_t index) {
+      if (index < expr.templateArgDetails.size() &&
+          expr.templateArgDetails[index].text == expr.templateArgs[index]) {
+        return expr.templateArgDetails[index].kind == TemplateArgumentKind::Integer;
+      }
+      return isUnsignedIntegerArgText(expr.templateArgs[index]);
+    };
+    std::ostringstream canonical;
+    for (size_t i = 0; i < expr.templateArgs.size(); ++i) {
+      if (i > 0) {
+        canonical << ",";
+      }
+      canonical << (isIntegerTemplateArg(i) ? "int:" : "type:")
+                << stripWhitespace(expr.templateArgs[i]);
+    }
     std::ostringstream out;
-    out << std::hex << fnv1a64(stripWhitespace(joinTemplateArgs(expr.templateArgs)));
+    out << std::hex << fnv1a64(canonical.str());
     return out.str();
   }();
   auto specializedPathForBase = [&](const std::string &basePath) {

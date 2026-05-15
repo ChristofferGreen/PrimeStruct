@@ -1882,11 +1882,18 @@ bool rewriteExpr(Expr &expr,
         }
       if (allConcrete) {
         std::string specializedPath;
-        if (!instantiateTemplate(resolvedPath, expr.templateArgs, ctx, error, specializedPath)) {
+        if (!instantiateTemplate(resolvedPath,
+                                 expr.templateArgs,
+                                 matchingTemplateArgumentDetails(expr.templateArgs,
+                                                                 expr.templateArgDetails),
+                                 ctx,
+                                 error,
+                                 specializedPath)) {
           return false;
         }
         expr.name = specializedPath;
         expr.templateArgs.clear();
+        expr.templateArgDetails.clear();
       }
     } else if (isKnownDef && !expr.templateArgs.empty()) {
       const Expr *templateCarryReceiverExpr = mapHelperReceiverExpr(expr);
@@ -2297,11 +2304,18 @@ bool rewriteExpr(Expr &expr,
         }
         if (allConcrete) {
           std::string specializedPath;
-          if (!instantiateTemplate(methodPath, expr.templateArgs, ctx, error, specializedPath)) {
+          if (!instantiateTemplate(methodPath,
+                                   expr.templateArgs,
+                                   matchingTemplateArgumentDetails(expr.templateArgs,
+                                                                   expr.templateArgDetails),
+                                   ctx,
+                                   error,
+                                   specializedPath)) {
             return false;
           }
           expr.name = specializedPath;
           expr.templateArgs.clear();
+          expr.templateArgDetails.clear();
           expr.isMethodCall = false;
         }
       } else if (isKnownDef && !expr.templateArgs.empty()) {

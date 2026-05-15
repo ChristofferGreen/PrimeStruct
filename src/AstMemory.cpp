@@ -22,6 +22,7 @@ void releaseExprBodies(Expr &expr) {
   releaseVectorStorage(expr.args);
   releaseVectorStorage(expr.argNames);
   releaseVectorStorage(expr.bodyArguments);
+  releaseVectorStorage(expr.templateArgDetails);
   expr.hasBodyArguments = false;
 }
 
@@ -50,6 +51,7 @@ void releaseExecutionBody(Execution &execution) {
   releaseVectorStorage(execution.arguments);
   releaseVectorStorage(execution.argumentNames);
   releaseVectorStorage(execution.bodyArguments);
+  releaseVectorStorage(execution.templateArgDetails);
   execution.hasBodyArguments = false;
 }
 
@@ -69,6 +71,10 @@ void accumulateTransformEstimate(const Transform &transform, ProgramHeapEstimate
   addVectorStorageEstimate(transform.templateArgs, stats);
   for (const std::string &arg : transform.templateArgs) {
     addStringEstimate(arg, stats);
+  }
+  addVectorStorageEstimate(transform.templateArgDetails, stats);
+  for (const TemplateArgument &arg : transform.templateArgDetails) {
+    addStringEstimate(arg.text, stats);
   }
   addVectorStorageEstimate(transform.arguments, stats);
   for (const std::string &arg : transform.arguments) {
@@ -101,6 +107,10 @@ void accumulateExprEstimate(const Expr &expr, ProgramHeapEstimateStats &stats) {
   addVectorStorageEstimate(expr.templateArgs, stats);
   for (const std::string &templateArg : expr.templateArgs) {
     addStringEstimate(templateArg, stats);
+  }
+  addVectorStorageEstimate(expr.templateArgDetails, stats);
+  for (const TemplateArgument &templateArg : expr.templateArgDetails) {
+    addStringEstimate(templateArg.text, stats);
   }
   addStringEstimate(expr.namespacePrefix, stats);
   addVectorStorageEstimate(expr.transforms, stats);
@@ -168,6 +178,10 @@ ProgramHeapEstimateStats estimateProgramHeap(const Program &program) {
     addVectorStorageEstimate(execution.templateArgs, stats);
     for (const std::string &templateArg : execution.templateArgs) {
       addStringEstimate(templateArg, stats);
+    }
+    addVectorStorageEstimate(execution.templateArgDetails, stats);
+    for (const TemplateArgument &templateArg : execution.templateArgDetails) {
+      addStringEstimate(templateArg.text, stats);
     }
     addVectorStorageEstimate(execution.templateArgIsPack, stats);
     accumulateExprVectorEstimate(execution.arguments, stats);
