@@ -18,6 +18,7 @@
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "primec/SemanticProduct.h"
+#include "primec/SoaPathHelpers.h"
 
 namespace primec::ir_lowerer {
 using count_access_detail::isDereferencedCollectionCountTarget;
@@ -222,7 +223,7 @@ bool isExplicitRemovedCountLikeAliasCall(const Expr &expr,
   };
   return matchesCollectionRoot("vector") ||
          matchesCollectionRoot("array") ||
-         matchesCollectionRoot("soa_vector");
+         matchesCollectionRoot(soa_paths::legacySoaFolder());
 }
 
 bool isNamedArgumentCollectionTemporary(const Expr &expr,
@@ -240,8 +241,11 @@ bool isExperimentalVectorStructValueLocal(const LocalInfo &info) {
 }
 
 bool isExperimentalSoaVectorStructLocal(const LocalInfo &info) {
-  return info.structTypeName == "/std/collections/experimental_soa_vector/SoaVector" ||
-         info.structTypeName.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+  const std::string backingTypePath =
+      soa_paths::collectionPath(soa_paths::experimentalSoaFolder(),
+                                soa_paths::soaBackingTypeName());
+  return info.structTypeName == backingTypePath ||
+         info.structTypeName.rfind(backingTypePath + "__", 0) == 0;
 }
 
 std::string normalizedInternalSoaStorageMetadataLeaf(std::string structPath) {
@@ -384,7 +388,7 @@ bool classifySemanticCountTargetTypeText(std::string typeText,
     }
     return classifySemanticCountTargetTypeText(args.front(), infoOut);
   }
-  if (base == "array" || base == "vector" || base == "soa_vector" ||
+  if (base == "array" || base == "vector" || base == soa_paths::legacySoaFolder() ||
       base == "map" || base == "Buffer") {
     infoOut.isCollection = true;
     infoOut.isVector = base == "vector";
@@ -552,7 +556,7 @@ bool classifySemanticCollectionTarget(const SemanticProgram &semanticProgram,
                                              collectionFact.collectionFamily)));
   if (collectionFamily == "array" ||
       collectionFamily == "vector" ||
-      collectionFamily == "soa_vector" ||
+      collectionFamily == soa_paths::legacySoaFolder() ||
       collectionFamily == "map" ||
       collectionFamily == "Buffer") {
     infoOut.isCollection = true;
@@ -1142,7 +1146,8 @@ bool isArrayCountCall(const Expr &expr,
     if (!getBuiltinCollectionName(target, collection)) {
       return false;
     }
-    if (collection == "array" || collection == "vector" || collection == "soa_vector") {
+    if (collection == "array" || collection == "vector" ||
+        collection == soa_paths::legacySoaFolder()) {
       return target.templateArgs.size() == 1;
     }
     if (collection == "map") {

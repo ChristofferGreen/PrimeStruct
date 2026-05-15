@@ -802,13 +802,29 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
 
   CHECK(countAccessClassifiersSource.find("bool isCanonicalSoaToAosHelperCall(const Expr &expr)") ==
         std::string::npos);
-  CHECK(countAccessClassifiersSource.find(
-            "isCanonicalCollectionHelperCall(target, \"std/collections/soa\", \"to_aos\", 1)") !=
+  CHECK(countAccessClassifiersSource.find("#include \"primec/SoaPathHelpers.h\"") !=
         std::string::npos);
-  CHECK(countAccessClassifiersSource.find(
-            "isCanonicalCollectionHelperCall(target, \"std/collections/soa_vector\", \"to_aos\", 1)") !=
+  CHECK(countAccessHelpersSource.find("#include \"primec/SoaPathHelpers.h\"") !=
         std::string::npos);
+  CHECK(countAccessClassifiersSource.find("soa_paths::collectionPath(folderName)") !=
+        std::string::npos);
+  CHECK(countAccessClassifiersSource.find("soa_paths::publicSoaFolder()") !=
+        std::string::npos);
+  CHECK(countAccessClassifiersSource.find("soa_paths::legacySoaFolder()") !=
+        std::string::npos);
+  CHECK(countAccessHelpersSource.find(
+            "soa_paths::collectionPath(soa_paths::experimentalSoaFolder(),") !=
+        std::string::npos);
+  CHECK(countAccessHelpersSource.find("soa_paths::soaBackingTypeName()") !=
+        std::string::npos);
+  CHECK(countAccessClassifiersSource.find("\"std/collections/soa\"") == std::string::npos);
+  CHECK(countAccessClassifiersSource.find("\"std/collections/soa_vector\"") == std::string::npos);
   CHECK(countAccessClassifiersSource.find("std/collections/soa_vector/to_aos") == std::string::npos);
+  CHECK(countAccessClassifiersSource.find("\"soa_vector\"") == std::string::npos);
+  CHECK(countAccessClassifiersSource.find("\"to_aos\"") == std::string::npos);
+  CHECK(countAccessHelpersSource.find("\"/std/collections/experimental_soa_vector/SoaVector\"") ==
+        std::string::npos);
+  CHECK(countAccessHelpersSource.find("\"soa_vector\"") == std::string::npos);
 
   CHECK(astCallPathHelpersSource.find("bool isCanonicalCollectionHelperCall(") != std::string::npos);
   CHECK(astCallPathHelpersSource.find("std/collections/soa_vector/to_aos") == std::string::npos);

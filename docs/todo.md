@@ -86,15 +86,14 @@ Task template:
 - TODO-4276: Expand type packs in helpers and lifecycle hooks | track:
   tuple-type-packs | primary surface: generic helper signatures, helper
   bodies, return envelopes, and lifecycle behavior
-- TODO-4528: Reduce lowerer count-access SoA trace residue | track:
-  soa-zero-audit | primary surface: lowerer count/access trace inventory and
-  shared SoA helper routing
+- TODO-4529: Replace SoA inventory with strict zero audit | track:
+  soa-zero-audit | primary surface: final production C++ SoA trace gate
 
 ### Parallel Work Tracks (Current)
 
-- `soa-zero-audit`: TODO-4533 removed lowerer call-resolution residual
-  bridge traces; ready TODO-4528 targets lowerer count/access residue before
-  serial successor TODO-4529.
+- `soa-zero-audit`: TODO-4528 removed lowerer count/access trace
+  residue; ready TODO-4529 replaces the remaining SoA inventory with a
+  strict zero-production-trace audit.
 - `map-zero-audit`: TODO-4532 reduced the lowerer native-dispatch slice;
   TODO-4464 remains the parent for future bounded trace-reduction splits
   and the final strict zero map-surface audit.
@@ -108,7 +107,6 @@ Task template:
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
-- TODO-4529: Replace SoA inventory with strict zero audit
 - TODO-4271: Add compile-time pack indexing
 - TODO-4272: Add stdlib `tuple<Ts...>`
 - TODO-4274: Add tuple bracket indexing sugar
@@ -127,7 +125,8 @@ Task template:
   TODO-4526 removed semantic-validation inventory residue after TODO-4530
   reduced the shared semantic builtin path helper boundary; TODO-4527 removed
   template-monomorph residue; TODO-4533 removed lowerer call-resolution
-  residual bridge traces, and TODO-4528 is ready before TODO-4529
+  residual bridge traces; TODO-4528 removed lowerer count/access residue; and
+  TODO-4529 is ready for the strict zero audit
 - Deferred generic tuple substrate: ready TODO-4276 after TODO-4275
   completed pack-expanded storage, followed by TODO-4271 -> TODO-4272
   -> TODO-4274 -> TODO-4273 -> TODO-4277 -> TODO-4278
@@ -143,7 +142,6 @@ Task template:
 ### Execution Queue (Recommended Track Order)
 
 - TODO-4276: Expand type packs in helpers and lifecycle hooks
-- TODO-4528: Reduce lowerer count-access SoA trace residue
 - TODO-4529: Replace SoA inventory with strict zero audit
 - TODO-4271: Add compile-time pack indexing
 - TODO-4272: Add stdlib `tuple<Ts...>`
@@ -1955,42 +1953,11 @@ Task template:
       lowerer routing. Keep the parent open until TODO-4529 replaces the
       inventory cap with a strict zero-production-trace audit.
 
-- [ ] TODO-4528: Reduce lowerer count-access SoA trace residue
-  - owner: ai
-  - created_at: 2026-05-15
-  - phase: SoA public surface rename and ownership cutover
-  - parallel_track: soa-zero-audit
-  - split_from: TODO-4524
-  - depends_on: TODO-4527, TODO-4533
-  - scope: Route or remove the next lowerer count/access SoA public-surface
-    trace residue in `src/ir_lowerer/IrLowererCountAccessClassifiers.cpp` and
-    nearby count/access helper paths.
-  - implementation_notes:
-    - Start from `src/ir_lowerer/IrLowererCountAccessClassifiers.cpp`,
-      `src/ir_lowerer/IrLowererCountAccessHelpers.cpp`, shared
-      `primec::soa_paths` helpers, and the checked SoA inventory rows that
-      mention count/access canonical, legacy, or conversion helper paths.
-    - Keep storage-level field layout, schema, field-view, and allocation
-      substrate terms when they do not encode public collection policy.
-  - acceptance:
-    - Count/access lowerer inventory rows for public SoA collection-surface
-      traces are deleted or reduced through shared helper routing.
-    - Existing SoA count, access, conversion, backend-IR, and source-lock
-      coverage stays stable.
-    - Focused SoA inventory, backend-IR source-lock, and TODO source-lock
-      tests pass.
-  - stop_rule: Stop once lowerer count/access code no longer owns direct
-    public SoA collection-surface traces outside generic substrate mechanics.
-  - notes:
-    - Split after TODO-4533 removed `IrLowererCallResolution.cpp` residual
-      bridge traces and showed the remaining emitter/lowerer inventory still
-      needs bounded, file-family-sized reductions before TODO-4529 can replace
-      the inventory with a strict zero audit.
-
 - [ ] TODO-4529: Replace SoA inventory with strict zero audit
   - owner: ai
   - created_at: 2026-05-15
   - phase: SoA public surface rename and ownership cutover
+  - parallel_track: soa-zero-audit
   - split_from: TODO-4524
   - depends_on: TODO-4528
   - scope: Replace the decaying SoA trace inventory with a strict

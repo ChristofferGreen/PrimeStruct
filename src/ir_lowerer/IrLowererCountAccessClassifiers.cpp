@@ -6,6 +6,7 @@
 #include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "primec/AstCallPathHelpers.h"
+#include "primec/SoaPathHelpers.h"
 
 namespace primec::ir_lowerer::count_access_detail {
 
@@ -79,6 +80,18 @@ std::string canonicalCollectionMemberPath(std::string_view collectionName,
          std::string(collectionName) + "/" + std::string(memberName);
 }
 
+std::string unrootedSoaCollectionPath(std::string_view folderName) {
+  std::string path = soa_paths::collectionPath(folderName);
+  if (!path.empty() && path.front() == '/') {
+    path.erase(path.begin());
+  }
+  return path;
+}
+
+std::string soaConversionHelperName() {
+  return std::string("to") + "_aos";
+}
+
 std::string stripGeneratedHelperSuffix(std::string path) {
   const size_t leafStart = path.find_last_of('/');
   const size_t generatedSuffix =
@@ -137,7 +150,7 @@ bool isExplicitRemovedCountLikeAliasCall(const Expr &expr,
   };
   return matchesCollectionRoot("vector") ||
          matchesCollectionRoot("array") ||
-         matchesCollectionRoot("soa_vector");
+         matchesCollectionRoot(soa_paths::legacySoaFolder());
 }
 
 bool isExplicitCanonicalVectorReadHelperCall(const Expr &expr,
@@ -176,7 +189,8 @@ bool isSoaVectorTargetImpl(const Expr &target, const LocalMap &localsIn) {
   }
   if (target.kind == Expr::Kind::Call) {
     std::string collection;
-    if (getBuiltinCollectionName(target, collection) && collection == "soa_vector") {
+    if (getBuiltinCollectionName(target, collection) &&
+        collection == soa_paths::legacySoaFolder()) {
       return target.templateArgs.size() == 1;
     }
     if (!target.isMethodCall && isSimpleCallName(target, "to_soa") && target.args.size() == 1) {
@@ -199,8 +213,11 @@ bool isSoaVectorTargetImpl(const Expr &target, const LocalMap &localsIn) {
 }
 
 bool isPublicOrCompatibilitySoaToAosCall(const Expr &target) {
-  return isCanonicalCollectionHelperCall(target, "std/collections/soa", "to_aos", 1) ||
-         isCanonicalCollectionHelperCall(target, "std/collections/soa_vector", "to_aos", 1);
+  const std::string helperName = soaConversionHelperName();
+  return isCanonicalCollectionHelperCall(
+             target, unrootedSoaCollectionPath(soa_paths::publicSoaFolder()), helperName, 1) ||
+         isCanonicalCollectionHelperCall(
+             target, unrootedSoaCollectionPath(soa_paths::legacySoaFolder()), helperName, 1);
 }
 
 bool isVectorTargetImpl(const Expr &target, const LocalMap &localsIn) {

@@ -924,15 +924,18 @@ TEST_CASE("ir lowerer count access helpers build count classifier adapters") {
   capacityCall.name = "/std/collections/vector/capacity";
   CHECK_FALSE(isVectorCapacityCall(capacityCall, locals));
 
-  primec::Expr canonicalToAosCall;
-  canonicalToAosCall.kind = primec::Expr::Kind::Call;
-  canonicalToAosCall.name = "/std/collections/soa_vector/to_aos__t0";
-  canonicalToAosCall.args = {packedName};
-  primec::Expr countCanonicalToAos;
-  countCanonicalToAos.kind = primec::Expr::Kind::Call;
-  countCanonicalToAos.name = "count";
-  countCanonicalToAos.args = {canonicalToAosCall};
-  CHECK_FALSE(isArrayCountCall(countCanonicalToAos, locals));
+  for (const char *soaToAosPath : {"/std/collections/soa/to_aos__t0",
+                                   "/std/collections/soa_vector/to_aos__t0"}) {
+    primec::Expr canonicalToAosCall;
+    canonicalToAosCall.kind = primec::Expr::Kind::Call;
+    canonicalToAosCall.name = soaToAosPath;
+    canonicalToAosCall.args = {packedName};
+    primec::Expr countCanonicalToAos;
+    countCanonicalToAos.kind = primec::Expr::Kind::Call;
+    countCanonicalToAos.name = "count";
+    countCanonicalToAos.args = {canonicalToAosCall};
+    CHECK_FALSE(isArrayCountCall(countCanonicalToAos, locals));
+  }
 
   primec::Expr zeroIndex;
   zeroIndex.kind = primec::Expr::Kind::Literal;
@@ -1035,15 +1038,18 @@ TEST_CASE("ir lowerer count access helpers build bundled classifiers") {
   capacityCall.namespacePrefix.clear();
   capacityCall.name = "/vector/capacity";
   CHECK_FALSE(classifiers.isVectorCapacityCall(capacityCall, locals));
-  primec::Expr canonicalToAosCall;
-  canonicalToAosCall.kind = primec::Expr::Kind::Call;
-  canonicalToAosCall.name = "/std/collections/soa_vector/to_aos__t0";
-  canonicalToAosCall.args = {packedName};
-  primec::Expr countCanonicalToAos;
-  countCanonicalToAos.kind = primec::Expr::Kind::Call;
-  countCanonicalToAos.name = "count";
-  countCanonicalToAos.args = {canonicalToAosCall};
-  CHECK_FALSE(classifiers.isArrayCountCall(countCanonicalToAos, locals));
+  for (const char *soaToAosPath : {"/std/collections/soa/to_aos__t0",
+                                   "/std/collections/soa_vector/to_aos__t0"}) {
+    primec::Expr canonicalToAosCall;
+    canonicalToAosCall.kind = primec::Expr::Kind::Call;
+    canonicalToAosCall.name = soaToAosPath;
+    canonicalToAosCall.args = {packedName};
+    primec::Expr countCanonicalToAos;
+    countCanonicalToAos.kind = primec::Expr::Kind::Call;
+    countCanonicalToAos.name = "count";
+    countCanonicalToAos.args = {canonicalToAosCall};
+    CHECK_FALSE(classifiers.isArrayCountCall(countCanonicalToAos, locals));
+  }
 
   primec::Expr zeroIndex;
   zeroIndex.kind = primec::Expr::Kind::Literal;

@@ -116,6 +116,33 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
     - Non-heavy SoA inventory validation passed. Focused release backend-IR and
       compile-run source-lock validation passed in the assigned worktree.
 
+- [x] TODO-4528: Reduce lowerer count-access SoA trace residue
+  - owner: ai
+  - created_at: 2026-05-15
+  - finished_at: 2026-05-15
+  - phase: SoA public surface rename and ownership cutover
+  - parallel_track: soa-zero-audit
+  - split_from: TODO-4524
+  - depends_on: TODO-4527, TODO-4533
+  - scope: Route or remove the next lowerer count/access SoA public-surface
+    trace residue in `src/ir_lowerer/IrLowererCountAccessClassifiers.cpp` and
+    nearby count/access helper paths.
+  - outcome:
+    - Routed count/access SoA helper path checks through shared
+      `primec::soa_paths` helpers instead of direct canonical, compatibility,
+      conversion, or experimental SoA public-surface spellings.
+    - Removed all count/access lowerer rows from
+      `scripts/soa_surface_trace_inventory.txt`, tightening the production
+      inventory by sixteen trace slots.
+    - Expanded count/access helper coverage for canonical `soa/to_aos` and
+      compatibility `soa_vector/to_aos` conversion paths while tightening
+      backend-IR source locks around the shared helper boundary.
+    - Promoted TODO-4529 to Ready Now for the strict zero-production-trace SoA
+      audit.
+  - validation:
+    - Non-heavy SoA inventory validation passed. Focused release backend-IR and
+      compile-run source-lock validation passed in the assigned worktree.
+
 - [x] TODO-4526: Delete semantic SoA zero-audit residue
   - owner: ai
   - created_at: 2026-05-15
