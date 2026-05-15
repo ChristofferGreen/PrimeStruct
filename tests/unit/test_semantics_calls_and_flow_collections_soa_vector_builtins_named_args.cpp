@@ -520,7 +520,7 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
   CHECK(error.empty());
 }
 
@@ -553,7 +553,7 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
   CHECK(error.empty());
 }
 
@@ -591,7 +591,7 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
   CHECK(error.empty());
 }
 
@@ -629,7 +629,7 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
   CHECK(error.empty());
 }
 
@@ -1034,24 +1034,25 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("soa_vector helper-return push and reserve keep same-path helper across escapes") {
+TEST_CASE("canonical soa helper-return push and reserve keep same-path helper across escapes") {
   const std::string source = R"(
+[struct reflect]
 Particle() {
   [i32] x{1i32}
 }
 
-[return<soa_vector<Particle>>]
+[return<soa<Particle>>]
 cloneValues() {
-  return(soa_vector<Particle>())
+  return(soa<Particle>())
 }
 
 [return<int>]
-/soa_vector/push([soa_vector<Particle>] values, [Particle] value) {
+/soa_vector/push([soa<Particle>] values, [Particle] value) {
   return(7i32)
 }
 
 [return<int>]
-/soa_vector/reserve([soa_vector<Particle>] values, [int] count) {
+/soa_vector/reserve([soa<Particle>] values, [int] count) {
   return(8i32)
 }
 
@@ -1086,30 +1087,31 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
   CHECK(error.empty());
 }
 
-TEST_CASE("soa_vector method-like helper-return push and reserve keep same-path helper across escapes") {
+TEST_CASE("canonical soa method-like helper-return push and reserve keep same-path helper across escapes") {
   const std::string source = R"(
+[struct reflect]
 Particle() {
   [i32] x{1i32}
 }
 
 Holder() {}
 
-[return<soa_vector<Particle>>]
+[return<soa<Particle>>]
 /Holder/cloneValues([Holder] self) {
-  return(soa_vector<Particle>())
+  return(soa<Particle>())
 }
 
 [return<int>]
-/soa_vector/push([soa_vector<Particle>] values, [Particle] value) {
+/soa_vector/push([soa<Particle>] values, [Particle] value) {
   return(7i32)
 }
 
 [return<int>]
-/soa_vector/reserve([soa_vector<Particle>] values, [int] count) {
+/soa_vector/reserve([soa<Particle>] values, [int] count) {
   return(8i32)
 }
 
@@ -1145,7 +1147,7 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
   CHECK(error.empty());
 }
 
@@ -1217,11 +1219,8 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("canonical soa field-view bindings track borrow roots through public imports") {
+TEST_CASE("canonical soa field-view bindings track borrow roots") {
   const std::string source = R"(
-import /std/collections/*
-import /std/collections/soa/*
-
 [struct reflect]
 Particle() {
   [i32] x{1i32}
