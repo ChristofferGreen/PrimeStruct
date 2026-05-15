@@ -1,27 +1,2 @@
-// Canonical conversion wrappers over the internal_soa_vector_conversions adapter.
-import /std/collections/*
-import /std/collections/internal_soa_vector_conversions/*
-import /std/collections/soa_vector/*
-
-[public effects(heap_alloc), return<vector<T>>]
-/std/collections/soa_vector_conversions/soaVectorToAos<T>(
-    [SoaVector<T>] values) {
-  return(/std/collections/internal_soa_vector_conversions/soaVectorToAos<T>(values))
-}
-
-[public effects(heap_alloc), return<vector<T>>]
-/std/collections/soa_vector_conversions/soaVectorToAosRef<T>(
-    [Reference<SoaVector<T>>] values) {
-  return(/std/collections/internal_soa_vector_conversions/soaVectorToAosRef<T>(values))
-}
-
-[public effects(heap_alloc), return<vector<T>>]
-/std/collections/soa_vector/to_aos<T>([SoaVector<T>] values) {
-  return(/std/collections/soa_vector_conversions/soaVectorToAos<T>(values))
-}
-
-[public effects(heap_alloc), return<vector<T>>]
-/std/collections/soa_vector/to_aos_ref<T>(
-    [Reference<SoaVector<T>>] values) {
-  return(/std/collections/soa_vector_conversions/soaVectorToAosRef<T>(values))
-}
+// Retired compatibility conversion module.
+// Public SoA conversions now live under /std/collections/soa/*.

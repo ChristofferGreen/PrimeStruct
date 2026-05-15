@@ -940,7 +940,7 @@ main() {
   REQUIRE(pushBridgeEntry != nullptr);
   REQUIRE(pushBridgeEntry->stdlibSurfaceId.has_value());
   CHECK(*pushBridgeEntry->stdlibSurfaceId ==
-        primec::StdlibSurfaceId::CollectionsSoaVectorHelpers);
+        primec::StdlibSurfaceId::CollectionsSoaHelpers);
 
   const auto *countBridgeEntry = findSemanticEntry(
       primec::semanticProgramBridgePathChoiceView(semanticProgram),
@@ -953,12 +953,12 @@ main() {
   REQUIRE(countBridgeEntry != nullptr);
   REQUIRE(countBridgeEntry->stdlibSurfaceId.has_value());
   CHECK(*countBridgeEntry->stdlibSurfaceId ==
-        primec::StdlibSurfaceId::CollectionsSoaVectorHelpers);
+        primec::StdlibSurfaceId::CollectionsSoaHelpers);
   const auto countBridgeSurfaceId =
       primec::semanticProgramLookupPublishedBridgePathChoiceStdlibSurfaceId(
           semanticProgram, countBridgeEntry->semanticNodeId);
   REQUIRE(countBridgeSurfaceId.has_value());
-  CHECK(*countBridgeSurfaceId == primec::StdlibSurfaceId::CollectionsSoaVectorHelpers);
+  CHECK(*countBridgeSurfaceId == primec::StdlibSurfaceId::CollectionsSoaHelpers);
 }
 
 TEST_CASE("semantic product method-call targets stay separated by receiver type") {
@@ -1458,8 +1458,10 @@ main() {
 TEST_CASE("semantic product keeps helper-return borrowed soa_vector read targets on canonical wrappers compatibility") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1544,8 +1546,10 @@ main() {
 TEST_CASE("semantic product keeps method-like borrowed soa_vector read targets on canonical wrappers compatibility") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1634,7 +1638,8 @@ main() {
 TEST_CASE("semantic product keeps borrowed soa_vector ref_ref targets on same-path helpers compatibility") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1808,8 +1813,10 @@ main() {
 TEST_CASE("semantic product validates direct return method-like borrowed helper-return experimental soa_vector reads") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1883,7 +1890,8 @@ main() {
 TEST_CASE("semantic product keeps helper-return SoaVector mutator initializer facts on wrappers compatibility") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1996,8 +2004,10 @@ main() {
 TEST_CASE("semantic product keeps helper-return borrowed soa_vector direct-call targets on canonical wrappers compatibility") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2124,7 +2134,8 @@ main() {
 TEST_CASE("semantic product keeps helper-return borrowed soa_vector field views on canonical reads compatibility") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2193,7 +2204,8 @@ main() {
 TEST_CASE("semantic product keeps borrowed local soa_vector field views on canonical reads compatibility") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2258,7 +2270,8 @@ main() {
 TEST_CASE("semantic product keeps method-like borrowed soa_vector field views on canonical reads compatibility") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -4011,10 +4024,10 @@ main() {
   CHECK_FALSE(soaEntry->isPointer);
   REQUIRE(soaEntry->helperSurfaceId.has_value());
   CHECK(*soaEntry->helperSurfaceId ==
-        primec::StdlibSurfaceId::CollectionsSoaVectorHelpers);
+        primec::StdlibSurfaceId::CollectionsSoaHelpers);
   REQUIRE(soaEntry->constructorSurfaceId.has_value());
   CHECK(*soaEntry->constructorSurfaceId ==
-        primec::StdlibSurfaceId::CollectionsSoaVectorConstructors);
+        primec::StdlibSurfaceId::CollectionsSoaConstructors);
 
   const auto *lookupEntry =
       primec::semanticProgramLookupPublishedCollectionSpecializationBySemanticId(
@@ -4026,7 +4039,7 @@ main() {
   const std::string formatted = primec::formatSemanticProgram(semanticProgram);
   CHECK(formatted.find("collection_specializations[") != std::string::npos);
   CHECK(formatted.find("helper_surface_id=\"collections.map_helpers\"") != std::string::npos);
-  CHECK(formatted.find("helper_surface_id=\"collections.soa_vector_helpers\"") !=
+  CHECK(formatted.find("helper_surface_id=\"collections.soa_helpers\"") !=
         std::string::npos);
 }
 

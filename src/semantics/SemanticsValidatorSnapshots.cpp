@@ -235,8 +235,8 @@ collectionBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
     collectionFamily = "map";
   } else {
     switch (metadata->id) {
-      case StdlibSurfaceId::CollectionsSoaVectorHelpers:
-      case StdlibSurfaceId::CollectionsSoaVectorConstructors:
+      case StdlibSurfaceId::CollectionsSoaHelpers:
+      case StdlibSurfaceId::CollectionsSoaConstructors:
         collectionFamily = "soa_vector";
         break;
       default:

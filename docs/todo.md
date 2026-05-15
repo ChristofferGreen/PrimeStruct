@@ -72,11 +72,11 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4519: Delete `soa_vector` compatibility seams
+- TODO-4310: Add zero C++ SoA collection-surface audit
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4310: Add zero C++ SoA collection-surface audit
+- TODO-4268: Add heterogeneous type-pack syntax and metadata
 
 ### Priority Lanes (Current)
 
@@ -85,8 +85,8 @@ Task template:
 - Deferred stdlib ADT migration: none active
 - Vector stdlib ownership cutover: none active
 - Map stdlib ownership cutover: TODO-4464
-- SoA public surface rename and ownership cutover: TODO-4306 parent split as
-  TODO-4519 -> TODO-4310
+- SoA public surface rename and ownership cutover: TODO-4306 parent split;
+  next gate is TODO-4310
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
   -> TODO-4275 -> TODO-4276 -> TODO-4271 -> TODO-4272 -> TODO-4274
   -> TODO-4273 -> TODO-4277 -> TODO-4278
@@ -101,7 +101,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4519: Delete `soa_vector` compatibility seams
 - TODO-4310: Add zero C++ SoA collection-surface audit
 - TODO-4268: Add heterogeneous type-pack syntax and metadata
 - TODO-4269: Bind and monomorphize type-pack arguments
@@ -152,10 +151,10 @@ Task template:
 | Compile-pipeline stage and publication-boundary contracts | none |
 | Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4305 |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4464, TODO-4519, TODO-4310 |
+| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4464, TODO-4310 |
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4464 |
-| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4464, TODO-4305, TODO-4519, TODO-4310 |
-| SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4514, TODO-4519, TODO-4310 |
+| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4464, TODO-4305, TODO-4310 |
+| SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4514, TODO-4310 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
 | Semantic-product public API factoring and versioning | none |
@@ -184,8 +183,8 @@ Task template:
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
 | Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4464 |
-| De-experimentalization surface and namespace parity | TODO-4430, TODO-4464, TODO-4305, TODO-4519, TODO-4310 |
-| `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4514, TODO-4519, TODO-4310 |
+| De-experimentalization surface and namespace parity | TODO-4430, TODO-4464, TODO-4305, TODO-4310 |
+| `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4514, TODO-4310 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
 | Emitter map-helper canonicalization parity | TODO-4464 |
@@ -320,15 +319,15 @@ Task template:
   Template
   monomorphization now asks the registry for preferred experimental vector/SoA
   helper spellings instead of carrying bespoke canonical-to-experimental maps.
-  SoA public helper, constructor, import-alias, field-view, conversion, and
-  retained compatibility metadata now lives in
+  SoA public helper, constructor, import-alias, field-view, and conversion
+  metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic
   `StdlibSurfaceRegistry` manifest path. The `soa<T>` public surface is
-  declared there alongside temporary `/std/collections/soa_vector/*`,
+  declared there without temporary `/std/collections/soa_vector/*`,
   same-path `/soa_vector/*`, mixed `/std/collections/{count,get,ref,reserve,push}`,
-  experimental helper wrapper, and conversion-helper compatibility spellings.
-  TODO-4518 migrated old fixture usage of those names, and TODO-4519 owns
-  deleting or intentionally rejecting the compatibility seams. The
+  experimental helper wrapper, or conversion-helper compatibility spellings.
+  old fixture usage of those names was migrated, and the compatibility seams
+  now reject. The
   registry keeps surface ids and generic APIs in C++, but it no longer owns
   SoA public collection member lists, import aliases, helper aliases,
   constructor spellings, or conversion spellings as handwritten tables.
@@ -344,7 +343,7 @@ Task template:
   dispatch checks are syntax/provenance-owned or lowering-owned.
 - Outside this lane: `array<T>` core ownership and the `soa<T>` public-surface
   rename remain separate boundaries tracked by TODO-4305, TODO-4306, and the
-  TODO-4518/TODO-4519/TODO-4310 completion sequence.
+  TODO-4310 audit gate.
   Generic contiguous-storage coverage needed before vector ordinary `.prime`
   lowering is complete and recorded in `docs/todo_finished.md`. Map-specific
   lookup/insertion substrate work is complete; remaining map work focuses on
@@ -365,9 +364,9 @@ Task template:
   the PrimeStruct map surface.
 - End-state rule for SoA: after TODO-4310, the public collection name is
   `soa<T>` under `/std/collections/soa/*`. The old `soa_vector<T>`,
-  `/std/collections/soa_vector/*`, `/soa_vector/*`, `SoaVector<T>`, and
-  `soaVector*` names are compatibility-only until TODO-4519 deletes or
-  intentionally rejects them after TODO-4518 migrated old fixtures. Production
+  `/std/collections/soa_vector/*`, `/soa_vector/*`, `SoaVector<T>`,
+  `soaVector*`, and direct experimental SoA imports are rejected
+  compatibility spellings after TODO-4518 migrated old fixtures. Production
   C++ under `src/` and `include/` must
   not contain PrimeStruct-SoA-collection surface paths, helper names, type
   names, diagnostics, parser/lowering branches, or metadata tables after the
@@ -382,15 +381,9 @@ Task template:
   long-term user-facing contracts.
 - Canonical collection contract: `/std/collections/vector/*` and
   `/std/collections/map/*` are the sole public vector/map collection surfaces.
-- Accepted compatibility namespaces:
-  `/std/collections/experimental_soa_vector/*` remains importable only for
-  targeted compatibility and conformance coverage. Ordinary public examples
-  should use `/std/collections/soa/*`.
-  `/std/collections/experimental_soa_vector_conversions/*` remains a bridge
-  for direct experimental imports. Canonical conversion helpers now route
-  through `/std/collections/internal_soa_vector_conversions/*`. These direct
-  experimental imports are retained compatibility shims for targeted tests
-  only, not ordinary public imports.
+- SoA compatibility shim: direct
+  `/std/collections/soa_vector*` and `/std/collections/experimental_soa_vector*`
+  imports are rejected; canonical public code uses `/std/collections/soa/*`.
 - Internal collection implementation modules:
   `/std/collections/internal_vector/*` owns the canonical vector backing
   adapter while preserving the current compatibility `Vector<T>` identity;
@@ -424,20 +417,20 @@ Task template:
   `/std/collections/soa/*` plus conversion helpers under the same public
   surface unless TODO-4305 deliberately chooses a separate
   `/std/collections/soa_conversions/*` namespace.
-- Current compatibility spellings are `/std/collections/soa_vector/*` and
-  `/std/collections/soa_vector_conversions/*`; ordinary public examples use
-  the `soa` spelling and `/std/collections/soa/*`.
-- Accepted compatibility seams: `/std/collections/experimental_soa_vector/*`
-  and `/std/collections/experimental_soa_vector_conversions/*` remain importable
-  only for targeted compatibility and conformance coverage; C++/VM/native
-  direct-import tests lock that compatibility contract.
+- Retired compatibility spellings are `soa_vector<T>`,
+  `/std/collections/soa_vector*`, rooted `/soa_vector/*`, `SoaVector<T>`,
+  `soaVector*`, and direct `/std/collections/experimental_soa_vector*` imports;
+  ordinary public examples use the `soa` spelling and `/std/collections/soa/*`.
+- Rejection seams: C++/VM/native tests lock the direct-import rejection
+  diagnostic for retired SoA compatibility modules and the `soa_vector<T>` type
+  spelling rejection.
 - Internal substrate namespaces: `/std/collections/internal_soa_vector/*`
   owns canonical wrapper implementation forwarding,
   `/std/collections/internal_soa_vector_conversions/*` owns canonical
   conversion implementation forwarding, while
   `/std/collections/internal_soa_storage/*` remains implementation-facing SoA
   storage/layout plumbing. The internal wrapper adapter still preserves the
-  compatibility `SoaVector<T>` type identity behind the promoted public wrapper
+  internal `SoaVector<T>` backing identity behind the promoted public wrapper
   surface. The inline-parameter and direct lowerer wrapper-dispatch bridges no
   longer use rooted `/soa_vector/*`, `/to_aos`, or `/to_aos_ref` spellings as
   hidden raw fallbacks.
@@ -445,15 +438,15 @@ Task template:
   authoritative for ordinary construction/read/ref/mutator/conversion helper
   names, bound field-view borrow-root invalidation, and canonical-only
   C++/VM/native helper, field-view, and conversion parity coverage. Conversion
-  receiver contracts are spelled through canonical `SoaVector<T>` surfaces, the
+  receiver contracts are spelled through canonical `soa<T>` surfaces, the
   checked-in ECS example uses canonical `soa` imports, and ordinary
-  public code no longer needs `experimental_soa_vector` or
+  public code cannot use `experimental_soa_vector` or
   `experimental_soa_vector_conversions` imports. The canonical wrapper routes through
   `/std/collections/internal_soa_vector/*` and canonical conversions route
   through `/std/collections/internal_soa_vector_conversions/*` instead of
   directly importing experimental implementation modules.
 - Stdlib-owned metadata: canonical `soa` helper/import/constructor,
-  field-view, conversion, and retained compatibility metadata lives in
+  field-view, and conversion metadata lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic
   `StdlibSurfaceRegistry` manifest path, while generic SoA substrate metadata
   remains separate from the public collection surface manifest.
@@ -461,8 +454,8 @@ Task template:
   to field-layout/codegen/introspection, `SoaSchema*` metadata, `SoaColumn<T>`
   and `SoaFieldView<T>` storage/view carriers, borrow-root and invalidation
   provenance, and allocation primitives. Public construction, helper routing,
-  conversion naming, import aliases, and compatibility spellings belong to
-  stdlib wrappers or compatibility shims.
+  conversion naming, import aliases, and compatibility diagnostics belong to
+  stdlib wrappers or focused diagnostics.
 
 ### Skipped Doctest Debt Summary
 
@@ -1928,13 +1921,13 @@ Task template:
       field-view helpers, and conversion helpers over `soaVectorCount`,
       `soaVectorGet`, `soaVectorRef`, `soaVectorPush`,
       `soaVectorReserve`, or `soaVectorToAos`.
-    - Keep `soa_vector<T>`, `/std/collections/soa_vector/*`, `/soa_vector/*`,
-      `SoaVector<T>`, and `soaVector*` only as compatibility shims until
-      TODO-4519.
+    - Treat `soa_vector<T>`, `/std/collections/soa_vector/*`, `/soa_vector/*`,
+      `SoaVector<T>`, and `soaVector*` as retired public compatibility
+      spellings; TODO-4310 owns the remaining production C++ trace audit.
   - acceptance:
     - Docs define `soa<T>` and `/std/collections/soa/*` as the target canonical
-      public SoA collection surface, with `soa_vector` documented as a
-      compatibility spelling only.
+      public SoA collection surface, with retired `soa_vector` spellings
+      documented as rejected public compatibility names.
     - Canonical public SoA examples and style-aligned stdlib code use `soa<T>`
       and `/std/collections/soa/<helper>` / namespace-owned helper names rather
       than `soa_vector<T>` or `soaVector*` prefixed helper names.
@@ -2010,53 +2003,6 @@ Task template:
     - TODO-4513 routed canonical `/std/collections/soa/to_aos`
       classification through semantic, emitter, and lowerer classifiers while
       keeping compatibility `soa_vector` conversion paths alive.
-
-- [ ] TODO-4519: Delete `soa_vector` compatibility seams
-  - owner: ai
-  - created_at: 2026-05-15
-  - phase: SoA public surface rename and ownership cutover
-  - split_from: TODO-4309
-  - depends_on: TODO-4518
-  - scope: Remove or intentionally reject the old `soa_vector` compatibility
-    spellings once TODO-4518 has moved broad fixture coverage onto the
-    canonical `soa<T>` surface.
-  - implementation_notes:
-    - Target `soa_vector<T>`, `/std/collections/soa_vector/*`,
-      `/std/collections/soa_vector_conversions/*`, rooted `/soa_vector/*`,
-      rooted `/to_aos` / `/to_aos_ref` compatibility spellings when they encode
-      the old surface, `SoaVector<T>`, `soaVector*` wrappers, and direct
-      `/std/collections/experimental_soa_vector*` imports.
-    - Preserve the canonical helper shape as path/module ownership:
-      `/std/collections/soa/soa`, `/std/collections/soa/count`,
-      `/std/collections/soa/get`, `/std/collections/soa/ref`,
-      `/std/collections/soa/count_ref`, `/std/collections/soa/get_ref`,
-      `/std/collections/soa/ref_ref`, `/std/collections/soa/push`,
-      `/std/collections/soa/reserve`, field-view helpers, and the documented
-      conversion helper paths.
-    - Start from `StdlibSurfaceRegistry`, `SoaPathHelpers`, semantic helper
-      rewrites, template-monomorph compatibility adapters, lowerer raw-path
-      dispatch checks, SoA stdlib files, compatibility-quarantine tests,
-      diagnostics snapshots, and docs/source locks.
-  - acceptance:
-    - Ordinary user code can use only canonical `soa<T>`,
-      `/std/collections/soa/*`, wildcard `import /std/collections/*`, and
-      documented SoA construction/conversion syntax.
-    - `soa_vector<T>`, `/soa_vector/*`, `soaVector*` names, and direct
-      `experimental_soa_vector*` imports are either removed from tests/docs or
-      reject with stable, intentional compatibility diagnostics.
-    - No public docs, examples, or canonical stdlib SoA source use prefixed
-      helper names to encode the module path; they use slash paths,
-      namespaces, imports, and method sugar instead.
-    - Production C++ contains no PrimeStruct-SoA-public-surface compatibility
-      handling, compatibility diagnostics, removed-helper adapters, parser/text
-      transform branches, lowerer raw-path checks, or public surface metadata
-      entries.
-    - The de-experimentalization policy and SoA public collection summary record
-      the final `soa` status.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once old `soa_vector` compatibility spellings are deleted
-    or intentionally rejected and the only supported public SoA collection
-    surface is `soa<T>`; leave the mechanical C++ trace audit to TODO-4310.
 
 - [ ] TODO-4310: Add zero C++ SoA collection-surface audit
   - owner: ai

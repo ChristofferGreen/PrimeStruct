@@ -299,6 +299,12 @@ bool parseBindingInfo(const Expr &expr,
         error = "binding requires exactly one type";
         return false;
       }
+      if (transform.name == "soa_vector" || transform.name == "/soa_vector" ||
+          transform.name == "std/collections/soa_vector" ||
+          transform.name == "/std/collections/soa_vector") {
+        error = "soa_vector<T> is not supported; use soa<T>";
+        return false;
+      }
       const std::string normalizedTypeName = normalizeBindingTypeName(transform.name);
       if ((normalizedTypeName == "array" || normalizedTypeName == "vector" || normalizedTypeName == "Buffer") &&
           transform.templateArgs.size() != 1) {

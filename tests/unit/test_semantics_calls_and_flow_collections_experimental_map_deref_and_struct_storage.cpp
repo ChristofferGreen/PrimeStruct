@@ -55,7 +55,7 @@ TEST_CASE("map constructors keep arg-pack count when soa helpers are imported co
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_map/*
-import /std/collections/soa_vector/*
+import /std/collections/soa/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {
@@ -80,7 +80,7 @@ TEST_CASE("map constructor mismatch wins over imported soa count alias compatibi
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_map/*
-import /std/collections/soa_vector/*
+import /std/collections/soa/*
 
 [return<T> effects(heap_alloc)]
 wrapValues<T>([T] values) {

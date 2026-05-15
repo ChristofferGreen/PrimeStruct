@@ -348,6 +348,12 @@ bool SemanticsValidator::buildImportAliases() {
       }
       continue;
     }
+    if (isDirectRemovedSoaCompatibilityImportPath(importPath)) {
+      if (!addImportDiagnostic(directRemovedSoaCompatibilityImportDiagnostic())) {
+        return false;
+      }
+      continue;
+    }
     if (importPath == "/std/math") {
       if (!addImportDiagnostic("import /std/math is not supported; use import /std/math/* or /std/math/<name>")) {
         return false;

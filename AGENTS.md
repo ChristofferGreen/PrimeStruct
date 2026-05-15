@@ -48,9 +48,7 @@ build and layout solidify.
   `stdlib/std/ui/*`, `stdlib/std/collections/vector.prime`,
   `stdlib/std/collections/map.prime`,
   `stdlib/std/collections/errors.prime`,
-  `stdlib/std/collections/soa.prime`,
-  `stdlib/std/collections/soa_vector.prime`,
-  `stdlib/std/collections/soa_vector_conversions.prime`, and
+  `stdlib/std/collections/soa.prime`, and
   `stdlib/std/gfx/gfx.prime` as style-aligned surface code; treat
   `stdlib/std/bench_non_math/*`, `stdlib/std/collections/collections.prime`,
   `stdlib/std/collections/experimental_vector.prime`,

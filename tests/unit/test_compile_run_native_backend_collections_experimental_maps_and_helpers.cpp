@@ -133,7 +133,7 @@ main() {
   CHECK(runCommand(methodExePath) == 17);
 }
 
-TEST_CASE("compiles and runs native experimental soa_vector stdlib helpers") {
+TEST_CASE("rejects native experimental soa_vector stdlib helpers") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -150,17 +150,20 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_experimental_soa_vector_helpers.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_vector_helpers_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_experimental_soa_vector_helpers_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "direct import of retired soa_vector compatibility modules is not supported; use /std/collections/soa/*") !=
+        std::string::npos);
 }
 
-TEST_CASE("compiles and runs native experimental soa_vector stdlib non-empty helper") {
+TEST_CASE("rejects native raw soa_vector type spelling") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
 
 [struct reflect]
 Particle() {
@@ -169,19 +172,20 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
-  [Particle] value{soaVectorGet<Particle>(values, 0i32)}
-  return(plus(soaVectorCount<Particle>(values), value.x))
+  [soa_vector<Particle>] values{soa<Particle>()}
+  return(count(values))
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_experimental_soa_vector_single.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_vector_single_exe").string();
+      writeTemp("compile_native_raw_soa_vector_type_reject.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_raw_soa_vector_type_reject_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 8);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("soa_vector<T> is not supported; use soa<T>") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles and runs native public soa count helper on public wrapper") {
@@ -419,7 +423,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("native legacy soa_vector compatibility helpers run without experimental imports") {
+TEST_CASE("native legacy soa_vector compatibility helpers reject") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa_vector/*
@@ -445,12 +449,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_wildcard_legacy_soa_vector_compatibility_helpers.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_wildcard_legacy_soa_vector_compatibility_helpers").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_wildcard_legacy_soa_vector_compatibility_helpers_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 17);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "direct import of retired soa_vector compatibility modules is not supported; use /std/collections/soa/*") !=
+        std::string::npos);
 }
 
 TEST_CASE("native wildcard-imported canonical soa helpers run without experimental imports") {
@@ -707,7 +714,8 @@ main() {
 TEST_CASE(
     "native rejects experimental soa_vector stdlib wide structs on pending width boundary across imported/direct/helper-return forms") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle17() {
@@ -785,7 +793,8 @@ runHelperReturn() {
 TEST_CASE("native rejects experimental soa_vector stdlib from-aos helper before typed bindings support") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -813,8 +822,10 @@ main() {
 TEST_CASE("native runs experimental soa_vector stdlib to-aos helper") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -840,7 +851,8 @@ main() {
 TEST_CASE("native rejects direct experimental soa_vector to-aos helper on builtin soa_vector") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -871,8 +883,10 @@ main() {
 TEST_CASE("native runs experimental soa_vector stdlib to-aos method on wrapper surface") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1024,8 +1038,10 @@ TEST_CASE("native materializes non-empty root soa_vector literals above former l
 TEST_CASE("native runs experimental soa_vector stdlib non-empty to-aos helper") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1051,8 +1067,10 @@ main() {
 TEST_CASE("native runs experimental soa_vector stdlib non-empty to-aos method on wrapper state") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1078,7 +1096,8 @@ main() {
 
 TEST_CASE("compiles and runs native experimental soa_vector stdlib get helper") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1104,7 +1123,8 @@ main() {
 
 TEST_CASE("compiles and runs native experimental soa_vector stdlib get method") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1131,7 +1151,8 @@ main() {
 TEST_CASE("native runs bare soa_vector get helper through helper return compatibility") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1163,7 +1184,8 @@ main() {
 TEST_CASE("native rejects global helper-return soa_vector method shadows compatibility") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1221,7 +1243,8 @@ main() {
 TEST_CASE("native rejects method-like helper-return soa_vector method shadows compatibility") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1365,7 +1388,8 @@ main() {
 
 TEST_CASE("native compiles nested struct-body soa_vector constructor-bearing helper returns compatibility") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1398,7 +1422,8 @@ main() {
 TEST_CASE("native runs nested struct-body soa_vector direct and bound helper expressions compatibility") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1435,7 +1460,8 @@ main() {
 TEST_CASE("native runs nested struct-body soa_vector method shadows compatibility") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1507,7 +1533,8 @@ main() {
 TEST_CASE("native runs explicit method-like helper-return experimental soa_vector to_aos shadow") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1551,7 +1578,8 @@ main() {
 
 TEST_CASE("native runs experimental soa_vector stdlib ref helper") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1576,7 +1604,8 @@ main() {
 
 TEST_CASE("native runs experimental soa_vector stdlib ref method") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1601,7 +1630,8 @@ main() {
 
 TEST_CASE("native runs experimental soa_vector ref pass-through and return") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1636,7 +1666,8 @@ main() {
 
 TEST_CASE("compiles and runs native experimental soa_vector stdlib push and reserve helpers") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1665,7 +1696,8 @@ main() {
 
 TEST_CASE("compiles and runs native experimental soa_vector stdlib push and reserve methods") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1694,7 +1726,8 @@ main() {
 
 TEST_CASE("native compiles and runs experimental soa_vector single-field index syntax") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 ScalarBox() {
@@ -1721,7 +1754,8 @@ main() {
 
 TEST_CASE("native compiles and runs experimental soa_vector reflected multi-field index syntax") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1749,7 +1783,8 @@ main() {
 TEST_CASE("native compiles and runs experimental soa_vector mutating indexed field writes") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1786,7 +1821,8 @@ main() {
 
 TEST_CASE("native compiles and runs richer borrowed experimental soa_vector mutating indexed field writes") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1825,7 +1861,8 @@ main() {
 
 TEST_CASE("native compiles and runs method-like borrowed experimental soa_vector mutating indexed field writes") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1874,7 +1911,8 @@ main() {
 
 TEST_CASE("native compiles and runs borrowed experimental soa_vector reflected index syntax") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1903,7 +1941,8 @@ main() {
 TEST_CASE("native compiles and runs experimental soa_vector bare get and ref field access") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1931,7 +1970,8 @@ main() {
 
 TEST_CASE("native compiles and runs borrowed local experimental soa_vector reflected index syntax") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1959,7 +1999,8 @@ main() {
 
 TEST_CASE("native compiles and runs borrowed helper-return experimental soa_vector reflected index syntax") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1991,7 +2032,8 @@ main() {
 
 TEST_CASE("native compiles and runs experimental soa_vector reflected call-form index syntax") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2036,7 +2078,8 @@ main() {
 
 TEST_CASE("native compiles and runs experimental soa_vector inline location borrow index syntax") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2076,7 +2119,8 @@ main() {
 
 TEST_CASE("native compiles and runs dereferenced borrowed helper-return experimental soa_vector reflected index syntax") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2111,7 +2155,8 @@ main() {
 TEST_CASE("native compiles and runs borrowed helper-return experimental soa_vector get/ref methods") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2145,7 +2190,8 @@ main() {
 TEST_CASE("native compiles and runs borrowed helper-return soa_vector ref_ref same-path helper compatibility") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2221,7 +2267,8 @@ main() {
 TEST_CASE("native compiles and runs helper-return experimental soa_vector method shadows") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2273,8 +2320,10 @@ main() {
 TEST_CASE("native compiles helper-return soa_vector shadows with explicit canonical fallbacks compatibility") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2352,8 +2401,10 @@ main() {
 TEST_CASE("native compiles and runs borrowed local experimental soa_vector read-only methods") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2392,8 +2443,10 @@ main() {
 TEST_CASE("native compiles and runs inline location experimental soa_vector read-only methods") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2433,8 +2486,10 @@ main() {
 TEST_CASE("native compiles and runs borrowed helper-return experimental soa_vector helper surfaces") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2477,7 +2532,8 @@ main() {
 TEST_CASE("native compiles and runs method-like borrowed helper-return experimental soa_vector helper surfaces") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2530,8 +2586,10 @@ main() {
 TEST_CASE("native compiles and runs direct return borrowed helper-return experimental soa_vector reads") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2575,8 +2633,10 @@ main() {
 TEST_CASE("native compiles and runs direct return method-like borrowed helper-return experimental soa_vector reads") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2624,8 +2684,10 @@ main() {
 TEST_CASE("native compiles and runs direct return inline location borrowed helper-return experimental soa_vector reads") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2669,8 +2731,10 @@ main() {
 TEST_CASE("native compiles and runs inline location method-like borrowed helper-return experimental soa_vector helpers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2742,8 +2806,10 @@ main() {
 TEST_CASE("native compiles and runs direct return inline location method-like borrowed helper-return experimental soa_vector reads") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2791,8 +2857,10 @@ main() {
 TEST_CASE("native compiles and runs inline location borrowed helper-return experimental soa_vector helpers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {

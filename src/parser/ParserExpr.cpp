@@ -106,7 +106,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     if (!name.empty() && name.front() == '/') {
       name.erase(name.begin());
     }
-    return name == "array" || name == "vector" || name == "map" || name == "soa_vector";
+    return name == "array" || name == "vector" || name == "map" || name == "soa";
   };
   auto isLikelyTypeBraceConstructor = [&](const Expr &call) -> bool {
     if (call.name.empty()) {

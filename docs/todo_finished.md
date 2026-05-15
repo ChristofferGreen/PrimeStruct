@@ -6,6 +6,42 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 15, 2026)**
+- [x] TODO-4519: Delete `soa_vector` compatibility seams
+  - owner: ai
+  - created_at: 2026-05-15
+  - finished_at: 2026-05-15
+  - phase: SoA public surface rename and ownership cutover
+  - split_from: TODO-4309
+  - depends_on: TODO-4518
+  - scope: Remove or intentionally reject the old `soa_vector` compatibility
+    spellings once TODO-4518 moved broad fixture coverage onto the canonical
+    `soa<T>` surface.
+  - acceptance:
+    - Ordinary user code can use only canonical `soa<T>`,
+      `/std/collections/soa/*`, wildcard `import /std/collections/*`, and
+      documented SoA construction/conversion syntax.
+    - `soa_vector<T>`, `/soa_vector/*`, `soaVector*` names, and direct
+      `experimental_soa_vector*` imports are either removed from tests/docs or
+      reject with stable, intentional compatibility diagnostics.
+    - No public docs, examples, or canonical stdlib SoA source use prefixed
+      helper names to encode the module path; they use slash paths,
+      namespaces, imports, and method sugar instead.
+    - The de-experimentalization policy and SoA public collection summary
+      record the final `soa` status while the mechanical production C++ trace
+      audit remains TODO-4310.
+  - stop_rule: Stop once old `soa_vector` compatibility spellings are deleted
+    or intentionally rejected and the only supported public SoA collection
+    surface is `soa<T>`; leave the mechanical C++ trace audit to TODO-4310.
+  - evidence: Rejected direct public imports of retired
+    `/std/collections/soa_vector*` and
+    `/std/collections/experimental_soa_vector*` modules with a stable
+    diagnostic, rejected raw `soa_vector<T>` type spelling in favor of
+    `soa<T>`, retired the old public `soa_vector*.prime` wrappers to
+    comment-only shims, removed old SoA public compatibility aliases from the
+    stdlib surface manifest, updated C++/VM/native rejection coverage and
+    docs/source locks, and promoted TODO-4310 as the next Ready Now zero-trace
+    audit.
+
 - [x] TODO-4518: Migrate SoA compatibility fixtures
   - owner: ai
   - created_at: 2026-05-15

@@ -95,7 +95,8 @@ main() {
 TEST_CASE("ir lowerer materializes variadic borrowed soa_vector packs with indexed count methods compatibility") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -191,7 +192,8 @@ main() {
 TEST_CASE("ir lowerer materializes variadic pointer soa_vector packs with indexed count methods compatibility") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -287,7 +289,8 @@ main() {
 TEST_CASE("ir lowerer materializes variadic soa_vector packs with indexed count methods compatibility") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {

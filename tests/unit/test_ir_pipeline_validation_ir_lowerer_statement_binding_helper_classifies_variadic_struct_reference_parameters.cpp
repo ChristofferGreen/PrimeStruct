@@ -540,7 +540,8 @@ TEST_CASE(
     "imported soa_vector parameters") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1094,7 +1095,8 @@ TEST_CASE(
     "soa_vector locals") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {

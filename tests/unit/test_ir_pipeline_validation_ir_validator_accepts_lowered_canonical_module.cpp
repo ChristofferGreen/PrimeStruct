@@ -1226,7 +1226,7 @@ TEST_CASE("ir lowerer stdlib surface metadata rejects experimental map lowering 
   const auto *soaGetRefMetadata = primec::findStdlibSurfaceMetadataByResolvedPath(
       "/std/collections/experimental_soa_vector/soaVectorGetRef");
   REQUIRE(soaGetRefMetadata != nullptr);
-  CHECK(soaGetRefMetadata->id == primec::StdlibSurfaceId::CollectionsSoaVectorHelpers);
+  CHECK(soaGetRefMetadata->id == primec::StdlibSurfaceId::CollectionsSoaHelpers);
   CHECK(primec::resolveStdlibSurfaceMemberName(
             *soaGetRefMetadata,
             "/std/collections/experimental_soa_vector/soaVectorGetRef") == "get_ref");
@@ -1235,7 +1235,7 @@ TEST_CASE("ir lowerer stdlib surface metadata rejects experimental map lowering 
       primec::findStdlibSurfaceMetadataByResolvedPath("/std/collections/soa/field_view");
   REQUIRE(publicSoaFieldViewMetadata != nullptr);
   CHECK(publicSoaFieldViewMetadata->id ==
-        primec::StdlibSurfaceId::CollectionsSoaVectorHelpers);
+        primec::StdlibSurfaceId::CollectionsSoaHelpers);
   CHECK(primec::resolveStdlibSurfaceMemberName(
             *publicSoaFieldViewMetadata, "/std/collections/soa/field_view") ==
         "field_view");
@@ -1276,7 +1276,7 @@ TEST_CASE("stdlib surface metadata resolves collection helper member tokens") {
   CHECK(primec::resolveStdlibSurfaceMemberName(*mapMetadata, "MapInsertRef").empty());
 
   const auto *soaMetadata =
-      primec::findStdlibSurfaceMetadata(primec::StdlibSurfaceId::CollectionsSoaVectorHelpers);
+      primec::findStdlibSurfaceMetadata(primec::StdlibSurfaceId::CollectionsSoaHelpers);
   REQUIRE(soaMetadata != nullptr);
   CHECK(primec::resolveStdlibSurfaceMemberName(*soaMetadata, "/std/collections/soa/count") ==
         "count");
@@ -1290,7 +1290,7 @@ TEST_CASE("stdlib surface metadata resolves collection helper member tokens") {
         "to_aos");
 
   const auto *soaCtorMetadata =
-      primec::findStdlibSurfaceMetadata(primec::StdlibSurfaceId::CollectionsSoaVectorConstructors);
+      primec::findStdlibSurfaceMetadata(primec::StdlibSurfaceId::CollectionsSoaConstructors);
   REQUIRE(soaCtorMetadata != nullptr);
   CHECK(primec::resolveStdlibSurfaceMemberName(*soaCtorMetadata, "/std/collections/soa/soa") ==
         "soa");
@@ -1304,7 +1304,7 @@ TEST_CASE("stdlib surface metadata classifies collection helper categories") {
   CHECK(primec::isStdlibSurfaceMemberName(
       primec::StdlibSurfaceId::CollectionsMapHelpers, "tryAt_ref"));
   CHECK(primec::isStdlibSurfaceMemberName(
-      primec::StdlibSurfaceId::CollectionsSoaVectorHelpers, "ref_ref"));
+      primec::StdlibSurfaceId::CollectionsSoaHelpers, "ref_ref"));
   CHECK_FALSE(primec::isStdlibSurfaceMemberName(
       primec::StdlibSurfaceId::CollectionsVectorHelperSurface, "insert"));
 
@@ -1930,7 +1930,8 @@ main() {
 TEST_CASE("bare soa_vector count helper lowers through wrapper return routing compatibility") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1962,7 +1963,8 @@ main() {
 TEST_CASE("nested struct-body soa_vector constructor-bearing helper returns lower through direct and bound expressions compatibility") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2000,7 +2002,8 @@ main() {
 TEST_CASE("bare soa_vector get helper lowers through wrapper return routing compatibility") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2461,7 +2464,8 @@ main() {
 TEST_CASE("canonical experimental wrapper to_aos slash-method lowers successfully") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2490,8 +2494,10 @@ main() {
 TEST_CASE("borrowed helper-return experimental wrapper lowers through conversion helper") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2531,8 +2537,10 @@ main() {
 TEST_CASE("borrowed helper-return experimental wrapper bare conversion alias lowers through generic wildcard import") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {

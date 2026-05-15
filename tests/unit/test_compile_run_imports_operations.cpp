@@ -215,7 +215,7 @@ main() {
   CHECK(runCommand(runCmd) == 27);
 }
 
-TEST_CASE("compiles and runs experimental soa_vector stdlib helpers in C++ emitter") {
+TEST_CASE("rejects experimental soa_vector stdlib helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -231,17 +231,20 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_experimental_soa_vector_helpers_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_experimental_soa_vector_helpers_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_experimental_soa_vector_helpers_exe_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "direct import of retired soa_vector compatibility modules is not supported; use /std/collections/soa/*") !=
+        std::string::npos);
 }
 
-TEST_CASE("compiles and runs experimental soa_vector stdlib non-empty helper in C++ emitter") {
+TEST_CASE("rejects raw soa_vector type spelling in C++ emitter") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
 
 [struct reflect]
 Particle() {
@@ -250,18 +253,19 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
-  [Particle] value{soaVectorGet<Particle>(values, 0i32)}
-  return(plus(soaVectorCount<Particle>(values), value.x))
+  [soa_vector<Particle>] values{soa<Particle>()}
+  return(count(values))
 }
 )";
-  const std::string srcPath = writeTemp("compile_experimental_soa_vector_single_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_experimental_soa_vector_single_exe").string();
+  const std::string srcPath = writeTemp("compile_raw_soa_vector_type_reject_exe.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_raw_soa_vector_type_reject_exe_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 8);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("soa_vector<T> is not supported; use soa<T>") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles and runs public soa count helper on public wrapper in C++ emitter") {
@@ -525,7 +529,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("legacy soa_vector compatibility helpers run without experimental imports in C++ emitter") {
+TEST_CASE("legacy soa_vector compatibility helpers reject in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa_vector/*
@@ -551,13 +555,16 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_wildcard_legacy_soa_vector_compatibility_helpers_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_wildcard_legacy_soa_vector_compatibility_helpers_exe")
+  const std::string errPath =
+      (testScratchPath("") / "primec_wildcard_legacy_soa_vector_compatibility_helpers_err.txt")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 17);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "direct import of retired soa_vector compatibility modules is not supported; use /std/collections/soa/*") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects graph-solved direct local-auto vector helper shadows in C++ emitter compatibility") {
@@ -592,7 +599,8 @@ main() {
 TEST_CASE(
     "rejects experimental soa_vector stdlib wide structs on pending width boundary across imported/direct/helper-return forms in C++ emitter") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle17() {
@@ -670,7 +678,8 @@ runHelperReturn() {
 TEST_CASE("rejects experimental soa_vector stdlib from-aos helper in C++ emitter before typed bindings support") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -728,8 +737,10 @@ main() {
 TEST_CASE("runs experimental soa_vector stdlib to-aos helper in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -754,8 +765,10 @@ main() {
 TEST_CASE("runs experimental soa_vector stdlib to-aos method on wrapper surface in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -830,7 +843,7 @@ main() {
 TEST_CASE("no-import root soa_vector canonical to_aos_ref helper form runs empty builtin soa_vector contract in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/soa_vector/*
+import /std/collections/soa/*
 
 [struct reflect]
 Particle() {
@@ -856,7 +869,8 @@ main() {
 TEST_CASE("experimental SoaVector canonical to_aos_ref helper form runs in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -883,7 +897,8 @@ TEST_CASE(
     "direct experimental soaVectorToAos helpers on builtin soa_vector reject in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -935,8 +950,10 @@ runRef() {
 TEST_CASE("runs experimental soa_vector stdlib non-empty to-aos helper in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -961,8 +978,10 @@ main() {
 TEST_CASE("runs experimental soa_vector stdlib non-empty to-aos method on wrapper state in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -986,7 +1005,8 @@ main() {
 
 TEST_CASE("compiles and runs experimental soa_vector stdlib get helper in C++ emitter") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1011,7 +1031,8 @@ main() {
 
 TEST_CASE("compiles and runs experimental soa_vector stdlib get method in C++ emitter") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1037,7 +1058,8 @@ main() {
 TEST_CASE("compiles and runs bare soa_vector get helper through helper return in C++ emitter compatibility") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1069,7 +1091,8 @@ main() {
 TEST_CASE("runs global helper-return soa_vector method shadows in C++ emitter compatibility") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1128,7 +1151,8 @@ main() {
 TEST_CASE("runs method-like helper-return soa_vector method shadows in C++ emitter compatibility") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1275,7 +1299,8 @@ main() {
 
 TEST_CASE("compiles nested struct-body soa_vector constructor-bearing helper returns in C++ emitter compatibility") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1308,7 +1333,8 @@ main() {
 TEST_CASE("compiles nested struct-body soa_vector direct and bound helper expressions in C++ emitter compatibility") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1345,7 +1371,8 @@ main() {
 TEST_CASE("compiles nested struct-body soa_vector method shadows in C++ emitter compatibility") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1417,7 +1444,8 @@ main() {
 TEST_CASE("compiles and runs explicit method-like helper-return experimental soa_vector to_aos shadow in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1461,7 +1489,8 @@ main() {
 
 TEST_CASE("compiles and runs experimental soa_vector stdlib ref helper in C++ emitter") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1485,7 +1514,8 @@ main() {
 
 TEST_CASE("compiles and runs experimental soa_vector stdlib ref method in C++ emitter") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1509,7 +1539,8 @@ main() {
 
 TEST_CASE("compiles and runs experimental soa_vector ref pass-through and return in C++ emitter") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1544,7 +1575,8 @@ main() {
 
 TEST_CASE("compiles and runs experimental soa_vector stdlib push and reserve helpers in C++ emitter") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1572,7 +1604,8 @@ main() {
 
 TEST_CASE("compiles and runs experimental soa_vector stdlib push and reserve methods in C++ emitter") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1600,7 +1633,8 @@ main() {
 
 TEST_CASE("compiles and runs experimental soa_vector single-field index syntax in C++ emitter") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 ScalarBox() {
@@ -1626,7 +1660,8 @@ main() {
 
 TEST_CASE("compiles and runs experimental soa_vector reflected multi-field index syntax in C++ emitter") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1653,7 +1688,8 @@ main() {
 TEST_CASE("compiles and runs experimental soa_vector mutating indexed field writes in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1689,7 +1725,8 @@ main() {
 
 TEST_CASE("compiles and runs richer borrowed experimental soa_vector mutating indexed field writes in C++ emitter") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1728,7 +1765,8 @@ main() {
 
 TEST_CASE("compiles and runs method-like borrowed experimental soa_vector mutating indexed field writes in C++ emitter") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1777,7 +1815,8 @@ main() {
 
 TEST_CASE("compiles and runs borrowed experimental soa_vector reflected index syntax in C++ emitter") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1805,7 +1844,8 @@ main() {
 
 TEST_CASE("compiles and runs borrowed local experimental soa_vector reflected index syntax in C++ emitter") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1833,7 +1873,8 @@ main() {
 
 TEST_CASE("compiles and runs borrowed helper-return experimental soa_vector reflected index syntax in C++ emitter") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1866,7 +1907,8 @@ main() {
 TEST_CASE("compiles and runs experimental soa_vector bare get and ref field access in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1893,7 +1935,8 @@ main() {
 
 TEST_CASE("compiles and runs experimental soa_vector reflected call-form index syntax in C++ emitter") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1938,7 +1981,8 @@ main() {
 
 TEST_CASE("compiles and runs experimental soa_vector inline location borrow index syntax in C++ emitter") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -1977,7 +2021,8 @@ main() {
 
 TEST_CASE("compiles and runs dereferenced borrowed helper-return experimental soa_vector reflected index syntax in C++ emitter") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2012,7 +2057,8 @@ main() {
 TEST_CASE("compiles and runs borrowed helper-return experimental soa_vector get/ref methods in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2046,7 +2092,8 @@ main() {
 TEST_CASE("compiles and runs borrowed helper-return soa_vector ref_ref same-path helper in C++ emitter compatibility") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2133,7 +2180,8 @@ main() {
 TEST_CASE("compiles and runs helper-return experimental soa_vector method shadows in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2185,8 +2233,10 @@ main() {
 TEST_CASE("compiles helper-return soa_vector shadows with explicit canonical fallbacks in C++ emitter compatibility") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2264,8 +2314,10 @@ main() {
 TEST_CASE("compiles and runs borrowed local experimental soa_vector read-only methods in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2303,8 +2355,10 @@ main() {
 TEST_CASE("compiles and runs inline location experimental soa_vector read-only methods in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2343,8 +2397,10 @@ main() {
 TEST_CASE("compiles and runs borrowed helper-return experimental soa_vector helper surfaces in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2386,7 +2442,8 @@ main() {
 TEST_CASE("compiles and runs method-like borrowed helper-return experimental soa_vector helper surfaces in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -2438,8 +2495,10 @@ main() {
 TEST_CASE("compiles and runs direct return borrowed helper-return experimental soa_vector reads in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2483,8 +2542,10 @@ main() {
 TEST_CASE("compiles and runs direct return method-like borrowed helper-return experimental soa_vector reads in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2532,8 +2593,10 @@ main() {
 TEST_CASE("compiles and runs direct return inline location borrowed helper-return experimental soa_vector reads in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2577,8 +2640,10 @@ main() {
 TEST_CASE("compiles and runs inline location method-like borrowed helper-return experimental soa_vector helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2650,8 +2715,10 @@ main() {
 TEST_CASE("compiles and runs direct return inline location method-like borrowed helper-return experimental soa_vector reads in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -2699,8 +2766,10 @@ main() {
 TEST_CASE("compiles and runs inline location borrowed helper-return experimental soa_vector helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector_conversions/*
 
 [struct reflect]
 Particle() {

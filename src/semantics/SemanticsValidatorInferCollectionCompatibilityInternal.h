@@ -565,6 +565,25 @@ legacyExperimentalVectorCompatibilityShorthandTypeText(
          "* is not supported; use /std/collections/map/*";
 }
 
+[[maybe_unused]] bool isDirectRemovedSoaCompatibilityImportPath(
+    std::string_view importPath) {
+  auto matchesRoot = [&](std::string_view root) {
+    return importPath == root || importPath == std::string(root) + "/*" ||
+           (importPath.size() > root.size() &&
+            importPath.rfind(root, 0) == 0 &&
+            importPath[root.size()] == '/');
+  };
+  return matchesRoot("/std/collections/soa_vector") ||
+         matchesRoot("/std/collections/soa_vector_conversions") ||
+         matchesRoot("/std/collections/experimental_soa_vector") ||
+         matchesRoot("/std/collections/experimental_soa_vector_conversions");
+}
+
+[[maybe_unused]] std::string directRemovedSoaCompatibilityImportDiagnostic() {
+  return "direct import of retired soa_vector compatibility modules is not "
+         "supported; use /std/collections/soa/*";
+}
+
 [[maybe_unused]] bool resolveExplicitPublishedMapHelperExprMemberName(
     std::string_view rawMethodName,
     std::string_view namespacePrefix,

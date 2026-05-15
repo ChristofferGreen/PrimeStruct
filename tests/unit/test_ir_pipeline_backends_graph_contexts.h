@@ -1450,7 +1450,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irCallResolution.find("StdlibSurfaceId::CollectionsMapHelpers") !=
         std::string::npos);
-  CHECK(irCallResolution.find("StdlibSurfaceId::CollectionsSoaVectorHelpers") !=
+  CHECK(irCallResolution.find("StdlibSurfaceId::CollectionsSoaHelpers") !=
         std::string::npos);
   CHECK(irCallResolution.find("const std::string resolvedPath = resolveCallPathFromPublishedLookups(expr, semanticProgram);") !=
         std::string::npos);

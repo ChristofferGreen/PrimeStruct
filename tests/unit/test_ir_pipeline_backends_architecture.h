@@ -133,7 +133,7 @@ TEST_CASE("design doc records soa public collection contract") {
   CHECK(design.find("/std/collections/soa_vector/*") != std::string::npos);
   CHECK(design.find("**Stdlib-owned surface metadata:** canonical `soa`") !=
         std::string::npos);
-  CHECK(design.find("Accepted compatibility namespace") != std::string::npos);
+  CHECK(design.find("Rejected compatibility namespace") != std::string::npos);
   CHECK(design.find("/std/collections/experimental_soa_vector/*") != std::string::npos);
   CHECK(design.find("/std/collections/internal_soa_storage/*") != std::string::npos);
 }
@@ -305,8 +305,8 @@ TEST_CASE("stdlib surface registry stays source locked") {
             "compatibility_spelling = /std/collections/experimental_map/mapOct") ==
         std::string::npos);
 
-  CHECK(source.find("StdlibSurfaceId::CollectionsSoaVectorHelpers") != std::string::npos);
-  CHECK(source.find("\"collections.soa_vector_helpers\"") == std::string::npos);
+  CHECK(source.find("StdlibSurfaceId::CollectionsSoaHelpers") != std::string::npos);
+  CHECK(source.find("\"collections.soa_helpers\"") == std::string::npos);
   CHECK(source.find("\"/std/collections/soa\"") == std::string::npos);
   CHECK(source.find("\"/std/collections/soa_vector\"") == std::string::npos);
   CHECK(source.find("\"field_view\"") == std::string::npos);
@@ -317,39 +317,39 @@ TEST_CASE("stdlib surface registry stays source locked") {
         std::string::npos);
   CHECK(source.find("\"/std/collections/experimental_soa_vector_conversions/soaVectorToAos\"") ==
         std::string::npos);
-  CHECK(collectionManifest.find("id = CollectionsSoaVectorHelpers") != std::string::npos);
-  CHECK(collectionManifest.find("bridge_key = collections.soa_vector_helpers") !=
+  CHECK(collectionManifest.find("id = CollectionsSoaHelpers") != std::string::npos);
+  CHECK(collectionManifest.find("bridge_key = collections.soa_helpers") !=
         std::string::npos);
   CHECK(collectionManifest.find("import_alias_spelling = /std/collections/soa") !=
         std::string::npos);
   CHECK(collectionManifest.find("lowering_spelling = /std/collections/soa/field_view") !=
         std::string::npos);
-  CHECK(collectionManifest.find("compatibility_spelling = /soa_vector/to_aos") !=
+  CHECK(collectionManifest.find("compatibility_spelling = /soa_vector/to_aos") ==
         std::string::npos);
-  CHECK(collectionManifest.find("member_alias = soaVectorGetRef -> get_ref") !=
+  CHECK(collectionManifest.find("member_alias = soaVectorGetRef -> get_ref") ==
         std::string::npos);
   CHECK(collectionManifest.find(
-            "compatibility_spelling = /std/collections/experimental_soa_vector/soaVectorPush") !=
+            "compatibility_spelling = /std/collections/experimental_soa_vector/soaVectorPush") ==
         std::string::npos);
   CHECK(collectionManifest.find(
             "compatibility_spelling = "
-            "/std/collections/experimental_soa_vector_conversions/soaVectorToAos") !=
+            "/std/collections/experimental_soa_vector_conversions/soaVectorToAos") ==
         std::string::npos);
 
-  CHECK(source.find("StdlibSurfaceId::CollectionsSoaVectorConstructors") !=
+  CHECK(source.find("StdlibSurfaceId::CollectionsSoaConstructors") !=
         std::string::npos);
-  CHECK(source.find("\"collections.soa_vector_constructors\"") == std::string::npos);
+  CHECK(source.find("\"collections.soa_constructors\"") == std::string::npos);
   CHECK(source.find("\"/std/collections/soa_vector/soa_vector\"") == std::string::npos);
   CHECK(source.find("\"/std/collections/experimental_soa_vector/soaVectorNew\"") ==
         std::string::npos);
-  CHECK(collectionManifest.find("id = CollectionsSoaVectorConstructors") !=
+  CHECK(collectionManifest.find("id = CollectionsSoaConstructors") !=
         std::string::npos);
-  CHECK(collectionManifest.find("bridge_key = collections.soa_vector_constructors") !=
+  CHECK(collectionManifest.find("bridge_key = collections.soa_constructors") !=
         std::string::npos);
   CHECK(collectionManifest.find("lowering_spelling = /std/collections/soa/soa") !=
         std::string::npos);
   CHECK(collectionManifest.find(
-            "compatibility_spelling = /std/collections/experimental_soa_vector/soaVectorNew") !=
+            "compatibility_spelling = /std/collections/experimental_soa_vector/soaVectorNew") ==
         std::string::npos);
 
   CHECK(source.find("StdlibSurfaceId::CollectionsContainerErrorHelpers") != std::string::npos);
@@ -432,36 +432,36 @@ TEST_CASE("collection helper surface registry resolves preferred compatibility s
             "/not_map/count",
             "/std/collections/experimental_map/") == "");
   CHECK(primec::stdlibSurfacePreferredSpellingForMember(
-            primec::StdlibSurfaceId::CollectionsSoaVectorHelpers,
+            primec::StdlibSurfaceId::CollectionsSoaHelpers,
             "/std/collections/soa_vector/count",
             "/std/collections/experimental_soa_vector/") ==
-        "/std/collections/experimental_soa_vector/soaVectorCount");
+        "");
   CHECK(primec::stdlibSurfacePreferredSpellingForMember(
-            primec::StdlibSurfaceId::CollectionsSoaVectorHelpers,
+            primec::StdlibSurfaceId::CollectionsSoaHelpers,
             "/std/collections/soa/count",
             "/std/collections/experimental_soa_vector/") ==
-        "/std/collections/experimental_soa_vector/soaVectorCount");
+        "");
   CHECK(primec::stdlibSurfacePreferredSpellingForMember(
-            primec::StdlibSurfaceId::CollectionsSoaVectorHelpers,
+            primec::StdlibSurfaceId::CollectionsSoaHelpers,
             "/std/collections/count",
             "/std/collections/experimental_soa_vector/") ==
-        "/std/collections/experimental_soa_vector/soaVectorCount");
+        "");
   CHECK(primec::stdlibSurfacePreferredSpellingForMember(
-            primec::StdlibSurfaceId::CollectionsSoaVectorHelpers,
+            primec::StdlibSurfaceId::CollectionsSoaHelpers,
             "/soa_vector/push",
             "/std/collections/experimental_soa_vector/") ==
-        "/std/collections/experimental_soa_vector/soaVectorPush");
+        "");
   CHECK(primec::stdlibSurfacePreferredSpellingForMember(
-            primec::StdlibSurfaceId::CollectionsSoaVectorHelpers,
+            primec::StdlibSurfaceId::CollectionsSoaHelpers,
             "/std/collections/soa_vector/to_aos",
             "/std/collections/experimental_soa_vector_conversions/") ==
-        "/std/collections/experimental_soa_vector_conversions/soaVectorToAos");
+        "");
   CHECK(primec::stdlibSurfaceCanonicalHelperPath(
-            primec::StdlibSurfaceId::CollectionsSoaVectorHelpers,
+            primec::StdlibSurfaceId::CollectionsSoaHelpers,
             "/std/collections/experimental_soa_vector/soaVectorGetRef") ==
-        "/std/collections/soa_vector/get_ref");
+        "");
   CHECK(primec::stdlibSurfacePreferredSpellingForMember(
-            primec::StdlibSurfaceId::CollectionsSoaVectorHelpers,
+            primec::StdlibSurfaceId::CollectionsSoaHelpers,
             "/not_soa/count",
             "/std/collections/experimental_soa_vector/") == "");
   CHECK(primec::stdlibSurfaceCanonicalHelperPath(

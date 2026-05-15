@@ -526,7 +526,7 @@ Bottom-level form therefore has:
   downstream `buffer_load(dereference(...), ...)` and `buffer_store(dereference(...), ...)` on that same IR/VM GPU
   path, and `array<T>`, `Reference<array<T>>`, `Pointer<array<T>>`, `vector<T>`, `Reference<vector<T>>`,
   `Pointer<vector<T>>`,
-  empty/header-only `soa_vector<T>`, `Reference<soa_vector<T>>`, `Pointer<soa_vector<T>>`, `map<K, V>`,
+  empty/header-only `soa<T>`, `Reference<soa<T>>`, `Pointer<soa<T>>`, `map<K, V>`,
   `Reference<map<K, V>>`, plus `Pointer<map<K, V>>`
   packs preserve indexed downstream `count()` resolution across those
   same forwarding modes, `vector<T>` packs also preserve indexed downstream `capacity()` plus statement-mutator
@@ -1133,7 +1133,7 @@ Architectural direction for type ownership:
 - `vector<T>` and `map<K, V>` remain portable surface envelopes today, but their public constructor/helper behavior
   should converge on stdlib `.prime` implementations over generic substrate.
 - `soa<T>` is the promoted stdlib-owned public collection surface over generic
-  SoA substrate. `soa_vector<T>` remains accepted compatibility.
+  SoA substrate. `soa_vector<T>` is a rejected compatibility spelling.
 - `Maybe<T>` is stdlib-owned, imported `Result<Error>` and value-carrying `Result<T, Error>` construction have stdlib
   sum surfaces, and legacy source C++ emitter `Result` helpers, `File<Mode>`, `Buffer<T>`, and `/std/gfx/*` remain
   hybrid surfaces with minimal builtin/runtime substrate.
@@ -1213,9 +1213,9 @@ The target implementation model is a stdlib `.prime` container on top of
 generic SoA substrate; `soa` should not remain a permanent compiler-owned
 collection. The current public spelling is the canonical
 `/std/collections/soa/*` surface. The old `soa_vector<T>`,
-`/std/collections/soa_vector/*`, and
-`/std/collections/soa_vector_conversions/*` spellings remain compatibility
-coverage for targeted tests rather than ordinary public imports.
+`/std/collections/soa_vector/*`,
+`/std/collections/soa_vector_conversions/*`, rooted `/soa_vector/*`, and
+direct experimental SoA imports are rejected compatibility spellings.
 
 Generic SoA substrate remains separate from that public collection surface:
 field-layout/codegen/introspection, generated `SoaSchema*` metadata,
@@ -1246,342 +1246,24 @@ Draft constraints:
     surfaces do not create a new ownership domain.
   - ECS-style updates should use a two-phase loop: stable-size read/update pass, then deferred structural writes.
 
-Current implementation status: parser/text-transform support accepts surface `soa<T>`/`soa_vector<T>` type spellings,
-including `soa_vector<T>{...}`/`soa_vector<T>[...]` compatibility syntax, and semantic validation now accepts
-`soa`/`soa_vector` usage when constraints hold
-(`soa`/`soa_vector` struct element requirement, literal/return template-arity checks, and deterministic
-`soa_vector field envelope is unsupported on /Type/field/...: ...` diagnostics for disallowed direct/nested
-element-field envelopes in literal, binding, and return validation paths). Builtin `count`/`get`/`ref` validation and
-current lowering behavior are temporary scaffolding while the language grows the generic SoA substrate needed for a
-real stdlib-owned implementation. Method-form/call-form field-view names now route through the shared
-`/soa_vector/field_view/<field>` helper path onto `soaVectorFieldView<Struct, Field>` (or a same-path user helper
-when visible), returning `SoaFieldView` values that can be bound with a tracked borrow root; direct builtin
-field-view call-argument/return escapes remain deterministic `field-view escapes ...` diagnostics while current IR lowering routes
-`count(...)` on SoA bindings through the native count path for current SoA bindings
-while empty `soa<T>`/`soa_vector<T>` literals lower to header-only storage. The stdlib wrapper/helper surface now also covers
-direct canonical `/std/collections/soa/*` helper calls plus imported wrapper `to_aos` helper/method routing
-across C++/native/VM; canonical conversion helpers use `SoaVector<T>` and
-`Reference<SoaVector<T>>` receiver spellings while routing through canonical
-`/std/collections/soa_vector/*` helper paths. Valid root bare/method/old-explicit
-`count`/`get`/`ref` plus bare/direct/method `to_aos`
-calls on builtin `soa_vector<T>` bindings now rewrite onto that same canonical helper path unless a visible
-old-surface user helper shadows them. Imported root bare/direct/method builtin `to_aos` forms now also clear
-semantics on that same canonical helper path instead of resolving directly against the experimental wrapper
-conversion helper. Valid root bare/method/old-explicit `push`/`reserve` calls on builtin
-`soa_vector<T>` bindings now also rewrite onto `/std/collections/soa_vector/push|reserve` unless a visible
-old-surface user helper shadows them, and old-explicit builtin mutator spellings now also share the same remaining
-`push|reserve requires mutable vector binding` lowerer contract on builtin `soa_vector<T>` receivers instead of
-falling through to the generic unsupported-expression-call rejection. Builtin `ref(...)` currently rejects direct,
-old-explicit, and helper-return local binding persistence plus call-argument and call-form/method-form return escapes
-with `unknown method: /std/collections/soa_vector/ref` until the borrowed-view substrate exists.
-Imported raw-builtin bare/method canonical `count/get/ref/push/reserve` forms now also clear semantics on that same
-canonical helper surface, imported method `get(...).field` / `ref(...).field` now resolves the element struct before
-lowering, and imported method `push/reserve` now also reaches the same canonical wrapper-mismatch boundary instead of
-the older mutable-vector-binding gap. Root and imported builtin bare/direct `to_aos` forms on raw `soa_vector<T>`
-bindings now also lower through the canonical stdlib shim instead of stopping on the earlier builtin-to-wrapper
-parameter mismatch, and imported plus no-import root builtin bare/direct/method/slash-method `to_aos` now
-materialize `/std/collections/soa_vector/to_aos__...` before lowering. Representative wildcard canonical
-helper/conversion coverage now runs across C++ emitter, VM, and native without direct experimental SoA imports in the
-test source.
-The fixed-width `.prime` SoA storage substrate now reaches sixteen columns. Reflected structs can now generate
-`SoaSchemaFieldCount`, `SoaSchemaFieldName`, `SoaSchemaFieldType`, and `SoaSchemaFieldVisibility` helpers to bridge the
-current constant-index metadata boundary, and can now also generate `SoaSchemaChunkCount`,
-`SoaSchemaChunkFieldStart`, and `SoaSchemaChunkFieldCount` helpers that group those flat field lists into deterministic
-sixteen-column storage chunks. They can now also generate `/Type/SoaSchemaStorage`,
-`/Type/SoaSchemaStorageNew()`, `/Type/SoaSchemaStorageCount(...)`, `/Type/SoaSchemaStorageCapacity(...)`,
-`/Type/SoaSchemaStorageReserve(...)`, `/Type/SoaSchemaStorageClear(...)`, and `/Type/SoaSchemaStorage/Destroy()`
-so reflected schemas have deterministic chunked allocation, grow/realloc, explicit clear, and implicit free/drop
-cleanup on top of that fixed-width substrate.
-Helper-return builtin bare/method `count/get/ref` reads on global and explicit `/Type/helper` receivers now also clear
-semantics on that same canonical surface instead of degrading to `does not accept template arguments`, and
-helper-return bare/method `push/reserve` local binding plus call-argument and direct-return escapes on those same
-receivers now preserve same-path `/soa_vector/push|reserve` helpers instead of degrading to builtin statement-only
-semantics or synthetic non-templated-definition template-argument errors.
-Vector-target wrong-receiver bare/method `count/get/ref` calls, plus old-explicit method
-`count/get/ref`, now also preserve visible same-path
-`/soa_vector/count|get|ref` user helpers instead of being pinned to the builtin `soa_vector`
-target-mismatch path.
-Vector-target root bare/method/old-explicit `get`/`ref` misuses now also keep the same canonical
-`/std/collections/soa_vector/get` and `/std/collections/soa_vector/ref` reject contracts instead of the old builtin
-`get requires soa_vector target` / `ref requires soa_vector target` diagnostics. Visible vector-target same-path
-`/soa_vector/push|reserve` helper shadows now also preserve plain method forms, and old-explicit slash-method forms
-rewrite to direct `/soa_vector/push(values, ...)` / `/soa_vector/reserve(values, ...)` calls instead of degrading to
-`unknown call target: /std/collections/soa_vector/push`. Vector-target root bare/direct/method
-`to_aos` misuses now also keep that same canonical
-`/std/collections/soa_vector/to_aos` reject contract instead of the old builtin `to_aos requires soa_vector target`
-diagnostic, while visible same-path `/to_aos` user helpers now still win on vector-target wrong-receiver forms
-through semantics and dump rewriting. Numeric builtin-vector helper-shadow cases also clear lowering and run across
-C++/native/VM now, so those paths no longer depend on the old builtin conversion scaffolding even though the separate
-struct-vector literal/runtime boundary still remains outside that helper-routing slice.
-Explicit canonical
-experimental-wrapper slash-method `values./std/collections/soa_vector/to_aos()` now also validates on that same
-canonical helper path and reaches the current lowerer `struct parameter type mismatch` boundary instead of
-degrading to an unknown wrapper-method path. Inline lowering also
-no longer keeps a dedicated builtin `soa_vector` count/get/ref helper bridge, instead using the shared
-definition-resolution plus count/access fallback path for those helper shapes, and the old
-backend-specific root builtin `soa_vector` `push|reserve` rejection path is gone too. Lowerer
-count/access classifier fallback also no longer treats raw `/soa_vector/count` as a builtin count alias once
-semantics has canonicalized those old-surface forms earlier in validation, and the remaining
-inferred/method fallback resolution for builtin `soa_vector` count receivers now prefers the
-canonical `/std/collections/soa_vector/count` helper path while still preserving same-path
-`/soa_vector/count` user-helper shadowing on helper-return receivers, and bare helper-return
-`count(...)` local binding, call-argument, and direct return escapes now also preserve that
-same-path helper shadow instead of degrading to a synthetic template-argument error. Bare wildcard-imported
-helper names on helper-return builtin `soa_vector` receivers now also canonicalize from the
-receiver family before experimental wrapper rewriting, so `count(holder.cloneValues())` and
-`get(holder.cloneValues(), i).field` stay on the canonical helper surface instead of leaking
-through unresolved root helper names. Helper-return expression-position bare and method
-`push(...)` / `reserve(...)` now also preserve same-path `/soa_vector/push` and
-`/soa_vector/reserve` user-helper shadowing instead of degrading to the old builtin
-statement-only mutator contract. Helper-return experimental-wrapper method
-`count/get/ref/push/reserve` now also rewrites to visible same-path `/soa_vector/*` helpers
-before validation/lowering on both global helper-return and explicit `/Type/helper`
-method-like struct-helper return receivers instead of leaking through wrapper methods in
-compile-run paths. Nested struct-body helper returns that materialize wrapper values through
-`return(soaVectorSingle<Particle>(Particle{...}))` now also clear that same direct/bound
-helper/conversion substrate plus same-path `/soa_vector/*` and `/to_aos` helper-shadow method
-surfaces instead of failing during specialization or later expression lowering. The equivalent
-helper-return method/infer fallback for builtin `soa_vector` `get` receivers now also prefers
-the canonical `/std/collections/soa_vector/get` helper path while still preserving same-path
-`/soa_vector/get` user-helper shadowing, helper-return builtin bare/method `get(...)` reads on
-global and explicit `/Type/helper` receivers now also clear semantics on that same canonical
-surface instead of degrading to `get does not accept template arguments`, and bare helper-return
-`get(...)` local binding, call-argument, and direct return escapes now also preserve that
-same-path helper shadow instead of degrading to a synthetic template-argument error. The equivalent helper-return method/infer fallback for
-builtin `soa_vector` `ref` receivers now also prefers the canonical
-`/std/collections/soa_vector/ref` helper path while still preserving same-path
-`/soa_vector/ref` user-helper shadowing. Read-only helper-return builtin `ref(...).field`
-reads on global and explicit `/Type/helper` receivers now also clear semantics on that same
-canonical surface instead of degrading to `ref does not accept template arguments`. Local `auto` inference on builtin and helper-return
-`ref(...)` method sugar now also respects that same-path helper return type instead of collapsing
-to the builtin element type, bare helper-return `ref(...)` local binding, call-argument, and
-direct return escapes now also preserve that same-path helper shadow instead of degrading to a
-synthetic template-argument error, and builtin borrowed-view recognizers in initializer and monomorph
-handling now accept that canonical resolved helper path too. The equivalent
-helper-return method/infer fallback for builtin `soa_vector` `to_aos` receivers now also
-prefers the canonical `/std/collections/soa_vector/to_aos` helper path, and vector-result
-recognizers now accept that canonical resolved helper path too. Same-path `/to_aos`
-user-helper shadowing now also survives helper-return builtin `to_aos` bare, direct-call,
-method, and infer fallback instead of canonicalizing early onto the canonical helper path.
-Experimental wrapper helper-return `to_aos()` method
-rewrites now also stop short of forcing `soaVectorToAos(...)` when a same-path `/to_aos`
-helper is visible, and that helper-preserving rewrite now also covers explicit `/Type/helper`
-method-like wrapper receivers instead of leaving `holder.cloneValues().to_aos()` on the raw
-wrapper-method path. Lowerer-side count target classification now also treats
-direct canonical `/std/collections/soa_vector/to_aos` call results as vector targets for nested
-count dispatch instead of depending on the old raw `/to_aos` call shape. C++ emitter
-vector-target classification now also treats those same direct canonical
-`/std/collections/soa_vector/to_aos` call results as vector targets for nested helper dispatch
-instead of depending on bound vector temporaries, and the shared native/VM vector-capacity
-classifier now does the same for nested backend helper dispatch. Those backend-side classifier
-checks now share one generic AST call-path helper instead of each backend file carrying its own
-`soa_vector/to_aos` matcher. Imported and no-import root bare/direct/method/slash-method
-builtin `to_aos` forms on raw `soa_vector<T>` bindings therefore now reach the same canonical
-semantic rewrite, materialize `/std/collections/soa_vector/to_aos__...`, and clear lowering plus
-C++/VM/native execution on that bridged conversion path. Representative wildcard canonical
-helper/conversion flows now also run on those three entrypoints without direct experimental SoA imports. The remaining raw-builtin
-conversion-specific compiler-owned code is now reduced to invalid-target/user-shadow fallback
-handling instead of a native runtime trap. The diagnostic harness now also locks both direct-canonical and
-imported-helper experimental-wrapper `to_aos` forms to that same canonical helper path at
-`ast-semantic`, so helper-call/conversion diagnostic cleanup is complete and the remaining SoA work is now richer
-field-view behavior rather than more runtime/diagnostic special-case removal.
-The shared compiler helper path for `/soa_vector/field_view/<field>` now routes
-through `soaVectorFieldView<Struct, Field>` and returns a strided
-`SoaFieldView<Field>` value. Standalone method-form and call-form field-view
-access on direct locals, borrowed locals, helper-return receivers, method-like
-struct-helper return receivers, and inline `location(...)`-wrapped variants now
-validate through that shared helper path instead of stopping on the old pending
-diagnostic. Mutating standalone method/call writes such as
-`assign(value.field(), next)` now lower through `soaVectorFieldView(...)` plus
-`soaFieldViewRef<T>(..., 0)` dereference writes on the same helper path, while
-indexed and explicit borrowed-slot writes such as `assign(value.field()[i], next)`,
-`assign(ref(value, i).field, next)`, and `assign(value.ref(i).field, next)` still
-lower through the existing `soaVectorRef<T>(..., i).field` substrate. Borrowed
-`Reference<SoaVector<T>>` read-only method sugar `borrowed.get(i)`,
-`borrowed.ref(i)`, and `borrowed.to_aos()` plus bare helper forms
-`count(...)`, `get(...)`, `ref(...)`, and `to_aos(...)` now also validate on the
-existing wrapper helper/conversion path for local, parameter, helper-return,
-inline `location(...)`, inline `dereference(location(...))`, inline
-location-wrapped borrowed helper-return, method-like struct-helper return, and
-inline location-wrapped method-like struct-helper return receivers instead of
-stopping on raw builtin target mismatch or the old helper-return lowerer
-mismatch. The remaining compiler-owned pending cleanup for builtin SoA field
-views now focuses only on the borrowed-view `ref(...)` lifetime rules, not on
-field-view helper routing or assignment plumbing.
-Validator-side fixed unavailable-method rejects now also route through one
-shared visibility-aware helper instead of recomputing the `/soa_vector/ref`
-visibility and pending/unavailable split inline, while validator-side visible
-same-path `/soa_vector/count|get|push|reserve` helper checks plus
-definition-return and collection-return same-path `/soa_vector/<field>`
-helper visibility now also route through that same shared
-definition-visibility helper instead of repeating import/declared probes
-or local same-path wrappers across count/capacity builtin validation,
-SoA builtin validation, method-target, infer-time helper-shadow,
-vector-helper routing, vector-helper same-path `/soa_vector/push|reserve`
-mutator-shadow checks, preferred same-path versus canonical target
-selection in method-target, infer-time, and vector-helper mutator
-routing, return-inference paths, and builtin SoA access/count helper
-fallback validation,
-while collection-return visible same-path `/soa_vector/get|ref` helper
-detection now uses one shared helper-name path instead of split `get` / `ref`
-branches, while preferred
-same-path-versus-canonical `soa_vector`
-helper target selection in method-target, infer-time, vector-helper
-mutator routing, plus builtin `get/ref` call-shape detection in direct
-validation and collection-return inference, plus direct same-path
-`/soa_vector/<helper>` visibility checks in count/builtin/method/vector
-routing, direct field-view helper detection, and return-inference
-helper-shadow probes now all route through shared validator helpers,
-with the remaining vector-target and builtin count/get/ref same-path
-probes now also using shared target helpers instead of direct
-`/soa_vector/count|get|ref` checks,
-with the validator-side direct builtin `ref(...)` visibility split now also
-using that same shared helper-target predicate instead of a hardcoded
-`/soa_vector/ref` probe,
-while monomorph-side visible `/soa_vector/ref` fallback detection now also
-uses that same shared definition-visibility helper directly instead of a
-dedicated ref-specific wrapper or local visibility cache, while
-monomorph-side old-surface `/soa_vector/ref` and `/soa_vector/<field>`
-visibility now also uses direct `sourceDefs` / `helperOverloads` checks
-inside monomorph implicit-template fallback instead of a local helper-target
-probe or a monomorph-local visible-path wrapper, while
-monomorph-side fixed method pending rejects now call
-the shared pending helper directly instead of a monomorph-local wrapper, while
-the remaining validator-side fixed unavailable-method rejects now call
-`soaUnavailableMethodDiagnostic(...)` directly with that same shared `ref`
-helper-target predicate instead of open-coded preferred-target comparisons, while
-direct builtin field-view/ref pending reporters now also route through one
-shared expr-to-path helper and the validator-local direct pending reporter
-wrapper plus the thin `isBuiltinSoaRefExpr(...)` wrapper are gone, while
-monomorph-side visible same-path
-`/soa_vector/<field>` helper checks now also route through that same shared
-definition-visibility helper instead of probing `sourceDefs` and
-`helperOverloads` inline, while monomorph-side fixed method pending rejects
-now also route through one shared visibility-aware helper instead of
-open-coding the optional pending lookup around that same visibility probe, and
-the low-level field-view and
-borrowed-view pending string builders are now
-file-local to the shared helper implementation instead of part of the public
-semantics-helper surface, while direct collection-access, count/capacity
-builtin validation, SoA builtin validation, collection dispatch inference,
-direct access helper routing, and method-target/infer borrowed experimental
-receiver handling now also share one borrowed experimental receiver probe
-end-to-end instead of keeping duplicated inline lambdas, wrapper lambdas, direct receiver
-adapters, or local borrowed-target wrappers, while direct SoA builtin validation now also
-calls that shared borrowed receiver probe directly instead of a local direct-receiver adapter.
-Standalone builtin field-view call
-forms now route through the shared synthetic `/soa_vector/field_view/<field>`
-or same-path `/soa_vector/<field>` path instead of a dedicated
-`SemanticsValidatorExprMapSoaBuiltins.cpp` fallback, and resolved helper-form
-field-view rejects now reuse the shared unavailable-method helper path there
-instead of an inline pending branch. The remaining live
-follow-ups are now reduced to invalidation plus richer borrowed-view semantics on top of that
-substrate. The current completed borrowed foothold now includes direct whole-value `ref(...)`
-values across direct wrapper locals, borrowed locals, explicit `dereference(...)` receivers,
-borrowed helper-return/method-like helper-return receivers, and inline
-`location(...)`-wrapped borrowed receivers in addition to the indexed/field-level borrowed
-projection surface (`ref(...).field`, `.ref(i).field`, and `value.field()[i]`-style
-reads/writes). Those projections are recomputed per use through the existing
-`soaVectorGet(...).field` / `soaVectorRef(...).field` helper path, so later invalidation
-work still starts at standalone borrowed values and standalone borrowed field-view values
-rather than the already-completed per-use projection surface. The next implementation step is therefore after the now-completed
-slot-backed borrowed-value carrier exposure through `soaColumnBorrowSlot<T>(...)` /
-`vectorBorrowSlot<T>(...)`. Those stdlib helpers now validate through `[return<Reference<T>>]`
-with slot-pointer provenance preserved through local `slot` aliases, and public
-`soaColumnRef<T>(...)` plus experimental helper `soaVectorRef<T>(...)` now also preserve that
-standalone borrowed carrier instead of dereferencing back to whole-element `T`, and the shared
-canonical/helper-method route for `ref(values, i)` / `values.ref(i)` now validates through the
-same `Reference<T>` carrier as well. Projected `.ref(i).field` reads/writes already ride the
-existing per-use `soaVectorRef(...).field` rewrite and stay with the later standalone borrowed
-field-view queue rather than this whole-value helper step.
-Read-only wrapper field-view indexing now routes both method-form `values.field()[i]`
-and call-form `field(values)[i]` reflected reads, plus borrowed local `borrowed.field()[i]`,
-inline `location(values).field()[i]` / `field(dereference(location(values)))[i]`,
-explicitly dereferenced borrowed `dereference(borrowed).field()[i]`, borrowed helper-return `pickBorrowed(...).field()[i]`,
-method-like struct-helper return `holder.pickBorrowed(...).field()[i]` / `field(holder.pickBorrowed(...))[i]`,
-inline location-wrapped borrowed helper-return `location(pickBorrowed(...)).field()[i]` / `field(location(pickBorrowed(...)))[i]`,
-inline location-wrapped method-like struct-helper return `location(holder.pickBorrowed(...)).field()[i]` /
-`field(location(holder.pickBorrowed(...)))[i]`,
-and explicitly dereferenced borrowed helper-return
-`dereference(pickBorrowed(...)).field()[i]` reads onto the existing
-`soaVectorGet<T>(..., i).field` helper path for both single-field and multi-field structs.
-Direct bare helper-field reads such as `ref(values, i).field`, `get(values, i).field`,
-method-form helper-field reads such as `values.ref(i).field` / `values.get(i).field`,
-bound method-like helper-return forms such as `[i32] field{get(holder.pickBorrowed(...), i).field}`
-and `[i32] field{holder.pickBorrowed(...).ref(i).field}`,
-and bound inline location-wrapped method-like helper-return forms such as
-`[i32] field{get(location(holder.pickBorrowed(...)), i).field}` and
-`[i32] field{location(holder.pickBorrowed(...)).ref(i).field}` now also ride that same
-generic struct-field path, and that successful read path no
-longer depends on lowerer/emitter/backend-local `field_view` or `soaVectorGet|soaVectorRef`
-routing branches. Direct return/root-expression borrowed helper-return reads such as
-`return(pickBorrowed(...).count())`, `return(pickBorrowed(...).field()[i])`,
-`return(get(pickBorrowed(...), i).field)`, `return(pickBorrowed(...).get(i).field)`,
-`return(pickBorrowed(...).ref(i).field)`, direct return/root-expression method-like borrowed
-helper-return reads such as `return(holder.pickBorrowed(...).count())`,
-`return(holder.pickBorrowed(...).field()[i])`, `return(get(holder.pickBorrowed(...), i).field)`,
-`return(holder.pickBorrowed(...).get(i).field)`, `return(holder.pickBorrowed(...).ref(i).field)`,
-and inline `location(...)`-wrapped variants now route through that same helper/indexing
-substrate. The standalone `ref(...)` receiver families are therefore in place, and those
-whole-value carriers now also survive local binding, helper pass-through, and direct helper
-return surfaces. Live standalone `Reference<T>` carriers now also reject later `push` /
-`reserve` growth on that same wrapper across direct local,
-direct borrowed/dereferenced receiver, helper-return, pass-through, and
-return-rooted surfaces. Standalone borrowed field-view values do not exist yet,
-but once they do they inherit this same invalidation contract from the richer
-field-view design note below. The compiler-owned direct unsupported field-view
-path now remains only for standalone borrowed reads; indexed field-view writes
-already lower through the `soaVectorRef<T>(..., i).field` substrate and standalone
-method/call writes now lower through `soaFieldViewRef<T>(..., 0)` on the shared
-helper path.
-Locally bound borrowed field-view values such as `borrowed.field()` /
-`field(borrowed)` now become non-owning column views over the same wrapper
-storage instead of remaining on the pending-diagnostic path. That borrowed-view
-surface covers the same receiver families that already succeed for
-`value.field()[i]`: direct borrowed locals, explicit dereference, borrowed helper
-returns, method-like helper returns, and inline `location(...)`-wrapped borrowed
-receivers. Bound field-view values inherit the same invalidation contract as
-`ref(...)`, stay borrowed rather than materializing owning vectors, and report
-borrowed-binding diagnostics when a live projection overlaps a later structural
-mutation. Direct pass/return escapes remain rejected until that provenance
-contract is promoted. The implementation now has the reusable non-owning `SoaColumn<T>`
-borrowed-view helper substrate plus reflected layout facts for reflect-enabled
-structs. `SoaColumn<T>` still stores contiguous whole `T` elements, and the
-current `SoaSchema*` helpers now expose validated field byte offsets and
-whole-element stride through `SoaSchemaFieldOffset(...)` /
-`SoaSchemaElementStride()`. Existing buffer helpers now expose byte-addressable
-reinterpretation and offsetting, and the stdlib builds
-`soaColumnFieldSlotUnsafe<Struct, Field>(...)` plus the strided `SoaFieldView<T>`
-carrier on top of those reflected layout facts. Field-view binding initializers now route through the shared
-`/soa_vector/field_view/<field>` helper path onto `soaVectorFieldView<...>` and
-return a non-owning strided view. Bound field-view values now preserve borrowed
-semantics by resolving their receiver roots through direct locals,
-`location(...)`/`dereference(...)`, and helper-return receivers;
-later structural mutation on that live root reports the same borrowed-binding
-invalidation diagnostic used by `ref(...)` carriers. Direct call-argument and
-return escapes remain rejected until the pass/return provenance contract is
-promoted.
-Standalone mutating method/call field-view writes now lower through
-`soaVectorFieldView(...)` plus `soaFieldViewRef<T>(..., 0)` dereference writes for
-direct wrapper locals, mutable borrowed locals, borrowed helper returns, method-like
-helper returns, and inline `location(...)`-wrapped variants instead of stopping on
-the old pending diagnostic. Those writes preserve the same invalidation rules as
-other borrowed SoA views and do not reintroduce builtin-only mutation branches
-outside the experimental helper path. The remaining invalidation boundary now
-starts at later whole-value `ref(...)` shrink/motion, storage-replacement/destruction,
-and provenance/escape rules after the later standalone borrowed field-view values
-themselves land.
-Non-empty `soa_vector` literals now lower through deterministic builtin
-materialization in backend literal lowering: struct-element payload slots are
-heap materialized and copied into SoA storage-compatible contiguous memory
-instead of emitting the former direct unsupported diagnostic boundary.
-These compiler-owned `soa_vector` materialization paths are transitional and
-should be deleted once generic SoA substrate owns the remaining backend storage
-work behind the promoted stdlib wrapper surface.
-Canonical example source: `examples/3.Surface/soa_ecs.prime` imports
-`/std/collections/soa/*` for the supported wrapper flow. That wrapper flow is
-the promoted public shape for `soa<T>`; old `soa_vector<T>` imports and direct
-experimental SoA imports remain compatibility shims for targeted tests only.
+Current implementation status: parser/text-transform support accepts the public
+`soa<T>` spelling, validates SoA-safe struct element constraints, and routes
+canonical construction, read/ref, field-view, mutation, and conversion helper
+forms through `/std/collections/soa/*`. Direct source imports of retired
+`/std/collections/soa_vector*` and
+`/std/collections/experimental_soa_vector*` modules reject with a stable
+diagnostic that points users at `/std/collections/soa/*`; raw
+`soa_vector<T>` type spellings reject in favor of `soa<T>`. The remaining
+`SoaVector<T>` and `soaVector*` names are internal backing identity for the
+current stdlib adapter and generic SoA substrate, not public collection
+spelling.
+
+The generic SoA substrate still owns field-layout/codegen/introspection,
+generated `SoaSchema*` metadata, `SoaColumn<T>` storage, `SoaFieldView<T>`
+non-owning views, checked-buffer allocation, field-slot addressing, borrow-root
+provenance, and invalidation tracking. Canonical example source:
+`examples/3.Surface/soa_ecs.prime` imports `/std/collections/soa/*` for
+the supported wrapper flow.
 
 ### 8.5 Matrix and Quaternion Types (Draft)
 

@@ -836,8 +836,8 @@ TEST_CASE("ir lowerer binding type helpers prefer semantic collection specializa
           .keyTypeTextId = primec::InvalidSymbolId,
           .valueTypeTextId =
               primec::semanticProgramInternCallTargetString(semanticProgram, "Particle"),
-          .helperSurfaceId = primec::StdlibSurfaceId::CollectionsSoaVectorHelpers,
-          .constructorSurfaceId = primec::StdlibSurfaceId::CollectionsSoaVectorConstructors,
+          .helperSurfaceId = primec::StdlibSurfaceId::CollectionsSoaHelpers,
+          .constructorSurfaceId = primec::StdlibSurfaceId::CollectionsSoaConstructors,
       });
   semanticProgram.publishedRoutingLookups.collectionSpecializationIndicesByExpr.emplace(120, 1);
 

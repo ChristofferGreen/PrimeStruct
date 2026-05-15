@@ -284,30 +284,8 @@ std::vector<std::string> collectSourceImportPaths(const std::string &source) {
 }
 
 std::vector<std::string> collectImplicitStdlibAutoIncludeKeys(const std::string &source) {
-  std::vector<std::string> keys;
-  Lexer lexer(source);
-  const std::vector<Token> tokens = lexer.tokenize();
-  bool sawBuiltinSoaVector = false;
-  bool sawBuiltinSoaToAos = false;
-  for (const Token &token : tokens) {
-    if (token.kind != TokenKind::Identifier) {
-      continue;
-    }
-    if (token.text == "soa_vector" || token.text == "/soa_vector") {
-      sawBuiltinSoaVector = true;
-      continue;
-    }
-    if (token.text == "to_aos" ||
-        token.text == "/to_aos" ||
-        token.text == "/std/collections/soa_vector/to_aos") {
-      sawBuiltinSoaToAos = true;
-      continue;
-    }
-  }
-  if (sawBuiltinSoaVector && sawBuiltinSoaToAos) {
-    keys.push_back("/std/collections/soa_vector_conversions");
-  }
-  return keys;
+  (void)source;
+  return {};
 }
 
 std::vector<std::string> collectStdlibAutoIncludeKeys(const std::string &importPath) {

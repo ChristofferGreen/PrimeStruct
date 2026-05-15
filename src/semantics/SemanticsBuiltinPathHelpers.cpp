@@ -475,7 +475,7 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   if (name.find('/') != std::string::npos) {
     return false;
   }
-  if (name == "array" || name == "vector" || name == "map" || name == "soa_vector" || name == "soa") {
+  if (name == "array" || name == "vector" || name == "map" || name == "soa") {
     out = name == "soa" ? "soa_vector" : name;
     return true;
   }

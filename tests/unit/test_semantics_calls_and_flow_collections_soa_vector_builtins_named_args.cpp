@@ -815,7 +815,8 @@ main() {
 
 TEST_CASE("soa_vector helper-return bare count keeps same-path helper across escapes compatibility") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
+import /std/collections/internal_soa_vector/*
 
 [struct reflect]
 Particle() {

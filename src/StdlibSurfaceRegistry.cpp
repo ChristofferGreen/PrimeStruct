@@ -307,11 +307,11 @@ std::optional<StdlibSurfaceId> parseManifestSurfaceId(std::string_view value) {
   if (value == "CollectionsMapConstructors") {
     return StdlibSurfaceId::CollectionsMapConstructors;
   }
-  if (value == "CollectionsSoaVectorHelpers") {
-    return StdlibSurfaceId::CollectionsSoaVectorHelpers;
+  if (value == "CollectionsSoaHelpers") {
+    return StdlibSurfaceId::CollectionsSoaHelpers;
   }
-  if (value == "CollectionsSoaVectorConstructors") {
-    return StdlibSurfaceId::CollectionsSoaVectorConstructors;
+  if (value == "CollectionsSoaConstructors") {
+    return StdlibSurfaceId::CollectionsSoaConstructors;
   }
   return std::nullopt;
 }
@@ -452,10 +452,10 @@ CollectionsManifestSurfaces loadCollectionsManifestSurfaces() {
       case StdlibSurfaceId::CollectionsMapConstructors:
         applyManifestSurfaceRecord(surfaces.mapConstructors, std::move(record));
         break;
-      case StdlibSurfaceId::CollectionsSoaVectorHelpers:
+      case StdlibSurfaceId::CollectionsSoaHelpers:
         applyManifestSurfaceRecord(surfaces.soaHelpers, std::move(record));
         break;
-      case StdlibSurfaceId::CollectionsSoaVectorConstructors:
+      case StdlibSurfaceId::CollectionsSoaConstructors:
         applyManifestSurfaceRecord(surfaces.soaConstructors, std::move(record));
         break;
       default:
@@ -553,7 +553,7 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .loweringSpellings = CollectionsSurfaces.mapConstructors.loweringSpellings.views,
     },
     {
-        .id = StdlibSurfaceId::CollectionsSoaVectorHelpers,
+        .id = StdlibSurfaceId::CollectionsSoaHelpers,
         .domain = StdlibSurfaceDomain::Collections,
         .shape = StdlibSurfaceShape::HelperFamily,
         .bridgeKey = CollectionsSurfaces.soaHelpers.bridgeKey,
@@ -567,7 +567,7 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .loweringSpellings = CollectionsSurfaces.soaHelpers.loweringSpellings.views,
     },
     {
-        .id = StdlibSurfaceId::CollectionsSoaVectorConstructors,
+        .id = StdlibSurfaceId::CollectionsSoaConstructors,
         .domain = StdlibSurfaceDomain::Collections,
         .shape = StdlibSurfaceShape::ConstructorFamily,
         .bridgeKey = CollectionsSurfaces.soaConstructors.bridgeKey,
@@ -701,8 +701,8 @@ std::string_view resolveSurfaceMemberNameImpl(const StdlibSurfaceMetadata &metad
     case StdlibSurfaceId::CollectionsVectorConstructors:
     case StdlibSurfaceId::CollectionsMapHelpers:
     case StdlibSurfaceId::CollectionsMapConstructors:
-    case StdlibSurfaceId::CollectionsSoaVectorHelpers:
-    case StdlibSurfaceId::CollectionsSoaVectorConstructors:
+    case StdlibSurfaceId::CollectionsSoaHelpers:
+    case StdlibSurfaceId::CollectionsSoaConstructors:
       return resolveMetadataMemberName(metadata, memberName);
     default:
       if (matchesAny(metadata.memberNames, memberName)) {

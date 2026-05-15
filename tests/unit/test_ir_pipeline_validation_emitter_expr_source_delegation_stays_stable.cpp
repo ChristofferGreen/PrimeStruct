@@ -2557,7 +2557,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "primec::stdlibSurfacePreferredSpellingForMember(") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
-            "primec::StdlibSurfaceId::CollectionsSoaVectorHelpers") !=
+            "primec::StdlibSurfaceId::CollectionsSoaHelpers") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
             "if (path == \"/std/collections/map/count\")") == std::string::npos);
@@ -2597,7 +2597,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
             "stdlibSurfaceCanonicalHelperPath(\n"
-            "        primec::StdlibSurfaceId::CollectionsSoaVectorHelpers,") !=
+            "        primec::StdlibSurfaceId::CollectionsSoaHelpers,") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
             "return \"/std/collections/experimental_soa_vector/soaVectorCount\"") ==
@@ -2836,7 +2836,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "auto preferredExperimentalSoaHelper = [](const std::string &candidatePath)") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
-            "primec::StdlibSurfaceId::CollectionsSoaVectorHelpers,\n"
+            "primec::StdlibSurfaceId::CollectionsSoaHelpers,\n"
             "        candidatePath,\n"
             "        \"/std/collections/experimental_soa_vector/\");") !=
         std::string::npos);

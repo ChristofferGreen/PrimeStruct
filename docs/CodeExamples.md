@@ -40,8 +40,6 @@ Style-aligned surface code:
 - `stdlib/std/collections/map.prime`
 - `stdlib/std/collections/errors.prime`
 - `stdlib/std/collections/soa.prime`
-- `stdlib/std/collections/soa_vector.prime`
-- `stdlib/std/collections/soa_vector_conversions.prime`
 - `stdlib/std/gfx/gfx.prime`
 
 These modules should converge on the readable surface forms in this document:
@@ -69,10 +67,10 @@ AoS/SoA conversion flows. Existing `soa_vector<T>` examples are
 compatibility-scoped and should be named as legacy coverage rather than
 ordinary example style.
 
-Retained SoA compatibility exception: direct imports of
-`/std/collections/experimental_soa_vector/*` and
-`/std/collections/experimental_soa_vector_conversions/*` are compatibility
-shims for targeted tests only, not ordinary example style.
+Retired SoA compatibility rule: direct imports of
+`/std/collections/soa_vector*` and `/std/collections/experimental_soa_vector*`
+are rejected compatibility spellings. Use `/std/collections/soa/*` and
+`soa<T>` for ordinary examples.
 
 Mixed-directory rule:
 - `stdlib/std/collections` is intentionally mixed; follow the file-level list

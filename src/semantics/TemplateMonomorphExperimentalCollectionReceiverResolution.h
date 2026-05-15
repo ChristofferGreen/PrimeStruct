@@ -591,7 +591,7 @@ std::string experimentalSoaVectorHelperPathForCanonicalHelper(const std::string 
   }
   auto mapsToBorrowedSoaHelper = [](const std::string &candidatePath) {
     const std::string canonicalHelperPath = primec::stdlibSurfaceCanonicalHelperPath(
-        primec::StdlibSurfaceId::CollectionsSoaVectorHelpers,
+        primec::StdlibSurfaceId::CollectionsSoaHelpers,
         candidatePath);
     return canonicalHelperPath == "/std/collections/soa_vector/count_ref" ||
            canonicalHelperPath == "/std/collections/soa_vector/get_ref" ||
@@ -604,7 +604,7 @@ std::string experimentalSoaVectorHelperPathForCanonicalHelper(const std::string 
   }
   auto preferredExperimentalSoaHelper = [](const std::string &candidatePath) {
     return primec::stdlibSurfacePreferredSpellingForMember(
-        primec::StdlibSurfaceId::CollectionsSoaVectorHelpers,
+        primec::StdlibSurfaceId::CollectionsSoaHelpers,
         candidatePath,
         "/std/collections/experimental_soa_vector/");
   };

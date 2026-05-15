@@ -11,7 +11,7 @@ bool isNonTypeTransformName(const std::string &name) {
 }
 
 bool isBuiltinTemplateContainer(const std::string &name) {
-  return name == "array" || name == "vector" || name == "soa" || name == "soa_vector" || name == "map" || name == "Result" ||
+  return name == "array" || name == "vector" || name == "soa" || name == "map" || name == "Result" ||
          name == "File" || isBuiltinTemplateTypeName(name);
 }
 
@@ -25,8 +25,7 @@ std::string normalizeBuiltinCollectionTemplateBase(const std::string &name) {
     return "vector";
   }
   if (name == "soa" || name == "/soa" ||
-      name == "std/collections/soa" || name == "/std/collections/soa" ||
-      name == "soa_vector" || name == "/soa_vector") {
+      name == "std/collections/soa" || name == "/std/collections/soa") {
     return "soa_vector";
   }
   if (name == "map" || name == "/map" || name == "std/collections/map" || name == "/std/collections/map") {
@@ -55,8 +54,7 @@ bool importPathCoversTarget(const std::string &importPath, const std::string &ta
   }
   if (importPath == canonicalVectorCompatibilityPrefixOrFallback() ||
       importPath == "/std/collections/map" ||
-      importPath == "/std/collections/soa_vector" ||
-      importPath == "/std/collections/soa_vector_conversions") {
+      importPath == "/std/collections/soa") {
     return targetPath.rfind(importPath + "/", 0) == 0;
   }
   if (importPath.size() >= 2 && importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
