@@ -386,7 +386,7 @@ std::string normalizeCollectionReceiverType(const std::string &typePath) {
   if (typePath == "/vector" || typePath == "vector") {
     return "vector";
   }
-  if (typePath == "/soa_vector" || typePath == "soa_vector" ||
+  if (typePath == "soa_vector" ||
       typePath == "/std/collections/soa_vector" ||
       typePath == "std/collections/soa_vector" ||
       typePath == "/std/collections/experimental_soa_vector/SoaVector" ||
@@ -406,7 +406,6 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
   if (!normalizedPath.empty() && normalizedPath.front() != '/') {
     if (normalizedPath.rfind("array/", 0) == 0 ||
         collectionSurfaceMemberPathUsesKnownPrefix(normalizedPath) ||
-        normalizedPath.rfind("soa_vector/", 0) == 0 ||
         normalizedPath.rfind("std/collections/soa_vector/", 0) == 0 ||
         normalizedPath.rfind("map/", 0) == 0 ||
         normalizedPath.rfind("std/collections/map/", 0) == 0) {
@@ -426,16 +425,6 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
             std::string(metadata->canonicalPath) + "/" + suffix);
       }
     }
-  } else if (normalizedPath.rfind("/soa_vector/", 0) == 0) {
-    appendUniqueCandidate(
-        candidates,
-        "/std/collections/soa_vector/" +
-            normalizedPath.substr(std::string("/soa_vector/").size()));
-  } else if (normalizedPath.rfind("/std/collections/soa_vector/", 0) == 0) {
-    appendUniqueCandidate(
-        candidates,
-        "/soa_vector/" +
-            normalizedPath.substr(std::string("/std/collections/soa_vector/").size()));
   }
   return candidates;
 }

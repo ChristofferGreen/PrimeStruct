@@ -173,9 +173,6 @@ residualBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
     return std::pair<std::string, std::string>(std::string(collectionFamily), std::move(helperName));
   };
 
-  if (auto parsed = parsePrefixedHelper("/soa_vector/", "soa_vector")) {
-    return parsed;
-  }
   if (auto parsed = parsePrefixedHelper("/std/collections/soa_vector/", "soa_vector")) {
     return parsed;
   }

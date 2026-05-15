@@ -221,16 +221,12 @@ bool resolveMethodCallPath(const Expr &call,
   const bool isExplicitMapAliasMethod = normalizedMethodName.rfind("map/", 0) == 0;
   const bool isExplicitStdlibMapMethod =
       normalizedMethodName.rfind("std/collections/map/", 0) == 0;
-  const bool isExplicitSoaAliasMethod = normalizedMethodName.rfind("soa_vector/", 0) == 0;
   const bool isExplicitStdlibSoaMethod =
       normalizedMethodName.rfind("std/collections/soa_vector/", 0) == 0;
   if (normalizedMethodName.rfind("array/", 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(std::string("array/").size());
   } else if (isExplicitStdlibVectorMethod) {
     normalizedMethodName = explicitVectorMethodName;
-  } else if (normalizedMethodName.rfind("soa_vector/", 0) == 0) {
-    normalizedMethodName =
-        normalizedMethodName.substr(std::string("soa_vector/").size());
   } else if (normalizedMethodName.rfind("std/collections/soa_vector/", 0) == 0) {
     normalizedMethodName =
         normalizedMethodName.substr(std::string("std/collections/soa_vector/").size());
@@ -578,10 +574,9 @@ bool resolveMethodCallPath(const Expr &call,
       resolvedType = normalizeMapImportAliasPath(importIt->second);
     }
   }
-  if (isConcreteExperimentalSoaVectorStructPath(resolvedType) &&
-      isCanonicalSoaWrapperMethodName(normalizedMethodName)) {
-    resolvedType = "/soa_vector";
-  }
+  const bool isConcreteSoaWrapperReceiver =
+      isConcreteExperimentalSoaVectorStructPath(resolvedType) &&
+      isCanonicalSoaWrapperMethodName(normalizedMethodName);
   if (resolvedType == "/vector" || resolvedType == "vector") {
     const bool isCountLikeMethod = normalizedMethodName == "count";
     const bool isCapacityLikeMethod = normalizedMethodName == "capacity";
@@ -604,34 +599,17 @@ bool resolveMethodCallPath(const Expr &call,
       return true;
     }
   }
-  if (resolvedType == "/soa_vector" || resolvedType == "soa_vector") {
+  if (isConcreteSoaWrapperReceiver || resolvedType == "/soa_vector" ||
+      resolvedType == "soa_vector") {
     const std::string helperName =
         borrowedSoaReceiver ? borrowedSoaMethodName(normalizedMethodName)
                             : normalizedMethodName;
     const std::string canonicalPath = "/std/collections/soa_vector/" + helperName;
-    const std::string aliasPath = "/soa_vector/" + helperName;
     if (isExplicitStdlibSoaMethod) {
       if (!hasDefinitionOrMetadata(metadataView, canonicalPath)) {
         return false;
       }
       resolvedOut = canonicalPath;
-      return true;
-    }
-    if (isExplicitSoaAliasMethod) {
-      if (hasDefinitionOrMetadata(metadataView, aliasPath)) {
-        resolvedOut = aliasPath;
-        return true;
-      }
-      if (!hasDefinitionOrMetadata(metadataView, canonicalPath)) {
-        return false;
-      }
-      resolvedOut = canonicalPath;
-      return true;
-    }
-    // Unqualified method calls should respect user-visible /soa_vector shadows
-    // before falling back to the canonical wrapper implementation.
-    if (hasDefinitionOrMetadata(metadataView, aliasPath)) {
-      resolvedOut = aliasPath;
       return true;
     }
     if (hasDefinitionOrMetadata(metadataView, canonicalPath)) {

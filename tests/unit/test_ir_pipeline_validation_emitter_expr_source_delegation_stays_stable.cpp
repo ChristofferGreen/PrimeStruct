@@ -3122,6 +3122,11 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
   CHECK(metadataHelpersSource.find(
             "appendUniqueCandidate(candidates, \"/map/\" + suffix)") ==
         std::string::npos);
+  CHECK(metadataHelpersSource.find("normalizedPath.rfind(\"soa_vector/\", 0) == 0") ==
+        std::string::npos);
+  CHECK(metadataHelpersSource.find("normalizedPath.rfind(\"/soa_vector/\", 0) == 0") ==
+        std::string::npos);
+  CHECK(metadataHelpersSource.find("\"/soa_vector/\" +") == std::string::npos);
   CHECK(metadataHelpersSource.find(
             "path.rfind(\"std/collections/experimental_map/\", 0) == 0") ==
         std::string::npos);
@@ -3179,6 +3184,14 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
         std::string::npos);
   CHECK(methodResolutionHelpersSource.find("bool removedCollectionAliasNeedsDefinition(") ==
         std::string::npos);
+  CHECK(methodResolutionHelpersSource.find("isExplicitSoaAliasMethod") ==
+        std::string::npos);
+  CHECK(methodResolutionHelpersSource.find("normalizedMethodName.rfind(\"soa_vector/\", 0)") ==
+        std::string::npos);
+  CHECK(methodResolutionHelpersSource.find("const std::string aliasPath = \"/soa_vector/\"") ==
+        std::string::npos);
+  CHECK(methodResolutionHelpersSource.find("user-visible /soa_vector shadows") ==
+        std::string::npos);
 
   CHECK(methodResolutionTypeInferenceHelpersSource.find("vectorHelperMemberNameFromPath(") !=
         std::string::npos);
@@ -3213,6 +3226,14 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
         std::string::npos);
   CHECK(emitSetupReturnInferenceCollectionsSource.find(
             "StdlibSurfaceId::CollectionsVectorHelperSurface") ==
+        std::string::npos);
+  CHECK(emitSetupReturnInferenceCollectionsSource.find(
+            "normalizedPath.rfind(\"soa_vector/\", 0) == 0") ==
+        std::string::npos);
+  CHECK(emitSetupReturnInferenceCollectionsSource.find(
+            "normalizedPath.rfind(\"/soa_vector/\", 0) == 0") ==
+        std::string::npos);
+  CHECK(emitSetupReturnInferenceCollectionsSource.find("\"/soa_vector/\" +") ==
         std::string::npos);
 
   CHECK(exprLambdaBodySource.find("resolvePublishedCollectionSurfacePathMemberName(") !=

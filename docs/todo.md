@@ -72,11 +72,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4522: Delete lowerer and emitter SoA public-surface traces
+- TODO-4523: Delete parser and pipeline SoA public-surface traces
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4523: Delete parser and pipeline SoA public-surface traces
 - TODO-4524: Tighten SoA surface audit to zero
 - TODO-4268: Add heterogeneous type-pack syntax and metadata
 
@@ -88,8 +87,8 @@ Task template:
 - Vector stdlib ownership cutover: none active
 - Map stdlib ownership cutover: TODO-4464
 - SoA public surface rename and ownership cutover: TODO-4306 parent split;
-  TODO-4521 reduced semantic inventory residue, and next gates are TODO-4522
-  -> TODO-4523 -> TODO-4524
+  TODO-4522 reduced lowerer/emitter inventory residue, and next gates are
+  TODO-4523 -> TODO-4524
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
   -> TODO-4275 -> TODO-4276 -> TODO-4271 -> TODO-4272 -> TODO-4274
   -> TODO-4273 -> TODO-4277 -> TODO-4278
@@ -104,7 +103,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4522: Delete lowerer and emitter SoA public-surface traces
 - TODO-4523: Delete parser and pipeline SoA public-surface traces
 - TODO-4524: Tighten SoA surface audit to zero
 - TODO-4268: Add heterogeneous type-pack syntax and metadata
@@ -156,10 +154,10 @@ Task template:
 | Compile-pipeline stage and publication-boundary contracts | none |
 | Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4305 |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4464, TODO-4522, TODO-4523, TODO-4524 |
+| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4464, TODO-4523, TODO-4524 |
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4464 |
-| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4464, TODO-4305, TODO-4522, TODO-4523, TODO-4524 |
-| SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4514, TODO-4522, TODO-4523, TODO-4524 |
+| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4464, TODO-4305, TODO-4523, TODO-4524 |
+| SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4514, TODO-4523, TODO-4524 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
 | Semantic-product public API factoring and versioning | none |
@@ -188,8 +186,8 @@ Task template:
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
 | Vector/map bridge parity for imports, rewrites, and lowering | TODO-4430, TODO-4464 |
-| De-experimentalization surface and namespace parity | TODO-4430, TODO-4464, TODO-4305, TODO-4522, TODO-4523, TODO-4524 |
-| `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4514, TODO-4522, TODO-4523, TODO-4524 |
+| De-experimentalization surface and namespace parity | TODO-4430, TODO-4464, TODO-4305, TODO-4523, TODO-4524 |
+| `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4514, TODO-4523, TODO-4524 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
 | Emitter map-helper canonicalization parity | TODO-4464 |
@@ -348,7 +346,7 @@ Task template:
   dispatch checks are syntax/provenance-owned or lowering-owned.
 - Outside this lane: `array<T>` core ownership and the `soa<T>` public-surface
   rename remain separate boundaries tracked by TODO-4305, TODO-4306, and the
-  remaining TODO-4522/TODO-4523/TODO-4524 audit sequence.
+  remaining TODO-4523/TODO-4524 audit sequence.
   Generic contiguous-storage coverage needed before vector ordinary `.prime`
   lowering is complete and recorded in `docs/todo_finished.md`. Map-specific
   lookup/insertion substrate work is complete; remaining map work focuses on
@@ -376,9 +374,9 @@ Task template:
   not contain PrimeStruct-SoA-collection surface paths, helper names, type
   names, diagnostics, parser/lowering branches, or metadata tables after the
   TODO-4524 zero audit. `scripts/check_soa_surface_trace_inventory.py`
-  records the current residue inventory, and TODO-4522 through TODO-4523
-  delete bounded source-family traces before TODO-4524 tightens the gate to
-  zero. Generic SoA substrate terms remain allowed where they do not encode
+  records the current residue inventory, and TODO-4523 deletes the remaining
+  bounded source-family traces before TODO-4524 tightens the gate to zero.
+  Generic SoA substrate terms remain allowed where they do not encode
   the public collection surface: field-layout/codegen/introspection,
   `SoaColumn`, `SoaFieldView`, `SoaSchema*`, field-view
   borrowing/invalidation, and allocation primitives.
@@ -1932,8 +1930,8 @@ Task template:
     - Treat `soa_vector<T>`, `/std/collections/soa_vector/*`, `/soa_vector/*`,
       `SoaVector<T>`, and `soaVector*` as retired public compatibility
       spellings; TODO-4520 installed the production C++ inventory, TODO-4521
-      reduced semantic residue, and TODO-4522 through TODO-4524 finish
-      reducing and tightening it.
+      reduced semantic residue, TODO-4522 reduced lowerer/emitter residue, and
+      TODO-4523/TODO-4524 finish reducing and tightening it.
   - acceptance:
     - Docs define `soa<T>` and `/std/collections/soa/*` as the target canonical
       public SoA collection surface, with retired `soa_vector` spellings
@@ -2013,32 +2011,6 @@ Task template:
     - TODO-4513 routed canonical `/std/collections/soa/to_aos`
       classification through semantic, emitter, and lowerer classifiers while
       keeping compatibility `soa_vector` conversion paths alive.
-
-- [ ] TODO-4522: Delete lowerer and emitter SoA public-surface traces
-  - owner: ai
-  - created_at: 2026-05-15
-  - phase: SoA public surface rename and ownership cutover
-  - split_from: TODO-4310
-  - depends_on: TODO-4521
-  - scope: Remove IR-lowerer and backend-emitter SoA public collection-surface
-    path, helper, and diagnostic traces identified by the inventory.
-  - implementation_notes:
-    - Start from inventory entries under `src/ir_lowerer/` and `src/emitter/`
-      that mention old or public SoA collection paths, helper spellings,
-      conversion shims, or public collection diagnostics.
-    - Preserve generic SoA substrate lowering for field layout, schemas,
-      field-view borrowing/invalidation, and allocation primitives.
-  - acceptance:
-    - Lowerer/emitter inventory counts for SoA public collection-surface terms
-      decrease to the new checked-in cap without removing allowed substrate
-      lowering.
-    - Canonical `soa<T>` compile-run, IR, VM/native, conversion, field-view,
-      mutation, and rejection coverage stays stable.
-    - Focused backend IR and compile-run tests pass.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once lowerer/emitter SoA public-surface residue is removed
-    or reduced to the next explicit cap; leave parser/pipeline residue to
-    TODO-4523.
 
 - [ ] TODO-4523: Delete parser and pipeline SoA public-surface traces
   - owner: ai

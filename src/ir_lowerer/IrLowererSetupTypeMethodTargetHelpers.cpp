@@ -26,8 +26,6 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     normalizedMethodName = normalizedMethodName.substr(rootedVectorPrefix.size());
   } else if (normalizedMethodName.rfind("array/", 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(std::string("array/").size());
-  } else if (normalizedMethodName.rfind("soa_vector/", 0) == 0) {
-    normalizedMethodName = normalizedMethodName.substr(std::string("soa_vector/").size());
   } else if (normalizedMethodName.rfind("std/collections/soa_vector/", 0) == 0) {
     normalizedMethodName =
         normalizedMethodName.substr(std::string("std/collections/soa_vector/").size());
@@ -55,8 +53,6 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
       normalizedOriginalMethodName.rfind(canonicalVectorPrefix, 0) == 0;
   const bool isExplicitArrayVectorMethod =
       normalizedOriginalMethodName.rfind("array/", 0) == 0;
-  const bool isExplicitSoaAliasMethod =
-      normalizedOriginalMethodName.rfind("soa_vector/", 0) == 0;
   const bool isExplicitCanonicalSoaMethod =
       normalizedOriginalMethodName.rfind("std/collections/soa_vector/", 0) == 0;
   std::string normalizedTypeName = typeName;
@@ -117,7 +113,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
             normalizedMethodName == "remove_swap");
   };
   auto shouldPreferCanonicalSoaPath = [&](const std::string &candidate) {
-    return !isExplicitSoaAliasMethod && isRawBuiltinSoaVectorReceiverTarget(candidate) &&
+    return isRawBuiltinSoaVectorReceiverTarget(candidate) &&
            (isExplicitCanonicalSoaMethod || normalizedMethodName == "get" ||
             normalizedMethodName == "ref" || normalizedMethodName == "push" ||
             normalizedMethodName == "reserve" ||
@@ -147,25 +143,6 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
       if (allowsArrayVectorCompatibilitySuffix(suffix)) {
         const std::string stdlibAlias = collectionMemberPath("vector", suffix);
         defIt = defMap.find(stdlibAlias);
-        if (defIt != defMap.end()) {
-          return defIt->second;
-        }
-      }
-    }
-    if (path.rfind("/soa_vector/", 0) == 0) {
-      const std::string suffix = path.substr(std::string("/soa_vector/").size());
-      const std::string canonicalAlias = "/std/collections/soa_vector/" + suffix;
-      defIt = defMap.find(canonicalAlias);
-      if (defIt != defMap.end()) {
-        return defIt->second;
-      }
-    }
-    if (path.rfind("/std/collections/soa_vector/", 0) == 0) {
-      const std::string suffix = path.substr(std::string("/std/collections/soa_vector/").size());
-      if (suffix != "get" && suffix != "ref" && suffix != "push" &&
-          suffix != "reserve" && suffix != "to_aos") {
-        const std::string samePathAlias = "/soa_vector/" + suffix;
-        defIt = defMap.find(samePathAlias);
         if (defIt != defMap.end()) {
           return defIt->second;
         }
@@ -221,9 +198,6 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
         !isCanonicalSoaWrapperMethodName(normalizedMethodName)) {
       return nullptr;
     }
-    if (isExplicitSoaAliasMethod) {
-      return findMethodDefinitionByPath("/soa_vector/" + normalizedMethodName);
-    }
     if (isExplicitCanonicalSoaMethod) {
       return findMethodDefinitionByPath("/std/collections/soa_vector/" + normalizedMethodName);
     }
@@ -233,10 +207,6 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
                 findMethodDefinitionByPath("/to_aos")) {
           return rootedResolved;
         }
-      }
-      if (const Definition *aliasResolved =
-              findMethodDefinitionByPath("/soa_vector/" + normalizedMethodName)) {
-        return aliasResolved;
       }
     }
     return findMethodDefinitionByPath("/std/collections/soa_vector/" + normalizedMethodName);

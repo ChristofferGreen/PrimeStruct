@@ -1210,6 +1210,14 @@ TEST_CASE("ir lowerer vector type layout traces use generic collection helpers")
   CHECK(methodTargetSource.find(
             "const std::string mapAlias = \"/map/\" + suffix") ==
         std::string::npos);
+  CHECK(methodTargetSource.find("isExplicitSoaAliasMethod") ==
+        std::string::npos);
+  CHECK(methodTargetSource.find("normalizedMethodName.rfind(\"soa_vector/\", 0)") ==
+        std::string::npos);
+  CHECK(methodTargetSource.find("path.rfind(\"/soa_vector/\", 0) == 0") ==
+        std::string::npos);
+  CHECK(methodTargetSource.find("const std::string samePathAlias = \"/soa_vector/\"") ==
+        std::string::npos);
   CHECK(methodCallSource.find("pruneRemovedMapCompatibilityReceiverPaths") ==
         std::string::npos);
 
@@ -1296,14 +1304,14 @@ TEST_CASE("native tail and late collection helper metadata dispatch stays source
         std::string::npos);
   CHECK(setupHelpersSource.find("resolvePublishedSemanticStdlibSurfaceMemberName(") !=
         std::string::npos);
-  CHECK(setupHelpersSource.find("normalizedPath.rfind(\"/soa_vector/\", 0) == 0") !=
+  CHECK(setupHelpersSource.find("normalizedPath.rfind(\"/soa_vector/\", 0) == 0") ==
         std::string::npos);
-  CHECK(setupHelpersSource.find("\"/std/collections/soa_vector/\" +") !=
+  CHECK(setupHelpersSource.find("\"/std/collections/soa_vector/\" +") ==
         std::string::npos);
   CHECK(setupHelpersSource.find(
-            "normalizedPath.rfind(\"/std/collections/soa_vector/\", 0) == 0") !=
+            "normalizedPath.rfind(\"/std/collections/soa_vector/\", 0) == 0") ==
         std::string::npos);
-  CHECK(setupHelpersSource.find("\"/soa_vector/\" +") !=
+  CHECK(setupHelpersSource.find("\"/soa_vector/\" +") ==
         std::string::npos);
   CHECK(collectionHelpersSource.find("resolvePublishedStdlibSurfaceMemberName(") !=
         std::string::npos);

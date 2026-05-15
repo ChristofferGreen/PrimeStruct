@@ -6,6 +6,31 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 15, 2026)**
+- [x] TODO-4522: Delete lowerer and emitter SoA public-surface traces
+  - owner: ai
+  - created_at: 2026-05-15
+  - finished_at: 2026-05-15
+  - phase: SoA public surface rename and ownership cutover
+  - split_from: TODO-4310
+  - depends_on: TODO-4521
+  - scope: Remove IR-lowerer and backend-emitter SoA public collection-surface
+    path, helper, and diagnostic traces identified by the inventory.
+  - outcome:
+    - Removed obsolete rooted `/soa_vector/*` lowerer/emitter method
+      resolution, metadata candidate, return-inference candidate, and residual
+      bridge fallback routing while preserving canonical internal
+      `/std/collections/soa_vector/*` helper lowering and generic experimental
+      SoA substrate handling.
+    - Tightened `scripts/soa_surface_trace_inventory.txt` from 1,796 to 1,758
+      allowed production traces, with the lowerer/emitter reductions limited to
+      `src/ir_lowerer/` and `src/emitter/` entries.
+    - Updated source locks and queue bookkeeping, promoting TODO-4523 as the
+      next Ready Now leaf for parser/pipeline/header registry residue.
+  - validation:
+    - Focused validation used the SoA inventory checker plus backend IR and
+      compile-run source-lock/canonical SoA slices; broad release validation is
+      deferred to the parent/full workflow.
+
 - [x] TODO-4520: Add SoA surface trace inventory gate
   - owner: ai
   - created_at: 2026-05-15

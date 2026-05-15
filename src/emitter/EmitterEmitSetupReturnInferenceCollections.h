@@ -156,7 +156,6 @@
       std::string vectorMemberName;
       if (normalizedPath.rfind("array/", 0) == 0 ||
           resolveVectorHelperMemberName(normalizedPath, true, vectorMemberName) ||
-          normalizedPath.rfind("soa_vector/", 0) == 0 ||
           normalizedPath.rfind("std/collections/soa_vector/", 0) == 0 ||
           normalizedPath.rfind("map/", 0) == 0 ||
           normalizedPath.rfind("std/collections/map/", 0) == 0) {
@@ -171,12 +170,6 @@
       if (allowsArrayVectorCompatibilitySuffix(suffix)) {
         appendUnique(vectorHelperPath(suffix));
       }
-    } else if (normalizedPath.rfind("/soa_vector/", 0) == 0) {
-      appendUnique("/std/collections/soa_vector/" +
-                   normalizedPath.substr(std::string("/soa_vector/").size()));
-    } else if (normalizedPath.rfind("/std/collections/soa_vector/", 0) == 0) {
-      appendUnique("/soa_vector/" +
-                   normalizedPath.substr(std::string("/std/collections/soa_vector/").size()));
     } else if (normalizedPath.rfind("/map/", 0) == 0) {
       const std::string suffix = normalizedPath.substr(std::string("/map/").size());
       if (!isCanonicalMapHelperName(suffix)) {

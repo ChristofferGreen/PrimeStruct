@@ -972,12 +972,6 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
       appendUnique(collectionMemberPath("vector", suffix));
     }
-  } else if (normalizedPath.rfind("/soa_vector/", 0) == 0) {
-    appendUnique("/std/collections/soa_vector/" +
-                 normalizedPath.substr(std::string("/soa_vector/").size()));
-  } else if (normalizedPath.rfind("/std/collections/soa_vector/", 0) == 0) {
-    appendUnique("/soa_vector/" +
-                 normalizedPath.substr(std::string("/std/collections/soa_vector/").size()));
   }
 
   return candidates;
