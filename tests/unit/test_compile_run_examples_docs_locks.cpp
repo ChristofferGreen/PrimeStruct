@@ -1611,16 +1611,27 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   const std::string vmMaps = readFile(vmMapsPath.string());
   const std::string examplesDocs = readFile(examplesDocsPath.string());
 
-  CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
+  CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
-  CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4526: Delete semantic SoA zero-audit residue") !=
+  CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)\n\n"
+                  "- TODO-4526: Delete semantic SoA zero-audit residue | track:\n"
+                  "  soa-zero-audit | primary surface: semantic validation and SoA source locks\n"
+                  "- TODO-4464: Add full zero C++ map-surface audit | track:\n"
+                  "  map-zero-audit | primary surface: map trace inventories, map backing\n"
+                  "  substrate, and map source locks\n"
+                  "- TODO-4268: Add heterogeneous type-pack syntax and metadata | track:\n"
+                  "  tuple-type-packs | primary surface: parser, AST, semantic product, and\n"
+                  "  tuple/type-pack docs") !=
         std::string::npos);
-  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
+  CHECK(todo.find("### Parallel Work Tracks (Current)\n\n"
+                  "- `soa-zero-audit`: ready TODO-4526, then serial successors TODO-4527\n"
+                  "  -> TODO-4528 -> TODO-4529. Assign only one worker from this track at once") !=
+        std::string::npos);
+  CHECK(todo.find("### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)\n\n"
                   "- TODO-4527: Delete template-monomorph SoA zero-audit residue\n"
                   "- TODO-4528: Delete emitter/lowerer SoA zero-audit residue\n"
                   "- TODO-4529: Replace SoA inventory with strict zero audit\n"
-                  "- TODO-4268: Add heterogeneous type-pack syntax and metadata") !=
+                  "- TODO-4269: Bind and monomorphize type-pack arguments") !=
         std::string::npos);
   CHECK(todo.find("- [~] TODO-4305: Rename and style canonical `.prime` SoA surface") !=
         std::string::npos);
@@ -1633,12 +1644,13 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
-  CHECK(todo.find("### Execution Queue (Recommended)\n\n"
+  CHECK(todo.find("### Execution Queue (Recommended Track Order)\n\n"
                   "- TODO-4526: Delete semantic SoA zero-audit residue\n"
+                  "- TODO-4464: Add full zero C++ map-surface audit\n"
+                  "- TODO-4268: Add heterogeneous type-pack syntax and metadata\n"
                   "- TODO-4527: Delete template-monomorph SoA zero-audit residue\n"
                   "- TODO-4528: Delete emitter/lowerer SoA zero-audit residue\n"
-                  "- TODO-4529: Replace SoA inventory with strict zero audit\n"
-                  "- TODO-4268: Add heterogeneous type-pack syntax and metadata") !=
+                  "- TODO-4529: Replace SoA inventory with strict zero audit") !=
         std::string::npos);
   CHECK(todo.find("TODO-4518: Migrate SoA compatibility fixtures") ==
         std::string::npos);
@@ -1669,6 +1681,12 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
     CHECK(todo.find("- " + entry) != std::string::npos);
     CHECK(todo.find("- [ ] " + entry) != std::string::npos);
   }
+  CHECK(todo.find("  - parallel_track: tuple-type-packs") !=
+        std::string::npos);
+  CHECK(todo.find("  - parallel_track: map-zero-audit") !=
+        std::string::npos);
+  CHECK(todo.find("  - parallel_track: soa-zero-audit") !=
+        std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4226") == std::string::npos);
   CHECK(todo.find("TODO-4227") == std::string::npos);
   CHECK(todo.find("TODO-4215") == std::string::npos);

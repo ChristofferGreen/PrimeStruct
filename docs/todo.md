@@ -45,6 +45,16 @@
     "continue with another slice" items. If a TODO accumulates completed-slice
     history while staying open, close the satisfied parent and create bounded
     follow-up leaves for any remaining worthwhile work.
+22. Keep parallel work explicit. `Ready Now` may contain multiple unrelated
+    leaves, but each entry must name a parallel track and a primary surface so
+    `$implement-todo-lite-parallel` can choose independent workers without
+    re-reading the whole file.
+23. Do not put two same-track successors in `Ready Now` at the same time unless
+    their task blocks prove they touch different source/test surfaces. Serial
+    successors belong in `Immediate Next 10` until their dependencies land.
+24. Before launching a parallel run, the parent should choose at most one ready
+    leaf per track, skip blocked/coupled tracks explicitly, and preserve
+    worker-side TODO edits as provisional until root reconciliation.
 
 Status legend:
 - `[ ]` queued
@@ -58,6 +68,7 @@ Task template:
   - owner: ai|human
   - created_at: YYYY-MM-DD
   - phase: Group/Phase name (optional but recommended)
+  - parallel_track: short-track-name (required when listed in Ready Now)
   - depends_on: TODO-XXXX, TODO-YYYY (optional but recommended)
   - scope: ...
   - implementation_notes: optional, but required when source/test entry points are not obvious
@@ -70,16 +81,43 @@ Task template:
 
 ## Open Tasks
 
-### Ready Now (Live Leaves; No Unmet TODO Dependencies)
+### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4526: Delete semantic SoA zero-audit residue
+- TODO-4526: Delete semantic SoA zero-audit residue | track:
+  soa-zero-audit | primary surface: semantic validation and SoA source locks
+- TODO-4464: Add full zero C++ map-surface audit | track:
+  map-zero-audit | primary surface: map trace inventories, map backing
+  substrate, and map source locks
+- TODO-4268: Add heterogeneous type-pack syntax and metadata | track:
+  tuple-type-packs | primary surface: parser, AST, semantic product, and
+  tuple/type-pack docs
 
-### Immediate Next 10 (After Ready Now)
+### Parallel Work Tracks (Current)
+
+- `soa-zero-audit`: ready TODO-4526, then serial successors TODO-4527
+  -> TODO-4528 -> TODO-4529. Assign only one worker from this track at once
+  because each successor tightens the same SoA inventory gate.
+- `map-zero-audit`: ready/in-progress TODO-4464. Keep independent from SoA
+  work except for shared docs/source-lock and testcase-log reconciliation.
+- `tuple-type-packs`: ready TODO-4268, then serial successors TODO-4269
+  -> TODO-4270 -> TODO-4275 -> TODO-4276 -> TODO-4271 -> TODO-4272
+  -> TODO-4274 -> TODO-4273 -> TODO-4277 -> TODO-4278.
+- `procedural-genericity`: blocked by TODO-4270 before TODO-4331 can start.
+- `generic-requirements`: blocked by TODO-4331 and TODO-4334 before
+  TODO-4341 can start.
+
+### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
 - TODO-4527: Delete template-monomorph SoA zero-audit residue
 - TODO-4528: Delete emitter/lowerer SoA zero-audit residue
 - TODO-4529: Replace SoA inventory with strict zero audit
-- TODO-4268: Add heterogeneous type-pack syntax and metadata
+- TODO-4269: Bind and monomorphize type-pack arguments
+- TODO-4270: Add compile-time integer template arguments
+- TODO-4275: Expand type packs into struct storage
+- TODO-4276: Expand type packs in helpers and lifecycle hooks
+- TODO-4271: Add compile-time pack indexing
+- TODO-4272: Add stdlib `tuple<Ts...>`
+- TODO-4274: Add tuple bracket indexing sugar
 
 ### Priority Lanes (Current)
 
@@ -87,13 +125,13 @@ Task template:
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
 - Vector stdlib ownership cutover: none active
-- Map stdlib ownership cutover: TODO-4464
+- Map stdlib ownership cutover: ready/in-progress TODO-4464
 - SoA public surface rename and ownership cutover: TODO-4306 parent split;
   TODO-4525 removed text-filter/IR-printer inventory residue, and the next
-  gates are TODO-4526 -> TODO-4527 -> TODO-4528 -> TODO-4529
-- Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
-  -> TODO-4275 -> TODO-4276 -> TODO-4271 -> TODO-4272 -> TODO-4274
-  -> TODO-4273 -> TODO-4277 -> TODO-4278
+  ready gate is TODO-4526, followed by TODO-4527 -> TODO-4528 -> TODO-4529
+- Deferred generic tuple substrate: ready TODO-4268, followed by TODO-4269
+  -> TODO-4270 -> TODO-4275 -> TODO-4276 -> TODO-4271 -> TODO-4272
+  -> TODO-4274 -> TODO-4273 -> TODO-4277 -> TODO-4278
 - Procedural compile-time genericity: TODO-4331 -> TODO-4332
   -> TODO-4333 -> TODO-4334 -> TODO-4335 -> TODO-4336 -> TODO-4337
   -> TODO-4338 -> TODO-4339 -> TODO-4340
@@ -103,13 +141,14 @@ Task template:
   -> TODO-4346 -> TODO-4358 -> TODO-4347 -> TODO-4351 -> TODO-4348
   -> TODO-4359 -> TODO-4349 -> TODO-4350
 
-### Execution Queue (Recommended)
+### Execution Queue (Recommended Track Order)
 
 - TODO-4526: Delete semantic SoA zero-audit residue
+- TODO-4464: Add full zero C++ map-surface audit
+- TODO-4268: Add heterogeneous type-pack syntax and metadata
 - TODO-4527: Delete template-monomorph SoA zero-audit residue
 - TODO-4528: Delete emitter/lowerer SoA zero-audit residue
 - TODO-4529: Replace SoA inventory with strict zero audit
-- TODO-4268: Add heterogeneous type-pack syntax and metadata
 - TODO-4269: Bind and monomorphize type-pack arguments
 - TODO-4270: Add compile-time integer template arguments
 - TODO-4275: Expand type packs into struct storage
@@ -483,6 +522,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred generic tuple substrate
+  - parallel_track: tuple-type-packs
   - scope: Add parser, AST, semantic-product, and diagnostic support for
     heterogeneous type-parameter packs such as `tuple<Ts...>` without adding
     pack expansion or tuple implementation yet.
@@ -1741,6 +1781,7 @@ Task template:
   - owner: ai
   - created_at: 2026-05-14
   - phase: Map stdlib ownership cutover
+  - parallel_track: map-zero-audit
   - depends_on: TODO-4506
   - split_from: TODO-4304
   - scope: Add a deterministic validation gate that proves the PrimeStruct map
@@ -2056,6 +2097,7 @@ Task template:
   - owner: ai
   - created_at: 2026-05-15
   - phase: SoA public surface rename and ownership cutover
+  - parallel_track: soa-zero-audit
   - split_from: TODO-4524
   - depends_on: TODO-4525
   - scope: Remove the remaining semantic-validation SoA public-surface trace
