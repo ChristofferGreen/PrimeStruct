@@ -23,9 +23,12 @@ PrimeStruct uses a single canonical form called an **Envelope** for definitions 
 Definition and struct headers parse `<...>` as template parameters. Ordinary
 parameters use `T`; one heterogeneous type-pack parameter may appear last using
 `Ts...`. Type-pack declarations bind any trailing template arguments into
-deterministic specialization metadata; expanding packs in struct storage or
-helper bodies is deferred to TODO-4275/TODO-4276. The homogeneous `args<T>`
-value-pack envelope is not a heterogeneous type-pack declaration.
+deterministic specialization metadata. Struct field declarations may expand a
+bound heterogeneous type pack using `[Ts...] values`, which lowers to one
+stored field per bound type using deterministic internal field names
+`__pack_values_0`, `__pack_values_1`, and so on. Expanding packs in helper
+bodies is deferred to TODO-4276. The homogeneous `args<T>` value-pack envelope
+is not a heterogeneous type-pack declaration.
 
 Call, method-call, transform, and nested type template argument lists accept
 type arguments and non-negative unsuffixed integer literal arguments. Integer
@@ -717,8 +720,16 @@ Rules:
   parameter using final `Ts...` syntax, such as `tuple<T, Ts...>`. Pack
   parameters are distinct from ordinary template parameters in AST and
   semantic-product metadata. Pack binding records zero, one, or multiple
-  trailing type arguments in source order on the generated specialization;
-  field and helper-body expansion remains deferred to TODO-4275/TODO-4276.
+  trailing type arguments in source order on the generated specialization.
+- Struct fields may expand a bound type pack with `[Ts...] values`. During
+  monomorphization the expansion is replaced by ordinary stored fields named
+  `__pack_values_0`, `__pack_values_1`, etc. A zero-length pack contributes no
+  fields. Pack-expanded fields participate in brace construction, field type
+  validation, layout, and semantic-product field metadata like ordinary fields.
+  Pack-expanded field declarations do not accept field modifiers or default
+  initializers in this slice, and type-pack expansion outside struct-field
+  declarations is rejected. Helper signatures and helper bodies remain
+  TODO-4276 work.
 - `(...)` is the runtime argument channel. A form may have compile-time
   arguments, runtime arguments, both, or neither.
 - A bare `name` in command or value position resolves to exactly one visible

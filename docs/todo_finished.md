@@ -6,6 +6,37 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 15, 2026)**
+- [x] TODO-4275: Expand type packs into struct storage
+  - owner: ai
+  - created_at: 2026-04-27
+  - finished_at: 2026-05-15
+  - phase: Deferred generic tuple substrate
+  - parallel_track: tuple-type-packs
+  - depends_on: TODO-4269, TODO-4270
+  - scope: Add `.prime` struct-field expansion for heterogeneous type packs so
+    a generic struct can store one field per bound type, without adding helper
+    body expansion or tuple-specific APIs yet.
+  - outcome:
+    - Added parser and AST support for `[Ts...]` field transforms so the
+      syntax is represented separately from ordinary scalar transforms.
+    - Expanded monomorphized struct pack storage into deterministic
+      `__pack_<field>_<index>` fields for zero, one, and multi-element
+      specializations.
+    - Kept pack-expanded fields on the ordinary struct-field path so brace
+      construction, field initialization, and layout metadata see the
+      generated fields without tuple-specific APIs.
+    - Rejected invalid modifiers, non-field placements, malformed pack
+      expansion shapes, and recursive pack storage while leaving helper body
+      and lifecycle expansion to TODO-4276.
+    - Documented the accepted syntax and implementation boundary in the
+      language syntax and design docs.
+  - validation:
+    - Parent-run focused release validation passed for parser template tests
+      and manual semantics template tests covering zero, one, and many pack
+      arguments plus invalid storage placements and scalar pack usage.
+    - Local non-heavy validation ran `git diff --check`; broad release
+      validation was deferred by the lite/parent workflow.
+
 - [x] TODO-4270: Add compile-time integer template arguments
   - owner: ai
   - created_at: 2026-04-27

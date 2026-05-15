@@ -240,6 +240,11 @@ bool rewriteTransforms(std::vector<Transform> &transforms,
                        Context &ctx,
                        std::string &error) {
   for (auto &transform : transforms) {
+    if (transform.isPackExpansion) {
+      error = "type-pack expansion is only supported in struct field declarations: " +
+              transform.name;
+      return false;
+    }
     if (!isNonTypeTransformName(transform.name)) {
       if (transform.templateArgs.empty()) {
         ResolvedType resolvedName = resolveTypeString(transform.name, mapping, allowedParams, namespacePrefix, ctx, error);

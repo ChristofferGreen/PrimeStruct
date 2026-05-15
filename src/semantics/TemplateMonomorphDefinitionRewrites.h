@@ -111,6 +111,137 @@ void refreshMonomorphizedSumVariants(Definition &def) {
   }
 }
 
+bool hasTypePackExpansionTransform(const Expr &expr) {
+  for (const Transform &transform : expr.transforms) {
+    if (transform.isPackExpansion) {
+      return true;
+    }
+  }
+  return false;
+}
+
+const TemplatePackBinding *findTemplatePackBinding(const Definition &def,
+                                                   const std::string &name) {
+  for (const TemplatePackBinding &binding : def.templatePackBindings) {
+    if (binding.parameterName == name) {
+      return &binding;
+    }
+  }
+  return nullptr;
+}
+
+std::string generatedPackFieldName(const std::string &sourceName,
+                                   size_t index) {
+  return "__pack_" + sourceName + "_" + std::to_string(index);
+}
+
+std::string templateSpecializationBasePath(std::string path) {
+  const size_t marker = path.rfind("__t");
+  if (marker != std::string::npos) {
+    bool allHex = marker + 3 < path.size();
+    for (size_t i = marker + 3; i < path.size(); ++i) {
+      if (!std::isxdigit(static_cast<unsigned char>(path[i]))) {
+        allHex = false;
+        break;
+      }
+    }
+    if (allHex) {
+      path.erase(marker);
+    }
+  }
+  return path;
+}
+
+bool expandTypePackStorageFields(Definition &def, std::string &error) {
+  bool hasExpansion = false;
+  for (const Expr &stmt : def.statements) {
+    if (hasTypePackExpansionTransform(stmt)) {
+      hasExpansion = true;
+      break;
+    }
+  }
+  if (!hasExpansion) {
+    return true;
+  }
+  if (!isStructDefinition(def)) {
+    for (const Expr &stmt : def.statements) {
+      if (hasTypePackExpansionTransform(stmt)) {
+        error = "type-pack expansion is only supported in struct field declarations: " +
+                def.fullPath + "/" + stmt.name;
+        return false;
+      }
+    }
+  }
+
+  std::vector<Expr> expandedStatements;
+  expandedStatements.reserve(def.statements.size());
+  std::unordered_set<std::string> fieldNames;
+  fieldNames.reserve(def.statements.size());
+  for (const Expr &stmt : def.statements) {
+    if (!stmt.isBinding) {
+      expandedStatements.push_back(stmt);
+      continue;
+    }
+    if (!hasTypePackExpansionTransform(stmt)) {
+      if (!stmt.name.empty()) {
+        fieldNames.insert(stmt.name);
+      }
+      expandedStatements.push_back(stmt);
+      continue;
+    }
+    if (stmt.transforms.size() != 1) {
+      error = "type-pack field expansion does not accept field modifiers: " +
+              def.fullPath + "/" + stmt.name;
+      return false;
+    }
+    const Transform &packTransform = stmt.transforms.front();
+    if (!packTransform.isPackExpansion ||
+        !packTransform.templateArgs.empty() ||
+        !packTransform.templateArgDetails.empty() ||
+        !packTransform.arguments.empty()) {
+      error = "type-pack field expansion requires a bare pack parameter: " +
+              def.fullPath + "/" + stmt.name;
+      return false;
+    }
+    if (!stmt.args.empty() || !stmt.argNames.empty()) {
+      error = "type-pack field expansion does not accept default initializers: " +
+              def.fullPath + "/" + stmt.name;
+      return false;
+    }
+    const TemplatePackBinding *packBinding =
+        findTemplatePackBinding(def, packTransform.name);
+    if (packBinding == nullptr) {
+      error = "unknown type-pack parameter for field expansion: " +
+              packTransform.name;
+      return false;
+    }
+    const std::string defTemplateBase = templateSpecializationBasePath(def.fullPath);
+    for (size_t packIndex = 0; packIndex < packBinding->arguments.size();
+         ++packIndex) {
+      if (templateSpecializationBasePath(packBinding->arguments[packIndex]) ==
+          defTemplateBase) {
+        error = "recursive pack-expanded storage not supported: " +
+                def.fullPath + "/" + stmt.name;
+        return false;
+      }
+      Expr field = stmt;
+      field.name = generatedPackFieldName(stmt.name, packIndex);
+      field.sourceName = field.name;
+      field.transforms.clear();
+      field.transforms.push_back(Transform{});
+      field.transforms.back().name = packBinding->arguments[packIndex];
+      if (!fieldNames.insert(field.name).second) {
+        error = "generated type-pack field conflicts with existing field: " +
+                def.fullPath + "/" + field.name;
+        return false;
+      }
+      expandedStatements.push_back(std::move(field));
+    }
+  }
+  def.statements = std::move(expandedStatements);
+  return true;
+}
+
 } // namespace
 
 bool rewriteDefinition(Definition &def,
@@ -121,6 +252,10 @@ bool rewriteDefinition(Definition &def,
   const std::string previousDefinitionPath = ctx.currentDefinitionPath;
   ctx.currentDefinitionPath = def.fullPath;
   auto restoreDefinitionPath = [&]() { ctx.currentDefinitionPath = previousDefinitionPath; };
+  if (!expandTypePackStorageFields(def, error)) {
+    restoreDefinitionPath();
+    return false;
+  }
   if (!rewriteTransforms(def.transforms, mapping, allowedParams, def.namespacePrefix, ctx, error)) {
     restoreDefinitionPath();
     return false;

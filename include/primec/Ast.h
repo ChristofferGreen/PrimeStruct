@@ -54,6 +54,7 @@ struct Transform {
   TransformPhase phase = TransformPhase::Auto;
   std::string resolvedPath = {};
   bool isAstTransformHook = false;
+  bool isPackExpansion = false;
 };
 
 struct Expr {

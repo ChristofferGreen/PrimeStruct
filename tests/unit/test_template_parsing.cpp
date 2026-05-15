@@ -71,6 +71,24 @@ Tuple<T, Ts...> {
         std::vector<bool>{false, true});
 }
 
+TEST_CASE("parses heterogeneous type pack field expansion") {
+  const std::string source = R"(
+[struct]
+Tuple<Ts...> {
+  [Ts...] values
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].statements.size() == 1);
+  const auto &field = program.definitions[0].statements.front();
+  REQUIRE(field.isBinding);
+  CHECK(field.name == "values");
+  REQUIRE(field.transforms.size() == 1);
+  CHECK(field.transforms.front().name == "Ts");
+  CHECK(field.transforms.front().isPackExpansion);
+}
+
 TEST_CASE("parses template list on call") {
   const std::string source = R"(
 [return<int>]

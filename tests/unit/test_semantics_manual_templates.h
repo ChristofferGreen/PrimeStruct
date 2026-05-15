@@ -230,6 +230,191 @@ TEST_CASE("type pack parameters cannot be used as scalar types before expansion"
         std::string::npos);
 }
 
+TEST_CASE("type pack storage expands into deterministic struct fields") {
+  primec::Program program;
+  primec::Transform packTransform = makeTransform("Ts");
+  packTransform.isPackExpansion = true;
+  primec::Definition tuple =
+      makeDefinition("/Tuple",
+                     {makeTransform("struct")},
+                     {makeBinding("values", {packTransform}, {})});
+  tuple.templateArgs = {"Ts"};
+  tuple.templateArgIsPack = {true};
+  program.definitions.push_back(std::move(tuple));
+
+  primec::Expr emptyCtor = makeCall("/Tuple");
+  emptyCtor.isBraceConstructor = true;
+  primec::Expr oneCtor = makeCall("/Tuple", {makeLiteral(1)});
+  oneCtor.isBraceConstructor = true;
+  oneCtor.templateArgs = {"i32"};
+  primec::Expr manyCtor =
+      makeCall("/Tuple", {makeLiteral(1), makeBool(true), makeLiteral(8)});
+  manyCtor.isBraceConstructor = true;
+  manyCtor.templateArgs = {"i32", "bool", "i32"};
+  program.definitions.push_back(
+      makeDefinition("/main",
+                     {makeTransform("return", std::string("i32"))},
+                     {makeBinding("empty", {makeTransform("auto")}, {emptyCtor}),
+                      makeBinding("one", {makeTransform("auto")}, {oneCtor}),
+                      makeBinding("many", {makeTransform("auto")}, {manyCtor}),
+                      makeCall("/return", {makeLiteral(0)})}));
+
+  primec::SemanticProgram semanticProgram;
+  primec::Semantics semantics;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  std::string error;
+  REQUIRE(semantics.validate(program,
+                             "/main",
+                             error,
+                             defaults,
+                             defaults,
+                             {},
+                             nullptr,
+                             false,
+                             &semanticProgram));
+  CHECK(error.empty());
+
+  const primec::Definition *zero = nullptr;
+  const primec::Definition *one = nullptr;
+  const primec::Definition *many = nullptr;
+  for (const primec::Definition &def : program.definitions) {
+    if (def.fullPath.rfind("/Tuple__t", 0) != 0 ||
+        def.templatePackBindings.size() != 1) {
+      continue;
+    }
+    const auto &args = def.templatePackBindings.front().arguments;
+    if (args.empty()) {
+      zero = &def;
+    } else if (args == std::vector<std::string>{"i32"}) {
+      one = &def;
+    } else if (args == std::vector<std::string>{"i32", "bool", "i32"}) {
+      many = &def;
+    }
+  }
+  REQUIRE(zero != nullptr);
+  REQUIRE(one != nullptr);
+  REQUIRE(many != nullptr);
+  CHECK(zero->statements.empty());
+  REQUIRE(one->statements.size() == 1);
+  CHECK(one->statements[0].name == "__pack_values_0");
+  REQUIRE(one->statements[0].transforms.size() == 1);
+  CHECK(one->statements[0].transforms[0].name == "i32");
+  REQUIRE(many->statements.size() == 3);
+  CHECK(many->statements[0].name == "__pack_values_0");
+  CHECK(many->statements[1].name == "__pack_values_1");
+  CHECK(many->statements[2].name == "__pack_values_2");
+
+  std::vector<std::string> manyFieldTypes;
+  for (const auto &entry : semanticProgram.structFieldMetadata) {
+    if (entry.structPath != many->fullPath) {
+      continue;
+    }
+    manyFieldTypes.push_back(entry.fieldName + ":" + entry.bindingTypeText);
+  }
+  CHECK(manyFieldTypes == std::vector<std::string>{
+                              "__pack_values_0:i32",
+                              "__pack_values_1:bool",
+                              "__pack_values_2:i32",
+                          });
+}
+
+TEST_CASE("type pack storage rejects invalid placements and shapes") {
+  auto makePackStorageStruct = [](const std::string &path,
+                                  std::vector<primec::Transform> fieldTransforms) {
+    primec::Definition def =
+        makeDefinition(path, {makeTransform("struct")},
+                       {makeBinding("values", std::move(fieldTransforms), {})});
+    def.templateArgs = {"Ts"};
+    def.templateArgIsPack = {true};
+    return def;
+  };
+  auto makePackTransform = []() {
+    primec::Transform transform = makeTransform("Ts");
+    transform.isPackExpansion = true;
+    return transform;
+  };
+
+  std::string error;
+  {
+    primec::Program program;
+    primec::Transform privateTransform = makeTransform("private");
+    program.definitions.push_back(
+        makePackStorageStruct("/Bad", {privateTransform, makePackTransform()}));
+    primec::Expr ctor = makeCall("/Bad", {makeLiteral(1)});
+    ctor.isBraceConstructor = true;
+    ctor.templateArgs = {"i32"};
+    program.definitions.push_back(
+        makeDefinition("/main",
+                       {makeTransform("return", std::string("i32"))},
+                       {makeBinding("bad", {makeTransform("auto")}, {ctor}),
+                        makeCall("/return", {makeLiteral(0)})}));
+    CHECK_FALSE(validateProgram(program, "/main", error));
+    CHECK(error.find("type-pack field expansion does not accept field modifiers") !=
+          std::string::npos);
+  }
+
+  error.clear();
+  {
+    primec::Program program;
+    primec::Definition bad =
+        makeDefinition("/bad",
+                       {makeTransform("return", std::string("i32"))},
+                       {makeBinding("values", {makePackTransform()}, {}),
+                        makeCall("/return", {makeLiteral(0)})});
+    bad.templateArgs = {"Ts"};
+    bad.templateArgIsPack = {true};
+    program.definitions.push_back(std::move(bad));
+    primec::Expr call = makeCall("/bad");
+    call.templateArgs = {"i32"};
+    program.definitions.push_back(
+        makeDefinition("/main",
+                       {makeTransform("return", std::string("i32"))},
+                       {makeCall("/return", {call})}));
+    CHECK_FALSE(validateProgram(program, "/main", error));
+    CHECK(error.find("type-pack expansion is only supported in struct field declarations") !=
+          std::string::npos);
+  }
+
+  error.clear();
+  {
+    primec::Program program;
+    program.definitions.push_back(
+        makePackStorageStruct("/Tuple", {makePackTransform()}));
+    primec::Expr ctor = makeCall("/Tuple", {makeLiteral(1)});
+    ctor.isBraceConstructor = true;
+    ctor.templateArgs = {"i32", "bool"};
+    program.definitions.push_back(
+        makeDefinition("/main",
+                       {makeTransform("return", std::string("i32"))},
+                       {makeBinding("bad", {makeTransform("auto")}, {ctor}),
+                        makeCall("/return", {makeLiteral(0)})}));
+    CHECK_FALSE(validateProgram(program, "/main", error));
+    CHECK(error.find("argument count mismatch for /Tuple__t") != std::string::npos);
+  }
+
+  error.clear();
+  {
+    primec::Program program;
+    program.definitions.push_back(
+        makePackStorageStruct("/Node", {makePackTransform()}));
+    primec::Expr childCtor = makeCall("/Node", {makeLiteral(1)});
+    childCtor.isBraceConstructor = true;
+    childCtor.templateArgs = {"i32"};
+    primec::Expr parentCtor = makeCall("/Node", {makeName("child")});
+    parentCtor.isBraceConstructor = true;
+    parentCtor.templateArgs = {"Node<i32>"};
+    program.definitions.push_back(
+        makeDefinition("/main",
+                       {makeTransform("return", std::string("i32"))},
+                       {makeBinding("child", {makeTransform("auto")}, {childCtor}),
+                        makeBinding("parent", {makeTransform("auto")}, {parentCtor}),
+                        makeCall("/return", {makeLiteral(0)})}));
+    CHECK_FALSE(validateProgram(program, "/main", error));
+    CHECK(error.find("recursive pack-expanded storage not supported") !=
+          std::string::npos);
+  }
+}
+
 TEST_CASE("implicit auto template inference for calls") {
   primec::Program program;
   primec::Definition identity =

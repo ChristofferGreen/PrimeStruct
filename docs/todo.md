@@ -83,12 +83,12 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4275: Expand type packs into struct storage | track:
-  tuple-type-packs | primary surface: parser, AST, semantic validation,
-  and generic struct storage layout
+- TODO-4276: Expand type packs in helpers and lifecycle hooks | track:
+  tuple-type-packs | primary surface: generic helper signatures, helper
+  bodies, return envelopes, and lifecycle behavior
 - TODO-4528: Delete emitter/lowerer SoA zero-audit residue | track:
-  soa-zero-audit | primary surface: emitter/lowerer trace inventory and
-  shared SoA helper routing
+  soa-zero-audit | primary surface: emitter/lowerer trace inventory and shared
+  SoA helper routing
 
 ### Parallel Work Tracks (Current)
 
@@ -97,8 +97,8 @@ Task template:
 - `map-zero-audit`: TODO-4532 reduced the lowerer native-dispatch slice;
   TODO-4464 remains the parent for future bounded trace-reduction splits
   and the final strict zero map-surface audit.
-- `tuple-type-packs`: ready TODO-4275 after TODO-4270 completed integer
-  template arguments, then serial successors TODO-4276 -> TODO-4271 -> TODO-4272
+- `tuple-type-packs`: ready TODO-4276 after TODO-4275 completed
+  pack-expanded storage, then serial successors TODO-4271 -> TODO-4272
   -> TODO-4274 -> TODO-4273 -> TODO-4277 -> TODO-4278.
 - `procedural-genericity`: blocked by the tuple-type-packs successor chain
   before TODO-4331 can start.
@@ -108,7 +108,6 @@ Task template:
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
 - TODO-4529: Replace SoA inventory with strict zero audit
-- TODO-4276: Expand type packs in helpers and lifecycle hooks
 - TODO-4271: Add compile-time pack indexing
 - TODO-4272: Add stdlib `tuple<Ts...>`
 - TODO-4274: Add tuple bracket indexing sugar
@@ -127,8 +126,8 @@ Task template:
   TODO-4526 removed semantic-validation inventory residue after TODO-4530
   reduced the shared semantic builtin path helper boundary; TODO-4527 removed
   template-monomorph residue; TODO-4528 is ready before TODO-4529
-- Deferred generic tuple substrate: ready TODO-4275 after TODO-4270, followed
-  by TODO-4276 -> TODO-4271 -> TODO-4272
+- Deferred generic tuple substrate: ready TODO-4276 after TODO-4275
+  completed pack-expanded storage, followed by TODO-4271 -> TODO-4272
   -> TODO-4274 -> TODO-4273 -> TODO-4277 -> TODO-4278
 - Procedural compile-time genericity: TODO-4331 -> TODO-4332
   -> TODO-4333 -> TODO-4334 -> TODO-4335 -> TODO-4336 -> TODO-4337
@@ -141,10 +140,9 @@ Task template:
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4275: Expand type packs into struct storage
+- TODO-4276: Expand type packs in helpers and lifecycle hooks
 - TODO-4528: Delete emitter/lowerer SoA zero-audit residue
 - TODO-4529: Replace SoA inventory with strict zero audit
-- TODO-4276: Expand type packs in helpers and lifecycle hooks
 - TODO-4271: Add compile-time pack indexing
 - TODO-4272: Add stdlib `tuple<Ts...>`
 - TODO-4274: Add tuple bracket indexing sugar
@@ -206,7 +204,7 @@ Task template:
 | Test-suite audit follow-up and release-gate stability | none |
 | Algebraic sum types and brace-only construction | none |
 | Stdlib ADT migration for `Maybe` and `Result` | none |
-| Generic type packs and tuple stdlib surface | TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
+| Generic type packs and tuple stdlib surface | TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity and local type facts | TODO-4331, TODO-4332, TODO-4333, TODO-4334, TODO-4335, TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
 | Generic constraints and compile-time flow control | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
@@ -233,7 +231,7 @@ Task template:
 | Release benchmark/example suite stability and doctest governance | none |
 | Sum-type and brace-construction conformance | none |
 | Maybe/Result sum migration conformance | none |
-| Generic type-pack and tuple conformance | TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
+| Generic type-pack and tuple conformance | TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity conformance | TODO-4331, TODO-4332, TODO-4333, TODO-4334, TODO-4335, TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
 | Generic constraint and compile-time flow conformance | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
@@ -509,41 +507,11 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4275: Expand type packs into struct storage
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Deferred generic tuple substrate
-  - parallel_track: tuple-type-packs
-  - depends_on: TODO-4269, TODO-4270
-  - scope: Add `.prime` struct-field expansion for heterogeneous type packs so
-    a generic struct can store one field per bound type, without adding helper
-    body expansion or tuple-specific APIs yet.
-  - implementation_notes:
-    - Build on type-pack monomorphization from TODO-4269 and the typed
-      template-argument representation from TODO-4270.
-    - The expansion syntax should stay generic and documented in
-      `docs/PrimeStruct_SyntaxSpec.md`; `tuple<Ts...>` is only the first known
-      consumer.
-    - Use deterministic internal field names for expanded storage so semantic
-      product, diagnostics, and lowering do not depend on source text hacks.
-  - acceptance:
-    - A `.prime` generic struct can expand a type pack into one stored field
-      per bound type with deterministic field order and stable internal names.
-    - Pack-expanded fields participate in brace construction and field
-      initialization for zero, one, and multi-element packs.
-    - Semantic-product or layout snapshots expose enough field metadata for
-      later indexed access without tuple-specific facts.
-    - Negative tests cover invalid field modifiers on pack expansions,
-      unsupported recursive pack-expanded storage, arity mismatches, and
-      unsupported placements outside documented struct-field contexts.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once pack-expanded storage is represented and initialized
-    deterministically; leave helper bodies and lifecycle hooks to TODO-4276.
-
 - [ ] TODO-4276: Expand type packs in helpers and lifecycle hooks
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred generic tuple substrate
+  - parallel_track: tuple-type-packs
   - depends_on: TODO-4275
   - scope: Extend pack expansion from stored fields into helper signatures,
     helper bodies, return envelopes, and generated copy/move/destroy lifecycle

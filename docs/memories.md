@@ -272,8 +272,16 @@ This file stores durable session-derived facts that are useful in later work. Ke
 ### type-pack-declarations-bind-specialization-metadata
 - Updated: 2026-05-15
 - Tags: parser, semantics, generics
-- Fact: Heterogeneous type-pack declarations record final `Ts...` metadata and monomorphized specializations now bind trailing type arguments into deterministic pack metadata, while field/helper expansion remains deferred to TODO-4275/TODO-4276.
-- Evidence: `Parser::parseTemplateParameterList` records `templateArgIsPack`, `bindTemplateArguments` captures trailing pack arguments in `TemplatePackBinding`, and semantic-product formatting publishes `template_pack_bindings`.
+- Fact: Heterogeneous type-pack declarations record final `Ts...` metadata,
+  monomorphized specializations bind trailing type arguments into
+  deterministic pack metadata, and struct fields can expand `[Ts...] storage`
+  into deterministic generated fields. Helper and lifecycle expansion remains
+  deferred to TODO-4276.
+- Evidence: `Parser::parseTemplateParameterList` records `templateArgIsPack`,
+  `bindTemplateArguments` captures trailing pack arguments in
+  `TemplatePackBinding`, semantic-product formatting publishes
+  `template_pack_bindings`, and `expandTypePackStorageFields` materializes
+  pack storage fields during template monomorphization.
 
 ### variadic-borrowed-pointer-packs-are-supported
 - Updated: 2026-05-01

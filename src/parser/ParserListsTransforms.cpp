@@ -33,6 +33,9 @@ void printTransforms(std::ostringstream &out, const std::vector<Transform> &tran
       }
       out << ">";
     }
+    if (transforms[i].isPackExpansion) {
+      out << "...";
+    }
     if (!transforms[i].arguments.empty()) {
       out << "(";
       for (size_t argIndex = 0; argIndex < transforms[i].arguments.size(); ++argIndex) {
@@ -288,6 +291,10 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
         return false;
       }
     }
+    if (match(TokenKind::Ellipsis)) {
+      expect(TokenKind::Ellipsis, "expected '...'");
+      transform.isPackExpansion = true;
+    }
     if (!parseTransformArguments(transform, phase)) {
       return false;
     }
@@ -342,6 +349,10 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
       if (!parseTemplateList(transform.templateArgs, &transform.templateArgDetails)) {
         return false;
       }
+    }
+    if (match(TokenKind::Ellipsis)) {
+      expect(TokenKind::Ellipsis, "expected '...'");
+      transform.isPackExpansion = true;
     }
     if (!parseTransformArguments(transform, transform.phase)) {
       return false;

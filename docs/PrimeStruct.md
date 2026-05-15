@@ -4157,6 +4157,14 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to brace
 ### Type Semantics (draft)
 - **Nested generics:** template arguments may themselves be generic envelopes (`map<i32, array<i32>>`), and the parser
   preserves the nested envelope string for later lowering.
+- **Heterogeneous type-pack storage:** a struct with a final type-pack
+  parameter can expand that pack in stored-field position with `[Ts...] values`.
+  Each specialization replaces the expansion with deterministic internal
+  fields named `__pack_values_0`, `__pack_values_1`, etc., in pack-argument
+  order. Zero-length packs produce no stored fields. These generated fields
+  participate in brace construction, layout, and semantic-product field
+  metadata as ordinary fields; helper signatures, helper bodies, and lifecycle
+  hooks are still deferred follow-up work.
 - **Field visibility:** stack-value declarations accept `[public]` or `[private]` transforms (default: public); they are
   mutually exclusive. The compiler records `visibility` metadata per field so tooling and backends enforce access rules
   consistently. Field visibility is in-language field-access metadata; it does not make a field a package-importable API
