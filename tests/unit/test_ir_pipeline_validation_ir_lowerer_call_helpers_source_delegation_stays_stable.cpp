@@ -497,6 +497,14 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(callResolutionSource.find("isResidualBridgeHelperPath(resolvedPath)") !=
         std::string::npos);
+  CHECK(callResolutionSource.find("#include \"primec/SoaPathHelpers.h\"") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("soa_paths::collectionPath(soa_paths::legacySoaFolder())") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("\"/std/collections/soa_vector/\"") ==
+        std::string::npos);
+  CHECK(callResolutionSource.find("\"soa_vector\"") == std::string::npos);
+  CHECK(callResolutionSource.find("\"to_aos\"") == std::string::npos);
   CHECK(callResolutionSource.find("isResidualBridgeHelperPath(fallbackResolvedPath)") ==
         std::string::npos);
   CHECK(callResolutionSource.find(

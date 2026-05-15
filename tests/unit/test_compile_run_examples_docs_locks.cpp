@@ -1617,13 +1617,14 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "- TODO-4276: Expand type packs in helpers and lifecycle hooks | track:\n"
                   "  tuple-type-packs | primary surface: generic helper signatures, helper\n"
                   "  bodies, return envelopes, and lifecycle behavior\n"
-                  "- TODO-4528: Delete emitter/lowerer SoA zero-audit residue | track:\n"
-                  "  soa-zero-audit | primary surface: emitter/lowerer trace inventory and shared\n"
-                  "  SoA helper routing") !=
+                  "- TODO-4528: Reduce lowerer count-access SoA trace residue | track:\n"
+                  "  soa-zero-audit | primary surface: lowerer count/access trace inventory and\n"
+                  "  shared SoA helper routing") !=
         std::string::npos);
   CHECK(todo.find("### Parallel Work Tracks (Current)\n\n"
-                  "- `soa-zero-audit`: ready TODO-4528 after TODO-4527 deleted the\n"
-                  "  template-monomorph source-lock residue; serial successor remains TODO-4529.") !=
+                  "- `soa-zero-audit`: TODO-4533 removed lowerer call-resolution residual\n"
+                  "  bridge traces; ready TODO-4528 targets lowerer count/access residue before\n"
+                  "  serial successor TODO-4529.") !=
         std::string::npos);
   CHECK(todo.find("- `map-zero-audit`: TODO-4532 reduced the lowerer native-dispatch slice;\n"
                   "  TODO-4464 remains the parent for future bounded trace-reduction splits\n"
@@ -1649,7 +1650,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended Track Order)\n\n"
                   "- TODO-4276: Expand type packs in helpers and lifecycle hooks\n"
-                  "- TODO-4528: Delete emitter/lowerer SoA zero-audit residue\n"
+                  "- TODO-4528: Reduce lowerer count-access SoA trace residue\n"
                   "- TODO-4529: Replace SoA inventory with strict zero audit\n"
                   "- TODO-4271: Add compile-time pack indexing") !=
         std::string::npos);
@@ -1683,11 +1684,13 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todoFinished.find("TODO-4527: Delete template-monomorph SoA zero-audit residue") !=
         std::string::npos);
+  CHECK(todoFinished.find("TODO-4533: Remove lowerer call-resolution SoA bridge traces") !=
+        std::string::npos);
   CHECK(todoFinished.find("TODO-4519: Delete `soa_vector` compatibility seams") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
       "TODO-4276: Expand type packs in helpers and lifecycle hooks",
-      "TODO-4528: Delete emitter/lowerer SoA zero-audit residue",
+      "TODO-4528: Reduce lowerer count-access SoA trace residue",
   };
   for (const std::string &entry : semanticPhaseQueue) {
     CHECK(todo.find("- " + entry) != std::string::npos);

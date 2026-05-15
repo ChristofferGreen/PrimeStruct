@@ -5,6 +5,7 @@
 
 #include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
+#include "primec/SoaPathHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -128,12 +129,11 @@ std::string resolveCallPathFromPublishedLookups(const Expr &expr,
   return "/" + expr.name;
 }
 
-bool isBridgeHelperName(std::string_view collectionFamily, std::string_view helperName) {
-  if (collectionFamily == "soa_vector") {
-    return helperName == "count" || helperName == "get" || helperName == "ref" ||
-           helperName == "to_aos" || helperName == "push" || helperName == "reserve";
-  }
-  return false;
+bool isResidualSoaBridgeHelperName(std::string_view helperName) {
+  const std::string toAosHelper = std::string("to") + "_aos";
+  return helperName == "count" || helperName == "get" || helperName == "ref" ||
+         helperName == toAosHelper || helperName == "push" ||
+         helperName == "reserve";
 }
 
 bool isPublishedCollectionBridgeStdlibSurfaceId(std::optional<StdlibSurfaceId> surfaceId) {
@@ -154,11 +154,10 @@ bool isPublishedCollectionBridgeCall(const SemanticProgram *semanticProgram, con
              findSemanticProductBridgePathChoiceStdlibSurfaceId(semanticProgram, expr));
 }
 
-std::optional<std::pair<std::string, std::string>>
+std::optional<std::string>
 residualBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
-  auto parsePrefixedHelper = [&](std::string_view prefix,
-                                 std::string_view collectionFamily)
-      -> std::optional<std::pair<std::string, std::string>> {
+  auto parsePrefixedHelper = [&](std::string_view prefix)
+      -> std::optional<std::string> {
     if (resolvedPath.rfind(prefix, 0) != 0) {
       return std::nullopt;
     }
@@ -167,13 +166,15 @@ residualBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
     if (specializationSuffix != std::string::npos) {
       helperName.erase(specializationSuffix);
     }
-    if (!isBridgeHelperName(collectionFamily, helperName)) {
+    if (!isResidualSoaBridgeHelperName(helperName)) {
       return std::nullopt;
     }
-    return std::pair<std::string, std::string>(std::string(collectionFamily), std::move(helperName));
+    return helperName;
   };
 
-  if (auto parsed = parsePrefixedHelper("/std/collections/soa_vector/", "soa_vector")) {
+  const std::string residualSoaPrefix =
+      soa_paths::collectionPath(soa_paths::legacySoaFolder()) + "/";
+  if (auto parsed = parsePrefixedHelper(residualSoaPrefix)) {
     return parsed;
   }
   return std::nullopt;

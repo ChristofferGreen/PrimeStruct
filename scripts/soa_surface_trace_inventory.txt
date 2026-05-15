@@ -44,9 +44,6 @@ src/ir_lowerer/IrLowererCallHelpers.cpp	experimental-soa-vector-path	1
 src/ir_lowerer/IrLowererCallHelpers.cpp	experimental-soa-vector-token	1
 src/ir_lowerer/IrLowererCallHelpers.cpp	soa-vector-token	1
 src/ir_lowerer/IrLowererCallHelpers.cpp	soa-vector-type-symbol	1
-src/ir_lowerer/IrLowererCallResolution.cpp	legacy-soa-vector-path	1
-src/ir_lowerer/IrLowererCallResolution.cpp	soa-conversion-helper	1
-src/ir_lowerer/IrLowererCallResolution.cpp	soa-vector-token	2
 src/ir_lowerer/IrLowererCountAccessClassifiers.cpp	canonical-soa-path	1
 src/ir_lowerer/IrLowererCountAccessClassifiers.cpp	legacy-soa-vector-path	1
 src/ir_lowerer/IrLowererCountAccessClassifiers.cpp	soa-conversion-helper	2

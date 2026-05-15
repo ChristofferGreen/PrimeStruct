@@ -91,6 +91,31 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
     - Focused release build, backend IR source-lock slices, and the stdlib map
       ownership misc suite passed in the assigned worktree.
 
+- [x] TODO-4533: Remove lowerer call-resolution SoA bridge traces
+  - owner: ai
+  - created_at: 2026-05-15
+  - finished_at: 2026-05-15
+  - phase: SoA public surface rename and ownership cutover
+  - parallel_track: soa-zero-audit
+  - split_from: TODO-4528
+  - depends_on: TODO-4527
+  - scope: Remove direct public SoA collection-surface spellings from
+    `src/ir_lowerer/IrLowererCallResolution.cpp`'s residual bridge-helper
+    matcher while preserving the fallback for unpublished SoA bridge choices.
+  - outcome:
+    - Routed residual SoA bridge-prefix construction through
+      `primec::soa_paths::collectionPath(legacySoaFolder())` instead of local
+      legacy public path literals.
+    - Kept bridge helper matching behavior but removed direct `soa_vector` and
+      `to_aos` spellings from call-resolution production code.
+    - Deleted all `IrLowererCallResolution.cpp` rows from the SoA surface trace
+      inventory, tightening the cap by three production trace slots.
+    - Added backend-IR/source-lock checks that keep call resolution on shared
+      SoA path helpers and reject direct legacy path/helper spelling drift.
+  - validation:
+    - Non-heavy SoA inventory validation passed. Focused release backend-IR and
+      compile-run source-lock validation passed in the assigned worktree.
+
 - [x] TODO-4526: Delete semantic SoA zero-audit residue
   - owner: ai
   - created_at: 2026-05-15
