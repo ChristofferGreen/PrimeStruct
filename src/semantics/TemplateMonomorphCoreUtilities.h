@@ -15,6 +15,90 @@ bool isBuiltinTemplateContainer(const std::string &name) {
          name == "File" || isBuiltinTemplateTypeName(name);
 }
 
+std::string templateMonomorphSoaReceiverTypeName() {
+  return internalSoaCollectionTypeName();
+}
+
+bool isTemplateMonomorphSoaReceiverType(std::string_view receiverTypeName) {
+  return receiverTypeName == templateMonomorphSoaReceiverTypeName();
+}
+
+std::string templateMonomorphSamePathSoaHelperPrefix(bool leadingSlash = true) {
+  std::string prefix = samePathSoaHelperTargetPath("");
+  if (!leadingSlash && !prefix.empty() && prefix.front() == '/') {
+    prefix.erase(prefix.begin());
+  }
+  return prefix;
+}
+
+std::string templateMonomorphCompatibilitySoaHelperPrefix(bool leadingSlash = true) {
+  std::string prefix = compatibilitySoaHelperTargetPath("");
+  prefix += "/";
+  if (!leadingSlash && !prefix.empty() && prefix.front() == '/') {
+    prefix.erase(prefix.begin());
+  }
+  return prefix;
+}
+
+std::string templateMonomorphPublicSoaHelperPrefix(bool leadingSlash = true) {
+  std::string prefix = publicSoaHelperTargetPath("");
+  prefix += "/";
+  if (!leadingSlash && !prefix.empty() && prefix.front() == '/') {
+    prefix.erase(prefix.begin());
+  }
+  return prefix;
+}
+
+std::string templateMonomorphExperimentalSoaHelperPrefix() {
+  std::string prefix = experimentalSoaStorageTypePath(true);
+  const size_t lastSlash = prefix.find_last_of('/');
+  if (lastSlash != std::string::npos) {
+    prefix.erase(lastSlash + 1);
+  }
+  return prefix;
+}
+
+std::string templateMonomorphSoaToAosHelperName(bool borrowed = false) {
+  std::string name = "to";
+  name += "_";
+  name += "aos";
+  if (borrowed) {
+    name += "_ref";
+  }
+  return name;
+}
+
+std::string templateMonomorphSoaToSoaHelperName() {
+  std::string name = "to";
+  name += "_";
+  name += "soa";
+  return name;
+}
+
+bool stripTemplateMonomorphSoaHelperPrefix(std::string_view path,
+                                           std::string &helperNameOut,
+                                           bool leadingSlash = true) {
+  const std::string samePathPrefix =
+      templateMonomorphSamePathSoaHelperPrefix(leadingSlash);
+  if (path.rfind(samePathPrefix, 0) == 0) {
+    helperNameOut = std::string(path.substr(samePathPrefix.size()));
+    return true;
+  }
+  const std::string compatibilityPrefix =
+      templateMonomorphCompatibilitySoaHelperPrefix(leadingSlash);
+  if (path.rfind(compatibilityPrefix, 0) == 0) {
+    helperNameOut = std::string(path.substr(compatibilityPrefix.size()));
+    return true;
+  }
+  const std::string publicPrefix =
+      templateMonomorphPublicSoaHelperPrefix(leadingSlash);
+  if (path.rfind(publicPrefix, 0) == 0) {
+    helperNameOut = std::string(path.substr(publicPrefix.size()));
+    return true;
+  }
+  return false;
+}
+
 std::string normalizeBuiltinCollectionTemplateBase(const std::string &name) {
   if (name == "array" || name == "/array") {
     return "array";
@@ -25,8 +109,9 @@ std::string normalizeBuiltinCollectionTemplateBase(const std::string &name) {
     return "vector";
   }
   if (name == "soa" || name == "/soa" ||
-      name == "std/collections/soa" || name == "/std/collections/soa") {
-    return "soa_vector";
+      name == publicSoaHelperTargetPath("") ||
+      name == trimLeadingSlash(publicSoaHelperTargetPath(""))) {
+    return templateMonomorphSoaReceiverTypeName();
   }
   if (name == "map" || name == "/map" || name == "std/collections/map" || name == "/std/collections/map") {
     return "map";
@@ -39,7 +124,9 @@ bool isBuiltinCollectionTemplateBase(const std::string &name, size_t argumentCou
   if (normalized.empty()) {
     return false;
   }
-  if ((normalized == "array" || normalized == "vector" || normalized == "soa_vector") && argumentCount == 1) {
+  if ((normalized == "array" || normalized == "vector" ||
+       isTemplateMonomorphSoaReceiverType(normalized)) &&
+      argumentCount == 1) {
     return true;
   }
   return normalized == "map" && argumentCount == 2;
@@ -54,7 +141,7 @@ bool importPathCoversTarget(const std::string &importPath, const std::string &ta
   }
   if (importPath == canonicalVectorCompatibilityPrefixOrFallback() ||
       importPath == "/std/collections/map" ||
-      importPath == "/std/collections/soa") {
+      importPath == publicSoaHelperTargetPath("")) {
     return targetPath.rfind(importPath + "/", 0) == 0;
   }
   if (importPath.size() >= 2 && importPath.compare(importPath.size() - 2, 2, "/*") == 0) {

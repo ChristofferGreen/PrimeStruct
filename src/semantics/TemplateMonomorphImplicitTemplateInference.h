@@ -54,7 +54,8 @@ bool inferImplicitTemplateArgs(const Definition &def,
   const bool isStdlibCollectionHelper =
       [&]() {
         if (isCanonicalVectorCompatibilityPath(def.fullPath) ||
-            def.fullPath.rfind("/std/collections/soa_vector/", 0) == 0 ||
+            def.fullPath.rfind(templateMonomorphCompatibilitySoaHelperPrefix(),
+                               0) == 0 ||
             isStdlibMapHelperDefinitionPath(def.fullPath)) {
           return true;
         }
@@ -67,7 +68,8 @@ bool inferImplicitTemplateArgs(const Definition &def,
         }
         const std::string normalizedReceiverType =
             normalizeCollectionReceiverTypeName(receiverBinding.typeName);
-        return normalizedReceiverType == "vector" || normalizedReceiverType == "soa_vector" ||
+        return normalizedReceiverType == "vector" ||
+               isTemplateMonomorphSoaReceiverType(normalizedReceiverType) ||
                normalizedReceiverType == "map";
       }();
   std::unordered_set<std::string> implicitSet;
@@ -113,7 +115,8 @@ bool inferImplicitTemplateArgs(const Definition &def,
         return false;
       }
       const std::string normalizedBase = normalizeBindingTypeName(base);
-      if (normalizeCollectionReceiverTypeName(normalizedBase) == "soa_vector") {
+      if (isTemplateMonomorphSoaReceiverType(
+              normalizeCollectionReceiverTypeName(normalizedBase))) {
         elemTypeOut = normalizeBindingTypeName(argText);
         return !elemTypeOut.empty();
       }
@@ -437,7 +440,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
     }
     return false;
   };
-  if (def.fullPath.rfind("/std/collections/soa_vector/", 0) == 0 &&
+  if (def.fullPath.rfind(templateMonomorphCompatibilitySoaHelperPrefix(), 0) == 0 &&
       !def.templateArgs.empty() &&
       inferred.count(def.templateArgs.front()) == 0 &&
       !callExpr.args.empty()) {
@@ -519,7 +522,8 @@ bool inferImplicitTemplateArgs(const Definition &def,
           std::string base;
           std::string argText;
           if (!splitTemplateTypeName(typeText, base, argText) || base.empty()) {
-            return normalizeCollectionReceiverTypeName(typeText) == "soa_vector";
+            return isTemplateMonomorphSoaReceiverType(
+                normalizeCollectionReceiverTypeName(typeText));
           }
           const std::string normalizedBase = normalizeCollectionReceiverTypeName(base);
           if ((normalizedBase == "Reference" || normalizedBase == "Pointer") &&
@@ -531,7 +535,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
             typeText = normalizeBindingTypeName(wrappedArgs.front());
             continue;
           }
-          return normalizedBase == "soa_vector";
+          return isTemplateMonomorphSoaReceiverType(normalizedBase);
         }
       };
       BindingInfo receiverInfo;
@@ -588,9 +592,10 @@ bool inferImplicitTemplateArgs(const Definition &def,
     const bool receiverIsExperimentalSoa =
         resolvesExperimentalSoaReceiver(candidate.args.front());
     auto hasVisibleSoaBorrowedHelper = [&](std::string_view helperName) {
-      const std::string samePath = "/soa_vector/" + std::string(helperName);
+      const std::string samePath =
+          templateMonomorphSamePathSoaHelperPrefix() + std::string(helperName);
       const std::string canonicalPath =
-          "/std/collections/soa_vector/" + std::string(helperName);
+          compatibilitySoaHelperTargetPath(helperName);
       return ctx.sourceDefs.count(samePath) > 0 ||
              ctx.helperOverloads.count(samePath) > 0 ||
              ctx.sourceDefs.count(canonicalPath) > 0 ||
@@ -606,15 +611,18 @@ bool inferImplicitTemplateArgs(const Definition &def,
         canonicalizeLegacySoaRefHelperPath("/" + normalizedName);
     const std::string normalizedNameSoaPath = "/" + normalizedName;
     const bool normalizedNameUsesCanonicalSoaNamespace =
-        normalizedName.rfind("std/collections/soa_vector/", 0) == 0;
+        normalizedName.rfind(
+            templateMonomorphCompatibilitySoaHelperPrefix(false), 0) == 0;
     const bool normalizedNameUsesLegacySoaNamespace =
-        normalizedName.rfind("soa_vector/", 0) == 0;
+        normalizedName.rfind(
+            templateMonomorphSamePathSoaHelperPrefix(false), 0) == 0;
     const std::string normalizedPrefixedSoaPath =
         normalizedPrefix.empty()
             ? std::string{}
             : "/" + normalizedPrefix + "/" + normalizedName;
     const bool normalizedPrefixedUsesLegacySoaNamespace =
-        normalizedPrefixedSoaPath.rfind("/soa_vector/", 0) == 0;
+        normalizedPrefixedSoaPath.rfind(
+            templateMonomorphSamePathSoaHelperPrefix(), 0) == 0;
     const bool normalizedPrefixedNameMatchesSoaRef =
         isLegacyOrCanonicalSoaHelperPath(normalizedPrefixedSoaPath, "ref");
     const bool normalizedPrefixedNameMatchesSoaRefRef =
@@ -654,7 +662,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
         normalizedNameUsesLegacySoaNamespace &&
         (normalizedNameMatchesSoaRef || normalizedNameMatchesSoaRefRef);
     const std::string normalizedMethodSoaPath =
-        "/soa_vector/" + normalizedName;
+        templateMonomorphSamePathSoaHelperPrefix() + normalizedName;
     const bool normalizedMethodNameMatchesSoaRef =
         isLegacyOrCanonicalSoaHelperPath(normalizedMethodSoaPath, "ref");
     const bool normalizedMethodNameMatchesSoaRefRef =
@@ -670,9 +678,9 @@ bool inferImplicitTemplateArgs(const Definition &def,
           normalizedMethodNameMatchesSoaRefRef ||
           isCanonicalBuiltinSoaRefRefCall ||
           isOldSurfaceBuiltinSoaRefRefCall;
-      const char *missingSoaRefHelperPath =
-          isAnyBuiltinSoaRefRefCall ? "/std/collections/soa_vector/ref_ref"
-                                    : "/std/collections/soa_vector/ref";
+      const std::string missingSoaRefHelperPath =
+          compatibilitySoaHelperTargetPath(
+              isAnyBuiltinSoaRefRefCall ? "ref_ref" : "ref");
       if (isAnyBuiltinSoaRefRefCall ? hasVisibleSoaRefRefHelper
                                     : hasVisibleSoaRefHelper) {
         return {};
@@ -704,15 +712,17 @@ bool inferImplicitTemplateArgs(const Definition &def,
     }
     const bool isKnownBuiltinSoaHelperName =
         normalizedName == "count" || normalizedName == "get" ||
-        normalizedName == "to_soa" || normalizedName == "to_aos" ||
-        normalizedName == "to_aos_ref" ||
+        normalizedName == templateMonomorphSoaToSoaHelperName() ||
+        normalizedName == templateMonomorphSoaToAosHelperName() ||
+        normalizedName == templateMonomorphSoaToAosHelperName(true) ||
         normalizedName == "contains";
     if (isKnownBuiltinSoaHelperName) {
       return {};
     }
-    const std::string ownedPath = "/soa_vector/" + normalizedName;
+    const std::string ownedPath =
+        templateMonomorphSamePathSoaHelperPrefix() + normalizedName;
     const std::string canonicalPath =
-        "/std/collections/soa_vector/" + normalizedName;
+        templateMonomorphCompatibilitySoaHelperPrefix() + normalizedName;
     if (ctx.sourceDefs.count(ownedPath) > 0 ||
         ctx.helperOverloads.count(ownedPath) > 0 ||
         ctx.sourceDefs.count(canonicalPath) > 0 ||

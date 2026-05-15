@@ -86,15 +86,14 @@ Task template:
 - TODO-4275: Expand type packs into struct storage | track:
   tuple-type-packs | primary surface: parser, AST, semantic validation,
   and generic struct storage layout
-- TODO-4527: Delete template-monomorph SoA zero-audit residue | track:
-  soa-zero-audit | primary surface: template monomorphization trace inventory
-  and shared SoA helper routing
+- TODO-4528: Delete emitter/lowerer SoA zero-audit residue | track:
+  soa-zero-audit | primary surface: emitter/lowerer trace inventory and
+  shared SoA helper routing
 
 ### Parallel Work Tracks (Current)
 
-- `soa-zero-audit`: ready TODO-4527 after TODO-4526 deleted the semantic
-  validation source-lock residue; serial successors remain TODO-4528
-  -> TODO-4529.
+- `soa-zero-audit`: ready TODO-4528 after TODO-4527 deleted the
+  template-monomorph source-lock residue; serial successor remains TODO-4529.
 - `map-zero-audit`: TODO-4532 reduced the lowerer native-dispatch slice;
   TODO-4464 remains the parent for future bounded trace-reduction splits
   and the final strict zero map-surface audit.
@@ -108,7 +107,6 @@ Task template:
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
-- TODO-4528: Delete emitter/lowerer SoA zero-audit residue
 - TODO-4529: Replace SoA inventory with strict zero audit
 - TODO-4276: Expand type packs in helpers and lifecycle hooks
 - TODO-4271: Add compile-time pack indexing
@@ -127,8 +125,8 @@ Task template:
   bounded trace-reduction splits and the final strict zero audit
 - SoA public surface rename and ownership cutover: TODO-4306 parent split;
   TODO-4526 removed semantic-validation inventory residue after TODO-4530
-  reduced the shared semantic builtin path helper boundary; TODO-4527 is
-  ready before TODO-4528 -> TODO-4529
+  reduced the shared semantic builtin path helper boundary; TODO-4527 removed
+  template-monomorph residue; TODO-4528 is ready before TODO-4529
 - Deferred generic tuple substrate: ready TODO-4275 after TODO-4270, followed
   by TODO-4276 -> TODO-4271 -> TODO-4272
   -> TODO-4274 -> TODO-4273 -> TODO-4277 -> TODO-4278
@@ -144,7 +142,6 @@ Task template:
 ### Execution Queue (Recommended Track Order)
 
 - TODO-4275: Expand type packs into struct storage
-- TODO-4527: Delete template-monomorph SoA zero-audit residue
 - TODO-4528: Delete emitter/lowerer SoA zero-audit residue
 - TODO-4529: Replace SoA inventory with strict zero audit
 - TODO-4276: Expand type packs in helpers and lifecycle hooks
@@ -1988,33 +1985,11 @@ Task template:
       lowerer routing. Keep the parent open until TODO-4529 replaces the
       inventory cap with a strict zero-production-trace audit.
 
-- [ ] TODO-4527: Delete template-monomorph SoA zero-audit residue
-  - owner: ai
-  - created_at: 2026-05-15
-  - phase: SoA public surface rename and ownership cutover
-  - parallel_track: soa-zero-audit
-  - split_from: TODO-4524
-  - depends_on: TODO-4526
-  - scope: Remove remaining template-monomorph SoA public-surface trace
-    inventory entries from compatibility paths, method targets, implicit
-    inference, fallback inference, and expression rewrites.
-  - implementation_notes:
-    - Start from `src/semantics/TemplateMonomorph*.h` inventory rows and route
-      any still-required compatibility classification through generic shared
-      helpers.
-  - acceptance:
-    - Template monomorphization inventory rows for public SoA collection-surface
-      traces are deleted or reduced to the next explicit cap.
-    - Existing canonical `soa<T>` construction, helper call, conversion, and
-      compatibility-rejection coverage stays stable.
-    - Focused template/semantic and source-lock tests pass.
-  - stop_rule: Stop once template monomorphization no longer owns direct public
-    SoA collection-surface traces outside shared compatibility helpers.
-
 - [ ] TODO-4528: Delete emitter/lowerer SoA zero-audit residue
   - owner: ai
   - created_at: 2026-05-15
   - phase: SoA public surface rename and ownership cutover
+  - parallel_track: soa-zero-audit
   - split_from: TODO-4524
   - depends_on: TODO-4527
   - scope: Remove remaining emitter and IR-lowerer SoA public-surface trace

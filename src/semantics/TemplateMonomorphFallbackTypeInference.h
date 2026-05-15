@@ -413,7 +413,8 @@ std::string inferExprTypeTextForTemplatedVectorFallback(const Expr &expr,
   }
   std::string builtinCollection;
   if (getBuiltinCollectionName(expr, builtinCollection)) {
-    if ((builtinCollection == "array" || builtinCollection == "vector" || builtinCollection == "soa_vector") &&
+    if ((builtinCollection == "array" || builtinCollection == "vector" ||
+         isTemplateMonomorphSoaReceiverType(builtinCollection)) &&
         expr.templateArgs.size() == 1) {
       return builtinCollection + "<" + expr.templateArgs.front() + ">";
     }
@@ -512,7 +513,8 @@ bool shouldPreferTemplatedVectorFallbackForTypeMismatch(const Definition &def,
     return false;
   };
   auto isCollectionEnvelopeBase = [&](const std::string &base) {
-    return base == "array" || base == "vector" || base == "map" || base == "soa_vector";
+    return base == "array" || base == "vector" || base == "map" ||
+           isTemplateMonomorphSoaReceiverType(base);
   };
   auto hasUnknownEnvelopeMismatch = [&](const std::string &normalizedExpected,
                                         const std::string &normalizedActual) {
@@ -702,9 +704,10 @@ std::string preferVectorStdlibImplicitTemplatePath(const Expr &expr,
       specializationSuffix != std::string::npos) {
     pathBase.erase(specializationSuffix);
   }
-  if (pathBase.rfind("/std/collections/soa/", 0) == 0 &&
-      (pathBase == "/std/collections/soa/push" ||
-       pathBase == "/std/collections/soa/reserve") &&
+  const std::string publicSoaPrefix = templateMonomorphPublicSoaHelperPrefix();
+  if (pathBase.rfind(publicSoaPrefix, 0) == 0 &&
+      (pathBase == publicSoaHelperTargetPath("push") ||
+       pathBase == publicSoaHelperTargetPath("reserve")) &&
       !expr.args.empty()) {
     auto inferFirstArgFamily = [&]() -> std::string {
       BindingInfo receiverBinding;
@@ -728,7 +731,7 @@ std::string preferVectorStdlibImplicitTemplatePath(const Expr &expr,
     };
     if (inferFirstArgFamily() == "vector") {
       const std::string helperName =
-          pathBase.substr(std::string("/std/collections/soa/").size());
+          pathBase.substr(publicSoaPrefix.size());
       const std::string vectorPath =
           canonicalVectorCompatibilityHelperPathOrFallback(helperName);
       if (ctx.sourceDefs.count(vectorPath) > 0 &&

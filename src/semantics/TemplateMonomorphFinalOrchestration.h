@@ -73,16 +73,22 @@ void buildImportAliases(Context &ctx) {
   auto shouldSkipWildcardAlias = [](const std::string &prefix, const std::string &remainder) {
     return prefix == "/std/collections" && (remainder == "vector" || remainder == "map");
   };
+  auto shouldKeepSoaHelperTargetOutOfImportAliases =
+      [](const std::string &aliasName, const std::string &targetPath) {
+        return targetPath.rfind(templateMonomorphCompatibilitySoaHelperPrefix(),
+                                0) == 0 &&
+               (aliasName == "count" || aliasName == "get" ||
+                aliasName == "ref" || aliasName == "count_ref" ||
+                aliasName == "get_ref" || aliasName == "ref_ref" ||
+                aliasName == "reserve" || aliasName == "push" ||
+                aliasName == templateMonomorphSoaToAosHelperName() ||
+                aliasName == templateMonomorphSoaToAosHelperName(true));
+      };
   auto registerAlias = [&](std::unordered_map<std::string, std::string> &targetAliases,
                            const std::string &aliasName,
                            const std::string &targetPath) {
     targetAliases.emplace(aliasName, targetPath);
-    if (!(targetPath.rfind("/std/collections/soa_vector/", 0) == 0 &&
-          (aliasName == "count" || aliasName == "get" || aliasName == "ref" ||
-           aliasName == "count_ref" || aliasName == "get_ref" ||
-           aliasName == "ref_ref" || aliasName == "reserve" ||
-           aliasName == "push" || aliasName == "to_aos" ||
-           aliasName == "to_aos_ref"))) {
+    if (!shouldKeepSoaHelperTargetOutOfImportAliases(aliasName, targetPath)) {
       ctx.importAliases.emplace(aliasName, targetPath);
     }
   };
@@ -90,12 +96,7 @@ void buildImportAliases(Context &ctx) {
                                      const std::string &aliasName,
                                      const std::string &targetPath) {
     targetAliases[aliasName] = targetPath;
-    if (!(targetPath.rfind("/std/collections/soa_vector/", 0) == 0 &&
-          (aliasName == "count" || aliasName == "get" || aliasName == "ref" ||
-           aliasName == "count_ref" || aliasName == "get_ref" ||
-           aliasName == "ref_ref" || aliasName == "reserve" ||
-           aliasName == "push" || aliasName == "to_aos" ||
-           aliasName == "to_aos_ref"))) {
+    if (!shouldKeepSoaHelperTargetOutOfImportAliases(aliasName, targetPath)) {
       ctx.importAliases[aliasName] = targetPath;
     }
   };

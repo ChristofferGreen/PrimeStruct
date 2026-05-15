@@ -257,8 +257,9 @@ bool rewriteExpr(Expr &expr,
     };
     auto isCanonicalSoaHelperPath = [](const std::string &candidate,
                                        std::string_view helperName) {
-      return (candidate.rfind("/std/collections/soa_vector/", 0) == 0 ||
-              candidate.rfind("/std/collections/soa/", 0) == 0) &&
+      return (candidate.rfind(templateMonomorphCompatibilitySoaHelperPrefix(),
+                              0) == 0 ||
+              candidate.rfind(templateMonomorphPublicSoaHelperPrefix(), 0) == 0) &&
              isLegacyOrCanonicalSoaHelperPath(candidate, helperName);
     };
     const std::string canonicalSoaCountPath = canonicalizeSoaHelperPath(path);
@@ -276,8 +277,10 @@ bool rewriteExpr(Expr &expr,
            isCanonicalSoaRefLikeHelperPath(path) ||
            isCanonicalSoaHelperPath(canonicalSoaCountPath, "reserve") ||
            isCanonicalSoaHelperPath(canonicalSoaCountPath, "push") ||
-           isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosPath, "to_aos") ||
-           isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosPath, "to_aos_ref");
+           isLegacyOrCanonicalSoaHelperPath(
+               canonicalSoaToAosPath, templateMonomorphSoaToAosHelperName()) ||
+           isLegacyOrCanonicalSoaHelperPath(
+               canonicalSoaToAosPath, templateMonomorphSoaToAosHelperName(true));
   };
   auto isTemplatedAutoCompatVectorHelperPath = [](std::string_view path) {
     const std::string compatibilityPrefix =
@@ -477,7 +480,8 @@ bool rewriteExpr(Expr &expr,
                                                     allowMathBare));
   };
   auto resolvesSoaReceiverForRewrite = [&](const Expr &receiverExpr) {
-    return inferCollectionReceiverFamilyForRewrite(&receiverExpr) == "soa_vector" ||
+    return isTemplateMonomorphSoaReceiverType(
+               inferCollectionReceiverFamilyForRewrite(&receiverExpr)) ||
            resolvesExperimentalSoaReceiverForRewrite(receiverExpr);
   };
   auto resolveExperimentalSoaVectorReceiverTemplateArgs =
@@ -506,7 +510,8 @@ bool rewriteExpr(Expr &expr,
               receiverTypeText = normalizeBindingTypeName(wrappedArgs.front());
               continue;
             }
-            if ((normalizeCollectionReceiverTypeName(normalizedBase) == "soa_vector" ||
+            if ((isTemplateMonomorphSoaReceiverType(
+                     normalizeCollectionReceiverTypeName(normalizedBase)) ||
                  isExperimentalSoaVectorSpecializedTypePath(normalizedBase)) &&
                 !argText.empty()) {
               return splitTopLevelTemplateArgs(argText, templateArgsOut) && templateArgsOut.size() == 1;
@@ -531,7 +536,7 @@ bool rewriteExpr(Expr &expr,
               continue;
             }
             const std::string normalizedBase = normalizeCollectionReceiverTypeName(base);
-            if (normalizedBase != "soa_vector") {
+            if (!isTemplateMonomorphSoaReceiverType(normalizedBase)) {
               continue;
             }
             return splitTopLevelTemplateArgs(argText, templateArgsOut) && templateArgsOut.size() == 1;
@@ -771,10 +776,10 @@ bool rewriteExpr(Expr &expr,
   };
   auto preferredBorrowedPathForPublicOrCompatibility =
       [](const std::string &canonicalPath, std::string_view borrowedHelper) {
-        if (canonicalPath.rfind("/std/collections/soa/", 0) == 0) {
-          return "/std/collections/soa/" + std::string(borrowedHelper);
+        if (canonicalPath.rfind(templateMonomorphPublicSoaHelperPrefix(), 0) == 0) {
+          return publicSoaHelperTargetPath(borrowedHelper);
         }
-        return "/std/collections/soa_vector/" + std::string(borrowedHelper);
+        return compatibilitySoaHelperTargetPath(borrowedHelper);
       };
   auto isCanonicalSoaBorrowedWrapperHelper = [&](const std::string &path) {
     auto canonicalizeSoaHelperPath = [](std::string canonicalPath) {
@@ -794,7 +799,8 @@ bool rewriteExpr(Expr &expr,
     return isLegacyOrCanonicalSoaHelperPath(canonicalSoaCountPath, "count_ref") ||
            isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get_ref") ||
            isLegacyOrCanonicalSoaHelperPath(canonicalSoaRefPath, "ref_ref") ||
-           isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosPath, "to_aos_ref");
+           isLegacyOrCanonicalSoaHelperPath(
+               canonicalSoaToAosPath, templateMonomorphSoaToAosHelperName(true));
   };
   auto preferredBorrowedSoaWrapperPath = [&](const std::string &path) {
     auto canonicalizeSoaHelperPath = [](std::string canonicalPath) {
@@ -812,16 +818,20 @@ bool rewriteExpr(Expr &expr,
     const std::string canonicalSoaToAosPath =
         canonicalizeLegacySoaToAosHelperPath(path);
     if (path == "/count" || path == "count") {
-      return std::string("/std/collections/soa_vector/count_ref");
+      return compatibilitySoaHelperTargetPath("count_ref");
     }
     if (path == "/get" || path == "get") {
-      return std::string("/std/collections/soa_vector/get_ref");
+      return compatibilitySoaHelperTargetPath("get_ref");
     }
     if (path == "/ref" || path == "ref") {
-      return std::string("/std/collections/soa_vector/ref_ref");
+      return compatibilitySoaHelperTargetPath("ref_ref");
     }
-    if (path == "/to_aos" || path == "to_aos") {
-      return std::string("/std/collections/soa_vector/to_aos_ref");
+    const std::string samePathSoaToAos =
+        "/" + templateMonomorphSoaToAosHelperName();
+    if (path == samePathSoaToAos ||
+        path == templateMonomorphSoaToAosHelperName()) {
+      return compatibilitySoaHelperTargetPath(
+          templateMonomorphSoaToAosHelperName(true));
     }
     if (isLegacyOrCanonicalSoaHelperPath(canonicalSoaCountPath, "count")) {
       return preferredBorrowedPathForPublicOrCompatibility(canonicalSoaCountPath,
@@ -835,8 +845,10 @@ bool rewriteExpr(Expr &expr,
       return preferredBorrowedPathForPublicOrCompatibility(canonicalSoaRefPath,
                                                            "ref_ref");
     }
-    if (isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosPath, "to_aos")) {
-      return std::string("/std/collections/soa_vector/to_aos_ref");
+    if (isLegacyOrCanonicalSoaHelperPath(
+            canonicalSoaToAosPath, templateMonomorphSoaToAosHelperName())) {
+      return compatibilitySoaHelperTargetPath(
+          templateMonomorphSoaToAosHelperName(true));
     }
     return std::string{};
   };
@@ -870,7 +882,8 @@ bool rewriteExpr(Expr &expr,
         if (!extractExplicitBindingType(defIt->second.parameters.front(), paramBinding)) {
           return false;
         }
-        return normalizeBindingTypeName(paramBinding.typeName) == "soa_vector" &&
+        return isTemplateMonomorphSoaReceiverType(
+                   normalizeBindingTypeName(paramBinding.typeName)) &&
                !paramBinding.typeTemplateArg.empty();
       };
       const std::string ownedHelperPath(helperPath);
@@ -892,7 +905,8 @@ bool rewriteExpr(Expr &expr,
       if (candidate == nullptr) {
         return false;
       }
-      if (inferCollectionReceiverFamily(candidate) == "soa_vector") {
+      if (isTemplateMonomorphSoaReceiverType(
+              inferCollectionReceiverFamily(candidate))) {
         return true;
       }
       if (candidate->kind != Expr::Kind::Call || candidate->isBinding) {
@@ -915,7 +929,8 @@ bool rewriteExpr(Expr &expr,
               defIt->second, hasMathImport(ctx), const_cast<Context &>(ctx), inferredReturn)) {
         return false;
       }
-      return normalizeBindingTypeName(inferredReturn.typeName) == "soa_vector" &&
+      return isTemplateMonomorphSoaReceiverType(
+                 normalizeBindingTypeName(inferredReturn.typeName)) &&
              !inferredReturn.typeTemplateArg.empty();
     };
     auto canonicalizeSoaHelperPath = [](std::string canonicalPath) {
@@ -931,8 +946,8 @@ bool rewriteExpr(Expr &expr,
       helperName =
           std::string(stripUnrootedCanonicalVectorCompatibilityPrefix(path));
       resolvesVectorFamilyPath = true;
-    } else if (path.rfind("/std/collections/soa_vector/", 0) == 0) {
-      helperName = path.substr(std::string("/std/collections/soa_vector/").size());
+    } else if (path.rfind(templateMonomorphCompatibilitySoaHelperPrefix(), 0) == 0) {
+      helperName = path.substr(templateMonomorphCompatibilitySoaHelperPrefix().size());
     } else if (!expr.isMethodCall &&
                !path.empty() &&
                path.front() == '/' &&
@@ -948,8 +963,9 @@ bool rewriteExpr(Expr &expr,
         helperName != "capacity" && helperName != "push" &&
         helperName != "reserve" && helperName != "get" &&
         helperName != "get_ref" && helperName != "ref" &&
-        helperName != "ref_ref" && helperName != "to_aos" &&
-        helperName != "to_aos_ref") {
+        helperName != "ref_ref" &&
+        helperName != templateMonomorphSoaToAosHelperName() &&
+        helperName != templateMonomorphSoaToAosHelperName(true)) {
       return path;
     }
     const std::string receiverFamily = inferCollectionReceiverFamily(receiverExpr);
@@ -964,8 +980,8 @@ bool rewriteExpr(Expr &expr,
         helperName = "get_ref";
       } else if (helperName == "ref") {
         helperName = "ref_ref";
-      } else if (helperName == "to_aos") {
-        helperName = "to_aos_ref";
+      } else if (helperName == templateMonomorphSoaToAosHelperName()) {
+        helperName = templateMonomorphSoaToAosHelperName(true);
       }
     }
     if (receiverFamily == "vector" &&
@@ -987,9 +1003,10 @@ bool rewriteExpr(Expr &expr,
         };
     if (helperName == "count" || helperName == "count_ref" ||
         helperName == "push" || helperName == "reserve") {
-      const std::string samePathSoaNonRefHelper = "/soa_vector/" + helperName;
+      const std::string samePathSoaNonRefHelper =
+          templateMonomorphSamePathSoaHelperPrefix() + helperName;
       const bool receiverEligibleForSamePathSoaHelper =
-          receiverFamily == "soa_vector" ||
+          isTemplateMonomorphSoaReceiverType(receiverFamily) ||
           receiverResolvesBorrowedExperimentalSoaVector ||
           receiverResolvesExperimentalSoaVector ||
           ((helperName == "count" || helperName == "count_ref") &&
@@ -1001,9 +1018,10 @@ bool rewriteExpr(Expr &expr,
       }
     }
     if (helperName == "get" || helperName == "get_ref") {
-      const std::string samePathGetHelper = "/soa_vector/" + helperName;
+      const std::string samePathGetHelper =
+          templateMonomorphSamePathSoaHelperPrefix() + helperName;
       if (hasDefinitionFamilyPath(samePathGetHelper) &&
-          (receiverFamily == "soa_vector" ||
+          (isTemplateMonomorphSoaReceiverType(receiverFamily) ||
            receiverResolvesBorrowedExperimentalSoaVector ||
            receiverResolvesExperimentalSoaVector ||
            receiverFamily == "vector")) {
@@ -1011,25 +1029,28 @@ bool rewriteExpr(Expr &expr,
       }
     }
     if (helperName == "ref" || helperName == "ref_ref") {
-      const std::string samePathRefHelper = "/soa_vector/" + helperName;
+      const std::string samePathRefHelper =
+          templateMonomorphSamePathSoaHelperPrefix() + helperName;
       if (hasDefinitionFamilyPath(samePathRefHelper) &&
-          (receiverFamily == "soa_vector" ||
+          (isTemplateMonomorphSoaReceiverType(receiverFamily) ||
            receiverResolvesBorrowedExperimentalSoaVector ||
            receiverResolvesExperimentalSoaVector ||
            receiverFamily == "vector")) {
         return samePathRefHelper;
       }
     }
-    if (helperName == "to_aos" || helperName == "to_aos_ref") {
+    if (helperName == templateMonomorphSoaToAosHelperName() ||
+        helperName == templateMonomorphSoaToAosHelperName(true)) {
       const std::string samePathToAosHelper = "/" + helperName;
       if (hasVisibleRootBuiltinSoaConversionHelper(samePathToAosHelper) &&
           resolvesBuiltinSoaToAosShadowReceiver(receiverExpr)) {
         return samePathToAosHelper;
       }
     }
-    if (receiverFamily == "soa_vector" ||
+    if (isTemplateMonomorphSoaReceiverType(receiverFamily) ||
         receiverResolvesBorrowedExperimentalSoaVector) {
-      const std::string preferred = "/std/collections/soa_vector/" + helperName;
+      const std::string preferred =
+          templateMonomorphCompatibilitySoaHelperPrefix() + helperName;
       if (ctx.sourceDefs.count(preferred) > 0 &&
           (resolvesVectorFamilyPath ||
            hasVisibleStdCollectionsImportForPath(ctx, preferred))) {
@@ -1073,29 +1094,34 @@ bool rewriteExpr(Expr &expr,
     const bool borrowedExperimentalSoaReceiver =
         resolvesBorrowedExperimentalSoaVectorReceiver(helperReceiverExpr);
     const bool isCanonicalNonBorrowedSoaHelperPath =
-        path == "/std/collections/soa_vector/count" ||
-        path == "/std/collections/soa/count" ||
-        path == "/std/collections/soa_vector/get" ||
-        path == "/std/collections/soa/get" ||
-        path == "/std/collections/soa_vector/ref" ||
-        path == "/std/collections/soa/ref" ||
-        path == "/std/collections/soa_vector/to_aos" ||
-        path == "/std/collections/soa/to_aos";
+        path == compatibilitySoaHelperTargetPath("count") ||
+        path == publicSoaHelperTargetPath("count") ||
+        path == compatibilitySoaHelperTargetPath("get") ||
+        path == publicSoaHelperTargetPath("get") ||
+        path == compatibilitySoaHelperTargetPath("ref") ||
+        path == publicSoaHelperTargetPath("ref") ||
+        path == compatibilitySoaHelperTargetPath(
+                    templateMonomorphSoaToAosHelperName()) ||
+        path == publicSoaHelperTargetPath(
+                    templateMonomorphSoaToAosHelperName());
     if (borrowedExperimentalSoaReceiver &&
         isCanonicalNonBorrowedSoaHelperPath) {
       return true;
     }
-    if ((path.rfind("/std/collections/soa_vector/", 0) == 0 ||
-         path.rfind("/std/collections/soa/", 0) == 0) &&
+    if ((path.rfind(templateMonomorphCompatibilitySoaHelperPrefix(), 0) == 0 ||
+         path.rfind(templateMonomorphPublicSoaHelperPrefix(), 0) == 0) &&
         helperReceiverExpr != nullptr) {
-      if (path == "/std/collections/soa/to_aos" ||
-          path == "/std/collections/soa/to_aos_ref") {
+      if (path == publicSoaHelperTargetPath(
+                      templateMonomorphSoaToAosHelperName()) ||
+          path == publicSoaHelperTargetPath(
+                      templateMonomorphSoaToAosHelperName(true))) {
         return true;
       }
       const bool directArgsPackReceiver =
           inferCollectionReceiverFamilyForRewrite(helperReceiverExpr) == "args";
       const bool directBuiltinSoaReceiver =
-          inferCollectionReceiverFamily(helperReceiverExpr) == "soa_vector";
+          isTemplateMonomorphSoaReceiverType(
+              inferCollectionReceiverFamily(helperReceiverExpr));
       const bool directExperimentalSoaReceiver =
           resolvesExperimentalSoaVectorReceiver(helperReceiverExpr);
       if (directArgsPackReceiver || directBuiltinSoaReceiver ||
@@ -1261,10 +1287,13 @@ bool rewriteExpr(Expr &expr,
         normalizedPrefix.erase(normalizedPrefix.begin());
       }
       const bool usesCanonicalSoaSurface =
-          normalizedName.rfind("std/collections/soa_vector/", 0) == 0 ||
-          normalizedName.rfind("std/collections/soa/", 0) == 0 ||
-          normalizedPrefix == "std/collections/soa_vector" ||
-          normalizedPrefix == "std/collections/soa";
+          normalizedName.rfind(
+              templateMonomorphCompatibilitySoaHelperPrefix(false), 0) == 0 ||
+          normalizedName.rfind(
+              templateMonomorphPublicSoaHelperPrefix(false), 0) == 0 ||
+          normalizedPrefix ==
+              trimLeadingSlash(compatibilitySoaHelperTargetPath("")) ||
+          normalizedPrefix == trimLeadingSlash(publicSoaHelperTargetPath(""));
       if (!usesCanonicalSoaSurface) {
         return std::string{};
       }
@@ -1272,34 +1301,34 @@ bool rewriteExpr(Expr &expr,
           normalizedName == "ref" || normalizedName == "ref_ref") {
         return normalizedName;
       }
-      if (normalizedName == "soa_vector/get" ||
-          normalizedName == "std/collections/soa_vector/get" ||
+      if (normalizedName == templateMonomorphSamePathSoaHelperPrefix(false) + "get" ||
+          normalizedName == templateMonomorphCompatibilitySoaHelperPrefix(false) + "get" ||
           normalizedName == "soa/get" ||
-          normalizedName == "std/collections/soa/get") {
+          normalizedName == templateMonomorphPublicSoaHelperPrefix(false) + "get") {
         return std::string("get");
       }
-      if (normalizedName == "soa_vector/get_ref" ||
-          normalizedName == "std/collections/soa_vector/get_ref" ||
+      if (normalizedName == templateMonomorphSamePathSoaHelperPrefix(false) + "get_ref" ||
+          normalizedName == templateMonomorphCompatibilitySoaHelperPrefix(false) + "get_ref" ||
           normalizedName == "soa/get_ref" ||
-          normalizedName == "std/collections/soa/get_ref") {
+          normalizedName == templateMonomorphPublicSoaHelperPrefix(false) + "get_ref") {
         return std::string("get_ref");
       }
-      if (normalizedName == "soa_vector/ref" ||
-          normalizedName == "std/collections/soa_vector/ref" ||
+      if (normalizedName == templateMonomorphSamePathSoaHelperPrefix(false) + "ref" ||
+          normalizedName == templateMonomorphCompatibilitySoaHelperPrefix(false) + "ref" ||
           normalizedName == "soa/ref" ||
-          normalizedName == "std/collections/soa/ref") {
+          normalizedName == templateMonomorphPublicSoaHelperPrefix(false) + "ref") {
         return std::string("ref");
       }
-      if (normalizedName == "soa_vector/ref_ref" ||
-          normalizedName == "std/collections/soa_vector/ref_ref" ||
+      if (normalizedName == templateMonomorphSamePathSoaHelperPrefix(false) + "ref_ref" ||
+          normalizedName == templateMonomorphCompatibilitySoaHelperPrefix(false) + "ref_ref" ||
           normalizedName == "soa/ref_ref" ||
-          normalizedName == "std/collections/soa/ref_ref") {
+          normalizedName == templateMonomorphPublicSoaHelperPrefix(false) + "ref_ref") {
         return std::string("ref_ref");
       }
-      if ((normalizedPrefix == "soa_vector" ||
-           normalizedPrefix == "std/collections/soa_vector" ||
+      if ((normalizedPrefix == templateMonomorphSoaReceiverTypeName() ||
+           normalizedPrefix == trimLeadingSlash(compatibilitySoaHelperTargetPath("")) ||
            normalizedPrefix == "soa" ||
-           normalizedPrefix == "std/collections/soa") &&
+           normalizedPrefix == trimLeadingSlash(publicSoaHelperTargetPath(""))) &&
           (normalizedName == "get" || normalizedName == "get_ref" ||
            normalizedName == "ref" || normalizedName == "ref_ref")) {
         return normalizedName;
@@ -1307,8 +1336,10 @@ bool rewriteExpr(Expr &expr,
       return std::string{};
     }();
     if (!helperReturnSoaRefHelper.empty() &&
-        ctx.sourceDefs.count("/soa_vector/" + helperReturnSoaRefHelper) == 0 &&
-        ctx.helperOverloads.count("/soa_vector/" + helperReturnSoaRefHelper) == 0 &&
+        ctx.sourceDefs.count(templateMonomorphSamePathSoaHelperPrefix() +
+                             helperReturnSoaRefHelper) == 0 &&
+        ctx.helperOverloads.count(templateMonomorphSamePathSoaHelperPrefix() +
+                                  helperReturnSoaRefHelper) == 0 &&
         !resolvesSoaReceiverForRewrite(expr.args.front())) {
       if (expr.args.size() != 2) {
         error = "argument count mismatch for builtin " + helperReturnSoaRefHelper;
@@ -1324,8 +1355,9 @@ bool rewriteExpr(Expr &expr,
       const std::string unavailablePath =
           (helperReturnSoaRefHelper == "get" ||
            helperReturnSoaRefHelper == "get_ref")
-              ? "/std/collections/soa_vector/" + helperReturnSoaRefHelper
-              : "/soa_vector/" + helperReturnSoaRefHelper;
+              ? compatibilitySoaHelperTargetPath(helperReturnSoaRefHelper)
+              : templateMonomorphSamePathSoaHelperPrefix() +
+                    helperReturnSoaRefHelper;
       error = soaUnavailableMethodDiagnostic(unavailablePath);
       return false;
     }
@@ -1440,7 +1472,8 @@ bool rewriteExpr(Expr &expr,
     if (!expr.isMethodCall &&
         expr.name.find('/') == std::string::npos &&
         isLegacyOrCanonicalSoaHelperPath(resolvedPath, "count") &&
-        inferCollectionReceiverFamily(mapHelperReceiverExpr(expr)) != "soa_vector") {
+        !isTemplateMonomorphSoaReceiverType(
+            inferCollectionReceiverFamily(mapHelperReceiverExpr(expr)))) {
       return true;
     }
     const std::string preferredBorrowedSoaPath =
@@ -1752,21 +1785,24 @@ bool rewriteExpr(Expr &expr,
         }
         return canonicalPath.substr(prefix.size());
       };
-      std::string helperName = extractHelperName("/std/collections/soa_vector/");
+      std::string helperName =
+          extractHelperName(templateMonomorphCompatibilitySoaHelperPrefix());
       if (helperName.empty()) {
         return std::string{};
       }
       if (helperName != "count" && helperName != "count_ref" &&
           helperName != "get" && helperName != "get_ref" &&
           helperName != "ref" && helperName != "ref_ref" &&
-          helperName != "to_aos" && helperName != "to_aos_ref" &&
+          helperName != templateMonomorphSoaToAosHelperName() &&
+          helperName != templateMonomorphSoaToAosHelperName(true) &&
           helperName != "push" && helperName != "reserve") {
         return std::string{};
       }
       const std::string samePath =
-          (helperName == "to_aos" || helperName == "to_aos_ref")
+          (helperName == templateMonomorphSoaToAosHelperName() ||
+           helperName == templateMonomorphSoaToAosHelperName(true))
               ? "/" + helperName
-              : "/soa_vector/" + helperName;
+              : templateMonomorphSamePathSoaHelperPrefix() + helperName;
       if ((ctx.sourceDefs.count(samePath) == 0 &&
            ctx.helperOverloads.count(samePath) == 0) ||
           ctx.templateDefs.count(samePath) > 0) {
@@ -1820,8 +1856,8 @@ bool rewriteExpr(Expr &expr,
           specializationSuffix != std::string::npos) {
         path.erase(specializationSuffix);
       }
-      if (path == "/std/collections/soa/push" ||
-          path == "/std/collections/soa/reserve") {
+      if (path == publicSoaHelperTargetPath("push") ||
+          path == publicSoaHelperTargetPath("reserve")) {
         return path;
       }
       return std::string{};
@@ -1831,7 +1867,7 @@ bool rewriteExpr(Expr &expr,
         !publicSoaMutatorPath.empty() &&
         resolvedReceiverFamily == "vector") {
       const std::string helperName = publicSoaMutatorPath.substr(
-          std::string("/std/collections/soa/").size());
+          templateMonomorphPublicSoaHelperPrefix().size());
       const std::string vectorPath =
           canonicalVectorCompatibilityHelperPathOrFallback(helperName);
       if (ctx.sourceDefs.count(vectorPath) > 0) {
@@ -2328,7 +2364,7 @@ bool rewriteExpr(Expr &expr,
             ((templateCarryReceiverExpr->kind == Expr::Kind::Call &&
               !templateCarryReceiverExpr->isBinding) ||
              templateCarryReceiverFamily == "vector" ||
-             templateCarryReceiverFamily == "soa_vector")) {
+             isTemplateMonomorphSoaReceiverType(templateCarryReceiverFamily))) {
           expr.templateArgs.clear();
         } else {
         error = "template arguments are only supported on templated definitions: " +

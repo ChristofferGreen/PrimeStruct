@@ -86,6 +86,33 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
     - Parent-scheduled focused release validation passed for the backend IR
       semantic/source-lock slice and the TODO queue source-lock slice.
 
+- [x] TODO-4527: Delete template-monomorph SoA zero-audit residue
+  - owner: ai
+  - created_at: 2026-05-15
+  - finished_at: 2026-05-15
+  - phase: SoA public surface rename and ownership cutover
+  - parallel_track: soa-zero-audit
+  - split_from: TODO-4524
+  - depends_on: TODO-4526
+  - scope: Remove remaining template-monomorph SoA public-surface trace
+    inventory entries from compatibility paths, method targets, implicit
+    inference, fallback inference, and expression rewrites.
+  - outcome:
+    - Routed template-monomorph SoA receiver, helper-prefix, conversion, and
+      compatibility path spellings through shared helper builders instead of
+      direct public collection-surface literals.
+    - Deleted the `TemplateMonomorph*.h` SoA surface inventory rows and
+      tightened stale semantic validator caps left by the regenerated
+      inventory.
+    - Promoted TODO-4528 as the next emitter/lowerer zero-audit leaf while
+      keeping TODO-4529 as the final strict zero audit.
+  - validation:
+    - Non-heavy SoA surface inventory validation passed.
+    - Parent-scheduled focused release build passed for
+      `PrimeStruct_compile_run_tests` and `PrimeStruct_semantics_tests`; the
+      focused TODO source-lock slice and two template-monomorph SoA same-path
+      helper semantics cases passed after bookkeeping.
+
 - [x] TODO-4269: Bind and monomorphize type-pack arguments
   - owner: ai
   - created_at: 2026-04-27

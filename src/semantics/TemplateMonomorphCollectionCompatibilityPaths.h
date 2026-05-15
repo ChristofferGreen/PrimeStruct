@@ -36,30 +36,26 @@ bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverTypeName,
   }
 
   std::string_view helperName;
-  if (receiverTypeName == "soa_vector") {
-    if (rawMethodName.rfind("soa_vector/", 0) == 0) {
-      helperName =
-          std::string_view(rawMethodName).substr(std::string_view("soa_vector/").size());
-    } else if (rawMethodName.rfind("std/collections/soa_vector/", 0) == 0) {
-      helperName = std::string_view(rawMethodName)
-                       .substr(std::string_view("std/collections/soa_vector/").size());
+  std::string helperNameString;
+  if (isTemplateMonomorphSoaReceiverType(receiverTypeName)) {
+    if (stripTemplateMonomorphSoaHelperPrefix(
+            rawMethodName, helperNameString, false)) {
+      helperName = helperNameString;
     }
     return !helperName.empty() && isRemovedBorrowedSoaCompatibilityHelper(helperName);
   }
 
   bool isVectorFamilyReceiver =
-      receiverTypeName == "array" || receiverTypeName == "vector" || receiverTypeName == "soa_vector";
+      receiverTypeName == "array" || receiverTypeName == "vector" ||
+      isTemplateMonomorphSoaReceiverType(receiverTypeName);
   if (isVectorFamilyReceiver) {
     if (rawMethodName.rfind("array/", 0) == 0) {
       helperName = std::string_view(rawMethodName).substr(std::string_view("array/").size());
-    } else if (rawMethodName.rfind("soa_vector/", 0) == 0) {
-      helperName =
-          std::string_view(rawMethodName).substr(std::string_view("soa_vector/").size());
     } else if (isUnrootedCanonicalVectorCompatibilityPath(rawMethodName)) {
       helperName = stripUnrootedCanonicalVectorCompatibilityPrefix(rawMethodName);
-    } else if (rawMethodName.rfind("std/collections/soa_vector/", 0) == 0) {
-      helperName = std::string_view(rawMethodName)
-                       .substr(std::string_view("std/collections/soa_vector/").size());
+    } else if (stripTemplateMonomorphSoaHelperPrefix(
+                   rawMethodName, helperNameString, false)) {
+      helperName = helperNameString;
     }
     return !helperName.empty() && isRemovedVectorCompatibilityHelper(std::string(helperName));
   }
@@ -80,16 +76,20 @@ bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverTypeName,
 std::string preferVectorStdlibHelperPath(const std::string &path,
                                          const std::unordered_map<std::string, Definition> &defs) {
   std::string preferred = path;
-  if (preferred.rfind("/soa_vector/", 0) == 0 && defs.count(preferred) == 0) {
-    const std::string suffix = preferred.substr(std::string("/soa_vector/").size());
-    const std::string stdlibAlias = "/std/collections/soa_vector/" + suffix;
+  const std::string samePathSoaPrefix =
+      templateMonomorphSamePathSoaHelperPrefix();
+  const std::string compatibilitySoaPrefix =
+      templateMonomorphCompatibilitySoaHelperPrefix();
+  if (preferred.rfind(samePathSoaPrefix, 0) == 0 && defs.count(preferred) == 0) {
+    const std::string suffix = preferred.substr(samePathSoaPrefix.size());
+    const std::string stdlibAlias = compatibilitySoaPrefix + suffix;
     if (defs.count(stdlibAlias) > 0) {
       preferred = stdlibAlias;
     }
   }
-  if (preferred.rfind("/std/collections/soa_vector/", 0) == 0 && defs.count(preferred) == 0) {
-    const std::string suffix = preferred.substr(std::string("/std/collections/soa_vector/").size());
-    const std::string samePathAlias = "/soa_vector/" + suffix;
+  if (preferred.rfind(compatibilitySoaPrefix, 0) == 0 && defs.count(preferred) == 0) {
+    const std::string suffix = preferred.substr(compatibilitySoaPrefix.size());
+    const std::string samePathAlias = samePathSoaPrefix + suffix;
     if (defs.count(samePathAlias) > 0) {
       preferred = samePathAlias;
     }
@@ -108,17 +108,21 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
 }
 
 std::string preferVectorStdlibTemplatePath(const std::string &path, const Context &ctx) {
-  if (path.rfind("/soa_vector/", 0) == 0) {
-    const std::string suffix = path.substr(std::string("/soa_vector/").size());
-    const std::string stdlibPath = "/std/collections/soa_vector/" + suffix;
+  const std::string samePathSoaPrefix =
+      templateMonomorphSamePathSoaHelperPrefix();
+  const std::string compatibilitySoaPrefix =
+      templateMonomorphCompatibilitySoaHelperPrefix();
+  if (path.rfind(samePathSoaPrefix, 0) == 0) {
+    const std::string suffix = path.substr(samePathSoaPrefix.size());
+    const std::string stdlibPath = compatibilitySoaPrefix + suffix;
     if (ctx.sourceDefs.count(stdlibPath) > 0 && ctx.templateDefs.count(stdlibPath) > 0) {
       return stdlibPath;
     }
     return path;
   }
-  if (path.rfind("/std/collections/soa_vector/", 0) == 0) {
-    const std::string suffix = path.substr(std::string("/std/collections/soa_vector/").size());
-    const std::string aliasPath = "/soa_vector/" + suffix;
+  if (path.rfind(compatibilitySoaPrefix, 0) == 0) {
+    const std::string suffix = path.substr(compatibilitySoaPrefix.size());
+    const std::string aliasPath = samePathSoaPrefix + suffix;
     if (ctx.sourceDefs.count(aliasPath) > 0 && ctx.templateDefs.count(aliasPath) > 0) {
       return aliasPath;
     }
@@ -226,7 +230,7 @@ std::string normalizeCollectionReceiverTypeName(std::string value) {
     return "vector";
   }
   if (isExperimentalSoaVectorTypePath(value)) {
-    return "soa_vector";
+    return templateMonomorphSoaReceiverTypeName();
   }
   if (value == "std/collections/map") {
     return "map";
@@ -242,7 +246,9 @@ std::string normalizeCollectionReceiverTypeName(std::string value) {
 }
 
 bool isCollectionReceiverTypeName(const std::string &value) {
-  return value == "array" || value == "vector" || value == "soa_vector" || value == "map" || value == "string";
+  return value == "array" || value == "vector" ||
+         isTemplateMonomorphSoaReceiverType(value) || value == "map" ||
+         value == "string";
 }
 
 std::string unwrapCollectionReceiverEnvelope(std::string typeName, const std::string &typeTemplateArg = {}) {

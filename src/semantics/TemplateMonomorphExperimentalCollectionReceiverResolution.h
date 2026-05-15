@@ -315,7 +315,8 @@ bool extractExperimentalSoaVectorValueReceiverTemplateArgsFromTypeText(const std
         normalizedType = normalizeBindingTypeName(args.front());
         continue;
       }
-      if (normalizedBase == "soa_vector" && !argText.empty()) {
+      if (isTemplateMonomorphSoaReceiverType(normalizedBase) &&
+          !argText.empty()) {
         return splitTopLevelTemplateArgs(argText, templateArgsOut) && templateArgsOut.size() == 1;
       }
     }
@@ -338,7 +339,8 @@ bool extractExperimentalSoaVectorValueReceiverTemplateArgsFromTypeText(const std
     if (!splitTemplateTypeName(cacheKey, base, argText) || base.empty()) {
       continue;
     }
-    if (normalizeCollectionReceiverTypeName(base) != "soa_vector") {
+    if (!isTemplateMonomorphSoaReceiverType(
+            normalizeCollectionReceiverTypeName(base))) {
       continue;
     }
     return splitTopLevelTemplateArgs(argText, templateArgsOut) && templateArgsOut.size() == 1;
@@ -593,9 +595,9 @@ std::string experimentalSoaVectorHelperPathForCanonicalHelper(const std::string 
     const std::string canonicalHelperPath = primec::stdlibSurfaceCanonicalHelperPath(
         primec::StdlibSurfaceId::CollectionsColumnarHelpers,
         candidatePath);
-    return canonicalHelperPath == "/std/collections/soa_vector/count_ref" ||
-           canonicalHelperPath == "/std/collections/soa_vector/get_ref" ||
-           canonicalHelperPath == "/std/collections/soa_vector/ref_ref";
+    return canonicalHelperPath == compatibilitySoaHelperTargetPath("count_ref") ||
+           canonicalHelperPath == compatibilitySoaHelperTargetPath("get_ref") ||
+           canonicalHelperPath == compatibilitySoaHelperTargetPath("ref_ref");
   };
   if (mapsToBorrowedSoaHelper(canonicalSoaCountPath) ||
       mapsToBorrowedSoaHelper(canonicalSoaGetPath) ||
@@ -606,7 +608,7 @@ std::string experimentalSoaVectorHelperPathForCanonicalHelper(const std::string 
     return primec::stdlibSurfacePreferredSpellingForMember(
         primec::StdlibSurfaceId::CollectionsColumnarHelpers,
         candidatePath,
-        "/std/collections/experimental_soa_vector/");
+        templateMonomorphExperimentalSoaHelperPrefix());
   };
   if (std::string preferredPath = preferredExperimentalSoaHelper(canonicalSoaCountPath);
       !preferredPath.empty()) {
