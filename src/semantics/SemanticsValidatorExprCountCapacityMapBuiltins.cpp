@@ -221,7 +221,7 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
         return false;
       }
       return failCountCapacityMapBuiltin(soaCountHelperName +
-                                         " requires soa_vector target");
+                                         " requires soa target");
     }
     if (!validateSoaHelperReturnTemplateArgs(expr.args.front(), elemType,
                                             soaCountHelperName.c_str())) {
@@ -473,7 +473,7 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
           return false;
         }
         return failCountCapacityMapBuiltin(soaCountHelperName +
-                                           " requires soa_vector target");
+                                           " requires soa target");
       }
       if (!validateSoaHelperReturnTemplateArgs(expr.args.front(), elemType,
                                               soaCountHelperName.c_str())) {

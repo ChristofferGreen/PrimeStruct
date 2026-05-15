@@ -1116,7 +1116,7 @@ std::optional<semantics::BindingInfo> extractParsedBindingInfo(
 
 bool validateBuiltinSoaHelperReturnMetadataExpr(
     const Expr &expr,
-    const std::unordered_map<std::string, BuiltinSoaReturnInfo> &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, BuiltinSoaReturnInfo> &soaCollectionReturnDefinitions,
     const std::unordered_set<std::string> &structPaths,
     const std::unordered_set<std::string> &reflectedStructPaths,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
@@ -1125,7 +1125,7 @@ bool validateBuiltinSoaHelperReturnMetadataExpr(
 
 bool validateBuiltinSoaHelperReturnMetadataStatements(
     const std::vector<Expr> &statements,
-    const std::unordered_map<std::string, BuiltinSoaReturnInfo> &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, BuiltinSoaReturnInfo> &soaCollectionReturnDefinitions,
     const std::unordered_set<std::string> &structPaths,
     const std::unordered_set<std::string> &reflectedStructPaths,
     std::unordered_map<std::string, semantics::BindingInfo> &bindings,
@@ -1133,7 +1133,7 @@ bool validateBuiltinSoaHelperReturnMetadataStatements(
     std::string &error) {
   for (const Expr &stmt : statements) {
     if (!validateBuiltinSoaHelperReturnMetadataExpr(stmt,
-                                                    soaVectorReturnDefinitions,
+                                                    soaCollectionReturnDefinitions,
                                                     structPaths,
                                                     reflectedStructPaths,
                                                     bindings,
@@ -1144,7 +1144,7 @@ bool validateBuiltinSoaHelperReturnMetadataStatements(
     if (!stmt.bodyArguments.empty()) {
       auto bodyBindings = bindings;
       if (!validateBuiltinSoaHelperReturnMetadataStatements(stmt.bodyArguments,
-                                                            soaVectorReturnDefinitions,
+                                                            soaCollectionReturnDefinitions,
                                                             structPaths,
                                                             reflectedStructPaths,
                                                             bodyBindings,
@@ -1164,7 +1164,7 @@ bool validateBuiltinSoaHelperReturnMetadataStatements(
 
 bool validateBuiltinSoaHelperReturnMetadataExpr(
     const Expr &expr,
-    const std::unordered_map<std::string, BuiltinSoaReturnInfo> &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, BuiltinSoaReturnInfo> &soaCollectionReturnDefinitions,
     const std::unordered_set<std::string> &structPaths,
     const std::unordered_set<std::string> &reflectedStructPaths,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
@@ -1172,7 +1172,7 @@ bool validateBuiltinSoaHelperReturnMetadataExpr(
     std::string &error) {
   for (const Expr &arg : expr.args) {
     if (!validateBuiltinSoaHelperReturnMetadataExpr(arg,
-                                                    soaVectorReturnDefinitions,
+                                                    soaCollectionReturnDefinitions,
                                                     structPaths,
                                                     reflectedStructPaths,
                                                     bindings,
@@ -1183,7 +1183,7 @@ bool validateBuiltinSoaHelperReturnMetadataExpr(
   }
   for (const Expr &bodyArg : expr.bodyArguments) {
     if (!validateBuiltinSoaHelperReturnMetadataExpr(bodyArg,
-                                                    soaVectorReturnDefinitions,
+                                                    soaCollectionReturnDefinitions,
                                                     structPaths,
                                                     reflectedStructPaths,
                                                     bindings,
@@ -1242,8 +1242,8 @@ bool validateBuiltinSoaHelperReturnMetadataExpr(
       candidateDefinitionPaths(receiver, definitionNamespace);
   appendMethodReceiverCandidatePath(receiver, receiverCandidatePaths);
   for (const std::string &candidatePath : receiverCandidatePaths) {
-    auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
-    if (returnIt != soaVectorReturnDefinitions.end()) {
+    auto returnIt = soaCollectionReturnDefinitions.find(candidatePath);
+    if (returnIt != soaCollectionReturnDefinitions.end()) {
       returnInfo = &returnIt->second;
       break;
     }
@@ -1274,7 +1274,7 @@ bool validateBuiltinSoaHelperReturnMetadataExpr(
 bool validateBuiltinSoaHelperReturnMetadataRequirements(Program &program,
                                                         std::string &error) {
   error.clear();
-  std::unordered_map<std::string, BuiltinSoaReturnInfo> soaVectorReturnDefinitions;
+  std::unordered_map<std::string, BuiltinSoaReturnInfo> soaCollectionReturnDefinitions;
   std::unordered_set<std::string> structPaths;
   std::unordered_set<std::string> reflectedStructPaths;
   for (const Definition &def : program.definitions) {
@@ -1283,10 +1283,10 @@ bool validateBuiltinSoaHelperReturnMetadataRequirements(Program &program,
       info.binding = *binding;
       info.namespacePrefix = def.namespacePrefix;
       info.templateParams.insert(def.templateArgs.begin(), def.templateArgs.end());
-      soaVectorReturnDefinitions[def.fullPath] = info;
+      soaCollectionReturnDefinitions[def.fullPath] = info;
       const size_t slash = def.fullPath.find_last_of('/');
       if (slash != std::string::npos && slash + 1 < def.fullPath.size()) {
-        soaVectorReturnDefinitions[def.fullPath.substr(slash + 1)] = std::move(info);
+        soaCollectionReturnDefinitions[def.fullPath.substr(slash + 1)] = std::move(info);
       }
     }
     if (isFieldOnlyStructDefinition(def)) {
@@ -1296,7 +1296,7 @@ bool validateBuiltinSoaHelperReturnMetadataRequirements(Program &program,
       }
     }
   }
-  if (soaVectorReturnDefinitions.empty()) {
+  if (soaCollectionReturnDefinitions.empty()) {
     return true;
   }
   for (const Definition &def : program.definitions) {
@@ -1312,7 +1312,7 @@ bool validateBuiltinSoaHelperReturnMetadataRequirements(Program &program,
       }
     }
     if (!validateBuiltinSoaHelperReturnMetadataStatements(def.statements,
-                                                          soaVectorReturnDefinitions,
+                                                          soaCollectionReturnDefinitions,
                                                           structPaths,
                                                           reflectedStructPaths,
                                                           bindings,
@@ -1322,7 +1322,7 @@ bool validateBuiltinSoaHelperReturnMetadataRequirements(Program &program,
     }
     if (def.returnExpr.has_value() &&
         !validateBuiltinSoaHelperReturnMetadataExpr(*def.returnExpr,
-                                                    soaVectorReturnDefinitions,
+                                                    soaCollectionReturnDefinitions,
                                                     structPaths,
                                                     reflectedStructPaths,
                                                     bindings,
@@ -1622,22 +1622,22 @@ void rewriteBuiltinSoaConversionMethodExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &vectorReturnDefinitions,
-    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::string &definitionNamespace);
 
 void rewriteBuiltinSoaConversionMethodStatements(
     std::vector<Expr> &statements,
     std::unordered_map<std::string, semantics::BindingInfo> bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &vectorReturnDefinitions,
-    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::string &definitionNamespace) {
   for (Expr &stmt : statements) {
     rewriteBuiltinSoaConversionMethodExpr(
-        stmt, bindings, vectorReturnDefinitions, soaVectorReturnDefinitions, definitionNamespace);
+        stmt, bindings, vectorReturnDefinitions, soaCollectionReturnDefinitions, definitionNamespace);
     if (!stmt.bodyArguments.empty()) {
       auto bodyBindings = bindings;
       rewriteBuiltinSoaConversionMethodStatements(
-          stmt.bodyArguments, bodyBindings, vectorReturnDefinitions, soaVectorReturnDefinitions, definitionNamespace);
+          stmt.bodyArguments, bodyBindings, vectorReturnDefinitions, soaCollectionReturnDefinitions, definitionNamespace);
     }
     if (stmt.isBinding) {
       if (auto vectorBinding = extractBuiltinVectorBinding(stmt); vectorBinding.has_value()) {
@@ -1653,11 +1653,11 @@ void rewriteBuiltinSoaConversionMethodExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &vectorReturnDefinitions,
-    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::string &definitionNamespace) {
   for (Expr &arg : expr.args) {
     rewriteBuiltinSoaConversionMethodExpr(
-        arg, bindings, vectorReturnDefinitions, soaVectorReturnDefinitions, definitionNamespace);
+        arg, bindings, vectorReturnDefinitions, soaCollectionReturnDefinitions, definitionNamespace);
   }
   if (expr.kind != Expr::Kind::Call || !expr.isMethodCall || expr.args.empty() ||
       expr.args.front().kind == Expr::Kind::Literal) {
@@ -1677,7 +1677,7 @@ void rewriteBuiltinSoaConversionMethodExpr(
     return false;
   };
   const auto &returnDefinitions =
-      helperName == "to_soa" ? vectorReturnDefinitions : soaVectorReturnDefinitions;
+      helperName == "to_soa" ? vectorReturnDefinitions : soaCollectionReturnDefinitions;
   std::optional<semantics::BindingInfo> receiverBinding;
   const Expr &receiver = expr.args.front();
   if (receiver.kind == Expr::Kind::Name) {
@@ -1721,7 +1721,7 @@ void rewriteBuiltinSoaConversionMethodExpr(
 bool rewriteBuiltinSoaConversionMethods(Program &program, std::string &error) {
   error.clear();
   std::unordered_map<std::string, semantics::BindingInfo> vectorReturnDefinitions;
-  std::unordered_map<std::string, semantics::BindingInfo> soaVectorReturnDefinitions;
+  std::unordered_map<std::string, semantics::BindingInfo> soaCollectionReturnDefinitions;
   for (const Definition &def : program.definitions) {
     if (auto binding = extractBuiltinVectorReturnBinding(def); binding.has_value()) {
       vectorReturnDefinitions[def.fullPath] = *binding;
@@ -1731,10 +1731,10 @@ bool rewriteBuiltinSoaConversionMethods(Program &program, std::string &error) {
       }
     }
     if (auto binding = extractBuiltinSoaVectorReturnBinding(def); binding.has_value()) {
-      soaVectorReturnDefinitions[def.fullPath] = *binding;
+      soaCollectionReturnDefinitions[def.fullPath] = *binding;
       const size_t slash = def.fullPath.find_last_of('/');
       if (slash != std::string::npos && slash + 1 < def.fullPath.size()) {
-        soaVectorReturnDefinitions[def.fullPath.substr(slash + 1)] = *binding;
+        soaCollectionReturnDefinitions[def.fullPath.substr(slash + 1)] = *binding;
       }
     }
   }
@@ -1753,10 +1753,10 @@ bool rewriteBuiltinSoaConversionMethods(Program &program, std::string &error) {
       definitionNamespace = def.fullPath.substr(0, slash);
     }
     rewriteBuiltinSoaConversionMethodStatements(
-        def.statements, bindings, vectorReturnDefinitions, soaVectorReturnDefinitions, definitionNamespace);
+        def.statements, bindings, vectorReturnDefinitions, soaCollectionReturnDefinitions, definitionNamespace);
     if (def.returnExpr.has_value()) {
       rewriteBuiltinSoaConversionMethodExpr(
-          *def.returnExpr, bindings, vectorReturnDefinitions, soaVectorReturnDefinitions, definitionNamespace);
+          *def.returnExpr, bindings, vectorReturnDefinitions, soaCollectionReturnDefinitions, definitionNamespace);
     }
   }
   return true;
@@ -1766,7 +1766,7 @@ void rewriteBuiltinSoaToAosCallExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &vectorReturnDefinitions,
-    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::string &definitionNamespace,
     bool preserveVisibleRootSoaHelper,
     bool preserveVisibleRootVectorHelper);
@@ -1775,7 +1775,7 @@ void rewriteBuiltinSoaToAosCallStatements(
     std::vector<Expr> &statements,
     std::unordered_map<std::string, semantics::BindingInfo> bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &vectorReturnDefinitions,
-    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::string &definitionNamespace,
     bool preserveVisibleRootSoaHelper,
     bool preserveVisibleRootVectorHelper) {
@@ -1784,7 +1784,7 @@ void rewriteBuiltinSoaToAosCallStatements(
         stmt,
         bindings,
         vectorReturnDefinitions,
-        soaVectorReturnDefinitions,
+        soaCollectionReturnDefinitions,
         definitionNamespace,
         preserveVisibleRootSoaHelper,
         preserveVisibleRootVectorHelper);
@@ -1794,7 +1794,7 @@ void rewriteBuiltinSoaToAosCallStatements(
           stmt.bodyArguments,
           bodyBindings,
           vectorReturnDefinitions,
-          soaVectorReturnDefinitions,
+          soaCollectionReturnDefinitions,
           definitionNamespace,
           preserveVisibleRootSoaHelper,
           preserveVisibleRootVectorHelper);
@@ -1813,7 +1813,7 @@ void rewriteBuiltinSoaToAosCallExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &vectorReturnDefinitions,
-    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::string &definitionNamespace,
     bool preserveVisibleRootSoaHelper,
     bool preserveVisibleRootVectorHelper) {
@@ -1889,8 +1889,8 @@ void rewriteBuiltinSoaToAosCallExpr(
       return BuiltinSoaReceiverBindingInfo{binding, false};
     }
     for (const std::string &candidatePath : candidateDefinitionPaths(candidate, definitionNamespace)) {
-      auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
-      if (returnIt != soaVectorReturnDefinitions.end()) {
+      auto returnIt = soaCollectionReturnDefinitions.find(candidatePath);
+      if (returnIt != soaCollectionReturnDefinitions.end()) {
         return extractBuiltinSoaReceiverBinding(returnIt->second);
       }
     }
@@ -1942,7 +1942,7 @@ void rewriteBuiltinSoaToAosCallExpr(
         arg,
         bindings,
         vectorReturnDefinitions,
-        soaVectorReturnDefinitions,
+        soaCollectionReturnDefinitions,
         definitionNamespace,
         preserveVisibleRootSoaHelper,
         preserveVisibleRootVectorHelper);
@@ -2001,7 +2001,7 @@ void rewriteBuiltinSoaToAosCallExpr(
 bool rewriteBuiltinSoaToAosCalls(Program &program, std::string &error) {
   error.clear();
   std::unordered_map<std::string, semantics::BindingInfo> vectorReturnDefinitions;
-  std::unordered_map<std::string, semantics::BindingInfo> soaVectorReturnDefinitions;
+  std::unordered_map<std::string, semantics::BindingInfo> soaCollectionReturnDefinitions;
   for (const Definition &def : program.definitions) {
     if (auto binding = extractBuiltinVectorReturnBinding(def); binding.has_value()) {
       vectorReturnDefinitions[def.fullPath] = *binding;
@@ -2011,10 +2011,10 @@ bool rewriteBuiltinSoaToAosCalls(Program &program, std::string &error) {
       }
     }
     if (auto binding = extractBuiltinSoaVectorReturnBinding(def); binding.has_value()) {
-      soaVectorReturnDefinitions[def.fullPath] = *binding;
+      soaCollectionReturnDefinitions[def.fullPath] = *binding;
       const size_t slash = def.fullPath.find_last_of('/');
       if (slash != std::string::npos && slash + 1 < def.fullPath.size()) {
-        soaVectorReturnDefinitions[def.fullPath.substr(slash + 1)] = *binding;
+        soaCollectionReturnDefinitions[def.fullPath.substr(slash + 1)] = *binding;
       }
     }
   }
@@ -2040,7 +2040,7 @@ bool rewriteBuiltinSoaToAosCalls(Program &program, std::string &error) {
         def.statements,
         bindings,
         vectorReturnDefinitions,
-        soaVectorReturnDefinitions,
+        soaCollectionReturnDefinitions,
         definitionNamespace,
         preserveVisibleRootSoaHelper,
         preserveVisibleRootVectorHelper);
@@ -2049,7 +2049,7 @@ bool rewriteBuiltinSoaToAosCalls(Program &program, std::string &error) {
           *def.returnExpr,
           bindings,
           vectorReturnDefinitions,
-          soaVectorReturnDefinitions,
+          soaCollectionReturnDefinitions,
           definitionNamespace,
           preserveVisibleRootSoaHelper,
           preserveVisibleRootVectorHelper);
@@ -2062,7 +2062,7 @@ void rewriteBuiltinSoaAccessExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &vectorReturnDefinitions,
-    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::string &definitionNamespace,
     bool preserveGetHelper,
     bool preserveGetRefHelper,
@@ -2073,7 +2073,7 @@ void rewriteBuiltinSoaAccessStatements(
     std::vector<Expr> &statements,
     std::unordered_map<std::string, semantics::BindingInfo> bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &vectorReturnDefinitions,
-    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::string &definitionNamespace,
     bool preserveGetHelper,
     bool preserveGetRefHelper,
@@ -2084,7 +2084,7 @@ void rewriteBuiltinSoaAccessStatements(
         stmt,
         bindings,
         vectorReturnDefinitions,
-        soaVectorReturnDefinitions,
+        soaCollectionReturnDefinitions,
         definitionNamespace,
         preserveGetHelper,
         preserveGetRefHelper,
@@ -2096,7 +2096,7 @@ void rewriteBuiltinSoaAccessStatements(
           stmt.bodyArguments,
           bodyBindings,
           vectorReturnDefinitions,
-          soaVectorReturnDefinitions,
+          soaCollectionReturnDefinitions,
           definitionNamespace,
           preserveGetHelper,
           preserveGetRefHelper,
@@ -2117,7 +2117,7 @@ void rewriteBuiltinSoaAccessExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &vectorReturnDefinitions,
-    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::string &definitionNamespace,
     bool preserveGetHelper,
     bool preserveGetRefHelper,
@@ -2195,8 +2195,8 @@ void rewriteBuiltinSoaAccessExpr(
       return BuiltinSoaReceiverBindingInfo{binding, false};
     }
     for (const std::string &candidatePath : candidateDefinitionPaths(candidate, definitionNamespace)) {
-      auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
-      if (returnIt != soaVectorReturnDefinitions.end()) {
+      auto returnIt = soaCollectionReturnDefinitions.find(candidatePath);
+      if (returnIt != soaCollectionReturnDefinitions.end()) {
         return extractBuiltinSoaReceiverBinding(returnIt->second);
       }
     }
@@ -2236,7 +2236,7 @@ void rewriteBuiltinSoaAccessExpr(
         arg,
         bindings,
         vectorReturnDefinitions,
-        soaVectorReturnDefinitions,
+        soaCollectionReturnDefinitions,
         definitionNamespace,
         preserveGetHelper,
         preserveGetRefHelper,
@@ -2296,7 +2296,7 @@ void rewriteBuiltinSoaAccessExpr(
 bool rewriteBuiltinSoaAccessCalls(Program &program, std::string &error) {
   error.clear();
   std::unordered_map<std::string, semantics::BindingInfo> vectorReturnDefinitions;
-  std::unordered_map<std::string, semantics::BindingInfo> soaVectorReturnDefinitions;
+  std::unordered_map<std::string, semantics::BindingInfo> soaCollectionReturnDefinitions;
   for (const Definition &def : program.definitions) {
     if (auto binding = extractBuiltinVectorReturnBinding(def); binding.has_value()) {
       vectorReturnDefinitions[def.fullPath] = *binding;
@@ -2306,10 +2306,10 @@ bool rewriteBuiltinSoaAccessCalls(Program &program, std::string &error) {
       }
     }
     if (auto binding = extractBuiltinSoaVectorOrBorrowedReturnBinding(def); binding.has_value()) {
-      soaVectorReturnDefinitions[def.fullPath] = *binding;
+      soaCollectionReturnDefinitions[def.fullPath] = *binding;
       const size_t slash = def.fullPath.find_last_of('/');
       if (slash != std::string::npos && slash + 1 < def.fullPath.size()) {
-        soaVectorReturnDefinitions[def.fullPath.substr(slash + 1)] = *binding;
+        soaCollectionReturnDefinitions[def.fullPath.substr(slash + 1)] = *binding;
       }
     }
   }
@@ -2335,7 +2335,7 @@ bool rewriteBuiltinSoaAccessCalls(Program &program, std::string &error) {
         def.statements,
         bindings,
         vectorReturnDefinitions,
-        soaVectorReturnDefinitions,
+        soaCollectionReturnDefinitions,
         definitionNamespace,
         preserveGetHelper,
         preserveGetRefHelper,
@@ -2346,7 +2346,7 @@ bool rewriteBuiltinSoaAccessCalls(Program &program, std::string &error) {
           *def.returnExpr,
           bindings,
           vectorReturnDefinitions,
-          soaVectorReturnDefinitions,
+          soaCollectionReturnDefinitions,
           definitionNamespace,
           preserveGetHelper,
           preserveGetRefHelper,
@@ -2361,7 +2361,7 @@ void rewriteBuiltinSoaCountExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &vectorReturnDefinitions,
-    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::string &definitionNamespace,
     bool preserveCountHelper,
     bool preserveCountRefHelper);
@@ -2370,7 +2370,7 @@ void rewriteBuiltinSoaCountStatements(
     std::vector<Expr> &statements,
     std::unordered_map<std::string, semantics::BindingInfo> bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &vectorReturnDefinitions,
-    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::string &definitionNamespace,
     bool preserveCountHelper,
     bool preserveCountRefHelper) {
@@ -2379,7 +2379,7 @@ void rewriteBuiltinSoaCountStatements(
         stmt,
         bindings,
         vectorReturnDefinitions,
-        soaVectorReturnDefinitions,
+        soaCollectionReturnDefinitions,
         definitionNamespace,
         preserveCountHelper,
         preserveCountRefHelper);
@@ -2389,7 +2389,7 @@ void rewriteBuiltinSoaCountStatements(
           stmt.bodyArguments,
           bodyBindings,
           vectorReturnDefinitions,
-          soaVectorReturnDefinitions,
+          soaCollectionReturnDefinitions,
           definitionNamespace,
           preserveCountHelper,
           preserveCountRefHelper);
@@ -2408,7 +2408,7 @@ void rewriteBuiltinSoaCountExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &vectorReturnDefinitions,
-    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::string &definitionNamespace,
     bool preserveCountHelper,
     bool preserveCountRefHelper) {
@@ -2484,8 +2484,8 @@ void rewriteBuiltinSoaCountExpr(
       return BuiltinSoaReceiverBindingInfo{binding, false};
     }
     for (const std::string &candidatePath : candidateDefinitionPaths(candidate, definitionNamespace)) {
-      auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
-      if (returnIt != soaVectorReturnDefinitions.end()) {
+      auto returnIt = soaCollectionReturnDefinitions.find(candidatePath);
+      if (returnIt != soaCollectionReturnDefinitions.end()) {
         return extractBuiltinSoaReceiverBinding(returnIt->second);
       }
     }
@@ -2525,7 +2525,7 @@ void rewriteBuiltinSoaCountExpr(
         arg,
         bindings,
         vectorReturnDefinitions,
-        soaVectorReturnDefinitions,
+        soaCollectionReturnDefinitions,
         definitionNamespace,
         preserveCountHelper,
         preserveCountRefHelper);
@@ -2578,7 +2578,7 @@ void rewriteBuiltinSoaCountExpr(
 bool rewriteBuiltinSoaCountCalls(Program &program, std::string &error) {
   error.clear();
   std::unordered_map<std::string, semantics::BindingInfo> vectorReturnDefinitions;
-  std::unordered_map<std::string, semantics::BindingInfo> soaVectorReturnDefinitions;
+  std::unordered_map<std::string, semantics::BindingInfo> soaCollectionReturnDefinitions;
   for (const Definition &def : program.definitions) {
     if (auto binding = extractBuiltinVectorReturnBinding(def); binding.has_value()) {
       vectorReturnDefinitions[def.fullPath] = *binding;
@@ -2588,10 +2588,10 @@ bool rewriteBuiltinSoaCountCalls(Program &program, std::string &error) {
       }
     }
     if (auto binding = extractBuiltinSoaVectorOrBorrowedReturnBinding(def); binding.has_value()) {
-      soaVectorReturnDefinitions[def.fullPath] = *binding;
+      soaCollectionReturnDefinitions[def.fullPath] = *binding;
       const size_t slash = def.fullPath.find_last_of('/');
       if (slash != std::string::npos && slash + 1 < def.fullPath.size()) {
-        soaVectorReturnDefinitions[def.fullPath.substr(slash + 1)] = *binding;
+        soaCollectionReturnDefinitions[def.fullPath.substr(slash + 1)] = *binding;
       }
     }
   }
@@ -2615,7 +2615,7 @@ bool rewriteBuiltinSoaCountCalls(Program &program, std::string &error) {
         def.statements,
         bindings,
         vectorReturnDefinitions,
-        soaVectorReturnDefinitions,
+        soaCollectionReturnDefinitions,
         definitionNamespace,
         preserveCountHelper,
         preserveCountRefHelper);
@@ -2624,7 +2624,7 @@ bool rewriteBuiltinSoaCountCalls(Program &program, std::string &error) {
           *def.returnExpr,
           bindings,
           vectorReturnDefinitions,
-          soaVectorReturnDefinitions,
+          soaCollectionReturnDefinitions,
           definitionNamespace,
           preserveCountHelper,
           preserveCountRefHelper);
@@ -2637,7 +2637,7 @@ void rewriteBuiltinSoaMutatorExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &vectorReturnDefinitions,
-    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::string &definitionNamespace,
     bool preservePushHelper,
     bool preserveReserveHelper,
@@ -2648,7 +2648,7 @@ void rewriteBuiltinSoaMutatorStatements(
     std::vector<Expr> &statements,
     std::unordered_map<std::string, semantics::BindingInfo> bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &vectorReturnDefinitions,
-    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::string &definitionNamespace,
     bool preservePushHelper,
     bool preserveReserveHelper,
@@ -2659,7 +2659,7 @@ void rewriteBuiltinSoaMutatorStatements(
         stmt,
         bindings,
         vectorReturnDefinitions,
-        soaVectorReturnDefinitions,
+        soaCollectionReturnDefinitions,
         definitionNamespace,
         preservePushHelper,
         preserveReserveHelper,
@@ -2671,7 +2671,7 @@ void rewriteBuiltinSoaMutatorStatements(
           stmt.bodyArguments,
           bodyBindings,
           vectorReturnDefinitions,
-          soaVectorReturnDefinitions,
+          soaCollectionReturnDefinitions,
           definitionNamespace,
           preservePushHelper,
           preserveReserveHelper,
@@ -2692,7 +2692,7 @@ void rewriteBuiltinSoaMutatorExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &vectorReturnDefinitions,
-    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::string &definitionNamespace,
     bool preservePushHelper,
     bool preserveReserveHelper,
@@ -2769,8 +2769,8 @@ void rewriteBuiltinSoaMutatorExpr(
       return binding;
     }
     for (const std::string &candidatePath : candidateDefinitionPaths(candidate, definitionNamespace)) {
-      auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
-      if (returnIt != soaVectorReturnDefinitions.end() && isBuiltinSoaVectorBinding(returnIt->second)) {
+      auto returnIt = soaCollectionReturnDefinitions.find(candidatePath);
+      if (returnIt != soaCollectionReturnDefinitions.end() && isBuiltinSoaVectorBinding(returnIt->second)) {
         return returnIt->second;
       }
     }
@@ -2804,7 +2804,7 @@ void rewriteBuiltinSoaMutatorExpr(
         arg,
         bindings,
         vectorReturnDefinitions,
-        soaVectorReturnDefinitions,
+        soaCollectionReturnDefinitions,
         definitionNamespace,
         preservePushHelper,
         preserveReserveHelper,
@@ -2870,7 +2870,7 @@ void rewriteBuiltinSoaMutatorExpr(
 bool rewriteBuiltinSoaMutatorCalls(Program &program, std::string &error) {
   error.clear();
   std::unordered_map<std::string, semantics::BindingInfo> vectorReturnDefinitions;
-  std::unordered_map<std::string, semantics::BindingInfo> soaVectorReturnDefinitions;
+  std::unordered_map<std::string, semantics::BindingInfo> soaCollectionReturnDefinitions;
   for (const Definition &def : program.definitions) {
     if (auto binding = extractBuiltinVectorReturnBinding(def); binding.has_value()) {
       vectorReturnDefinitions[def.fullPath] = *binding;
@@ -2880,10 +2880,10 @@ bool rewriteBuiltinSoaMutatorCalls(Program &program, std::string &error) {
       }
     }
     if (auto binding = extractBuiltinSoaVectorReturnBinding(def); binding.has_value()) {
-      soaVectorReturnDefinitions[def.fullPath] = *binding;
+      soaCollectionReturnDefinitions[def.fullPath] = *binding;
       const size_t slash = def.fullPath.find_last_of('/');
       if (slash != std::string::npos && slash + 1 < def.fullPath.size()) {
-        soaVectorReturnDefinitions[def.fullPath.substr(slash + 1)] = *binding;
+        soaCollectionReturnDefinitions[def.fullPath.substr(slash + 1)] = *binding;
       }
     }
   }
@@ -2911,7 +2911,7 @@ bool rewriteBuiltinSoaMutatorCalls(Program &program, std::string &error) {
         def.statements,
         bindings,
         vectorReturnDefinitions,
-        soaVectorReturnDefinitions,
+        soaCollectionReturnDefinitions,
         definitionNamespace,
         preservePushHelper,
         preserveReserveHelper,
@@ -2922,7 +2922,7 @@ bool rewriteBuiltinSoaMutatorCalls(Program &program, std::string &error) {
           *def.returnExpr,
           bindings,
           vectorReturnDefinitions,
-          soaVectorReturnDefinitions,
+          soaCollectionReturnDefinitions,
           definitionNamespace,
           preservePushHelper,
           preserveReserveHelper,
@@ -2936,7 +2936,7 @@ bool rewriteBuiltinSoaMutatorCalls(Program &program, std::string &error) {
 void rewriteExperimentalSoaToAosMethodExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
-    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::unordered_set<std::string> &structPaths,
     const std::string &definitionNamespace,
     bool hasVisibleRootToAosHelper,
@@ -2955,7 +2955,7 @@ bool isStructLikeDefinition(const Definition &def);
 void rewriteExperimentalSoaSamePathHelperMethodExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
-    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::unordered_set<std::string> &structPaths,
     const std::string &definitionNamespace,
     const std::unordered_set<std::string> &visibleSoaHelpers);
@@ -2963,7 +2963,7 @@ void rewriteExperimentalSoaSamePathHelperMethodExpr(
 void rewriteExperimentalSoaSamePathHelperMethodStatements(
     std::vector<Expr> &statements,
     std::unordered_map<std::string, semantics::BindingInfo> bindings,
-    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::unordered_set<std::string> &structPaths,
     const std::string &definitionNamespace,
     const std::unordered_set<std::string> &visibleSoaHelpers) {
@@ -2971,7 +2971,7 @@ void rewriteExperimentalSoaSamePathHelperMethodStatements(
     rewriteExperimentalSoaSamePathHelperMethodExpr(
         stmt,
         bindings,
-        soaVectorReturnDefinitions,
+        soaCollectionReturnDefinitions,
         structPaths,
         definitionNamespace,
         visibleSoaHelpers);
@@ -2980,7 +2980,7 @@ void rewriteExperimentalSoaSamePathHelperMethodStatements(
       rewriteExperimentalSoaSamePathHelperMethodStatements(
           stmt.bodyArguments,
           bodyBindings,
-          soaVectorReturnDefinitions,
+          soaCollectionReturnDefinitions,
           structPaths,
           definitionNamespace,
           visibleSoaHelpers);
@@ -2997,7 +2997,7 @@ void rewriteExperimentalSoaSamePathHelperMethodStatements(
 void rewriteExperimentalSoaSamePathHelperMethodExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
-    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::unordered_set<std::string> &structPaths,
     const std::string &definitionNamespace,
     const std::unordered_set<std::string> &visibleSoaHelpers) {
@@ -3005,7 +3005,7 @@ void rewriteExperimentalSoaSamePathHelperMethodExpr(
     rewriteExperimentalSoaSamePathHelperMethodExpr(
         arg,
         bindings,
-        soaVectorReturnDefinitions,
+        soaCollectionReturnDefinitions,
         structPaths,
         definitionNamespace,
         visibleSoaHelpers);
@@ -3045,8 +3045,8 @@ void rewriteExperimentalSoaSamePathHelperMethodExpr(
   } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {
     for (const std::string &candidatePath :
          candidatePathsForExprCall(receiver, definitionNamespace, &bindings, &structPaths)) {
-      auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
-      if (returnIt != soaVectorReturnDefinitions.end() &&
+      auto returnIt = soaCollectionReturnDefinitions.find(candidatePath);
+      if (returnIt != soaCollectionReturnDefinitions.end() &&
           isExperimentalSoaVectorBinding(returnIt->second)) {
         receiverBinding = returnIt->second;
         canonicalReceiverExpr = canonicalizeResolvedCallPath(receiver, candidatePath);
@@ -3070,16 +3070,16 @@ void rewriteExperimentalSoaSamePathHelperMethodExpr(
 
 bool rewriteExperimentalSoaSamePathHelperMethods(Program &program, std::string &error) {
   error.clear();
-  std::unordered_map<std::string, semantics::BindingInfo> soaVectorReturnDefinitions;
+  std::unordered_map<std::string, semantics::BindingInfo> soaCollectionReturnDefinitions;
   std::unordered_set<std::string> structPaths;
   std::unordered_set<std::string> visibleSoaHelpers;
   for (const Definition &def : program.definitions) {
     if (auto binding = extractExperimentalSoaVectorReturnBindingImpl(def, false);
         binding.has_value()) {
-      soaVectorReturnDefinitions[def.fullPath] = *binding;
+      soaCollectionReturnDefinitions[def.fullPath] = *binding;
       const size_t slash = def.fullPath.find_last_of('/');
       if (slash != std::string::npos && slash + 1 < def.fullPath.size()) {
-        soaVectorReturnDefinitions[def.fullPath.substr(slash + 1)] = *binding;
+        soaCollectionReturnDefinitions[def.fullPath.substr(slash + 1)] = *binding;
       }
     }
     if (isStructLikeDefinition(def)) {
@@ -3120,7 +3120,7 @@ bool rewriteExperimentalSoaSamePathHelperMethods(Program &program, std::string &
     rewriteExperimentalSoaSamePathHelperMethodStatements(
         def.statements,
         bindings,
-        soaVectorReturnDefinitions,
+        soaCollectionReturnDefinitions,
         structPaths,
         definitionNamespace,
         visibleSoaHelpers);
@@ -3135,7 +3135,7 @@ bool rewriteExperimentalSoaSamePathHelperMethods(Program &program, std::string &
       rewriteExperimentalSoaSamePathHelperMethodExpr(
           *def.returnExpr,
           returnBindings,
-          soaVectorReturnDefinitions,
+          soaCollectionReturnDefinitions,
           structPaths,
           definitionNamespace,
           visibleSoaHelpers);
@@ -3147,7 +3147,7 @@ bool rewriteExperimentalSoaSamePathHelperMethods(Program &program, std::string &
 void rewriteExperimentalSoaToAosMethodStatements(
     std::vector<Expr> &statements,
     std::unordered_map<std::string, semantics::BindingInfo> bindings,
-    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::unordered_set<std::string> &structPaths,
     const std::string &definitionNamespace,
     bool hasVisibleRootToAosHelper,
@@ -3156,7 +3156,7 @@ void rewriteExperimentalSoaToAosMethodStatements(
     rewriteExperimentalSoaToAosMethodExpr(
         stmt,
         bindings,
-        soaVectorReturnDefinitions,
+        soaCollectionReturnDefinitions,
         structPaths,
         definitionNamespace,
         hasVisibleRootToAosHelper,
@@ -3166,7 +3166,7 @@ void rewriteExperimentalSoaToAosMethodStatements(
       rewriteExperimentalSoaToAosMethodStatements(
           stmt.bodyArguments,
           bodyBindings,
-          soaVectorReturnDefinitions,
+          soaCollectionReturnDefinitions,
           structPaths,
           definitionNamespace,
           hasVisibleRootToAosHelper,
@@ -3183,7 +3183,7 @@ void rewriteExperimentalSoaToAosMethodStatements(
 void rewriteExperimentalSoaToAosMethodExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
-    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::unordered_set<std::string> &structPaths,
     const std::string &definitionNamespace,
     bool hasVisibleRootToAosHelper,
@@ -3192,7 +3192,7 @@ void rewriteExperimentalSoaToAosMethodExpr(
     rewriteExperimentalSoaToAosMethodExpr(
         arg,
         bindings,
-        soaVectorReturnDefinitions,
+        soaCollectionReturnDefinitions,
         structPaths,
         definitionNamespace,
         hasVisibleRootToAosHelper,
@@ -3230,8 +3230,8 @@ void rewriteExperimentalSoaToAosMethodExpr(
         candidatePathsForExprCall(receiver, definitionNamespace, &bindings, &structPaths);
     if (!receiverBinding.has_value()) {
       for (const std::string &candidatePath : candidatePaths) {
-        auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
-        if (returnIt != soaVectorReturnDefinitions.end() &&
+        auto returnIt = soaCollectionReturnDefinitions.find(candidatePath);
+        if (returnIt != soaCollectionReturnDefinitions.end() &&
             tryReceiverBinding(returnIt->second)) {
           receiverBinding = returnIt->second;
           canonicalReceiverExpr = canonicalizeResolvedCallPath(receiver, candidatePath);
@@ -3291,7 +3291,7 @@ void rewriteExperimentalSoaToAosMethodExpr(
 
 bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
   error.clear();
-  std::unordered_map<std::string, semantics::BindingInfo> soaVectorReturnDefinitions;
+  std::unordered_map<std::string, semantics::BindingInfo> soaCollectionReturnDefinitions;
   std::unordered_set<std::string> structPaths;
   const bool hasVisibleRootToAosHelper =
       hasVisibleRootExperimentalSoaHelper(program, "to_aos");
@@ -3312,10 +3312,10 @@ bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
   for (const Definition &def : program.definitions) {
     if (auto binding = extractExperimentalSoaVectorOrBorrowedReturnBinding(def);
         binding.has_value()) {
-      soaVectorReturnDefinitions[def.fullPath] = *binding;
+      soaCollectionReturnDefinitions[def.fullPath] = *binding;
       const size_t slash = def.fullPath.find_last_of('/');
       if (slash != std::string::npos && slash + 1 < def.fullPath.size()) {
-        soaVectorReturnDefinitions[def.fullPath.substr(slash + 1)] = *binding;
+        soaCollectionReturnDefinitions[def.fullPath.substr(slash + 1)] = *binding;
       }
     }
     if (isStructLikeDefinition(def)) {
@@ -3358,7 +3358,7 @@ bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
     rewriteExperimentalSoaToAosMethodStatements(
         def.statements,
         bindings,
-        soaVectorReturnDefinitions,
+        soaCollectionReturnDefinitions,
         structPaths,
         definitionNamespace,
         hasVisibleRootToAosHelper,
@@ -3373,7 +3373,7 @@ bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
       rewriteExperimentalSoaToAosMethodExpr(
           *def.returnExpr,
           returnBindings,
-          soaVectorReturnDefinitions,
+          soaCollectionReturnDefinitions,
           structPaths,
           definitionNamespace,
           hasVisibleRootToAosHelper,
@@ -3436,7 +3436,7 @@ Expr canonicalizeResolvedCallPath(const Expr &callExpr, const std::string &resol
 std::optional<Expr> normalizeExperimentalSoaInlineBorrowReceiver(
     const Expr &receiver,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
-    const std::unordered_map<std::string, semantics::BindingInfo> *soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> *soaCollectionReturnDefinitions,
     const std::string &definitionNamespace,
     const std::unordered_set<std::string> *structPaths) {
   auto canonicalExperimentalSoaReceiver = [&](const Expr &expr) -> std::optional<Expr> {
@@ -3453,13 +3453,13 @@ std::optional<Expr> normalizeExperimentalSoaInlineBorrowReceiver(
       }
       return std::nullopt;
     }
-    if (expr.kind != Expr::Kind::Call || expr.isBinding || soaVectorReturnDefinitions == nullptr) {
+    if (expr.kind != Expr::Kind::Call || expr.isBinding || soaCollectionReturnDefinitions == nullptr) {
       return std::nullopt;
     }
     for (const std::string &candidatePath :
          candidatePathsForExprCall(expr, definitionNamespace, &bindings, structPaths)) {
-      auto returnIt = soaVectorReturnDefinitions->find(candidatePath);
-      if (returnIt == soaVectorReturnDefinitions->end()) {
+      auto returnIt = soaCollectionReturnDefinitions->find(candidatePath);
+      if (returnIt == soaCollectionReturnDefinitions->end()) {
         continue;
       }
       std::string ignoredElemType;
@@ -3498,7 +3498,7 @@ std::optional<Expr> normalizeExperimentalSoaInlineBorrowReceiver(
 std::optional<Expr> normalizeExperimentalSoaBorrowedHelperReceiver(
     const Expr &receiver,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
-    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::string &definitionNamespace,
     const std::unordered_set<std::string> &structPaths) {
   auto makeDereferenceCall = [](Expr borrowedExpr) {
@@ -3527,8 +3527,8 @@ std::optional<Expr> normalizeExperimentalSoaBorrowedHelperReceiver(
     }
     for (const std::string &candidatePath :
          candidatePathsForExprCall(expr, definitionNamespace, &bindings, &structPaths)) {
-      auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
-      if (returnIt != soaVectorReturnDefinitions.end() &&
+      auto returnIt = soaCollectionReturnDefinitions.find(candidatePath);
+      if (returnIt != soaCollectionReturnDefinitions.end() &&
           isBorrowedBinding(returnIt->second)) {
         return canonicalizeResolvedCallPath(expr, candidatePath);
       }
@@ -3536,7 +3536,7 @@ std::optional<Expr> normalizeExperimentalSoaBorrowedHelperReceiver(
     return std::nullopt;
   };
   if (auto normalizedInline = normalizeExperimentalSoaInlineBorrowReceiver(
-          receiver, bindings, &soaVectorReturnDefinitions, definitionNamespace, &structPaths);
+          receiver, bindings, &soaCollectionReturnDefinitions, definitionNamespace, &structPaths);
       normalizedInline.has_value()) {
     return normalizedInline;
   }
@@ -3573,7 +3573,7 @@ std::optional<Expr> normalizeExperimentalSoaBorrowedHelperReceiver(
 bool normalizeExperimentalSoaBorrowedHelperMethodCall(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
-    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::unordered_set<std::string> &structPaths,
     const std::string &definitionNamespace) {
   auto isBorrowedBinding = [&](const semantics::BindingInfo &binding) {
@@ -3596,8 +3596,8 @@ bool normalizeExperimentalSoaBorrowedHelperMethodCall(
                                    definitionNamespace,
                                    &bindings,
                                    &structPaths)) {
-      auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
-      if (returnIt != soaVectorReturnDefinitions.end() &&
+      auto returnIt = soaCollectionReturnDefinitions.find(candidatePath);
+      if (returnIt != soaCollectionReturnDefinitions.end() &&
           isBorrowedBinding(returnIt->second)) {
         return canonicalizeResolvedCallPath(candidate, candidatePath);
       }
@@ -3696,8 +3696,8 @@ bool normalizeExperimentalSoaBorrowedHelperMethodCall(
                                      definitionNamespace,
                                      &bindings,
                                      &structPaths)) {
-        auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
-        if (returnIt != soaVectorReturnDefinitions.end()) {
+        auto returnIt = soaCollectionReturnDefinitions.find(candidatePath);
+        if (returnIt != soaCollectionReturnDefinitions.end()) {
           if (auto elemType = bindingElementType(returnIt->second);
               elemType.has_value()) {
             return elemType;
@@ -3710,7 +3710,7 @@ bool normalizeExperimentalSoaBorrowedHelperMethodCall(
             normalizeExperimentalSoaBorrowedHelperReceiver(
                 receiver,
                 bindings,
-                soaVectorReturnDefinitions,
+                soaCollectionReturnDefinitions,
                 definitionNamespace,
                 structPaths);
         normalizedBorrowed.has_value() &&
@@ -3732,8 +3732,8 @@ bool normalizeExperimentalSoaBorrowedHelperMethodCall(
     }
     for (const std::string &candidatePath :
          candidateDefinitionPaths(receiver, definitionNamespace)) {
-      auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
-      if (returnIt != soaVectorReturnDefinitions.end()) {
+      auto returnIt = soaCollectionReturnDefinitions.find(candidatePath);
+      if (returnIt != soaCollectionReturnDefinitions.end()) {
         if (auto elemType = bindingElementType(returnIt->second);
             elemType.has_value()) {
           return elemType;
@@ -3751,8 +3751,8 @@ bool normalizeExperimentalSoaBorrowedHelperMethodCall(
       if (target.kind == Expr::Kind::Call && !target.isBinding) {
         for (const std::string &candidatePath :
              candidateDefinitionPaths(target, definitionNamespace)) {
-          auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
-          if (returnIt != soaVectorReturnDefinitions.end()) {
+          auto returnIt = soaCollectionReturnDefinitions.find(candidatePath);
+          if (returnIt != soaCollectionReturnDefinitions.end()) {
             if (auto elemType = bindingElementType(returnIt->second);
                 elemType.has_value()) {
               return elemType;
@@ -3765,8 +3765,8 @@ bool normalizeExperimentalSoaBorrowedHelperMethodCall(
                                      definitionNamespace,
                                      &bindings,
                                      &structPaths)) {
-        auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
-        if (returnIt != soaVectorReturnDefinitions.end()) {
+        auto returnIt = soaCollectionReturnDefinitions.find(candidatePath);
+        if (returnIt != soaCollectionReturnDefinitions.end()) {
           if (auto elemType = bindingElementType(returnIt->second);
               elemType.has_value()) {
             return elemType;
@@ -3780,8 +3780,8 @@ bool normalizeExperimentalSoaBorrowedHelperMethodCall(
                                    definitionNamespace,
                                    &bindings,
                                    &structPaths)) {
-      auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
-      if (returnIt != soaVectorReturnDefinitions.end()) {
+      auto returnIt = soaCollectionReturnDefinitions.find(candidatePath);
+      if (returnIt != soaCollectionReturnDefinitions.end()) {
         if (auto elemType = bindingElementType(returnIt->second);
             elemType.has_value()) {
           return elemType;
@@ -3807,8 +3807,8 @@ bool normalizeExperimentalSoaBorrowedHelperMethodCall(
         if (target.kind == Expr::Kind::Call && !target.isBinding) {
           for (const std::string &candidatePath :
                candidateDefinitionPaths(target, definitionNamespace)) {
-            auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
-            if (returnIt != soaVectorReturnDefinitions.end()) {
+            auto returnIt = soaCollectionReturnDefinitions.find(candidatePath);
+            if (returnIt != soaCollectionReturnDefinitions.end()) {
               if (auto elemType = bindingElementType(returnIt->second);
                   elemType.has_value()) {
                 return elemType;
@@ -3825,8 +3825,8 @@ bool normalizeExperimentalSoaBorrowedHelperMethodCall(
                                        definitionNamespace,
                                        &bindings,
                                        &structPaths)) {
-          auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
-          if (returnIt != soaVectorReturnDefinitions.end()) {
+          auto returnIt = soaCollectionReturnDefinitions.find(candidatePath);
+          if (returnIt != soaCollectionReturnDefinitions.end()) {
             if (auto elemType = bindingElementType(returnIt->second);
                 elemType.has_value()) {
               return elemType;
@@ -3928,7 +3928,7 @@ bool normalizeExperimentalSoaBorrowedHelperMethodCall(
     return false;
   }
   const auto normalizedReceiver = normalizeExperimentalSoaBorrowedHelperReceiver(
-      expr.args.front(), bindings, soaVectorReturnDefinitions, definitionNamespace, structPaths);
+      expr.args.front(), bindings, soaCollectionReturnDefinitions, definitionNamespace, structPaths);
   if (!normalizedReceiver.has_value()) {
     return false;
   }
@@ -3942,7 +3942,7 @@ bool normalizeExperimentalSoaBorrowedHelperMethodCall(
 void rewriteExperimentalSoaInlineBorrowMethodExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
-    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::unordered_set<std::string> &structPaths,
     const std::string &definitionNamespace);
 
@@ -3951,16 +3951,16 @@ bool isStructLikeDefinition(const Definition &def);
 void rewriteExperimentalSoaInlineBorrowMethodStatements(
     std::vector<Expr> &statements,
     std::unordered_map<std::string, semantics::BindingInfo> bindings,
-    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::unordered_set<std::string> &structPaths,
     const std::string &definitionNamespace) {
   for (Expr &stmt : statements) {
     rewriteExperimentalSoaInlineBorrowMethodExpr(
-        stmt, bindings, soaVectorReturnDefinitions, structPaths, definitionNamespace);
+        stmt, bindings, soaCollectionReturnDefinitions, structPaths, definitionNamespace);
     if (!stmt.bodyArguments.empty()) {
       auto bodyBindings = bindings;
       rewriteExperimentalSoaInlineBorrowMethodStatements(
-          stmt.bodyArguments, bodyBindings, soaVectorReturnDefinitions, structPaths, definitionNamespace);
+          stmt.bodyArguments, bodyBindings, soaCollectionReturnDefinitions, structPaths, definitionNamespace);
     }
     if (stmt.isBinding) {
       if (auto binding = extractParsedOrExperimentalSoaBindingInfo(stmt, &structPaths); binding.has_value()) {
@@ -3973,12 +3973,12 @@ void rewriteExperimentalSoaInlineBorrowMethodStatements(
 void rewriteExperimentalSoaInlineBorrowMethodExpr(
     Expr &expr,
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
-    const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
+    const std::unordered_map<std::string, semantics::BindingInfo> &soaCollectionReturnDefinitions,
     const std::unordered_set<std::string> &structPaths,
     const std::string &definitionNamespace) {
   for (Expr &arg : expr.args) {
     rewriteExperimentalSoaInlineBorrowMethodExpr(
-        arg, bindings, soaVectorReturnDefinitions, structPaths, definitionNamespace);
+        arg, bindings, soaCollectionReturnDefinitions, structPaths, definitionNamespace);
   }
   if (expr.kind != Expr::Kind::Call) {
     return;
@@ -3986,23 +3986,23 @@ void rewriteExperimentalSoaInlineBorrowMethodExpr(
   if (expr.isFieldAccess && !expr.args.empty()) {
     Expr &receiverExpr = expr.args.front();
     normalizeExperimentalSoaBorrowedHelperMethodCall(
-        receiverExpr, bindings, soaVectorReturnDefinitions, structPaths, definitionNamespace);
+        receiverExpr, bindings, soaCollectionReturnDefinitions, structPaths, definitionNamespace);
   }
   normalizeExperimentalSoaBorrowedHelperMethodCall(
-      expr, bindings, soaVectorReturnDefinitions, structPaths, definitionNamespace);
+      expr, bindings, soaCollectionReturnDefinitions, structPaths, definitionNamespace);
 }
 
 bool rewriteExperimentalSoaInlineBorrowMethods(Program &program, std::string &error) {
   error.clear();
-  std::unordered_map<std::string, semantics::BindingInfo> soaVectorReturnDefinitions;
+  std::unordered_map<std::string, semantics::BindingInfo> soaCollectionReturnDefinitions;
   std::unordered_set<std::string> structPaths;
   for (const Definition &def : program.definitions) {
     if (auto binding = extractExperimentalSoaVectorOrBorrowedReturnBinding(def);
         binding.has_value()) {
-      soaVectorReturnDefinitions[def.fullPath] = *binding;
+      soaCollectionReturnDefinitions[def.fullPath] = *binding;
       const size_t slash = def.fullPath.find_last_of('/');
       if (slash != std::string::npos && slash + 1 < def.fullPath.size()) {
-        soaVectorReturnDefinitions[def.fullPath.substr(slash + 1)] = *binding;
+        soaCollectionReturnDefinitions[def.fullPath.substr(slash + 1)] = *binding;
       }
     }
     if (isStructLikeDefinition(def)) {
@@ -4022,7 +4022,7 @@ bool rewriteExperimentalSoaInlineBorrowMethods(Program &program, std::string &er
       definitionNamespace = def.fullPath.substr(0, slash);
     }
     rewriteExperimentalSoaInlineBorrowMethodStatements(
-        def.statements, bindings, soaVectorReturnDefinitions, structPaths, definitionNamespace);
+        def.statements, bindings, soaCollectionReturnDefinitions, structPaths, definitionNamespace);
     if (def.returnExpr.has_value()) {
       auto returnBindings = bindings;
       for (const Expr &stmt : def.statements) {
@@ -4033,7 +4033,7 @@ bool rewriteExperimentalSoaInlineBorrowMethods(Program &program, std::string &er
       rewriteExperimentalSoaInlineBorrowMethodExpr(
           *def.returnExpr,
           returnBindings,
-          soaVectorReturnDefinitions,
+          soaCollectionReturnDefinitions,
           structPaths,
           definitionNamespace);
     }
@@ -4074,7 +4074,7 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &allBindings,
     const std::unordered_map<std::string, semantics::BindingInfo>
-        &soaVectorReturnDefinitions,
+        &soaCollectionReturnDefinitions,
     const std::unordered_map<std::string, std::string> &specializedSoaVectorElementTypes,
     const std::unordered_map<std::string, std::unordered_set<std::string>> &structFieldNames,
     const std::unordered_set<std::string> &structPaths,
@@ -4086,7 +4086,7 @@ void rewriteExperimentalSoaFieldViewIndexStatements(
     std::unordered_map<std::string, semantics::BindingInfo> bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &allBindings,
     const std::unordered_map<std::string, semantics::BindingInfo>
-        &soaVectorReturnDefinitions,
+        &soaCollectionReturnDefinitions,
     const std::unordered_map<std::string, std::string> &specializedSoaVectorElementTypes,
     const std::unordered_map<std::string, std::unordered_set<std::string>> &structFieldNames,
     const std::unordered_set<std::string> &structPaths,
@@ -4097,7 +4097,7 @@ void rewriteExperimentalSoaFieldViewIndexStatements(
         stmt,
         bindings,
         allBindings,
-        soaVectorReturnDefinitions,
+        soaCollectionReturnDefinitions,
         specializedSoaVectorElementTypes,
         structFieldNames,
         structPaths,
@@ -4109,7 +4109,7 @@ void rewriteExperimentalSoaFieldViewIndexStatements(
           stmt.bodyArguments,
           bodyBindings,
           allBindings,
-          soaVectorReturnDefinitions,
+          soaCollectionReturnDefinitions,
           specializedSoaVectorElementTypes,
           structFieldNames,
           structPaths,
@@ -4131,7 +4131,7 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &allBindings,
     const std::unordered_map<std::string, semantics::BindingInfo>
-        &soaVectorReturnDefinitions,
+        &soaCollectionReturnDefinitions,
     const std::unordered_map<std::string, std::string> &specializedSoaVectorElementTypes,
     const std::unordered_map<std::string, std::unordered_set<std::string>> &structFieldNames,
     const std::unordered_set<std::string> &structPaths,
@@ -4142,7 +4142,7 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
         arg,
         bindings,
         allBindings,
-        soaVectorReturnDefinitions,
+        soaCollectionReturnDefinitions,
         specializedSoaVectorElementTypes,
         structFieldNames,
         structPaths,
@@ -4244,8 +4244,8 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
       }
     } else if (locationTarget.kind == Expr::Kind::Call && !locationTarget.isBinding) {
       for (const std::string &candidatePath : candidatePathsForCall(locationTarget)) {
-        auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
-        if (returnIt != soaVectorReturnDefinitions.end() &&
+        auto returnIt = soaCollectionReturnDefinitions.find(candidatePath);
+        if (returnIt != soaCollectionReturnDefinitions.end() &&
             tryReceiverBinding(returnIt->second)) {
           canonicalReceiverExpr = canonicalizeResolvedCallPath(locationTarget, candidatePath);
           getReceiverExpr = &*canonicalReceiverExpr;
@@ -4256,7 +4256,7 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
     return false;
   };
   if (const auto normalizedReceiver = normalizeExperimentalSoaBorrowedHelperReceiver(
-          receiver, bindings, soaVectorReturnDefinitions, definitionNamespace, structPaths);
+          receiver, bindings, soaCollectionReturnDefinitions, definitionNamespace, structPaths);
       normalizedReceiver.has_value()) {
     canonicalReceiverExpr = *normalizedReceiver;
     getReceiverExpr = &*canonicalReceiverExpr;
@@ -4280,8 +4280,8 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
     } else if (normalizedBindingSource->kind == Expr::Kind::Call &&
                !normalizedBindingSource->isBinding) {
       for (const std::string &candidatePath : candidatePathsForCall(*normalizedBindingSource)) {
-        auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
-        if (returnIt != soaVectorReturnDefinitions.end() &&
+        auto returnIt = soaCollectionReturnDefinitions.find(candidatePath);
+        if (returnIt != soaCollectionReturnDefinitions.end() &&
             tryReceiverBinding(returnIt->second)) {
           break;
         }
@@ -4318,8 +4318,8 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
         }
       } else if (borrowedSource.kind == Expr::Kind::Call && !borrowedSource.isBinding) {
         for (const std::string &candidatePath : candidatePathsForCall(borrowedSource)) {
-          auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
-          if (returnIt != soaVectorReturnDefinitions.end() &&
+          auto returnIt = soaCollectionReturnDefinitions.find(candidatePath);
+          if (returnIt != soaCollectionReturnDefinitions.end() &&
               tryReceiverBinding(returnIt->second)) {
             canonicalReceiverExpr = canonicalizeResolvedCallPath(borrowedSource, candidatePath);
             getReceiverExpr = &*canonicalReceiverExpr;
@@ -4330,8 +4330,8 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
     }
     if (receiverElemType.empty()) {
       for (const std::string &candidatePath : candidatePathsForCall(receiver)) {
-        auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
-        if (returnIt != soaVectorReturnDefinitions.end() &&
+        auto returnIt = soaCollectionReturnDefinitions.find(candidatePath);
+        if (returnIt != soaCollectionReturnDefinitions.end() &&
             tryReceiverBinding(returnIt->second)) {
           canonicalReceiverExpr = canonicalizeResolvedCallPath(receiver, candidatePath);
           getReceiverExpr = &*canonicalReceiverExpr;
@@ -4405,7 +4405,7 @@ bool rewriteExperimentalSoaFieldViewIndexes(Program &program, std::string &error
   std::unordered_map<std::string, std::unordered_set<std::string>> structFieldNames;
   std::unordered_set<std::string> structPaths;
   std::unordered_set<std::string> visibleSoaFieldHelpers;
-  std::unordered_map<std::string, semantics::BindingInfo> soaVectorReturnDefinitions;
+  std::unordered_map<std::string, semantics::BindingInfo> soaCollectionReturnDefinitions;
   const auto specializedSoaVectorElementTypes =
       buildSpecializedExperimentalSoaVectorElementTypes(program);
 
@@ -4420,10 +4420,10 @@ bool rewriteExperimentalSoaFieldViewIndexes(Program &program, std::string &error
     }
     if (auto binding = extractExperimentalSoaVectorOrBorrowedReturnBinding(def);
         binding.has_value()) {
-      soaVectorReturnDefinitions[def.fullPath] = *binding;
+      soaCollectionReturnDefinitions[def.fullPath] = *binding;
       const size_t slash = def.fullPath.find_last_of('/');
       if (slash != std::string::npos && slash + 1 < def.fullPath.size()) {
-        soaVectorReturnDefinitions[def.fullPath.substr(slash + 1)] = *binding;
+        soaCollectionReturnDefinitions[def.fullPath.substr(slash + 1)] = *binding;
       }
     }
     if (!isStructLikeDefinition(def)) {
@@ -4482,7 +4482,7 @@ bool rewriteExperimentalSoaFieldViewIndexes(Program &program, std::string &error
         def.statements,
         bindings,
         allBindings,
-        soaVectorReturnDefinitions,
+        soaCollectionReturnDefinitions,
         specializedSoaVectorElementTypes,
         structFieldNames,
         structPaths,
@@ -4493,7 +4493,7 @@ bool rewriteExperimentalSoaFieldViewIndexes(Program &program, std::string &error
           *def.returnExpr,
           bindings,
           allBindings,
-          soaVectorReturnDefinitions,
+          soaCollectionReturnDefinitions,
           specializedSoaVectorElementTypes,
           structFieldNames,
           structPaths,
@@ -4509,7 +4509,7 @@ void rewriteExperimentalSoaFieldViewHelperExpr(
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &allBindings,
     const std::unordered_map<std::string, semantics::BindingInfo>
-        &soaVectorReturnDefinitions,
+        &soaCollectionReturnDefinitions,
     const std::unordered_map<std::string, std::string> &specializedSoaVectorElementTypes,
     const std::unordered_map<std::string, std::unordered_map<std::string, SoaFieldViewFieldInfo>>
         &structFieldInfo,
@@ -4522,7 +4522,7 @@ void rewriteExperimentalSoaFieldViewHelperStatements(
     std::unordered_map<std::string, semantics::BindingInfo> bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &allBindings,
     const std::unordered_map<std::string, semantics::BindingInfo>
-        &soaVectorReturnDefinitions,
+        &soaCollectionReturnDefinitions,
     const std::unordered_map<std::string, std::string> &specializedSoaVectorElementTypes,
     const std::unordered_map<std::string, std::unordered_map<std::string, SoaFieldViewFieldInfo>>
         &structFieldInfo,
@@ -4534,7 +4534,7 @@ void rewriteExperimentalSoaFieldViewHelperStatements(
         stmt,
         bindings,
         allBindings,
-        soaVectorReturnDefinitions,
+        soaCollectionReturnDefinitions,
         specializedSoaVectorElementTypes,
         structFieldInfo,
         structPaths,
@@ -4546,7 +4546,7 @@ void rewriteExperimentalSoaFieldViewHelperStatements(
           stmt.bodyArguments,
           bodyBindings,
           allBindings,
-          soaVectorReturnDefinitions,
+          soaCollectionReturnDefinitions,
           specializedSoaVectorElementTypes,
           structFieldInfo,
           structPaths,
@@ -4566,7 +4566,7 @@ void rewriteExperimentalSoaFieldViewHelperExpr(
     const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
     const std::unordered_map<std::string, semantics::BindingInfo> &allBindings,
     const std::unordered_map<std::string, semantics::BindingInfo>
-        &soaVectorReturnDefinitions,
+        &soaCollectionReturnDefinitions,
     const std::unordered_map<std::string, std::string> &specializedSoaVectorElementTypes,
     const std::unordered_map<std::string, std::unordered_map<std::string, SoaFieldViewFieldInfo>>
         &structFieldInfo,
@@ -4578,7 +4578,7 @@ void rewriteExperimentalSoaFieldViewHelperExpr(
         arg,
         bindings,
         allBindings,
-        soaVectorReturnDefinitions,
+        soaCollectionReturnDefinitions,
         specializedSoaVectorElementTypes,
         structFieldInfo,
         structPaths,
@@ -4687,8 +4687,8 @@ void rewriteExperimentalSoaFieldViewHelperExpr(
       }
     } else if (locationTarget.kind == Expr::Kind::Call && !locationTarget.isBinding) {
       for (const std::string &candidatePath : candidatePathsForCall(locationTarget)) {
-        auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
-        if (returnIt != soaVectorReturnDefinitions.end() &&
+        auto returnIt = soaCollectionReturnDefinitions.find(candidatePath);
+        if (returnIt != soaCollectionReturnDefinitions.end() &&
             tryReceiverBinding(returnIt->second)) {
           canonicalReceiverExpr = canonicalizeResolvedCallPath(locationTarget, candidatePath);
           getReceiverExpr = &*canonicalReceiverExpr;
@@ -4699,7 +4699,7 @@ void rewriteExperimentalSoaFieldViewHelperExpr(
     return false;
   };
   if (const auto normalizedReceiver = normalizeExperimentalSoaBorrowedHelperReceiver(
-          receiver, bindings, soaVectorReturnDefinitions, definitionNamespace, structPaths);
+          receiver, bindings, soaCollectionReturnDefinitions, definitionNamespace, structPaths);
       normalizedReceiver.has_value()) {
     canonicalReceiverExpr = *normalizedReceiver;
     getReceiverExpr = &*canonicalReceiverExpr;
@@ -4723,8 +4723,8 @@ void rewriteExperimentalSoaFieldViewHelperExpr(
     } else if (normalizedBindingSource->kind == Expr::Kind::Call &&
                !normalizedBindingSource->isBinding) {
       for (const std::string &candidatePath : candidatePathsForCall(*normalizedBindingSource)) {
-        auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
-        if (returnIt != soaVectorReturnDefinitions.end() &&
+        auto returnIt = soaCollectionReturnDefinitions.find(candidatePath);
+        if (returnIt != soaCollectionReturnDefinitions.end() &&
             tryReceiverBinding(returnIt->second)) {
           break;
         }
@@ -4761,8 +4761,8 @@ void rewriteExperimentalSoaFieldViewHelperExpr(
         }
       } else if (borrowedSource.kind == Expr::Kind::Call && !borrowedSource.isBinding) {
         for (const std::string &candidatePath : candidatePathsForCall(borrowedSource)) {
-          auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
-          if (returnIt != soaVectorReturnDefinitions.end() &&
+          auto returnIt = soaCollectionReturnDefinitions.find(candidatePath);
+          if (returnIt != soaCollectionReturnDefinitions.end() &&
               tryReceiverBinding(returnIt->second)) {
             canonicalReceiverExpr = canonicalizeResolvedCallPath(borrowedSource, candidatePath);
             getReceiverExpr = &*canonicalReceiverExpr;
@@ -4773,8 +4773,8 @@ void rewriteExperimentalSoaFieldViewHelperExpr(
     }
     if (receiverElemType.empty()) {
       for (const std::string &candidatePath : candidatePathsForCall(receiver)) {
-        auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
-        if (returnIt != soaVectorReturnDefinitions.end() &&
+        auto returnIt = soaCollectionReturnDefinitions.find(candidatePath);
+        if (returnIt != soaCollectionReturnDefinitions.end() &&
             tryReceiverBinding(returnIt->second)) {
           canonicalReceiverExpr = canonicalizeResolvedCallPath(receiver, candidatePath);
           getReceiverExpr = &*canonicalReceiverExpr;
@@ -4852,7 +4852,7 @@ bool rewriteExperimentalSoaFieldViewHelpers(Program &program, std::string &error
   std::unordered_map<std::string, std::unordered_map<std::string, SoaFieldViewFieldInfo>> structFieldInfo;
   std::unordered_set<std::string> structPaths;
   std::unordered_set<std::string> visibleSoaFieldHelpers;
-  std::unordered_map<std::string, semantics::BindingInfo> soaVectorReturnDefinitions;
+  std::unordered_map<std::string, semantics::BindingInfo> soaCollectionReturnDefinitions;
   const auto specializedSoaVectorElementTypes =
       buildSpecializedExperimentalSoaVectorElementTypes(program);
 
@@ -4867,10 +4867,10 @@ bool rewriteExperimentalSoaFieldViewHelpers(Program &program, std::string &error
     }
     if (auto binding = extractExperimentalSoaVectorOrBorrowedReturnBinding(def);
         binding.has_value()) {
-      soaVectorReturnDefinitions[def.fullPath] = *binding;
+      soaCollectionReturnDefinitions[def.fullPath] = *binding;
       const size_t slash = def.fullPath.find_last_of('/');
       if (slash != std::string::npos && slash + 1 < def.fullPath.size()) {
-        soaVectorReturnDefinitions[def.fullPath.substr(slash + 1)] = *binding;
+        soaCollectionReturnDefinitions[def.fullPath.substr(slash + 1)] = *binding;
       }
     }
     if (isStructLikeDefinition(def)) {
@@ -4956,7 +4956,7 @@ bool rewriteExperimentalSoaFieldViewHelpers(Program &program, std::string &error
         def.statements,
         bindings,
         allBindings,
-        soaVectorReturnDefinitions,
+        soaCollectionReturnDefinitions,
         specializedSoaVectorElementTypes,
         structFieldInfo,
         structPaths,
@@ -4967,7 +4967,7 @@ bool rewriteExperimentalSoaFieldViewHelpers(Program &program, std::string &error
           *def.returnExpr,
           bindings,
           allBindings,
-          soaVectorReturnDefinitions,
+          soaCollectionReturnDefinitions,
           specializedSoaVectorElementTypes,
           structFieldInfo,
           structPaths,

@@ -217,7 +217,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector literal requires exactly one template argument") != std::string::npos);
+  CHECK(error.find("unknown call target: soa_vector") != std::string::npos);
 }
 
 TEST_CASE("soa_vector literal validates when element type is soa-safe struct") {
@@ -247,7 +247,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector literal requires struct element type") != std::string::npos);
+  CHECK(error.find("unknown call target: soa_vector") != std::string::npos);
 }
 
 TEST_CASE("soa_vector literal rejects string element field envelope") {
@@ -340,7 +340,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("soa_vector literal requires heap_alloc effect") != std::string::npos);
+  CHECK(error.find("unknown call target: soa_vector") != std::string::npos);
 }
 
 TEST_CASE("array literal type mismatch fails") {

@@ -333,7 +333,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("get requires soa_vector target") !=
+  CHECK(readFile(errPath).find("get requires soa target") !=
         std::string::npos);
 }
 

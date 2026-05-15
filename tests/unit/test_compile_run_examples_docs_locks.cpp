@@ -1614,11 +1614,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4520: Add SoA surface trace inventory gate") !=
+                  "- TODO-4522: Delete lowerer and emitter SoA public-surface traces") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
-                  "- TODO-4521: Delete semantic SoA public-surface traces\n"
-                  "- TODO-4522: Delete lowerer and emitter SoA public-surface traces\n"
                   "- TODO-4523: Delete parser and pipeline SoA public-surface traces\n"
                   "- TODO-4524: Tighten SoA surface audit to zero\n"
                   "- TODO-4268: Add heterogeneous type-pack syntax and metadata") !=
@@ -1635,8 +1633,6 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4520: Add SoA surface trace inventory gate\n"
-                  "- TODO-4521: Delete semantic SoA public-surface traces\n"
                   "- TODO-4522: Delete lowerer and emitter SoA public-surface traces\n"
                   "- TODO-4523: Delete parser and pipeline SoA public-surface traces\n"
                   "- TODO-4524: Tighten SoA surface audit to zero\n"
@@ -1647,6 +1643,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4518: Migrate SoA compatibility fixtures") !=
         std::string::npos);
   CHECK(todo.find("TODO-4519: Delete `soa_vector` compatibility seams") ==
+        std::string::npos);
+  CHECK(todo.find("TODO-4521: Delete semantic SoA public-surface traces") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4521: Delete semantic SoA public-surface traces") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4519: Delete `soa_vector` compatibility seams") !=
         std::string::npos);
@@ -1990,7 +1990,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Compile-time macro hooks and AST transform ownership | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4464, TODO-4520, TODO-4521, TODO-4522, TODO-4523, TODO-4524 |") !=
+  CHECK(todo.find("| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4464, TODO-4522, TODO-4523, TODO-4524 |") !=
         std::string::npos);
   CHECK(todo.find("| Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4464 |") !=
         std::string::npos);
@@ -2000,13 +2000,13 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Test-suite audit follow-up and release-gate stability | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4464, TODO-4305, TODO-4520, TODO-4521, TODO-4522, TODO-4523, TODO-4524 |") !=
+  CHECK(todo.find("| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4464, TODO-4305, TODO-4522, TODO-4523, TODO-4524 |") !=
         std::string::npos);
-  CHECK(todo.find("| SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4514, TODO-4520, TODO-4521, TODO-4522, TODO-4523, TODO-4524 |") !=
+  CHECK(todo.find("| SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4514, TODO-4522, TODO-4523, TODO-4524 |") !=
         std::string::npos);
-  CHECK(todo.find("| De-experimentalization surface and namespace parity | TODO-4430, TODO-4464, TODO-4305, TODO-4520, TODO-4521, TODO-4522, TODO-4523, TODO-4524 |") !=
+  CHECK(todo.find("| De-experimentalization surface and namespace parity | TODO-4430, TODO-4464, TODO-4305, TODO-4522, TODO-4523, TODO-4524 |") !=
         std::string::npos);
-  CHECK(todo.find("| `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4514, TODO-4520, TODO-4521, TODO-4522, TODO-4523, TODO-4524 |") !=
+  CHECK(todo.find("| `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4514, TODO-4522, TODO-4523, TODO-4524 |") !=
         std::string::npos);
   CHECK(todo.find("| Validator entrypoint and benchmark-plumbing split | none |") !=
         std::string::npos);

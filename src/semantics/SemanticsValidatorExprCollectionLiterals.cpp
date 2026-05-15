@@ -51,19 +51,19 @@ bool SemanticsValidator::validateExprCollectionLiteralBuiltins(
   if (builtinName == "soa_vector") {
     if (expr.templateArgs.size() != 1) {
       return failCollectionLiteralDiagnostic(
-          "soa_vector literal requires exactly one template argument");
+          "soa literal requires exactly one template argument");
     }
     if (!isSoaVectorStructElementType(expr.templateArgs.front(),
                                       expr.namespacePrefix, structNames_,
                                       importAliases_)) {
-      return failCollectionLiteralDiagnostic("soa_vector literal requires struct element type");
+      return failCollectionLiteralDiagnostic("soa literal requires struct element type");
     }
     if (!validateSoaVectorElementFieldEnvelopes(expr.templateArgs.front(),
                                                 expr.namespacePrefix)) {
       return false;
     }
     if (!expr.args.empty() && currentValidationState_.context.activeEffects.count("heap_alloc") == 0) {
-      return failCollectionLiteralDiagnostic("soa_vector literal requires heap_alloc effect");
+      return failCollectionLiteralDiagnostic("soa literal requires heap_alloc effect");
     }
   }
   if (builtinName == "vector" && !expr.args.empty()) {

@@ -201,7 +201,7 @@ main() {
       (testScratchPath("") / "primec_vm_public_soa_get_non_soa_receiver_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("get requires soa_vector target") !=
+  CHECK(readFile(errPath).find("get requires soa target") !=
         std::string::npos);
 }
 

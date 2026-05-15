@@ -1584,6 +1584,8 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find("soa_vector field view requires soa_vector target") ==
         std::string::npos);
+  CHECK(exprMapSoaBuiltinsSource.find("soa field view requires soa target") ==
+        std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find("splitSoaFieldViewHelperPath(resolved)") !=
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find(

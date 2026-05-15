@@ -2101,7 +2101,7 @@ main() {
   primec::SemanticProgram semanticProgram;
   std::string error;
   CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.find("get requires soa_vector target") != std::string::npos);
+  CHECK(error.find("get requires soa target") != std::string::npos);
 }
 
 TEST_CASE("root ref helper forms stop in semantics on borrowed-view pending diagnostic") {

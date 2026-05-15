@@ -19551,3 +19551,37 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     `PrimeStruct_compile_run_tests`; and ran focused registry, metadata, and
     docs-lock doctest slices while skipping broad baseline validation per the
     lite workflow.
+
+- [x] TODO-4521: Delete semantic SoA public-surface traces
+  - owner: ai
+  - created_at: 2026-05-15
+  - finished_at: 2026-05-15
+  - phase: SoA public surface rename and ownership cutover
+  - split_from: TODO-4310
+  - depends_on: TODO-4520
+  - scope: Remove the semantic-validator, semantic-product, and template
+    monomorphization SoA public collection-surface traces identified by the
+    inventory while preserving generic SoA substrate behavior.
+  - implementation_notes:
+    - Started from the inventory entries in `src/semantics/`, including
+      compatibility recognizers, public helper-path mirrors, type-spelling
+      recognizers, and old public diagnostic text.
+    - Preserved allowed generic substrate facts and names such as `SoaColumn`,
+      `SoaFieldView`, `SoaSchema*`, borrow roots, field-layout metadata, and
+      allocation primitives.
+  - acceptance:
+    - Semantic-layer inventory counts for SoA public collection-surface terms
+      decrease to the new checked-in cap without removing allowed substrate
+      traces.
+    - Existing canonical `soa<T>` semantic coverage and rejection coverage for
+      retired old public spellings stay stable.
+    - Focused semantic and source-lock tests pass.
+  - stop_rule: Stop once semantic-layer SoA public-surface residue is removed or
+    reduced to the next explicit cap; leave lowerer/emitter and parser/pipeline
+    residue to TODO-4522/TODO-4523.
+  - evidence: Renamed semantic SoA helper-return metadata plumbing so it no
+    longer carries public `soaVector*` helper tokens, retargeted semantic
+    diagnostics for SoA target/return/literal failures to canonical `soa`
+    wording, reduced the checked-in semantic inventory cap, refreshed affected
+    semantic/compile-run/source-lock expectations, and promoted TODO-4522 as
+    the next Ready Now leaf.

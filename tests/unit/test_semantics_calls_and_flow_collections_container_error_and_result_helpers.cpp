@@ -356,7 +356,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("count requires soa_vector target") != std::string::npos);
+  CHECK(error.find("count requires soa target") != std::string::npos);
 }
 
 TEST_CASE("public soa count helper validates through struct helper return receivers") {
@@ -588,7 +588,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("get requires soa_vector target") != std::string::npos);
+  CHECK(error.find("get requires soa target") != std::string::npos);
 }
 
 TEST_CASE("public soa get slash-method validates on public wrapper") {
@@ -3777,7 +3777,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("get requires soa_vector target") != std::string::npos);
+  CHECK(error.find("get requires soa target") != std::string::npos);
 }
 
 TEST_CASE("canonical get helper validates through struct helper return receivers compatibility") {

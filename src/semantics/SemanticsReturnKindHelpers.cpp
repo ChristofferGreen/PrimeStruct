@@ -173,11 +173,11 @@ ReturnKind getReturnKind(const Definition &def,
       if (splitTemplateTypeName(normalizedType, base, arg) && base == "soa_vector") {
         std::vector<std::string> args;
         if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
-          error = "soa_vector return type requires exactly one template argument on " + def.fullPath;
+          error = "soa return type requires exactly one template argument on " + def.fullPath;
           return ReturnKind::Unknown;
         }
         if (!isSoaVectorStructElementType(args.front(), def.namespacePrefix, structNames, importAliases)) {
-          error = "soa_vector return type requires struct element type on " + def.fullPath;
+          error = "soa return type requires struct element type on " + def.fullPath;
           return ReturnKind::Unknown;
         }
         return ReturnKind::Array;
@@ -187,7 +187,7 @@ ReturnKind getReturnKind(const Definition &def,
         return ReturnKind::Unknown;
       }
       if (normalizedType == "soa_vector") {
-        error = "soa_vector return type requires exactly one template argument on " + def.fullPath;
+        error = "soa return type requires exactly one template argument on " + def.fullPath;
         return ReturnKind::Unknown;
       }
       if (splitTemplateTypeName(normalizedType, base, arg) && base == "array") {

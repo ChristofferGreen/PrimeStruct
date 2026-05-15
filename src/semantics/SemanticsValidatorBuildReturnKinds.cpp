@@ -191,7 +191,7 @@ bool SemanticsValidator::buildDefinitionReturnKinds(const std::unordered_set<std
             break;
           }
           if (!isSoaVectorStructElementType(args.front(), def.namespacePrefix, structNames_, importAliases_)) {
-            returnKindError = "soa_vector return type requires struct element type on " + def.fullPath;
+            returnKindError = "soa return type requires struct element type on " + def.fullPath;
             break;
           }
           if (!validateSoaVectorElementFieldEnvelopes(args.front(), def.namespacePrefix)) {

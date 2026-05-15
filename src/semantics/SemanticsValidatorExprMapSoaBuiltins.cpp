@@ -438,7 +438,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       } else {
         return failMapSoaBuiltinDiagnostic(
             helperName == "to_soa" ? "to_soa requires vector target"
-                                   : "to_aos requires soa_vector target");
+                                   : "to_aos requires soa target");
       }
     }
     if (helperName == "to_aos") {
@@ -547,7 +547,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
         return true;
       }
       return failMapSoaBuiltinDiagnostic(helperName +
-                                        " requires soa_vector target");
+                                        " requires soa target");
     }
     if (!validateSoaHelperReturnTemplateArgs(expr.args.front(), elemType, helperName)) {
       return false;

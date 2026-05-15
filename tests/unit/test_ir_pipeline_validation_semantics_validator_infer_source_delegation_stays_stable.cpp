@@ -2607,7 +2607,7 @@ main() {
             "normalizeExperimentalSoaBorrowedHelperReceiver(\n"
             "                receiver,\n"
             "                bindings,\n"
-            "                soaVectorReturnDefinitions,\n"
+            "                soaCollectionReturnDefinitions,\n"
             "                definitionNamespace,\n"
             "                structPaths)") !=
         std::string::npos);
