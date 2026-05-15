@@ -13,6 +13,15 @@ primec::Program parseProgram(const std::string &source) {
   CHECK(error.empty());
   return program;
 }
+
+std::string parseError(const std::string &source) {
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  return error;
+}
 } // namespace
 
 TEST_SUITE_BEGIN("primestruct.parser.templates");
@@ -28,6 +37,38 @@ identity<T>([T] x) {
   REQUIRE(program.definitions.size() == 1);
   CHECK(program.definitions[0].templateArgs.size() == 1);
   CHECK(program.definitions[0].templateArgs[0] == "T");
+  CHECK(program.definitions[0].templateArgIsPack.size() == 1);
+  CHECK_FALSE(program.definitions[0].templateArgIsPack[0]);
+}
+
+TEST_CASE("parses heterogeneous type pack parameter on definition") {
+  const std::string source = R"(
+[return<T>]
+pack_head<T, Ts...>([T] head) {
+  return(head)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  CHECK(program.definitions[0].templateArgs ==
+        std::vector<std::string>{"T", "Ts"});
+  CHECK(program.definitions[0].templateArgIsPack ==
+        std::vector<bool>{false, true});
+}
+
+TEST_CASE("parses heterogeneous type pack parameter on struct") {
+  const std::string source = R"(
+[struct]
+Tuple<T, Ts...> {
+  [T] head
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  CHECK(program.definitions[0].templateArgs ==
+        std::vector<std::string>{"T", "Ts"});
+  CHECK(program.definitions[0].templateArgIsPack ==
+        std::vector<bool>{false, true});
 }
 
 TEST_CASE("parses template list on call") {
@@ -84,6 +125,46 @@ main() {
   REQUIRE(def.transforms.size() == 1);
   REQUIRE(def.transforms[0].templateArgs.size() == 1);
   CHECK(def.transforms[0].templateArgs[0] == "array<i32>");
+}
+
+TEST_CASE("rejects invalid heterogeneous type pack declarations") {
+  CHECK(parseError(R"(
+[return<i32>]
+bad<T, T>() {
+  return(0i32)
+}
+)").find("duplicate template parameter: T") != std::string::npos);
+
+  CHECK(parseError(R"(
+[return<i32>]
+bad<Ts..., Us...>() {
+  return(0i32)
+}
+)").find("only one type pack parameter is supported") != std::string::npos);
+
+  CHECK(parseError(R"(
+[return<i32>]
+bad<Ts..., T>() {
+  return(0i32)
+}
+)").find("type pack parameter must be last") != std::string::npos);
+
+  CHECK(parseError(R"(
+[return<i32>]
+bad<args<T>>() {
+  return(0i32)
+}
+)").find("args<T> is variadic value-pack syntax") != std::string::npos);
+}
+
+TEST_CASE("rejects type pack expansion outside template parameter list") {
+  CHECK(parseError(R"(
+[return<i32>]
+main() {
+  return(use<Ts...>(0i32))
+}
+)").find("type-pack expansion is only valid in template parameter lists") !=
+        std::string::npos);
 }
 
 TEST_SUITE_END();

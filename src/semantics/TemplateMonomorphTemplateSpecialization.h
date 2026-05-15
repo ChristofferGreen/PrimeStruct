@@ -112,6 +112,7 @@ bool specializeTemplateDefinitionFamily(const std::string &basePath,
       clone.name = specializedName;
       clone.namespacePrefix = parentPathForDefinition(specializedBasePath);
       clone.templateArgs.clear();
+      clone.templateArgIsPack.clear();
     }
     if (!clonePaths.insert(clone.fullPath).second) {
       error = "template specialization conflicts with existing definition: " + clone.fullPath;

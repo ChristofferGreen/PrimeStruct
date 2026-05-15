@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <sstream>
+#include <unordered_set>
 #include <utility>
 
 namespace primec {
@@ -177,6 +178,9 @@ bool Parser::parseTemplateList(std::vector<std::string> &out) {
     if (!parseTypeName(typeName)) {
       return false;
     }
+    if (matchRaw(TokenKind::Ellipsis)) {
+      return fail("type-pack expansion is only valid in template parameter lists");
+    }
     out.push_back(typeName);
     skipSeparators();
     if (matchRaw(TokenKind::RAngle)) {
@@ -191,6 +195,109 @@ bool Parser::parseTemplateList(std::vector<std::string> &out) {
     return false;
   }
   return true;
+}
+
+bool Parser::parseTemplateParameterList(std::vector<std::string> &out,
+                                        std::vector<bool> &outIsPack) {
+  auto skipCommentsOnly = [&]() {
+    while (tokens_[pos_].kind == TokenKind::Comment) {
+      ++pos_;
+    }
+  };
+  auto matchRaw = [&](TokenKind kind) -> bool {
+    skipCommentsOnly();
+    return tokens_[pos_].kind == kind;
+  };
+  auto consumeRaw = [&](TokenKind kind, const std::string &message) -> Token {
+    if (matchRaw(TokenKind::Invalid)) {
+      fail(describeInvalidToken(tokens_[pos_]));
+      return {TokenKind::End, ""};
+    }
+    if (!matchRaw(kind)) {
+      fail(message);
+      return {TokenKind::End, ""};
+    }
+    return tokens_[pos_++];
+  };
+  auto expectRaw = [&](TokenKind kind, const std::string &message) -> bool {
+    if (matchRaw(TokenKind::Invalid)) {
+      return fail(describeInvalidToken(tokens_[pos_]));
+    }
+    if (!matchRaw(kind)) {
+      return fail(message);
+    }
+    ++pos_;
+    return true;
+  };
+  auto skipSeparators = [&]() {
+    skipCommentsOnly();
+    while (tokens_[pos_].kind == TokenKind::Comma || tokens_[pos_].kind == TokenKind::Semicolon) {
+      ++pos_;
+      skipCommentsOnly();
+    }
+  };
+
+  if (!expectRaw(TokenKind::LAngle, "expected '<'")) {
+    return false;
+  }
+  skipSeparators();
+  if (matchRaw(TokenKind::RAngle)) {
+    return fail("expected template parameter identifier");
+  }
+
+  std::unordered_set<std::string> seen;
+  bool sawPack = false;
+  while (true) {
+    if (sawPack && matchRaw(TokenKind::Identifier)) {
+      size_t scan = pos_ + 1;
+      while (scan < tokens_.size() && tokens_[scan].kind == TokenKind::Comment) {
+        ++scan;
+      }
+      if (scan < tokens_.size() && tokens_[scan].kind == TokenKind::Ellipsis) {
+        return fail("only one type pack parameter is supported");
+      }
+      return fail("type pack parameter must be last");
+    }
+    Token name = consumeRaw(TokenKind::Identifier, "expected template parameter identifier");
+    if (name.kind == TokenKind::End) {
+      return false;
+    }
+    std::string nameError;
+    if (!validateIdentifierText(name.text, nameError)) {
+      return fail(nameError);
+    }
+    if (name.text == "args" && matchRaw(TokenKind::LAngle)) {
+      return fail("args<T> is variadic value-pack syntax, not a heterogeneous type pack; use Ts...");
+    }
+    if (matchRaw(TokenKind::LAngle)) {
+      return fail("template parameter declarations accept identifiers only; use Ts... for a type pack");
+    }
+    const bool isPack = matchRaw(TokenKind::Ellipsis);
+    if (isPack) {
+      if (sawPack) {
+        return fail("only one type pack parameter is supported");
+      }
+      if (!expectRaw(TokenKind::Ellipsis, "expected '...'")) {
+        return false;
+      }
+      sawPack = true;
+    }
+    if (!seen.insert(name.text).second) {
+      return fail("duplicate template parameter: " + name.text);
+    }
+    out.push_back(name.text);
+    outIsPack.push_back(isPack);
+
+    skipSeparators();
+    if (matchRaw(TokenKind::RAngle)) {
+      break;
+    }
+    if (matchRaw(TokenKind::Identifier)) {
+      continue;
+    }
+    return fail("expected '>'");
+  }
+  return expectRaw(TokenKind::RAngle, "expected '>'");
 }
 
 bool Parser::parseTypeName(std::string &out) {
@@ -260,6 +367,9 @@ bool Parser::parseTypeName(std::string &out) {
       out += nested;
       first = false;
       skipSeparators();
+      if (matchRaw(TokenKind::Ellipsis)) {
+        return fail("type-pack expansion is only valid in template parameter lists");
+      }
       if (matchRaw(TokenKind::RAngle)) {
         break;
       }
@@ -278,7 +388,8 @@ bool Parser::parseTypeName(std::string &out) {
 
 bool Parser::parseParameterBinding(Expr &out,
                                    const std::string &namespacePrefix,
-                                   std::vector<std::string> *implicitTemplateArgsOut) {
+                                   std::vector<std::string> *implicitTemplateArgsOut,
+                                   std::vector<bool> *implicitTemplateArgIsPackOut) {
   if (!match(TokenKind::LBracket)) {
     return fail("expected '[' to start parameter");
   }
@@ -326,6 +437,9 @@ bool Parser::parseParameterBinding(Expr &out,
       }
       packType = nextVariadicPackTemplateName(*implicitTemplateArgsOut);
       implicitTemplateArgsOut->push_back(packType);
+      if (implicitTemplateArgIsPackOut != nullptr) {
+        implicitTemplateArgIsPackOut->push_back(false);
+      }
     } else {
       if (explicitType->name == "args") {
         return fail("variadic parameter cannot combine ... with args envelope");
@@ -360,7 +474,8 @@ bool Parser::parseParameterBinding(Expr &out,
 
 bool Parser::parseParameterList(std::vector<Expr> &out,
                                 const std::string &namespacePrefix,
-                                std::vector<std::string> *implicitTemplateArgsOut) {
+                                std::vector<std::string> *implicitTemplateArgsOut,
+                                std::vector<bool> *implicitTemplateArgIsPackOut) {
   auto skipCommentsOnly = [&]() {
     while (tokens_[pos_].kind == TokenKind::Comment) {
       ++pos_;
@@ -476,7 +591,8 @@ bool Parser::parseParameterList(std::vector<Expr> &out,
         return fail("expected '[' to start parameter");
       }
     }
-    if (param.name.empty() && !parseParameterBinding(param, namespacePrefix, implicitTemplateArgsOut)) {
+    if (param.name.empty() &&
+        !parseParameterBinding(param, namespacePrefix, implicitTemplateArgsOut, implicitTemplateArgIsPackOut)) {
       return false;
     }
     const bool isVariadic =

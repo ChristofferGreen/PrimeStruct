@@ -31,13 +31,17 @@ private:
   bool parseDefinitionOrExecution(std::vector<Definition> &defs, std::vector<Execution> &execs);
   bool parseTransformList(std::vector<Transform> &out);
   bool parseTemplateList(std::vector<std::string> &out);
+  bool parseTemplateParameterList(std::vector<std::string> &out,
+                                  std::vector<bool> &outIsPack);
   bool parseTypeName(std::string &out);
   bool parseParameterList(std::vector<Expr> &out,
                           const std::string &namespacePrefix,
-                          std::vector<std::string> *implicitTemplateArgsOut = nullptr);
+                          std::vector<std::string> *implicitTemplateArgsOut = nullptr,
+                          std::vector<bool> *implicitTemplateArgIsPackOut = nullptr);
   bool parseParameterBinding(Expr &out,
                              const std::string &namespacePrefix,
-                             std::vector<std::string> *implicitTemplateArgsOut = nullptr);
+                             std::vector<std::string> *implicitTemplateArgsOut = nullptr,
+                             std::vector<bool> *implicitTemplateArgIsPackOut = nullptr);
   bool parseCallArgumentList(std::vector<Expr> &out,
                              std::vector<std::optional<std::string>> &argNames,
                              const std::string &namespacePrefix);

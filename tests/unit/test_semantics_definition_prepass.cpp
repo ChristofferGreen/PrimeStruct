@@ -3,10 +3,12 @@
 #include "primec/SemanticValidationPlan.h"
 #include "primec/SemanticsDefinitionPartitioner.h"
 #include "primec/SemanticsDefinitionPrepass.h"
+#include "primec/SemanticProduct.h"
 
 #include <algorithm>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "test_semantics_helpers.h"
@@ -210,6 +212,42 @@ alpha() {
 
   REQUIRE(snapshot.duplicateDeclarationPaths.size() == 1);
   CHECK(snapshot.duplicateDeclarationPaths[0] == "/alpha");
+}
+
+TEST_CASE("semantic validation rejects invalid type-pack metadata") {
+  primec::Program program = parseProgram(R"(
+[return<i32>]
+id<T>([T] value) {
+  return(value)
+}
+
+[return<i32>]
+main() {
+  return(0i32)
+}
+)");
+  REQUIRE(program.definitions.size() == 2);
+  program.definitions[0].templateArgs = {"Ts", "T"};
+  program.definitions[0].templateArgIsPack = {true, false};
+
+  primec::Semantics semantics;
+  std::string error;
+  CHECK_FALSE(semantics.validate(program, "/main", error, {}, {}));
+  CHECK(error.find("type pack parameter must be last") != std::string::npos);
+}
+
+TEST_CASE("semantic product formatting distinguishes type-pack parameters") {
+  primec::SemanticProgram semanticProgram;
+  primec::SemanticProgramDefinition definition;
+  definition.fullPath = "/Tuple";
+  definition.name = "Tuple";
+  definition.templateParameters = {"T", "Ts"};
+  definition.templateParameterIsPack = {false, true};
+  semanticProgram.definitions.push_back(std::move(definition));
+
+  const std::string formatted = primec::formatSemanticProgram(semanticProgram);
+  CHECK(formatted.find("template_params=[\"T\", \"Ts...\"]") !=
+        std::string::npos);
 }
 
 TEST_CASE("definition prepass is read-only over the program and repeat-run stable") {

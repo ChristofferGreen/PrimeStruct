@@ -2,6 +2,7 @@
 
 #include <array>
 #include <string_view>
+#include <unordered_set>
 #include <utility>
 
 namespace primec::semantics {
@@ -156,10 +157,42 @@ bool SemanticsValidator::buildDefinitionMaps() {
     const std::string parent = def.fullPath.substr(0, slash);
     return structNames_.count(parent) > 0;
   };
+  auto validateTemplateParameters = [&](const Definition &def) -> bool {
+    if (!def.templateArgIsPack.empty() &&
+        def.templateArgIsPack.size() != def.templateArgs.size()) {
+      return failDefinitionDiagnostic(def,
+                                      "template parameter metadata mismatch on " +
+                                          def.fullPath);
+    }
+    std::unordered_set<std::string> seen;
+    bool sawPack = false;
+    for (std::size_t index = 0; index < def.templateArgs.size(); ++index) {
+      const std::string &name = def.templateArgs[index];
+      if (!seen.insert(name).second) {
+        return failDefinitionDiagnostic(def,
+                                        "duplicate template parameter: " + name);
+      }
+      const bool isPack = index < def.templateArgIsPack.size() &&
+                          def.templateArgIsPack[index];
+      if (isPack) {
+        if (sawPack) {
+          return failDefinitionDiagnostic(def,
+                                          "only one type pack parameter is supported");
+        }
+        sawPack = true;
+      } else if (sawPack) {
+        return failDefinitionDiagnostic(def, "type pack parameter must be last");
+      }
+    }
+    return true;
+  };
   std::vector<SemanticDiagnosticRecord> transformDiagnosticRecords;
   for (const auto &declaration : validationPlan_->definitionPrepass.declarationsInStableOrder) {
     const Definition &def = program_.definitions[declaration.stableIndex];
     DefinitionContextScope definitionScope(*this, def);
+    if (!validateTemplateParameters(def)) {
+      return false;
+    }
     if (defMap_.count(def.fullPath) > 0) {
       return failBuildDefinitionMapDiagnostic("duplicate definition: " +
                                               def.fullPath,

@@ -1,5 +1,36 @@
 #pragma once
 
+bool validateTemplateParameterMetadataForTemplateSetup(const Definition &def,
+                                                       std::string &error) {
+  if (!def.templateArgIsPack.empty() &&
+      def.templateArgIsPack.size() != def.templateArgs.size()) {
+    error = "template parameter metadata mismatch on " + def.fullPath;
+    return false;
+  }
+  std::unordered_set<std::string> seen;
+  bool sawPack = false;
+  for (std::size_t index = 0; index < def.templateArgs.size(); ++index) {
+    const std::string &name = def.templateArgs[index];
+    if (!seen.insert(name).second) {
+      error = "duplicate template parameter: " + name;
+      return false;
+    }
+    const bool isPack = index < def.templateArgIsPack.size() &&
+                        def.templateArgIsPack[index];
+    if (isPack) {
+      if (sawPack) {
+        error = "only one type pack parameter is supported";
+        return false;
+      }
+      sawPack = true;
+    } else if (sawPack) {
+      error = "type pack parameter must be last";
+      return false;
+    }
+  }
+  return true;
+}
+
 bool initializeTemplateMonomorphSourceDefinitions(Context &ctx,
                                                   const std::string &entryPath,
                                                   std::unordered_set<std::string> &templateRoots,
@@ -10,6 +41,9 @@ bool initializeTemplateMonomorphSourceDefinitions(Context &ctx,
   std::unordered_set<std::string> occupiedPaths;
   occupiedPaths.reserve(ctx.program.definitions.size());
   for (const auto &def : ctx.program.definitions) {
+    if (!validateTemplateParameterMetadataForTemplateSetup(def, error)) {
+      return false;
+    }
     definitionsByPath[def.fullPath].push_back(&def);
     occupiedPaths.insert(def.fullPath);
   }

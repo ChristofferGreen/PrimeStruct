@@ -380,8 +380,9 @@ bool Parser::tryParseNestedDefinition(std::vector<Definition> &defs,
   }
 
   std::vector<std::string> templateArgs;
+  std::vector<bool> templateArgIsPack;
   if (match(TokenKind::LAngle)) {
-    if (!parseTemplateList(templateArgs)) {
+    if (!parseTemplateParameterList(templateArgs, templateArgIsPack)) {
       return false;
     }
   }
@@ -438,7 +439,7 @@ bool Parser::tryParseNestedDefinition(std::vector<Definition> &defs,
       return false;
     }
   } else {
-    if (!parseParameterList(parameters, parentPath, &templateArgs)) {
+    if (!parseParameterList(parameters, parentPath, &templateArgs, &templateArgIsPack)) {
       return false;
     }
   }
@@ -473,6 +474,7 @@ bool Parser::tryParseNestedDefinition(std::vector<Definition> &defs,
   def.sourceColumn = name.column;
   def.transforms = std::move(combinedTransforms);
   def.templateArgs = std::move(templateArgs);
+  def.templateArgIsPack = std::move(templateArgIsPack);
   def.parameters = std::move(parameters);
   def.isNested = true;
   if (!parseDefinitionBody(def, hasNoReturnDefinitionTransform, defs)) {

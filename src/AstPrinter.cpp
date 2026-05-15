@@ -165,7 +165,13 @@ void printTransforms(std::ostringstream &out, const std::vector<Transform> &tran
   out << "] ";
 }
 
-void printTemplateArgs(std::ostringstream &out, const std::vector<std::string> &args) {
+bool isTemplateArgPack(const std::vector<bool> &templateArgIsPack, size_t index) {
+  return index < templateArgIsPack.size() && templateArgIsPack[index];
+}
+
+void printTemplateArgs(std::ostringstream &out,
+                       const std::vector<std::string> &args,
+                       const std::vector<bool> &templateArgIsPack = {}) {
   if (args.empty()) {
     return;
   }
@@ -175,6 +181,9 @@ void printTemplateArgs(std::ostringstream &out, const std::vector<std::string> &
       out << ", ";
     }
     out << args[i];
+    if (isTemplateArgPack(templateArgIsPack, i)) {
+      out << "...";
+    }
   }
   out << ">";
 }
@@ -198,7 +207,7 @@ void printDefinition(std::ostringstream &out, const Definition &def, int depth) 
   indent(out, depth);
   printTransforms(out, def.transforms);
   out << def.fullPath;
-  printTemplateArgs(out, def.templateArgs);
+  printTemplateArgs(out, def.templateArgs, def.templateArgIsPack);
   out << "(";
   for (size_t i = 0; i < def.parameters.size(); ++i) {
     if (i > 0) {
@@ -228,7 +237,7 @@ void printExecution(std::ostringstream &out, const Execution &exec, int depth) {
   indent(out, depth);
   printTransforms(out, exec.transforms);
   out << exec.fullPath;
-  printTemplateArgs(out, exec.templateArgs);
+  printTemplateArgs(out, exec.templateArgs, exec.templateArgIsPack);
   out << "(";
   for (size_t i = 0; i < exec.arguments.size(); ++i) {
     if (i > 0) {

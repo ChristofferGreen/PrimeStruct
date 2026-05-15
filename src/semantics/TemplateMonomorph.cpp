@@ -101,6 +101,15 @@ bool definitionHasVariadicParameter(const Definition &def) {
   return !def.parameters.empty() && isArgsPackParameterExpr(def.parameters.back());
 }
 
+bool definitionHasTypePackParameter(const Definition &def) {
+  for (bool isPack : def.templateArgIsPack) {
+    if (isPack) {
+      return true;
+    }
+  }
+  return false;
+}
+
 ResolvedType resolveTypeString(std::string input,
                                const SubstMap &mapping,
                                const std::unordered_set<std::string> &allowedParams,
@@ -316,6 +325,11 @@ bool instantiateTemplate(const std::string &basePath,
   const Definition &baseDef = defIt->second;
   if (baseDef.templateArgs.empty()) {
     error = "template arguments are only supported on templated definitions: " +
+            helperOverloadDisplayPath(basePath, ctx);
+    return false;
+  }
+  if (definitionHasTypePackParameter(baseDef)) {
+    error = "type-pack template binding is deferred to TODO-4269: " +
             helperOverloadDisplayPath(basePath, ctx);
     return false;
   }

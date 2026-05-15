@@ -64,6 +64,24 @@ Existing `args<T>` variadics are still useful for homogeneous value lists such
 as `vector<T>{...}`, but they are not the tuple substrate because every element
 has the same type.
 
+Accepted declaration syntax starts with generic PrimeStruct template
+parameters, not tuple-specific grammar:
+
+```prime
+[struct]
+tuple<Ts...> {
+}
+```
+
+Only one type-pack parameter is currently accepted and it must be the final
+template parameter, for example `ResultTuple<Status, Ts...>`. The parser, AST,
+and semantic-product metadata can record that `Ts` is a heterogeneous type
+pack, but pack binding and arbitrary-arity monomorphization are deferred to
+TODO-4269. Expanding `Ts...` into struct fields, constructor initialization,
+helpers, and lifecycle hooks remains deferred to TODO-4275/TODO-4276.
+`args<T>` remains the homogeneous value-pack envelope and is not a spelling for
+heterogeneous type packs.
+
 Optional but useful follow-up substrate:
 
 - heterogeneous value-pack inference for helpers such as `make_tuple(values...)`
@@ -384,9 +402,9 @@ expression that caused the failure.
 
 When this prototype graduates into active implementation work:
 
-- complete the generic type-pack substrate tracked by TODO-4268 through
-  TODO-4271, including the split field/helper expansion work in TODO-4275 and
-  TODO-4276
+- complete the remaining generic type-pack substrate tracked by TODO-4269
+  through TODO-4271, including the split field/helper expansion work in
+  TODO-4275 and TODO-4276
 - add `stdlib/std/tuple/tuple.prime` and a public import surface in TODO-4272
 - implement `tuple<Ts...>` as one generic `.prime` definition, not a generated
   or hand-written fixed-arity family

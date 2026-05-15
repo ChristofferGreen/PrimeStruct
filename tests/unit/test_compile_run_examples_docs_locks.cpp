@@ -1614,24 +1614,20 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4526: Delete semantic SoA zero-audit residue | track:\n"
-                  "  soa-zero-audit | primary surface: semantic validation and SoA source locks\n"
-                  "- TODO-4464: Add full zero C++ map-surface audit | track:\n"
-                  "  map-zero-audit | primary surface: map trace inventories, map backing\n"
-                  "  substrate, and map source locks\n"
-                  "- TODO-4268: Add heterogeneous type-pack syntax and metadata | track:\n"
-                  "  tuple-type-packs | primary surface: parser, AST, semantic product, and\n"
-                  "  tuple/type-pack docs") !=
+                  "- TODO-4269: Bind and monomorphize type-pack arguments | track:\n"
+                  "  tuple-type-packs | primary surface: template monomorphization, type\n"
+                  "  binding, diagnostics, and tuple/type-pack tests") !=
         std::string::npos);
   CHECK(todo.find("### Parallel Work Tracks (Current)\n\n"
-                  "- `soa-zero-audit`: ready TODO-4526, then serial successors TODO-4527\n"
-                  "  -> TODO-4528 -> TODO-4529. Assign only one worker from this track at once") !=
+                  "- `soa-zero-audit`: TODO-4530 completed the ready semantic builtin-helper\n"
+                  "  leaf; no further SoA leaf is ready until the parent reconciles TODO-4526 or\n"
+                  "  assigns another semantic child slice. Serial successors remain TODO-4527") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)\n\n"
                   "- TODO-4527: Delete template-monomorph SoA zero-audit residue\n"
                   "- TODO-4528: Delete emitter/lowerer SoA zero-audit residue\n"
                   "- TODO-4529: Replace SoA inventory with strict zero audit\n"
-                  "- TODO-4269: Bind and monomorphize type-pack arguments") !=
+                  "- TODO-4270: Add compile-time integer template arguments") !=
         std::string::npos);
   CHECK(todo.find("- [~] TODO-4305: Rename and style canonical `.prime` SoA surface") !=
         std::string::npos);
@@ -1645,12 +1641,13 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended Track Order)\n\n"
-                  "- TODO-4526: Delete semantic SoA zero-audit residue\n"
-                  "- TODO-4464: Add full zero C++ map-surface audit\n"
-                  "- TODO-4268: Add heterogeneous type-pack syntax and metadata\n"
+                  "- TODO-4269: Bind and monomorphize type-pack arguments\n"
                   "- TODO-4527: Delete template-monomorph SoA zero-audit residue\n"
                   "- TODO-4528: Delete emitter/lowerer SoA zero-audit residue\n"
-                  "- TODO-4529: Replace SoA inventory with strict zero audit") !=
+                  "- TODO-4529: Replace SoA inventory with strict zero audit\n"
+                  "- TODO-4270: Add compile-time integer template arguments") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4268: Add heterogeneous type-pack syntax and metadata") !=
         std::string::npos);
   CHECK(todo.find("TODO-4518: Migrate SoA compatibility fixtures") ==
         std::string::npos);
@@ -1673,7 +1670,6 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4519: Delete `soa_vector` compatibility seams") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4268: Add heterogeneous type-pack syntax and metadata",
       "TODO-4269: Bind and monomorphize type-pack arguments",
       "TODO-4270: Add compile-time integer template arguments",
   };

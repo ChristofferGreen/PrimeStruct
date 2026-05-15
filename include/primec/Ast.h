@@ -71,6 +71,7 @@ struct Definition {
   std::string namespacePrefix;
   std::vector<Transform> transforms;
   std::vector<std::string> templateArgs;
+  std::vector<bool> templateArgIsPack;
   std::vector<Expr> parameters;
   std::vector<Expr> statements;
   std::vector<SumVariant> sumVariants;
@@ -88,6 +89,7 @@ struct Execution {
   std::string namespacePrefix;
   std::vector<Transform> transforms;
   std::vector<std::string> templateArgs;
+  std::vector<bool> templateArgIsPack;
   std::vector<Expr> arguments;
   std::vector<std::optional<std::string>> argumentNames;
   std::vector<Expr> bodyArguments;

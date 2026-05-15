@@ -179,8 +179,9 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   }
 
   std::vector<std::string> templateArgs;
+  std::vector<bool> templateArgIsPack;
   if (match(TokenKind::LAngle)) {
-    if (!parseTemplateList(templateArgs)) {
+    if (!parseTemplateParameterList(templateArgs, templateArgIsPack)) {
       return false;
     }
   }
@@ -229,6 +230,7 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     def.sourceColumn = name.column;
     def.transforms = std::move(transforms);
     def.templateArgs = std::move(templateArgs);
+    def.templateArgIsPack = std::move(templateArgIsPack);
     if (!parseDefinitionBody(def, hasNoReturnDefinitionTransform, defs)) {
       return false;
     }
@@ -261,7 +263,7 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
         return false;
       }
     } else {
-      if (!parseParameterList(parameters, currentNamespacePrefix(), &templateArgs)) {
+      if (!parseParameterList(parameters, currentNamespacePrefix(), &templateArgs, &templateArgIsPack)) {
         return false;
       }
     }
@@ -294,6 +296,7 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     def.sourceColumn = name.column;
     def.transforms = std::move(transforms);
     def.templateArgs = std::move(templateArgs);
+    def.templateArgIsPack = std::move(templateArgIsPack);
     def.parameters = std::move(parameters);
     if (!parseDefinitionBody(def, hasNoReturnDefinitionTransform, defs)) {
       return false;
@@ -322,6 +325,10 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   if (match(TokenKind::LBrace)) {
     return fail("executions do not accept body blocks");
   }
+  if (std::find(templateArgIsPack.begin(), templateArgIsPack.end(), true) !=
+      templateArgIsPack.end()) {
+    return fail("type pack parameters are only supported on definitions");
+  }
 
   Execution exec;
   exec.name = name.text;
@@ -331,6 +338,7 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   exec.sourceColumn = name.column;
   exec.transforms = std::move(transforms);
   exec.templateArgs = std::move(templateArgs);
+  exec.templateArgIsPack = std::move(templateArgIsPack);
   exec.arguments = std::move(arguments);
   exec.argumentNames = std::move(argumentNames);
   execs.push_back(std::move(exec));

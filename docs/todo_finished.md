@@ -6,6 +6,31 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 15, 2026)**
+- [x] TODO-4268: Add heterogeneous type-pack syntax and metadata
+  - owner: ai
+  - created_at: 2026-04-27
+  - finished_at: 2026-05-15
+  - phase: Deferred generic tuple substrate
+  - parallel_track: tuple-type-packs
+  - scope: Add parser, AST, semantic-product, and diagnostic support for
+    heterogeneous type-parameter packs such as `tuple<Ts...>` without adding
+    pack expansion or tuple implementation yet.
+  - outcome:
+    - Added generic declaration parsing for final `Ts...` type-pack
+      parameters on definitions and structs, with AST and semantic-product
+      metadata that distinguishes ordinary parameters from pack parameters.
+    - Kept heterogeneous type packs separate from homogeneous `args<T>`
+      value packs and added diagnostics for duplicate names, multiple packs,
+      non-final packs, `args<T>` misuse, and unsupported pack expansion in
+      ordinary type positions.
+    - Documented the accepted declaration syntax in the tuple prototype and
+      syntax spec while leaving binding to TODO-4269 and expansion to
+      TODO-4275/TODO-4276.
+  - validation:
+    - Release build-only validation plus parser, semantic prepass, and TODO
+      source-lock doctest slices passed for the touched metadata and
+      bookkeeping areas.
+
 - [x] TODO-4530: Reduce semantic SoA builtin path helper traces
   - owner: ai
   - created_at: 2026-05-15

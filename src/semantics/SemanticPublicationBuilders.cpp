@@ -624,6 +624,12 @@ void initializeSemanticProgramPublicationShell(SemanticPublicationBuilderState &
       definition.name = def.name;
       definition.fullPath = def.fullPath;
       definition.namespacePrefix = def.namespacePrefix;
+      definition.templateParameters = def.templateArgs;
+      definition.templateParameterIsPack.reserve(def.templateArgs.size());
+      for (std::size_t index = 0; index < def.templateArgs.size(); ++index) {
+        definition.templateParameterIsPack.push_back(index < def.templateArgIsPack.size() &&
+                                                     def.templateArgIsPack[index]);
+      }
       definition.sourceLine = def.sourceLine;
       definition.sourceColumn = def.sourceColumn;
       definition.semanticNodeId = def.semanticNodeId;

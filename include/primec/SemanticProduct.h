@@ -65,6 +65,8 @@ struct SemanticProgramDefinition {
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
   uint64_t provenanceHandle = 0;
+  std::vector<std::string> templateParameters = {};
+  std::vector<bool> templateParameterIsPack = {};
 };
 
 struct SemanticProgramExecution {

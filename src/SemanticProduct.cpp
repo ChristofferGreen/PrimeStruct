@@ -55,6 +55,24 @@ std::string formatSemanticStringList(const std::vector<std::string> &values) {
   return out.str();
 }
 
+std::string formatSemanticTemplateParameterList(const std::vector<std::string> &values,
+                                                const std::vector<bool> &isPack) {
+  std::ostringstream out;
+  out << "[";
+  for (size_t i = 0; i < values.size(); ++i) {
+    if (i != 0) {
+      out << ", ";
+    }
+    std::string rendered = values[i];
+    if (i < isPack.size() && isPack[i]) {
+      rendered += "...";
+    }
+    out << quoteSemanticString(rendered);
+  }
+  out << "]";
+  return out.str();
+}
+
 std::string formatSemanticStdlibSurfaceId(StdlibSurfaceId id) {
   if (const auto *metadata = findStdlibSurfaceMetadata(id); metadata != nullptr) {
     return std::string(metadata->bridgeKey);
@@ -1120,14 +1138,23 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
   }
   for (size_t i = 0; i < semanticProgram.definitions.size(); ++i) {
     const auto &entry = semanticProgram.definitions[i];
+    std::string definitionText =
+        "full_path=" + quoteSemanticString(entry.fullPath) + " name=" +
+        quoteSemanticString(entry.name) + " namespace_prefix=" +
+        quoteSemanticString(entry.namespacePrefix);
+    if (!entry.templateParameters.empty()) {
+      definitionText += " template_params=" +
+                        formatSemanticTemplateParameterList(entry.templateParameters,
+                                                            entry.templateParameterIsPack);
+    }
+    definitionText += " provenance_handle=" + std::to_string(entry.provenanceHandle) +
+                      " source=" +
+                      quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine,
+                                                                       entry.sourceColumn));
     appendSemanticIndexedLine(out,
                               "definitions",
                               i,
-                              "full_path=" + quoteSemanticString(entry.fullPath) + " name=" +
-                                  quoteSemanticString(entry.name) + " namespace_prefix=" +
-                                  quoteSemanticString(entry.namespacePrefix) + " provenance_handle=" +
-                                  std::to_string(entry.provenanceHandle) + " source=" +
-                                  quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
+                              definitionText);
   }
   for (size_t i = 0; i < semanticProgram.executions.size(); ++i) {
     const auto &entry = semanticProgram.executions[i];

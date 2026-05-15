@@ -20,6 +20,14 @@ PrimeStruct uses a single canonical form called an **Envelope** for definitions 
 - `(...)` contains parameters or arguments.
 - `{...}` contains a definition body (bindings use `{...}` for initializers).
 
+Definition and struct headers parse `<...>` as template parameters. Ordinary
+parameters use `T`; one heterogeneous type-pack parameter may appear last using
+`Ts...`. Type-pack declarations are metadata only in this slice: binding
+template arguments to a pack is deferred to TODO-4269, and expanding packs in
+struct storage or helper bodies is deferred to TODO-4275/TODO-4276. The
+homogeneous `args<T>` value-pack envelope is not a heterogeneous type-pack
+declaration.
+
 Executions are call-style forms with mandatory parentheses and no body. In the canonical AST they are envelopes with an
 implicit empty body. Executions model behavior, not value construction:
 
@@ -314,9 +322,9 @@ definition     = canonical_definition | post_params_definition ;
 execution      = transforms_opt call ;
 
 canonical_definition = envelope body_block ;
-post_params_definition = name template_opt params "[" transform_list "]" body_block ;
+post_params_definition = name template_param_opt params "[" transform_list "]" body_block ;
 
-envelope       = transforms_opt name template_opt params_opt ;
+envelope       = transforms_opt name template_param_opt params_opt ;
 params_opt     = params | /* empty */ ;
 
 transforms_opt            = [ "[" transform_list "]" ] ;
@@ -344,6 +352,11 @@ template_opt   = [ "<" template_list ">" ] ;
 template_list  = envelope_ref { [ "," | ";" ] envelope_ref } ;
 // Commas and semicolons inside template lists are optional separators with no semantic meaning.
 envelope_ref   = identifier [ "<" envelope_ref { [ "," | ";" ] envelope_ref } ">" ] ;
+template_param_opt  = [ "<" template_param_list ">" ] ;
+template_param_list = template_param { [ "," | ";" ] template_param } ;
+template_param      = identifier [ "..." ] ;
+// Definition and struct declarations use template_param_opt. At most one
+// `...` type-pack parameter is supported, and it must be final.
 
 params         = "(" param_list_opt ")" ;
 param_list_opt = [ param { [ "," | ";" ] param } ] ;
@@ -695,6 +708,12 @@ Rules:
 - `<...>` is the compile-time argument channel. Existing explicit templates are
   compile-time arguments to definitions and calls; future compile-time
   primitives such as `typeof<left>` use the same channel.
+- Definition and struct declarations may reserve one heterogeneous type-pack
+  parameter using final `Ts...` syntax, such as `tuple<T, Ts...>`. Pack
+  parameters are distinct from ordinary template parameters in AST and
+  semantic-product metadata. Pack binding is deferred to TODO-4269, so calling
+  or naming a type-pack generic with arbitrary arity remains unsupported until
+  that task lands.
 - `(...)` is the runtime argument channel. A form may have compile-time
   arguments, runtime arguments, both, or neither.
 - A bare `name` in command or value position resolves to exactly one visible
