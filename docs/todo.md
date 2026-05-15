@@ -2116,6 +2116,14 @@ Task template:
       `src/semantics/SemanticsValidate.cpp`,
       `src/semantics/SemanticsBuiltinPathHelpers.cpp`, and related validators
       remain in scope for the rest of TODO-4526.
+    - Current SemanticsValidate slice routes remaining SoA helper/type
+      spellings through shared helpers and reduces
+      `src/semantics/SemanticsValidate.cpp` to the explicit cap
+      (`experimental-soa-vector-path` 7, `experimental-soa-vector-token` 7,
+      `legacy-soa-vector-path` 22, `root-soa-vector-path` 20,
+      `soa-vector-token` 1, `soa-vector-type-symbol` 1);
+      `src/semantics/SemanticsBuiltinPathHelpers.cpp` and related validators
+      remain in scope for the rest of TODO-4526.
   - acceptance:
     - Semantic inventory rows for public SoA collection-surface traces are
       deleted or reduced to the next explicit cap.

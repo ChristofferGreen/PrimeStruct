@@ -126,6 +126,27 @@ std::string collectionNamespaceLocal(std::string_view collectionName) {
   return namespacePath;
 }
 
+bool typePathMatchesLocal(std::string_view normalizedTypePath,
+                          std::string_view bareName,
+                          std::string_view fullPathNoSlash) {
+  if (!normalizedTypePath.empty() && normalizedTypePath.front() == '/') {
+    normalizedTypePath.remove_prefix(1);
+  }
+  const std::string bareTemplatePrefix = std::string(bareName) + "<";
+  const std::string fullTemplatePrefix = std::string(fullPathNoSlash) + "<";
+  const std::string bareSpecializedPrefix = std::string(bareName) + "__";
+  const std::string fullSpecializedPrefix = std::string(fullPathNoSlash) + "__";
+  auto startsWith = [](std::string_view value, const std::string &prefix) {
+    return value.starts_with(std::string_view(prefix));
+  };
+  return normalizedTypePath == bareName ||
+         normalizedTypePath == fullPathNoSlash ||
+         startsWith(normalizedTypePath, bareTemplatePrefix) ||
+         startsWith(normalizedTypePath, fullTemplatePrefix) ||
+         startsWith(normalizedTypePath, bareSpecializedPrefix) ||
+         startsWith(normalizedTypePath, fullSpecializedPrefix);
+}
+
 } // namespace
 
 std::string samePathSoaHelperTargetPath(std::string_view helperName) {
@@ -250,6 +271,49 @@ bool usesExplicitPublicSoaHelperPath(std::string_view normalizedPrefix,
     return usesPublicSurface;
   }
   return isPublicSoaSurfaceNamespace(normalizedPrefix);
+}
+
+std::string internalSoaCollectionTypeName() {
+  return std::string("soa") + "_vector";
+}
+
+std::string internalSoaCollectionTypePath(bool leadingSlash) {
+  std::string path = collectionNamespaceLocal(internalSoaCollectionTypeName());
+  if (leadingSlash) {
+    path.insert(path.begin(), '/');
+  }
+  return path;
+}
+
+std::string experimentalSoaStorageTypeName() {
+  return std::string("Soa") + "Vector";
+}
+
+std::string experimentalSoaStorageTypePath(bool leadingSlash) {
+  std::string path = experimentalCollectionMemberRootLocal(
+      internalSoaCollectionTypeName());
+  path += experimentalSoaStorageTypeName();
+  if (leadingSlash) {
+    path.insert(path.begin(), '/');
+  }
+  return path;
+}
+
+bool isInternalSoaCollectionTypeName(std::string_view normalizedTypeName) {
+  return typePathMatchesLocal(normalizedTypeName,
+                              internalSoaCollectionTypeName(),
+                              internalSoaCollectionTypePath(false));
+}
+
+bool isInternalSoaCollectionTypePath(std::string_view normalizedTypePath) {
+  return typePathMatchesLocal(normalizedTypePath,
+                              internalSoaCollectionTypeName(),
+                              internalSoaCollectionTypePath(false));
+}
+
+bool isInternalOrExperimentalSoaStorageTypePath(std::string_view normalizedTypePath) {
+  return isInternalSoaCollectionTypePath(normalizedTypePath) ||
+         isExperimentalSoaVectorTypePath(normalizedTypePath);
 }
 
 bool getBuiltinOperatorName(const Expr &expr, std::string &out) {

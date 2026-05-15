@@ -340,14 +340,11 @@ bool isBuiltinSoaVectorTypeText(const std::string &typeText) {
   if (!rawType.empty() && rawType.front() == '/') {
     rawType.erase(rawType.begin());
   }
-  if (rawType == "SoaVector" || rawType.rfind("SoaVector<", 0) == 0 ||
-      rawType == "std/collections/experimental_soa_vector/SoaVector" ||
-      rawType.rfind("std/collections/experimental_soa_vector/SoaVector<", 0) == 0 ||
-      semantics::isExperimentalSoaVectorSpecializedTypePath(rawType)) {
+  if (semantics::isExperimentalSoaVectorTypePath(rawType)) {
     return false;
   }
   const std::string normalizedType = semantics::normalizeBindingTypeName(typeText);
-  return normalizedType == "soa_vector" || normalizedType.rfind("soa_vector<", 0) == 0;
+  return semantics::isInternalSoaCollectionTypeName(normalizedType);
 }
 
 bool isExperimentalSoaVectorBaseName(const std::string &typeName) {
@@ -355,9 +352,7 @@ bool isExperimentalSoaVectorBaseName(const std::string &typeName) {
   if (!normalizedType.empty() && normalizedType.front() == '/') {
     normalizedType.erase(normalizedType.begin());
   }
-  return normalizedType == "SoaVector" ||
-         normalizedType == "std/collections/experimental_soa_vector/SoaVector" ||
-         semantics::isExperimentalSoaVectorSpecializedTypePath(normalizedType);
+  return semantics::isExperimentalSoaVectorTypePath(normalizedType);
 }
 
 bool isExperimentalSoaVectorBinding(const semantics::BindingInfo &binding) {
@@ -578,10 +573,7 @@ bool extractExperimentalSoaVectorElementTypeForFieldViewRewrite(const semantics:
         if (!base.empty() && base.front() == '/') {
           base.erase(base.begin());
         }
-        if ((base == "SoaVector" ||
-             base == "soa_vector" ||
-             base == "std/collections/soa_vector" ||
-             base == "std/collections/experimental_soa_vector/SoaVector") &&
+        if (semantics::isInternalOrExperimentalSoaStorageTypePath(base) &&
             !argText.empty()) {
           std::vector<std::string> args;
           if (!semantics::splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
@@ -882,8 +874,7 @@ bool extractExperimentalSoaVectorElementTypeForToAosRewrite(const semantics::Bin
         if (!normalizedBase.empty() && normalizedBase.front() == '/') {
           normalizedBase.erase(normalizedBase.begin());
         }
-        if ((normalizedBase == "SoaVector" ||
-             normalizedBase == "std/collections/experimental_soa_vector/SoaVector") &&
+        if (semantics::isExperimentalSoaVectorTypePath(normalizedBase) &&
             !argText.empty()) {
           std::vector<std::string> args;
           if (!semantics::splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
@@ -989,7 +980,7 @@ bool hasVisibleRootSoaHelperForReceiverType(const Program &program,
   const std::string canonicalPath =
       "/std/collections/soa_vector/" + std::string(helperName);
   auto matchesReceiverType = [&](const Expr &parameter) {
-    if (receiverTypeName == "soa_vector") {
+    if (receiverTypeName == semantics::internalSoaCollectionTypeName()) {
       return extractBuiltinSoaVectorBinding(parameter).has_value() ||
              extractExperimentalSoaVectorBinding(parameter).has_value();
     }
@@ -1436,10 +1427,8 @@ std::optional<semantics::BindingInfo> extractBuiltinCollectionBindingFromTypeTex
   }
   const std::string normalizedBase = semantics::normalizeBindingTypeName(base);
   const bool matchesSoaExpectedBase =
-      expectedBase == "soa_vector" &&
-      (normalizedBase == "SoaVector" ||
-       normalizedBase == "std/collections/soa_vector" ||
-       normalizedBase == "std/collections/experimental_soa_vector/SoaVector");
+      expectedBase == semantics::internalSoaCollectionTypeName() &&
+      semantics::isInternalOrExperimentalSoaStorageTypePath(normalizedBase);
   const bool matchesExpectedBase =
       normalizedBase == expectedBase ||
       matchesSoaExpectedBase;
@@ -1482,14 +1471,14 @@ std::optional<BuiltinSoaReceiverBindingInfo> extractBuiltinSoaReceiverBinding(
     return BuiltinSoaReceiverBindingInfo{binding, false};
   }
   if (auto wrapped = extractBuiltinCollectionBindingFromWrappedTypeText(
-          bindingTypeText(binding), "soa_vector");
+          bindingTypeText(binding), semantics::internalSoaCollectionTypeName());
       wrapped.has_value()) {
     return BuiltinSoaReceiverBindingInfo{*wrapped, true};
   }
   std::string elemType;
   if (extractExperimentalSoaVectorElementTypeForFieldViewRewrite(binding, elemType)) {
     semantics::BindingInfo canonicalBinding;
-    canonicalBinding.typeName = "soa_vector";
+    canonicalBinding.typeName = semantics::internalSoaCollectionTypeName();
     canonicalBinding.typeTemplateArg = elemType;
     const std::string normalizedType = semantics::normalizeBindingTypeName(binding.typeName);
     const bool borrowed = normalizedType == "Reference" || normalizedType == "Pointer";
@@ -1498,16 +1487,21 @@ std::optional<BuiltinSoaReceiverBindingInfo> extractBuiltinSoaReceiverBinding(
   return std::nullopt;
 }
 
-std::string builtinSoaConversionMethodName(std::string_view methodName) {
-  std::string normalized(methodName);
+std::string stripSoaSurfaceHelperPrefix(std::string_view rawName) {
+  std::string normalized(rawName);
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
-  if (normalized.rfind("std/collections/soa_vector/", 0) == 0) {
-    normalized = normalized.substr(std::string("std/collections/soa_vector/").size());
-  } else if (normalized.rfind("soa_vector/", 0) == 0) {
-    normalized = normalized.substr(std::string("soa_vector/").size());
-  } else {
+  std::string helperName;
+  if (semantics::splitSoaSurfaceHelperPath(normalized, &helperName, nullptr)) {
+    return helperName;
+  }
+  return normalized;
+}
+
+std::string builtinSoaConversionMethodName(std::string_view methodName) {
+  std::string normalized = stripSoaSurfaceHelperPrefix(methodName);
+  if (normalized == methodName || (!methodName.empty() && methodName.front() == '/')) {
     const std::string vectorCollectionPrefix =
         std::string("std/collections/") + "vector" + "/";
     if (normalized.rfind(vectorCollectionPrefix, 0) == 0) {
@@ -1524,15 +1518,7 @@ std::string builtinSoaConversionMethodName(std::string_view methodName) {
 }
 
 std::string builtinSoaAccessHelperName(std::string_view rawName) {
-  std::string normalized(rawName);
-  if (!normalized.empty() && normalized.front() == '/') {
-    normalized.erase(normalized.begin());
-  }
-  if (normalized.rfind("std/collections/soa_vector/", 0) == 0) {
-    normalized = normalized.substr(std::string("std/collections/soa_vector/").size());
-  } else if (normalized.rfind("soa_vector/", 0) == 0) {
-    normalized = normalized.substr(std::string("soa_vector/").size());
-  }
+  const std::string normalized = stripSoaSurfaceHelperPrefix(rawName);
   if (normalized == "get" || normalized == "get_ref" ||
       normalized == "ref" || normalized == "ref_ref") {
     return normalized;
@@ -1551,15 +1537,7 @@ std::string borrowedBuiltinSoaAccessHelperName(std::string_view helperName) {
 }
 
 std::string builtinSoaCountHelperName(std::string_view rawName) {
-  std::string normalized(rawName);
-  if (!normalized.empty() && normalized.front() == '/') {
-    normalized.erase(normalized.begin());
-  }
-  if (normalized.rfind("std/collections/soa_vector/", 0) == 0) {
-    normalized = normalized.substr(std::string("std/collections/soa_vector/").size());
-  } else if (normalized.rfind("soa_vector/", 0) == 0) {
-    normalized = normalized.substr(std::string("soa_vector/").size());
-  }
+  const std::string normalized = stripSoaSurfaceHelperPrefix(rawName);
   if (normalized == "count" || normalized == "count_ref") {
     return normalized;
   }
@@ -1574,26 +1552,16 @@ std::string borrowedBuiltinSoaCountHelperName(std::string_view helperName) {
 }
 
 bool isOldExplicitSoaCountHelperName(std::string_view rawName) {
-  std::string normalized(rawName);
-  if (!normalized.empty() && normalized.front() == '/') {
-    normalized.erase(normalized.begin());
-  }
-  return normalized == "soa_vector/count" ||
-         normalized == "std/collections/soa_vector/count" ||
-         normalized == "soa_vector/count_ref" ||
-         normalized == "std/collections/soa_vector/count_ref";
+  bool usesPublicSurface = false;
+  std::string helperName;
+  return semantics::splitSoaSurfaceHelperPath(
+             rawName, &helperName, &usesPublicSurface) &&
+         !usesPublicSurface &&
+         (helperName == "count" || helperName == "count_ref");
 }
 
 std::string builtinSoaMutatorHelperName(std::string_view rawName) {
-  std::string normalized(rawName);
-  if (!normalized.empty() && normalized.front() == '/') {
-    normalized.erase(normalized.begin());
-  }
-  if (normalized.rfind("std/collections/soa_vector/", 0) == 0) {
-    normalized = normalized.substr(std::string("std/collections/soa_vector/").size());
-  } else if (normalized.rfind("soa_vector/", 0) == 0) {
-    normalized = normalized.substr(std::string("soa_vector/").size());
-  }
+  const std::string normalized = stripSoaSurfaceHelperPrefix(rawName);
   if (normalized == "push" || normalized == "reserve") {
     return normalized;
   }
@@ -1601,15 +1569,11 @@ std::string builtinSoaMutatorHelperName(std::string_view rawName) {
 }
 
 std::string oldExplicitSoaMutatorHelperName(std::string_view rawName) {
-  std::string normalized(rawName);
-  if (!normalized.empty() && normalized.front() == '/') {
-    normalized.erase(normalized.begin());
-  }
-  if (normalized.rfind("std/collections/soa_vector/", 0) == 0) {
-    normalized = normalized.substr(std::string("std/collections/soa_vector/").size());
-  } else if (normalized.rfind("soa_vector/", 0) == 0) {
-    normalized = normalized.substr(std::string("soa_vector/").size());
-  } else {
+  bool usesPublicSurface = false;
+  std::string normalized;
+  if (!semantics::splitSoaSurfaceHelperPath(
+          rawName, &normalized, &usesPublicSurface) ||
+      usesPublicSurface) {
     return {};
   }
   if (normalized == "push" || normalized == "reserve") {
@@ -1881,10 +1845,10 @@ void rewriteBuiltinSoaToAosCallExpr(
     }
     std::string collectionName;
     if (semantics::getBuiltinCollectionName(candidate, collectionName) &&
-        collectionName == "soa_vector" &&
+        collectionName == semantics::internalSoaCollectionTypeName() &&
         candidate.templateArgs.size() == 1) {
       semantics::BindingInfo binding;
-      binding.typeName = "soa_vector";
+      binding.typeName = semantics::internalSoaCollectionTypeName();
       binding.typeTemplateArg = candidate.templateArgs.front();
       return BuiltinSoaReceiverBindingInfo{binding, false};
     }
@@ -1902,7 +1866,7 @@ void rewriteBuiltinSoaToAosCallExpr(
         return std::nullopt;
       }
       semantics::BindingInfo binding;
-      binding.typeName = "soa_vector";
+      binding.typeName = semantics::internalSoaCollectionTypeName();
       binding.typeTemplateArg = vectorBinding->typeTemplateArg;
       return BuiltinSoaReceiverBindingInfo{binding, false};
     }
@@ -1914,7 +1878,8 @@ void rewriteBuiltinSoaToAosCallExpr(
         auto bindingIt = bindings.find(derefTarget.name);
         if (bindingIt != bindings.end()) {
           if (auto binding = extractBuiltinCollectionBindingFromWrappedTypeText(
-                  bindingTypeText(bindingIt->second), "soa_vector");
+                  bindingTypeText(bindingIt->second),
+                  semantics::internalSoaCollectionTypeName());
               binding.has_value()) {
             return BuiltinSoaReceiverBindingInfo{*binding, false};
           }
@@ -1927,7 +1892,8 @@ void rewriteBuiltinSoaToAosCallExpr(
         auto bindingIt = bindings.find(derefTarget.args.front().name);
         if (bindingIt != bindings.end()) {
           if (auto binding = extractBuiltinCollectionBindingFromWrappedTypeText(
-                  bindingTypeText(bindingIt->second), "soa_vector");
+                  bindingTypeText(bindingIt->second),
+                  semantics::internalSoaCollectionTypeName());
               binding.has_value()) {
             return BuiltinSoaReceiverBindingInfo{*binding, false};
           }
@@ -1993,7 +1959,7 @@ void rewriteBuiltinSoaToAosCallExpr(
 
   expr.isMethodCall = false;
   expr.isFieldAccess = false;
-  expr.name = "/std/collections/soa_vector/to_aos";
+  expr.name = semantics::compatibilitySoaHelperTargetPath("to_aos");
   expr.namespacePrefix.clear();
   expr.templateArgs.clear();
 }
@@ -2019,7 +1985,8 @@ bool rewriteBuiltinSoaToAosCalls(Program &program, std::string &error) {
     }
   }
   const bool preserveVisibleRootSoaHelper =
-      hasVisibleRootSoaHelperForReceiverType(program, "to_aos", "soa_vector");
+      hasVisibleRootSoaHelperForReceiverType(
+          program, "to_aos", semantics::internalSoaCollectionTypeName());
   const bool preserveVisibleRootVectorHelper =
       hasVisibleRootSoaHelperForReceiverType(program, "to_aos", "vector");
   for (Definition &def : program.definitions) {
@@ -2187,10 +2154,10 @@ void rewriteBuiltinSoaAccessExpr(
     }
     std::string collectionName;
     if (semantics::getBuiltinCollectionName(candidate, collectionName) &&
-        collectionName == "soa_vector" &&
+        collectionName == semantics::internalSoaCollectionTypeName() &&
         candidate.templateArgs.size() == 1) {
       semantics::BindingInfo binding;
-      binding.typeName = "soa_vector";
+      binding.typeName = semantics::internalSoaCollectionTypeName();
       binding.typeTemplateArg = candidate.templateArgs.front();
       return BuiltinSoaReceiverBindingInfo{binding, false};
     }
@@ -2208,7 +2175,8 @@ void rewriteBuiltinSoaAccessExpr(
         auto bindingIt = bindings.find(derefTarget.name);
         if (bindingIt != bindings.end()) {
           if (auto binding = extractBuiltinCollectionBindingFromWrappedTypeText(
-                  bindingTypeText(bindingIt->second), "soa_vector");
+                  bindingTypeText(bindingIt->second),
+                  semantics::internalSoaCollectionTypeName());
               binding.has_value()) {
             return BuiltinSoaReceiverBindingInfo{*binding, false};
           }
@@ -2221,7 +2189,8 @@ void rewriteBuiltinSoaAccessExpr(
         auto bindingIt = bindings.find(derefTarget.args.front().name);
         if (bindingIt != bindings.end()) {
           if (auto binding = extractBuiltinCollectionBindingFromWrappedTypeText(
-                  bindingTypeText(bindingIt->second), "soa_vector");
+                  bindingTypeText(bindingIt->second),
+                  semantics::internalSoaCollectionTypeName());
               binding.has_value()) {
             return BuiltinSoaReceiverBindingInfo{*binding, false};
           }
@@ -2283,7 +2252,7 @@ void rewriteBuiltinSoaAccessExpr(
 
   expr.isMethodCall = false;
   expr.isFieldAccess = false;
-  expr.name = "/std/collections/soa_vector/" + resolvedHelperName;
+  expr.name = semantics::compatibilitySoaHelperTargetPath(resolvedHelperName);
   expr.namespacePrefix.clear();
   expr.templateArgs.clear();
   if (receiverBinding.has_value() && !receiverBinding->binding.typeTemplateArg.empty()) {
@@ -2476,10 +2445,10 @@ void rewriteBuiltinSoaCountExpr(
     }
     std::string collectionName;
     if (semantics::getBuiltinCollectionName(candidate, collectionName) &&
-        collectionName == "soa_vector" &&
+        collectionName == semantics::internalSoaCollectionTypeName() &&
         candidate.templateArgs.size() == 1) {
       semantics::BindingInfo binding;
-      binding.typeName = "soa_vector";
+      binding.typeName = semantics::internalSoaCollectionTypeName();
       binding.typeTemplateArg = candidate.templateArgs.front();
       return BuiltinSoaReceiverBindingInfo{binding, false};
     }
@@ -2497,7 +2466,8 @@ void rewriteBuiltinSoaCountExpr(
         auto bindingIt = bindings.find(derefTarget.name);
         if (bindingIt != bindings.end()) {
           if (auto binding = extractBuiltinCollectionBindingFromWrappedTypeText(
-                  bindingTypeText(bindingIt->second), "soa_vector");
+                  bindingTypeText(bindingIt->second),
+                  semantics::internalSoaCollectionTypeName());
               binding.has_value()) {
             return BuiltinSoaReceiverBindingInfo{*binding, false};
           }
@@ -2510,7 +2480,8 @@ void rewriteBuiltinSoaCountExpr(
         auto bindingIt = bindings.find(derefTarget.args.front().name);
         if (bindingIt != bindings.end()) {
           if (auto binding = extractBuiltinCollectionBindingFromWrappedTypeText(
-                  bindingTypeText(bindingIt->second), "soa_vector");
+                  bindingTypeText(bindingIt->second),
+                  semantics::internalSoaCollectionTypeName());
               binding.has_value()) {
             return BuiltinSoaReceiverBindingInfo{*binding, false};
           }
@@ -2565,7 +2536,7 @@ void rewriteBuiltinSoaCountExpr(
 
   expr.isMethodCall = false;
   expr.isFieldAccess = false;
-  expr.name = "/std/collections/soa_vector/" + resolvedHelperName;
+  expr.name = semantics::compatibilitySoaHelperTargetPath(resolvedHelperName);
   expr.namespacePrefix.clear();
   expr.templateArgs.clear();
   if (receiverBinding.has_value() && !receiverBinding->binding.typeTemplateArg.empty()) {
@@ -2761,10 +2732,10 @@ void rewriteBuiltinSoaMutatorExpr(
     }
     std::string collectionName;
     if (semantics::getBuiltinCollectionName(candidate, collectionName) &&
-        collectionName == "soa_vector" &&
+        collectionName == semantics::internalSoaCollectionTypeName() &&
         candidate.templateArgs.size() == 1) {
       semantics::BindingInfo binding;
-      binding.typeName = "soa_vector";
+      binding.typeName = semantics::internalSoaCollectionTypeName();
       binding.typeTemplateArg = candidate.templateArgs.front();
       return binding;
     }
@@ -2782,7 +2753,8 @@ void rewriteBuiltinSoaMutatorExpr(
         auto bindingIt = bindings.find(derefTarget.name);
         if (bindingIt != bindings.end()) {
           return extractBuiltinCollectionBindingFromWrappedTypeText(
-              bindingTypeText(bindingIt->second), "soa_vector");
+              bindingTypeText(bindingIt->second),
+              semantics::internalSoaCollectionTypeName());
         }
       }
       std::string accessName;
@@ -2792,7 +2764,8 @@ void rewriteBuiltinSoaMutatorExpr(
         auto bindingIt = bindings.find(derefTarget.args.front().name);
         if (bindingIt != bindings.end()) {
           return extractBuiltinCollectionBindingFromWrappedTypeText(
-              bindingTypeText(bindingIt->second), "soa_vector");
+              bindingTypeText(bindingIt->second),
+              semantics::internalSoaCollectionTypeName());
         }
       }
     }
@@ -2841,7 +2814,7 @@ void rewriteBuiltinSoaMutatorExpr(
     if (expr.isMethodCall) {
       expr.isMethodCall = false;
       expr.isFieldAccess = false;
-      expr.name = "/soa_vector/" + helperName;
+      expr.name = semantics::samePathSoaHelperTargetPath(helperName);
       expr.namespacePrefix.clear();
       expr.templateArgs.clear();
     }
@@ -2856,7 +2829,7 @@ void rewriteBuiltinSoaMutatorExpr(
 
   expr.isMethodCall = false;
   expr.isFieldAccess = false;
-  expr.name = "/std/collections/soa_vector/" + helperName;
+  expr.name = semantics::compatibilitySoaHelperTargetPath(helperName);
   expr.namespacePrefix.clear();
   expr.templateArgs.clear();
   if (receiverBinding.has_value() && !receiverBinding->typeTemplateArg.empty()) {
@@ -3272,7 +3245,7 @@ void rewriteExperimentalSoaToAosMethodExpr(
   if (hasVisibleCanonicalToAosHelper) {
     expr.isMethodCall = false;
     expr.isFieldAccess = false;
-    expr.name = "/std/collections/soa_vector/to_aos";
+    expr.name = semantics::compatibilitySoaHelperTargetPath("to_aos");
     expr.namespacePrefix.clear();
     if (canonicalReceiverExpr.has_value()) {
       expr.args.front() = *canonicalReceiverExpr;
@@ -3282,7 +3255,7 @@ void rewriteExperimentalSoaToAosMethodExpr(
 
   expr.isMethodCall = false;
   expr.isFieldAccess = false;
-  expr.name = "/std/collections/soa_vector/to_aos";
+  expr.name = semantics::compatibilitySoaHelperTargetPath("to_aos");
   expr.namespacePrefix.clear();
   if (canonicalReceiverExpr.has_value()) {
     expr.args.front() = *canonicalReceiverExpr;
@@ -3329,7 +3302,7 @@ bool rewriteExperimentalSoaToAosMethods(Program &program, std::string &error) {
       program.sourceImports.empty() ? program.imports : program.sourceImports;
   for (const auto &importPath : importPaths) {
     const std::string canonicalToAosImportTarget =
-        "/std/collections/soa_vector/to_aos";
+        semantics::compatibilitySoaHelperTargetPath("to_aos");
     if (isCanonicalSoaToAosDefinitionPath(canonicalToAosImportTarget) &&
         localImportPathCoversTarget(importPath, canonicalToAosImportTarget)) {
       hasVisibleCanonicalToAosHelper = true;
@@ -3921,7 +3894,7 @@ bool normalizeExperimentalSoaBorrowedHelperMethodCall(
       expr.name = borrowedHelperRoot + "ref_ref";
       return true;
     }
-    expr.name = "/std/collections/soa_vector/to_aos_ref";
+    expr.name = semantics::compatibilitySoaHelperTargetPath("to_aos_ref");
     return true;
   }
   if (!expr.isMethodCall && expr.name.find('/') != std::string::npos) {
@@ -4207,10 +4180,7 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
           continue;
         }
         receiverUsesCanonicalSoaVector =
-            base == "SoaVector" ||
-            base == "soa_vector" || base == "/soa_vector" ||
-            base == "std/collections/soa_vector" ||
-            base == "/std/collections/soa_vector";
+            semantics::isInternalOrExperimentalSoaStorageTypePath(base);
         return;
       }
     };
@@ -4650,10 +4620,7 @@ void rewriteExperimentalSoaFieldViewHelperExpr(
           continue;
         }
         receiverUsesCanonicalSoaVector =
-            base == "SoaVector" ||
-            base == "soa_vector" || base == "/soa_vector" ||
-            base == "std/collections/soa_vector" ||
-            base == "/std/collections/soa_vector";
+            semantics::isInternalOrExperimentalSoaStorageTypePath(base);
         return;
       }
     };
@@ -6300,7 +6267,8 @@ bool rewriteOmittedStructInitializers(Program &program, std::string &error) {
     }
     const std::string normalizedType = semantics::normalizeBindingTypeName(info.typeName);
     if (!info.typeTemplateArg.empty()) {
-      if (normalizedType != "vector" && normalizedType != "soa_vector") {
+      if (normalizedType != "vector" &&
+          normalizedType != semantics::internalSoaCollectionTypeName()) {
         error = "omitted initializer requires vector or soa_vector type: " + info.typeName;
         return false;
       }

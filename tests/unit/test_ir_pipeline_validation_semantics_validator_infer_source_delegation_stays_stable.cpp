@@ -2594,12 +2594,15 @@ main() {
             "findExperimentalMapCompatibilityHelper(") == std::string::npos);
   CHECK(collectionCompatibilitySource.find(
             "findRemovedCollectionHelperReference(") == std::string::npos);
-  CHECK(semanticsValidateSource.find(
+  CHECK((semanticsValidateSource.find(
             "base == \"SoaVector\" ||\n"
             "             base == \"soa_vector\" ||\n"
             "             base == \"std/collections/soa_vector\" ||\n"
             "             base == \"std/collections/experimental_soa_vector/SoaVector\"") !=
-        std::string::npos);
+            std::string::npos ||
+        semanticsValidateSource.find(
+            "semantics::isInternalOrExperimentalSoaStorageTypePath(base)") !=
+            std::string::npos));
   CHECK(semanticsValidateSource.find(
             "auto elementTypeForBorrowedSource = [&](const Expr &borrowedSource)") !=
         std::string::npos);
@@ -2614,44 +2617,64 @@ main() {
   CHECK(semanticsValidateSource.find(
             "elementTypeForBorrowedSource(normalizedBorrowed->args.front())") !=
         std::string::npos);
-  CHECK(semanticsValidateSource.find(
+  CHECK((semanticsValidateSource.find(
             "normalized.rfind(\"std/collections/soa_vector/\", 0) == 0") !=
-        std::string::npos);
-  CHECK(semanticsValidateSource.find(
+            std::string::npos ||
+        semanticsValidateSource.find("stripSoaSurfaceHelperPrefix(") !=
+            std::string::npos));
+  CHECK((semanticsValidateSource.find(
             "normalized = normalized.substr(std::string(\"std/collections/soa_vector/\").size());") !=
-        std::string::npos);
-  CHECK(semanticsValidateSource.find(
+            std::string::npos ||
+        semanticsValidateSource.find("splitSoaSurfaceHelperPath(") !=
+            std::string::npos));
+  CHECK((semanticsValidateSource.find(
             "normalized == \"std/collections/soa_vector/count\"") !=
-        std::string::npos);
+            std::string::npos ||
+        semanticsValidateSource.find("compatibilitySoaHelperTargetPath(\"count\")") !=
+            std::string::npos ||
+        semanticsValidateSource.find("splitSoaSurfaceHelperPath(") !=
+            std::string::npos));
   CHECK(semanticsValidateSource.find(
             "normalized == \"count\" || normalized == \"count_ref\"") !=
         std::string::npos);
-  CHECK(semanticsValidateSource.find(
+  CHECK((semanticsValidateSource.find(
             "normalized == \"soa_vector/count_ref\" ||\n"
             "         normalized == \"std/collections/soa_vector/count_ref\"") !=
-        std::string::npos);
-  CHECK(semanticsValidateSource.find(
+            std::string::npos ||
+        semanticsValidateSource.find("isOldExplicitSoaCountHelperName(") !=
+            std::string::npos));
+  CHECK((semanticsValidateSource.find(
             "const bool matchesSoaExpectedBase =\n"
             "      expectedBase == \"soa_vector\" &&\n"
             "      (normalizedBase == \"SoaVector\" ||\n"
             "       normalizedBase == \"std/collections/soa_vector\" ||\n"
             "       normalizedBase == \"std/collections/experimental_soa_vector/SoaVector\");") !=
-        std::string::npos);
+            std::string::npos ||
+        semanticsValidateSource.find(
+            "expectedBase == semantics::internalSoaCollectionTypeName() &&\n"
+            "      semantics::isInternalOrExperimentalSoaStorageTypePath(normalizedBase);") !=
+            std::string::npos));
   CHECK(semanticsValidateSource.find(
             "const bool matchesExpectedBase =\n"
             "      normalizedBase == expectedBase ||\n"
             "      matchesSoaExpectedBase;") !=
         std::string::npos);
-  CHECK(semanticsValidateSource.find(
+  CHECK((semanticsValidateSource.find(
             "if (normalized.rfind(\"std/collections/soa_vector/\", 0) == 0) {\n"
             "    normalized = normalized.substr(std::string(\"std/collections/soa_vector/\").size());\n"
             "  } else if (normalized.rfind(\"soa_vector/\", 0) == 0) {") !=
-        std::string::npos);
-  CHECK(semanticsValidateSource.find(
+            std::string::npos ||
+        semanticsValidateSource.find(
+            "std::string stripSoaSurfaceHelperPrefix(std::string_view rawName)") !=
+            std::string::npos));
+  CHECK((semanticsValidateSource.find(
             "if (normalized.rfind(\"std/collections/soa_vector/\", 0) == 0) {\n"
             "    normalized = normalized.substr(std::string(\"std/collections/soa_vector/\").size());\n"
             "  } else if (normalized.rfind(\"soa_vector/\", 0) == 0) {") !=
-        std::string::npos);
+            std::string::npos ||
+        semanticsValidateSource.find(
+            "const std::string normalized = stripSoaSurfaceHelperPrefix(rawName);") !=
+            std::string::npos));
   CHECK(semanticsValidateSource.find(
             "const std::string canonicalPath =\n"
             "      \"/std/collections/soa_vector/\" + std::string(helperName);") !=
@@ -2747,15 +2770,21 @@ main() {
             "    if (normalizedMethodName == \"ref\" ||\n"
             "        normalizedMethodName == \"ref_ref\") {") !=
         std::string::npos);
-  CHECK(semanticsValidateSource.find(
+  CHECK((semanticsValidateSource.find(
             "expr.name = \"/std/collections/soa_vector/\" + helperName;") !=
-        std::string::npos);
-  CHECK(semanticsValidateSource.find(
+            std::string::npos ||
+        semanticsValidateSource.find(
+            "expr.name = semantics::compatibilitySoaHelperTargetPath(helperName);") !=
+            std::string::npos));
+  CHECK((semanticsValidateSource.find(
             "  const bool useBorrowedGetHelper = receiverNeedsDereference;\n"
             "  getCall.name =\n"
             "      useBorrowedGetHelper ? \"/std/collections/soa_vector/get_ref\"\n"
             "                           : \"/std/collections/soa_vector/get\";") !=
-        std::string::npos);
+            std::string::npos ||
+        semanticsValidateSource.find(
+            "useBorrowedGetHelper ? semantics::compatibilitySoaHelperTargetPath(\"get_ref\")") !=
+            std::string::npos));
   CHECK(semanticsValidateSource.find(
             "    if (!useBorrowedGetHelper) {\n"
             "      callExpr.args.push_back(*getReceiverExpr);\n"
