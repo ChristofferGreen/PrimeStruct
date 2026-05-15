@@ -79,8 +79,6 @@ ALLOWED_MAX_COUNTS: dict[tuple[str, str], int] = {
         "src/ir_lowerer/IrLowererLowerEmitExprCollectionHelpers.h",
         "map-backing-type-symbol",
     ): 1,
-    ("src/ir_lowerer/IrLowererLowerEmitExprTailDispatch.h", "experimental-map-path"): 15,
-    ("src/ir_lowerer/IrLowererLowerEmitExprTailDispatch.h", "map-backing-type-symbol"): 7,
     ("src/ir_lowerer/IrLowererLowerEmitExprTryHelpers.h", "experimental-map-path"): 1,
     ("src/ir_lowerer/IrLowererLowerEmitExprTryHelpers.h", "map-backing-type-symbol"): 1,
     (

@@ -34,6 +34,34 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
       semantic/source-lock slices; broad release validation is deferred to the
       parent/full workflow.
 
+- [x] TODO-4531: Reduce map lowerer tail-dispatch audit traces
+  - owner: ai
+  - created_at: 2026-05-15
+  - finished_at: 2026-05-15
+  - phase: Map stdlib ownership cutover
+  - parallel_track: map-zero-audit
+  - split_from: TODO-4464
+  - depends_on: TODO-4506
+  - scope: Remove or route through shared lowerer helpers the remaining
+    PrimeStruct-map-specific trace residue in
+    `src/ir_lowerer/IrLowererLowerEmitExprTailDispatch.h`.
+  - outcome:
+    - Replaced tail-dispatch local semantic map type parsing and native-tail
+      map backing path synthesis with the shared `resolveMapAccessTargetInfo`
+      classifier and shared collection path helpers.
+    - Tightened `scripts/check_map_surface_trace_inventory.py` for
+      `IrLowererLowerEmitExprTailDispatch.h` from 49 allowed traces to 13 and
+      removed that file's `experimental-map-path` and
+      `map-backing-type-symbol` rows from
+      `scripts/check_map_backing_traces.py`.
+    - Updated lowerer source-lock coverage to require shared map target
+      classification and to reject the retired local tail-dispatch map/backing
+      inference helpers.
+  - validation:
+    - Focused validation used both map inventory checkers, their script
+      self-tests, and backend-IR source-lock coverage; broad release
+      validation is deferred to the parent/full workflow.
+
 - [x] TODO-4525: Delete text-filter and IR-printer SoA zero-audit residue
   - owner: ai
   - created_at: 2026-05-15

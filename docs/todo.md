@@ -83,9 +83,6 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4531: Reduce map lowerer tail-dispatch audit traces | track:
-  map-zero-audit | primary surface: map trace inventories, IR-lowerer tail
-  dispatch, and map source locks
 - TODO-4268: Add heterogeneous type-pack syntax and metadata | track:
   tuple-type-packs | primary surface: parser, AST, semantic product, and
   tuple/type-pack docs
@@ -96,8 +93,9 @@ Task template:
   leaf; no further SoA leaf is ready until the parent reconciles TODO-4526 or
   assigns another semantic child slice. Serial successors remain TODO-4527
   -> TODO-4528 -> TODO-4529.
-- `map-zero-audit`: ready TODO-4531 under TODO-4464. Keep independent from
-  SoA work except for shared docs/source-lock and testcase-log reconciliation.
+- `map-zero-audit`: no ready leaf after TODO-4531; TODO-4464 remains the
+  parent for the final strict zero map-surface audit and should be split again
+  only when the next bounded trace-reduction slice is clear.
 - `tuple-type-packs`: ready TODO-4268, then serial successors TODO-4269
   -> TODO-4270 -> TODO-4275 -> TODO-4276 -> TODO-4271 -> TODO-4272
   -> TODO-4274 -> TODO-4273 -> TODO-4277 -> TODO-4278.
@@ -124,7 +122,8 @@ Task template:
   must enter as bounded leaves only.
 - Deferred stdlib ADT migration: none active
 - Vector stdlib ownership cutover: none active
-- Map stdlib ownership cutover: ready TODO-4531 under in-progress TODO-4464
+- Map stdlib ownership cutover: no ready leaf after TODO-4531; TODO-4464
+  remains in progress for future bounded trace-reduction splits
 - SoA public surface rename and ownership cutover: TODO-4306 parent split;
   TODO-4530 removed semantic builtin path helper inventory residue, and
   TODO-4526 remains pending parent reconciliation or another semantic child
@@ -143,7 +142,6 @@ Task template:
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4531: Reduce map lowerer tail-dispatch audit traces
 - TODO-4268: Add heterogeneous type-pack syntax and metadata
 - TODO-4527: Delete template-monomorph SoA zero-audit residue
 - TODO-4528: Delete emitter/lowerer SoA zero-audit residue
@@ -1939,38 +1937,6 @@ Task template:
   - stop_rule: Stop once the release gate mechanically enforces that map is
     fully stdlib-owned and no PrimeStruct-map-specific production C++ traces
     remain.
-
-- [ ] TODO-4531: Reduce map lowerer tail-dispatch audit traces
-  - owner: ai
-  - created_at: 2026-05-15
-  - phase: Map stdlib ownership cutover
-  - parallel_track: map-zero-audit
-  - split_from: TODO-4464
-  - depends_on: TODO-4506
-  - scope: Remove or route through shared lowerer helpers the remaining
-    PrimeStruct-map-specific trace residue in
-    `src/ir_lowerer/IrLowererLowerEmitExprTailDispatch.h`.
-  - implementation_notes:
-    - Start from the current map-surface inventory cap for
-      `src/ir_lowerer/IrLowererLowerEmitExprTailDispatch.h` (49 total traces)
-      and backing inventory rows for the same file (`experimental-map-path`
-      15, `map-backing-type-symbol` 7).
-    - Prefer existing lowerer collection/backing classifiers and path helpers
-      over direct `/std/collections/map`,
-      `/std/collections/experimental_map`, `Map__`, or map helper symbol
-      checks.
-    - Keep genuinely generic collection tail-dispatch behavior shared with
-      vector/SoA intact; this slice should not broaden map semantics.
-  - acceptance:
-    - The map-surface and map-backing inventory caps for
-      `IrLowererLowerEmitExprTailDispatch.h` are reduced to the next explicit
-      cap without adding new production files to either inventory.
-    - Existing canonical map lookup, mutation, miss-result, and source-lock
-      behavior stays stable for the focused lowerer tail-dispatch surface.
-    - Focused backend-IR or compile-run coverage plus both map inventory
-      checkers pass.
-  - stop_rule: Stop once the tail-dispatch lowerer no longer owns avoidable
-    direct map-surface or map-backing spellings outside shared helper calls.
 
 - [~] TODO-4305: Rename and style canonical `.prime` SoA surface
   - owner: ai
