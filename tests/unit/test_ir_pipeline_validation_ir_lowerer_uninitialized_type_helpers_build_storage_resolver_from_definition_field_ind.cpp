@@ -381,7 +381,7 @@ TEST_CASE("ir lowerer binding type helpers classify binding kind and string/file
   REQUIRE(std::filesystem::exists(bindingTypeHelpersPath));
   const std::string bindingTypeHelpersSource = readText(bindingTypeHelpersPath);
   CHECK(bindingTypeHelpersSource.find(
-            "soa_paths::isExperimentalSoaVectorTypePath(name)") !=
+            "soa_paths::isExperimentalColumnarVectorTypePath(name)") !=
         std::string::npos);
   CHECK(bindingTypeHelpersSource.find(
             "name == \"std/collections/experimental_soa_vector/SoaVector\"") !=
@@ -836,8 +836,8 @@ TEST_CASE("ir lowerer binding type helpers prefer semantic collection specializa
           .keyTypeTextId = primec::InvalidSymbolId,
           .valueTypeTextId =
               primec::semanticProgramInternCallTargetString(semanticProgram, "Particle"),
-          .helperSurfaceId = primec::StdlibSurfaceId::CollectionsSoaHelpers,
-          .constructorSurfaceId = primec::StdlibSurfaceId::CollectionsSoaConstructors,
+          .helperSurfaceId = primec::StdlibSurfaceId::CollectionsColumnarHelpers,
+          .constructorSurfaceId = primec::StdlibSurfaceId::CollectionsColumnarConstructors,
       });
   semanticProgram.publishedRoutingLookups.collectionSpecializationIndicesByExpr.emplace(120, 1);
 

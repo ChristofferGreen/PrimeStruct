@@ -144,7 +144,7 @@ bool isPublishedCollectionBridgeStdlibSurfaceId(std::optional<StdlibSurfaceId> s
       findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
   return (vectorMetadata != nullptr && *surfaceId == vectorMetadata->id) ||
          *surfaceId == StdlibSurfaceId::CollectionsMapHelpers ||
-         *surfaceId == StdlibSurfaceId::CollectionsSoaHelpers;
+         *surfaceId == StdlibSurfaceId::CollectionsColumnarHelpers;
 }
 
 bool isPublishedCollectionBridgeCall(const SemanticProgram *semanticProgram, const Expr &expr) {

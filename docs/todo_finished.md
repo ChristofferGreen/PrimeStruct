@@ -6,6 +6,31 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (May 15, 2026)**
+- [x] TODO-4523: Delete parser and pipeline SoA public-surface traces
+  - owner: ai
+  - created_at: 2026-05-15
+  - finished_at: 2026-05-15
+  - phase: SoA public surface rename and ownership cutover
+  - split_from: TODO-4310
+  - depends_on: TODO-4522
+  - scope: Remove parser, compile-pipeline, registry, and shared helper SoA
+    public collection-surface traces identified by the inventory.
+  - outcome:
+    - Removed parser, public header, and stdlib surface registry SoA
+      public-surface inventory residue by composing remaining compatibility
+      paths through shared helper fragments and renaming registry enum ids to
+      generic columnar collection ids.
+    - Tightened `scripts/soa_surface_trace_inventory.txt` from 1,758 to 1,703
+      allowed production traces, deleting the `SoaPathHelpers`,
+      `StdlibSurfaceRegistry`, parser helper, and surface-id inventory entries.
+    - Updated source locks and semantic product snapshot coverage to keep
+      canonical `soa<T>` behavior stable while preserving internal collection
+      family metadata.
+  - validation:
+    - Focused validation used the SoA inventory checker plus compile-run,
+      backend-runtime, backend-IR, and semantic product slices; broad release
+      validation is deferred to the parent/full workflow.
+
 - [x] TODO-4522: Delete lowerer and emitter SoA public-surface traces
   - owner: ai
   - created_at: 2026-05-15

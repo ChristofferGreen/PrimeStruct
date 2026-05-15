@@ -122,7 +122,7 @@ bool resolveSpecializedExperimentalSoaVectorStructPath(const std::string &typeTe
     if (!normalizedType.empty() && normalizedType.front() != '/') {
       normalizedType.insert(normalizedType.begin(), '/');
     }
-    if (soa_paths::isExperimentalSoaVectorSpecializedTypePath(normalizedType)) {
+    if (soa_paths::isExperimentalColumnarVectorSpecializedTypePath(normalizedType)) {
       structPathOut = normalizedType;
       return true;
     }
@@ -380,7 +380,7 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
         normalizedPointerTargetType.front() != '/') {
       normalizedPointerTargetType.insert(normalizedPointerTargetType.begin(), '/');
     }
-    if (soa_paths::isExperimentalSoaVectorSpecializedTypePath(normalizedPointerTargetType)) {
+    if (soa_paths::isExperimentalColumnarVectorSpecializedTypePath(normalizedPointerTargetType)) {
       infoOut.pointerToVector = true;
       infoOut.isSoaVector = true;
       infoOut.structTypeName = normalizedPointerTargetType;
@@ -498,7 +498,7 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
         normalizedRefTargetType.front() != '/') {
       normalizedRefTargetType.insert(normalizedRefTargetType.begin(), '/');
     }
-    if (soa_paths::isExperimentalSoaVectorSpecializedTypePath(normalizedRefTargetType)) {
+    if (soa_paths::isExperimentalColumnarVectorSpecializedTypePath(normalizedRefTargetType)) {
       infoOut.argsPackElementKind = LocalInfo::Kind::Reference;
       infoOut.referenceToVector = true;
       infoOut.isSoaVector = true;

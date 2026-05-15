@@ -305,7 +305,7 @@ TEST_CASE("stdlib surface registry stays source locked") {
             "compatibility_spelling = /std/collections/experimental_map/mapOct") ==
         std::string::npos);
 
-  CHECK(source.find("StdlibSurfaceId::CollectionsSoaHelpers") != std::string::npos);
+  CHECK(source.find("StdlibSurfaceId::CollectionsColumnarHelpers") != std::string::npos);
   CHECK(source.find("\"collections.soa_helpers\"") == std::string::npos);
   CHECK(source.find("\"/std/collections/soa\"") == std::string::npos);
   CHECK(source.find("\"/std/collections/soa_vector\"") == std::string::npos);
@@ -317,7 +317,7 @@ TEST_CASE("stdlib surface registry stays source locked") {
         std::string::npos);
   CHECK(source.find("\"/std/collections/experimental_soa_vector_conversions/soaVectorToAos\"") ==
         std::string::npos);
-  CHECK(collectionManifest.find("id = CollectionsSoaHelpers") != std::string::npos);
+  CHECK(collectionManifest.find("id = CollectionsColumnarHelpers") != std::string::npos);
   CHECK(collectionManifest.find("bridge_key = collections.soa_helpers") !=
         std::string::npos);
   CHECK(collectionManifest.find("import_alias_spelling = /std/collections/soa") !=
@@ -336,13 +336,13 @@ TEST_CASE("stdlib surface registry stays source locked") {
             "/std/collections/experimental_soa_vector_conversions/soaVectorToAos") ==
         std::string::npos);
 
-  CHECK(source.find("StdlibSurfaceId::CollectionsSoaConstructors") !=
+  CHECK(source.find("StdlibSurfaceId::CollectionsColumnarConstructors") !=
         std::string::npos);
   CHECK(source.find("\"collections.soa_constructors\"") == std::string::npos);
   CHECK(source.find("\"/std/collections/soa_vector/soa_vector\"") == std::string::npos);
   CHECK(source.find("\"/std/collections/experimental_soa_vector/soaVectorNew\"") ==
         std::string::npos);
-  CHECK(collectionManifest.find("id = CollectionsSoaConstructors") !=
+  CHECK(collectionManifest.find("id = CollectionsColumnarConstructors") !=
         std::string::npos);
   CHECK(collectionManifest.find("bridge_key = collections.soa_constructors") !=
         std::string::npos);
@@ -432,36 +432,36 @@ TEST_CASE("collection helper surface registry resolves preferred compatibility s
             "/not_map/count",
             "/std/collections/experimental_map/") == "");
   CHECK(primec::stdlibSurfacePreferredSpellingForMember(
-            primec::StdlibSurfaceId::CollectionsSoaHelpers,
+            primec::StdlibSurfaceId::CollectionsColumnarHelpers,
             "/std/collections/soa_vector/count",
             "/std/collections/experimental_soa_vector/") ==
         "");
   CHECK(primec::stdlibSurfacePreferredSpellingForMember(
-            primec::StdlibSurfaceId::CollectionsSoaHelpers,
+            primec::StdlibSurfaceId::CollectionsColumnarHelpers,
             "/std/collections/soa/count",
             "/std/collections/experimental_soa_vector/") ==
         "");
   CHECK(primec::stdlibSurfacePreferredSpellingForMember(
-            primec::StdlibSurfaceId::CollectionsSoaHelpers,
+            primec::StdlibSurfaceId::CollectionsColumnarHelpers,
             "/std/collections/count",
             "/std/collections/experimental_soa_vector/") ==
         "");
   CHECK(primec::stdlibSurfacePreferredSpellingForMember(
-            primec::StdlibSurfaceId::CollectionsSoaHelpers,
+            primec::StdlibSurfaceId::CollectionsColumnarHelpers,
             "/soa_vector/push",
             "/std/collections/experimental_soa_vector/") ==
         "");
   CHECK(primec::stdlibSurfacePreferredSpellingForMember(
-            primec::StdlibSurfaceId::CollectionsSoaHelpers,
+            primec::StdlibSurfaceId::CollectionsColumnarHelpers,
             "/std/collections/soa_vector/to_aos",
             "/std/collections/experimental_soa_vector_conversions/") ==
         "");
   CHECK(primec::stdlibSurfaceCanonicalHelperPath(
-            primec::StdlibSurfaceId::CollectionsSoaHelpers,
+            primec::StdlibSurfaceId::CollectionsColumnarHelpers,
             "/std/collections/experimental_soa_vector/soaVectorGetRef") ==
         "");
   CHECK(primec::stdlibSurfacePreferredSpellingForMember(
-            primec::StdlibSurfaceId::CollectionsSoaHelpers,
+            primec::StdlibSurfaceId::CollectionsColumnarHelpers,
             "/not_soa/count",
             "/std/collections/experimental_soa_vector/") == "");
   CHECK(primec::stdlibSurfaceCanonicalHelperPath(
@@ -864,7 +864,7 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
   const std::string allowlist = readTextFile(allowlistPath);
   const std::string soaPathHelpers = readTextFile(soaPathHelpersApiPath);
   CHECK(soaPathHelpers.find("namespace primec::soa_paths") != std::string::npos);
-  CHECK(soaPathHelpers.find("isExperimentalSoaVectorSpecializedTypePath") !=
+  CHECK(soaPathHelpers.find("isExperimentalColumnarVectorSpecializedTypePath") !=
         std::string::npos);
   CHECK(soaPathHelpers.find("canonicalizeLegacySoaRefHelperPath") !=
         std::string::npos);

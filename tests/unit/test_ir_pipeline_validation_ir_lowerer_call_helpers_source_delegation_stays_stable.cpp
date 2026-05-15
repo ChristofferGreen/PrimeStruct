@@ -452,7 +452,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(callResolutionSource.find("StdlibSurfaceId::CollectionsMapHelpers") !=
         std::string::npos);
-  CHECK(callResolutionSource.find("StdlibSurfaceId::CollectionsSoaHelpers") !=
+  CHECK(callResolutionSource.find("StdlibSurfaceId::CollectionsColumnarHelpers") !=
         std::string::npos);
   CHECK(callResolutionSource.find("normalizeMapImportAliasPath(") !=
         std::string::npos);
@@ -596,7 +596,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(inlineDispatchSource.find("std/collections/soa_vector/push") == std::string::npos);
   CHECK(inlineDispatchSource.find("std/collections/soa_vector/reserve") == std::string::npos);
   CHECK(inlineParamHelpersSource.find(
-            "soa_paths::isExperimentalSoaVectorSpecializedTypePath(structPath)") !=
+            "soa_paths::isExperimentalColumnarVectorSpecializedTypePath(structPath)") !=
         std::string::npos);
   CHECK(inlineParamHelpersSource.find(
             "structPath.rfind(\"/std/collections/experimental_soa_vector/SoaVector__\", 0) == 0") ==
@@ -652,7 +652,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(lowerStatementsExprSource.find("isSamePathSoaHelperPath(rawPath)") !=
         std::string::npos);
   CHECK(uninitializedStructInferenceSource.find(
-            "soa_paths::isExperimentalSoaVectorSpecializedTypePath(normalizedReceiverStruct)") !=
+            "soa_paths::isExperimentalColumnarVectorSpecializedTypePath(normalizedReceiverStruct)") !=
         std::string::npos);
   CHECK(uninitializedStructInferenceSource.find(
             "normalizedReceiverStruct.rfind(\"/std/collections/experimental_soa_vector/SoaVector__\", 0) != 0") ==
@@ -661,7 +661,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
             "auto isRawBuiltinSoaVectorReceiverTarget = [&](const std::string &candidate)") !=
         std::string::npos);
   CHECK(setupTypeMethodTargetHelpersSource.find(
-            "semantics::isExperimentalSoaVectorTypePath(normalized)") ==
+            "semantics::isExperimentalColumnarVectorTypePath(normalized)") ==
         std::string::npos);
   CHECK(operatorCollectionMutationHelpersSource.find(
             "auto canonicalizeLegacySoaRefHelperPath = [](const std::string &path)") ==
@@ -679,7 +679,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
             "soa_paths::isExperimentalSoaRefLikeHelperPath(canonicalPath)") !=
         std::string::npos);
   CHECK(operatorCollectionMutationHelpersSource.find(
-            "soa_paths::isExperimentalSoaVectorSpecializedTypePath(structPath)") !=
+            "soa_paths::isExperimentalColumnarVectorSpecializedTypePath(structPath)") !=
         std::string::npos);
   CHECK(operatorCollectionMutationHelpersSource.find(
             "std::string normalizedInternalSoaStorageLeaf(std::string structPath)") !=

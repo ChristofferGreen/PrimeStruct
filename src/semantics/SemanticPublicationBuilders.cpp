@@ -583,8 +583,8 @@ void publishCollectionSpecializationForBinding(
                                 : helperMetadata->id;
     entry.constructorSurfaceId = StdlibSurfaceId::CollectionsVectorConstructors;
   } else if (entry.collectionFamily == "soa_vector") {
-    entry.helperSurfaceId = StdlibSurfaceId::CollectionsSoaHelpers;
-    entry.constructorSurfaceId = StdlibSurfaceId::CollectionsSoaConstructors;
+    entry.helperSurfaceId = StdlibSurfaceId::CollectionsColumnarHelpers;
+    entry.constructorSurfaceId = StdlibSurfaceId::CollectionsColumnarConstructors;
   } else if (entry.collectionFamily == "map") {
     entry.helperSurfaceId = StdlibSurfaceId::CollectionsMapHelpers;
     entry.constructorSurfaceId = StdlibSurfaceId::CollectionsMapConstructors;

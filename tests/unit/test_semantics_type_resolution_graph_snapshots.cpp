@@ -904,19 +904,19 @@ Particle() {
 }
 
 [return<void>]
-/std/collections/soa_vector/push<T>([soa_vector<T>] values, [T] value) {
+/std/collections/soa/push<T>([soa<T> mut] values, [T] value) {
 }
 
 [return<int>]
-/std/collections/soa_vector/count<T>([soa_vector<T>] values) {
+/std/collections/soa/count<T>([soa<T>] values) {
   return(1i32)
 }
 
 [effects(heap_alloc), return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
-  /std/collections/soa_vector/push<Particle>(values, Particle(7i32))
-  return(/std/collections/soa_vector/count<Particle>(values))
+  [soa<Particle> mut] values{soa<Particle>()}
+  /std/collections/soa/push<Particle>(values, Particle(7i32))
+  return(/std/collections/soa/count<Particle>(values))
 }
 )";
 
@@ -935,12 +935,12 @@ main() {
         return entry.scopePath == "/main" && entry.collectionFamily == "soa_vector" &&
                primec::semanticProgramBridgePathChoiceHelperName(semanticProgram, entry) == "push" &&
                primec::semanticProgramResolveCallTargetString(semanticProgram, entry.chosenPathId)
-                       .find("/std/collections/soa_vector/push") == 0;
+                       .find("/std/collections/soa/push") == 0;
       });
   REQUIRE(pushBridgeEntry != nullptr);
   REQUIRE(pushBridgeEntry->stdlibSurfaceId.has_value());
   CHECK(*pushBridgeEntry->stdlibSurfaceId ==
-        primec::StdlibSurfaceId::CollectionsSoaHelpers);
+        primec::StdlibSurfaceId::CollectionsColumnarHelpers);
 
   const auto *countBridgeEntry = findSemanticEntry(
       primec::semanticProgramBridgePathChoiceView(semanticProgram),
@@ -948,17 +948,17 @@ main() {
         return entry.scopePath == "/main" && entry.collectionFamily == "soa_vector" &&
                primec::semanticProgramBridgePathChoiceHelperName(semanticProgram, entry) == "count" &&
                primec::semanticProgramResolveCallTargetString(semanticProgram, entry.chosenPathId)
-                       .find("/std/collections/soa_vector/count") == 0;
+                       .find("/std/collections/soa/count") == 0;
       });
   REQUIRE(countBridgeEntry != nullptr);
   REQUIRE(countBridgeEntry->stdlibSurfaceId.has_value());
   CHECK(*countBridgeEntry->stdlibSurfaceId ==
-        primec::StdlibSurfaceId::CollectionsSoaHelpers);
+        primec::StdlibSurfaceId::CollectionsColumnarHelpers);
   const auto countBridgeSurfaceId =
       primec::semanticProgramLookupPublishedBridgePathChoiceStdlibSurfaceId(
           semanticProgram, countBridgeEntry->semanticNodeId);
   REQUIRE(countBridgeSurfaceId.has_value());
-  CHECK(*countBridgeSurfaceId == primec::StdlibSurfaceId::CollectionsSoaHelpers);
+  CHECK(*countBridgeSurfaceId == primec::StdlibSurfaceId::CollectionsColumnarHelpers);
 }
 
 TEST_CASE("semantic product method-call targets stay separated by receiver type") {
@@ -3952,8 +3952,6 @@ main() {
 
 TEST_CASE("semantic product publishes vector map and soa_vector collection specializations") {
   const std::string source = R"(
-import /std/collections/*
-
 [struct reflect]
 Particle() {
   [i32] x{1i32}
@@ -3964,9 +3962,9 @@ main() {
   [vector<i32>] values{vector<i32>(1i32)}
   [map<i32, i64> mut] pairs{map<i32, i64>(1i32, 7i64)}
   [Reference<map<i32, i64>>] pairsRef{location(pairs)}
-  [soa_vector<Particle>] particles{soa_vector<Particle>()}
-  [Reference<soa_vector<Particle>>] particleRefs{location(particles)}
-  return(count(values))
+  [soa<Particle>] particles{soa<Particle>()}
+  [Reference<soa<Particle>>] particleRefs{location(particles)}
+  return(0i32)
 }
 )";
 
@@ -4024,10 +4022,10 @@ main() {
   CHECK_FALSE(soaEntry->isPointer);
   REQUIRE(soaEntry->helperSurfaceId.has_value());
   CHECK(*soaEntry->helperSurfaceId ==
-        primec::StdlibSurfaceId::CollectionsSoaHelpers);
+        primec::StdlibSurfaceId::CollectionsColumnarHelpers);
   REQUIRE(soaEntry->constructorSurfaceId.has_value());
   CHECK(*soaEntry->constructorSurfaceId ==
-        primec::StdlibSurfaceId::CollectionsSoaConstructors);
+        primec::StdlibSurfaceId::CollectionsColumnarConstructors);
 
   const auto *lookupEntry =
       primec::semanticProgramLookupPublishedCollectionSpecializationBySemanticId(

@@ -1,13 +1,4 @@
-include/primec/SoaPathHelpers.h	canonical-soa-path	3
-include/primec/SoaPathHelpers.h	experimental-soa-vector-path	6
-include/primec/SoaPathHelpers.h	experimental-soa-vector-token	6
-include/primec/SoaPathHelpers.h	legacy-soa-vector-path	7
-include/primec/SoaPathHelpers.h	root-soa-vector-path	5
-include/primec/SoaPathHelpers.h	soa-vector-helper-symbol	2
-include/primec/SoaPathHelpers.h	soa-vector-type-symbol	6
-include/primec/StdlibSurfaceRegistry.h	soa-surface-id	2
 src/IrPrinterHelpers.cpp	soa-vector-token	1
-src/StdlibSurfaceRegistry.cpp	soa-surface-id	10
 src/emitter/EmitterBuiltinCallPathHelpers.cpp	experimental-soa-vector-path	1
 src/emitter/EmitterBuiltinCallPathHelpers.cpp	experimental-soa-vector-token	2
 src/emitter/EmitterBuiltinCallPathHelpers.cpp	soa-conversion-helper	2
@@ -56,7 +47,6 @@ src/ir_lowerer/IrLowererCallHelpers.cpp	soa-vector-token	1
 src/ir_lowerer/IrLowererCallHelpers.cpp	soa-vector-type-symbol	1
 src/ir_lowerer/IrLowererCallResolution.cpp	legacy-soa-vector-path	1
 src/ir_lowerer/IrLowererCallResolution.cpp	soa-conversion-helper	1
-src/ir_lowerer/IrLowererCallResolution.cpp	soa-surface-id	1
 src/ir_lowerer/IrLowererCallResolution.cpp	soa-vector-token	2
 src/ir_lowerer/IrLowererCountAccessClassifiers.cpp	canonical-soa-path	1
 src/ir_lowerer/IrLowererCountAccessClassifiers.cpp	legacy-soa-vector-path	1
@@ -185,11 +175,9 @@ src/ir_lowerer/IrLowererUninitializedStructInference.cpp	soa-vector-token	1
 src/ir_lowerer/IrLowererVectorRecordLayoutHelpers.h	experimental-soa-vector-path	4
 src/ir_lowerer/IrLowererVectorRecordLayoutHelpers.h	experimental-soa-vector-token	4
 src/ir_lowerer/IrLowererVectorRecordLayoutHelpers.h	soa-vector-type-symbol	4
-src/parser/ParserHelpers.cpp	soa-conversion-helper	1
 src/semantics/SemanticPublicationBuilders.cpp	experimental-soa-vector-path	2
 src/semantics/SemanticPublicationBuilders.cpp	experimental-soa-vector-token	2
 src/semantics/SemanticPublicationBuilders.cpp	legacy-soa-vector-path	2
-src/semantics/SemanticPublicationBuilders.cpp	soa-surface-id	2
 src/semantics/SemanticPublicationBuilders.cpp	soa-vector-token	4
 src/semantics/SemanticPublicationBuilders.cpp	soa-vector-type-symbol	4
 src/semantics/SemanticValidationPlan.cpp	soa-conversion-helper	2
@@ -342,7 +330,6 @@ src/semantics/SemanticsValidatorSnapshots.cpp	experimental-soa-vector-token	4
 src/semantics/SemanticsValidatorSnapshots.cpp	legacy-soa-vector-path	3
 src/semantics/SemanticsValidatorSnapshots.cpp	root-soa-vector-path	1
 src/semantics/SemanticsValidatorSnapshots.cpp	soa-conversion-helper	2
-src/semantics/SemanticsValidatorSnapshots.cpp	soa-surface-id	2
 src/semantics/SemanticsValidatorSnapshots.cpp	soa-vector-helper-symbol	10
 src/semantics/SemanticsValidatorSnapshots.cpp	soa-vector-token	5
 src/semantics/SemanticsValidatorStatement.cpp	legacy-soa-vector-path	1
@@ -372,7 +359,6 @@ src/semantics/TemplateMonomorphCoreUtilities.h	soa-vector-token	2
 src/semantics/TemplateMonomorphExperimentalCollectionReceiverResolution.h	experimental-soa-vector-path	1
 src/semantics/TemplateMonomorphExperimentalCollectionReceiverResolution.h	experimental-soa-vector-token	1
 src/semantics/TemplateMonomorphExperimentalCollectionReceiverResolution.h	legacy-soa-vector-path	3
-src/semantics/TemplateMonomorphExperimentalCollectionReceiverResolution.h	soa-surface-id	2
 src/semantics/TemplateMonomorphExperimentalCollectionReceiverResolution.h	soa-vector-token	2
 src/semantics/TemplateMonomorphExpressionRewrite.h	canonical-soa-path	20
 src/semantics/TemplateMonomorphExpressionRewrite.h	legacy-soa-vector-path	24

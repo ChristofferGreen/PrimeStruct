@@ -48,7 +48,7 @@ bool isVectorStructPath(const std::string &structPath) {
 }
 
 bool isSpecializedExperimentalSoaVectorStructPath(const std::string &structPath) {
-  return soa_paths::isExperimentalSoaVectorSpecializedTypePath(structPath);
+  return soa_paths::isExperimentalColumnarVectorSpecializedTypePath(structPath);
 }
 
 bool isRawBuiltinSoaVectorStructPath(const std::string &structPath) {

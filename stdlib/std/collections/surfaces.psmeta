@@ -99,7 +99,7 @@ import_alias_spelling = map
 lowering_spelling = /std/collections/map/map
 
 [surface]
-id = CollectionsSoaHelpers
+id = CollectionsColumnarHelpers
 domain = Collections
 shape = HelperFamily
 bridge_key = collections.soa_helpers
@@ -129,7 +129,7 @@ lowering_spelling = /std/collections/soa/push
 lowering_spelling = /std/collections/soa/to_aos
 
 [surface]
-id = CollectionsSoaConstructors
+id = CollectionsColumnarConstructors
 domain = Collections
 shape = ConstructorFamily
 bridge_key = collections.soa_constructors

@@ -166,7 +166,7 @@ std::string resolveSpecializedExperimentalSoaVectorStructPath(
     if (!normalized.empty() && normalized.front() != '/') {
       normalized.insert(normalized.begin(), '/');
     }
-    if (soa_paths::isExperimentalSoaVectorSpecializedTypePath(normalized)) {
+    if (soa_paths::isExperimentalColumnarVectorSpecializedTypePath(normalized)) {
       return normalized;
     }
 
@@ -220,7 +220,7 @@ std::string inferExperimentalSoaElementStructPathFromReceiverStruct(
       normalizedReceiverStruct.front() != '/') {
     normalizedReceiverStruct.insert(normalizedReceiverStruct.begin(), '/');
   }
-  if (!soa_paths::isExperimentalSoaVectorSpecializedTypePath(normalizedReceiverStruct)) {
+  if (!soa_paths::isExperimentalColumnarVectorSpecializedTypePath(normalizedReceiverStruct)) {
     return "";
   }
 

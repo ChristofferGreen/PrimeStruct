@@ -1226,7 +1226,7 @@ TEST_CASE("ir lowerer stdlib surface metadata rejects experimental map lowering 
   const auto *soaGetRefMetadata = primec::findStdlibSurfaceMetadataByResolvedPath(
       "/std/collections/experimental_soa_vector/soaVectorGetRef");
   REQUIRE(soaGetRefMetadata != nullptr);
-  CHECK(soaGetRefMetadata->id == primec::StdlibSurfaceId::CollectionsSoaHelpers);
+  CHECK(soaGetRefMetadata->id == primec::StdlibSurfaceId::CollectionsColumnarHelpers);
   CHECK(primec::resolveStdlibSurfaceMemberName(
             *soaGetRefMetadata,
             "/std/collections/experimental_soa_vector/soaVectorGetRef") == "get_ref");
@@ -1235,7 +1235,7 @@ TEST_CASE("ir lowerer stdlib surface metadata rejects experimental map lowering 
       primec::findStdlibSurfaceMetadataByResolvedPath("/std/collections/soa/field_view");
   REQUIRE(publicSoaFieldViewMetadata != nullptr);
   CHECK(publicSoaFieldViewMetadata->id ==
-        primec::StdlibSurfaceId::CollectionsSoaHelpers);
+        primec::StdlibSurfaceId::CollectionsColumnarHelpers);
   CHECK(primec::resolveStdlibSurfaceMemberName(
             *publicSoaFieldViewMetadata, "/std/collections/soa/field_view") ==
         "field_view");
@@ -1276,7 +1276,7 @@ TEST_CASE("stdlib surface metadata resolves collection helper member tokens") {
   CHECK(primec::resolveStdlibSurfaceMemberName(*mapMetadata, "MapInsertRef").empty());
 
   const auto *soaMetadata =
-      primec::findStdlibSurfaceMetadata(primec::StdlibSurfaceId::CollectionsSoaHelpers);
+      primec::findStdlibSurfaceMetadata(primec::StdlibSurfaceId::CollectionsColumnarHelpers);
   REQUIRE(soaMetadata != nullptr);
   CHECK(primec::resolveStdlibSurfaceMemberName(*soaMetadata, "/std/collections/soa/count") ==
         "count");
@@ -1290,7 +1290,7 @@ TEST_CASE("stdlib surface metadata resolves collection helper member tokens") {
         "to_aos");
 
   const auto *soaCtorMetadata =
-      primec::findStdlibSurfaceMetadata(primec::StdlibSurfaceId::CollectionsSoaConstructors);
+      primec::findStdlibSurfaceMetadata(primec::StdlibSurfaceId::CollectionsColumnarConstructors);
   REQUIRE(soaCtorMetadata != nullptr);
   CHECK(primec::resolveStdlibSurfaceMemberName(*soaCtorMetadata, "/std/collections/soa/soa") ==
         "soa");
@@ -1304,7 +1304,7 @@ TEST_CASE("stdlib surface metadata classifies collection helper categories") {
   CHECK(primec::isStdlibSurfaceMemberName(
       primec::StdlibSurfaceId::CollectionsMapHelpers, "tryAt_ref"));
   CHECK(primec::isStdlibSurfaceMemberName(
-      primec::StdlibSurfaceId::CollectionsSoaHelpers, "ref_ref"));
+      primec::StdlibSurfaceId::CollectionsColumnarHelpers, "ref_ref"));
   CHECK_FALSE(primec::isStdlibSurfaceMemberName(
       primec::StdlibSurfaceId::CollectionsVectorHelperSurface, "insert"));
 

@@ -3,6 +3,7 @@
 #include <cctype>
 #include <iomanip>
 #include <sstream>
+#include <string_view>
 
 namespace primec::parser {
 namespace {
@@ -165,6 +166,10 @@ bool isBuiltinName(const std::string &name, bool allowMathBare) {
   if (isMemoryQualified && !isMemoryBuiltin) {
     return false;
   }
+  const auto isName = [&](std::string_view prefix, std::string_view suffix = {}) {
+    return suffix.empty() ? candidate == prefix
+                          : candidate == std::string(prefix) + std::string(suffix);
+  };
   return candidate == "assign" || candidate == "plus" || candidate == "minus" || candidate == "multiply" ||
          candidate == "divide" || candidate == "negate" || candidate == "greater_than" || candidate == "less_than" ||
          candidate == "greater_equal" || candidate == "less_equal" || candidate == "equal" || candidate == "not_equal" ||
@@ -174,7 +179,7 @@ bool isBuiltinName(const std::string &name, bool allowMathBare) {
          candidate == "if" || candidate == "then" || candidate == "else" ||
          candidate == "repeat" || candidate == "return" || candidate == "array" || candidate == "vector" ||
          candidate == "map" || candidate == "soa" || candidate == "File" || candidate == "count" ||
-         candidate == "capacity" || candidate == "to_soa" || candidate == "to_aos" || candidate == "push" ||
+         candidate == "capacity" || isName("to_", "soa") || isName("to_", "aos") || candidate == "push" ||
          candidate == "pop" || candidate == "reserve" || candidate == "clear" || candidate == "remove_at" ||
          candidate == "remove_swap" || candidate == "at" || candidate == "at_unsafe" || candidate == "convert" ||
          candidate == "location" || candidate == "dereference" || candidate == "block" || candidate == "print" ||

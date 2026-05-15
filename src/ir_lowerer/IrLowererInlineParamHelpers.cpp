@@ -42,7 +42,7 @@ bool isCanonicalBuiltinSoaBridgePath(const std::string &calleePath) {
 }
 
 bool isExperimentalSoaVectorStructPath(const std::string &structPath) {
-  return soa_paths::isExperimentalSoaVectorSpecializedTypePath(structPath);
+  return soa_paths::isExperimentalColumnarVectorSpecializedTypePath(structPath);
 }
 
 std::string experimentalCollectionTypePath(std::string_view collectionName,

@@ -26,7 +26,7 @@ bool resolveSpecializedExperimentalSoaVectorStructPathFromTypeText(
   if (!normalized.empty() && normalized.front() != '/') {
     normalized.insert(normalized.begin(), '/');
   }
-  if (soa_paths::isExperimentalSoaVectorSpecializedTypePath(normalized)) {
+  if (soa_paths::isExperimentalColumnarVectorSpecializedTypePath(normalized)) {
     structPathOut = normalized;
     return true;
   }
@@ -432,7 +432,7 @@ void setReferenceArrayInfoFromTypeText(const std::string &typeText, LocalInfo &i
   if (!normalizedTargetType.empty() && normalizedTargetType.front() != '/') {
     normalizedTargetType.insert(normalizedTargetType.begin(), '/');
   }
-  if (soa_paths::isExperimentalSoaVectorSpecializedTypePath(normalizedTargetType)) {
+  if (soa_paths::isExperimentalColumnarVectorSpecializedTypePath(normalizedTargetType)) {
     if (info.kind == LocalInfo::Kind::Reference) {
       info.referenceToVector = true;
     } else {
@@ -941,7 +941,7 @@ std::string normalizeCollectionBindingTypeName(const std::string &name) {
       name == "/SoaVector" ||
       name == "std/collections/experimental_soa_vector/SoaVector" ||
       name == "/std/collections/experimental_soa_vector/SoaVector" ||
-      soa_paths::isExperimentalSoaVectorTypePath(name)) {
+      soa_paths::isExperimentalColumnarVectorTypePath(name)) {
     return "soa_vector";
   }
   if (name == "Buffer" || name == "std/gfx/Buffer" || name == "/std/gfx/Buffer" ||
