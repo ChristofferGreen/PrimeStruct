@@ -51,7 +51,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map constructors keep arg-pack count when soa helpers are imported") {
+TEST_CASE("map constructors keep arg-pack count when soa helpers are imported compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_map/*
@@ -76,7 +76,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map constructor mismatch wins over imported soa count alias") {
+TEST_CASE("map constructor mismatch wins over imported soa count alias compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/internal_map/*

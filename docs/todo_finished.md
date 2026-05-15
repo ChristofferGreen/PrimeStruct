@@ -5,6 +5,43 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Completion (May 15, 2026)**
+- [x] TODO-4518: Migrate SoA compatibility fixtures
+  - owner: ai
+  - created_at: 2026-05-15
+  - finished_at: 2026-05-15
+  - phase: SoA public surface rename and ownership cutover
+  - split_from: TODO-4309
+  - scope: Migrate existing tests, examples, and stdlib fixtures that still
+    exercise the old public SoA compatibility spellings onto the canonical
+    `soa<T>` surface before the compatibility seams are deleted.
+  - acceptance:
+    - Existing user-facing tests, examples, and docs no longer depend on old
+      public SoA compatibility imports or type/helper spellings except in
+      explicitly named compatibility/substrate fixtures.
+    - Canonical `soa<T>` construction, count/get/ref, push/reserve,
+      field-view, conversion, mutation, invalidation, destruction, import, and
+      compile-run coverage remains behavior-compatible after the fixture
+      migration.
+    - Compatibility-quarantine tests remain narrowly named and are sufficient
+      for TODO-4519 to delete or intentionally reject the old spellings without
+      broad unrelated fixture migration in the same commit.
+    - Docs and source-lock tests record the fixture-migration boundary and
+      keep TODO-4519 plus TODO-4310 as separate follow-up gates.
+  - stop_rule: Stop once old SoA public compatibility spellings are no longer
+    needed by general fixture coverage; leave deletion/rejection of the
+    compatibility seams to TODO-4519 and the mechanical C++ trace audit to
+    TODO-4310.
+  - evidence: Migrated the ordinary C++ emitter, native, VM, semantics, and IR
+    validator `canonical soa_vector` behavior fixtures onto public
+    `/std/collections/soa/*` imports, `soa<T>` bindings, and namespace-owned
+    helper calls; renamed the remaining direct old-import cases as explicit
+    legacy, compatibility, experimental, builtin, or substrate fixtures; added
+    a source-lock that rejects future direct old SoA imports outside those
+    quarantined fixture names; and promoted TODO-4519 as the next Ready Now
+    deletion/rejection gate while leaving TODO-4310 as the mechanical C++
+    trace audit.
+
 **Todo Completion (May 14, 2026)**
 - [x] TODO-4517: Lower public SoA field-view wrappers
   - owner: ai

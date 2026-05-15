@@ -159,7 +159,7 @@ main() {
   CHECK(ast.find("/soa_vector/count(this.storage)", countPos) == std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic keeps canonical soa_vector get helper path") {
+TEST_CASE("dump ast-semantic keeps canonical soa_vector get helper path compatibility") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -188,7 +188,7 @@ main() {
   CHECK(ast.find("return /std/collections/soa_vector/get__", mainPos) != std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites bare soa_vector get helper on helper return") {
+TEST_CASE("dump ast-semantic rewrites bare soa_vector get helper on helper return compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -227,7 +227,7 @@ main() {
   CHECK(ast.find("return get(", mainPos) == std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites global helper-return soa_vector method shadows to same-path helpers") {
+TEST_CASE("dump ast-semantic rewrites global helper-return soa_vector method shadows to same-path helpers compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -303,7 +303,7 @@ main() {
   CHECK(ast.find(".reserve(", mainPos) == std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites method-like helper-return soa_vector method shadows to same-path helpers") {
+TEST_CASE("dump ast-semantic rewrites method-like helper-return soa_vector method shadows to same-path helpers compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -383,7 +383,7 @@ main() {
   CHECK(ast.find(".reserve(", mainPos) == std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic accepts nested struct-body soa_vector constructor-bearing helper returns") {
+TEST_CASE("dump ast-semantic accepts nested struct-body soa_vector constructor-bearing helper returns compatibility") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -423,7 +423,7 @@ main() {
   CHECK(ast.find("Particle(7)") != std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic rewrites nested struct-body soa_vector method shadows to same-path helpers") {
+TEST_CASE("dump ast-semantic rewrites nested struct-body soa_vector method shadows to same-path helpers compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -1669,7 +1669,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic canonical soa_vector to_aos helper body uses canonical count/get loop") {
+TEST_CASE("dump ast-semantic canonical soa_vector to_aos helper body uses canonical count/get loop compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa_vector/*
@@ -1708,7 +1708,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic canonical soa_vector to_aos_ref helper body uses canonical count_ref/get_ref loop") {
+TEST_CASE("dump ast-semantic canonical soa_vector to_aos_ref helper body uses canonical count_ref/get_ref loop compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa_vector/*
@@ -2066,7 +2066,7 @@ main() {
   CHECK(ast.find("holder.cloneValues().ref(0)", mainPos) == std::string::npos);
 }
 
-TEST_CASE("dump ast-semantic keeps borrowed soa_vector ref_ref same-path helper shadows") {
+TEST_CASE("dump ast-semantic keeps borrowed soa_vector ref_ref same-path helper shadows compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*

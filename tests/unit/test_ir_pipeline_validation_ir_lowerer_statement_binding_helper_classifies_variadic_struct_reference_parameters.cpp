@@ -911,7 +911,7 @@ TEST_CASE("ir lowerer statement binding helper preserves inferred borrowed map r
   CHECK(info.structTypeName == expectedStructPath);
 }
 
-TEST_CASE("ir lowerer statement binding helper classifies explicit soa_vector locals with specialized struct paths") {
+TEST_CASE("ir lowerer statement binding helper classifies explicit soa_vector locals with specialized struct paths compatibility") {
   primec::Expr stmt;
   stmt.kind = primec::Expr::Kind::Call;
   stmt.isBinding = true;

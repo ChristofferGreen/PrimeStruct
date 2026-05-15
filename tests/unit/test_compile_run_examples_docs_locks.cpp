@@ -3,6 +3,7 @@
 #include "test_compile_run_examples_helpers.h"
 
 #include <algorithm>
+#include <sstream>
 #include <vector>
 
 TEST_SUITE_BEGIN("primestruct.compile.run.examples");
@@ -68,6 +69,71 @@ static std::vector<std::string> productionFilesContainingAny(
   }
   std::sort(paths.begin(), paths.end());
   return paths;
+}
+
+static std::string currentTestCaseNameFromLine(const std::string &line,
+                                               const std::string &currentName) {
+  const std::string prefix = "TEST_CASE(\"";
+  const std::size_t start = line.find(prefix);
+  if (start == std::string::npos) {
+    return currentName;
+  }
+  const std::size_t nameStart = start + prefix.size();
+  const std::size_t nameEnd = line.find('"', nameStart);
+  if (nameEnd == std::string::npos) {
+    return currentName;
+  }
+  return line.substr(nameStart, nameEnd - nameStart);
+}
+
+static bool isDirectOldSoaImportLine(const std::string &line) {
+  const std::size_t first = line.find_first_not_of(" \t");
+  if (first == std::string::npos) {
+    return false;
+  }
+  const std::string trimmed = line.substr(first);
+  return trimmed.rfind("import /std/collections/soa_vector", 0) == 0 ||
+         trimmed.rfind("import /std/collections/experimental_soa_vector", 0) == 0;
+}
+
+static bool isExplicitSoaCompatibilityFixtureName(const std::string &testName) {
+  for (const char *marker :
+       {"legacy", "compatibility", "experimental", "old-surface", "builtin", "substrate"}) {
+    if (testName.find(marker) != std::string::npos) {
+      return true;
+    }
+  }
+  return false;
+}
+
+static std::vector<std::string> directOldSoaImportFixtureViolations(
+    const std::filesystem::path &testsPath) {
+  std::vector<std::string> violations;
+  for (const auto &entry : std::filesystem::recursive_directory_iterator(testsPath)) {
+    if (!entry.is_regular_file()) {
+      continue;
+    }
+    const std::string ext = entry.path().extension().string();
+    if (ext != ".cpp" && ext != ".h") {
+      continue;
+    }
+    std::istringstream stream(readFile(entry.path().string()));
+    std::string line;
+    std::string currentTestName;
+    int lineNumber = 0;
+    while (std::getline(stream, line)) {
+      ++lineNumber;
+      currentTestName = currentTestCaseNameFromLine(line, currentTestName);
+      if (!isDirectOldSoaImportLine(line) ||
+          isExplicitSoaCompatibilityFixtureName(currentTestName)) {
+        continue;
+      }
+      violations.push_back(entry.path().lexically_relative(testsPath).generic_string() + ":" +
+                           std::to_string(lineNumber) + " in " + currentTestName);
+    }
+  }
+  std::sort(violations.begin(), violations.end());
+  return violations;
 }
 
 TEST_CASE("contributor doctest guardrails stay source locked") {
@@ -1130,6 +1196,62 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("soa compatibility fixture migration boundary stays source locked") {
+  const std::filesystem::path testsPath = resolveUnitTestsPath();
+  const std::filesystem::path examplesPath = resolveRepoPath("examples");
+  const std::filesystem::path cppParityPath =
+      resolveRepoPath(std::filesystem::path("tests") / "unit" / "test_compile_run_imports_operations.cpp");
+  const std::filesystem::path vmParityPath = resolveRepoPath(
+      std::filesystem::path("tests") / "unit" / "test_compile_run_vm_collections_wrapper_temporaries_a.cpp");
+  const std::filesystem::path nativeParityPath = resolveRepoPath(
+      std::filesystem::path("tests") / "unit" /
+      "test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp");
+  REQUIRE(std::filesystem::exists(testsPath));
+  REQUIRE(std::filesystem::exists(examplesPath));
+  REQUIRE(std::filesystem::exists(cppParityPath));
+  REQUIRE(std::filesystem::exists(vmParityPath));
+  REQUIRE(std::filesystem::exists(nativeParityPath));
+
+  const auto violations = directOldSoaImportFixtureViolations(testsPath);
+  for (const std::string &violation : violations) {
+    INFO("Direct old SoA import must stay in an explicitly named compatibility fixture: "
+         << violation);
+  }
+  CHECK(violations.empty());
+
+  for (const auto &entry : std::filesystem::recursive_directory_iterator(examplesPath)) {
+    if (!entry.is_regular_file() || entry.path().extension() != ".prime") {
+      continue;
+    }
+    const std::string source = readFile(entry.path().string());
+    INFO("Public examples should use /std/collections/soa/*: "
+         << entry.path().lexically_relative(examplesPath).generic_string());
+    CHECK(source.find("import /std/collections/soa_vector") == std::string::npos);
+    CHECK(source.find("import /std/collections/experimental_soa_vector") ==
+          std::string::npos);
+    CHECK(source.find("soa_vector<") == std::string::npos);
+  }
+
+  const std::string cppParity = readFile(cppParityPath.string());
+  const std::string vmParity = readFile(vmParityPath.string());
+  const std::string nativeParity = readFile(nativeParityPath.string());
+  CHECK(cppParity.find("TEST_CASE(\"compiles and runs public soa count helper") !=
+        std::string::npos);
+  CHECK(cppParity.find("TEST_CASE(\"compiles and runs canonical soa_vector count helper") ==
+        std::string::npos);
+  CHECK(cppParity.find("TEST_CASE(\"public soa to_aos explicit helper is a vector target") !=
+        std::string::npos);
+  CHECK(vmParity.find("TEST_CASE(\"runs vm public soa count helper") !=
+        std::string::npos);
+  CHECK(vmParity.find("TEST_CASE(\"runs vm canonical soa_vector count helper") ==
+        std::string::npos);
+  CHECK(nativeParity.find("TEST_CASE(\"compiles and runs native public soa count helper") !=
+        std::string::npos);
+  CHECK(nativeParity.find(
+            "TEST_CASE(\"compiles and runs native canonical soa_vector count helper") ==
+        std::string::npos);
+}
+
 TEST_CASE("arg-pack docs do not point at inactive TODO slices") {
   std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
   std::filesystem::path syntaxSpecPath = std::filesystem::path("..") / "docs" / "PrimeStruct_SyntaxSpec.md";
@@ -1483,10 +1605,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4518: Migrate SoA compatibility fixtures") !=
+                  "- TODO-4519: Delete `soa_vector` compatibility seams") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
-                  "- TODO-4519: Delete `soa_vector` compatibility seams\n"
                   "- TODO-4310: Add zero C++ SoA collection-surface audit") !=
         std::string::npos);
   CHECK(todo.find("- [~] TODO-4305: Rename and style canonical `.prime` SoA surface") !=
@@ -1501,9 +1622,12 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4518: Migrate SoA compatibility fixtures\n"
                   "- TODO-4519: Delete `soa_vector` compatibility seams\n"
                   "- TODO-4310: Add zero C++ SoA collection-surface audit") !=
+        std::string::npos);
+  CHECK(todo.find("TODO-4518: Migrate SoA compatibility fixtures") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4518: Migrate SoA compatibility fixtures") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
       "TODO-4268: Add heterogeneous type-pack syntax and metadata",
@@ -1845,7 +1969,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Compile-time macro hooks and AST transform ownership | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4464, TODO-4518, TODO-4519, TODO-4310 |") !=
+  CHECK(todo.find("| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4430, TODO-4464, TODO-4519, TODO-4310 |") !=
         std::string::npos);
   CHECK(todo.find("| Vector/map stdlib ownership cutover and collection surface authority | TODO-4430, TODO-4464 |") !=
         std::string::npos);
@@ -1855,13 +1979,13 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Test-suite audit follow-up and release-gate stability | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4464, TODO-4305, TODO-4518, TODO-4519, TODO-4310 |") !=
+  CHECK(todo.find("| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4430, TODO-4464, TODO-4305, TODO-4519, TODO-4310 |") !=
         std::string::npos);
-  CHECK(todo.find("| SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4514, TODO-4518, TODO-4519, TODO-4310 |") !=
+  CHECK(todo.find("| SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4514, TODO-4519, TODO-4310 |") !=
         std::string::npos);
-  CHECK(todo.find("| De-experimentalization surface and namespace parity | TODO-4430, TODO-4464, TODO-4305, TODO-4518, TODO-4519, TODO-4310 |") !=
+  CHECK(todo.find("| De-experimentalization surface and namespace parity | TODO-4430, TODO-4464, TODO-4305, TODO-4519, TODO-4310 |") !=
         std::string::npos);
-  CHECK(todo.find("| `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4514, TODO-4518, TODO-4519, TODO-4310 |") !=
+  CHECK(todo.find("| `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4514, TODO-4519, TODO-4310 |") !=
         std::string::npos);
   CHECK(todo.find("| Validator entrypoint and benchmark-plumbing split | none |") !=
         std::string::npos);

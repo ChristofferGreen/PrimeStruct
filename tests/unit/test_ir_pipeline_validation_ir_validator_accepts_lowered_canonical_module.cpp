@@ -1899,10 +1899,10 @@ main() {
   CHECK_FALSE(module.functions[0].instructions.empty());
 }
 
-TEST_CASE("canonical soa_vector count helper lowers through wrapper routing") {
+TEST_CASE("public soa count helper lowers through wrapper routing") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
 
 [struct reflect]
 Particle() {
@@ -1911,8 +1911,8 @@ Particle() {
 
 [return<int>]
 main() {
-  [SoaVector<Particle>] values{soaVectorNew<Particle>()}
-  return(/std/collections/vector/count(/std/collections/soa_vector/to_aos<Particle>(values)))
+  [soa<Particle>] values{soa<Particle>()}
+  return(/std/collections/vector/count(/std/collections/soa/to_aos<Particle>(values)))
 }
 )";
   primec::Program program;
@@ -1927,7 +1927,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("bare soa_vector count helper lowers through wrapper return routing") {
+TEST_CASE("bare soa_vector count helper lowers through wrapper return routing compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -1959,7 +1959,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("nested struct-body soa_vector constructor-bearing helper returns lower through direct and bound expressions") {
+TEST_CASE("nested struct-body soa_vector constructor-bearing helper returns lower through direct and bound expressions compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -1997,7 +1997,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("bare soa_vector get helper lowers through wrapper return routing") {
+TEST_CASE("bare soa_vector get helper lowers through wrapper return routing compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*

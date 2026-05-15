@@ -92,7 +92,7 @@ main() {
   CHECK(result == 25);
 }
 
-TEST_CASE("ir lowerer materializes variadic borrowed soa_vector packs with indexed count methods") {
+TEST_CASE("ir lowerer materializes variadic borrowed soa_vector packs with indexed count methods compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -188,7 +188,7 @@ main() {
   CHECK(result == 27);
 }
 
-TEST_CASE("ir lowerer materializes variadic pointer soa_vector packs with indexed count methods") {
+TEST_CASE("ir lowerer materializes variadic pointer soa_vector packs with indexed count methods compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -284,7 +284,7 @@ main() {
   CHECK(result == 27);
 }
 
-TEST_CASE("ir lowerer materializes variadic soa_vector packs with indexed count methods") {
+TEST_CASE("ir lowerer materializes variadic soa_vector packs with indexed count methods compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*

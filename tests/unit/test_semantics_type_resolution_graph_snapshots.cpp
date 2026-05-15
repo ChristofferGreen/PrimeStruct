@@ -1455,7 +1455,7 @@ main() {
   CHECK_FALSE(choseConcreteExperimentalGet);
 }
 
-TEST_CASE("semantic product keeps helper-return borrowed soa_vector read targets on canonical wrappers") {
+TEST_CASE("semantic product keeps helper-return borrowed soa_vector read targets on canonical wrappers compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -1541,7 +1541,7 @@ main() {
   CHECK_FALSE(choseReferenceGet);
 }
 
-TEST_CASE("semantic product keeps method-like borrowed soa_vector read targets on canonical wrappers") {
+TEST_CASE("semantic product keeps method-like borrowed soa_vector read targets on canonical wrappers compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -1631,7 +1631,7 @@ main() {
   CHECK_FALSE(choseReferenceGet);
 }
 
-TEST_CASE("semantic product keeps borrowed soa_vector ref_ref targets on same-path helpers") {
+TEST_CASE("semantic product keeps borrowed soa_vector ref_ref targets on same-path helpers compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -1880,7 +1880,7 @@ main() {
   REQUIRE(fieldViewRead != nullptr);
 }
 
-TEST_CASE("semantic product keeps helper-return SoaVector mutator initializer facts on wrappers") {
+TEST_CASE("semantic product keeps helper-return SoaVector mutator initializer facts on wrappers compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -1993,7 +1993,7 @@ main() {
   CHECK_FALSE(choseConcreteExperimentalPush);
 }
 
-TEST_CASE("semantic product keeps helper-return borrowed soa_vector direct-call targets on canonical wrappers") {
+TEST_CASE("semantic product keeps helper-return borrowed soa_vector direct-call targets on canonical wrappers compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -2121,7 +2121,7 @@ main() {
   CHECK_FALSE(choseUnborrowedGet);
 }
 
-TEST_CASE("semantic product keeps helper-return borrowed soa_vector field views on canonical reads") {
+TEST_CASE("semantic product keeps helper-return borrowed soa_vector field views on canonical reads compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -2190,7 +2190,7 @@ main() {
   CHECK_FALSE(choseExplicitFieldViewBridge);
 }
 
-TEST_CASE("semantic product keeps borrowed local soa_vector field views on canonical reads") {
+TEST_CASE("semantic product keeps borrowed local soa_vector field views on canonical reads compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -2255,7 +2255,7 @@ main() {
   CHECK_FALSE(choseExplicitFieldViewBridge);
 }
 
-TEST_CASE("semantic product keeps method-like borrowed soa_vector field views on canonical reads") {
+TEST_CASE("semantic product keeps method-like borrowed soa_vector field views on canonical reads compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*

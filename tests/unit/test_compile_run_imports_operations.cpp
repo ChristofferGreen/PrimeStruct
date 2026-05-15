@@ -264,9 +264,9 @@ main() {
   CHECK(runCommand(exePath) == 8);
 }
 
-TEST_CASE("compiles and runs canonical soa_vector count helper on experimental wrapper in C++ emitter") {
+TEST_CASE("compiles and runs public soa count helper on public wrapper in C++ emitter") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
 
 [struct reflect]
 Particle() {
@@ -275,23 +275,23 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
-  return(plus(values.count(), /std/collections/soa_vector/count<Particle>(values)))
+  [soa<Particle>] values{/std/collections/soa/single<Particle>(Particle(7i32))}
+  return(plus(values.count(), /std/collections/soa/count<Particle>(values)))
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_canonical_soa_vector_count_experimental_wrapper_exe.prime", source);
+      writeTemp("compile_public_soa_count_public_wrapper_exe.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_canonical_soa_vector_count_experimental_wrapper_exe").string();
+      (testScratchPath("") / "primec_public_soa_count_public_wrapper_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs canonical soa_vector get helper in C++ emitter") {
+TEST_CASE("compiles and runs public soa get helper in C++ emitter") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
 
 [struct reflect]
 Particle() {
@@ -300,32 +300,32 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(9i32))}
-  return(/std/collections/soa_vector/get<Particle>(values, 0i32).x)
+  [soa<Particle>] values{/std/collections/soa/single<Particle>(Particle(9i32))}
+  return(/std/collections/soa/get<Particle>(values, 0i32).x)
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_canonical_soa_vector_get_experimental_wrapper_exe.prime", source);
+      writeTemp("compile_public_soa_get_public_wrapper_exe.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_canonical_soa_vector_get_experimental_wrapper_exe").string();
+      (testScratchPath("") / "primec_public_soa_get_public_wrapper_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("canonical soa_vector get helper rejects template arguments on non-soa receiver in C++ emitter") {
+TEST_CASE("public soa get helper rejects template arguments on non-soa receiver in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32)}
-  return(/std/collections/soa_vector/get<i32>(values, 0i32))
+  return(/std/collections/soa/get<i32>(values, 0i32))
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_canonical_soa_vector_get_non_soa_receiver_exe.prime", source);
+      writeTemp("compile_public_soa_get_non_soa_receiver_exe.prime", source);
   const std::string errPath =
-      (testScratchPath("") / "primec_canonical_soa_vector_get_non_soa_receiver_exe_err.txt").string();
+      (testScratchPath("") / "primec_public_soa_get_non_soa_receiver_exe_err.txt").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
@@ -333,9 +333,9 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("canonical soa_vector get slash-method reaches field access reject in C++ emitter") {
+TEST_CASE("public soa get slash-method reaches field access reject in C++ emitter") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
 
 [struct reflect]
 Particle() {
@@ -344,14 +344,14 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(9i32))}
-  return(values./std/collections/soa_vector/get(0i32).x)
+  [soa<Particle>] values{/std/collections/soa/single<Particle>(Particle(9i32))}
+  return(values./std/collections/soa/get(0i32).x)
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_canonical_soa_vector_get_slash_method_exe.prime", source);
+      writeTemp("compile_public_soa_get_slash_method_exe.prime", source);
   const std::string errPath =
-      (testScratchPath("") / "primec_canonical_soa_vector_get_slash_method_exe_err.txt").string();
+      (testScratchPath("") / "primec_public_soa_get_slash_method_exe_err.txt").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
   const int compileStatus = runCommand(compileCmd);
@@ -362,11 +362,10 @@ main() {
   }
 }
 
-TEST_CASE("canonical soa_vector to_aos slash-method runs in C++ emitter") {
+TEST_CASE("public soa to_aos slash-method runs in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
-import /std/collections/experimental_soa_vector_conversions/*
+import /std/collections/soa/*
 
 [struct reflect]
 Particle() {
@@ -375,24 +374,24 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(9i32))}
-  [vector<Particle>] unpacked{values./std/collections/soa_vector/to_aos()}
+  [soa<Particle>] values{/std/collections/soa/single<Particle>(Particle(9i32))}
+  [vector<Particle>] unpacked{values./std/collections/soa/to_aos()}
   return(count(unpacked))
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_canonical_soa_vector_to_aos_slash_method_exe.prime", source);
+      writeTemp("compile_public_soa_to_aos_slash_method_exe.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_canonical_soa_vector_to_aos_slash_method_exe").string();
+      (testScratchPath("") / "primec_public_soa_to_aos_slash_method_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs canonical soa_vector ref helper in C++ emitter") {
+TEST_CASE("compiles and runs public soa ref helper in C++ emitter") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
 
 [struct reflect]
 Particle() {
@@ -401,23 +400,23 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(9i32))}
-  return(/std/collections/soa_vector/ref<Particle>(values, 0i32).x)
+  [soa<Particle>] values{/std/collections/soa/single<Particle>(Particle(9i32))}
+  return(/std/collections/soa/ref<Particle>(values, 0i32).x)
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_canonical_soa_vector_ref_experimental_wrapper_exe.prime", source);
+      writeTemp("compile_public_soa_ref_public_wrapper_exe.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_canonical_soa_vector_ref_experimental_wrapper_exe").string();
+      (testScratchPath("") / "primec_public_soa_ref_public_wrapper_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("compiles and runs canonical soa_vector mutator helpers in C++ emitter") {
+TEST_CASE("compiles and runs public soa mutator helpers in C++ emitter") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
 
 [struct reflect]
 Particle() {
@@ -426,28 +425,28 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
-  /std/collections/soa_vector/reserve<Particle>(values, 2i32)
-  /std/collections/soa_vector/push<Particle>(values, Particle(4i32))
-  /std/collections/soa_vector/push<Particle>(values, Particle(9i32))
-  return(plus(/std/collections/soa_vector/count<Particle>(values),
-              /std/collections/soa_vector/get<Particle>(values, 1i32).x))
+  [soa<Particle> mut] values{soa<Particle>()}
+  /std/collections/soa/reserve<Particle>(values, 2i32)
+  /std/collections/soa/push<Particle>(values, Particle(4i32))
+  /std/collections/soa/push<Particle>(values, Particle(9i32))
+  return(plus(/std/collections/soa/count<Particle>(values),
+              /std/collections/soa/get<Particle>(values, 1i32).x))
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_canonical_soa_vector_mutators_experimental_wrapper_exe.prime", source);
+      writeTemp("compile_public_soa_mutators_public_wrapper_exe.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_canonical_soa_vector_mutators_experimental_wrapper_exe").string();
+      (testScratchPath("") / "primec_public_soa_mutators_public_wrapper_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 11);
 }
 
-TEST_CASE("canonical soa_vector to_aos helper lowers in C++ emitter") {
+TEST_CASE("public soa to_aos helper lowers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
 
 [struct reflect]
 Particle() {
@@ -456,25 +455,25 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
-  [vector<Particle>] unpacked{/std/collections/soa_vector/to_aos<Particle>(values)}
+  [soa<Particle>] values{/std/collections/soa/single<Particle>(Particle(7i32))}
+  [vector<Particle>] unpacked{/std/collections/soa/to_aos<Particle>(values)}
   return(count(unpacked))
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_canonical_soa_vector_to_aos_experimental_wrapper_exe.prime", source);
+      writeTemp("compile_public_soa_to_aos_public_wrapper_exe.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_canonical_soa_vector_to_aos_experimental_wrapper_exe").string();
+      (testScratchPath("") / "primec_public_soa_to_aos_public_wrapper_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("canonical soa_vector to_aos temporaries route through canonical vector capacity in C++ emitter") {
+TEST_CASE("public soa to_aos temporaries route through canonical vector capacity in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
 
 [struct reflect]
 Particle() {
@@ -483,14 +482,14 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
-  return(/std/collections/vector/capacity(/std/collections/soa_vector/to_aos<Particle>(values)))
+  [soa<Particle>] values{/std/collections/soa/single<Particle>(Particle(7i32))}
+  return(/std/collections/vector/capacity(/std/collections/soa/to_aos<Particle>(values)))
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_canonical_soa_vector_to_aos_vector_capacity_experimental_wrapper_exe.prime", source);
+      writeTemp("compile_public_soa_to_aos_vector_capacity_public_wrapper_exe.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_canonical_soa_vector_to_aos_vector_capacity_experimental_wrapper_exe")
+      (testScratchPath("") / "primec_public_soa_to_aos_vector_capacity_public_wrapper_exe")
           .string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
@@ -551,9 +550,9 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_wildcard_canonical_soa_vector_helpers_exe.prime", source);
+      writeTemp("compile_wildcard_legacy_soa_vector_compatibility_helpers_exe.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_wildcard_canonical_soa_vector_helpers_exe")
+      (testScratchPath("") / "primec_wildcard_legacy_soa_vector_compatibility_helpers_exe")
           .string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
@@ -561,7 +560,7 @@ main() {
   CHECK(runCommand(exePath) == 17);
 }
 
-TEST_CASE("rejects graph-solved direct local-auto vector helper shadows in C++ emitter") {
+TEST_CASE("rejects graph-solved direct local-auto vector helper shadows in C++ emitter compatibility") {
   const std::string source = R"(
 /vector/count([vector<i32>] values) {
   return(17i32)
@@ -1035,7 +1034,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs bare soa_vector get helper through helper return in C++ emitter") {
+TEST_CASE("compiles and runs bare soa_vector get helper through helper return in C++ emitter compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -1067,7 +1066,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("runs global helper-return soa_vector method shadows in C++ emitter") {
+TEST_CASE("runs global helper-return soa_vector method shadows in C++ emitter compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -1126,7 +1125,7 @@ main() {
       131);
 }
 
-TEST_CASE("runs method-like helper-return soa_vector method shadows in C++ emitter") {
+TEST_CASE("runs method-like helper-return soa_vector method shadows in C++ emitter compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -1274,7 +1273,7 @@ main() {
   CHECK(runCommand(exePath) == 27);
 }
 
-TEST_CASE("compiles nested struct-body soa_vector constructor-bearing helper returns in C++ emitter") {
+TEST_CASE("compiles nested struct-body soa_vector constructor-bearing helper returns in C++ emitter compatibility") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -1306,7 +1305,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("compiles nested struct-body soa_vector direct and bound helper expressions in C++ emitter") {
+TEST_CASE("compiles nested struct-body soa_vector direct and bound helper expressions in C++ emitter compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -1343,7 +1342,7 @@ main() {
   CHECK(runCommand(exePath) == 16);
 }
 
-TEST_CASE("compiles nested struct-body soa_vector method shadows in C++ emitter") {
+TEST_CASE("compiles nested struct-body soa_vector method shadows in C++ emitter compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -2044,7 +2043,7 @@ main() {
   CHECK(runCommand(exePath) == 16);
 }
 
-TEST_CASE("compiles and runs borrowed helper-return soa_vector ref_ref same-path helper in C++ emitter") {
+TEST_CASE("compiles and runs borrowed helper-return soa_vector ref_ref same-path helper in C++ emitter compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -2183,7 +2182,7 @@ main() {
   CHECK(runCommand(exePath) == 15);
 }
 
-TEST_CASE("compiles helper-return soa_vector shadows with explicit canonical fallbacks in C++ emitter") {
+TEST_CASE("compiles helper-return soa_vector shadows with explicit canonical fallbacks in C++ emitter compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*

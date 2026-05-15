@@ -134,9 +134,9 @@ main() {
   CHECK(runCommand(runCmd) == 1);
 }
 
-TEST_CASE("runs vm canonical soa_vector count helper on experimental wrapper") {
+TEST_CASE("runs vm public soa count helper on public wrapper") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
 
 [struct reflect]
 Particle() {
@@ -145,19 +145,19 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
-  return(plus(values.count(), /std/collections/soa_vector/count<Particle>(values)))
+  [soa<Particle>] values{/std/collections/soa/single<Particle>(Particle(7i32))}
+  return(plus(values.count(), /std/collections/soa/count<Particle>(values)))
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_canonical_soa_vector_count_experimental_wrapper.prime", source);
+      writeTemp("vm_public_soa_count_public_wrapper.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("runs vm canonical soa_vector get helper") {
+TEST_CASE("runs vm public soa get helper") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
 
 [struct reflect]
 Particle() {
@@ -166,37 +166,37 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(9i32))}
-  return(/std/collections/soa_vector/get<Particle>(values, 0i32).x)
+  [soa<Particle>] values{/std/collections/soa/single<Particle>(Particle(9i32))}
+  return(/std/collections/soa/get<Particle>(values, 0i32).x)
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_canonical_soa_vector_get_experimental_wrapper.prime", source);
+      writeTemp("vm_public_soa_get_public_wrapper.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 9);
 }
 
-TEST_CASE("vm canonical soa_vector get helper rejects template arguments on non-soa receiver") {
+TEST_CASE("vm public soa get helper rejects template arguments on non-soa receiver") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32)}
-  return(/std/collections/soa_vector/get<i32>(values, 0i32))
+  return(/std/collections/soa/get<i32>(values, 0i32))
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_canonical_soa_vector_get_non_soa_receiver.prime", source);
+      writeTemp("vm_public_soa_get_non_soa_receiver.prime", source);
   const std::string errPath =
-      (testScratchPath("") / "primec_vm_canonical_soa_vector_get_non_soa_receiver_err.txt").string();
+      (testScratchPath("") / "primec_vm_public_soa_get_non_soa_receiver_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("get requires soa_vector target") !=
         std::string::npos);
 }
 
-TEST_CASE("vm canonical soa_vector get slash-method reaches field access reject") {
+TEST_CASE("vm public soa get slash-method reaches field access reject") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
 
 [struct reflect]
 Particle() {
@@ -205,24 +205,24 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(9i32))}
-  return(values./std/collections/soa_vector/get(0i32).x)
+  [soa<Particle>] values{/std/collections/soa/single<Particle>(Particle(9i32))}
+  return(values./std/collections/soa/get(0i32).x)
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_canonical_soa_vector_get_slash_method.prime", source);
+      writeTemp("vm_public_soa_get_slash_method.prime", source);
   const std::string errPath =
-      (testScratchPath("") / "primec_vm_canonical_soa_vector_get_slash_method_err.txt").string();
+      (testScratchPath("") / "primec_vm_public_soa_get_slash_method_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("field access requires struct receiver") !=
         std::string::npos);
 }
 
-TEST_CASE("vm canonical soa_vector to_aos slash-method keeps canonical reject") {
+TEST_CASE("vm public soa to_aos slash-method keeps canonical reject") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
 
 [struct reflect]
 Particle() {
@@ -231,15 +231,15 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(9i32))}
-  [vector<Particle>] unpacked{values./std/collections/soa_vector/to_aos()}
+  [soa<Particle>] values{/std/collections/soa/single<Particle>(Particle(9i32))}
+  [vector<Particle>] unpacked{values./std/collections/soa/to_aos()}
   return(count(unpacked))
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_canonical_soa_vector_to_aos_slash_method.prime", source);
+      writeTemp("vm_public_soa_to_aos_slash_method.prime", source);
   const std::string errPath =
-      (testScratchPath("") / "primec_vm_canonical_soa_vector_to_aos_slash_method_err.txt").string();
+      (testScratchPath("") / "primec_vm_public_soa_to_aos_slash_method_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("struct parameter type mismatch") != std::string::npos);
@@ -247,9 +247,9 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("runs vm canonical soa_vector ref helper") {
+TEST_CASE("runs vm public soa ref helper") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
 
 [struct reflect]
 Particle() {
@@ -258,19 +258,19 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(9i32))}
-  return(/std/collections/soa_vector/ref<Particle>(values, 0i32).x)
+  [soa<Particle>] values{/std/collections/soa/single<Particle>(Particle(9i32))}
+  return(/std/collections/soa/ref<Particle>(values, 0i32).x)
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_canonical_soa_vector_ref_experimental_wrapper.prime", source);
+      writeTemp("vm_public_soa_ref_public_wrapper.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 9);
 }
 
-TEST_CASE("runs vm canonical soa_vector mutator helpers") {
+TEST_CASE("runs vm public soa mutator helpers") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
 
 [struct reflect]
 Particle() {
@@ -279,24 +279,24 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
-  /std/collections/soa_vector/reserve<Particle>(values, 2i32)
-  /std/collections/soa_vector/push<Particle>(values, Particle(4i32))
-  /std/collections/soa_vector/push<Particle>(values, Particle(9i32))
-  return(plus(/std/collections/soa_vector/count<Particle>(values),
-              /std/collections/soa_vector/get<Particle>(values, 1i32).x))
+  [soa<Particle> mut] values{soa<Particle>()}
+  /std/collections/soa/reserve<Particle>(values, 2i32)
+  /std/collections/soa/push<Particle>(values, Particle(4i32))
+  /std/collections/soa/push<Particle>(values, Particle(9i32))
+  return(plus(/std/collections/soa/count<Particle>(values),
+              /std/collections/soa/get<Particle>(values, 1i32).x))
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_canonical_soa_vector_mutators_experimental_wrapper.prime", source);
+      writeTemp("vm_public_soa_mutators_public_wrapper.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 11);
 }
 
-TEST_CASE("vm canonical soa_vector to_aos helper lowers") {
+TEST_CASE("vm public soa to_aos helper lowers") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
 
 [struct reflect]
 Particle() {
@@ -305,21 +305,21 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
-  [vector<Particle>] unpacked{/std/collections/soa_vector/to_aos<Particle>(values)}
+  [soa<Particle>] values{/std/collections/soa/single<Particle>(Particle(7i32))}
+  [vector<Particle>] unpacked{/std/collections/soa/to_aos<Particle>(values)}
   return(count(unpacked))
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_canonical_soa_vector_to_aos_experimental_wrapper.prime", source);
+      writeTemp("vm_public_soa_to_aos_public_wrapper.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 1);
 }
 
-TEST_CASE("vm canonical soa_vector to_aos temporaries route through canonical vector capacity") {
+TEST_CASE("vm public soa to_aos temporaries route through canonical vector capacity") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa/*
 
 [struct reflect]
 Particle() {
@@ -328,12 +328,12 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
-  return(/std/collections/vector/capacity(/std/collections/soa_vector/to_aos<Particle>(values)))
+  [soa<Particle>] values{/std/collections/soa/single<Particle>(Particle(7i32))}
+  return(/std/collections/vector/capacity(/std/collections/soa/to_aos<Particle>(values)))
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_canonical_soa_vector_to_aos_vector_capacity_experimental_wrapper.prime", source);
+      writeTemp("vm_public_soa_to_aos_vector_capacity_public_wrapper.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 1);
 }
@@ -502,14 +502,14 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("vm_wildcard_canonical_soa_vector_helpers.prime", source);
+      writeTemp("vm_wildcard_legacy_soa_vector_compatibility_helpers.prime", source);
   const std::string outPath =
-      (testScratchPath("") / "primec_vm_wildcard_canonical_soa_vector_helpers.psvm").string();
+      (testScratchPath("") / "primec_vm_wildcard_legacy_soa_vector_compatibility_helpers.psvm").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(runCmd) == 17);
 }
 
-TEST_CASE("vm runs graph-solved direct local-auto vector helper shadows") {
+TEST_CASE("vm runs graph-solved direct local-auto vector helper shadows compatibility") {
   const std::string source = R"(
 /vector/count([vector<i32>] values) {
   return(17i32)
@@ -876,7 +876,7 @@ main() {
   CHECK(runCommand(runCmd) == 7);
 }
 
-TEST_CASE("runs vm bare soa_vector get helper through helper return") {
+TEST_CASE("runs vm bare soa_vector get helper through helper return compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -903,7 +903,7 @@ main() {
   CHECK(runCommand(runCmd) == 7);
 }
 
-TEST_CASE("runs vm global helper-return soa_vector method shadows") {
+TEST_CASE("runs vm global helper-return soa_vector method shadows compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -959,7 +959,7 @@ main() {
   CHECK(runCommand(runCmd) == 131);
 }
 
-TEST_CASE("runs vm method-like helper-return soa_vector method shadows") {
+TEST_CASE("runs vm method-like helper-return soa_vector method shadows compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -1091,7 +1091,7 @@ main() {
   CHECK(runCommand(runCmd) == 27);
 }
 
-TEST_CASE("runs vm nested struct-body soa_vector constructor-bearing helper returns") {
+TEST_CASE("runs vm nested struct-body soa_vector constructor-bearing helper returns compatibility") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -1119,7 +1119,7 @@ main() {
   CHECK(runCommand(runCmd) == 0);
 }
 
-TEST_CASE("runs vm nested struct-body soa_vector direct and bound helper expressions") {
+TEST_CASE("runs vm nested struct-body soa_vector direct and bound helper expressions compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -1152,7 +1152,7 @@ main() {
   CHECK(runCommand(runCmd) == 16);
 }
 
-TEST_CASE("runs vm nested struct-body soa_vector method shadows") {
+TEST_CASE("runs vm nested struct-body soa_vector method shadows compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -1771,7 +1771,7 @@ main() {
   CHECK(runCommand(runCmd) == 16);
 }
 
-TEST_CASE("vm runs borrowed helper-return soa_vector ref_ref same-path helper") {
+TEST_CASE("vm runs borrowed helper-return soa_vector ref_ref same-path helper compatibility") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
