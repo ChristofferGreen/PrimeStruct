@@ -813,11 +813,15 @@ static bool rewriteMapInsertHelperStatementToCanonical(
         return inferMapKindsFromTypeText(argText, keyKindOut, valueKindOut);
       }
 
+      const std::string experimentalMapType =
+          experimentalCollectionTypePath("map", "Map");
+      const std::string slashlessExperimentalMapType =
+          experimentalMapType.substr(1);
       const bool isMapBase =
           normalizedBase == "map" || normalizedBase == "/map" ||
           normalizedBase == "std/collections/map" || normalizedBase == "/std/collections/map" ||
-          normalizedBase == "std/collections/experimental_map/Map" ||
-          normalizedBase == "/std/collections/experimental_map/Map";
+          normalizedBase == slashlessExperimentalMapType ||
+          normalizedBase == experimentalMapType;
       if (!isMapBase) {
         return false;
       }
@@ -844,9 +848,13 @@ static bool rewriteMapInsertHelperStatementToCanonical(
         return inferMapStructPathFromTypeText(argText);
       }
 
-      if (normalizedBase == "std/collections/experimental_map/Map" ||
-          normalizedBase == "/std/collections/experimental_map/Map") {
-        return std::string{"/std/collections/experimental_map/Map"};
+      const std::string experimentalMapType =
+          experimentalCollectionTypePath("map", "Map");
+      const std::string slashlessExperimentalMapType =
+          experimentalMapType.substr(1);
+      if (normalizedBase == slashlessExperimentalMapType ||
+          normalizedBase == experimentalMapType) {
+        return experimentalMapType;
       }
       return std::string{};
     };
@@ -1274,8 +1282,10 @@ static bool rewriteMapInsertHelperStatementToCanonical(
     return false;
   }
   auto isExperimentalMapStructPath = [](const std::string &structPath) {
-    return structPath == "/std/collections/experimental_map/Map" ||
-           structPath.rfind("/std/collections/experimental_map/Map__", 0) == 0;
+    const std::string experimentalMapType =
+        experimentalCollectionTypePath("map", "Map");
+    return structPath == experimentalMapType ||
+           structPath.rfind(experimentalMapType + "__", 0) == 0;
   };
   if (targetInfo.isWrappedMapTarget ||
       isExperimentalMapStructPath(targetInfo.structTypeName)) {

@@ -2080,6 +2080,9 @@ Task template:
     - 2026-05-16: Access target map struct inference no longer hard-codes
       rooted or slashless experimental map backing paths; it now derives both
       through `experimentalCollectionTypePath`.
+    - 2026-05-16: Statement-call map insert rewriting no longer hard-codes
+      rooted, slashless, or generated experimental map backing paths; it now
+      derives those paths through the local collection path helper.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.
