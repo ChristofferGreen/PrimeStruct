@@ -88,7 +88,6 @@ TEST_CASE("emitter expr contract covers control routing without source locks") {
         {},
         {},
         {},
-        {},
         [&](std::string &pathOut) {
           resolverCalled = true;
           pathOut = "/std/collections/vector/count";

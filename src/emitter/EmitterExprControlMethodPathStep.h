@@ -18,7 +18,6 @@ std::optional<std::string> runEmitterExprControlMethodPathStep(
     const Expr &expr,
     const std::unordered_map<std::string, Emitter::BindingInfo> &localTypes,
     const EmitterExprControlIsCountLikeCallFn &isArrayCountCall,
-    const EmitterExprControlIsCountLikeCallFn &isMapCountCall,
     const EmitterExprControlIsCountLikeCallFn &isStringCountCall,
     const EmitterExprControlResolveMethodPathFn &resolveMethodPath);
 

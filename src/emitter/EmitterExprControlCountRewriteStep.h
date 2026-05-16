@@ -21,7 +21,6 @@ std::optional<std::string> runEmitterExprControlCountRewriteStep(
     const std::unordered_map<std::string, std::string> &nameMap,
     const std::unordered_map<std::string, Emitter::BindingInfo> &localTypes,
     const EmitterExprControlCountRewriteIsCountLikeCallFn &isArrayCountCall,
-    const EmitterExprControlCountRewriteIsCountLikeCallFn &isMapCountCall,
     const EmitterExprControlCountRewriteIsCountLikeCallFn &isStringCountCall,
     const EmitterExprControlCountRewriteResolveMethodPathFn &resolveMethodPath,
     const EmitterExprControlCountRewriteIsCollectionAccessReceiverFn &isCollectionAccessReceiverExpr = {});

@@ -14,7 +14,6 @@ TEST_CASE("emitter expr control count-rewrite step only rewrites bare collection
       {},
       {},
       {},
-      {},
       [&](const primec::Expr &, std::string &) { return true; }).has_value());
 
   primec::Expr wrongNameExpr = methodExpr;
@@ -23,7 +22,6 @@ TEST_CASE("emitter expr control count-rewrite step only rewrites bare collection
   CHECK_FALSE(primec::emitter::runEmitterExprControlCountRewriteStep(
       wrongNameExpr,
       "size",
-      {},
       {},
       {},
       {},
@@ -40,7 +38,6 @@ TEST_CASE("emitter expr control count-rewrite step only rewrites bare collection
       {},
       {},
       {},
-      {},
       [&](const primec::Expr &, std::string &) { return true; }).has_value());
 
   primec::Expr countExpr = wrongArityExpr;
@@ -49,7 +46,6 @@ TEST_CASE("emitter expr control count-rewrite step only rewrites bare collection
       countExpr,
       "count",
       {{"count", "/already/resolved"}},
-      {},
       {},
       {},
       {},
@@ -64,7 +60,6 @@ TEST_CASE("emitter expr control count-rewrite step only rewrites bare collection
       [&](const primec::Expr &, const std::unordered_map<std::string, primec::Emitter::BindingInfo> &) {
         return true;
       },
-      {},
       {},
       [&](const primec::Expr &, std::string &pathOut) {
         resolverCalled = true;
@@ -81,7 +76,6 @@ TEST_CASE("emitter expr control count-rewrite step only rewrites bare collection
   CHECK_FALSE(primec::emitter::runEmitterExprControlCountRewriteStep(
                   aliasCountExpr,
                   "/std/collections/vector/count",
-                  {},
                   {},
                   {},
                   {},
@@ -103,7 +97,6 @@ TEST_CASE("emitter expr control count-rewrite step only rewrites bare collection
                   {},
                   {},
                   {},
-                  {},
                   [&](const primec::Expr &, std::string &) {
                     ++aliasMapCountResolveCalls;
                     return true;
@@ -120,7 +113,6 @@ TEST_CASE("emitter expr control count-rewrite step only rewrites bare collection
                   {},
                   {},
                   {},
-                  {},
                   [&](const primec::Expr &, std::string &) { return true; })
                   .has_value());
 
@@ -130,7 +122,6 @@ TEST_CASE("emitter expr control count-rewrite step only rewrites bare collection
   CHECK_FALSE(primec::emitter::runEmitterExprControlCountRewriteStep(
                   parserShapedCanonicalCountExpr,
                   "/std/collections/map/count",
-                  {},
                   {},
                   {},
                   {},
@@ -148,7 +139,6 @@ TEST_CASE("emitter expr control count-rewrite step only rewrites bare collection
   auto aliasCapacityResolvedPath = primec::emitter::runEmitterExprControlCountRewriteStep(
       aliasCapacityExpr,
       "/vector/capacity",
-      {},
       {},
       {},
       {},
@@ -176,7 +166,6 @@ TEST_CASE("emitter expr control count-rewrite step only rewrites bare collection
   auto accessResolvedPath = primec::emitter::runEmitterExprControlCountRewriteStep(
       accessExpr,
       "at",
-      {},
       {},
       {},
       {},
@@ -209,7 +198,6 @@ TEST_CASE("emitter expr control count-rewrite step only rewrites bare collection
                   {},
                   {},
                   {},
-                  {},
                   [&](const primec::Expr &, std::string &) {
                     ++aliasAccessResolveCalls;
                     return true;
@@ -223,7 +211,6 @@ TEST_CASE("emitter expr control count-rewrite step only rewrites bare collection
   CHECK_FALSE(primec::emitter::runEmitterExprControlCountRewriteStep(
                   aliasMapAccessExpr,
                   "/map/at",
-                  {},
                   {},
                   {},
                   {},
@@ -245,7 +232,6 @@ TEST_CASE("emitter expr control count-rewrite step only rewrites bare collection
                   {},
                   {},
                   {},
-                  {},
                   [&](const primec::Expr &, std::string &) {
                     ++canonicalMapAccessResolveCalls;
                     return true;
@@ -262,7 +248,6 @@ TEST_CASE("emitter expr control count-rewrite step only rewrites bare collection
                   {},
                   {},
                   {},
-                  {},
                   [&](const primec::Expr &, std::string &) { return true; })
                   .has_value());
 
@@ -270,7 +255,6 @@ TEST_CASE("emitter expr control count-rewrite step only rewrites bare collection
   CHECK_FALSE(primec::emitter::runEmitterExprControlCountRewriteStep(
                   accessExpr,
                   "at",
-                  {},
                   {},
                   {},
                   {},
@@ -296,7 +280,6 @@ TEST_CASE("emitter expr control count-rewrite step only rewrites bare collection
   auto positionalAccessResolvedPath = primec::emitter::runEmitterExprControlCountRewriteStep(
       positionalAccessExpr,
       "at",
-      {},
       {},
       {},
       {},
@@ -327,7 +310,6 @@ TEST_CASE("emitter expr control count-rewrite step only rewrites bare collection
       {},
       {},
       {},
-      {},
       [&](const primec::Expr &methodCandidate, std::string &pathOut) {
         ++positionalStringResolveCalls;
         if (!methodCandidate.isMethodCall || methodCandidate.args.empty()) {
@@ -349,7 +331,6 @@ TEST_CASE("emitter expr control count-rewrite step only rewrites bare collection
   auto positionalUnsafeStringAccessResolvedPath = primec::emitter::runEmitterExprControlCountRewriteStep(
       positionalUnsafeStringAccessExpr,
       "at_unsafe",
-      {},
       {},
       {},
       {},
@@ -379,7 +360,6 @@ TEST_CASE("emitter expr control count-rewrite step only rewrites bare collection
                   {},
                   {},
                   {},
-                  {},
                   [&](const primec::Expr &, std::string &) {
                     ++canonicalUnsafeStringResolveCalls;
                     return true;
@@ -394,7 +374,6 @@ TEST_CASE("emitter expr control count-rewrite step only rewrites bare collection
   auto positionalNameAccessResolvedPath = primec::emitter::runEmitterExprControlCountRewriteStep(
       positionalNameAccessExpr,
       "at",
-      {},
       {},
       {},
       {},
@@ -430,7 +409,6 @@ TEST_CASE("emitter expr control count-rewrite step only rewrites bare collection
                   {},
                   {},
                   {},
-                  {},
                   [&](const primec::Expr &methodCandidate, std::string &pathOut) {
                     ++knownReceiverResolveCalls;
                     if (!methodCandidate.isMethodCall || methodCandidate.args.empty()) {
@@ -456,7 +434,6 @@ TEST_CASE("emitter expr control count-rewrite step only rewrites bare collection
       {},
       {},
       {},
-      {},
       [&](const primec::Expr &, std::string &) { return false; }).has_value());
 
   CHECK_FALSE(primec::emitter::runEmitterExprControlCountRewriteStep(
@@ -466,13 +443,11 @@ TEST_CASE("emitter expr control count-rewrite step only rewrites bare collection
       {},
       {},
       {},
-      {},
       {}).has_value());
 
   auto resolvedPath = primec::emitter::runEmitterExprControlCountRewriteStep(
       countExpr,
       "count",
-      {},
       {},
       {},
       {},

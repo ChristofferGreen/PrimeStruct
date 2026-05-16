@@ -69,9 +69,6 @@
             return isArrayCountCall(candidate, candidateLocalTypes);
           },
           [&](const Expr &candidate, const std::unordered_map<std::string, BindingInfo> &candidateLocalTypes) {
-            return isMapCountCall(candidate, candidateLocalTypes);
-          },
-          [&](const Expr &candidate, const std::unordered_map<std::string, BindingInfo> &candidateLocalTypes) {
             return isStringCountCall(candidate, candidateLocalTypes);
           },
           [&](std::string &methodPathOut) {
@@ -98,9 +95,6 @@
           localTypes,
           [&](const Expr &candidate, const std::unordered_map<std::string, BindingInfo> &candidateLocalTypes) {
             return isArrayCountCall(candidate, candidateLocalTypes);
-          },
-          [&](const Expr &candidate, const std::unordered_map<std::string, BindingInfo> &candidateLocalTypes) {
-            return isMapCountCall(candidate, candidateLocalTypes);
           },
           [&](const Expr &candidate, const std::unordered_map<std::string, BindingInfo> &candidateLocalTypes) {
             return isStringCountCall(candidate, candidateLocalTypes);
