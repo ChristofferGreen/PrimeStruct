@@ -283,14 +283,9 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
                                              locals,
                                              builtinCollectionDispatchResolverAdapters)
           : std::string();
-  const bool isMapNamespacedCountCompatibilityCall =
-      directRemovedMapCompatibilityPath == "/map/count";
   const bool isMapNamespacedAccessCompatibilityCall =
       directRemovedMapCompatibilityPath == "/map/at" ||
       directRemovedMapCompatibilityPath == "/map/at_unsafe";
-  if (!expr.isMethodCall && isMapNamespacedCountCompatibilityCall) {
-    return finish(ReturnKind::Unknown);
-  }
   if (!expr.isMethodCall && isMapNamespacedAccessCompatibilityCall) {
     return finish(ReturnKind::Unknown);
   }
@@ -371,8 +366,6 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
       !isArrayNamespacedVectorCountCompatibilityCall(
           expr, builtinCollectionDispatchResolvers)) {
     std::string elemType;
-    std::string keyType;
-    std::string valueType;
     if (resolveArgsPackCountTarget(expr.args.front(), elemType)) {
       const std::string methodPath = preferVectorStdlibHelperPath("/array/count");
       if (!hasDefinitionPath(methodPath)) {
@@ -399,12 +392,6 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
         return finish(ReturnKind::Int);
       }
       context.resolved = "/string/count";
-      hasResolvedPath = true;
-    } else if (resolveMapTarget(expr.args.front(), keyType, valueType)) {
-      context.resolved =
-          hasDefinitionPath("/std/collections/map/count")
-              ? "/std/collections/map/count"
-              : "/std/collections/map/count";
       hasResolvedPath = true;
     }
   }
@@ -448,9 +435,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
         return hasImportedDefinitionPath(path) || hasDeclaredDefinitionPath(path);
       };
       auto isVisibleStdlibMapMethodWithBuiltinReturn = [&](const std::string &path) {
-        return (path == "/std/collections/map/count" ||
-                path == "/std/collections/map/count_ref" ||
-                path == "/std/collections/map/contains" ||
+        return (path == "/std/collections/map/contains" ||
                 path == "/std/collections/map/contains_ref" ||
                 path == "/std/collections/map/tryAt" ||
                 path == "/std/collections/map/tryAt_ref" ||
@@ -461,9 +446,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
                hasVisibleStdlibMapMethodDefinition(path);
       };
       auto isMissingStdlibMapMethodDefinition = [&](const std::string &path) {
-        return (path == "/std/collections/map/count" ||
-                path == "/std/collections/map/count_ref" ||
-                path == "/std/collections/map/contains" ||
+        return (path == "/std/collections/map/contains" ||
                 path == "/std/collections/map/contains_ref" ||
                 path == "/std/collections/map/tryAt" ||
                 path == "/std/collections/map/tryAt_ref" ||
