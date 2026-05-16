@@ -1839,6 +1839,9 @@ Task template:
     - 2026-05-16: Collection-dispatch setup no longer suppresses namespaced
       canonical map access inference when a rooted `/map/<access>` definition
       exists; explicit removed-alias rejection remains separate.
+    - 2026-05-16: Method-target resolution no longer reclassifies direct
+      calls as removed `/map/*` compatibility solely from resolved callee
+      paths; only explicit syntactic removed-spelling probes remain there.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

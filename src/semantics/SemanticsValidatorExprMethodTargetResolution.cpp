@@ -1617,36 +1617,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
                 normalized == "insert" || normalized == "insert_ref")) {
       helperName = normalized;
     } else {
-      const std::string resolvedPath = resolveCalleePath(candidate);
-      if (resolvedPath == "/map/count") {
-        helperName = "count";
-      } else if (resolvedPath == "/map/count_ref") {
-        helperName = "count_ref";
-      } else if (resolvedPath == "/map/size") {
-        helperName = "size";
-      } else if (resolvedPath == "/map/contains") {
-        helperName = "contains";
-      } else if (resolvedPath == "/map/contains_ref") {
-        helperName = "contains_ref";
-      } else if (resolvedPath == "/map/tryAt") {
-        helperName = "tryAt";
-      } else if (resolvedPath == "/map/tryAt_ref") {
-        helperName = "tryAt_ref";
-      } else if (resolvedPath == "/map/at") {
-        helperName = "at";
-      } else if (resolvedPath == "/map/at_ref") {
-        helperName = "at_ref";
-      } else if (resolvedPath == "/map/at_unsafe") {
-        helperName = "at_unsafe";
-      } else if (resolvedPath == "/map/at_unsafe_ref") {
-        helperName = "at_unsafe_ref";
-      } else if (resolvedPath == "/map/insert") {
-        helperName = "insert";
-      } else if (resolvedPath == "/map/insert_ref") {
-        helperName = "insert_ref";
-      } else {
-        return "";
-      }
+      return "";
     }
     const std::string removedPath = "/map/" + helperName;
     if (defMap_.find(removedPath) != defMap_.end() || candidate.args.empty()) {

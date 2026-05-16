@@ -98,7 +98,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   canonical `/std/collections/map/count` for non-templated count diagnostics
   or clear inferred canonical map receiver template arguments through rooted
   `/map/*` paths; collection-dispatch setup should not prefer an explicit
-  rooted `/map/<access>` definition over canonical map access inference.
+  rooted `/map/<access>` definition over canonical map access inference, and
+  method-target resolution should not reclassify a direct call as removed
+  `/map/*` compatibility solely from its resolved callee path.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -153,7 +155,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   path for the non-templated count diagnostic and no longer includes rooted
   `/map/*` in the inferred canonical map receiver template-argument cleanup;
   collection-dispatch setup no longer suppresses namespaced canonical map
-  access inference just because a rooted `/map/<access>` definition exists.
+  access inference just because a rooted `/map/<access>` definition exists;
+  method-target resolution no longer has a resolved-callee `/map/*` table for
+  direct map helper compatibility detection.
 
 ### map-constructor-normalization-uses-public-path
 - Updated: 2026-05-16
