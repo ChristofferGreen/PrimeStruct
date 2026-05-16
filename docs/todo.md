@@ -356,6 +356,8 @@ Task template:
   classifiers.
   Collection-access validation no longer treats rooted `/map/at*` resolved
   paths as canonical map access helper paths.
+  Collection-access validation also no longer treats slashless `map/at*_ref`
+  names or a `map` namespace prefix as canonical map access helper names.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic
