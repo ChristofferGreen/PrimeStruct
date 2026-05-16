@@ -2139,6 +2139,9 @@ Task template:
     - 2026-05-16: Semantic expression collection-dispatch setup no longer
       hard-codes canonical map access helper paths; it now resolves helper
       names through stdlib surface metadata.
+    - 2026-05-16: Semantic effect-free collection helper routing no longer
+      hard-codes canonical map helper paths or slashless prefixes; it now
+      builds them from stdlib surface metadata.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

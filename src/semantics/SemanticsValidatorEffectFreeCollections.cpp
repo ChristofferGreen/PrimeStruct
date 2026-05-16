@@ -1,9 +1,31 @@
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
+#include <string_view>
 #include <vector>
 
 namespace primec::semantics {
+namespace {
+
+std::string canonicalMapHelperPathLocal(std::string_view helperName) {
+  return canonicalCollectionHelperPath(StdlibSurfaceId::CollectionsMapHelpers,
+                                       helperName);
+}
+
+std::string unrootedCanonicalMapHelperPrefixLocal() {
+  const StdlibSurfaceMetadata *metadata =
+      findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsMapHelpers);
+  if (metadata == nullptr) {
+    return "";
+  }
+  std::string prefix(metadata->canonicalPath);
+  if (!prefix.empty() && prefix.front() == '/') {
+    prefix.erase(prefix.begin());
+  }
+  return prefix + "/";
+}
+
+} // namespace
 
 std::string SemanticsValidator::normalizeEffectFreeCollectionMethodName(const std::string &receiverPath,
                                                                         std::string methodName) const {
@@ -25,8 +47,8 @@ std::string SemanticsValidator::normalizeEffectFreeCollectionMethodName(const st
     }
   }
   if (receiverPath == "/map") {
-    const std::string stdMapPrefix = "std/collections/map/";
-    if (methodName.rfind(stdMapPrefix, 0) == 0) {
+    const std::string stdMapPrefix = unrootedCanonicalMapHelperPrefixLocal();
+    if (!stdMapPrefix.empty() && methodName.rfind(stdMapPrefix, 0) == 0) {
       return methodName.substr(stdMapPrefix.size());
     }
   }
@@ -51,7 +73,7 @@ std::vector<std::string> SemanticsValidator::effectFreeMethodPathCandidatesForRe
             canonicalVectorCompatibilityHelperPathOrFallback(methodName)};
   }
   if (receiverPath == "/map") {
-    return {"/std/collections/map/" + methodName};
+    return {canonicalMapHelperPathLocal(methodName)};
   }
   return {receiverPath + "/" + methodName};
 }
@@ -97,9 +119,12 @@ std::vector<std::string> SemanticsValidator::effectFreeCollectionHelperPathCandi
 
   std::string normalizedPath = path;
   if (!normalizedPath.empty() && normalizedPath.front() != '/') {
+    const std::string stdMapPrefix =
+        unrootedCanonicalMapHelperPrefixLocal();
     if (normalizedPath.rfind("array/", 0) == 0 || isUnrootedVectorHelperPath(normalizedPath) ||
         isUnrootedCanonicalVectorCompatibilityPath(normalizedPath) ||
-        normalizedPath.rfind("std/collections/map/", 0) == 0) {
+        (!stdMapPrefix.empty() &&
+         normalizedPath.rfind(stdMapPrefix, 0) == 0)) {
       normalizedPath.insert(normalizedPath.begin(), '/');
     }
   }
@@ -246,7 +271,7 @@ std::string SemanticsValidator::resolveEffectFreeBareMapCallPath(const Expr &cal
           *callExpr.argNames[i] == "values") {
         foundValues = true;
         if (tryResolveReceiverIndex(i)) {
-          return "/std/collections/map/" + helperName;
+          return canonicalMapHelperPathLocal(helperName);
         }
         break;
       }
@@ -254,14 +279,14 @@ std::string SemanticsValidator::resolveEffectFreeBareMapCallPath(const Expr &cal
     if (!foundValues) {
       for (size_t i = 0; i < callExpr.args.size(); ++i) {
         if (tryResolveReceiverIndex(i)) {
-          return "/std/collections/map/" + helperName;
+          return canonicalMapHelperPathLocal(helperName);
         }
       }
     }
   } else {
     for (size_t i = 0; i < callExpr.args.size(); ++i) {
       if (tryResolveReceiverIndex(i)) {
-        return "/std/collections/map/" + helperName;
+        return canonicalMapHelperPathLocal(helperName);
       }
     }
   }

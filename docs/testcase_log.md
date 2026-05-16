@@ -110,6 +110,27 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 18:58 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="print accepts string map access"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="omitted initializer rejects Create with canonical map method precedence when constructor is not effect-free"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical map call precedence keeps builtin count diagnostics before omitted initializer"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="omitted initializer rejects Create with canonical slash-path map call helper when constructor is not effect-free"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="wrapper-returned canonical map call keeps builtin count diagnostics before omitted initializer"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="omitted initializer rejects wrapper-returned canonical map method helper fallback when constructor is not effect-free"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` | failures: none |
+  notes: semantic effect-free collection helper routing now builds canonical
+  map helper paths through stdlib surface metadata; stale direct-call omitted
+  initializer expectations now assert the current builtin-count diagnostic.
+- 2026-05-16 18:55 local | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="omitted initializer rejects Create with canonical map call precedence when constructor is not effect-free"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="omitted initializer rejects wrapper-returned canonical map call helper fallback when constructor is not effect-free"` |
+  failures: `omitted initializer rejects Create with canonical map call precedence when constructor is not effect-free`,
+  `omitted initializer rejects wrapper-returned canonical map call helper fallback when constructor is not effect-free` |
+  notes: stale expectations still wanted omitted-initializer diagnostics for
+  direct map-count calls that now fail earlier with builtin-count arity
+  diagnostics; updated in the following passing rerun.
 - 2026-05-16 18:54 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="bare map contains call requires imported canonical helper or explicit definition"`;

@@ -68,7 +68,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("omitted initializer rejects Create with canonical map call precedence when constructor is not effect-free") {
+TEST_CASE("canonical map call precedence keeps builtin count diagnostics before omitted initializer") {
   const std::string source = R"(
 [effects(io_out), return<i32>]
 /map/count([map<i32, i32>] values, [bool] marker) {
@@ -100,7 +100,8 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("omitted initializer requires effect-free zero-arg constructor: /Thing") != std::string::npos);
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+  CHECK(error.find("effect-free zero-arg constructor") == std::string::npos);
 }
 
 TEST_CASE("map call precedence now rejects omitted initializer through Create effectfulness gate") {
@@ -197,7 +198,7 @@ main() {
   CHECK(error.find("effect-free zero-arg constructor") == std::string::npos);
 }
 
-TEST_CASE("omitted initializer rejects wrapper-returned canonical map call helper fallback when constructor is not effect-free") {
+TEST_CASE("wrapper-returned canonical map call keeps builtin count diagnostics before omitted initializer") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapItems() {
@@ -227,7 +228,8 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("omitted initializer requires effect-free zero-arg constructor: /Thing") != std::string::npos);
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+  CHECK(error.find("effect-free zero-arg constructor") == std::string::npos);
 }
 
 TEST_CASE("omitted initializer keeps canonical diagnostics for wrapper-returned map call helper fallback") {
