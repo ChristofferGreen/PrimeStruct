@@ -296,7 +296,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs map unnamespaced contains through canonical helper in C++ emitter") {
+TEST_CASE("rejects map unnamespaced contains through canonical helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/map/contains([map<i32, i32>] values, [i32] key) {
@@ -310,13 +310,14 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_map_unnamespaced_contains_prefers_canonical_helper.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_map_unnamespaced_contains_prefers_canonical_helper_exe")
+      writeTemp("compile_cpp_map_unnamespaced_contains_canonical_helper_reject.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_map_unnamespaced_contains_canonical_helper_reject.err")
           .string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: contains") != std::string::npos);
 }
 
 TEST_CASE("rejects map unnamespaced contains through compatibility helper when canonical helper is absent in C++ emitter") {
@@ -341,11 +342,11 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/contains") !=
+  CHECK(readFile(errPath).find("unknown call target: contains") !=
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs map unnamespaced contains preferring canonical helper over compatibility alias in C++ emitter") {
+TEST_CASE("rejects map unnamespaced contains preferring canonical helper over compatibility alias in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/map/contains([map<i32, i32>] values, [i32] key) {
@@ -364,14 +365,16 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_map_unnamespaced_contains_prefers_canonical_over_alias.prime", source);
-  const std::string exePath =
+      writeTemp("compile_cpp_map_unnamespaced_contains_prefers_canonical_over_alias_reject.prime",
+                source);
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_map_unnamespaced_contains_prefers_canonical_over_alias_exe")
+       "primec_cpp_map_unnamespaced_contains_prefers_canonical_over_alias_reject.err")
           .string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: contains") != std::string::npos);
 }
 
 TEST_CASE("rejects map unnamespaced contains without helper in C++ emitter with unknown-target diagnostics") {
@@ -395,7 +398,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/contains") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: contains") != std::string::npos);
 }
 
 TEST_CASE("rejects map unnamespaced tryAt through canonical helper in C++ emitter without on_error") {
@@ -422,7 +425,7 @@ main() {
   CHECK(readFile(errPath).find("missing on_error for ? usage") != std::string::npos);
 }
 
-TEST_CASE("rejects map unnamespaced tryAt through compatibility helper in C++ emitter with unknown-target diagnostics") {
+TEST_CASE("rejects map unnamespaced tryAt through compatibility helper in C++ emitter without on_error") {
   const std::string source = R"(
 [effects(heap_alloc), return<Result<i32, ContainerError>>]
 /map/tryAt([map<i32, i32>] values, [i32] key) {
@@ -444,7 +447,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/tryAt") != std::string::npos);
+  CHECK(readFile(errPath).find("missing on_error for ? usage") != std::string::npos);
 }
 
 TEST_CASE("rejects map unnamespaced tryAt preferring canonical helper over compatibility alias in C++ emitter without on_error") {

@@ -184,39 +184,6 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     keyTypeOut = candidate.templateArgs.front();
     return true;
   };
-  auto explicitCallPath = [&]() -> std::string {
-    if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.name.empty()) {
-      return {};
-    }
-    if (!expr.name.empty() && expr.name.front() == '/') {
-      return expr.name;
-    }
-    std::string prefix = expr.namespacePrefix;
-    if (!prefix.empty() && prefix.front() != '/') {
-      prefix.insert(prefix.begin(), '/');
-    }
-    if (prefix.empty()) {
-      return "/" + expr.name;
-    }
-    return prefix + "/" + expr.name;
-  };
-  const std::string explicitPath = explicitCallPath();
-  auto hasExplicitDeclaredCallPath = [&](const std::string &path) {
-    return hasDeclaredDefinitionPath(path) || hasImportedDefinitionPath(path);
-  };
-
-  const bool isExplicitMapContainsOrTryAtAlias =
-      explicitPath == "/map/contains" || explicitPath == "/map/contains_ref" ||
-      explicitPath == "/map/tryAt" || explicitPath == "/map/tryAt_ref";
-  if (!expr.isMethodCall && isExplicitMapContainsOrTryAtAlias) {
-    if (!hasExplicitDeclaredCallPath(explicitPath)) {
-      return failLateMapAccessBuiltinDiagnostic("unknown call target: " +
-                                               explicitPath);
-    }
-    handledOut = false;
-    return true;
-  }
-
   std::string builtinName;
   auto isExperimentalMapReceiver = [&](const Expr &receiverExpr) {
     std::string ignoredKeyType;
