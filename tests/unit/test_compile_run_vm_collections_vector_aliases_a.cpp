@@ -64,7 +64,7 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("keeps builtin vm map namespaced count method compatibility alias") {
+TEST_CASE("rejects vm map namespaced count method compatibility alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
@@ -82,8 +82,9 @@ main() {
                                "primec_vm_map_namespaced_count_method_compatibility_alias_reject_out.txt")
                                   .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 1);
-  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("unknown method: /map/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm bare map count method without imported canonical helper") {

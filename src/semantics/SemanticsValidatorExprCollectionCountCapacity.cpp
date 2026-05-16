@@ -107,6 +107,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       [](const std::string &helperName) {
         return helperName == "count" || helperName == "count_ref";
       };
+  if (const std::string removedRootMapDiagnostic =
+          removedRootMapMethodDiagnostic(expr);
+      !removedRootMapDiagnostic.empty()) {
+    handledOut = true;
+    return failExprDiagnostic(expr, removedRootMapDiagnostic);
+  }
   const auto canonicalVectorHelperPath =
       [](std::string_view helperName) {
         std::string path = canonicalVectorCompatibilityHelperPath(helperName);

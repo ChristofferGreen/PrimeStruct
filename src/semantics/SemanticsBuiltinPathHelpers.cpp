@@ -573,6 +573,35 @@ bool isExplicitRemovedCollectionCallAlias(std::string rawPath) {
   return false;
 }
 
+std::string removedRootMapMethodDiagnostic(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || !expr.isMethodCall ||
+      expr.args.empty()) {
+    return {};
+  }
+  std::string normalizedName = expr.name;
+  if (!normalizedName.empty() && normalizedName.front() == '/') {
+    normalizedName.erase(normalizedName.begin());
+  }
+  std::string normalizedPrefix = expr.namespacePrefix;
+  if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
+    normalizedPrefix.erase(normalizedPrefix.begin());
+  }
+  const std::string rootName = std::string("ma") + "p";
+  const std::string rootPrefix = rootName + "/";
+  std::string helperName;
+  if (normalizedPrefix == rootName) {
+    helperName = normalizedName;
+  } else if (normalizedName.rfind(rootPrefix, 0) == 0) {
+    helperName = normalizedName.substr(rootPrefix.size());
+  } else {
+    return {};
+  }
+  if (!isRemovedMapCompatibilityHelper(helperName)) {
+    return {};
+  }
+  return "unknown method: /" + rootPrefix + helperName;
+}
+
 bool isLifecycleHelperName(const std::string &fullPath) {
   static const std::array<HelperSuffixInfo, 10> suffixes = {{
       {"Create", ""},

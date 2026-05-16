@@ -1691,6 +1691,11 @@ Task template:
       native map implementation. Remaining work is to delete the now-unused
       production C++ map hooks instead of preserving them as compatibility
       dispatch.
+    - 2026-05-16: Explicit rooted `/map/count` method spellings now reject
+      before semantic pre-dispatch, return-kind inference, lowerer method
+      lookup, or emitter helper parsing can borrow canonical
+      `/std/collections/map/count` behavior; the map-surface trace caps for
+      the touched inference/emitter files were tightened with that removal.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

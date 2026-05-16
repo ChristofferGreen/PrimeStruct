@@ -79,8 +79,6 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       normalizedMethodName = std::string(
           stripUnrootedCanonicalVectorCompatibilityPrefix(
               normalizedMethodName));
-    } else if (normalizedMethodName.rfind("map/", 0) == 0) {
-      normalizedMethodName = normalizedMethodName.substr(std::string("map/").size());
     } else if (normalizedMethodName.rfind("std/collections/map/", 0) == 0) {
       normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/map/").size());
     }
@@ -264,6 +262,10 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
   } else {
     explicitRemovedMethodPath = explicitRemovedCollectionMethodPath(methodName, expr.namespacePrefix);
+  }
+  if (!removedRootMapMethodDiagnostic(expr).empty() &&
+      !hasDeclaredDefinitionPath(explicitRemovedMethodPath)) {
+    return false;
   }
   auto methodTargetMemoKey = [&](std::string_view receiverTypeText)
       -> std::optional<CallTargetResolutionScratch::MethodTargetMemoKey> {

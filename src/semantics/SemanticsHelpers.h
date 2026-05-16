@@ -117,6 +117,7 @@ bool getBuiltinMutationName(const Expr &expr, std::string &out);
 bool isRootBuiltinName(const std::string &name);
 bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverPath, std::string rawMethodName);
 bool isExplicitRemovedCollectionCallAlias(std::string rawPath);
+std::string removedRootMapMethodDiagnostic(const Expr &expr);
 bool isLifecycleHelperName(const std::string &fullPath);
 bool getBuiltinClampName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinMinMaxName(const Expr &expr, std::string &out, bool allowBare);

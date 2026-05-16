@@ -494,16 +494,14 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   if (resolvePublishedVectorHelperExprMemberName(expr, helperName)) {
     return helperName == targetName;
   }
-  if ((resolvedPath.rfind("/map/", 0) == 0 ||
-       resolvedPath.rfind("/std/collections/map/", 0) == 0) &&
+  if (resolvedPath.rfind("/std/collections/map/", 0) == 0 &&
       resolvePublishedCollectionSurfaceExprMemberName(
           expr, StdlibSurfaceId::CollectionsMapHelpers, helperName)) {
     return (helperName == "count" || helperName == "at" ||
             helperName == "at_unsafe") &&
            helperName == targetName;
   }
-  if ((resolvedPath.rfind("/map/", 0) == 0 ||
-       resolvedPath.rfind("/std/collections/map/", 0) == 0) &&
+  if (resolvedPath.rfind("/std/collections/map/", 0) == 0 &&
       resolvePublishedCollectionSurfaceExprMemberName(
           expr, StdlibSurfaceId::CollectionsMapConstructors, helperName)) {
     return helperName == targetName;

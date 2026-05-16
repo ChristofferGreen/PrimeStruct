@@ -425,6 +425,10 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     }
     return {};
   };
+  if (isExplicitMapMethodAliasPath(explicitMethodPath)) {
+    errorOut = "unknown method: " + explicitMethodPath;
+    return nullptr;
+  }
   auto resolveDefinitionFamilyByArity = [&](const std::string &path,
                                             size_t argCount) -> const Definition * {
     auto defIt = defMap.find(path);
@@ -631,6 +635,13 @@ const Definition *resolveMethodCallDefinitionFromExpr(
           !explicitVectorCountBridgePath.empty()
               ? explicitVectorCountBridgePath
               : resolvedPath;
+      if (isExplicitMapMethodAliasPath(explicitMethodPath) &&
+          preferredResolvedPath == explicitMethodPath) {
+        errorOut =
+            "semantic-product method-call target missing lowered definition: " +
+            preferredResolvedPath;
+        return nullptr;
+      }
       if (allowsReceiverResolvedVectorMetadataFallback) {
         std::string receiverTypeText =
             unwrapSemanticReceiverTypeText(

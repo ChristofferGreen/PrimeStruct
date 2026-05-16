@@ -1956,9 +1956,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (explicitMapHelperPath.rfind("/map/", 0) != 0) {
       return false;
     }
-    if (hasDefinitionPath(explicitMapHelperPath) ||
-        hasDeclaredDefinitionPath(explicitMapHelperPath) ||
-        hasImportedDefinitionPath(explicitMapHelperPath)) {
+    if (hasDeclaredDefinitionPath(explicitMapHelperPath)) {
       resolvedOut = explicitMapHelperPath;
       isBuiltinOut = false;
       return true;
@@ -1966,6 +1964,13 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return failMethodTargetResolutionDiagnostic("unknown method: " +
                                                 explicitMapHelperPath);
   };
+  if (!explicitMapHelperPath.empty()) {
+    const bool resolvedExplicitRootMapMethod =
+        resolveExplicitRootMapMethodPath();
+    if (resolvedExplicitRootMapMethod || !error_.empty()) {
+      return resolvedExplicitRootMapMethod;
+    }
+  }
   auto resolveDirectReceiver = [&](const Expr &directCandidate,
                                    std::string &directElemTypeOut) -> bool {
     return this->resolveDirectSoaVectorOrExperimentalBorrowedReceiver(

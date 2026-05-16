@@ -681,6 +681,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
 
     std::string resolved;
+    if (const std::string removedRootMapDiagnostic =
+            removedRootMapMethodDiagnostic(expr);
+        !removedRootMapDiagnostic.empty()) {
+      return failExprRootDiagnostic(removedRootMapDiagnostic);
+    }
     ExprPreDispatchDirectCallContext preDispatchDirectCallContext;
     preDispatchDirectCallContext.dispatchBootstrap = &dispatchBootstrap;
     std::optional<Expr> rewrittenPreDispatchDirectCall;

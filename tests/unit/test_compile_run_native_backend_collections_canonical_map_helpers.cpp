@@ -415,7 +415,7 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("native map namespaced count method uses builtin count through compatibility alias") {
+TEST_CASE("native map namespaced count method compatibility alias is rejected") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
@@ -439,8 +439,9 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(outPath).find("unknown method: /map/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects native bare map count method without imported canonical helper") {

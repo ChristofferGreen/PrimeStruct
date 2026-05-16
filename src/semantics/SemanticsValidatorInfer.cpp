@@ -62,6 +62,12 @@ ReturnKind SemanticsValidator::inferExprReturnKindImpl(const Expr &expr,
   if (expr.kind == Expr::Kind::StringLiteral) {
     return ReturnKind::String;
   }
+  if (const std::string removedRootMapDiagnostic =
+          removedRootMapMethodDiagnostic(expr);
+      !removedRootMapDiagnostic.empty()) {
+    (void)failExprDiagnostic(expr, removedRootMapDiagnostic);
+    return ReturnKind::Unknown;
+  }
   if (expr.kind == Expr::Kind::Name) {
     if (const BindingInfo *paramBinding = findParamBinding(params, expr.name)) {
       if (paramBinding->typeName == "Reference" && !paramBinding->typeTemplateArg.empty()) {
