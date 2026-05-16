@@ -33,13 +33,6 @@
         }
       }
     }
-    if (preferred.rfind("/map/", 0) == 0 && defMap.count(preferred) == 0) {
-      const std::string stdlibAlias =
-          "/std/collections/map/" + preferred.substr(std::string("/map/").size());
-      if (defMap.count(stdlibAlias) > 0) {
-        preferred = stdlibAlias;
-      }
-    }
     return preferred;
   };
   auto normalizeCollectionMethodName = [](const std::string &receiverStruct,
