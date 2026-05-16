@@ -4,6 +4,17 @@
 
 namespace primec::semantics {
 
+namespace {
+bool isSpecializedExperimentalMapBackingPath(std::string typeName) {
+  typeName = normalizeBindingTypeName(typeName);
+  if (!typeName.empty() && typeName.front() == '/') {
+    typeName.erase(typeName.begin());
+  }
+  return isExperimentalCollectionBackingTypeName("map", "Map", typeName) &&
+         typeName.find("__") != std::string::npos;
+}
+} // namespace
+
 std::string SemanticsValidator::inferStructReturnPath(
     const Expr &expr,
     const std::vector<ParameterInfo> &params,
@@ -615,7 +626,7 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
         if (!normalizedCollectionPath.empty() && normalizedCollectionPath.front() != '/') {
           normalizedCollectionPath.insert(normalizedCollectionPath.begin(), '/');
         }
-        if (normalizedCollectionPath.rfind("/std/collections/experimental_map/Map__", 0) == 0 &&
+        if (isSpecializedExperimentalMapBackingPath(normalizedCollectionPath) &&
             structNames_.count(resolvedCollectionPath) > 0) {
           return resolvedCollectionPath;
         }
