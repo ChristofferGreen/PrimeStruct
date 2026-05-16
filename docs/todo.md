@@ -489,6 +489,9 @@ Task template:
   Emitter collection-type canonical map access detection now resolves helper
   ownership through `collections.map_helpers` metadata instead of parsing the
   canonical map helper prefix.
+  Lowerer statement-binding explicit map helper canonicalization now detects
+  raw published map helper paths through `CollectionsMapHelpers` metadata
+  instead of direct rooted/canonical map path prefix checks.
   Emitter binding-type map compatibility checks now derive canonical and
   experimental map type paths through local collection path helpers instead of
   direct map path fragments.

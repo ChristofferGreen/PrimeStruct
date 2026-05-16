@@ -7,6 +7,12 @@
   resolved-path helpers, inline-dispatch map helper classifiers, and SoA
   helper path strings. The map bridge-key assertion updated in the same run
   did not fail.
+- `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers keep explicit map helper same-path defs"`
+  is stale after the map stdlib-ownership cutover. On 2026-05-16 it still
+  expected `/map/at` and `/map/at_unsafe` calls with a canonical fallback
+  resolver to return `nullptr`, while the current resolver returns the
+  canonical helper definitions. Adjacent explicit canonical `contains` and
+  `tryAt` same-path coverage still passes.
 - `PrimeStruct_backend_ir_tests --test-case="ir lowers map literal call as statement"`
   is stale after parser/template cleanup. On 2026-05-16 it failed before IR
   lowering with `Parse error: duplicate template parameter: i32` for the
@@ -105,6 +111,20 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 23:46 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers keep explicit canonical map contains and tryAt same-path defs" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none in the
+  listed passing commands; the stale explicit map helper same-path fixture is
+  listed above | notes: lowerer statement-binding explicit map helper
+  canonicalization now detects raw published map helper paths through
+  `CollectionsMapHelpers` metadata instead of direct rooted/canonical map path
+  prefix checks; the map surface inventory remains at 318 production traces
+  because a raw path trace was replaced by a surface-id trace, and backing
+  traces remain at 0.
 - 2026-05-16 23:43 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="C++ emitter helper keeps canonical map contains and tryAt direct-call return metadata" --no-skip`;

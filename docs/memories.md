@@ -526,7 +526,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   ownership through published stdlib surface metadata instead of direct map
   helper prefix strings; emitter collection-type canonical map access
   detection now resolves helper ownership through `collections.map_helpers`
-  metadata instead of parsing the canonical map helper prefix. The stale
+  metadata instead of parsing the canonical map helper prefix; lowerer
+  statement-binding explicit map helper canonicalization now detects raw
+  published map helper paths through `CollectionsMapHelpers` metadata instead
+  of direct rooted/canonical map path prefix checks. The stale
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`
   return type, which allowed the emitter collection-type rooted map access

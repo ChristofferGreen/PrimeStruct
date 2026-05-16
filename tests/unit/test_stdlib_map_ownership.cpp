@@ -769,7 +769,11 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(nativeTailSource.find("isMapReadHelperName(directMapReadHelperName)") != std::string::npos);
   CHECK(lowerStatementsExprSource.find("Keep direct canonical map access helpers") == std::string::npos);
   CHECK(lowerStatementsExprSource.find("keepsBuiltinCanonicalMapHelperReturn") == std::string::npos);
-  CHECK(lowerStatementsBindingsSource.find("collectionMemberRoot(\"map\")") !=
+  CHECK(lowerStatementsBindingsSource.find("resolvePublishedStdlibSurfaceMemberName(\n"
+                                           "                  rawPath,\n"
+                                           "                  StdlibSurfaceId::CollectionsMapHelpers") !=
+        std::string::npos);
+  CHECK(lowerStatementsBindingsSource.find("rawPath.rfind(\"/map/\", 0)") ==
         std::string::npos);
   CHECK(lowerStatementsBindingsSource.find("rawPath.rfind(\"/std/collections/map/\", 0)") ==
         std::string::npos);
