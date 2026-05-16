@@ -1891,6 +1891,8 @@ Task template:
     - 2026-05-16: Stale semantic struct-return coverage now locks that map
       method sugar ignores rooted `/map/at` helpers and uses the canonical
       map helper return type.
+    - 2026-05-16: Emitter collection-type inference no longer prunes
+      canonical map access candidates from rooted `/map/<access>` inputs.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.
