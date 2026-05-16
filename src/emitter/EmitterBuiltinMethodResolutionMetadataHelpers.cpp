@@ -453,12 +453,6 @@ void pruneMapAccessStructReturnCompatibilityCandidates(
       eraseCandidate("/map/" + suffix);
       eraseCandidate("/std/collections/map/" + suffix);
     }
-  } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
-    const std::string suffix =
-        normalizedPath.substr(std::string("/std/collections/map/").size());
-    if (isCanonicalMapAccessHelperName(suffix)) {
-      eraseCandidate("/map/" + suffix);
-    }
   }
 }
 

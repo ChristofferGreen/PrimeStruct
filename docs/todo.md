@@ -1864,6 +1864,9 @@ Task template:
     - 2026-05-16: Emitter collection-type inference no longer prunes rooted
       `/map/<access>` candidates from canonical map access paths after the
       reverse candidates were removed.
+    - 2026-05-16: Emitter method metadata no longer prunes rooted
+      `/map/<access>` candidates from canonical map access paths after the
+      reverse candidates were removed.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

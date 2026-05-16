@@ -210,6 +210,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string emitterCollectionTypeHelpersSource =
       readText(repoRoot() / "src" / "emitter" /
                "EmitterExprCollectionTypeHelpers.h");
+  const std::string emitterMethodMetadataSource =
+      readText(repoRoot() / "src" / "emitter" /
+               "EmitterBuiltinMethodResolutionMetadataHelpers.cpp");
   const std::string statementLowererSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererStatementCallEmission.cpp");
   const std::string lowerStatementsExprSource =
@@ -266,6 +269,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!emitterCallPathHelpersSource.empty());
   REQUIRE(!emitterReturnInferenceCollectionsSource.empty());
   REQUIRE(!emitterCollectionTypeHelpersSource.empty());
+  REQUIRE(!emitterMethodMetadataSource.empty());
   REQUIRE(!statementLowererSource.empty());
   REQUIRE(!lowerStatementsExprSource.empty());
   REQUIRE(!inlineNativeSource.empty());
@@ -450,6 +454,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(emitterReturnInferenceCollectionsSource.find("appendUnique(\"/map/\" + suffix)") ==
         std::string::npos);
   CHECK(emitterCollectionTypeHelpersSource.find("eraseCandidate(\"/map/\" + suffix)") ==
+        std::string::npos);
+  CHECK(emitterMethodMetadataSource.find("} else if (normalizedPath.rfind(\"/std/collections/map/\", 0) == 0) {\n"
+                                         "    const std::string suffix =") ==
         std::string::npos);
   CHECK(statementLowererSource.find("isPrimeMapInsertBody") != std::string::npos);
   CHECK(statementLowererSource.find("rewriteMapInsertHelperStatementToCanonical") != std::string::npos);
