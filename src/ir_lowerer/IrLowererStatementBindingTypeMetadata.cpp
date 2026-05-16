@@ -9,6 +9,7 @@
 #include "IrLowererHelpers.h"
 #include "IrLowererResultHelpers.h"
 #include "IrLowererSemanticProductTargetAdapters.h"
+#include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "primec/SoaPathHelpers.h"
@@ -96,7 +97,7 @@ bool resolveSpecializedExperimentalMapStructPath(const std::string &typeText, st
   }
 
   std::ostringstream specializedPath;
-  specializedPath << "/std/collections/map/MapValue"
+  specializedPath << collectionTypePath("map") << "/MapValue"
                   << mangleTemplateTypeArgsSuffix(templateArgs);
   structPathOut = specializedPath.str();
   return true;

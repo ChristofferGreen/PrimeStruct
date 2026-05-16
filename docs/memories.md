@@ -151,7 +151,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `collectionTypePath("map")` rather than a hard-coded canonical map path
   literal; packed Result payload metadata should identify experimental map
   payload bases through `isExperimentalCollectionTypeName` instead of a
-  hard-coded experimental map path.
+  hard-coded experimental map path; statement-binding map struct metadata
+  should build canonical `MapValue` roots from `collectionTypePath("map")`.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

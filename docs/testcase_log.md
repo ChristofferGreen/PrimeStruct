@@ -54,6 +54,16 @@
 
 ## Recent Test Runs
 - 2026-05-16 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer statement binding helper classifies variadic map parameters"`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer statement binding helper preserves inferred borrowed map return metadata"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` |
+  failures: none | notes: statement-binding map struct metadata now builds
+  `MapValue` paths through `collectionTypePath("map")` instead of a
+  hard-coded canonical map path; the map surface inventory now observes 977
+  production traces and backing traces remain at 210.
+- 2026-05-16 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer result helpers resolve map Result payload metadata"`;
   `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;

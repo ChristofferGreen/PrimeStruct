@@ -1924,6 +1924,9 @@ Task template:
       `isExperimentalCollectionTypeName` and the ownership test no longer
       classifies the packed-result helper as an allowed experimental-map
       backing trace file.
+    - 2026-05-16: Statement-binding map struct metadata no longer hard-codes
+      the canonical `MapValue` root path; it now builds that root from
+      `collectionTypePath("map")`.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.
