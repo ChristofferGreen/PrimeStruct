@@ -80,7 +80,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   access helper calls, and diagnostic target formatting should not carry a
   rooted `/map/count__t` specialization shortcut; infer-method resolution
   should not mirror `/map/*` receiver paths to `/std/collections/map/*`
-  candidates or vice versa.
+  candidates or vice versa, and pointer-like call target candidate generation
+  should not append reciprocal `/map/*` and `/std/collections/map/*` helper
+  candidates.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -117,7 +119,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `/map/at*_ref` access helper calls; diagnostic target formatting no
   longer carries a rooted `/map/count__t` specialization shortcut;
   infer-method resolution no longer mirrors `/map/*` receiver paths to
-  `/std/collections/map/*` candidates or vice versa.
+  `/std/collections/map/*` candidates or vice versa; pointer-like call target
+  candidate generation no longer appends reciprocal `/map/*` and
+  `/std/collections/map/*` helper candidates.
 
 ### map-constructor-normalization-uses-public-path
 - Updated: 2026-05-16

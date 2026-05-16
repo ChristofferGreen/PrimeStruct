@@ -13,16 +13,6 @@ bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
          suffix != "remove_at" && suffix != "remove_swap";
 }
 
-bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
-  return helperName == "count" || helperName == "count_ref" ||
-         helperName == "size" ||
-         helperName == "contains" || helperName == "contains_ref" ||
-         helperName == "tryAt" || helperName == "tryAt_ref" ||
-         helperName == "at" || helperName == "at_ref" ||
-         helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
-         helperName == "insert" || helperName == "insert_ref";
-}
-
 std::vector<std::string> pointerLikeCallPathCandidates(const std::string &path) {
   std::vector<std::string> candidates;
   auto appendUnique = [&](const std::string &candidate) {
@@ -51,16 +41,6 @@ std::vector<std::string> pointerLikeCallPathCandidates(const std::string &path) 
     const std::string suffix = canonicalPath.substr(std::string("/array/").size());
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
       appendUnique(canonicalVectorCompatibilityHelperPathOrFallback(suffix));
-    }
-  } else if (canonicalPath.rfind("/map/", 0) == 0) {
-    const std::string suffix = canonicalPath.substr(std::string("/map/").size());
-    if (!isRemovedMapCompatibilityHelper(suffix)) {
-      appendUnique("/std/collections/map/" + suffix);
-    }
-  } else if (canonicalPath.rfind("/std/collections/map/", 0) == 0) {
-    const std::string suffix = canonicalPath.substr(std::string("/std/collections/map/").size());
-    if (!isRemovedMapCompatibilityHelper(suffix)) {
-      appendUnique("/map/" + suffix);
     }
   }
 

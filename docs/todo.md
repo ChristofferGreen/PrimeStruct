@@ -385,6 +385,8 @@ Task template:
   specialization shortcut.
   Infer-method resolution no longer mirrors `/map/*` receiver paths to
   `/std/collections/map/*` candidates or vice versa.
+  Pointer-like call target candidate generation no longer appends reciprocal
+  `/map/*` and `/std/collections/map/*` helper candidates.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic
