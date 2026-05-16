@@ -20,6 +20,19 @@ void eraseStructReturnCandidate(std::vector<std::string> &candidates, const std:
   }
 }
 
+std::string collectionTypePathLocal(const std::string &collectionName,
+                                    const std::string &typeName = {},
+                                    bool leadingSlash = true) {
+  std::string path = leadingSlash ? "/" : "";
+  path += "std/collections/";
+  path += collectionName;
+  if (!typeName.empty()) {
+    path += "/";
+    path += typeName;
+  }
+  return path;
+}
+
 } // namespace
 
 std::string SemanticsValidator::inferStructReturnCollectionPath(const std::string &typeName,
@@ -199,9 +212,11 @@ std::string SemanticsValidator::inferStructReturnPointerTargetTypeText(
 std::string SemanticsValidator::normalizeInferStructReturnHelperPath(const std::string &path) const {
   std::string normalizedPath = path;
   if (!normalizedPath.empty() && normalizedPath.front() != '/') {
+    const std::string unrootedMapPrefix =
+        collectionTypePathLocal("map", {}, false) + "/";
     if (normalizedPath.rfind("array/", 0) == 0 || isUnrootedVectorHelperPath(normalizedPath) ||
         isUnrootedCanonicalVectorCompatibilityPath(normalizedPath) ||
-        normalizedPath.rfind("std/collections/map/", 0) == 0) {
+        normalizedPath.rfind(unrootedMapPrefix, 0) == 0) {
       normalizedPath.insert(normalizedPath.begin(), '/');
     }
   }
@@ -311,7 +326,7 @@ std::string SemanticsValidator::specializedExperimentalMapStructReturnPath(
   }
 
   std::ostringstream specializedPath;
-  specializedPath << "/std/collections/map/MapValue__t"
+  specializedPath << collectionTypePathLocal("map", "MapValue") << "__t"
                   << std::hex
                   << fnv1a64(canonicalArgs.str());
   return specializedPath.str();

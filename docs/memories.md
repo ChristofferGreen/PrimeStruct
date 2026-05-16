@@ -166,7 +166,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   expectations; statement binding helper map struct-path inference should
   also derive `MapValue` roots through `collectionTypePath("map")`; semantics
   binding map type recognition should derive canonical map and `MapValue`
-  roots through a local collection path helper.
+  roots through a local collection path helper; semantics struct-return helper
+  path normalization and specialized `MapValue` return-path construction
+  should use that same local path-helper pattern.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
