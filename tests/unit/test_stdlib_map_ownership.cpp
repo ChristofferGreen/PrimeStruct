@@ -507,6 +507,17 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(emitterCallPathHelpersSource.find("preferred.rfind(\"map/\", 0) == 0 || preferred.rfind(\"std/collections/map/\", 0) == 0") ==
         std::string::npos);
+  CHECK(emitterCallPathHelpersSource.find("resolvedPath.rfind(\"/std/collections/map/\", 0)") ==
+        std::string::npos);
+  CHECK(emitterCallPathHelpersSource.find("resolvedPath.rfind(\"/map/\", 0)") ==
+        std::string::npos);
+  CHECK(emitterCallPathHelpersSource.find("scopedName.rfind(\"std/collections/map/\", 0)") ==
+        std::string::npos);
+  CHECK(emitterCallPathHelpersSource.find("scopedName.rfind(\"map/\", 0)") ==
+        std::string::npos);
+  CHECK(emitterCallPathHelpersSource.find("resolveCanonicalStdlibSurfaceExprMemberName(\n"
+                                          "          expr, StdlibSurfaceId::CollectionsMapHelpers") !=
+        std::string::npos);
   CHECK(emitterReturnInferenceCollectionsSource.find("const std::string mapAlias = \"/map/\" + suffix") ==
         std::string::npos);
   CHECK(emitterReturnInferenceCollectionsSource.find("preferred.rfind(\"/map/\", 0) == 0 && defMap.count(preferred) == 0") ==

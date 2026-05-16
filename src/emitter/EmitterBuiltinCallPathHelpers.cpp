@@ -176,6 +176,30 @@ bool isCanonicalVectorHelperExprPath(const Expr &expr) {
   return normalizedExprPath(expr).rfind(prefix, 0) == 0;
 }
 
+bool isCanonicalStdlibSurfaceExprPath(const Expr &expr, StdlibSurfaceId surfaceId) {
+  const auto *metadata = findStdlibSurfaceMetadata(surfaceId);
+  if (metadata == nullptr) {
+    return false;
+  }
+  const std::string path = normalizedExprPath(expr);
+  if (metadata->shape == StdlibSurfaceShape::ConstructorFamily) {
+    return path == metadata->canonicalPath ||
+           path.rfind(std::string(metadata->canonicalPath) + "__", 0) == 0;
+  }
+  const std::string prefix = std::string(metadata->canonicalPath) + "/";
+  return path.rfind(prefix, 0) == 0;
+}
+
+bool resolveCanonicalStdlibSurfaceExprMemberName(const Expr &expr,
+                                                 StdlibSurfaceId surfaceId,
+                                                 std::string &memberNameOut) {
+  if (!isCanonicalStdlibSurfaceExprPath(expr, surfaceId)) {
+    return false;
+  }
+  return resolvePublishedCollectionSurfaceExprMemberName(
+      expr, surfaceId, memberNameOut);
+}
+
 bool resolvePublishedVectorHelperExprMemberName(const Expr &expr,
                                                 std::string &memberNameOut) {
   if (!isCanonicalVectorHelperExprPath(expr)) {
@@ -318,8 +342,7 @@ bool getBuiltinArrayAccessNameLocal(const Expr &expr, std::string &out) {
   if (resolvePublishedVectorHelperExprMemberName(expr, out)) {
     return out == "at" || out == "at_unsafe";
   }
-  if (resolvedPath.rfind("/std/collections/map/", 0) == 0 &&
-      resolvePublishedCollectionSurfaceExprMemberName(
+  if (resolveCanonicalStdlibSurfaceExprMemberName(
           expr, StdlibSurfaceId::CollectionsMapHelpers, out)) {
     return isCanonicalMapAccessHelperName(out);
   }
@@ -496,15 +519,13 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   if (resolvePublishedVectorHelperExprMemberName(expr, helperName)) {
     return helperName == targetName;
   }
-  if (resolvedPath.rfind("/std/collections/map/", 0) == 0 &&
-      resolvePublishedCollectionSurfaceExprMemberName(
+  if (resolveCanonicalStdlibSurfaceExprMemberName(
           expr, StdlibSurfaceId::CollectionsMapHelpers, helperName)) {
     return (helperName == "count" || helperName == "at" ||
             helperName == "at_unsafe") &&
            helperName == targetName;
   }
-  if (resolvedPath.rfind("/std/collections/map/", 0) == 0 &&
-      resolvePublishedCollectionSurfaceExprMemberName(
+  if (resolveCanonicalStdlibSurfaceExprMemberName(
           expr, StdlibSurfaceId::CollectionsMapConstructors, helperName)) {
     return helperName == targetName;
   }
@@ -780,15 +801,12 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
     if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
       return false;
     }
-    std::string normalizedName = resolveExprPath(candidate);
-    if (!normalizedName.empty() && normalizedName.front() == '/') {
-      normalizedName.erase(normalizedName.begin());
-    }
-    const auto generatedSuffix = normalizedName.find("__");
-    if (generatedSuffix != std::string::npos) {
-      normalizedName.erase(generatedSuffix);
-    }
-    return normalizedName == "std/collections/map/entry";
+    std::string helperName;
+    return resolveCanonicalStdlibSurfaceExprMemberName(
+               candidate,
+               StdlibSurfaceId::CollectionsMapHelpers,
+               helperName) &&
+           helperName == "entry";
   };
   const bool hasEntryCtorArgs = [&]() {
     for (const auto &arg : expr.args) {
@@ -800,9 +818,7 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   }();
   std::string helperName;
   const std::string resolvedPath = resolveExprPath(expr);
-  if ((resolvedPath.rfind("/map/", 0) == 0 ||
-       resolvedPath.rfind("/std/collections/map/", 0) == 0) &&
-      resolvePublishedCollectionSurfaceExprMemberName(
+  if (resolvePublishedCollectionSurfaceExprMemberName(
           expr, StdlibSurfaceId::CollectionsMapConstructors, helperName) &&
       helperName == "map") {
     if (hasEntryCtorArgs) {
@@ -823,16 +839,8 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
       resolvePublishedVectorConstructorExprMemberName(expr, helperName)) {
     return false;
   }
-  if (scopedName.rfind("std/collections/map/", 0) == 0) {
-    std::string alias =
-        scopedName.substr(std::string("std/collections/map/").size());
-    if (alias == "map") {
-      if (hasEntryCtorArgs) {
-        return false;
-      }
-      out = "map";
-      return true;
-    }
+  if (resolveCanonicalStdlibSurfaceExprMemberName(
+          expr, StdlibSurfaceId::CollectionsMapHelpers, helperName)) {
     return false;
   }
   if (scopedName.rfind("std/collections/internal_soa_storage/", 0) == 0) {
@@ -843,7 +851,8 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
     }
     return false;
   }
-  if (scopedName.rfind("map/", 0) == 0) {
+  if (resolvePublishedCollectionSurfaceExprMemberName(
+          expr, StdlibSurfaceId::CollectionsMapHelpers, helperName)) {
     return false;
   }
   if (rawName.find('/') != std::string::npos) {

@@ -105,6 +105,19 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 23:39 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="C++ emitter helper rejects removed full-path map method aliases,C++ emitter helper keeps canonical map contains and tryAt direct-call return metadata" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="emitter collection helper metadata delegation stays source locked" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: emitter call-path helper classification now derives map helper and
+  constructor path ownership through published stdlib surface metadata instead
+  of direct map helper prefix strings; the map surface inventory now observes
+  320 production traces and backing traces remain at 0.
 - 2026-05-16 23:35 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="C++ emitter helper rejects removed full-path map method aliases,C++ emitter helper keeps canonical map contains and tryAt direct-call return metadata" --no-skip`;

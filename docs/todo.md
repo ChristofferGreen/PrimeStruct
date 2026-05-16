@@ -483,6 +483,9 @@ Task template:
   Emitter method type inference now classifies canonical and import-alias map
   access helper paths through published stdlib surface metadata instead of
   direct map helper prefix checks.
+  Emitter call-path helper classification now derives map helper and
+  constructor path ownership through published stdlib surface metadata instead
+  of direct map helper prefix strings.
   Emitter binding-type map compatibility checks now derive canonical and
   experimental map type paths through local collection path helpers instead of
   direct map path fragments.

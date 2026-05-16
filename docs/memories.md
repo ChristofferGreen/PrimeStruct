@@ -521,7 +521,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   inference no longer synthesizes canonical
   `/std/collections/map/<suffix>` candidates from rooted `/map/<suffix>`
   inputs; its unused rooted `/map/<access>` pruning lambda is also gone; and
-  vector stdlib helper preference no longer normalizes map paths. The stale
+  vector stdlib helper preference no longer normalizes map paths; emitter
+  call-path helper classification now derives map helper and constructor path
+  ownership through published stdlib surface metadata instead of direct map
+  helper prefix strings. The stale
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`
   return type, which allowed the emitter collection-type rooted map access
