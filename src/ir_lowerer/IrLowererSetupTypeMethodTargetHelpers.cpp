@@ -84,7 +84,6 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     const std::string normalized = stripReceiverPrefix(candidate);
     return normalized == "map" || normalized.rfind("map<", 0) == 0 ||
            normalized == "std/collections/map" || normalized.rfind("std/collections/map<", 0) == 0 ||
-           normalized == "Map" || normalized.rfind("Map<", 0) == 0 ||
            normalized == "std/collections/experimental_map/Map" ||
            normalized.rfind("std/collections/experimental_map/Map<", 0) == 0;
   };

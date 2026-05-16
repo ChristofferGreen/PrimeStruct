@@ -559,6 +559,10 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     }
     const bool isExplicitMapAccessHelper =
         isCanonicalMapAccessResolvedPath(resolved);
+    if (isExplicitMapAccessHelper && !isMap && !isExperimentalMap) {
+      handledOut = false;
+      return true;
+    }
     if (!expr.templateArgs.empty() &&
         (isMap || isExperimentalMap || isExplicitMapAccessHelper)) {
       return true;

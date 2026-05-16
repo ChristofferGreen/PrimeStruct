@@ -124,8 +124,7 @@ bool resolveSemanticProductResultOkPayloadInfo(
     if (!normalizedBase.empty() && normalizedBase.front() == '/') {
       normalizedBase.erase(normalizedBase.begin());
     }
-    if ((normalizedBase == "Map" ||
-         normalizedBase == "std/collections/experimental_map/Map") &&
+    if (normalizedBase == "std/collections/experimental_map/Map" &&
         resolveSpecializedExperimentalMapStructPathForBindingType(
             bindingTypeText, out.structType)) {
       return true;

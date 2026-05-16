@@ -349,11 +349,9 @@ bool isVectorBuiltinName(const Expr &expr, const char *name) {
 }
 
 bool isMapBuiltinName(const Expr &expr, const char *name) {
-  if (isSimpleCallName(expr, name)) {
-    return true;
-  }
-  std::string aliasName;
-  return resolveMapHelperAliasName(expr, aliasName) && aliasName == name;
+  (void)expr;
+  (void)name;
+  return false;
 }
 
 } // namespace primec::ir_lowerer::count_access_detail

@@ -389,21 +389,15 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
 }
 
 bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
-  if (expr.name.empty()) {
-    return false;
-  }
-  return resolvePublishedStdlibSurfaceExprMemberName(
-      expr,
-      StdlibSurfaceId::CollectionsMapHelpers,
-      helperNameOut);
+  (void)expr;
+  helperNameOut.clear();
+  return false;
 }
 
 bool resolveBorrowedMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
-  return resolvePublishedStdlibSurfaceExprMemberName(
-             expr,
-             StdlibSurfaceId::CollectionsMapHelpers,
-             helperNameOut) &&
-         helperNameOut.ends_with("_ref");
+  (void)expr;
+  helperNameOut.clear();
+  return false;
 }
 
 std::string stdCollectionsRoot(bool leadingSlash) {

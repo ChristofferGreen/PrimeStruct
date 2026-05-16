@@ -105,5 +105,48 @@ TEST_CASE("map2 stdlib source stays isolated from legacy map implementation") {
   CHECK(source.find("CollectionsMap") == std::string::npos);
 }
 
+TEST_CASE("compiles and runs canonical map stdlib-owned helpers") {
+  const std::string source = R"(
+import /std/collections/map/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [MapValue<string, i32> mut] values{mapNew<string, i32>()}
+  /std/collections/map/mapInsert<string, i32>(values, "left"raw_utf8, 4i32)
+  /std/collections/map/mapInsert<string, i32>(values, "right"raw_utf8, 7i32)
+  /std/collections/map/mapInsert<string, i32>(values, "left"raw_utf8, 9i32)
+  [i32] c{/std/collections/map/mapCount<string, i32>(values)}
+  [i32] left{/std/collections/map/mapAt<string, i32>(values, "left"raw_utf8)}
+  [i32] right{/std/collections/map/mapAtUnsafe<string, i32>(values, "right"raw_utf8)}
+  [i32 mut] total{plus(c, plus(left, right))}
+  if(/std/collections/map/mapContains<string, i32>(values, "missing"raw_utf8),
+     then() { assign(total, 99i32) },
+     else() { })
+  return(total)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_map_stdlib_owned_helpers.prime", source);
+  const std::string outPath =
+      (testScratchPath("") / "primec_native_map_stdlib_owned_helpers_out.txt").string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_map_stdlib_owned_helpers_exe").string();
+
+  const std::string compileCmd = map2PrimecCompileCommand(srcPath, exePath, outPath);
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(exePath) == 18);
+}
+
+TEST_CASE("canonical map stdlib source stays isolated from legacy implementation") {
+  const std::filesystem::path sourcePath =
+      map2RepoRoot() / "stdlib/std/collections/map.prime";
+  const std::string source = readFile(sourcePath.string());
+
+  CHECK(source.find("/std/collections/internal_map") == std::string::npos);
+  CHECK(source.find("experimental_map") == std::string::npos);
+  CHECK(source.find("Map__") == std::string::npos);
+  CHECK(source.find("CollectionsMap") == std::string::npos);
+}
+
 TEST_SUITE_END();
 #endif

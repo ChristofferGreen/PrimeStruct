@@ -634,10 +634,8 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     const Expr &keyExpr = expr.args[1];
     std::string mapKeyType;
     if (!resolveMapKeyType(receiverExpr, *dispatchResolvers, mapKeyType)) {
-      if (!validateExpr(params, locals, receiverExpr)) {
-        return false;
-      }
-      return failCountCapacityMapBuiltin(helperName + " requires map target");
+      handledOut = false;
+      return true;
     }
     if (!mapKeyType.empty()) {
       if (normalizeBindingTypeName(mapKeyType) == "string") {

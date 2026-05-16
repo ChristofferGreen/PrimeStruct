@@ -137,15 +137,17 @@ main() {
   CHECK(runCommand(exePath) == 22);
 }
 
-TEST_CASE("exact map import runs explicit stdlib surface in C++ emitter") {
+TEST_CASE("map wildcard import runs stdlib-owned surface in C++ emitter") {
   const std::string source = R"(
-import /std/collections/map
+import /std/collections/map/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 8i32)}
-  return(plus(/std/collections/map/count(values),
-      /std/collections/map/at_unsafe(values, 2i32)))
+  [MapValue<string, i32> mut] values{/std/collections/map/mapNew<string, i32>()}
+  /std/collections/map/mapInsert<string, i32>(values, "one"raw_utf8, 4i32)
+  /std/collections/map/mapInsert<string, i32>(values, "two"raw_utf8, 8i32)
+  return(plus(/std/collections/map/mapCount<string, i32>(values),
+      /std/collections/map/mapAtUnsafe<string, i32>(values, "two"raw_utf8)))
 }
 )";
   const std::string srcPath = writeTemp("compile_exact_map_import_exe.prime", source);

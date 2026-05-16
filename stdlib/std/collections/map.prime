@@ -1,90 +1,299 @@
-// Canonical public wrapper layer over the internal_map implementation module.
-import /std/collections/internal_map/*
+// Standalone canonical stdlib-owned map implementation.
+// This module intentionally does not import the retired native map implementation.
+import /std/collections/equality/*
+import /std/collections/errors/*
+import /std/collections/internal_vector/*
 
-[public return<Entry<K, V>>]
-/std/collections/map/entry<K, V>([K] key, [V] value) {
-  return(/std/collections/internal_map/entry<K, V>(key, value))
-}
+namespace std {
+  namespace collections {
+  namespace map {
+  [public struct]
+  Entry<K, V>() {
+    [public K] key
+    [public V] value
+  }
 
-[public effects(heap_alloc), return<map<K, V>>]
-/std/collections/map/map<K, V>([args<Entry<K, V>>] entries) {
-  [mut] out{/std/collections/internal_map/mapNew<K, V>()}
-  entryCount{count(entries)}
-  [mut] index{0i32}
-  while(less_than(index, entryCount), do() {
-    current{entries[index]}
-    /std/collections/internal_map/insertImpl<K, V>(out, current.key, current.value)
-    increment(index)
-  })
-  return(out)
-}
+  [public struct]
+  MapValue<K, V>() {
+    [public Vector<K> mut] keys{/std/collections/internal_vector/vector<K>()}
+    [public Vector<V> mut] payloads{/std/collections/internal_vector/vector<V>()}
 
-[public effects(heap_alloc), return<map<K, V>>]
-/std/collections/map/map<K, V>([K] firstKey, [V] firstValue) {
-  return(/std/collections/internal_map/mapSingle<K, V>(firstKey, firstValue))
-}
+    [public return<i32>]
+    mapCount() {
+      [Vector<K>] keys{this.keys}
+      return(/std/collections/internal_vector/vectorCount<K>(keys))
+    }
 
-[public effects(heap_alloc), return<map<K, V>>]
-/std/collections/map/map<K, V>([K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue) {
-  return(/std/collections/internal_map/mapPair<K, V>(firstKey, firstValue, secondKey, secondValue))
-}
+    [public return<bool> Comparable<K>]
+    mapContains([K] key) {
+      [Vector<K>] keys{this.keys}
+      [i32] limit{/std/collections/internal_vector/vectorCount<K>(keys)}
+      return(less_than(
+          /std/collections/map/findIndex<K, V>(this, key),
+          limit))
+    }
 
-[public return<i32>]
-/std/collections/map/count<K, V>([map<K, V>] values) {
-  return(/std/collections/internal_map/countImpl<K, V>(values))
-}
+    [public return<Result<V, /std/collections/ContainerError>> Comparable<K>]
+    mapTryAt([K] key) {
+      [i32] index{/std/collections/map/findIndex<K, V>(this, key)}
+      [Vector<V>] payloads{this.payloads}
+      [Vector<K>] keys{this.keys}
+      [i32] limit{/std/collections/internal_vector/vectorCount<K>(keys)}
+      if(less_than(index, limit),
+         then() { return(Result.ok(/std/collections/internal_vector/vectorAtUnsafe<V>(payloads, index))) },
+         else() { return(/std/collections/ContainerError/result<V>(/std/collections/ContainerError/missingKey())) })
+    }
 
-[public return<i32>]
-/std/collections/map/count_ref<K, V>([Reference<map<K, V>>] values) {
-  return(/std/collections/internal_map/countRefImpl<K, V>(values))
-}
+    [public return<V> Comparable<K>]
+    mapAt([K] key) {
+      [i32] index{/std/collections/map/findIndex<K, V>(this, key)}
+      [Vector<V>] payloads{this.payloads}
+      [Vector<K>] keys{this.keys}
+      [i32] limit{/std/collections/internal_vector/vectorCount<K>(keys)}
+      if(less_than(index, limit),
+         then() { return(/std/collections/internal_vector/vectorAtUnsafe<V>(payloads, index)) },
+         else() { return(/std/collections/internal_vector/vectorAt<V>(payloads, index)) })
+    }
 
-[public return<bool> Comparable<K>]
-/std/collections/map/contains<K, V>([map<K, V>] values, [K] key) {
-  return(/std/collections/internal_map/containsImpl<K, V>(values, key))
-}
+    [public return<V> Comparable<K>]
+    mapAtUnsafe([K] key) {
+      [Vector<V>] payloads{this.payloads}
+      return(/std/collections/internal_vector/vectorAtUnsafe<V>(
+          payloads,
+          /std/collections/map/findIndex<K, V>(this, key)))
+    }
 
-[public return<bool> Comparable<K>]
-/std/collections/map/contains_ref<K, V>([Reference<map<K, V>>] values, [K] key) {
-  return(/std/collections/internal_map/containsRefImpl<K, V>(values, key))
-}
+    [public effects(heap_alloc), return<void> Comparable<K>]
+    mapInsert([K] key, [V] value) {
+      [i32] index{/std/collections/map/findIndex<K, V>(this, key)}
+      [Vector<K> mut] keys{this.keys}
+      [Vector<V> mut] payloads{this.payloads}
+      [i32] limit{/std/collections/internal_vector/vectorCount<K>(keys)}
+      if(less_than(index, limit),
+         then() {
+           /std/collections/map/overwriteSlot<V>(payloads, index, value)
+           assign(this.payloads, payloads)
+         },
+         else() {
+           /std/collections/internal_vector/vectorPush<K>(keys, key)
+           /std/collections/internal_vector/vectorPush<V>(payloads, value)
+           assign(this.keys, keys)
+           assign(this.payloads, payloads)
+         })
+    }
 
-[public return<Result<V, /std/collections/ContainerError>> Comparable<K>]
-/std/collections/map/tryAt<K, V>([map<K, V>] values, [K] key) {
-  return(/std/collections/internal_map/tryAtImpl<K, V>(values, key))
-}
+    [public mut]
+    Move([Reference<Self>] other) {
+      assign(this.keys, other.keys)
+      assign(this.payloads, other.payloads)
+      assign(other.keys, /std/collections/internal_vector/vector<K>())
+      assign(other.payloads, /std/collections/internal_vector/vector<V>())
+    }
+  }
 
-[public return<Result<V, /std/collections/ContainerError>> Comparable<K>]
-/std/collections/map/tryAt_ref<K, V>([Reference<map<K, V>>] values, [K] key) {
-  return(/std/collections/internal_map/tryAtRefImpl<K, V>(values, key))
-}
+  [public return<Entry<K, V>>]
+  entry<K, V>([K] key, [V] value) {
+    return(Entry<K, V>{key, value})
+  }
 
-[public return<V> Comparable<K>]
-/std/collections/map/at<K, V>([map<K, V>] values, [K] key) {
-  return(/std/collections/internal_map/atImpl<K, V>(values, key))
-}
+  [public effects(heap_alloc), return<MapValue<K, V>>]
+  mapNew<K, V>() {
+    return(MapValue<K, V>{})
+  }
 
-[public return<V> Comparable<K>]
-/std/collections/map/at_ref<K, V>([Reference<map<K, V>>] values, [K] key) {
-  return(/std/collections/internal_map/atRefImpl<K, V>(values, key))
-}
+  [return<bool>]
+  keysEqual<K>([K] left, [K] right) {
+    return(left.equal(right))
+  }
 
-[public return<V> Comparable<K>]
-/std/collections/map/at_unsafe<K, V>([map<K, V>] values, [K] key) {
-  return(/std/collections/internal_map/atUnsafeImpl<K, V>(values, key))
-}
+  [public effects(heap_alloc), return<MapValue<K, V>> Comparable<K>]
+  map<K, V>([args<Entry<K, V>>] entries) {
+    [MapValue<K, V> mut] out{mapNew<K, V>()}
+    [i32] entryCount{count(entries)}
+    [i32 mut] index{0i32}
+    while(less_than(index, entryCount), do() {
+      [Entry<K, V>] current{entries[index]}
+      /std/collections/map/mapInsert<K, V>(out, current.key, current.value)
+      increment(index)
+    })
+    return(out)
+  }
 
-[public return<V> Comparable<K>]
-/std/collections/map/at_unsafe_ref<K, V>([Reference<map<K, V>>] values, [K] key) {
-  return(/std/collections/internal_map/atUnsafeRefImpl<K, V>(values, key))
-}
+  [public effects(heap_alloc), return<MapValue<K, V>> Comparable<K>]
+  map<K, V>([K] firstKey, [V] firstValue) {
+    [MapValue<K, V> mut] out{mapNew<K, V>()}
+    /std/collections/map/mapInsert<K, V>(out, firstKey, firstValue)
+    return(out)
+  }
 
-[public effects(heap_alloc), return<void> Comparable<K>]
-/std/collections/map/insert<K, V>([map<K, V> mut] values, [K] key, [V] value) {
-  /std/collections/internal_map/insertImpl<K, V>(values, key, value)
-}
+  [public effects(heap_alloc), return<MapValue<K, V>> Comparable<K>]
+  map<K, V>([K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue) {
+    [MapValue<K, V> mut] out{map<K, V>(firstKey, firstValue)}
+    /std/collections/map/mapInsert<K, V>(out, secondKey, secondValue)
+    return(out)
+  }
 
-[public effects(heap_alloc), return<void> Comparable<K>]
-/std/collections/map/insert_ref<K, V>([Reference<map<K, V>> mut] values, [K] key, [V] value) {
-  /std/collections/internal_map/insertRefImpl<K, V>(values, key, value)
+  [public return<i32>]
+  mapCount<K, V>([MapValue<K, V>] entries) {
+    [Vector<K>] keys{entries.keys}
+    return(/std/collections/internal_vector/vectorCount<K>(keys))
+  }
+
+  [public return<i32>]
+  mapCountRef<K, V>([Reference<MapValue<K, V>>] entries) {
+    [Vector<K>] keys{entries.keys}
+    return(/std/collections/internal_vector/vectorCount<K>(keys))
+  }
+
+  [return<i32> Comparable<K>]
+  findIndex<K, V>([MapValue<K, V>] entries, [K] key) {
+    [i32 mut] index{0i32}
+    [Vector<K>] keys{entries.keys}
+    [i32] limit{/std/collections/internal_vector/vectorCount<K>(keys)}
+    while(less_than(index, limit), do() {
+      if(/std/collections/map/keysEqual<K>(/std/collections/internal_vector/vectorAt<K>(keys, index), key),
+         then() { return(index) },
+         else() { })
+      increment(index)
+    })
+    return(limit)
+  }
+
+  [return<i32> Comparable<K>]
+  findIndexRef<K, V>([Reference<MapValue<K, V>>] entries, [K] key) {
+    [i32 mut] index{0i32}
+    [Vector<K>] keys{entries.keys}
+    [i32] limit{/std/collections/internal_vector/vectorCount<K>(keys)}
+    while(less_than(index, limit), do() {
+      if(/std/collections/map/keysEqual<K>(/std/collections/internal_vector/vectorAt<K>(keys, index), key),
+         then() { return(index) },
+         else() { })
+      increment(index)
+    })
+    return(limit)
+  }
+
+  [return<void>]
+  overwriteSlot<T>([Vector<T> mut] values, [i32] index, [T] value) {
+    [Pointer<uninitialized<T>> mut] slot{
+        /std/collections/internal_buffer_unchecked/bufferOffsetUnsafe<uninitialized<T>>(values.data, index)}
+    drop(dereference(slot))
+    init(dereference(slot), value)
+  }
+
+  [public effects(heap_alloc), return<void> Comparable<K>]
+  mapInsert<K, V>([MapValue<K, V> mut] entries, [K] key, [V] value) {
+    [i32] index{/std/collections/map/findIndex<K, V>(entries, key)}
+    [Vector<K> mut] keys{entries.keys}
+    [Vector<V> mut] payloads{entries.payloads}
+    if(less_than(index, /std/collections/map/mapCount<K, V>(entries)),
+       then() {
+         /std/collections/map/overwriteSlot<V>(payloads, index, value)
+         assign(entries.payloads, payloads)
+       },
+       else() {
+         /std/collections/internal_vector/vectorPush<K>(keys, key)
+         /std/collections/internal_vector/vectorPush<V>(payloads, value)
+         assign(entries.keys, keys)
+         assign(entries.payloads, payloads)
+       })
+  }
+
+  [public effects(heap_alloc), return<void> Comparable<K>]
+  mapInsertRef<K, V>([Reference<MapValue<K, V>> mut] entries, [K] key, [V] value) {
+    [i32] index{/std/collections/map/findIndexRef<K, V>(entries, key)}
+    [Vector<K> mut] keys{entries.keys}
+    [Vector<V> mut] payloads{entries.payloads}
+    if(less_than(index, /std/collections/map/mapCountRef<K, V>(entries)),
+       then() {
+         /std/collections/map/overwriteSlot<V>(payloads, index, value)
+         assign(entries.payloads, payloads)
+       },
+       else() {
+         /std/collections/internal_vector/vectorPush<K>(keys, key)
+         /std/collections/internal_vector/vectorPush<V>(payloads, value)
+         assign(entries.keys, keys)
+         assign(entries.payloads, payloads)
+       })
+  }
+
+  [public return<bool> Comparable<K>]
+  mapContains<K, V>([MapValue<K, V>] entries, [K] key) {
+    [Vector<K>] keys{entries.keys}
+    [i32] limit{/std/collections/internal_vector/vectorCount<K>(keys)}
+    return(less_than(
+        /std/collections/map/findIndex<K, V>(entries, key),
+        limit))
+  }
+
+  [public return<bool> Comparable<K>]
+  mapContainsRef<K, V>([Reference<MapValue<K, V>>] entries, [K] key) {
+    [Vector<K>] keys{entries.keys}
+    [i32] limit{/std/collections/internal_vector/vectorCount<K>(keys)}
+    return(less_than(
+        /std/collections/map/findIndexRef<K, V>(entries, key),
+        limit))
+  }
+
+  [public return<Result<V, /std/collections/ContainerError>> Comparable<K>]
+  mapTryAt<K, V>([MapValue<K, V>] entries, [K] key) {
+    [i32] index{/std/collections/map/findIndex<K, V>(entries, key)}
+    [Vector<V>] payloads{entries.payloads}
+    [Vector<K>] keys{entries.keys}
+    [i32] limit{/std/collections/internal_vector/vectorCount<K>(keys)}
+    if(less_than(index, limit),
+       then() { return(Result.ok(/std/collections/internal_vector/vectorAtUnsafe<V>(payloads, index))) },
+       else() { return(/std/collections/ContainerError/result<V>(/std/collections/ContainerError/missingKey())) })
+  }
+
+  [public return<Result<V, /std/collections/ContainerError>> Comparable<K>]
+  mapTryAtRef<K, V>([Reference<MapValue<K, V>>] entries, [K] key) {
+    [i32] index{/std/collections/map/findIndexRef<K, V>(entries, key)}
+    [Vector<V>] payloads{entries.payloads}
+    [Vector<K>] keys{entries.keys}
+    [i32] limit{/std/collections/internal_vector/vectorCount<K>(keys)}
+    if(less_than(index, limit),
+       then() { return(Result.ok(/std/collections/internal_vector/vectorAtUnsafe<V>(payloads, index))) },
+       else() { return(/std/collections/ContainerError/result<V>(/std/collections/ContainerError/missingKey())) })
+  }
+
+  [public return<V> Comparable<K>]
+  mapAt<K, V>([MapValue<K, V>] entries, [K] key) {
+    [i32] index{/std/collections/map/findIndex<K, V>(entries, key)}
+    [Vector<V>] payloads{entries.payloads}
+    [Vector<K>] keys{entries.keys}
+    [i32] limit{/std/collections/internal_vector/vectorCount<K>(keys)}
+    if(less_than(index, limit),
+       then() { return(/std/collections/internal_vector/vectorAtUnsafe<V>(payloads, index)) },
+       else() { return(/std/collections/internal_vector/vectorAt<V>(payloads, index)) })
+  }
+
+  [public return<V> Comparable<K>]
+  mapAtRef<K, V>([Reference<MapValue<K, V>>] entries, [K] key) {
+    [i32] index{/std/collections/map/findIndexRef<K, V>(entries, key)}
+    [Vector<V>] payloads{entries.payloads}
+    [Vector<K>] keys{entries.keys}
+    [i32] limit{/std/collections/internal_vector/vectorCount<K>(keys)}
+    if(less_than(index, limit),
+       then() { return(/std/collections/internal_vector/vectorAtUnsafe<V>(payloads, index)) },
+       else() { return(/std/collections/internal_vector/vectorAt<V>(payloads, index)) })
+  }
+
+  [public return<V> Comparable<K>]
+  mapAtUnsafe<K, V>([MapValue<K, V>] entries, [K] key) {
+    [Vector<V>] payloads{entries.payloads}
+    return(/std/collections/internal_vector/vectorAtUnsafe<V>(
+        payloads,
+        /std/collections/map/findIndex<K, V>(entries, key)))
+  }
+
+  [public return<V> Comparable<K>]
+  mapAtUnsafeRef<K, V>([Reference<MapValue<K, V>>] entries, [K] key) {
+    [Vector<V>] payloads{entries.payloads}
+    return(/std/collections/internal_vector/vectorAtUnsafe<V>(
+        payloads,
+        /std/collections/map/findIndexRef<K, V>(entries, key)))
+  }
+  }
+  }
 }

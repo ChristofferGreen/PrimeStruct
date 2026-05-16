@@ -51,7 +51,7 @@ bool applyPass(const std::string &input,
 	      return false;
 	    }
 	    const std::string publicSoaName = std::string("soa");
-	    const std::string names[] = {"array", "vector", "map", publicSoaName};
+	    const std::string names[] = {"array", "vector", publicSoaName};
 	    for (const auto &name : names) {
 	      const size_t nameLen = name.size();
 	      if (index + nameLen > input.size()) {

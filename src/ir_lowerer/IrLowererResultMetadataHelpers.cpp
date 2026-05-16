@@ -509,8 +509,7 @@ bool applySemanticDirectValueTypeText(const std::string &typeText, ResultExprInf
     if (!normalizedBase.empty() && normalizedBase.front() == '/') {
       normalizedBase.erase(normalizedBase.begin());
     }
-    if ((normalizedBase == "Map" ||
-         normalizedBase == "std/collections/experimental_map/Map") &&
+    if (normalizedBase == "std/collections/experimental_map/Map" &&
         resolveSpecializedExperimentalMapStructPathForBindingType(
             trimmedType, out.valueStructType)) {
       return true;

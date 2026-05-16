@@ -422,7 +422,6 @@ bool isBaseSetupMapFamilyText(const std::string &familyText) {
     normalized.erase(normalized.begin());
   }
   return normalized == "map" || normalized == "std/collections/map" ||
-         normalized == "Map" ||
          normalized == "std/collections/experimental_map/Map" ||
          normalized.rfind("std/collections/experimental_map/Map__", 0) == 0;
 }

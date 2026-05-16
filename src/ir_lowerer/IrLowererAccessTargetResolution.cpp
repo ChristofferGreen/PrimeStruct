@@ -655,8 +655,7 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
           return specialized;
         }
       }
-      if (structTypeName == "Map" ||
-          structTypeName == "std/collections/experimental_map/Map" ||
+      if (structTypeName == "std/collections/experimental_map/Map" ||
           structTypeName == "/std/collections/experimental_map/Map") {
         const std::string specialized =
             inferExperimentalMapStructPathFromKinds(localInfo.mapKeyKind,
@@ -700,8 +699,7 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
           return specialized;
         }
       }
-      if (structTypeName == "Map" ||
-          structTypeName == "std/collections/experimental_map/Map" ||
+      if (structTypeName == "std/collections/experimental_map/Map" ||
           structTypeName == "/std/collections/experimental_map/Map") {
         const std::string specialized =
             inferExperimentalMapStructPathFromKinds(localInfo.mapKeyKind,

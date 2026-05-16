@@ -41,15 +41,6 @@ std::string canonicalStdlibMapAccessPathForHelper(const std::string &helperName)
   return "";
 }
 
-bool collectionAccessDefinitionReturnsString(const Definition &definition) {
-  for (const auto &transform : definition.transforms) {
-    if (transform.name == "return" && transform.templateArgs.size() == 1) {
-      return normalizeBindingTypeName(transform.templateArgs.front()) == "string";
-    }
-  }
-  return false;
-}
-
 std::string canonicalStdlibMapContainsPathForResolvedMethod(const std::string &methodResolved) {
   return methodResolved == "/std/collections/map/contains_ref" ||
                  methodResolved == "/map/contains_ref"
@@ -291,13 +282,18 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
         hasBuiltinAccessSpelling ? accessHelperName
                                  : explicitCanonicalMapAccessHelperName);
     auto helperIt = defMap_.find(helperPath);
+    if ((helperIt != defMap_.end() && helperIt->second != nullptr) ||
+        hasDefinitionFamilyPath(helperPath) ||
+        hasDeclaredDefinitionPath(helperPath) ||
+        hasImportedDefinitionPath(helperPath)) {
+      return true;
+    }
     handledOut = true;
     usedMethodTarget = true;
     hasMethodReceiverIndex = true;
     methodReceiverIndex = 0;
     resolved = helperPath;
-    resolvedMethod = helperIt == defMap_.end() || helperIt->second == nullptr ||
-                     !collectionAccessDefinitionReturnsString(*helperIt->second);
+    resolvedMethod = helperIt == defMap_.end() || helperIt->second == nullptr;
     return true;
   }
 

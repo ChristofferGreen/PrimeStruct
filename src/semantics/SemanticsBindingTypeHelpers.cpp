@@ -128,18 +128,6 @@ std::string normalizeBindingTypeName(const std::string &name) {
   if (name.rfind("/std/gfx/experimental/Buffer<", 0) == 0) {
     return "Buffer" + name.substr(std::string("/std/gfx/experimental/Buffer").size());
   }
-  if (name == "/map" || name == "std/collections/map" || name == "/std/collections/map") {
-    return "map";
-  }
-  if (name.rfind("/map<", 0) == 0) {
-    return name.substr(1);
-  }
-  if (name.rfind("std/collections/map<", 0) == 0) {
-    return "map" + name.substr(std::string("std/collections/map").size());
-  }
-  if (name.rfind("/std/collections/map<", 0) == 0) {
-    return "map" + name.substr(std::string("/std/collections/map").size());
-  }
   if (name == "std/maybe/Maybe" || name == "/std/maybe/Maybe") {
     return "Maybe";
   }
@@ -209,10 +197,7 @@ bool validateBuiltinMapKeyType(const BindingInfo &binding,
 
 bool isMapCollectionTypeName(const std::string &name) {
   const std::string normalized = normalizeBindingTypeName(name);
-  return normalized == "map" || normalized == "/map" ||
-         normalized == "std/collections/map" || normalized == "/std/collections/map" ||
-         normalized == "Map" || normalized == "/Map" ||
-         normalized == "std/collections/experimental_map/Map" ||
+  return normalized == "std/collections/experimental_map/Map" ||
          normalized == "/std/collections/experimental_map/Map";
 }
 
@@ -531,7 +516,7 @@ ReturnKind returnKindForTypeName(const std::string &name) {
       return ReturnKind::Array;
     }
     const bool isMapLike =
-        (base == "map" || base == "Map" || base == "std/collections/experimental_map/Map" ||
+        (base == "std/collections/experimental_map/Map" ||
          base == "/std/collections/experimental_map/Map" ||
          base.rfind("std/collections/experimental_map/Map__", 0) == 0 ||
          base.rfind("/std/collections/experimental_map/Map__", 0) == 0);

@@ -1683,6 +1683,14 @@ Task template:
       implementation. The vector/SoA uninitialized-buffer frees now route
       through `bufferFreeUninitialized<T>` to avoid parse-sensitive explicit
       nested template calls in statement position.
+    - 2026-05-16: `stdlib/std/collections/map.prime` now carries a
+      stdlib-owned `MapValue` implementation with non-builtin `map*` helpers
+      (`mapInsert`, `mapAt`, `mapCount`, and related ref/access variants).
+      Focused native smoke coverage proves empty-map insertion, overwrite,
+      lookup, and missing-key contains behavior without importing the retired
+      native map implementation. Remaining work is to delete the now-unused
+      production C++ map hooks instead of preserving them as compatibility
+      dispatch.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

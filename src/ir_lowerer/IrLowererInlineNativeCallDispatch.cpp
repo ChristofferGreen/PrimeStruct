@@ -218,15 +218,15 @@ bool prefersBuiltinCountFallbackOverRemovedShadow(
   return false;
 }
 
-bool matchesInlineMapHelperFamily(std::string_view requestedHelperName,
-                                  std::string_view resolvedHelperName) {
+[[maybe_unused]] bool matchesInlineMapHelperFamily(std::string_view requestedHelperName,
+                                                   std::string_view resolvedHelperName) {
   if (requestedHelperName == resolvedHelperName) {
     return true;
   }
   return resolvedHelperName == std::string(requestedHelperName) + "_ref";
 }
 
-bool isInlineMapBuiltinHelperName(std::string_view helperName) {
+[[maybe_unused]] bool isInlineMapBuiltinHelperName(std::string_view helperName) {
   return helperName == "insert" || helperName == "insert_ref";
 }
 
@@ -284,9 +284,9 @@ bool keepsBuiltinInlineReturnForPublishedVectorHelper(std::string_view helperNam
   return true;
 }
 
-bool prefersPublishedMapHelperDefinition(const Expr &expr,
-                                         std::string_view helperName,
-                                         const Definition &callee) {
+[[maybe_unused]] bool prefersPublishedMapHelperDefinition(const Expr &expr,
+                                                          std::string_view helperName,
+                                                          const Definition &callee) {
   if (!expr.isMethodCall) {
     if (isSemanticBarePublishedMapHelperCall(expr, helperName)) {
       return true;
@@ -327,6 +327,10 @@ bool prefersPublishedMapHelperDefinition(const Expr &expr,
 }
 
 bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee) {
+  (void)expr;
+  (void)callee;
+  return false;
+#if 0
   std::string resolvedHelperName;
   const bool hasPublishedResolvedHelper =
       resolvePublishedInlineMapHelperName(callee.fullPath, resolvedHelperName);
@@ -397,6 +401,7 @@ bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee) {
     return false;
   }
   return isInlineMapBuiltinHelperName(helperName);
+#endif
 }
 
 bool isTypeNamespaceMethodCallForInlineEmit(const Expr &callExpr,

@@ -21,7 +21,7 @@ std::string normalizeDeclaredCollectionTypeBase(const std::string &base) {
     return "soa" "_vector";
   }
   if (base == "/map" || base == "std/collections/map" || base == "/std/collections/map" ||
-      base == "Map" || base == "std/collections/experimental_map/Map" ||
+      base == "std/collections/experimental_map/Map" ||
       base == "/std/collections/experimental_map/Map" ||
       base.rfind("std/collections/experimental_map/Map__", 0) == 0 ||
       base.rfind("/std/collections/experimental_map/Map__", 0) == 0) {

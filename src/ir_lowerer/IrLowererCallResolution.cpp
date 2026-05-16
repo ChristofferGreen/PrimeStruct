@@ -21,8 +21,8 @@ std::string stdCollectionMemberRoot(std::string_view collectionName) {
   return stdCollectionsRoot() + "/" + std::string(collectionName) + "/";
 }
 
-std::string stdCollectionMemberPath(std::string_view collectionName,
-                                    std::string_view memberName) {
+[[maybe_unused]] std::string stdCollectionMemberPath(std::string_view collectionName,
+                                                     std::string_view memberName) {
   return stdCollectionMemberRoot(collectionName) + std::string(memberName);
 }
 
@@ -191,7 +191,8 @@ bool isBridgeHelperCall(const SemanticProgram *semanticProgram,
          isResidualBridgeHelperPath(resolvedPath);
 }
 
-bool isBuiltinPublishedMapHelperName(const Expr &expr, std::string_view helperName) {
+[[maybe_unused]] bool isBuiltinPublishedMapHelperName(const Expr &expr,
+                                                      std::string_view helperName) {
   if (helperName == "count") {
     return expr.args.size() == 1;
   }
@@ -208,6 +209,11 @@ bool isBuiltinPublishedMapHelperName(const Expr &expr, std::string_view helperNa
 bool isMapBuiltinResolvedPath(const SemanticProgram *semanticProgram,
                               const Expr &expr,
                               const std::string &resolvedPath) {
+  (void)semanticProgram;
+  (void)expr;
+  (void)resolvedPath;
+  return false;
+#if 0
   const auto mapHelperPath = [](std::string_view memberName) {
     return stdCollectionMemberPath("map", memberName);
   };
@@ -295,6 +301,7 @@ bool isMapBuiltinResolvedPath(const SemanticProgram *semanticProgram,
     }
   }
   return false;
+#endif
 }
 
 bool isExplicitSamePathPublishedMapHelperCall(const Expr &expr,

@@ -56,7 +56,7 @@ bool isBuiltinMapTypeName(const std::string &typeName) {
 }
 
 bool isExperimentalMapTypeName(const std::string &typeName) {
-  return typeName == "Map" || typeName == "std/collections/experimental_map/Map" ||
+  return typeName == "std/collections/experimental_map/Map" ||
          typeName == "/std/collections/experimental_map/Map" ||
          typeName.rfind("std/collections/experimental_map/Map__", 0) == 0 ||
          typeName.rfind("/std/collections/experimental_map/Map__", 0) == 0;

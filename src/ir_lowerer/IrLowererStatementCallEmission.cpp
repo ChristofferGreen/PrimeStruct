@@ -820,7 +820,6 @@ static bool rewriteMapInsertHelperStatementToCanonical(
       const bool isMapBase =
           normalizedBase == "map" || normalizedBase == "/map" ||
           normalizedBase == "std/collections/map" || normalizedBase == "/std/collections/map" ||
-          normalizedBase == "Map" || normalizedBase == "/Map" ||
           normalizedBase == "std/collections/experimental_map/Map" ||
           normalizedBase == "/std/collections/experimental_map/Map";
       if (!isMapBase) {
