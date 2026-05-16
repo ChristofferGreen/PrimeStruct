@@ -128,7 +128,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `/std/collections/map/<suffix>` candidates from rooted `/map/<suffix>`
   inputs; unused rooted `/map/<access>` return-struct pruning should stay
   deleted once no call site remains; vector stdlib helper preference should
-  not normalize map paths while handling array-to-vector fallback.
+  not normalize map paths while handling array-to-vector fallback; map method
+  sugar should ignore rooted `/map/at` struct-return helpers and use the
+  canonical helper return type.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -213,7 +215,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   inference no longer synthesizes canonical
   `/std/collections/map/<suffix>` candidates from rooted `/map/<suffix>`
   inputs; its unused rooted `/map/<access>` pruning lambda is also gone; and
-  vector stdlib helper preference no longer normalizes map paths.
+  vector stdlib helper preference no longer normalizes map paths. The stale
+  rooted-alias struct-return semantic fixture now expects `values.at()` to use
+  the canonical map helper return type instead of a user-defined `/map/at`
+  return type.
 
 ### map-constructor-normalization-uses-public-path
 - Updated: 2026-05-16
