@@ -66,6 +66,11 @@
   `explicitVectorCountLocalResolveDefinitionCalls == 1` seeing `2`, while
   adjacent call-helper struct classifier and bundled entry setup coverage
   still passes.
+- `PrimeStruct_backend_ir_tests --test-case="ir lowerer map constructor rewrite checks constructor surface before resolving defs"`
+  has stale source-lock coverage after setup-type collection helpers stopped
+  spelling the experimental map backing path directly. On 2026-05-16 it
+  failed its exact `constructorSurfaceCheck` source search, while adjacent
+  uninitialized stdlib map constructor struct inference coverage still passes.
 - `PrimeStruct_semantics_tests` inferred map-struct-field and
   uninitialized-storage constructor fixtures are stale after the map
   stdlib-ownership cutover. On 2026-05-16 the filters
@@ -89,6 +94,21 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 18:02 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer uninitialized type helpers infer concrete stdlib map constructor structs,ir lowerer uninitialized type helpers infer forwarded stdlib map constructor structs"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` | failures: none |
+  notes: setup-type collection helper generated map struct path inference now
+  builds the experimental map backing prefix with
+  `experimentalCollectionTypePath`; the map surface inventory now observes
+  845 production traces and backing traces now observe 90.
+- 2026-05-16 18:02 local | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer uninitialized type helpers infer concrete stdlib map constructor structs,ir lowerer uninitialized type helpers infer forwarded stdlib map constructor structs,ir lowerer map constructor rewrite checks constructor surface before resolving defs"` |
+  failures: `ir lowerer map constructor rewrite checks constructor surface
+  before resolving defs` | notes: stale source-lock exact-source assertion;
+  reran the adjacent constructor struct inference cases above.
 - 2026-05-16 18:00 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs canonical namespaced map helpers on experimental map values in C++ emitter,compiles and runs wrapper map helpers on experimental map values in C++ emitter"`;

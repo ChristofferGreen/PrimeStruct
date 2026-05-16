@@ -874,7 +874,7 @@ std::string inferPublishedExperimentalMapStructPathFromConstructorPath(std::stri
   if (leaf.rfind(memberPrefix, 0) != 0) {
     return "";
   }
-  return "/std/collections/experimental_map/Map__" +
+  return experimentalCollectionTypePath("map", "Map") + "__" +
          leaf.substr(memberPrefix.size());
 }
 

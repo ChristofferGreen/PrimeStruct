@@ -247,6 +247,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   emitter builtin call-path map type classification should derive the
   experimental map type path through the local experimental collection path
   builder;
+  setup-type collection helper generated map struct path inference should
+  derive the experimental map backing prefix through
+  `experimentalCollectionTypePath`;
   generated collection struct classification should derive the canonical map
   `MapValue__*` prefix through `collectionTypePath("map")` instead of
   carrying a split-string map root.
