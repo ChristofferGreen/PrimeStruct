@@ -321,7 +321,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   through collection path helpers instead of direct map path strings; Result
   metadata direct map constructor recognition should derive rooted and
   unrooted canonical map constructor paths through collection path helpers
-  instead of direct map path strings;
+  instead of direct map path strings; inline-call context generated canonical
+  map constructor helper recognition should derive the map constructor prefix
+  through collection path helpers instead of a direct map path string;
   statement-expression map count/access target classification should reuse
   local experimental collection type and generated-specialization helpers
   instead of direct experimental map backing path text;

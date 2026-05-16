@@ -50,7 +50,7 @@ bool isGeneratedStdlibCollectionStructPath(std::string_view path) {
 bool isGeneratedStdlibCollectionConstructorHelperPath(std::string_view path) {
   return isSinglePathSegmentWithPrefix(path, collectionMemberRoot("vector") + "vector__") ||
          isSinglePathSegmentWithPrefix(path, experimentalCollectionMemberRoot("vector") + "vector__") ||
-         isSinglePathSegmentWithPrefix(path, "/std/collections/map/map__") ||
+         isSinglePathSegmentWithPrefix(path, collectionMemberRoot("map") + "map__") ||
          isSinglePathSegmentWithPrefix(path, experimentalCollectionMemberRoot("map") + "map__") ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/" "soa/soa__") ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/" "soa" "_vector/soa" "_vector__") ||

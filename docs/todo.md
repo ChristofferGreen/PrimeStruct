@@ -482,6 +482,9 @@ Task template:
   Result metadata direct map constructor recognition now derives rooted and
   unrooted canonical map constructor paths through collection path helpers
   instead of direct map path strings.
+  Inline-call context generated canonical map constructor helper recognition
+  now derives the map constructor prefix through collection path helpers
+  instead of a direct map path string.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic

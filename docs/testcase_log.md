@@ -105,6 +105,17 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 21:27 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer inline call context helper prepares scoped setup,ir lowerer inline call context helper reports setup diagnostics,ir lowerer inline-call context-setup step initializes context and zero value" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: inline-call context generated canonical map constructor helper
+  recognition now derives the map constructor prefix through collection path
+  helpers instead of a direct map path string; the map surface inventory now
+  observes 354 production traces and backing traces remain at 0.
 - 2026-05-16 21:24 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer result helpers resolve Result.map struct payload metadata,ir lowerer result helpers resolve function-returned map Result payload metadata,ir lowerer result helpers require semantic query facts for unresolved Result.map metadata" --no-skip`;
