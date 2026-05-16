@@ -1992,6 +1992,9 @@ Task template:
     - 2026-05-16: Semantic binding type helpers no longer hard-code
       experimental map backing type names for map collection or return-kind
       classification; they now reuse generic experimental collection helpers.
+    - 2026-05-16: Semantic argument validation no longer hard-codes
+      experimental map backing template bases for map compatibility; those
+      checks now use the shared experimental collection backing helper.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

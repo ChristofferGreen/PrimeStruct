@@ -18,6 +18,17 @@ bool isCollectionLikeTemplateBase(std::string_view baseName) {
          normalizedBase == "std/collections/map";
 }
 
+bool isExperimentalMapBackingTemplateBaseForArgumentValidation(std::string base) {
+  base = normalizeBindingTypeName(std::move(base));
+  if (!base.empty() && base.front() == '/') {
+    base.erase(base.begin());
+  }
+  const size_t leafStart = base.find_last_of('/');
+  const std::string leaf =
+      leafStart == std::string::npos ? base : base.substr(leafStart + 1);
+  return leaf == "Map" && isExperimentalCollectionBackingTypeName("map", "Map", base);
+}
+
 } // namespace
 
 std::string SemanticsValidator::expectedBindingTypeText(const BindingInfo &binding) const {
@@ -421,8 +432,8 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
         if (maybePreferExplicitCanonicalMapKeyDiagnostic(expectedTemplateArgs)) {
           return false;
         }
-      } else if ((normalizedExpectedBase == "Map" ||
-                  normalizedExpectedBase == "std/collections/experimental_map/Map") &&
+      } else if (isExperimentalMapBackingTemplateBaseForArgumentValidation(
+                     normalizedExpectedBase) &&
                  expectedTemplateArgs.size() == 2) {
         std::string actualKeyType;
         std::string actualValueType;
@@ -447,8 +458,8 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
             inferredArgs.size() == 2) {
           const std::string normalizedInferredBase = normalizeBindingTypeName(inferredBase);
           if (isMapCollectionTypeName(normalizedInferredBase) ||
-              normalizedInferredBase == "Map" ||
-              normalizedInferredBase == "std/collections/experimental_map/Map") {
+              isExperimentalMapBackingTemplateBaseForArgumentValidation(
+                  normalizedInferredBase)) {
             if (normalizeBindingTypeName(expectedTemplateArgs[0]) ==
                     normalizeBindingTypeName(inferredArgs[0]) &&
                 normalizeBindingTypeName(expectedTemplateArgs[1]) ==
@@ -605,8 +616,7 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
        (inferCollectionBindingType(arg, actualMapBase, actualMapTemplateArgs) &&
         actualMapTemplateArgs.size() == 2 &&
         (isMapCollectionTypeName(normalizeBindingTypeName(actualMapBase)) ||
-         normalizeBindingTypeName(actualMapBase) == "Map" ||
-         normalizeBindingTypeName(actualMapBase) == "std/collections/experimental_map/Map") &&
+         isExperimentalMapBackingTemplateBaseForArgumentValidation(actualMapBase)) &&
         normalizeBindingTypeName(expectedMapKeyType) ==
             normalizeBindingTypeName(actualMapTemplateArgs[0]) &&
         normalizeBindingTypeName(expectedMapValueType) ==

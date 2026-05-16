@@ -196,6 +196,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   semantic binding type helpers should classify experimental map backing names
   through generic experimental collection helpers instead of direct map
   backing paths;
+  semantic argument validation should use the shared helper for experimental
+  map backing template-base compatibility checks;
   generated collection struct classification should derive the canonical map
   `MapValue__*` prefix through `collectionTypePath("map")` instead of
   carrying a split-string map root.
