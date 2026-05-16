@@ -602,15 +602,15 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   CHECK(semanticsInferCollectionCountCapacitySource.find("bool SemanticsValidator::resolveBuiltinCollectionCountCapacityReturnKind") !=
         std::string::npos);
   CHECK(semanticsInferCollectionCountCapacitySource.find(
-            "auto failInferCountCapacityDiagnostic = [&](std::string message) -> bool {") !=
+            "auto failInferCountCapacityDiagnostic = [&](std::string message) -> bool {") ==
         std::string::npos);
   CHECK(semanticsInferCollectionDirectCountCapacitySource.find("ReturnKind SemanticsValidator::inferBuiltinCollectionDirectCountCapacityReturnKind") !=
         std::string::npos);
   CHECK(semanticsInferCollectionDirectCountCapacitySource.find(
-            "auto failInferDirectCountCapacityDiagnostic =") !=
+            "auto failInferDirectCountCapacityDiagnostic =") ==
         std::string::npos);
   CHECK(semanticsInferCollectionDirectCountCapacitySource.find(
-            "(void)failExprDiagnostic(expr, std::move(message));") !=
+            "(void)failExprDiagnostic(expr, std::move(message));") ==
         std::string::npos);
   CHECK(semanticsInferCollectionDirectCountCapacitySource.find(
             "auto rejectsRootedVectorBuiltinAlias =") ==
@@ -626,7 +626,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferCollectionDirectCountCapacitySource.find("if (context.isDirectCapacitySingleArg && context.resolveVectorTarget != nullptr)") !=
         std::string::npos);
-  CHECK(semanticsInferCollectionCountCapacitySource.find("context.isCountLike && methodResolved == (context.countHelperName == \"count_ref\"") !=
+  CHECK(semanticsInferCollectionCountCapacitySource.find("context.isCountLike && methodResolved == (context.countHelperName == \"count_ref\"") ==
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSource.find("bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind") !=
         std::string::npos);

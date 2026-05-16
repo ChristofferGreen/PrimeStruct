@@ -7,37 +7,12 @@ bool SemanticsValidator::resolveBuiltinCollectionCountCapacityReturnKind(
     const BuiltinCollectionCountCapacityDispatchContext &context,
     ReturnKind &kindOut) {
   kindOut = ReturnKind::Unknown;
-  auto failInferCountCapacityDiagnostic = [&](std::string message) -> bool {
-    (void)failExprDiagnostic(callExpr, std::move(message));
-    return false;
-  };
   if (callExpr.isMethodCall || callExpr.args.empty()) {
     return false;
   }
-  if (!context.isCountLike && !context.isCapacityLike) {
-    return false;
-  }
-
-  std::string mapKeyType;
-  std::string mapValueType;
-  auto hasVisibleStdlibMapCountDefinition = [&]() {
-    return hasImportedDefinitionPath("/std/collections/map/count") ||
-           (context.hasDeclaredDefinitionPath != nullptr &&
-            context.hasDeclaredDefinitionPath("/std/collections/map/count"));
-  };
-  if (context.isUnnamespacedMapCountFallbackCall &&
-      context.shouldInferBuiltinBareMapCountCall &&
-      context.hasDeclaredDefinitionPath != nullptr &&
-      !context.hasDeclaredDefinitionPath("/std/collections/map/count") &&
-      !context.hasDeclaredDefinitionPath("/map/count") &&
-      !hasVisibleStdlibMapCountDefinition() &&
-      context.resolveMapTarget != nullptr &&
-      context.resolveMapTarget(callExpr.args.front(), mapKeyType, mapValueType)) {
-    kindOut = ReturnKind::Int;
-    return true;
-  }
-
-  if (context.resolveMethodCallPath == nullptr || context.preferVectorStdlibHelperPath == nullptr) {
+  if ((!context.isCountLike && !context.isCapacityLike) ||
+      context.resolveMethodCallPath == nullptr ||
+      context.preferVectorStdlibHelperPath == nullptr) {
     return false;
   }
 
@@ -47,14 +22,6 @@ bool SemanticsValidator::resolveBuiltinCollectionCountCapacityReturnKind(
     return false;
   }
   methodResolved = context.preferVectorStdlibHelperPath(methodResolved);
-  if (context.isCountLike && methodResolved == (context.countHelperName == "count_ref"
-                                                    ? "/std/collections/map/count_ref"
-                                                    : "/std/collections/map/count") &&
-      !hasVisibleStdlibMapCountDefinition() &&
-      !context.shouldInferBuiltinBareMapCountCall) {
-    return failInferCountCapacityDiagnostic(
-        std::string("unknown call target: ") + methodResolved);
-  }
 
   auto methodIt = defMap_.find(methodResolved);
   if (methodIt != defMap_.end()) {

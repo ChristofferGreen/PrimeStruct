@@ -298,13 +298,9 @@
   struct BuiltinCollectionCountCapacityDispatchContext {
     bool isCountLike = false;
     bool isCapacityLike = false;
-    bool isUnnamespacedMapCountFallbackCall = false;
-    bool shouldInferBuiltinBareMapCountCall = false;
     std::string countHelperName = "count";
     std::function<bool(const std::string &, std::string &)> resolveMethodCallPath;
     std::function<std::string(const std::string &)> preferVectorStdlibHelperPath;
-    std::function<bool(const std::string &)> hasDeclaredDefinitionPath;
-    std::function<bool(const Expr &, std::string &, std::string &)> resolveMapTarget;
     const BuiltinCollectionDispatchResolvers *dispatchResolvers = nullptr;
   };
   struct BuiltinCollectionDirectCountCapacityContext {
@@ -312,19 +308,14 @@
     bool isDirectCountSingleArg = false;
     bool isDirectCapacityCall = false;
     bool isDirectCapacitySingleArg = false;
-    bool shouldInferBuiltinBareMapCountCall = false;
     std::string countHelperName = "count";
     std::function<bool(const std::string &, std::string &)> resolveMethodCallPath;
     std::function<std::string(const std::string &)> preferVectorStdlibHelperPath;
-    std::function<bool(const std::string &)> hasDeclaredDefinitionPath;
     std::function<bool(const std::string &, ReturnKind &)> inferResolvedPathReturnKind;
-    std::function<bool(const Expr &, Expr &)> tryRewriteBareMapHelperCall;
-    std::function<ReturnKind(const Expr &)> inferRewrittenExprReturnKind;
     std::function<bool(const Expr &, std::string &)> resolveArgsPackCountTarget;
     std::function<bool(const Expr &, std::string &)> resolveVectorTarget;
     std::function<bool(const Expr &, std::string &)> resolveArrayTarget;
     std::function<bool(const Expr &)> resolveStringTarget;
-    std::function<bool(const Expr &, std::string &, std::string &)> resolveMapTarget;
     const BuiltinCollectionDispatchResolvers *dispatchResolvers = nullptr;
   };
   struct InferCollectionDispatchSetup {

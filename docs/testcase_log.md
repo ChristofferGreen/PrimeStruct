@@ -1,6 +1,10 @@
 # Testcase Log
 
 ## Current Known Failures
+- `PrimeStruct_backend_ir_tests --test-case="semantics validator infer source delegation stays stable" --no-skip`
+  has 15 stale SoA/experimental_soa_vector source-lock assertions after the
+  SoA public-surface cleanup. The map-count inference assertions in that test
+  have been updated; the remaining failures are unrelated SoA lock drift.
 - `PrimeStruct_semantics_tests --test-case="*map*count*" --no-skip` has
   obsolete legacy map-count compatibility coverage after removing C++ semantic
   builtin handling for `/std/collections/map/count` and related map access
@@ -10,6 +14,11 @@
   cutover; the stdlib-owned `MapValue` smoke tests continue to pass.
 
 ## Recent Test Runs
+- 2026-05-16 local | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="semantics validator infer source delegation stays stable" --no-skip` |
+  failures: 15 stale SoA/experimental_soa_vector source-lock assertions |
+  notes: rerun after updating the removed map-count inference source locks;
+  remaining failures are unrelated SoA lock drift.
 - 2026-05-16 local | fail | mode: release | command:
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="*map*count*" --no-skip` |
   failures: 41 obsolete legacy map-count compatibility cases | notes:

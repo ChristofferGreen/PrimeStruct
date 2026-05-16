@@ -17,11 +17,6 @@ ReturnKind SemanticsValidator::inferBuiltinCollectionDirectCountCapacityReturnKi
   }
 
   handled = true;
-  auto failInferDirectCountCapacityDiagnostic =
-      [&](std::string message) -> ReturnKind {
-    (void)failExprDiagnostic(expr, std::move(message));
-    return ReturnKind::Unknown;
-  };
   const std::string directCallPath = resolveCalleePath(expr);
   const auto inferHelperReturnKind = [&](const std::string &helperName,
                                          const Expr &receiverExpr,
@@ -29,11 +24,6 @@ ReturnKind SemanticsValidator::inferBuiltinCollectionDirectCountCapacityReturnKi
     if (context.resolveMethodCallPath == nullptr || context.preferVectorStdlibHelperPath == nullptr) {
       return ReturnKind::Unknown;
     }
-    auto hasVisibleStdlibMapCountDefinition = [&]() {
-      return hasImportedDefinitionPath("/std/collections/map/count") ||
-             (context.hasDeclaredDefinitionPath != nullptr &&
-              context.hasDeclaredDefinitionPath("/std/collections/map/count"));
-    };
     std::string methodResolved;
     const std::string rootedHelperPath = rootedVectorHelperPath(helperName);
     if (directCallPath == rootedHelperPath &&
@@ -44,15 +34,6 @@ ReturnKind SemanticsValidator::inferBuiltinCollectionDirectCountCapacityReturnKi
       return ReturnKind::Unknown;
     }
     methodResolved = context.preferVectorStdlibHelperPath(methodResolved);
-    if ((helperName == "count" || helperName == "count_ref") &&
-        methodResolved == (helperName == "count_ref"
-                               ? "/std/collections/map/count_ref"
-                               : "/std/collections/map/count") &&
-        !hasVisibleStdlibMapCountDefinition() &&
-        !context.shouldInferBuiltinBareMapCountCall) {
-      return failInferDirectCountCapacityDiagnostic(
-          std::string("unknown call target: ") + methodResolved);
-    }
     if (allowBuiltinFallback && context.dispatchResolvers != nullptr &&
         defMap_.find(methodResolved) == defMap_.end()) {
       ReturnKind builtinMethodKind = ReturnKind::Unknown;
@@ -71,15 +52,6 @@ ReturnKind SemanticsValidator::inferBuiltinCollectionDirectCountCapacityReturnKi
   };
 
   if (context.isDirectCountCall) {
-    if (!context.shouldInferBuiltinBareMapCountCall &&
-        context.tryRewriteBareMapHelperCall != nullptr &&
-        context.inferRewrittenExprReturnKind != nullptr) {
-      Expr rewrittenMapHelperCall;
-      if (context.tryRewriteBareMapHelperCall(expr, rewrittenMapHelperCall)) {
-        return context.inferRewrittenExprReturnKind(rewrittenMapHelperCall);
-      }
-    }
-
     const ReturnKind helperReturnKind =
         inferHelperReturnKind(context.countHelperName, expr.args.front(),
                               context.isDirectCountSingleArg);
@@ -89,8 +61,6 @@ ReturnKind SemanticsValidator::inferBuiltinCollectionDirectCountCapacityReturnKi
 
     if (context.isDirectCountSingleArg) {
       std::string elemType;
-      std::string keyType;
-      std::string valueType;
       if ((context.resolveArgsPackCountTarget != nullptr &&
            context.resolveArgsPackCountTarget(expr.args.front(), elemType)) ||
           (context.resolveVectorTarget != nullptr &&
@@ -99,11 +69,6 @@ ReturnKind SemanticsValidator::inferBuiltinCollectionDirectCountCapacityReturnKi
            context.resolveArrayTarget(expr.args.front(), elemType)) ||
           (context.resolveStringTarget != nullptr &&
            context.resolveStringTarget(expr.args.front()))) {
-        return ReturnKind::Int;
-      }
-      if (context.shouldInferBuiltinBareMapCountCall &&
-          context.resolveMapTarget != nullptr &&
-          context.resolveMapTarget(expr.args.front(), keyType, valueType)) {
         return ReturnKind::Int;
       }
     }

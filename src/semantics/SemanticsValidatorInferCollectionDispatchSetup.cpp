@@ -135,14 +135,9 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
                         (isCanonicalMapAccessHelperName(expr.name)
                              ? expr.name
                              : namespacedHelper));
-  const BuiltinCollectionDispatchResolverAdapters mapCountDispatchResolverAdapters;
-  const bool isUnnamespacedMapCountFallbackCall =
-      !expr.isMethodCall && isUnnamespacedMapCountBuiltinFallbackCall(
-                                expr, params, locals, mapCountDispatchResolverAdapters);
   const bool isResolvedMapCountCall =
       !expr.isMethodCall && resolved == "/map/count" &&
-      !isMapNamespacedCountCompatibilityCall &&
-      !isUnnamespacedMapCountFallbackCall;
+      !isMapNamespacedCountCompatibilityCall;
   const bool isNamespacedVectorCapacityCall =
       !expr.isMethodCall && isNamespacedVectorHelperCall &&
       namespacedHelper == "capacity" &&
@@ -250,19 +245,14 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
             extractMapKeyValueTypesFromTypeText(elemType, keyType, valueType));
   };
 
-  const bool shouldInferBuiltinBareMapCountCall =
-      shouldBuiltinValidateCurrentMapWrapperHelper("count");
   auto preferVectorStdlibHelperPathForDispatch =
       [&](const std::string &path) {
         return preferVectorStdlibHelperPath(path);
       };
-  auto hasDeclaredDefinitionPathForDispatch =
-      [&](const std::string &path) { return hasDeclaredDefinitionPath(path); };
 
   setupOut.builtinCollectionCountCapacityDispatchContext.isCountLike =
       (isVectorBuiltinName(expr, "count") || isStdNamespacedMapCountCall ||
-       isNamespacedMapCountCall || isUnnamespacedMapCountFallbackCall ||
-       isResolvedMapCountCall) &&
+       isNamespacedMapCountCall || isResolvedMapCountCall) &&
       expr.args.size() == 1 &&
       !isArrayNamespacedVectorCountCompatibilityCall(
           expr, builtinCollectionDispatchResolvers) &&
@@ -275,18 +265,10 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
           : "count";
   setupOut.builtinCollectionCountCapacityDispatchContext.isCapacityLike =
       isInferBuiltinSingleArgCapacityLike;
-  setupOut.builtinCollectionCountCapacityDispatchContext
-      .isUnnamespacedMapCountFallbackCall = isUnnamespacedMapCountFallbackCall;
-  setupOut.builtinCollectionCountCapacityDispatchContext
-      .shouldInferBuiltinBareMapCountCall = shouldInferBuiltinBareMapCountCall;
   setupOut.builtinCollectionCountCapacityDispatchContext.resolveMethodCallPath =
       resolveMethodCallPath;
   setupOut.builtinCollectionCountCapacityDispatchContext
       .preferVectorStdlibHelperPath = preferVectorStdlibHelperPathForDispatch;
-  setupOut.builtinCollectionCountCapacityDispatchContext
-      .hasDeclaredDefinitionPath = hasDeclaredDefinitionPathForDispatch;
-  setupOut.builtinCollectionCountCapacityDispatchContext.resolveMapTarget =
-      builtinCollectionDispatchResolvers.resolveMapTarget;
   setupOut.builtinCollectionCountCapacityDispatchContext.dispatchResolvers =
       &builtinCollectionDispatchResolvers;
 
@@ -320,8 +302,7 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
   const bool isDirectBuiltinCountCapacityCountCall =
       !expr.isMethodCall &&
       (isVectorBuiltinName(expr, "count") || isStdNamespacedMapCountCall ||
-       isNamespacedMapCountCall || isUnnamespacedMapCountFallbackCall ||
-       isResolvedMapCountCall) &&
+       isNamespacedMapCountCall || isResolvedMapCountCall) &&
       !expr.args.empty() &&
       !isArrayNamespacedVectorCountCompatibilityCall(
           expr, builtinCollectionDispatchResolvers) &&
@@ -329,8 +310,7 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
        shouldBuiltinValidateStdNamespacedVectorCountCall) &&
       ((defMap_.find(resolved) == defMap_.end() && !isStdNamespacedMapCountCall) ||
        isNamespacedVectorCountCall || isStdNamespacedMapCountCall ||
-       isNamespacedMapCountCall || isUnnamespacedMapCountFallbackCall ||
-       isResolvedMapCountCall);
+       isNamespacedMapCountCall || isResolvedMapCountCall);
   const bool inferBuiltinCapacityCallTargetsDirectReceiver =
       defMap_.find(resolved) == defMap_.end() ||
       isNamespacedVectorCapacityCall;
@@ -350,27 +330,12 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
   setupOut.builtinCollectionDirectCountCapacityContext
       .isDirectCapacitySingleArg =
       isDirectBuiltinSingleArgCountCapacityCapacityCall;
-  setupOut.builtinCollectionDirectCountCapacityContext
-      .shouldInferBuiltinBareMapCountCall = shouldInferBuiltinBareMapCountCall;
   setupOut.builtinCollectionDirectCountCapacityContext.resolveMethodCallPath =
       resolveMethodCallPath;
   setupOut.builtinCollectionDirectCountCapacityContext
       .preferVectorStdlibHelperPath = preferVectorStdlibHelperPathForDispatch;
   setupOut.builtinCollectionDirectCountCapacityContext
-      .hasDeclaredDefinitionPath = hasDeclaredDefinitionPathForDispatch;
-  setupOut.builtinCollectionDirectCountCapacityContext
       .inferResolvedPathReturnKind = inferResolvedPathReturnKind;
-  setupOut.builtinCollectionDirectCountCapacityContext.tryRewriteBareMapHelperCall =
-      [&](const Expr &candidate, Expr &rewrittenOut) {
-        return tryRewriteBareMapHelperCall(candidate, "count",
-                                           builtinCollectionDispatchResolvers,
-                                           rewrittenOut);
-      };
-  setupOut.builtinCollectionDirectCountCapacityContext
-      .inferRewrittenExprReturnKind =
-      [&](const Expr &rewrittenExpr) {
-        return inferExprReturnKind(rewrittenExpr, params, locals);
-      };
   setupOut.builtinCollectionDirectCountCapacityContext
       .resolveArgsPackCountTarget = resolveArgsPackCountTarget;
   setupOut.builtinCollectionDirectCountCapacityContext.resolveVectorTarget =
@@ -379,8 +344,6 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
       builtinCollectionDispatchResolvers.resolveArrayTarget;
   setupOut.builtinCollectionDirectCountCapacityContext.resolveStringTarget =
       builtinCollectionDispatchResolvers.resolveStringTarget;
-  setupOut.builtinCollectionDirectCountCapacityContext.resolveMapTarget =
-      builtinCollectionDispatchResolvers.resolveMapTarget;
   setupOut.builtinCollectionDirectCountCapacityContext.dispatchResolvers =
       &builtinCollectionDispatchResolvers;
 }
