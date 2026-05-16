@@ -471,7 +471,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
                                     semanticIndexPtr)
              .isMapTarget)) {
       const std::string canonicalMapHelper =
-          "/std/collections/map/" + mapHelperName;
+          collectionMemberPath("map", mapHelperName);
       if (const Definition *canonicalDef =
               resolveDefinitionFamilyByArity(canonicalMapHelper,
                                              callExpr.args.size())) {

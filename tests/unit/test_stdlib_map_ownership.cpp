@@ -571,6 +571,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(setupTypeMethodCallSource.find("normalizedMethodName.rfind(\"std/collections/map/\", 0)") ==
         std::string::npos);
+  CHECK(setupTypeMethodCallSource.find("collectionMemberPath(\"map\", mapHelperName)") !=
+        std::string::npos);
+  CHECK(setupTypeMethodCallSource.find("\"/std/collections/map/\" + mapHelperName") ==
+        std::string::npos);
   CHECK(statementLowererSource.find("callee->fullPath.rfind(\"/std/collections/internal_map/insertImpl__\", 0)") !=
         std::string::npos);
   CHECK(statementLowererSource.find("canonicalStatementMapHelperPath(\"insert\")") !=

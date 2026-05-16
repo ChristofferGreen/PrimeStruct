@@ -454,6 +454,9 @@ Task template:
   Setup-type method-call map helper prefix stripping now derives rooted and
   canonical map prefixes through collection path helpers instead of direct map
   path strings.
+  Setup-type method-call canonical map helper lookup now builds the helper path
+  through collection path helpers instead of direct map helper path
+  concatenation.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic
