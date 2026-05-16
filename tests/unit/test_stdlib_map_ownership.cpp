@@ -254,6 +254,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(statementLowererSource.find("isPrimeMapInsertBody") != std::string::npos);
   CHECK(statementLowererSource.find("rewriteMapInsertHelperStatementToCanonical") != std::string::npos);
   CHECK(statementLowererSource.find("rewriteMapInsertHelperStatementToBuiltin") == std::string::npos);
+  CHECK(statementLowererSource.find("/map/at(argsPack") == std::string::npos);
   CHECK(statementLowererSource.find("callee->fullPath.rfind(\"/std/collections/internal_map/insertImpl__\", 0)") !=
         std::string::npos);
   CHECK(statementLowererSource.find("rewrittenStmt.name = \"/std/collections/map/insert\"") != std::string::npos);

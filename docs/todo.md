@@ -1773,6 +1773,9 @@ Task template:
       map receiver method candidates to rooted `/map/*` definitions; map
       receiver struct-return probing now checks only the canonical
       `/std/collections/map/*` method candidate.
+    - 2026-05-16: Lowerer statement-call receiver inference comments no
+      longer preserve a rooted `/map/at` args-pack example; source-lock
+      coverage now keeps that retired rooted trace absent.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

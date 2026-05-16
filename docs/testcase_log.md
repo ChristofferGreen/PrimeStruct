@@ -43,6 +43,14 @@
 
 ## Recent Test Runs
 - 2026-05-16 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` |
+  failures: none | notes: lowerer statement-call receiver inference no
+  longer carries a rooted `/map/at` args-pack example in production comments,
+  and the ownership source-lock keeps that retired rooted trace absent.
+- 2026-05-16 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib map constructors accept explicit canonical map struct fields,canonical stdlib map helpers accept constructor receivers"`;

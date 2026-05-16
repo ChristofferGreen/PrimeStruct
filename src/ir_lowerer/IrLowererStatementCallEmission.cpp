@@ -1106,9 +1106,8 @@ static bool rewriteMapInsertHelperStatementToCanonical(
     }
 
     // Reuse the core access-target resolver on the peeled receiver shape so
-    // wrapped args-pack map-access forms (for example stacked
-    // location/dereference around /map/at(argsPack, ...)) can flow through the
-    // same typed map-target inference used by direct receivers.
+    // wrapped args-pack map-access forms can flow through the same typed
+    // map-target inference used by direct receivers.
     auto canonicalTargetInfo =
         resolveMapAccessTargetInfo(*canonicalReceiverExpr,
                                    localsIn,
