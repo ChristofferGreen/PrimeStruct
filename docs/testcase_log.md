@@ -73,6 +73,17 @@
   manual map uninitialized validation coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 17:13 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="explicit canonical map access helpers accept canonical map values,canonical namespaced map access helpers accept experimental map values,stdlib namespaced map access helpers accept imported stdlib wrappers,explicit canonical map parameter keeps builtin helper validation,explicit canonical map parameter keeps builtin key diagnostics"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` |
+  failures: none | notes: collection-dispatch map field extraction now uses
+  the shared experimental collection backing helper for unspecialized
+  `Map<K,V>` type text and generated `Map__*` backing structs; the map surface
+  inventory now observes 927 production traces and backing traces now observe
+  172.
 - 2026-05-16 17:11 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="explicit canonical map access helpers accept canonical map values,canonical namespaced map access helpers accept experimental map values,stdlib namespaced map access helpers accept imported stdlib wrappers,explicit canonical map parameter keeps builtin helper validation,explicit canonical map parameter keeps builtin key diagnostics"`;

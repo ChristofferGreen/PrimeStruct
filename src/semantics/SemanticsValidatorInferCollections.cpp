@@ -60,6 +60,30 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
   auto extractExperimentalMapFieldTypes = [this](const BindingInfo &binding,
                                                  std::string &keyTypeOut,
                                                  std::string &valueTypeOut) -> bool {
+    auto experimentalMapBackingLeaf = [](std::string typeName) -> std::string {
+      typeName = normalizeBindingTypeName(std::move(typeName));
+      if (!typeName.empty() && typeName.front() == '/') {
+        typeName.erase(typeName.begin());
+      }
+      const size_t leafStart = typeName.find_last_of('/');
+      return leafStart == std::string::npos ? typeName : typeName.substr(leafStart + 1);
+    };
+    auto isUnspecializedExperimentalMapBackingType = [&](std::string typeName) -> bool {
+      typeName = normalizeBindingTypeName(std::move(typeName));
+      if (!typeName.empty() && typeName.front() == '/') {
+        typeName.erase(typeName.begin());
+      }
+      return experimentalMapBackingLeaf(typeName) == "Map" &&
+             isExperimentalCollectionBackingTypeName("map", "Map", typeName);
+    };
+    auto isSpecializedExperimentalMapBackingType = [&](std::string typeName) -> bool {
+      typeName = normalizeBindingTypeName(std::move(typeName));
+      if (!typeName.empty() && typeName.front() == '/') {
+        typeName.erase(typeName.begin());
+      }
+      return experimentalMapBackingLeaf(typeName).rfind("Map__", 0) == 0 &&
+             isExperimentalCollectionBackingTypeName("map", "Map", typeName);
+    };
     auto extractFromTypeText = [&](std::string normalizedType) -> bool {
       while (true) {
         std::string base;
@@ -74,11 +98,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
             normalizedType = normalizeBindingTypeName(args.front());
             continue;
           }
-          std::string normalizedBase = base;
-          if (!normalizedBase.empty() && normalizedBase.front() == '/') {
-            normalizedBase.erase(normalizedBase.begin());
-          }
-          if ((normalizedBase == "Map" || normalizedBase == "std/collections/experimental_map/Map")) {
+          if (isUnspecializedExperimentalMapBackingType(base)) {
             std::vector<std::string> args;
             if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 2) {
               return false;
@@ -97,7 +117,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
         if (!normalizedResolvedPath.empty() && normalizedResolvedPath.front() == '/') {
           normalizedResolvedPath.erase(normalizedResolvedPath.begin());
         }
-        if (normalizedResolvedPath.rfind("std/collections/experimental_map/Map__", 0) != 0) {
+        if (!isSpecializedExperimentalMapBackingType(normalizedResolvedPath)) {
           return false;
         }
         auto defIt = defMap_.find(resolvedPath);
