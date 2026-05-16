@@ -257,6 +257,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   backing paths through `experimentalCollectionTypePath`;
   setup-type method-call synthetic collection fallback blocking should derive
   the experimental map member root through `experimentalCollectionMemberRoot`;
+  struct-slot map type recognition should derive rooted and slashless
+  experimental map backing paths through `experimentalCollectionTypePath`;
   generated collection struct classification should derive the canonical map
   `MapValue__*` prefix through `collectionTypePath("map")` instead of
   carrying a split-string map root.

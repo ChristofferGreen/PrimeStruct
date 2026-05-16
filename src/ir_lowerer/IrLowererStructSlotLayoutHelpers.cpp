@@ -56,13 +56,15 @@ bool isBuiltinMapTypeName(const std::string &typeName) {
 }
 
 bool isExperimentalMapTypeName(const std::string &typeName) {
+  const std::string experimentalMapType = experimentalCollectionTypePath("map", "Map", false);
+  const std::string rootedExperimentalMapType = experimentalCollectionTypePath("map", "Map");
   const std::string mapValueRoot = collectionTypePath("map") + "/MapValue";
   const std::string mapValueRootNoSlash =
       !mapValueRoot.empty() && mapValueRoot.front() == '/' ? mapValueRoot.substr(1) : mapValueRoot;
-  return typeName == "std/collections/experimental_map/Map" ||
-         typeName == "/std/collections/experimental_map/Map" ||
-         typeName.rfind("std/collections/experimental_map/Map__", 0) == 0 ||
-         typeName.rfind("/std/collections/experimental_map/Map__", 0) == 0 ||
+  return typeName == experimentalMapType ||
+         typeName == rootedExperimentalMapType ||
+         typeName.rfind(experimentalMapType + "__", 0) == 0 ||
+         typeName.rfind(rootedExperimentalMapType + "__", 0) == 0 ||
          typeName == mapValueRootNoSlash ||
          typeName == mapValueRoot ||
          typeName.rfind(mapValueRootNoSlash + "__", 0) == 0 ||
