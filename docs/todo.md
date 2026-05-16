@@ -295,8 +295,9 @@ Task template:
   experimental map backing recognition through
   `isExperimentalCollectionBackingTypeName`, including graph binding
   initializer inference, and statement return collection normalization now
-  uses the same helper for generated map backing recognition. The remaining
-  production lowerer/emitter
+  uses the same helper for generated map backing recognition, and
+  collection-type normalization now uses the same helper for generated map
+  backing recognition. The remaining production lowerer/emitter
   experimental-map traces
   are source-locked as temporary internal backing substrate by
   `test_stdlib_map_ownership.cpp`, and

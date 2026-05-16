@@ -83,6 +83,15 @@ bool hasExplicitDefinitionFamilyPath(
   return false;
 }
 
+bool isSpecializedExperimentalMapBackingPath(std::string typeName) {
+  typeName = normalizeBindingTypeName(typeName);
+  if (!typeName.empty() && typeName.front() == '/') {
+    typeName.erase(typeName.begin());
+  }
+  return isExperimentalCollectionBackingTypeName("map", "Map", typeName) &&
+         typeName.find("__") != std::string::npos;
+}
+
 } // namespace
 
 std::string SemanticsValidator::normalizeCollectionTypePath(const std::string &typePath) const {
@@ -145,8 +154,7 @@ std::string SemanticsValidator::normalizeCollectionTypePath(const std::string &t
       normalizedType == "/std/collections/map") {
     return "/map";
   }
-  if (normalizedType.rfind("/std/collections/experimental_map/Map__", 0) == 0 ||
-      normalizedType.rfind("std/collections/experimental_map/Map__", 0) == 0) {
+  if (isSpecializedExperimentalMapBackingPath(normalizedType)) {
     return "/map";
   }
   if (normalizedType == "/string" || normalizedType == "string") {

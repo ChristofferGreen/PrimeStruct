@@ -179,8 +179,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   generated experimental map backing recognition through
   `isExperimentalCollectionBackingTypeName`, including graph binding
   initializer inference; statement return collection normalization should use
-  the same helper for generated map backing recognition; generated collection
-  struct classification should derive the canonical map `MapValue__*` prefix through
+  the same helper for generated map backing recognition; collection-type
+  normalization should use the same helper for generated map backing
+  recognition; generated collection struct classification should derive the
+  canonical map `MapValue__*` prefix through
   `collectionTypePath("map")` instead of carrying a split-string map root.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
