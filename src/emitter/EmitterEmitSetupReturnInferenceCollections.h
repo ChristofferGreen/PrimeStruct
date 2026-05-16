@@ -4,6 +4,7 @@
            suffix != "remove_at" && suffix != "remove_swap";
   };
   constexpr std::string_view VectorHelperSurfaceBridgeKey = "collections.vector_helpers";
+  constexpr std::string_view MapHelperSurfaceBridgeKey = "collections.map_helpers";
   auto vectorHelperPath = [&](std::string_view helperName) {
     const auto *metadata =
         findPublishedCollectionHelperSurfaceMetadataByBridgeKey(
@@ -12,6 +13,57 @@
       return std::string{};
     }
     return std::string(metadata->canonicalPath) + "/" + std::string(helperName);
+  };
+  auto mapHelperPath = [&](std::string_view helperName) {
+    return publishedCollectionSurfaceHelperPath(
+        MapHelperSurfaceBridgeKey,
+        helperName);
+  };
+  auto surfaceHelperPathForRawMethodName = [&](std::string_view bridgeKey,
+                                               std::string_view rawMethodName) {
+    const auto *metadata =
+        findPublishedCollectionHelperSurfaceMetadataByBridgeKey(bridgeKey);
+    if (metadata == nullptr || rawMethodName.empty()) {
+      return std::string{};
+    }
+    std::string normalizedRaw(rawMethodName);
+    if (!normalizedRaw.empty() && normalizedRaw.front() != '/') {
+      normalizedRaw.insert(normalizedRaw.begin(), '/');
+    }
+    std::string memberName;
+    if (!resolvePublishedCollectionSurfacePathMemberName(
+            normalizedRaw,
+            bridgeKey,
+            true,
+            memberName)) {
+      return std::string{};
+    }
+    auto pathForRoot = [&](std::string_view root) {
+      std::string normalizedRoot(root);
+      if (!normalizedRoot.empty() && normalizedRoot.front() != '/') {
+        normalizedRoot.insert(normalizedRoot.begin(), '/');
+      }
+      if (normalizedRoot.empty() ||
+          normalizedRaw.size() <= normalizedRoot.size() ||
+          normalizedRaw.rfind(normalizedRoot, 0) != 0 ||
+          normalizedRaw[normalizedRoot.size()] != '/') {
+        return std::string{};
+      }
+      return normalizedRoot + "/" + memberName;
+    };
+    if (std::string canonicalPath = pathForRoot(metadata->canonicalPath);
+        !canonicalPath.empty()) {
+      return canonicalPath;
+    }
+    for (const std::string_view alias : metadata->importAliasSpellings) {
+      if (std::string aliasPath = pathForRoot(alias); !aliasPath.empty()) {
+        return aliasPath;
+      }
+    }
+    return std::string{};
+  };
+  auto isMapReceiverStruct = [](const std::string &receiverStruct) {
+    return normalizeBindingTypeName(receiverStruct) == "map";
   };
   auto resolveVectorHelperMemberName = [&](std::string_view path,
                                            bool includeImportAliases,
@@ -35,8 +87,8 @@
     }
     return preferred;
   };
-  auto normalizeCollectionMethodName = [](const std::string &receiverStruct,
-                                          std::string methodName) -> std::string {
+  auto normalizeCollectionMethodName = [&](const std::string &receiverStruct,
+                                           std::string methodName) -> std::string {
     if (!methodName.empty() && methodName.front() == '/') {
       methodName.erase(methodName.begin());
     }
@@ -52,6 +104,16 @@
               true,
               vectorMemberName)) {
         return vectorMemberName;
+      }
+    }
+    if (isMapReceiverStruct(receiverStruct)) {
+      std::string mapMemberName;
+      if (resolvePublishedCollectionSurfacePathMemberName(
+              methodName,
+              MapHelperSurfaceBridgeKey,
+              true,
+              mapMemberName)) {
+        return mapMemberName;
       }
     }
     return methodName;
@@ -78,28 +140,20 @@
       }
       return candidates;
     }
-    if (receiverStruct == "/map") {
-      const std::string_view explicitHelperName = mapHelperNameFromPath(rawMethodName);
-      const bool isExplicitCompatibilityMethod =
-          rawMethodName.rfind("map/", 0) == 0 &&
-          !explicitHelperName.empty() &&
-          isCanonicalMapHelperName(explicitHelperName);
-      const bool isExplicitCanonicalMethod =
-          rawMethodName.rfind("std/collections/map/", 0) == 0 &&
-          !explicitHelperName.empty() &&
-          isCanonicalMapHelperName(explicitHelperName);
-      if (isExplicitCompatibilityMethod) {
-        return {"/map/" + std::string(explicitHelperName)};
-      }
-      if (isExplicitCanonicalMethod) {
-        return {"/std/collections/map/" + std::string(explicitHelperName)};
+    if (isMapReceiverStruct(receiverStruct)) {
+      if (const std::string explicitMapPath =
+              surfaceHelperPathForRawMethodName(
+                  MapHelperSurfaceBridgeKey,
+                  rawMethodName);
+          !explicitMapPath.empty()) {
+        return {explicitMapPath};
       }
       const bool isMapHelperMethod = isCanonicalMapHelperName(methodName);
       if (isMapHelperMethod) {
-        return {"/std/collections/map/" + methodName};
+        return {mapHelperPath(methodName)};
       }
       std::vector<std::string> candidates = {
-          "/std/collections/map/" + methodName,
+          mapHelperPath(methodName),
       };
       return candidates;
     }

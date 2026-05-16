@@ -336,7 +336,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   map helper paths through the published stdlib surface member resolver instead
   of direct map helper prefix checks; emitter method metadata receiver
   normalization should rely on the shared map type classifier instead of a
-  direct rooted `/map` type check;
+  direct rooted `/map` type check; emitter setup return-inference map method
+  candidate construction should derive explicit import-alias and canonical
+  helper paths through published stdlib surface metadata instead of direct map
+  helper path strings;
   statement-expression map count/access target classification should reuse
   local experimental collection type and generated-specialization helpers
   instead of direct experimental map backing path text;

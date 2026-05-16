@@ -474,6 +474,9 @@ Task template:
   member resolver instead of direct map helper prefix checks.
   Emitter method metadata receiver normalization now relies on the shared map
   type classifier instead of a direct rooted `/map` type check.
+  Emitter setup return-inference map method candidate construction now derives
+  explicit import-alias and canonical helper paths through published stdlib
+  surface metadata instead of direct map helper path strings.
   Emitter binding-type map compatibility checks now derive canonical and
   experimental map type paths through local collection path helpers instead of
   direct map path fragments.
