@@ -2086,6 +2086,9 @@ Task template:
     - 2026-05-16: Emitter return-kind type parsing no longer hard-codes
       experimental map backing base paths or generated prefixes; it now uses
       a local storage-base helper for those classifications.
+    - 2026-05-16: Collection expression lowering no longer hard-codes
+      experimental map backing member roots or generated `Map` prefixes; it
+      now derives them through local collection path helpers.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

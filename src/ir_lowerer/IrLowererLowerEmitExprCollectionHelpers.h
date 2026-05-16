@@ -414,7 +414,8 @@
           if (resolvedCollectionFromDef) {
             collectionStructPath = inferStructExprPath(*receiverExpr, localsIn);
             if (collectionStructPath.empty() &&
-                receiverDef->fullPath.rfind("/std/collections/experimental_map/", 0) == 0) {
+                receiverDef->fullPath.rfind(
+                    experimentalCollectionMemberRoot("map"), 0) == 0) {
               collectionStructPath =
                   inferPublishedExperimentalMapStructPathFromConstructorPath(
                       receiverDef->fullPath);
@@ -630,7 +631,9 @@
               materializedInfo.pointerToMap =
                   materializedWrappedMapReceiver &&
                   materializedMapReceiverKind == ir_lowerer::LocalInfo::Kind::Pointer;
-              if (collectionStructPath.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
+              if (collectionStructPath.rfind(
+                      experimentalCollectionTypePath("map", "Map") + "__",
+                      0) == 0) {
                 materializedInfo.structTypeName = collectionStructPath;
                 if (materializedInfo.structSlotCount <= 0) {
                   StructSlotLayoutInfo layout;

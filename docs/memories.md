@@ -267,7 +267,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   experimental map backing paths through its collection path helper; emitter
   return-kind type parsing should classify experimental map backing bases and
   generated prefixes through a local storage-base helper instead of direct
-  path text;
+  path text; collection expression lowering should derive experimental map
+  backing member roots and generated `Map` prefixes through local collection
+  path helpers;
   generated collection struct classification should derive the canonical map
   `MapValue__*` prefix through `collectionTypePath("map")` instead of
   carrying a split-string map root.
