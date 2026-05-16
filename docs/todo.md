@@ -1865,6 +1865,10 @@ Task template:
     - 2026-05-16: Template expression rewriting no longer probes visible
       rooted `/map/<helper>` definitions to report explicit-template
       diagnostics for bare map receiver calls.
+    - 2026-05-16: Template-monomorph map helper rewrite and
+      receiver-resolution no longer hard-code canonical map helper paths,
+      helper classification, preferred lowering spellings, or unknown-target
+      paths; they now derive those through stdlib surface metadata.
     - 2026-05-16: Late fallback return-kind inference now targets canonical
       `/std/collections/map/<helper>` paths rather than rooted
       `/map/<helper>` paths when resolving map receiver builtin access

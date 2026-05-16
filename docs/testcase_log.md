@@ -110,6 +110,16 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 19:31 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map pre-dispatch inference keeps rooted and canonical helper paths isolated,map canonical explicit-template count call keeps canonical non-templated diagnostics,map canonical implicit-template count call keeps canonical non-templated diagnostics,map canonical slash-path explicit-template access method stays on canonical unknown call target diagnostic,map canonical implicit-template count wrapper slash return keeps canonical diagnostics,map canonical wrapper auto local keeps builtin count diagnostics,map canonical reference wrapper auto local keeps key diagnostics,templated canonical map count wrapper method sugar rejects without explicit alias,map stdlib namespaced count expression keeps canonical helper return precedence,map stdlib namespaced count expression ignores templated alias helper fallback,map compatibility explicit-template count call keeps alias precedence with canonical templated helper" --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` | failures: none |
+  notes: template-monomorph map helper rewrite and receiver-resolution now
+  resolve canonical helper paths, helper classification, preferred lowering
+  spellings, and unknown-target paths through stdlib surface metadata; the
+  map surface inventory now observes 523 production traces and backing traces
+  remain at 0.
 - 2026-05-16 19:25 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical map access wrapper ignores removed alias helper,bare map access methods require imported canonical helpers or explicit definitions,stdlib namespaced map at requires imported stdlib helper or explicit definition,stdlib namespaced map at_unsafe requires imported stdlib helper or explicit definition,canonical stdlib map helpers accept constructor receivers,stdlib canonical map contains and tryAt helpers resolve in method-call sugar,map method access keeps canonical struct-return forwarding,map method access field expression keeps canonical struct-return forwarding,map method access ignores rooted alias struct-return helper,map method access reports canonical builtin result type over alias helper,map compatibility tryAt call rejects visible canonical definition" --no-skip`;

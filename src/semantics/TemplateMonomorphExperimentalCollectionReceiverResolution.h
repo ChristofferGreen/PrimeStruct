@@ -514,26 +514,131 @@ bool resolvesExperimentalVectorValueReceiver(const Expr *receiverExpr,
   return resolvesExperimentalVectorValueTypeText(inferredReceiverType);
 }
 
+const StdlibSurfaceMetadata *templateMonomorphMapHelperSurfaceMetadata() {
+  return primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+}
+
+bool resolveTemplateMonomorphMapHelperName(std::string path,
+                                           std::string &helperNameOut) {
+  helperNameOut.clear();
+  const StdlibSurfaceMetadata *metadata =
+      templateMonomorphMapHelperSurfaceMetadata();
+  if (metadata == nullptr || path.empty()) {
+    return false;
+  }
+  if (path.find('/') != std::string::npos && path.front() != '/') {
+    path.insert(path.begin(), '/');
+  }
+  if (path.find('/') != std::string::npos) {
+    const StdlibSurfaceMetadata *pathMetadata =
+        primec::findStdlibSurfaceMetadataByResolvedPath(path);
+    if (pathMetadata == nullptr || pathMetadata->id != metadata->id) {
+      return false;
+    }
+  }
+  const std::string_view helperName =
+      primec::resolveStdlibSurfaceMemberName(*metadata, path);
+  if (helperName.empty()) {
+    return false;
+  }
+  helperNameOut.assign(helperName);
+  return true;
+}
+
+std::string templateMonomorphCanonicalMapHelperPath(std::string_view spelling) {
+  std::string helperName;
+  if (!resolveTemplateMonomorphMapHelperName(std::string(spelling),
+                                             helperName)) {
+    return {};
+  }
+  const StdlibSurfaceMetadata *metadata =
+      templateMonomorphMapHelperSurfaceMetadata();
+  if (metadata == nullptr) {
+    return {};
+  }
+  return std::string(metadata->canonicalPath) + "/" + helperName;
+}
+
+bool resolveTemplateMonomorphCanonicalMapHelperName(
+    std::string path,
+    std::string &helperNameOut) {
+  helperNameOut.clear();
+  const StdlibSurfaceMetadata *metadata =
+      templateMonomorphMapHelperSurfaceMetadata();
+  if (metadata == nullptr || path.empty()) {
+    return false;
+  }
+  if (path.front() != '/') {
+    path.insert(path.begin(), '/');
+  }
+  const std::string canonicalPrefix =
+      std::string(metadata->canonicalPath) + "/";
+  if (path.rfind(canonicalPrefix, 0) != 0) {
+    return false;
+  }
+  return resolveTemplateMonomorphMapHelperName(std::move(path),
+                                               helperNameOut);
+}
+
+bool isTemplateMonomorphCanonicalMapHelperPath(const std::string &path) {
+  std::string helperName;
+  return resolveTemplateMonomorphCanonicalMapHelperName(path, helperName) &&
+         helperName != "map" && helperName != "entry";
+}
+
+bool isTemplateMonomorphCanonicalMapValueAccessPath(const std::string &path) {
+  std::string helperName;
+  return resolveTemplateMonomorphCanonicalMapHelperName(path, helperName) &&
+         (helperName == "at" || helperName == "at_unsafe");
+}
+
+bool isTemplateMonomorphCanonicalMapCountPath(const std::string &path) {
+  std::string helperName;
+  return resolveTemplateMonomorphCanonicalMapHelperName(path, helperName) &&
+         helperName == "count";
+}
+
+std::string templateMonomorphPreferredMapHelperSpellingForMember(
+    std::string_view spelling,
+    std::string_view preferredPrefix) {
+  std::string helperName;
+  if (!resolveTemplateMonomorphMapHelperName(std::string(spelling),
+                                             helperName)) {
+    return {};
+  }
+  const StdlibSurfaceMetadata *metadata =
+      templateMonomorphMapHelperSurfaceMetadata();
+  if (metadata == nullptr) {
+    return {};
+  }
+  auto findPreferred = [&](std::span<const std::string_view> spellings) {
+    for (const std::string_view candidate : spellings) {
+      std::string candidateHelperName;
+      if (candidate.rfind(preferredPrefix, 0) == 0 &&
+          resolveTemplateMonomorphMapHelperName(std::string(candidate),
+                                                candidateHelperName) &&
+          candidateHelperName == helperName) {
+        return std::string(candidate);
+      }
+    }
+    return std::string{};
+  };
+  if (std::string preferred = findPreferred(metadata->loweringSpellings);
+      !preferred.empty()) {
+    return preferred;
+  }
+  return findPreferred(metadata->compatibilitySpellings);
+}
+
 std::string canonicalMapHelperUnknownTargetPath(const std::string &resolvedPath) {
-  if (resolvedPath == "/std/collections/map/count") {
-    return "/std/collections/map/count";
+  std::string helperName;
+  if (!resolveTemplateMonomorphCanonicalMapHelperName(resolvedPath,
+                                                      helperName) ||
+      helperName == "map" || helperName == "entry" ||
+      helperName.ends_with("_ref")) {
+    return {};
   }
-  if (resolvedPath == "/std/collections/map/contains") {
-    return "/std/collections/map/contains";
-  }
-  if (resolvedPath == "/std/collections/map/tryAt") {
-    return "/std/collections/map/tryAt";
-  }
-  if (resolvedPath == "/std/collections/map/at") {
-    return "/std/collections/map/at";
-  }
-  if (resolvedPath == "/std/collections/map/at_unsafe") {
-    return "/std/collections/map/at_unsafe";
-  }
-  if (resolvedPath == "/std/collections/map/insert") {
-    return "/std/collections/map/insert";
-  }
-  return {};
+  return templateMonomorphCanonicalMapHelperPath(helperName);
 }
 
 bool resolveExperimentalMapValueReceiverTemplateArgs(const Expr *receiverExpr,
@@ -585,10 +690,8 @@ std::string experimentalMapHelperPathForCanonicalHelper(const std::string &path)
   if (path.rfind("/map/", 0) == 0) {
     return {};
   }
-  return primec::stdlibSurfacePreferredSpellingForMember(
-      primec::StdlibSurfaceId::CollectionsMapHelpers,
-      path,
-      experimentalCollectionConstructorRootLocal("map"));
+  return templateMonomorphPreferredMapHelperSpellingForMember(
+      path, experimentalCollectionConstructorRootLocal("map"));
 }
 
 std::string experimentalVectorHelperPathForCanonicalHelper(const std::string &path) {
@@ -701,10 +804,8 @@ std::string experimentalMapHelperPathForWrapperHelper(const std::string &path) {
   if (path.rfind("/map/", 0) == 0) {
     return {};
   }
-  return primec::stdlibSurfacePreferredSpellingForMember(
-      primec::StdlibSurfaceId::CollectionsMapHelpers,
-      path,
-      experimentalCollectionConstructorRootLocal("map"));
+  return templateMonomorphPreferredMapHelperSpellingForMember(
+      path, experimentalCollectionConstructorRootLocal("map"));
 }
 
 bool resolveExperimentalVectorValueReceiverTemplateArgs(const Expr *receiverExpr,

@@ -233,16 +233,7 @@ bool rewriteExpr(Expr &expr,
   }
 
   auto isCanonicalBuiltinMapHelperPath = [](const std::string &path) {
-    return path == "/std/collections/map/count" || path == "/std/collections/map/contains" ||
-           path == "/std/collections/map/tryAt" || path == "/std/collections/map/at" ||
-           path == "/std/collections/map/at_unsafe" ||
-           path == "/std/collections/map/insert" ||
-           path == "/std/collections/map/count_ref" ||
-           path == "/std/collections/map/contains_ref" ||
-           path == "/std/collections/map/tryAt_ref" ||
-           path == "/std/collections/map/at_ref" ||
-           path == "/std/collections/map/at_unsafe_ref" ||
-           path == "/std/collections/map/insert_ref";
+    return isTemplateMonomorphCanonicalMapHelperPath(path);
   };
   auto isCanonicalStdlibCollectionHelperPath = [&](const std::string &path) {
     if (isCanonicalBuiltinMapHelperPath(path)) {
@@ -1059,7 +1050,8 @@ bool rewriteExpr(Expr &expr,
     }
     if (!resolvesVectorFamilyPath && receiverFamily == "map" &&
         (helperName == "count" || helperName == "count_ref")) {
-      const std::string preferred = "/std/collections/map/" + helperName;
+      const std::string preferred =
+          templateMonomorphCanonicalMapHelperPath(helperName);
       if (hasVisibleStdCollectionsImportForPath(ctx, preferred) &&
           ctx.sourceDefs.count(preferred) > 0) {
         return preferred;
@@ -1137,7 +1129,7 @@ bool rewriteExpr(Expr &expr,
               mapHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx)) {
         return true;
       }
-      if (path.rfind("/std/collections/map/", 0) == 0) {
+      if (isTemplateMonomorphCanonicalMapHelperPath(path)) {
         return true;
       }
       return false;
@@ -1551,8 +1543,8 @@ bool rewriteExpr(Expr &expr,
         experimentalMapReceiverExpr->kind == Expr::Kind::Call &&
         !experimentalMapReceiverExpr->isFieldAccess &&
         !receiverIsPublishedMapConstructor &&
-        (borrowedCanonicalMapUnknownTarget == "/std/collections/map/at" ||
-         borrowedCanonicalMapUnknownTarget == "/std/collections/map/at_unsafe");
+        isTemplateMonomorphCanonicalMapValueAccessPath(
+            borrowedCanonicalMapUnknownTarget);
     if (!experimentalMapPath.empty() && ctx.sourceDefs.count(experimentalMapPath) > 0 &&
         resolvesExperimentalMapValueReceiver(
             experimentalMapReceiverExpr, params, locals, allowMathBare, mapping, allowedParams, namespacePrefix, ctx)) {
@@ -1656,7 +1648,7 @@ bool rewriteExpr(Expr &expr,
       }
     }
     if (expr.templateArgs.empty() &&
-        resolvedPath.rfind("/std/collections/map/", 0) == 0 &&
+        isTemplateMonomorphCanonicalMapHelperPath(resolvedPath) &&
         hasVisibleStdCollectionsImportForPath(
             ctx,
             resolvedPath)) {
@@ -1718,7 +1710,7 @@ bool rewriteExpr(Expr &expr,
       expr.templateArgs.clear();
     }
     if (inferredCanonicalMapReceiverTemplateArgs &&
-        resolvedPath.rfind("/std/collections/map/", 0) == 0 &&
+        isTemplateMonomorphCanonicalMapHelperPath(resolvedPath) &&
         resolvedPath.find("__t") != std::string::npos) {
       expr.templateArgs.clear();
     }
@@ -1733,7 +1725,7 @@ bool rewriteExpr(Expr &expr,
         preferredPath != originalResolvedPath && ctx.templateDefs.count(preferredPath) > 0;
     const bool resolvedWasTemplate = ctx.templateDefs.count(resolvedPath) > 0;
     const bool isBuiltinMapCountPath =
-        resolvedPath == "/std/collections/map/count";
+        isTemplateMonomorphCanonicalMapCountPath(resolvedPath);
     const bool isKnownDef = ctx.sourceDefs.count(resolvedPath) > 0;
     if (!expr.templateArgs.empty() && !resolvedWasTemplate && !isKnownDef && isBuiltinMapCountPath) {
       error = "count does not accept template arguments";
@@ -2167,7 +2159,7 @@ bool rewriteExpr(Expr &expr,
         }
       }
       if (expr.templateArgs.empty() &&
-          methodPath.rfind("/std/collections/map/", 0) == 0 &&
+          isTemplateMonomorphCanonicalMapHelperPath(methodPath) &&
           hasVisibleStdCollectionsImportForPath(ctx, methodPath)) {
         std::vector<std::string> receiverTemplateArgs;
         if (resolveExperimentalMapValueReceiverTemplateArgs(
