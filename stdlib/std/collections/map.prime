@@ -186,10 +186,8 @@ namespace std {
 
   [return<void>]
   overwriteSlot<T>([Vector<T> mut] values, [i32] index, [T] value) {
-    [Pointer<uninitialized<T>> mut] slot{
-        /std/collections/internal_buffer_unchecked/bufferOffsetUnsafe<uninitialized<T>>(values.data, index)}
-    drop(dereference(slot))
-    init(dereference(slot), value)
+    [Reference<T> mut] slot{/std/collections/internal_vector/vectorBorrowSlot<T>(values, index)}
+    assign(dereference(slot), value)
   }
 
   [public effects(heap_alloc), return<void> Comparable<K>]
@@ -230,7 +228,20 @@ namespace std {
 
   [public effects(heap_alloc), return<void> Comparable<K>]
   insert<K, V>([MapValue<K, V> mut] entries, [K] key, [V] value) {
-    /std/collections/map/mapInsert<K, V>(entries, key, value)
+    [i32] index{/std/collections/map/findIndex<K, V>(entries, key)}
+    [Vector<K> mut] keys{entries.keys}
+    [Vector<V> mut] payloads{entries.payloads}
+    if(less_than(index, /std/collections/map/mapCount<K, V>(entries)),
+       then() {
+         /std/collections/map/overwriteSlot<V>(payloads, index, value)
+         assign(entries.payloads, payloads)
+       },
+       else() {
+         /std/collections/internal_vector/vectorPush<K>(keys, key)
+         /std/collections/internal_vector/vectorPush<V>(payloads, value)
+         assign(entries.keys, keys)
+         assign(entries.payloads, payloads)
+       })
   }
 
   [public effects(heap_alloc), return<void> Comparable<K>]

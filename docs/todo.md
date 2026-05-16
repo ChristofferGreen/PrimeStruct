@@ -1726,6 +1726,14 @@ Task template:
     - 2026-05-16: Native templated stdlib wrapper-temporary fixtures now use
       `map<K, V>(key, value)` and `return<auto>` rather than the retired
       `mapSingle<K, V>` helper plus old bare `map<K, V>` return envelope.
+    - 2026-05-16: Public `/std/collections/map/insert*` helpers no longer
+      take the native generated-map-insert shortcut; only
+      `internal_map/insert*Impl` remains on that compatibility path. Local
+      canonical `MapValue` insert/overwrite/growth tests now run through the
+      stdlib implementation in native, VM, and C++ emitter modes. Non-local
+      `MapValue` field receivers now compile-reject in the shared conformance
+      fixtures because supporting them still depends on the retired C++ map
+      field bridge.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

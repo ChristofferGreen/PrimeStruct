@@ -64,6 +64,18 @@ This file stores durable session-derived facts that are useful in later work. Ke
   semantic and inference rejection so pre-dispatch cannot borrow
   `/std/collections/map/count`.
 
+### mapvalue-public-insert-uses-stdlib
+- Updated: 2026-05-16
+- Tags: ir, collections, native
+- Fact: Public `/std/collections/map/insert*` must inline the stdlib-owned
+  `MapValue` helpers instead of using generated native flat-map insert
+  lowering; non-local `MapValue` field receivers are compile-reject fixtures
+  until a non-bridge field path exists.
+- Evidence: Canonical local map insert/overwrite/growth VM/native/C++ emitter
+  conformance hung or hit invalid indirect addresses until public insert was
+  removed from `isGeneratedMapInsertHelper`, while field receiver cases still
+  fail with `struct field type mismatch` without the retired map bridge.
+
 ### native-map-values-must-be-scalars
 - Updated: 2026-05-15
 - Tags: native, collections, lowering

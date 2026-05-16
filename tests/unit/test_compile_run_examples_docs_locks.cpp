@@ -638,9 +638,8 @@ TEST_CASE("vector map bridge boundary docs stay source locked") {
                             "  monomorphization still asks the registry for preferred experimental\n"
                             "  vector/SoA") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("SoA public helper, constructor,\n"
-                            "  import-alias, field-view, conversion, and retained compatibility metadata\n"
-                            "  now lives in `stdlib/std/collections/surfaces.psmeta`") !=
+  CHECK(primeStructDoc.find("SoA public helper, constructor, import-alias, field-view, and conversion\n"
+                            "  metadata now lives in `stdlib/std/collections/surfaces.psmeta`") !=
         std::string::npos);
   CHECK(primeStructDoc.find("it no longer owns SoA public collection member lists") !=
         std::string::npos);
@@ -686,10 +685,10 @@ TEST_CASE("vector map bridge boundary docs stay source locked") {
   CHECK(todo.find("Template\n"
                   "  monomorphization now asks the registry for preferred experimental vector/SoA") !=
         std::string::npos);
-  CHECK(todo.find("SoA public helper, constructor, import-alias, field-view, conversion, and\n"
-                  "  retained compatibility metadata now lives in") !=
+  CHECK(todo.find("SoA public helper, constructor, import-alias, field-view, and conversion\n"
+                  "  metadata now lives in") !=
         std::string::npos);
-  CHECK(todo.find("it no longer owns SoA public collection member lists") !=
+  CHECK(todo.find("without temporary `/std/collections/soa_vector/*`") !=
         std::string::npos);
   CHECK(todo.find("Gfx Buffer helper compatibility is routed\n"
                   "  through `StdlibSurfaceRegistry::GfxBufferHelpers`") !=

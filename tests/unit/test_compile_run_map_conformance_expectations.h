@@ -510,24 +510,14 @@ inline void expectBuiltinCanonicalMapInsertOverwriteConformance(const std::strin
 }
 
 inline void expectBuiltinCanonicalMapInsertNonLocalGrowthConformance(const std::string &emitMode) {
-  expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertNonLocalGrowthConformanceSource(),
-                                            "map_builtin_canonical_insert_non_local_growth_" + emitMode,
-                                            emitMode,
-                                            31,
-                                            "");
+  expectMapConformanceCompileReject(
+      makeBuiltinCanonicalMapInsertNonLocalGrowthConformanceSource(),
+      "map_builtin_canonical_insert_non_local_growth_" + emitMode,
+      emitMode,
+      "");
 }
 
 inline void expectBuiltinCanonicalMapInsertNestedNonLocalGrowthConformance(const std::string &emitMode) {
-  if (emitMode == "vm") {
-    expectMapConformanceProgramRunsWithOutput(
-        makeBuiltinCanonicalMapInsertNestedNonLocalGrowthConformanceSource(),
-        "map_builtin_canonical_insert_nested_non_local_growth_" + emitMode,
-        emitMode,
-        31,
-        "");
-    return;
-  }
-
   expectMapConformanceCompileReject(
       makeBuiltinCanonicalMapInsertNestedNonLocalGrowthConformanceSource(),
       "map_builtin_canonical_insert_nested_non_local_growth_" + emitMode,
@@ -536,16 +526,6 @@ inline void expectBuiltinCanonicalMapInsertNestedNonLocalGrowthConformance(const
 }
 
 inline void expectBuiltinCanonicalMapInsertHelperReturnBorrowedMethodConformance(const std::string &emitMode) {
-  if (emitMode == "vm") {
-    expectMapConformanceProgramRunsWithOutput(
-        makeBuiltinCanonicalMapInsertHelperReturnBorrowedMethodConformanceSource(),
-        "map_builtin_canonical_insert_helper_return_borrowed_method_" + emitMode,
-        emitMode,
-        18,
-        "");
-    return;
-  }
-
   expectMapConformanceCompileReject(
       makeBuiltinCanonicalMapInsertHelperReturnBorrowedMethodConformanceSource(),
       "map_builtin_canonical_insert_helper_return_borrowed_method_" + emitMode,
@@ -554,11 +534,11 @@ inline void expectBuiltinCanonicalMapInsertHelperReturnBorrowedMethodConformance
 }
 
 inline void expectBuiltinCanonicalMapStructFieldInitializerConformance(const std::string &emitMode) {
-  expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapStructFieldInitializerConformanceSource(),
-                                            "map_builtin_canonical_struct_field_initializer_" + emitMode,
-                                            emitMode,
-                                            0,
-                                            "");
+  expectMapConformanceCompileReject(
+      makeBuiltinCanonicalMapStructFieldInitializerConformanceSource(),
+      "map_builtin_canonical_struct_field_initializer_" + emitMode,
+      emitMode,
+      "");
 }
 
 inline void expectBuiltinCanonicalMapInsertHelperReturnValueDirectConformance(const std::string &emitMode) {
@@ -580,11 +560,10 @@ inline void expectBuiltinCanonicalMapInsertHelperReturnValueMethodConformance(co
 }
 
 inline void expectBuiltinCanonicalMapInsertBorrowedHolderFieldDirectConformance(const std::string &emitMode) {
-  expectMapConformanceProgramRunsWithOutput(
+  expectMapConformanceCompileReject(
       makeBuiltinCanonicalMapInsertBorrowedHolderFieldDirectConformanceSource(),
       "map_builtin_canonical_insert_borrowed_holder_field_direct_" + emitMode,
       emitMode,
-      0,
       "");
 }
 

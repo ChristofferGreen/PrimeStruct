@@ -500,7 +500,7 @@ inline std::string makeBuiltinCanonicalMapInsertFirstGrowthConformanceSource() {
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [map<i32, i32> mut] values{map<i32, i32>()}\n";
-  source += "  /std/collections/map/insert<i32, i32>(values, 1i32, 4i32)\n";
+  source += "  /std/collections/map/insert(values, 1i32, 4i32)\n";
   source += "  values.insert(1i32, 7i32)\n";
   source += "  return(plus(values.count(), values.at(1i32)))\n";
   source += "}\n";
@@ -513,7 +513,7 @@ inline std::string makeBuiltinCanonicalMapInsertRepeatedGrowthConformanceSource(
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [map<i32, i32> mut] values{map<i32, i32>(1i32, 4i32, 2i32, 7i32, 3i32, 11i32, 4i32, 13i32, 5i32, 15i32, 6i32, 17i32, 7i32, 19i32, 8i32, 21i32, 9i32, 23i32, 10i32, 25i32, 11i32, 27i32, 12i32, 29i32, 13i32, 31i32, 14i32, 33i32, 15i32, 35i32, 16i32, 37i32, 17i32, 39i32, 18i32, 41i32, 19i32, 43i32, 20i32, 45i32)}\n";
-  source += "  /std/collections/map/insert<i32, i32>(values, 21i32, 47i32)\n";
+  source += "  /std/collections/map/insert(values, 21i32, 47i32)\n";
   source += "  values.insert(22i32, 49i32)\n";
   source += "  values.insert(1i32, 9i32)\n";
   source += "  return(plus(values.count(), plus(values.at(1i32), plus(values.at(10i32), plus(values.at(20i32), plus(values.at_unsafe(21i32), values.at(22i32)))))))\n";
@@ -527,7 +527,7 @@ inline std::string makeBuiltinCanonicalMapInsertPairGrowthConformanceSource() {
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [map<i32, i32> mut] values{map<i32, i32>(1i32, 4i32)}\n";
-  source += "  /std/collections/map/insert<i32, i32>(values, 2i32, 7i32)\n";
+  source += "  /std/collections/map/insert(values, 2i32, 7i32)\n";
   source += "  values.insert(1i32, 9i32)\n";
   source += "  return(plus(values.count(), plus(values.at(1i32), values.at_unsafe(2i32))))\n";
   source += "}\n";
@@ -540,7 +540,7 @@ inline std::string makeBuiltinCanonicalMapInsertTripleGrowthConformanceSource() 
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [map<i32, i32> mut] values{map<i32, i32>(1i32, 4i32, 2i32, 7i32)}\n";
-  source += "  /std/collections/map/insert<i32, i32>(values, 3i32, 11i32)\n";
+  source += "  /std/collections/map/insert(values, 3i32, 11i32)\n";
   source += "  values.insert(1i32, 9i32)\n";
   source += "  return(plus(values.count(), plus(values.at(1i32), plus(values.at(2i32), values.at_unsafe(3i32)))))\n";
   source += "}\n";
@@ -553,7 +553,7 @@ inline std::string makeBuiltinCanonicalMapInsertQuadGrowthConformanceSource() {
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [map<i32, i32> mut] values{map<i32, i32>(1i32, 4i32, 2i32, 7i32, 3i32, 11i32)}\n";
-  source += "  /std/collections/map/insert<i32, i32>(values, 4i32, 13i32)\n";
+  source += "  /std/collections/map/insert(values, 4i32, 13i32)\n";
   source += "  values.insert(1i32, 9i32)\n";
   source += "  return(plus(values.count(), plus(values.at(1i32), plus(values.at(2i32), plus(values.at(3i32), values.at_unsafe(4i32))))))\n";
   source += "}\n";
@@ -566,7 +566,7 @@ inline std::string makeBuiltinCanonicalMapInsertQuintGrowthConformanceSource() {
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [map<i32, i32> mut] values{map<i32, i32>(1i32, 4i32, 2i32, 7i32, 3i32, 11i32, 4i32, 13i32)}\n";
-  source += "  /std/collections/map/insert<i32, i32>(values, 5i32, 15i32)\n";
+  source += "  /std/collections/map/insert(values, 5i32, 15i32)\n";
   source += "  values.insert(1i32, 9i32)\n";
   source += "  return(plus(values.count(), plus(values.at(1i32), plus(values.at(2i32), plus(values.at(3i32), plus(values.at(4i32), values.at_unsafe(5i32)))))))\n";
   source += "}\n";
@@ -579,7 +579,7 @@ inline std::string makeBuiltinCanonicalMapInsertSextGrowthConformanceSource() {
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [map<i32, i32> mut] values{map<i32, i32>(1i32, 4i32, 2i32, 7i32, 3i32, 11i32, 4i32, 13i32, 5i32, 15i32)}\n";
-  source += "  /std/collections/map/insert<i32, i32>(values, 6i32, 17i32)\n";
+  source += "  /std/collections/map/insert(values, 6i32, 17i32)\n";
   source += "  values.insert(1i32, 9i32)\n";
   source += "  return(plus(values.count(), plus(values.at(1i32), plus(values.at(2i32), plus(values.at(3i32), plus(values.at(4i32), plus(values.at(5i32), values.at_unsafe(6i32))))))))\n";
   source += "}\n";
@@ -592,7 +592,7 @@ inline std::string makeBuiltinCanonicalMapInsertSeptGrowthConformanceSource() {
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [map<i32, i32> mut] values{map<i32, i32>(1i32, 4i32, 2i32, 7i32, 3i32, 11i32, 4i32, 13i32, 5i32, 15i32, 6i32, 17i32)}\n";
-  source += "  /std/collections/map/insert<i32, i32>(values, 7i32, 19i32)\n";
+  source += "  /std/collections/map/insert(values, 7i32, 19i32)\n";
   source += "  values.insert(1i32, 9i32)\n";
   source += "  return(plus(values.count(), plus(values.at(1i32), plus(values.at(2i32), plus(values.at(3i32), plus(values.at(4i32), plus(values.at(5i32), plus(values.at(6i32), values.at_unsafe(7i32)))))))))\n";
   source += "}\n";
@@ -605,7 +605,7 @@ inline std::string makeBuiltinCanonicalMapInsertOctGrowthConformanceSource() {
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [map<i32, i32> mut] values{map<i32, i32>(1i32, 4i32, 2i32, 7i32, 3i32, 11i32, 4i32, 13i32, 5i32, 15i32, 6i32, 17i32, 7i32, 19i32)}\n";
-  source += "  /std/collections/map/insert<i32, i32>(values, 8i32, 21i32)\n";
+  source += "  /std/collections/map/insert(values, 8i32, 21i32)\n";
   source += "  values.insert(1i32, 9i32)\n";
   source += "  return(plus(values.count(), plus(values.at(1i32), plus(values.at(2i32), plus(values.at(3i32), plus(values.at(4i32), plus(values.at(5i32), plus(values.at(6i32), plus(values.at(7i32), values.at_unsafe(8i32))))))))))\n";
   source += "}\n";
@@ -618,7 +618,7 @@ inline std::string makeBuiltinCanonicalMapInsertNinthGrowthConformanceSource() {
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [map<i32, i32> mut] values{map<i32, i32>(1i32, 4i32, 2i32, 7i32, 3i32, 11i32, 4i32, 13i32, 5i32, 15i32, 6i32, 17i32, 7i32, 19i32, 8i32, 21i32)}\n";
-  source += "  /std/collections/map/insert<i32, i32>(values, 9i32, 23i32)\n";
+  source += "  /std/collections/map/insert(values, 9i32, 23i32)\n";
   source += "  values.insert(1i32, 9i32)\n";
   source += "  return(plus(values.count(), plus(values.at(1i32), plus(values.at(2i32), plus(values.at(3i32), plus(values.at(4i32), plus(values.at(5i32), plus(values.at(6i32), plus(values.at(7i32), plus(values.at(8i32), values.at_unsafe(9i32)))))))))))\n";
   source += "}\n";
@@ -631,7 +631,7 @@ inline std::string makeBuiltinCanonicalMapInsertTenthGrowthConformanceSource() {
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [map<i32, i32> mut] values{map<i32, i32>(1i32, 4i32, 2i32, 7i32, 3i32, 11i32, 4i32, 13i32, 5i32, 15i32, 6i32, 17i32, 7i32, 19i32, 8i32, 21i32, 9i32, 23i32)}\n";
-  source += "  /std/collections/map/insert<i32, i32>(values, 10i32, 25i32)\n";
+  source += "  /std/collections/map/insert(values, 10i32, 25i32)\n";
   source += "  values.insert(1i32, 9i32)\n";
   source += "  return(plus(values.count(), plus(values.at(1i32), plus(values.at(2i32), plus(values.at(3i32), plus(values.at(4i32), plus(values.at(5i32), plus(values.at(6i32), plus(values.at(7i32), plus(values.at(8i32), plus(values.at(9i32), values.at_unsafe(10i32))))))))))))\n";
   source += "}\n";
@@ -644,7 +644,7 @@ inline std::string makeBuiltinCanonicalMapInsertEleventhGrowthConformanceSource(
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [map<i32, i32> mut] values{map<i32, i32>(1i32, 4i32, 2i32, 7i32, 3i32, 11i32, 4i32, 13i32, 5i32, 15i32, 6i32, 17i32, 7i32, 19i32, 8i32, 21i32, 9i32, 23i32, 10i32, 25i32)}\n";
-  source += "  /std/collections/map/insert<i32, i32>(values, 11i32, 27i32)\n";
+  source += "  /std/collections/map/insert(values, 11i32, 27i32)\n";
   source += "  values.insert(1i32, 9i32)\n";
   source += "  return(plus(values.count(), plus(values.at(1i32), plus(values.at(2i32), plus(values.at(3i32), plus(values.at(4i32), plus(values.at(5i32), plus(values.at(6i32), plus(values.at(7i32), plus(values.at(8i32), plus(values.at(9i32), plus(values.at(10i32), values.at_unsafe(11i32)))))))))))))\n";
   source += "}\n";
@@ -657,7 +657,7 @@ inline std::string makeBuiltinCanonicalMapInsertTwelfthGrowthConformanceSource()
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [map<i32, i32> mut] values{map<i32, i32>(1i32, 4i32, 2i32, 7i32, 3i32, 11i32, 4i32, 13i32, 5i32, 15i32, 6i32, 17i32, 7i32, 19i32, 8i32, 21i32, 9i32, 23i32, 10i32, 25i32, 11i32, 27i32)}\n";
-  source += "  /std/collections/map/insert<i32, i32>(values, 12i32, 29i32)\n";
+  source += "  /std/collections/map/insert(values, 12i32, 29i32)\n";
   source += "  values.insert(1i32, 9i32)\n";
   source += "  return(plus(values.count(), plus(values.at(1i32), plus(values.at(2i32), plus(values.at(3i32), plus(values.at(4i32), plus(values.at(5i32), plus(values.at(6i32), plus(values.at(7i32), plus(values.at(8i32), plus(values.at(9i32), plus(values.at(10i32), plus(values.at(11i32), values.at_unsafe(12i32))))))))))))))\n";
   source += "}\n";
@@ -670,7 +670,7 @@ inline std::string makeBuiltinCanonicalMapInsertThirteenthGrowthConformanceSourc
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [map<i32, i32> mut] values{map<i32, i32>(1i32, 4i32, 2i32, 7i32, 3i32, 11i32, 4i32, 13i32, 5i32, 15i32, 6i32, 17i32, 7i32, 19i32, 8i32, 21i32, 9i32, 23i32, 10i32, 25i32, 11i32, 27i32, 12i32, 29i32)}\n";
-  source += "  /std/collections/map/insert<i32, i32>(values, 13i32, 31i32)\n";
+  source += "  /std/collections/map/insert(values, 13i32, 31i32)\n";
   source += "  values.insert(1i32, 9i32)\n";
   source += "  return(plus(values.count(), plus(values.at(1i32), plus(values.at(3i32), plus(values.at(4i32), plus(values.at(5i32), plus(values.at(6i32), plus(values.at(7i32), plus(values.at(8i32), plus(values.at(9i32), plus(values.at(10i32), plus(values.at(11i32), plus(values.at(12i32), values.at_unsafe(13i32))))))))))))))\n";
   source += "}\n";
@@ -683,7 +683,7 @@ inline std::string makeBuiltinCanonicalMapInsertFourteenthGrowthConformanceSourc
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [map<i32, i32> mut] values{map<i32, i32>(1i32, 4i32, 2i32, 7i32, 3i32, 11i32, 4i32, 13i32, 5i32, 15i32, 6i32, 17i32, 7i32, 19i32, 8i32, 21i32, 9i32, 23i32, 10i32, 25i32, 11i32, 27i32, 12i32, 29i32, 13i32, 31i32)}\n";
-  source += "  /std/collections/map/insert<i32, i32>(values, 14i32, 33i32)\n";
+  source += "  /std/collections/map/insert(values, 14i32, 33i32)\n";
   source += "  values.insert(1i32, 9i32)\n";
   source += "  return(plus(values.count(), plus(values.at(1i32), plus(values.at(5i32), plus(values.at(9i32), plus(values.at(13i32), values.at_unsafe(14i32)))))))\n";
   source += "}\n";
@@ -696,7 +696,7 @@ inline std::string makeBuiltinCanonicalMapInsertFifteenthGrowthConformanceSource
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [map<i32, i32> mut] values{map<i32, i32>(1i32, 4i32, 2i32, 7i32, 3i32, 11i32, 4i32, 13i32, 5i32, 15i32, 6i32, 17i32, 7i32, 19i32, 8i32, 21i32, 9i32, 23i32, 10i32, 25i32, 11i32, 27i32, 12i32, 29i32, 13i32, 31i32, 14i32, 33i32)}\n";
-  source += "  /std/collections/map/insert<i32, i32>(values, 15i32, 35i32)\n";
+  source += "  /std/collections/map/insert(values, 15i32, 35i32)\n";
   source += "  values.insert(1i32, 9i32)\n";
   source += "  return(plus(values.count(), plus(values.at(1i32), plus(values.at(5i32), plus(values.at(10i32), plus(values.at(14i32), values.at_unsafe(15i32)))))))\n";
   source += "}\n";
@@ -709,7 +709,7 @@ inline std::string makeBuiltinCanonicalMapInsertSixteenthGrowthConformanceSource
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [map<i32, i32> mut] values{map<i32, i32>(1i32, 4i32, 2i32, 7i32, 3i32, 11i32, 4i32, 13i32, 5i32, 15i32, 6i32, 17i32, 7i32, 19i32, 8i32, 21i32, 9i32, 23i32, 10i32, 25i32, 11i32, 27i32, 12i32, 29i32, 13i32, 31i32, 14i32, 33i32, 15i32, 35i32)}\n";
-  source += "  /std/collections/map/insert<i32, i32>(values, 16i32, 37i32)\n";
+  source += "  /std/collections/map/insert(values, 16i32, 37i32)\n";
   source += "  values.insert(1i32, 9i32)\n";
   source += "  return(plus(values.count(), plus(values.at(1i32), plus(values.at(5i32), plus(values.at(10i32), plus(values.at(15i32), values.at_unsafe(16i32)))))))\n";
   source += "}\n";
@@ -722,7 +722,7 @@ inline std::string makeBuiltinCanonicalMapInsertSeventeenthGrowthConformanceSour
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [map<i32, i32> mut] values{map<i32, i32>(1i32, 4i32, 2i32, 7i32, 3i32, 11i32, 4i32, 13i32, 5i32, 15i32, 6i32, 17i32, 7i32, 19i32, 8i32, 21i32, 9i32, 23i32, 10i32, 25i32, 11i32, 27i32, 12i32, 29i32, 13i32, 31i32, 14i32, 33i32, 15i32, 35i32, 16i32, 37i32)}\n";
-  source += "  /std/collections/map/insert<i32, i32>(values, 17i32, 39i32)\n";
+  source += "  /std/collections/map/insert(values, 17i32, 39i32)\n";
   source += "  values.insert(1i32, 9i32)\n";
   source += "  return(plus(values.count(), plus(values.at(1i32), plus(values.at(5i32), plus(values.at(10i32), plus(values.at(16i32), values.at_unsafe(17i32)))))))\n";
   source += "}\n";
@@ -735,7 +735,7 @@ inline std::string makeBuiltinCanonicalMapInsertEighteenthGrowthConformanceSourc
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [map<i32, i32> mut] values{map<i32, i32>(1i32, 4i32, 2i32, 7i32, 3i32, 11i32, 4i32, 13i32, 5i32, 15i32, 6i32, 17i32, 7i32, 19i32, 8i32, 21i32, 9i32, 23i32, 10i32, 25i32, 11i32, 27i32, 12i32, 29i32, 13i32, 31i32, 14i32, 33i32, 15i32, 35i32, 16i32, 37i32, 17i32, 39i32)}\n";
-  source += "  /std/collections/map/insert<i32, i32>(values, 18i32, 41i32)\n";
+  source += "  /std/collections/map/insert(values, 18i32, 41i32)\n";
   source += "  values.insert(1i32, 9i32)\n";
   source += "  return(plus(values.count(), plus(values.at(1i32), plus(values.at(5i32), plus(values.at(10i32), plus(values.at(17i32), values.at_unsafe(18i32)))))))\n";
   source += "}\n";
@@ -748,7 +748,7 @@ inline std::string makeBuiltinCanonicalMapInsertNineteenthGrowthConformanceSourc
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [map<i32, i32> mut] values{map<i32, i32>(1i32, 4i32, 2i32, 7i32, 3i32, 11i32, 4i32, 13i32, 5i32, 15i32, 6i32, 17i32, 7i32, 19i32, 8i32, 21i32, 9i32, 23i32, 10i32, 25i32, 11i32, 27i32, 12i32, 29i32, 13i32, 31i32, 14i32, 33i32, 15i32, 35i32, 16i32, 37i32, 17i32, 39i32, 18i32, 41i32)}\n";
-  source += "  /std/collections/map/insert<i32, i32>(values, 19i32, 43i32)\n";
+  source += "  /std/collections/map/insert(values, 19i32, 43i32)\n";
   source += "  values.insert(1i32, 9i32)\n";
   source += "  return(plus(values.count(), plus(values.at(1i32), plus(values.at(5i32), plus(values.at(10i32), plus(values.at(18i32), values.at_unsafe(19i32)))))))\n";
   source += "}\n";
@@ -761,7 +761,7 @@ inline std::string makeBuiltinCanonicalMapInsertTwentiethGrowthConformanceSource
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [map<i32, i32> mut] values{map<i32, i32>(1i32, 4i32, 2i32, 7i32, 3i32, 11i32, 4i32, 13i32, 5i32, 15i32, 6i32, 17i32, 7i32, 19i32, 8i32, 21i32, 9i32, 23i32, 10i32, 25i32, 11i32, 27i32, 12i32, 29i32, 13i32, 31i32, 14i32, 33i32, 15i32, 35i32, 16i32, 37i32, 17i32, 39i32, 18i32, 41i32, 19i32, 43i32)}\n";
-  source += "  /std/collections/map/insert<i32, i32>(values, 20i32, 45i32)\n";
+  source += "  /std/collections/map/insert(values, 20i32, 45i32)\n";
   source += "  values.insert(1i32, 9i32)\n";
   source += "  return(plus(values.count(), plus(values.at(1i32), plus(values.at(5i32), plus(values.at(10i32), plus(values.at(19i32), values.at_unsafe(20i32)))))))\n";
   source += "}\n";
@@ -774,7 +774,7 @@ inline std::string makeBuiltinCanonicalMapInsertOverwriteConformanceSource() {
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [map<i32, i32> mut] values{map<i32, i32>(1i32, 4i32, 2i32, 7i32)}\n";
-  source += "  /std/collections/map/insert<i32, i32>(values, 1i32, 9i32)\n";
+  source += "  /std/collections/map/insert(values, 1i32, 9i32)\n";
   source += "  values.insert(2i32, 11i32)\n";
   source += "  return(plus(values.count(), plus(values.at(1i32), values.at_unsafe(2i32))))\n";
   source += "}\n";
@@ -791,11 +791,11 @@ inline std::string makeBuiltinCanonicalMapInsertNonLocalGrowthConformanceSource(
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [Holder mut] holder{Holder()}\n";
-  source += "  /std/collections/map/insert<i32, i32>(holder.values, 1i32, 4i32)\n";
-  source += "  holder.values.insert(2i32, 7i32)\n";
   source += "  [Reference<map<i32, i32>> mut] ref{location(holder.values)}\n";
-  source += "  /std/collections/map/insert_ref<i32, i32>(ref, 3i32, 11i32)\n";
-  source += "  /std/collections/map/insert_ref<i32, i32>(ref, 2i32, 13i32)\n";
+  source += "  /std/collections/map/insert_ref(ref, 1i32, 4i32)\n";
+  source += "  /std/collections/map/insert_ref(ref, 2i32, 7i32)\n";
+  source += "  /std/collections/map/insert_ref(ref, 3i32, 11i32)\n";
+  source += "  /std/collections/map/insert_ref(ref, 2i32, 13i32)\n";
   source += "  return(plus(holder.values.count(), plus(holder.values.at(1i32), plus(holder.values.at_unsafe(2i32), holder.values.at(3i32)))))\n";
   source += "}\n";
   return source;
@@ -819,11 +819,11 @@ inline std::string makeBuiltinCanonicalMapInsertNestedNonLocalGrowthConformanceS
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [Outer mut] outer{Outer()}\n";
-  source += "  /std/collections/map/insert<i32, i32>(outer.holder.values, 1i32, 4i32)\n";
-  source += "  /std/collections/map/insert<i32, i32>(outer.holder.values, 2i32, 7i32)\n";
   source += "  [Reference<map<i32, i32>> mut] ref{borrowValues(location(outer.holder.values))}\n";
-  source += "  /std/collections/map/insert_ref<i32, i32>(ref, 3i32, 11i32)\n";
-  source += "  /std/collections/map/insert_ref<i32, i32>(ref, 2i32, 13i32)\n";
+  source += "  /std/collections/map/insert_ref(ref, 1i32, 4i32)\n";
+  source += "  /std/collections/map/insert_ref(ref, 2i32, 7i32)\n";
+  source += "  /std/collections/map/insert_ref(ref, 3i32, 11i32)\n";
+  source += "  /std/collections/map/insert_ref(ref, 2i32, 13i32)\n";
   source +=
       "  return(plus(outer.holder.values.count(), plus(outer.holder.values.at(1i32), plus(outer.holder.values.at_unsafe(2i32), outer.holder.values.at(3i32)))))\n";
   source += "}\n";
@@ -863,8 +863,7 @@ inline std::string makeBuiltinCanonicalMapStructFieldInitializerConformanceSourc
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [Holder mut] holder{Holder()}\n";
-  source += "  [Reference<map<i32, i32>>] valuesRef{location(holder.values)}\n";
-  source += "  return(/std/collections/map/count<i32, i32>(valuesRef))\n";
+  source += "  return(holder.values.count())\n";
   source += "}\n";
   return source;
 }
@@ -872,14 +871,14 @@ inline std::string makeBuiltinCanonicalMapStructFieldInitializerConformanceSourc
 inline std::string makeBuiltinCanonicalMapInsertHelperReturnValueDirectConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n\n";
-  source += "[return<map<i32, i32>> effects(heap_alloc)]\n";
+  source += "[return</std/collections/map/MapValue<i32, i32>> effects(heap_alloc)]\n";
   source += "makeValues() {\n";
-  source += "  [map<i32, i32>] values{map<i32, i32>()}\n";
+  source += "  [/std/collections/map/MapValue<i32, i32>] values{map<i32, i32>()}\n";
   source += "  return(values)\n";
   source += "}\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
-  source += "  /std/collections/map/insert<i32, i32>(makeValues(), 1i32, 4i32)\n";
+  source += "  /std/collections/map/insert(makeValues(), 1i32, 4i32)\n";
   source += "  return(0i32)\n";
   source += "}\n";
   return source;
@@ -888,9 +887,9 @@ inline std::string makeBuiltinCanonicalMapInsertHelperReturnValueDirectConforman
 inline std::string makeBuiltinCanonicalMapInsertHelperReturnValueMethodConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n\n";
-  source += "[return<map<i32, i32>> effects(heap_alloc)]\n";
+  source += "[return</std/collections/map/MapValue<i32, i32>> effects(heap_alloc)]\n";
   source += "makeValues() {\n";
-  source += "  [map<i32, i32>] values{map<i32, i32>()}\n";
+  source += "  [/std/collections/map/MapValue<i32, i32>] values{map<i32, i32>()}\n";
   source += "  return(values)\n";
   source += "}\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
@@ -915,7 +914,7 @@ inline std::string makeBuiltinCanonicalMapInsertBorrowedHolderFieldDirectConform
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [Holder mut] holder{Holder()}\n";
-  source += "  /std/collections/map/insert<i32, i32>(borrowHolder(location(holder)).values, 1i32, 4i32)\n";
+  source += "  /std/collections/map/insert(borrowHolder(location(holder)).values, 1i32, 4i32)\n";
   source += "  return(0i32)\n";
   source += "}\n";
   return source;

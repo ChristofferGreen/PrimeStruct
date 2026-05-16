@@ -711,10 +711,6 @@
     }
 
     const bool isGeneratedMapInsertHelper =
-        callee.fullPath == "/std/collections/map/insert" ||
-        callee.fullPath.rfind("/std/collections/map/insert__", 0) == 0 ||
-        callee.fullPath == "/std/collections/map/insert_ref" ||
-        callee.fullPath.rfind("/std/collections/map/insert_ref__", 0) == 0 ||
         callee.fullPath == "/std/collections/internal_map/insertImpl" ||
         callee.fullPath.rfind("/std/collections/internal_map/insertImpl__", 0) == 0 ||
         callee.fullPath == "/std/collections/internal_map/insertRefImpl" ||
