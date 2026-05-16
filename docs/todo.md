@@ -441,6 +441,8 @@ Task template:
   Declared collection inference now recognizes map type bases and direct map
   constructors through shared collection classifiers and constructor surface
   metadata instead of direct map type and constructor path strings.
+  Binding type normalization now recognizes map types through shared collection
+  classifiers instead of direct rooted/canonical map type strings.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic

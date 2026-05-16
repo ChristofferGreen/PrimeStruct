@@ -288,7 +288,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   direct rooted/canonical map type strings; declared collection inference
   should recognize map type bases and direct map constructors through shared
   collection classifiers and constructor surface metadata instead of direct map
-  type and constructor path strings;
+  type and constructor path strings; binding type normalization should recognize
+  map types through shared collection classifiers instead of direct
+  rooted/canonical map type strings;
   statement-expression map count/access target classification should reuse
   local experimental collection type and generated-specialization helpers
   instead of direct experimental map backing path text;

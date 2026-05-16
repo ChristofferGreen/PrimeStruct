@@ -239,6 +239,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererStructSlotLayoutHelpers.cpp");
   const std::string declaredCollectionInferenceSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererSetupTypeDeclaredCollectionInference.cpp");
+  const std::string bindingTypeHelpersSource =
+      readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererBindingTypeHelpers.cpp");
 
   REQUIRE(!mapSource.empty());
   REQUIRE(!experimentalSource.empty());
@@ -287,6 +289,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!uninitializedStructInferenceSource.empty());
   REQUIRE(!structSlotLayoutSource.empty());
   REQUIRE(!declaredCollectionInferenceSource.empty());
+  REQUIRE(!bindingTypeHelpersSource.empty());
 
   CHECK(mapSource.find("import /std/collections/internal_map/*") == std::string::npos);
   CHECK(mapSource.find("import /std/collections/internal_vector/*") != std::string::npos);
@@ -524,6 +527,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(declaredCollectionInferenceSource.find("base == \"std/collections/map\"") ==
         std::string::npos);
   CHECK(declaredCollectionInferenceSource.find("normalizedName == \"std/collections/map/map\"") ==
+        std::string::npos);
+  CHECK(bindingTypeHelpersSource.find("isBuiltinCollectionTypeName(name, \"map\")") !=
+        std::string::npos);
+  CHECK(bindingTypeHelpersSource.find("name == \"/map\"") ==
+        std::string::npos);
+  CHECK(bindingTypeHelpersSource.find("name == \"std/collections/map\"") ==
         std::string::npos);
   CHECK(statementLowererSource.find("callee->fullPath.rfind(\"/std/collections/internal_map/insertImpl__\", 0)") !=
         std::string::npos);
