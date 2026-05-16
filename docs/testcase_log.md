@@ -55,6 +55,11 @@
   is stale after the map stdlib-ownership cutover. On 2026-05-16 the current
   fixture failed validation before the inline-argument assertions because it
   still uses the retired `/std/collections/mapPair` constructor path.
+- `PrimeStruct_backend_ir_tests --test-case="ir lowerer setup inference helper resolves wrapper-returned canonical map access string kinds,ir lowerer setup inference helper resolves wrapper-returned slash-method map access kinds"`
+  is stale after the map stdlib-ownership cutover. On 2026-05-16 both
+  wrapper-returned setup-inference fixtures failed to resolve expected map
+  access element kinds, while adjacent local-map and string map-reference
+  lowerer setup-inference coverage still passes.
 - `PrimeStruct_semantics_tests` inferred map-struct-field and
   uninitialized-storage constructor fixtures are stale after the map
   stdlib-ownership cutover. On 2026-05-16 the filters
@@ -78,6 +83,23 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 17:45 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup inference helper resolves array and map access kinds,ir lowerer setup inference helper resolves string map reference access kinds"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` | failures: none |
+  notes: declared-collection map type normalization now builds the
+  experimental map backing base with `experimentalCollectionTypePath`; the map
+  surface inventory now observes 875 production traces and backing traces now
+  observe 120.
+- 2026-05-16 17:45 local | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup inference helper resolves wrapper-returned canonical map access string kinds,ir lowerer setup inference helper resolves wrapper-returned slash-method map access kinds,ir lowerer setup inference helper resolves array and map access kinds,ir lowerer setup inference helper resolves string map reference access kinds"` |
+  failures: `ir lowerer setup inference helper resolves wrapper-returned
+  canonical map access string kinds`, `ir lowerer setup inference helper
+  resolves wrapper-returned slash-method map access kinds` | notes: stale
+  wrapper-returned map setup-inference fixtures after the stdlib-owned map
+  cutover; reran the adjacent local-map and string map-reference cases above.
 - 2026-05-16 17:54 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="explicit canonical map access helpers accept canonical map values,declared canonical map access positional reorder keeps key diagnostics,canonical namespaced map access helpers accept experimental map values,wrapper-returned direct canonical map access count keeps primitive diagnostics"`;

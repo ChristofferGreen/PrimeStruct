@@ -219,6 +219,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   shared helpers for unspecialized and generated map receiver types;
   late map-access validation should use the shared helper for unspecialized
   experimental map type text;
+  declared collection map type normalization should derive unspecialized and
+  generated experimental map backing bases through
+  `experimentalCollectionTypePath`;
   generated collection struct classification should derive the canonical map
   `MapValue__*` prefix through `collectionTypePath("map")` instead of
   carrying a split-string map root.

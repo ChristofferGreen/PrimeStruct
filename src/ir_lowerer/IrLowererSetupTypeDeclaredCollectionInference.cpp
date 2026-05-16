@@ -20,11 +20,14 @@ std::string normalizeDeclaredCollectionTypeBase(const std::string &base) {
       base.rfind("/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0) {
     return "soa" "_vector";
   }
+  const std::string experimentalMapType =
+      experimentalCollectionTypePath("map", "Map", false);
+  const std::string rootedExperimentalMapType =
+      experimentalCollectionTypePath("map", "Map");
   if (base == "/map" || base == "std/collections/map" || base == "/std/collections/map" ||
-      base == "std/collections/experimental_map/Map" ||
-      base == "/std/collections/experimental_map/Map" ||
-      base.rfind("std/collections/experimental_map/Map__", 0) == 0 ||
-      base.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
+      base == experimentalMapType || base == rootedExperimentalMapType ||
+      base.rfind(experimentalMapType + "__", 0) == 0 ||
+      base.rfind(rootedExperimentalMapType + "__", 0) == 0) {
     return "map";
   }
   return base;
