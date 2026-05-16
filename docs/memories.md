@@ -290,6 +290,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   semantic collection-helper rewrite and compatibility internals should use
   the shared constructor root helper for experimental map helper backing
   paths;
+  template-monomorph expression rewrite, receiver-resolution, and semantic
+  builtin path helpers should use shared experimental map root/path helpers;
   generated collection struct classification should derive the canonical map
   `MapValue__*` prefix through `collectionTypePath("map")` instead of
   carrying a split-string map root.

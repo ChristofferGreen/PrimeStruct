@@ -1080,7 +1080,7 @@ bool rewriteExpr(Expr &expr,
     if (!expr.templateArgs.empty()) {
       return false;
     }
-    if (path == "/std/collections/experimental_map/mapNew" &&
+    if (path == experimentalCollectionConstructorPathLocal("map", "mapNew") &&
         ctx.templateDefs.count(path) > 0) {
       return true;
     }
@@ -1646,7 +1646,7 @@ bool rewriteExpr(Expr &expr,
     }
     bool inferredCanonicalMapReceiverTemplateArgs = false;
     if (expr.templateArgs.empty() &&
-        resolvedPath.rfind("/std/collections/experimental_map/", 0) == 0 &&
+        resolvedPath.rfind(experimentalCollectionConstructorRootLocal("map"), 0) == 0 &&
         resolvesExperimentalMapValueReceiver(
             mapHelperReceiverExpr(expr), params, locals, allowMathBare, mapping, allowedParams, namespacePrefix, ctx)) {
       std::vector<std::string> receiverTemplateArgs;
@@ -1701,7 +1701,7 @@ bool rewriteExpr(Expr &expr,
         allConcrete = true;
       }
     }
-    if (resolvedPath.rfind("/std/collections/experimental_map/", 0) == 0 &&
+    if (resolvedPath.rfind(experimentalCollectionConstructorRootLocal("map"), 0) == 0 &&
         resolvedPath.find("__t") != std::string::npos) {
       expr.templateArgs.clear();
     }
@@ -2191,7 +2191,7 @@ bool rewriteExpr(Expr &expr,
           allConcrete = true;
         }
       }
-      if (methodPath.rfind("/std/collections/experimental_map/", 0) == 0 &&
+      if (methodPath.rfind(experimentalCollectionConstructorRootLocal("map"), 0) == 0 &&
           methodPath.find("__t") != std::string::npos) {
         expr.templateArgs.clear();
       }

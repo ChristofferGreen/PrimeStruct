@@ -588,7 +588,7 @@ std::string experimentalMapHelperPathForCanonicalHelper(const std::string &path)
   return primec::stdlibSurfacePreferredSpellingForMember(
       primec::StdlibSurfaceId::CollectionsMapHelpers,
       path,
-      "/std/collections/experimental_map/");
+      experimentalCollectionConstructorRootLocal("map"));
 }
 
 std::string experimentalVectorHelperPathForCanonicalHelper(const std::string &path) {
@@ -704,7 +704,7 @@ std::string experimentalMapHelperPathForWrapperHelper(const std::string &path) {
   return primec::stdlibSurfacePreferredSpellingForMember(
       primec::StdlibSurfaceId::CollectionsMapHelpers,
       path,
-      "/std/collections/experimental_map/");
+      experimentalCollectionConstructorRootLocal("map"));
 }
 
 bool resolveExperimentalVectorValueReceiverTemplateArgs(const Expr *receiverExpr,

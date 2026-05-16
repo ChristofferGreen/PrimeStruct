@@ -1109,7 +1109,7 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   };
   if (matchStdlibLegacyAccessAlias("std/collections/") ||
       matchStdlibLegacyAccessAlias(experimentalCollectionMemberRootLocal("vector")) ||
-      matchStdlibLegacyAccessAlias("std/collections/experimental_map/")) {
+      matchStdlibLegacyAccessAlias(experimentalCollectionMemberRootLocal("map"))) {
     return true;
   }
   const std::string stdVectorRoot = collectionMemberRootLocal("vector");
