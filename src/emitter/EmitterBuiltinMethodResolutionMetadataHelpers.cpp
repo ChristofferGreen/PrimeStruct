@@ -499,22 +499,6 @@ const ReturnKind *findReturnKindMetadata(const MethodResolutionMetadataView &vie
   return nullptr;
 }
 
-std::string preferCanonicalMapMethodHelperPath(const MethodResolutionMetadataView &view,
-                                               const std::string &path) {
-  if (path.rfind("/map/", 0) != 0) {
-    return path;
-  }
-  const std::string suffix = path.substr(std::string("/map/").size());
-  if (!isCanonicalMapHelperName(suffix)) {
-    return path;
-  }
-  const std::string canonicalPath = "/std/collections/map/" + suffix;
-  if (hasDefinitionOrMetadata(view, canonicalPath)) {
-    return canonicalPath;
-  }
-  return path;
-}
-
 bool hasDefinitionOrMetadata(const MethodResolutionMetadataView &view, const std::string &path) {
   return view.defMap.count(path) > 0 || findStructTypeMetadata(view, path) != nullptr ||
          findReturnStructMetadata(view, path) != nullptr ||

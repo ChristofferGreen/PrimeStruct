@@ -45,8 +45,6 @@ const std::string *findReturnStructMetadata(const MethodResolutionMetadataView &
                                             const std::string &path);
 const ReturnKind *findReturnKindMetadata(const MethodResolutionMetadataView &view,
                                          const std::string &path);
-std::string preferCanonicalMapMethodHelperPath(const MethodResolutionMetadataView &view,
-                                               const std::string &path);
 bool hasDefinitionOrMetadata(const MethodResolutionMetadataView &view, const std::string &path);
 std::string inferMethodResolutionPrimitiveTypeName(
     const Expr &expr,

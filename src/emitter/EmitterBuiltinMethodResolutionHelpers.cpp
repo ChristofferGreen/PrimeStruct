@@ -451,8 +451,7 @@ bool resolveMethodCallPath(const Expr &call,
       std::string resolvedReceiverPath = resolveExprPath(receiver);
       if (findStructTypeMetadata(metadataView, resolvedReceiverPath) != nullptr ||
           defMap.find(resolvedReceiverPath + "/" + normalizedMethodName) != defMap.end()) {
-        resolvedOut = preferCanonicalMapMethodHelperPath(
-            metadataView, resolvedReceiverPath + "/" + normalizedMethodName);
+        resolvedOut = resolvedReceiverPath + "/" + normalizedMethodName;
         return true;
       }
       std::string resolvedType = resolveTypePath(receiver.name, receiver.namespacePrefix);
@@ -462,8 +461,7 @@ bool resolveMethodCallPath(const Expr &call,
         resolvedType = normalizeMapImportAliasPath(importIt->second);
       }
       if (findStructTypeMetadata(metadataView, resolvedType) != nullptr) {
-        resolvedOut =
-            preferCanonicalMapMethodHelperPath(metadataView, resolvedType + "/" + normalizedMethodName);
+        resolvedOut = resolvedType + "/" + normalizedMethodName;
         return true;
       }
       return false;
@@ -665,8 +663,7 @@ bool resolveMethodCallPath(const Expr &call,
       return true;
     }
   }
-  resolvedOut =
-      preferCanonicalMapMethodHelperPath(metadataView, resolvedType + "/" + normalizedMethodName);
+  resolvedOut = resolvedType + "/" + normalizedMethodName;
   return true;
 }
 
