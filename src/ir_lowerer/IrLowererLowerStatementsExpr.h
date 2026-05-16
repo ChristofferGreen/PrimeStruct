@@ -132,14 +132,55 @@
           }
           return helperPath;
         };
+        auto mapHelperMetadata = []() {
+          return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+        };
+        auto mapConstructorMetadata = []() {
+          return findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
+        };
+        auto resolveMapHelperMemberName = [&](std::string path,
+                                              std::string &helperNameOut) {
+          helperNameOut.clear();
+          const auto *metadata = mapHelperMetadata();
+          if (metadata == nullptr) {
+            return false;
+          }
+          path = normalizeCollectionHelperPath(path);
+          return resolvePublishedStdlibSurfaceMemberName(
+              path, metadata->id, helperNameOut);
+        };
+        auto isCanonicalMapHelperFamilyPath = [&](const std::string &path) {
+          const auto *metadata = mapHelperMetadata();
+          return metadata != nullptr &&
+                 isCanonicalPublishedStdlibSurfaceHelperPath(
+                     normalizeCollectionHelperPath(path), metadata->id);
+        };
+        auto isMapHelperMemberPath = [&](const std::string &path,
+                                         std::string_view expectedName) {
+          std::string helperName;
+          return resolveMapHelperMemberName(path, helperName) &&
+                 helperName == std::string(expectedName);
+        };
+        auto isCanonicalMapConstructorPath = [&](const std::string &path) {
+          const auto *metadata = mapConstructorMetadata();
+          if (metadata == nullptr) {
+            return false;
+          }
+          std::string constructorName;
+          const std::string normalizedPath = normalizeCollectionHelperPath(path);
+          return normalizedPath == metadata->canonicalPath &&
+                 resolvePublishedStdlibSurfaceConstructorMemberName(
+                     normalizedPath, metadata->id, constructorName) &&
+                 constructorName == "map";
+        };
         auto isDirectCollectionHelperPath = [&](const std::string &path) {
           return path.rfind("/array/", 0) == 0 ||
                  path.rfind(collectionMemberRoot("vector"), 0) == 0 ||
                  path.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0 ||
-                 path.rfind("/std/collections/map/", 0) == 0;
+                 isCanonicalMapHelperFamilyPath(path);
         };
-        auto hasMapEntryCtorArgs = [](const Expr &callExpr) {
-          auto isMapEntryCallExpr = [](const Expr &candidate) {
+        auto hasMapEntryCtorArgs = [&](const Expr &callExpr) {
+          auto isMapEntryCallExpr = [&](const Expr &candidate) {
             if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
               return false;
             }
@@ -159,8 +200,7 @@
             if (generatedSuffix != std::string::npos) {
               normalizedName.erase(generatedSuffix);
             }
-            return normalizedName == "map/entry" ||
-                   normalizedName == "std/collections/map/entry";
+            return isMapHelperMemberPath(normalizedName, "entry");
           };
           for (const auto &arg : callExpr.args) {
             if (isMapEntryCallExpr(arg)) {
@@ -274,7 +314,7 @@
           const std::string rawPath = resolveDirectHelperPath(callExpr);
           const std::string normalizedRawPath =
               normalizeCollectionHelperPath(rawPath);
-          if (normalizedRawPath != "/std/collections/map/map") {
+          if (!isCanonicalMapConstructorPath(normalizedRawPath)) {
             return nullptr;
           }
           for (const auto &[path, def] : defMap) {
@@ -467,7 +507,7 @@
           }
           if (directCallee == nullptr &&
               hasMapEntryCtorArgs(expr) &&
-              rawPath.rfind("/std/collections/map/", 0) == 0) {
+              isCanonicalMapHelperFamilyPath(rawPath)) {
             directCallee = findDirectEntryMapConstructorDefinition(expr);
           }
           if (directCallee == nullptr &&
@@ -692,8 +732,8 @@
             if (hasMapEntryCtorArgs(expr) &&
                 extractHelperTail(normalizeCollectionHelperPath(directCallee->fullPath)) ==
                     "map" &&
-                (rawPath.rfind("/std/collections/map/", 0) == 0 ||
-                 resolvedExprPath.rfind("/std/collections/map/", 0) == 0) &&
+                (isCanonicalMapHelperFamilyPath(rawPath) ||
+                 isCanonicalMapHelperFamilyPath(resolvedExprPath)) &&
                 isDirectHelperDefinitionFamily(expr, *directCallee)) {
               if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
                 return false;
@@ -723,8 +763,8 @@
                  helperName == "tryAt" || helperName == "at" ||
                  helperName == "at_unsafe" || helperName == "insert" ||
                  helperName == "insert_ref") &&
-                (rawPath.rfind("/std/collections/map/", 0) == 0 ||
-                 directCallee->fullPath.rfind("/std/collections/map/", 0) == 0) &&
+                (isCanonicalMapHelperFamilyPath(rawPath) ||
+                 isCanonicalMapHelperFamilyPath(directCallee->fullPath)) &&
                 isDirectHelperDefinitionFamily(expr, *directCallee)) {
               if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
                 return false;
@@ -737,14 +777,14 @@
             const bool isExplicitCanonicalMapAccess =
                 (getBuiltinArrayAccessName(expr, accessName) &&
                  expr.args.size() == 2 &&
-                 rawPath.rfind("/std/collections/map/", 0) == 0) ||
+                 isCanonicalMapHelperFamilyPath(rawPath)) ||
                 (resolveMapHelperAliasName(expr, explicitMapAccessHelperName) &&
                  (explicitMapAccessHelperName == "at" ||
                   explicitMapAccessHelperName == "at_ref" ||
                   explicitMapAccessHelperName == "at_unsafe" ||
                   explicitMapAccessHelperName == "at_unsafe_ref") &&
                  expr.args.size() == 2 &&
-                 rawPath.rfind("/std/collections/map/", 0) == 0);
+                 isCanonicalMapHelperFamilyPath(rawPath));
             if (isExplicitCanonicalMapAccess &&
                 isDirectHelperDefinitionFamily(expr, *directCallee)) {
               error =
@@ -1042,8 +1082,7 @@
           error = priorError;
         }
         if (!expr.isMethodCall && hasMapEntryCtorArgs(expr) &&
-            normalizeCollectionHelperPath(resolveExprPath(expr)) ==
-                "/std/collections/map/map") {
+            isCanonicalMapConstructorPath(resolveExprPath(expr))) {
           error = "native backend does not support variadic entry map constructors";
           return false;
         }
@@ -1077,10 +1116,14 @@
             return true;
           }
         }
+        std::string resolvedMapInsertHelperName;
+        const std::string exprPath = resolveExprPath(expr);
         if (!expr.isMethodCall &&
-            (resolveExprPath(expr) == "/std/collections/map/insert" ||
-             resolveExprPath(expr) == "/std/collections/map/insert_ref" ||
-             resolveExprPath(expr).rfind("/std/collections/internal_map/insert", 0) == 0)) {
+            ((isCanonicalMapHelperFamilyPath(exprPath) &&
+              resolveMapHelperMemberName(exprPath, resolvedMapInsertHelperName) &&
+              (resolvedMapInsertHelperName == "insert" ||
+               resolvedMapInsertHelperName == "insert_ref")) ||
+             exprPath.rfind("/std/collections/internal_map/insert", 0) == 0)) {
           if (const Definition *directCallee = resolveDirectHelperDefinition(expr);
               directCallee != nullptr) {
             if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {

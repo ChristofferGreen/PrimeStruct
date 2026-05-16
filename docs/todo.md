@@ -427,6 +427,9 @@ Task template:
   Native-tail dispatch now derives canonical map helper paths, explicit
   helper classification, import coverage, and missing-helper diagnostics
   through stdlib surface metadata instead of direct canonical map path text.
+  Statement-expression lowering now derives direct canonical map helper and
+  constructor recognition through stdlib surface metadata instead of direct
+  canonical map path literals.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic

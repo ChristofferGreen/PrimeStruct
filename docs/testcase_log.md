@@ -105,6 +105,22 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 19:57 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers inline direct canonical map count-like helpers for map locals,ir lowerer call helpers keep explicit canonical map contains and tryAt same-path defs,ir lowerer map constructor rewrite checks constructor surface before resolving defs,ir lowerer statement expr has no inline builtin map insert family" --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` | failures: none |
+  notes: statement-expression lowering now derives direct canonical map helper
+  and constructor recognition through stdlib surface metadata; the map
+  surface inventory now observes 436 production traces and backing traces
+  remain at 0.
+- 2026-05-16 19:56 local | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers inline direct canonical map count-like helpers for map locals,ir lowerer call helpers keep explicit canonical map contains and tryAt same-path defs,ir lowerer map constructor rewrite checks constructor surface before resolving defs,ir lowerer statement expr has no inline builtin map insert family,ir lowerer helper rejects parser-shaped canonical map entry constructors as builtin map" --no-skip` |
+  failures: ir lowerer helper rejects parser-shaped canonical map entry constructors as builtin map |
+  notes: the first selected lowerer statement-expression run included the
+  already-known stale parser-shaped canonical map entry constructor source
+  fixture; adjacent statement-expression and direct canonical map helper
+  cases passed in the follow-up run.
 - 2026-05-16 19:52 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer native tail map access inference uses semantic receiver facts first,native tail and late collection helper metadata dispatch stays source locked,ir lowerer builtin map access prefers semantic target facts,ir lowerer count access helpers normalize parser-shaped canonical map access receivers" --no-skip`;

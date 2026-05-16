@@ -358,6 +358,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   native-tail dispatch should derive canonical map helper paths, explicit
   helper classification, import coverage, and missing-helper diagnostics
   from stdlib surface metadata instead of direct canonical map path text;
+  statement-expression lowering should derive direct canonical map helper and
+  constructor recognition from stdlib surface metadata instead of direct
+  canonical map path literals;
   generated collection struct classification should derive the canonical map
   `MapValue__*` prefix through `collectionTypePath("map")` instead of
   carrying a split-string map root.
