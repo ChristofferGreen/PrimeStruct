@@ -111,14 +111,6 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
   if (setupOut.hasBuiltinAccessSpelling) {
     setupOut.builtinAccessName = directMapAccessHelperName;
   }
-  const bool prefersExplicitDirectMapAccessAliasDefinition =
-      !expr.isMethodCall &&
-      (isNamespacedMapHelperCall &&
-       isCanonicalMapAccessHelperName(namespacedHelper)) &&
-      hasDefinitionPath("/map/" +
-                        (isCanonicalMapAccessHelperName(expr.name)
-                             ? expr.name
-                             : namespacedHelper));
   const bool isNamespacedVectorCapacityCall =
       !expr.isMethodCall && isNamespacedVectorHelperCall &&
       namespacedHelper == "capacity" &&
@@ -204,7 +196,6 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
   const bool isNamespacedMapAccessCall =
       !expr.isMethodCall && setupOut.isBuiltinAccess && isNamespacedMapHelperCall &&
       isCanonicalMapAccessHelperName(namespacedHelper) &&
-      !prefersExplicitDirectMapAccessAliasDefinition &&
       !isMapNamespacedAccessCompatibilityCall && !hasDefinitionPath(resolved);
   setupOut.shouldInferBuiltinBareMapContainsCall =
       shouldBuiltinValidateCurrentMapWrapperHelper("contains");

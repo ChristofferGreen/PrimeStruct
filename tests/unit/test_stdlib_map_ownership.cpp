@@ -363,6 +363,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferCollectionDispatchSetupSource.find("resolvedPath == \"/map/at_ref\"") ==
         std::string::npos);
+  CHECK(inferCollectionDispatchSetupSource.find("hasDefinitionPath(\"/map/\" +") ==
+        std::string::npos);
   CHECK(inferCollectionDispatchSetupSource.find("namespacePrefix == \"map\"") ==
         std::string::npos);
   CHECK(inferCollectionDispatchSetupSource.find("expr.namespacePrefix == \"map\"") ==

@@ -1836,6 +1836,9 @@ Task template:
     - 2026-05-16: Template expression rewriting no longer clears inferred
       canonical map receiver template arguments through a rooted `/map/*`
       branch; the canonical `/std/collections/map/*` branch remains.
+    - 2026-05-16: Collection-dispatch setup no longer suppresses namespaced
+      canonical map access inference when a rooted `/map/<access>` definition
+      exists; explicit removed-alias rejection remains separate.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.
