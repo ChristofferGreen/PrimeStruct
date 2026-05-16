@@ -25,8 +25,41 @@
   string-valued map runtime fixture has since been retargeted to compile-only
   coverage because native runtime string-valued maps still hang after
   compilation.
+- `PrimeStruct_backend_ir_tests --test-case="ir lowerer supports direct map Result payloads,ir lowerer materializes variadic map packs with indexed count methods,ir lowerer materializes variadic map packs with indexed canonical count calls"`
+  is not a clean map-cutover gate after retiring rooted `/map/map` constructor
+  retargeting. The direct payload and unqualified-count cases still use stale
+  retired map literal/count compatibility, and the canonical-count variadic
+  case still expects `args<map<K, V>>` to carry the retired builtin map layout
+  instead of the stdlib-owned `MapValue` path.
+- `PrimeStruct_compile_run_tests --test-case="C++ emitter materializes variadic map value packs with indexed count methods" --no-skip`
+  is stale after the map stdlib-ownership cutover; it still expects variadic
+  `args<map<K, V>>` method-sugar count fallback to resolve through the retired
+  map compatibility path.
 
 ## Recent Test Runs
+- 2026-05-16 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_compile_run_tests PrimeStruct_misc_tests`;
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation"`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="runs vm builtin canonical map first-growth inserts"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib namespaced map constructor resolves through imported stdlib helper,stdlib namespaced map constructor keeps same-path definition before wrapper fallback,canonical stdlib map helpers accept constructor receivers"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .`;
+  `python3 scripts/check_map_adapter_traces.py --root .`;
+  `python3 scripts/check_semantic_map_wrapper_traces.py --root .` |
+  failures: none | notes: inline param, packed-args, and packed-result map
+  constructor normalization no longer emits retired rooted `/map/map`; it
+  normalizes only to the public stdlib constructor while source locks enforce
+  the retired spelling stays absent.
+- 2026-05-16 local | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer materializes variadic map packs with indexed count methods,ir lowerer materializes variadic map packs with indexed canonical count calls"`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer supports direct map Result payloads" -s`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="C++ emitter materializes variadic map value packs with indexed count methods" --no-skip` |
+  failures: stale direct/variadic builtin-map compatibility cases | notes:
+  these cases still rely on retired map literal/count/method fallback or
+  builtin-layout `args<map<K, V>>` behavior and are recorded above as known
+  non-gates during the stdlib-owned `MapValue` cutover.
 - 2026-05-16 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_backend_ir_tests PrimeStruct_compile_run_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib namespaced map constructor resolves through imported stdlib helper,stdlib namespaced map constructor keeps same-path definition before wrapper fallback,retired public mapPair bridge reports unknown target,canonical stdlib map helpers accept constructor receivers"`;

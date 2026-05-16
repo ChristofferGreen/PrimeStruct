@@ -11,7 +11,7 @@ namespace primec::ir_lowerer {
 
 namespace {
 
-bool isBuiltinMapConstructorExpr(const Expr &callExpr) {
+bool isPublishedMapConstructorExpr(const Expr &callExpr) {
   if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
     return false;
   }
@@ -87,26 +87,25 @@ bool namesExplicitExperimentalMapType(const std::string &typeText) {
          base.rfind("std/collections/experimental_map/Map__", 0) == 0;
 }
 
-bool rewriteBuiltinMapConstructorExpr(const Expr &callExpr,
-                                      LocalInfo::ValueKind fallbackKeyKind,
-                                      LocalInfo::ValueKind fallbackValueKind,
-                                      const ResolveInlineParameterDefinitionCallFn &resolveDefinitionCall,
-                                      Expr &rewrittenExpr) {
+bool rewritePublishedMapConstructorExpr(const Expr &callExpr,
+                                        LocalInfo::ValueKind fallbackKeyKind,
+                                        LocalInfo::ValueKind fallbackValueKind,
+                                        const ResolveInlineParameterDefinitionCallFn &resolveDefinitionCall,
+                                        Expr &rewrittenExpr) {
   if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
     return false;
   }
   const Definition *callee = resolveDefinitionCall ? resolveDefinitionCall(callExpr) : nullptr;
-  const bool isResolvedExperimentalConstructor = [&]() {
-    return callee != nullptr &&
-           isResolvedCanonicalPublishedStdlibSurfaceConstructorPath(
-               callee->fullPath,
-               primec::StdlibSurfaceId::CollectionsMapConstructors);
-  }();
-  if (!isBuiltinMapConstructorExpr(callExpr) && !isResolvedExperimentalConstructor) {
+  const bool isResolvedPublishedConstructor =
+      callee != nullptr &&
+      isResolvedCanonicalPublishedStdlibSurfaceConstructorPath(
+          callee->fullPath,
+          primec::StdlibSurfaceId::CollectionsMapConstructors);
+  if (!isPublishedMapConstructorExpr(callExpr) && !isResolvedPublishedConstructor) {
     return false;
   }
   rewrittenExpr = callExpr;
-  rewrittenExpr.name = "/map/map";
+  rewrittenExpr.name = collectionMemberPath("map", "map");
   rewrittenExpr.namespacePrefix.clear();
   rewrittenExpr.isMethodCall = false;
   rewrittenExpr.semanticNodeId = 0;
@@ -323,7 +322,7 @@ bool emitInlinePackedCallParameter(
     if (paramInfo.argsPackElementKind == LocalInfo::Kind::Map &&
         paramInfo.structTypeName.empty() &&
         argExpr.kind == Expr::Kind::Call &&
-        rewriteBuiltinMapConstructorExpr(
+        rewritePublishedMapConstructorExpr(
             argExpr, paramInfo.mapKeyKind, paramInfo.mapValueKind, resolveDefinitionCall, rewrittenMapArgExpr)) {
       emittedArgExpr = &rewrittenMapArgExpr;
     }

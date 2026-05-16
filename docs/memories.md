@@ -64,6 +64,18 @@ This file stores durable session-derived facts that are useful in later work. Ke
   semantic and inference rejection so pre-dispatch cannot borrow
   `/std/collections/map/count`.
 
+### map-constructor-normalization-uses-public-path
+- Updated: 2026-05-16
+- Tags: ir, collections, compatibility
+- Fact: Temporary lowerer normalization for inline map parameters,
+  variadic map arguments, and packed `Result.ok` map payloads must target the
+  public `/std/collections/map/map` constructor, not the retired rooted
+  `/map/map` builtin spelling.
+- Evidence: Replacing those three `rewrittenExpr.name = "/map/map"` sites
+  with `collectionMemberPath("map", "map")` kept focused public-constructor
+  semantics and VM smoke tests passing while the map ownership source lock now
+  rejects the retired rooted rewrite.
+
 ### mapvalue-public-insert-uses-stdlib
 - Updated: 2026-05-16
 - Tags: ir, collections, native

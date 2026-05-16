@@ -188,7 +188,7 @@ bool rewritePackedResultMapConstructorExpr(const Expr &callExpr,
   }
 
   rewrittenExpr = callExpr;
-  rewrittenExpr.name = "/map/map";
+  rewrittenExpr.name = collectionMemberPath("map", "map");
   rewrittenExpr.namespacePrefix.clear();
   rewrittenExpr.isMethodCall = false;
   rewrittenExpr.semanticNodeId = 0;

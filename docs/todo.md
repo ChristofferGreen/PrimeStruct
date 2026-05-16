@@ -1749,6 +1749,12 @@ Task template:
       constructor aliasing is limited to the explicit `/std/collections/map/map`
       surface alias rewrite plus the still-separate experimental-map entry-args
       path.
+    - 2026-05-16: Inline parameter, variadic packed-argument, and packed
+      `Result.ok` map constructor normalization no longer retargets canonical
+      stdlib map constructors to the retired rooted `/map/map` builtin path.
+      The remaining temporary normalization points at the public
+      `/std/collections/map/map` constructor while the old builtin-map
+      variadic/result fixtures are retired or retargeted to `MapValue`.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.
