@@ -16,6 +16,36 @@ std::string experimentalCollectionBorrowedBindingTypeText(const BindingInfo &bin
   return binding.typeTemplateArg;
 }
 
+std::string experimentalMapBackingLeafForReceiverResolution(std::string typeName) {
+  typeName = normalizeBindingTypeName(std::move(typeName));
+  if (!typeName.empty() && typeName.front() == '/') {
+    typeName.erase(typeName.begin());
+  }
+  const size_t leafStart = typeName.find_last_of('/');
+  return leafStart == std::string::npos ? typeName : typeName.substr(leafStart + 1);
+}
+
+bool isUnspecializedExperimentalMapBackingTypeForReceiverResolution(
+    std::string typeName) {
+  typeName = normalizeBindingTypeName(std::move(typeName));
+  if (!typeName.empty() && typeName.front() == '/') {
+    typeName.erase(typeName.begin());
+  }
+  return experimentalMapBackingLeafForReceiverResolution(typeName) == "Map" &&
+         isExperimentalCollectionBackingTypeName("map", "Map", typeName);
+}
+
+bool isSpecializedExperimentalMapBackingTypeForReceiverResolution(
+    std::string typeName) {
+  typeName = normalizeBindingTypeName(std::move(typeName));
+  if (!typeName.empty() && typeName.front() == '/') {
+    typeName.erase(typeName.begin());
+  }
+  return experimentalMapBackingLeafForReceiverResolution(typeName).rfind("Map__", 0) ==
+             0 &&
+         isExperimentalCollectionBackingTypeName("map", "Map", typeName);
+}
+
 bool isRootMapConstructorReceiverExpr(const Expr *receiverExpr) {
   if (receiverExpr == nullptr || receiverExpr->kind != Expr::Kind::Call ||
       receiverExpr->isMethodCall || receiverExpr->name.empty()) {
@@ -196,7 +226,8 @@ bool extractExperimentalMapValueReceiverTemplateArgsFromTypeText(const std::stri
       normalizedType = normalizeBindingTypeName(args.front());
       continue;
     }
-    if (normalizedBase == "Map" || normalizedBase == "std/collections/experimental_map/Map") {
+    if (isUnspecializedExperimentalMapBackingTypeForReceiverResolution(
+            normalizedBase)) {
       return splitTopLevelTemplateArgs(argText, templateArgsOut) && templateArgsOut.size() == 2;
     }
     break;
@@ -209,7 +240,8 @@ bool extractExperimentalMapValueReceiverTemplateArgsFromTypeText(const std::stri
   if (!normalizedResolvedPath.empty() && normalizedResolvedPath.front() == '/') {
     normalizedResolvedPath.erase(normalizedResolvedPath.begin());
   }
-  if (normalizedResolvedPath.rfind("std/collections/experimental_map/Map__", 0) != 0) {
+  if (!isSpecializedExperimentalMapBackingTypeForReceiverResolution(
+          normalizedResolvedPath)) {
     return false;
   }
   auto defIt = ctx.sourceDefs.find(resolvedPath);

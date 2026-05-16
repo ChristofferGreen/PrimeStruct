@@ -215,6 +215,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   unspecialized experimental map type text;
   build-parameter experimental map value detection should use the shared
   helper for unspecialized and generated experimental map value types;
+  template-monomorph experimental collection receiver resolution should use
+  shared helpers for unspecialized and generated map receiver types;
   generated collection struct classification should derive the canonical map
   `MapValue__*` prefix through `collectionTypePath("map")` instead of
   carrying a split-string map root.

@@ -78,6 +78,21 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 17:51 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib namespaced map helpers accept experimental map value receivers,stdlib wrapper map helpers accept experimental map value receivers,canonical namespaced map _ref helpers accept borrowed experimental map receivers"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` |
+  failures: none | notes: template-monomorph experimental collection receiver
+  resolution now uses shared experimental collection backing classifiers for
+  unspecialized and generated map receiver types; the map surface inventory
+  now observes 883 production traces and backing traces now observe 128.
+- 2026-05-16 17:50 local | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib namespaced map helpers accept experimental map value receivers,stdlib wrapper map helpers accept experimental map value receivers,canonical namespaced map _ref helpers accept borrowed experimental map receivers,imported canonical map count validates builtin map method receivers"` |
+  failures: `imported canonical map count validates builtin map method receivers`
+  | notes: stale map-count compatibility fixture under the already logged
+  `*map*count*` bucket; reran the three non-stale receiver cases above.
 - 2026-05-16 17:47 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib namespaced map constructor accepts explicit experimental map parameters,stdlib namespaced map constructor keeps mismatch diagnostics on explicit experimental map parameters,canonical namespaced map access helpers accept experimental map values"`;
