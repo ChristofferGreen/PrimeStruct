@@ -3,9 +3,8 @@
 
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
-
-#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 namespace primec::semantics {
 
@@ -24,6 +23,30 @@ std::string stripGeneratedHelperSuffix(std::string path) {
   return path;
 }
 
+std::string canonicalMapHelperPathLocal(std::string_view helperName) {
+  return canonicalCollectionHelperPath(StdlibSurfaceId::CollectionsMapHelpers,
+                                       helperName);
+}
+
+bool resolveCanonicalMapHelperNameFromSpelling(std::string path,
+                                               std::string &helperNameOut) {
+  helperNameOut.clear();
+  if (!path.empty() && path.front() != '/') {
+    path.insert(path.begin(), '/');
+  }
+  return resolvePublishedCollectionHelperResolvedPath(
+      path, StdlibSurfaceId::CollectionsMapHelpers, helperNameOut);
+}
+
+bool isCanonicalMapAccessResolvedPath(const std::string &path) {
+  std::string helperName;
+  if (!resolveCanonicalMapHelperNameFromSpelling(path, helperName)) {
+    return false;
+  }
+  return helperName == "at" || helperName == "at_ref" ||
+         helperName == "at_unsafe" || helperName == "at_unsafe_ref";
+}
+
 bool getCanonicalMapAccessBuiltinName(const Expr &candidate,
                                       std::string &helperOut) {
   helperOut.clear();
@@ -38,12 +61,12 @@ bool getCanonicalMapAccessBuiltinName(const Expr &candidate,
   if (!normalizedName.empty() && normalizedName.front() == '/') {
     normalizedName.erase(normalizedName.begin());
   }
-  if (normalizedName == "std/collections/map/at_ref") {
-    helperOut = "at_ref";
-    return true;
-  }
-  if (normalizedName == "std/collections/map/at_unsafe_ref") {
-    helperOut = "at_unsafe_ref";
+  std::string resolvedMapHelperName;
+  if (resolveCanonicalMapHelperNameFromSpelling(
+          normalizedName, resolvedMapHelperName) &&
+      (resolvedMapHelperName == "at_ref" ||
+       resolvedMapHelperName == "at_unsafe_ref")) {
+    helperOut = resolvedMapHelperName;
     return true;
   }
   return false;
@@ -175,7 +198,7 @@ bool SemanticsValidator::isStringExprForArgumentValidation(
       if (!receiverIsMap) {
         return false;
       }
-      const std::string helperPath = "/std/collections/map/" + helperName;
+      const std::string helperPath = canonicalMapHelperPathLocal(helperName);
       auto defIt = defMap_.find(helperPath);
       if (defIt == defMap_.end()) {
         for (auto candidateIt = defMap_.begin(); candidateIt != defMap_.end(); ++candidateIt) {
@@ -231,10 +254,7 @@ bool SemanticsValidator::isStringExprForArgumentValidation(
       return true;
     }
     const bool isExplicitMapAccessPath =
-        resolvedBasePath == "/std/collections/map/at" ||
-        resolvedBasePath == "/std/collections/map/at_ref" ||
-        resolvedBasePath == "/std/collections/map/at_unsafe" ||
-        resolvedBasePath == "/std/collections/map/at_unsafe_ref";
+        isCanonicalMapAccessResolvedPath(resolvedBasePath);
     if (isExplicitMapAccessPath) {
       auto defIt = defMap_.find(resolvedPath);
       if (defIt == defMap_.end()) {
