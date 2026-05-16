@@ -131,7 +131,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   not normalize map paths while handling array-to-vector fallback; map method
   sugar should ignore rooted `/map/at` struct-return helpers and use the
   canonical helper return type; emitter collection-type inference should not
-  prune canonical map access candidates from rooted `/map/<access>` inputs.
+  prune canonical map access candidates from rooted `/map/<access>` inputs,
+  and the shared emitter method metadata/type-inference helper should not
+  prune rooted map access candidates either.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -220,7 +222,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`
   return type, which allowed the emitter collection-type rooted map access
-  pruning branch to be removed.
+  pruning branch to be removed. The same obsolete pruning helper was then
+  removed from shared emitter method metadata/type inference and setup-return
+  inference.
 
 ### map-constructor-normalization-uses-public-path
 - Updated: 2026-05-16

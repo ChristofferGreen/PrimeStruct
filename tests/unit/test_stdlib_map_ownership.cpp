@@ -476,6 +476,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(emitterMethodMetadataSource.find("preferCanonicalMapMethodHelperPath") ==
         std::string::npos);
+  CHECK(emitterMethodMetadataSource.find("pruneMapAccessStructReturnCompatibilityCandidates") ==
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("pruneMapAccessStructReturnCompatibilityCandidates") ==
+        std::string::npos);
   CHECK(statementLowererSource.find("isPrimeMapInsertBody") != std::string::npos);
   CHECK(statementLowererSource.find("rewriteMapInsertHelperStatementToCanonical") != std::string::npos);
   CHECK(statementLowererSource.find("rewriteMapInsertHelperStatementToBuiltin") == std::string::npos);

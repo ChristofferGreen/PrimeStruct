@@ -49,6 +49,17 @@
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical namespaced map access helpers accept experimental map values,stdlib namespaced map access helpers accept imported stdlib wrappers,collected diagnostics ignore imported canonical map access helper calls,explicit canonical map access helpers accept canonical map values"`;
   `python3 scripts/check_map_surface_trace_inventory.py --root .`;
   `python3 scripts/check_map_backing_traces.py --root .` |
+  failures: none | notes: shared emitter method metadata/type-inference
+  no longer prunes map access candidates for rooted `/map/<access>` inputs;
+  the map surface inventory now observes 994 production traces and backing
+  traces remain at 212.
+- 2026-05-16 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map method access ignores rooted alias struct-return helper"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical namespaced map access helpers accept experimental map values,stdlib namespaced map access helpers accept imported stdlib wrappers,collected diagnostics ignore imported canonical map access helper calls,explicit canonical map access helpers accept canonical map values"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` |
   failures: none | notes: emitter collection-type inference no longer
   prunes canonical map access candidates from rooted `/map/<access>` inputs
   after semantic coverage now locks canonical method-sugar return typing; the

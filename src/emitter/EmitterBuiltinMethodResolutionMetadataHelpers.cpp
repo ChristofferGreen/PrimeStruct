@@ -429,33 +429,6 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
   return candidates;
 }
 
-void pruneMapAccessStructReturnCompatibilityCandidates(
-    const std::string &path,
-    std::vector<std::string> &candidates) {
-  std::string normalizedPath = path;
-  if (!normalizedPath.empty() && normalizedPath.front() != '/') {
-    if (normalizedPath.rfind("map/", 0) == 0 || normalizedPath.rfind("std/collections/map/", 0) == 0) {
-      normalizedPath.insert(normalizedPath.begin(), '/');
-    }
-  }
-  auto eraseCandidate = [&](const std::string &candidate) {
-    for (auto it = candidates.begin(); it != candidates.end();) {
-      if (*it == candidate) {
-        it = candidates.erase(it);
-      } else {
-        ++it;
-      }
-    }
-  };
-  if (normalizedPath.rfind("/map/", 0) == 0) {
-    const std::string suffix = normalizedPath.substr(std::string("/map/").size());
-    if (isCanonicalMapAccessHelperName(suffix)) {
-      eraseCandidate("/map/" + suffix);
-      eraseCandidate("/std/collections/map/" + suffix);
-    }
-  }
-}
-
 std::string normalizeMapImportAliasPath(const std::string &path) {
   if (path.empty() || path.front() == '/') {
     return path;

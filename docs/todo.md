@@ -1893,6 +1893,8 @@ Task template:
       map helper return type.
     - 2026-05-16: Emitter collection-type inference no longer prunes
       canonical map access candidates from rooted `/map/<access>` inputs.
+    - 2026-05-16: Shared emitter method metadata/type-inference no longer
+      prunes rooted map access candidates from collection helper path lists.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

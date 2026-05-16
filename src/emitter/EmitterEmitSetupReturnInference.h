@@ -407,7 +407,6 @@
 
       const std::string resolvedExprPath = resolveExprPath(expr);
       auto resolvedCandidates = collectionHelperPathCandidates(resolvedExprPath);
-      pruneMapAccessStructReturnCompatibilityCandidates(resolvedExprPath, resolvedCandidates);
       pruneBuiltinVectorAccessStructReturnCandidates(expr, resolvedExprPath, params, locals, resolvedCandidates);
       for (const auto &candidate : resolvedCandidates) {
         auto it = returnStructs.find(candidate);
