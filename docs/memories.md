@@ -211,6 +211,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   for unspecialized experimental map backing types;
   collection-access validation should use the shared helper for
   unspecialized experimental map type text;
+  pre-dispatch direct-call validation should use the same helper for
+  unspecialized experimental map type text;
   generated collection struct classification should derive the canonical map
   `MapValue__*` prefix through `collectionTypePath("map")` instead of
   carrying a split-string map root.

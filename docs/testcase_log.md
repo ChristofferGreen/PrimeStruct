@@ -73,6 +73,16 @@
   manual map uninitialized validation coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 17:44 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map pre-dispatch inference keeps rooted and canonical helper paths isolated,explicit canonical map access helpers accept canonical map values,explicit canonical map parameter keeps builtin key diagnostics,canonical namespaced map access helpers accept experimental map values"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` |
+  failures: none | notes: pre-dispatch direct-call validation now uses the
+  shared experimental collection backing helper for unspecialized experimental
+  map type text; the map surface inventory now observes 888 production traces
+  and backing traces now observe 133.
 - 2026-05-16 17:41 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="map access validates key type,unsafe map access validates key type,canonical namespaced map access helpers accept experimental map values,experimental map bracket access stays unsupported on value and borrowed call receivers"`;
