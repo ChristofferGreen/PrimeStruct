@@ -399,6 +399,8 @@ Task template:
   Removed-map body-argument target resolution no longer falls back from
   canonical `/std/collections/map/<helper>` to rooted `/map/<helper>`
   definitions.
+  Collection-access resolution no longer prefers rooted `/map/at*` helper
+  definitions when resolving canonical map access helper calls.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic

@@ -91,7 +91,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   method-target resolution should not prefer rooted `/map/<helper>`
   definitions or imports when choosing map method targets; removed-map
   body-argument target resolution should not fall back from canonical
-  `/std/collections/map/<helper>` to rooted `/map/<helper>` definitions.
+  `/std/collections/map/<helper>` to rooted `/map/<helper>` definitions, and
+  collection-access resolution should not prefer rooted `/map/at*` helper
+  definitions when resolving canonical map access helper calls.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -140,7 +142,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `/map/<helper>` definitions or imports when choosing map method targets;
   removed-map body-argument target resolution no longer falls back from
   canonical `/std/collections/map/<helper>` to rooted `/map/<helper>`
-  definitions.
+  definitions; collection-access resolution no longer prefers rooted
+  `/map/at*` helper definitions when resolving canonical map access helper
+  calls.
 
 ### map-constructor-normalization-uses-public-path
 - Updated: 2026-05-16

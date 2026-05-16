@@ -153,18 +153,6 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       isValueSurfaceAccessHelperName(accessHelperName) &&
       isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
                                                    accessHelperName);
-  const bool prefersExplicitDirectMapAccessAliasDefinition =
-      !expr.isMethodCall &&
-      (context.isNamespacedMapHelperCall &&
-       isCanonicalMapAccessHelperName(context.namespacedHelper)) &&
-      defMap_.find("/map/" +
-                   (isCanonicalMapAccessHelperName(expr.name) ? expr.name
-                                                              : context.namespacedHelper)) !=
-          defMap_.end();
-  if (prefersExplicitDirectMapAccessAliasDefinition) {
-    resolved = "/map/" + (isCanonicalMapAccessHelperName(expr.name) ? expr.name
-                                                                    : context.namespacedHelper);
-  }
   auto isMapNamespacedAccessCompatibilityCall = [&](const Expr &candidate) -> bool {
     if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
       return false;
@@ -220,7 +208,6 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
   const bool isNamespacedMapAccessCall =
       isBuiltinAccessName && context.isNamespacedMapHelperCall &&
       isCanonicalMapAccessHelperName(context.namespacedHelper) &&
-      !prefersExplicitDirectMapAccessAliasDefinition &&
       defMap_.find(resolved) == defMap_.end();
   const std::string explicitRemovedMethodPath =
       explicitRemovedCollectionMethodPath(expr.name, expr.namespacePrefix);
@@ -452,14 +439,6 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
           methodResolved = canonicalVectorMethodTarget;
         }
       }
-      if (isCanonicalMapAccessHelperName(accessHelperName) &&
-          context.resolveMapTarget(receiverCandidate) &&
-          !isLocalRootMapAliasReceiverCall(receiverCandidate) &&
-          !explicitCanonicalMapAccessCall &&
-          defMap_.find("/map/" + accessHelperName) != defMap_.end()) {
-        methodResolved = "/map/" + accessHelperName;
-        isBuiltinMethod = false;
-      }
       if (!isBuiltinMethod && !resolvedVectorAccessMethod &&
           !hasDefinitionPath(methodResolved) &&
           !hasDeclaredDefinitionPath(methodResolved) &&
@@ -601,14 +580,6 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
               hasImportedDefinitionPath(canonicalVectorMethodTarget)) {
             methodResolved = canonicalVectorMethodTarget;
           }
-        }
-        if (isCanonicalMapAccessHelperName(accessHelperName) &&
-            context.resolveMapTarget(expr.args.front()) &&
-            !isLocalRootMapAliasReceiverCall(expr.args.front()) &&
-            !explicitCanonicalMapAccessCall &&
-            defMap_.find("/map/" + accessHelperName) != defMap_.end()) {
-          methodResolved = "/map/" + accessHelperName;
-          isBuiltinMethod = false;
         }
         if (isBuiltinMethod) {
           usedMethodTarget = true;

@@ -396,6 +396,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(collectionAccessSource.find("expr.namespacePrefix == \"map\"") ==
         std::string::npos);
+  CHECK(collectionAccessSource.find("defMap_.find(\"/map/\" + accessHelperName)") ==
+        std::string::npos);
+  CHECK(collectionAccessSource.find("resolved = \"/map/\" +") ==
+        std::string::npos);
   CHECK(countCapacityMapBuiltinSource.find("/std/collections/map/count") ==
         std::string::npos);
   CHECK(countCapacityMapBuiltinSource.find("/std/collections/map/at") ==
