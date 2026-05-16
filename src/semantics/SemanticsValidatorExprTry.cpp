@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 namespace primec::semantics {
 
@@ -59,26 +60,26 @@ bool SemanticsValidator::validateExprTryBuiltin(
         shouldBuiltinValidateCurrentMapWrapperHelper("at_ref") ||
         shouldBuiltinValidateCurrentMapWrapperHelper("at_unsafe") ||
         shouldBuiltinValidateCurrentMapWrapperHelper("at_unsafe_ref");
-    if ((tryTargetPath == "/std/collections/map/tryAt" ||
-         tryTargetPath == "/std/collections/map/tryAt_ref" ||
+    const std::string canonicalTryAtPath =
+        canonicalCollectionHelperPath(StdlibSurfaceId::CollectionsMapHelpers, "tryAt");
+    const std::string canonicalTryAtRefPath =
+        canonicalCollectionHelperPath(StdlibSurfaceId::CollectionsMapHelpers, "tryAt_ref");
+    const bool isCanonicalTryAtTarget =
+        tryTargetPath == canonicalTryAtPath || tryTargetPath == canonicalTryAtRefPath;
+    const std::string canonicalTryAtDiagnosticPath =
+        tryTargetPath == canonicalTryAtRefPath ? canonicalTryAtRefPath : canonicalTryAtPath;
+    if ((isCanonicalTryAtTarget ||
          isBareMapTryAtFallback) &&
         !allowCurrentMapWrapperTryAt &&
-        !hasImportedDefinitionPath(tryTargetPath == "/std/collections/map/tryAt_ref"
-                                       ? "/std/collections/map/tryAt_ref"
-                                       : "/std/collections/map/tryAt") &&
-        !hasDeclaredDefinitionPath(tryTargetPath == "/std/collections/map/tryAt_ref"
-                                       ? "/std/collections/map/tryAt_ref"
-                                       : "/std/collections/map/tryAt") &&
+        !hasImportedDefinitionPath(canonicalTryAtDiagnosticPath) &&
+        !hasDeclaredDefinitionPath(canonicalTryAtDiagnosticPath) &&
         !hasImportedDefinitionPath("/tryAt") &&
         !hasDeclaredDefinitionPath("/tryAt") &&
         !(context.isIndexedArgsPackMapReceiverTarget != nullptr &&
           !tryTargetExpr.args.empty() &&
           context.isIndexedArgsPackMapReceiverTarget(tryTargetExpr.args.front()))) {
       return failTryDiagnostic(
-          "unknown call target: " +
-          std::string(tryTargetPath == "/std/collections/map/tryAt_ref"
-                          ? "/std/collections/map/tryAt_ref"
-                          : "/std/collections/map/tryAt"));
+          "unknown call target: " + canonicalTryAtDiagnosticPath);
     }
   }
 
