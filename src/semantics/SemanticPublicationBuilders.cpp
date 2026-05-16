@@ -1,5 +1,6 @@
 #include "SemanticPublicationBuilders.h"
 
+#include "MapConstructorHelpers.h"
 #include "primec/StdlibSurfaceRegistry.h"
 
 #include <algorithm>
@@ -470,6 +471,18 @@ std::string experimentalCollectionTypeForPublication(std::string_view collection
   return root;
 }
 
+bool isUnspecializedExperimentalMapBackingTypeForPublication(std::string typeName) {
+  typeName = normalizeBindingTypeName(std::move(typeName));
+  if (!typeName.empty() && typeName.front() == '/') {
+    typeName.erase(typeName.begin());
+  }
+  const size_t leafStart = typeName.find_last_of('/');
+  const std::string leaf =
+      leafStart == std::string::npos ? typeName : typeName.substr(leafStart + 1);
+  return leaf == "Map" &&
+         isExperimentalCollectionBackingTypeName("map", "Map", typeName);
+}
+
 std::string normalizeCollectionSpecializationTypeName(std::string typeName) {
   typeName = normalizeBindingTypeName(typeName);
   if (typeName == "/vector" ||
@@ -482,8 +495,8 @@ std::string normalizeCollectionSpecializationTypeName(std::string typeName) {
   }
   if (typeName == "/map" || typeName == "std/collections/map" ||
       typeName == "/std/collections/map" || typeName == "Map" ||
-      typeName == "/Map" || typeName == "std/collections/experimental_map/Map" ||
-      typeName == "/std/collections/experimental_map/Map") {
+      typeName == "/Map" ||
+      isUnspecializedExperimentalMapBackingTypeForPublication(typeName)) {
     return "map";
   }
   if (typeName == "/soa" "_vector" || typeName == "std/collections/" "soa" "_vector" ||

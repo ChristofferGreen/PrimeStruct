@@ -2008,6 +2008,9 @@ Task template:
     - 2026-05-16: Borrowed experimental map extraction in semantic validation
       no longer hard-codes experimental map backing prefixes; it now uses the
       shared experimental collection backing helper.
+    - 2026-05-16: Semantic publication collection specialization no longer
+      hard-codes unspecialized experimental map backing types; it now uses the
+      shared experimental collection backing helper.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

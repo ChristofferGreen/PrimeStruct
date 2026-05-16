@@ -207,6 +207,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   unspecialized and generated experimental map value types;
   borrowed experimental map extraction in semantic validation should use the
   shared helper instead of direct experimental map backing prefixes;
+  semantic publication collection specialization should use the shared helper
+  for unspecialized experimental map backing types;
   generated collection struct classification should derive the canonical map
   `MapValue__*` prefix through `collectionTypePath("map")` instead of
   carrying a split-string map root.
