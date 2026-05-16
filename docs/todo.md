@@ -1845,6 +1845,10 @@ Task template:
     - 2026-05-16: Template expression rewriting no longer probes visible
       rooted `/map/<helper>` definitions to report explicit-template
       diagnostics for bare map receiver calls.
+    - 2026-05-16: Late fallback return-kind inference now targets canonical
+      `/std/collections/map/<helper>` paths rather than rooted
+      `/map/<helper>` paths when resolving map receiver builtin access
+      spelling.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

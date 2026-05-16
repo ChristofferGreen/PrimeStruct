@@ -103,7 +103,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `/map/*` compatibility solely from its resolved callee path; template
   expression rewriting should not probe visible rooted `/map/<helper>`
   definitions to report explicit-template diagnostics for bare map receiver
-  calls.
+  calls, and late fallback return-kind inference should target canonical
+  `/std/collections/map/<helper>` paths for map receivers instead of rooted
+  `/map/<helper>` paths.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -162,7 +164,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   method-target resolution no longer has a resolved-callee `/map/*` table for
   direct map helper compatibility detection; template expression rewriting no
   longer probes rooted `/map/<helper>` source definitions for explicit
-  template-argument diagnostics on bare map receiver calls.
+  template-argument diagnostics on bare map receiver calls; late fallback
+  return-kind inference now routes map receiver builtin access spelling to
+  canonical `/std/collections/map/<helper>` paths instead of rooted
+  `/map/<helper>` paths.
 
 ### map-constructor-normalization-uses-public-path
 - Updated: 2026-05-16

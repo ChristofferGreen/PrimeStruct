@@ -132,7 +132,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
         methodResolved = "/string/" + helperName;
       } else if (resolveMapTarget != nullptr &&
                  resolveMapTarget(receiverCandidate, keyType, valueType)) {
-        methodResolved = "/map/" + helperName;
+        methodResolved = "/std/collections/map/" + helperName;
       } else if (resolveExperimentalMapTarget != nullptr &&
                  resolveExperimentalMapTarget(receiverCandidate, keyType, valueType)) {
         methodResolved = "/std/collections/map/" + helperName;

@@ -379,6 +379,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find("namespacePrefix == \"map\"") ==
         std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find("methodResolved = \"/map/\" + helperName") ==
+        std::string::npos);
   CHECK(pointerLikeSource.find("appendUnique(\"/std/collections/map/\" + suffix)") ==
         std::string::npos);
   CHECK(pointerLikeSource.find("appendUnique(\"/map/\" + suffix)") ==
