@@ -162,7 +162,8 @@ bool SemanticsValidator::validateExprMethodCallTarget(
           helperName != "at_ref" && helperName != "at_unsafe_ref") {
         return false;
       }
-      const std::string helperPath = "/std/collections/map/" + helperName;
+      const std::string helperPath = canonicalCollectionHelperPath(
+          StdlibSurfaceId::CollectionsMapHelpers, helperName);
       auto defIt = defMap_.find(helperPath);
       if (defIt == defMap_.end() || defIt->second == nullptr) {
         return false;
@@ -279,9 +280,12 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     }
     resolved = preferredMapMethodTargetForCall(params, locals, receiverExpr,
                                               helperName);
-    isBuiltinMethod = resolved.rfind("/std/collections/map/", 0) == 0 &&
-                      (shouldBuiltinValidateCurrentMapWrapperHelper(helperName) ||
-                       hasImportedDefinitionPath(resolved));
+    std::string resolvedMapHelperName;
+    isBuiltinMethod =
+        resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(
+            resolved, resolvedMapHelperName) &&
+        (shouldBuiltinValidateCurrentMapWrapperHelper(resolvedMapHelperName) ||
+         hasImportedDefinitionPath(resolved));
     return true;
   };
   const bool hasIndexedArgsPackMapMethodTarget =
@@ -486,14 +490,10 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       }
       resolved = preferredMapMethodTargetForCall(params, locals, expr.args.front(),
                                                 helperName);
-      std::string resolvedHelperName = helperName;
-      const size_t helperSeparator = resolved.find_last_of('/');
-      if (helperSeparator != std::string::npos &&
-          helperSeparator + 1 < resolved.size()) {
-        resolvedHelperName = resolved.substr(helperSeparator + 1);
-      }
-      if (resolved.rfind("/std/collections/map/", 0) == 0 &&
-          (shouldBuiltinValidateCurrentMapWrapperHelper(resolvedHelperName) ||
+      std::string canonicalMapHelperName;
+      if (resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(
+              resolved, canonicalMapHelperName) &&
+          (shouldBuiltinValidateCurrentMapWrapperHelper(canonicalMapHelperName) ||
            hasImportedDefinitionPath(resolved))) {
         isBuiltinMethod = true;
       } else {
@@ -636,18 +636,9 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     return hasImportedDefinitionPath(path) || hasDeclaredDefinitionPath(path);
   };
   auto isMissingStdlibMapMethodDefinition = [&](const std::string &path) {
-    return (path == "/std/collections/map/count" ||
-            path == "/std/collections/map/count_ref" ||
-            path == "/std/collections/map/contains" ||
-            path == "/std/collections/map/contains_ref" ||
-            path == "/std/collections/map/tryAt" ||
-            path == "/std/collections/map/tryAt_ref" ||
-            path == "/std/collections/map/at" ||
-            path == "/std/collections/map/at_ref" ||
-            path == "/std/collections/map/at_unsafe" ||
-            path == "/std/collections/map/at_unsafe_ref" ||
-            path == "/std/collections/map/insert" ||
-            path == "/std/collections/map/insert_ref") &&
+    std::string helperName;
+    return resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(
+               path, helperName) &&
            !hasVisibleStdlibMapMethodDefinition(path);
   };
   if (isMissingStdlibMapMethodDefinition(resolved) &&

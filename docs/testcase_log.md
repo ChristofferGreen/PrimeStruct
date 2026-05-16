@@ -110,6 +110,18 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 18:49 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="bare map contains call requires imported canonical helper or explicit definition"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="bare map tryAt call requires imported canonical helper or explicit definition"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="bare map access methods require imported canonical helpers or explicit definitions"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib canonical map contains and tryAt helpers resolve in method-call sugar"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` | failures: none |
+  notes: semantic method-resolution map helper return and missing-definition
+  checks now resolve canonical helper names through stdlib surface metadata;
+  the map surface inventory now observes 715 production traces and backing
+  traces remain at 0.
 - 2026-05-16 18:46 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="bare map contains call requires imported canonical helper or explicit definition"`;
