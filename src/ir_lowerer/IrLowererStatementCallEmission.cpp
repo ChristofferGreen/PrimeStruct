@@ -46,6 +46,10 @@ const StdlibSurfaceMetadata *statementVectorHelperMetadata() {
   return findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
 }
 
+const StdlibSurfaceMetadata *statementMapHelperMetadata() {
+  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+}
+
 bool isExperimentalVectorTypePath(std::string_view path) {
   const std::string vectorTypePath = experimentalCollectionTypePath("vector", "Vector");
   return path == vectorTypePath || path.rfind(vectorTypePath + "__", 0) == 0;
@@ -143,7 +147,9 @@ std::string canonicalStatementMapHelperName(std::string helperName) {
 bool resolvePublishedStatementMapHelperName(std::string_view resolvedPath,
                                             std::string &helperNameOut) {
   const auto *metadata = findStdlibSurfaceMetadataByResolvedPath(resolvedPath);
-  if (metadata == nullptr || metadata->id != StdlibSurfaceId::CollectionsMapHelpers) {
+  const auto *mapMetadata = statementMapHelperMetadata();
+  if (metadata == nullptr || mapMetadata == nullptr ||
+      metadata->id != mapMetadata->id) {
     return false;
   }
   const size_t slash = resolvedPath.find_last_of('/');
@@ -153,6 +159,14 @@ bool resolvePublishedStatementMapHelperName(std::string_view resolvedPath,
   helperNameOut =
       canonicalStatementMapHelperName(std::string(resolvedPath.substr(slash + 1)));
   return !helperNameOut.empty();
+}
+
+std::string canonicalStatementMapHelperPath(std::string_view helperName) {
+  const auto *metadata = statementMapHelperMetadata();
+  if (metadata == nullptr) {
+    return {};
+  }
+  return stdlibSurfaceCanonicalHelperPath(metadata->id, helperName);
 }
 
 bool isFreeMemoryIntrinsicCall(const Expr &expr) {
@@ -691,11 +705,7 @@ static bool rewriteMapInsertHelperStatementToCanonical(
     if (callee == nullptr) {
       return false;
     }
-    return callee->fullPath == "/std/collections/map/insert" ||
-           callee->fullPath.rfind("/std/collections/map/insert__", 0) == 0 ||
-           callee->fullPath == "/std/collections/map/insert_ref" ||
-           callee->fullPath.rfind("/std/collections/map/insert_ref__", 0) == 0 ||
-           callee->fullPath == "/std/collections/internal_map/insertImpl" ||
+    return callee->fullPath == "/std/collections/internal_map/insertImpl" ||
            callee->fullPath.rfind("/std/collections/internal_map/insertImpl__", 0) == 0 ||
            callee->fullPath == "/std/collections/internal_map/insertRefImpl" ||
            callee->fullPath.rfind("/std/collections/internal_map/insertRefImpl__", 0) == 0;
@@ -726,6 +736,13 @@ static bool rewriteMapInsertHelperStatementToCanonical(
     return helperName == "insert" || helperName == "insert_ref" ||
            helperName == "Insert" || helperName == "InsertRef";
   };
+  auto isPublishedMapInsertHelperCall = [](const Expr &callExpr) {
+    std::string helperName;
+    return resolvePublishedStatementMapHelperName(
+               resolveStatementCallPathWithoutFallbackProbes(callExpr),
+               helperName) &&
+           (helperName == "insert" || helperName == "insert_ref");
+  };
 
   size_t receiverIndex = 0;
   if (stmt.isMethodCall) {
@@ -748,6 +765,7 @@ static bool rewriteMapInsertHelperStatementToCanonical(
   } else {
     std::string helperName;
     if ((!resolveMapHelperAliasName(stmt, helperName) || helperName != "insert") &&
+        !isPublishedMapInsertHelperCall(stmt) &&
         !isDirectBareMapInsertHelperStem(stmt)) {
       return false;
     }
@@ -813,15 +831,9 @@ static bool rewriteMapInsertHelperStatementToCanonical(
         return inferMapKindsFromTypeText(argText, keyKindOut, valueKindOut);
       }
 
-      const std::string experimentalMapType =
-          experimentalCollectionTypePath("map", "Map");
-      const std::string slashlessExperimentalMapType =
-          experimentalMapType.substr(1);
       const bool isMapBase =
-          normalizedBase == "map" || normalizedBase == "/map" ||
-          normalizedBase == "std/collections/map" || normalizedBase == "/std/collections/map" ||
-          normalizedBase == slashlessExperimentalMapType ||
-          normalizedBase == experimentalMapType;
+          isBuiltinCollectionTypeName(normalizedBase, "map") ||
+          isExperimentalCollectionTypeName(normalizedBase, "map", "Map");
       if (!isMapBase) {
         return false;
       }
@@ -937,10 +949,7 @@ static bool rewriteMapInsertHelperStatementToCanonical(
           semanticProgram,
           collectionFact->collectionFamilyId,
           collectionFact->collectionFamily);
-      if (collectionFamily != "map" &&
-          collectionFamily != "/map" &&
-          collectionFamily != "std/collections/map" &&
-          collectionFamily != "/std/collections/map") {
+      if (!isBuiltinCollectionTypeName(collectionFamily, "map")) {
         return false;
       }
       const LocalInfo::ValueKind keyKind = valueKindFromTypeName(
@@ -1082,9 +1091,11 @@ static bool rewriteMapInsertHelperStatementToCanonical(
         return true;
       }
       std::string publishedHelperName;
-      if (resolvePublishedStdlibSurfaceExprMemberName(
+      const auto *metadata = statementMapHelperMetadata();
+      if (metadata != nullptr &&
+          resolvePublishedStdlibSurfaceExprMemberName(
               expr,
-              StdlibSurfaceId::CollectionsMapHelpers,
+              metadata->id,
               publishedHelperName) &&
           (publishedHelperName == "at" || publishedHelperName == "at_ref" ||
            publishedHelperName == "at_unsafe" ||
@@ -1277,7 +1288,10 @@ static bool rewriteMapInsertHelperStatementToCanonical(
     return false;
   };
 
-  const auto targetInfo = resolveMapAccessTargetInfo(stmt.args[receiverIndex], localsIn, inferCallMapTargetInfo);
+  MapAccessTargetInfo targetInfo;
+  if (!inferCallMapTargetInfo(stmt.args[receiverIndex], targetInfo)) {
+    return false;
+  }
   if (!targetInfo.isMapTarget) {
     return false;
   }
@@ -1293,7 +1307,10 @@ static bool rewriteMapInsertHelperStatementToCanonical(
   }
 
   rewrittenStmt = stmt;
-  rewrittenStmt.name = "/std/collections/map/insert";
+  rewrittenStmt.name = canonicalStatementMapHelperPath("insert");
+  if (rewrittenStmt.name.empty()) {
+    return false;
+  }
   rewrittenStmt.namespacePrefix.clear();
   rewrittenStmt.isMethodCall = false;
   rewrittenStmt.isFieldAccess = false;

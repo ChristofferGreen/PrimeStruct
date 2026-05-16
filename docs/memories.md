@@ -264,7 +264,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   map struct inference should derive rooted and slashless experimental map
   backing paths through `experimentalCollectionTypePath`; statement-call map
   insert rewriting should derive rooted, slashless, and generated
-  experimental map backing paths through its collection path helper; emitter
+  experimental map backing paths through its collection path helper;
+  statement-call map insert recognition and rewrite targets should resolve the
+  map helper family through `collections.map_helpers` metadata and the stdlib
+  surface canonical-helper API instead of spelling public canonical map helper
+  paths or naming `StdlibSurfaceId::CollectionsMapHelpers` directly; emitter
   return-kind type parsing should classify experimental map backing bases and
   generated prefixes through a local storage-base helper instead of direct
   path text; collection expression lowering should derive experimental map

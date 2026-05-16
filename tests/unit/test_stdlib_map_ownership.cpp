@@ -502,7 +502,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(statementLowererSource.find("/map/at(argsPack") == std::string::npos);
   CHECK(statementLowererSource.find("callee->fullPath.rfind(\"/std/collections/internal_map/insertImpl__\", 0)") !=
         std::string::npos);
-  CHECK(statementLowererSource.find("rewrittenStmt.name = \"/std/collections/map/insert\"") != std::string::npos);
+  CHECK(statementLowererSource.find("canonicalStatementMapHelperPath(\"insert\")") !=
+        std::string::npos);
+  CHECK(statementLowererSource.find("rewrittenStmt.name = \"/std/collections/map/insert\"") ==
+        std::string::npos);
   CHECK(inlineNativeSource.find("return helperName == \"insert\" || helperName == \"insert_ref\"") ==
         std::string::npos);
   CHECK(inlineNativeSource.find("return helperName == \"at\" || helperName == \"at_ref\"") ==

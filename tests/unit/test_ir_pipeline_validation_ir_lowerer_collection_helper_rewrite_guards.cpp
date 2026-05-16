@@ -1018,7 +1018,7 @@ TEST_CASE("ir lowerer skips builtin map insert rewrite for direct experimental m
         std::string::npos);
   CHECK(tailDispatchSource.find("ir_lowerer::isExperimentalMapStructTypePath(targetInfo.structTypeName)) {") !=
         std::string::npos);
-  CHECK(statementSource.find("structPath.rfind(\"/std/collections/experimental_map/Map__\", 0) == 0;") !=
+  CHECK(statementSource.find("structPath.rfind(experimentalMapType + \"__\", 0) == 0;") !=
         std::string::npos);
   CHECK(tailDispatchSource.find("auto isSpecializedExperimentalMapStructPath =") !=
         std::string::npos);
@@ -1067,10 +1067,12 @@ TEST_CASE("ir lowerer statement map insert rewrite uses semantic product receive
         statementSource.find("queryFact->bindingTypeText,"));
   CHECK(statementSource.find("queryFact->queryTypeTextId") <
         statementSource.find("queryFact->queryTypeText,"));
-  CHECK(statementSource.find("tryPopulateFromSemanticReceiverFact(*canonicalReceiverExpr, targetInfoOut)") !=
+  CHECK(statementSource.find("tryPopulateFromSemanticReceiverFact(\n"
+                             "            *canonicalReceiverExpr, targetInfoOut, hasSemanticMapReceiverFact)") !=
         std::string::npos);
   const size_t semanticReceiverGate = statementSource.find(
-      "tryPopulateFromSemanticReceiverFact(*canonicalReceiverExpr, targetInfoOut)");
+      "tryPopulateFromSemanticReceiverFact(\n"
+      "            *canonicalReceiverExpr, targetInfoOut, hasSemanticMapReceiverFact)");
   const size_t canonicalResolver = statementSource.find(
       "resolveMapAccessTargetInfo(*canonicalReceiverExpr,\n"
       "                                   localsIn,\n"

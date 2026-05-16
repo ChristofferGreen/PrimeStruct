@@ -2108,6 +2108,11 @@ Task template:
     - 2026-05-16: Statement-call map insert rewriting no longer hard-codes
       rooted, slashless, or generated experimental map backing paths; it now
       derives those paths through the local collection path helper.
+    - 2026-05-16: Statement-call map insert recognition and rewrite targets no
+      longer spell public canonical map helper paths or name
+      `StdlibSurfaceId::CollectionsMapHelpers` directly; they now resolve the
+      map helper family through `collections.map_helpers` metadata and the
+      stdlib surface canonical-helper API.
     - 2026-05-16: Emitter return-kind type parsing no longer hard-codes
       experimental map backing base paths or generated prefixes; it now uses
       a local storage-base helper for those classifications.

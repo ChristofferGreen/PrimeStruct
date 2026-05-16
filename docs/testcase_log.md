@@ -105,6 +105,22 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 20:10 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer map insert rewrite uses semantic receiver facts before stale locals,ir lowerer inline map insert helper prefers semantic receiver facts,ir lowerer skips builtin map insert rewrite for direct experimental map locals,ir lowerer statement map insert rewrite uses semantic product receiver ids first,ir lowerer tail map insert rewrite uses semantic receiver facts first,ir lowerer map insert helper writes grown pointers back through wrapper locals,ir lowerer statement call emission source delegation stays stable" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` | failures: none |
+  notes: statement-call map insert recognition and rewrite targets now route
+  through stdlib surface metadata; the map surface inventory now observes 425
+  production traces and backing traces remain at 0.
+- 2026-05-16 20:08 local | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer map insert rewrite uses semantic receiver facts before stale locals,ir lowerer inline map insert helper prefers semantic receiver facts,ir lowerer skips builtin map insert rewrite for direct experimental map locals,ir lowerer statement map insert rewrite uses semantic product receiver ids first,ir lowerer tail map insert rewrite uses semantic receiver facts first,ir lowerer map insert helper writes grown pointers back through wrapper locals,ir lowerer statement call emission source delegation stays stable" --no-skip` |
+  failures: ir lowerer map insert rewrite uses semantic receiver facts before stale locals |
+  notes: first statement-call rerun exposed stale canonical insert test stubs
+  and a stale-local semantic receiver leak; both passed after routing the rewrite
+  through metadata and statement-call-specific receiver inference.
 - 2026-05-16 19:57 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers inline direct canonical map count-like helpers for map locals,ir lowerer call helpers keep explicit canonical map contains and tryAt same-path defs,ir lowerer map constructor rewrite checks constructor surface before resolving defs,ir lowerer statement expr has no inline builtin map insert family" --no-skip`;

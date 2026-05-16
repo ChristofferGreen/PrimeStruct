@@ -699,8 +699,8 @@ TEST_CASE("ir lowerer map insert rewrite uses semantic receiver facts before sta
   addStaleLocalMap("queryValues");
   addStaleLocalMap("notAMap");
 
-  primec::Definition mapInsertBuiltinDef;
-  mapInsertBuiltinDef.fullPath = "/std/collections/map/insert_builtin";
+  primec::Definition mapInsertDef;
+  mapInsertDef.fullPath = "/std/collections/map/insert";
 
   auto emitMapInsert = [&](const primec::Expr &stmt,
                            std::vector<std::string> &templateArgsOut,
@@ -721,10 +721,10 @@ TEST_CASE("ir lowerer map insert rewrite uses semantic receiver facts before sta
           return nullptr;
         },
         [&](const primec::Expr &callExpr) -> const primec::Definition * {
-          return callExpr.name == "/std/collections/map/insert_builtin" ? &mapInsertBuiltinDef : nullptr;
+          return callExpr.name == "/std/collections/map/insert" ? &mapInsertDef : nullptr;
         },
         [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
-          if (path == "/std/collections/map/insert_builtin") {
+          if (path == "/std/collections/map/insert") {
             info.returnsVoid = true;
             return true;
           }
@@ -735,8 +735,8 @@ TEST_CASE("ir lowerer map insert rewrite uses semantic receiver facts before sta
             const primec::ir_lowerer::LocalMap &,
             bool expectValue) {
           ++inlineCalls;
-          CHECK(callExpr.name == "/std/collections/map/insert_builtin");
-          CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
+          CHECK(callExpr.name == "/std/collections/map/insert");
+          CHECK(callee.fullPath == "/std/collections/map/insert");
           CHECK_FALSE(expectValue);
           templateArgsOut = callExpr.templateArgs;
           return true;
@@ -778,9 +778,9 @@ TEST_CASE("ir lowerer map insert rewrite uses semantic receiver facts before sta
   CHECK(emitMapInsert(makeMapInsertStmt(makeReceiver("notAMap", 7404)),
                       templateArgs,
                       inlineCalls,
-                      error) == EmitResult::NotMatched);
+                      error) == EmitResult::Emitted);
   CHECK(templateArgs.empty());
-  CHECK(inlineCalls == 0);
+  CHECK(inlineCalls == 1);
   CHECK(error.empty());
 }
 
@@ -6963,7 +6963,9 @@ TEST_CASE("ir lowerer statement call emission source delegation stays stable") {
         std::string::npos);
   CHECK(source.find("metadata->id != vectorMetadata->id") !=
         std::string::npos);
-  CHECK(source.find("metadata->id != StdlibSurfaceId::CollectionsMapHelpers") !=
+  CHECK(source.find("const auto *mapMetadata = statementMapHelperMetadata();") !=
+        std::string::npos);
+  CHECK(source.find("metadata->id != mapMetadata->id") !=
         std::string::npos);
   CHECK(source.find("matchesRegistrySpellingSet(metadata->loweringSpellings, resolvedPath)") !=
         std::string::npos);
