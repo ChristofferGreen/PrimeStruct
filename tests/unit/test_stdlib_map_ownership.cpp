@@ -163,6 +163,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string collectionAccessValidationSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprCollectionAccessValidation.cpp");
+  const std::string collectionAccessSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorExprCollectionAccess.cpp");
   const std::string countCapacityMapBuiltinSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprCountCapacityBuiltins.cpp");
@@ -200,6 +203,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!scalarPointerMemorySource.empty());
   REQUIRE(!argumentValidationCollectionsSource.empty());
   REQUIRE(!collectionAccessValidationSource.empty());
+  REQUIRE(!collectionAccessSource.empty());
   REQUIRE(!countCapacityMapBuiltinSource.empty());
   REQUIRE(!statementLowererSource.empty());
   REQUIRE(!lowerStatementsExprSource.empty());
@@ -312,6 +316,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(collectionAccessValidationSource.find("normalizedName == \"map/at_ref\"") ==
         std::string::npos);
   CHECK(collectionAccessValidationSource.find("namespacePrefix == \"map\"") ==
+        std::string::npos);
+  CHECK(collectionAccessSource.find("resolvedPath == \"/map/at_ref\" ||\n"
+                                    "            resolvedPath == \"/std/collections/map/at_ref\"") ==
+        std::string::npos);
+  CHECK(collectionAccessSource.find("normalizedName.rfind(\"map/\", 0) == 0) {\n"
+                                    "          const std::string helperName =") ==
+        std::string::npos);
+  CHECK(collectionAccessSource.find("expr.namespacePrefix == \"map\"") ==
         std::string::npos);
   CHECK(countCapacityMapBuiltinSource.find("/std/collections/map/count") ==
         std::string::npos);

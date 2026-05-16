@@ -68,7 +68,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   detection must ignore rooted `/map/at*` resolved paths; late map access
   validation follows the same canonical-only helper-name rule; statement
   printability must not treat rooted `/map/at*` calls as builtin map access
-  printability shortcuts.
+  printability shortcuts, and collection-access resolution keeps removed-alias
+  rejection separate from canonical helper-name classification.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -92,7 +93,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   validation no longer treats slashless `map/at*_ref` names or a `map`
   namespace prefix as canonical map access helper names; statement
   printability no longer treats rooted `/map/at` or `/map/at_unsafe` calls
-  as builtin map access printability shortcuts.
+  as builtin map access printability shortcuts; collection-access resolution
+  no longer treats rooted `/map/at*_ref`, slashless `map/at*`, or a `map`
+  namespace prefix as canonical map access helper-name classifiers.
 
 ### map-constructor-normalization-uses-public-path
 - Updated: 2026-05-16

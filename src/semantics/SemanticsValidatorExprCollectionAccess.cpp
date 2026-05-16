@@ -109,13 +109,11 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
           return true;
         }
         const std::string resolvedPath = resolveCalleePath(candidate);
-        if (resolvedPath == "/map/at_ref" ||
-            resolvedPath == "/std/collections/map/at_ref") {
+        if (resolvedPath == "/std/collections/map/at_ref") {
           helperNameOut = "at_ref";
           return true;
         }
-        if (resolvedPath == "/map/at_unsafe_ref" ||
-            resolvedPath == "/std/collections/map/at_unsafe_ref") {
+        if (resolvedPath == "/std/collections/map/at_unsafe_ref") {
           helperNameOut = "at_unsafe_ref";
           return true;
         }
@@ -131,20 +129,11 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
             return true;
           }
         }
-        if (normalizedName.rfind("map/", 0) == 0) {
-          const std::string helperName =
-              normalizedName.substr(std::string("map/").size());
-          if (isCanonicalMapAccessHelperName(helperName)) {
-            helperNameOut = helperName;
-            return true;
-          }
-        }
         std::string namespacePrefix = candidate.namespacePrefix;
         if (!namespacePrefix.empty() && namespacePrefix.front() == '/') {
           namespacePrefix.erase(namespacePrefix.begin());
         }
-        if ((namespacePrefix == "map" ||
-             namespacePrefix == "std/collections/map") &&
+        if (namespacePrefix == "std/collections/map" &&
             isCanonicalMapAccessHelperName(candidate.name)) {
           helperNameOut = candidate.name;
           return true;
@@ -166,10 +155,8 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
                                                    accessHelperName);
   const bool prefersExplicitDirectMapAccessAliasDefinition =
       !expr.isMethodCall &&
-      (((context.isNamespacedMapHelperCall &&
-         isCanonicalMapAccessHelperName(context.namespacedHelper)) ||
-        (((expr.namespacePrefix == "map") || (expr.namespacePrefix == "/map")) &&
-         isCanonicalMapAccessHelperName(expr.name)))) &&
+      (context.isNamespacedMapHelperCall &&
+       isCanonicalMapAccessHelperName(context.namespacedHelper)) &&
       defMap_.find("/map/" +
                    (isCanonicalMapAccessHelperName(expr.name) ? expr.name
                                                               : context.namespacedHelper)) !=

@@ -369,6 +369,9 @@ Task template:
   or a `map` namespace prefix as canonical map access helper names.
   Statement printability no longer treats rooted `/map/at` or
   `/map/at_unsafe` calls as builtin map access printability shortcuts.
+  Collection-access resolution no longer treats rooted `/map/at*_ref`,
+  slashless `map/at*`, or a `map` namespace prefix as canonical map access
+  helper-name classifiers; removed-alias rejection remains separate.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic
