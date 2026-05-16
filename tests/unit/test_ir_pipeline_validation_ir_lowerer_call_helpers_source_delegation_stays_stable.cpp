@@ -1376,7 +1376,8 @@ TEST_CASE("native tail and late collection helper metadata dispatch stays source
   CHECK(tailDispatchSource.find(
             "helperName == \"tryAt\" || helperName == \"at\" ||\n"
             "               helperName == \"at_unsafe\") &&\n"
-            "              rawPath.rfind(\"/map/\", 0) == 0") != std::string::npos);
+            "              rawPath.rfind(\"/\" + std::string(\"map\") + \"/\", 0) == 0") !=
+        std::string::npos);
   CHECK(tailDispatchSource.find(
             "helperName == \"tryAt\" || helperName == \"at\" ||\n"
             "               helperName == \"at_unsafe\" || helperName == \"insert\" ||") !=

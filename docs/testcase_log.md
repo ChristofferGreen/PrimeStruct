@@ -105,6 +105,15 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 19:52 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer native tail map access inference uses semantic receiver facts first,native tail and late collection helper metadata dispatch stays source locked,ir lowerer builtin map access prefers semantic target facts,ir lowerer count access helpers normalize parser-shaped canonical map access receivers" --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` | failures: none |
+  notes: native-tail dispatch now derives canonical map helper paths,
+  explicit map helper classification, import coverage, and diagnostics
+  through stdlib surface metadata; the map surface inventory now observes 450
+  production traces and backing traces remain at 0.
 - 2026-05-16 19:48 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers resolve and validate map access targets,ir lowerer map constructor rewrite checks constructor surface before resolving defs,ir lowerer late collection constructor guards use published constructor queries,ir lowerer constructor metadata helpers retire duplicated constructor tables" --no-skip`;

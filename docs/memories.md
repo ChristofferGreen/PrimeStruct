@@ -355,6 +355,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   IR access-target resolution should derive canonical map constructor and
   access-helper path recognition from stdlib surface metadata instead of
   embedding canonical map path literals;
+  native-tail dispatch should derive canonical map helper paths, explicit
+  helper classification, import coverage, and missing-helper diagnostics
+  from stdlib surface metadata instead of direct canonical map path text;
   generated collection struct classification should derive the canonical map
   `MapValue__*` prefix through `collectionTypePath("map")` instead of
   carrying a split-string map root.

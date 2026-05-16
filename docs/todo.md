@@ -424,6 +424,9 @@ Task template:
   IR access-target resolution now recognizes canonical map constructor and
   access-helper paths through stdlib surface metadata instead of direct
   canonical map path literals.
+  Native-tail dispatch now derives canonical map helper paths, explicit
+  helper classification, import coverage, and missing-helper diagnostics
+  through stdlib surface metadata instead of direct canonical map path text.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic

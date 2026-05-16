@@ -37,6 +37,10 @@ const StdlibSurfaceMetadata *nativeTailVectorHelperMetadata() {
   return findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
 }
 
+const StdlibSurfaceMetadata *nativeTailMapHelperMetadata() {
+  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+}
+
 bool semanticSurfaceMatches(std::optional<StdlibSurfaceId> surfaceId,
                             const StdlibSurfaceMetadata *metadata) {
   return surfaceId.has_value() && metadata != nullptr && *surfaceId == metadata->id;
@@ -62,10 +66,51 @@ bool resolvePublishedNativeTailVectorHelperName(const SemanticProgram *semanticP
          resolvePublishedNativeTailHelperName(semanticProgram, expr, metadata->id, helperNameOut);
 }
 
+bool resolvePublishedNativeTailMapHelperName(const SemanticProgram *semanticProgram,
+                                             const Expr &expr,
+                                             std::string &helperNameOut) {
+  const auto *metadata = nativeTailMapHelperMetadata();
+  return metadata != nullptr &&
+         resolvePublishedNativeTailHelperName(semanticProgram, expr, metadata->id, helperNameOut);
+}
+
+std::string nativeTailMapHelperPath(std::string_view helperName) {
+  const auto *metadata = nativeTailMapHelperMetadata();
+  if (metadata == nullptr) {
+    return {};
+  }
+  return stdlibSurfaceCanonicalHelperPath(metadata->id, helperName);
+}
+
 bool isCanonicalPublishedNativeTailVectorHelperPath(std::string_view path) {
   const auto *metadata = nativeTailVectorHelperMetadata();
   return metadata != nullptr &&
          isCanonicalPublishedStdlibSurfaceHelperPath(path, metadata->id);
+}
+
+bool isCanonicalPublishedNativeTailMapHelperPath(std::string_view path) {
+  const auto *metadata = nativeTailMapHelperMetadata();
+  return metadata != nullptr &&
+         isCanonicalPublishedStdlibSurfaceHelperPath(path, metadata->id);
+}
+
+bool hasCanonicalNativeTailMapHelperPrefix(std::string_view text) {
+  const auto *metadata = nativeTailMapHelperMetadata();
+  if (metadata == nullptr || metadata->canonicalPath.empty()) {
+    return false;
+  }
+  auto hasPrefix = [&](std::string_view root) {
+    return text.size() > root.size() && text.rfind(root, 0) == 0 &&
+           text[root.size()] == '/';
+  };
+  if (hasPrefix(metadata->canonicalPath)) {
+    return true;
+  }
+  std::string_view unrooted = metadata->canonicalPath;
+  if (!unrooted.empty() && unrooted.front() == '/') {
+    unrooted.remove_prefix(1);
+  }
+  return hasPrefix(unrooted);
 }
 
 bool semanticDirectCallMatchesVectorHelperSurface(const SemanticProgram *semanticProgram,
@@ -80,11 +125,8 @@ bool isExplicitDirectMapCountContainsTryAtCall(const SemanticProgram *semanticPr
     return false;
   }
   std::string helperName;
-  return resolvePublishedNativeTailHelperName(
-             semanticProgram,
-             expr,
-             StdlibSurfaceId::CollectionsMapHelpers,
-             helperName) &&
+  return resolvePublishedNativeTailMapHelperName(
+             semanticProgram, expr, helperName) &&
          (helperName == "count" || helperName == "contains" || helperName == "tryAt");
 }
 
@@ -128,8 +170,10 @@ bool hasSemanticMapReadHelperDefinition(const SemanticProgram *semanticProgram,
   if (semanticProgram == nullptr || !isMapReadHelperName(helperName)) {
     return false;
   }
-  const std::string helperPath =
-      "/std/collections/map/" + std::string(helperName);
+  const std::string helperPath = nativeTailMapHelperPath(helperName);
+  if (helperPath.empty()) {
+    return false;
+  }
   for (const auto &definition : semanticProgram->definitions) {
     if (definition.fullPath == helperPath ||
         definition.fullPath.rfind(helperPath + "__", 0) == 0) {
@@ -189,10 +233,16 @@ bool hasSemanticMapAccessHelperDefinition(const SemanticProgram *semanticProgram
       (accessName != "at" && accessName != "at_unsafe")) {
     return false;
   }
-  auto importsMapHelpers = [](const std::vector<std::string> &imports) {
+  const std::string canonicalPath = nativeTailMapHelperPath(accessName);
+  const std::string canonicalRefPath = nativeTailMapHelperPath(
+      std::string(accessName) + "_ref");
+  if (canonicalPath.empty() || canonicalRefPath.empty()) {
+    return false;
+  }
+  auto importsMapHelpers = [&](const std::vector<std::string> &imports) {
     for (const std::string &importPath : imports) {
-      if (importPath == "/std/collections/*" ||
-          importPath == "/std/collections/map/*") {
+      if (importPathCoversNativeTailTarget(importPath, canonicalPath) ||
+          importPathCoversNativeTailTarget(importPath, canonicalRefPath)) {
         return true;
       }
     }
@@ -210,10 +260,8 @@ bool hasSemanticMapAccessHelperDefinition(const SemanticProgram *semanticProgram
     if (generatedSuffix != std::string::npos) {
       path.erase(generatedSuffix);
     }
-    const std::string canonicalPath =
-        "/std/collections/map/" + std::string(accessName);
     if (path == canonicalPath ||
-        path == canonicalPath + "_ref") {
+        path == canonicalRefPath) {
       return true;
     }
   }
@@ -329,11 +377,8 @@ bool isStringReturningMapAccessAlias(
 }
 
 bool hasExplicitStdMapSourceSpelling(const Expr &expr) {
-  const auto hasStdMapPrefix = [](std::string_view text) {
-    return text.rfind("/std/collections/map/", 0) == 0 ||
-           text.rfind("std/collections/map/", 0) == 0;
-  };
-  return hasStdMapPrefix(expr.name) || hasStdMapPrefix(expr.namespacePrefix);
+  return hasCanonicalNativeTailMapHelperPrefix(expr.name) ||
+         hasCanonicalNativeTailMapHelperPrefix(expr.namespacePrefix);
 }
 
 } // namespace
@@ -658,11 +703,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
   }
   std::string directMapReadHelperName;
   if (!expr.isMethodCall &&
-      resolvePublishedNativeTailHelperName(
-          semanticProgram,
-          expr,
-          StdlibSurfaceId::CollectionsMapHelpers,
-          directMapReadHelperName) &&
+      resolvePublishedNativeTailMapHelperName(
+          semanticProgram, expr, directMapReadHelperName) &&
       isMapReadHelperName(directMapReadHelperName) &&
       hasSemanticMapReadHelperDefinition(semanticProgram,
                                          directMapReadHelperName)) {
@@ -953,29 +995,22 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     }
     const bool isExplicitMapAccessCall =
         !expr.isMethodCall &&
-        resolvePublishedNativeTailHelperName(
-            semanticProgram,
-            expr,
-            StdlibSurfaceId::CollectionsMapHelpers,
-            explicitHelperName) &&
+        resolvePublishedNativeTailMapHelperName(
+            semanticProgram, expr, explicitHelperName) &&
         (explicitHelperName == "at" || explicitHelperName == "at_ref" ||
          explicitHelperName == "at_unsafe" ||
          explicitHelperName == "at_unsafe_ref");
     const bool isExplicitMapAccessMethodCall =
         expr.isMethodCall &&
-        resolvePublishedNativeTailHelperName(
-            semanticProgram,
-            expr,
-            StdlibSurfaceId::CollectionsMapHelpers,
-            explicitHelperName) &&
+        resolvePublishedNativeTailMapHelperName(
+            semanticProgram, expr, explicitHelperName) &&
         (explicitHelperName == "at" || explicitHelperName == "at_ref" ||
          explicitHelperName == "at_unsafe" ||
          explicitHelperName == "at_unsafe_ref");
     const std::string explicitMapAccessMethodPath =
-        (directHelperPath.rfind("/std/collections/map/", 0) == 0 ||
-         directHelperPath.rfind("std/collections/map/", 0) == 0)
+        isCanonicalPublishedNativeTailMapHelperPath(directHelperPath)
             ? directHelperPath
-            : "/std/collections/map/" + explicitHelperName;
+            : nativeTailMapHelperPath(explicitHelperName);
     if (isExplicitMapAccessMethodCall &&
         !semanticMapAccessHelperKeepsBuiltinReturn(semanticProgram,
                                                    explicitMapAccessMethodPath)) {
@@ -1028,7 +1063,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       const auto mapTargetInfo = resolveMapAccessTargetInfo(
           expr.args.front(), localsIn, resolveCallMapAccessTargetInfo);
       if (mapTargetInfo.isMapTarget) {
-        error = "unknown call target: /std/collections/map/" + accessName;
+        const std::string helperPath = nativeTailMapHelperPath(accessName);
+        error = "unknown call target: " + helperPath;
         return NativeCallTailDispatchResult::Error;
       }
     }
@@ -1041,7 +1077,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
            (expr.name.find('/') == std::string::npos &&
             !hasExplicitStdMapSourceSpelling(expr) &&
             !semanticMapAccessHelperKeepsBuiltinReturn(
-                semanticProgram, "/std/collections/map/" + accessName)))) {
+                semanticProgram, nativeTailMapHelperPath(accessName))))) {
         return NativeCallTailDispatchResult::NotHandled;
       }
     }
