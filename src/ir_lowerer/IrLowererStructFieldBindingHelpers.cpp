@@ -15,8 +15,8 @@ namespace primec::ir_lowerer {
 namespace {
 
 bool isSpecializedExperimentalCollectionTypeName(const std::string &typeName) {
-  return typeName.rfind("std/collections/experimental_map/Map__", 0) == 0 ||
-         typeName.rfind("/std/collections/experimental_map/Map__", 0) == 0 ||
+  return (isExperimentalCollectionTypeName(typeName, "map", "Map") &&
+          typeName.find("__") != std::string::npos) ||
          (isExperimentalCollectionTypeName(typeName, "vector", "Vector") &&
           typeName.find("__") != std::string::npos) ||
          typeName.rfind("std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0 ||

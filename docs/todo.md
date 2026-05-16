@@ -2038,6 +2038,9 @@ Task template:
     - 2026-05-16: Statement-binding metadata no longer hard-codes the
       generated experimental map backing prefix; it now derives that prefix
       through `experimentalCollectionTypePath`.
+    - 2026-05-16: Struct-field binding helper classification no longer
+      hard-codes generated experimental map backing prefixes; it now uses the
+      shared experimental collection classifier.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.
