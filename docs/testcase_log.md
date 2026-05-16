@@ -73,6 +73,16 @@
   manual map uninitialized validation coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 17:18 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="wrapper-returned canonical map keeps if string branch compatibility,wrapper-returned referenced canonical map keeps if string branch compatibility,if rejects builtin string map access mixed with numeric branch,explicit canonical map parameter keeps builtin helper validation"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` |
+  failures: none | notes: collection return inference now uses shared
+  experimental collection backing classifiers for unspecialized map backing
+  return types and generated map fallback paths; the map surface inventory now
+  observes 921 production traces and backing traces now observe 166.
 - 2026-05-16 17:15 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="print accepts string map access,explicit canonical map parameter keeps print statement string validation"`;

@@ -1986,6 +1986,9 @@ Task template:
       unspecialized experimental map backing return type exclusion; it now
       routes that classifier through the shared experimental collection
       backing helper.
+    - 2026-05-16: Collection return inference no longer hard-codes
+      unspecialized or generated experimental map backing return paths; both
+      now route through shared experimental collection backing classifiers.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

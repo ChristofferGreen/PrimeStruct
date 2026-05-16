@@ -191,9 +191,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   field extraction should also use the same helper for unspecialized and
   generated experimental map backing types; statement printability should use
   the same helper when excluding unspecialized experimental map backing
-  returns; generated collection struct classification should derive the
-  canonical map `MapValue__*` prefix through `collectionTypePath("map")`
-  instead of carrying a split-string map root.
+  returns; collection return inference should use the same helper for
+  unspecialized and generated experimental map backing return paths;
+  generated collection struct classification should derive the canonical map
+  `MapValue__*` prefix through `collectionTypePath("map")` instead of
+  carrying a split-string map root.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

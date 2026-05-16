@@ -59,6 +59,41 @@ bool extractBuiltinSoaVectorElementTypeFromTypeTextForQueryInference(
   return true;
 }
 
+std::string experimentalMapBackingLeafForReturnInference(std::string typeName) {
+  typeName = normalizeBindingTypeName(std::move(typeName));
+  if (!typeName.empty() && typeName.front() == '/') {
+    typeName.erase(typeName.begin());
+  }
+  const size_t leafStart = typeName.find_last_of('/');
+  return leafStart == std::string::npos ? typeName : typeName.substr(leafStart + 1);
+}
+
+bool isUnspecializedExperimentalMapBackingTypeForReturnInference(std::string typeName) {
+  typeName = normalizeBindingTypeName(std::move(typeName));
+  if (!typeName.empty() && typeName.front() == '/') {
+    typeName.erase(typeName.begin());
+  }
+  return experimentalMapBackingLeafForReturnInference(typeName) == "Map" &&
+         isExperimentalCollectionBackingTypeName("map", "Map", typeName);
+}
+
+bool isSpecializedExperimentalMapBackingTypeForReturnInference(std::string typeName) {
+  typeName = normalizeBindingTypeName(std::move(typeName));
+  if (!typeName.empty() && typeName.front() == '/') {
+    typeName.erase(typeName.begin());
+  }
+  return experimentalMapBackingLeafForReturnInference(typeName).rfind("Map__", 0) == 0 &&
+         isExperimentalCollectionBackingTypeName("map", "Map", typeName);
+}
+
+bool isBareExperimentalMapBackingNameForReturnInference(std::string typeName) {
+  typeName = normalizeBindingTypeName(std::move(typeName));
+  if (!typeName.empty() && typeName.front() == '/') {
+    typeName.erase(typeName.begin());
+  }
+  return typeName == "Map";
+}
+
 } // namespace
 
 bool SemanticsValidator::inferDefinitionReturnBinding(const Definition &def, BindingInfo &bindingOut) {
@@ -117,7 +152,7 @@ bool SemanticsValidator::inferDefinitionReturnBinding(const Definition &def, Bin
         base == "vector" || base == "soa" "_vector" || isMapCollectionTypeName(base) ||
         base == "Vector" ||
         isLegacyExperimentalVectorCompatibilityPath("/" + base) ||
-        base == "Map" || base == "std/collections/experimental_map/Map" ||
+        isUnspecializedExperimentalMapBackingTypeForReturnInference(base) ||
         !resolveStructTypePath(base, def.namespacePrefix, structNames_).empty()) {
       std::vector<std::string> args;
       if (!splitTopLevelTemplateArgs(argText, args) || args.empty()) {
@@ -1098,9 +1133,10 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
                   collectionMethodFallbackTypeText) ||
               isLegacyExperimentalVectorCompatibilityTypePath(
                   "/" + collectionMethodFallbackTypeText) ||
-              collectionMethodFallbackTypeText == "Map" ||
-              collectionMethodFallbackTypeText.rfind("/std/collections/experimental_map/Map__", 0) == 0 ||
-              collectionMethodFallbackTypeText.rfind("std/collections/experimental_map/Map__", 0) == 0;
+              isBareExperimentalMapBackingNameForReturnInference(
+                  collectionMethodFallbackTypeText) ||
+              isSpecializedExperimentalMapBackingTypeForReturnInference(
+                  collectionMethodFallbackTypeText);
           if (!keepExperimentalCollectionPath) {
             collectionMethodFallbackTypeText = normalizedCollectionType.substr(1);
           }
