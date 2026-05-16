@@ -279,7 +279,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   generated experimental map backing prefix through the local collection type
   helper; IR-printer return-kind type parsing should classify experimental
   map backing bases and generated prefixes through the existing generic
-  experimental collection type helper;
+  experimental collection type helper; semantic map constructor and
+  entry-argument path checks should route experimental map backing member
+  paths through shared constructor helpers instead of direct path text;
   generated collection struct classification should derive the canonical map
   `MapValue__*` prefix through `collectionTypePath("map")` instead of
   carrying a split-string map root.

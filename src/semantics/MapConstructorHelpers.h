@@ -28,6 +28,22 @@ inline std::string experimentalCollectionConstructorRootLocal(
   return "/std/collections/experimental_" + std::string(collectionName) + "/";
 }
 
+inline std::string experimentalCollectionConstructorPathLocal(
+    std::string_view collectionName,
+    std::string_view memberName) {
+  return experimentalCollectionConstructorRootLocal(collectionName) +
+         std::string(memberName);
+}
+
+inline bool isExperimentalCollectionConstructorPathLocal(
+    const std::string &path,
+    std::string_view collectionName,
+    std::string_view memberName) {
+  const std::string expected =
+      experimentalCollectionConstructorPathLocal(collectionName, memberName);
+  return path == expected || path.rfind(expected + "__", 0) == 0;
+}
+
 inline bool isExperimentalCollectionBackingTypeName(
     std::string_view collectionName,
     std::string_view backingTypeName,
@@ -212,7 +228,7 @@ inline bool resolveMapConstructorMemberPath(std::string_view rawPath,
 inline bool isResolvedCanonicalMapConstructorPath(const std::string &rawPath) {
   const std::string normalizedPath = stripCollectionConstructorSuffixes(rawPath);
   if (normalizedPath.rfind("/std/collections/", 0) != 0 ||
-      normalizedPath.rfind("/std/collections/experimental_map/", 0) == 0) {
+      normalizedPath.rfind(experimentalCollectionConstructorRootLocal("map"), 0) == 0) {
     return false;
   }
   std::string memberName;
@@ -233,7 +249,7 @@ inline bool isResolvedPublishedMapConstructorPath(const std::string &rawPath) {
     return false;
   }
   return !(memberName == "map" &&
-           normalizedPath == "/std/collections/experimental_map/map");
+           normalizedPath == experimentalCollectionConstructorPathLocal("map", "map"));
 }
 
 inline bool isResolvedMapConstructorPath(const std::string &rawPath) {
@@ -245,7 +261,7 @@ inline bool isResolvedMapConstructorPath(const std::string &rawPath) {
     return false;
   }
   return !(memberName == "map" &&
-           normalizedPath == "/std/collections/experimental_map/map");
+           normalizedPath == experimentalCollectionConstructorPathLocal("map", "map"));
 }
 
 inline bool isResolvedVectorConstructorHelperPath(const std::string &rawPath) {

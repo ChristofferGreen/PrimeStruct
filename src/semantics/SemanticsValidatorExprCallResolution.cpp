@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "MapConstructorHelpers.h"
 
 #include <algorithm>
 #include <cctype>
@@ -224,8 +225,7 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
   auto isMapEntryConstructorPath = [](const std::string &path) {
     return path == "/std/collections/map/entry" ||
            path.rfind("/std/collections/map/entry__", 0) == 0 ||
-           path == "/std/collections/experimental_map/entry" ||
-           path.rfind("/std/collections/experimental_map/entry__", 0) == 0;
+           isExperimentalCollectionConstructorPathLocal(path, "map", "entry");
   };
   auto explicitCallPath = [](const Expr &callExpr) -> std::string {
     if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall ||

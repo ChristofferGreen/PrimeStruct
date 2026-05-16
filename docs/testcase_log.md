@@ -82,6 +82,11 @@
   map access-target path construction moved through shared experimental
   collection path helpers; adjacent direct and forwarded map access target
   resolution coverage still passes.
+- `PrimeStruct_backend_ir_tests --test-case="ir lowerer helper rejects parser-shaped canonical map entry constructors as builtin map"`
+  is stale after the map stdlib-ownership cutover. On 2026-05-16 it still
+  expects parser-shaped canonical map entry constructors to stay outside
+  builtin collection-name classification, while current constructor/entry
+  semantics coverage passes through the stdlib-owned map helper surface.
 - `PrimeStruct_semantics_tests` inferred map-struct-field and
   uninitialized-storage constructor fixtures are stale after the map
   stdlib-ownership cutover. On 2026-05-16 the filters
@@ -105,6 +110,22 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 19:03 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_backend_ir_tests PrimeStruct_compile_run_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib namespaced map constructor resolves through imported stdlib helper,canonical stdlib map helpers accept constructor receivers,stdlib namespaced map constructor accepts explicit experimental map bindings"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` | failures: none |
+  notes: semantic map constructor and entry-argument path checks now route
+  experimental map backing member paths through shared constructor helpers;
+  the map surface inventory now observes 778 production traces and backing
+  traces now observe 22.
+- 2026-05-16 19:03 local | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer helper rejects parser-shaped canonical map entry constructors as builtin map"` |
+  failures: `ir lowerer helper rejects parser-shaped canonical map entry
+  constructors as builtin map` | notes: stale parser-shaped canonical map
+  entry builtin-classification expectation; reran the adjacent semantic map
+  constructor cases above.
 - 2026-05-16 18:54 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_compile_run_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers infer forwarded map access targets"`;
