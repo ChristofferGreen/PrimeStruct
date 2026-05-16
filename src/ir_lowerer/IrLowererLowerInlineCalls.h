@@ -786,16 +786,9 @@
         if (normalizedBase == "Reference" || normalizedBase == "Pointer") {
           return inferMapKindsFromTypeText(argText, keyKindOut, valueKindOut);
         }
-        const std::string experimentalMapType =
-            experimentalCollectionTypePath("map", "Map");
-        const std::string slashlessExperimentalMapType =
-            experimentalMapType.substr(1);
         const bool isMapBase =
-            normalizedBase == "map" || normalizedBase == "/map" ||
-            normalizedBase == "std/collections/map" ||
-            normalizedBase == "/std/collections/map" ||
-            normalizedBase == slashlessExperimentalMapType ||
-            normalizedBase == experimentalMapType;
+            isBuiltinCollectionTypeName(normalizedBase, "map") ||
+            isExperimentalCollectionTypeName(normalizedBase, "map", "Map");
         if (!isMapBase) {
           return false;
         }
@@ -852,9 +845,7 @@
         const std::string collectionFamily =
             resolveSemanticTypeText(collectionFact->collectionFamilyId,
                                     collectionFact->collectionFamily);
-        if (collectionFamily != "map" && collectionFamily != "/map" &&
-            collectionFamily != "std/collections/map" &&
-            collectionFamily != "/std/collections/map") {
+        if (!isBuiltinCollectionTypeName(collectionFamily, "map")) {
           return false;
         }
         const LocalInfo::ValueKind keyKind = valueKindFromTypeName(

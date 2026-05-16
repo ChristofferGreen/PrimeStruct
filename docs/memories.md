@@ -278,7 +278,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   backing member roots and generated `Map` prefixes through local collection
   path helpers; inline call map-kind inference and experimental map receiver
   classification should derive rooted, slashless, and generated experimental
-  map backing paths through local collection path helpers;
+  map backing paths through local collection path helpers; lowerer inline-call
+  map-kind inference and semantic collection-family gates should use the shared
+  builtin/experimental collection classifiers instead of local rooted/canonical
+  map type strings;
   statement-expression map count/access target classification should reuse
   local experimental collection type and generated-specialization helpers
   instead of direct experimental map backing path text;

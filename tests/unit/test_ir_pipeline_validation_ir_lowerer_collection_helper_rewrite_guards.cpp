@@ -908,6 +908,16 @@ TEST_CASE("ir lowerer inline map insert helper prefers semantic receiver facts")
         std::string::npos);
   CHECK(source.find("findSemanticProductCollectionSpecialization(semanticTargets.semanticIndex,") !=
         std::string::npos);
+  CHECK(source.find("isBuiltinCollectionTypeName(normalizedBase, \"map\")") !=
+        std::string::npos);
+  CHECK(source.find("isExperimentalCollectionTypeName(normalizedBase, \"map\", \"Map\")") !=
+        std::string::npos);
+  CHECK(source.find("isBuiltinCollectionTypeName(collectionFamily, \"map\")") !=
+        std::string::npos);
+  CHECK(source.find("normalizedBase == \"std/collections/map\"") ==
+        std::string::npos);
+  CHECK(source.find("collectionFamily != \"map\" && collectionFamily != \"/map\"") ==
+        std::string::npos);
   CHECK(source.find("collectionFact->keyTypeTextId") !=
         std::string::npos);
   CHECK(source.find("collectionFact->valueTypeTextId") !=

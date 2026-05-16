@@ -105,6 +105,17 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 20:28 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer inline map insert helper prefers semantic receiver facts,ir lowerer inline dispatch map helper deferral uses semantic receiver facts first,ir lowerer inline dispatch collection access fallback uses semantic receiver facts first" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: lowerer inline-call map-kind inference now uses shared collection
+  classifiers instead of direct rooted/canonical map type strings; the map
+  surface inventory now observes 419 production traces and backing traces remain
+  at 0.
 - 2026-05-16 20:15 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer inline dispatch map helper deferral uses semantic receiver facts first,ir lowerer inline native dispatch prefers published canonical map access helpers,ir lowerer call helpers keep explicit map helpers out of native builtin emission,ir lowerer inline dispatch collection access fallback uses semantic receiver facts first" --no-skip`;

@@ -430,6 +430,9 @@ Task template:
   Statement-expression lowering now derives direct canonical map helper and
   constructor recognition through stdlib surface metadata instead of direct
   canonical map path literals.
+  Lowerer inline-call map-kind inference now uses the shared builtin and
+  experimental collection classifiers instead of local rooted/canonical map type
+  string checks.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic
