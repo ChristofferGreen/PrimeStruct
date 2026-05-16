@@ -71,6 +71,11 @@
   spelling the experimental map backing path directly. On 2026-05-16 it
   failed its exact `constructorSurfaceCheck` source search, while adjacent
   uninitialized stdlib map constructor struct inference coverage still passes.
+- `PrimeStruct_backend_ir_tests --test-case="ir lowerer binding type helpers classify binding kind and string/fileerror types"`
+  has stale source-lock coverage for exact SoA experimental type strings. On
+  2026-05-16 it failed four source-string assertions for
+  `experimental_soa_vector/SoaVector`, while adjacent binding value-kind and
+  semantic collection specialization coverage still passes.
 - `PrimeStruct_semantics_tests` inferred map-struct-field and
   uninitialized-storage constructor fixtures are stale after the map
   stdlib-ownership cutover. On 2026-05-16 the filters
@@ -94,6 +99,21 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 18:12 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer binding type helpers resolve value kinds from transforms,ir lowerer binding type helpers prefer semantic collection specialization facts"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` | failures: none |
+  notes: binding type normalization now builds rooted and slashless
+  experimental map backing paths with `experimentalCollectionTypePath`; the
+  map surface inventory now observes 826 production traces and backing traces
+  now observe 71.
+- 2026-05-16 18:12 local | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer binding type helpers classify binding kind and string/fileerror types,ir lowerer binding type helpers resolve value kinds from transforms,ir lowerer binding type helpers prefer semantic collection specialization facts"` |
+  failures: `ir lowerer binding type helpers classify binding kind and
+  string/fileerror types` | notes: stale exact-source assertions for SoA
+  experimental type strings; reran the adjacent behavioral cases above.
 - 2026-05-16 18:09 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer struct layout helpers compute uncached diagnostics,ir lowerer call helpers build this params and collect struct fields,ir lowerer result helpers resolve Result.map struct payload metadata"`;

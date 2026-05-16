@@ -924,11 +924,15 @@ std::string normalizeCollectionBindingTypeName(const std::string &name) {
       isExperimentalCollectionTypeName(name, "vector", "Vector")) {
     return "vector";
   }
+  const std::string experimentalMapType =
+      experimentalCollectionTypePath("map", "Map", false);
+  const std::string rootedExperimentalMapType =
+      experimentalCollectionTypePath("map", "Map");
   if (name == "/map" || name == "std/collections/map" || name == "/std/collections/map" ||
-      name == "std/collections/experimental_map/Map" ||
-      name == "/std/collections/experimental_map/Map" ||
-      name.rfind("std/collections/experimental_map/Map__", 0) == 0 ||
-      name.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
+      name == experimentalMapType ||
+      name == rootedExperimentalMapType ||
+      name.rfind(experimentalMapType + "__", 0) == 0 ||
+      name.rfind(rootedExperimentalMapType + "__", 0) == 0) {
     return "map";
   }
   if (name == "soa" || name == "/soa" ||

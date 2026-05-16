@@ -2074,6 +2074,9 @@ Task template:
     - 2026-05-16: Struct-slot map type recognition no longer hard-codes
       rooted or slashless experimental map backing paths; it now derives both
       through `experimentalCollectionTypePath`.
+    - 2026-05-16: Binding type normalization no longer hard-codes rooted or
+      slashless experimental map backing paths; it now derives both through
+      `experimentalCollectionTypePath`.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.
