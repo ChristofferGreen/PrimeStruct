@@ -275,6 +275,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   statement-expression map count/access target classification should reuse
   local experimental collection type and generated-specialization helpers
   instead of direct experimental map backing path text;
+  try-expression specialized map Result payload inference should derive the
+  generated experimental map backing prefix through the local collection type
+  helper;
   generated collection struct classification should derive the canonical map
   `MapValue__*` prefix through `collectionTypePath("map")` instead of
   carrying a split-string map root.

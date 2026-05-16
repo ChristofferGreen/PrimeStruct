@@ -105,6 +105,22 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 18:49 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_compile_run_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer result helpers resolve Result.map struct payload metadata,ir lowerer call helpers infer forwarded map access targets"`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native canonical map access direct calls and method sugar use ordinary map helpers,compiles and runs native builtin canonical map first-growth inserts"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` | failures: none |
+  notes: try-expression specialized map Result payload inference now derives
+  the generated experimental map backing prefix through the local collection
+  type helper; the map surface inventory now observes 796 production traces
+  and backing traces now observe 40.
+- 2026-05-16 18:49 local | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer supports direct map Result payloads,ir lowerer result helpers resolve Result.map struct payload metadata,ir lowerer call helpers infer forwarded map access targets"` |
+  failures: `ir lowerer supports direct map Result payloads` | notes: stale
+  retired map literal/count compatibility fixture failed `parseAndValidate`;
+  reran the adjacent Result metadata and forwarded map access cases above.
 - 2026-05-16 18:44 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_compile_run_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers resolve and validate map access targets,ir lowerer call helpers infer forwarded map access targets"`;

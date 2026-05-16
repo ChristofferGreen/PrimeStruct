@@ -437,7 +437,9 @@
               if (!normalized.empty() && normalized.front() != '/') {
                 normalized.insert(normalized.begin(), '/');
               }
-              if (normalized.rfind("/std/collections/experimental_map/Map__", 0) != 0) {
+              if (normalized.rfind(
+                      experimentalCollectionTypePath("map", "Map") + "__",
+                      0) != 0) {
                 return false;
               }
               Expr syntheticExpr;

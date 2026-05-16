@@ -2097,6 +2097,9 @@ Task template:
       classification no longer hard-codes unspecialized or generated
       experimental map backing paths; it now reuses local experimental
       collection type and generated-specialization helpers.
+    - 2026-05-16: Try-expression specialized map Result payload inference no
+      longer hard-codes the generated experimental map backing prefix; it now
+      derives that prefix through the local collection type helper.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.
