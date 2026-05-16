@@ -639,29 +639,6 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  auto isMapEntryCallExpr = [](const Expr &candidate) {
-    if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
-      return false;
-    }
-    std::string normalizedName = resolveScopedExprName(candidate);
-    if (!normalizedName.empty() && normalizedName.front() == '/') {
-      normalizedName.erase(normalizedName.begin());
-    }
-    const auto generatedSuffix = normalizedName.find("__");
-    if (generatedSuffix != std::string::npos) {
-      normalizedName.erase(generatedSuffix);
-    }
-    return normalizedName == "map/entry" ||
-           normalizedName == "std/collections/map/entry";
-  };
-  const bool hasEntryCtorArgs = [&]() {
-    for (const auto &arg : expr.args) {
-      if (isMapEntryCallExpr(arg)) {
-        return true;
-      }
-    }
-    return false;
-  }();
   std::string scopedName = resolveScopedExprName(expr);
   if (!scopedName.empty() && scopedName[0] == '/') {
     scopedName.erase(scopedName.begin());
@@ -674,28 +651,6 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
     std::string alias = scopedName.substr(collectionMemberRoot("vector").size());
     if (alias == "vector") {
       out = "vector";
-      return true;
-    }
-    return false;
-  }
-  if (scopedName.rfind("map/", 0) == 0) {
-    std::string alias = scopedName.substr(std::string("map/").size());
-    if (alias == "map") {
-      if (hasEntryCtorArgs) {
-        return false;
-      }
-      out = "map";
-      return true;
-    }
-    return false;
-  }
-  if (scopedName.rfind("std/collections/map/", 0) == 0) {
-    std::string alias = scopedName.substr(std::string("std/collections/map/").size());
-    if (alias == "map") {
-      if (hasEntryCtorArgs) {
-        return false;
-      }
-      out = "map";
       return true;
     }
     return false;
