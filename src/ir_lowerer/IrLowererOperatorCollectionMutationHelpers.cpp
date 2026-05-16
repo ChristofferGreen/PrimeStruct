@@ -550,7 +550,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
           (keyKind != LocalInfo::ValueKind::Unknown && valueKind != LocalInfo::ValueKind::Unknown);
       if (useExperimentalMapLayout) {
         if (mapStructPath.empty()) {
-          mapStructPath = "/std/collections/experimental_map/Map";
+          mapStructPath = experimentalCollectionTypePath("map", "Map");
         }
         const int32_t baseLocal = nextLocal;
 

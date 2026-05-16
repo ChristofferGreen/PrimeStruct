@@ -7,6 +7,11 @@
   resolved-path helpers, inline-dispatch map helper classifiers, and SoA
   helper path strings. The map bridge-key assertion updated in the same run
   did not fail.
+- `PrimeStruct_backend_ir_tests --test-case="ir lowers map literal call as statement"`
+  is stale after parser/template cleanup. On 2026-05-16 it failed before IR
+  lowering with `Parse error: duplicate template parameter: i32` for the
+  old `map<i32, i32>(...)` statement fixture; nearby string-keyed map literal
+  lowerer coverage still passes.
 - `PrimeStruct_backend_ir_tests --test-case="semantics validator infer source delegation stays stable" --no-skip`
   has 15 stale SoA/experimental_soa_vector source-lock assertions after the
   SoA public-surface cleanup. The map-count inference assertions in that test
@@ -48,6 +53,23 @@
   `MapValue` surface constructor coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer supports string-keyed map literals"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` |
+  failures: none | notes: map literal lowering now obtains the empty inferred
+  map backing path through `experimentalCollectionTypePath("map", "Map")`
+  instead of hard-coding `/std/collections/experimental_map/Map`; the map
+  surface inventory now observes 980 production traces and backing traces
+  now observe 211.
+- 2026-05-16 local | fail-known | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer supports string-keyed map literals,ir lowers map literal call as statement"` |
+  failures: stale `ir lowers map literal call as statement` fixture | notes:
+  the string-keyed map literal test passed; the statement fixture failed at
+  parse time with duplicate `i32` template parameters before reaching the
+  changed lowerer code.
 - 2026-05-16 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;

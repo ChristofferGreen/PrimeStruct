@@ -1910,6 +1910,11 @@ Task template:
       published bridge helper surfaces; it now resolves the map helper
       surface through `collections.map_helpers` metadata like the vector
       helper path.
+    - 2026-05-16: Map literal lowering no longer hard-codes the empty
+      inferred-map backing path as `/std/collections/experimental_map/Map`;
+      it now uses the shared `experimentalCollectionTypePath("map", "Map")`
+      helper and the ownership test no longer classifies the mutation lowerer
+      as an allowed experimental-map backing trace file.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

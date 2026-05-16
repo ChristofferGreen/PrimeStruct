@@ -143,7 +143,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   strip `map/` and `std/collections/map/` prefixes before explicit map helper
   candidate construction; IR call resolution should classify the map helper
   bridge surface through `collections.map_helpers` metadata instead of a
-  direct `StdlibSurfaceId::CollectionsMapHelpers` production trace.
+  direct `StdlibSurfaceId::CollectionsMapHelpers` production trace; map
+  literal lowering should obtain the empty inferred-map backing path through
+  `experimentalCollectionTypePath("map", "Map")` instead of hard-coding the
+  experimental map path in the mutation lowerer.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
