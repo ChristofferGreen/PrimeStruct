@@ -237,6 +237,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererUninitializedStructInference.cpp");
   const std::string structSlotLayoutSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererStructSlotLayoutHelpers.cpp");
+  const std::string declaredCollectionInferenceSource =
+      readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererSetupTypeDeclaredCollectionInference.cpp");
 
   REQUIRE(!mapSource.empty());
   REQUIRE(!experimentalSource.empty());
@@ -284,6 +286,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!packedResultSource.empty());
   REQUIRE(!uninitializedStructInferenceSource.empty());
   REQUIRE(!structSlotLayoutSource.empty());
+  REQUIRE(!declaredCollectionInferenceSource.empty());
 
   CHECK(mapSource.find("import /std/collections/internal_map/*") == std::string::npos);
   CHECK(mapSource.find("import /std/collections/internal_vector/*") != std::string::npos);
@@ -515,6 +518,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(structSlotLayoutSource.find("isBuiltinCollectionTypeName(typeName, \"map\")") !=
         std::string::npos);
   CHECK(structSlotLayoutSource.find("typeName == \"std/collections/map\"") ==
+        std::string::npos);
+  CHECK(declaredCollectionInferenceSource.find("isBuiltinCollectionTypeName(base, \"map\")") !=
+        std::string::npos);
+  CHECK(declaredCollectionInferenceSource.find("base == \"std/collections/map\"") ==
+        std::string::npos);
+  CHECK(declaredCollectionInferenceSource.find("normalizedName == \"std/collections/map/map\"") ==
         std::string::npos);
   CHECK(statementLowererSource.find("callee->fullPath.rfind(\"/std/collections/internal_map/insertImpl__\", 0)") !=
         std::string::npos);

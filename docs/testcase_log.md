@@ -105,6 +105,23 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 20:37 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup type infers referenced declared collection receivers,ir lowerer constructor metadata helpers retire duplicated constructor tables" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: declared collection inference now recognizes map type bases and direct
+  map constructors through shared collection classifiers and constructor surface
+  metadata; the map surface inventory now observes 412 production traces and
+  backing traces remain at 0.
+- 2026-05-16 20:37 local | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_misc_tests` |
+  failures: `tests/unit/test_stdlib_map_ownership.cpp` compile |
+  notes: first source-lock build missed the local
+  `declaredCollectionInferenceSource` fixture variable; the follow-up build and
+  `primestruct.stdlib.map_ownership` run passed after wiring the fixture.
 - 2026-05-16 20:34 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup type helper resolves builtin-like count call methods" --no-skip`;

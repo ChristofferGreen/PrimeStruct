@@ -438,6 +438,9 @@ Task template:
   access strings.
   Struct-slot layout now recognizes builtin map type names through the shared
   collection classifier instead of direct rooted/canonical map type strings.
+  Declared collection inference now recognizes map type bases and direct map
+  constructors through shared collection classifiers and constructor surface
+  metadata instead of direct map type and constructor path strings.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic

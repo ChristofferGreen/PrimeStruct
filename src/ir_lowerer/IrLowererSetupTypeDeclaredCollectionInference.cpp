@@ -20,14 +20,8 @@ std::string normalizeDeclaredCollectionTypeBase(const std::string &base) {
       base.rfind("/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0) {
     return "soa" "_vector";
   }
-  const std::string experimentalMapType =
-      experimentalCollectionTypePath("map", "Map", false);
-  const std::string rootedExperimentalMapType =
-      experimentalCollectionTypePath("map", "Map");
-  if (base == "/map" || base == "std/collections/map" || base == "/std/collections/map" ||
-      base == experimentalMapType || base == rootedExperimentalMapType ||
-      base.rfind(experimentalMapType + "__", 0) == 0 ||
-      base.rfind(rootedExperimentalMapType + "__", 0) == 0) {
+  if (isBuiltinCollectionTypeName(base, "map") ||
+      isExperimentalCollectionTypeName(base, "map", "Map")) {
     return "map";
   }
   return base;
@@ -165,11 +159,9 @@ bool inferDeclaredReturnCollection(const Definition &definition,
       normalizedName.erase(normalizedName.begin());
     }
     auto isDirectMapConstructor = [&]() {
-      return normalizedName == "std/collections/map/map" ||
-             normalizedName.rfind("std/collections/map/map__", 0) == 0 ||
-             isPublishedStdlibSurfaceConstructorExpr(
-                 candidate,
-                 primec::StdlibSurfaceId::CollectionsMapConstructors);
+      return isPublishedStdlibSurfaceConstructorExpr(
+          candidate,
+          primec::StdlibSurfaceId::CollectionsMapConstructors);
     };
     auto isDirectVectorConstructor = [&]() {
       const std::string constructorPath =

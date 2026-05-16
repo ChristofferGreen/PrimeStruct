@@ -285,7 +285,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   args-pack access through the published map-helper surface instead of direct
   rooted/canonical map access strings; struct-slot layout should recognize
   builtin map type names through the shared collection classifier instead of
-  direct rooted/canonical map type strings;
+  direct rooted/canonical map type strings; declared collection inference
+  should recognize map type bases and direct map constructors through shared
+  collection classifiers and constructor surface metadata instead of direct map
+  type and constructor path strings;
   statement-expression map count/access target classification should reuse
   local experimental collection type and generated-specialization helpers
   instead of direct experimental map backing path text;
