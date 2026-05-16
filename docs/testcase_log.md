@@ -105,6 +105,17 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 21:24 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer result helpers resolve Result.map struct payload metadata,ir lowerer result helpers resolve function-returned map Result payload metadata,ir lowerer result helpers require semantic query facts for unresolved Result.map metadata" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: Result metadata direct map constructor recognition now derives rooted
+  and unrooted canonical map constructor paths through collection path helpers
+  instead of direct map path strings; the map surface inventory now observes
+  355 production traces and backing traces remain at 0.
 - 2026-05-16 21:21 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer count access helpers normalize parser-shaped canonical map access receivers,ir lowerer count access helpers prefer graph facts for string map access emission" --no-skip`;

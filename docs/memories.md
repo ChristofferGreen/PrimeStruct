@@ -318,7 +318,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   helpers instead of direct map path strings; count/access map access helper
   lookup, explicit std-map spelling checks, and rewritten parser-shaped map
   access receivers should derive canonical map helper paths and prefixes
-  through collection path helpers instead of direct map path strings;
+  through collection path helpers instead of direct map path strings; Result
+  metadata direct map constructor recognition should derive rooted and
+  unrooted canonical map constructor paths through collection path helpers
+  instead of direct map path strings;
   statement-expression map count/access target classification should reuse
   local experimental collection type and generated-specialization helpers
   instead of direct experimental map backing path text;

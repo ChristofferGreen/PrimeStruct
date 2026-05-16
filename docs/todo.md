@@ -479,6 +479,9 @@ Task template:
   and rewritten parser-shaped map access receivers now derive canonical map
   helper paths and prefixes through collection path helpers instead of direct
   map path strings.
+  Result metadata direct map constructor recognition now derives rooted and
+  unrooted canonical map constructor paths through collection path helpers
+  instead of direct map path strings.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic

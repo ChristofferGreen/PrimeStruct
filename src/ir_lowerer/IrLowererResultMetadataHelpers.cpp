@@ -709,13 +709,17 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
   if (!expr.isMethodCall) {
     auto matchesDirectMapConstructor = [&](const Expr &candidate) {
       const std::string scopedPath = resolveScopedCallPath(candidate);
+      const std::string rootedMapConstructor =
+          collectionMemberPath("map", "map");
+      const std::string unrootedMapConstructor =
+          collectionMemberPath("map", "map", false);
       return isPublishedStdlibSurfaceConstructorExpr(
                  candidate,
                  primec::StdlibSurfaceId::CollectionsMapConstructors) ||
-             scopedPath == "/std/collections/map/map" ||
-             scopedPath.rfind("/std/collections/map/map__", 0) == 0 ||
-             scopedPath == "std/collections/map/map" ||
-             scopedPath.rfind("std/collections/map/map__", 0) == 0;
+             scopedPath == rootedMapConstructor ||
+             scopedPath.rfind(rootedMapConstructor + "__", 0) == 0 ||
+             scopedPath == unrootedMapConstructor ||
+             scopedPath.rfind(unrootedMapConstructor + "__", 0) == 0;
     };
     if (matchesDirectMapConstructor(expr) && expr.templateArgs.size() == 2) {
       return assignCollection(
