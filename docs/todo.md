@@ -2053,6 +2053,9 @@ Task template:
     - 2026-05-16: Statement-binding helper generated map backing checks no
       longer hard-code the experimental map backing prefix; they now derive it
       through `experimentalCollectionTypePath`.
+    - 2026-05-16: Inline call context generated map struct and experimental
+      map constructor-helper prefixes no longer hard-code backing paths; they
+      now derive those prefixes through local collection path builders.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

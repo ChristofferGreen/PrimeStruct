@@ -241,6 +241,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   statement-binding helper generated map backing checks should derive the
   generated experimental map backing prefix through
   `experimentalCollectionTypePath`;
+  inline call context generated map struct and experimental map
+  constructor-helper prefixes should derive backing paths through local
+  collection path builders;
   generated collection struct classification should derive the canonical map
   `MapValue__*` prefix through `collectionTypePath("map")` instead of
   carrying a split-string map root.
