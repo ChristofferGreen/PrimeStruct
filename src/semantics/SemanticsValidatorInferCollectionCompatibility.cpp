@@ -241,7 +241,7 @@ bool SemanticsValidator::hasDefinitionPath(const std::string &path) const {
 }
 
 std::string SemanticsValidator::preferredExperimentalMapHelperTarget(std::string_view helperName) const {
-  constexpr std::string_view prefix = "/std/collections/experimental_map/";
+  const std::string prefix = experimentalCollectionConstructorRootLocal("map");
   std::string experimentalPath = preferredPublishedCollectionLoweringPath(
       helperName, StdlibSurfaceId::CollectionsMapHelpers, prefix);
   if (experimentalPath.empty()) {
@@ -255,9 +255,9 @@ std::string SemanticsValidator::preferredCanonicalExperimentalMapHelperTarget(st
   const std::string experimentalPath = preferredPublishedCollectionLoweringPath(
       helperName,
       StdlibSurfaceId::CollectionsMapHelpers,
-      "/std/collections/experimental_map/");
+      experimentalCollectionConstructorRootLocal("map"));
   if (experimentalPath.empty()) {
-    return "/std/collections/experimental_map/" + std::string(helperName);
+    return experimentalCollectionConstructorPathLocal("map", helperName);
   }
   return experimentalPath;
 }
@@ -462,7 +462,7 @@ bool SemanticsValidator::canonicalExperimentalMapHelperPath(const std::string &r
 bool SemanticsValidator::canonicalizeExperimentalMapHelperResolvedPath(const std::string &resolvedPath,
                                                                        std::string &canonicalPathOut) const {
   canonicalPathOut.clear();
-  if (resolvedPath.rfind("/std/collections/experimental_map/", 0) != 0) {
+  if (resolvedPath.rfind(experimentalCollectionConstructorRootLocal("map"), 0) != 0) {
     return false;
   }
   std::string helperName;
@@ -488,7 +488,7 @@ bool SemanticsValidator::canonicalizeExperimentalMapHelperResolvedPath(const std
 
 bool SemanticsValidator::shouldLogicalCanonicalizeDefinedExperimentalMapHelperPath(
     const std::string &resolvedPath) const {
-  if (resolvedPath.rfind("/std/collections/experimental_map/", 0) != 0) {
+  if (resolvedPath.rfind(experimentalCollectionConstructorRootLocal("map"), 0) != 0) {
     return false;
   }
   const std::string &definitionPath =
@@ -640,7 +640,7 @@ std::string SemanticsValidator::directMapHelperCompatibilityPath(
   std::string resolvedExperimentalHelperName;
   if (currentValidationState_.context.definitionPath.rfind(
           "/std/collections/map/", 0) == 0 &&
-      resolvedPath.rfind("/std/collections/experimental_map/", 0) == 0 &&
+      resolvedPath.rfind(experimentalCollectionConstructorRootLocal("map"), 0) == 0 &&
       resolvePublishedCollectionHelperResolvedPath(
           resolvedPath,
           StdlibSurfaceId::CollectionsMapHelpers,

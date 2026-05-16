@@ -282,6 +282,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   experimental collection type helper; semantic map constructor and
   entry-argument path checks should route experimental map backing member
   paths through shared constructor helpers instead of direct path text;
+  semantic collection compatibility helper selection should use shared
+  constructor root/path helpers for experimental map helper backing paths;
   generated collection struct classification should derive the canonical map
   `MapValue__*` prefix through `collectionTypePath("map")` instead of
   carrying a split-string map root.

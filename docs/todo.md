@@ -2106,6 +2106,9 @@ Task template:
     - 2026-05-16: Semantic map constructor and entry-argument path checks no
       longer hard-code experimental map backing member paths; they now route
       map/entry constructor detection through shared constructor helpers.
+    - 2026-05-16: Semantic collection compatibility helper selection no
+      longer hard-codes the experimental map helper root; it now uses shared
+      constructor root/path helpers for those backing paths.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.
