@@ -10,6 +10,7 @@
 #include "SemanticsValidateReflectionGeneratedHelpers.h"
 #include "SemanticsValidateReflectionMetadata.h"
 #include "SemanticsValidateTransforms.h"
+#include "MapConstructorHelpers.h"
 #include "SemanticsHelpers.h"
 #include "SemanticsValidationBenchmarkOrchestration.h"
 #include "SemanticsValidationPublicationOrchestration.h"
@@ -173,10 +174,17 @@ bool isExperimentalMapTypeText(const std::string &typeText) {
     return false;
   }
   const std::string normalizedInner = semantics::normalizeBindingTypeName(typeText);
-  return normalizedInner == "Map" ||
-         normalizedInner.rfind("Map<", 0) == 0 ||
-         normalizedInner.rfind("/std/collections/experimental_map/Map", 0) == 0 ||
-         normalizedInner.rfind("std/collections/experimental_map/Map", 0) == 0;
+  std::string candidate = normalizedInner;
+  std::string base;
+  std::string argText;
+  if (semantics::splitTemplateTypeName(normalizedInner, base, argText) &&
+      !base.empty()) {
+    candidate = semantics::normalizeBindingTypeName(base);
+  }
+  if (!candidate.empty() && candidate.front() == '/') {
+    candidate.erase(candidate.begin());
+  }
+  return isExperimentalCollectionBackingTypeName("map", "Map", candidate);
 }
 
 std::optional<semantics::BindingInfo> extractBorrowedExperimentalMapBinding(const Expr &expr) {
