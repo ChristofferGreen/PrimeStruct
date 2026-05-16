@@ -235,11 +235,13 @@ std::string normalizeCollectionReceiverTypeName(std::string value) {
   if (value == "std/collections/map") {
     return "map";
   }
-  if (value == "Map" || value.rfind("Map__", 0) == 0) {
-    return "map";
-  }
-  if (value == "std/collections/experimental_map/Map" ||
-      value.rfind("std/collections/experimental_map/Map__", 0) == 0) {
+  const std::string mapBackingName = "Map";
+  const bool bareGeneratedMapBacking =
+      value.find('/') == std::string::npos &&
+      (value == mapBackingName ||
+       value.rfind(mapBackingName + "__", 0) == 0);
+  if (bareGeneratedMapBacking ||
+      isExperimentalCollectionBackingTypeName("map", mapBackingName, value)) {
     return "map";
   }
   return value;

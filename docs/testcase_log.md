@@ -73,6 +73,23 @@
   manual map uninitialized validation coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 17:30 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical namespaced map access helpers accept experimental map values,stdlib namespaced map helpers accept experimental map value receivers,stdlib wrapper map helpers accept experimental map value receivers"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` |
+  failures: none | notes: template-monomorph collection receiver
+  normalization now uses the shared experimental collection backing helper
+  for experimental map backing paths and constructs bare generated map backing
+  prefixes from the backing name; the map surface inventory now observes 902
+  production traces and backing traces now observe 147.
+- 2026-05-16 17:29 local | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical namespaced map access helpers accept experimental map values,stdlib namespaced map helpers accept experimental map value receivers,stdlib wrapper map helpers accept experimental map value receivers,experimental map method-call sugar keeps missing Map helper diagnostics"` |
+  failures: `experimental map method-call sugar keeps missing Map helper diagnostics`
+  | notes: stale map-count compatibility diagnostic expectation under the
+  already logged `*map*count*` bucket; reran the three non-stale helper
+  resolution cases above.
 - 2026-05-16 17:27 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="wrapper-returned canonical map method ignores alias helper when canonical helper is absent,wrapper-returned canonical map method requires helper definition,stdlib canonical map access count shadow keeps canonical precedence over alias helper,stdlib canonical map access count shadow currently validates mixed canonical and alias returns"`;
