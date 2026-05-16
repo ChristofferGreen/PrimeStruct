@@ -1876,6 +1876,8 @@ Task template:
     - 2026-05-16: Shared emitter call-path preference no longer rewrites
       missing rooted `/map/<suffix>` paths to canonical
       `/std/collections/map/<suffix>` paths.
+    - 2026-05-16: Emitter return inference no longer adds an implicit rooted
+      `/map/<method>` candidate after canonical map method candidates.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

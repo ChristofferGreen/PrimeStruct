@@ -111,12 +111,6 @@
       std::vector<std::string> candidates = {
           "/std/collections/map/" + methodName,
       };
-      const bool blocksRemovedMapAliasStructReturnForwarding =
-          !explicitHelperName.empty() &&
-          isCanonicalMapAccessHelperName(explicitHelperName);
-      if (!blocksRemovedMapAliasStructReturnForwarding) {
-        candidates.push_back("/map/" + methodName);
-      }
       return candidates;
     }
     return {receiverStruct + "/" + methodName};

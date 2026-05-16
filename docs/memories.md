@@ -119,7 +119,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   and return inference should follow the same rule; emitter return inference
   should not rewrite missing rooted `/map/<suffix>` paths to canonical
   `/std/collections/map/<suffix>` paths; the shared emitter call-path
-  preference should follow the same no-rooted-to-canonical fallback rule.
+  preference should follow the same no-rooted-to-canonical fallback rule, and
+  emitter return inference should not add implicit rooted `/map/<method>`
+  candidates after canonical map method candidates.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -197,7 +199,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   map access paths either; emitter return inference follows the same rule and
   no longer rewrites missing rooted `/map/<suffix>` paths to canonical
   `/std/collections/map/<suffix>` paths, and the shared emitter call-path
-  preference follows the same rule.
+  preference follows the same rule; emitter return inference no longer adds
+  an implicit rooted `/map/<method>` candidate after canonical map method
+  candidates.
 
 ### map-constructor-normalization-uses-public-path
 - Updated: 2026-05-16
