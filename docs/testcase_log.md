@@ -105,6 +105,18 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 21:14 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer collection helper rewrite guards explicit map defs,ir lowerer call helpers keep lowered collection helper paths reachable via published surface ids" --no-skip`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="native tail and late collection helper metadata dispatch stays source locked" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: setup-type collection helper map alias and normalization checks now
+  derive rooted and canonical map prefixes through collection path helpers
+  instead of direct map helper path strings; the map surface inventory now
+  observes 369 production traces and backing traces remain at 0.
 - 2026-05-16 21:11 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="emitter collection helper metadata delegation stays source locked" --no-skip`;

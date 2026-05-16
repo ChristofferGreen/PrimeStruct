@@ -310,7 +310,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   derive rooted and canonical prefixes through collection path helpers instead
   of direct map helper path strings; emitter binding-type map compatibility
   checks should derive canonical and experimental map type paths through local
-  collection path helpers instead of direct map path fragments;
+  collection path helpers instead of direct map path fragments; setup-type
+  collection helper map alias and normalization checks should derive rooted
+  and canonical map prefixes through collection path helpers instead of direct
+  map helper path strings;
   statement-expression map count/access target classification should reuse
   local experimental collection type and generated-specialization helpers
   instead of direct experimental map backing path text;

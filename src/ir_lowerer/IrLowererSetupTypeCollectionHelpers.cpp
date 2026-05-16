@@ -32,7 +32,7 @@ std::string normalizePublishedCollectionPath(std::string path) {
   path = normalizeCollectionHelperPath(path);
   if (!path.empty() && path.front() != '/' &&
       (path.rfind("std/collections/", 0) == 0 ||
-       path.rfind("map/", 0) == 0 ||
+       path.rfind(normalizeBuiltinCollectionStructPath("map").substr(1) + "/", 0) == 0 ||
        path.rfind(std::string("vector") + "/", 0) == 0)) {
     path.insert(path.begin(), '/');
   }
@@ -504,8 +504,8 @@ std::string normalizeCollectionHelperPath(const std::string &path) {
         normalizedPath.rfind(std::string("vector") + "/", 0) == 0 ||
         normalizedPath.rfind(collectionMemberRoot("vector", false), 0) == 0 ||
         normalizedPath.rfind(experimentalCollectionMemberRoot("vector", false), 0) == 0 ||
-        normalizedPath.rfind("map/", 0) == 0 ||
-        normalizedPath.rfind("std/collections/map/", 0) == 0) {
+        normalizedPath.rfind(normalizeBuiltinCollectionStructPath("map").substr(1) + "/", 0) == 0 ||
+        normalizedPath.rfind(collectionMemberRoot("map", false), 0) == 0) {
       normalizedPath.insert(normalizedPath.begin(), '/');
     }
   }
@@ -554,8 +554,9 @@ bool isExplicitMapMethodAliasPath(const std::string &methodName) {
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
-  const std::string mapPrefix = "map/";
-  const std::string stdMapPrefix = "std/collections/map/";
+  const std::string mapPrefix =
+      normalizeBuiltinCollectionStructPath("map").substr(1) + "/";
+  const std::string stdMapPrefix = collectionMemberRoot("map", false);
   if (normalized.rfind(mapPrefix, 0) == 0) {
     std::string helperName;
     return resolvePublishedStdlibSurfaceMemberToken(
@@ -585,8 +586,9 @@ bool isExplicitMapContainsOrTryAtMethodPath(const std::string &methodName) {
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
-  const std::string mapPrefix = "map/";
-  const std::string stdMapPrefix = "std/collections/map/";
+  const std::string mapPrefix =
+      normalizeBuiltinCollectionStructPath("map").substr(1) + "/";
+  const std::string stdMapPrefix = collectionMemberRoot("map", false);
   if (normalized.rfind(mapPrefix, 0) == 0) {
     std::string helperName;
     return resolvePublishedStdlibSurfaceMemberToken(
