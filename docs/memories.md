@@ -63,7 +63,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   as canonical helper paths or recognizing slashless `map/at*_ref` names and
   the `map` namespace prefix as canonical helper names, and collection
   return-kind inference must not grant rooted `/map/*` helpers builtin map
-  return kinds.
+  return kinds; collection-dispatch setup inference follows the same
+  canonical-only helper-name rule.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -79,7 +80,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   resolved-path helper table and no longer recognizes slashless `map/at*_ref`
   names or a `map` namespace prefix as canonical map access helper names;
   collection return-kind inference now only handles canonical
-  `/std/collections/map/*` helper paths.
+  `/std/collections/map/*` helper paths, and collection-dispatch setup
+  inference no longer treats rooted `/map/at*_ref` resolved paths or a `map`
+  namespace prefix as canonical map access helper-name classifiers.
 
 ### map-constructor-normalization-uses-public-path
 - Updated: 2026-05-16

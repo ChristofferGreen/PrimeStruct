@@ -80,13 +80,11 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
           return true;
         }
         const std::string resolvedPath = resolveCalleePath(candidate);
-        if (resolvedPath == "/map/at_ref" ||
-            resolvedPath == "/std/collections/map/at_ref") {
+        if (resolvedPath == "/std/collections/map/at_ref") {
           helperNameOut = "at_ref";
           return true;
         }
-        if (resolvedPath == "/map/at_unsafe_ref" ||
-            resolvedPath == "/std/collections/map/at_unsafe_ref") {
+        if (resolvedPath == "/std/collections/map/at_unsafe_ref") {
           helperNameOut = "at_unsafe_ref";
           return true;
         }
@@ -94,8 +92,7 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
         if (!namespacePrefix.empty() && namespacePrefix.front() == '/') {
           namespacePrefix.erase(namespacePrefix.begin());
         }
-        if ((namespacePrefix == "map" ||
-             namespacePrefix == "std/collections/map") &&
+        if (namespacePrefix == "std/collections/map" &&
             isCanonicalMapAccessHelperName(candidate.name)) {
           helperNameOut = candidate.name;
           return true;
@@ -116,10 +113,8 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
   }
   const bool prefersExplicitDirectMapAccessAliasDefinition =
       !expr.isMethodCall &&
-      (((isNamespacedMapHelperCall &&
-         isCanonicalMapAccessHelperName(namespacedHelper)) ||
-        (((expr.namespacePrefix == "map") || (expr.namespacePrefix == "/map")) &&
-         isCanonicalMapAccessHelperName(expr.name)))) &&
+      (isNamespacedMapHelperCall &&
+       isCanonicalMapAccessHelperName(namespacedHelper)) &&
       hasDefinitionPath("/map/" +
                         (isCanonicalMapAccessHelperName(expr.name)
                              ? expr.name

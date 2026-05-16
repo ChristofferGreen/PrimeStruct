@@ -360,6 +360,9 @@ Task template:
   names or a `map` namespace prefix as canonical map access helper names.
   Collection return-kind inference no longer grants rooted `/map/*` helper
   paths builtin map return kinds.
+  Collection-dispatch setup inference no longer treats rooted
+  `/map/at*_ref` resolved paths or a `map` namespace prefix as canonical map
+  access helper-name classifiers.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic

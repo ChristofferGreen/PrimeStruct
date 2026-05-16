@@ -48,6 +48,17 @@
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical namespaced map access helpers accept experimental map values,stdlib namespaced map access helpers accept imported stdlib wrappers,collected diagnostics ignore imported canonical map access helper calls,explicit canonical map access helpers accept canonical map values"`;
   `python3 scripts/check_map_surface_trace_inventory.py --root .`;
   `python3 scripts/check_map_backing_traces.py --root .` |
+  failures: none | notes: collection-dispatch setup inference no longer
+  treats rooted `/map/at*_ref` resolved paths or a `map` namespace prefix as
+  canonical map access helper-name classifiers; canonical stdlib map access
+  validation still passes, and the map surface inventory now observes 1116
+  production traces.
+- 2026-05-16 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical namespaced map access helpers accept experimental map values,stdlib namespaced map access helpers accept imported stdlib wrappers,collected diagnostics ignore imported canonical map access helper calls,explicit canonical map access helpers accept canonical map values"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` |
   failures: none | notes: collection return-kind inference no longer grants
   rooted `/map/*` helper paths builtin map return kinds; canonical stdlib map
   access validation still passes, and the map surface inventory now observes
