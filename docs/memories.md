@@ -163,7 +163,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   target struct-path inference should likewise derive the root through
   `collectionTypePath("map")`, and access-target tests should assert the
   stdlib-owned `MapValue__*` identity instead of stale experimental `Map__*`
-  expectations.
+  expectations; statement binding helper map struct-path inference should
+  also derive `MapValue` roots through `collectionTypePath("map")`.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

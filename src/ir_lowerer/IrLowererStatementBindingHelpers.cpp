@@ -189,7 +189,7 @@ bool resolveSpecializedExperimentalMapStructPathFromTypeText(const std::string &
   }
 
   std::ostringstream specializedPath;
-  specializedPath << "/std/collections/map/MapValue"
+  specializedPath << collectionTypePath("map") << "/MapValue"
                   << mangleTemplateTypeArgsSuffix(templateArgs);
   structPathOut = specializedPath.str();
   return true;
