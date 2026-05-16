@@ -129,7 +129,7 @@ TEST_CASE("ir lowerer setup type helper rejects explicit map access aliases thro
       &methodResolved));
   CHECK_FALSE(methodResolved);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
-  CHECK(aliasCountResolveCalls == 1);
+  CHECK(aliasCountResolveCalls == 0);
 
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   methodResolved = false;
