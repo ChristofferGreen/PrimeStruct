@@ -57,6 +57,18 @@
   still uses the retired `/std/collections/mapPair` constructor path.
 
 ## Recent Test Runs
+- 2026-05-16 16:45 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers resolve and validate map access targets,ir lowerer call helpers infer forwarded map access targets"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="helper-wrapped Result.ok payload assignments accept explicit canonical map result targets,helper-wrapped Result.ok payloads accept canonical map result dereference targets,canonical stdlib map returns are allowed,inferred canonical map returns rewrite canonical constructors,stdlib wrapper map constructor accepts explicit canonical map returns,stdlib canonical map count method auto inference falls back to canonical helper return"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` |
+  failures: none | notes: setup-type map struct classification,
+  Result map identity, and statement-return collection normalization now
+  derive canonical `MapValue` roots through collection path helpers instead
+  of split-string map roots; the map surface inventory remains at 965
+  production traces and backing traces remain at 210.
 - 2026-05-16 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer struct layout coverage ignores generated collection helper subpaths"`;

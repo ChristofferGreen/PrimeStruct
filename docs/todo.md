@@ -284,7 +284,10 @@ Task template:
   helper instead of a production C++ map path literal, and semantic
   direct-call return binding inference now recognizes experimental map backing
   specializations through the same helper instead of a production C++ map path
-  literal. The remaining production lowerer/emitter experimental-map traces
+  literal, and setup-type map struct classification, Result map identity, and
+  statement-return collection normalization now derive canonical `MapValue`
+  roots through collection path helpers instead of split-string map roots. The
+  remaining production lowerer/emitter experimental-map traces
   are source-locked as temporary internal backing substrate by
   `test_stdlib_map_ownership.cpp`, and
   all production `src`/`include` experimental-map/`Map__*` backing traces are

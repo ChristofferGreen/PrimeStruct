@@ -7,6 +7,7 @@
 #include <limits>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace primec::semantics {
@@ -19,6 +20,19 @@ bool isMatrixQuaternionTypePathForReturnDiagnostic(const std::string &typePath) 
 
 bool isVectorTypePathForReturnDiagnostic(const std::string &typePath) {
   return typePath == "/std/math/Vec2" || typePath == "/std/math/Vec3" || typePath == "/std/math/Vec4";
+}
+
+std::string collectionTypePathLocal(std::string_view collectionName,
+                                    std::string_view typeName = {},
+                                    bool leadingSlash = true) {
+  std::string path = leadingSlash ? "/" : "";
+  path += "std/collections/";
+  path += std::string(collectionName);
+  if (!typeName.empty()) {
+    path += "/";
+    path += std::string(typeName);
+  }
+  return path;
 }
 
 bool isMatrixQuaternionConversionTypePathForReturn(const std::string &typePath) {
@@ -947,8 +961,10 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
             if (normalizedTypePath.rfind("std/collections/experimental_map/Map__", 0) == 0) {
               return "/map";
             }
-            if (normalizedTypePath.rfind("std/collections/" "map" "/MapValue__", 0) == 0 ||
-                normalizedTypePath == "std/collections/" "map" "/MapValue") {
+            const std::string canonicalMapValueRoot =
+                collectionTypePathLocal("map", "MapValue", false);
+            if (normalizedTypePath.rfind(canonicalMapValueRoot + "__", 0) == 0 ||
+                normalizedTypePath == canonicalMapValueRoot) {
               return "/map";
             }
             if (isLegacyExperimentalVectorCompatibilityTypePath(
@@ -970,7 +986,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
               return "/soa" "_vector";
             }
             if (isMapCollectionTypeName(typePath) || typePath == "/map" ||
-                typePath == "/std/collections/" "map") {
+                typePath == collectionTypePathLocal("map")) {
               return "/map";
             }
             if (typePath == "/string" || typePath == "string") {

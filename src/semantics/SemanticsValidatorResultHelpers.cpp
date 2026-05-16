@@ -46,14 +46,27 @@ uint64_t fnv1a64(std::string_view text) {
   return hash;
 }
 
+std::string collectionTypePathLocal(std::string_view collectionName,
+                                    std::string_view typeName = {},
+                                    bool leadingSlash = true) {
+  std::string path = leadingSlash ? "/" : "";
+  path += "std/collections/";
+  path += std::string(collectionName);
+  if (!typeName.empty()) {
+    path += "/";
+    path += std::string(typeName);
+  }
+  return path;
+}
+
 std::string canonicalMapValueIdentity(const std::string &typeText) {
   std::string normalized = normalizeBindingTypeName(trimText(typeText));
   if (!normalized.empty() && normalized.front() != '/') {
     normalized.insert(normalized.begin(), '/');
   }
-  constexpr std::string_view mapValueRoot = "/std/collections/" "map" "/MapValue";
+  const std::string mapValueRoot = collectionTypePathLocal("map", "MapValue");
   if (normalized == mapValueRoot ||
-      normalized.rfind(std::string(mapValueRoot) + "__", 0) == 0) {
+      normalized.rfind(mapValueRoot + "__", 0) == 0) {
     return stripWhitespace(std::move(normalized));
   }
 
