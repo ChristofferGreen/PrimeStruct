@@ -480,6 +480,9 @@ Task template:
   Emitter method resolution now resolves explicit map helper names and helper
   paths through published stdlib surface metadata instead of direct map helper
   prefix and path strings.
+  Emitter method type inference now classifies canonical and import-alias map
+  access helper paths through published stdlib surface metadata instead of
+  direct map helper prefix checks.
   Emitter binding-type map compatibility checks now derive canonical and
   experimental map type paths through local collection path helpers instead of
   direct map path fragments.

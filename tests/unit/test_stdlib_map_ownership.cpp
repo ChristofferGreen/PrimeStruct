@@ -724,6 +724,20 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(emitterMethodTypeInferenceSource.find("const std::string aliasPath = \"/map/\" + candidate.name") ==
         std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("const std::string canonicalPath = \"/std/collections/map/\" + candidate.name") ==
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("normalized.rfind(\"map/\", 0)") ==
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("normalized.rfind(\"std/collections/map/\", 0)") ==
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("resolvedExprPath.rfind(\"/std/collections/map/\", 0)") ==
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("resolvedExprPath.rfind(\"/map/\", 0)") ==
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("isCanonicalMapHelperMemberPath(normalized, helperName)") !=
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("isMapImportAliasHelperMemberPath(resolvedExprPath, helperName)") !=
+        std::string::npos);
   CHECK(emitterHelpersTypesSource.find("base += \"map/Map\"") == std::string::npos);
   CHECK(emitterHelpersTypesSource.find("experimentalCollectionTypePathLocal(\"map\", \"Map\"") !=
         std::string::npos);

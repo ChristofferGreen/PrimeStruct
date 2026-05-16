@@ -9,6 +9,7 @@ namespace primec::emitter {
 namespace {
 
 constexpr std::string_view VectorHelperSurfaceBridgeKey = "collections.vector_helpers";
+constexpr std::string_view MapHelperSurfaceBridgeKey = "collections.map_helpers";
 
 std::string resolvedCollectionHelperName(const Expr &candidate) {
   std::string normalized = resolveExprPath(candidate);
@@ -16,6 +17,14 @@ std::string resolvedCollectionHelperName(const Expr &candidate) {
     normalized.erase(normalized.begin());
   }
   return normalized;
+}
+
+std::string rootedHelperPath(std::string_view path) {
+  std::string rooted(path);
+  if (!rooted.empty() && rooted.front() != '/') {
+    rooted.insert(rooted.begin(), '/');
+  }
+  return rooted;
 }
 
 bool isVectorAccessHelperMemberName(std::string_view memberName) {
@@ -46,6 +55,38 @@ std::string vectorHelperPath(std::string_view memberName) {
   return publishedCollectionSurfaceHelperPath(
       VectorHelperSurfaceBridgeKey,
       memberName);
+}
+
+std::string mapHelperPath(std::string_view memberName) {
+  return publishedCollectionSurfaceHelperPath(
+      MapHelperSurfaceBridgeKey,
+      memberName);
+}
+
+std::string mapHelperMemberNameFromPath(std::string_view path) {
+  return std::string(mapHelperNameFromPath(path));
+}
+
+bool isCanonicalMapHelperMemberPath(std::string_view path,
+                                    std::string &memberNameOut) {
+  if (path.find('/') == std::string_view::npos) {
+    memberNameOut.clear();
+    return false;
+  }
+  memberNameOut = mapHelperMemberNameFromPath(path);
+  return !memberNameOut.empty() &&
+         rootedHelperPath(path) == mapHelperPath(memberNameOut);
+}
+
+bool isMapImportAliasHelperMemberPath(std::string_view path,
+                                      std::string &memberNameOut) {
+  if (path.find('/') == std::string_view::npos) {
+    memberNameOut.clear();
+    return false;
+  }
+  memberNameOut = mapHelperMemberNameFromPath(path);
+  return !memberNameOut.empty() &&
+         rootedHelperPath(path) != mapHelperPath(memberNameOut);
 }
 
 bool isSoaVectorReceiverTypeNameLocal(const std::string &typeName) {
@@ -255,7 +296,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     if (!isBareMapAccessMethod(candidate)) {
       return "";
     }
-    const std::string canonicalPath = "/std/collections/map/" + candidate.name;
+    const std::string canonicalPath = mapHelperPath(candidate.name);
     if (hasDefinitionOrMetadata(view, canonicalPath)) {
       return canonicalPath;
     }
@@ -266,12 +307,12 @@ std::string inferMethodResolutionPrimitiveTypeName(
       return false;
     }
     const std::string normalized = resolvedCollectionHelperName(candidate);
-    if (normalized.rfind("map/", 0) != 0 ||
-        !isCanonicalMapAccessHelperName(
-            std::string_view(normalized).substr(std::string_view("map/").size()))) {
+    std::string helperName;
+    if (!isMapImportAliasHelperMemberPath(normalized, helperName) ||
+        !isCanonicalMapAccessHelperName(helperName)) {
       return false;
     }
-    if (view.defMap.find("/" + normalized) != view.defMap.end()) {
+    if (view.defMap.find(rootedHelperPath(normalized)) != view.defMap.end()) {
       return false;
     }
     const size_t receiverIndex = getAccessCallReceiverIndex(candidate, localTypes);
@@ -352,14 +393,15 @@ std::string inferMethodResolutionPrimitiveTypeName(
       return "";
     }
     const std::string normalized = resolvedCollectionHelperName(candidate);
-    if (normalized.rfind("std/collections/map/", 0) != 0 ||
-        !isCanonicalMapAccessHelperName(
-            std::string_view(normalized).substr(std::string_view("std/collections/map/").size()))) {
+    std::string helperName;
+    if (!isCanonicalMapHelperMemberPath(normalized, helperName) ||
+        !isCanonicalMapAccessHelperName(helperName)) {
       return "";
     }
     const std::string resolvedExprPath = resolveExprPath(candidate);
-    if (!isCanonicalMapAccessHelperPath(resolvedExprPath) ||
-        resolvedExprPath.rfind("/std/collections/map/", 0) != 0) {
+    std::string resolvedHelperName;
+    if (!isCanonicalMapHelperMemberPath(resolvedExprPath, resolvedHelperName) ||
+        resolvedHelperName != helperName) {
       return "";
     }
     return typeNameFromResolvedCandidates(view, {resolvedExprPath});
@@ -385,9 +427,9 @@ std::string inferMethodResolutionPrimitiveTypeName(
       return "";
     }
     const std::string normalized = resolvedCollectionHelperName(candidate);
-    if (normalized.rfind("std/collections/map/", 0) != 0 ||
-        !isCanonicalMapAccessHelperName(
-            std::string_view(normalized).substr(std::string_view("std/collections/map/").size()))) {
+    std::string helperName;
+    if (!isCanonicalMapHelperMemberPath(normalized, helperName) ||
+        !isCanonicalMapAccessHelperName(helperName)) {
       return "";
     }
     const size_t receiverIndex = getAccessCallReceiverIndex(candidate, localTypes);
@@ -409,12 +451,11 @@ std::string inferMethodResolutionPrimitiveTypeName(
       return false;
     }
     const std::string resolvedExprPath = resolveExprPath(candidate);
-    if (resolvedExprPath.rfind("/map/", 0) != 0) {
+    std::string helperName;
+    if (!isMapImportAliasHelperMemberPath(resolvedExprPath, helperName)) {
       return false;
     }
-    const std::string_view helperName = mapHelperNameFromPath(resolvedExprPath);
-    return !helperName.empty() &&
-           isRemovedMapDirectCallResultCompatibilityHelperName(helperName);
+    return isRemovedMapDirectCallResultCompatibilityHelperName(helperName);
   };
 
   inferPrimitiveTypeName = [&](const Expr &candidateExpr) -> std::string {

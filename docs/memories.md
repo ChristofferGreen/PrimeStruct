@@ -341,7 +341,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   helper paths through published stdlib surface metadata instead of direct map
   helper path strings; emitter method resolution should resolve explicit map
   helper names and helper paths through published stdlib surface metadata
-  instead of direct map helper prefix and path strings;
+  instead of direct map helper prefix and path strings; emitter method type
+  inference should classify canonical and import-alias map access helper paths
+  through published stdlib surface metadata instead of direct map helper prefix
+  checks;
   statement-expression map count/access target classification should reuse
   local experimental collection type and generated-specialization helpers
   instead of direct experimental map backing path text;
