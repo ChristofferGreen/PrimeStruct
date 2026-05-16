@@ -94,6 +94,22 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 18:05 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer inline param helper rejects borrowed vector variadic alias type mismatch,ir lowerer inline param helper materializes pointer File handle variadic args packs"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` | failures: none |
+  notes: inline parameter map-like struct detection now builds the
+  experimental map backing path with `experimentalCollectionTypePath`; the map
+  surface inventory now observes 839 production traces and backing traces now
+  observe 84.
+- 2026-05-16 18:05 local | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer inline param helper rejects borrowed vector variadic alias type mismatch,ir lowerer inline param helper materializes pointer File handle variadic args packs,ir lowerer call helpers build inline arguments for inferred experimental map receiver methods"` |
+  failures: `ir lowerer call helpers build inline arguments for inferred
+  experimental map receiver methods` | notes: stale map receiver fixture under
+  the already logged stdlib-ownership cutover bucket; reran adjacent inline
+  parameter cases above.
 - 2026-05-16 18:04 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer inference call-return setup resolves canonical namespaced map access directly,ir lowerer inference dispatch requires semantic try facts,ir lowerer setup inference helper resolves array and map access kinds"`;
