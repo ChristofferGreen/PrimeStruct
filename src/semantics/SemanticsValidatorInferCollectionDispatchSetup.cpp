@@ -16,10 +16,23 @@ bool isMapAccessCompatibilityPath(const std::string &path) {
 }
 
 bool isStdNamespacedCanonicalMapAccessPath(const std::string &path) {
-  return path == "/std/collections/map/at" ||
-         path == "/std/collections/map/at_ref" ||
-         path == "/std/collections/map/at_unsafe" ||
-         path == "/std/collections/map/at_unsafe_ref";
+  std::string helperName;
+  return resolvePublishedCollectionHelperResolvedPath(
+             path, StdlibSurfaceId::CollectionsMapHelpers, helperName) &&
+         isCanonicalMapAccessHelperName(helperName);
+}
+
+std::string canonicalMapHelperNamespace() {
+  const StdlibSurfaceMetadata *metadata =
+      findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsMapHelpers);
+  if (metadata == nullptr) {
+    return "";
+  }
+  std::string namespacePath(metadata->canonicalPath);
+  if (!namespacePath.empty() && namespacePath.front() == '/') {
+    namespacePath.erase(namespacePath.begin());
+  }
+  return namespacePath;
 }
 
 } // namespace
@@ -80,19 +93,21 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
           return true;
         }
         const std::string resolvedPath = resolveCalleePath(candidate);
-        if (resolvedPath == "/std/collections/map/at_ref") {
-          helperNameOut = "at_ref";
-          return true;
-        }
-        if (resolvedPath == "/std/collections/map/at_unsafe_ref") {
-          helperNameOut = "at_unsafe_ref";
+        std::string resolvedMapHelperName;
+        if (resolvePublishedCollectionHelperResolvedPath(
+                resolvedPath,
+                StdlibSurfaceId::CollectionsMapHelpers,
+                resolvedMapHelperName) &&
+            (resolvedMapHelperName == "at_ref" ||
+             resolvedMapHelperName == "at_unsafe_ref")) {
+          helperNameOut = resolvedMapHelperName;
           return true;
         }
         std::string namespacePrefix = candidate.namespacePrefix;
         if (!namespacePrefix.empty() && namespacePrefix.front() == '/') {
           namespacePrefix.erase(namespacePrefix.begin());
         }
-        if (namespacePrefix == "std/collections/map" &&
+        if (namespacePrefix == canonicalMapHelperNamespace() &&
             isCanonicalMapAccessHelperName(candidate.name)) {
           helperNameOut = candidate.name;
           return true;
@@ -247,7 +262,7 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
     return normalized;
   }();
   const bool isStdNamespacedMapAccessPath =
-      normalizedCallName.rfind("std/collections/map/", 0) == 0;
+      isStdNamespacedCanonicalMapAccessPath("/" + normalizedCallName);
   setupOut.shouldDeferNamespacedVectorAccessCall =
       isNamespacedVectorAccessCall &&
       (!hasResolvedDefinition || setupOut.isStdNamespacedVectorAccessSpelling);

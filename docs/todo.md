@@ -2133,6 +2133,9 @@ Task template:
     - 2026-05-16: Semantic collection-dispatch return-kind checks no longer
       hard-code canonical map helper paths; they now resolve helper names
       through stdlib surface metadata.
+    - 2026-05-16: Semantic infer collection-dispatch setup no longer
+      hard-codes canonical map access helper paths or namespaces; it now
+      resolves both through stdlib surface metadata.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.
