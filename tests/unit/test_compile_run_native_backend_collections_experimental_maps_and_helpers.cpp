@@ -34,9 +34,9 @@ wrapVector<T>([T] value) {
   return(/std/collections/vector/vector<T>(value))
 }
 
-[return<map<K, V>>]
+[return<auto>]
 wrapMap<K, V>([K] key, [V] value) {
-  [map<K, V>] values{mapSingle<K, V>(key, value)}
+  [/std/collections/map<K, V>] values{map<K, V>(key, value)}
   return(values)
 }
 
@@ -3467,9 +3467,9 @@ TEST_CASE("compiles and runs native templated stdlib wrapper temporary call form
   const std::string source = R"(
 import /std/collections/*
 
-[return<map<K, V>>]
+[return<auto>]
 wrapMap<K, V>([K] key, [V] value) {
-  [map<K, V>] values{mapSingle<K, V>(key, value)}
+  [/std/collections/map<K, V>] values{map<K, V>(key, value)}
   return(values)
 }
 
@@ -3946,9 +3946,9 @@ wrapVector<T>([T] value) {
   return(/std/collections/vector/vector<T>(value))
 }
 
-[return<map<K, V>>]
+[return<auto>]
 wrapMap<K, V>([K] key, [V] value) {
-  [map<K, V>] values{mapSingle<K, V>(key, value)}
+  [/std/collections/map<K, V>] values{map<K, V>(key, value)}
   return(values)
 }
 
@@ -3979,9 +3979,9 @@ wrapVector<T>([T] value) {
   return(/std/collections/vector/vector<T>(value))
 }
 
-[return<map<K, V>>]
+[return<auto>]
 wrapMap<K, V>([K] key, [V] value) {
-  [map<K, V>] values{mapSingle<K, V>(key, value)}
+  [/std/collections/map<K, V>] values{map<K, V>(key, value)}
   return(values)
 }
 
@@ -4016,9 +4016,9 @@ wrapVector<T>([T] value) {
   return(/std/collections/vector/vector<T>(value))
 }
 
-[return<map<K, V>>]
+[return<auto>]
 wrapMap<K, V>([K] key, [V] value) {
-  [map<K, V>] values{mapSingle<K, V>(key, value)}
+  [/std/collections/map<K, V>] values{map<K, V>(key, value)}
   return(values)
 }
 
@@ -4051,9 +4051,9 @@ wrapVector<T>([T] value) {
   return(/std/collections/vector/vector<T>(value))
 }
 
-[return<map<K, V>>]
+[return<auto>]
 wrapMap<K, V>([K] key, [V] value) {
-  [map<K, V>] values{mapSingle<K, V>(key, value)}
+  [/std/collections/map<K, V>] values{map<K, V>(key, value)}
   return(values)
 }
 

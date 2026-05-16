@@ -1723,6 +1723,9 @@ Task template:
       maps instead of retired key/value brace literal syntax. The
       string-valued native map case is compile-only because the current native
       runtime still hangs after successfully compiling that path.
+    - 2026-05-16: Native templated stdlib wrapper-temporary fixtures now use
+      `map<K, V>(key, value)` and `return<auto>` rather than the retired
+      `mapSingle<K, V>` helper plus old bare `map<K, V>` return envelope.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

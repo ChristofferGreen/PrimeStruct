@@ -25,6 +25,17 @@
 ## Recent Test Runs
 - 2026-05-16 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native templated stdlib return wrapper temporaries in expressions" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native templated stdlib wrapper temporary call forms" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native templated stdlib wrapper temporary index forms" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native templated stdlib wrapper temporary syntax parity" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native templated stdlib wrapper temporary unsafe parity" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native templated stdlib wrapper temporary count capacity parity" --no-skip` |
+  failures: none | notes: native templated wrapper temporaries now use the
+  current map constructor-call surface and `return<auto>` instead of the
+  retired `mapSingle<K, V>` helper and old bare `map<K, V>` return envelope.
+- 2026-05-16 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native collection constructor parity" --no-skip`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native map constructor calls" --no-skip`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native map count helper" --no-skip`;
