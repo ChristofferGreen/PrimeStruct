@@ -852,7 +852,7 @@ TEST_CASE("ir lowerer internal soa metadata receivers resolve interned ids") {
   CHECK(source.find("auto resolveReceiverTypeText") == std::string::npos);
 }
 
-TEST_CASE("ir lowerer statement expr guards inline builtin map insert family") {
+TEST_CASE("ir lowerer statement expr has no inline builtin map insert family") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
     CHECK(file.is_open());
@@ -873,18 +873,11 @@ TEST_CASE("ir lowerer statement expr guards inline builtin map insert family") {
   REQUIRE(std::filesystem::exists(statementsExprPath));
   const std::string source = readText(statementsExprPath);
 
-  CHECK(source.find("auto isBuiltinMapInsertFamilyPath = [&](const std::string &path) {") !=
-        std::string::npos);
-  CHECK(source.find("normalizedPath == \"/std/collections/map/insert_builtin\";") !=
-        std::string::npos);
-  CHECK(source.find("if (isBuiltinMapInsertFamilyPath(rawPath) ||\n"
-                    "                isBuiltinMapInsertFamilyPath(directCallee->fullPath)) {") !=
-        std::string::npos);
-  CHECK(source.find("if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {") !=
-        std::string::npos);
+  CHECK(source.find("isBuiltinMapInsertFamilyPath") == std::string::npos);
+  CHECK(source.find("/std/collections/map/insert_builtin") == std::string::npos);
 }
 
-TEST_CASE("ir lowerer inline map insert builtin prefers semantic receiver facts") {
+TEST_CASE("ir lowerer inline map insert helper prefers semantic receiver facts") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
     CHECK(file.is_open());
@@ -939,19 +932,19 @@ TEST_CASE("ir lowerer inline map insert builtin prefers semantic receiver facts"
         std::string::npos);
   CHECK(source.find("tryPopulateMapKindsFromSemanticReceiver(*originalValuesArg, valuesIt->second)") <
         source.find("extractParameterTypeName(callee.parameters[1])"));
-  CHECK(source.find("info.kind == LocalInfo::Kind::Value &&\n"
-                    "                info.mapKeyKind != LocalInfo::ValueKind::Unknown &&\n"
-                    "                info.mapValueKind != LocalInfo::ValueKind::Unknown") !=
+  CHECK(source.find("info.kind == LocalInfo::Kind::Value &&") !=
+        std::string::npos);
+  CHECK(source.find("info.mapKeyKind != LocalInfo::ValueKind::Unknown &&") !=
+        std::string::npos);
+  CHECK(source.find("info.mapValueKind != LocalInfo::ValueKind::Unknown") !=
         std::string::npos);
   CHECK(source.find("if (valuesIt->second.referenceToMap || valuesIt->second.pointerToMap) {") !=
         std::string::npos);
-  CHECK(source.find("} else {\n"
-                    "          ptrLocal = valuesIt->second.index;\n"
-                    "        }") !=
+  CHECK(source.find("ptrLocal = valuesIt->second.index;") !=
         std::string::npos);
-  CHECK(source.find("if (!isBuiltinCanonicalMapInsertCallee && receiverUsesExperimentalMapStruct) {") !=
+  CHECK(source.find("if (receiverUsesExperimentalMapStruct) {") !=
         std::string::npos);
-  CHECK(source.find("the builtin canonical insert path mutates the flat map") !=
+  CHECK(source.find("this helper path mutates the flat map") !=
         std::string::npos);
   CHECK(source.find("if (requireValue) {\n"
                     "        function.instructions.push_back({IrOpcode::PushI32, 0});\n"

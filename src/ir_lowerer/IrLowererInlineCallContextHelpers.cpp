@@ -101,8 +101,6 @@ bool prepareInlineDefinitionCallContext(
 
   out.structDefinition = isStructDefinition(callee);
   const bool isGeneratedMapInsertHelper =
-      callee.fullPath == "/std/collections/map/insert_builtin" ||
-      callee.fullPath.rfind("/std/collections/map/insert_builtin__", 0) == 0 ||
       callee.fullPath == "/std/collections/map/insert" ||
       callee.fullPath.rfind("/std/collections/map/insert__", 0) == 0 ||
       callee.fullPath == "/std/collections/map/insert_ref" ||

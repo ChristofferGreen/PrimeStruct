@@ -784,10 +784,6 @@ static bool rewriteMapInsertHelperStatementToCanonical(
         return true;
       }
       const std::string helperStem = normalizeInsertHelperStem(callee.fullPath);
-      if (callee.fullPath.rfind("/std/collections/map/", 0) == 0 &&
-          helperStem == "insert_builtin") {
-        return true;
-      }
       if (helperStem == "insert" || helperStem == "insert_ref" ||
           helperStem == "Insert" || helperStem == "InsertRef") {
         return true;

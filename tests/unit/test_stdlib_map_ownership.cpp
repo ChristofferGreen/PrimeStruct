@@ -127,7 +127,7 @@ bool isAllowedExperimentalMapTrace(const std::string &relativePath,
 
 TEST_SUITE_BEGIN("primestruct.stdlib.map_ownership");
 
-TEST_CASE("canonical map surface owns implementation through internal map module") {
+TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string mapSource = readText(collectionsFile("map.prime"));
   const std::string experimentalSource = readText(collectionsFile("experimental_map.prime"));
   const std::string internalSource = readText(collectionsFile("internal_map.prime"));
@@ -157,12 +157,16 @@ TEST_CASE("canonical map surface owns implementation through internal map module
   REQUIRE(!nativeTailSource.empty());
   REQUIRE(!tailDispatchSource.empty());
 
-  CHECK(mapSource.find("import /std/collections/internal_map/*") != std::string::npos);
+  CHECK(mapSource.find("import /std/collections/internal_map/*") == std::string::npos);
+  CHECK(mapSource.find("import /std/collections/internal_vector/*") != std::string::npos);
   CHECK(mapSource.find("/std/collections/experimental_map/") == std::string::npos);
-  CHECK(mapSource.find("/std/collections/internal_map/insertImpl") != std::string::npos);
+  CHECK(mapSource.find("/std/collections/internal_map/insertImpl") == std::string::npos);
   CHECK(mapSource.find("insert_builtin") == std::string::npos);
   CHECK(mapSource.find("Reference<Map<K, V>>") == std::string::npos);
-  CHECK(mapSource.find("Reference<map<K, V>>") != std::string::npos);
+  CHECK(mapSource.find("Reference<map<K, V>>") == std::string::npos);
+  CHECK(mapSource.find("MapValue<K, V>") != std::string::npos);
+  CHECK(mapSource.find("mapInsert<K, V>([MapValue<K, V> mut] entries") !=
+        std::string::npos);
 
   CHECK(experimentalSource.find("import /std/collections/internal_map/*") != std::string::npos);
   CHECK(experimentalSource.find("namespace experimental_map") == std::string::npos);
@@ -216,7 +220,7 @@ TEST_CASE("canonical map surface owns implementation through internal map module
   CHECK(statementLowererSource.find("callee->fullPath.rfind(\"/std/collections/internal_map/insertImpl__\", 0)") !=
         std::string::npos);
   CHECK(statementLowererSource.find("rewrittenStmt.name = \"/std/collections/map/insert\"") != std::string::npos);
-  CHECK(inlineNativeSource.find("return helperName == \"insert\" || helperName == \"insert_ref\"") !=
+  CHECK(inlineNativeSource.find("return helperName == \"insert\" || helperName == \"insert_ref\"") ==
         std::string::npos);
   CHECK(inlineNativeSource.find("return helperName == \"at\" || helperName == \"at_ref\"") ==
         std::string::npos);

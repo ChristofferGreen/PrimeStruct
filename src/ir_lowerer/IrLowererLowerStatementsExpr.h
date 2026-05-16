@@ -191,10 +191,6 @@
                  normalizedPath.rfind("/std/collections/experimental" "_soa" "_vector/soa" "Vector", 0) == 0 ||
                  normalizedPath.rfind("/std/collections/experimental" "_soa" "_vector_conversions/soa" "Vector", 0) == 0;
         };
-        auto isBuiltinMapInsertFamilyPath = [&](const std::string &path) {
-          const std::string normalizedPath = stripGeneratedHelperSuffix(path);
-          return normalizedPath == "/std/collections/map/insert_builtin";
-        };
         auto findDirectInternalSoaDefinition = [&](const std::string &rawPath)
             -> const Definition * {
           const std::string helperName = extractHelperTail(rawPath);
@@ -654,13 +650,6 @@
             const bool isResolvedSoaWrapperHelper =
                 isSoaWrapperHelperFamilyPath(directCallee->fullPath);
             if (isResolvedSoaWrapperHelper || isVisibleSamePathSoaHelper) {
-              if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
-                return false;
-              }
-              return true;
-            }
-            if (isBuiltinMapInsertFamilyPath(rawPath) ||
-                isBuiltinMapInsertFamilyPath(directCallee->fullPath)) {
               if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
                 return false;
               }

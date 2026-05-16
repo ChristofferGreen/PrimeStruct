@@ -710,9 +710,6 @@
       return false;
     }
 
-    const bool isBuiltinCanonicalMapInsertCallee =
-        callee.fullPath == "/std/collections/map/insert_builtin" ||
-        callee.fullPath.rfind("/std/collections/map/insert_builtin__", 0) == 0;
     const bool isGeneratedMapInsertHelper =
         callee.fullPath == "/std/collections/map/insert" ||
         callee.fullPath.rfind("/std/collections/map/insert__", 0) == 0 ||
@@ -722,7 +719,7 @@
         callee.fullPath.rfind("/std/collections/internal_map/insertImpl__", 0) == 0 ||
         callee.fullPath == "/std/collections/internal_map/insertRefImpl" ||
         callee.fullPath.rfind("/std/collections/internal_map/insertRefImpl__", 0) == 0;
-    if (isBuiltinCanonicalMapInsertCallee || isGeneratedMapInsertHelper) {
+    if (isGeneratedMapInsertHelper) {
       auto extractParameterTypeName = [](const Expr &paramExpr) {
         for (const auto &transform : paramExpr.transforms) {
           if (transform.name == "mut" || transform.name == "public" || transform.name == "private" ||
@@ -969,10 +966,10 @@
               isExperimentalMapStructPath(callerValuesIt->second.structTypeName);
         }
       }
-      if (!isBuiltinCanonicalMapInsertCallee && receiverUsesExperimentalMapStruct) {
+      if (receiverUsesExperimentalMapStruct) {
         // Experimental-map receivers still need the real stdlib helper body,
-        // because the builtin canonical insert path mutates the flat map
-        // storage layout, not the struct-backed experimental map layout.
+        // because this helper path mutates the flat map storage layout, not
+        // the struct-backed experimental map layout.
       } else {
         if (valuesIt->second.mapKeyKind == LocalInfo::ValueKind::Unknown &&
             callee.parameters.size() >= 3) {
