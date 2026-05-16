@@ -110,6 +110,19 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 19:04 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map wrapper temporary tryAt auto inference requires canonical helper definition"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map wrapper temporary contains call validates canonical target classification"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map wrapper temporary contains call requires canonical helper definition"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map wrapper temporary contains auto inference requires canonical helper definition"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map compatibility tryAt call rejects visible canonical definition"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` | failures: none |
+  notes: late map access builtin validation now resolves canonical helper
+  names, namespace checks, and unknown-target diagnostics through stdlib
+  surface metadata; the map surface inventory now observes 653 production
+  traces and backing traces remain at 0.
 - 2026-05-16 19:01 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="bare map access methods require imported canonical helpers or explicit definitions"`;
