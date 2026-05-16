@@ -786,8 +786,7 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
     if (generatedSuffix != std::string::npos) {
       normalizedName.erase(generatedSuffix);
     }
-    return normalizedName == "map/entry" ||
-           normalizedName == "std/collections/map/entry";
+    return normalizedName == "std/collections/map/entry";
   };
   const bool hasEntryCtorArgs = [&]() {
     for (const auto &arg : expr.args) {
@@ -822,17 +821,6 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
       resolvePublishedVectorConstructorExprMemberName(expr, helperName)) {
     return false;
   }
-  if (scopedName.rfind("map/", 0) == 0) {
-    std::string alias = scopedName.substr(std::string("map/").size());
-    if (alias == "map") {
-      if (hasEntryCtorArgs) {
-        return false;
-      }
-      out = "map";
-      return true;
-    }
-    return false;
-  }
   if (scopedName.rfind("std/collections/map/", 0) == 0) {
     std::string alias =
         scopedName.substr(std::string("std/collections/map/").size());
@@ -851,6 +839,9 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
       out = alias;
       return true;
     }
+    return false;
+  }
+  if (scopedName.rfind("map/", 0) == 0) {
     return false;
   }
   if (rawName.find('/') != std::string::npos) {

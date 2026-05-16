@@ -1696,6 +1696,10 @@ Task template:
       lookup, or emitter helper parsing can borrow canonical
       `/std/collections/map/count` behavior; the map-surface trace caps for
       the touched inference/emitter files were tightened with that removal.
+    - 2026-05-16: The C++ emitter collection classifier no longer treats
+      rooted `/map/map` or rooted `/map/entry` spellings as builtin map
+      constructor aliases; canonical and experimental backing constructor
+      handling remain separate follow-up cleanup areas.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

@@ -471,6 +471,16 @@ TEST_CASE("C++ emitter helper rejects array namespaced vector constructor alias 
   CHECK_FALSE(primec::emitter::getBuiltinCollectionName(call, builtin));
 }
 
+TEST_CASE("C++ emitter helper rejects rooted map constructor alias builtin") {
+  primec::Expr call;
+  call.kind = primec::Expr::Kind::Call;
+  call.name = "map";
+  call.namespacePrefix = "/map";
+
+  std::string builtin;
+  CHECK_FALSE(primec::emitter::getBuiltinCollectionName(call, builtin));
+}
+
 TEST_CASE("C++ emitter helper rejects bare vector count methods without helper metadata") {
   primec::Expr call;
   call.kind = primec::Expr::Kind::Call;
