@@ -257,8 +257,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   } else if (isUnrootedCanonicalVectorCompatibilityPath(normalizedMethodName)) {
     normalizedMethodName = std::string(
         stripUnrootedCanonicalVectorCompatibilityPrefix(normalizedMethodName));
-  } else if (normalizedMethodName.rfind("map/", 0) == 0) {
-    normalizedMethodName = normalizedMethodName.substr(std::string("map/").size());
   } else if (normalizedMethodName.rfind("std/collections/map/", 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/map/").size());
   }
@@ -1933,9 +1931,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (explicitMapHelperPath.rfind("/std/collections/map/", 0) == 0) {
       return canonical;
     }
-    if (explicitMapHelperPath.rfind("/map/", 0) == 0) {
-      return alias;
-    }
     if (hasDeclaredDefinitionPath(alias)) {
       return alias;
     }
@@ -1956,6 +1951,20 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return true;
     }
     return setCollectionMethodTarget(preferredMapHelper);
+  };
+  auto resolveExplicitRootMapMethodPath = [&]() -> bool {
+    if (explicitMapHelperPath.rfind("/map/", 0) != 0) {
+      return false;
+    }
+    if (hasDefinitionPath(explicitMapHelperPath) ||
+        hasDeclaredDefinitionPath(explicitMapHelperPath) ||
+        hasImportedDefinitionPath(explicitMapHelperPath)) {
+      resolvedOut = explicitMapHelperPath;
+      isBuiltinOut = false;
+      return true;
+    }
+    return failMethodTargetResolutionDiagnostic("unknown method: " +
+                                                explicitMapHelperPath);
   };
   auto resolveDirectReceiver = [&](const Expr &directCandidate,
                                    std::string &directElemTypeOut) -> bool {
@@ -3301,7 +3310,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
        isCanonicalMapAccessMethodName(normalizedMethodName) ||
        normalizedMethodName == "insert" || normalizedMethodName == "insert_ref")) {
     if (explicitMapHelperPath.rfind("/map/", 0) == 0) {
-      return setCollectionMethodTarget(explicitMapHelperPath);
+      return resolveExplicitRootMapMethodPath();
     }
     const std::string canonicalMapHelper = "/std/collections/map/" + normalizedMethodName;
     if (hasDeclaredDefinitionPath(canonicalMapHelper) || hasImportedDefinitionPath(canonicalMapHelper)) {
@@ -3376,7 +3385,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
          normalizedMethodName == "at_unsafe" ||
          normalizedMethodName == "insert")) {
       if (explicitMapHelperPath.rfind("/map/", 0) == 0) {
-        return setCollectionMethodTarget(explicitMapHelperPath);
+        return resolveExplicitRootMapMethodPath();
       }
       std::string borrowedHelperName = normalizedMethodName;
       if (borrowedHelperName == "count") {

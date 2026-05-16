@@ -1108,7 +1108,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("keeps builtin map access for namespaced at method compatibility alias in C++ emitter") {
+TEST_CASE("uses canonical helper for namespaced map at method alias in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] index) {
@@ -1121,15 +1121,15 @@ main() {
   return(values./map/at(1i32))
 }
 )";
-  const std::string srcPath = writeTemp("compile_cpp_map_namespaced_at_method_compatibility_alias_reject.prime",
+  const std::string srcPath = writeTemp("compile_cpp_map_namespaced_at_method_canonical_helper.prime",
                                         source);
   const std::string exePath = (testScratchPath("") /
-                               "primec_cpp_map_namespaced_at_method_compatibility_alias_reject_exe")
+                               "primec_cpp_map_namespaced_at_method_canonical_helper_exe")
                                   .string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 4);
+  CHECK(runCommand(exePath) == 17);
 }
 
 TEST_CASE("C++ emitter resolves stdlib canonical map count helper in method-call sugar") {
