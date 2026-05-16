@@ -42,17 +42,7 @@ bool isMapConstructorDirectTargetPath(std::string path) {
   if (overloadSuffix != std::string::npos) {
     path.erase(overloadSuffix);
   }
-  return path == "/std/collections/map/map" ||
-         path == "/std/collections/mapNew" ||
-         path == "/std/collections/mapSingle" ||
-         path == "/std/collections/mapDouble" ||
-         path == "/std/collections/mapPair" ||
-         path == "/std/collections/mapTriple" ||
-         path == "/std/collections/mapQuad" ||
-         path == "/std/collections/mapQuint" ||
-         path == "/std/collections/mapSext" ||
-         path == "/std/collections/mapSept" ||
-         path == "/std/collections/mapOct";
+  return path == "/std/collections/map/map";
 }
 
 std::string findMapConstructorBridgePathChoiceBySource(

@@ -1734,6 +1734,11 @@ Task template:
       `MapValue` field receivers now compile-reject in the shared conformance
       fixtures because supporting them still depends on the retired C++ map
       field bridge.
+    - 2026-05-16: Rooted retired public constructor aliases such as
+      `/std/collections/mapSingle` and `/std/collections/mapPair` are no
+      longer recognized by the semantic builtin-map constructor classifier or
+      lowerer setup-type direct-target classifier; only the still-public
+      `/std/collections/map/map` constructor path remains on those checks.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

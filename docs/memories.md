@@ -112,6 +112,18 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: Semantic-product return-info precomputation enumerates callable definitions only through `callableSummaryIndicesByPathId`, so tests that manually create callable summaries must seed that published map.
 - Evidence: `precomputeSemanticProductReturnInfoCache(...)` now fails closed for raw callable summaries without the map, and inference get-return-info setup tests pin both mapped and raw-only paths.
 
+### retired-public-map-constructors-not-canonical
+- Updated: 2026-05-16
+- Tags: semantics, ir, collections
+- Fact: Rooted retired public map constructor aliases such as
+  `/std/collections/mapSingle` and `/std/collections/mapPair` must not be
+  treated as canonical map constructors; unqualified names remain separate
+  legacy/internal compatibility surfaces.
+- Evidence: `isBuiltinCanonicalMapConstructorExpr(...)` and
+  `isMapConstructorDirectTargetPath(...)` now only accept the public rooted
+  `/std/collections/map/map` constructor path, with source-lock coverage in
+  `test_stdlib_map_ownership.cpp`.
+
 ### semantic-memory-policy-uses-runner-headroom
 - Updated: 2026-05-14
 - Tags: benchmarks, ci, memory
