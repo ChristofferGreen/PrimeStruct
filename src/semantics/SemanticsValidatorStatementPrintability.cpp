@@ -5,6 +5,7 @@
 #include <functional>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -36,6 +37,15 @@ bool isUnspecializedExperimentalMapBackingBaseForPrintability(std::string base) 
   const std::string leaf =
       leafStart == std::string::npos ? base : base.substr(leafStart + 1);
   return leaf == "Map" && isExperimentalCollectionBackingTypeName("map", "Map", base);
+}
+
+bool isCanonicalMapHelperResolvedPath(const std::string &path,
+                                      std::string_view helperName) {
+  std::string resolvedHelperName;
+  return resolvePublishedCollectionHelperResolvedPath(
+             path, StdlibSurfaceId::CollectionsMapHelpers,
+             resolvedHelperName) &&
+         resolvedHelperName == helperName;
 }
 
 } // namespace
@@ -254,8 +264,8 @@ bool SemanticsValidator::isStringStatementExpr(const Expr &arg,
           isStdNamespacedVectorCompatibilityHelperPath(resolvedPath, "at") ||
           isStdNamespacedVectorCompatibilityHelperPath(resolvedPath,
                                                        "at_unsafe") ||
-          resolvedPath == "/std/collections/map/at" ||
-          resolvedPath == "/std/collections/map/at_unsafe";
+          isCanonicalMapHelperResolvedPath(resolvedPath, "at") ||
+          isCanonicalMapHelperResolvedPath(resolvedPath, "at_unsafe");
       std::string accessName;
       if (treatAsBuiltinAccess &&
           getBuiltinArrayAccessName(candidate, accessName) &&

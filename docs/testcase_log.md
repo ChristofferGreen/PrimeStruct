@@ -110,6 +110,15 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 19:10 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="print accepts string map access"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map access accepts string key expression"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` | failures: none |
+  notes: statement printability now resolves canonical map access helper
+  classification through stdlib surface metadata; the map surface inventory
+  now observes 641 production traces and backing traces remain at 0.
 - 2026-05-16 19:09 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="print accepts string map access"`;

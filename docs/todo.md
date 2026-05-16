@@ -2154,6 +2154,9 @@ Task template:
     - 2026-05-16: Collection argument validation no longer hard-codes
       canonical map access helper paths or explicit access-path
       classification; it now resolves them through stdlib surface metadata.
+    - 2026-05-16: Statement printability no longer hard-codes canonical map
+      access helper classification; it now resolves it through stdlib
+      surface metadata.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.
