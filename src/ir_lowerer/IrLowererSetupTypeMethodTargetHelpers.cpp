@@ -82,12 +82,8 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   };
   auto isMapReceiverTarget = [&](const std::string &candidate) {
     const std::string normalized = stripReceiverPrefix(candidate);
-    const std::string experimentalMapType =
-        experimentalCollectionTypePath("map", "Map", false);
-    return normalized == "map" || normalized.rfind("map<", 0) == 0 ||
-           normalized == "std/collections/map" || normalized.rfind("std/collections/map<", 0) == 0 ||
-           normalized == experimentalMapType ||
-           normalized.rfind(experimentalMapType + "<", 0) == 0;
+    return isBuiltinCollectionTypeName(normalized, "map") ||
+           isExperimentalCollectionTypeName(normalized, "map", "Map");
   };
   auto isBufferReceiverTarget = [&](const std::string &candidate) {
     return candidate == "Buffer" || candidate == "std/gfx/Buffer" || candidate == "std/gfx/experimental/Buffer";

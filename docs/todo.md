@@ -446,6 +446,8 @@ Task template:
   Inference base-kind and dispatch setup now recognize map family type text
   through shared collection classifiers instead of direct rooted/canonical map
   strings.
+  Setup-type method target resolution now recognizes map receiver types through
+  shared collection classifiers instead of direct rooted/canonical map strings.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic
