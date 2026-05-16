@@ -192,8 +192,8 @@ bool blocksSyntheticCollectionFallbackDirectTarget(const std::string &targetPath
   const std::string normalized = normalizeCollectionHelperPath(targetPath);
   return normalized.rfind(normalizeBuiltinCollectionStructPath("vector") + "/", 0) == 0 ||
          normalized.rfind(collectionMemberRoot("vector"), 0) == 0 ||
-         normalized.rfind("/map/", 0) == 0 ||
-         normalized.rfind("/std/collections/map/", 0) == 0 ||
+         normalized.rfind(normalizeBuiltinCollectionStructPath("map") + "/", 0) == 0 ||
+         normalized.rfind(collectionMemberRoot("map"), 0) == 0 ||
          normalized.rfind("/soa" "_vector/", 0) == 0 ||
          normalized.rfind("/std/collections/" "soa" "_vector/", 0) == 0 ||
          normalized.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0 ||
@@ -609,7 +609,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       const bool routesExplicitVectorCountMethodThroughMapMethodTarget =
           requestsExplicitVectorCountMethod &&
           normalizeCollectionHelperPath(resolvedPath) ==
-              "/std/collections/map/count";
+              collectionMemberPath("map", "count");
       const bool routesExplicitVectorCountMethodThroughBuiltinScalarTarget =
           requestsExplicitVectorCountMethod &&
           (resolvedPath == "/string/count" || resolvedPath == "/array/count");

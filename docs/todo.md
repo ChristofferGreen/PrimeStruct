@@ -457,6 +457,9 @@ Task template:
   Setup-type method-call canonical map helper lookup now builds the helper path
   through collection path helpers instead of direct map helper path
   concatenation.
+  Setup-type method-call synthetic fallback blocking and explicit vector-count
+  map-target checks now derive map paths through collection path helpers instead
+  of direct map path strings.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic
