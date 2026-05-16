@@ -641,6 +641,10 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
       return false;
     }
     auto resolvedExperimentalMapStructPath = [&](const std::string &structTypeName) {
+      const std::string experimentalMapType =
+          experimentalCollectionTypePath("map", "Map", false);
+      const std::string rootedExperimentalMapType =
+          experimentalCollectionTypePath("map", "Map");
       if (structTypeName.empty()) {
         const std::string specialized =
             inferExperimentalMapStructPathFromKinds(localInfo.mapKeyKind,
@@ -649,8 +653,8 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
           return specialized;
         }
       }
-      if (structTypeName == "std/collections/experimental_map/Map" ||
-          structTypeName == "/std/collections/experimental_map/Map") {
+      if (structTypeName == experimentalMapType ||
+          structTypeName == rootedExperimentalMapType) {
         const std::string specialized =
             inferExperimentalMapStructPathFromKinds(localInfo.mapKeyKind,
                                                     localInfo.mapValueKind);
@@ -685,6 +689,10 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
       return false;
     }
     auto resolvedExperimentalMapStructPath = [&](const std::string &structTypeName) {
+      const std::string experimentalMapType =
+          experimentalCollectionTypePath("map", "Map", false);
+      const std::string rootedExperimentalMapType =
+          experimentalCollectionTypePath("map", "Map");
       if (structTypeName.empty()) {
         const std::string specialized =
             inferExperimentalMapStructPathFromKinds(localInfo.mapKeyKind,
@@ -693,8 +701,8 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
           return specialized;
         }
       }
-      if (structTypeName == "std/collections/experimental_map/Map" ||
-          structTypeName == "/std/collections/experimental_map/Map") {
+      if (structTypeName == experimentalMapType ||
+          structTypeName == rootedExperimentalMapType) {
         const std::string specialized =
             inferExperimentalMapStructPathFromKinds(localInfo.mapKeyKind,
                                                     localInfo.mapValueKind);

@@ -260,7 +260,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   struct-slot map type recognition should derive rooted and slashless
   experimental map backing paths through `experimentalCollectionTypePath`;
   binding type normalization should derive rooted and slashless experimental
-  map backing paths through `experimentalCollectionTypePath`;
+  map backing paths through `experimentalCollectionTypePath`; access target
+  map struct inference should derive rooted and slashless experimental map
+  backing paths through `experimentalCollectionTypePath`;
   generated collection struct classification should derive the canonical map
   `MapValue__*` prefix through `collectionTypePath("map")` instead of
   carrying a split-string map root.

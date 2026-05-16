@@ -76,6 +76,12 @@
   2026-05-16 it failed four source-string assertions for
   `experimental_soa_vector/SoaVector`, while adjacent binding value-kind and
   semantic collection specialization coverage still passes.
+- `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers lower explicit map access for args-pack receivers"`
+  is stale after the map stdlib-ownership cutover. On 2026-05-16 it failed
+  the expected native-tail dispatch and instruction-emission assertions after
+  map access-target path construction moved through shared experimental
+  collection path helpers; adjacent direct and forwarded map access target
+  resolution coverage still passes.
 - `PrimeStruct_semantics_tests` inferred map-struct-field and
   uninitialized-storage constructor fixtures are stale after the map
   stdlib-ownership cutover. On 2026-05-16 the filters
@@ -99,6 +105,21 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 18:18 local | pass | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers resolve and validate map access targets,ir lowerer call helpers infer forwarded map access targets"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` | failures: none |
+  notes: access-target map struct inference now derives rooted and slashless
+  experimental backing paths with `experimentalCollectionTypePath`; the map
+  surface inventory now observes 822 production traces and backing traces now
+  observe 67.
+- 2026-05-16 18:18 local | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers resolve and validate map access targets,ir lowerer call helpers infer forwarded map access targets,ir lowerer call helpers lower explicit map access for args-pack receivers"` |
+  failures: `ir lowerer call helpers lower explicit map access for args-pack
+  receivers` | notes: stale explicit args-pack map access native-tail
+  dispatch and instruction-emission expectations; reran the adjacent direct
+  and forwarded access-target cases above.
 - 2026-05-16 18:12 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer binding type helpers resolve value kinds from transforms,ir lowerer binding type helpers prefer semantic collection specialization facts"`;
