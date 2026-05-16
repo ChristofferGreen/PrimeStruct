@@ -205,10 +205,6 @@ ALLOWED_MAX_COUNTS: dict[tuple[str, str], int] = {
         "experimental-map-path",
     ): 2,
     (
-        "src/semantics/SemanticsValidatorExprCountCapacityMapBuiltins.cpp",
-        "experimental-map-path",
-    ): 2,
-    (
         "src/semantics/SemanticsValidatorExprLateMapAccessBuiltins.cpp",
         "experimental-map-path",
     ): 3,

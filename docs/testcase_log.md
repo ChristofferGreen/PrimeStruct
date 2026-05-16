@@ -14,9 +14,9 @@
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="*map*count*" --no-skip` |
   failures: 41 obsolete legacy map-count compatibility cases | notes:
   surfaced after deleting semantic map-count/map-access builtin branches from
-  `SemanticsValidatorExprCountCapacityMapBuiltins.cpp`; focused stdlib-owned
-  map smoke tests passed and this pattern needs retirement with the remaining
-  old C++ map compatibility tests.
+  the count/capacity builtin validator; focused stdlib-owned map smoke tests
+  passed and this pattern needs retirement with the remaining old C++ map
+  compatibility tests.
 - 2026-05-16 local | pass | mode: release | command:
   `cmake --build build-release --target primec`; `cmake --build build-release --target PrimeStruct_compile_run_tests`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="map wildcard import runs stdlib-owned surface in C++ emitter" --no-skip`;
