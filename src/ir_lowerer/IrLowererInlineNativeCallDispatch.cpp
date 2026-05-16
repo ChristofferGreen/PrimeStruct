@@ -60,9 +60,15 @@ std::string canonicalInlineMapHelperName(std::string helperName) {
   return helperName;
 }
 
+const StdlibSurfaceMetadata *inlineMapHelperMetadata() {
+  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+}
+
 bool resolvePublishedInlineMapHelperName(std::string_view resolvedPath, std::string &helperNameOut) {
   const auto *metadata = findStdlibSurfaceMetadataByResolvedPath(resolvedPath);
-  if (metadata == nullptr || metadata->id != StdlibSurfaceId::CollectionsMapHelpers) {
+  const auto *mapMetadata = inlineMapHelperMetadata();
+  if (metadata == nullptr || mapMetadata == nullptr ||
+      metadata->id != mapMetadata->id) {
     return false;
   }
   const size_t slash = resolvedPath.find_last_of('/');
@@ -1153,8 +1159,11 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       }
     }
     const bool isCanonicalStdMapHelperCall =
-        isCanonicalPublishedStdlibSurfaceHelperPath(
-            rawPath, StdlibSurfaceId::CollectionsMapHelpers);
+        [&]() {
+          const auto *mapMetadata = inlineMapHelperMetadata();
+          return mapMetadata != nullptr &&
+                 isCanonicalPublishedStdlibSurfaceHelperPath(rawPath, mapMetadata->id);
+        }();
     if (isCanonicalStdMapHelperCall && !expr.args.empty()) {
       const auto targetInfo =
           resolveMapAccessTargetInfo(expr.args.front(),

@@ -268,7 +268,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   statement-call map insert recognition and rewrite targets should resolve the
   map helper family through `collections.map_helpers` metadata and the stdlib
   surface canonical-helper API instead of spelling public canonical map helper
-  paths or naming `StdlibSurfaceId::CollectionsMapHelpers` directly; emitter
+  paths or naming `StdlibSurfaceId::CollectionsMapHelpers` directly; inline
+  native map helper recognition should also resolve the map helper family
+  through `collections.map_helpers` metadata instead of naming
+  `StdlibSurfaceId::CollectionsMapHelpers` directly; emitter
   return-kind type parsing should classify experimental map backing bases and
   generated prefixes through a local storage-base helper instead of direct
   path text; collection expression lowering should derive experimental map

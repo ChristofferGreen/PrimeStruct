@@ -105,6 +105,22 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 20:15 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer inline dispatch map helper deferral uses semantic receiver facts first,ir lowerer inline native dispatch prefers published canonical map access helpers,ir lowerer call helpers keep explicit map helpers out of native builtin emission,ir lowerer inline dispatch collection access fallback uses semantic receiver facts first" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` | failures: none |
+  notes: inline native map helper recognition now resolves the map helper
+  family through `collections.map_helpers` metadata; the map surface inventory
+  now observes 423 production traces and backing traces remain at 0.
+- 2026-05-16 20:13 local | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer inline dispatch map helper deferral uses semantic receiver facts first,ir lowerer inline native dispatch prefers published canonical map access helpers,ir lowerer call helpers keep explicit map helpers out of native builtin emission,ir lowerer inline dispatch collection access fallback uses semantic receiver facts first" --no-skip` |
+  failures: ir lowerer inline native dispatch prefers published canonical map access helpers; ir lowerer call helpers keep explicit map helpers out of native builtin emission |
+  notes: first inline-dispatch rerun exposed a stale source-lock gate name and
+  stale `/map/count` native-tail emission expectation; both passed after the
+  lock and removed-alias expectation were updated.
 - 2026-05-16 20:10 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer map insert rewrite uses semantic receiver facts before stale locals,ir lowerer inline map insert helper prefers semantic receiver facts,ir lowerer skips builtin map insert rewrite for direct experimental map locals,ir lowerer statement map insert rewrite uses semantic product receiver ids first,ir lowerer tail map insert rewrite uses semantic receiver facts first,ir lowerer map insert helper writes grown pointers back through wrapper locals,ir lowerer statement call emission source delegation stays stable" --no-skip`;

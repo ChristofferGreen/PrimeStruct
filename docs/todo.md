@@ -2113,6 +2113,9 @@ Task template:
       `StdlibSurfaceId::CollectionsMapHelpers` directly; they now resolve the
       map helper family through `collections.map_helpers` metadata and the
       stdlib surface canonical-helper API.
+    - 2026-05-16: Inline native map helper recognition no longer names
+      `StdlibSurfaceId::CollectionsMapHelpers` directly; it now resolves the
+      helper family through `collections.map_helpers` metadata.
     - 2026-05-16: Emitter return-kind type parsing no longer hard-codes
       experimental map backing base paths or generated prefixes; it now uses
       a local storage-base helper for those classifications.

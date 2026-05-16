@@ -2111,9 +2111,13 @@ TEST_CASE("ir lowerer inline native dispatch prefers published canonical map acc
   REQUIRE(std::filesystem::exists(inlineDispatchPath));
   const std::string source = readText(inlineDispatchPath);
 
-  CHECK(source.find("const bool isExplicitCanonicalMapHelperPath =") !=
+  CHECK(source.find("const bool isCanonicalStdMapHelperCall =") !=
         std::string::npos);
   CHECK(source.find("isCanonicalPublishedStdlibSurfaceHelperPath(") !=
+        std::string::npos);
+  CHECK(source.find("inlineMapHelperMetadata()") !=
+        std::string::npos);
+  CHECK(source.find("StdlibSurfaceId::CollectionsMapHelpers") ==
         std::string::npos);
   CHECK(source.find("rawPath.rfind(\"/std/collections/map/\", 0) == 0") ==
         std::string::npos);
