@@ -231,6 +231,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   prefixes through `experimentalCollectionTypePath`;
   struct-field binding helper classification should use shared experimental
   collection classifiers for generated map backing names;
+  inline packed-args map detection should derive unspecialized and generated
+  experimental map backing bases through `experimentalCollectionTypePath`;
   generated collection struct classification should derive the canonical map
   `MapValue__*` prefix through `collectionTypePath("map")` instead of
   carrying a split-string map root.

@@ -2041,6 +2041,9 @@ Task template:
     - 2026-05-16: Struct-field binding helper classification no longer
       hard-codes generated experimental map backing prefixes; it now uses the
       shared experimental collection classifier.
+    - 2026-05-16: Inline packed-args map detection no longer hard-codes
+      unspecialized or generated experimental map backing bases; both are
+      derived through `experimentalCollectionTypePath`.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

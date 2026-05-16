@@ -83,8 +83,10 @@ bool namesExplicitExperimentalMapType(const std::string &typeText) {
   if (!base.empty() && base.front() == '/') {
     base.erase(base.begin());
   }
-  return base == "std/collections/experimental_map/Map" ||
-         base.rfind("std/collections/experimental_map/Map__", 0) == 0;
+  const std::string experimentalMapType =
+      experimentalCollectionTypePath("map", "Map", false);
+  return base == experimentalMapType ||
+         base.rfind(experimentalMapType + "__", 0) == 0;
 }
 
 bool rewritePublishedMapConstructorExpr(const Expr &callExpr,
