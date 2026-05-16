@@ -5680,17 +5680,7 @@ bool isBuiltinCanonicalMapConstructorExpr(
       path.erase(specializationSuffix);
     }
     if (!path.empty() && path.front() != '/') {
-      return path == "map" ||
-             path == "mapNew" ||
-             path == "mapSingle" ||
-             path == "mapDouble" ||
-             path == "mapPair" ||
-             path == "mapTriple" ||
-             path == "mapQuad" ||
-             path == "mapQuint" ||
-             path == "mapSext" ||
-             path == "mapSept" ||
-             path == "mapOct";
+      return path == "map";
     }
     return path == "/std/collections/map/map";
   };

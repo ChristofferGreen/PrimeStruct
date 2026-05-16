@@ -1755,6 +1755,10 @@ Task template:
       The remaining temporary normalization points at the public
       `/std/collections/map/map` constructor while the old builtin-map
       variadic/result fixtures are retired or retargeted to `MapValue`.
+    - 2026-05-16: Semantic constructor-backed map binding detection and
+      parameter map-value checks no longer classify fixed-arity legacy names
+      such as `mapSingle`, `mapPair`, or `mapOct` as canonical map
+      constructors; only the public `map` constructor surface remains.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

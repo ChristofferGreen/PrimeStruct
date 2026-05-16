@@ -137,7 +137,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `isMapConstructorDirectTargetPath(...)` now only accept the public rooted
   `/std/collections/map/map` constructor path, while `MapConstructorHelpers.h`
   no longer carries the fixed-arity map constructor rewrite table or the
-  metadata-backed map constructor rewrite functions.
+  metadata-backed map constructor rewrite functions; semantic
+  constructor-backed binding and parameter map-value checks no longer
+  classify fixed-arity `mapSingle`/`mapPair`-style names as canonical
+  constructors.
 
 ### semantic-memory-policy-uses-runner-headroom
 - Updated: 2026-05-14

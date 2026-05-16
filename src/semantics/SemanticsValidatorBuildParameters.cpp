@@ -231,15 +231,9 @@ bool SemanticsValidator::buildParameters() {
                                  member) == 0 &&
                     path[path.size() - member.size() - 1] == '/');
           };
-          constexpr std::array<std::string_view, 11> MapConstructorMembers = {
-              "map",       "mapNew",  "mapSingle", "mapDouble",
-              "mapPair",   "mapTriple", "mapQuad", "mapQuint",
-              "mapSext",   "mapSept", "mapOct"};
-          for (const std::string_view member : MapConstructorMembers) {
-            if (pathHasMember(expr.name, member) ||
-                pathHasMember(resolvedExprPath, member)) {
-              return true;
-            }
+          if (pathHasMember(expr.name, "map") ||
+              pathHasMember(resolvedExprPath, "map")) {
+            return true;
           }
           return false;
         };

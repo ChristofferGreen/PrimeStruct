@@ -219,7 +219,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(registrySource.find("resolveCollectionsMapHelperMemberName") == std::string::npos);
   CHECK(registrySource.find("\"/std/collections/map/insert\"") == std::string::npos);
 
-  CHECK(semanticsSource.find("path == \"mapSingle\"") != std::string::npos);
+  CHECK(semanticsSource.find("path == \"mapSingle\"") == std::string::npos);
   CHECK(semanticsSource.find("path == \"/std/collections/mapSingle\"") ==
         std::string::npos);
   CHECK(semanticsSource.find("path == \"/std/collections/mapPair\"") ==

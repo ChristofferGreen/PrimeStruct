@@ -296,19 +296,6 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
       const bool allowRootMapConstructorAlias =
           hasVisibleCanonicalMapConstructor && !hasRootMapDefinitionFamily();
       const std::string resolvedTarget = resolveCalleePath(target);
-      if (target.templateArgs.empty() &&
-          (resolvedTarget.find("mapSingle") != std::string::npos ||
-           resolvedTarget.find("mapDouble") != std::string::npos ||
-           resolvedTarget.find("mapPair") != std::string::npos ||
-           resolvedTarget.find("mapTriple") != std::string::npos ||
-           resolvedTarget.find("mapQuad") != std::string::npos ||
-           resolvedTarget.find("mapQuint") != std::string::npos ||
-           resolvedTarget.find("mapSext") != std::string::npos ||
-           resolvedTarget.find("mapSept") != std::string::npos ||
-           resolvedTarget.find("mapOct") != std::string::npos) &&
-          inferMapConstructorArgTypes(target, keyTypeOut, valueTypeOut)) {
-        return true;
-      }
       if (isDirectMapConstructorPath(resolvedTarget) &&
           target.templateArgs.size() == 2 &&
           (!isRootMapAliasPath(resolvedTarget) || allowRootMapConstructorAlias)) {
