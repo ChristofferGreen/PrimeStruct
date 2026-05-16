@@ -677,13 +677,8 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
       return false;
     }
   }
-  std::string mapHelperName;
-  const bool isMapCountCall =
-      isMapBuiltinName(callExpr, "count") ||
-      (resolveMapHelperAliasName(callExpr, mapHelperName) &&
-       mapHelperName == "count_ref");
   const bool isCountCall =
-      (isVectorBuiltinName(callExpr, "count") || isMapCountCall) &&
+      isVectorBuiltinName(callExpr, "count") &&
       callExpr.args.size() == 1;
   const bool isContainsCall = isSimpleCallName(callExpr, "contains") && callExpr.args.size() == 2;
   std::string accessName;

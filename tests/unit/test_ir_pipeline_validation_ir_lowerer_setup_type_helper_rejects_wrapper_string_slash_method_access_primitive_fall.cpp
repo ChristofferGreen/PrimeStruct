@@ -889,7 +889,7 @@ TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for explicit ma
   CHECK(error == "unknown method target for tag");
 }
 
-TEST_CASE("ir lowerer setup type helper splits explicit map count and contains receiver diagnostics") {
+TEST_CASE("ir lowerer setup type helper resolves explicit map count and contains receivers by inferred kind") {
   primec::Definition intTagDef;
   intTagDef.fullPath = "/i32/tag";
   primec::Definition boolTagDef;
@@ -951,13 +951,8 @@ TEST_CASE("ir lowerer setup type helper splits explicit map count and contains r
     const primec::Definition *expected =
         inferredKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool ? &boolTagDef : &intTagDef;
     INFO(receiverNameStr);
-    if (receiverNameStr.rfind("/std/collections/map/", 0) == 0) {
-      CHECK(resolved == nullptr);
-      CHECK(error == "unknown method target for tag");
-    } else {
-      CHECK(resolved == expected);
-      CHECK(error.empty());
-    }
+    CHECK(resolved == expected);
+    CHECK(error.empty());
   };
 
   expectCurrentBehavior("/map/count", primec::ir_lowerer::LocalInfo::ValueKind::Int32);
