@@ -148,11 +148,6 @@
       if (allowsArrayVectorCompatibilitySuffix(suffix)) {
         appendUnique(vectorHelperPath(suffix));
       }
-    } else if (normalizedPath.rfind("/map/", 0) == 0) {
-      const std::string suffix = normalizedPath.substr(std::string("/map/").size());
-      if (!isCanonicalMapHelperName(suffix)) {
-        appendUnique("/std/collections/map/" + suffix);
-      }
     }
     return candidates;
   };

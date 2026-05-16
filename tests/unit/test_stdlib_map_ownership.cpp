@@ -459,6 +459,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(emitterReturnInferenceCollectionsSource.find("candidates.push_back(\"/map/\" + methodName)") ==
         std::string::npos);
+  CHECK(emitterReturnInferenceCollectionsSource.find("appendUnique(\"/std/collections/map/\" + suffix)") ==
+        std::string::npos);
   CHECK(emitterReturnInferenceCollectionsSource.find("eraseCandidate(\"/map/\" + suffix)") ==
         std::string::npos);
   CHECK(emitterCollectionTypeHelpersSource.find("eraseCandidate(\"/map/\" + suffix)") ==

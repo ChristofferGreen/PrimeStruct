@@ -123,7 +123,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   emitter return inference should not add implicit rooted `/map/<method>`
   candidates after canonical map method candidates; emitter method metadata
   should not rewrite rooted `/map/<helper>` method paths to canonical
-  `/std/collections/map/<helper>` paths when canonical metadata exists.
+  `/std/collections/map/<helper>` paths when canonical metadata exists; and
+  emitter return-struct inference should not synthesize canonical
+  `/std/collections/map/<suffix>` candidates from rooted `/map/<suffix>`
+  inputs.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -204,7 +207,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   preference follows the same rule; emitter return inference no longer adds
   an implicit rooted `/map/<method>` candidate after canonical map method
   candidates; emitter method metadata no longer has a shared
-  rooted-to-canonical map method helper preference.
+  rooted-to-canonical map method helper preference; emitter return-struct
+  inference no longer synthesizes canonical
+  `/std/collections/map/<suffix>` candidates from rooted `/map/<suffix>`
+  inputs.
 
 ### map-constructor-normalization-uses-public-path
 - Updated: 2026-05-16
