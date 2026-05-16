@@ -223,6 +223,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string emitterMethodTypeInferenceSource =
       readText(repoRoot() / "src" / "emitter" /
                "EmitterBuiltinMethodResolutionTypeInferenceHelpers.cpp");
+  const std::string emitterHelpersTypesSource =
+      readText(repoRoot() / "src" / "emitter" / "EmitterHelpersTypes.cpp");
   const std::string nativeTailSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererNativeTailDispatch.cpp");
   const std::string tailDispatchSource =
@@ -291,6 +293,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!inlineNativeSource.empty());
   REQUIRE(!emitterMethodResolutionSource.empty());
   REQUIRE(!emitterMethodTypeInferenceSource.empty());
+  REQUIRE(!emitterHelpersTypesSource.empty());
   REQUIRE(!nativeTailSource.empty());
   REQUIRE(!tailDispatchSource.empty());
   REQUIRE(!inlinePackedArgsSource.empty());
@@ -622,6 +625,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(emitterMethodResolutionSource.find("!hasAliasHelperDefinition && !hasCanonicalHelperDefinition") ==
         std::string::npos);
   CHECK(emitterMethodTypeInferenceSource.find("const std::string aliasPath = \"/map/\" + candidate.name") ==
+        std::string::npos);
+  CHECK(emitterHelpersTypesSource.find("base += \"map/Map\"") == std::string::npos);
+  CHECK(emitterHelpersTypesSource.find("experimentalCollectionTypePathLocal(\"map\", \"Map\"") !=
+        std::string::npos);
+  CHECK(emitterHelpersTypesSource.find("name == \"/map\"") == std::string::npos);
+  CHECK(emitterHelpersTypesSource.find("name == \"std/collections/map\"") ==
+        std::string::npos);
+  CHECK(emitterHelpersTypesSource.find("name.rfind(\"/std/collections/map<\"") ==
         std::string::npos);
   CHECK(nativeTailSource.find("hasSemanticMapReadHelperDefinition") != std::string::npos);
   CHECK(nativeTailSource.find("isMapReadHelperName(directMapReadHelperName)") != std::string::npos);

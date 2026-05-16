@@ -308,7 +308,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   canonical helper paths through collection path helpers instead of direct map
   helper path strings; lowerer struct-return map helper candidate paths should
   derive rooted and canonical prefixes through collection path helpers instead
-  of direct map helper path strings;
+  of direct map helper path strings; emitter binding-type map compatibility
+  checks should derive canonical and experimental map type paths through local
+  collection path helpers instead of direct map path fragments;
   statement-expression map count/access target classification should reuse
   local experimental collection type and generated-specialization helpers
   instead of direct experimental map backing path text;

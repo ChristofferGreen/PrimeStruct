@@ -92,10 +92,36 @@ static bool isVectorCompatibilityStorageBase(std::string_view base) {
   return segments[3] == "Vector" || segments[3].rfind("Vector__", 0) == 0;
 }
 
-static std::string experimentalMapStorageBase(bool leadingSlash = true) {
+static std::string collectionTypePathLocal(std::string_view collectionName,
+                                           bool leadingSlash = true) {
+  std::string base = leadingSlash ? "/" : "";
+  base += "std/collections/";
+  base += std::string(collectionName);
+  return base;
+}
+
+static std::string experimentalCollectionMemberRootLocal(
+    std::string_view collectionName,
+    bool leadingSlash = true) {
   std::string base = leadingSlash ? "/" : "";
   base += "std/collections/experimental_";
-  base += "map/Map";
+  base += std::string(collectionName);
+  base += "/";
+  return base;
+}
+
+static std::string experimentalCollectionTypePathLocal(
+    std::string_view collectionName,
+    std::string_view typeName,
+    bool leadingSlash = true) {
+  std::string base =
+      experimentalCollectionMemberRootLocal(collectionName, leadingSlash);
+  base += std::string(typeName);
+  return base;
+}
+
+static std::string experimentalMapStorageBase(bool leadingSlash = true) {
+  std::string base = experimentalCollectionTypePathLocal("map", "Map", leadingSlash);
   return base;
 }
 
@@ -137,17 +163,21 @@ std::string normalizeBindingTypeName(const std::string &name) {
   if (name.rfind("/std/collections/" "soa<", 0) == 0) {
     return "soa" "_vector" + name.substr(std::string("/std/collections/" "soa").size());
   }
-  if (name == "/map" || name == "std/collections/map" || name == "/std/collections/map") {
+  const std::string rootedMapType = "/" + std::string("map");
+  const std::string slashlessCanonicalMapType = collectionTypePathLocal("map", false);
+  const std::string rootedCanonicalMapType = collectionTypePathLocal("map");
+  if (name == rootedMapType || name == slashlessCanonicalMapType ||
+      name == rootedCanonicalMapType) {
     return "map";
   }
-  if (name.rfind("/map<", 0) == 0) {
+  if (name.rfind(rootedMapType + "<", 0) == 0) {
     return name.substr(1);
   }
-  if (name.rfind("std/collections/map<", 0) == 0) {
-    return "map" + name.substr(std::string("std/collections/map").size());
+  if (name.rfind(slashlessCanonicalMapType + "<", 0) == 0) {
+    return "map" + name.substr(slashlessCanonicalMapType.size());
   }
-  if (name.rfind("/std/collections/map<", 0) == 0) {
-    return "map" + name.substr(std::string("/std/collections/map").size());
+  if (name.rfind(rootedCanonicalMapType + "<", 0) == 0) {
+    return "map" + name.substr(rootedCanonicalMapType.size());
   }
   return name;
 }

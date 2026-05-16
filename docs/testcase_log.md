@@ -105,6 +105,17 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 21:11 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="emitter collection helper metadata delegation stays source locked" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: emitter binding-type map compatibility checks now derive canonical and
+  experimental map type paths through local collection path helpers instead of
+  direct map path fragments; the map surface inventory now observes 376
+  production traces and backing traces remain at 0.
 - 2026-05-16 21:07 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer struct return helpers keep bare map access canonical forwarding,ir lowerer struct return helpers keep canonical slash-path map access forwarding,ir lowerer struct return helpers keep canonical map access call forwarding,ir lowerer struct return helpers reject map access compatibility call forwarding,ir lowerer struct return helpers reject map tryAt compatibility call forwarding" --no-skip`;
