@@ -149,7 +149,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   experimental map path in the mutation lowerer; struct-type map local
   inference should build the canonical `MapValue` root from
   `collectionTypePath("map")` rather than a hard-coded canonical map path
-  literal.
+  literal; packed Result payload metadata should identify experimental map
+  payload bases through `isExperimentalCollectionTypeName` instead of a
+  hard-coded experimental map path.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

@@ -1919,6 +1919,11 @@ Task template:
       canonical `MapValue` root path; it now builds that root from
       `collectionTypePath("map")` and keeps focused name-expression coverage
       for the resulting `MapValue__*` path.
+    - 2026-05-16: Packed Result payload metadata no longer compares payload
+      bases to a hard-coded experimental map path; it now uses
+      `isExperimentalCollectionTypeName` and the ownership test no longer
+      classifies the packed-result helper as an allowed experimental-map
+      backing trace file.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.
