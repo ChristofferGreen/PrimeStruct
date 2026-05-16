@@ -433,6 +433,9 @@ Task template:
   Lowerer inline-call map-kind inference now uses the shared builtin and
   experimental collection classifiers instead of local rooted/canonical map type
   string checks.
+  Uninitialized-struct inference now recognizes explicit map args-pack access
+  through the published map-helper surface instead of direct rooted/canonical map
+  access strings.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic

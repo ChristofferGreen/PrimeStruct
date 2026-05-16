@@ -105,6 +105,17 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 20:31 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup type helper resolves method receiver struct paths from call expressions" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: uninitialized-struct inference now recognizes explicit map args-pack
+  access through the published map-helper surface instead of direct rooted or
+  canonical map access strings; the map surface inventory now observes 418
+  production traces and backing traces remain at 0.
 - 2026-05-16 20:28 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer inline map insert helper prefers semantic receiver facts,ir lowerer inline dispatch map helper deferral uses semantic receiver facts first,ir lowerer inline dispatch collection access fallback uses semantic receiver facts first" --no-skip`;

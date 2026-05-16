@@ -826,9 +826,14 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
         }
       }
       std::string accessName;
+      std::string publishedMapHelperName;
       const bool isExplicitMapArgsPackAt =
           !exprIn.isMethodCall &&
-          (scopedCallPath == "/map/at" || scopedCallPath == "/std/collections/map/at") &&
+          resolvePublishedStdlibSurfaceExprMemberName(
+              exprIn,
+              primec::StdlibSurfaceId::CollectionsMapHelpers,
+              publishedMapHelperName) &&
+          publishedMapHelperName == "at" &&
           exprIn.args.size() == 2;
       if ((getBuiltinArrayAccessName(exprIn, accessName) && exprIn.args.size() == 2) ||
           isExplicitMapArgsPackAt) {

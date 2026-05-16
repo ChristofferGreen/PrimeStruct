@@ -233,6 +233,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererInlineParamHelpers.cpp");
   const std::string packedResultSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererPackedResultHelpers.cpp");
+  const std::string uninitializedStructInferenceSource =
+      readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererUninitializedStructInference.cpp");
 
   REQUIRE(!mapSource.empty());
   REQUIRE(!experimentalSource.empty());
@@ -278,6 +280,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!inlinePackedArgsSource.empty());
   REQUIRE(!inlineParamHelpersSource.empty());
   REQUIRE(!packedResultSource.empty());
+  REQUIRE(!uninitializedStructInferenceSource.empty());
 
   CHECK(mapSource.find("import /std/collections/internal_map/*") == std::string::npos);
   CHECK(mapSource.find("import /std/collections/internal_vector/*") != std::string::npos);
@@ -500,6 +503,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(statementLowererSource.find("rewriteMapInsertHelperStatementToCanonical") != std::string::npos);
   CHECK(statementLowererSource.find("rewriteMapInsertHelperStatementToBuiltin") == std::string::npos);
   CHECK(statementLowererSource.find("/map/at(argsPack") == std::string::npos);
+  CHECK(uninitializedStructInferenceSource.find("scopedCallPath == \"/map/at\"") ==
+        std::string::npos);
+  CHECK(uninitializedStructInferenceSource.find("scopedCallPath == \"/std/collections/map/at\"") ==
+        std::string::npos);
+  CHECK(uninitializedStructInferenceSource.find("publishedMapHelperName == \"at\"") !=
+        std::string::npos);
   CHECK(statementLowererSource.find("callee->fullPath.rfind(\"/std/collections/internal_map/insertImpl__\", 0)") !=
         std::string::npos);
   CHECK(statementLowererSource.find("canonicalStatementMapHelperPath(\"insert\")") !=

@@ -281,7 +281,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   map backing paths through local collection path helpers; lowerer inline-call
   map-kind inference and semantic collection-family gates should use the shared
   builtin/experimental collection classifiers instead of local rooted/canonical
-  map type strings;
+  map type strings; uninitialized-struct inference should recognize explicit map
+  args-pack access through the published map-helper surface instead of direct
+  rooted/canonical map access strings;
   statement-expression map count/access target classification should reuse
   local experimental collection type and generated-specialization helpers
   instead of direct experimental map backing path text;
