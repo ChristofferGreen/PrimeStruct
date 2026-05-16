@@ -34,9 +34,6 @@
       const std::string &path,
       const BuiltinCollectionDispatchResolvers &dispatchResolvers,
       std::vector<std::string> &candidates) const;
-  bool isExplicitMapAccessStructReturnCompatibilityCall(
-      const Expr &candidate,
-      const BuiltinCollectionDispatchResolvers &dispatchResolvers) const;
   std::string specializedExperimentalMapStructReturnPath(
       const std::vector<std::string> &templateArgs) const;
   std::string inferMethodCollectionTypePathFromTypeText(const std::string &typeText) const;

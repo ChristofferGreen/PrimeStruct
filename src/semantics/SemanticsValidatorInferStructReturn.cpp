@@ -642,13 +642,10 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
     }
 
     const std::string resolvedCallee = resolveStructReturnCallTarget(expr);
-    const bool isExplicitMapAccessCompatibilityCall =
-        isExplicitMapAccessStructReturnCompatibilityCall(expr, builtinCollectionDispatchResolvers);
-    const std::string structReturnProbePath = isExplicitMapAccessCompatibilityCall ? expr.name : resolvedCallee;
-    auto resolvedCandidates = inferStructReturnCollectionHelperPathCandidates(structReturnProbePath);
+    auto resolvedCandidates = inferStructReturnCollectionHelperPathCandidates(resolvedCallee);
     pruneInferStructReturnBuiltinVectorAccessCandidates(
         expr,
-        structReturnProbePath,
+        resolvedCallee,
         builtinCollectionDispatchResolvers,
         resolvedCandidates);
     for (const auto &candidate : resolvedCandidates) {

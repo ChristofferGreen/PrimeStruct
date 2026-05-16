@@ -372,6 +372,8 @@ Task template:
   Collection-access resolution no longer treats rooted `/map/at*_ref`,
   slashless `map/at*`, or a `map` namespace prefix as canonical map access
   helper-name classifiers; removed-alias rejection remains separate.
+  Struct-return inference no longer carries the explicit `map/at` or
+  `/map/at` compatibility probe for map access helper return structs.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic

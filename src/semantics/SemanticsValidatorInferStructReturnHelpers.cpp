@@ -281,54 +281,6 @@ void SemanticsValidator::pruneInferStructReturnBuiltinVectorAccessCandidates(
       candidates, canonicalVectorCompatibilityHelperPathOrFallback(suffix));
 }
 
-bool SemanticsValidator::isExplicitMapAccessStructReturnCompatibilityCall(
-    const Expr &candidate,
-    const BuiltinCollectionDispatchResolvers &dispatchResolvers) const {
-  if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
-    return false;
-  }
-
-  std::string normalized = candidate.name;
-  if (!normalized.empty() && normalized.front() == '/') {
-    normalized.erase(normalized.begin());
-  }
-
-  std::string helperName;
-  if (normalized == "map/at") {
-    helperName = "at";
-  } else if (normalized == "map/at_unsafe") {
-    helperName = "at_unsafe";
-  } else {
-    return false;
-  }
-  if (hasDefinitionPath("/map/" + helperName) || candidate.args.empty()) {
-    return false;
-  }
-
-  size_t receiverIndex = 0;
-  if (hasNamedArguments(candidate.argNames)) {
-    bool foundValues = false;
-    for (size_t i = 0; i < candidate.args.size(); ++i) {
-      if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
-          *candidate.argNames[i] == "values") {
-        receiverIndex = i;
-        foundValues = true;
-        break;
-      }
-    }
-    if (!foundValues) {
-      receiverIndex = 0;
-    }
-  }
-  if (receiverIndex >= candidate.args.size()) {
-    return false;
-  }
-
-  std::string keyType;
-  std::string valueType;
-  return dispatchResolvers.resolveMapTarget(candidate.args[receiverIndex], keyType, valueType);
-}
-
 std::string SemanticsValidator::specializedExperimentalMapStructReturnPath(
     const std::vector<std::string> &templateArgs) const {
   auto stripWhitespace = [](const std::string &text) {
