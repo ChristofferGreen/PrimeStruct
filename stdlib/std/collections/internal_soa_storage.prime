@@ -69,7 +69,7 @@ namespace std {
          then() {
            soaColumnCheckShape<T>(this)
            soaColumnDropRange<T>(this, this.count)
-           /std/collections/internal_buffer_checked/bufferFree<uninitialized<T>>(this.data)
+           /std/collections/internal_buffer_checked/bufferFreeUninitialized<T>(this.data)
            assign(this.ownsData, false)
            assign(this.count, 0i32)
            assign(this.capacity, 0i32)
@@ -1781,7 +1781,7 @@ namespace std {
     [Pointer<uninitialized<T>> mut] grown{
         /std/collections/internal_buffer_checked/bufferAlloc<uninitialized<T>>(allocCount)}
     soaColumnMovePrefixToBuffer<T>(grown, values, values.field_count())
-    /std/collections/internal_buffer_checked/bufferFree<uninitialized<T>>(values.data)
+    /std/collections/internal_buffer_checked/bufferFreeUninitialized<T>(values.data)
     assign(values.data, grown)
     values.set_field_capacity(capacity)
   }

@@ -1669,6 +1669,20 @@ Task template:
       support; canonical-constructor-to-backing-helper rewrites; generated
       `map__` constructor reentry; and broad backing fallback blockers in
       setup-type/later collection-expression lowering.
+    - 2026-05-16: `stdlib/std/collections/map2.prime` now exists as an
+      isolated replacement candidate with no imports or references to
+      `map.prime`, `internal_map.prime`, `experimental_map.prime`, `/map/*`,
+      `Map__*`, or `CollectionsMap*`. It deliberately uses unique helper
+      names such as `map2Get` and `map2Insert` while the old C++ map hooks
+      still reserve canonical `at`/`insert`/method-sugar behavior; the final
+      cutover should delete the legacy hooks first, then rename `map2` and
+      its helpers to the canonical map surface.
+    - 2026-05-16: Primitive key equality moved out of `internal_map.prime`
+      into `stdlib/std/collections/equality.prime`, so the isolated `map2`
+      candidate can support string-key lookup without importing the old map
+      implementation. The vector/SoA uninitialized-buffer frees now route
+      through `bufferFreeUninitialized<T>` to avoid parse-sensitive explicit
+      nested template calls in statement position.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

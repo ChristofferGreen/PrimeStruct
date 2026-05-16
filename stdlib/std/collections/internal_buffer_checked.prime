@@ -16,6 +16,11 @@ namespace std {
     /std/intrinsics/memory/free(ptr)
   }
 
+  [public effects(heap_alloc), return<void>]
+  bufferFreeUninitialized<T>([Pointer<uninitialized<T>>] ptr) {
+    /std/intrinsics/memory/free(ptr)
+  }
+
   [public return<Pointer<T>>]
   bufferOffsetChecked<T>([Pointer<T>] ptr, [i32] index, [i32] count) {
     return(/std/intrinsics/memory/at(ptr, index, count))

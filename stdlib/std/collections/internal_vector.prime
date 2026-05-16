@@ -70,7 +70,7 @@ namespace std {
            [Pointer<uninitialized<T>>] dataPtr{vectorDataPtr<T>(this)}
            /std/collections/experimental_vector/vectorCheckShape<T>(this)
            /std/collections/experimental_vector/vectorDropRange<T>(this, this.fieldCount)
-           /std/collections/internal_buffer_checked/bufferFree<uninitialized<T>>(dataPtr)
+           /std/collections/internal_buffer_checked/bufferFreeUninitialized<T>(dataPtr)
            assign(this.ownsData, false)
            assign(this.fieldCount, 0i32)
            assign(this.fieldCapacity, 0i32)
@@ -214,7 +214,7 @@ namespace std {
               [Pointer<uninitialized<T>> mut] grown{
                   /std/collections/internal_buffer_checked/bufferAlloc<uninitialized<T>>(allocCount)}
               vectorMovePrefixToBuffer<T>(grown, values, values.field_count())
-              /std/collections/internal_buffer_checked/bufferFree<uninitialized<T>>(values.data)
+              /std/collections/internal_buffer_checked/bufferFreeUninitialized<T>(values.data)
               assign(values.data, grown)
               values.set_field_capacity(capacity)
             },
