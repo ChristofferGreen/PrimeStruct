@@ -290,7 +290,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   collection classifiers and constructor surface metadata instead of direct map
   type and constructor path strings; binding type normalization should recognize
   map types through shared collection classifiers instead of direct
-  rooted/canonical map type strings;
+  rooted/canonical map type strings; inference base-kind and dispatch setup
+  should recognize map family type text through shared collection classifiers
+  instead of direct rooted/canonical map strings;
   statement-expression map count/access target classification should reuse
   local experimental collection type and generated-specialization helpers
   instead of direct experimental map backing path text;

@@ -241,6 +241,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererSetupTypeDeclaredCollectionInference.cpp");
   const std::string bindingTypeHelpersSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererBindingTypeHelpers.cpp");
+  const std::string inferenceDispatchSetupSource =
+      readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererLowerInferenceDispatchSetup.cpp");
+  const std::string inferenceBaseKindSource =
+      readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererLowerInferenceBaseKindHelpers.cpp");
 
   REQUIRE(!mapSource.empty());
   REQUIRE(!experimentalSource.empty());
@@ -290,6 +294,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!structSlotLayoutSource.empty());
   REQUIRE(!declaredCollectionInferenceSource.empty());
   REQUIRE(!bindingTypeHelpersSource.empty());
+  REQUIRE(!inferenceDispatchSetupSource.empty());
+  REQUIRE(!inferenceBaseKindSource.empty());
 
   CHECK(mapSource.find("import /std/collections/internal_map/*") == std::string::npos);
   CHECK(mapSource.find("import /std/collections/internal_vector/*") != std::string::npos);
@@ -533,6 +539,16 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(bindingTypeHelpersSource.find("name == \"/map\"") ==
         std::string::npos);
   CHECK(bindingTypeHelpersSource.find("name == \"std/collections/map\"") ==
+        std::string::npos);
+  CHECK(inferenceDispatchSetupSource.find(
+            "isBuiltinCollectionTypeName(normalized, \"map\")") !=
+        std::string::npos);
+  CHECK(inferenceDispatchSetupSource.find("normalized == \"std/collections/map\"") ==
+        std::string::npos);
+  CHECK(inferenceBaseKindSource.find(
+            "isBuiltinCollectionTypeName(normalized, \"map\")") !=
+        std::string::npos);
+  CHECK(inferenceBaseKindSource.find("normalized == \"std/collections/map\"") ==
         std::string::npos);
   CHECK(statementLowererSource.find("callee->fullPath.rfind(\"/std/collections/internal_map/insertImpl__\", 0)") !=
         std::string::npos);

@@ -443,6 +443,9 @@ Task template:
   metadata instead of direct map type and constructor path strings.
   Binding type normalization now recognizes map types through shared collection
   classifiers instead of direct rooted/canonical map type strings.
+  Inference base-kind and dispatch setup now recognize map family type text
+  through shared collection classifiers instead of direct rooted/canonical map
+  strings.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic

@@ -156,11 +156,8 @@ bool isDispatchSetupMapFamilyText(const std::string &familyText) {
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
-  const std::string experimentalMapType =
-      experimentalCollectionTypePath("map", "Map", false);
-  return normalized == "map" || normalized == "std/collections/map" ||
-         normalized == experimentalMapType ||
-         normalized.rfind(experimentalMapType + "__", 0) == 0;
+  return isBuiltinCollectionTypeName(normalized, "map") ||
+         isExperimentalCollectionTypeName(normalized, "map", "Map");
 }
 
 bool inferDispatchSetupMapKindsFromTypeText(const std::string &typeText,
