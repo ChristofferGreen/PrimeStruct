@@ -237,8 +237,6 @@ std::string selectHelperOverloadPath(const Expr &expr, const std::string &resolv
   auto isMapEntryConstructorPath = [](const std::string &path) {
     return path == "/std/collections/map/entry" ||
            path.rfind("/std/collections/map/entry__", 0) == 0 ||
-           path == "/map/entry" ||
-           path.rfind("/map/entry__", 0) == 0 ||
            path == "/std/collections/experimental_map/entry" ||
            path.rfind("/std/collections/experimental_map/entry__", 0) == 0;
   };

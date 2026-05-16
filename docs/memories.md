@@ -128,11 +128,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Updated: 2026-05-16
 - Tags: semantics, ir, collections
 - Fact: Rooted retired public map constructor aliases such as
-  `/std/collections/mapSingle` and `/std/collections/mapPair` must not be
-  treated as canonical map constructors; unqualified names remain separate
-  legacy/internal compatibility surfaces, and metadata-backed constructor
-  rewrites must not synthesize fixed-arity replacements for them or keep no-op
-  map rewrite shims alive.
+  `/std/collections/mapSingle`, `/std/collections/mapPair`, and
+  `/map/entry` must not be treated as canonical map constructors; unqualified
+  names remain separate legacy/internal compatibility surfaces, and
+  metadata-backed constructor rewrites must not synthesize fixed-arity
+  replacements for them or keep no-op map rewrite shims alive.
 - Evidence: `isBuiltinCanonicalMapConstructorExpr(...)` and
   `isMapConstructorDirectTargetPath(...)` now only accept the public rooted
   `/std/collections/map/map` constructor path, while `MapConstructorHelpers.h`
@@ -141,7 +141,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   constructor-backed binding and parameter map-value checks no longer
   classify fixed-arity `mapSingle`/`mapPair`-style names as canonical
   constructors; lowerer assignment/init/packed-Result paths no longer rewrite
-  public map constructors to experimental-map fixed-arity helpers.
+  public map constructors to experimental-map fixed-arity helpers; semantic
+  call resolution and template-monomorph overload selection no longer
+  classify rooted `/map/entry` spellings as map entry constructors.
 
 ### semantic-memory-policy-uses-runner-headroom
 - Updated: 2026-05-14

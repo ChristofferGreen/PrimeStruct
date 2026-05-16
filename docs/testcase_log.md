@@ -35,8 +35,32 @@
   is stale after the map stdlib-ownership cutover; it still expects variadic
   `args<map<K, V>>` method-sugar count fallback to resolve through the retired
   map compatibility path.
+- `PrimeStruct_semantics_tests --test-case="helper-wrapped map constructors infer canonical auto locals"`
+  is stale after the map stdlib-ownership cutover; it still imports
+  `internal_map`-style map wrappers and now fails with
+  `unknown call target: /std/collections/map/tryAt` while current
+  `MapValue` surface constructor coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests PrimeStruct_compile_run_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib map constructors accept explicit canonical map struct fields"`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native rejects map constructor literal parity with canonical entries"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` |
+  failures: none | notes: rooted `/map/entry` no longer classifies as a map
+  entry constructor in semantic call resolution or template-monomorph overload
+  selection; canonical `/std/collections/map/entry` entry-args coverage still
+  passes.
+- 2026-05-16 local | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="helper-wrapped map constructors infer canonical auto locals,inferred canonical map returns rewrite canonical constructors,stdlib map constructors accept explicit canonical map struct fields"` |
+  failures: stale helper-wrapped map constructor auto-inference fixture |
+  notes: only the helper-wrapped case failed with
+  `unknown call target: /std/collections/map/tryAt`; the two current canonical
+  constructor cases in the same command passed, and the narrower current
+  `stdlib map constructors accept explicit canonical map struct fields` rerun
+  passed separately.
 - 2026-05-16 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_compile_run_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;

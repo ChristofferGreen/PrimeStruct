@@ -1764,6 +1764,11 @@ Task template:
       `/std/collections/experimental_map/mapNew`/`mapSingle`/fixed-arity
       backing helpers when assigning, initializing, or packing experimental
       map structs.
+    - 2026-05-16: Semantic call resolution and template-monomorph overload
+      selection no longer classify rooted `/map/entry` or generated
+      `/map/entry__*` spellings as map entry constructors. Canonical
+      `/std/collections/map/entry` remains covered only for the still-existing
+      entry-args path while that old path is retired separately.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.
