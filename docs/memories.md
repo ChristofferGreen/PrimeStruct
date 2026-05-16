@@ -306,6 +306,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   semantic infer collection-dispatch setup should resolve canonical map
   access helper names and namespaces through stdlib surface metadata instead
   of direct path text;
+  semantic expression collection-dispatch setup should resolve canonical map
+  access helper names through stdlib surface metadata instead of direct path
+  text;
   generated collection struct classification should derive the canonical map
   `MapValue__*` prefix through `collectionTypePath("map")` instead of
   carrying a split-string map root.

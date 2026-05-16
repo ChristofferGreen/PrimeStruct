@@ -11,10 +11,10 @@ bool isCanonicalMapAccessHelperName(const std::string &helperName) {
 }
 
 bool isStdNamespacedCanonicalMapAccessPath(const std::string &path) {
-  return path == "/std/collections/map/at" ||
-         path == "/std/collections/map/at_ref" ||
-         path == "/std/collections/map/at_unsafe" ||
-         path == "/std/collections/map/at_unsafe_ref";
+  std::string helperName;
+  return resolvePublishedCollectionHelperResolvedPath(
+             path, StdlibSurfaceId::CollectionsMapHelpers, helperName) &&
+         isCanonicalMapAccessHelperName(helperName);
 }
 
 } // namespace
