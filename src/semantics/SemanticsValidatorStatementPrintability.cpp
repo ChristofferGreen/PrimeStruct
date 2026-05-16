@@ -27,6 +27,17 @@ ReturnKind returnKindForStatementBinding(const BindingInfo &binding) {
   return returnKindForTypeName(binding.typeName);
 }
 
+bool isUnspecializedExperimentalMapBackingBaseForPrintability(std::string base) {
+  base = normalizeBindingTypeName(std::move(base));
+  if (!base.empty() && base.front() == '/') {
+    base.erase(base.begin());
+  }
+  const size_t leafStart = base.find_last_of('/');
+  const std::string leaf =
+      leafStart == std::string::npos ? base : base.substr(leafStart + 1);
+  return leaf == "Map" && isExperimentalCollectionBackingTypeName("map", "Map", base);
+}
+
 } // namespace
 
 bool SemanticsValidator::isStringStatementExpr(const Expr &arg,
@@ -130,9 +141,7 @@ bool SemanticsValidator::isStringStatementExpr(const Expr &arg,
               return false;
             }
             const std::string normalizedBase = normalizeBindingTypeName(base);
-            if (normalizedBase == "Map" ||
-                normalizedBase == "std/collections/experimental_map/Map" ||
-                normalizedBase == "/std/collections/experimental_map/Map") {
+            if (isUnspecializedExperimentalMapBackingBaseForPrintability(normalizedBase)) {
               return false;
             }
             if (isMapCollectionTypeName(normalizedBase)) {

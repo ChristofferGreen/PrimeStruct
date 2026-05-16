@@ -1982,6 +1982,10 @@ Task template:
       longer hard-codes unspecialized or generated experimental map backing
       paths; both now route through the shared experimental collection backing
       helper.
+    - 2026-05-16: Statement printability no longer hard-codes the
+      unspecialized experimental map backing return type exclusion; it now
+      routes that classifier through the shared experimental collection
+      backing helper.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.
