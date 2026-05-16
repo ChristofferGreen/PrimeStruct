@@ -227,6 +227,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   IR inference dispatch map-family detection should derive unspecialized and
   generated experimental map backing bases through
   `experimentalCollectionTypePath`;
+  statement-binding metadata should derive generated experimental map backing
+  prefixes through `experimentalCollectionTypePath`;
   generated collection struct classification should derive the canonical map
   `MapValue__*` prefix through `collectionTypePath("map")` instead of
   carrying a split-string map root.

@@ -76,7 +76,9 @@ bool resolveSpecializedExperimentalMapStructPath(const std::string &typeText, st
   if (!normalizedType.empty() && normalizedType.front() != '/') {
     normalizedType.insert(normalizedType.begin(), '/');
   }
-  if (normalizedType.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
+  const std::string experimentalMapPrefix =
+      experimentalCollectionTypePath("map", "Map") + "__";
+  if (normalizedType.rfind(experimentalMapPrefix, 0) == 0) {
     structPathOut = normalizedType;
     return true;
   }
