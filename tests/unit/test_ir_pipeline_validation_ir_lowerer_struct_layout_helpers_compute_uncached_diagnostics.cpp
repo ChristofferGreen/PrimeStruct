@@ -310,6 +310,17 @@ TEST_CASE("ir lowerer struct layout helpers classify layout transforms") {
   CHECK(primec::ir_lowerer::isLayoutQualifierName("align_kbytes"));
   CHECK_FALSE(primec::ir_lowerer::isLayoutQualifierName("i32"));
 
+  primec::ir_lowerer::BindingTypeLayout mapLayout;
+  std::string mapStructTypeName;
+  std::string layoutError;
+  CHECK(primec::ir_lowerer::classifyBindingTypeLayout(
+      {"/std/collections/experimental_map/Map__ti32_i64", {}},
+      mapLayout,
+      mapStructTypeName,
+      layoutError));
+  CHECK(mapStructTypeName == "/std/collections/experimental_map/Map__ti32_i64");
+  CHECK(layoutError.empty());
+
   primec::Expr podField;
   primec::Transform podTransform;
   podTransform.name = "pod";

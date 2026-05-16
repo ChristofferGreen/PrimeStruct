@@ -1655,6 +1655,9 @@ TEST_CASE("ir lowerer inference expr-kind call-fallback setup wires callback") {
     }
     return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   };
+  state.inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  };
 
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallFallbackSetup(
@@ -1665,10 +1668,21 @@ TEST_CASE("ir lowerer inference expr-kind call-fallback setup wires callback") {
           .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
           .isVectorCapacityCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
           .isEntryArgsName = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-          .inferStructExprPath =
-              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string{}; },
+          .inferStructExprPath = [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+            if (expr.kind == primec::Expr::Kind::Name && expr.name == "holder") {
+              return std::string{"/pkg/Holder"};
+            }
+            return std::string{};
+          },
           .resolveStructFieldSlot =
-              [](const std::string &, const std::string &, primec::ir_lowerer::StructSlotFieldInfo &) {
+              [](const std::string &structPath,
+                 const std::string &fieldName,
+                 primec::ir_lowerer::StructSlotFieldInfo &fieldInfo) {
+                if (structPath == "/pkg/Holder" && fieldName == "values") {
+                  fieldInfo.structPath = "/std/collections/experimental_map/Map__ti32_i64";
+                  fieldInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+                  return true;
+                }
                 return false;
               },
       },
@@ -1715,6 +1729,22 @@ TEST_CASE("ir lowerer inference expr-kind call-fallback setup wires callback") {
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(state.inferCallExprCountAccessGpuFallbackKind(bufferLoadExpr, locals, kindOut));
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Float32);
+
+  primec::Expr holderExpr;
+  holderExpr.kind = primec::Expr::Kind::Name;
+  holderExpr.name = "holder";
+  primec::Expr valuesFieldExpr;
+  valuesFieldExpr.kind = primec::Expr::Kind::Call;
+  valuesFieldExpr.name = "values";
+  valuesFieldExpr.isFieldAccess = true;
+  valuesFieldExpr.args.push_back(holderExpr);
+  primec::Expr mapCountExpr;
+  mapCountExpr.kind = primec::Expr::Kind::Call;
+  mapCountExpr.name = "count";
+  mapCountExpr.args.push_back(valuesFieldExpr);
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprCountAccessGpuFallbackKind(mapCountExpr, locals, kindOut));
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 
   primec::Expr unknownExpr;
   unknownExpr.kind = primec::Expr::Kind::Call;

@@ -21,7 +21,8 @@ bool isSpecializedExperimentalStructTypeName(const std::string &name) {
   if (!normalized.empty() && normalized.front() != '/') {
     normalized.insert(normalized.begin(), '/');
   }
-  return normalized.rfind("/std/collections/experimental_map/Map__", 0) == 0 ||
+  return (isExperimentalCollectionTypeName(normalized, "map", "Map") &&
+          normalized.find("__") != std::string::npos) ||
          (isExperimentalCollectionTypeName(normalized, "vector", "Vector") &&
           normalized.find("__") != std::string::npos);
 }

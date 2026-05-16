@@ -171,7 +171,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   should use that same local path-helper pattern; setup-type map struct
   classification, Result map identity, and statement-return collection
   normalization should derive canonical `MapValue` roots through collection
-  path helpers instead of split-string map roots; generated collection struct
+  path helpers instead of split-string map roots; lowerer fallback setup and
+  struct-layout generated map classifiers should derive experimental map
+  backing paths through shared collection helpers; generated collection struct
   classification should derive the canonical map `MapValue__*` prefix through
   `collectionTypePath("map")` instead of carrying a split-string map root.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated

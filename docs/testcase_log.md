@@ -57,6 +57,22 @@
   still uses the retired `/std/collections/mapPair` constructor path.
 
 ## Recent Test Runs
+- 2026-05-16 16:49 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer inference expr-kind call-fallback setup wires callback,ir lowerer struct layout helpers classify layout transforms"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` |
+  failures: none | notes: lowerer fallback setup and struct-layout
+  generated map classifiers now derive experimental map backing paths through
+  shared collection helpers; the map surface inventory now observes 960
+  production traces and backing traces now observe 205.
+- 2026-05-16 16:48 local | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer inference expr-kind call-fallback setup wires callback,ir lowerer struct layout helpers classify layout transforms"` |
+  failures: `ir lowerer inference expr-kind call-fallback setup wires callback`
+  | notes: newly added map-field count fixture threw `bad_function_call`
+  because the test harness had no `state.inferExprKind`; fixed by installing
+  the fixture callback before the rerun above.
 - 2026-05-16 16:45 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers resolve and validate map access targets,ir lowerer call helpers infer forwarded map access targets"`;

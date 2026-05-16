@@ -286,8 +286,11 @@ Task template:
   specializations through the same helper instead of a production C++ map path
   literal, and setup-type map struct classification, Result map identity, and
   statement-return collection normalization now derive canonical `MapValue`
-  roots through collection path helpers instead of split-string map roots. The
-  remaining production lowerer/emitter experimental-map traces
+  roots through collection path helpers instead of split-string map roots, and
+  lowerer fallback setup plus struct-layout generated map classifiers now
+  derive experimental map backing paths through shared collection helpers
+  instead of direct backing path roots. The remaining production lowerer/emitter
+  experimental-map traces
   are source-locked as temporary internal backing substrate by
   `test_stdlib_map_ownership.cpp`, and
   all production `src`/`include` experimental-map/`Map__*` backing traces are

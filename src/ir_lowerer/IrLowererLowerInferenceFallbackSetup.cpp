@@ -15,9 +15,8 @@ bool isVectorCollectionStructPath(const std::string &structPath) {
 }
 
 bool isMapCollectionStructPath(const std::string &structPath) {
-  return structPath == "/map" ||
-         structPath == "/std/collections/experimental_map/Map" ||
-         structPath.rfind("/std/collections/experimental_map/Map__", 0) == 0;
+  return structPath == normalizeBuiltinCollectionStructPath("map") ||
+         isExperimentalCollectionTypeName(structPath, "map", "Map");
 }
 
 } // namespace
