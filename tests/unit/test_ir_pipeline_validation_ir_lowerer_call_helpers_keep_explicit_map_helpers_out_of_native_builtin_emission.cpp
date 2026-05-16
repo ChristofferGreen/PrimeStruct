@@ -35,7 +35,7 @@ TEST_CASE("ir lowerer call helpers infer forwarded map access targets") {
   CHECK(info.isMapTarget);
   CHECK(info.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::String);
   CHECK(info.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
-  CHECK(info.structTypeName.rfind("/std/collections/experimental_map/Map__", 0) == 0);
+  CHECK(info.structTypeName.rfind("/std/collections/map/MapValue__", 0) == 0);
 }
 
 TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native builtin emission") {

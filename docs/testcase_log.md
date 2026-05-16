@@ -59,6 +59,17 @@
 ## Recent Test Runs
 - 2026-05-16 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers resolve and validate map access targets,ir lowerer call helpers infer forwarded map access targets"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` |
+  failures: none | notes: map access target struct-path inference now builds
+  canonical `MapValue` roots through `collectionTypePath("map")`; stale
+  access-target assertions now lock the stdlib-owned `MapValue__*` identity;
+  the map surface inventory now observes 974 production traces and backing
+  traces remain at 210.
+- 2026-05-16 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer struct type helpers resolve struct slot layouts from definition fields,ir lowerer struct type helpers resolve struct slots from definition field index"`;
   `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
   `python3 scripts/check_map_surface_trace_inventory.py --root .`;

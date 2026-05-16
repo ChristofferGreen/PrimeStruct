@@ -159,7 +159,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   instead of retired `mapPair`/builtin-map compatibility expectations;
   struct-slot map type recognition and specialized `MapValue` path
   construction should also derive that root through
-  `collectionTypePath("map")` instead of spelling it directly.
+  `collectionTypePath("map")` instead of spelling it directly; map access
+  target struct-path inference should likewise derive the root through
+  `collectionTypePath("map")`, and access-target tests should assert the
+  stdlib-owned `MapValue__*` identity instead of stale experimental `Map__*`
+  expectations.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
