@@ -133,6 +133,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string callResolutionSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprCallResolution.cpp");
+  const std::string callPathHelpersSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsCallPathHelpers.cpp");
   const std::string methodTargetResolutionSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprMethodTargetResolution.cpp");
@@ -278,6 +281,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!semanticsSource.empty());
   REQUIRE(!validatorSource.empty());
   REQUIRE(!callResolutionSource.empty());
+  REQUIRE(!callPathHelpersSource.empty());
   REQUIRE(!methodTargetResolutionSource.empty());
   REQUIRE(!templateCoreSource.empty());
   REQUIRE(!templateReceiverSource.empty());
@@ -399,6 +403,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(callResolutionSource.find("\"/map/entry\"") == std::string::npos);
   CHECK(callResolutionSource.find("\"/map/entry__\"") == std::string::npos);
   CHECK(callResolutionSource.find("directExplicitCallPath == \"/map/at\"") ==
+        std::string::npos);
+  CHECK(callPathHelpersSource.find("name.rfind(\"map/\", 0)") ==
+        std::string::npos);
+  CHECK(callPathHelpersSource.find("name.rfind(\"std/collections/map/\", 0)") ==
+        std::string::npos);
+  CHECK(callPathHelpersSource.find("resolveMapHelperMemberName(name, mapHelperName)") !=
         std::string::npos);
   CHECK(methodTargetResolutionSource.find("const std::string alias = \"/map/\" + resolvedHelperName") ==
         std::string::npos);

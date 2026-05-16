@@ -308,7 +308,9 @@ Task template:
   `map/` prefix check, and semantic method-target resolution now recognizes
   slashless map helper alias paths through
   `metadataBackedMapHelperRootAliasMethodName` instead of direct `map/`
-  prefix checks. The remaining production
+  prefix checks, and semantic simple-call path helpers now resolve map helper
+  member names through `collections.map_helpers` metadata instead of direct
+  slashless and canonical map prefix stripping. The remaining production
   lowerer/emitter
   experimental-map traces
   are source-locked as temporary internal backing substrate by

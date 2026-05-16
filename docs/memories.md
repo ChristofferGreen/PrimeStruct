@@ -543,7 +543,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `map/` prefix check; semantic method-target resolution now recognizes
   slashless map helper alias paths through
   `metadataBackedMapHelperRootAliasMethodName` instead of direct `map/`
-  prefix checks. The stale
+  prefix checks; semantic simple-call path helpers now resolve map helper
+  member names through `collections.map_helpers` metadata instead of direct
+  slashless and canonical map prefix stripping. The stale
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`
   return type, which allowed the emitter collection-type rooted map access

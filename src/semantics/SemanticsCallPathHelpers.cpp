@@ -16,6 +16,14 @@ std::string_view trimLeadingSlash(std::string_view text) {
   return text;
 }
 
+std::string stripTemplateSpecializationSuffix(std::string value) {
+  const size_t suffix = value.find("__t");
+  if (suffix != std::string::npos) {
+    value.erase(suffix);
+  }
+  return value;
+}
+
 bool resolveCanonicalVectorHelperMemberName(std::string_view path,
                                             std::string &memberNameOut) {
   memberNameOut.clear();
@@ -49,6 +57,23 @@ bool resolveCanonicalVectorHelperMemberName(std::string_view path,
   return true;
 }
 
+bool resolveMapHelperMemberName(std::string_view path,
+                                std::string &memberNameOut) {
+  memberNameOut.clear();
+  const StdlibSurfaceMetadata *metadata =
+      findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  if (metadata == nullptr) {
+    return false;
+  }
+  const std::string_view memberName =
+      resolveStdlibSurfaceMemberName(*metadata, path);
+  if (memberName.empty() || memberName == "entry") {
+    return false;
+  }
+  memberNameOut.assign(memberName);
+  return true;
+}
+
 } // namespace
 
 bool isAssignCall(const Expr &expr) {
@@ -69,13 +94,6 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  auto stripTemplateSpecializationSuffix = [](std::string value) {
-    const size_t suffix = value.find("__t");
-    if (suffix != std::string::npos) {
-      value.erase(suffix);
-    }
-    return value;
-  };
   const std::string targetName = nameToMatch == nullptr ? std::string() : std::string(nameToMatch);
   std::string name = expr.name;
   if (!name.empty() && name[0] == '/') {
@@ -88,27 +106,9 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   if (resolveCanonicalVectorHelperMemberName(name, vectorHelperName)) {
     return vectorHelperName == targetName;
   }
-  if (name.rfind("map/", 0) == 0) {
-    std::string alias = stripTemplateSpecializationSuffix(name.substr(std::string("map/").size()));
-    if (alias.find('/') == std::string::npos &&
-        (alias == "map" || alias == "count" || alias == "count_ref" ||
-         alias == "contains" || alias == "contains_ref" || alias == "tryAt" ||
-         alias == "tryAt_ref" || alias == "at" || alias == "at_ref" ||
-         alias == "at_unsafe" || alias == "at_unsafe_ref" ||
-         alias == "insert" || alias == "insert_ref")) {
-      return alias == targetName;
-    }
-  }
-  if (name.rfind("std/collections/map/", 0) == 0) {
-    std::string alias = stripTemplateSpecializationSuffix(name.substr(std::string("std/collections/map/").size()));
-    if (alias.find('/') == std::string::npos &&
-        (alias == "map" || alias == "count" || alias == "count_ref" ||
-         alias == "contains" || alias == "contains_ref" || alias == "tryAt" ||
-         alias == "tryAt_ref" || alias == "at" || alias == "at_ref" ||
-         alias == "at_unsafe" || alias == "at_unsafe_ref" ||
-         alias == "insert" || alias == "insert_ref")) {
-      return alias == targetName;
-    }
+  std::string mapHelperName;
+  if (resolveMapHelperMemberName(name, mapHelperName)) {
+    return mapHelperName == targetName;
   }
   if (name.find('/') != std::string::npos) {
     return false;
