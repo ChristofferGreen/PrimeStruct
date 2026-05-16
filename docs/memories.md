@@ -65,7 +65,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   return-kind inference must not grant rooted `/map/*` helpers builtin map
   return kinds; collection-dispatch setup inference follows the same
   canonical-only helper-name rule, and infer-definition deferred alias
-  detection must ignore rooted `/map/at*` resolved paths.
+  detection must ignore rooted `/map/at*` resolved paths; late map access
+  validation follows the same canonical-only helper-name rule.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -85,7 +86,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   inference no longer treats rooted `/map/at*_ref` resolved paths or a `map`
   namespace prefix as canonical map access helper-name classifiers;
   infer-definition deferred map alias detection no longer treats rooted
-  `/map/at*` resolved paths as map access helpers.
+  `/map/at*` resolved paths as map access helpers, and late map access
+  validation no longer treats slashless `map/at*_ref` names or a `map`
+  namespace prefix as canonical map access helper names.
 
 ### map-constructor-normalization-uses-public-path
 - Updated: 2026-05-16

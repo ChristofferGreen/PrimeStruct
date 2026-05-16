@@ -21,13 +21,11 @@ bool getCanonicalMapAccessBuiltinName(const Expr &candidate,
   if (!normalizedName.empty() && normalizedName.front() == '/') {
     normalizedName.erase(normalizedName.begin());
   }
-  if (normalizedName == "map/at_ref" ||
-      normalizedName == "std/collections/map/at_ref") {
+  if (normalizedName == "std/collections/map/at_ref") {
     helperOut = "at_ref";
     return true;
   }
-  if (normalizedName == "map/at_unsafe_ref" ||
-      normalizedName == "std/collections/map/at_unsafe_ref") {
+  if (normalizedName == "std/collections/map/at_unsafe_ref") {
     helperOut = "at_unsafe_ref";
     return true;
   }
@@ -35,8 +33,7 @@ bool getCanonicalMapAccessBuiltinName(const Expr &candidate,
   if (!namespacePrefix.empty() && namespacePrefix.front() == '/') {
     namespacePrefix.erase(namespacePrefix.begin());
   }
-  if ((namespacePrefix == "map" ||
-       namespacePrefix == "std/collections/map") &&
+  if (namespacePrefix == "std/collections/map" &&
       (candidate.name == "at_ref" || candidate.name == "at_unsafe_ref")) {
     helperOut = candidate.name;
     return true;

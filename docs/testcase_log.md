@@ -48,6 +48,16 @@
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical namespaced map access helpers accept experimental map values,stdlib namespaced map access helpers accept imported stdlib wrappers,collected diagnostics ignore imported canonical map access helper calls,explicit canonical map access helpers accept canonical map values"`;
   `python3 scripts/check_map_surface_trace_inventory.py --root .`;
   `python3 scripts/check_map_backing_traces.py --root .` |
+  failures: none | notes: late map access validation no longer treats
+  slashless `map/at*_ref` names or a `map` namespace prefix as canonical map
+  access helper names; canonical stdlib map access validation still passes,
+  and the map surface inventory now observes 1110 production traces.
+- 2026-05-16 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical namespaced map access helpers accept experimental map values,stdlib namespaced map access helpers accept imported stdlib wrappers,collected diagnostics ignore imported canonical map access helper calls,explicit canonical map access helpers accept canonical map values"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` |
   failures: none | notes: infer-definition deferred map alias detection no
   longer treats rooted `/map/at*` resolved paths as map access helpers;
   canonical stdlib map access validation still passes, and the map surface

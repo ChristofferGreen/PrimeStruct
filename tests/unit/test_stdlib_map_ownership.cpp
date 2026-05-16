@@ -148,6 +148,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string inferDefinitionSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorInferDefinition.cpp");
+  const std::string lateMapAccessBuiltinsSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorExprLateMapAccessBuiltins.cpp");
   const std::string scalarPointerMemorySource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprScalarPointerMemory.cpp");
@@ -189,6 +192,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!inferCollectionDispatchSource.empty());
   REQUIRE(!inferCollectionDispatchSetupSource.empty());
   REQUIRE(!inferDefinitionSource.empty());
+  REQUIRE(!lateMapAccessBuiltinsSource.empty());
   REQUIRE(!scalarPointerMemorySource.empty());
   REQUIRE(!argumentValidationCollectionsSource.empty());
   REQUIRE(!collectionAccessValidationSource.empty());
@@ -282,6 +286,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inferCollectionDispatchSetupSource.find("expr.namespacePrefix == \"map\"") ==
         std::string::npos);
   CHECK(inferDefinitionSource.find("resolvedPath == \"/map/at\"") ==
+        std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find("normalizedName == \"map/at_ref\"") ==
+        std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find("namespacePrefix == \"map\"") ==
         std::string::npos);
   CHECK(scalarPointerMemorySource.find("isExplicitMapAccessHelperPath") ==
         std::string::npos);
