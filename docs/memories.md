@@ -294,6 +294,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   builtin path helpers should use shared experimental map root/path helpers;
   semantic `try` builtin validation should obtain canonical map tryAt helper
   paths from stdlib surface metadata instead of direct path text;
+  semantic infer pre-dispatch map helper visibility checks should resolve
+  canonical helper names through stdlib surface metadata instead of direct
+  path text;
   generated collection struct classification should derive the canonical map
   `MapValue__*` prefix through `collectionTypePath("map")` instead of
   carrying a split-string map root.

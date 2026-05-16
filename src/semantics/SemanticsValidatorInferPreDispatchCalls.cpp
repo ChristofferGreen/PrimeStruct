@@ -434,28 +434,31 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
       auto hasVisibleStdlibMapMethodDefinition = [&](const std::string &path) {
         return hasImportedDefinitionPath(path) || hasDeclaredDefinitionPath(path);
       };
+      auto resolveStdlibMapMethodHelperName = [&](const std::string &path,
+                                                  std::string &helperNameOut) {
+        return resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(
+            path, helperNameOut);
+      };
+      auto isMapMethodWithBuiltinReturn = [&](std::string_view helperName) {
+        return helperName == "contains" || helperName == "contains_ref" ||
+               helperName == "tryAt" || helperName == "tryAt_ref" ||
+               helperName == "at" || helperName == "at_ref" ||
+               helperName == "at_unsafe" || helperName == "at_unsafe_ref";
+      };
+      auto isMapMethodNeedingVisibleDefinition = [&](std::string_view helperName) {
+        return isMapMethodWithBuiltinReturn(helperName) ||
+               helperName == "insert" || helperName == "insert_ref";
+      };
       auto isVisibleStdlibMapMethodWithBuiltinReturn = [&](const std::string &path) {
-        return (path == "/std/collections/map/contains" ||
-                path == "/std/collections/map/contains_ref" ||
-                path == "/std/collections/map/tryAt" ||
-                path == "/std/collections/map/tryAt_ref" ||
-                path == "/std/collections/map/at" ||
-                path == "/std/collections/map/at_ref" ||
-                path == "/std/collections/map/at_unsafe" ||
-                path == "/std/collections/map/at_unsafe_ref") &&
+        std::string helperName;
+        return resolveStdlibMapMethodHelperName(path, helperName) &&
+               isMapMethodWithBuiltinReturn(helperName) &&
                hasVisibleStdlibMapMethodDefinition(path);
       };
       auto isMissingStdlibMapMethodDefinition = [&](const std::string &path) {
-        return (path == "/std/collections/map/contains" ||
-                path == "/std/collections/map/contains_ref" ||
-                path == "/std/collections/map/tryAt" ||
-                path == "/std/collections/map/tryAt_ref" ||
-                path == "/std/collections/map/at" ||
-                path == "/std/collections/map/at_ref" ||
-                path == "/std/collections/map/at_unsafe" ||
-                path == "/std/collections/map/at_unsafe_ref" ||
-                path == "/std/collections/map/insert" ||
-                path == "/std/collections/map/insert_ref") &&
+        std::string helperName;
+        return resolveStdlibMapMethodHelperName(path, helperName) &&
+               isMapMethodNeedingVisibleDefinition(helperName) &&
                !hasVisibleStdlibMapMethodDefinition(path);
       };
       if (logicalMethodResolved == "/file_error/why" ||

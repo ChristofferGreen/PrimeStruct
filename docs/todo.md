@@ -2123,6 +2123,10 @@ Task template:
     - 2026-05-16: Semantic `try` builtin validation no longer hard-codes
       canonical map tryAt helper paths; it now obtains them from stdlib
       surface metadata.
+    - 2026-05-16: Semantic infer pre-dispatch map helper visibility checks no
+      longer hard-code canonical map helper paths; they now resolve helper
+      names through stdlib surface metadata before checking builtin return
+      and missing-definition behavior.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.
