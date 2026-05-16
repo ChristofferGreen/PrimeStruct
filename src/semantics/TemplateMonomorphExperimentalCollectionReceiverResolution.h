@@ -484,22 +484,22 @@ bool resolvesExperimentalVectorValueReceiver(const Expr *receiverExpr,
 }
 
 std::string canonicalMapHelperUnknownTargetPath(const std::string &resolvedPath) {
-  if (resolvedPath == "/std/collections/map/count" || resolvedPath == "/map/count") {
+  if (resolvedPath == "/std/collections/map/count") {
     return "/std/collections/map/count";
   }
-  if (resolvedPath == "/std/collections/map/contains" || resolvedPath == "/map/contains") {
+  if (resolvedPath == "/std/collections/map/contains") {
     return "/std/collections/map/contains";
   }
-  if (resolvedPath == "/std/collections/map/tryAt" || resolvedPath == "/map/tryAt") {
+  if (resolvedPath == "/std/collections/map/tryAt") {
     return "/std/collections/map/tryAt";
   }
-  if (resolvedPath == "/std/collections/map/at" || resolvedPath == "/map/at") {
+  if (resolvedPath == "/std/collections/map/at") {
     return "/std/collections/map/at";
   }
-  if (resolvedPath == "/std/collections/map/at_unsafe" || resolvedPath == "/map/at_unsafe") {
+  if (resolvedPath == "/std/collections/map/at_unsafe") {
     return "/std/collections/map/at_unsafe";
   }
-  if (resolvedPath == "/std/collections/map/insert" || resolvedPath == "/map/insert") {
+  if (resolvedPath == "/std/collections/map/insert") {
     return "/std/collections/map/insert";
   }
   return {};

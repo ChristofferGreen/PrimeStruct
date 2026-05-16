@@ -374,6 +374,9 @@ Task template:
   helper-name classifiers; removed-alias rejection remains separate.
   Struct-return inference no longer carries the explicit `map/at` or
   `/map/at` compatibility probe for map access helper return structs.
+  Template monomorphization no longer canonicalizes unknown-target
+  diagnostics from rooted `/map/{count,contains,tryAt,at,at_unsafe,insert}`
+  helper paths to `/std/collections/map/*`.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic

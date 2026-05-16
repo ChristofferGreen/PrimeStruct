@@ -71,7 +71,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   printability shortcuts, collection-access resolution keeps removed-alias
   rejection separate from canonical helper-name classification, and
   struct-return inference should not carry an explicit `map/at` or `/map/at`
-  compatibility probe for map access helper return structs.
+  compatibility probe for map access helper return structs; template
+  monomorphization should not canonicalize unknown-target diagnostics from
+  rooted `/map/*` helper paths to `/std/collections/map/*`.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -99,7 +101,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   no longer treats rooted `/map/at*_ref`, slashless `map/at*`, or a `map`
   namespace prefix as canonical map access helper-name classifiers;
   struct-return inference no longer probes explicit `map/at` or `/map/at`
-  compatibility calls for map access helper return structs.
+  compatibility calls for map access helper return structs; template
+  monomorphization no longer rewrites rooted `/map/{count,contains,tryAt,at,
+  at_unsafe,insert}` unknown-target diagnostics to
+  `/std/collections/map/*`.
 
 ### map-constructor-normalization-uses-public-path
 - Updated: 2026-05-16
