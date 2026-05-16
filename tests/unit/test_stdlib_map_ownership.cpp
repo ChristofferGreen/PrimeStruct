@@ -548,6 +548,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(emitterMethodMetadataSource.find("candidate.rfind(\"std/collections/map/\", 0)") ==
         std::string::npos);
+  CHECK(emitterMethodMetadataSource.find("typePath == \"/map\"") ==
+        std::string::npos);
   CHECK(emitterMethodMetadataSource.find("resolvePublishedCollectionSurfaceMemberName(\n"
                                          "          normalizeCollectionHelperPath(candidate),\n"
                                          "          StdlibSurfaceId::CollectionsMapHelpers") !=

@@ -385,7 +385,7 @@ std::string normalizeCollectionReceiverType(const std::string &typePath) {
       typePath == "Soa" "Vector") {
     return "soa" "_vector";
   }
-  if (isMapCollectionTypeNameLocal(typePath) || typePath == "/map") {
+  if (isMapCollectionTypeNameLocal(typePath)) {
     return "map";
   }
   return typePath;

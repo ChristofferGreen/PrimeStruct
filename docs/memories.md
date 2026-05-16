@@ -334,7 +334,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   of a direct slashless canonical map path string; emitter method metadata
   removed-alias detection should resolve both map import aliases and canonical
   map helper paths through the published stdlib surface member resolver instead
-  of direct map helper prefix checks;
+  of direct map helper prefix checks; emitter method metadata receiver
+  normalization should rely on the shared map type classifier instead of a
+  direct rooted `/map` type check;
   statement-expression map count/access target classification should reuse
   local experimental collection type and generated-specialization helpers
   instead of direct experimental map backing path text;
