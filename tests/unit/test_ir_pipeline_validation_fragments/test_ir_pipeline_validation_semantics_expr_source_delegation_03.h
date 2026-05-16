@@ -421,10 +421,10 @@
             "      [&](std::string message) -> bool {") !=
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
-            "bool SemanticsValidator::validateExprCountCapacityMapBuiltins") !=
+            "bool SemanticsValidator::validateExprCountCapacityBuiltins") !=
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
-            "auto failCountCapacityMapBuiltin = [&](std::string message) -> bool {") !=
+            "auto failCountCapacityBuiltin = [&](std::string message) -> bool {") !=
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "return failExprDiagnostic(expr, std::move(message));") !=

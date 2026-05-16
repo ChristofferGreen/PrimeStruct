@@ -666,7 +666,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   const std::filesystem::path exprPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExpr.cpp";
   const std::filesystem::path exprCountCapacityMapBuiltinsPath =
-      repoRoot / "src" / "semantics" / "SemanticsValidatorExprCountCapacityMapBuiltins.cpp";
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprCountCapacityBuiltins.cpp";
   const std::filesystem::path exprMethodCompatibilitySetupPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprMethodCompatibilitySetup.cpp";
   const std::filesystem::path inferPreDispatchCallsPath =

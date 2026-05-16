@@ -348,7 +348,7 @@
         std::string::npos);
   CHECK(validatorHeader.find("bool validateExprLateUnknownTargetFallbacks(") !=
         std::string::npos);
-  CHECK(validatorHeader.find("void prepareExprCountCapacityMapBuiltinContext(") !=
+  CHECK(validatorHeader.find("void prepareExprCountCapacityBuiltinContext(") !=
         std::string::npos);
   CHECK(validatorHeader.find("void prepareExprLateMapSoaBuiltinContext(") !=
         std::string::npos);

@@ -33,33 +33,14 @@ void SemanticsValidator::prepareExprLateBuiltinContext(
       };
 }
 
-void SemanticsValidator::prepareExprCountCapacityMapBuiltinContext(
-    bool shouldBuiltinValidateBareMapCountCall,
-    bool isNamespacedMapCountCall,
-    bool isResolvedMapCountCall,
-    const BuiltinCollectionDispatchResolverAdapters &dispatchResolverAdapters,
+void SemanticsValidator::prepareExprCountCapacityBuiltinContext(
     const BuiltinCollectionDispatchResolvers &dispatchResolvers,
-    ExprCountCapacityMapBuiltinContext &contextOut) {
+    ExprCountCapacityBuiltinContext &contextOut) {
   contextOut = {};
-  contextOut.shouldBuiltinValidateBareMapCountCall =
-      shouldBuiltinValidateBareMapCountCall;
-  contextOut.isNamespacedMapCountCall = isNamespacedMapCountCall;
-  contextOut.isResolvedMapCountCall = isResolvedMapCountCall;
   contextOut.resolveVectorTarget =
       [&](const Expr &target, std::string &elemTypeOut) {
         return dispatchResolvers.resolveVectorTarget(target, elemTypeOut);
       };
-  contextOut.resolveMapTarget =
-      [&](const Expr &target) {
-        std::string keyType;
-        std::string valueType;
-        return dispatchResolvers.resolveMapTarget(target, keyType, valueType) ||
-               dispatchResolvers.resolveExperimentalMapTarget(target, keyType,
-                                                              valueType) ||
-               this->isIndexedArgsPackMapReceiverTarget(target,
-                                                        dispatchResolvers);
-      };
-  contextOut.dispatchResolverAdapters = &dispatchResolverAdapters;
   contextOut.dispatchResolvers = &dispatchResolvers;
 }
 

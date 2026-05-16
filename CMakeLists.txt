@@ -157,7 +157,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorExprCollectionAccess.cpp
   src/semantics/SemanticsValidatorExprCollectionAccessValidation.cpp
   src/semantics/SemanticsValidatorExprCollectionCountCapacity.cpp
-  src/semantics/SemanticsValidatorExprCountCapacityMapBuiltins.cpp
+  src/semantics/SemanticsValidatorExprCountCapacityBuiltins.cpp
   src/semantics/SemanticsValidatorExprLateCollectionAccessFallbacks.cpp
   src/semantics/SemanticsValidatorExprLateFallbackBuiltins.cpp
   src/semantics/SemanticsValidatorExprCollectionPredicates.cpp

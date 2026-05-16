@@ -1173,21 +1173,17 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (handledLateBuiltin) {
       return true;
     }
-    ExprCountCapacityMapBuiltinContext countCapacityMapBuiltinContext;
-    prepareExprCountCapacityMapBuiltinContext(
-        shouldBuiltinValidateBareMapCountCall,
-        collectionDispatchSetup.isNamespacedMapCountCall,
-        collectionDispatchSetup.isResolvedMapCountCall,
-        dispatchBootstrap.dispatchResolverAdapters,
+    ExprCountCapacityBuiltinContext countCapacityBuiltinContext;
+    prepareExprCountCapacityBuiltinContext(
         dispatchBootstrap.dispatchResolvers,
-        countCapacityMapBuiltinContext);
-    bool handledCountCapacityMapBuiltin = false;
-    if (!validateExprCountCapacityMapBuiltins(
+        countCapacityBuiltinContext);
+    bool handledCountCapacityBuiltin = false;
+    if (!validateExprCountCapacityBuiltins(
             params, locals, expr, resolved, resolvedMethod,
-            countCapacityMapBuiltinContext, handledCountCapacityMapBuiltin)) {
+            countCapacityBuiltinContext, handledCountCapacityBuiltin)) {
       return false;
     }
-    if (handledCountCapacityMapBuiltin) {
+    if (handledCountCapacityBuiltin) {
       return true;
     }
     const bool resolvedUsesCanonicalSoaNamespace =

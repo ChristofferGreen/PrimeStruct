@@ -247,7 +247,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   const std::filesystem::path semanticsExprCollectionDispatchSetupPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionDispatchSetup.cpp";
   const std::filesystem::path semanticsExprCountCapacityMapBuiltinsPath =
-      repoRoot / "src" / "semantics" / "SemanticsValidatorExprCountCapacityMapBuiltins.cpp";
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprCountCapacityBuiltins.cpp";
   const std::filesystem::path semanticsExprCollectionPredicatesPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionPredicates.cpp";
   const std::filesystem::path semanticsExprCollectionAccessValidationPath =
@@ -301,7 +301,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
   const std::string semanticsStatementVectorHelpersSource =
       readText(semanticsStatementVectorHelpersPath);
 
-  CHECK(semanticsExprSource.find("validateExprCountCapacityMapBuiltins(") !=
+  CHECK(semanticsExprSource.find("validateExprCountCapacityBuiltins(") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("validateExprLateCallCompatibility(") !=
         std::string::npos);
@@ -390,7 +390,7 @@ TEST_CASE("semantics validator expr source delegation stays stable") {
             "bool SemanticsValidator::prepareExprCollectionDispatchSetup(") !=
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
-            "bool SemanticsValidator::validateExprCountCapacityMapBuiltins(") !=
+            "bool SemanticsValidator::validateExprCountCapacityBuiltins(") !=
         std::string::npos);
   CHECK(semanticsExprDirectCollectionFallbacksSource.find(
             "bool SemanticsValidator::validateExprDirectCollectionFallbacks(") !=

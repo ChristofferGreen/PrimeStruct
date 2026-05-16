@@ -250,10 +250,10 @@
             "contextOut.tryBuiltinContext.getDirectMapHelperCompatibilityPath =") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
-            "countCapacityMapBuiltinContext.shouldBuiltinValidateStdNamespacedVectorCountCall =") ==
+            "countCapacityBuiltinContext.shouldBuiltinValidateStdNamespacedVectorCountCall =") ==
         std::string::npos);
   CHECK(semanticsExprBuiltinContextSetupSource.find(
-            "contextOut.shouldBuiltinValidateStdNamespacedVectorCountCall =") !=
+            "contextOut.shouldBuiltinValidateStdNamespacedVectorCountCall =") ==
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "lateFallbackBuiltinContext.collectionAccessFallbackContext.isStdNamespacedVectorAccessCall =") ==
@@ -295,7 +295,7 @@
         std::string::npos);
   CHECK(semanticsExprSource.find("validateExprLateBuiltins(params, locals, expr, resolved,") !=
         std::string::npos);
-  CHECK(semanticsExprSource.find("validateExprCountCapacityMapBuiltins(") !=
+  CHECK(semanticsExprSource.find("validateExprCountCapacityBuiltins(") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("validateExprTryBuiltin(params, locals, expr,") ==
         std::string::npos);

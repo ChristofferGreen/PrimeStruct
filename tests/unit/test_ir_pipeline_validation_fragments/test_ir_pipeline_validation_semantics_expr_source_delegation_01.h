@@ -48,7 +48,7 @@
   const std::filesystem::path semanticsExprCollectionCountCapacityPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionCountCapacity.cpp";
   const std::filesystem::path semanticsExprCountCapacityMapBuiltinsPath =
-      repoRoot / "src" / "semantics" / "SemanticsValidatorExprCountCapacityMapBuiltins.cpp";
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprCountCapacityBuiltins.cpp";
   const std::filesystem::path semanticsExprCollectionAccessPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionAccess.cpp";
   const std::filesystem::path semanticsExprCollectionAccessValidationPath =
@@ -4571,8 +4571,9 @@
             "        dispatchBootstrap.dispatchResolverAdapters,") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
-            "prepareExprCountCapacityMapBuiltinContext(\n"
-            "        shouldBuiltinValidateBareMapCountCall,") !=
+            "prepareExprCountCapacityBuiltinContext(\n"
+            "        dispatchBootstrap.dispatchResolvers,\n"
+            "        countCapacityBuiltinContext);") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "        collectionDispatchSetup.shouldBuiltinValidateStdNamespacedVectorCountCall,") ==
@@ -4597,7 +4598,7 @@
             "    bool isNamespacedVectorCountCall = false;") ==
         std::string::npos);
   CHECK(semanticsExprPrivateValidationSource.find(
-            "struct ExprCountCapacityMapBuiltinContext {\n"
+            "struct ExprCountCapacityBuiltinContext {\n"
             "    bool shouldBuiltinValidateStdNamespacedVectorCountCall = false;") ==
         std::string::npos);
   CHECK(semanticsExprPrivateValidationSource.find(
@@ -4680,29 +4681,23 @@
             "const auto validateVectorCountBuiltinCall = [&]() -> bool {\n"
             "    handledOut = true;\n"
             "    if (!expr.templateArgs.empty()) {\n"
-            "      return failCountCapacityMapBuiltin(\n"
+            "      return failCountCapacityBuiltin(\n"
             "          \"count does not accept template arguments\");\n"
             "    }\n"
             "    if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {\n"
-            "      return failCountCapacityMapBuiltin(\"count does not accept block arguments\");\n"
+            "      return failCountCapacityBuiltin(\"count does not accept block arguments\");\n"
             "    }\n"
             "    if (expr.args.size() != 1) {\n"
-            "      return failCountCapacityMapBuiltin(\n"
+            "      return failCountCapacityBuiltin(\n"
             "          \"argument count mismatch for builtin count\");\n"
             "    }\n"
             "    return validateExpr(params, locals, expr.args.front());\n"
             "  };") != std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
-            "const auto validateVectorCountBuiltinPath = [&](bool allowBareMapRewrite) -> bool {\n"
+            "const auto validateVectorCountBuiltinPath = [&]() -> bool {\n"
             "    handledOut = true;\n"
-            "    if (allowBareMapRewrite) {\n"
-            "      if (std::optional<Expr> rewrittenMapHelperCall =\n"
-            "              tryRewriteBareMapCountBuiltinFallback()) {\n"
-            "        return validateExpr(params, locals, *rewrittenMapHelperCall);\n"
-            "      }\n"
-            "    }\n"
             "    return validateVectorCountBuiltinCall();\n"
-            "  };") != std::string::npos);
+          "  };") != std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "if (resolvedMethod &&\n"
             "      logicalResolvedMethod == \"/std/collections/vector/count\") {\n"
@@ -4714,13 +4709,13 @@
             "    if (resolvedMethod &&\n"
             "        isStdNamespacedVectorCompatibilityHelperPath(logicalResolvedMethod,\n"
             "                                                     \"count\")) {\n"
-            "      return validateVectorCountBuiltinPath(false);\n"
+            "      return validateVectorCountBuiltinPath();\n"
             "    }\n"
             "    if (shouldValidateVectorCountBuiltinFallback) {\n"
-            "      return validateVectorCountBuiltinPath(true);\n"
+            "      return validateVectorCountBuiltinPath();\n"
             "    }\n"
             "    return std::nullopt;\n"
-            "  };") != std::string::npos);
+          "  };") != std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "if (resolvedMethod &&\n"
             "      logicalResolvedMethod == \"/std/collections/vector/count\") {\n"
@@ -4733,9 +4728,6 @@
             "      !isStdNamespacedVectorCompatibilityDirectCall(expr.isMethodCall,\n"
             "                                                    resolveCalleePath(expr),\n"
             "                                                    \"count\") &&\n"
-            "      !context.isNamespacedMapCountCall && !context.isResolvedMapCountCall &&\n"
-            "      !isUnnamespacedMapCountBuiltinFallbackCall(expr, params, locals,\n"
-            "                                                 *dispatchResolverAdapters) &&\n"
             "      it == defMap_.end();") != std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "auto tryRewriteBareMapCountBuiltinFallback = [&]() -> std::optional<Expr> {\n"
@@ -4748,7 +4740,7 @@
             "      return std::nullopt;\n"
             "    }\n"
             "    return rewrittenMapHelperCall;\n"
-            "  };") != std::string::npos);
+            "  };") == std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
             "const auto validateVectorCountBuiltinFallback = [&]() -> bool {\n"
             "    handledOut = true;\n"
@@ -5044,20 +5036,20 @@
             "const auto validateVectorCapacityBuiltinCall = [&]() -> bool {\n"
             "    handledOut = true;\n"
             "    if (!expr.templateArgs.empty()) {\n"
-            "      return failCountCapacityMapBuiltin(\n"
+            "      return failCountCapacityBuiltin(\n"
             "          \"capacity does not accept template arguments\");\n"
             "    }\n"
             "    if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {\n"
-            "      return failCountCapacityMapBuiltin(\n"
+            "      return failCountCapacityBuiltin(\n"
             "          \"capacity does not accept block arguments\");\n"
             "    }\n"
             "    if (expr.args.size() != 1) {\n"
-            "      return failCountCapacityMapBuiltin(\n"
+            "      return failCountCapacityBuiltin(\n"
             "          \"argument count mismatch for builtin capacity\");\n"
             "    }\n"
             "    std::string elemType;\n"
             "    if (!context.resolveVectorTarget(expr.args.front(), elemType)) {\n"
-            "      return failCountCapacityMapBuiltin(\n"
+            "      return failCountCapacityBuiltin(\n"
             "          vectorCompatibilityRequiresVectorTargetDiagnostic(\"capacity\"));\n"
             "    }\n"
             "    return validateExpr(params, locals, expr.args.front());\n"

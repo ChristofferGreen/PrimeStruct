@@ -30,9 +30,9 @@
         std::string::npos);
   CHECK(validatorExpr.find("bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(") !=
         std::string::npos);
-  CHECK(validatorExprMain.find("prepareExprCountCapacityMapBuiltinContext(") !=
+  CHECK(validatorExprMain.find("prepareExprCountCapacityBuiltinContext(") !=
         std::string::npos);
-  CHECK(validatorExpr.find("void SemanticsValidator::prepareExprCountCapacityMapBuiltinContext(") !=
+  CHECK(validatorExpr.find("void SemanticsValidator::prepareExprCountCapacityBuiltinContext(") !=
         std::string::npos);
   CHECK(validatorExprMain.find("prepareExprLateMapSoaBuiltinContext(") !=
         std::string::npos);

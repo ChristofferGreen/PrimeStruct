@@ -164,30 +164,21 @@
                                 bool resolvedMethod,
                                 const ExprLateBuiltinContext &context,
                                 bool &handledOut);
-  struct ExprCountCapacityMapBuiltinContext {
-    bool shouldBuiltinValidateBareMapCountCall = false;
-    bool isNamespacedMapCountCall = false;
-    bool isResolvedMapCountCall = false;
+  struct ExprCountCapacityBuiltinContext {
     std::function<bool(const Expr &, std::string &)> resolveVectorTarget;
-    std::function<bool(const Expr &)> resolveMapTarget;
-    const BuiltinCollectionDispatchResolverAdapters *dispatchResolverAdapters = nullptr;
     const BuiltinCollectionDispatchResolvers *dispatchResolvers = nullptr;
   };
-  bool validateExprCountCapacityMapBuiltins(
+  bool validateExprCountCapacityBuiltins(
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals,
       const Expr &expr,
       const std::string &resolved,
       bool resolvedMethod,
-      const ExprCountCapacityMapBuiltinContext &context,
+      const ExprCountCapacityBuiltinContext &context,
       bool &handledOut);
-  void prepareExprCountCapacityMapBuiltinContext(
-      bool shouldBuiltinValidateBareMapCountCall,
-      bool isNamespacedMapCountCall,
-      bool isResolvedMapCountCall,
-      const BuiltinCollectionDispatchResolverAdapters &dispatchResolverAdapters,
+  void prepareExprCountCapacityBuiltinContext(
       const BuiltinCollectionDispatchResolvers &dispatchResolvers,
-      ExprCountCapacityMapBuiltinContext &contextOut);
+      ExprCountCapacityBuiltinContext &contextOut);
   struct ExprNamedArgumentBuiltinContext {
     bool hasVectorHelperCallResolution = false;
     std::function<bool(const Expr &)> isNamedArgsPackMethodAccessCall;

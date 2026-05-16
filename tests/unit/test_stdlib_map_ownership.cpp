@@ -136,7 +136,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string semanticsSource = readText(repoRoot() / "src" / "semantics" / "SemanticsValidate.cpp");
   const std::string countCapacityMapBuiltinSource =
       readText(repoRoot() / "src" / "semantics" /
-               "SemanticsValidatorExprCountCapacityMapBuiltins.cpp");
+               "SemanticsValidatorExprCountCapacityBuiltins.cpp");
   const std::string statementLowererSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererStatementCallEmission.cpp");
   const std::string lowerStatementsExprSource =
