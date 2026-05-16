@@ -39,7 +39,7 @@ bool isSpecializedExperimentalMapTypeText(const std::string &typeText) {
   if (!normalized.empty() && normalized.front() != '/') {
     normalized.insert(normalized.begin(), '/');
   }
-  return normalized.rfind("/std/collections/experimental_map/Map__", 0) == 0;
+  return normalized.rfind(experimentalCollectionTypePath("map", "Map") + "__", 0) == 0;
 }
 
 std::string resolveSemanticBindingTypeText(const SemanticProgram *semanticProgram,
@@ -170,7 +170,7 @@ bool resolveSpecializedExperimentalMapStructPathFromTypeText(const std::string &
   if (!normalizedType.empty() && normalizedType.front() != '/') {
     normalizedType.insert(normalizedType.begin(), '/');
   }
-  if (normalizedType.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
+  if (normalizedType.rfind(experimentalCollectionTypePath("map", "Map") + "__", 0) == 0) {
     structPathOut = normalizedType;
     return true;
   }
