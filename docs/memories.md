@@ -126,7 +126,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `/std/collections/map/<helper>` paths when canonical metadata exists; and
   emitter return-struct inference should not synthesize canonical
   `/std/collections/map/<suffix>` candidates from rooted `/map/<suffix>`
-  inputs.
+  inputs; unused rooted `/map/<access>` return-struct pruning should stay
+  deleted once no call site remains.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -210,7 +211,7 @@ This file stores durable session-derived facts that are useful in later work. Ke
   rooted-to-canonical map method helper preference; emitter return-struct
   inference no longer synthesizes canonical
   `/std/collections/map/<suffix>` candidates from rooted `/map/<suffix>`
-  inputs.
+  inputs; its unused rooted `/map/<access>` pruning lambda is also gone.
 
 ### map-constructor-normalization-uses-public-path
 - Updated: 2026-05-16

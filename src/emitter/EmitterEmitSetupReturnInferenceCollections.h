@@ -151,31 +151,6 @@
     }
     return candidates;
   };
-  auto pruneMapAccessStructReturnCompatibilityCandidates = [&](const std::string &path,
-                                                               std::vector<std::string> &candidates) {
-    std::string normalizedPath = path;
-    if (!normalizedPath.empty() && normalizedPath.front() != '/') {
-      if (normalizedPath.rfind("map/", 0) == 0 ||
-          normalizedPath.rfind("std/collections/map/", 0) == 0) {
-        normalizedPath.insert(normalizedPath.begin(), '/');
-      }
-    }
-    auto eraseCandidate = [&](const std::string &candidate) {
-      for (auto it = candidates.begin(); it != candidates.end();) {
-        if (*it == candidate) {
-          it = candidates.erase(it);
-        } else {
-          ++it;
-        }
-      }
-    };
-    if (normalizedPath.rfind("/map/", 0) == 0) {
-      const std::string suffix = normalizedPath.substr(std::string("/map/").size());
-      if (isCanonicalMapAccessHelperName(suffix)) {
-        eraseCandidate("/std/collections/map/" + suffix);
-      }
-    }
-  };
   auto pruneBuiltinVectorAccessStructReturnCandidates =
       [&](const Expr &candidate,
           const std::string &path,
