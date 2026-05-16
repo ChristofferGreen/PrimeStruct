@@ -77,7 +77,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   collection-access validation should not retarget rooted `/map/*`
   diagnostic targets to `/std/collections/map/*`; direct call resolution
   should not return a missing-target shortcut for rooted `/map/at*_ref`
-  access helper calls.
+  access helper calls, and diagnostic target formatting should not carry a
+  rooted `/map/count__t` specialization shortcut.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -111,7 +112,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `/std/collections/map/*`; collection-access validation no longer retargets
   rooted `/map/*` diagnostic targets to `/std/collections/map/*`; direct
   call resolution no longer returns a missing-target shortcut for rooted
-  `/map/at*_ref` access helper calls.
+  `/map/at*_ref` access helper calls; diagnostic target formatting no
+  longer carries a rooted `/map/count__t` specialization shortcut.
 
 ### map-constructor-normalization-uses-public-path
 - Updated: 2026-05-16

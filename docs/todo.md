@@ -381,6 +381,8 @@ Task template:
   diagnostic targets to `/std/collections/map/*`.
   Direct call resolution no longer returns a missing-target shortcut for
   rooted `/map/at*_ref` access helper calls.
+  Diagnostic target formatting no longer carries a rooted `/map/count__t`
+  specialization shortcut.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic

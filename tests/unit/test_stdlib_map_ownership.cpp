@@ -130,6 +130,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string surfacesSource = readText(collectionsFile("surfaces.psmeta"));
   const std::string registrySource = readText(repoRoot() / "src" / "StdlibSurfaceRegistry.cpp");
   const std::string semanticsSource = readText(repoRoot() / "src" / "semantics" / "SemanticsValidate.cpp");
+  const std::string validatorSource =
+      readText(repoRoot() / "src" / "semantics" / "SemanticsValidator.cpp");
   const std::string callResolutionSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprCallResolution.cpp");
@@ -198,6 +200,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!surfacesSource.empty());
   REQUIRE(!registrySource.empty());
   REQUIRE(!semanticsSource.empty());
+  REQUIRE(!validatorSource.empty());
   REQUIRE(!callResolutionSource.empty());
   REQUIRE(!templateCoreSource.empty());
   REQUIRE(!templateReceiverSource.empty());
@@ -282,6 +285,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(semanticsSource.find("\"/std/collections/map/insert_builtin\"") == std::string::npos);
   CHECK(semanticsSource.find("isCanonicalBuiltinMapReadHelperName") != std::string::npos);
   CHECK(semanticsSource.find("helperName = \"/std/collections/map/\" + helperName") !=
+        std::string::npos);
+  CHECK(validatorSource.find("path.rfind(\"/map/count__t\"") ==
         std::string::npos);
   CHECK(callResolutionSource.find("\"/map/entry\"") == std::string::npos);
   CHECK(callResolutionSource.find("\"/map/entry__\"") == std::string::npos);
