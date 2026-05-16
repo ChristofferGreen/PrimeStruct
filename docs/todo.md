@@ -1989,6 +1989,9 @@ Task template:
     - 2026-05-16: Collection return inference no longer hard-codes
       unspecialized or generated experimental map backing return paths; both
       now route through shared experimental collection backing classifiers.
+    - 2026-05-16: Semantic binding type helpers no longer hard-code
+      experimental map backing type names for map collection or return-kind
+      classification; they now reuse generic experimental collection helpers.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

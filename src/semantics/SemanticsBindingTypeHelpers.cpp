@@ -49,6 +49,17 @@ bool isExperimentalCollectionTypeBaseLocal(const std::string &base,
          base.rfind(rooted + "__", 0) == 0;
 }
 
+bool isUnspecializedExperimentalCollectionTypeBaseLocal(
+    const std::string &base,
+    std::string_view collectionName,
+    std::string_view typeName) {
+  const std::string bare =
+      experimentalCollectionTypePathLocal(collectionName, typeName);
+  const std::string rooted =
+      experimentalCollectionTypePathLocal(collectionName, typeName, true);
+  return base == typeName || base == bare || base == rooted;
+}
+
 bool hasExplicitBindingTypeTransform(const Expr &expr) {
   for (const auto &transform : expr.transforms) {
     if (transform.name == "effects" || transform.name == "capabilities") {
@@ -222,8 +233,8 @@ bool isMapCollectionTypeName(const std::string &name) {
          normalized == rootedMapValueRoot ||
          normalized.rfind(mapValueRoot + "__", 0) == 0 ||
          normalized.rfind(rootedMapValueRoot + "__", 0) == 0 ||
-         normalized == "std/collections/experimental_map/Map" ||
-         normalized == "/std/collections/experimental_map/Map";
+         isUnspecializedExperimentalCollectionTypeBaseLocal(
+             normalized, "map", "Map");
 }
 
 bool returnsMapCollectionType(const std::string &typeText) {
@@ -541,10 +552,7 @@ ReturnKind returnKindForTypeName(const std::string &name) {
       return ReturnKind::Array;
     }
     const bool isMapLike =
-        (base == "std/collections/experimental_map/Map" ||
-         base == "/std/collections/experimental_map/Map" ||
-         base.rfind("std/collections/experimental_map/Map__", 0) == 0 ||
-         base.rfind("/std/collections/experimental_map/Map__", 0) == 0);
+        base != "Map" && isExperimentalCollectionTypeBaseLocal(base, "map", "Map");
     if (isMapLike && args.size() == 2) {
       return ReturnKind::Array;
     }
