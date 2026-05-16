@@ -83,6 +83,16 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 17:48 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer inference call-return setup resolves canonical namespaced map access directly,ir lowerer call helpers resolve and validate map access targets,ir lowerer inference dispatch requires semantic try facts"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` | failures: none |
+  notes: IR inference dispatch map-family detection now builds the
+  experimental map backing base with `experimentalCollectionTypePath`; the map
+  surface inventory now observes 869 production traces and backing traces now
+  observe 114.
 - 2026-05-16 17:46 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup type helper keeps reject diagnostics for explicit slash-method map access receivers,ir lowerer setup type helper keeps reject diagnostics for wrapper-returned explicit slash-method map access,ir lowerer setup type helper resolves declared receiver aliases through slashless map imports"`;
