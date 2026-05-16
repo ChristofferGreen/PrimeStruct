@@ -291,8 +291,10 @@ Task template:
   derive experimental map backing paths through shared collection helpers
   instead of direct backing path roots, and uninitialized-struct specialized
   map detection now derives generated experimental map backing recognition
-  through the same helper. The remaining production lowerer/emitter
-  experimental-map traces
+  through the same helper, and initializer inference now derives generated
+  experimental map backing recognition through
+  `isExperimentalCollectionBackingTypeName`. The remaining production
+  lowerer/emitter experimental-map traces
   are source-locked as temporary internal backing substrate by
   `test_stdlib_map_ownership.cpp`, and
   all production `src`/`include` experimental-map/`Map__*` backing traces are

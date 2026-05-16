@@ -7,6 +7,15 @@
 
 namespace primec::semantics {
 namespace {
+bool isSpecializedExperimentalMapBackingPath(std::string typeName) {
+  typeName = normalizeBindingTypeName(typeName);
+  if (!typeName.empty() && typeName.front() == '/') {
+    typeName.erase(typeName.begin());
+  }
+  return isExperimentalCollectionBackingTypeName("map", "Map", typeName) &&
+         typeName.find("__") != std::string::npos;
+}
+
 bool extractBuiltinSoaVectorElementTypeFromTypeText(const std::string &typeText,
                                                     std::string &elemTypeOut) {
   elemTypeOut.clear();
@@ -514,8 +523,11 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
       if (normalizedReturnType.empty() || normalizedReturnType == "auto") {
         return false;
       }
-      if (normalizedReturnType.rfind("std/collections/experimental_map/Map__", 0) == 0) {
-        bindingOut.typeName = "/" + normalizedReturnType;
+      if (isSpecializedExperimentalMapBackingPath(normalizedReturnType)) {
+        bindingOut.typeName = normalizedReturnType;
+        if (!bindingOut.typeName.empty() && bindingOut.typeName.front() != '/') {
+          bindingOut.typeName.insert(bindingOut.typeName.begin(), '/');
+        }
         bindingOut.typeTemplateArg.clear();
         return finish();
       }
@@ -957,7 +969,7 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
         const bool keepExperimentalCollectionPath =
             isLegacyExperimentalVectorCompatibilityPath(inferredStruct) ||
             isLegacyExperimentalVectorCompatibilityTypePath(inferredStruct) ||
-            inferredStruct.rfind("/std/collections/experimental_map/Map__", 0) == 0;
+            isSpecializedExperimentalMapBackingPath(inferredStruct);
         if (keepExperimentalCollectionPath) {
           bindingOut.typeName = inferredStruct;
           bindingOut.typeTemplateArg.clear();

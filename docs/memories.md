@@ -175,7 +175,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   struct-layout generated map classifiers should derive experimental map
   backing paths through shared collection helpers; uninitialized-struct
   specialized map detection should use the same helper for generated
-  experimental map backing paths; generated collection struct
+  experimental map backing paths; initializer inference should derive
+  generated experimental map backing recognition through
+  `isExperimentalCollectionBackingTypeName`; generated collection struct
   classification should derive the canonical map `MapValue__*` prefix through
   `collectionTypePath("map")` instead of carrying a split-string map root.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated

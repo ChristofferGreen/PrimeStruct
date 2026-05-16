@@ -55,8 +55,47 @@
   is stale after the map stdlib-ownership cutover. On 2026-05-16 the current
   fixture failed validation before the inline-argument assertions because it
   still uses the retired `/std/collections/mapPair` constructor path.
+- `PrimeStruct_semantics_tests` inferred map-struct-field and
+  uninitialized-storage constructor fixtures are stale after the map
+  stdlib-ownership cutover. On 2026-05-16 the filters
+  `stdlib map constructors accept inferred canonical map struct fields`,
+  `helper-wrapped inferred canonical map struct fields validate`,
+  `helper-wrapped map constructor assignments accept inferred canonical map
+  struct fields`, `auto bindings inside inferred canonical map return blocks
+  rewrite constructors`, and `helper-wrapped map constructors accept canonical
+  map uninitialized storage` failed with missing canonical map access helper
+  or `init value type mismatch` diagnostics; adjacent explicit-target and
+  canonical constructor-return coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 16:54 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="inferred canonical map returns rewrite canonical constructors,block-bodied inferred canonical map returns rewrite constructors,helper-wrapped inferred canonical map returns rewrite nested constructor arguments,double helper-wrapped inferred canonical map returns rewrite nested constructor arguments,stdlib map constructors accept explicit canonical map struct fields,helper-wrapped map constructors accept explicit canonical map bindings"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` |
+  failures: none | notes: initializer inference now derives generated
+  experimental map backing recognition through
+  `isExperimentalCollectionBackingTypeName`; the map surface inventory now
+  observes 954 production traces and backing traces now observe 199.
+- 2026-05-16 16:53 local | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="inferred canonical map returns rewrite canonical constructors,block-bodied inferred canonical map returns rewrite constructors,helper-wrapped inferred canonical map returns rewrite nested constructor arguments,double helper-wrapped inferred canonical map returns rewrite nested constructor arguments,stdlib map constructors accept explicit canonical map struct fields,helper-wrapped map constructors accept explicit canonical map bindings,helper-wrapped map constructors accept canonical map uninitialized storage"` |
+  failures: `helper-wrapped map constructors accept canonical map uninitialized storage`
+  | notes: stale map uninitialized-storage fixture now reports
+  `init value type mismatch`; reran the six adjacent passing cases above.
+- 2026-05-16 16:52 local | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="inferred canonical map returns rewrite canonical constructors,block-bodied inferred canonical map returns rewrite constructors,auto bindings inside inferred canonical map return blocks rewrite constructors,helper-wrapped inferred canonical map returns rewrite nested constructor arguments,double helper-wrapped inferred canonical map returns rewrite nested constructor arguments"` |
+  failures: `auto bindings inside inferred canonical map return blocks rewrite constructors`
+  | notes: stale auto-binding map constructor fixture failed while the
+  adjacent constructor-return cases passed.
+- 2026-05-16 16:51 local | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib map constructors accept inferred canonical map struct fields,helper-wrapped inferred canonical map struct fields validate,helper-wrapped inferred canonical result map struct fields validate,helper-wrapped map constructor assignments accept inferred canonical map struct fields"` |
+  failures: `stdlib map constructors accept inferred canonical map struct fields`,
+  `helper-wrapped inferred canonical map struct fields validate`,
+  `helper-wrapped map constructor assignments accept inferred canonical map
+  struct fields` | notes: stale inferred map-struct-field fixtures failed
+  with missing canonical map access helper diagnostics; the result payload
+  variant passed.
 - 2026-05-16 16:50 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer uninitialized type helpers infer concrete stdlib map constructor structs,ir lowerer uninitialized type helpers infer forwarded stdlib map constructor structs,ir lowerer statement binding helper keeps canonical map constructor value metadata"`;
