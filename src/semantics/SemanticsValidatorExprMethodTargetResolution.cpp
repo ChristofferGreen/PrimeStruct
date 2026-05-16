@@ -30,6 +30,43 @@ bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
          helperName == "insert" || helperName == "insert_ref";
 }
 
+std::string canonicalMapHelperPathLocal(std::string_view helperName) {
+  return canonicalCollectionHelperPath(StdlibSurfaceId::CollectionsMapHelpers,
+                                       helperName);
+}
+
+std::string canonicalMapHelperNamespaceLocal() {
+  const StdlibSurfaceMetadata *metadata =
+      findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsMapHelpers);
+  if (metadata == nullptr) {
+    return "";
+  }
+  std::string namespacePath(metadata->canonicalPath);
+  if (!namespacePath.empty() && namespacePath.front() == '/') {
+    namespacePath.erase(namespacePath.begin());
+  }
+  return namespacePath;
+}
+
+bool resolveCanonicalMapHelperNameFromSpelling(std::string path,
+                                               std::string &helperNameOut) {
+  helperNameOut.clear();
+  if (!path.empty() && path.front() != '/') {
+    path.insert(path.begin(), '/');
+  }
+  return resolvePublishedCollectionHelperResolvedPath(
+      path, StdlibSurfaceId::CollectionsMapHelpers, helperNameOut);
+}
+
+bool isCanonicalMapBuiltinMethodHelper(std::string_view helperName) {
+  return helperName == "count" || helperName == "count_ref" ||
+         helperName == "contains" || helperName == "contains_ref" ||
+         helperName == "tryAt" || helperName == "tryAt_ref" ||
+         helperName == "at" || helperName == "at_ref" ||
+         helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
+         helperName == "insert";
+}
+
 std::string experimentalMapBackingLeafForMethodTargets(std::string typeName) {
   typeName = normalizeBindingTypeName(std::move(typeName));
   if (!typeName.empty() && typeName.front() == '/') {
@@ -164,6 +201,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     std::string_view helperName;
     bool isStdNamespacedVectorHelper = false;
+    bool isStdNamespacedMapHelper = false;
+    std::string resolvedCanonicalMapHelperName;
     std::string compatibilityCollection;
     if (normalizedPrefix == "array") {
       helperName = candidate;
@@ -178,8 +217,9 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     } else if (normalizedPrefix == "map") {
       helperName = candidate;
       compatibilityCollection = "map";
-    } else if (normalizedPrefix == "std/collections/map") {
+    } else if (normalizedPrefix == canonicalMapHelperNamespaceLocal()) {
       helperName = candidate;
+      isStdNamespacedMapHelper = true;
       compatibilityCollection = "map";
     } else if (candidate.rfind("array/", 0) == 0) {
       helperName = std::string_view(candidate).substr(std::string_view("array/").size());
@@ -194,16 +234,17 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     } else if (candidate.rfind("map/", 0) == 0) {
       helperName = std::string_view(candidate).substr(std::string_view("map/").size());
       compatibilityCollection = "map";
-    } else if (candidate.rfind("std/collections/map/", 0) == 0) {
-      helperName = std::string_view(candidate).substr(std::string_view("std/collections/map/").size());
+    } else if (resolveCanonicalMapHelperNameFromSpelling(
+                   candidate, resolvedCanonicalMapHelperName)) {
+      helperName = resolvedCanonicalMapHelperName;
+      isStdNamespacedMapHelper = true;
       compatibilityCollection = "map";
     }
     if (helperName.empty()) {
       return "";
     }
     if (compatibilityCollection == "map") {
-      if (normalizedPrefix == "std/collections/map" ||
-          candidate.rfind("std/collections/map/", 0) == 0) {
+      if (isStdNamespacedMapHelper) {
         return "";
       }
       if (!isRemovedMapCompatibilityHelper(helperName)) {
@@ -259,11 +300,19 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
       normalizedPrefix.erase(normalizedPrefix.begin());
     }
-    if (normalizedPrefix == "map" || normalizedPrefix == "std/collections/map") {
+    if (normalizedPrefix == "map") {
       return "/" + normalizedPrefix + "/" + candidate;
     }
-    if (candidate.rfind("map/", 0) == 0 || candidate.rfind("std/collections/map/", 0) == 0) {
+    if (normalizedPrefix == canonicalMapHelperNamespaceLocal()) {
+      return canonicalMapHelperPathLocal(candidate);
+    }
+    if (candidate.rfind("map/", 0) == 0) {
       return "/" + candidate;
+    }
+    std::string canonicalMapHelperName;
+    if (resolveCanonicalMapHelperNameFromSpelling(candidate,
+                                                  canonicalMapHelperName)) {
+      return canonicalMapHelperPathLocal(canonicalMapHelperName);
     }
     return "";
   };
@@ -284,8 +333,10 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   } else if (isUnrootedCanonicalVectorCompatibilityPath(normalizedMethodName)) {
     normalizedMethodName = std::string(
         stripUnrootedCanonicalVectorCompatibilityPrefix(normalizedMethodName));
-  } else if (normalizedMethodName.rfind("std/collections/map/", 0) == 0) {
-    normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/map/").size());
+  } else if (std::string canonicalMapHelperName;
+             resolveCanonicalMapHelperNameFromSpelling(
+                 normalizedMethodName, canonicalMapHelperName)) {
+    normalizedMethodName = canonicalMapHelperName;
   }
   auto isExperimentalVectorMetadataMethodName = [](std::string_view name) {
     return name == "field_count" || name == "field_capacity" ||
@@ -1648,7 +1699,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return "";
     }
     if (isCanonicalMapAccessMethodName(helperName)) {
-      const std::string canonicalPath = "/std/collections/map/" + helperName;
+      const std::string canonicalPath = canonicalMapHelperPathLocal(helperName);
       auto defIt = defMap_.find(canonicalPath);
       if (defIt != defMap_.end() && defIt->second != nullptr) {
         for (const auto &transform : defIt->second->transforms) {
@@ -1824,19 +1875,12 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       isBuiltinOut = true;
       return true;
     }
-    if ((resolvedOut == "/std/collections/map/count" ||
-         resolvedOut == "/std/collections/map/count_ref" ||
-         resolvedOut == "/std/collections/map/contains" ||
-         resolvedOut == "/std/collections/map/contains_ref" ||
-         resolvedOut == "/std/collections/map/tryAt" ||
-         resolvedOut == "/std/collections/map/tryAt_ref" ||
-         resolvedOut == "/std/collections/map/at" ||
-         resolvedOut == "/std/collections/map/at_ref" ||
-         resolvedOut == "/std/collections/map/at_unsafe" ||
-         resolvedOut == "/std/collections/map/at_unsafe_ref" ||
-         resolvedOut == "/std/collections/map/insert") &&
+    std::string resolvedCanonicalMapHelperName;
+    if (resolveCanonicalMapHelperNameFromSpelling(
+            resolvedOut, resolvedCanonicalMapHelperName) &&
+        isCanonicalMapBuiltinMethodHelper(resolvedCanonicalMapHelperName) &&
         (this->shouldBuiltinValidateCurrentMapWrapperHelper(
-             resolvedOut.substr(std::string("/std/collections/map/").size())) ||
+             resolvedCanonicalMapHelperName) ||
          hasImportedDefinitionPath(resolvedOut))) {
       isBuiltinOut = true;
       return true;
@@ -1915,14 +1959,16 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             : helperName;
     std::string keyType;
     std::string valueType;
-    const std::string canonical = "/std/collections/map/" + resolvedHelperName;
+    const std::string canonical = canonicalMapHelperPathLocal(resolvedHelperName);
     if (resolveExperimentalMapTarget(receiverExpr, keyType, valueType)) {
       if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
         return canonical;
       }
       return this->preferredCanonicalExperimentalMapHelperTarget(resolvedHelperName);
     }
-    if (explicitMapHelperPath.rfind("/std/collections/map/", 0) == 0) {
+    std::string explicitCanonicalMapHelperName;
+    if (resolveCanonicalMapHelperNameFromSpelling(
+            explicitMapHelperPath, explicitCanonicalMapHelperName)) {
       return canonical;
     }
     if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
@@ -3305,7 +3351,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (explicitMapHelperPath.rfind("/map/", 0) == 0) {
       return resolveExplicitRootMapMethodPath();
     }
-    const std::string canonicalMapHelper = "/std/collections/map/" + normalizedMethodName;
+    const std::string canonicalMapHelper =
+        canonicalMapHelperPathLocal(normalizedMethodName);
     if (hasDeclaredDefinitionPath(canonicalMapHelper) || hasImportedDefinitionPath(canonicalMapHelper)) {
       resolvedOut = canonicalMapHelper;
       isBuiltinOut = false;

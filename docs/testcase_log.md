@@ -110,6 +110,20 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 19:22 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map method access keeps canonical struct-return forwarding"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map method access field expression keeps canonical struct-return forwarding"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map method access ignores rooted alias struct-return helper"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map method access reports canonical builtin result type over alias helper"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib canonical map contains and tryAt helpers resolve in method-call sugar"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map compatibility tryAt call rejects visible canonical definition"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` | failures: none |
+  notes: method target resolution now derives canonical map helper paths,
+  namespace checks, explicit helper spelling, and builtin-method
+  classification through stdlib surface metadata; the map surface inventory
+  now observes 573 production traces and backing traces remain at 0.
 - 2026-05-16 19:18 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="explicit canonical map access helpers accept canonical map values"`;

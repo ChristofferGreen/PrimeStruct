@@ -333,6 +333,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   collection access target resolution should resolve canonical map
   access/contains helper paths, namespace checks, and missing-definition
   diagnostics through stdlib surface metadata instead of direct path text;
+  method target resolution should derive canonical map helper paths,
+  namespace checks, explicit helper spelling, and builtin-method
+  classification through stdlib surface metadata instead of direct path
+  text;
   generated collection struct classification should derive the canonical map
   `MapValue__*` prefix through `collectionTypePath("map")` instead of
   carrying a split-string map root.
