@@ -2,6 +2,7 @@
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -13,18 +14,44 @@ bool isCanonicalMapAccessHelperName(const std::string &helperName) {
          helperName == "at_unsafe" || helperName == "at_unsafe_ref";
 }
 
+std::string canonicalMapHelperPathLocal(std::string_view helperName) {
+  return canonicalCollectionHelperPath(StdlibSurfaceId::CollectionsMapHelpers,
+                                       helperName);
+}
+
+std::string canonicalMapHelperNamespaceLocal() {
+  const StdlibSurfaceMetadata *metadata =
+      findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsMapHelpers);
+  if (metadata == nullptr) {
+    return "";
+  }
+  std::string namespacePath(metadata->canonicalPath);
+  if (!namespacePath.empty() && namespacePath.front() == '/') {
+    namespacePath.erase(namespacePath.begin());
+  }
+  return namespacePath;
+}
+
+bool resolveCanonicalMapHelperNameFromSpelling(std::string path,
+                                               std::string &helperNameOut) {
+  helperNameOut.clear();
+  if (!path.empty() && path.front() != '/') {
+    path.insert(path.begin(), '/');
+  }
+  return resolvePublishedCollectionHelperResolvedPath(
+      path, StdlibSurfaceId::CollectionsMapHelpers, helperNameOut);
+}
+
 bool isCanonicalMapAccessResolvedPath(const std::string &path) {
-  return path == "/std/collections/map/at" ||
-         path == "/std/collections/map/at_ref" ||
-         path == "/std/collections/map/at_unsafe" ||
-         path == "/std/collections/map/at_unsafe_ref";
+  std::string helperName;
+  return resolveCanonicalMapHelperNameFromSpelling(path, helperName) &&
+         isCanonicalMapAccessHelperName(helperName);
 }
 
 bool isSourceSpelledCanonicalMapAccessCall(const Expr &expr) {
   const std::string &sourceName =
       expr.sourceName.empty() ? expr.name : expr.sourceName;
-  return sourceName.rfind("/std/collections/map/", 0) == 0 ||
-         sourceName.rfind("std/collections/map/", 0) == 0;
+  return isCanonicalMapAccessResolvedPath(sourceName);
 }
 
 bool isUnqualifiedCollectionAccessCall(const Expr &candidate,
@@ -59,19 +86,19 @@ bool getCanonicalCollectionAccessBuiltinName(const Expr &candidate,
   if (!normalizedName.empty() && normalizedName.front() == '/') {
     normalizedName.erase(normalizedName.begin());
   }
-  if (normalizedName == "std/collections/map/at_ref") {
-    helperOut = "at_ref";
-    return true;
-  }
-  if (normalizedName == "std/collections/map/at_unsafe_ref") {
-    helperOut = "at_unsafe_ref";
+  std::string resolvedMapHelperName;
+  if (resolveCanonicalMapHelperNameFromSpelling(
+          normalizedName, resolvedMapHelperName) &&
+      (resolvedMapHelperName == "at_ref" ||
+       resolvedMapHelperName == "at_unsafe_ref")) {
+    helperOut = resolvedMapHelperName;
     return true;
   }
   std::string namespacePrefix = candidate.namespacePrefix;
   if (!namespacePrefix.empty() && namespacePrefix.front() == '/') {
     namespacePrefix.erase(namespacePrefix.begin());
   }
-  if (namespacePrefix == "std/collections/map" &&
+  if (namespacePrefix == canonicalMapHelperNamespaceLocal() &&
       isCanonicalMapAccessHelperName(candidate.name)) {
     helperOut = candidate.name;
     return true;
@@ -144,9 +171,9 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
          (isSourceSpelledCanonicalMapAccessCall(expr) ||
           (!hasSourceShape &&
            (isCanonicalMapAccessResolvedPath(resolved) ||
-            expr.name.rfind("/std/collections/map/", 0) == 0 ||
-            expr.namespacePrefix == "/std/collections/map" ||
-            expr.namespacePrefix == "std/collections/map"))));
+            isCanonicalMapAccessResolvedPath(expr.name) ||
+            canonicalMapHelperNamespaceLocal() ==
+                trimLeadingSlash(expr.namespacePrefix)))));
     if (isExplicitCanonicalMapAccessCall) {
       return failCollectionAccessDiagnostic("argument type mismatch for " +
                                             resolved + " parameter key");
@@ -354,7 +381,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
           isCanonicalMapAccessResolvedPath(resolved)) {
         std::string diagnosticTarget = resolved;
         if (diagnosticTarget.empty()) {
-          diagnosticTarget = "/std/collections/map/" + builtinName;
+          diagnosticTarget = canonicalMapHelperPathLocal(builtinName);
         }
         return failCollectionAccessDiagnostic("unknown call target: " +
                                               diagnosticTarget);
@@ -404,7 +431,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
          resolvesNonRootExperimentalMapTarget(expr.args[1]))) {
       handledOut = true;
       return failCollectionAccessDiagnostic(
-          "unknown call target: /std/collections/map/" + builtinName);
+          "unknown call target: " + canonicalMapHelperPathLocal(builtinName));
     }
     auto isExperimentalMapTypeReceiver = [&](const Expr &candidate) {
       if (isRootMapAliasExpr(candidate)) {
@@ -419,7 +446,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
          isExperimentalMapTypeReceiver(expr.args[1]))) {
       handledOut = true;
       return failCollectionAccessDiagnostic(
-          "unknown call target: /std/collections/map/" + builtinName);
+          "unknown call target: " + canonicalMapHelperPathLocal(builtinName));
     }
     if (!expr.isMethodCall &&
         context.isMapLikeBareAccessReceiverTarget != nullptr &&
@@ -630,10 +657,10 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
         !(context.isIndexedArgsPackMapReceiverTarget != nullptr &&
           context.isIndexedArgsPackMapReceiverTarget(expr.args.front())) &&
         !hasDeclaredDefinitionPath("/map/" + builtinName) &&
-        !hasImportedDefinitionPath("/std/collections/map/" + builtinName) &&
-        !hasDeclaredDefinitionPath("/std/collections/map/" + builtinName)) {
+        !hasImportedDefinitionPath(canonicalMapHelperPathLocal(builtinName)) &&
+        !hasDeclaredDefinitionPath(canonicalMapHelperPathLocal(builtinName))) {
       return failCollectionAccessDiagnostic(
-          "unknown call target: /std/collections/map/" + builtinName);
+          "unknown call target: " + canonicalMapHelperPathLocal(builtinName));
     }
     if (!isMap && !isExperimentalMap) {
       if (!isIntegerExpr(expr.args[indexArgIndex])) {

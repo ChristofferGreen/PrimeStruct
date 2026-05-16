@@ -110,6 +110,19 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 19:01 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="bare map access methods require imported canonical helpers or explicit definitions"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib namespaced map at requires imported stdlib helper or explicit definition"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib namespaced map at_unsafe requires imported stdlib helper or explicit definition"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical namespaced map access helpers accept experimental map values"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib namespaced map access helpers accept imported stdlib wrappers"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` | failures: none |
+  notes: semantic collection-access validation now resolves canonical map
+  access helper names, namespace checks, and diagnostic paths through stdlib
+  surface metadata; the map surface inventory now observes 681 production
+  traces and backing traces remain at 0.
 - 2026-05-16 18:58 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="print accepts string map access"`;
