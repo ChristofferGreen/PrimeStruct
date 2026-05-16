@@ -73,6 +73,16 @@
   manual map uninitialized validation coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 17:27 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="wrapper-returned canonical map method ignores alias helper when canonical helper is absent,wrapper-returned canonical map method requires helper definition,stdlib canonical map access count shadow keeps canonical precedence over alias helper,stdlib canonical map access count shadow currently validates mixed canonical and alias returns"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` |
+  failures: none | notes: semantic method-target resolution now uses shared
+  experimental collection backing classifiers for unspecialized map backing
+  receivers and generated `Map__*` fallback paths; the map surface inventory
+  now observes 906 production traces and backing traces now observe 151.
 - 2026-05-16 17:24 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="explicit canonical map parameter keeps builtin helper validation,explicit canonical map parameter keeps builtin key diagnostics,stdlib wrapper map constructor accepts explicit canonical map parameters,stdlib wrapper map constructor keeps mismatch diagnostics on explicit canonical map parameters"`;

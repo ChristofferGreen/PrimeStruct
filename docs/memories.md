@@ -198,6 +198,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   backing paths;
   semantic argument validation should use the shared helper for experimental
   map backing template-base compatibility checks;
+  semantic method-target resolution should use the shared helper for
+  experimental map backing receiver and generated fallback checks;
   generated collection struct classification should derive the canonical map
   `MapValue__*` prefix through `collectionTypePath("map")` instead of
   carrying a split-string map root.

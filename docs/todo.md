@@ -1995,6 +1995,9 @@ Task template:
     - 2026-05-16: Semantic argument validation no longer hard-codes
       experimental map backing template bases for map compatibility; those
       checks now use the shared experimental collection backing helper.
+    - 2026-05-16: Semantic method-target resolution no longer hard-codes
+      experimental map backing receiver or generated fallback paths; those
+      classifiers now use the shared experimental collection backing helper.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

@@ -30,6 +30,33 @@ bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
          helperName == "insert" || helperName == "insert_ref";
 }
 
+std::string experimentalMapBackingLeafForMethodTargets(std::string typeName) {
+  typeName = normalizeBindingTypeName(std::move(typeName));
+  if (!typeName.empty() && typeName.front() == '/') {
+    typeName.erase(typeName.begin());
+  }
+  const size_t leafStart = typeName.find_last_of('/');
+  return leafStart == std::string::npos ? typeName : typeName.substr(leafStart + 1);
+}
+
+bool isUnspecializedExperimentalMapBackingTypeForMethodTargets(std::string typeName) {
+  typeName = normalizeBindingTypeName(std::move(typeName));
+  if (!typeName.empty() && typeName.front() == '/') {
+    typeName.erase(typeName.begin());
+  }
+  return experimentalMapBackingLeafForMethodTargets(typeName) == "Map" &&
+         isExperimentalCollectionBackingTypeName("map", "Map", typeName);
+}
+
+bool isSpecializedExperimentalMapBackingTypeForMethodTargets(std::string typeName) {
+  typeName = normalizeBindingTypeName(std::move(typeName));
+  if (!typeName.empty() && typeName.front() == '/') {
+    typeName.erase(typeName.begin());
+  }
+  return experimentalMapBackingLeafForMethodTargets(typeName).rfind("Map__", 0) == 0 &&
+         isExperimentalCollectionBackingTypeName("map", "Map", typeName);
+}
+
 bool isFileMethodName(std::string_view methodName) {
   return methodName == "write" || methodName == "writeLine" ||
          methodName == "write_line" || methodName == "writeByte" ||
@@ -1331,11 +1358,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             normalizedType = normalizeBindingTypeName(args.front());
             continue;
           }
-          std::string normalizedBase = base;
-          if (!normalizedBase.empty() && normalizedBase.front() == '/') {
-            normalizedBase.erase(normalizedBase.begin());
-          }
-          if (normalizedBase == "Map" || normalizedBase == "std/collections/experimental_map/Map") {
+          if (isUnspecializedExperimentalMapBackingTypeForMethodTargets(base)) {
             std::vector<std::string> args;
             if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 2) {
               return false;
@@ -1354,7 +1377,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         if (!normalizedResolvedPath.empty() && normalizedResolvedPath.front() == '/') {
           normalizedResolvedPath.erase(normalizedResolvedPath.begin());
         }
-        if (normalizedResolvedPath.rfind("std/collections/experimental_map/Map__", 0) != 0) {
+        if (!isSpecializedExperimentalMapBackingTypeForMethodTargets(
+                normalizedResolvedPath)) {
           return false;
         }
         return extractExperimentalMapFieldTypesFromStructPath(resolvedPath, keyTypeOut, valueTypeOut);
@@ -3200,7 +3224,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         normalizedStruct.insert(normalizedStruct.begin(), '/');
       }
       if (normalizedStruct == "/map" ||
-          normalizedStruct.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
+          isSpecializedExperimentalMapBackingTypeForMethodTargets(normalizedStruct)) {
         typeName = "/map";
       } else {
         typeName = inferredStruct;
