@@ -160,7 +160,6 @@ bool isVectorValue(const Expr &target, const std::unordered_map<std::string, Bin
 bool isMapValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes);
 bool isStringValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes);
 bool isArrayCountCall(const Expr &call, const std::unordered_map<std::string, BindingInfo> &localTypes);
-bool isMapCountCall(const Expr &call, const std::unordered_map<std::string, BindingInfo> &localTypes);
 bool isStringCountCall(const Expr &call, const std::unordered_map<std::string, BindingInfo> &localTypes);
 bool isVectorCapacityCall(const Expr &call, const std::unordered_map<std::string, BindingInfo> &localTypes);
 bool resolveMethodCallPath(const Expr &call,

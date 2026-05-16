@@ -213,16 +213,6 @@ bool isArrayCountCall(const Expr &call, const std::unordered_map<std::string, Bi
   return isArrayValue(call.args.front(), localTypes);
 }
 
-bool isMapCountCall(const Expr &call, const std::unordered_map<std::string, BindingInfo> &localTypes) {
-  if (!matchesScopedBuiltinSimpleCall(call, "count") || call.args.size() != 1) {
-    return false;
-  }
-  if (isExplicitMapCountNameLocal(call)) {
-    return false;
-  }
-  return isMapValue(call.args.front(), localTypes);
-}
-
 bool isStringCountCall(const Expr &call, const std::unordered_map<std::string, BindingInfo> &localTypes) {
   if (!matchesScopedBuiltinSimpleCall(call, "count") || call.args.size() != 1) {
     return false;

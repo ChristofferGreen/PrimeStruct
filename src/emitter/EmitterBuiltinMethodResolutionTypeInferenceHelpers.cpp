@@ -555,7 +555,6 @@ std::string inferMethodResolutionPrimitiveTypeName(
           }
         }
         if (isArrayCountCall(candidateExpr, localTypes) ||
-            isMapCountCall(candidateExpr, localTypes) ||
             isStringCountCall(candidateExpr, localTypes) ||
             isVectorCapacityCall(candidateExpr, localTypes)) {
           return "i32";

@@ -16,47 +16,6 @@ void checkFileContains(const std::string &path, const char *fragment) {
 
 } // namespace
 
-TEST_CASE("C++ emitter compiles canonical direct-call map count string receivers") {
-  const std::string source = R"(
-[return<int>]
-/map/count([map<i32, string>] values) {
-  return(41i32)
-}
-
-[return<string>]
-/std/collections/map/count([map<i32, string>] values) {
-  return("hello"utf8)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [map<i32, string>] values{map<i32, string>(1i32, "value"utf8)}
-  return(/std/collections/map/count(values).count())
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_stdlib_namespaced_map_count_direct_call_string_receiver.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_stdlib_namespaced_map_count_direct_call_string_receiver_exe")
-          .string();
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_stdlib_namespaced_map_count_direct_call_string_receiver.err")
-          .string();
-  const std::string runtimeErrPath =
-      (testScratchPath("") /
-       "primec_cpp_stdlib_namespaced_map_count_direct_call_string_receiver_runtime.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(readFile(errPath).empty());
-  CHECK(runCommand(exePath + " > /dev/null 2> " + runtimeErrPath) == 1);
-  checkFileContains(runtimeErrPath, "invalid string index in IR");
-}
-
 TEST_CASE("C++ emitter keeps canonical diagnostics on direct-call map count receivers") {
   const std::string source = R"(
 [return<string>]
@@ -152,7 +111,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  checkFileContains(errPath, "unknown call target: /std/collections/map/count");
+  checkFileContains(errPath, "unknown method: /map<i32, i32>/count");
 }
 
 TEST_CASE("rejects user wrapper temporary count capacity shadow value mismatch in C++ emitter") {
@@ -203,7 +162,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  checkFileContains(errPath, "binding initializer type mismatch");
+  checkFileContains(errPath, "unknown method: /map<i32, i32>/count");
 }
 
 TEST_CASE("C++ emitter rejects wrapper count/capacity builtin fallback on map count first") {
@@ -233,7 +192,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") !=
+  CHECK(readFile(errPath).find("unknown method: /map<i32, i32>/count") !=
         std::string::npos);
 }
 
@@ -376,7 +335,7 @@ main() {
   CHECK(runCommand(exePath) == 44);
 }
 
-TEST_CASE("C++ emitter keeps canonical map-count diagnostic for alias direct-call vector count on map receiver") {
+TEST_CASE("C++ emitter keeps vector-count diagnostic for alias direct-call vector count on map receiver") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -397,7 +356,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") !=
+  CHECK(readFile(outPath).find("unknown call target: /vector/count") !=
         std::string::npos);
 }
 
@@ -480,7 +439,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /string/count") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps canonical map-count diagnostic for slash-method vector count on map receiver") {
+TEST_CASE("C++ emitter keeps map receiver method diagnostic for slash-method vector count on map receiver") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -502,7 +461,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") !=
+  CHECK(readFile(errPath).find("unknown method: /map<i32, i32>/count") !=
         std::string::npos);
 }
 
