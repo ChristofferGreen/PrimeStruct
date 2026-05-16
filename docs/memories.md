@@ -344,6 +344,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   canonical helper paths, helper classification, preferred lowering
   spellings, and unknown-target paths through stdlib surface metadata instead
   of direct path text;
+  late fallback return-kind inference should derive canonical map helper
+  paths and contains/tryAt/access helper classification through stdlib
+  surface metadata instead of direct path text;
   generated collection struct classification should derive the canonical map
   `MapValue__*` prefix through `collectionTypePath("map")` instead of
   carrying a split-string map root.

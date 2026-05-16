@@ -2,7 +2,101 @@
 
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
+#include <string_view>
+#include <utility>
+
 namespace primec::semantics {
+namespace {
+
+const StdlibSurfaceMetadata *lateFallbackMapHelperSurfaceMetadata() {
+  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+}
+
+bool resolveLateFallbackMapHelperName(std::string path,
+                                      std::string &helperNameOut) {
+  helperNameOut.clear();
+  const StdlibSurfaceMetadata *metadata =
+      lateFallbackMapHelperSurfaceMetadata();
+  if (metadata == nullptr || path.empty()) {
+    return false;
+  }
+  if (path.find('/') != std::string::npos && path.front() != '/') {
+    path.insert(path.begin(), '/');
+  }
+  if (path.find('/') != std::string::npos) {
+    const StdlibSurfaceMetadata *pathMetadata =
+        findStdlibSurfaceMetadataByResolvedPath(path);
+    if (pathMetadata == nullptr || pathMetadata->id != metadata->id) {
+      return false;
+    }
+  }
+  const std::string_view helperName =
+      resolveStdlibSurfaceMemberName(*metadata, path);
+  if (helperName.empty()) {
+    return false;
+  }
+  helperNameOut.assign(helperName);
+  return true;
+}
+
+std::string lateFallbackCanonicalMapHelperPath(std::string_view helperName) {
+  std::string resolvedHelperName;
+  if (!resolveLateFallbackMapHelperName(std::string(helperName),
+                                        resolvedHelperName)) {
+    return {};
+  }
+  const StdlibSurfaceMetadata *metadata =
+      lateFallbackMapHelperSurfaceMetadata();
+  if (metadata == nullptr) {
+    return {};
+  }
+  return std::string(metadata->canonicalPath) + "/" + resolvedHelperName;
+}
+
+bool resolveLateFallbackCanonicalMapHelperName(std::string path,
+                                               std::string &helperNameOut) {
+  helperNameOut.clear();
+  const StdlibSurfaceMetadata *metadata =
+      lateFallbackMapHelperSurfaceMetadata();
+  if (metadata == nullptr || path.empty()) {
+    return false;
+  }
+  if (path.front() != '/') {
+    path.insert(path.begin(), '/');
+  }
+  const std::string canonicalPrefix =
+      std::string(metadata->canonicalPath) + "/";
+  if (path.rfind(canonicalPrefix, 0) != 0) {
+    return false;
+  }
+  return resolveLateFallbackMapHelperName(std::move(path), helperNameOut);
+}
+
+bool isCanonicalMapContainsHelperPath(const std::string &path) {
+  std::string helperName;
+  return resolveLateFallbackCanonicalMapHelperName(path, helperName) &&
+         (helperName == "contains" || helperName == "contains_ref");
+}
+
+bool isCanonicalMapTryAtHelperPath(const std::string &path) {
+  std::string helperName;
+  return resolveLateFallbackCanonicalMapHelperName(path, helperName) &&
+         (helperName == "tryAt" || helperName == "tryAt_ref");
+}
+
+bool isCanonicalMapAccessHelperPath(const std::string &path) {
+  std::string helperName;
+  return resolveLateFallbackCanonicalMapHelperName(path, helperName) &&
+         (helperName == "at" || helperName == "at_ref" ||
+          helperName == "at_unsafe" || helperName == "at_unsafe_ref");
+}
+
+bool isRootedMapAccessHelperPath(const std::string &path) {
+  return path == "/map/at" || path == "/map/at_ref" ||
+         path == "/map/at_unsafe" || path == "/map/at_unsafe_ref";
+}
+
+} // namespace
 
 ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
     const Expr &expr,
@@ -132,10 +226,10 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
         methodResolved = "/string/" + helperName;
       } else if (resolveMapTarget != nullptr &&
                  resolveMapTarget(receiverCandidate, keyType, valueType)) {
-        methodResolved = "/std/collections/map/" + helperName;
+        methodResolved = lateFallbackCanonicalMapHelperPath(helperName);
       } else if (resolveExperimentalMapTarget != nullptr &&
                  resolveExperimentalMapTarget(receiverCandidate, keyType, valueType)) {
-        methodResolved = "/std/collections/map/" + helperName;
+        methodResolved = lateFallbackCanonicalMapHelperPath(helperName);
       } else {
         return false;
       }
@@ -358,8 +452,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
       std::string methodResolved;
       if (context.resolveMethodCallPath != nullptr &&
           context.resolveMethodCallPath(expr.name, methodResolved)) {
-        if ((methodResolved == "/std/collections/map/contains" ||
-             methodResolved == "/std/collections/map/contains_ref") &&
+        if (isCanonicalMapContainsHelperPath(methodResolved) &&
             !inferCollectionDispatchSetup.shouldInferBuiltinBareMapContainsCall &&
             !inferCollectionDispatchSetup.isIndexedArgsPackMapReceiverTarget(
                 receiverExpr) &&
@@ -368,8 +461,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
           return failInferLateFallbackDiagnostic(
               "unknown call target: " + methodResolved);
         }
-        if ((methodResolved == "/std/collections/map/tryAt" ||
-             methodResolved == "/std/collections/map/tryAt_ref") &&
+        if (isCanonicalMapTryAtHelperPath(methodResolved) &&
             !inferCollectionDispatchSetup.shouldInferBuiltinBareMapTryAtCall &&
             !inferCollectionDispatchSetup.isIndexedArgsPackMapReceiverTarget(
                 receiverExpr) &&
@@ -380,28 +472,21 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
           return failInferLateFallbackDiagnostic(
               "unknown call target: " + methodResolved);
         }
-        if ((methodResolved == "/map/at" ||
-             methodResolved == "/map/at_ref" ||
-             methodResolved == "/std/collections/map/at_ref" ||
-             methodResolved == "/map/at_unsafe" ||
-             methodResolved == "/map/at_unsafe_ref" ||
-             methodResolved == "/std/collections/map/at" ||
-             methodResolved == "/std/collections/map/at_unsafe" ||
-             methodResolved == "/std/collections/map/at_unsafe_ref") &&
+        const bool isCanonicalAccessPath =
+            isCanonicalMapAccessHelperPath(methodResolved);
+        const std::string canonicalAccessPath =
+            isCanonicalAccessPath
+                ? methodResolved
+                : lateFallbackCanonicalMapHelperPath(builtinAccessName);
+        if ((isRootedMapAccessHelperPath(methodResolved) ||
+             isCanonicalAccessPath) &&
             !inferCollectionDispatchSetup.shouldInferBuiltinBareMapAccessCall &&
             !inferCollectionDispatchSetup.isIndexedArgsPackMapReceiverTarget(
                 receiverExpr) &&
-            !hasImportedDefinitionPath(methodResolved.rfind("/std/collections/map/", 0) == 0
-                                           ? methodResolved
-                                           : "/std/collections/map/" + builtinAccessName) &&
-            !hasDeclaredDefinitionPath(methodResolved.rfind("/std/collections/map/", 0) == 0
-                                           ? methodResolved
-                                           : "/std/collections/map/" + builtinAccessName)) {
+            !hasImportedDefinitionPath(canonicalAccessPath) &&
+            !hasDeclaredDefinitionPath(canonicalAccessPath)) {
           return failInferLateFallbackDiagnostic(
-              "unknown call target: " +
-              std::string(methodResolved.rfind("/std/collections/map/", 0) == 0
-                              ? methodResolved
-                              : "/std/collections/map/" + builtinAccessName));
+              "unknown call target: " + canonicalAccessPath);
         }
         auto methodIt = defMap_.find(methodResolved);
         if (methodIt != defMap_.end()) {

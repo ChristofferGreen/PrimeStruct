@@ -1873,6 +1873,9 @@ Task template:
       `/std/collections/map/<helper>` paths rather than rooted
       `/map/<helper>` paths when resolving map receiver builtin access
       spelling.
+    - 2026-05-16: Late fallback return-kind inference no longer hard-codes
+      canonical map helper paths or contains/tryAt/access helper
+      classification; it now derives those through stdlib surface metadata.
     - 2026-05-16: Emitter method resolution no longer lets implicit map
       helper methods resolve through rooted `/map/<helper>` metadata when the
       canonical stdlib map helper metadata is absent.
