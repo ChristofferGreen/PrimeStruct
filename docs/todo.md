@@ -2023,6 +2023,9 @@ Task template:
     - 2026-05-16: Template-monomorph experimental collection receiver
       resolution no longer hard-codes unspecialized or generated map receiver
       types; both now use shared experimental collection backing classifiers.
+    - 2026-05-16: Late map-access validation no longer hard-codes
+      unspecialized experimental map type text; it now uses the shared
+      experimental collection backing helper.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.
