@@ -110,6 +110,22 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 19:41 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="exact map imports keep canonical wrapper access helpers visible,wildcard collection imports keep bare vector and map bridge aliases,exact vector import keeps map bridge aliases unavailable,exact map import keeps vector bridge aliases unavailable,map namespaced access call keeps canonical struct-return forwarding,map namespaced access alias rejects canonical struct-return forwarding,map compatibility count call requires explicit alias definition,map compatibility count auto inference requires explicit alias definition,map compatibility contains call rejects visible canonical definition,map compatibility tryAt call rejects visible canonical definition,map compatibility at call requires explicit alias definition,stdlib-owned map compatibility at call falls back to canonical helper" --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` | failures: none |
+  notes: semantic collection compatibility now derives canonical map helper
+  paths, helper metadata lookups, wrapper-surface detection, and removed
+  body-argument targets through stdlib surface metadata; the map surface
+  inventory now observes 491 production traces and backing traces remain at 0.
+- 2026-05-16 19:39 local | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="exact vector import keeps map bridge aliases unavailable" --no-skip` |
+  failures: exact vector import keeps map bridge aliases unavailable |
+  notes: first compatibility rewrite patch reported `unknown call target:
+  count` instead of the expected canonical map helper target; fixed by
+  preserving the bare map-helper canonical diagnostic when the canonical
+  helper is not imported or declared.
 - 2026-05-16 19:33 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="map stdlib namespaced count expression keeps canonical helper return precedence,map stdlib namespaced count expression succeeds when canonical helper matches return type,map stdlib namespaced count expression non-builtin arity falls back to canonical helper return,map stdlib namespaced count expression does not fall back to map alias helper,map stdlib namespaced count expression ignores templated alias helper fallback,map stdlib namespaced count auto inference keeps canonical helper return precedence,map stdlib namespaced count auto inference keeps canonical unknown target,map stdlib namespaced access helper auto inference keeps canonical precedence,stdlib namespaced map at requires imported stdlib helper or explicit definition,stdlib namespaced map at_unsafe requires imported stdlib helper or explicit definition" --no-skip`;
