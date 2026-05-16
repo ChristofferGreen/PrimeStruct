@@ -134,6 +134,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string surfacesSource = readText(collectionsFile("surfaces.psmeta"));
   const std::string registrySource = readText(repoRoot() / "src" / "StdlibSurfaceRegistry.cpp");
   const std::string semanticsSource = readText(repoRoot() / "src" / "semantics" / "SemanticsValidate.cpp");
+  const std::string countCapacityMapBuiltinSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorExprCountCapacityMapBuiltins.cpp");
   const std::string statementLowererSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererStatementCallEmission.cpp");
   const std::string lowerStatementsExprSource =
@@ -151,6 +154,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!surfacesSource.empty());
   REQUIRE(!registrySource.empty());
   REQUIRE(!semanticsSource.empty());
+  REQUIRE(!countCapacityMapBuiltinSource.empty());
   REQUIRE(!statementLowererSource.empty());
   REQUIRE(!lowerStatementsExprSource.empty());
   REQUIRE(!inlineNativeSource.empty());
@@ -213,6 +217,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(semanticsSource.find("\"/std/collections/map/insert_builtin\"") == std::string::npos);
   CHECK(semanticsSource.find("isCanonicalBuiltinMapReadHelperName") != std::string::npos);
   CHECK(semanticsSource.find("helperName = \"/std/collections/map/\" + helperName") !=
+        std::string::npos);
+  CHECK(countCapacityMapBuiltinSource.find("/std/collections/map/count") ==
+        std::string::npos);
+  CHECK(countCapacityMapBuiltinSource.find("/std/collections/map/at") ==
+        std::string::npos);
+  CHECK(countCapacityMapBuiltinSource.find("canonicalizeExperimentalMapHelperResolvedPath") ==
         std::string::npos);
   CHECK(statementLowererSource.find("isPrimeMapInsertBody") != std::string::npos);
   CHECK(statementLowererSource.find("rewriteMapInsertHelperStatementToCanonical") != std::string::npos);

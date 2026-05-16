@@ -1,9 +1,32 @@
 # Testcase Log
 
 ## Current Known Failures
-- None.
+- `PrimeStruct_semantics_tests --test-case="*map*count*" --no-skip` has
+  obsolete legacy map-count compatibility coverage after removing C++ semantic
+  builtin handling for `/std/collections/map/count` and related map access
+  helpers. On 2026-05-16 it reported 41 failed cases and 40 passed cases.
+  These failures are expected to be retired or rewritten as the remaining old
+  C++ map compatibility tests are deleted during the map stdlib-ownership
+  cutover; the stdlib-owned `MapValue` smoke tests continue to pass.
 
 ## Recent Test Runs
+- 2026-05-16 local | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="*map*count*" --no-skip` |
+  failures: 41 obsolete legacy map-count compatibility cases | notes:
+  surfaced after deleting semantic map-count/map-access builtin branches from
+  `SemanticsValidatorExprCountCapacityMapBuiltins.cpp`; focused stdlib-owned
+  map smoke tests passed and this pattern needs retirement with the remaining
+  old C++ map compatibility tests.
+- 2026-05-16 local | pass | mode: release | command:
+  `cmake --build build-release --target primec`; `cmake --build build-release --target PrimeStruct_compile_run_tests`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="map wildcard import runs stdlib-owned surface in C++ emitter" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs canonical map stdlib-owned helpers" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="canonical map stdlib source stays isolated from legacy implementation" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation" --no-skip` |
+  failures: none | notes: focused validation passed after removing the
+  semantic map-count/map-access builtin branches while preserving the
+  stdlib-owned map implementation path.
 - 2026-05-16 02:50 local | pass | mode: release | command: `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DPRIMESTRUCT_BUILD_TESTS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`; `cmake --build build-release --target PrimeStruct_parser_tests PrimeStruct_misc_tests PrimeStruct_compile_run_tests -j 1`; `cd build-release && ./PrimeStruct_parser_tests --test-suite=primestruct.parser.templates`; `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.semantics.manual --test-case="type pack storage expands into deterministic struct fields,type pack storage rejects invalid placements and shapes,type pack helper bindings expand parameters locals and return envelopes,type pack reflection helpers follow expanded field order"`; `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked"` | failures: none | notes: root focused validation passed after cherry-picking TODO-4276 worker commit `055b013ea` into root as `3c73004c5`.
 - 2026-05-16 02:25 local | pass | mode: release | command: `cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DPRIMESTRUCT_BUILD_TESTS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`; `cmake --build build-release --target PrimeStruct_parser_tests PrimeStruct_misc_tests -j 1`; `cd build-release && ./PrimeStruct_parser_tests --test-suite=primestruct.parser.templates`; `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.semantics.manual --test-case="type pack storage expands into deterministic struct fields,type pack storage rejects invalid placements and shapes,type pack helper bindings expand parameters locals and return envelopes,type pack reflection helpers follow expanded field order"`; `cmake --build build-release --target PrimeStruct_compile_run_tests -j 1`; `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked"`; `git diff --check` | failures: none | notes: TODO-4276 focused validation passed after expanding type packs in helper parameters, locals, return/type envelopes, call template arguments, and reflection-generated helper order for concrete pack specializations.
 - 2026-05-16 02:25 local | fail | mode: release | command: `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked"` | failures: todo queue and skipped doctest debt stay source locked | notes: source-lock caught promoted TODO-4271 missing required `parallel_track: tuple-type-packs`; added the metadata and reran successfully.
