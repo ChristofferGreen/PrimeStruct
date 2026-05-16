@@ -1858,6 +1858,9 @@ Task template:
     - 2026-05-16: Emitter call-path preference no longer falls back from
       missing canonical `/std/collections/map/<suffix>` paths to rooted
       `/map/<suffix>` aliases.
+    - 2026-05-16: Emitter return inference no longer adds or prefers rooted
+      `/map/<suffix>` aliases when canonical
+      `/std/collections/map/<suffix>` paths are missing.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

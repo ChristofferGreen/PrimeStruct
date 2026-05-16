@@ -40,15 +40,6 @@
         preferred = stdlibAlias;
       }
     }
-    if (preferred.rfind("/std/collections/map/", 0) == 0 && defMap.count(preferred) == 0) {
-      const std::string suffix = preferred.substr(std::string("/std/collections/map/").size());
-      if (!isCanonicalMapHelperName(suffix)) {
-        const std::string mapAlias = "/map/" + suffix;
-        if (defMap.count(mapAlias) > 0) {
-          preferred = mapAlias;
-        }
-      }
-    }
     return preferred;
   };
   auto normalizeCollectionMethodName = [](const std::string &receiverStruct,
@@ -174,12 +165,6 @@
       const std::string suffix = normalizedPath.substr(std::string("/map/").size());
       if (!isCanonicalMapHelperName(suffix)) {
         appendUnique("/std/collections/map/" + suffix);
-      }
-    } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
-      const std::string suffix =
-          normalizedPath.substr(std::string("/std/collections/map/").size());
-      if (!isCanonicalMapHelperName(suffix)) {
-        appendUnique("/map/" + suffix);
       }
     }
     return candidates;
