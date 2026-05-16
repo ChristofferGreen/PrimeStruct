@@ -14,9 +14,7 @@ bool isCanonicalMapAccessHelperName(const std::string &helperName) {
 }
 
 bool isCanonicalMapAccessResolvedPath(const std::string &path) {
-  return path == "/map/at" || path == "/map/at_ref" ||
-         path == "/map/at_unsafe" || path == "/map/at_unsafe_ref" ||
-         path == "/std/collections/map/at" ||
+  return path == "/std/collections/map/at" ||
          path == "/std/collections/map/at_ref" ||
          path == "/std/collections/map/at_unsafe" ||
          path == "/std/collections/map/at_unsafe_ref";

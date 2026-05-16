@@ -58,7 +58,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   available only when an explicit source definition family exists, not when
   template monomorphization has generated a `__...` specialization or when a
   map receiver method, scalar pointer/memory validation, or string argument
-  validation could otherwise mirror to rooted `/map/*` candidates.
+  validation could otherwise mirror to rooted `/map/*` candidates; collection
+  access validation must also avoid treating rooted `/map/at*` resolved paths
+  as canonical helper paths.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -69,7 +71,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   and scalar pointer/memory builtin validation no longer carries a direct
   rooted-or-canonical map access helper path classifier; string argument
   validation no longer treats rooted `/map/at*` resolved paths or slashless
-  `map/at*_ref` names as explicit map access helper classifiers.
+  `map/at*_ref` names as explicit map access helper classifiers; collection
+  access validation no longer includes rooted `/map/at*` in its canonical
+  resolved-path helper table.
 
 ### map-constructor-normalization-uses-public-path
 - Updated: 2026-05-16

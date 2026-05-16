@@ -354,6 +354,8 @@ Task template:
   String argument validation no longer treats rooted `/map/at*` resolved
   paths or slashless `map/at*_ref` names as explicit map access helper
   classifiers.
+  Collection-access validation no longer treats rooted `/map/at*` resolved
+  paths as canonical map access helper paths.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic
