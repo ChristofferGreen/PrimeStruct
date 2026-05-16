@@ -1769,6 +1769,10 @@ Task template:
       `/map/entry__*` spellings as map entry constructors. Canonical
       `/std/collections/map/entry` remains covered only for the still-existing
       entry-args path while that old path is retired separately.
+    - 2026-05-16: Semantic struct-return method inference no longer mirrors
+      map receiver method candidates to rooted `/map/*` definitions; map
+      receiver struct-return probing now checks only the canonical
+      `/std/collections/map/*` method candidate.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

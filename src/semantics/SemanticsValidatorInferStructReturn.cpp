@@ -353,7 +353,7 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
         }
       } else if (receiverStruct == "/map") {
         if (!isExplicitRemovedMapAliasStructReturnMethod) {
-          methodCandidates = {"/std/collections/map/" + methodName, "/map/" + methodName};
+          methodCandidates = {"/std/collections/map/" + methodName};
         }
       } else {
         methodCandidates = {receiverStruct + "/" + methodName};

@@ -56,13 +56,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Tags: semantics, collections, compatibility
 - Fact: Removed map aliases such as `/map/count` should count as
   available only when an explicit source definition family exists, not when
-  template monomorphization has generated a `__...` specialization.
+  template monomorphization has generated a `__...` specialization or when a
+  map receiver method could otherwise mirror to rooted `/map/*` candidates.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
   rooted-method cleanup showed `values./map/count()` also needs early
   semantic and inference rejection so pre-dispatch cannot borrow
-  `/std/collections/map/count`.
+  `/std/collections/map/count`; semantic struct-return method inference now
+  probes only canonical `/std/collections/map/*` candidates for map receivers.
 
 ### map-constructor-normalization-uses-public-path
 - Updated: 2026-05-16

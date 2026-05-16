@@ -43,6 +43,15 @@
 
 ## Recent Test Runs
 - 2026-05-16 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib map constructors accept explicit canonical map struct fields,canonical stdlib map helpers accept constructor receivers"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` |
+  failures: none | notes: semantic struct-return method inference no longer
+  mirrors map receiver methods to rooted `/map/*` candidates; only the
+  canonical `/std/collections/map/*` candidate remains for map receivers.
+- 2026-05-16 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests PrimeStruct_compile_run_tests`;
   `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib map constructors accept explicit canonical map struct fields"`;

@@ -136,6 +136,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string templateCoreSource =
       readText(repoRoot() / "src" / "semantics" /
                "TemplateMonomorphCoreUtilities.h");
+  const std::string inferStructReturnSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorInferStructReturn.cpp");
   const std::string countCapacityMapBuiltinSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprCountCapacityBuiltins.cpp");
@@ -164,6 +167,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!semanticsSource.empty());
   REQUIRE(!callResolutionSource.empty());
   REQUIRE(!templateCoreSource.empty());
+  REQUIRE(!inferStructReturnSource.empty());
   REQUIRE(!countCapacityMapBuiltinSource.empty());
   REQUIRE(!statementLowererSource.empty());
   REQUIRE(!lowerStatementsExprSource.empty());
@@ -239,6 +243,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(callResolutionSource.find("\"/map/entry__\"") == std::string::npos);
   CHECK(templateCoreSource.find("\"/map/entry\"") == std::string::npos);
   CHECK(templateCoreSource.find("\"/map/entry__\"") == std::string::npos);
+  CHECK(inferStructReturnSource.find("\"/std/collections/map/\" + methodName, \"/map/\" + methodName") ==
+        std::string::npos);
   CHECK(countCapacityMapBuiltinSource.find("/std/collections/map/count") ==
         std::string::npos);
   CHECK(countCapacityMapBuiltinSource.find("/std/collections/map/at") ==
