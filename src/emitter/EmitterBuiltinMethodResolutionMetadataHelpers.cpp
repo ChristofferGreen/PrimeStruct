@@ -102,9 +102,7 @@ std::string normalizeCollectionHelperPath(std::string path) {
   if (!path.empty() && path.front() != '/' &&
       (path.rfind("array/", 0) == 0 ||
        collectionSurfaceMemberPathUsesKnownPrefix(path) ||
-       path.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0 ||
-       path.rfind("map/", 0) == 0 ||
-       path.rfind("std/collections/map/", 0) == 0)) {
+       path.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0)) {
     path.insert(path.begin(), '/');
   }
   return path;
@@ -406,9 +404,7 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
   if (!normalizedPath.empty() && normalizedPath.front() != '/') {
     if (normalizedPath.rfind("array/", 0) == 0 ||
         collectionSurfaceMemberPathUsesKnownPrefix(normalizedPath) ||
-        normalizedPath.rfind("std/collections/" "soa" "_vector/", 0) == 0 ||
-        normalizedPath.rfind("map/", 0) == 0 ||
-        normalizedPath.rfind("std/collections/map/", 0) == 0) {
+        normalizedPath.rfind("std/collections/" "soa" "_vector/", 0) == 0) {
       normalizedPath.insert(normalizedPath.begin(), '/');
     }
   }
@@ -432,9 +428,6 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
 std::string normalizeMapImportAliasPath(const std::string &path) {
   if (path.empty() || path.front() == '/') {
     return path;
-  }
-  if (path.rfind("map/", 0) == 0 || path.rfind("std/collections/map/", 0) == 0) {
-    return "/" + path;
   }
   return path;
 }

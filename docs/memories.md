@@ -133,7 +133,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   canonical helper return type; emitter collection-type inference should not
   prune canonical map access candidates from rooted `/map/<access>` inputs,
   and the shared emitter method metadata/type-inference helper should not
-  prune rooted map access candidates either.
+  prune rooted map access candidates either; emitter method metadata should
+  not normalize slashless rooted/canonical map helper paths to leading-slash
+  candidates.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -224,7 +226,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   return type, which allowed the emitter collection-type rooted map access
   pruning branch to be removed. The same obsolete pruning helper was then
   removed from shared emitter method metadata/type inference and setup-return
-  inference.
+  inference. Emitter method metadata no longer normalizes slashless
+  rooted/canonical map helper paths to leading-slash candidates.
 
 ### map-constructor-normalization-uses-public-path
 - Updated: 2026-05-16
