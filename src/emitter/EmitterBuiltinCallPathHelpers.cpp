@@ -881,15 +881,6 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
       }
     }
   }
-  if (preferred.rfind("/map/", 0) == 0 && nameMap.count(preferred) == 0) {
-    const std::string suffix = preferred.substr(std::string("/map/").size());
-    if (!isCanonicalMapHelperName(suffix)) {
-      const std::string stdlibAlias = "/std/collections/map/" + suffix;
-      if (nameMap.count(stdlibAlias) > 0) {
-        preferred = stdlibAlias;
-      }
-    }
-  }
   return preferred;
 }
 
