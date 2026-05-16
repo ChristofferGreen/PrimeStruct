@@ -46,6 +46,10 @@ std::string SemanticsValidator::inferStructReturnCollectionPath(const std::strin
     return "/" + normalizedTypeName;
   }
   if (isMapCollectionTypeName(normalizedTypeName) && !normalizedTypeTemplateArg.empty()) {
+    std::vector<std::string> args;
+    if (splitTopLevelTemplateArgs(normalizedTypeTemplateArg, args) && args.size() == 2) {
+      return specializedExperimentalMapStructReturnPath(args);
+    }
     return "/map";
   }
 
@@ -58,7 +62,7 @@ std::string SemanticsValidator::inferStructReturnCollectionPath(const std::strin
         return "/" + base;
       }
       if (isMapCollectionTypeName(base) && args.size() == 2) {
-        return "/map";
+        return specializedExperimentalMapStructReturnPath(args);
       }
     }
   }
@@ -346,10 +350,18 @@ std::string SemanticsValidator::specializedExperimentalMapStructReturnPath(
     return hash;
   };
 
+  std::ostringstream canonicalArgs;
+  for (size_t index = 0; index < templateArgs.size(); ++index) {
+    if (index != 0) {
+      canonicalArgs << ",";
+    }
+    canonicalArgs << "type:" << stripWhitespace(templateArgs[index]);
+  }
+
   std::ostringstream specializedPath;
-  specializedPath << "/std/collections/experimental_map/Map__t"
+  specializedPath << "/std/collections/map/MapValue__t"
                   << std::hex
-                  << fnv1a64(stripWhitespace(joinTemplateArgs(templateArgs)));
+                  << fnv1a64(canonicalArgs.str());
   return specializedPath.str();
 }
 

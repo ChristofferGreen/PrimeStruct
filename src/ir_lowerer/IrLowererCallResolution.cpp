@@ -602,7 +602,8 @@ bool validateSemanticProductMethodCallCoverage(const Program &program,
   };
 
   validateExpr = [&](const std::string &scopePath, const Expr &expr) {
-    if (expr.kind == Expr::Kind::Call && expr.isMethodCall) {
+    if (expr.kind == Expr::Kind::Call && expr.isMethodCall &&
+        !expr.isFieldAccess) {
       if (expr.semanticNodeId == 0) {
         error = "missing semantic-product method-call semantic id: " +
                 describeCallSite(scopePath, expr);

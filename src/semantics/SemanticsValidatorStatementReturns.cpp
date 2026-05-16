@@ -947,6 +947,10 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
             if (normalizedTypePath.rfind("std/collections/experimental_map/Map__", 0) == 0) {
               return "/map";
             }
+            if (normalizedTypePath.rfind("std/collections/" "map" "/MapValue__", 0) == 0 ||
+                normalizedTypePath == "std/collections/" "map" "/MapValue") {
+              return "/map";
+            }
             if (isLegacyExperimentalVectorCompatibilityTypePath(
                     normalizedTypePath) ||
                 isLegacyExperimentalVectorCompatibilityTypePath(
@@ -965,7 +969,8 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
             if (typePath == "/soa" "_vector" || typePath == "soa" "_vector") {
               return "/soa" "_vector";
             }
-            if (isMapCollectionTypeName(typePath) || typePath == "/map" || typePath == "/std/collections/map") {
+            if (isMapCollectionTypeName(typePath) || typePath == "/map" ||
+                typePath == "/std/collections/" "map") {
               return "/map";
             }
             if (typePath == "/string" || typePath == "string") {

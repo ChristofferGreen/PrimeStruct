@@ -381,6 +381,9 @@ void SemanticsValidator::ensureQuerySnapshotFactCaches() {
   queryFactSnapshotCache_.clear();
 
   forEachInferredQuerySnapshot([&](const Definition &def, const Expr &expr, QuerySnapshotData &&queryData) {
+    if (queryData.resolvedPath.empty()) {
+      return;
+    }
     QueryFactSnapshotEntry factEntry{
         def.fullPath,
         expr.name,
@@ -431,6 +434,9 @@ void SemanticsValidator::ensureQuerySnapshotFactCaches() {
     }
     QuerySnapshotData queryData;
     if (!inferQuerySnapshotData(defParams, activeLocals, target, queryData)) {
+      return;
+    }
+    if (queryData.resolvedPath.empty()) {
       return;
     }
     appendQueryFactSnapshotIfMissing(QueryFactSnapshotEntry{

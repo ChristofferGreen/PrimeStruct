@@ -154,21 +154,10 @@ bool resolveSpecializedExperimentalMapStructPath(const std::string &typeName,
   if (!splitTemplateArgs(typeTemplateArg, templateArgs) || templateArgs.size() != 2) {
     return false;
   }
-  std::string canonicalArgs = joinTemplateArgsText(templateArgs);
-  canonicalArgs.erase(
-      std::remove_if(canonicalArgs.begin(), canonicalArgs.end(), [](unsigned char ch) {
-        return std::isspace(ch) != 0;
-      }),
-      canonicalArgs.end());
-
-  uint64_t hash = 1469598103934665603ULL;
-  for (unsigned char ch : canonicalArgs) {
-    hash ^= static_cast<uint64_t>(ch);
-    hash *= 1099511628211ULL;
-  }
 
   std::ostringstream specializedPath;
-  specializedPath << "/std/collections/experimental_map/Map__t" << std::hex << hash;
+  specializedPath << "/std/collections/map/MapValue"
+                  << mangleTemplateTypeArgsSuffix(templateArgs);
   structPathOut = specializedPath.str();
   return true;
 }

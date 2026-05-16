@@ -197,7 +197,14 @@ bool validateBuiltinMapKeyType(const BindingInfo &binding,
 
 bool isMapCollectionTypeName(const std::string &name) {
   const std::string normalized = normalizeBindingTypeName(name);
-  return normalized == "std/collections/experimental_map/Map" ||
+  return normalized == "map" || normalized == "/map" ||
+         normalized == "std/collections/map" ||
+         normalized == "/std/collections/map" ||
+         normalized == "std/collections/map/MapValue" ||
+         normalized == "/std/collections/map/MapValue" ||
+         normalized.rfind("std/collections/map/MapValue__", 0) == 0 ||
+         normalized.rfind("/std/collections/map/MapValue__", 0) == 0 ||
+         normalized == "std/collections/experimental_map/Map" ||
          normalized == "/std/collections/experimental_map/Map";
 }
 

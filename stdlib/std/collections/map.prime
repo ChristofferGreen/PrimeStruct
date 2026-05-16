@@ -128,7 +128,8 @@ namespace std {
 
   [public effects(heap_alloc), return<MapValue<K, V>> Comparable<K>]
   map<K, V>([K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue) {
-    [MapValue<K, V> mut] out{map<K, V>(firstKey, firstValue)}
+    [MapValue<K, V> mut] out{mapNew<K, V>()}
+    /std/collections/map/mapInsert<K, V>(out, firstKey, firstValue)
     /std/collections/map/mapInsert<K, V>(out, secondKey, secondValue)
     return(out)
   }
@@ -143,6 +144,16 @@ namespace std {
   mapCountRef<K, V>([Reference<MapValue<K, V>>] entries) {
     [Vector<K>] keys{entries.keys}
     return(/std/collections/internal_vector/vectorCount<K>(keys))
+  }
+
+  [public return<i32>]
+  count<K, V>([MapValue<K, V>] entries) {
+    return(/std/collections/map/mapCount<K, V>(entries))
+  }
+
+  [public return<i32>]
+  count_ref<K, V>([Reference<MapValue<K, V>>] entries) {
+    return(/std/collections/map/mapCountRef<K, V>(entries))
   }
 
   [return<i32> Comparable<K>]
@@ -214,7 +225,17 @@ namespace std {
          /std/collections/internal_vector/vectorPush<V>(payloads, value)
          assign(entries.keys, keys)
          assign(entries.payloads, payloads)
-       })
+         })
+  }
+
+  [public effects(heap_alloc), return<void> Comparable<K>]
+  insert<K, V>([MapValue<K, V> mut] entries, [K] key, [V] value) {
+    /std/collections/map/mapInsert<K, V>(entries, key, value)
+  }
+
+  [public effects(heap_alloc), return<void> Comparable<K>]
+  insert_ref<K, V>([Reference<MapValue<K, V>> mut] entries, [K] key, [V] value) {
+    /std/collections/map/mapInsertRef<K, V>(entries, key, value)
   }
 
   [public return<bool> Comparable<K>]
@@ -233,6 +254,16 @@ namespace std {
     return(less_than(
         /std/collections/map/findIndexRef<K, V>(entries, key),
         limit))
+  }
+
+  [public return<bool> Comparable<K>]
+  contains<K, V>([MapValue<K, V>] entries, [K] key) {
+    return(/std/collections/map/mapContains<K, V>(entries, key))
+  }
+
+  [public return<bool> Comparable<K>]
+  contains_ref<K, V>([Reference<MapValue<K, V>>] entries, [K] key) {
+    return(/std/collections/map/mapContainsRef<K, V>(entries, key))
   }
 
   [public return<Result<V, /std/collections/ContainerError>> Comparable<K>]
@@ -255,6 +286,16 @@ namespace std {
     if(less_than(index, limit),
        then() { return(Result.ok(/std/collections/internal_vector/vectorAtUnsafe<V>(payloads, index))) },
        else() { return(/std/collections/ContainerError/result<V>(/std/collections/ContainerError/missingKey())) })
+  }
+
+  [public return<Result<V, /std/collections/ContainerError>> Comparable<K>]
+  tryAt<K, V>([MapValue<K, V>] entries, [K] key) {
+    return(/std/collections/map/mapTryAt<K, V>(entries, key))
+  }
+
+  [public return<Result<V, /std/collections/ContainerError>> Comparable<K>]
+  tryAt_ref<K, V>([Reference<MapValue<K, V>>] entries, [K] key) {
+    return(/std/collections/map/mapTryAtRef<K, V>(entries, key))
   }
 
   [public return<V> Comparable<K>]
@@ -280,6 +321,16 @@ namespace std {
   }
 
   [public return<V> Comparable<K>]
+  at<K, V>([MapValue<K, V>] entries, [K] key) {
+    return(/std/collections/map/mapAt<K, V>(entries, key))
+  }
+
+  [public return<V> Comparable<K>]
+  at_ref<K, V>([Reference<MapValue<K, V>>] entries, [K] key) {
+    return(/std/collections/map/mapAtRef<K, V>(entries, key))
+  }
+
+  [public return<V> Comparable<K>]
   mapAtUnsafe<K, V>([MapValue<K, V>] entries, [K] key) {
     [Vector<V>] payloads{entries.payloads}
     return(/std/collections/internal_vector/vectorAtUnsafe<V>(
@@ -293,6 +344,16 @@ namespace std {
     return(/std/collections/internal_vector/vectorAtUnsafe<V>(
         payloads,
         /std/collections/map/findIndexRef<K, V>(entries, key)))
+  }
+
+  [public return<V> Comparable<K>]
+  at_unsafe<K, V>([MapValue<K, V>] entries, [K] key) {
+    return(/std/collections/map/mapAtUnsafe<K, V>(entries, key))
+  }
+
+  [public return<V> Comparable<K>]
+  at_unsafe_ref<K, V>([Reference<MapValue<K, V>>] entries, [K] key) {
+    return(/std/collections/map/mapAtUnsafeRef<K, V>(entries, key))
   }
   }
   }

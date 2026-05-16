@@ -65,100 +65,6 @@
         };
     canonicalizeExplicitBuiltinMapHelpers(normalizedStmt);
     const Expr &stmt = normalizedStmt;
-    auto rewriteBuiltinMapConstructorExpr = [&](const Expr &callExpr,
-                                                const std::vector<std::string> &declaredTemplateArgs,
-                                                LocalInfo::ValueKind fallbackKeyKind,
-                                                LocalInfo::ValueKind fallbackValueKind,
-                                                Expr &rewrittenExpr) {
-      if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
-        return false;
-      }
-      const Definition *callee = resolveDefinitionCall(callExpr);
-      if (callee == nullptr ||
-          !isResolvedCanonicalPublishedStdlibSurfaceConstructorPath(
-              callee->fullPath,
-              primec::StdlibSurfaceId::CollectionsMapConstructors)) {
-        return false;
-      }
-      rewrittenExpr = callExpr;
-      rewrittenExpr.name = "/map/map";
-      rewrittenExpr.namespacePrefix.clear();
-      rewrittenExpr.isMethodCall = false;
-      rewrittenExpr.semanticNodeId = 0;
-      if (rewrittenExpr.templateArgs.empty()) {
-        if (declaredTemplateArgs.size() == 2) {
-          rewrittenExpr.templateArgs = declaredTemplateArgs;
-        } else if (callee->parameters.size() >= 2) {
-          auto extractParameterTypeName = [&](const Expr &paramExpr) {
-            for (const auto &transform : paramExpr.transforms) {
-              if (transform.name == "mut" || transform.name == "public" || transform.name == "private" ||
-                  transform.name == "static" || transform.name == "shared" || transform.name == "placement" ||
-                  transform.name == "align" || transform.name == "packed" || transform.name == "reflection" ||
-                  transform.name == "effects" || transform.name == "capabilities") {
-                continue;
-              }
-              if (!transform.arguments.empty()) {
-                continue;
-              }
-              std::string typeName = transform.name;
-              if (!transform.templateArgs.empty()) {
-                typeName += "<";
-                for (size_t index = 0; index < transform.templateArgs.size(); ++index) {
-                  if (index != 0) {
-                    typeName += ", ";
-                  }
-                  typeName += trimTemplateTypeText(transform.templateArgs[index]);
-                }
-                typeName += ">";
-              }
-              return typeName;
-            }
-            return std::string{};
-          };
-          const std::string keyTypeName = extractParameterTypeName(callee->parameters[0]);
-          const std::string valueTypeName = extractParameterTypeName(callee->parameters[1]);
-          if (!keyTypeName.empty() && !valueTypeName.empty()) {
-            rewrittenExpr.templateArgs = {keyTypeName, valueTypeName};
-          }
-        } else if (fallbackKeyKind != LocalInfo::ValueKind::Unknown &&
-                   fallbackValueKind != LocalInfo::ValueKind::Unknown) {
-          rewrittenExpr.templateArgs = {
-              typeNameForValueKind(fallbackKeyKind),
-              typeNameForValueKind(fallbackValueKind),
-          };
-        }
-      }
-      return true;
-    };
-    auto extractBuiltinMapReturnTemplateArgs = [&]() {
-      std::vector<std::string> templateArgs;
-      const std::string &definitionPath =
-          activeInlineContext != nullptr ? activeInlineContext->defPath : function.name;
-      auto defIt = defMap.find(definitionPath);
-      if (defIt == defMap.end() || defIt->second == nullptr) {
-        return templateArgs;
-      }
-      for (const auto &transform : defIt->second->transforms) {
-        if (transform.name != "return" || transform.templateArgs.size() != 1) {
-          continue;
-        }
-        std::string base;
-        std::string argList;
-        if (!splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), base, argList)) {
-          return std::vector<std::string>{};
-        }
-        if (normalizeCollectionBindingTypeName(base) != "map") {
-          return std::vector<std::string>{};
-        }
-        if (!splitTemplateArgs(argList, templateArgs) || templateArgs.size() != 2) {
-          return std::vector<std::string>{};
-        }
-        templateArgs[0] = trimTemplateTypeText(templateArgs[0]);
-        templateArgs[1] = trimTemplateTypeText(templateArgs[1]);
-        return templateArgs;
-      }
-      return templateArgs;
-    };
     auto extractDeclaredStructReturnPath = [&]() {
       const std::string &definitionPath =
           activeInlineContext != nullptr ? activeInlineContext->defPath : function.name;
@@ -1043,15 +949,7 @@
         error = "native backend requires typed bindings";
         return false;
       }
-      Expr rewrittenMapInitExpr;
-      const Expr *emittedInitExpr = &init;
-      if (info.kind == LocalInfo::Kind::Map && init.kind == Expr::Kind::Call && !init.isMethodCall) {
-        if (rewriteBuiltinMapConstructorExpr(
-                init, {}, info.mapKeyKind, info.mapValueKind, rewrittenMapInitExpr)) {
-          emittedInitExpr = &rewrittenMapInitExpr;
-        }
-      }
-      if (!emitExpr(*emittedInitExpr, localsIn)) {
+      if (!emitExpr(init, localsIn)) {
         return false;
       }
       info.index = nextLocal++;
@@ -1166,23 +1064,6 @@
     LocalMap rewrittenReturnLocals;
     const LocalMap *emittedReturnLocals = &localsIn;
     if (isReturnCall(stmt) && stmt.args.size() == 1) {
-      Expr rewrittenReturnValueExpr;
-      const std::vector<std::string> declaredMapTemplateArgs = extractBuiltinMapReturnTemplateArgs();
-      LocalInfo::ValueKind returnMapKeyKind = LocalInfo::ValueKind::Unknown;
-      LocalInfo::ValueKind returnMapValueKind = LocalInfo::ValueKind::Unknown;
-      if (stmt.args.front().kind == Expr::Kind::Call && stmt.args.front().args.size() >= 2) {
-        returnMapKeyKind = inferExprKind(stmt.args.front().args.front(), localsIn);
-        returnMapValueKind = inferExprKind(stmt.args.front().args[1], localsIn);
-      }
-      if (rewriteBuiltinMapConstructorExpr(stmt.args.front(),
-                                          declaredMapTemplateArgs,
-                                          returnMapKeyKind,
-                                          returnMapValueKind,
-                                          rewrittenReturnValueExpr)) {
-        rewrittenReturnStmt = stmt;
-        rewrittenReturnStmt.args.front() = std::move(rewrittenReturnValueExpr);
-        emittedReturnStmt = &rewrittenReturnStmt;
-      }
       const Expr &returnValueExpr = emittedReturnStmt->args.front();
       if (const Definition *returnSumDef = extractDeclaredSumReturnDefinition();
           returnSumDef != nullptr &&

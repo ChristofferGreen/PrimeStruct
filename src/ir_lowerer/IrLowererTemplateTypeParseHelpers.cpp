@@ -1,6 +1,9 @@
 #include "IrLowererTemplateTypeParseHelpers.h"
 
+#include <algorithm>
 #include <cctype>
+#include <cstdint>
+#include <sstream>
 
 #include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
@@ -46,6 +49,33 @@ bool splitTemplateArgs(const std::string &text, std::vector<std::string> &out) {
   }
   out.push_back(trimTemplateTypeText(text.substr(start)));
   return true;
+}
+
+std::string mangleTemplateTypeArgsSuffix(const std::vector<std::string> &args) {
+  std::ostringstream canonical;
+  for (size_t index = 0; index < args.size(); ++index) {
+    if (index != 0) {
+      canonical << ",";
+    }
+    std::string arg = trimTemplateTypeText(args[index]);
+    arg.erase(
+        std::remove_if(arg.begin(),
+                       arg.end(),
+                       [](unsigned char ch) { return std::isspace(ch) != 0; }),
+        arg.end());
+    canonical << "type:" << arg;
+  }
+
+  uint64_t hash = 1469598103934665603ULL;
+  const std::string canonicalText = canonical.str();
+  for (unsigned char ch : canonicalText) {
+    hash ^= static_cast<uint64_t>(ch);
+    hash *= 1099511628211ULL;
+  }
+
+  std::ostringstream suffix;
+  suffix << "__t" << std::hex << hash;
+  return suffix.str();
 }
 
 bool isResultTemplateTypeBaseName(const std::string &base) {

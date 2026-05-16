@@ -35,7 +35,7 @@ std::string SemanticsValidator::resolveStructReturnPathForBuild(const std::strin
         return "/vector";
       }
       if (isMapCollectionTypeName(collectionBase) && args.size() == 2) {
-        return "/map";
+        return specializedExperimentalMapStructReturnPath(args);
       }
     }
   }

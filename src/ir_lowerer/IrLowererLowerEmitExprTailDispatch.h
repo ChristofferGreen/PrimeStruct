@@ -511,16 +511,7 @@
                ir_lowerer::isCanonicalPublishedStdlibSurfaceHelperPath(
                    resolveExprPath(callExpr),
                    primec::StdlibSurfaceId::CollectionsMapHelpers));
-          const bool explicitCanonicalDirectMapAccess =
-              !callExpr.isMethodCall &&
-              hasExplicitStdMapHelperSpelling(callExpr) &&
-              (helperName == "at" || helperName == "at_unsafe");
-          const bool preserveCanonicalStdMapHelperPath =
-              isCanonicalStdMapHelperPath &&
-              (!mapTargetInfo.isMapTarget ||
-               (mapTargetInfo.isWrappedMapTarget &&
-                !explicitCanonicalDirectMapAccess));
-          if (preserveCanonicalStdMapHelperPath) {
+          if (isCanonicalStdMapHelperPath) {
             // Keep canonical stdlib helper calls intact so direct overrides on
             // the published map helper surface are honored.
             return false;

@@ -1700,6 +1700,16 @@ Task template:
       rooted `/map/map` or rooted `/map/entry` spellings as builtin map
       constructor aliases; canonical and experimental backing constructor
       handling remain separate follow-up cleanup areas.
+    - 2026-05-16: Canonical public helpers in
+      `stdlib/std/collections/map.prime` now route through the stdlib-owned
+      `MapValue` implementation, and native lowering no longer rewrites
+      canonical map constructors or helper calls through rooted `/map/map` or
+      bare builtin map hooks. Semantic and lowering paths now share the
+      template-monomorph `MapValue__t*` identity for `map<K, V>` bindings,
+      returns, and parameters. Focused native constructor binding/return/
+      parameter tests pass; the remaining blocker is stale native collection
+      compatibility coverage around method-helper forwarding, reference
+      helpers, and `MapValue__t*` layout/ref mismatches.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

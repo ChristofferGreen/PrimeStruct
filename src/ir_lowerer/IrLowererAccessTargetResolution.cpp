@@ -99,15 +99,9 @@ std::string inferExperimentalMapStructPathFromKinds(LocalInfo::ValueKind keyKind
     return "";
   }
 
-  const std::string canonicalArgs = keyType + "," + valueType;
-  uint64_t hash = 1469598103934665603ULL;
-  for (unsigned char ch : canonicalArgs) {
-    hash ^= static_cast<uint64_t>(ch);
-    hash *= 1099511628211ULL;
-  }
-
   std::ostringstream specializedPath;
-  specializedPath << "/std/collections/experimental_map/Map__t" << std::hex << hash;
+  specializedPath << "/std/collections/map/MapValue"
+                  << mangleTemplateTypeArgsSuffix({keyType, valueType});
   return specializedPath.str();
 }
 
