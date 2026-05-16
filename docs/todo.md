@@ -488,6 +488,9 @@ Task template:
   Statement binding explicit map helper canonicalization now derives the
   canonical map helper root through a local collection path helper instead of
   a direct canonical map path string.
+  Lower emit expression collection helper explicit map helper canonicalization
+  now derives the canonical map helper root through the local collection path
+  helper instead of a direct canonical map path string.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic

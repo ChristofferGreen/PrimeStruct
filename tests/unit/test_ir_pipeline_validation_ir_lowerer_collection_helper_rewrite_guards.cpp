@@ -44,8 +44,12 @@ TEST_CASE("ir lowerer collection helper rewrite guards explicit map defs") {
             "if (callExpr.namespacePrefix.empty() &&\n"
             "              callExpr.name == helperName) {") !=
         std::string::npos);
+  CHECK(source.find("const std::string canonicalMapHelperRoot = collectionMemberRoot(\"map\");") !=
+        std::string::npos);
   CHECK(source.find(
-            "if (directHelperPath.rfind(\"/std/collections/map/\", 0) == 0) {") !=
+            "if (directHelperPath.rfind(canonicalMapHelperRoot, 0) == 0) {") !=
+        std::string::npos);
+  CHECK(source.find("directHelperPath.rfind(\"/std/collections/map/\", 0)") ==
         std::string::npos);
   CHECK(source.find("directHelperPath.rfind(\"/std/collections/experimental_map/\", 0)") ==
         std::string::npos);
@@ -1939,13 +1943,17 @@ TEST_CASE("ir lowerer canonical map contains and tryAt rewrites stay recognized 
   const std::string collectionHelpersSource = readText(collectionHelpersPath);
   const std::string tailDispatchSource = readText(tailDispatchPath);
 
-  CHECK(collectionHelpersSource.find("matchesResolvedPath(\"/std/collections/map/contains\")") !=
+  CHECK(collectionHelpersSource.find("const std::string canonicalMapHelperRoot = collectionMemberRoot(\"map\");") !=
         std::string::npos);
-  CHECK(collectionHelpersSource.find("matchesResolvedPath(\"/std/collections/map/tryAt\")") !=
+  CHECK(collectionHelpersSource.find("helperName != \"count\" && helperName != \"contains\" &&") !=
         std::string::npos);
-  CHECK(tailDispatchSource.find("matchesGeneratedMapHelperPath(callExpr, \"/std/collections/map/contains\")") !=
+  CHECK(collectionHelpersSource.find("helperName != \"tryAt\" && helperName != \"insert\"") !=
         std::string::npos);
-  CHECK(tailDispatchSource.find("matchesGeneratedMapHelperPath(callExpr, \"/std/collections/map/tryAt\")") !=
+  CHECK(tailDispatchSource.find("ir_lowerer::collectionMemberPath(\"map\", helperName)") !=
+        std::string::npos);
+  CHECK(tailDispatchSource.find("helperName != \"count\" && helperName != \"contains\" &&") !=
+        std::string::npos);
+  CHECK(tailDispatchSource.find("helperName != \"tryAt\" && helperName != \"at\" &&") !=
         std::string::npos);
 }
 
@@ -2056,7 +2064,7 @@ TEST_CASE("ir lowerer late expression fallback guards explicit map helper defs")
         std::string::npos);
 }
 
-TEST_CASE("ir lowerer late expression canonical map helpers prefer semantic targets") {
+TEST_CASE("ir lowerer late expression canonical map helpers use path-family gates") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
     CHECK(file.is_open());
@@ -2078,24 +2086,19 @@ TEST_CASE("ir lowerer late expression canonical map helpers prefer semantic targ
   const std::string source = readText(statementsExprPath);
 
   const size_t canonicalMapGate =
-      source.find("const bool isExplicitCanonicalMapHelperPath =");
-  const size_t semanticResolver = source.find(
-      "ir_lowerer::resolveMapAccessTargetInfo(\n"
-      "                            expr.args.front(),\n"
-      "                            localsIn,\n"
-      "                            {},\n"
-      "                            semanticProgram,\n"
-      "                            &callResolutionAdapters.semanticProductTargets.semanticIndex)",
+      source.find("auto isCanonicalMapHelperFamilyPath =");
+  const size_t explicitAccessGate = source.find(
+      "const bool isExplicitCanonicalMapAccess =",
       canonicalMapGate);
   const size_t builtinDeferral =
-      source.find("if (isExplicitCanonicalMapHelperPath &&",
-                  semanticResolver);
+      source.find("if (isExplicitCanonicalMapAccess &&",
+                  explicitAccessGate);
 
   REQUIRE(canonicalMapGate != std::string::npos);
-  REQUIRE(semanticResolver != std::string::npos);
+  REQUIRE(explicitAccessGate != std::string::npos);
   REQUIRE(builtinDeferral != std::string::npos);
-  CHECK(canonicalMapGate < semanticResolver);
-  CHECK(semanticResolver < builtinDeferral);
+  CHECK(canonicalMapGate < explicitAccessGate);
+  CHECK(explicitAccessGate < builtinDeferral);
   CHECK(source.find("resolveMapAccessTargetInfo(expr.args.front(), localsIn)") ==
         std::string::npos);
 }

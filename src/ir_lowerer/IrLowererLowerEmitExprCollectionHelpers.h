@@ -205,7 +205,8 @@
             return false;
           }
           const std::string directHelperPath = resolveCollectionExprDirectPath(callExpr);
-          if (directHelperPath.rfind("/std/collections/map/", 0) == 0) {
+          const std::string canonicalMapHelperRoot = collectionMemberRoot("map");
+          if (directHelperPath.rfind(canonicalMapHelperRoot, 0) == 0) {
             return false;
           }
           if (ir_lowerer::isPublishedStdlibSurfaceLoweringPath(

@@ -105,6 +105,19 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 23:13 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer collection helper rewrite guards explicit map defs,ir lowerer canonical map contains and tryAt rewrites stay recognized late,ir lowerer late expression canonical map helpers use path-family gates" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: lower emit expression collection helper explicit map helper
+  canonicalization now derives the canonical map helper root through the local
+  collection path helper instead of a direct canonical map path string; stale
+  source locks for the adjacent path-family guards were updated; the map
+  surface inventory now observes 352 production traces and backing traces
+  remain at 0.
 - 2026-05-16 21:30 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer statement binding helper preserves inferred borrowed map return metadata,ir lowerer statement binding helper keeps canonical map constructor value metadata,ir lowerer statement binding helper inherits map metadata from named source binding" --no-skip`;
