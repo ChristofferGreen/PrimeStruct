@@ -203,6 +203,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   template-monomorph collection receiver normalization should use the shared
   helper for experimental map backing paths while constructing bare generated
   backing prefixes from the backing name;
+  template-monomorph fallback type inference should use the shared helper for
+  unspecialized and generated experimental map value types;
   generated collection struct classification should derive the canonical map
   `MapValue__*` prefix through `collectionTypePath("map")` instead of
   carrying a split-string map root.

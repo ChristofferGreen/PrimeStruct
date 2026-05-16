@@ -2002,6 +2002,9 @@ Task template:
       longer hard-codes experimental map backing paths or generated backing
       prefixes; full backing paths now use the shared helper and bare
       generated prefixes are built from the backing name.
+    - 2026-05-16: Template-monomorph fallback type inference no longer
+      hard-codes unspecialized or generated experimental map value types; both
+      now route through shared experimental collection backing classifiers.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

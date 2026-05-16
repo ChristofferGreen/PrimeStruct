@@ -73,6 +73,16 @@
   manual map uninitialized validation coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 17:33 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical namespaced map access helpers accept experimental map values,stdlib namespaced map helpers accept experimental map value receivers,stdlib wrapper map helpers accept experimental map value receivers,canonical namespaced map insert validates on explicit experimental map bindings"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` |
+  failures: none | notes: template-monomorph fallback type inference now uses
+  shared experimental collection backing classifiers for unspecialized and
+  generated experimental map value types; the map surface inventory now
+  observes 897 production traces and backing traces now observe 142.
 - 2026-05-16 17:30 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical namespaced map access helpers accept experimental map values,stdlib namespaced map helpers accept experimental map value receivers,stdlib wrapper map helpers accept experimental map value receivers"`;

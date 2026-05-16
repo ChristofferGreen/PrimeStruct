@@ -162,6 +162,35 @@ std::string resolveStructLikeExprPathForTemplatedVectorFallback(const Expr &expr
   return {};
 }
 
+std::string experimentalMapBackingLeafForFallbackInference(std::string typeName) {
+  typeName = normalizeBindingTypeName(std::move(typeName));
+  if (!typeName.empty() && typeName.front() == '/') {
+    typeName.erase(typeName.begin());
+  }
+  const size_t leafStart = typeName.find_last_of('/');
+  return leafStart == std::string::npos ? typeName : typeName.substr(leafStart + 1);
+}
+
+bool isUnspecializedExperimentalMapBackingTypeForFallbackInference(
+    std::string typeName) {
+  typeName = normalizeBindingTypeName(std::move(typeName));
+  if (!typeName.empty() && typeName.front() == '/') {
+    typeName.erase(typeName.begin());
+  }
+  return experimentalMapBackingLeafForFallbackInference(typeName) == "Map" &&
+         isExperimentalCollectionBackingTypeName("map", "Map", typeName);
+}
+
+bool isSpecializedExperimentalMapBackingTypeForFallbackInference(
+    std::string typeName) {
+  typeName = normalizeBindingTypeName(std::move(typeName));
+  if (!typeName.empty() && typeName.front() == '/') {
+    typeName.erase(typeName.begin());
+  }
+  return experimentalMapBackingLeafForFallbackInference(typeName).rfind("Map__", 0) == 0 &&
+         isExperimentalCollectionBackingTypeName("map", "Map", typeName);
+}
+
 bool resolvesExperimentalMapValueTypeText(const std::string &typeText,
                                           const SubstMap &mapping,
                                           const std::unordered_set<std::string> &allowedParams,
@@ -178,14 +207,16 @@ bool resolvesExperimentalMapValueTypeText(const std::string &typeText,
     if (!normalizedInputBase.empty() && normalizedInputBase.front() == '/') {
       normalizedInputBase.erase(normalizedInputBase.begin());
     }
-    if (normalizedInputBase != "Map" && normalizedInputBase != "std/collections/experimental_map/Map") {
+    if (!isUnspecializedExperimentalMapBackingTypeForFallbackInference(
+            normalizedInputBase)) {
       return false;
     }
   } else {
     if (!normalizedInput.empty() && normalizedInput.front() == '/') {
       normalizedInput.erase(normalizedInput.begin());
     }
-    if (normalizedInput.rfind("std/collections/experimental_map/Map__", 0) != 0) {
+    if (!isSpecializedExperimentalMapBackingTypeForFallbackInference(
+            normalizedInput)) {
       return false;
     }
   }
@@ -202,7 +233,8 @@ bool resolvesExperimentalMapValueTypeText(const std::string &typeText,
     if (!normalizedBase.empty() && normalizedBase.front() == '/') {
       normalizedBase.erase(normalizedBase.begin());
     }
-    if (normalizedBase == "Map" || normalizedBase == "std/collections/experimental_map/Map") {
+    if (isUnspecializedExperimentalMapBackingTypeForFallbackInference(
+            normalizedBase)) {
       std::vector<std::string> args;
       return splitTopLevelTemplateArgs(argText, args) && args.size() == 2;
     }
@@ -210,7 +242,7 @@ bool resolvesExperimentalMapValueTypeText(const std::string &typeText,
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
-  return normalized.rfind("std/collections/experimental_map/Map__", 0) == 0;
+  return isSpecializedExperimentalMapBackingTypeForFallbackInference(normalized);
 }
 
 struct TemplatedFallbackQueryStateAdapterData {
