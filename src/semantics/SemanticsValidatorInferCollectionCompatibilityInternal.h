@@ -452,7 +452,7 @@ legacyExperimentalVectorCompatibilityShorthandTypeText(
     std::string &helperNameOut) {
   helperNameOut.clear();
   if (resolvedPath.rfind("/std/collections/internal_map/", 0) == 0 ||
-      resolvedPath.rfind("/std/collections/experimental_map/", 0) == 0) {
+      resolvedPath.rfind(experimentalCollectionConstructorRootLocal("map"), 0) == 0) {
     return false;
   }
   if (!resolvePublishedCollectionHelperResolvedPath(

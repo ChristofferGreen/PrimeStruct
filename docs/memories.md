@@ -287,6 +287,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   semantic and template-monomorph generated map backing detection should rely
   on the shared experimental collection backing classifier instead of spelling
   the generated `Map` prefix;
+  semantic collection-helper rewrite and compatibility internals should use
+  the shared constructor root helper for experimental map helper backing
+  paths;
   generated collection struct classification should derive the canonical map
   `MapValue__*` prefix through `collectionTypePath("map")` instead of
   carrying a split-string map root.

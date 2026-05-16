@@ -559,7 +559,7 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalMapHelperCall(
       rewrittenOut.name = preferredPublishedCollectionLoweringPath(
           "insert_ref",
           StdlibSurfaceId::CollectionsMapHelpers,
-          "/std/collections/experimental_map/");
+          experimentalCollectionConstructorRootLocal("map"));
       if (rewrittenOut.name.empty()) {
         rewrittenOut.name = canonicalCollectionHelperPath(
             StdlibSurfaceId::CollectionsMapHelpers, "insert_ref");
@@ -594,7 +594,7 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalMapHelperCall(
       return explicitTarget;
     }();
     directExperimentalMapHelperSpelling =
-        explicitTarget.rfind("/std/collections/experimental_map/", 0) == 0;
+        explicitTarget.rfind(experimentalCollectionConstructorRootLocal("map"), 0) == 0;
     if (!canonicalExperimentalMapHelperPath(resolvedOrExplicitPath, canonicalPath, helperName)) {
       return false;
     }

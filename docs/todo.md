@@ -2112,6 +2112,9 @@ Task template:
     - 2026-05-16: Semantic and template-monomorph generated map backing
       detection no longer spells the generated `Map` prefix; those checks now
       rely on the shared experimental collection backing classifier.
+    - 2026-05-16: Semantic collection-helper rewrite and compatibility
+      internals no longer hard-code experimental map helper roots; they now
+      use the shared constructor root helper for those backing paths.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.
