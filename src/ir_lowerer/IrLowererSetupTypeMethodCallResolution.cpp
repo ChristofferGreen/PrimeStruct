@@ -611,9 +611,8 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     if (!resolvedPath.empty()) {
       const bool routesExplicitVectorCountMethodThroughMapMethodTarget =
           requestsExplicitVectorCountMethod &&
-          (normalizeCollectionHelperPath(resolvedPath) == "/map/count" ||
-           normalizeCollectionHelperPath(resolvedPath) ==
-               "/std/collections/map/count");
+          normalizeCollectionHelperPath(resolvedPath) ==
+              "/std/collections/map/count";
       const bool routesExplicitVectorCountMethodThroughBuiltinScalarTarget =
           requestsExplicitVectorCountMethod &&
           (resolvedPath == "/string/count" || resolvedPath == "/array/count");
