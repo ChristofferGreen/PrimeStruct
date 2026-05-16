@@ -59,8 +59,6 @@ bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind(
       isStdNamespacedVectorCompatibilityHelperPath(resolvedPath, "capacity");
   if (resolvedPath == "/array/count" ||
       resolvedVectorCount || resolvedPath == "/string/count" ||
-      resolvedPath == "/map/count" || resolvedPath == "/std/collections/map/count" ||
-      resolvedPath == "/std/collections/map/count_ref" ||
       resolvedSoaCanonicalIsCount || resolvedSoaCanonicalIsCountRef ||
       isExperimentalSoaCountLikeHelperPath(resolvedSoaCanonical) ||
       resolvedVectorCapacity) {
