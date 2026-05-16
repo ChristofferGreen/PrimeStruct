@@ -2161,6 +2161,10 @@ Task template:
       hard-codes the canonical map helper prefix; it now derives it through
       stdlib surface metadata, and stale method-alias diagnostics were
       refreshed to current receiver-method behavior.
+    - 2026-05-16: Collection access target resolution no longer hard-codes
+      canonical map access/contains helper paths, namespace checks, or
+      missing-definition diagnostics; it now resolves them through stdlib
+      surface metadata.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

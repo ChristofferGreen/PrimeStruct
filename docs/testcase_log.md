@@ -110,6 +110,21 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 19:18 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="explicit canonical map access helpers accept canonical map values"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="bare map contains call resolves through canonical helper definition"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="bare map contains call rejects compatibility alias when canonical helper is absent"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="bare map access methods require imported canonical helpers or explicit definitions"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib namespaced map at requires imported stdlib helper or explicit definition"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib namespaced map at_unsafe requires imported stdlib helper or explicit definition"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical map access wrapper ignores removed alias helper"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` | failures: none |
+  notes: collection access target resolution now derives canonical map
+  access/contains helper paths, namespace checks, and missing-definition
+  diagnostics through stdlib surface metadata; the map surface inventory now
+  observes 595 production traces and backing traces remain at 0.
 - 2026-05-16 19:13 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="map method alias access accepts matching receiver during inference"`;
