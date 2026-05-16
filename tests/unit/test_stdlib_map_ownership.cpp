@@ -207,6 +207,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string emitterReturnInferenceCollectionsSource =
       readText(repoRoot() / "src" / "emitter" /
                "EmitterEmitSetupReturnInferenceCollections.h");
+  const std::string emitterCollectionTypeHelpersSource =
+      readText(repoRoot() / "src" / "emitter" /
+               "EmitterExprCollectionTypeHelpers.h");
   const std::string statementLowererSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererStatementCallEmission.cpp");
   const std::string lowerStatementsExprSource =
@@ -262,6 +265,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!countCapacityMapBuiltinSource.empty());
   REQUIRE(!emitterCallPathHelpersSource.empty());
   REQUIRE(!emitterReturnInferenceCollectionsSource.empty());
+  REQUIRE(!emitterCollectionTypeHelpersSource.empty());
   REQUIRE(!statementLowererSource.empty());
   REQUIRE(!lowerStatementsExprSource.empty());
   REQUIRE(!inlineNativeSource.empty());
@@ -444,6 +448,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(emitterReturnInferenceCollectionsSource.find("const std::string mapAlias = \"/map/\" + suffix") ==
         std::string::npos);
   CHECK(emitterReturnInferenceCollectionsSource.find("appendUnique(\"/map/\" + suffix)") ==
+        std::string::npos);
+  CHECK(emitterCollectionTypeHelpersSource.find("eraseCandidate(\"/map/\" + suffix)") ==
         std::string::npos);
   CHECK(statementLowererSource.find("isPrimeMapInsertBody") != std::string::npos);
   CHECK(statementLowererSource.find("rewriteMapInsertHelperStatementToCanonical") != std::string::npos);

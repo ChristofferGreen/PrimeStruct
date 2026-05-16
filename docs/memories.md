@@ -113,7 +113,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   from missing canonical `/std/collections/map/<suffix>` paths to rooted
   `/map/<suffix>` aliases, and emitter return inference should not add or
   prefer rooted `/map/<suffix>` aliases when canonical map helper paths are
-  missing.
+  missing; emitter collection-type inference should not prune rooted
+  `/map/<access>` candidates from canonical map access paths after those
+  reverse candidates are no longer generated.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -184,7 +186,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   longer falls back from missing canonical `/std/collections/map/<suffix>`
   paths to rooted `/map/<suffix>` aliases; emitter return inference no longer
   adds or prefers rooted `/map/<suffix>` aliases when canonical
-  `/std/collections/map/<suffix>` paths are missing.
+  `/std/collections/map/<suffix>` paths are missing; emitter collection-type
+  inference no longer prunes rooted `/map/<access>` candidates from canonical
+  map access paths after the reverse candidates were removed.
 
 ### map-constructor-normalization-uses-public-path
 - Updated: 2026-05-16
