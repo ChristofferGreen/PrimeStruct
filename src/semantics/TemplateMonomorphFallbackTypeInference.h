@@ -187,7 +187,7 @@ bool isSpecializedExperimentalMapBackingTypeForFallbackInference(
   if (!typeName.empty() && typeName.front() == '/') {
     typeName.erase(typeName.begin());
   }
-  return experimentalMapBackingLeafForFallbackInference(typeName).rfind("Map__", 0) == 0 &&
+  return experimentalMapBackingLeafForFallbackInference(typeName) != "Map" &&
          isExperimentalCollectionBackingTypeName("map", "Map", typeName);
 }
 

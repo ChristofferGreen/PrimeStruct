@@ -110,6 +110,17 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 19:15 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_backend_ir_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical namespaced map access helpers accept experimental map values,stdlib namespaced map access helpers accept imported stdlib wrappers,canonical stdlib map returns are allowed,inferred canonical map returns rewrite canonical constructors"`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer result helpers resolve Result.map struct payload metadata,ir lowerer call helpers infer forwarded map access targets"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` | failures: none |
+  notes: semantic and template-monomorph generated map backing detection now
+  uses the shared experimental collection backing classifier instead of
+  spelling the generated `Map` prefix; the map surface inventory now observes
+  766 production traces and backing traces now observe 10.
 - 2026-05-16 19:10 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical namespaced map access helpers accept experimental map values,stdlib namespaced map access helpers accept imported stdlib wrappers,collected diagnostics ignore imported canonical map access helper calls,explicit canonical map access helpers accept canonical map values"`;

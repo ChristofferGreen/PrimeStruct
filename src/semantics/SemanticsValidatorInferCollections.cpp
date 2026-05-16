@@ -81,7 +81,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
       if (!typeName.empty() && typeName.front() == '/') {
         typeName.erase(typeName.begin());
       }
-      return experimentalMapBackingLeaf(typeName).rfind("Map__", 0) == 0 &&
+      return experimentalMapBackingLeaf(typeName) != "Map" &&
              isExperimentalCollectionBackingTypeName("map", "Map", typeName);
     };
     auto extractFromTypeText = [&](std::string normalizedType) -> bool {

@@ -53,7 +53,7 @@ bool isSpecializedExperimentalMapBackingTypeForMethodTargets(std::string typeNam
   if (!typeName.empty() && typeName.front() == '/') {
     typeName.erase(typeName.begin());
   }
-  return experimentalMapBackingLeafForMethodTargets(typeName).rfind("Map__", 0) == 0 &&
+  return experimentalMapBackingLeafForMethodTargets(typeName) != "Map" &&
          isExperimentalCollectionBackingTypeName("map", "Map", typeName);
 }
 

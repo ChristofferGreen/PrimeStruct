@@ -82,7 +82,7 @@ bool isSpecializedExperimentalMapBackingTypeForReturnInference(std::string typeN
   if (!typeName.empty() && typeName.front() == '/') {
     typeName.erase(typeName.begin());
   }
-  return experimentalMapBackingLeafForReturnInference(typeName).rfind("Map__", 0) == 0 &&
+  return experimentalMapBackingLeafForReturnInference(typeName) != "Map" &&
          isExperimentalCollectionBackingTypeName("map", "Map", typeName);
 }
 

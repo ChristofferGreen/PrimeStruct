@@ -109,7 +109,7 @@ bool isSpecializedExperimentalMapBackingStructPath(std::string structPath) {
   const size_t leafStart = structPath.find_last_of('/');
   const std::string leaf =
       leafStart == std::string::npos ? structPath : structPath.substr(leafStart + 1);
-  return leaf.rfind("Map__", 0) == 0 &&
+  return leaf != "Map" &&
          isExperimentalCollectionBackingTypeName("map", "Map", structPath);
 }
 

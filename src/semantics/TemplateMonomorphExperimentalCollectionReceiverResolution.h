@@ -41,8 +41,7 @@ bool isSpecializedExperimentalMapBackingTypeForReceiverResolution(
   if (!typeName.empty() && typeName.front() == '/') {
     typeName.erase(typeName.begin());
   }
-  return experimentalMapBackingLeafForReceiverResolution(typeName).rfind("Map__", 0) ==
-             0 &&
+  return experimentalMapBackingLeafForReceiverResolution(typeName) != "Map" &&
          isExperimentalCollectionBackingTypeName("map", "Map", typeName);
 }
 
