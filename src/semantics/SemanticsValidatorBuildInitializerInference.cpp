@@ -170,18 +170,8 @@ std::string SemanticsValidator::preferredCollectionHelperResolvedPath(
   if (const std::string helperName = explicitStdMapHelperName();
       !helperName.empty()) {
     const std::string canonical = "/std/collections/map/" + helperName;
-    const bool prefersAlias = helperName == "at" || helperName == "at_ref" ||
-                              helperName == "at_unsafe" ||
-                              helperName == "at_unsafe_ref";
-    const std::string alias = "/map/" + helperName;
-    if (prefersAlias && defMap_.count(alias) > 0) {
-      return alias;
-    }
     if (defMap_.count(canonical) > 0) {
       return canonical;
-    }
-    if (defMap_.count(alias) > 0) {
-      return alias;
     }
     return {};
   }

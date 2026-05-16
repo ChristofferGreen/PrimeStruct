@@ -392,6 +392,8 @@ Task template:
   helpers.
   Bare map helper rewrite target selection no longer falls back to visible
   rooted `/map/<helper>` helper families after canonical lookup.
+  Initializer inference no longer prefers or falls back to rooted
+  `/map/<helper>` aliases for explicit stdlib map helper targets.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic

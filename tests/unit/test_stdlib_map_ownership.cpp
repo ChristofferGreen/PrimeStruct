@@ -156,6 +156,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string collectionHelperRewritesSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorCollectionHelperRewrites.cpp");
+  const std::string buildInitializerInferenceSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorBuildInitializerInference.cpp");
   const std::string inferCollectionDispatchSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorInferCollectionDispatch.cpp");
@@ -221,6 +224,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!inferMethodResolutionSource.empty());
   REQUIRE(!inferMethodResolutionHelpersSource.empty());
   REQUIRE(!collectionHelperRewritesSource.empty());
+  REQUIRE(!buildInitializerInferenceSource.empty());
   REQUIRE(!inferCollectionDispatchSource.empty());
   REQUIRE(!inferCollectionDispatchSetupSource.empty());
   REQUIRE(!inferDefinitionSource.empty());
@@ -327,6 +331,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inferMethodResolutionHelpersSource.find("const std::string alias = \"/map/\" + selectedHelperName") ==
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find("const std::string alias = \"/map/\" + std::string(helperName)") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find("const std::string alias = \"/map/\" + helperName") ==
         std::string::npos);
   CHECK(inferCollectionDispatchSource.find("resolvedPath.rfind(\"/map/\"") ==
         std::string::npos);
