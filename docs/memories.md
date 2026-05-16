@@ -264,7 +264,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   map struct inference should derive rooted and slashless experimental map
   backing paths through `experimentalCollectionTypePath`; statement-call map
   insert rewriting should derive rooted, slashless, and generated
-  experimental map backing paths through its collection path helper;
+  experimental map backing paths through its collection path helper; emitter
+  return-kind type parsing should classify experimental map backing bases and
+  generated prefixes through a local storage-base helper instead of direct
+  path text;
   generated collection struct classification should derive the canonical map
   `MapValue__*` prefix through `collectionTypePath("map")` instead of
   carrying a split-string map root.

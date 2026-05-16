@@ -92,6 +92,23 @@ static bool isVectorCompatibilityStorageBase(std::string_view base) {
   return segments[3] == "Vector" || segments[3].rfind("Vector__", 0) == 0;
 }
 
+static std::string experimentalMapStorageBase(bool leadingSlash = true) {
+  std::string base = leadingSlash ? "/" : "";
+  base += "std/collections/experimental_";
+  base += "map/Map";
+  return base;
+}
+
+static bool isMapCompatibilityStorageBase(std::string_view base) {
+  const std::string normalized(base);
+  const std::string rootedMapBase = experimentalMapStorageBase();
+  const std::string slashlessMapBase = experimentalMapStorageBase(false);
+  return normalized == "Map" || normalized == slashlessMapBase ||
+         normalized == rootedMapBase ||
+         normalized.rfind(slashlessMapBase + "__", 0) == 0 ||
+         normalized.rfind(rootedMapBase + "__", 0) == 0;
+}
+
 bool isPrimitiveBindingTypeName(const std::string &name) {
   return name == "int" || name == "i32" || name == "i64" || name == "u64" || name == "float" || name == "f32" ||
          name == "f64" || name == "bool" || name == "string" || name == "FileError";
@@ -579,10 +596,7 @@ ReturnKind returnKindForTypeName(const std::string &name) {
         ((base == "array" || base == "vector" || base == "soa" "_vector" || base == "Buffer" ||
           isVectorCompatibilityStorageBase(base)) &&
          args.size() == 1) ||
-        ((base == "map" || base == "Map" || base == "std/collections/experimental_map/Map" ||
-          base == "/std/collections/experimental_map/Map" ||
-          base.rfind("std/collections/experimental_map/Map__", 0) == 0 ||
-          base.rfind("/std/collections/experimental_map/Map__", 0) == 0) &&
+        ((base == "map" || isMapCompatibilityStorageBase(base)) &&
          args.size() == 2);
     if (isCollectionLike) {
       return ReturnKind::Array;

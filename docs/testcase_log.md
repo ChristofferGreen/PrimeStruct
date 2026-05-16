@@ -105,6 +105,16 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 18:29 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs builtin canonical map first-growth inserts in C++ emitter,compiles and runs builtin canonical map repeated-growth inserts in C++ emitter,compiles and runs builtin canonical map insert overwrites in C++ emitter"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` | failures: none |
+  notes: emitter return-kind type parsing now classifies experimental map
+  backing bases through a local storage-base helper instead of direct
+  experimental map path/prefix strings; the map surface inventory now
+  observes 809 production traces and backing traces now observe 53.
 - 2026-05-16 18:24 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_misc_tests`;
   `cmake --build build-release --target PrimeStruct_compile_run_tests`;

@@ -2083,6 +2083,9 @@ Task template:
     - 2026-05-16: Statement-call map insert rewriting no longer hard-codes
       rooted, slashless, or generated experimental map backing paths; it now
       derives those paths through the local collection path helper.
+    - 2026-05-16: Emitter return-kind type parsing no longer hard-codes
+      experimental map backing base paths or generated prefixes; it now uses
+      a local storage-base helper for those classifications.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.
