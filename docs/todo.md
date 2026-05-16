@@ -448,6 +448,9 @@ Task template:
   strings.
   Setup-type method target resolution now recognizes map receiver types through
   shared collection classifiers instead of direct rooted/canonical map strings.
+  Setup-type method-call canonical map constructor direct-target checks now
+  construct the canonical path through collection path helpers instead of a
+  direct map path literal.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic

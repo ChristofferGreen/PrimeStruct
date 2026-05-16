@@ -294,7 +294,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   should recognize map family type text through shared collection classifiers
   instead of direct rooted/canonical map strings; setup-type method target
   resolution should recognize map receiver types through shared collection
-  classifiers instead of direct rooted/canonical map strings;
+  classifiers instead of direct rooted/canonical map strings; setup-type
+  method-call canonical map constructor direct-target checks should construct
+  the canonical path through collection path helpers instead of a direct map
+  path literal;
   statement-expression map count/access target classification should reuse
   local experimental collection type and generated-specialization helpers
   instead of direct experimental map backing path text;

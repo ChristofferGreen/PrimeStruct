@@ -42,7 +42,7 @@ bool isMapConstructorDirectTargetPath(std::string path) {
   if (overloadSuffix != std::string::npos) {
     path.erase(overloadSuffix);
   }
-  return path == "/std/collections/map/map";
+  return path == collectionMemberPath("map", "map");
 }
 
 std::string findMapConstructorBridgePathChoiceBySource(
