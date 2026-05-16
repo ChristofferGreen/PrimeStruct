@@ -130,7 +130,7 @@ std::string inferExperimentalMapStructPathFromKinds(LocalInfo::ValueKind keyKind
   }
 
   std::ostringstream specializedPath;
-  specializedPath << "/std/collections/map/MapValue"
+  specializedPath << collectionTypePath("map") << "/MapValue"
                   << mangleTemplateTypeArgsSuffix({keyType, valueType});
   return specializedPath.str();
 }

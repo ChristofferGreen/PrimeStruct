@@ -1915,6 +1915,10 @@ Task template:
       it now uses the shared `experimentalCollectionTypePath("map", "Map")`
       helper and the ownership test no longer classifies the mutation lowerer
       as an allowed experimental-map backing trace file.
+    - 2026-05-16: Struct-type map local inference no longer hard-codes the
+      canonical `MapValue` root path; it now builds that root from
+      `collectionTypePath("map")` and keeps focused name-expression coverage
+      for the resulting `MapValue__*` path.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

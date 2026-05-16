@@ -146,7 +146,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   direct `StdlibSurfaceId::CollectionsMapHelpers` production trace; map
   literal lowering should obtain the empty inferred-map backing path through
   `experimentalCollectionTypePath("map", "Map")` instead of hard-coding the
-  experimental map path in the mutation lowerer.
+  experimental map path in the mutation lowerer; struct-type map local
+  inference should build the canonical `MapValue` root from
+  `collectionTypePath("map")` rather than a hard-coded canonical map path
+  literal.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
