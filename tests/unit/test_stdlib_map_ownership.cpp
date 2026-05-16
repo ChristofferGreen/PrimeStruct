@@ -333,6 +333,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(collectionAccessValidationSource.find("namespacePrefix == \"map\"") ==
         std::string::npos);
+  CHECK(collectionAccessValidationSource.find("diagnosticTarget.rfind(\"/map/\"") ==
+        std::string::npos);
   CHECK(collectionAccessSource.find("resolvedPath == \"/map/at_ref\" ||\n"
                                     "            resolvedPath == \"/std/collections/map/at_ref\"") ==
         std::string::npos);

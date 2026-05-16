@@ -377,6 +377,8 @@ Task template:
   Template monomorphization no longer canonicalizes unknown-target
   diagnostics from rooted `/map/{count,contains,tryAt,at,at_unsafe,insert}`
   helper paths to `/std/collections/map/*`.
+  Collection-access validation no longer retargets rooted `/map/*`
+  diagnostic targets to `/std/collections/map/*`.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic
