@@ -223,9 +223,15 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
     }
   };
   auto isMapEntryConstructorPath = [](const std::string &path) {
-    return path == "/std/collections/map/entry" ||
-           path.rfind("/std/collections/map/entry__", 0) == 0 ||
-           isExperimentalCollectionConstructorPathLocal(path, "map", "entry");
+    if (const auto *metadata = mapHelperSurfaceMetadataLocal();
+        metadata != nullptr) {
+      const std::string entryPath =
+          std::string(metadata->canonicalPath) + "/entry";
+      if (path == entryPath || path.rfind(entryPath + "__", 0) == 0) {
+        return true;
+      }
+    }
+    return isExperimentalCollectionConstructorPathLocal(path, "map", "entry");
   };
   auto explicitCallPath = [](const Expr &callExpr) -> std::string {
     if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall ||
@@ -468,12 +474,24 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
       (findParamBinding(params, expr.args.front().name) != nullptr ||
        locals.count(expr.args.front().name) > 0);
   const std::string mapConstructorBasePath = [&]() -> std::string {
-    if (candidatePath == "/std/collections/map/map" ||
-        candidatePath.rfind("/std/collections/map/map__ov", 0) == 0) {
-      return "/std/collections/map/map";
+    const auto *metadata = mapConstructorSurfaceMetadataLocal();
+    if (metadata == nullptr) {
+      return {};
     }
-    if (candidatePath == "/map" || candidatePath.rfind("/map__ov", 0) == 0) {
-      return "/map";
+    const std::string canonicalPath(metadata->canonicalPath);
+    if (candidatePath == canonicalPath ||
+        candidatePath.rfind(canonicalPath + "__ov", 0) == 0) {
+      return canonicalPath;
+    }
+    for (std::string_view alias : metadata->importAliasSpellings) {
+      if (alias.find('/') != std::string_view::npos) {
+        continue;
+      }
+      const std::string rootedAlias = "/" + std::string(alias);
+      if (candidatePath == rootedAlias ||
+          candidatePath.rfind(rootedAlias + "__ov", 0) == 0) {
+        return rootedAlias;
+      }
     }
     return {};
   }();

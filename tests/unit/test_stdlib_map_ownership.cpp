@@ -404,6 +404,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(callResolutionSource.find("\"/map/entry__\"") == std::string::npos);
   CHECK(callResolutionSource.find("directExplicitCallPath == \"/map/at\"") ==
         std::string::npos);
+  CHECK(callResolutionSource.find("path == \"/std/collections/map/entry\"") ==
+        std::string::npos);
+  CHECK(callResolutionSource.find("candidatePath == \"/std/collections/map/map\"") ==
+        std::string::npos);
+  CHECK(callResolutionSource.find("mapHelperSurfaceMetadataLocal()") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("mapConstructorSurfaceMetadataLocal()") !=
+        std::string::npos);
   CHECK(callPathHelpersSource.find("name.rfind(\"map/\", 0)") ==
         std::string::npos);
   CHECK(callPathHelpersSource.find("name.rfind(\"std/collections/map/\", 0)") ==

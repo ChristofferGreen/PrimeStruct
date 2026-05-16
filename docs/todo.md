@@ -310,7 +310,10 @@ Task template:
   `metadataBackedMapHelperRootAliasMethodName` instead of direct `map/`
   prefix checks, and semantic simple-call path helpers now resolve map helper
   member names through `collections.map_helpers` metadata instead of direct
-  slashless and canonical map prefix stripping. The remaining production
+  slashless and canonical map prefix stripping, and semantic concrete call
+  resolution now recognizes map entry helper and constructor base paths
+  through map surface metadata instead of direct canonical map
+  entry/constructor literals. The remaining production
   lowerer/emitter
   experimental-map traces
   are source-locked as temporary internal backing substrate by
