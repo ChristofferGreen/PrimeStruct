@@ -867,8 +867,8 @@
               const bool isExperimentalVectorTarget =
                   isExperimentalVectorTypePath(structPath);
               const bool isExperimentalMapTarget =
-                  structPath == "/std/collections/experimental_map/Map" ||
-                  structPath.rfind("/std/collections/experimental_map/Map__", 0) == 0;
+                  structPath == experimentalCollectionTypePath("map", "Map") ||
+                  matchesGeneratedSpecializedType(structPath, "map", "Map");
               const bool isExperimentalSoaVectorTarget =
                   structPath == "/std/collections/experimental" "_soa" "_vector/Soa" "Vector" ||
                   structPath.rfind("/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0;

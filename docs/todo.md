@@ -2093,6 +2093,10 @@ Task template:
       receiver classification no longer hard-code rooted, slashless, or
       generated experimental map backing paths; they now derive those paths
       through local collection path helpers.
+    - 2026-05-16: Statement-expression map count/access target
+      classification no longer hard-codes unspecialized or generated
+      experimental map backing paths; it now reuses local experimental
+      collection type and generated-specialization helpers.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

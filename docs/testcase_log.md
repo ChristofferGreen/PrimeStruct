@@ -105,6 +105,17 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 18:44 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_compile_run_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers resolve and validate map access targets,ir lowerer call helpers infer forwarded map access targets"`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native canonical map access direct calls and method sugar use ordinary map helpers,compiles and runs native builtin canonical map first-growth inserts"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` | failures: none |
+  notes: statement-expression map count/access target classification now
+  reuses local experimental collection type and generated-specialization
+  helpers; the map surface inventory now observes 798 production traces and
+  backing traces now observe 42.
 - 2026-05-16 18:39 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_compile_run_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers infer forwarded map access targets"`;
