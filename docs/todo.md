@@ -387,6 +387,9 @@ Task template:
   `/std/collections/map/*` candidates or vice versa.
   Pointer-like call target candidate generation no longer appends reciprocal
   `/map/*` and `/std/collections/map/*` helper candidates.
+  Preferred map method target selection no longer returns explicit
+  `/map/<helper>` definitions or imports ahead of canonical stdlib map
+  helpers.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic

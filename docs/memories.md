@@ -82,7 +82,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   should not mirror `/map/*` receiver paths to `/std/collections/map/*`
   candidates or vice versa, and pointer-like call target candidate generation
   should not append reciprocal `/map/*` and `/std/collections/map/*` helper
-  candidates.
+  candidates; preferred map method target selection should not return
+  explicit `/map/<helper>` definitions or imports ahead of canonical stdlib
+  map helpers.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -121,7 +123,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   infer-method resolution no longer mirrors `/map/*` receiver paths to
   `/std/collections/map/*` candidates or vice versa; pointer-like call target
   candidate generation no longer appends reciprocal `/map/*` and
-  `/std/collections/map/*` helper candidates.
+  `/std/collections/map/*` helper candidates; preferred map method target
+  selection no longer returns explicit `/map/<helper>` definitions or imports
+  ahead of canonical stdlib map helpers.
 
 ### map-constructor-normalization-uses-public-path
 - Updated: 2026-05-16

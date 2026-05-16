@@ -150,6 +150,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string inferMethodResolutionSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorInferMethodResolution.cpp");
+  const std::string inferMethodResolutionHelpersSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorInferMethodResolutionHelpers.cpp");
   const std::string inferCollectionDispatchSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorInferCollectionDispatch.cpp");
@@ -213,6 +216,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!inferStructReturnSource.empty());
   REQUIRE(!inferStructReturnHelpersSource.empty());
   REQUIRE(!inferMethodResolutionSource.empty());
+  REQUIRE(!inferMethodResolutionHelpersSource.empty());
   REQUIRE(!inferCollectionDispatchSource.empty());
   REQUIRE(!inferCollectionDispatchSetupSource.empty());
   REQUIRE(!inferDefinitionSource.empty());
@@ -315,6 +319,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inferMethodResolutionSource.find("joinMethodTarget(\"/std/collections/map\", helperSuffix)") ==
         std::string::npos);
   CHECK(inferMethodResolutionSource.find("joinMethodTarget(\"/map\", helperSuffix)") ==
+        std::string::npos);
+  CHECK(inferMethodResolutionHelpersSource.find("const std::string alias = \"/map/\" + selectedHelperName") ==
         std::string::npos);
   CHECK(inferCollectionDispatchSource.find("resolvedPath.rfind(\"/map/\"") ==
         std::string::npos);
