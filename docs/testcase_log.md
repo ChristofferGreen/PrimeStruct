@@ -5,6 +5,10 @@
   has 15 stale SoA/experimental_soa_vector source-lock assertions after the
   SoA public-surface cleanup. The map-count inference assertions in that test
   have been updated; the remaining failures are unrelated SoA lock drift.
+- `PrimeStruct_backend_ir_tests --test-case="template monomorph source delegation stays stable"`
+  has 44 stale SoA/experimental_soa_vector source-lock assertions after the
+  SoA public-surface cleanup. The map-constructor helper assertion in that
+  test has been updated; the remaining failures are unrelated SoA lock drift.
 - `PrimeStruct_semantics_tests --test-case="*map*count*" --no-skip` has
   obsolete legacy map-count compatibility coverage after removing C++ semantic
   builtin handling for `/std/collections/map/count` and related map access
@@ -23,6 +27,13 @@
   compilation.
 
 ## Recent Test Runs
+- 2026-05-16 local | fail | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="template monomorph source delegation stays stable"` |
+  failures: 44 stale SoA/experimental_soa_vector source-lock assertions |
+  notes: rerun after removing fixed-arity map constructor rewrite helpers from
+  `MapConstructorHelpers.h`; the updated map-constructor source-lock assertion
+  is covered, but the test remains blocked by unrelated SoA lock drift.
 - 2026-05-16 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native templated stdlib return wrapper temporaries in expressions" --no-skip`;

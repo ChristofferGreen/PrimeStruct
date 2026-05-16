@@ -2860,7 +2860,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "soaVectorToAosRef") ==
         std::string::npos);
   CHECK(mapConstructorHelpersSource.find(
-            "std::string experimentalMapConstructorHelperPath(size_t argumentCount)") !=
+            "std::string experimentalMapConstructorHelperPath(size_t argumentCount)") ==
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionConstructorPathsSource.find(
             "std::string experimentalMapConstructorRewritePath(const std::string &resolvedPath, size_t argumentCount)") !=

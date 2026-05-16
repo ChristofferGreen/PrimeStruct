@@ -297,47 +297,6 @@ inline std::string preferredCollectionConstructorSpelling(
   return fallback;
 }
 
-inline std::string mapConstructorMemberNameForArgumentCount(size_t argumentCount) {
-  switch (argumentCount) {
-  case 0:
-    return "mapNew";
-  case 2:
-    return "mapSingle";
-  case 4:
-    return "mapPair";
-  case 6:
-    return "mapTriple";
-  case 8:
-    return "mapQuad";
-  case 10:
-    return "mapQuint";
-  case 12:
-    return "mapSext";
-  case 14:
-    return "mapSept";
-  case 16:
-    return "mapOct";
-  default:
-    return {};
-  }
-}
-
-inline std::string canonicalMapConstructorHelperPath(size_t argumentCount) {
-  const std::string memberName =
-      mapConstructorMemberNameForArgumentCount(argumentCount);
-  if (memberName.empty()) {
-    return {};
-  }
-  const primec::StdlibSurfaceMetadata *metadata = primec::findStdlibSurfaceMetadata(
-      primec::StdlibSurfaceId::CollectionsMapConstructors);
-  if (metadata == nullptr) {
-    return {};
-  }
-  return preferredCollectionConstructorSpelling(
-      primec::StdlibSurfaceId::CollectionsMapConstructors, memberName,
-      metadata->loweringSpellings, "/std/collections/");
-}
-
 inline std::string metadataBackedMapConstructorAliasRewritePath(
     std::string_view resolvedPath) {
   const primec::StdlibSurfaceMetadata *metadata =
@@ -354,60 +313,13 @@ inline std::string metadataBackedMapConstructorAliasRewritePath(
 }
 
 inline std::string metadataBackedCanonicalMapConstructorRewritePath(
-    const std::string &resolvedPath, size_t argumentCount) {
-  const std::string normalizedPath =
-      stripCollectionConstructorSuffixes(resolvedPath);
-  if (normalizedPath != "/map/map" &&
-      normalizedPath != "/std/collections/map/map") {
-    return {};
-  }
-  return canonicalMapConstructorHelperPath(argumentCount);
-}
-
-inline std::string experimentalMapConstructorHelperPath(size_t argumentCount) {
-  const std::string memberName =
-      mapConstructorMemberNameForArgumentCount(argumentCount);
-  if (memberName.empty()) {
-    return {};
-  }
-  const primec::StdlibSurfaceMetadata *metadata = primec::findStdlibSurfaceMetadata(
-      primec::StdlibSurfaceId::CollectionsMapConstructors);
-  if (metadata == nullptr) {
-    return {};
-  }
-  return preferredCollectionConstructorSpelling(
-      primec::StdlibSurfaceId::CollectionsMapConstructors, memberName,
-      metadata->compatibilitySpellings,
-      "/std/collections/experimental_map/");
-}
-
-inline std::string canonicalMapConstructorToExperimental(const std::string &canonicalPath) {
-  std::string memberName;
-  if (!resolveCollectionConstructorMemberPath(
-          primec::StdlibSurfaceId::CollectionsMapConstructors, canonicalPath,
-          memberName) ||
-      memberName == "map") {
-    return {};
-  }
-  const primec::StdlibSurfaceMetadata *metadata = primec::findStdlibSurfaceMetadata(
-      primec::StdlibSurfaceId::CollectionsMapConstructors);
-  if (metadata == nullptr) {
-    return {};
-  }
-  return preferredCollectionConstructorSpelling(
-      primec::StdlibSurfaceId::CollectionsMapConstructors, memberName,
-      metadata->compatibilitySpellings,
-      "/std/collections/experimental_map/");
+    const std::string &, size_t) {
+  return {};
 }
 
 inline std::string metadataBackedExperimentalMapConstructorRewritePath(
-    const std::string &resolvedPath, size_t argumentCount) {
-  const std::string normalizedPath =
-      stripCollectionConstructorSuffixes(resolvedPath);
-  if (normalizedPath == "/map" || normalizedPath == "/std/collections/map/map") {
-    return experimentalMapConstructorHelperPath(argumentCount);
-  }
-  return canonicalMapConstructorToExperimental(normalizedPath);
+    const std::string &, size_t) {
+  return {};
 }
 
 inline std::string metadataBackedExperimentalVectorConstructorCompatibilityPath(

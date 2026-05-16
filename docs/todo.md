@@ -1739,6 +1739,11 @@ Task template:
       longer recognized by the semantic builtin-map constructor classifier or
       lowerer setup-type direct-target classifier; only the still-public
       `/std/collections/map/map` constructor path remains on those checks.
+    - 2026-05-16: `MapConstructorHelpers.h` no longer carries the dead
+      fixed-arity `mapNew`/`mapSingle`/`mapPair` through `mapOct` rewrite
+      table for metadata-backed canonical/experimental map constructor
+      rewrites; those registry-backed rewrite shims now return no replacement
+      until a real public constructor member exists again.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

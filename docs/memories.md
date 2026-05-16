@@ -118,11 +118,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: Rooted retired public map constructor aliases such as
   `/std/collections/mapSingle` and `/std/collections/mapPair` must not be
   treated as canonical map constructors; unqualified names remain separate
-  legacy/internal compatibility surfaces.
+  legacy/internal compatibility surfaces, and metadata-backed constructor
+  rewrites must not synthesize fixed-arity replacements for them.
 - Evidence: `isBuiltinCanonicalMapConstructorExpr(...)` and
   `isMapConstructorDirectTargetPath(...)` now only accept the public rooted
-  `/std/collections/map/map` constructor path, with source-lock coverage in
-  `test_stdlib_map_ownership.cpp`.
+  `/std/collections/map/map` constructor path, while `MapConstructorHelpers.h`
+  no longer carries the fixed-arity map constructor rewrite table.
 
 ### semantic-memory-policy-uses-runner-headroom
 - Updated: 2026-05-14
