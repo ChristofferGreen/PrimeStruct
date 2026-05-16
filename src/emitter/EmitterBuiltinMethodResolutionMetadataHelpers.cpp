@@ -315,10 +315,6 @@ namespace {
 std::vector<std::string> metadataPathCandidates(const std::string &path) {
   std::vector<std::string> candidates;
   appendUniqueCandidate(candidates, path);
-  if (!path.empty() && path.front() == '/' &&
-      (path.rfind("/map/", 0) == 0 || path.rfind("/std/collections/map/", 0) == 0)) {
-    appendUniqueCandidate(candidates, path.substr(1));
-  }
   return candidates;
 }
 

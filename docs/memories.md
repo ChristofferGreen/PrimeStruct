@@ -136,7 +136,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   prune rooted map access candidates either; emitter method metadata should
   not normalize slashless rooted/canonical map helper paths to leading-slash
   candidates; emitter import-alias resolution should use alias paths directly
-  instead of routing through the identity `normalizeMapImportAliasPath` helper.
+  instead of routing through the identity `normalizeMapImportAliasPath` helper;
+  emitter method metadata should not add slashless candidates for rooted map
+  helper metadata paths.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -230,7 +232,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   inference. Emitter method metadata no longer normalizes slashless
   rooted/canonical map helper paths to leading-slash candidates, and the
   identity `normalizeMapImportAliasPath` hook has been removed from emitter
-  control call and method-resolution paths.
+  control call and method-resolution paths. Emitter method metadata also no
+  longer adds slashless candidates for rooted map helper metadata paths.
 
 ### map-constructor-normalization-uses-public-path
 - Updated: 2026-05-16
