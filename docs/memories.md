@@ -532,7 +532,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   of direct rooted/canonical map path prefix checks; lowerer emit-expression
   explicit map helper rewriting now detects raw alias and canonical map helper
   paths through `CollectionsMapHelpers` metadata instead of direct
-  rooted/canonical map helper prefix checks. The stale
+  rooted/canonical map helper prefix checks; lowerer builtin array-access
+  classification now rejects published map helper surface paths through
+  `CollectionsMapHelpers` metadata instead of direct `map/` and
+  `std/collections/map/` prefix checks. The stale
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`
   return type, which allowed the emitter collection-type rooted map access

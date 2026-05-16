@@ -4,6 +4,8 @@
 #include <array>
 #include <string_view>
 
+#include "primec/StdlibSurfaceRegistry.h"
+
 namespace primec::ir_lowerer {
 namespace {
 std::string stdCollectionsRoot() {
@@ -26,6 +28,22 @@ std::string experimentalCollectionMemberRoot(std::string_view collectionName) {
 std::string collectionWrapperAlias(std::string_view collectionName,
                                    std::string_view suffix) {
   return std::string(collectionName) + std::string(suffix);
+}
+
+bool resolvesMapHelperSurfacePath(std::string_view path) {
+  const auto *metadata =
+      findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsMapHelpers);
+  if (metadata == nullptr) {
+    return false;
+  }
+  if (!resolveStdlibSurfaceMemberName(*metadata, path).empty()) {
+    return true;
+  }
+  if (!path.empty() && path.front() != '/') {
+    const std::string rootedPath = "/" + std::string(path);
+    return !resolveStdlibSurfaceMemberName(*metadata, rootedPath).empty();
+  }
+  return false;
 }
 
 std::string stripGeneratedSuffix(std::string alias) {
@@ -577,10 +595,7 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   if (scopedName.rfind(builtinVectorPrefix, 0) == 0) {
     return false;
   }
-  if (scopedName.rfind("map/", 0) == 0) {
-    return false;
-  }
-  if (scopedName.rfind("std/collections/map/", 0) == 0) {
+  if (resolvesMapHelperSurfacePath(scopedName)) {
     return false;
   }
   rawName = stripGeneratedSuffix(std::move(rawName));

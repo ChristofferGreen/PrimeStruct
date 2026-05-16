@@ -495,6 +495,9 @@ Task template:
   Lowerer emit-expression explicit map helper rewriting now detects raw alias
   and canonical map helper paths through `CollectionsMapHelpers` metadata
   instead of direct rooted/canonical map helper prefix checks.
+  Lowerer builtin array-access classification now rejects published map
+  helper surface paths through `CollectionsMapHelpers` metadata instead of
+  direct `map/` and `std/collections/map/` prefix checks.
   Emitter binding-type map compatibility checks now derive canonical and
   experimental map type paths through local collection path helpers instead of
   direct map path fragments.
