@@ -333,6 +333,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(templateExpressionRewriteSource.find(
             "resolvedPath == \"/std/collections/map/count\" || resolvedPath == \"/map/count\"") ==
         std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("resolvedPath.rfind(\"/map/\", 0) == 0) &&") ==
+        std::string::npos);
   CHECK(inferStructReturnSource.find("\"/std/collections/map/\" + methodName, \"/map/\" + methodName") ==
         std::string::npos);
   CHECK(inferStructReturnSource.find("isExplicitMapAccessStructReturnCompatibilityCall") ==

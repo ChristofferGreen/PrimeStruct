@@ -1833,6 +1833,9 @@ Task template:
       `/map/count` as equivalent to canonical `/std/collections/map/count`
       when reporting template arguments on non-templated count calls; the
       stdlib map ownership source lock keeps that diagnostic shortcut absent.
+    - 2026-05-16: Template expression rewriting no longer clears inferred
+      canonical map receiver template arguments through a rooted `/map/*`
+      branch; the canonical `/std/collections/map/*` branch remains.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

@@ -1730,8 +1730,7 @@ bool rewriteExpr(Expr &expr,
       expr.templateArgs.clear();
     }
     if (inferredCanonicalMapReceiverTemplateArgs &&
-        (resolvedPath.rfind("/std/collections/map/", 0) == 0 ||
-         resolvedPath.rfind("/map/", 0) == 0) &&
+        resolvedPath.rfind("/std/collections/map/", 0) == 0 &&
         resolvedPath.find("__t") != std::string::npos) {
       expr.templateArgs.clear();
     }

@@ -95,7 +95,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   collection-access resolution should not prefer rooted `/map/at*` helper
   definitions when resolving canonical map access helper calls; template
   monomorphization should not treat rooted `/map/count` as equivalent to
-  canonical `/std/collections/map/count` for non-templated count diagnostics.
+  canonical `/std/collections/map/count` for non-templated count diagnostics
+  or clear inferred canonical map receiver template arguments through rooted
+  `/map/*` paths.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -147,7 +149,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   definitions; collection-access resolution no longer prefers rooted
   `/map/at*` helper definitions when resolving canonical map access helper
   calls; template monomorphization now only uses the canonical count helper
-  path for the non-templated count diagnostic.
+  path for the non-templated count diagnostic and no longer includes rooted
+  `/map/*` in the inferred canonical map receiver template-argument cleanup.
 
 ### map-constructor-normalization-uses-public-path
 - Updated: 2026-05-16
