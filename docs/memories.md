@@ -75,7 +75,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   monomorphization should not canonicalize unknown-target diagnostics from
   rooted `/map/*` helper paths to `/std/collections/map/*`, and
   collection-access validation should not retarget rooted `/map/*`
-  diagnostic targets to `/std/collections/map/*`.
+  diagnostic targets to `/std/collections/map/*`; direct call resolution
+  should not return a missing-target shortcut for rooted `/map/at*_ref`
+  access helper calls.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -107,7 +109,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   monomorphization no longer rewrites rooted `/map/{count,contains,tryAt,at,
   at_unsafe,insert}` unknown-target diagnostics to
   `/std/collections/map/*`; collection-access validation no longer retargets
-  rooted `/map/*` diagnostic targets to `/std/collections/map/*`.
+  rooted `/map/*` diagnostic targets to `/std/collections/map/*`; direct
+  call resolution no longer returns a missing-target shortcut for rooted
+  `/map/at*_ref` access helper calls.
 
 ### map-constructor-normalization-uses-public-path
 - Updated: 2026-05-16

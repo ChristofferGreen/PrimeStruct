@@ -285,6 +285,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(callResolutionSource.find("\"/map/entry\"") == std::string::npos);
   CHECK(callResolutionSource.find("\"/map/entry__\"") == std::string::npos);
+  CHECK(callResolutionSource.find("directExplicitCallPath == \"/map/at\"") ==
+        std::string::npos);
   CHECK(templateCoreSource.find("\"/map/entry\"") == std::string::npos);
   CHECK(templateCoreSource.find("\"/map/entry__\"") == std::string::npos);
   CHECK(templateReceiverSource.find("|| resolvedPath == \"/map/") ==
