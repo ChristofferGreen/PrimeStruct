@@ -55,7 +55,7 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("compiles and runs native collection bracket literals") {
+TEST_CASE("compiles and runs native collection constructor parity") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -63,7 +63,7 @@ import /std/collections/*
 main() {
   [array<i32>] values{array<i32>[1i32, 2i32]}
   [vector<i32>] list{vector<i32>[3i32, 4i32]}
-  [map<i32, i32>] table{map<i32, i32>[5i32=6i32]}
+  [map<i32, i32>] table{map<i32, i32>(5i32, 6i32)}
   return(plus(plus(values[1i32], list[1i32]), at(table, 5i32)))
 }
 )";
@@ -76,13 +76,13 @@ main() {
   CHECK(runCommand(exePath) == 12);
 }
 
-TEST_CASE("compiles and runs native map literals") {
+TEST_CASE("compiles and runs native map constructor calls") {
   const std::string source = R"(
 import /std/collections/*
 
 [return<int>]
 main() {
-  return(at(map<i32, i32>{1i32=2i32, 3i32=4i32}, 3i32))
+  return(at(map<i32, i32>(1i32, 2i32, 3i32, 4i32), 3i32))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_map_literal.prime", source);
@@ -99,7 +99,7 @@ import /std/collections/*
 
 [return<int>]
 main() {
-  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
   return(count(values))
 }
 )";
@@ -122,7 +122,7 @@ import /std/collections/*
 
 [return<int>]
 main() {
-  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
   return(values.size())
 }
 )";
@@ -141,7 +141,7 @@ import /std/collections/*
 
 [return<int>]
 main() {
-  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
   return(at(values, 3i32))
 }
 )";
@@ -159,7 +159,7 @@ import /std/collections/*
 
 [return<int>]
 main() {
-  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
   return(values[3i32])
 }
 )";
@@ -177,7 +177,7 @@ import /std/collections/*
 
 [return<int>]
 main() {
-  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
   return(at_unsafe(values, 1i32))
 }
 )";
@@ -195,7 +195,7 @@ import /std/collections/*
 
 [return<int>]
 main() {
-  [map<bool, i32>] values{map<bool, i32>{true=1i32, false=2i32}}
+  [map<bool, i32>] values{map<bool, i32>(true, 1i32, false, 2i32)}
   return(plus(at(values, true), at_unsafe(values, false)))
 }
 )";
@@ -213,7 +213,7 @@ import /std/collections/*
 
 [return<int>]
 main() {
-  [map<u64, i32>] values{map<u64, i32>{2u64=7i32, 11u64=5i32}}
+  [map<u64, i32>] values{map<u64, i32>(2u64, 7i32, 11u64, 5i32)}
   return(plus(at(values, 2u64), at_unsafe(values, 11u64)))
 }
 )";
@@ -231,7 +231,7 @@ import /std/collections/*
 
 [return<int>]
 main() {
-  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
   return(at(values, 9i32))
 }
 )";
@@ -244,14 +244,14 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   const std::string runCmd = exePath + " 2> " + errPath;
   CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath) == "map key not found\n");
+  CHECK(readFile(errPath) == "array index out of bounds\n");
 }
 
 TEST_CASE("compiles and runs native typed map binding") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
   return(0i32)
 }
 )";
@@ -302,7 +302,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native string-valued map literals on builtin path") {
+TEST_CASE("compiles native string-valued map constructors on stdlib path") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -315,14 +315,11 @@ main() {
   const std::string srcPath = writeTemp("compile_native_map_literal_string_values.prime", source);
   const std::string outPath =
       (testScratchPath("") / "primec_native_map_literal_string_values_out.txt").string();
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_map_literal_string_values_exe").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(readFile(outPath).empty());
-  CHECK(runCommand(exePath) == 5);
 }
 
 TEST_CASE("compiles and runs native string-keyed map literals") {

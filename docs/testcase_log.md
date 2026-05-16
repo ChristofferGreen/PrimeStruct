@@ -17,9 +17,40 @@
   passed, 105 failed, and 3539 skipped before the hanging map string-valued
   literal executable was interrupted. The failures are dominated by stale SoA
   public-surface coverage and older map-literal/insert compatibility fixtures;
-  the focused native MapValue cutover cases listed below pass.
+  the focused native MapValue cutover cases listed below pass. The old
+  string-valued map runtime fixture has since been retargeted to compile-only
+  coverage because native runtime string-valued maps still hang after
+  compilation.
 
 ## Recent Test Runs
+- 2026-05-16 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_compile_run_tests`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native collection constructor parity" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native map constructor calls" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native map count helper" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native map method call" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native map at helper" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native map indexing sugar" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native map at_unsafe helper" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native bool map access helpers" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native u64 map access helpers" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native map at missing key" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native typed map binding" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="rejects native map literal odd args" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="rejects native map literal type mismatch" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles native string-valued map constructors on stdlib path" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native string-keyed map literals" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native map literal string binding key" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native string-keyed map indexing sugar" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native string-keyed map indexing binding key" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="rejects native map indexing with argv key" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native string-keyed map binding lookup" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="rejects native map lookup with argv string key" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="rejects native map literal string key from argv binding" --no-skip` |
+  failures: none | notes: native map literal/string-key fixture now uses the
+  stdlib map constructor-call surface instead of retired key/value brace
+  literal syntax; string-valued native maps are compile-only to avoid the
+  current runtime hang.
 - 2026-05-16 local | fail | mode: release | command:
   `cd build-release && ./PrimeStruct_compile_run_tests --test-suite="primestruct.compile.run.native_backend.collections" --no-skip` |
   failures: 105 stale native collection compatibility cases before interrupt |

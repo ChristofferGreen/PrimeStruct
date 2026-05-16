@@ -1718,6 +1718,11 @@ Task template:
       gate: it is dominated by stale SoA public-surface tests plus older
       map-literal/insert compatibility fixtures that still expect retired C++
       map literal behavior.
+    - 2026-05-16: The native map literal/string-key compile-run fixture now
+      uses the stdlib constructor-call surface for numeric/bool/string-keyed
+      maps instead of retired key/value brace literal syntax. The
+      string-valued native map case is compile-only because the current native
+      runtime still hangs after successfully compiling that path.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.
