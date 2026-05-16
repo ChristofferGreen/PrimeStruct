@@ -263,20 +263,6 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
       return alias == targetName;
     }
   }
-  if (name.rfind("map/", 0) == 0) {
-    std::string alias = name.substr(std::string("map/").size());
-    if (alias.find('/') == std::string::npos &&
-        (alias == "map" || alias == "count" || alias == "at" || alias == "at_unsafe")) {
-      return alias == targetName;
-    }
-  }
-  if (name.rfind("std/collections/map/", 0) == 0) {
-    std::string alias = name.substr(std::string("std/collections/map/").size());
-    if (alias.find('/') == std::string::npos &&
-        (alias == "map" || alias == "count" || alias == "at" || alias == "at_unsafe")) {
-      return alias == targetName;
-    }
-  }
   auto isRemovedScopedCollectionAlias = [](const std::string &candidate) {
     return candidate.rfind(std::string("vector") + "/", 0) == 0 ||
            candidate.rfind("array/", 0) == 0 ||
