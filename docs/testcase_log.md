@@ -68,6 +68,16 @@
   canonical constructor-return coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 16:56 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical stdlib map returns are allowed,inferred canonical map returns rewrite canonical constructors,stdlib wrapper map constructor accepts explicit canonical map returns,stdlib canonical map count method auto inference falls back to canonical helper return"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` |
+  failures: none | notes: statement return collection normalization now
+  uses the shared experimental collection backing helper for generated map
+  backing recognition; the map surface inventory now observes 948 production
+  traces and backing traces now observe 193.
 - 2026-05-16 16:55 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="inferred canonical map returns rewrite canonical constructors,block-bodied inferred canonical map returns rewrite constructors,helper-wrapped inferred canonical map returns rewrite nested constructor arguments,double helper-wrapped inferred canonical map returns rewrite nested constructor arguments,stdlib map constructors accept explicit canonical map struct fields,helper-wrapped map constructors accept explicit canonical map bindings"`;

@@ -35,6 +35,15 @@ std::string collectionTypePathLocal(std::string_view collectionName,
   return path;
 }
 
+bool isSpecializedExperimentalMapBackingPath(std::string typeName) {
+  typeName = normalizeBindingTypeName(typeName);
+  if (!typeName.empty() && typeName.front() == '/') {
+    typeName.erase(typeName.begin());
+  }
+  return isExperimentalCollectionBackingTypeName("map", "Map", typeName) &&
+         typeName.find("__") != std::string::npos;
+}
+
 bool isMatrixQuaternionConversionTypePathForReturn(const std::string &typePath) {
   return isMatrixQuaternionTypePathForReturnDiagnostic(typePath) || isVectorTypePathForReturnDiagnostic(typePath);
 }
@@ -958,7 +967,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
             if (!normalizedTypePath.empty() && normalizedTypePath.front() == '/') {
               normalizedTypePath.erase(normalizedTypePath.begin());
             }
-            if (normalizedTypePath.rfind("std/collections/experimental_map/Map__", 0) == 0) {
+            if (isSpecializedExperimentalMapBackingPath(normalizedTypePath)) {
               return "/map";
             }
             const std::string canonicalMapValueRoot =
