@@ -1,10 +1,30 @@
 #include "SemanticsValidator.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
 namespace primec::semantics {
+
+namespace {
+
+std::string canonicalMapHelperPathLocal(std::string_view helperName) {
+  return canonicalCollectionHelperPath(StdlibSurfaceId::CollectionsMapHelpers,
+                                       helperName);
+}
+
+bool isCanonicalMapHelperResolvedPath(const std::string &path,
+                                      std::string_view helperName) {
+  std::string resolvedHelperName;
+  return resolvePublishedCollectionHelperResolvedPath(
+             path, StdlibSurfaceId::CollectionsMapHelpers,
+             resolvedHelperName) &&
+         resolvedHelperName == helperName;
+}
+
+} // namespace
 
 bool SemanticsValidator::validateExprMapSoaBuiltins(
     const std::vector<ParameterInfo> &params,
@@ -56,10 +76,12 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     return failExprDiagnostic(expr, std::move(message));
   };
   auto hasBareMapContainsBuiltinDefinition = [&]() {
-    return hasImportedDefinitionPath("/std/collections/map/contains") ||
-           hasDeclaredDefinitionPath("/std/collections/map/contains") ||
-           hasImportedDefinitionPath("/std/collections/map/contains_ref") ||
-           hasDeclaredDefinitionPath("/std/collections/map/contains_ref") ||
+    return hasImportedDefinitionPath(canonicalMapHelperPathLocal("contains")) ||
+           hasDeclaredDefinitionPath(canonicalMapHelperPathLocal("contains")) ||
+           hasImportedDefinitionPath(
+               canonicalMapHelperPathLocal("contains_ref")) ||
+           hasDeclaredDefinitionPath(
+               canonicalMapHelperPathLocal("contains_ref")) ||
            hasImportedDefinitionPath("/contains") ||
            hasDeclaredDefinitionPath("/contains");
   };
@@ -335,17 +357,19 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     handledOut = true;
     if (!hasBareMapContainsBuiltinDefinition()) {
       return failMapSoaBuiltinDiagnostic(
-          "unknown call target: /std/collections/map/contains");
+          "unknown call target: " + canonicalMapHelperPathLocal("contains"));
     }
     return validateContainsBuiltin("contains");
   }
 
   if (resolvedMethod &&
-      (resolved == "/std/collections/map/contains" ||
-       resolved == "/std/collections/map/contains_ref")) {
+      (isCanonicalMapHelperResolvedPath(resolved, "contains") ||
+       isCanonicalMapHelperResolvedPath(resolved, "contains_ref"))) {
     handledOut = true;
     return validateContainsBuiltin(
-        resolved == "/std/collections/map/contains_ref" ? "contains_ref" : "contains");
+        isCanonicalMapHelperResolvedPath(resolved, "contains_ref")
+            ? "contains_ref"
+            : "contains");
   }
 
   const std::string resolvedSoaToAosCanonical =

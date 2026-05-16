@@ -110,6 +110,18 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 19:06 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="bare map contains call requires imported canonical helper or explicit definition"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="bare map contains call resolves through canonical helper definition"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib namespaced map contains requires imported stdlib helper or explicit definition"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib canonical map contains and tryAt helpers resolve in method-call sugar"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` | failures: none |
+  notes: map/SOA builtin validation now resolves canonical map contains
+  helper definition checks and diagnostics through stdlib surface metadata;
+  the map surface inventory now observes 647 production traces and backing
+  traces remain at 0.
 - 2026-05-16 19:04 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="map wrapper temporary tryAt auto inference requires canonical helper definition"`;
