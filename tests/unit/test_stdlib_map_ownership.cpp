@@ -151,6 +151,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string lateMapAccessBuiltinsSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprLateMapAccessBuiltins.cpp");
+  const std::string statementPrintabilitySource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorStatementPrintability.cpp");
   const std::string scalarPointerMemorySource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprScalarPointerMemory.cpp");
@@ -193,6 +196,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!inferCollectionDispatchSetupSource.empty());
   REQUIRE(!inferDefinitionSource.empty());
   REQUIRE(!lateMapAccessBuiltinsSource.empty());
+  REQUIRE(!statementPrintabilitySource.empty());
   REQUIRE(!scalarPointerMemorySource.empty());
   REQUIRE(!argumentValidationCollectionsSource.empty());
   REQUIRE(!collectionAccessValidationSource.empty());
@@ -290,6 +294,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(lateMapAccessBuiltinsSource.find("normalizedName == \"map/at_ref\"") ==
         std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find("namespacePrefix == \"map\"") ==
+        std::string::npos);
+  CHECK(statementPrintabilitySource.find("resolvedPath == \"/map/at\"") ==
         std::string::npos);
   CHECK(scalarPointerMemorySource.find("isExplicitMapAccessHelperPath") ==
         std::string::npos);

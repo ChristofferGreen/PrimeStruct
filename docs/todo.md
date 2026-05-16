@@ -367,6 +367,8 @@ Task template:
   `/map/at*` resolved paths as map access helpers.
   Late map access validation no longer treats slashless `map/at*_ref` names
   or a `map` namespace prefix as canonical map access helper names.
+  Statement printability no longer treats rooted `/map/at` or
+  `/map/at_unsafe` calls as builtin map access printability shortcuts.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic

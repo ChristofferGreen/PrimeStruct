@@ -245,8 +245,6 @@ bool SemanticsValidator::isStringStatementExpr(const Expr &arg,
           isStdNamespacedVectorCompatibilityHelperPath(resolvedPath, "at") ||
           isStdNamespacedVectorCompatibilityHelperPath(resolvedPath,
                                                        "at_unsafe") ||
-          resolvedPath == "/map/at" ||
-          resolvedPath == "/map/at_unsafe" ||
           resolvedPath == "/std/collections/map/at" ||
           resolvedPath == "/std/collections/map/at_unsafe";
       std::string accessName;
