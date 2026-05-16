@@ -57,8 +57,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: Removed map aliases such as `/map/count` should count as
   available only when an explicit source definition family exists, not when
   template monomorphization has generated a `__...` specialization or when a
-  map receiver method or scalar pointer/memory validation could otherwise
-  mirror to rooted `/map/*` candidates.
+  map receiver method, scalar pointer/memory validation, or string argument
+  validation could otherwise mirror to rooted `/map/*` candidates.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -67,7 +67,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `/std/collections/map/count`; semantic struct-return method inference now
   probes only canonical `/std/collections/map/*` candidates for map receivers,
   and scalar pointer/memory builtin validation no longer carries a direct
-  rooted-or-canonical map access helper path classifier.
+  rooted-or-canonical map access helper path classifier; string argument
+  validation no longer treats rooted `/map/at*` resolved paths or slashless
+  `map/at*_ref` names as explicit map access helper classifiers.
 
 ### map-constructor-normalization-uses-public-path
 - Updated: 2026-05-16
