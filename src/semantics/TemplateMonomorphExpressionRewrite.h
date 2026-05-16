@@ -1426,18 +1426,6 @@ bool rewriteExpr(Expr &expr,
         }
       }
     }
-    if (!expr.templateArgs.empty() &&
-        expr.name.find('/') == std::string::npos &&
-        inferCollectionReceiverFamily(mapHelperReceiverExpr(expr)) == "map" &&
-        isRemovedMapCompatibilityHelper(mapCompatibilityHelperBase(expr.name))) {
-      const std::string compatibilityPath = "/map/" + std::string(mapCompatibilityHelperBase(expr.name));
-      if (ctx.sourceDefs.count(compatibilityPath) > 0 &&
-          ctx.templateDefs.count(compatibilityPath) == 0) {
-        error = "template arguments are only supported on templated definitions: " +
-                helperOverloadDisplayPath(compatibilityPath, ctx);
-        return false;
-      }
-    }
     if (!expr.isMethodCall && expr.templateArgs.empty() &&
         expr.name.find('/') == std::string::npos &&
         (resolvedPath == "/count" || resolvedPath == "/capacity")) {

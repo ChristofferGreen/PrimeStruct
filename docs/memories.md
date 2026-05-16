@@ -100,7 +100,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `/map/*` paths; collection-dispatch setup should not prefer an explicit
   rooted `/map/<access>` definition over canonical map access inference, and
   method-target resolution should not reclassify a direct call as removed
-  `/map/*` compatibility solely from its resolved callee path.
+  `/map/*` compatibility solely from its resolved callee path; template
+  expression rewriting should not probe visible rooted `/map/<helper>`
+  definitions to report explicit-template diagnostics for bare map receiver
+  calls.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -157,7 +160,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   collection-dispatch setup no longer suppresses namespaced canonical map
   access inference just because a rooted `/map/<access>` definition exists;
   method-target resolution no longer has a resolved-callee `/map/*` table for
-  direct map helper compatibility detection.
+  direct map helper compatibility detection; template expression rewriting no
+  longer probes rooted `/map/<helper>` source definitions for explicit
+  template-argument diagnostics on bare map receiver calls.
 
 ### map-constructor-normalization-uses-public-path
 - Updated: 2026-05-16

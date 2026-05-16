@@ -1842,6 +1842,9 @@ Task template:
     - 2026-05-16: Method-target resolution no longer reclassifies direct
       calls as removed `/map/*` compatibility solely from resolved callee
       paths; only explicit syntactic removed-spelling probes remain there.
+    - 2026-05-16: Template expression rewriting no longer probes visible
+      rooted `/map/<helper>` definitions to report explicit-template
+      diagnostics for bare map receiver calls.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.
