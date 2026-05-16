@@ -1921,7 +1921,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     std::string keyType;
     std::string valueType;
     const std::string canonical = "/std/collections/map/" + resolvedHelperName;
-    const std::string alias = "/map/" + resolvedHelperName;
     if (resolveExperimentalMapTarget(receiverExpr, keyType, valueType)) {
       if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
         return canonical;
@@ -1931,14 +1930,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (explicitMapHelperPath.rfind("/std/collections/map/", 0) == 0) {
       return canonical;
     }
-    if (hasDeclaredDefinitionPath(alias)) {
-      return alias;
-    }
     if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
       return canonical;
-    }
-    if (hasImportedDefinitionPath(alias)) {
-      return alias;
     }
     return canonical;
   };

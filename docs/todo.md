@@ -394,6 +394,8 @@ Task template:
   rooted `/map/<helper>` helper families after canonical lookup.
   Initializer inference no longer prefers or falls back to rooted
   `/map/<helper>` aliases for explicit stdlib map helper targets.
+  Method-target resolution no longer prefers rooted `/map/<helper>`
+  definitions or imports when choosing map method targets.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic
