@@ -571,6 +571,19 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(emitterMethodResolutionSource.find("normalizeMapImportAliasPath") ==
         std::string::npos);
+  CHECK(emitterMethodResolutionSource.find("normalizedMethodName.rfind(\"map/\", 0)") ==
+        std::string::npos);
+  CHECK(emitterMethodResolutionSource.find("normalizedMethodName.rfind(\"std/collections/map/\", 0)") ==
+        std::string::npos);
+  CHECK(emitterMethodResolutionSource.find("resolvedType == \"/map\"") ==
+        std::string::npos);
+  CHECK(emitterMethodResolutionSource.find("const std::string aliasPath = \"/map/\" + normalizedMethodName") ==
+        std::string::npos);
+  CHECK(emitterMethodResolutionSource.find("const std::string canonicalPath = \"/std/collections/map/\" + normalizedMethodName") ==
+        std::string::npos);
+  CHECK(emitterMethodResolutionSource.find("publishedSurfaceHelperPathForRawMethodName(\n"
+                                           "            MapHelperSurfaceBridgeKey") !=
+        std::string::npos);
   CHECK(emitterMethodTypeInferenceSource.find("pruneMapAccessStructReturnCompatibilityCandidates") ==
         std::string::npos);
   CHECK(statementLowererSource.find("isPrimeMapInsertBody") != std::string::npos);

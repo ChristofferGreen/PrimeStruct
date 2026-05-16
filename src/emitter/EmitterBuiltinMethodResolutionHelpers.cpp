@@ -11,6 +11,51 @@ using BindingInfo = Emitter::BindingInfo;
 namespace {
 
 constexpr std::string_view VectorHelperSurfaceBridgeKey = "collections.vector_helpers";
+constexpr std::string_view MapHelperSurfaceBridgeKey = "collections.map_helpers";
+
+std::string publishedSurfaceHelperPathForRawMethodName(std::string_view bridgeKey,
+                                                       std::string_view rawMethodName) {
+  const auto *metadata =
+      findPublishedCollectionHelperSurfaceMetadataByBridgeKey(bridgeKey);
+  if (metadata == nullptr || rawMethodName.empty()) {
+    return {};
+  }
+  std::string normalizedRaw(rawMethodName);
+  if (!normalizedRaw.empty() && normalizedRaw.front() != '/') {
+    normalizedRaw.insert(normalizedRaw.begin(), '/');
+  }
+  std::string memberName;
+  if (!resolvePublishedCollectionSurfacePathMemberName(
+          normalizedRaw,
+          bridgeKey,
+          true,
+          memberName)) {
+    return {};
+  }
+  auto pathForRoot = [&](std::string_view root) {
+    std::string normalizedRoot(root);
+    if (!normalizedRoot.empty() && normalizedRoot.front() != '/') {
+      normalizedRoot.insert(normalizedRoot.begin(), '/');
+    }
+    if (normalizedRoot.empty() ||
+        normalizedRaw.size() <= normalizedRoot.size() ||
+        normalizedRaw.rfind(normalizedRoot, 0) != 0 ||
+        normalizedRaw[normalizedRoot.size()] != '/') {
+      return std::string{};
+    }
+    return normalizedRoot + "/" + memberName;
+  };
+  if (std::string canonicalPath = pathForRoot(metadata->canonicalPath);
+      !canonicalPath.empty()) {
+    return canonicalPath;
+  }
+  for (const std::string_view alias : metadata->importAliasSpellings) {
+    if (std::string aliasPath = pathForRoot(alias); !aliasPath.empty()) {
+      return aliasPath;
+    }
+  }
+  return {};
+}
 
 std::string inferSoaReceiverTypeFromBinding(const BindingInfo &binding) {
   auto classifyTypeText = [&](const std::string &typeText) -> std::string {
@@ -218,9 +263,13 @@ bool resolveMethodCallPath(const Expr &call,
           VectorHelperSurfaceBridgeKey,
           false,
           explicitVectorMethodName);
-  const bool isExplicitMapAliasMethod = normalizedMethodName.rfind("map/", 0) == 0;
-  const bool isExplicitStdlibMapMethod =
-      normalizedMethodName.rfind("std/collections/map/", 0) == 0;
+  std::string explicitMapMethodName;
+  const bool isExplicitMapMethod =
+      resolvePublishedCollectionSurfacePathMemberName(
+          normalizedMethodName,
+          MapHelperSurfaceBridgeKey,
+          true,
+          explicitMapMethodName);
   const bool isExplicitStdlibSoaMethod =
       normalizedMethodName.rfind("std/collections/" "soa" "_vector/", 0) == 0;
   if (normalizedMethodName.rfind("array/", 0) == 0) {
@@ -230,11 +279,8 @@ bool resolveMethodCallPath(const Expr &call,
   } else if (normalizedMethodName.rfind("std/collections/" "soa" "_vector/", 0) == 0) {
     normalizedMethodName =
         normalizedMethodName.substr(std::string("std/collections/" "soa" "_vector/").size());
-  } else if (normalizedMethodName.rfind("map/", 0) == 0) {
-    normalizedMethodName = normalizedMethodName.substr(std::string("map/").size());
-  } else if (normalizedMethodName.rfind("std/collections/map/", 0) == 0) {
-    normalizedMethodName =
-        normalizedMethodName.substr(std::string("std/collections/map/").size());
+  } else if (isExplicitMapMethod) {
+    normalizedMethodName = explicitMapMethodName;
   }
   if (isExplicitStdlibVectorMethod) {
     const std::string explicitPath =
@@ -614,51 +660,42 @@ bool resolveMethodCallPath(const Expr &call,
       return true;
     }
   }
-  if (resolvedType == "/map" || resolvedType == "map") {
-    const std::string aliasPath = "/map/" + normalizedMethodName;
-    const std::string canonicalPath = "/std/collections/map/" + normalizedMethodName;
+  if (normalizeBindingTypeName(resolvedType) == "map") {
+    const std::string explicitMapPath =
+        publishedSurfaceHelperPathForRawMethodName(
+            MapHelperSurfaceBridgeKey,
+            call.name);
+    const std::string canonicalPath =
+        publishedCollectionSurfaceHelperPath(
+            MapHelperSurfaceBridgeKey,
+            normalizedMethodName);
     const bool isMapHelperMethod = isCanonicalMapHelperName(normalizedMethodName);
     const bool isRemovedMapSlashMethod =
         isRemovedMapSlashMethodMetadataHelperName(normalizedMethodName);
-    const bool hasAliasHelperDefinition =
-        hasDefinitionOrMetadata(metadataView, aliasPath);
     const bool hasCanonicalHelperDefinition =
         hasDefinitionOrMetadata(metadataView, canonicalPath);
     if (isMapHelperMethod) {
-      if (isRemovedMapSlashMethod &&
-          (isExplicitMapAliasMethod || isExplicitStdlibMapMethod)) {
+      if (isRemovedMapSlashMethod && isExplicitMapMethod) {
         return false;
       }
-      if (isExplicitMapAliasMethod) {
-        if (!hasAliasHelperDefinition) {
+      if (isExplicitMapMethod) {
+        if (explicitMapPath.empty() ||
+            !hasDefinitionOrMetadata(metadataView, explicitMapPath)) {
           return false;
         }
-        resolvedOut = aliasPath;
-        return true;
-      }
-      if (isExplicitStdlibMapMethod) {
-        if (!hasCanonicalHelperDefinition) {
-          return false;
-        }
-        resolvedOut = canonicalPath;
+        resolvedOut = explicitMapPath;
         return true;
       }
       if (!hasCanonicalHelperDefinition) {
         return false;
       }
     }
-    if (isExplicitMapAliasMethod) {
-      if (!hasDefinitionOrMetadata(metadataView, aliasPath)) {
+    if (isExplicitMapMethod) {
+      if (explicitMapPath.empty() ||
+          !hasDefinitionOrMetadata(metadataView, explicitMapPath)) {
         return false;
       }
-      resolvedOut = aliasPath;
-      return true;
-    }
-    if (isExplicitStdlibMapMethod) {
-      if (!hasDefinitionOrMetadata(metadataView, canonicalPath)) {
-        return false;
-      }
-      resolvedOut = canonicalPath;
+      resolvedOut = explicitMapPath;
       return true;
     }
   }
