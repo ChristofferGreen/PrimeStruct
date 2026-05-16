@@ -2056,6 +2056,9 @@ Task template:
     - 2026-05-16: Inline call context generated map struct and experimental
       map constructor-helper prefixes no longer hard-code backing paths; they
       now derive those prefixes through local collection path builders.
+    - 2026-05-16: Emitter builtin call-path map type classification no longer
+      hard-codes the experimental map type path; it now derives that path
+      through the local experimental collection path builder.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

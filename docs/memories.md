@@ -244,6 +244,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   inline call context generated map struct and experimental map
   constructor-helper prefixes should derive backing paths through local
   collection path builders;
+  emitter builtin call-path map type classification should derive the
+  experimental map type path through the local experimental collection path
+  builder;
   generated collection struct classification should derive the canonical map
   `MapValue__*` prefix through `collectionTypePath("map")` instead of
   carrying a split-string map root.

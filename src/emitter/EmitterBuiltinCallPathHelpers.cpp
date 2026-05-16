@@ -99,8 +99,10 @@ std::string preferredFileMethodTargetLocal(
 
 bool isMapCollectionTypeNameLocal(const std::string &name) {
   const std::string normalized = normalizeBindingTypeName(name);
+  const std::string experimentalMapType =
+      experimentalCollectionMemberRootLocal("map") + "Map";
   return normalized == "map" || normalized == "std/collections/map" || normalized == "Map" ||
-         normalized == "std/collections/experimental_map/Map";
+         normalized == experimentalMapType;
 }
 
 bool extractMapKeyValueTypesFromTypeTextLocal(const std::string &typeText,
