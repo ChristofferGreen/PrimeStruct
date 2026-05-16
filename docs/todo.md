@@ -466,6 +466,9 @@ Task template:
   Lowerer struct-return map helper candidate paths now derive rooted and
   canonical prefixes through collection path helpers instead of direct map
   helper path strings.
+  Emitter method metadata removed-alias detection now resolves canonical map
+  helper paths through stdlib surface metadata instead of a direct slashless
+  canonical map path string.
   Emitter binding-type map compatibility checks now derive canonical and
   experimental map type paths through local collection path helpers instead of
   direct map path fragments.

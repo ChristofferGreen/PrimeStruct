@@ -273,10 +273,16 @@ bool isRemovedCollectionMethodAliasPath(std::string_view rawMethodName) {
     return isRemovedExactPublishedMapHelper(
         std::string_view(candidate).substr(std::string_view("map/").size()));
   }
-  if (candidate.rfind("std/collections/map/", 0) == 0) {
-    return isRemovedExactPublishedMapHelper(
-        std::string_view(candidate).substr(
-            std::string_view("std/collections/map/").size()));
+  if (const auto *metadata =
+          findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsMapHelpers);
+      metadata != nullptr) {
+    std::string canonicalMemberName;
+    if (resolveCanonicalSurfacePathMemberName(
+            *metadata,
+            normalizeCollectionHelperPath(candidate),
+            canonicalMemberName)) {
+      return isRemovedExactPublishedMapHelper(canonicalMemberName);
+    }
   }
   return false;
 }
