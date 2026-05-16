@@ -299,8 +299,9 @@ Task template:
   collection-type normalization now uses the same helper for generated map
   backing recognition, and struct-return inference now uses the same helper
   for generated map backing recognition, and Result helper map payload
-  recognition now uses the same helper for generated map backing paths. The
-  remaining production lowerer/emitter
+  recognition now uses the same helper for generated map backing paths, and
+  receiver-path map backing exclusions now use the same helper. The remaining
+  production lowerer/emitter
   experimental-map traces
   are source-locked as temporary internal backing substrate by
   `test_stdlib_map_ownership.cpp`, and

@@ -68,6 +68,15 @@
   canonical constructor-return coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 17:02 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map namespaced access call keeps canonical struct-return forwarding,map method access keeps canonical struct-return forwarding,map method access field expression keeps canonical struct-return forwarding,map method access ignores rooted alias struct-return helper"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` |
+  failures: none | notes: receiver-path map backing exclusions now use the
+  shared experimental collection backing helper; the map surface inventory
+  now observes 936 production traces and backing traces now observe 181.
 - 2026-05-16 17:01 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="helper-wrapped Result.ok payload assignments accept explicit canonical map result targets,helper-wrapped Result.ok payloads accept canonical map result dereference targets,canonical stdlib map returns are allowed,stdlib wrapper map constructor accepts explicit canonical map returns"`;

@@ -1,9 +1,21 @@
 #include "SemanticsValidator.h"
+#include "MapConstructorHelpers.h"
 
 #include <string>
 #include <string_view>
 
 namespace primec::semantics {
+
+namespace {
+bool isSpecializedExperimentalMapBackingPath(std::string typeName) {
+  typeName = normalizeBindingTypeName(typeName);
+  if (!typeName.empty() && typeName.front() == '/') {
+    typeName.erase(typeName.begin());
+  }
+  return isExperimentalCollectionBackingTypeName("map", "Map", typeName) &&
+         typeName.find("__") != std::string::npos;
+}
+} // namespace
 
 bool SemanticsValidator::resolveNonCollectionAccessHelperPathFromTypeText(
     const std::string &typeText,
@@ -42,7 +54,7 @@ bool SemanticsValidator::resolveNonCollectionAccessHelperPathFromTypeText(
     resolvedType = resolveTypePath(resolvedLookupType, typeNamespace);
   }
   if (resolvedType.empty() ||
-      resolvedType.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
+      isSpecializedExperimentalMapBackingPath(resolvedType)) {
     return false;
   }
   pathOut = resolvedType + "/" + std::string(helperName);
@@ -158,7 +170,7 @@ bool SemanticsValidator::resolveLeadingNonCollectionAccessReceiverPath(
   }
   const std::string structPath = inferStructReturnPath(receiverExpr, params, locals);
   if (structPath.empty() || !normalizeCollectionTypePath(structPath).empty() ||
-      structPath.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
+      isSpecializedExperimentalMapBackingPath(structPath)) {
     return false;
   }
   pathOut = structPath + "/" + std::string(helperName);
