@@ -87,6 +87,42 @@ bool isRemovedVectorHelperDefinitionPath(const std::string &path) {
          memberName != "vector";
 }
 
+bool resolveMapHelperDefinitionMember(const std::string &path,
+                                      std::string &memberNameOut) {
+  memberNameOut.clear();
+  if (path.find('/') == std::string::npos) {
+    return false;
+  }
+  const auto *metadata =
+      findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  if (metadata == nullptr) {
+    return false;
+  }
+  auto resolve = [&](std::string_view candidate) {
+    return resolveStdlibSurfaceMemberName(*metadata, candidate);
+  };
+  std::string_view memberName = resolve(path);
+  if (memberName.empty() && !path.empty() && path.front() == '/') {
+    const std::string_view unrootedPath = trimLeadingSlash(path);
+    if (unrootedPath.find('/') != std::string_view::npos) {
+      memberName = resolve(unrootedPath);
+    }
+  }
+  if (memberName.empty()) {
+    return false;
+  }
+  memberNameOut.assign(memberName);
+  return true;
+}
+
+bool isRemovedCountFallbackMapHelper(std::string_view helperName) {
+  return helperName == "count" || helperName == "contains" ||
+         helperName == "tryAt" || helperName == "at" ||
+         helperName == "at_unsafe" || helperName == "count_ref" ||
+         helperName == "contains_ref" || helperName == "tryAt_ref" ||
+         helperName == "at_ref" || helperName == "at_unsafe_ref";
+}
+
 bool isArgsPackParam(const Expr &param) {
   for (const auto &transform : param.transforms) {
     if (transform.name == "effects" || transform.name == "capabilities") {
@@ -176,20 +212,9 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
       return false;
     }
     const std::string directHelperPath = resolveDirectHelperPath();
-    auto matchesMapRoot = [&](std::string_view helperName) {
-      const std::string unrooted = "map/" + std::string(helperName);
-      return directHelperPath == unrooted || directHelperPath == "/" + unrooted;
-    };
-    return matchesMapRoot("count") ||
-           matchesMapRoot("contains") ||
-           matchesMapRoot("tryAt") ||
-           matchesMapRoot("at") ||
-           matchesMapRoot("at_unsafe") ||
-           matchesMapRoot("count_ref") ||
-           matchesMapRoot("contains_ref") ||
-           matchesMapRoot("tryAt_ref") ||
-           matchesMapRoot("at_ref") ||
-           matchesMapRoot("at_unsafe_ref");
+    std::string helperName;
+    return resolveMapHelperDefinitionMember(directHelperPath, helperName) &&
+           isRemovedCountFallbackMapHelper(helperName);
   };
   if (!expr.isMethodCall) {
     const std::string directHelperPath = resolveDirectHelperPath();

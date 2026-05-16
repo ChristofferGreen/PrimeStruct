@@ -313,7 +313,9 @@ Task template:
   slashless and canonical map prefix stripping, and semantic concrete call
   resolution now recognizes map entry helper and constructor base paths
   through map surface metadata instead of direct canonical map
-  entry/constructor literals. The remaining production
+  entry/constructor literals, and lowerer count fallback now recognizes
+  removed map helper alias calls through `collections.map_helpers` metadata
+  instead of a local slashless `map/` helper table. The remaining production
   lowerer/emitter
   experimental-map traces
   are source-locked as temporary internal backing substrate by

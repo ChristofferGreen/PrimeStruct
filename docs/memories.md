@@ -548,7 +548,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   slashless and canonical map prefix stripping; semantic concrete call
   resolution now recognizes map entry helper and constructor base paths
   through map surface metadata instead of direct canonical map
-  entry/constructor literals. The stale
+  entry/constructor literals; lowerer count fallback now recognizes removed
+  map helper alias calls through `collections.map_helpers` metadata instead
+  of a local slashless `map/` helper table. The stale
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`
   return type, which allowed the emitter collection-type rooted map access

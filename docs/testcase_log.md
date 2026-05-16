@@ -7,6 +7,13 @@
   resolved-path helpers, inline-dispatch map helper classifiers, and SoA
   helper path strings. The map bridge-key assertion updated in the same run
   did not fail.
+- `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers handle non-method count fallback"`
+  has stale count-fallback expectations after the map stdlib-ownership
+  cutover. On 2026-05-17 it still expected removed `/map/count` and
+  `/map/at*` alias calls, plus canonical map access calls, to route through
+  fallback emission paths; current lowerer behavior keeps those removed map
+  helper aliases out of non-method count fallback, while the adjacent
+  same-path map count-like direct-definition guard passes.
 - `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers keep explicit map helper same-path defs"`
   is stale after the map stdlib-ownership cutover. On 2026-05-16 it still
   expected `/map/at` and `/map/at_unsafe` calls with a canonical fallback
@@ -111,6 +118,19 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-17 00:12 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers prefer direct same-path map count-like defs" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: lowerer count fallback now recognizes removed map helper alias
+  calls through `collections.map_helpers` metadata instead of a local
+  slashless `map/` helper table; the broader non-method count fallback
+  source test remains stale and is listed in Current Known Failures. The map
+  surface inventory dropped to 299 production traces and backing traces
+  remain at 0.
 - 2026-05-17 00:09 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical stdlib map wrappers resolve through explicit namespaced helpers" --no-skip`;

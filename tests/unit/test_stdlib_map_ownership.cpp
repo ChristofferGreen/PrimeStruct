@@ -216,6 +216,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
                "EmitterBuiltinMethodResolutionMetadataHelpers.cpp");
   const std::string statementLowererSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererStatementCallEmission.cpp");
+  const std::string lowererCallHelpersSource =
+      readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererCallHelpers.cpp");
   const std::string lowerStatementsExprSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererLowerStatementsExpr.h");
   const std::string lowerStatementsBindingsSource =
@@ -309,6 +311,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!emitterCollectionTypeHelpersSource.empty());
   REQUIRE(!emitterMethodMetadataSource.empty());
   REQUIRE(!statementLowererSource.empty());
+  REQUIRE(!lowererCallHelpersSource.empty());
   REQUIRE(!lowerStatementsExprSource.empty());
   REQUIRE(!lowerStatementsBindingsSource.empty());
   REQUIRE(!inlineNativeSource.empty());
@@ -760,6 +763,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(statementLowererSource.find("canonicalStatementMapHelperPath(\"insert\")") !=
         std::string::npos);
   CHECK(statementLowererSource.find("rewrittenStmt.name = \"/std/collections/map/insert\"") ==
+        std::string::npos);
+  CHECK(lowererCallHelpersSource.find("const std::string unrooted = \"map/\" + std::string(helperName)") ==
+        std::string::npos);
+  CHECK(lowererCallHelpersSource.find("resolveMapHelperDefinitionMember(directHelperPath, helperName)") !=
         std::string::npos);
   CHECK(inlineNativeSource.find("return helperName == \"insert\" || helperName == \"insert_ref\"") ==
         std::string::npos);
