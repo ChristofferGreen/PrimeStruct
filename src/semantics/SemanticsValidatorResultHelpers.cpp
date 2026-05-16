@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "MapConstructorHelpers.h"
 #include "SemanticsValidatorExprCaptureSplitStep.h"
 
 #include <algorithm>
@@ -92,6 +93,15 @@ std::string canonicalMapValueIdentity(const std::string &typeText) {
   std::ostringstream out;
   out << mapValueRoot << "__t" << std::hex << fnv1a64(canonicalArgs.str());
   return out.str();
+}
+
+bool isSpecializedExperimentalMapBackingPath(std::string typeName) {
+  typeName = normalizeBindingTypeName(typeName);
+  if (!typeName.empty() && typeName.front() == '/') {
+    typeName.erase(typeName.begin());
+  }
+  return isExperimentalCollectionBackingTypeName("map", "Map", typeName) &&
+         typeName.find("__") != std::string::npos;
 }
 
 bool isResultTypeBaseName(const std::string &base) {
@@ -317,7 +327,7 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     if (!resolvedPath.empty() && resolvedPath.front() != '/') {
       resolvedPath.insert(resolvedPath.begin(), '/');
     }
-    if (resolvedPath.rfind("/std/collections/experimental_map/Map__", 0) != 0) {
+    if (!isSpecializedExperimentalMapBackingPath(resolvedPath)) {
       return false;
     }
     auto defIt = defMap_.find(resolvedPath);

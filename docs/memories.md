@@ -182,7 +182,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   the same helper for generated map backing recognition; collection-type
   normalization should use the same helper for generated map backing
   recognition; struct-return inference should use the same helper for
-  generated map backing recognition; generated collection struct
+  generated map backing recognition; Result helper map payload recognition
+  should use the same helper for generated map backing paths; generated collection struct
   classification should derive the canonical map `MapValue__*` prefix through
   `collectionTypePath("map")` instead of carrying a split-string map root.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
