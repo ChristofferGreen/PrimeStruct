@@ -55,19 +55,6 @@ bool isRawBuiltinSoaVectorStructPath(const std::string &structPath) {
   return structPath == "/soa" "_vector" || structPath == "/std/collections/" "soa" "_vector";
 }
 
-const Expr &mapStructRhsExprForTarget(
-    const std::string &targetStructPath,
-    const Expr &rhsExpr,
-    const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
-    Expr &rewrittenExpr) {
-  if (isExperimentalMapStructTypePath(targetStructPath) &&
-      rewritePublishedMapConstructorForExperimentalMapStruct(
-          rhsExpr, resolveDefinitionCall, rewrittenExpr)) {
-    return rewrittenExpr;
-  }
-  return rhsExpr;
-}
-
 std::string defaultVectorRecordStructPath(std::string_view builtin) {
   if (builtin == "soa" "_vector") {
     return collectionTypePath("soa" "_vector");
@@ -961,12 +948,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
       }
       if (it->second.kind == LocalInfo::Kind::Reference) {
         if (!it->second.structTypeName.empty()) {
-          Expr rewrittenRhs;
-          const Expr &rhsExpr = mapStructRhsExprForTarget(
-              it->second.structTypeName,
-              expr.args[1],
-              context.resolveDefinitionCall,
-              rewrittenRhs);
+          const Expr &rhsExpr = expr.args[1];
           std::string rhsStruct = inferStructExprPath(rhsExpr, localsIn);
           if (rhsStruct.empty() ||
               !areCompatibleStructPaths(rhsStruct, it->second.structTypeName)) {
@@ -1009,12 +991,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         return true;
       }
       if (it->second.kind == LocalInfo::Kind::Value && !it->second.structTypeName.empty()) {
-        Expr rewrittenRhs;
-        const Expr &rhsExpr = mapStructRhsExprForTarget(
-            it->second.structTypeName,
-            expr.args[1],
-            context.resolveDefinitionCall,
-            rewrittenRhs);
+        const Expr &rhsExpr = expr.args[1];
         std::string rhsStruct = inferStructExprPath(rhsExpr, localsIn);
         if (rhsStruct.empty() || !areCompatibleStructPaths(rhsStruct, it->second.structTypeName)) {
           error = "assign requires matching struct value";
@@ -1464,12 +1441,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
           target.name == "storage" &&
           fieldStructPath.rfind("/std/collections/internal_soa_storage/SoaColumn__", 0) == 0;
       if (isRawBuiltinSoaStorageAssign) {
-        Expr rewrittenRhs;
-        const Expr &rhsExpr = mapStructRhsExprForTarget(
-            fieldStructPath,
-            expr.args[1],
-            context.resolveDefinitionCall,
-            rewrittenRhs);
+        const Expr &rhsExpr = expr.args[1];
         const std::string rhsStruct = inferStructExprPath(rhsExpr, localsIn);
         if (rhsStruct.empty() || !areCompatibleStructPaths(rhsStruct, fieldStructPath)) {
           error = "assign requires matching struct value";
@@ -1515,12 +1487,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
       const int32_t destPtrLocal = allocTempLocal();
       instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
       if (!fieldStructPath.empty()) {
-        Expr rewrittenRhs;
-        const Expr &rhsExpr = mapStructRhsExprForTarget(
-            fieldStructPath,
-            expr.args[1],
-            context.resolveDefinitionCall,
-            rewrittenRhs);
+        const Expr &rhsExpr = expr.args[1];
         const std::string rhsStruct = inferStructExprPath(rhsExpr, localsIn);
         if (rhsStruct.empty() || !areCompatibleStructPaths(rhsStruct, fieldStructPath)) {
           error = "assign requires matching struct value";

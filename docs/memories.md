@@ -140,7 +140,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   metadata-backed map constructor rewrite functions; semantic
   constructor-backed binding and parameter map-value checks no longer
   classify fixed-arity `mapSingle`/`mapPair`-style names as canonical
-  constructors.
+  constructors; lowerer assignment/init/packed-Result paths no longer rewrite
+  public map constructors to experimental-map fixed-arity helpers.
 
 ### semantic-memory-policy-uses-runner-headroom
 - Updated: 2026-05-14

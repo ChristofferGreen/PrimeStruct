@@ -630,14 +630,7 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
     }
     return ResultOkMethodCallEmitResult::Emitted;
   }
-  const Expr *structPayloadExpr = &payloadExpr;
-  Expr rewrittenStructMapPayloadExpr;
-  if (isExperimentalMapStructTypePath(structType) &&
-      rewritePublishedMapConstructorForExperimentalMapStruct(
-          payloadExpr, resolveDefinitionCall, rewrittenStructMapPayloadExpr)) {
-    structPayloadExpr = &rewrittenStructMapPayloadExpr;
-  }
-  if (!emitExpr(*structPayloadExpr, localsIn)) {
+  if (!emitExpr(payloadExpr, localsIn)) {
     return ResultOkMethodCallEmitResult::Error;
   }
   if (!payloadInfo.isPackedSingleSlot) {

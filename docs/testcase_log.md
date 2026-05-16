@@ -38,6 +38,22 @@
 
 ## Recent Test Runs
 - 2026-05-16 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_compile_run_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="runs vm builtin canonical map first-growth inserts"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .`;
+  `python3 scripts/check_map_adapter_traces.py --root .`;
+  `python3 scripts/check_semantic_map_wrapper_traces.py --root .` |
+  failures: none | notes: lowerer assignment, uninitialized-init, and packed
+  Result paths no longer rewrite public map constructors to
+  `experimental_map/mapSingle`-style backing helpers.
+- 2026-05-16 local | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer supports direct map Result payloads"` |
+  failures: stale direct builtin-map Result payload fixture | notes: this
+  remains the same known non-gate recorded above after removing the
+  experimental-map constructor rewrite bridge.
+- 2026-05-16 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation"`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib namespaced map constructor resolves through imported stdlib helper,stdlib namespaced map constructor keeps same-path definition before wrapper fallback,retired public mapPair bridge reports unknown target,canonical stdlib map helpers accept constructor receivers"`;

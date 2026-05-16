@@ -1759,6 +1759,11 @@ Task template:
       parameter map-value checks no longer classify fixed-arity legacy names
       such as `mapSingle`, `mapPair`, or `mapOct` as canonical map
       constructors; only the public `map` constructor surface remains.
+    - 2026-05-16: IR lowering no longer rewrites public
+      `/std/collections/map/map` constructor calls into
+      `/std/collections/experimental_map/mapNew`/`mapSingle`/fixed-arity
+      backing helpers when assigning, initializing, or packing experimental
+      map structs.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

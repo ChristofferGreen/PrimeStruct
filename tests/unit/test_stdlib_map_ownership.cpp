@@ -104,10 +104,6 @@ bool isAllowedExperimentalMapTrace(const std::string &relativePath,
     return relativePath ==
            "src/ir_lowerer/IrLowererLowerEmitExprCollectionHelpers.h";
   }
-  if (relativePath == "src/ir_lowerer/IrLowererCallHelpers.cpp" &&
-      contains("rewrittenExpr.name = \"/std/collections/experimental_map/\" + helperLeaf;")) {
-    return true;
-  }
   if (relativePath == "src/ir_lowerer/IrLowererSetupTypeMethodCallResolution.cpp" &&
       contains("normalized.rfind(\"/std/collections/experimental_map/\", 0) == 0")) {
     return true;
