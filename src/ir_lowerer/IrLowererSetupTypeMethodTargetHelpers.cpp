@@ -22,6 +22,10 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
       normalizeBuiltinCollectionStructPath("vector").substr(1) + "/";
   const std::string canonicalVectorPrefix =
       collectionMemberRoot("vector", false);
+  const std::string rootedMapPrefix =
+      normalizeBuiltinCollectionStructPath("map").substr(1) + "/";
+  const std::string canonicalMapPrefix =
+      collectionMemberRoot("map", false);
   if (normalizedMethodName.rfind(rootedVectorPrefix, 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(rootedVectorPrefix.size());
   } else if (normalizedMethodName.rfind("array/", 0) == 0) {
@@ -31,21 +35,21 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
         normalizedMethodName.substr(std::string("std/collections/" "soa" "_vector/").size());
   } else if (normalizedMethodName.rfind(canonicalVectorPrefix, 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(canonicalVectorPrefix.size());
-  } else if (normalizedMethodName.rfind("map/", 0) == 0) {
-    normalizedMethodName = normalizedMethodName.substr(std::string("map/").size());
-  } else if (normalizedMethodName.rfind("std/collections/map/", 0) == 0) {
-    normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/map/").size());
+  } else if (normalizedMethodName.rfind(rootedMapPrefix, 0) == 0) {
+    normalizedMethodName = normalizedMethodName.substr(rootedMapPrefix.size());
+  } else if (normalizedMethodName.rfind(canonicalMapPrefix, 0) == 0) {
+    normalizedMethodName = normalizedMethodName.substr(canonicalMapPrefix.size());
   }
   std::string normalizedOriginalMethodName = methodName;
   if (!normalizedOriginalMethodName.empty() && normalizedOriginalMethodName.front() == '/') {
     normalizedOriginalMethodName.erase(normalizedOriginalMethodName.begin());
   }
   const bool isExplicitCanonicalMapMethodAlias =
-      normalizedOriginalMethodName.rfind("std/collections/map/", 0) == 0;
+      normalizedOriginalMethodName.rfind(canonicalMapPrefix, 0) == 0;
   const bool isExplicitCompatibilityMapMethodAlias =
       isExplicitMapMethodAlias && !isExplicitCanonicalMapMethodAlias;
   const bool isExplicitMapContainsOrTryAtCompatibilityMethodAlias =
-      normalizedOriginalMethodName.rfind("map/", 0) == 0 &&
+      normalizedOriginalMethodName.rfind(rootedMapPrefix, 0) == 0 &&
       isExplicitMapContainsOrTryAtMethod;
   const bool isExplicitVectorAliasMethod =
       normalizedOriginalMethodName.rfind(rootedVectorPrefix, 0) == 0;

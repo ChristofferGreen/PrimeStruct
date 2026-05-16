@@ -105,6 +105,17 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 21:17 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup type helper resolves method definitions from receiver targets" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: setup-type method-target map method prefix stripping now derives
+  rooted and canonical map prefixes through collection path helpers instead
+  of direct map path strings; the map surface inventory now observes 363
+  production traces and backing traces remain at 0.
 - 2026-05-16 21:14 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer collection helper rewrite guards explicit map defs,ir lowerer call helpers keep lowered collection helper paths reachable via published surface ids" --no-skip`;

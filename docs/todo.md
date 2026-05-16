@@ -472,6 +472,9 @@ Task template:
   Setup-type collection helper map alias and normalization checks now derive
   rooted and canonical map prefixes through collection path helpers instead of
   direct map helper path strings.
+  Setup-type method-target map method prefix stripping now derives rooted and
+  canonical map prefixes through collection path helpers instead of direct map
+  path strings.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic

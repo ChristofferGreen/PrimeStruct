@@ -590,6 +590,18 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(setupTypeMethodTargetSource.find("normalized == \"std/collections/map\"") ==
         std::string::npos);
+  CHECK(setupTypeMethodTargetSource.find("const std::string rootedMapPrefix") !=
+        std::string::npos);
+  CHECK(setupTypeMethodTargetSource.find("const std::string canonicalMapPrefix") !=
+        std::string::npos);
+  CHECK(setupTypeMethodTargetSource.find("normalizedMethodName.rfind(\"map/\", 0)") ==
+        std::string::npos);
+  CHECK(setupTypeMethodTargetSource.find("normalizedMethodName.rfind(\"std/collections/map/\", 0)") ==
+        std::string::npos);
+  CHECK(setupTypeMethodTargetSource.find("normalizedOriginalMethodName.rfind(\"map/\", 0)") ==
+        std::string::npos);
+  CHECK(setupTypeMethodTargetSource.find("normalizedOriginalMethodName.rfind(\"std/collections/map/\", 0)") ==
+        std::string::npos);
   CHECK(setupTypeMethodCallSource.find("collectionMemberPath(\"map\", \"map\")") !=
         std::string::npos);
   CHECK(setupTypeMethodCallSource.find("path == \"/std/collections/map/map\"") ==
