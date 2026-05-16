@@ -67,7 +67,7 @@ bool isSpecializedExperimentalMapTypeText(const std::string &typeText) {
   if (!normalized.empty() && normalized.front() != '/') {
     normalized.insert(normalized.begin(), '/');
   }
-  return normalized.rfind("/std/collections/experimental_map/Map__", 0) == 0;
+  return normalized.rfind(experimentalCollectionTypePath("map", "Map") + "__", 0) == 0;
 }
 
 bool isSpecializedExperimentalVectorTypeText(const std::string &typeText) {
@@ -509,7 +509,7 @@ bool applySemanticDirectValueTypeText(const std::string &typeText, ResultExprInf
     if (!normalizedBase.empty() && normalizedBase.front() == '/') {
       normalizedBase.erase(normalizedBase.begin());
     }
-    if (normalizedBase == "std/collections/experimental_map/Map" &&
+    if (normalizedBase == experimentalCollectionTypePath("map", "Map", false) &&
         resolveSpecializedExperimentalMapStructPathForBindingType(
             trimmedType, out.valueStructType)) {
       return true;
