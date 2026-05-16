@@ -305,7 +305,10 @@ Task template:
   init map type matching now uses the same helper, and lowerer simple-call
   scoped collection alias rejection now recognizes map helper surface paths
   through `CollectionsMapHelpers` metadata instead of a direct slashless
-  `map/` prefix check. The remaining production
+  `map/` prefix check, and semantic method-target resolution now recognizes
+  slashless map helper alias paths through
+  `metadataBackedMapHelperRootAliasMethodName` instead of direct `map/`
+  prefix checks. The remaining production
   lowerer/emitter
   experimental-map traces
   are source-locked as temporary internal backing substrate by

@@ -231,8 +231,10 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       helperName = stripUnrootedCanonicalVectorCompatibilityPrefix(candidate);
       isStdNamespacedVectorHelper = true;
       compatibilityCollection = "vector";
-    } else if (candidate.rfind("map/", 0) == 0) {
-      helperName = std::string_view(candidate).substr(std::string_view("map/").size());
+    } else if (const std::string rootAliasHelperName =
+                   metadataBackedMapHelperRootAliasMethodName(candidate);
+               !rootAliasHelperName.empty()) {
+      helperName = rootAliasHelperName;
       compatibilityCollection = "map";
     } else if (resolveCanonicalMapHelperNameFromSpelling(
                    candidate, resolvedCanonicalMapHelperName)) {
@@ -250,7 +252,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       if (!isRemovedMapCompatibilityHelper(helperName)) {
         return "";
       }
-      return "/map/" + std::string(helperName);
+      return "/" + compatibilityCollection + "/" + std::string(helperName);
     }
     if (!isRemovedVectorCompatibilityHelper(helperName)) {
       return "";
@@ -306,7 +308,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (normalizedPrefix == canonicalMapHelperNamespaceLocal()) {
       return canonicalMapHelperPathLocal(candidate);
     }
-    if (candidate.rfind("map/", 0) == 0) {
+    if (!metadataBackedMapHelperRootAliasMethodName(candidate).empty()) {
       return "/" + candidate;
     }
     std::string canonicalMapHelperName;

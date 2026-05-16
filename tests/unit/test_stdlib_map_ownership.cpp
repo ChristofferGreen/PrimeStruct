@@ -404,6 +404,11 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(methodTargetResolutionSource.find("resolvedPath == \"/map/") ==
         std::string::npos);
+  CHECK(methodTargetResolutionSource.find("candidate.rfind(\"map/\", 0)") ==
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find(
+            "metadataBackedMapHelperRootAliasMethodName(candidate)") !=
+        std::string::npos);
   CHECK(templateCoreSource.find("\"/map/entry\"") == std::string::npos);
   CHECK(templateCoreSource.find("\"/map/entry__\"") == std::string::npos);
   CHECK(templateReceiverSource.find("|| resolvedPath == \"/map/") ==

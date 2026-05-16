@@ -540,7 +540,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   metadata instead of a literal `map/at*` raw-path table; lowerer simple-call
   scoped collection alias rejection now recognizes map helper surface paths
   through `CollectionsMapHelpers` metadata instead of a direct slashless
-  `map/` prefix check. The stale
+  `map/` prefix check; semantic method-target resolution now recognizes
+  slashless map helper alias paths through
+  `metadataBackedMapHelperRootAliasMethodName` instead of direct `map/`
+  prefix checks. The stale
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`
   return type, which allowed the emitter collection-type rooted map access
