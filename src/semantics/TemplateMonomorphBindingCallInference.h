@@ -56,21 +56,6 @@ bool inferCallBindingTypeForMonomorph(const Expr &initializer,
     resolved = resolveCalleePath(initializer, initializer.namespacePrefix, ctx);
   }
 
-  if (!initializer.isMethodCall && initializer.templateArgs.size() == 2) {
-    const std::string experimentalPath = experimentalMapConstructorInferencePath(resolved);
-    if (!experimentalPath.empty() && ctx.sourceDefs.count(experimentalPath) > 0) {
-      handledOut = true;
-      infoOut.typeName = "/std/collections/experimental_map/Map";
-      infoOut.typeTemplateArg = joinTemplateArgs(initializer.templateArgs);
-      return true;
-    }
-    if (isExperimentalMapConstructorHelperPath(resolved)) {
-      handledOut = true;
-      infoOut.typeName = "/std/collections/experimental_map/Map";
-      infoOut.typeTemplateArg = joinTemplateArgs(initializer.templateArgs);
-      return true;
-    }
-  }
   if (!initializer.isMethodCall && initializer.templateArgs.size() == 1) {
     const std::string experimentalPath = experimentalVectorConstructorInferencePath(resolved);
     if (!experimentalPath.empty() && ctx.sourceDefs.count(experimentalPath) > 0) {
@@ -87,100 +72,6 @@ bool inferCallBindingTypeForMonomorph(const Expr &initializer,
     }
   }
   if (!initializer.isMethodCall && initializer.templateArgs.empty()) {
-    const std::string experimentalPath = experimentalMapConstructorInferencePath(resolved);
-    if (!experimentalPath.empty() && ctx.sourceDefs.count(experimentalPath) > 0) {
-      auto defIt = ctx.sourceDefs.find(resolved);
-      if (defIt != ctx.sourceDefs.end()) {
-        std::vector<std::string> inferredArgs;
-        std::string inferError;
-        if (inferImplicitTemplateArgs(defIt->second,
-                                      initializer,
-                                      locals,
-                                      params,
-                                      SubstMap{},
-                                      {},
-                                      initializer.namespacePrefix,
-                                      ctx,
-                                      allowMathBare,
-                                      inferredArgs,
-                                      inferError) &&
-            inferredArgs.size() == 2) {
-          infoOut.typeName = "/std/collections/experimental_map/Map";
-          infoOut.typeTemplateArg = joinTemplateArgs(inferredArgs);
-          return true;
-        }
-        if (!inferError.empty()) {
-          handledOut = true;
-          return false;
-        }
-        defIt = ctx.sourceDefs.find(resolved);
-        if (defIt == ctx.sourceDefs.end()) {
-          handledOut = true;
-          return false;
-        }
-        for (const auto &transform : defIt->second.transforms) {
-          if (transform.name != "return" || transform.templateArgs.size() != 1) {
-            continue;
-          }
-          std::string keyType;
-          std::string valueType;
-          if (extractMapKeyValueTypesFromTypeText(transform.templateArgs.front(), keyType, valueType)) {
-            infoOut.typeName = "/std/collections/experimental_map/Map";
-            infoOut.typeTemplateArg = joinTemplateArgs({keyType, valueType});
-            return true;
-          }
-        }
-      }
-    }
-    if (isExperimentalMapConstructorHelperPath(resolved)) {
-      auto defIt = ctx.sourceDefs.find(resolved);
-      if (defIt != ctx.sourceDefs.end()) {
-        std::vector<std::string> inferredArgs;
-        std::string inferError;
-        if (inferImplicitTemplateArgs(defIt->second,
-                                      initializer,
-                                      locals,
-                                      params,
-                                      SubstMap{},
-                                      {},
-                                      initializer.namespacePrefix,
-                                      ctx,
-                                      allowMathBare,
-                                      inferredArgs,
-                                      inferError) &&
-            inferredArgs.size() == 2) {
-          infoOut.typeName = "/std/collections/experimental_map/Map";
-          infoOut.typeTemplateArg = joinTemplateArgs(inferredArgs);
-          return true;
-        }
-        if (!inferError.empty()) {
-          handledOut = true;
-          return false;
-        }
-        defIt = ctx.sourceDefs.find(resolved);
-        if (defIt == ctx.sourceDefs.end()) {
-          handledOut = true;
-          return false;
-        }
-        for (const auto &transform : defIt->second.transforms) {
-          if (transform.name != "return" || transform.templateArgs.size() != 1) {
-            continue;
-          }
-          std::string keyType;
-          std::string valueType;
-          if (resolvesExperimentalMapValueTypeText(transform.templateArgs.front(),
-                                                   SubstMap{},
-                                                   {},
-                                                   defIt->second.namespacePrefix,
-                                                   ctx) &&
-              extractMapKeyValueTypesFromTypeText(transform.templateArgs.front(), keyType, valueType)) {
-            infoOut.typeName = "/std/collections/experimental_map/Map";
-            infoOut.typeTemplateArg = joinTemplateArgs({keyType, valueType});
-            return true;
-          }
-        }
-      }
-    }
     const std::string experimentalVectorPath = experimentalVectorConstructorInferencePath(resolved);
     if (!experimentalVectorPath.empty() && ctx.sourceDefs.count(experimentalVectorPath) > 0) {
       auto defIt = ctx.sourceDefs.find(resolved);

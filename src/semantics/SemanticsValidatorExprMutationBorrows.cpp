@@ -988,10 +988,6 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       }
       const std::string rhsPath = resolveCalleePath(expr.args[1]);
       std::string constructorPath = rhsPath;
-      if (!isResolvedMapConstructorPath(constructorPath)) {
-        constructorPath = metadataBackedExperimentalMapConstructorRewritePath(
-            rhsPath, expr.args[1].args.size());
-      }
       if (constructorPath.empty() ||
           !isResolvedMapConstructorPath(constructorPath)) {
         return true;

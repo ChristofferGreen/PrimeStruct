@@ -2425,7 +2425,7 @@ main() {
             "this->preferredGfxErrorHelperTarget(expr.name, normalizedPrefix)") !=
         std::string::npos);
   CHECK(buildCallResolutionSource.find(
-            "metadataBackedCanonicalMapConstructorRewritePath(") !=
+            "metadataBackedCanonicalMapConstructorRewritePath(") ==
         std::string::npos);
   CHECK(buildCallResolutionSource.find(
             "hasDefinitionFamilyPath(resolvedPath) &&\n"

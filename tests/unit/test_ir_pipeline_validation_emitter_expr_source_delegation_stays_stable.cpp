@@ -2466,7 +2466,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "#include \"MapConstructorHelpers.h\"") !=
         std::string::npos);
   CHECK(templateMonomorphTypeResolutionSource.find(
-            "metadataBackedCanonicalMapConstructorRewritePath(") !=
+            "metadataBackedCanonicalMapConstructorRewritePath(") ==
         std::string::npos);
   CHECK(templateMonomorphTypeResolutionSource.find(
             "auto vectorConstructorHelperPath = [&]() -> std::string {") ==
@@ -2863,7 +2863,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "std::string experimentalMapConstructorHelperPath(size_t argumentCount)") ==
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionConstructorPathsSource.find(
-            "std::string experimentalMapConstructorRewritePath(const std::string &resolvedPath, size_t argumentCount)") !=
+            "std::string experimentalMapConstructorRewritePath(const std::string &resolvedPath, size_t argumentCount)") ==
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionConstructorPathsSource.find(
             "std::string experimentalVectorConstructorRewritePath(const std::string &resolvedPath, size_t argumentCount)") !=
@@ -2872,7 +2872,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "#include \"MapConstructorHelpers.h\"") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionConstructorPathsSource.find(
-            "metadataBackedExperimentalMapConstructorRewritePath(") !=
+            "metadataBackedExperimentalMapConstructorRewritePath(") ==
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionConstructorPathsSource.find(
             "metadataBackedExperimentalVectorConstructorCompatibilityPath(") !=
@@ -2887,7 +2887,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "if (resolvedPath == \"/std/collections/vectorSingle\")") ==
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionTypeHelpersSource.find(
-            "metadataBackedExperimentalMapConstructorRewritePath(resolvedPath, 0)") !=
+            "metadataBackedExperimentalMapConstructorRewritePath(resolvedPath, 0)") ==
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionTypeHelpersSource.find(
             "experimentalCollectionConstructorRootLocal(\"map\")") !=

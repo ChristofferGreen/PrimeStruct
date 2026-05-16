@@ -312,16 +312,6 @@ inline std::string metadataBackedMapConstructorAliasRewritePath(
   return std::string(metadata->canonicalPath);
 }
 
-inline std::string metadataBackedCanonicalMapConstructorRewritePath(
-    const std::string &, size_t) {
-  return {};
-}
-
-inline std::string metadataBackedExperimentalMapConstructorRewritePath(
-    const std::string &, size_t) {
-  return {};
-}
-
 inline std::string metadataBackedExperimentalVectorConstructorCompatibilityPath(
     const std::string &resolvedPath) {
   const std::string normalizedPath =

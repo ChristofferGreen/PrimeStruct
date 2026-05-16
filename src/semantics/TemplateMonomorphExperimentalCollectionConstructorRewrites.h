@@ -92,7 +92,7 @@ bool rewriteCanonicalExperimentalMapConstructorExpr(Expr &valueExpr,
     return true;
   }
   const std::string originalPath = resolveCalleePath(valueExpr, namespacePrefix, ctx);
-  std::string helperPath = experimentalMapConstructorRewritePath(originalPath, valueExpr.args.size());
+  std::string helperPath;
   if ((originalPath == "/map" || originalPath == "/std/collections/map/map") && !valueExpr.args.empty()) {
     const bool usesEntryArgs = std::all_of(valueExpr.args.begin(), valueExpr.args.end(), [&](const Expr &argExpr) {
       return isExperimentalMapEntryArgument(argExpr, params, locals, allowMathBare, namespacePrefix, ctx);

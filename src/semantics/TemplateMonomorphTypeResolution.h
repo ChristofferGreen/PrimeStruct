@@ -502,12 +502,6 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
          ctx.helperOverloads.count(vectorConstructorPath) > 0)) {
       return vectorConstructorPath;
     }
-    const std::string helperPath =
-        metadataBackedCanonicalMapConstructorRewritePath(resolvedPath,
-                                                         expr.args.size());
-    if (!helperPath.empty() && ctx.sourceDefs.count(helperPath) > 0) {
-      return helperPath;
-    }
     return resolvedPath;
   };
   auto finalizeResolvedPath = [&](const std::string &resolvedPath) -> std::string {

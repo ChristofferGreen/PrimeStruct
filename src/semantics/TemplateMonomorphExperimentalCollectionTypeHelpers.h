@@ -2,20 +2,6 @@
 
 #include "MapConstructorHelpers.h"
 
-std::string experimentalMapConstructorInferencePath(const std::string &resolvedPath) {
-  return metadataBackedExperimentalMapConstructorRewritePath(resolvedPath, 0);
-}
-
-bool isExperimentalMapConstructorHelperPath(const std::string &resolvedPath) {
-  const std::string normalizedPath = stripMapConstructorSuffixes(resolvedPath);
-  const std::string experimentalMapRoot =
-      experimentalCollectionConstructorRootLocal("map");
-  std::string memberName;
-  return normalizedPath.rfind(experimentalMapRoot, 0) == 0 &&
-         resolveMapConstructorMemberPath(normalizedPath, memberName) &&
-         memberName != "map";
-}
-
 std::string experimentalVectorConstructorInferencePath(const std::string &resolvedPath) {
   return metadataBackedExperimentalVectorConstructorCompatibilityPath(
       resolvedPath);

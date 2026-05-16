@@ -264,20 +264,6 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
         !hasImportedDefinitionPath(resolvedPath)) {
       return resolvedPath;
     }
-    const std::string helperPath =
-        metadataBackedCanonicalMapConstructorRewritePath(resolvedPath,
-                                                         expr.args.size());
-    if (!helperPath.empty()) {
-      if (defMap_.count(helperPath) > 0) {
-        return helperPath;
-      }
-      const std::string experimentalHelper =
-          metadataBackedExperimentalMapConstructorRewritePath(helperPath,
-                                                              expr.args.size());
-      if (!experimentalHelper.empty() && defMap_.count(experimentalHelper) > 0) {
-        return experimentalHelper;
-      }
-    }
     return rewriteCanonicalCollectionHelperPath(resolvedPath);
   };
 

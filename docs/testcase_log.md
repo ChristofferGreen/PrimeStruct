@@ -27,6 +27,15 @@
   compilation.
 
 ## Recent Test Runs
+- 2026-05-16 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_backend_ir_tests PrimeStruct_compile_run_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib namespaced map constructor resolves through imported stdlib helper,stdlib namespaced map constructor keeps same-path definition before wrapper fallback,retired public mapPair bridge reports unknown target,canonical stdlib map helpers accept constructor receivers"`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="runs vm builtin canonical map first-growth inserts"` |
+  failures: none | notes: focused validation passed after deleting no-op
+  metadata-backed map constructor rewrite shims and their semantic/template
+  monomorph call sites. Backend IR source-lock binaries rebuild, but the
+  matching source-lock doctests remain blocked by unrelated stale SoA locks
+  recorded above.
 - 2026-05-16 local | fail | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="template monomorph source delegation stays stable"` |

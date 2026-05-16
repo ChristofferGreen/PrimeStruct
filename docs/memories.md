@@ -119,11 +119,13 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `/std/collections/mapSingle` and `/std/collections/mapPair` must not be
   treated as canonical map constructors; unqualified names remain separate
   legacy/internal compatibility surfaces, and metadata-backed constructor
-  rewrites must not synthesize fixed-arity replacements for them.
+  rewrites must not synthesize fixed-arity replacements for them or keep no-op
+  map rewrite shims alive.
 - Evidence: `isBuiltinCanonicalMapConstructorExpr(...)` and
   `isMapConstructorDirectTargetPath(...)` now only accept the public rooted
   `/std/collections/map/map` constructor path, while `MapConstructorHelpers.h`
-  no longer carries the fixed-arity map constructor rewrite table.
+  no longer carries the fixed-arity map constructor rewrite table or the
+  metadata-backed map constructor rewrite functions.
 
 ### semantic-memory-policy-uses-runner-headroom
 - Updated: 2026-05-14

@@ -1744,6 +1744,11 @@ Task template:
       table for metadata-backed canonical/experimental map constructor
       rewrites; those registry-backed rewrite shims now return no replacement
       until a real public constructor member exists again.
+    - 2026-05-16: The no-op metadata-backed map constructor rewrite shims and
+      their semantic/template-monomorph call sites are removed. Remaining map
+      constructor aliasing is limited to the explicit `/std/collections/map/map`
+      surface alias rewrite plus the still-separate experimental-map entry-args
+      path.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.
