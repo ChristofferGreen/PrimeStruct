@@ -213,7 +213,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferCombinedSource.find("setupOut.builtinCollectionCountCapacityDispatchContext.isCountLike =") !=
         std::string::npos);
-  CHECK(semanticsInferCombinedSource.find("setupOut.builtinCollectionCountCapacityDispatchContext.countHelperName =") !=
+  CHECK(semanticsInferCombinedSource.find("setupOut.builtinCollectionCountCapacityDispatchContext.countHelperName =") ==
         std::string::npos);
   CHECK(semanticsInferCombinedSource.find("setupOut.builtinCollectionDirectCountCapacityContext.isDirectCountCall =") !=
         std::string::npos);
@@ -829,7 +829,7 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find("setupOut.builtinCollectionCountCapacityDispatchContext.isCountLike =") !=
         std::string::npos);
-  CHECK(semanticsInferCollectionDispatchSetupSource.find("setupOut.builtinCollectionCountCapacityDispatchContext.countHelperName =") !=
+  CHECK(semanticsInferCollectionDispatchSetupSource.find("setupOut.builtinCollectionCountCapacityDispatchContext.countHelperName =") ==
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find("setupOut.builtinCollectionDirectCountCapacityContext.isDirectCountCall =") !=
         std::string::npos);

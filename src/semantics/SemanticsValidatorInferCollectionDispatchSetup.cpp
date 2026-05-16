@@ -58,10 +58,6 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
       hasImportedCanonicalVectorHelperDefinition("count");
   const bool shouldBuiltinValidateStdNamespacedVectorCountCall =
       isStdNamespacedVectorCountCall && hasStdNamespacedVectorCountDefinition;
-  const bool isStdNamespacedMapCountCall =
-      !expr.isMethodCall &&
-      (resolveCalleePath(expr) == "/std/collections/map/count" ||
-       resolveCalleePath(expr) == "/std/collections/map/count_ref");
   const bool isNamespacedVectorCountCall =
       !expr.isMethodCall && isNamespacedVectorHelperCall && namespacedHelper == "count" &&
       isVectorBuiltinName(expr, "count") &&
@@ -71,15 +67,8 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
           ? directMapHelperCompatibilityPath(
                 expr, params, locals, BuiltinCollectionDispatchResolverAdapters{})
           : std::string();
-  const bool isMapNamespacedCountCompatibilityCall =
-      directRemovedMapCompatibilityPath == "/map/count";
   const bool isMapNamespacedAccessCompatibilityCall =
       isMapAccessCompatibilityPath(directRemovedMapCompatibilityPath);
-  const bool isNamespacedMapCountCall =
-      !expr.isMethodCall && isNamespacedMapHelperCall &&
-      (namespacedHelper == "count" || namespacedHelper == "count_ref") &&
-      !isMapNamespacedCountCompatibilityCall && !isStdNamespacedMapCountCall &&
-      !hasDefinitionPath(resolved);
   auto getCanonicalMapAccessHelperNameForDispatch =
       [&](const Expr &candidate, std::string &helperNameOut) -> bool {
         helperNameOut.clear();
@@ -135,9 +124,6 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
                         (isCanonicalMapAccessHelperName(expr.name)
                              ? expr.name
                              : namespacedHelper));
-  const bool isResolvedMapCountCall =
-      !expr.isMethodCall && resolved == "/map/count" &&
-      !isMapNamespacedCountCompatibilityCall;
   const bool isNamespacedVectorCapacityCall =
       !expr.isMethodCall && isNamespacedVectorHelperCall &&
       namespacedHelper == "capacity" &&
@@ -251,18 +237,12 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
       };
 
   setupOut.builtinCollectionCountCapacityDispatchContext.isCountLike =
-      (isVectorBuiltinName(expr, "count") || isStdNamespacedMapCountCall ||
-       isNamespacedMapCountCall || isResolvedMapCountCall) &&
+      isVectorBuiltinName(expr, "count") &&
       expr.args.size() == 1 &&
       !isArrayNamespacedVectorCountCompatibilityCall(
           expr, builtinCollectionDispatchResolvers) &&
       (!isStdNamespacedVectorCountCall ||
        shouldBuiltinValidateStdNamespacedVectorCountCall);
-  setupOut.builtinCollectionCountCapacityDispatchContext.countHelperName =
-      ((resolveCalleePath(expr) == "/std/collections/map/count_ref") ||
-       (isNamespacedMapHelperCall && namespacedHelper == "count_ref"))
-          ? "count_ref"
-          : "count";
   setupOut.builtinCollectionCountCapacityDispatchContext.isCapacityLike =
       isInferBuiltinSingleArgCapacityLike;
   setupOut.builtinCollectionCountCapacityDispatchContext.resolveMethodCallPath =
@@ -294,23 +274,19 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
           expr, builtinCollectionDispatchResolvers,
           setupOut.preferredBuiltinAccessKind);
   setupOut.shouldDeferResolvedNamespacedCollectionHelperReturn =
-      isNamespacedVectorCountCall || isNamespacedMapCountCall ||
-      isResolvedMapCountCall || isNamespacedVectorCapacityCall ||
+      isNamespacedVectorCountCall || isNamespacedVectorCapacityCall ||
       setupOut.shouldDeferNamespacedVectorAccessCall ||
       setupOut.shouldDeferNamespacedMapAccessCall;
 
   const bool isDirectBuiltinCountCapacityCountCall =
       !expr.isMethodCall &&
-      (isVectorBuiltinName(expr, "count") || isStdNamespacedMapCountCall ||
-       isNamespacedMapCountCall || isResolvedMapCountCall) &&
+      isVectorBuiltinName(expr, "count") &&
       !expr.args.empty() &&
       !isArrayNamespacedVectorCountCompatibilityCall(
           expr, builtinCollectionDispatchResolvers) &&
       (!isStdNamespacedVectorCountCall ||
        shouldBuiltinValidateStdNamespacedVectorCountCall) &&
-      ((defMap_.find(resolved) == defMap_.end() && !isStdNamespacedMapCountCall) ||
-       isNamespacedVectorCountCall || isStdNamespacedMapCountCall ||
-       isNamespacedMapCountCall || isResolvedMapCountCall);
+      (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorCountCall);
   const bool inferBuiltinCapacityCallTargetsDirectReceiver =
       defMap_.find(resolved) == defMap_.end() ||
       isNamespacedVectorCapacityCall;
