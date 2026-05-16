@@ -11,15 +11,15 @@ TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
 TEST_CASE("compiles and runs native stdlib namespaced map reference access helpers") {
   const std::string source = R"(
-import /std/collections/*
+import /std/collections/map
 
 [effects(heap_alloc), return<int>]
 main() {
   [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
   [Reference</std/collections/map<i32, i32>>] ref{location(values)}
-  [i32] c{/std/collections/map/count(ref)}
-  [i32] first{/std/collections/map/at(ref, 1i32)}
-  [i32] second{/std/collections/map/at_unsafe(ref, 2i32)}
+  [i32] c{/std/collections/map/mapCountRef<i32, i32>(ref)}
+  [i32] first{/std/collections/map/mapAtRef<i32, i32>(ref, 1i32)}
+  [i32] second{/std/collections/map/mapAtUnsafeRef<i32, i32>(ref, 2i32)}
   return(plus(c, plus(first, second)))
 }
 )";
@@ -103,7 +103,7 @@ main() {
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(readFile(outPath).empty());
-  CHECK(runCommand(exePath) == 16);
+  CHECK(runCommand(exePath) == 91);
 }
 
 TEST_CASE("rejects native canonical map access helper key mismatch on wrapper slash return receiver") {

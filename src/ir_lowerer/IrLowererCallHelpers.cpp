@@ -30,6 +30,7 @@ bool isGeneratedStdlibCollectionStructPath(std::string_view path) {
       experimentalCollectionTypePath("vector", "Vector") + "__";
   return isSinglePathSegmentWithPrefix(path, experimentalVectorTypePrefix) ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/experimental_map/Map__") ||
+         isSinglePathSegmentWithPrefix(path, "/std/collections/" "map" "/MapValue__") ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__") ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/internal_soa_storage/SoaColumn__") ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/internal_soa_storage/SoaFieldView__") ||

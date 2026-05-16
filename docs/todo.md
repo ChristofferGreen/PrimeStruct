@@ -1710,6 +1710,14 @@ Task template:
       parameter tests pass; the remaining blocker is stale native collection
       compatibility coverage around method-helper forwarding, reference
       helpers, and `MapValue__t*` layout/ref mismatches.
+    - 2026-05-16: Native layout predicates and semantic reference type
+      compatibility now recognize the stdlib-owned `MapValue__t*` identity, so
+      the focused native map method/helper forwarding, reference-helper,
+      wrapper-returned, explicit canonical binding, and typed-return cases pass
+      on `MapValue`. The broad native collections shard is still not a clean
+      gate: it is dominated by stale SoA public-surface tests plus older
+      map-literal/insert compatibility fixtures that still expect retired C++
+      map literal behavior.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

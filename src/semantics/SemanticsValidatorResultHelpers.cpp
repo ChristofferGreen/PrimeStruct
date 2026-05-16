@@ -1,8 +1,11 @@
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorExprCaptureSplitStep.h"
 
+#include <algorithm>
 #include <cctype>
+#include <cstdint>
 #include <functional>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -23,6 +26,59 @@ std::string trimText(const std::string &text) {
     --end;
   }
   return text.substr(start, end - start);
+}
+
+std::string stripWhitespace(std::string text) {
+  text.erase(
+      std::remove_if(text.begin(),
+                     text.end(),
+                     [](unsigned char ch) { return std::isspace(ch) != 0; }),
+      text.end());
+  return text;
+}
+
+uint64_t fnv1a64(std::string_view text) {
+  uint64_t hash = 1469598103934665603ULL;
+  for (unsigned char ch : text) {
+    hash ^= static_cast<uint64_t>(ch);
+    hash *= 1099511628211ULL;
+  }
+  return hash;
+}
+
+std::string canonicalMapValueIdentity(const std::string &typeText) {
+  std::string normalized = normalizeBindingTypeName(trimText(typeText));
+  if (!normalized.empty() && normalized.front() != '/') {
+    normalized.insert(normalized.begin(), '/');
+  }
+  constexpr std::string_view mapValueRoot = "/std/collections/" "map" "/MapValue";
+  if (normalized == mapValueRoot ||
+      normalized.rfind(std::string(mapValueRoot) + "__", 0) == 0) {
+    return stripWhitespace(std::move(normalized));
+  }
+
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(normalized, base, argText) ||
+      !isMapCollectionTypeName(base)) {
+    return {};
+  }
+  std::vector<std::string> args;
+  if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 2) {
+    return {};
+  }
+
+  std::ostringstream canonicalArgs;
+  for (size_t index = 0; index < args.size(); ++index) {
+    if (index != 0) {
+      canonicalArgs << ",";
+    }
+    canonicalArgs << "type:" << stripWhitespace(args[index]);
+  }
+
+  std::ostringstream out;
+  out << mapValueRoot << "__t" << std::hex << fnv1a64(canonicalArgs.str());
+  return out.str();
 }
 
 bool isResultTypeBaseName(const std::string &base) {
@@ -942,6 +998,12 @@ bool SemanticsValidator::errorTypesMatch(const std::string &left,
   const std::string normalizedLeft = normalizeType(left);
   const std::string normalizedRight = normalizeType(right);
   if (normalizedLeft == normalizedRight) {
+    return true;
+  }
+  const std::string leftMapValueIdentity =
+      canonicalMapValueIdentity(normalizedLeft);
+  if (!leftMapValueIdentity.empty() &&
+      leftMapValueIdentity == canonicalMapValueIdentity(normalizedRight)) {
     return true;
   }
   auto isUnresolvedRelativeRootMatch = [&](const std::string &rawRelative,

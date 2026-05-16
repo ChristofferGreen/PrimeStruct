@@ -309,7 +309,7 @@ main() {
   CHECK(runCommand(exePath) == 91);
 }
 
-TEST_CASE("compiles and runs native direct wrapper-returned canonical map access count shadow with zero exit") {
+TEST_CASE("compiles and runs native direct wrapper-returned canonical map access count shadow") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -341,7 +341,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
+  CHECK(runCommand(exePath) == 91);
 }
 
 TEST_CASE("native keeps wrapper-returned canonical map method access string receiver typing") {

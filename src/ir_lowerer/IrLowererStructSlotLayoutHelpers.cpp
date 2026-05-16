@@ -59,7 +59,11 @@ bool isExperimentalMapTypeName(const std::string &typeName) {
   return typeName == "std/collections/experimental_map/Map" ||
          typeName == "/std/collections/experimental_map/Map" ||
          typeName.rfind("std/collections/experimental_map/Map__", 0) == 0 ||
-         typeName.rfind("/std/collections/experimental_map/Map__", 0) == 0;
+         typeName.rfind("/std/collections/experimental_map/Map__", 0) == 0 ||
+         typeName == "std/collections/" "map" "/MapValue" ||
+         typeName == "/std/collections/" "map" "/MapValue" ||
+         typeName.rfind("std/collections/" "map" "/MapValue__", 0) == 0 ||
+         typeName.rfind("/std/collections/" "map" "/MapValue__", 0) == 0;
 }
 
 bool isMapTypeName(const std::string &typeName) {
@@ -143,7 +147,7 @@ bool resolveSpecializedExperimentalMapStructPath(const std::string &typeName,
   if (!normalizedType.empty() && normalizedType.front() != '/') {
     normalizedType.insert(normalizedType.begin(), '/');
   }
-  if (normalizedType.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
+  if (isExperimentalMapStructTypePath(normalizedType)) {
     structPathOut = std::move(normalizedType);
     return true;
   }
@@ -285,8 +289,7 @@ void applySpecializedExperimentalMapFieldLayout(
     const CollectStructLayoutFieldsFn &collectStructLayoutFields,
     const ValueKindFromTypeNameFn &valueKindFromTypeName,
     StructSlotFieldInfo &fieldInfo) {
-  if (structPath.rfind("/std/collections/experimental_map/Map__", 0) != 0 &&
-      structPath.rfind("std/collections/experimental_map/Map__", 0) != 0) {
+  if (!isExperimentalMapStructTypePath(structPath)) {
     return;
   }
   std::vector<StructLayoutFieldInfo> fields;

@@ -12,8 +12,36 @@
   These failures are expected to be retired or rewritten as the remaining old
   C++ map compatibility tests are deleted during the map stdlib-ownership
   cutover; the stdlib-owned `MapValue` smoke tests continue to pass.
+- `PrimeStruct_compile_run_tests --test-suite="primestruct.compile.run.native_backend.collections" --no-skip`
+  is not a clean map-cutover gate. On 2026-05-16 it reported 343 cases, 238
+  passed, 105 failed, and 3539 skipped before the hanging map string-valued
+  literal executable was interrupted. The failures are dominated by stale SoA
+  public-surface coverage and older map-literal/insert compatibility fixtures;
+  the focused native MapValue cutover cases listed below pass.
 
 ## Recent Test Runs
+- 2026-05-16 local | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-suite="primestruct.compile.run.native_backend.collections" --no-skip` |
+  failures: 105 stale native collection compatibility cases before interrupt |
+  notes: broad shard is dominated by unrelated SoA public-surface drift and
+  older map-literal/insert fixtures after the map stdlib-ownership cutover;
+  focused native MapValue cutover cases pass.
+- 2026-05-16 local | pass | mode: release | command:
+  `cmake --build build-release --target primec PrimeStruct_compile_run_tests`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native map method alias access forwards helper receiver chains" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="keeps canonical native map method access field expression forwarding" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native wrapper-returned canonical map slash-method forwards struct receiver" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native direct wrapper-returned canonical map access count shadow" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native keeps wrapper-returned canonical map method access string receiver typing" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native wrapper-returned slash-method map access count shadow with direct exit" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native canonical slash vector count same-path helper on map receiver" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native stdlib namespaced map reference access helpers" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native canonical map method with slash return type receiver" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native canonical map access direct calls and method sugar use ordinary map helpers" --no-skip`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="compiles and runs native explicit canonical map typed bindings with builtin helpers" --no-skip` |
+  failures: none | notes: focused native map cutover blocker set passed after
+  recognizing `MapValue__t*` in native layout predicates and semantic
+  reference type compatibility.
 - 2026-05-16 local | fail | mode: release | command:
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="semantics validator infer source delegation stays stable" --no-skip` |
   failures: 15 stale SoA/experimental_soa_vector source-lock assertions |

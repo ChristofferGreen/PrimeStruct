@@ -559,7 +559,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
 
       std::string mapStructPath = inferStructExprPath(expr, localsIn);
       const bool useExperimentalMapLayout =
-          mapStructPath.rfind("/std/collections/experimental_map/Map__", 0) == 0 ||
+          isExperimentalMapStructTypePath(mapStructPath) ||
           (keyKind != LocalInfo::ValueKind::Unknown && valueKind != LocalInfo::ValueKind::Unknown);
       if (useExperimentalMapLayout) {
         if (mapStructPath.empty()) {
