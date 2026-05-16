@@ -56,14 +56,17 @@ bool isBuiltinMapTypeName(const std::string &typeName) {
 }
 
 bool isExperimentalMapTypeName(const std::string &typeName) {
+  const std::string mapValueRoot = collectionTypePath("map") + "/MapValue";
+  const std::string mapValueRootNoSlash =
+      !mapValueRoot.empty() && mapValueRoot.front() == '/' ? mapValueRoot.substr(1) : mapValueRoot;
   return typeName == "std/collections/experimental_map/Map" ||
          typeName == "/std/collections/experimental_map/Map" ||
          typeName.rfind("std/collections/experimental_map/Map__", 0) == 0 ||
          typeName.rfind("/std/collections/experimental_map/Map__", 0) == 0 ||
-         typeName == "std/collections/" "map" "/MapValue" ||
-         typeName == "/std/collections/" "map" "/MapValue" ||
-         typeName.rfind("std/collections/" "map" "/MapValue__", 0) == 0 ||
-         typeName.rfind("/std/collections/" "map" "/MapValue__", 0) == 0;
+         typeName == mapValueRootNoSlash ||
+         typeName == mapValueRoot ||
+         typeName.rfind(mapValueRootNoSlash + "__", 0) == 0 ||
+         typeName.rfind(mapValueRoot + "__", 0) == 0;
 }
 
 bool isMapTypeName(const std::string &typeName) {
@@ -160,7 +163,7 @@ bool resolveSpecializedExperimentalMapStructPath(const std::string &typeName,
   }
 
   std::ostringstream specializedPath;
-  specializedPath << "/std/collections/map/MapValue"
+  specializedPath << collectionTypePath("map") << "/MapValue"
                   << mangleTemplateTypeArgsSuffix(templateArgs);
   structPathOut = specializedPath.str();
   return true;

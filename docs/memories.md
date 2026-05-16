@@ -156,7 +156,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   uninitialized map target inference should also build that `MapValue` root
   from `collectionTypePath("map")`, with unit coverage aimed at the canonical
   `/std/collections/map/map` constructor and stdlib-owned value metadata
-  instead of retired `mapPair`/builtin-map compatibility expectations.
+  instead of retired `mapPair`/builtin-map compatibility expectations;
+  struct-slot map type recognition and specialized `MapValue` path
+  construction should also derive that root through
+  `collectionTypePath("map")` instead of spelling it directly.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

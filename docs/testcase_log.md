@@ -51,8 +51,22 @@
   `internal_map`-style map wrappers and now fails with
   `unknown call target: /std/collections/map/tryAt` while current
   `MapValue` surface constructor coverage passes.
+- `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers build inline arguments for inferred experimental map receiver methods"`
+  is stale after the map stdlib-ownership cutover. On 2026-05-16 the current
+  fixture failed validation before the inline-argument assertions because it
+  still uses the retired `/std/collections/mapPair` constructor path.
 
 ## Recent Test Runs
+- 2026-05-16 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer struct type helpers resolve struct slot layouts from definition fields,ir lowerer struct type helpers resolve struct slots from definition field index"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` |
+  failures: none | notes: struct-slot map type recognition and specialized
+  `MapValue` path construction now build the canonical root through
+  `collectionTypePath("map")`; the map surface inventory now observes 975
+  production traces and backing traces remain at 210.
 - 2026-05-16 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer uninitialized type helpers infer concrete stdlib map constructor structs,ir lowerer uninitialized type helpers infer forwarded stdlib map constructor structs,ir lowerer statement binding helper keeps canonical map constructor value metadata"`;

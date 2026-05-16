@@ -1933,6 +1933,9 @@ Task template:
       canonical `/std/collections/map/map` constructor plus stdlib-owned
       `MapValue` value metadata instead of retired `mapPair`/builtin-map
       compatibility expectations.
+    - 2026-05-16: Struct-slot map type recognition and specialized
+      `MapValue` path construction no longer spell the canonical map value
+      root directly; both now derive it through `collectionTypePath("map")`.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.
