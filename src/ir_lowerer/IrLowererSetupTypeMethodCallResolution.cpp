@@ -197,7 +197,7 @@ bool blocksSyntheticCollectionFallbackDirectTarget(const std::string &targetPath
          normalized.rfind("/soa" "_vector/", 0) == 0 ||
          normalized.rfind("/std/collections/" "soa" "_vector/", 0) == 0 ||
          normalized.rfind(experimentalCollectionMemberRoot("vector"), 0) == 0 ||
-         normalized.rfind("/std/collections/experimental_map/", 0) == 0 ||
+         normalized.rfind(experimentalCollectionMemberRoot("map"), 0) == 0 ||
          normalized.rfind("/std/collections/experimental" "_soa" "_vector/", 0) == 0;
 }
 

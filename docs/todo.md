@@ -2068,6 +2068,9 @@ Task template:
     - 2026-05-16: Inline parameter map-like struct detection no longer
       hard-codes experimental map backing paths; it now derives them through
       `experimentalCollectionTypePath`.
+    - 2026-05-16: Setup-type method-call synthetic collection fallback
+      blocking no longer hard-codes the experimental map member root; it now
+      derives that root through `experimentalCollectionMemberRoot`.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

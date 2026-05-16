@@ -94,6 +94,16 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 18:07 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup type helper resolves method call definitions from expressions,ir lowerer setup type helper reports method call definition diagnostics from expressions,ir lowerer setup type helper resolves method call return kinds"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` | failures: none |
+  notes: setup-type method-call synthetic collection fallback blocking now
+  builds the experimental map member root with `experimentalCollectionMemberRoot`;
+  the map surface inventory now observes 838 production traces and backing
+  traces now observe 83.
 - 2026-05-16 18:05 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer inline param helper rejects borrowed vector variadic alias type mismatch,ir lowerer inline param helper materializes pointer File handle variadic args packs"`;
