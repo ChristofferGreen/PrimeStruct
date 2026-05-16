@@ -421,6 +421,9 @@ Task template:
   definitions.
   Collection-access resolution no longer prefers rooted `/map/at*` helper
   definitions when resolving canonical map access helper calls.
+  IR access-target resolution now recognizes canonical map constructor and
+  access-helper paths through stdlib surface metadata instead of direct
+  canonical map path literals.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic

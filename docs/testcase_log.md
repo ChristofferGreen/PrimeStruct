@@ -66,11 +66,6 @@
   `explicitVectorCountLocalResolveDefinitionCalls == 1` seeing `2`, while
   adjacent call-helper struct classifier and bundled entry setup coverage
   still passes.
-- `PrimeStruct_backend_ir_tests --test-case="ir lowerer map constructor rewrite checks constructor surface before resolving defs"`
-  has stale source-lock coverage after setup-type collection helpers stopped
-  spelling the experimental map backing path directly. On 2026-05-16 it
-  failed its exact `constructorSurfaceCheck` source search, while adjacent
-  uninitialized stdlib map constructor struct inference coverage still passes.
 - `PrimeStruct_backend_ir_tests --test-case="ir lowerer binding type helpers classify binding kind and string/fileerror types"`
   has stale source-lock coverage for exact SoA experimental type strings. On
   2026-05-16 it failed four source-string assertions for
@@ -110,6 +105,22 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 19:48 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers resolve and validate map access targets,ir lowerer map constructor rewrite checks constructor surface before resolving defs,ir lowerer late collection constructor guards use published constructor queries,ir lowerer constructor metadata helpers retire duplicated constructor tables" --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` | failures: none |
+  notes: IR access-target resolution now recognizes canonical map
+  constructor and access-helper paths through stdlib surface metadata; the
+  map surface inventory now observes 464 production traces and backing traces
+  remain at 0.
+- 2026-05-16 19:46 local | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers resolve and validate map access targets,ir lowerer call helpers source delegation stays stable,ir lowerer map constructor rewrite checks constructor surface before resolving defs,ir lowerer late collection constructor guards use published constructor queries" --no-skip` |
+  failures: ir lowerer call helpers source delegation stays stable; ir lowerer
+  map constructor rewrite checks constructor surface before resolving defs |
+  notes: source-delegation still has the known stale map/SoA source-lock
+  assertions listed above; the constructor-rewrite guard also carried an
+  obsolete source search and was updated before the focused passing rerun.
 - 2026-05-16 19:41 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="exact map imports keep canonical wrapper access helpers visible,wildcard collection imports keep bare vector and map bridge aliases,exact vector import keeps map bridge aliases unavailable,exact map import keeps vector bridge aliases unavailable,map namespaced access call keeps canonical struct-return forwarding,map namespaced access alias rejects canonical struct-return forwarding,map compatibility count call requires explicit alias definition,map compatibility count auto inference requires explicit alias definition,map compatibility contains call rejects visible canonical definition,map compatibility tryAt call rejects visible canonical definition,map compatibility at call requires explicit alias definition,stdlib-owned map compatibility at call falls back to canonical helper" --no-skip`;

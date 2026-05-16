@@ -553,12 +553,12 @@ TEST_CASE("ir lowerer map constructor rewrite checks constructor surface before 
   const std::string source = readText(collectionHelpersPath);
 
   const size_t constructorSurfaceCheck = source.find(
-      "if (!resolvePublishedLateCollectionMemberName(\n"
+      "if (!resolvePublishedLateCollectionConstructorName(\n"
       "                  callExpr,\n"
       "                  primec::StdlibSurfaceId::CollectionsMapConstructors,\n"
       "                  constructorName) ||");
   const size_t resolveDefinitionCallPos =
-      source.find("const Definition *callee = resolveDefinitionCall(callExpr);");
+      source.find("resolveDefinitionCall(callExpr)", constructorSurfaceCheck);
 
   REQUIRE(constructorSurfaceCheck != std::string::npos);
   REQUIRE(resolveDefinitionCallPos != std::string::npos);
@@ -616,10 +616,10 @@ TEST_CASE("ir lowerer constructor metadata helpers retire duplicated constructor
         std::string::npos);
 
   CHECK(accessTargetResolutionSource.find(
-            "inferPublishedExperimentalMapStructPathFromConstructorPath(path)") !=
+            "resolveMapConstructorPathMemberName(normalizedName, constructorName)") !=
         std::string::npos);
   CHECK(accessTargetResolutionSource.find(
-            "isPublishedStdlibSurfaceConstructorExpr(") !=
+            "isPublishedMapConstructorExpr(target)") !=
         std::string::npos);
   CHECK(accessTargetResolutionSource.find("matchesPath(\"std/collections/mapSingle\")") ==
         std::string::npos);

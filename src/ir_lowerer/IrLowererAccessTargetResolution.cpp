@@ -1,6 +1,7 @@
 #include "IrLowererCallHelpers.h"
 
 #include <sstream>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -68,6 +69,64 @@ bool hasInferredTypedWrappedMap(const LocalInfo &localInfo, LocalInfo::Kind kind
   return (kind == LocalInfo::Kind::Reference || kind == LocalInfo::Kind::Pointer) &&
          localInfo.mapKeyKind != LocalInfo::ValueKind::Unknown &&
          localInfo.mapValueKind != LocalInfo::ValueKind::Unknown;
+}
+
+const StdlibSurfaceMetadata *mapHelperSurfaceMetadataForAccessTargets() {
+  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+}
+
+const StdlibSurfaceMetadata *mapConstructorSurfaceMetadataForAccessTargets() {
+  return findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
+}
+
+bool isMapAccessHelperName(std::string_view helperName) {
+  return helperName == "at" || helperName == "at_ref" ||
+         helperName == "at_unsafe" || helperName == "at_unsafe_ref";
+}
+
+bool resolveMapAccessHelperPathMemberName(std::string_view path,
+                                          std::string &helperNameOut) {
+  helperNameOut.clear();
+  const auto *metadata = mapHelperSurfaceMetadataForAccessTargets();
+  if (metadata == nullptr) {
+    return false;
+  }
+  const std::string_view helperName =
+      resolveStdlibSurfaceMemberName(*metadata, path);
+  if (helperName.empty()) {
+    return false;
+  }
+  helperNameOut.assign(helperName);
+  return true;
+}
+
+bool isExplicitMapAccessHelperPath(std::string_view path) {
+  std::string helperName;
+  return resolveMapAccessHelperPathMemberName(path, helperName) &&
+         isMapAccessHelperName(helperName);
+}
+
+bool resolveMapConstructorExprMemberName(const Expr &expr,
+                                         std::string &constructorNameOut) {
+  constructorNameOut.clear();
+  const auto *metadata = mapConstructorSurfaceMetadataForAccessTargets();
+  return metadata != nullptr &&
+         resolvePublishedStdlibSurfaceConstructorExprMemberName(
+             expr, metadata->id, constructorNameOut);
+}
+
+bool resolveMapConstructorPathMemberName(std::string_view path,
+                                         std::string &constructorNameOut) {
+  constructorNameOut.clear();
+  const auto *metadata = mapConstructorSurfaceMetadataForAccessTargets();
+  return metadata != nullptr &&
+         resolvePublishedStdlibSurfaceConstructorMemberName(
+             path, metadata->id, constructorNameOut);
+}
+
+bool isPublishedMapConstructorExpr(const Expr &expr) {
+  std::string constructorName;
+  return resolveMapConstructorExprMemberName(expr, constructorName);
 }
 
 std::string mapKindTypeName(LocalInfo::ValueKind kind) {
@@ -466,10 +525,7 @@ const Expr *resolveCallArgumentForParameter(const Expr &target,
 
 bool isForwardedMapNewConstructor(const Expr &expr) {
   std::string constructorName;
-  return resolvePublishedStdlibSurfaceConstructorExprMemberName(
-             expr,
-             primec::StdlibSurfaceId::CollectionsMapConstructors,
-             constructorName) &&
+  return resolveMapConstructorExprMemberName(expr, constructorName) &&
          constructorName == "mapNew";
 }
 
@@ -483,14 +539,10 @@ bool inferDirectMapConstructorTargetInfo(const Expr &target, MapAccessTargetInfo
   if (!normalizedName.empty() && normalizedName.front() == '/') {
     normalizedName.erase(normalizedName.begin());
   }
-  auto matchesPath = [&](const std::string &basePath) {
-    return normalizedName == basePath || normalizedName.rfind(basePath + "__", 0) == 0;
-  };
   auto isDirectMapConstructor = [&]() {
-    return matchesPath("std/collections/map/map") ||
-           isPublishedStdlibSurfaceConstructorExpr(
-               target,
-               primec::StdlibSurfaceId::CollectionsMapConstructors);
+    std::string constructorName;
+    return resolveMapConstructorPathMemberName(normalizedName, constructorName) ||
+           isPublishedMapConstructorExpr(target);
   };
   auto inferLiteralKind = [&](const Expr &valueExpr, LocalInfo::ValueKind &kindOut) {
     kindOut = LocalInfo::ValueKind::Unknown;
@@ -771,19 +823,10 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
     const std::string preSemanticScopedPath = resolveScopedCallPath(target);
     const bool preSemanticAliasMapAccess =
         resolveMapHelperAliasName(target, preSemanticHelperName) &&
-        (preSemanticHelperName == "at" || preSemanticHelperName == "at_ref" ||
-         preSemanticHelperName == "at_unsafe" ||
-         preSemanticHelperName == "at_unsafe_ref");
+        isMapAccessHelperName(preSemanticHelperName);
     const bool preSemanticExplicitMapAccess =
         !target.isMethodCall &&
-        (preSemanticScopedPath == "/map/at" ||
-         preSemanticScopedPath == "/std/collections/map/at" ||
-         preSemanticScopedPath == "/map/at_ref" ||
-         preSemanticScopedPath == "/std/collections/map/at_ref" ||
-         preSemanticScopedPath == "/map/at_unsafe" ||
-         preSemanticScopedPath == "/std/collections/map/at_unsafe" ||
-         preSemanticScopedPath == "/map/at_unsafe_ref" ||
-         preSemanticScopedPath == "/std/collections/map/at_unsafe_ref" ||
+        (isExplicitMapAccessHelperPath(preSemanticScopedPath) ||
          preSemanticAliasMapAccess) &&
         target.args.size() == 2;
     if (((getBuiltinArrayAccessName(target, preSemanticAccessName) &&
@@ -844,14 +887,10 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
     const std::string scopedTargetPath = resolveScopedCallPath(target);
     const bool isAliasMapArgsPackAccess =
         resolveMapHelperAliasName(target, helperName) &&
-        (helperName == "at" || helperName == "at_ref" ||
-         helperName == "at_unsafe" || helperName == "at_unsafe_ref");
+        isMapAccessHelperName(helperName);
     const bool isExplicitMapArgsPackAccess =
         !target.isMethodCall &&
-        (scopedTargetPath == "/map/at" || scopedTargetPath == "/std/collections/map/at" ||
-         scopedTargetPath == "/map/at_ref" || scopedTargetPath == "/std/collections/map/at_ref" ||
-         scopedTargetPath == "/map/at_unsafe" || scopedTargetPath == "/std/collections/map/at_unsafe" ||
-         scopedTargetPath == "/map/at_unsafe_ref" || scopedTargetPath == "/std/collections/map/at_unsafe_ref" ||
+        (isExplicitMapAccessHelperPath(scopedTargetPath) ||
          isAliasMapArgsPackAccess) &&
         target.args.size() == 2;
     if ((getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) ||
@@ -1345,14 +1384,10 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     const std::string scopedTargetPath = resolveScopedCallPath(target);
     const bool isAliasMapArgsPackAccess =
         resolveMapHelperAliasName(target, helperName) &&
-        (helperName == "at" || helperName == "at_ref" ||
-         helperName == "at_unsafe" || helperName == "at_unsafe_ref");
+        isMapAccessHelperName(helperName);
     const bool isExplicitMapArgsPackAccess =
         !target.isMethodCall &&
-        (scopedTargetPath == "/map/at" || scopedTargetPath == "/std/collections/map/at" ||
-         scopedTargetPath == "/map/at_ref" || scopedTargetPath == "/std/collections/map/at_ref" ||
-         scopedTargetPath == "/map/at_unsafe" || scopedTargetPath == "/std/collections/map/at_unsafe" ||
-         scopedTargetPath == "/map/at_unsafe_ref" || scopedTargetPath == "/std/collections/map/at_unsafe_ref" ||
+        (isExplicitMapAccessHelperPath(scopedTargetPath) ||
          isAliasMapArgsPackAccess) &&
         target.args.size() == 2;
     if ((getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) ||
