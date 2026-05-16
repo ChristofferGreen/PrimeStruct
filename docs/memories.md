@@ -297,7 +297,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   classifiers instead of direct rooted/canonical map strings; setup-type
   method-call canonical map constructor direct-target checks should construct
   the canonical path through collection path helpers instead of a direct map
-  path literal;
+  path literal; setup-type method-call map helper prefix stripping should derive
+  rooted and canonical map prefixes through collection path helpers instead of
+  direct map path strings;
   statement-expression map count/access target classification should reuse
   local experimental collection type and generated-specialization helpers
   instead of direct experimental map backing path text;

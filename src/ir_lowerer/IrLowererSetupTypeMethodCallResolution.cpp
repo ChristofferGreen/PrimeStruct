@@ -394,15 +394,18 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   const std::string explicitMethodPath = describeMethodCallExpr(callExpr);
   const bool allowsReceiverResolvedVectorMetadataFallback =
       isExperimentalVectorMetadataMethodPath(explicitMethodPath);
+  const std::string rootedMapPrefix =
+      normalizeBuiltinCollectionStructPath("map").substr(1) + "/";
+  const std::string canonicalMapPrefix = collectionMemberRoot("map", false);
   auto sourceMapMethodHelperName = [&]() -> std::string {
     std::string helperName = explicitMethodPath;
     if (!helperName.empty() && helperName.front() == '/') {
       helperName.erase(helperName.begin());
     }
-    if (helperName.rfind("std/collections/map/", 0) == 0) {
-      helperName.erase(0, std::string("std/collections/map/").size());
-    } else if (helperName.rfind("map/", 0) == 0) {
-      helperName.erase(0, std::string("map/").size());
+    if (helperName.rfind(canonicalMapPrefix, 0) == 0) {
+      helperName.erase(0, canonicalMapPrefix.size());
+    } else if (helperName.rfind(rootedMapPrefix, 0) == 0) {
+      helperName.erase(0, rootedMapPrefix.size());
     }
     if (helperName == "count" || helperName == "count_ref" ||
         helperName == "size" ||
@@ -755,10 +758,10 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       normalizedMethodName = normalizedMethodName.substr(std::string("array/").size());
     } else if (normalizedMethodName.rfind(canonicalVectorPrefix, 0) == 0) {
       normalizedMethodName = normalizedMethodName.substr(canonicalVectorPrefix.size());
-    } else if (normalizedMethodName.rfind("map/", 0) == 0) {
-      normalizedMethodName = normalizedMethodName.substr(std::string("map/").size());
-    } else if (normalizedMethodName.rfind("std/collections/map/", 0) == 0) {
-      normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/map/").size());
+    } else if (normalizedMethodName.rfind(rootedMapPrefix, 0) == 0) {
+      normalizedMethodName = normalizedMethodName.substr(rootedMapPrefix.size());
+    } else if (normalizedMethodName.rfind(canonicalMapPrefix, 0) == 0) {
+      normalizedMethodName = normalizedMethodName.substr(canonicalMapPrefix.size());
     }
     std::string helperPath;
     if (receiver->name == "FileError" &&
