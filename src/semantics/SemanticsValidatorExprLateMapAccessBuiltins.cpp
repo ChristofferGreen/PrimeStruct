@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "MapConstructorHelpers.h"
 
 #include <string>
 #include <utility>
@@ -46,6 +47,15 @@ bool getCanonicalMapAccessBuiltinName(const Expr &candidate,
   return false;
 }
 
+bool isSpecializedExperimentalMapBackingPath(std::string typeName) {
+  typeName = normalizeBindingTypeName(typeName);
+  if (!typeName.empty() && typeName.front() == '/') {
+    typeName.erase(typeName.begin());
+  }
+  return isExperimentalCollectionBackingTypeName("map", "Map", typeName) &&
+         typeName.find("__") != std::string::npos;
+}
+
 bool isExperimentalMapTypeText(const std::string &typeText) {
   std::string normalizedType = normalizeBindingTypeName(typeText);
   while (true) {
@@ -53,7 +63,7 @@ bool isExperimentalMapTypeText(const std::string &typeText) {
     if (!normalizedPath.empty() && normalizedPath.front() == '/') {
       normalizedPath.erase(normalizedPath.begin());
     }
-    if (normalizedPath.rfind("std/collections/experimental_map/Map__", 0) == 0) {
+    if (isSpecializedExperimentalMapBackingPath(normalizedPath)) {
       return true;
     }
     std::string base;

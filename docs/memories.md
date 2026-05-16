@@ -184,7 +184,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   recognition; struct-return inference should use the same helper for
   generated map backing recognition; Result helper map payload recognition
   should use the same helper for generated map backing paths; receiver-path
-  map backing exclusions should use the same helper; generated collection struct
+  map backing exclusions should use the same helper; late map-access receiver
+  classification should use the same helper; generated collection struct
   classification should derive the canonical map `MapValue__*` prefix through
   `collectionTypePath("map")` instead of carrying a split-string map root.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
