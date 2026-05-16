@@ -178,12 +178,21 @@
           return false;
         }
         auto rewriteExplicitBuiltinMapHelperExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
+          constexpr auto MapHelperSurfaceId =
+              primec::StdlibSurfaceId::CollectionsMapHelpers;
           if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall || callExpr.args.empty()) {
             return false;
           }
           auto isRootedAliasSamePathCountLikeCall = [&](const Expr &candidate) {
             const std::string rawPath = resolveCollectionExprDirectPath(candidate);
-            if (rawPath.rfind("/map/", 0) != 0) {
+            std::string directHelperName;
+            if (!ir_lowerer::resolvePublishedStdlibSurfaceMemberName(
+                    rawPath,
+                    MapHelperSurfaceId,
+                    directHelperName) ||
+                ir_lowerer::isCanonicalPublishedStdlibSurfaceHelperPath(
+                    rawPath,
+                    MapHelperSurfaceId)) {
               return false;
             }
             const std::string resolvedPath = resolveExprPath(candidate);
@@ -194,7 +203,7 @@
           if ((!resolveMapHelperAliasName(callExpr, helperName) &&
                !resolvePublishedLateCollectionMemberName(
                    callExpr,
-                   primec::StdlibSurfaceId::CollectionsMapHelpers,
+                   MapHelperSurfaceId,
                    helperName)) ||
               (helperName != "count" && helperName != "contains" &&
                helperName != "tryAt" && helperName != "insert")) {
@@ -205,16 +214,17 @@
             return false;
           }
           const std::string directHelperPath = resolveCollectionExprDirectPath(callExpr);
-          const std::string canonicalMapHelperRoot = collectionMemberRoot("map");
-          if (directHelperPath.rfind(canonicalMapHelperRoot, 0) == 0) {
+          if (ir_lowerer::isCanonicalPublishedStdlibSurfaceHelperPath(
+                  directHelperPath,
+                  MapHelperSurfaceId)) {
             return false;
           }
           if (ir_lowerer::isPublishedStdlibSurfaceLoweringPath(
                   directHelperPath,
-                  primec::StdlibSurfaceId::CollectionsMapHelpers) &&
+                  MapHelperSurfaceId) &&
               !ir_lowerer::isCanonicalPublishedStdlibSurfaceHelperPath(
                   directHelperPath,
-                  primec::StdlibSurfaceId::CollectionsMapHelpers)) {
+                  MapHelperSurfaceId)) {
             return false;
           }
           if (helperName != "insert" && isRootedAliasSamePathCountLikeCall(callExpr)) {

@@ -492,6 +492,9 @@ Task template:
   Lowerer statement-binding explicit map helper canonicalization now detects
   raw published map helper paths through `CollectionsMapHelpers` metadata
   instead of direct rooted/canonical map path prefix checks.
+  Lowerer emit-expression explicit map helper rewriting now detects raw alias
+  and canonical map helper paths through `CollectionsMapHelpers` metadata
+  instead of direct rooted/canonical map helper prefix checks.
   Emitter binding-type map compatibility checks now derive canonical and
   experimental map type paths through local collection path helpers instead of
   direct map path fragments.

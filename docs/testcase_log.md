@@ -111,6 +111,18 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 23:50 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers keep explicit canonical map contains and tryAt same-path defs" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: lowerer emit-expression explicit map helper rewriting now detects
+  raw alias and canonical map helper paths through `CollectionsMapHelpers`
+  metadata instead of direct rooted/canonical map helper prefix checks; the
+  map surface inventory now observes 315 production traces and backing traces
+  remain at 0.
 - 2026-05-16 23:46 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers keep explicit canonical map contains and tryAt same-path defs" --no-skip`;
