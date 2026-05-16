@@ -324,6 +324,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   instead of direct map path strings; inline-call context generated canonical
   map constructor helper recognition should derive the map constructor prefix
   through collection path helpers instead of a direct map path string;
+  statement binding explicit map helper canonicalization should derive the
+  canonical map helper root through a local collection path helper instead of
+  a direct canonical map path string;
   statement-expression map count/access target classification should reuse
   local experimental collection type and generated-specialization helpers
   instead of direct experimental map backing path text;

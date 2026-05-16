@@ -13,6 +13,9 @@
       }
       return exprIn.name;
     };
+    auto collectionMemberRoot = [](std::string_view collectionName) {
+      return std::string("/std/collections/") + std::string(collectionName) + "/";
+    };
     auto findDirectMapHelperDefinition = [&](const std::string &rawPath) -> const Definition * {
       auto defIt = defMap.find(rawPath);
       if (defIt != defMap.end()) {
@@ -54,8 +57,9 @@
             return;
           }
           const std::string rawPath = resolveDirectMapHelperPath(exprIn);
+          const std::string canonicalMapRoot = collectionMemberRoot("map");
           if ((rawPath.rfind("/map/", 0) == 0 ||
-               rawPath.rfind("/std/collections/map/", 0) == 0) &&
+               rawPath.rfind(canonicalMapRoot, 0) == 0) &&
               findDirectMapHelperDefinition(rawPath) != nullptr) {
             return;
           }
