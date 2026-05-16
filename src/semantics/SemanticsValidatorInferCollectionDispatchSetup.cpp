@@ -10,9 +10,39 @@ bool isCanonicalMapAccessHelperName(const std::string &helperName) {
          helperName == "at_unsafe" || helperName == "at_unsafe_ref";
 }
 
+bool resolveRootMapHelperAliasPath(std::string_view rawPath,
+                                   std::string &helperNameOut) {
+  helperNameOut.clear();
+  const StdlibSurfaceMetadata *metadata =
+      findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsMapHelpers);
+  if (metadata == nullptr) {
+    return false;
+  }
+  const std::string_view path = trimLeadingSlash(rawPath);
+  bool matchesRootAlias = false;
+  for (std::string_view alias : metadata->importAliasSpellings) {
+    alias = trimLeadingSlash(alias);
+    if (alias.find('/') != std::string_view::npos ||
+        path.size() <= alias.size() || path.rfind(alias, 0) != 0 ||
+        path[alias.size()] != '/') {
+      continue;
+    }
+    matchesRootAlias = true;
+    break;
+  }
+  if (!matchesRootAlias) {
+    return false;
+  }
+  return resolvePublishedCollectionHelperResolvedPath(
+      "/" + std::string(path),
+      StdlibSurfaceId::CollectionsMapHelpers,
+      helperNameOut);
+}
+
 bool isMapAccessCompatibilityPath(const std::string &path) {
-  return path == "/map/at" || path == "/map/at_ref" ||
-         path == "/map/at_unsafe" || path == "/map/at_unsafe_ref";
+  std::string helperName;
+  return resolveRootMapHelperAliasPath(path, helperName) &&
+         isCanonicalMapAccessHelperName(helperName);
 }
 
 bool isStdNamespacedCanonicalMapAccessPath(const std::string &path) {

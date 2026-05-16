@@ -483,6 +483,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferCollectionDispatchSetupSource.find("expr.namespacePrefix == \"map\"") ==
         std::string::npos);
+  CHECK(inferCollectionDispatchSetupSource.find("resolveRootMapHelperAliasPath(path, helperName)") !=
+        std::string::npos);
   CHECK(inferDefinitionSource.find("resolvedPath == \"/map/at\"") ==
         std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find("normalizedName == \"map/at_ref\"") ==

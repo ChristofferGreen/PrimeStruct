@@ -550,7 +550,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   through map surface metadata instead of direct canonical map
   entry/constructor literals; lowerer count fallback now recognizes removed
   map helper alias calls through `collections.map_helpers` metadata instead
-  of a local slashless `map/` helper table. The stale
+  of a local slashless `map/` helper table; semantic collection dispatch
+  setup now recognizes rooted map access compatibility paths through
+  `CollectionsMapHelpers` import-alias metadata instead of a literal
+  `/map/at*` table. The stale
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`
   return type, which allowed the emitter collection-type rooted map access

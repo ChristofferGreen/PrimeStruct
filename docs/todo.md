@@ -315,7 +315,10 @@ Task template:
   through map surface metadata instead of direct canonical map
   entry/constructor literals, and lowerer count fallback now recognizes
   removed map helper alias calls through `collections.map_helpers` metadata
-  instead of a local slashless `map/` helper table. The remaining production
+  instead of a local slashless `map/` helper table, and semantic collection
+  dispatch setup now recognizes rooted map access compatibility paths
+  through `CollectionsMapHelpers` import-alias metadata instead of a literal
+  `/map/at*` table. The remaining production
   lowerer/emitter
   experimental-map traces
   are source-locked as temporary internal backing substrate by

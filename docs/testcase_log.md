@@ -118,6 +118,17 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-17 00:15 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical map Ref helper calls accept borrowed map references" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: semantic collection dispatch setup now recognizes rooted map
+  access compatibility paths through `CollectionsMapHelpers` import-alias
+  metadata instead of a literal `/map/at*` table; the map surface inventory
+  dropped to 297 production traces and backing traces remain at 0.
 - 2026-05-17 00:12 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers prefer direct same-path map count-like defs" --no-skip`;
