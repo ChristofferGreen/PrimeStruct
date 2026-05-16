@@ -30,10 +30,6 @@ bool isVectorBuiltinName(const Expr &expr, const char *name) {
   return isBareCallName(expr, name);
 }
 
-bool isMapBuiltinName(const Expr &expr, const char *name) {
-  return isBareCallName(expr, name);
-}
-
 } // namespace
 
 std::optional<std::string> runEmitterExprControlCountRewriteStep(
@@ -53,12 +49,10 @@ std::optional<std::string> runEmitterExprControlCountRewriteStep(
     return std::nullopt;
   }
   const bool isCountLikeCall =
-      (isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) &&
-      expr.args.size() == 1;
+      isVectorBuiltinName(expr, "count") && expr.args.size() == 1;
   const bool isCapacityLikeCall = isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1;
   const bool isAccessLikeCall =
-      (isVectorBuiltinName(expr, "at") || isVectorBuiltinName(expr, "at_unsafe") ||
-       isMapBuiltinName(expr, "at") || isMapBuiltinName(expr, "at_unsafe")) &&
+      (isVectorBuiltinName(expr, "at") || isVectorBuiltinName(expr, "at_unsafe")) &&
       expr.args.size() == 2;
   const bool isVectorMutatorLikeCall =
       ((isVectorBuiltinName(expr, "push") || isVectorBuiltinName(expr, "reserve") ||
