@@ -383,6 +383,8 @@ Task template:
   rooted `/map/at*_ref` access helper calls.
   Diagnostic target formatting no longer carries a rooted `/map/count__t`
   specialization shortcut.
+  Infer-method resolution no longer mirrors `/map/*` receiver paths to
+  `/std/collections/map/*` candidates or vice versa.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic

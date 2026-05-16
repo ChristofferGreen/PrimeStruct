@@ -195,16 +195,6 @@ bool SemanticsValidator::resolveInferMethodCallPath(
   };
   auto canonicalReceiverAliasPath = [&](const std::string &resolvedReceiverPath) -> std::string {
     auto buildAliasPath = [&]() -> std::string {
-      if (resolvedReceiverPath.rfind("/map/", 0) == 0) {
-        const std::string_view helperSuffix =
-            std::string_view(resolvedReceiverPath).substr(std::string_view("/map/").size());
-        return joinMethodTarget("/std/collections/map", helperSuffix);
-      }
-      if (resolvedReceiverPath.rfind("/std/collections/map/", 0) == 0) {
-        const std::string_view helperSuffix = std::string_view(resolvedReceiverPath).substr(
-            std::string_view("/std/collections/map/").size());
-        return joinMethodTarget("/map", helperSuffix);
-      }
       return {};
     };
 
