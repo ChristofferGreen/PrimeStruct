@@ -7,6 +7,17 @@
 
 namespace primec::semantics {
 
+namespace {
+bool isSpecializedExperimentalMapBackingPath(std::string typeName) {
+  typeName = normalizeBindingTypeName(typeName);
+  if (!typeName.empty() && typeName.front() == '/') {
+    typeName.erase(typeName.begin());
+  }
+  return isExperimentalCollectionBackingTypeName("map", "Map", typeName) &&
+         typeName.find("__") != std::string::npos;
+}
+} // namespace
+
 bool SemanticsValidator::graphBindingIsUsable(const BindingInfo &binding) const {
   const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
   if (normalizedType.empty() || normalizedType == "auto") {
@@ -1033,8 +1044,7 @@ bool SemanticsValidator::canonicalizeInferredCollectionBinding(
     return true;
   }
   if ((normalizedBindingType == "Map" && !bindingOut.typeTemplateArg.empty()) ||
-      normalizedBindingType.rfind("/std/collections/experimental_map/Map__", 0) == 0 ||
-      normalizedBindingType.rfind("std/collections/experimental_map/Map__", 0) == 0) {
+      isSpecializedExperimentalMapBackingPath(normalizedBindingType)) {
     return true;
   }
   const std::string normalizedCollectionType = normalizeCollectionTypePath(bindingTypeText(bindingOut));
