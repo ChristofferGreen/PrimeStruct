@@ -107,7 +107,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `/std/collections/map/<helper>` paths for map receivers instead of rooted
   `/map/<helper>` paths; emitter method resolution should not let implicit
   map helper methods resolve through rooted `/map/<helper>` metadata when
-  canonical stdlib map helper metadata is absent.
+  canonical stdlib map helper metadata is absent, and emitter method type
+  inference should not fall back from canonical map access metadata to rooted
+  `/map/<access>` metadata.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -171,7 +173,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   canonical `/std/collections/map/<helper>` paths instead of rooted
   `/map/<helper>` paths; emitter method resolution now requires canonical
   `/std/collections/map/<helper>` metadata for implicit map helper methods
-  instead of accepting rooted `/map/<helper>` metadata as the only match.
+  instead of accepting rooted `/map/<helper>` metadata as the only match;
+  emitter method type inference no longer falls back from canonical
+  `/std/collections/map/<access>` metadata to rooted `/map/<access>`
+  metadata for bare map access methods.
 
 ### map-constructor-normalization-uses-public-path
 - Updated: 2026-05-16

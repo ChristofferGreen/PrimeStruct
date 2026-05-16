@@ -210,6 +210,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string emitterMethodResolutionSource =
       readText(repoRoot() / "src" / "emitter" /
                "EmitterBuiltinMethodResolutionHelpers.cpp");
+  const std::string emitterMethodTypeInferenceSource =
+      readText(repoRoot() / "src" / "emitter" /
+               "EmitterBuiltinMethodResolutionTypeInferenceHelpers.cpp");
   const std::string nativeTailSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererNativeTailDispatch.cpp");
   const std::string tailDispatchSource =
@@ -255,6 +258,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!lowerStatementsExprSource.empty());
   REQUIRE(!inlineNativeSource.empty());
   REQUIRE(!emitterMethodResolutionSource.empty());
+  REQUIRE(!emitterMethodTypeInferenceSource.empty());
   REQUIRE(!nativeTailSource.empty());
   REQUIRE(!tailDispatchSource.empty());
   REQUIRE(!inlinePackedArgsSource.empty());
@@ -442,6 +446,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inlineNativeSource.find("emitCanonicalInlineDefinitionCall(expr, *callee)") != std::string::npos);
   CHECK(emitterMethodResolutionSource.find("!hasAliasHelperDefinition && !hasCanonicalHelperDefinition") ==
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("const std::string aliasPath = \"/map/\" + candidate.name") ==
         std::string::npos);
   CHECK(nativeTailSource.find("hasSemanticMapReadHelperDefinition") != std::string::npos);
   CHECK(nativeTailSource.find("isMapReadHelperName(directMapReadHelperName)") != std::string::npos);

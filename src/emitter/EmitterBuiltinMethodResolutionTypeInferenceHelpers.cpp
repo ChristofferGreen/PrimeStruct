@@ -261,10 +261,6 @@ std::string inferMethodResolutionPrimitiveTypeName(
     if (hasDefinitionOrMetadata(view, canonicalPath)) {
       return canonicalPath;
     }
-    const std::string aliasPath = "/map/" + candidate.name;
-    if (hasDefinitionOrMetadata(view, aliasPath)) {
-      return aliasPath;
-    }
     return "";
   };
   auto isExplicitMapAccessCompatibilityCall = [&](const Expr &candidate) {
