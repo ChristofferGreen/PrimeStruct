@@ -100,10 +100,6 @@ std::string SemanticsValidator::preferredBareMapHelperTarget(std::string_view he
       isPublishedBorrowedMapHelperName(helperName)) {
     return canonical;
   }
-  const std::string alias = "/map/" + std::string(helperName);
-  if (hasVisibleMapHelperFamily(alias)) {
-    return alias;
-  }
   return canonical;
 }
 

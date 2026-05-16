@@ -84,7 +84,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   should not append reciprocal `/map/*` and `/std/collections/map/*` helper
   candidates; preferred map method target selection should not return
   explicit `/map/<helper>` definitions or imports ahead of canonical stdlib
-  map helpers.
+  map helpers, and bare map helper rewrite target selection should not fall
+  back to visible rooted `/map/<helper>` helper families after canonical
+  lookup.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -125,7 +127,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   candidate generation no longer appends reciprocal `/map/*` and
   `/std/collections/map/*` helper candidates; preferred map method target
   selection no longer returns explicit `/map/<helper>` definitions or imports
-  ahead of canonical stdlib map helpers.
+  ahead of canonical stdlib map helpers; bare map helper rewrite target
+  selection no longer falls back to visible rooted `/map/<helper>` helper
+  families after canonical lookup.
 
 ### map-constructor-normalization-uses-public-path
 - Updated: 2026-05-16

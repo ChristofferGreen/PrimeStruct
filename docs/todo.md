@@ -390,6 +390,8 @@ Task template:
   Preferred map method target selection no longer returns explicit
   `/map/<helper>` definitions or imports ahead of canonical stdlib map
   helpers.
+  Bare map helper rewrite target selection no longer falls back to visible
+  rooted `/map/<helper>` helper families after canonical lookup.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic
