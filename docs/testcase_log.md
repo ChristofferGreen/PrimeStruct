@@ -105,6 +105,18 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 21:21 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer count access helpers normalize parser-shaped canonical map access receivers,ir lowerer count access helpers prefer graph facts for string map access emission" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: count/access map access helper lookup, explicit std-map spelling
+  checks, and rewritten parser-shaped map access receivers now derive
+  canonical map helper paths and prefixes through collection path helpers
+  instead of direct map path strings; the map surface inventory now observes
+  359 production traces and backing traces remain at 0.
 - 2026-05-16 21:17 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup type helper resolves method definitions from receiver targets" --no-skip`;

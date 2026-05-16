@@ -315,7 +315,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   and canonical map prefixes through collection path helpers instead of direct
   map helper path strings; setup-type method-target map method prefix stripping
   should derive rooted and canonical map prefixes through collection path
-  helpers instead of direct map path strings;
+  helpers instead of direct map path strings; count/access map access helper
+  lookup, explicit std-map spelling checks, and rewritten parser-shaped map
+  access receivers should derive canonical map helper paths and prefixes
+  through collection path helpers instead of direct map path strings;
   statement-expression map count/access target classification should reuse
   local experimental collection type and generated-specialization helpers
   instead of direct experimental map backing path text;

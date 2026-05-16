@@ -93,6 +93,29 @@ std::string canonicalCollectionMemberPrefix(std::string_view collectionName) {
          std::string(collectionName) + "/";
 }
 
+std::string canonicalCollectionMemberPath(std::string_view collectionName,
+                                          std::string_view memberName,
+                                          bool leadingSlash = true) {
+  std::string path =
+      canonicalCollectionMemberPrefix(collectionName) + std::string(memberName);
+  if (leadingSlash) {
+    path.insert(path.begin(), '/');
+  }
+  return path;
+}
+
+bool hasCanonicalCollectionMemberPrefix(std::string_view text,
+                                        std::string_view collectionName) {
+  const std::string prefixStorage =
+      canonicalCollectionMemberPrefix(collectionName);
+  const std::string_view prefix(prefixStorage);
+  if (text.rfind(prefix, 0) == 0) {
+    return true;
+  }
+  return !text.empty() && text.front() == '/' &&
+         text.substr(1).rfind(prefix, 0) == 0;
+}
+
 std::string stripGeneratedHelperSuffix(std::string path) {
   const size_t leafStart = path.find_last_of('/');
   const size_t generatedSuffix =
@@ -759,7 +782,7 @@ bool publishedMapAccessHelperReturnsString(const SemanticProgram *semanticProgra
     return false;
   }
   const std::string helperPath =
-      "/std/collections/map/" + std::string(accessName);
+      canonicalCollectionMemberPath("map", accessName);
   const auto helperPathId =
       semanticProgramLookupCallTargetStringId(*semanticProgram, helperPath);
   if (!helperPathId.has_value()) {
@@ -784,8 +807,7 @@ bool publishedMapAccessHelperReturnsString(const SemanticProgram *semanticProgra
 
 bool hasExplicitStdMapSourceSpelling(const Expr &expr) {
   const auto hasStdMapPrefix = [](std::string_view text) {
-    return text.rfind("/std/collections/map/", 0) == 0 ||
-           text.rfind("std/collections/map/", 0) == 0;
+    return hasCanonicalCollectionMemberPrefix(text, "map");
   };
   return hasStdMapPrefix(expr.name) || hasStdMapPrefix(expr.namespacePrefix);
 }
@@ -1837,7 +1859,8 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       rewrittenStringTarget.isMethodCall = false;
       rewrittenStringTarget.isFieldAccess = false;
       rewrittenStringTarget.namespacePrefix.clear();
-      rewrittenStringTarget.name = "/std/collections/map/" + accessName;
+      rewrittenStringTarget.name =
+          canonicalCollectionMemberPath("map", accessName);
     }
     if (!emitExpr(rewrittenStringTarget, localsIn)) {
       return CountAccessCallEmitResult::Error;
