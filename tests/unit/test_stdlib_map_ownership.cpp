@@ -470,6 +470,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(emitterReturnInferenceCollectionsSource.find("normalizedPath.rfind(\"map/\", 0) == 0 ||\n"
                                                      "          normalizedPath.rfind(\"std/collections/map/\", 0) == 0") ==
         std::string::npos);
+  CHECK(emitterReturnInferenceCollectionsSource.find("const std::string mapPrefix = \"map/\"") ==
+        std::string::npos);
+  CHECK(emitterReturnInferenceCollectionsSource.find("const std::string stdMapPrefix = \"std/collections/map/\"") ==
+        std::string::npos);
   CHECK(emitterCollectionTypeHelpersSource.find("eraseCandidate(\"/map/\" + suffix)") ==
         std::string::npos);
   CHECK(emitterCollectionTypeHelpersSource.find("eraseCandidate(\"/std/collections/map/\" + suffix)") ==

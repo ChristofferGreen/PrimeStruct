@@ -1903,6 +1903,8 @@ Task template:
       for rooted map helper metadata paths.
     - 2026-05-16: Emitter return inference no longer normalizes slashless
       rooted/canonical map helper paths to leading-slash candidates.
+    - 2026-05-16: Emitter return inference no longer strips `map/` or
+      `std/collections/map/` prefixes before explicit candidate construction.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

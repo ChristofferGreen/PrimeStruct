@@ -54,16 +54,6 @@
         return vectorMemberName;
       }
     }
-    if (receiverStruct == "/map") {
-      const std::string mapPrefix = "map/";
-      const std::string stdMapPrefix = "std/collections/map/";
-      if (methodName.rfind(mapPrefix, 0) == 0) {
-        return methodName.substr(mapPrefix.size());
-      }
-      if (methodName.rfind(stdMapPrefix, 0) == 0) {
-        return methodName.substr(stdMapPrefix.size());
-      }
-    }
     return methodName;
   };
   auto collectionMethodPathCandidates = [&](const std::string &receiverStruct,
@@ -99,10 +89,10 @@
           !explicitHelperName.empty() &&
           isCanonicalMapHelperName(explicitHelperName);
       if (isExplicitCompatibilityMethod) {
-        return {"/map/" + methodName};
+        return {"/map/" + std::string(explicitHelperName)};
       }
       if (isExplicitCanonicalMethod) {
-        return {"/std/collections/map/" + methodName};
+        return {"/std/collections/map/" + std::string(explicitHelperName)};
       }
       const bool isMapHelperMethod = isCanonicalMapHelperName(methodName);
       if (isMapHelperMethod) {

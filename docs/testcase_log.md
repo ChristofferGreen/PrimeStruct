@@ -48,6 +48,16 @@
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="map method access ignores rooted alias struct-return helper,canonical namespaced map access helpers accept experimental map values,stdlib namespaced map access helpers accept imported stdlib wrappers,collected diagnostics ignore imported canonical map access helper calls,explicit canonical map access helpers accept canonical map values"`;
   `python3 scripts/check_map_surface_trace_inventory.py --root .`;
   `python3 scripts/check_map_backing_traces.py --root .` |
+  failures: none | notes: emitter return inference no longer strips
+  `map/` or `std/collections/map/` prefixes before explicit map helper
+  candidate construction; the map surface inventory now observes 982
+  production traces and backing traces remain at 212.
+- 2026-05-16 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map method access ignores rooted alias struct-return helper,canonical namespaced map access helpers accept experimental map values,stdlib namespaced map access helpers accept imported stdlib wrappers,collected diagnostics ignore imported canonical map access helper calls,explicit canonical map access helpers accept canonical map values"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` |
   failures: none | notes: emitter return inference no longer normalizes
   slashless rooted/canonical map helper paths to leading-slash candidates;
   the map surface inventory now observes 984 production traces and backing
