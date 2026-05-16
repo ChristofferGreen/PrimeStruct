@@ -110,6 +110,24 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 19:13 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map method alias access accepts matching receiver during inference"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map method alias access rejects missing receiver method during inference"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="wrapper-returned map method alias access keeps primitive argument diagnostics during inference"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` | failures: none |
+  notes: pointer-like method normalization now derives the canonical map
+  helper prefix from stdlib surface metadata; stale map method-alias
+  expectations now distinguish the accepted matching-receiver path from the
+  missing `/Marker/tag` diagnostic. The map surface inventory observes 641
+  production traces and backing traces remain at 0.
+- 2026-05-16 19:11 local | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map method alias access keeps primitive argument diagnostics during inference"` |
+  failures: map method alias access keeps primitive argument diagnostics
+  during inference | notes: stale expectation looked for
+  `unable to infer return type on /project`; current diagnostic is
+  `unknown method: /Marker/tag`.
 - 2026-05-16 19:10 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="print accepts string map access"`;
@@ -2521,6 +2539,7 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] map method alias primitive argument stale diagnostic | resolved: 2026-05-16 19:13 local | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="map method alias access accepts matching receiver during inference"`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="map method alias access rejects missing receiver method during inference"` | notes: updated stale expectations so the matching `/Marker/tag` receiver path validates and the missing receiver method case expects `unknown method: /Marker/tag`.
 - [x] type pack storage expands into deterministic struct fields | resolved: 2026-05-15 21:07 local | validating command: `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.semantics.manual --test-case="type pack storage expands into deterministic struct fields,type pack storage rejects invalid placements and shapes,type pack specializations bind zero one and many arguments,type pack parameters cannot be used as scalar types before expansion"` | notes: parent-run rerun passed after replacing the parser-dependent source fixture with direct AST construction for the storage-expansion cases.
 - [x] todo queue and skipped doctest debt stay source locked | resolved: 2026-05-15 18:56 local | validating command: `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked"` | notes: TODO queue source lock now matches completed TODO-4270, TODO-4532, and TODO-4526 bookkeeping plus active TODO-4275 and TODO-4527 successors.
 - [x] parses integer template argument metadata on call and method call | resolved: 2026-05-15 18:19 local | validating command: `cmake --build build-release --target PrimeStruct_parser_tests && cd build-release && ./PrimeStruct_parser_tests --test-suite=primestruct.parser.templates` | notes: corrected new test to expect both bindings plus return and inspect definition returnExpr directly

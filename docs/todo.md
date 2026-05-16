@@ -2157,6 +2157,10 @@ Task template:
     - 2026-05-16: Statement printability no longer hard-codes canonical map
       access helper classification; it now resolves it through stdlib
       surface metadata.
+    - 2026-05-16: Pointer-like collection method normalization no longer
+      hard-codes the canonical map helper prefix; it now derives it through
+      stdlib surface metadata, and stale method-alias diagnostics were
+      refreshed to current receiver-method behavior.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

@@ -288,7 +288,7 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("map method alias access keeps primitive receiver diagnostics during inference") {
+TEST_CASE("map method alias access accepts matching receiver during inference") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -316,11 +316,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unable to infer return type on /project") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
 }
 
-TEST_CASE("map method alias access keeps primitive argument diagnostics during inference") {
+TEST_CASE("map method alias access rejects missing receiver method during inference") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -349,7 +348,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unable to infer return type on /project") != std::string::npos);
+  CHECK(error.find("unknown method: /Marker/tag") != std::string::npos);
 }
 
 TEST_CASE("wrapper-returned map method alias access keeps primitive receiver diagnostics during inference") {

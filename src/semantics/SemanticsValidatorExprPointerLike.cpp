@@ -13,6 +13,22 @@ bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
          suffix != "remove_at" && suffix != "remove_swap";
 }
 
+std::string unrootedCanonicalMapHelperPrefix() {
+  const StdlibSurfaceMetadata *metadata =
+      findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsMapHelpers);
+  if (metadata == nullptr) {
+    return "";
+  }
+  std::string prefix(metadata->canonicalPath);
+  if (!prefix.empty() && prefix.front() == '/') {
+    prefix.erase(prefix.begin());
+  }
+  if (!prefix.empty()) {
+    prefix += "/";
+  }
+  return prefix;
+}
+
 std::vector<std::string> pointerLikeCallPathCandidates(const std::string &path) {
   std::vector<std::string> candidates;
   auto appendUnique = [&](const std::string &candidate) {
@@ -56,7 +72,7 @@ std::string SemanticsValidator::normalizeCollectionMethodName(const std::string 
   }
   const std::string arrayPrefix = "array/";
   const std::string mapPrefix = "map/";
-  const std::string stdMapPrefix = "std/collections/map/";
+  const std::string stdMapPrefix = unrootedCanonicalMapHelperPrefix();
   if (isUnrootedVectorHelperPath(normalized)) {
     normalized = normalized.substr(unrootedVectorHelperPrefix().size());
   } else if (normalized.rfind(arrayPrefix, 0) == 0) {
@@ -66,7 +82,7 @@ std::string SemanticsValidator::normalizeCollectionMethodName(const std::string 
         std::string(stripUnrootedCanonicalVectorCompatibilityPrefix(normalized));
   } else if (normalized.rfind(mapPrefix, 0) == 0) {
     normalized = normalized.substr(mapPrefix.size());
-  } else if (normalized.rfind(stdMapPrefix, 0) == 0) {
+  } else if (!stdMapPrefix.empty() && normalized.rfind(stdMapPrefix, 0) == 0) {
     normalized = normalized.substr(stdMapPrefix.size());
   }
   return normalized;
