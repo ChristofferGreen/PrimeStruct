@@ -469,6 +469,9 @@ Task template:
   Emitter method metadata removed-alias detection now resolves canonical map
   helper paths through stdlib surface metadata instead of a direct slashless
   canonical map path string.
+  Emitter method metadata removed-alias detection now resolves both map import
+  aliases and canonical map helper paths through the published stdlib surface
+  member resolver instead of direct map helper prefix checks.
   Emitter binding-type map compatibility checks now derive canonical and
   experimental map type paths through local collection path helpers instead of
   direct map path fragments.

@@ -331,7 +331,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   root through the local collection path helper instead of a direct canonical
   map path string; emitter method metadata removed-alias detection should
   resolve canonical map helper paths through stdlib surface metadata instead
-  of a direct slashless canonical map path string;
+  of a direct slashless canonical map path string; emitter method metadata
+  removed-alias detection should resolve both map import aliases and canonical
+  map helper paths through the published stdlib surface member resolver instead
+  of direct map helper prefix checks;
   statement-expression map count/access target classification should reuse
   local experimental collection type and generated-specialization helpers
   instead of direct experimental map backing path text;
