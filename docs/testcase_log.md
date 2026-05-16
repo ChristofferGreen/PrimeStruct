@@ -58,6 +58,17 @@
 
 ## Recent Test Runs
 - 2026-05-16 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer struct layout coverage ignores generated collection helper subpaths"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` |
+  failures: none | notes: generated collection struct classification now
+  derives the canonical map `MapValue__*` prefix through
+  `collectionTypePath("map")`; this removes a split-string map root while the
+  map surface inventory remains at 965 production traces and backing traces
+  remain at 210.
+- 2026-05-16 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical stdlib map returns are allowed,inferred canonical map returns rewrite canonical constructors,stdlib canonical map count method auto inference falls back to canonical helper return,stdlib wrapper map constructor accepts explicit canonical map returns"`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer struct return helpers keep bare map access canonical forwarding,ir lowerer struct return helpers keep canonical slash-path map access forwarding,ir lowerer struct return helpers keep canonical map access call forwarding"`;

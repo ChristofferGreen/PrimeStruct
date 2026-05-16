@@ -1951,6 +1951,9 @@ Task template:
       specialized `MapValue` return-path construction no longer spell
       canonical map roots directly; both now derive those strings through a
       local collection path helper.
+    - 2026-05-16: Generated collection struct classification no longer
+      carries a split-string canonical map `MapValue__*` prefix; it now
+      derives that prefix through `collectionTypePath("map")`.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

@@ -168,7 +168,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   binding map type recognition should derive canonical map and `MapValue`
   roots through a local collection path helper; semantics struct-return helper
   path normalization and specialized `MapValue` return-path construction
-  should use that same local path-helper pattern.
+  should use that same local path-helper pattern; generated collection struct
+  classification should derive the canonical map `MapValue__*` prefix through
+  `collectionTypePath("map")` instead of carrying a split-string map root.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
