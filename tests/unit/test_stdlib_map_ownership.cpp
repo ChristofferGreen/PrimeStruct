@@ -235,6 +235,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.h");
   const std::string builtinNameHelpersSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererBuiltinNameHelpers.cpp");
+  const std::string lowererHelpersSource =
+      readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererHelpers.cpp");
   const std::string inlinePackedArgsSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererInlinePackedArgs.cpp");
   const std::string inlineParamHelpersSource =
@@ -312,6 +314,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!nativeTailSource.empty());
   REQUIRE(!tailDispatchSource.empty());
   REQUIRE(!lowerEmitExprCollectionSource.empty());
+  REQUIRE(!builtinNameHelpersSource.empty());
+  REQUIRE(!lowererHelpersSource.empty());
   REQUIRE(!inlinePackedArgsSource.empty());
   REQUIRE(!inlineParamHelpersSource.empty());
   REQUIRE(!packedResultSource.empty());
@@ -800,6 +804,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(builtinNameHelpersSource.find("scopedName.rfind(\"std/collections/map/\", 0)") ==
         std::string::npos);
   CHECK(builtinNameHelpersSource.find("resolvesMapHelperSurfacePath(scopedName)") !=
+        std::string::npos);
+  CHECK(lowererHelpersSource.find("candidate.rfind(\"map/\", 0)") ==
+        std::string::npos);
+  CHECK(lowererHelpersSource.find("resolvesMapHelperSurfacePath(candidate)") !=
         std::string::npos);
   CHECK(inlinePackedArgsSource.find("rewrittenExpr.name = \"/map/map\"") == std::string::npos);
   CHECK(inlinePackedArgsSource.find("rewriteBuiltinMapConstructorExpr") == std::string::npos);

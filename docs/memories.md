@@ -537,7 +537,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `CollectionsMapHelpers` metadata instead of direct `map/` and
   `std/collections/map/` prefix checks; inline native dispatch now classifies
   removed explicit map access helper paths through `CollectionsMapHelpers`
-  metadata instead of a literal `map/at*` raw-path table. The stale
+  metadata instead of a literal `map/at*` raw-path table; lowerer simple-call
+  scoped collection alias rejection now recognizes map helper surface paths
+  through `CollectionsMapHelpers` metadata instead of a direct slashless
+  `map/` prefix check. The stale
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`
   return type, which allowed the emitter collection-type rooted map access

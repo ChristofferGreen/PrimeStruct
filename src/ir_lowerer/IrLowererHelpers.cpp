@@ -2,6 +2,9 @@
 
 #include <cctype>
 #include <sstream>
+#include <string_view>
+
+#include "primec/StdlibSurfaceRegistry.h"
 
 namespace primec::ir_lowerer {
 
@@ -64,6 +67,22 @@ bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
          alias == "is_finite" || alias == "floor" ||
          alias == "ceil" || alias == "round" || alias == "trunc" ||
          alias == "fract" || alias == "sqrt" || alias == "cbrt";
+}
+
+bool resolvesMapHelperSurfacePath(std::string_view path) {
+  const auto *metadata =
+      findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsMapHelpers);
+  if (metadata == nullptr) {
+    return false;
+  }
+  if (!resolveStdlibSurfaceMemberName(*metadata, path).empty()) {
+    return true;
+  }
+  if (!path.empty() && path.front() != '/') {
+    const std::string rootedPath = "/" + std::string(path);
+    return !resolveStdlibSurfaceMemberName(*metadata, rootedPath).empty();
+  }
+  return false;
 }
 
 bool shouldStripBuiltinPrefix(const std::string &prefix,
@@ -266,7 +285,7 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   auto isRemovedScopedCollectionAlias = [](const std::string &candidate) {
     return candidate.rfind(std::string("vector") + "/", 0) == 0 ||
            candidate.rfind("array/", 0) == 0 ||
-           candidate.rfind("map/", 0) == 0;
+           resolvesMapHelperSurfacePath(candidate);
   };
   const std::string internalSoaAlias =
       normalizeInternalSoaStorageBuiltinAlias(name);
