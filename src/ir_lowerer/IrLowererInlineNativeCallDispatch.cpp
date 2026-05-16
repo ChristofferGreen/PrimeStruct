@@ -155,14 +155,26 @@ bool isExplicitRemovedMapAccessHelperCall(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
     return false;
   }
-  std::string rawPath = resolveInlineCallPathWithoutFallbackProbes(expr);
-  if (!rawPath.empty() && rawPath.front() == '/') {
+  const std::string originalPath = resolveInlineCallPathWithoutFallbackProbes(expr);
+  std::string rawPath = originalPath;
+  std::string helperName;
+  if (!resolvePublishedStdlibSurfaceMemberName(
+          rawPath,
+          StdlibSurfaceId::CollectionsMapHelpers,
+          helperName) &&
+      !rawPath.empty() && rawPath.front() == '/') {
     rawPath.erase(rawPath.begin());
+    if (!resolvePublishedStdlibSurfaceMemberName(
+            rawPath,
+            StdlibSurfaceId::CollectionsMapHelpers,
+            helperName)) {
+      return false;
+    }
   }
-  return rawPath == "map/at" ||
-         rawPath == "map/at_unsafe" ||
-         rawPath == "map/at_ref" ||
-         rawPath == "map/at_unsafe_ref";
+  return !isCanonicalPublishedStdlibSurfaceHelperPath(
+             originalPath, StdlibSurfaceId::CollectionsMapHelpers) &&
+         (helperName == "at" || helperName == "at_unsafe" ||
+          helperName == "at_ref" || helperName == "at_unsafe_ref");
 }
 
 bool isSemanticBarePreferredMapHelperDefinitionCall(const Expr &expr,

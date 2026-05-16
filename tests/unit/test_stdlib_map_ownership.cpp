@@ -740,6 +740,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inlineNativeSource.find("return helperName == \"count\" || helperName == \"count_ref\"") ==
         std::string::npos);
+  CHECK(inlineNativeSource.find("rawPath == \"map/at\"") == std::string::npos);
+  CHECK(inlineNativeSource.find("rawPath == \"map/at_unsafe\"") == std::string::npos);
+  CHECK(inlineNativeSource.find("rawPath == \"map/at_ref\"") == std::string::npos);
+  CHECK(inlineNativeSource.find("rawPath == \"map/at_unsafe_ref\"") == std::string::npos);
   CHECK(inlineNativeSource.find("emitCanonicalInlineDefinitionCall(expr, *callee)") != std::string::npos);
   CHECK(emitterMethodResolutionSource.find("!hasAliasHelperDefinition && !hasCanonicalHelperDefinition") ==
         std::string::npos);

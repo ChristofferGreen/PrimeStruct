@@ -498,6 +498,9 @@ Task template:
   Lowerer builtin array-access classification now rejects published map
   helper surface paths through `CollectionsMapHelpers` metadata instead of
   direct `map/` and `std/collections/map/` prefix checks.
+  Inline native dispatch now classifies removed explicit map access helper
+  paths through `CollectionsMapHelpers` metadata instead of a literal
+  `map/at*` raw-path table.
   Emitter binding-type map compatibility checks now derive canonical and
   experimental map type paths through local collection path helpers instead of
   direct map path fragments.
