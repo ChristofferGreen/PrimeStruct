@@ -486,6 +486,9 @@ Task template:
   Emitter call-path helper classification now derives map helper and
   constructor path ownership through published stdlib surface metadata instead
   of direct map helper prefix strings.
+  Emitter collection-type canonical map access detection now resolves helper
+  ownership through `collections.map_helpers` metadata instead of parsing the
+  canonical map helper prefix.
   Emitter binding-type map compatibility checks now derive canonical and
   experimental map type paths through local collection path helpers instead of
   direct map path fragments.

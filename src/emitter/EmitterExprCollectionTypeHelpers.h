@@ -15,6 +15,8 @@
   };
   constexpr std::string_view CollectionTypeVectorHelperSurfaceBridgeKey =
       "collections.vector_helpers";
+  constexpr std::string_view CollectionTypeMapHelperSurfaceBridgeKey =
+      "collections.map_helpers";
   auto collectionTypeVectorHelperMemberName = [&](std::string_view path,
                                                   bool includeImportAliases)
       -> std::string {
@@ -42,6 +44,22 @@
     }
     return isCollectionTypeVectorAccessHelper(
         collectionTypeVectorHelperMemberName(resolveExprPath(candidate), false));
+  };
+  auto collectionTypeMapHelperMemberName = [&](std::string_view path,
+                                               bool includeImportAliases)
+      -> std::string {
+    std::string memberName;
+    if (!resolvePublishedCollectionSurfacePathMemberName(
+            path,
+            CollectionTypeMapHelperSurfaceBridgeKey,
+            includeImportAliases,
+            memberName)) {
+      return "";
+    }
+    return memberName;
+  };
+  auto isCollectionTypeMapAccessHelper = [](std::string_view memberName) {
+    return isCanonicalMapAccessHelperName(memberName);
   };
   auto explicitVectorAccessResolvedTypePath = [&](const Expr &candidate) -> std::string {
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
@@ -176,13 +194,8 @@
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return "";
     }
-    std::string normalized = resolveExprPath(candidate);
-    if (!normalized.empty() && normalized.front() == '/') {
-      normalized.erase(normalized.begin());
-    }
-    if (normalized.rfind("std/collections/map/", 0) != 0 ||
-        !isCanonicalMapAccessHelperName(
-            std::string_view(normalized).substr(std::string_view("std/collections/map/").size()))) {
+    if (!isCollectionTypeMapAccessHelper(
+            collectionTypeMapHelperMemberName(resolveExprPath(candidate), false))) {
       return "";
     }
     if (candidate.args.empty()) {
