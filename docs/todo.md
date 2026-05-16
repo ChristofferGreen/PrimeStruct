@@ -2017,6 +2017,10 @@ Task template:
     - 2026-05-16: Pre-dispatch direct-call validation no longer hard-codes
       unspecialized experimental map type text; it now uses the shared
       experimental collection backing helper.
+    - 2026-05-16: Pre-dispatch direct-call handling no longer hard-codes
+      canonical map helper paths, source-spelling checks, builtin helper
+      classification, or diagnostics; it now resolves them through stdlib
+      surface metadata.
     - 2026-05-16: Build-parameter experimental map value detection no longer
       hard-codes unspecialized or generated experimental map value types; it
       now uses the shared experimental collection backing helper.
