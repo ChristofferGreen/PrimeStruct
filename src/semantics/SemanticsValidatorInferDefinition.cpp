@@ -97,10 +97,7 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
       if (resolvedPath == "/std/collections/map/at" ||
           resolvedPath == "/std/collections/map/at_ref" ||
           resolvedPath == "/std/collections/map/at_unsafe" ||
-          resolvedPath == "/std/collections/map/at_unsafe_ref" ||
-          resolvedPath == "/map/at" || resolvedPath == "/map/at_ref" ||
-          resolvedPath == "/map/at_unsafe" ||
-          resolvedPath == "/map/at_unsafe_ref") {
+          resolvedPath == "/std/collections/map/at_unsafe_ref") {
         return true;
       }
     }

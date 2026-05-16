@@ -363,6 +363,8 @@ Task template:
   Collection-dispatch setup inference no longer treats rooted
   `/map/at*_ref` resolved paths or a `map` namespace prefix as canonical map
   access helper-name classifiers.
+  Infer-definition deferred map alias detection no longer treats rooted
+  `/map/at*` resolved paths as map access helpers.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic

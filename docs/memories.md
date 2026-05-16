@@ -64,7 +64,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   the `map` namespace prefix as canonical helper names, and collection
   return-kind inference must not grant rooted `/map/*` helpers builtin map
   return kinds; collection-dispatch setup inference follows the same
-  canonical-only helper-name rule.
+  canonical-only helper-name rule, and infer-definition deferred alias
+  detection must ignore rooted `/map/at*` resolved paths.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -82,7 +83,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   collection return-kind inference now only handles canonical
   `/std/collections/map/*` helper paths, and collection-dispatch setup
   inference no longer treats rooted `/map/at*_ref` resolved paths or a `map`
-  namespace prefix as canonical map access helper-name classifiers.
+  namespace prefix as canonical map access helper-name classifiers;
+  infer-definition deferred map alias detection no longer treats rooted
+  `/map/at*` resolved paths as map access helpers.
 
 ### map-constructor-normalization-uses-public-path
 - Updated: 2026-05-16
