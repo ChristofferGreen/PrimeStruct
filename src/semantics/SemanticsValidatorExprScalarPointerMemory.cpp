@@ -229,17 +229,6 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
   };
 
   std::string builtinName;
-  auto isExplicitMapAccessHelperPath = [&](const Expr &candidate) {
-    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall) {
-      return false;
-    }
-    const std::string resolved = resolveCalleePath(candidate);
-    return resolved == "/map/at" || resolved == "/map/at_unsafe" ||
-           resolved == "/std/collections/map/at_ref" ||
-           resolved == "/std/collections/map/at_unsafe_ref" ||
-           resolved == "/std/collections/map/at" ||
-           resolved == "/std/collections/map/at_unsafe";
-  };
   auto isMapLikeCollectionExpr = [&](const Expr &candidate) -> bool {
     std::string keyType;
     std::string valueType;
@@ -333,12 +322,11 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
   }
 
   if (getBuiltinMemoryName(expr, builtinName)) {
-    if (isExplicitMapAccessHelperPath(expr) ||
-        ((builtinName == "at" || builtinName == "at_unsafe") &&
-         expr.args.size() == 2 &&
-         (expr.templateArgs.size() == 2 ||
-          isMapLikeCollectionExpr(expr.args.front()) ||
-          isMapLikeCollectionExpr(expr.args[1])))) {
+    if ((builtinName == "at" || builtinName == "at_unsafe") &&
+        expr.args.size() == 2 &&
+        (expr.templateArgs.size() == 2 ||
+         isMapLikeCollectionExpr(expr.args.front()) ||
+         isMapLikeCollectionExpr(expr.args[1]))) {
       return true;
     }
     handledOut = true;

@@ -348,6 +348,9 @@ Task template:
   Template
   monomorphization now asks the registry for preferred experimental vector/SoA
   helper spellings instead of carrying bespoke canonical-to-experimental maps.
+  Scalar pointer/memory builtin validation no longer carries a direct
+  rooted-or-canonical map access helper path classifier; only the generic
+  memory-`at` map-like operand bypass remains for true memory builtin names.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic
