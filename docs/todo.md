@@ -1927,6 +1927,12 @@ Task template:
     - 2026-05-16: Statement-binding map struct metadata no longer hard-codes
       the canonical `MapValue` root path; it now builds that root from
       `collectionTypePath("map")`.
+    - 2026-05-16: Uninitialized map target inference no longer hard-codes
+      the canonical `MapValue` root path; it now builds that root from
+      `collectionTypePath("map")`, and stale unit coverage now targets the
+      canonical `/std/collections/map/map` constructor plus stdlib-owned
+      `MapValue` value metadata instead of retired `mapPair`/builtin-map
+      compatibility expectations.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

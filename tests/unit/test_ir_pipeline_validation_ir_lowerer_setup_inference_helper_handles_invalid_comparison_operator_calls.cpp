@@ -584,7 +584,7 @@ TEST_CASE("ir lowerer statement binding helper infers pointer kind from unchecke
   CHECK(info.structTypeName == "/pkg/Pair");
 }
 
-TEST_CASE("ir lowerer statement binding helper infers canonical map constructor metadata") {
+TEST_CASE("ir lowerer statement binding helper keeps canonical map constructor value metadata") {
   primec::Expr stmt;
   stmt.name = "value";
 
@@ -609,10 +609,10 @@ TEST_CASE("ir lowerer statement binding helper infers canonical map constructor 
         return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
       });
 
-  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Map);
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
-  CHECK(info.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
-  CHECK(info.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(info.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(info.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
 TEST_CASE("ir lowerer statement binding helper keeps scoped Buffer ctor as Buffer metadata") {

@@ -55,6 +55,18 @@
 ## Recent Test Runs
 - 2026-05-16 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer uninitialized type helpers infer concrete stdlib map constructor structs,ir lowerer uninitialized type helpers infer forwarded stdlib map constructor structs,ir lowerer statement binding helper keeps canonical map constructor value metadata"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` |
+  failures: none | notes: uninitialized map target inference now builds the
+  canonical `MapValue` root through `collectionTypePath("map")`; stale
+  `mapPair` and retired builtin-map metadata expectations were retargeted to
+  canonical `/std/collections/map/map` plus stdlib-owned `MapValue` value
+  metadata; the map surface inventory now observes 976 production traces and
+  backing traces remain at 210.
+- 2026-05-16 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer statement binding helper classifies variadic map parameters"`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer statement binding helper preserves inferred borrowed map return metadata"`;
   `python3 scripts/check_map_surface_trace_inventory.py --root .`;

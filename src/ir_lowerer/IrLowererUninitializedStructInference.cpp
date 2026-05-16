@@ -350,7 +350,7 @@ std::string inferUninitializedTargetStructPath(const std::string &typeText,
   }
 
   std::ostringstream specializedPath;
-  specializedPath << "/std/collections/map/MapValue"
+  specializedPath << collectionTypePath("map") << "/MapValue"
                   << mangleTemplateTypeArgsSuffix(templateArgs);
   return specializedPath.str();
 }

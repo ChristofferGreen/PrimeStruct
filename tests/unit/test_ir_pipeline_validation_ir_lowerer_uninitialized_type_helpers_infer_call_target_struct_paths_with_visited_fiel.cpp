@@ -862,21 +862,12 @@ TEST_CASE("ir lowerer uninitialized type helpers resolve field storage type info
 }
 
 TEST_CASE("ir lowerer uninitialized type helpers infer concrete stdlib map constructor structs") {
-  primec::Definition mapPairDef;
-  mapPairDef.fullPath = "/std/collections/mapPair__tgeneric";
-  primec::Transform returnTransform;
-  returnTransform.name = "return";
-  returnTransform.templateArgs.push_back("map<K, V>");
-  mapPairDef.transforms.push_back(returnTransform);
-
-  const std::unordered_map<std::string, const primec::Definition *> defMap = {
-      {mapPairDef.fullPath, &mapPairDef},
-  };
+  const std::unordered_map<std::string, const primec::Definition *> defMap;
   auto resolveStructTypeName = [](const std::string &, const std::string &, std::string &) {
     return false;
   };
-  auto resolveExprPath = [](const primec::Expr &) {
-    return std::string("/std/collections/mapPair__tgeneric");
+  auto resolveExprPath = [](const primec::Expr &expr) {
+    return expr.name;
   };
   const primec::ir_lowerer::UninitializedFieldBindingIndex fieldIndex;
   auto resolveStructFieldSlot = [](const std::string &,
@@ -885,23 +876,23 @@ TEST_CASE("ir lowerer uninitialized type helpers infer concrete stdlib map const
     return false;
   };
 
-  primec::Expr intMapPair;
-  intMapPair.kind = primec::Expr::Kind::Call;
-  intMapPair.name = "/std/collections/mapPair";
-  intMapPair.templateArgs = {"string", "i32"};
+  primec::Expr intMapCall;
+  intMapCall.kind = primec::Expr::Kind::Call;
+  intMapCall.name = "/std/collections/map/map";
+  intMapCall.templateArgs = {"string", "i32"};
 
-  primec::Expr boolMapPair = intMapPair;
-  boolMapPair.templateArgs = {"string", "bool"};
+  primec::Expr boolMapCall = intMapCall;
+  boolMapCall.templateArgs = {"string", "bool"};
 
   const std::string intMapStruct =
       primec::ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
-          intMapPair, {}, defMap, resolveStructTypeName, resolveExprPath, fieldIndex, resolveStructFieldSlot);
+          intMapCall, {}, defMap, resolveStructTypeName, resolveExprPath, fieldIndex, resolveStructFieldSlot);
   const std::string boolMapStruct =
       primec::ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
-          boolMapPair, {}, defMap, resolveStructTypeName, resolveExprPath, fieldIndex, resolveStructFieldSlot);
+          boolMapCall, {}, defMap, resolveStructTypeName, resolveExprPath, fieldIndex, resolveStructFieldSlot);
 
-  CHECK(intMapStruct.rfind("/std/collections/experimental_map/Map__", 0) == 0);
-  CHECK(boolMapStruct.rfind("/std/collections/experimental_map/Map__", 0) == 0);
+  CHECK(intMapStruct.rfind("/std/collections/map/MapValue__", 0) == 0);
+  CHECK(boolMapStruct.rfind("/std/collections/map/MapValue__", 0) == 0);
   CHECK(intMapStruct != boolMapStruct);
 }
 
@@ -941,21 +932,21 @@ TEST_CASE("ir lowerer uninitialized type helpers infer forwarded stdlib map cons
     return false;
   };
 
-  primec::Expr mapPair;
-  mapPair.kind = primec::Expr::Kind::Call;
-  mapPair.name = "/std/collections/mapPair";
-  mapPair.templateArgs = {"string", "i32"};
+  primec::Expr mapCall;
+  mapCall.kind = primec::Expr::Kind::Call;
+  mapCall.name = "/std/collections/map/map";
+  mapCall.templateArgs = {"string", "i32"};
 
   primec::Expr wrapCall;
   wrapCall.kind = primec::Expr::Kind::Call;
   wrapCall.name = "wrapValues";
-  wrapCall.args.push_back(mapPair);
+  wrapCall.args.push_back(mapCall);
 
   const std::string mapStruct =
       primec::ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
           wrapCall, {}, defMap, resolveStructTypeName, resolveExprPath, fieldIndex, resolveStructFieldSlot);
 
-  CHECK(mapStruct.rfind("/std/collections/experimental_map/Map__", 0) == 0);
+  CHECK(mapStruct.rfind("/std/collections/map/MapValue__", 0) == 0);
 }
 
 TEST_CASE("ir lowerer uninitialized type helpers use semantic try value facts") {

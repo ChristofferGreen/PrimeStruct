@@ -152,7 +152,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   literal; packed Result payload metadata should identify experimental map
   payload bases through `isExperimentalCollectionTypeName` instead of a
   hard-coded experimental map path; statement-binding map struct metadata
-  should build canonical `MapValue` roots from `collectionTypePath("map")`.
+  should build canonical `MapValue` roots from `collectionTypePath("map")`;
+  uninitialized map target inference should also build that `MapValue` root
+  from `collectionTypePath("map")`, with unit coverage aimed at the canonical
+  `/std/collections/map/map` constructor and stdlib-owned value metadata
+  instead of retired `mapPair`/builtin-map compatibility expectations.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
