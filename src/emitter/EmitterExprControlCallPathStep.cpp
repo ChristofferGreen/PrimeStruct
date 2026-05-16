@@ -1,5 +1,4 @@
 #include "EmitterExprControlCallPathStep.h"
-#include "EmitterBuiltinMethodResolutionTypeInferenceInternal.h"
 
 namespace primec::emitter {
 
@@ -17,7 +16,7 @@ std::optional<std::string> runEmitterExprControlCallPathStep(
   if (!expr.namespacePrefix.empty()) {
     const auto importIt = importAliases.find(expr.name);
     if (importIt != importAliases.end()) {
-      return normalizeMapImportAliasPath(importIt->second);
+      return importIt->second;
     }
     return std::nullopt;
   }
@@ -27,7 +26,7 @@ std::optional<std::string> runEmitterExprControlCallPathStep(
   }
   const auto importIt = importAliases.find(expr.name);
   if (importIt != importAliases.end()) {
-    return normalizeMapImportAliasPath(importIt->second);
+    return importIt->second;
   }
   return std::nullopt;
 }

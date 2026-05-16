@@ -1897,6 +1897,8 @@ Task template:
       prunes rooted map access candidates from collection helper path lists.
     - 2026-05-16: Emitter method metadata no longer normalizes slashless
       rooted/canonical map helper paths to leading-slash candidates.
+    - 2026-05-16: Emitter import-alias resolution no longer routes through
+      the identity `normalizeMapImportAliasPath` helper.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

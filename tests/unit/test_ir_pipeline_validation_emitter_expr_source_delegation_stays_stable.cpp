@@ -3286,7 +3286,7 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
   CHECK(helperTypesSource.find("StdlibSurfaceId::CollectionsVectorHelperSurface") ==
         std::string::npos);
 
-  CHECK(exprControlCallPathStepSource.find("normalizeMapImportAliasPath(importIt->second)") !=
+  CHECK(exprControlCallPathStepSource.find("return importIt->second;") !=
         std::string::npos);
   CHECK(exprControlCallPathStepSource.find("std::string normalizeMapImportAliasPath(") ==
         std::string::npos);

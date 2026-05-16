@@ -35,7 +35,6 @@ std::string typeNameFromResolvedCandidates(const MethodResolutionMetadataView &v
 bool extractCollectionElementTypeFromReturnType(const std::string &typeName, std::string &typeOut);
 std::string normalizeCollectionReceiverType(const std::string &typePath);
 std::vector<std::string> collectionHelperPathCandidates(const std::string &path);
-std::string normalizeMapImportAliasPath(const std::string &path);
 const std::string *findStructTypeMetadata(const MethodResolutionMetadataView &view,
                                           const std::string &path);
 const std::string *findReturnStructMetadata(const MethodResolutionMetadataView &view,

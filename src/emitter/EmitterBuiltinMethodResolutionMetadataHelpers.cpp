@@ -315,7 +315,6 @@ namespace {
 std::vector<std::string> metadataPathCandidates(const std::string &path) {
   std::vector<std::string> candidates;
   appendUniqueCandidate(candidates, path);
-  appendUniqueCandidate(candidates, normalizeMapImportAliasPath(path));
   if (!path.empty() && path.front() == '/' &&
       (path.rfind("/map/", 0) == 0 || path.rfind("/std/collections/map/", 0) == 0)) {
     appendUniqueCandidate(candidates, path.substr(1));
@@ -423,13 +422,6 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
     }
   }
   return candidates;
-}
-
-std::string normalizeMapImportAliasPath(const std::string &path) {
-  if (path.empty() || path.front() == '/') {
-    return path;
-  }
-  return path;
 }
 
 const std::string *findStructTypeMetadata(const MethodResolutionMetadataView &view,

@@ -458,7 +458,7 @@ bool resolveMethodCallPath(const Expr &call,
       auto importIt = importAliases.find(receiver.name);
       if (findStructTypeMetadata(metadataView, resolvedType) == nullptr &&
           importIt != importAliases.end()) {
-        resolvedType = normalizeMapImportAliasPath(importIt->second);
+        resolvedType = importIt->second;
       }
       if (findStructTypeMetadata(metadataView, resolvedType) != nullptr) {
         resolvedOut = resolvedType + "/" + normalizedMethodName;
@@ -564,12 +564,11 @@ bool resolveMethodCallPath(const Expr &call,
     return true;
   }
 
-  typeName = normalizeMapImportAliasPath(typeName);
   std::string resolvedType = resolveTypePath(typeName, call.namespacePrefix);
   if (findReturnKindMetadata(metadataView, resolvedType) == nullptr) {
     auto importIt = importAliases.find(typeName);
     if (importIt != importAliases.end()) {
-      resolvedType = normalizeMapImportAliasPath(importIt->second);
+      resolvedType = importIt->second;
     }
   }
   const bool isConcreteSoaWrapperReceiver =
