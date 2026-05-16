@@ -105,7 +105,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   definitions to report explicit-template diagnostics for bare map receiver
   calls, and late fallback return-kind inference should target canonical
   `/std/collections/map/<helper>` paths for map receivers instead of rooted
-  `/map/<helper>` paths.
+  `/map/<helper>` paths; emitter method resolution should not let implicit
+  map helper methods resolve through rooted `/map/<helper>` metadata when
+  canonical stdlib map helper metadata is absent.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -167,7 +169,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   template-argument diagnostics on bare map receiver calls; late fallback
   return-kind inference now routes map receiver builtin access spelling to
   canonical `/std/collections/map/<helper>` paths instead of rooted
-  `/map/<helper>` paths.
+  `/map/<helper>` paths; emitter method resolution now requires canonical
+  `/std/collections/map/<helper>` metadata for implicit map helper methods
+  instead of accepting rooted `/map/<helper>` metadata as the only match.
 
 ### map-constructor-normalization-uses-public-path
 - Updated: 2026-05-16

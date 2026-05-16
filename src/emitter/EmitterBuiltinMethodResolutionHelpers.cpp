@@ -646,7 +646,7 @@ bool resolveMethodCallPath(const Expr &call,
         resolvedOut = canonicalPath;
         return true;
       }
-      if (!hasAliasHelperDefinition && !hasCanonicalHelperDefinition) {
+      if (!hasCanonicalHelperDefinition) {
         return false;
       }
     }

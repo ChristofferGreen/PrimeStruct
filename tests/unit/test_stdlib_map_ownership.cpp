@@ -207,6 +207,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererLowerStatementsExpr.h");
   const std::string inlineNativeSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererInlineNativeCallDispatch.cpp");
+  const std::string emitterMethodResolutionSource =
+      readText(repoRoot() / "src" / "emitter" /
+               "EmitterBuiltinMethodResolutionHelpers.cpp");
   const std::string nativeTailSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererNativeTailDispatch.cpp");
   const std::string tailDispatchSource =
@@ -251,6 +254,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!statementLowererSource.empty());
   REQUIRE(!lowerStatementsExprSource.empty());
   REQUIRE(!inlineNativeSource.empty());
+  REQUIRE(!emitterMethodResolutionSource.empty());
   REQUIRE(!nativeTailSource.empty());
   REQUIRE(!tailDispatchSource.empty());
   REQUIRE(!inlinePackedArgsSource.empty());
@@ -437,6 +441,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inlineNativeSource.find("return helperName == \"count\" || helperName == \"count_ref\"") ==
         std::string::npos);
   CHECK(inlineNativeSource.find("emitCanonicalInlineDefinitionCall(expr, *callee)") != std::string::npos);
+  CHECK(emitterMethodResolutionSource.find("!hasAliasHelperDefinition && !hasCanonicalHelperDefinition") ==
+        std::string::npos);
   CHECK(nativeTailSource.find("hasSemanticMapReadHelperDefinition") != std::string::npos);
   CHECK(nativeTailSource.find("isMapReadHelperName(directMapReadHelperName)") != std::string::npos);
   CHECK(lowerStatementsExprSource.find("Keep direct canonical map access helpers") == std::string::npos);

@@ -1849,6 +1849,9 @@ Task template:
       `/std/collections/map/<helper>` paths rather than rooted
       `/map/<helper>` paths when resolving map receiver builtin access
       spelling.
+    - 2026-05-16: Emitter method resolution no longer lets implicit map
+      helper methods resolve through rooted `/map/<helper>` metadata when the
+      canonical stdlib map helper metadata is absent.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.
