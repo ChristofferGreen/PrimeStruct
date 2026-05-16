@@ -109,7 +109,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   map helper methods resolve through rooted `/map/<helper>` metadata when
   canonical stdlib map helper metadata is absent, and emitter method type
   inference should not fall back from canonical map access metadata to rooted
-  `/map/<access>` metadata.
+  `/map/<access>` metadata; emitter call-path preference should not fall back
+  from missing canonical `/std/collections/map/<suffix>` paths to rooted
+  `/map/<suffix>` aliases.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -176,7 +178,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   instead of accepting rooted `/map/<helper>` metadata as the only match;
   emitter method type inference no longer falls back from canonical
   `/std/collections/map/<access>` metadata to rooted `/map/<access>`
-  metadata for bare map access methods.
+  metadata for bare map access methods; emitter call-path preference no
+  longer falls back from missing canonical `/std/collections/map/<suffix>`
+  paths to rooted `/map/<suffix>` aliases.
 
 ### map-constructor-normalization-uses-public-path
 - Updated: 2026-05-16

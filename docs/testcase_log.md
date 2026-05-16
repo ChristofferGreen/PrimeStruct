@@ -48,6 +48,17 @@
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical namespaced map access helpers accept experimental map values,stdlib namespaced map access helpers accept imported stdlib wrappers,collected diagnostics ignore imported canonical map access helper calls,explicit canonical map access helpers accept canonical map values"`;
   `python3 scripts/check_map_surface_trace_inventory.py --root .`;
   `python3 scripts/check_map_backing_traces.py --root .` |
+  failures: none | notes: emitter call-path preference no longer falls back
+  from missing canonical `/std/collections/map/<suffix>` paths to rooted
+  `/map/<suffix>` aliases; canonical stdlib map access validation still
+  passes, the map surface inventory now observes 1040 production traces, and
+  backing traces remain at 212.
+- 2026-05-16 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical namespaced map access helpers accept experimental map values,stdlib namespaced map access helpers accept imported stdlib wrappers,collected diagnostics ignore imported canonical map access helper calls,explicit canonical map access helpers accept canonical map values"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` |
   failures: none | notes: emitter method type inference no longer falls back
   from canonical `/std/collections/map/<access>` metadata to rooted
   `/map/<access>` metadata for bare map access methods; canonical stdlib map

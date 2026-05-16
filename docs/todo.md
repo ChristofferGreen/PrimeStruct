@@ -1855,6 +1855,9 @@ Task template:
     - 2026-05-16: Emitter method type inference no longer falls back from
       canonical `/std/collections/map/<access>` metadata to rooted
       `/map/<access>` metadata for bare map access methods.
+    - 2026-05-16: Emitter call-path preference no longer falls back from
+      missing canonical `/std/collections/map/<suffix>` paths to rooted
+      `/map/<suffix>` aliases.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

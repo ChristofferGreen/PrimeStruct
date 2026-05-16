@@ -201,6 +201,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string countCapacityMapBuiltinSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprCountCapacityBuiltins.cpp");
+  const std::string emitterCallPathHelpersSource =
+      readText(repoRoot() / "src" / "emitter" /
+               "EmitterBuiltinCallPathHelpers.cpp");
   const std::string statementLowererSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererStatementCallEmission.cpp");
   const std::string lowerStatementsExprSource =
@@ -254,6 +257,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!collectionAccessValidationSource.empty());
   REQUIRE(!collectionAccessSource.empty());
   REQUIRE(!countCapacityMapBuiltinSource.empty());
+  REQUIRE(!emitterCallPathHelpersSource.empty());
   REQUIRE(!statementLowererSource.empty());
   REQUIRE(!lowerStatementsExprSource.empty());
   REQUIRE(!inlineNativeSource.empty());
@@ -430,6 +434,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(countCapacityMapBuiltinSource.find("/std/collections/map/at") ==
         std::string::npos);
   CHECK(countCapacityMapBuiltinSource.find("canonicalizeExperimentalMapHelperResolvedPath") ==
+        std::string::npos);
+  CHECK(emitterCallPathHelpersSource.find("const std::string mapAlias = \"/map/\" + suffix") ==
         std::string::npos);
   CHECK(statementLowererSource.find("isPrimeMapInsertBody") != std::string::npos);
   CHECK(statementLowererSource.find("rewriteMapInsertHelperStatementToCanonical") != std::string::npos);
