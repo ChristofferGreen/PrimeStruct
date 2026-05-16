@@ -8,6 +8,122 @@ ResolvedType resolveTypeStringImpl(std::string input,
                                    const std::string &namespacePrefix,
                                    Context &ctx,
                                    std::string &error,
+                                   std::unordered_set<std::string> &substitutionStack);
+
+bool splitTypePackExpansionText(const std::string &input, std::string &packNameOut) {
+  const std::string trimmed = trimWhitespace(input);
+  if (trimmed.size() <= 3 || trimmed.compare(trimmed.size() - 3, 3, "...") != 0) {
+    return false;
+  }
+  packNameOut = trimWhitespace(trimmed.substr(0, trimmed.size() - 3));
+  return !packNameOut.empty();
+}
+
+const TemplatePackBinding *findTemplatePackBinding(const Definition &def,
+                                                   const std::string &name) {
+  for (const TemplatePackBinding &binding : def.templatePackBindings) {
+    if (binding.parameterName == name) {
+      return &binding;
+    }
+  }
+  return nullptr;
+}
+
+const TemplatePackBinding *findTemplatePackBindingForCurrentDefinition(const Context &ctx,
+                                                                       const std::string &name) {
+  if (ctx.currentRewriteDefinition != nullptr) {
+    if (const TemplatePackBinding *binding =
+            findTemplatePackBinding(*ctx.currentRewriteDefinition, name)) {
+      return binding;
+    }
+  }
+  auto defIt = ctx.sourceDefs.find(ctx.currentDefinitionPath);
+  if (defIt == ctx.sourceDefs.end()) {
+    return nullptr;
+  }
+  return findTemplatePackBinding(defIt->second, name);
+}
+
+bool appendResolvedTemplateArg(const std::string &arg,
+                               const SubstMap &mapping,
+                               const std::unordered_set<std::string> &allowedParams,
+                               const std::string &namespacePrefix,
+                               Context &ctx,
+                               std::string &error,
+                               std::unordered_set<std::string> &substitutionStack,
+                               std::vector<std::string> &resolvedArgs,
+                               bool &allConcrete) {
+  std::string packName;
+  if (splitTypePackExpansionText(arg, packName)) {
+    const TemplatePackBinding *packBinding =
+        findTemplatePackBindingForCurrentDefinition(ctx, packName);
+    if (packBinding == nullptr) {
+      error = "unknown type-pack parameter for type expansion: " + packName;
+      return false;
+    }
+    for (const std::string &packArg : packBinding->arguments) {
+      if (!appendResolvedTemplateArg(packArg,
+                                     mapping,
+                                     allowedParams,
+                                     namespacePrefix,
+                                     ctx,
+                                     error,
+                                     substitutionStack,
+                                     resolvedArgs,
+                                     allConcrete)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  ResolvedType resolved =
+      resolveTypeStringImpl(arg, mapping, allowedParams, namespacePrefix, ctx, error, substitutionStack);
+  if (!error.empty()) {
+    return false;
+  }
+  if (!resolved.concrete) {
+    allConcrete = false;
+  }
+  resolvedArgs.push_back(resolved.text);
+  return true;
+}
+
+bool resolveTemplateArgumentList(std::vector<std::string> &args,
+                                 const SubstMap &mapping,
+                                 const std::unordered_set<std::string> &allowedParams,
+                                 const std::string &namespacePrefix,
+                                 Context &ctx,
+                                 std::string &error,
+                                 bool &allConcreteOut) {
+  std::vector<std::string> resolvedArgs;
+  resolvedArgs.reserve(args.size());
+  bool allConcrete = true;
+  std::unordered_set<std::string> substitutionStack;
+  for (const auto &arg : args) {
+    if (!appendResolvedTemplateArg(arg,
+                                   mapping,
+                                   allowedParams,
+                                   namespacePrefix,
+                                   ctx,
+                                   error,
+                                   substitutionStack,
+                                   resolvedArgs,
+                                   allConcrete)) {
+      return false;
+    }
+  }
+  args = std::move(resolvedArgs);
+  allConcreteOut = allConcrete;
+  return true;
+}
+
+ResolvedType resolveTypeStringImpl(std::string input,
+                                   const SubstMap &mapping,
+                                   const std::unordered_set<std::string> &allowedParams,
+                                   const std::string &namespacePrefix,
+                                   Context &ctx,
+                                   std::string &error,
                                    std::unordered_set<std::string> &substitutionStack) {
   ResolvedType result;
   std::string trimmed = trimWhitespace(input);
@@ -89,17 +205,19 @@ ResolvedType resolveTypeStringImpl(std::string input,
   resolvedArgs.reserve(args.size());
   bool allConcrete = true;
   for (const auto &arg : args) {
-    ResolvedType resolved =
-        resolveTypeStringImpl(arg, mapping, allowedParams, namespacePrefix, ctx, error, substitutionStack);
-    if (!error.empty()) {
+    if (!appendResolvedTemplateArg(arg,
+                                   mapping,
+                                   allowedParams,
+                                   namespacePrefix,
+                                   ctx,
+                                   error,
+                                   substitutionStack,
+                                   resolvedArgs,
+                                   allConcrete)) {
       result.text.clear();
       result.concrete = false;
       return result;
     }
-    if (!resolved.concrete) {
-      allConcrete = false;
-    }
-    resolvedArgs.push_back(resolved.text);
   }
   const auto explicitTemplateArgFactKey = [&](const std::string &targetPath) {
     return targetPath + "<" + joinTemplateArgs(resolvedArgs) + ">";
@@ -272,13 +390,14 @@ bool rewriteTransforms(std::vector<Transform> &transforms,
         }
       } else {
         bool allConcreteTemplateArgs = true;
-        for (auto &arg : transform.templateArgs) {
-          ResolvedType resolvedArg = resolveTypeString(arg, mapping, allowedParams, namespacePrefix, ctx, error);
-          if (!error.empty()) {
-            return false;
-          }
-          allConcreteTemplateArgs = allConcreteTemplateArgs && resolvedArg.concrete;
-          arg = resolvedArg.text;
+        if (!resolveTemplateArgumentList(transform.templateArgs,
+                                         mapping,
+                                         allowedParams,
+                                         namespacePrefix,
+                                         ctx,
+                                         error,
+                                         allConcreteTemplateArgs)) {
+          return false;
         }
 
         std::string resolvedPath =
@@ -329,12 +448,15 @@ bool rewriteTransforms(std::vector<Transform> &transforms,
         }
       }
     }
-    for (auto &arg : transform.templateArgs) {
-      ResolvedType resolvedArg = resolveTypeString(arg, mapping, allowedParams, namespacePrefix, ctx, error);
-      if (!error.empty()) {
-        return false;
-      }
-      arg = resolvedArg.text;
+    bool ignoredAllConcrete = true;
+    if (!resolveTemplateArgumentList(transform.templateArgs,
+                                     mapping,
+                                     allowedParams,
+                                     namespacePrefix,
+                                     ctx,
+                                     error,
+                                     ignoredAllConcrete)) {
+      return false;
     }
   }
   return true;

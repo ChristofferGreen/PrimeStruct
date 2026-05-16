@@ -5,6 +5,37 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Completion (May 16, 2026)**
+- [x] TODO-4276: Expand type packs in helpers and lifecycle hooks
+  - owner: ai
+  - created_at: 2026-04-27
+  - finished_at: 2026-05-16
+  - phase: Deferred generic tuple substrate
+  - parallel_track: tuple-type-packs
+  - depends_on: TODO-4275
+  - scope: Extend pack expansion from stored fields into helper signatures,
+    helper bodies, return envelopes, and generated copy/move/destroy lifecycle
+    behavior.
+  - outcome:
+    - Accepted `Ts...` inside nested type and call template argument lists so
+      return/type envelopes and explicit generic calls can splice concrete pack
+      arguments after specialization.
+    - Expanded `[Ts...]` helper parameters and helper-local bindings into
+      deterministic concrete bindings named from the source binding and pack
+      index, while rejecting default initializers on local pack expansions.
+    - Regenerated reflection helpers after concrete pack specialization so
+      `Clone` and `CopyFrom` consume the same expanded field order published by
+      reflection metadata.
+    - Documented the supported helper, local, return-envelope, and generated
+      reflection-helper boundary while leaving generic pack indexing to
+      TODO-4271.
+  - validation:
+    - Focused release validation covered parser template tests, manual
+      semantics template tests for helper and reflection pack expansion, TODO
+      source-lock coverage, and `git diff --check`.
+    - Full `./scripts/compile.sh --release` remains deferred by the lite
+      workflow.
+
 **Todo Completion (May 15, 2026)**
 - [x] TODO-4275: Expand type packs into struct storage
   - owner: ai

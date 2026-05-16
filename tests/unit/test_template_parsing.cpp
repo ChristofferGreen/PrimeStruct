@@ -89,6 +89,30 @@ Tuple<Ts...> {
   CHECK(field.transforms.front().isPackExpansion);
 }
 
+TEST_CASE("parses heterogeneous type pack expansion in type envelopes") {
+  const std::string source = R"(
+[struct]
+Tuple<Ts...> {
+  [Ts...] values
+}
+
+[return<Tuple<Ts...>>]
+identity<Ts...>([Tuple<Ts...>] value) {
+  return(value)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 2);
+  const auto &helper = program.definitions[1];
+  REQUIRE(helper.transforms.size() == 1);
+  REQUIRE(helper.transforms.front().templateArgs.size() == 1);
+  CHECK(helper.transforms.front().templateArgs.front() == "Tuple<Ts...>");
+  REQUIRE(helper.parameters.size() == 1);
+  REQUIRE(helper.parameters.front().transforms.size() == 1);
+  REQUIRE(helper.parameters.front().transforms.front().templateArgs.size() == 1);
+  CHECK(helper.parameters.front().transforms.front().templateArgs.front() == "Ts...");
+}
+
 TEST_CASE("parses template list on call") {
   const std::string source = R"(
 [return<int>]
@@ -247,14 +271,20 @@ bad<args<T>>() {
 )").find("args<T> is variadic value-pack syntax") != std::string::npos);
 }
 
-TEST_CASE("rejects type pack expansion outside template parameter list") {
-  CHECK(parseError(R"(
+TEST_CASE("parses type pack expansion in call template arguments") {
+  const std::string source = R"(
 [return<i32>]
-main() {
-  return(use<Ts...>(0i32))
+forward<Ts...>() {
+  return(use<Ts...>())
 }
-)").find("type-pack expansion is only valid in template parameter lists") !=
-        std::string::npos);
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions.front().returnExpr.has_value());
+  const auto &useCall = *program.definitions.front().returnExpr;
+  REQUIRE(useCall.kind == primec::Expr::Kind::Call);
+  REQUIRE(useCall.templateArgs.size() == 1);
+  CHECK(useCall.templateArgs.front() == "Ts...");
 }
 
 TEST_SUITE_END();

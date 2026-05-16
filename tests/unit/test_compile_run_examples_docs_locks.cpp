@@ -1614,9 +1614,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4276: Expand type packs in helpers and lifecycle hooks | track:\n"
-                  "  tuple-type-packs | primary surface: generic helper signatures, helper\n"
-                  "  bodies, return envelopes, and lifecycle behavior") !=
+                  "- TODO-4271: Add compile-time pack indexing | track: tuple-type-packs |\n"
+                  "  primary surface: generic pack-index selection and diagnostics") !=
         std::string::npos);
   CHECK(todo.find("- `soa-zero-audit`: TODO-4529 replaced the residue inventory with a strict\n"
                   "  zero-production-trace audit; no SoA zero-audit leaf is ready.") !=
@@ -1625,12 +1624,12 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
                   "  TODO-4464 remains the parent for future bounded trace-reduction splits\n"
                   "  and the final strict zero map-surface audit.") !=
         std::string::npos);
-  CHECK(todo.find("- `tuple-type-packs`: ready TODO-4276 after TODO-4275 completed\n"
-                  "  pack-expanded storage, then serial successors TODO-4271 -> TODO-4272") !=
+  CHECK(todo.find("- `tuple-type-packs`: TODO-4276 completed helper/lifecycle pack\n"
+                  "  expansion; ready TODO-4271, then serial successors TODO-4272") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)\n\n"
-                  "- TODO-4271: Add compile-time pack indexing\n"
-                  "- TODO-4272: Add stdlib `tuple<Ts...>`") !=
+                  "- TODO-4272: Add stdlib `tuple<Ts...>`\n"
+                  "- TODO-4274: Add tuple bracket indexing sugar") !=
         std::string::npos);
   CHECK(todo.find("- [~] TODO-4305: Rename and style canonical `.prime` SoA surface") !=
         std::string::npos);
@@ -1644,8 +1643,12 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended Track Order)\n\n"
-                  "- TODO-4276: Expand type packs in helpers and lifecycle hooks\n"
-                  "- TODO-4271: Add compile-time pack indexing") !=
+                  "- TODO-4271: Add compile-time pack indexing\n"
+                  "- TODO-4272: Add stdlib `tuple<Ts...>`") !=
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4276: Expand type packs in helpers and lifecycle hooks") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4276: Expand type packs in helpers and lifecycle hooks") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4275: Expand type packs into struct storage") !=
         std::string::npos);
@@ -1690,7 +1693,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4519: Delete `soa_vector` compatibility seams") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4276: Expand type packs in helpers and lifecycle hooks",
+      "TODO-4271: Add compile-time pack indexing",
   };
   for (const std::string &entry : semanticPhaseQueue) {
     CHECK(todo.find("- " + entry) != std::string::npos);

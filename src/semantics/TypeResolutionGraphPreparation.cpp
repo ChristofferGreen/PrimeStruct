@@ -42,6 +42,9 @@ bool prepareProgramForTypeResolutionAnalysis(Program &program,
                              implicitTemplateArgFactHitCountOut)) {
     return false;
   }
+  if (!rewriteReflectionGeneratedHelpersForPackSpecializations(program, error)) {
+    return false;
+  }
   if (!rewriteReflectionMetadataQueries(program, error)) {
     return false;
   }

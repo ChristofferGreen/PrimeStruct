@@ -26,9 +26,11 @@ parameters use `T`; one heterogeneous type-pack parameter may appear last using
 deterministic specialization metadata. Struct field declarations may expand a
 bound heterogeneous type pack using `[Ts...] values`, which lowers to one
 stored field per bound type using deterministic internal field names
-`__pack_values_0`, `__pack_values_1`, and so on. Expanding packs in helper
-bodies is deferred to TODO-4276. The homogeneous `args<T>` value-pack envelope
-is not a heterogeneous type-pack declaration.
+`__pack_values_0`, `__pack_values_1`, and so on. Helper parameters and local
+bindings may use the same `[Ts...] values` expansion, and type/call template
+argument lists may use `Ts...` to splice the bound pack into the concrete
+specialization. The homogeneous `args<T>` value-pack envelope is not a
+heterogeneous type-pack declaration.
 
 Call, method-call, transform, and nested type template argument lists accept
 type arguments and non-negative unsuffixed integer literal arguments. Integer
@@ -727,9 +729,11 @@ Rules:
   fields. Pack-expanded fields participate in brace construction, field type
   validation, layout, and semantic-product field metadata like ordinary fields.
   Pack-expanded field declarations do not accept field modifiers or default
-  initializers in this slice, and type-pack expansion outside struct-field
-  declarations is rejected. Helper signatures and helper bodies remain
-  TODO-4276 work.
+  initializers. Helper parameters and helper-local declarations may also expand
+  a bound type pack with `[Ts...] name`; helper-local expansion follows ordinary
+  omitted-initializer rules for each expanded concrete binding. Return/type
+  envelopes and call template argument lists may use `Ts...` to splice the bound
+  pack into nested concrete template arguments.
 - `(...)` is the runtime argument channel. A form may have compile-time
   arguments, runtime arguments, both, or neither.
 - A bare `name` in command or value position resolves to exactly one visible

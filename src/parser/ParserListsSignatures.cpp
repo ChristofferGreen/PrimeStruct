@@ -364,9 +364,6 @@ bool Parser::parseTemplateArgument(std::string &out, TemplateArgument *detailOut
       out += nested;
       first = false;
       skipSeparators();
-      if (matchRaw(TokenKind::Ellipsis)) {
-        return fail("type-pack expansion is only valid in template parameter lists");
-      }
       if (matchRaw(TokenKind::RAngle)) {
         break;
       }
@@ -380,6 +377,12 @@ bool Parser::parseTemplateArgument(std::string &out, TemplateArgument *detailOut
       return false;
     }
     out += ">";
+  }
+  if (matchRaw(TokenKind::Ellipsis)) {
+    if (!expectRaw(TokenKind::Ellipsis, "expected '...'")) {
+      return false;
+    }
+    out += "...";
   }
   if (detailOut != nullptr) {
     *detailOut = TemplateArgument::type(out);

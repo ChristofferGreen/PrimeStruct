@@ -270,18 +270,20 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Evidence: Release reruns from `build-release/PrimeStruct_compile_run_tests --source-file=*test_compile_run_text_filters_diagnostics_c.cpp` plus direct `./primec --emit-diagnostics --collect-diagnostics` reproductions against the same sources emitted those messages.
 
 ### type-pack-declarations-bind-specialization-metadata
-- Updated: 2026-05-15
-- Tags: parser, semantics, generics
+- Updated: 2026-05-16
+- Tags: parser, semantics, generics, reflection
 - Fact: Heterogeneous type-pack declarations record final `Ts...` metadata,
   monomorphized specializations bind trailing type arguments into
-  deterministic pack metadata, and struct fields can expand `[Ts...] storage`
-  into deterministic generated fields. Helper and lifecycle expansion remains
-  deferred to TODO-4276.
+  deterministic pack metadata, and concrete specialization rewrites expand
+  struct fields, helper parameters, helper locals, nested type/call template
+  arguments, and generated reflection helpers from that pack metadata.
 - Evidence: `Parser::parseTemplateParameterList` records `templateArgIsPack`,
   `bindTemplateArguments` captures trailing pack arguments in
   `TemplatePackBinding`, semantic-product formatting publishes
-  `template_pack_bindings`, and `expandTypePackStorageFields` materializes
-  pack storage fields during template monomorphization.
+  `template_pack_bindings`, `expandTypePackBindingList` materializes concrete
+  bindings during template monomorphization, and
+  `rewriteReflectionGeneratedHelpersForPackSpecializations` regenerates
+  reflection helpers from expanded fields.
 
 ### variadic-borrowed-pointer-packs-are-supported
 - Updated: 2026-05-01

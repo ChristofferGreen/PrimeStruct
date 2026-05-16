@@ -120,16 +120,6 @@ bool hasTypePackExpansionTransform(const Expr &expr) {
   return false;
 }
 
-const TemplatePackBinding *findTemplatePackBinding(const Definition &def,
-                                                   const std::string &name) {
-  for (const TemplatePackBinding &binding : def.templatePackBindings) {
-    if (binding.parameterName == name) {
-      return &binding;
-    }
-  }
-  return nullptr;
-}
-
 std::string generatedPackFieldName(const std::string &sourceName,
                                    size_t index) {
   return "__pack_" + sourceName + "_" + std::to_string(index);
@@ -152,10 +142,40 @@ std::string templateSpecializationBasePath(std::string path) {
   return path;
 }
 
-bool expandTypePackStorageFields(Definition &def, std::string &error) {
+enum class TypePackBindingExpansionKind {
+  StructField,
+  Parameter,
+  Local,
+};
+
+const char *typePackBindingExpansionLabel(TypePackBindingExpansionKind kind) {
+  switch (kind) {
+    case TypePackBindingExpansionKind::StructField:
+      return "field";
+    case TypePackBindingExpansionKind::Parameter:
+      return "parameter";
+    case TypePackBindingExpansionKind::Local:
+      return "local";
+  }
+  return "binding";
+}
+
+std::string typePackBindingExpansionPath(const Definition &def,
+                                         const Expr &binding,
+                                         TypePackBindingExpansionKind kind) {
+  if (kind == TypePackBindingExpansionKind::StructField) {
+    return def.fullPath + "/" + binding.name;
+  }
+  return def.fullPath + "(" + binding.name + ")";
+}
+
+bool expandTypePackBindingList(Definition &def,
+                               std::vector<Expr> &bindings,
+                               TypePackBindingExpansionKind kind,
+                               std::string &error) {
   bool hasExpansion = false;
-  for (const Expr &stmt : def.statements) {
-    if (hasTypePackExpansionTransform(stmt)) {
+  for (const Expr &binding : bindings) {
+    if (hasTypePackExpansionTransform(binding)) {
       hasExpansion = true;
       break;
     }
@@ -163,82 +183,108 @@ bool expandTypePackStorageFields(Definition &def, std::string &error) {
   if (!hasExpansion) {
     return true;
   }
-  if (!isStructDefinition(def)) {
-    for (const Expr &stmt : def.statements) {
-      if (hasTypePackExpansionTransform(stmt)) {
-        error = "type-pack expansion is only supported in struct field declarations: " +
-                def.fullPath + "/" + stmt.name;
+  std::vector<Expr> expandedBindings;
+  expandedBindings.reserve(bindings.size());
+  std::unordered_set<std::string> bindingNames;
+  bindingNames.reserve(bindings.size());
+  for (const Expr &binding : bindings) {
+    if (!binding.isBinding) {
+      if (hasTypePackExpansionTransform(binding)) {
+        error = "type-pack expansion is only supported in binding declarations: " +
+                typePackBindingExpansionPath(def, binding, kind);
         return false;
       }
-    }
-  }
-
-  std::vector<Expr> expandedStatements;
-  expandedStatements.reserve(def.statements.size());
-  std::unordered_set<std::string> fieldNames;
-  fieldNames.reserve(def.statements.size());
-  for (const Expr &stmt : def.statements) {
-    if (!stmt.isBinding) {
-      expandedStatements.push_back(stmt);
+      expandedBindings.push_back(binding);
       continue;
     }
-    if (!hasTypePackExpansionTransform(stmt)) {
-      if (!stmt.name.empty()) {
-        fieldNames.insert(stmt.name);
+    if (!hasTypePackExpansionTransform(binding)) {
+      if (!binding.name.empty()) {
+        bindingNames.insert(binding.name);
       }
-      expandedStatements.push_back(stmt);
+      expandedBindings.push_back(binding);
       continue;
     }
-    if (stmt.transforms.size() != 1) {
-      error = "type-pack field expansion does not accept field modifiers: " +
-              def.fullPath + "/" + stmt.name;
+    const char *label = typePackBindingExpansionLabel(kind);
+    if (binding.transforms.size() != 1) {
+      error = std::string("type-pack ") + label +
+              " expansion does not accept modifiers: " +
+              typePackBindingExpansionPath(def, binding, kind);
       return false;
     }
-    const Transform &packTransform = stmt.transforms.front();
+    const Transform &packTransform = binding.transforms.front();
     if (!packTransform.isPackExpansion ||
         !packTransform.templateArgs.empty() ||
         !packTransform.templateArgDetails.empty() ||
         !packTransform.arguments.empty()) {
-      error = "type-pack field expansion requires a bare pack parameter: " +
-              def.fullPath + "/" + stmt.name;
+      error = std::string("type-pack ") + label +
+              " expansion requires a bare pack parameter: " +
+              typePackBindingExpansionPath(def, binding, kind);
       return false;
     }
-    if (!stmt.args.empty() || !stmt.argNames.empty()) {
-      error = "type-pack field expansion does not accept default initializers: " +
-              def.fullPath + "/" + stmt.name;
+    if (!binding.args.empty() || !binding.argNames.empty()) {
+      error = std::string("type-pack ") + label +
+              " expansion does not accept default initializers: " +
+              typePackBindingExpansionPath(def, binding, kind);
       return false;
     }
     const TemplatePackBinding *packBinding =
         findTemplatePackBinding(def, packTransform.name);
     if (packBinding == nullptr) {
-      error = "unknown type-pack parameter for field expansion: " +
+      error = std::string("unknown type-pack parameter for ") + label +
+              " expansion: " +
               packTransform.name;
       return false;
     }
     const std::string defTemplateBase = templateSpecializationBasePath(def.fullPath);
     for (size_t packIndex = 0; packIndex < packBinding->arguments.size();
          ++packIndex) {
-      if (templateSpecializationBasePath(packBinding->arguments[packIndex]) ==
+      if (kind == TypePackBindingExpansionKind::StructField &&
+          templateSpecializationBasePath(packBinding->arguments[packIndex]) ==
           defTemplateBase) {
         error = "recursive pack-expanded storage not supported: " +
-                def.fullPath + "/" + stmt.name;
+                typePackBindingExpansionPath(def, binding, kind);
         return false;
       }
-      Expr field = stmt;
-      field.name = generatedPackFieldName(stmt.name, packIndex);
-      field.sourceName = field.name;
-      field.transforms.clear();
-      field.transforms.push_back(Transform{});
-      field.transforms.back().name = packBinding->arguments[packIndex];
-      if (!fieldNames.insert(field.name).second) {
-        error = "generated type-pack field conflicts with existing field: " +
-                def.fullPath + "/" + field.name;
+      Expr expanded = binding;
+      expanded.name = generatedPackFieldName(binding.name, packIndex);
+      expanded.sourceName = expanded.name;
+      expanded.transforms.clear();
+      expanded.transforms.push_back(Transform{});
+      expanded.transforms.back().name = packBinding->arguments[packIndex];
+      if (!bindingNames.insert(expanded.name).second) {
+        error = std::string("generated type-pack ") + label +
+                " conflicts with existing binding: " +
+                typePackBindingExpansionPath(def, expanded, kind);
         return false;
       }
-      expandedStatements.push_back(std::move(field));
+      expandedBindings.push_back(std::move(expanded));
     }
   }
-  def.statements = std::move(expandedStatements);
+  bindings = std::move(expandedBindings);
+  return true;
+}
+
+bool expandTypePackHelperBindings(Definition &def, std::string &error) {
+  if (!expandTypePackBindingList(def, def.parameters, TypePackBindingExpansionKind::Parameter, error)) {
+    return false;
+  }
+  if (isStructDefinition(def)) {
+    return expandTypePackBindingList(def, def.statements, TypePackBindingExpansionKind::StructField, error);
+  }
+  return expandTypePackBindingList(def, def.statements, TypePackBindingExpansionKind::Local, error);
+}
+
+bool rejectUnsupportedTypePackStatementExpansions(const Definition &def, std::string &error) {
+  if (isStructDefinition(def)) {
+    return true;
+  }
+  for (const Expr &stmt : def.statements) {
+    if (hasTypePackExpansionTransform(stmt) && !stmt.isBinding) {
+      error = "type-pack expansion is only supported in binding declarations: " +
+              def.fullPath + "/" + stmt.name;
+      return false;
+    }
+  }
   return true;
 }
 
@@ -250,9 +296,15 @@ bool rewriteDefinition(Definition &def,
                        Context &ctx,
                        std::string &error) {
   const std::string previousDefinitionPath = ctx.currentDefinitionPath;
+  const Definition *previousRewriteDefinition = ctx.currentRewriteDefinition;
   ctx.currentDefinitionPath = def.fullPath;
-  auto restoreDefinitionPath = [&]() { ctx.currentDefinitionPath = previousDefinitionPath; };
-  if (!expandTypePackStorageFields(def, error)) {
+  ctx.currentRewriteDefinition = &def;
+  auto restoreDefinitionPath = [&]() {
+    ctx.currentDefinitionPath = previousDefinitionPath;
+    ctx.currentRewriteDefinition = previousRewriteDefinition;
+  };
+  if (!rejectUnsupportedTypePackStatementExpansions(def, error) ||
+      !expandTypePackHelperBindings(def, error)) {
     restoreDefinitionPath();
     return false;
   }

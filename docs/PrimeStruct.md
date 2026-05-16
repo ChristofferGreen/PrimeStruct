@@ -4163,8 +4163,13 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to brace
   fields named `__pack_values_0`, `__pack_values_1`, etc., in pack-argument
   order. Zero-length packs produce no stored fields. These generated fields
   participate in brace construction, layout, and semantic-product field
-  metadata as ordinary fields; helper signatures, helper bodies, and lifecycle
-  hooks are still deferred follow-up work.
+  metadata as ordinary fields. Helper parameters and helper-local bindings may
+  use the same `[Ts...] name` expansion, while return/type envelopes and call
+  template arguments may spell `Ts...` where specialization expands it into
+  zero or more concrete template arguments. Generated reflection helpers such
+  as `Clone` and `CopyFrom` consume the same expanded source-order field list,
+  so helper field order matches reflection metadata order. Generic pack
+  indexing is still deferred follow-up work.
 - **Field visibility:** stack-value declarations accept `[public]` or `[private]` transforms (default: public); they are
   mutually exclusive. The compiler records `visibility` metadata per field so tooling and backends enforce access rules
   consistently. Field visibility is in-language field-access metadata; it does not make a field a package-importable API

@@ -48,9 +48,30 @@ std::string formatTransformType(const Transform &transform) {
   return transform.name + "<" + formatTemplateArgs(transform.templateArgs) + ">";
 }
 
+bool definitionHasPackExpandedField(const Definition &def) {
+  for (const Expr &stmt : def.statements) {
+    if (!stmt.isBinding) {
+      continue;
+    }
+    for (const Transform &transform : stmt.transforms) {
+      if (transform.isPackExpansion) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+enum class ReflectionGeneratedHelperRewriteMode {
+  Normal,
+  PackSpecializationsOnly,
+};
+
 } // namespace
 
-bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
+bool rewriteReflectionGeneratedHelpersImpl(Program &program,
+                                           std::string &error,
+                                           ReflectionGeneratedHelperRewriteMode mode) {
   auto isStructDefinition = [](const Definition &def, bool &isExplicitOut) {
     bool hasStructTransform = false;
     bool hasReturnTransform = false;
@@ -143,6 +164,12 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
   rewrittenDefinitions.reserve(program.definitions.size());
   for (auto &def : program.definitions) {
     const bool isStruct = structNames.count(def.fullPath) > 0;
+    const bool isPackSpecialization =
+        !def.templatePackBindings.empty() && def.templateArgs.empty();
+    const bool shouldRewriteThisDefinition =
+        mode == ReflectionGeneratedHelperRewriteMode::PackSpecializationsOnly
+            ? isPackSpecialization
+            : !(definitionHasPackExpandedField(def) && !def.templateArgs.empty());
     bool shouldGenerateEqual = false;
     bool shouldGenerateNotEqual = false;
     bool shouldGenerateDefault = false;
@@ -157,7 +184,7 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     bool shouldGenerateSerialize = false;
     bool shouldGenerateDeserialize = false;
     bool shouldGenerateSoaSchema = false;
-    if (isStruct && hasTransformNamed(def.transforms, "generate")) {
+    if (shouldRewriteThisDefinition && isStruct && hasTransformNamed(def.transforms, "generate")) {
       for (const auto &transform : def.transforms) {
         if (transform.name != "generate") {
           continue;
@@ -376,5 +403,14 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
   return true;
 }
 
+bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
+  return rewriteReflectionGeneratedHelpersImpl(
+      program, error, ReflectionGeneratedHelperRewriteMode::Normal);
+}
+
+bool rewriteReflectionGeneratedHelpersForPackSpecializations(Program &program, std::string &error) {
+  return rewriteReflectionGeneratedHelpersImpl(
+      program, error, ReflectionGeneratedHelperRewriteMode::PackSpecializationsOnly);
+}
 
 } // namespace primec::semantics

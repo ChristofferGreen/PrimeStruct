@@ -1363,15 +1363,14 @@ bool rewriteExpr(Expr &expr,
     }
   }
   bool allConcrete = true;
-  for (auto &templArg : expr.templateArgs) {
-    ResolvedType resolvedArg = resolveTypeString(templArg, mapping, allowedParams, namespacePrefix, ctx, error);
-    if (!error.empty()) {
-      return false;
-    }
-    if (!resolvedArg.concrete) {
-      allConcrete = false;
-    }
-    templArg = resolvedArg.text;
+  if (!resolveTemplateArgumentList(expr.templateArgs,
+                                   mapping,
+                                   allowedParams,
+                                   namespacePrefix,
+                                   ctx,
+                                   error,
+                                   allConcrete)) {
+    return false;
   }
   if (!expr.isMethodCall && !expr.isBinding) {
     if (Expr *receiverExpr = mutableMapHelperReceiverExpr(expr)) {

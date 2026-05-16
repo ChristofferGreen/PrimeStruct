@@ -83,9 +83,8 @@ Task template:
 
 ### Ready Now (Parallel-Candidate Leaves; No Unmet TODO Dependencies)
 
-- TODO-4276: Expand type packs in helpers and lifecycle hooks | track:
-  tuple-type-packs | primary surface: generic helper signatures, helper
-  bodies, return envelopes, and lifecycle behavior
+- TODO-4271: Add compile-time pack indexing | track: tuple-type-packs |
+  primary surface: generic pack-index selection and diagnostics
 
 ### Parallel Work Tracks (Current)
 
@@ -94,8 +93,8 @@ Task template:
 - `map-zero-audit`: TODO-4532 reduced the lowerer native-dispatch slice;
   TODO-4464 remains the parent for future bounded trace-reduction splits
   and the final strict zero map-surface audit.
-- `tuple-type-packs`: ready TODO-4276 after TODO-4275 completed
-  pack-expanded storage, then serial successors TODO-4271 -> TODO-4272
+- `tuple-type-packs`: TODO-4276 completed helper/lifecycle pack
+  expansion; ready TODO-4271, then serial successors TODO-4272
   -> TODO-4274 -> TODO-4273 -> TODO-4277 -> TODO-4278.
 - `procedural-genericity`: blocked by the tuple-type-packs successor chain
   before TODO-4331 can start.
@@ -104,7 +103,6 @@ Task template:
 
 ### Immediate Next 10 (Track Successors; Not Ready Until Dependencies Land)
 
-- TODO-4271: Add compile-time pack indexing
 - TODO-4272: Add stdlib `tuple<Ts...>`
 - TODO-4274: Add tuple bracket indexing sugar
 - TODO-4273: Add heterogeneous value-pack inference
@@ -124,8 +122,8 @@ Task template:
   template-monomorph residue; TODO-4533 removed lowerer call-resolution
   residual bridge traces; TODO-4528 removed lowerer count/access residue; and
   TODO-4529 replaced the residue inventory with a strict zero audit
-- Deferred generic tuple substrate: ready TODO-4276 after TODO-4275
-  completed pack-expanded storage, followed by TODO-4271 -> TODO-4272
+- Deferred generic tuple substrate: ready TODO-4271 after TODO-4276
+  completed helper/lifecycle pack expansion, followed by TODO-4272
   -> TODO-4274 -> TODO-4273 -> TODO-4277 -> TODO-4278
 - Procedural compile-time genericity: TODO-4331 -> TODO-4332
   -> TODO-4333 -> TODO-4334 -> TODO-4335 -> TODO-4336 -> TODO-4337
@@ -138,7 +136,6 @@ Task template:
 
 ### Execution Queue (Recommended Track Order)
 
-- TODO-4276: Expand type packs in helpers and lifecycle hooks
 - TODO-4271: Add compile-time pack indexing
 - TODO-4272: Add stdlib `tuple<Ts...>`
 - TODO-4274: Add tuple bracket indexing sugar
@@ -200,7 +197,7 @@ Task template:
 | Test-suite audit follow-up and release-gate stability | none |
 | Algebraic sum types and brace-only construction | none |
 | Stdlib ADT migration for `Maybe` and `Result` | none |
-| Generic type packs and tuple stdlib surface | TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
+| Generic type packs and tuple stdlib surface | TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity and local type facts | TODO-4331, TODO-4332, TODO-4333, TODO-4334, TODO-4335, TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
 | Generic constraints and compile-time flow control | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
@@ -227,7 +224,7 @@ Task template:
 | Release benchmark/example suite stability and doctest governance | none |
 | Sum-type and brace-construction conformance | none |
 | Maybe/Result sum migration conformance | none |
-| Generic type-pack and tuple conformance | TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
+| Generic type-pack and tuple conformance | TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 | Procedural compile-time genericity conformance | TODO-4331, TODO-4332, TODO-4333, TODO-4334, TODO-4335, TODO-4336, TODO-4337, TODO-4338, TODO-4339, TODO-4340 |
 | Generic constraint and compile-time flow conformance | TODO-4341, TODO-4342, TODO-4343, TODO-4344, TODO-4352, TODO-4353, TODO-4354, TODO-4355, TODO-4356, TODO-4357, TODO-4345, TODO-4346, TODO-4358, TODO-4347, TODO-4351, TODO-4348, TODO-4359, TODO-4349, TODO-4350 |
 
@@ -503,51 +500,11 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4276: Expand type packs in helpers and lifecycle hooks
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Deferred generic tuple substrate
-  - parallel_track: tuple-type-packs
-  - depends_on: TODO-4275
-  - scope: Extend pack expansion from stored fields into helper signatures,
-    helper bodies, return envelopes, and generated copy/move/destroy lifecycle
-    behavior.
-  - implementation_notes:
-    - Build on pack-expanded storage from TODO-4275 and existing lifecycle
-      semantics for ordinary struct fields.
-    - Cross-reference the reflection field metadata API and generated helper
-      model in `docs/PrimeStruct.md`: `meta.field_count<T>()`,
-      `meta.field_name<T>(i)`, `meta.field_type<T>(i)`,
-      `meta.field_visibility<T>(i)`, plus generated `/Type/Default`,
-      `/Type/Clone`, `/Type/Clear`, and lifecycle behavior. Pack-expanded
-      lifecycle order should reuse that source-order field model rather than
-      introducing tuple-specific `drop(item...)` semantics.
-    - Keep lifecycle order deterministic and documented; tuple element
-      lifecycle depends on it.
-    - Add focused tests before broad tuple tests so generic pack expansion is
-      validated independently of `tuple`.
-  - acceptance:
-    - Helper definitions can mention pack-expanded parameters, locals, and
-      return envelopes in documented positions.
-    - Pack-expanded fields participate in copy, move, and destruction according
-      to ordinary struct field rules, including non-trivial element types.
-    - Reflection metadata for reflect-enabled pack-expanded structs reports
-      expanded fields in the same order that lifecycle hooks copy, move, clear,
-      and destroy them.
-    - Lifecycle failures in one element type produce diagnostics that identify
-      the element index or expanded field.
-    - Tests cover zero-element, one-element, and multi-element packs in helper
-      and lifecycle contexts, including at least one reflect-enabled
-      pack-expanded struct that exercises `meta.field_count<T>()` and generated
-      helper behavior.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once generic pack expansion works outside stored fields and
-    lifecycle behavior is covered; leave indexed access to TODO-4271.
-
 - [ ] TODO-4271: Add compile-time pack indexing
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred generic tuple substrate
+  - parallel_track: tuple-type-packs
   - depends_on: TODO-4276, TODO-4270
   - scope: Add generic compile-time pack indexing so helpers can resolve the
     `I`th type and storage slot of a heterogeneous type pack.

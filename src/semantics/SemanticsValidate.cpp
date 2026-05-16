@@ -6404,7 +6404,11 @@ bool runSemanticValidationManifestAstPass(
   }
   if (pass.name == "template-monomorphization") {
     try {
-      return semantics::monomorphizeTemplates(program, entryPath, error);
+      if (!semantics::monomorphizeTemplates(program, entryPath, error)) {
+        return false;
+      }
+      return semantics::rewriteReflectionGeneratedHelpersForPackSpecializations(
+          program, error);
     } catch (const std::exception &ex) {
       error = std::string("template monomorphization exception: ") + ex.what();
       return false;

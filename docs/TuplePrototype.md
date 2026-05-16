@@ -78,8 +78,9 @@ template parameter, for example `ResultTuple<Status, Ts...>`. The parser, AST,
 and semantic-product metadata can record that `Ts` is a heterogeneous type
 pack, and monomorphized definitions record the trailing type arguments bound
 to that pack in source order. Expanding `Ts...` into struct fields,
-constructor initialization, helpers, and lifecycle hooks remains deferred to
-TODO-4275/TODO-4276.
+constructor initialization, helper parameters, helper locals, return envelopes,
+and generated reflection helper field order is covered by TODO-4275/TODO-4276;
+generic indexed access remains deferred to TODO-4271.
 `args<T>` remains the homogeneous value-pack envelope and is not a spelling for
 heterogeneous type packs.
 

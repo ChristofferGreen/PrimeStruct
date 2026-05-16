@@ -91,6 +91,7 @@ struct Context {
   std::vector<ImplicitTemplateArgResolutionFactForTesting> implicitTemplateArgFactsForTesting;
   std::unordered_map<std::string, ImplicitTemplateArgInferenceFact> implicitTemplateArgInferenceFacts;
   uint64_t implicitTemplateArgInferenceFactHitsForTesting = 0;
+  const Definition *currentRewriteDefinition = nullptr;
 };
 
 using LocalTypeMap = std::unordered_map<std::string, BindingInfo>;

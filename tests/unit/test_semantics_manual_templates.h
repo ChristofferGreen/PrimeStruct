@@ -349,7 +349,7 @@ TEST_CASE("type pack storage rejects invalid placements and shapes") {
                        {makeBinding("bad", {makeTransform("auto")}, {ctor}),
                         makeCall("/return", {makeLiteral(0)})}));
     CHECK_FALSE(validateProgram(program, "/main", error));
-    CHECK(error.find("type-pack field expansion does not accept field modifiers") !=
+    CHECK(error.find("type-pack field expansion does not accept modifiers") !=
           std::string::npos);
   }
 
@@ -359,7 +359,7 @@ TEST_CASE("type pack storage rejects invalid placements and shapes") {
     primec::Definition bad =
         makeDefinition("/bad",
                        {makeTransform("return", std::string("i32"))},
-                       {makeBinding("values", {makePackTransform()}, {}),
+                       {makeBinding("values", {makePackTransform()}, {makeLiteral(1)}),
                         makeCall("/return", {makeLiteral(0)})});
     bad.templateArgs = {"Ts"};
     bad.templateArgIsPack = {true};
@@ -371,7 +371,7 @@ TEST_CASE("type pack storage rejects invalid placements and shapes") {
                        {makeTransform("return", std::string("i32"))},
                        {makeCall("/return", {call})}));
     CHECK_FALSE(validateProgram(program, "/main", error));
-    CHECK(error.find("type-pack expansion is only supported in struct field declarations") !=
+    CHECK(error.find("type-pack local expansion does not accept default initializers") !=
           std::string::npos);
   }
 
@@ -413,6 +413,221 @@ TEST_CASE("type pack storage rejects invalid placements and shapes") {
     CHECK(error.find("recursive pack-expanded storage not supported") !=
           std::string::npos);
   }
+}
+
+TEST_CASE("type pack helper bindings expand parameters locals and return envelopes") {
+  auto makePackTransform = []() {
+    primec::Transform transform = makeTransform("Ts");
+    transform.isPackExpansion = true;
+    return transform;
+  };
+  auto makeTupleReturn = []() {
+    primec::Transform transform = makeTransform("return");
+    transform.templateArgs.push_back("Tuple<Ts...>");
+    return transform;
+  };
+  auto makeTupleCtor = [](std::vector<primec::Expr> args) {
+    primec::Expr ctor = makeCall("/Tuple", std::move(args));
+    ctor.isBraceConstructor = true;
+    ctor.templateArgs = {"Ts..."};
+    return ctor;
+  };
+
+  primec::Program program;
+  program.definitions.push_back(
+      makeDefinition("/UnitA", {makeTransform("struct")}, {}));
+  program.definitions.push_back(
+      makeDefinition("/UnitB", {makeTransform("struct")}, {}));
+  primec::Definition tuple =
+      makeDefinition("/Tuple",
+                     {makeTransform("struct")},
+                     {makeBinding("values", {makePackTransform()}, {})});
+  tuple.templateArgs = {"Ts"};
+  tuple.templateArgIsPack = {true};
+  program.definitions.push_back(std::move(tuple));
+
+  primec::Definition empty =
+      makeDefinition("/make_empty",
+                     {makeTupleReturn()},
+                     {makeCall("/return", {makeTupleCtor({})})});
+  empty.templateArgs = {"Ts"};
+  empty.templateArgIsPack = {true};
+  program.definitions.push_back(std::move(empty));
+
+  auto unitCtor = [](const std::string &typeName) {
+    primec::Expr ctor = makeCall(typeName);
+    ctor.isBraceConstructor = true;
+    return ctor;
+  };
+
+  primec::Definition single =
+      makeDefinition("/make_single",
+                     {makeTupleReturn()},
+                     {makeBinding("scratch", {makePackTransform()}, {}),
+                      makeCall("/return", {makeTupleCtor({makeName("__pack_values_0")})})},
+                     {makeBinding("values", {makePackTransform()}, {})});
+  single.templateArgs = {"Ts"};
+  single.templateArgIsPack = {true};
+  program.definitions.push_back(std::move(single));
+
+  primec::Definition pair =
+      makeDefinition("/make_pair",
+                     {makeTupleReturn()},
+                     {makeBinding("scratch", {makePackTransform()}, {}),
+                      makeCall("/return", {makeTupleCtor({makeName("__pack_values_0"),
+                                                          makeName("__pack_values_1")})})},
+                     {makeBinding("values", {makePackTransform()}, {})});
+  pair.templateArgs = {"Ts"};
+  pair.templateArgIsPack = {true};
+  program.definitions.push_back(std::move(pair));
+
+  primec::Expr emptyCall = makeCall("/make_empty");
+  primec::Expr singleCall = makeCall("/make_single", {unitCtor("/UnitA")});
+  singleCall.templateArgs = {"UnitA"};
+  primec::Expr pairCall = makeCall("/make_pair", {unitCtor("/UnitA"), unitCtor("/UnitB")});
+  pairCall.templateArgs = {"UnitA", "UnitB"};
+  program.definitions.push_back(
+      makeDefinition("/main",
+                     {makeTransform("return", std::string("i32"))},
+                     {makeBinding("empty", {makeTransform("auto")}, {emptyCall}),
+                      makeBinding("single", {makeTransform("auto")}, {singleCall}),
+                      makeBinding("pair", {makeTransform("auto")}, {pairCall}),
+                      makeCall("/return", {makeLiteral(0)})}));
+
+  std::string error;
+  primec::Semantics semantics;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  INFO(error);
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults));
+  CHECK(error.empty());
+
+  const primec::Definition *singleSpecialization = nullptr;
+  const primec::Definition *pairSpecialization = nullptr;
+  for (const auto &def : program.definitions) {
+    if (def.fullPath.rfind("/make_single__t", 0) == 0) {
+      singleSpecialization = &def;
+    } else if (def.fullPath.rfind("/make_pair__t", 0) == 0) {
+      pairSpecialization = &def;
+    }
+  }
+  REQUIRE(singleSpecialization != nullptr);
+  REQUIRE(pairSpecialization != nullptr);
+
+  REQUIRE(singleSpecialization->parameters.size() == 1);
+  CHECK(singleSpecialization->parameters[0].name == "__pack_values_0");
+  REQUIRE(singleSpecialization->statements.size() == 2);
+  CHECK(singleSpecialization->statements[0].name == "__pack_scratch_0");
+  REQUIRE(singleSpecialization->transforms.size() == 1);
+  REQUIRE(singleSpecialization->transforms[0].templateArgs.size() == 1);
+  CHECK(singleSpecialization->transforms[0].templateArgs[0].rfind("/Tuple__t", 0) == 0);
+
+  REQUIRE(pairSpecialization->parameters.size() == 2);
+  CHECK(pairSpecialization->parameters[0].name == "__pack_values_0");
+  CHECK(pairSpecialization->parameters[1].name == "__pack_values_1");
+  REQUIRE(pairSpecialization->statements.size() == 3);
+  CHECK(pairSpecialization->statements[0].name == "__pack_scratch_0");
+  CHECK(pairSpecialization->statements[1].name == "__pack_scratch_1");
+}
+
+TEST_CASE("type pack reflection helpers follow expanded field order") {
+  auto makePackTransform = []() {
+    primec::Transform transform = makeTransform("Ts");
+    transform.isPackExpansion = true;
+    return transform;
+  };
+  primec::Transform generateTransform = makeTransform("generate");
+  generateTransform.arguments = {"Clone", "CopyFrom"};
+
+  primec::Program program;
+  program.definitions.push_back(
+      makeDefinition("/UnitA", {makeTransform("struct")}, {}));
+  program.definitions.push_back(
+      makeDefinition("/UnitB", {makeTransform("struct")}, {}));
+  primec::Definition tuple =
+      makeDefinition("/Tuple",
+                     {makeTransform("struct"), makeTransform("reflect"), generateTransform},
+                     {makeBinding("values", {makePackTransform()}, {})});
+  tuple.templateArgs = {"Ts"};
+  tuple.templateArgIsPack = {true};
+  program.definitions.push_back(std::move(tuple));
+
+  auto unitCtor = [](const std::string &typeName) {
+    primec::Expr ctor = makeCall(typeName);
+    ctor.isBraceConstructor = true;
+    return ctor;
+  };
+
+  primec::Expr ctor = makeCall("/Tuple", {unitCtor("/UnitA"), unitCtor("/UnitB")});
+  ctor.isBraceConstructor = true;
+  ctor.templateArgs = {"UnitA", "UnitB"};
+  primec::Expr fieldCountCall = makeCall("/meta/field_count");
+  fieldCountCall.templateArgs = {"Tuple<UnitA, UnitB>"};
+  program.definitions.push_back(
+      makeDefinition("/main",
+                     {makeTransform("return", std::string("i32"))},
+                     {makeBinding("tuple", {makeTransform("auto")}, {ctor}),
+                      makeBinding("fieldCount", {makeTransform("i32")}, {fieldCountCall}),
+                      makeCall("/return", {makeLiteral(0)})}));
+
+  primec::SemanticProgram semanticProgram;
+  primec::Semantics semantics;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  std::string error;
+  INFO(error);
+  REQUIRE(semantics.validate(program,
+                             "/main",
+                             error,
+                             defaults,
+                             defaults,
+                             {},
+                             nullptr,
+                             false,
+                             &semanticProgram));
+  CHECK(error.empty());
+
+  const primec::Definition *tupleSpecialization = nullptr;
+  for (const auto &def : program.definitions) {
+    if (def.fullPath.rfind("/Tuple__t", 0) == 0 &&
+        def.templatePackBindings.size() == 1) {
+      tupleSpecialization = &def;
+      break;
+    }
+  }
+  REQUIRE(tupleSpecialization != nullptr);
+
+  std::vector<std::string> reflectedFields;
+  for (const auto &entry : semanticProgram.structFieldMetadata) {
+    if (entry.structPath == tupleSpecialization->fullPath) {
+      reflectedFields.push_back(entry.fieldName + ":" + entry.bindingTypeText);
+    }
+  }
+  REQUIRE(reflectedFields.size() == 2);
+  CHECK(reflectedFields[0].rfind("__pack_values_0:", 0) == 0);
+  CHECK(reflectedFields[0].find("UnitA") != std::string::npos);
+  CHECK(reflectedFields[1].rfind("__pack_values_1:", 0) == 0);
+  CHECK(reflectedFields[1].find("UnitB") != std::string::npos);
+
+  const primec::Definition *cloneHelper = nullptr;
+  const primec::Definition *copyFromHelper = nullptr;
+  for (const auto &def : program.definitions) {
+    if (def.fullPath == tupleSpecialization->fullPath + "/Clone") {
+      cloneHelper = &def;
+    } else if (def.fullPath == tupleSpecialization->fullPath + "/CopyFrom") {
+      copyFromHelper = &def;
+    }
+  }
+  REQUIRE(cloneHelper != nullptr);
+  REQUIRE(cloneHelper->returnExpr.has_value());
+  REQUIRE(cloneHelper->returnExpr->args.size() == 2);
+  CHECK(cloneHelper->returnExpr->args[0].name == "__pack_values_0");
+  CHECK(cloneHelper->returnExpr->args[1].name == "__pack_values_1");
+
+  REQUIRE(copyFromHelper != nullptr);
+  REQUIRE(copyFromHelper->statements.size() == 2);
+  REQUIRE(copyFromHelper->statements[0].args.size() == 2);
+  REQUIRE(copyFromHelper->statements[1].args.size() == 2);
+  CHECK(copyFromHelper->statements[0].args[0].name == "__pack_values_0");
+  CHECK(copyFromHelper->statements[1].args[0].name == "__pack_values_1");
 }
 
 TEST_CASE("implicit auto template inference for calls") {
