@@ -303,7 +303,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   should build the helper path through collection path helpers instead of direct
   map helper path concatenation; setup-type method-call synthetic fallback
   blocking and explicit vector-count map-target checks should derive map paths
-  through collection path helpers instead of direct map path strings;
+  through collection path helpers instead of direct map path strings; inference
+  base-kind map `tryAt`/`contains` call-name checks should derive slashless
+  canonical helper paths through collection path helpers instead of direct map
+  helper path strings;
   statement-expression map count/access target classification should reuse
   local experimental collection type and generated-specialization helpers
   instead of direct experimental map backing path text;

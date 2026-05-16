@@ -556,6 +556,18 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferenceBaseKindSource.find("normalized == \"std/collections/map\"") ==
         std::string::npos);
+  CHECK(inferenceBaseKindSource.find("collectionMemberPath(\"map\", \"tryAt\", false)") !=
+        std::string::npos);
+  CHECK(inferenceBaseKindSource.find("normalized == \"map/tryAt\"") ==
+        std::string::npos);
+  CHECK(inferenceBaseKindSource.find("normalized == \"std/collections/map/tryAt\"") ==
+        std::string::npos);
+  CHECK(inferenceBaseKindSource.find("collectionMemberPath(\"map\", \"contains\", false)") !=
+        std::string::npos);
+  CHECK(inferenceBaseKindSource.find("normalized == \"map/contains\"") ==
+        std::string::npos);
+  CHECK(inferenceBaseKindSource.find("normalized == \"std/collections/map/contains\"") ==
+        std::string::npos);
   CHECK(setupTypeMethodTargetSource.find(
             "isBuiltinCollectionTypeName(normalized, \"map\")") !=
         std::string::npos);

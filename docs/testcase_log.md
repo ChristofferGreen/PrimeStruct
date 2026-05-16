@@ -105,6 +105,17 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 21:03 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer inference base-kind helpers resolve parser-shaped canonical map result helpers" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: inference base-kind map tryAt/contains call-name checks now derive
+  slashless canonical helper paths through collection path helpers instead of
+  direct map helper path strings; the map surface inventory now observes 390
+  production traces and backing traces remain at 0.
 - 2026-05-16 20:59 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup type helper rejects explicit map helper return kinds same-path,ir lowerer setup type helper reports method call definition diagnostics from expressions" --no-skip`;

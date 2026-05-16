@@ -460,6 +460,9 @@ Task template:
   Setup-type method-call synthetic fallback blocking and explicit vector-count
   map-target checks now derive map paths through collection path helpers instead
   of direct map path strings.
+  Inference base-kind map `tryAt`/`contains` call-name checks now derive
+  slashless canonical helper paths through collection path helpers instead of
+  direct map helper path strings.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic
