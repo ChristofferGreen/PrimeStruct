@@ -786,12 +786,16 @@
         if (normalizedBase == "Reference" || normalizedBase == "Pointer") {
           return inferMapKindsFromTypeText(argText, keyKindOut, valueKindOut);
         }
+        const std::string experimentalMapType =
+            experimentalCollectionTypePath("map", "Map");
+        const std::string slashlessExperimentalMapType =
+            experimentalMapType.substr(1);
         const bool isMapBase =
             normalizedBase == "map" || normalizedBase == "/map" ||
             normalizedBase == "std/collections/map" ||
             normalizedBase == "/std/collections/map" ||
-            normalizedBase == "std/collections/experimental_map/Map" ||
-            normalizedBase == "/std/collections/experimental_map/Map";
+            normalizedBase == slashlessExperimentalMapType ||
+            normalizedBase == experimentalMapType;
         if (!isMapBase) {
           return false;
         }
@@ -948,9 +952,11 @@
           }
         }
       }
-      auto isExperimentalMapStructPath = [](const std::string &structPath) {
-        return structPath == "/std/collections/experimental_map/Map" ||
-               structPath.rfind("/std/collections/experimental_map/Map__", 0) == 0;
+      auto isExperimentalMapStructPath = [&](const std::string &structPath) {
+        const std::string experimentalMapType =
+            experimentalCollectionTypePath("map", "Map");
+        return structPath == experimentalMapType ||
+               structPath.rfind(experimentalMapType + "__", 0) == 0;
       };
       bool receiverUsesExperimentalMapStruct =
           isExperimentalMapStructPath(valuesIt->second.structTypeName);

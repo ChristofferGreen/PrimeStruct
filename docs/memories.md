@@ -269,7 +269,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   generated prefixes through a local storage-base helper instead of direct
   path text; collection expression lowering should derive experimental map
   backing member roots and generated `Map` prefixes through local collection
-  path helpers;
+  path helpers; inline call map-kind inference and experimental map receiver
+  classification should derive rooted, slashless, and generated experimental
+  map backing paths through local collection path helpers;
   generated collection struct classification should derive the canonical map
   `MapValue__*` prefix through `collectionTypePath("map")` instead of
   carrying a split-string map root.

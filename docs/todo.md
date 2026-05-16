@@ -2089,6 +2089,10 @@ Task template:
     - 2026-05-16: Collection expression lowering no longer hard-codes
       experimental map backing member roots or generated `Map` prefixes; it
       now derives them through local collection path helpers.
+    - 2026-05-16: Inline call map-kind inference and experimental map
+      receiver classification no longer hard-code rooted, slashless, or
+      generated experimental map backing paths; they now derive those paths
+      through local collection path helpers.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.
