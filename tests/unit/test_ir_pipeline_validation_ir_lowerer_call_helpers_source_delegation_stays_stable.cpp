@@ -450,7 +450,9 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(callResolutionSource.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.vector_helpers\")") !=
         std::string::npos);
-  CHECK(callResolutionSource.find("StdlibSurfaceId::CollectionsMapHelpers") !=
+  CHECK(callResolutionSource.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
         std::string::npos);
   CHECK(callResolutionSource.find("StdlibSurfaceId::CollectionsColumnarHelpers") !=
         std::string::npos);

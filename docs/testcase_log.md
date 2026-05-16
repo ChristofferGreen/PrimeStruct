@@ -1,6 +1,12 @@
 # Testcase Log
 
 ## Current Known Failures
+- `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable"`
+  still has stale source-lock assertions after the map/SoA cleanup. On
+  2026-05-16 it reported 31 failures for already-removed map builtin
+  resolved-path helpers, inline-dispatch map helper classifiers, and SoA
+  helper path strings. The map bridge-key assertion updated in the same run
+  did not fail.
 - `PrimeStruct_backend_ir_tests --test-case="semantics validator infer source delegation stays stable" --no-skip`
   has 15 stale SoA/experimental_soa_vector source-lock assertions after the
   SoA public-surface cleanup. The map-count inference assertions in that test
@@ -42,6 +48,22 @@
   `MapValue` surface constructor coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers keep exact-import vector and map bridge parity,ir lowerer bridge coverage uses published collection surface ids for lowered helper spellings"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` |
+  failures: none | notes: IR call resolution now recognizes the map helper
+  bridge surface through `collections.map_helpers` metadata instead of naming
+  `StdlibSurfaceId::CollectionsMapHelpers` directly; the map surface inventory
+  now observes 981 production traces and backing traces remain at 212.
+- 2026-05-16 local | fail-known | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable"` |
+  failures: 31 stale source-lock assertions | notes: the failures are the
+  known stale broad source-delegation lock for removed map/SoA helper strings;
+  the newly updated `collections.map_helpers` expectation was not among the
+  failures.
 - 2026-05-16 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;

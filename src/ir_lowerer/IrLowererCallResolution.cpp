@@ -119,8 +119,10 @@ bool isPublishedCollectionBridgeStdlibSurfaceId(std::optional<StdlibSurfaceId> s
   }
   const auto *vectorMetadata =
       findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
+  const auto *mapMetadata =
+      findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
   return (vectorMetadata != nullptr && *surfaceId == vectorMetadata->id) ||
-         *surfaceId == StdlibSurfaceId::CollectionsMapHelpers ||
+         (mapMetadata != nullptr && *surfaceId == mapMetadata->id) ||
          *surfaceId == StdlibSurfaceId::CollectionsColumnarHelpers;
 }
 

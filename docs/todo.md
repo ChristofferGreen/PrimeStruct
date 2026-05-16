@@ -1905,6 +1905,11 @@ Task template:
       rooted/canonical map helper paths to leading-slash candidates.
     - 2026-05-16: Emitter return inference no longer strips `map/` or
       `std/collections/map/` prefixes before explicit candidate construction.
+    - 2026-05-16: IR call resolution no longer names
+      `StdlibSurfaceId::CollectionsMapHelpers` directly when classifying
+      published bridge helper surfaces; it now resolves the map helper
+      surface through `collections.map_helpers` metadata like the vector
+      helper path.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.
