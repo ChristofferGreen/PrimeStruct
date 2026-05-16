@@ -93,9 +93,17 @@ bool isExperimentalMapTypeText(const std::string &typeText) {
       return false;
     }
     base = normalizeBindingTypeName(base);
-    if (base == "Map" || base == "/Map" ||
-        base == "std/collections/experimental_map/Map" ||
-        base == "/std/collections/experimental_map/Map") {
+    std::string normalizedBase = base;
+    if (!normalizedBase.empty() && normalizedBase.front() == '/') {
+      normalizedBase.erase(normalizedBase.begin());
+    }
+    const size_t leafStart = normalizedBase.find_last_of('/');
+    const std::string leaf = leafStart == std::string::npos
+                                 ? normalizedBase
+                                 : normalizedBase.substr(leafStart + 1);
+    if (leaf == "Map" &&
+        isExperimentalCollectionBackingTypeName(
+            "map", "Map", normalizedBase)) {
       std::vector<std::string> args;
       return splitTopLevelTemplateArgs(arg, args) && args.size() == 2;
     }
