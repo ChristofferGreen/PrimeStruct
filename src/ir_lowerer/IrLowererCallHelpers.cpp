@@ -28,10 +28,12 @@ bool isGeneratedSinglePathSegmentWithPrefix(std::string_view path, std::string_v
 bool isGeneratedStdlibCollectionStructPath(std::string_view path) {
   const std::string experimentalVectorTypePrefix =
       experimentalCollectionTypePath("vector", "Vector") + "__";
+  const std::string experimentalMapTypePrefix =
+      experimentalCollectionTypePath("map", "Map") + "__";
   const std::string mapValueTypePrefix =
       collectionTypePath("map") + "/MapValue__";
   return isSinglePathSegmentWithPrefix(path, experimentalVectorTypePrefix) ||
-         isSinglePathSegmentWithPrefix(path, "/std/collections/experimental_map/Map__") ||
+         isSinglePathSegmentWithPrefix(path, experimentalMapTypePrefix) ||
          isSinglePathSegmentWithPrefix(path, mapValueTypePrefix) ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__") ||
          isSinglePathSegmentWithPrefix(path, "/std/collections/internal_soa_storage/SoaColumn__") ||

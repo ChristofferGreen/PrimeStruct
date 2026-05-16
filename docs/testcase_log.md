@@ -60,6 +60,12 @@
   wrapper-returned setup-inference fixtures failed to resolve expected map
   access element kinds, while adjacent local-map and string map-reference
   lowerer setup-inference coverage still passes.
+- `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers dispatch inline calls with locals"`
+  has stale assertion-count coverage around explicit vector-count resolver
+  calls. On 2026-05-16 it failed with
+  `explicitVectorCountLocalResolveDefinitionCalls == 1` seeing `2`, while
+  adjacent call-helper struct classifier and bundled entry setup coverage
+  still passes.
 - `PrimeStruct_semantics_tests` inferred map-struct-field and
   uninitialized-storage constructor fixtures are stale after the map
   stdlib-ownership cutover. On 2026-05-16 the filters
@@ -83,6 +89,21 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 17:55 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers classify struct helpers and transforms,ir lowerer call helpers classify struct definitions,ir lowerer call helpers build bundled entry call setup"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` | failures: none |
+  notes: call-helper generated collection struct classification now builds the
+  experimental map backing prefix with `experimentalCollectionTypePath`; the
+  map surface inventory now observes 855 production traces and backing traces
+  now observe 100.
+- 2026-05-16 17:55 local | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers classify struct helpers and transforms,ir lowerer call helpers classify struct definitions,ir lowerer call helpers dispatch inline calls with locals"` |
+  failures: `ir lowerer call helpers dispatch inline calls with locals` |
+  notes: stale explicit vector-count resolver-call assertion-count drift;
+  reran adjacent struct classifier and bundled entry setup cases above.
 - 2026-05-16 17:53 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer result helpers resolve Result.map struct payload metadata,ir lowerer result helpers resolve function-returned map Result payload metadata,ir lowerer result helpers require semantic query facts for unresolved Result.map metadata"`;
