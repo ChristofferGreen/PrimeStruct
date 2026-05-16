@@ -222,6 +222,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   declared collection map type normalization should derive unspecialized and
   generated experimental map backing bases through
   `experimentalCollectionTypePath`;
+  IR setup method-target receiver classification should derive the
+  experimental map receiver path through `experimentalCollectionTypePath`;
   generated collection struct classification should derive the canonical map
   `MapValue__*` prefix through `collectionTypePath("map")` instead of
   carrying a split-string map root.
