@@ -396,6 +396,9 @@ Task template:
   `/map/<helper>` aliases for explicit stdlib map helper targets.
   Method-target resolution no longer prefers rooted `/map/<helper>`
   definitions or imports when choosing map method targets.
+  Removed-map body-argument target resolution no longer falls back from
+  canonical `/std/collections/map/<helper>` to rooted `/map/<helper>`
+  definitions.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic
