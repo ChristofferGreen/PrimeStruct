@@ -58,6 +58,16 @@
 
 ## Recent Test Runs
 - 2026-05-16 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical namespaced map access helpers accept experimental map values,stdlib namespaced map access helpers accept imported stdlib wrappers,collected diagnostics ignore imported canonical map access helper calls,explicit canonical map access helpers accept canonical map values"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` |
+  failures: none | notes: semantics binding map type recognition now builds
+  canonical map and `MapValue` paths through a local collection path helper
+  instead of spelling canonical map roots directly; the map surface inventory
+  now observes 967 production traces and backing traces remain at 210.
+- 2026-05-16 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer statement binding helper classifies variadic map parameters,ir lowerer statement binding helper preserves inferred borrowed map return metadata,ir lowerer statement binding helper keeps canonical map constructor value metadata"`;
   `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;

@@ -26,6 +26,19 @@ std::string experimentalCollectionTypePathLocal(std::string_view collectionName,
   return path;
 }
 
+std::string collectionTypePathLocal(std::string_view collectionName,
+                                    std::string_view typeName = {},
+                                    bool leadingSlash = false) {
+  std::string path = leadingSlash ? "/" : "";
+  path += "std/collections/";
+  path += std::string(collectionName);
+  if (!typeName.empty()) {
+    path += "/";
+    path += std::string(typeName);
+  }
+  return path;
+}
+
 bool isExperimentalCollectionTypeBaseLocal(const std::string &base,
                                            std::string_view collectionName,
                                            std::string_view typeName) {
@@ -197,13 +210,18 @@ bool validateBuiltinMapKeyType(const BindingInfo &binding,
 
 bool isMapCollectionTypeName(const std::string &name) {
   const std::string normalized = normalizeBindingTypeName(name);
+  const std::string mapRoot = collectionTypePathLocal("map");
+  const std::string rootedMapRoot = collectionTypePathLocal("map", {}, true);
+  const std::string mapValueRoot = collectionTypePathLocal("map", "MapValue");
+  const std::string rootedMapValueRoot =
+      collectionTypePathLocal("map", "MapValue", true);
   return normalized == "map" || normalized == "/map" ||
-         normalized == "std/collections/map" ||
-         normalized == "/std/collections/map" ||
-         normalized == "std/collections/map/MapValue" ||
-         normalized == "/std/collections/map/MapValue" ||
-         normalized.rfind("std/collections/map/MapValue__", 0) == 0 ||
-         normalized.rfind("/std/collections/map/MapValue__", 0) == 0 ||
+         normalized == mapRoot ||
+         normalized == rootedMapRoot ||
+         normalized == mapValueRoot ||
+         normalized == rootedMapValueRoot ||
+         normalized.rfind(mapValueRoot + "__", 0) == 0 ||
+         normalized.rfind(rootedMapValueRoot + "__", 0) == 0 ||
          normalized == "std/collections/experimental_map/Map" ||
          normalized == "/std/collections/experimental_map/Map";
 }

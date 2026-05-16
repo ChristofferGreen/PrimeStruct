@@ -1944,6 +1944,9 @@ Task template:
     - 2026-05-16: Statement binding helper map struct-path inference no
       longer spells the canonical `MapValue` root directly; it now builds the
       root through `collectionTypePath("map")`.
+    - 2026-05-16: Semantics binding map type recognition no longer spells
+      canonical map or `MapValue` roots directly; it now derives those strings
+      through a local collection path helper.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.
