@@ -66,8 +66,28 @@
   map uninitialized storage` failed with missing canonical map access helper
   or `init value type mismatch` diagnostics; adjacent explicit-target and
   canonical constructor-return coverage passes.
+- `PrimeStruct_misc_tests --test-case="uninitialized canonical map template arg keeps map key value diagnostics"`
+  is stale after the map stdlib-ownership cutover. On 2026-05-16 it
+  validated successfully instead of reporting
+  `uninitialized storage is not allowed in map key/value types`; adjacent
+  manual map uninitialized validation coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 17:07 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="uninitialized init validates map key/value types,canonical map template arg without uninitialized validates"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` |
+  failures: none | notes: statement init map type matching now uses the
+  shared experimental collection backing helper for generated map backing
+  paths; the map surface inventory now observes 930 production traces and
+  backing traces now observe 175.
+- 2026-05-16 17:06 local | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="uninitialized init validates map key/value types,uninitialized canonical map template arg keeps map key value diagnostics,canonical map template arg without uninitialized validates"` |
+  failures: `uninitialized canonical map template arg keeps map key value diagnostics`
+  | notes: stale manual diagnostic fixture now validates successfully; reran
+  the two adjacent passing cases above.
 - 2026-05-16 17:04 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="explicit canonical map access helpers accept canonical map values,canonical namespaced map access helpers accept experimental map values,stdlib namespaced map access helpers accept imported stdlib wrappers,stdlib canonical map access count shadow currently validates mixed canonical and alias returns"`;

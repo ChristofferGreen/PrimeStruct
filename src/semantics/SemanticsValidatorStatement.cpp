@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "MapConstructorHelpers.h"
 #include "SemanticsValidatorStatementLoopCountStep.h"
 
 #include <cctype>
@@ -42,6 +43,15 @@ std::string initValueTypeMismatchDiagnostic(const std::string &expectedTypePath,
            implicitMatrixQuaternionConversionDiagnostic(expectedTypePath, actualTypePath);
   }
   return "init value type mismatch";
+}
+
+bool isSpecializedExperimentalMapBackingPath(std::string typeName) {
+  typeName = normalizeBindingTypeName(typeName);
+  if (!typeName.empty() && typeName.front() == '/') {
+    typeName.erase(typeName.begin());
+  }
+  return isExperimentalCollectionBackingTypeName("map", "Map", typeName) &&
+         typeName.find("__") != std::string::npos;
 }
 
 } // namespace
@@ -151,11 +161,11 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
             return true;
           }
           std::string structPath = resolveStructTypePath(normalizedType, namespacePrefix, structNames_);
-          if (structPath.empty() && normalizedType.rfind("std/collections/experimental_map/Map__", 0) == 0) {
-            structPath = "/" + normalizedType;
-          } else if (structPath.empty() &&
-                     normalizedType.rfind("/std/collections/experimental_map/Map__", 0) == 0) {
+          if (structPath.empty() && isSpecializedExperimentalMapBackingPath(normalizedType)) {
             structPath = normalizedType;
+            if (!structPath.empty() && structPath.front() != '/') {
+              structPath.insert(structPath.begin(), '/');
+            }
           }
           return !structPath.empty() && extractExperimentalMapFieldTypesFromStructPath(structPath,
                                                                                        keyTypeOut,

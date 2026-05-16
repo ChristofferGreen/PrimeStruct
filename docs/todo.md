@@ -301,8 +301,9 @@ Task template:
   for generated map backing recognition, and Result helper map payload
   recognition now uses the same helper for generated map backing paths, and
   receiver-path map backing exclusions now use the same helper, and late
-  map-access receiver classification now uses the same helper. The remaining
-  production lowerer/emitter
+  map-access receiver classification now uses the same helper, and statement
+  init map type matching now uses the same helper. The remaining production
+  lowerer/emitter
   experimental-map traces
   are source-locked as temporary internal backing substrate by
   `test_stdlib_map_ownership.cpp`, and
