@@ -61,7 +61,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   validation could otherwise mirror to rooted `/map/*` candidates; collection
   access validation must also avoid treating rooted `/map/at*` resolved paths
   as canonical helper paths or recognizing slashless `map/at*_ref` names and
-  the `map` namespace prefix as canonical helper names.
+  the `map` namespace prefix as canonical helper names, and collection
+  return-kind inference must not grant rooted `/map/*` helpers builtin map
+  return kinds.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -75,7 +77,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `map/at*_ref` names as explicit map access helper classifiers; collection
   access validation no longer includes rooted `/map/at*` in its canonical
   resolved-path helper table and no longer recognizes slashless `map/at*_ref`
-  names or a `map` namespace prefix as canonical map access helper names.
+  names or a `map` namespace prefix as canonical map access helper names;
+  collection return-kind inference now only handles canonical
+  `/std/collections/map/*` helper paths.
 
 ### map-constructor-normalization-uses-public-path
 - Updated: 2026-05-16

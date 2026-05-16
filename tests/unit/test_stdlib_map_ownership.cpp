@@ -139,6 +139,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string inferStructReturnSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorInferStructReturn.cpp");
+  const std::string inferCollectionDispatchSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorInferCollectionDispatch.cpp");
   const std::string scalarPointerMemorySource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprScalarPointerMemory.cpp");
@@ -177,6 +180,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!callResolutionSource.empty());
   REQUIRE(!templateCoreSource.empty());
   REQUIRE(!inferStructReturnSource.empty());
+  REQUIRE(!inferCollectionDispatchSource.empty());
   REQUIRE(!scalarPointerMemorySource.empty());
   REQUIRE(!argumentValidationCollectionsSource.empty());
   REQUIRE(!collectionAccessValidationSource.empty());
@@ -256,6 +260,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(templateCoreSource.find("\"/map/entry\"") == std::string::npos);
   CHECK(templateCoreSource.find("\"/map/entry__\"") == std::string::npos);
   CHECK(inferStructReturnSource.find("\"/std/collections/map/\" + methodName, \"/map/\" + methodName") ==
+        std::string::npos);
+  CHECK(inferCollectionDispatchSource.find("resolvedPath.rfind(\"/map/\"") ==
+        std::string::npos);
+  CHECK(inferCollectionDispatchSource.find("resolvedPath == \"/map/at\"") ==
+        std::string::npos);
+  CHECK(inferCollectionDispatchSource.find("resolvedPath == \"/map/contains\"") ==
         std::string::npos);
   CHECK(scalarPointerMemorySource.find("isExplicitMapAccessHelperPath") ==
         std::string::npos);
