@@ -142,8 +142,7 @@ bool SemanticsValidator::buildParameters() {
         normalizedType.erase(normalizedType.begin());
       }
       return normalizedType == "map" || normalizedType == "std/collections/map" ||
-             normalizedType == "Map" || normalizedType == "std/collections/experimental_map/Map" ||
-             normalizedType.rfind("std/collections/experimental_map/Map__", 0) == 0;
+             isExperimentalCollectionBackingTypeName("map", "Map", normalizedType);
     };
     auto typeTextCarriesExperimentalMapValue = [&](const std::string &typeText) {
       if (typeTextIsExperimentalMapValue(typeText)) {

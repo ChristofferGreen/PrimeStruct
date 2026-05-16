@@ -71,8 +71,29 @@
   validated successfully instead of reporting
   `uninitialized storage is not allowed in map key/value types`; adjacent
   manual map uninitialized validation coverage passes.
+- `PrimeStruct_semantics_tests --test-case="helper-wrapped map constructors accept explicit experimental map parameters"`
+  is stale after the map stdlib-ownership cutover. On 2026-05-16 it failed
+  with `argument type mismatch for /scoreValues parameter values: expected
+  map<string, i32> got /std/collections/map/MapValue__...`; adjacent explicit
+  experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 17:47 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib namespaced map constructor accepts explicit experimental map parameters,stdlib namespaced map constructor keeps mismatch diagnostics on explicit experimental map parameters,canonical namespaced map access helpers accept experimental map values"`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-case="canonical map surface owns standalone stdlib implementation,experimental map production traces are classified as backing substrate"`;
+  `python3 scripts/check_map_surface_trace_inventory.py --root .`;
+  `python3 scripts/check_map_backing_traces.py --root .` |
+  failures: none | notes: build-parameter experimental map value detection
+  now uses the shared experimental collection backing helper; the map surface
+  inventory now observes 885 production traces and backing traces now observe
+  130.
+- 2026-05-16 17:46 local | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib namespaced map constructor accepts explicit experimental map parameters,stdlib namespaced map constructor keeps mismatch diagnostics on explicit experimental map parameters,helper-wrapped map constructors accept explicit experimental map parameters,canonical namespaced map access helpers accept experimental map values"` |
+  failures: `helper-wrapped map constructors accept explicit experimental map parameters`
+  | notes: stale helper-wrapped explicit experimental parameter fixture now
+  reports a `MapValue__*` mismatch after the stdlib-owned map cutover; reran
+  the adjacent non-stale cases above.
 - 2026-05-16 17:44 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="map pre-dispatch inference keeps rooted and canonical helper paths isolated,explicit canonical map access helpers accept canonical map values,explicit canonical map parameter keeps builtin key diagnostics,canonical namespaced map access helpers accept experimental map values"`;
