@@ -51,8 +51,7 @@ bool isVectorTypeName(const std::string &typeName) {
 }
 
 bool isBuiltinMapTypeName(const std::string &typeName) {
-  return typeName == "map" || typeName == "/map" || typeName == "std/collections/map" ||
-         typeName == "/std/collections/map";
+  return isBuiltinCollectionTypeName(typeName, "map");
 }
 
 bool isExperimentalMapTypeName(const std::string &typeName) {

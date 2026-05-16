@@ -436,6 +436,8 @@ Task template:
   Uninitialized-struct inference now recognizes explicit map args-pack access
   through the published map-helper surface instead of direct rooted/canonical map
   access strings.
+  Struct-slot layout now recognizes builtin map type names through the shared
+  collection classifier instead of direct rooted/canonical map type strings.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic

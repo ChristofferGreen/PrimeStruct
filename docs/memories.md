@@ -283,7 +283,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   builtin/experimental collection classifiers instead of local rooted/canonical
   map type strings; uninitialized-struct inference should recognize explicit map
   args-pack access through the published map-helper surface instead of direct
-  rooted/canonical map access strings;
+  rooted/canonical map access strings; struct-slot layout should recognize
+  builtin map type names through the shared collection classifier instead of
+  direct rooted/canonical map type strings;
   statement-expression map count/access target classification should reuse
   local experimental collection type and generated-specialization helpers
   instead of direct experimental map backing path text;
