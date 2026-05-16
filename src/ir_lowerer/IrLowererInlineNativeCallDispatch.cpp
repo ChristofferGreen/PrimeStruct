@@ -87,25 +87,6 @@ std::string resolveInlineCallPathWithoutFallbackProbes(const Expr &expr) {
   return expr.name;
 }
 
-bool isExplicitSamePathPublishedMapHelperCall(const Expr &expr,
-                                              const std::string &resolvedPath) {
-  if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
-    return false;
-  }
-  const std::string rawPath = resolveInlineCallPathWithoutFallbackProbes(expr);
-  if (rawPath.empty() || rawPath.front() != '/') {
-    return false;
-  }
-  if (!isCanonicalPublishedStdlibSurfaceHelperPath(
-          rawPath, StdlibSurfaceId::CollectionsMapHelpers) ||
-      !isCanonicalPublishedStdlibSurfaceHelperPath(
-          resolvedPath, StdlibSurfaceId::CollectionsMapHelpers)) {
-    return false;
-  }
-  return normalizeCollectionHelperPath(rawPath) ==
-         normalizeCollectionHelperPath(resolvedPath);
-}
-
 bool isSemanticBarePublishedMapHelperCall(const Expr &expr,
                                           std::string_view helperName) {
   if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.semanticNodeId == 0 ||
@@ -218,18 +199,6 @@ bool prefersBuiltinCountFallbackOverRemovedShadow(
   return false;
 }
 
-[[maybe_unused]] bool matchesInlineMapHelperFamily(std::string_view requestedHelperName,
-                                                   std::string_view resolvedHelperName) {
-  if (requestedHelperName == resolvedHelperName) {
-    return true;
-  }
-  return resolvedHelperName == std::string(requestedHelperName) + "_ref";
-}
-
-[[maybe_unused]] bool isInlineMapBuiltinHelperName(std::string_view helperName) {
-  return helperName == "insert" || helperName == "insert_ref";
-}
-
 bool keepsBuiltinInlineReturnForPublishedMapHelper(std::string_view helperName,
                                                    const Definition &callee) {
   std::string declaredReturnType;
@@ -282,126 +251,6 @@ bool keepsBuiltinInlineReturnForPublishedVectorHelper(std::string_view helperNam
            declaredReturnType == "f64" || declaredReturnType == "string";
   }
   return true;
-}
-
-[[maybe_unused]] bool prefersPublishedMapHelperDefinition(const Expr &expr,
-                                                          std::string_view helperName,
-                                                          const Definition &callee) {
-  if (!expr.isMethodCall) {
-    if (isSemanticBarePublishedMapHelperCall(expr, helperName)) {
-      return true;
-    }
-    const std::string rawPath = resolveInlineCallPathWithoutFallbackProbes(expr);
-    const bool isExplicitCanonicalMapHelperPath =
-        isCanonicalPublishedStdlibSurfaceHelperPath(
-            rawPath, StdlibSurfaceId::CollectionsMapHelpers);
-    if (isExplicitCanonicalMapHelperPath &&
-        (helperName == "count" || helperName == "count_ref" ||
-         helperName == "contains" || helperName == "contains_ref" ||
-         helperName == "tryAt" || helperName == "tryAt_ref" ||
-         helperName == "at" || helperName == "at_ref" ||
-         helperName == "at_unsafe" || helperName == "at_unsafe_ref")) {
-      return true;
-    }
-    if (isExplicitSamePathPublishedMapHelperCall(expr, callee.fullPath)) {
-      return true;
-    }
-    if ((helperName == "at" || helperName == "at_ref" ||
-         helperName == "at_unsafe" || helperName == "at_unsafe_ref") &&
-        !expr.args.empty() && expr.args.front().kind == Expr::Kind::Call) {
-      return true;
-    }
-    return false;
-  }
-  if (helperName == "count" || helperName == "count_ref") {
-    return true;
-  }
-  if ((helperName == "contains" || helperName == "contains_ref" ||
-       helperName == "tryAt" || helperName == "tryAt_ref" ||
-       helperName == "at" || helperName == "at_ref" ||
-       helperName == "at_unsafe" || helperName == "at_unsafe_ref") &&
-      !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name) {
-    return true;
-  }
-  return false;
-}
-
-bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee) {
-  (void)expr;
-  (void)callee;
-  return false;
-#if 0
-  std::string resolvedHelperName;
-  const bool hasPublishedResolvedHelper =
-      resolvePublishedInlineMapHelperName(callee.fullPath, resolvedHelperName);
-  if (!expr.isMethodCall) {
-    const std::string scopedExprPath = resolveInlineCallPathWithoutFallbackProbes(expr);
-    if (prefersPublishedMapHelperDefinition(expr, resolvedHelperName, callee)) {
-      return false;
-    }
-    if (isExplicitMapContainsOrTryAtMethodPath(scopedExprPath) &&
-        normalizeCollectionHelperPath(scopedExprPath) ==
-            normalizeCollectionHelperPath(callee.fullPath)) {
-      return false;
-    }
-    std::string aliasName;
-    std::string normalizedName = scopedExprPath;
-    if (!normalizedName.empty() && normalizedName.front() == '/') {
-      normalizedName.erase(normalizedName.begin());
-    }
-    std::string accessName;
-    if (getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2) {
-      return hasPublishedResolvedHelper &&
-             (resolvedHelperName == "at" || resolvedHelperName == "at_ref" ||
-              resolvedHelperName == "at_unsafe" ||
-              resolvedHelperName == "at_unsafe_ref");
-    }
-    if (resolveMapHelperAliasName(expr, aliasName)) {
-      const size_t expectedArgCount =
-          aliasName == "count" ? 1u : (aliasName == "insert" ? 3u : 2u);
-      return hasPublishedResolvedHelper &&
-             expr.args.size() == expectedArgCount &&
-             matchesInlineMapHelperFamily(aliasName, resolvedHelperName);
-    }
-    if (normalizedName == "contains" && expr.args.size() == 2) {
-      return hasPublishedResolvedHelper &&
-             matchesInlineMapHelperFamily("contains", resolvedHelperName);
-    }
-    if (normalizedName == "tryAt" && expr.args.size() == 2) {
-      return hasPublishedResolvedHelper &&
-             matchesInlineMapHelperFamily("tryAt", resolvedHelperName);
-    }
-    if (normalizedName == "count" && expr.args.size() == 1) {
-      return hasPublishedResolvedHelper &&
-             matchesInlineMapHelperFamily("count", resolvedHelperName);
-    }
-    if (normalizedName == "insert" && expr.args.size() == 3) {
-      return hasPublishedResolvedHelper &&
-             matchesInlineMapHelperFamily("insert", resolvedHelperName);
-    }
-    return false;
-  }
-  if (hasPublishedResolvedHelper && isInlineMapBuiltinHelperName(resolvedHelperName)) {
-    if (prefersPublishedMapHelperDefinition(expr, resolvedHelperName, callee)) {
-      return false;
-    }
-    if (!keepsBuiltinInlineReturnForPublishedMapHelper(resolvedHelperName, callee)) {
-      return false;
-    }
-    return true;
-  }
-  const size_t slash = callee.fullPath.find_last_of('/');
-  if (slash == std::string::npos || slash == 0) {
-    return false;
-  }
-  const std::string helperName =
-      canonicalInlineMapHelperName(callee.fullPath.substr(slash + 1));
-  const std::string receiverPath = callee.fullPath.substr(0, slash);
-  if (!isExperimentalMapStructTypePath(receiverPath)) {
-    return false;
-  }
-  return isInlineMapBuiltinHelperName(helperName);
-#endif
 }
 
 bool isTypeNamespaceMethodCallForInlineEmit(const Expr &callExpr,
@@ -751,11 +600,6 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
         (isSemanticBarePreferredMapHelperDefinitionCall(expr, *directCallee) ||
          isBareDirectWrapperMapAccessDefinitionCall(expr) ||
          isExplicitSamePathMapCountLikeDefinitionCall(expr, *directCallee))) {
-      if (isCollectionAccessReceiverExpr && !expr.args.empty() &&
-          isCollectionAccessReceiverExpr(expr.args.front()) &&
-          isMapBuiltinInlinePath(expr, *directCallee)) {
-        return InlineCallDispatchResult::NotHandled;
-      }
       const auto emitResult = emitResolvedInlineDefinitionCall(
           expr, directCallee, emitInlineDefinitionCall, error);
       if (emitResult == ResolvedInlineCallResult::Emitted) {
@@ -801,11 +645,6 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
           isInternalSoaMetadataHelperPath(callee->fullPath)) {
         return InlineCallDispatchResult::NotHandled;
       }
-      if (isCollectionAccessReceiverExpr && !expr.args.empty() &&
-          isCollectionAccessReceiverExpr(expr.args.front()) &&
-          isMapBuiltinInlinePath(expr, *callee)) {
-        return InlineCallDispatchResult::NotHandled;
-      }
       const auto emitResult = emitResolvedInlineDefinitionCall(
           expr, callee, emitInlineDefinitionCall, error);
       if (emitResult == ResolvedInlineCallResult::Emitted) {
@@ -826,11 +665,6 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
           directCallee != nullptr ? directCallee : resolveDefinitionCall(expr)) {
     if (expr.args.size() == 1 &&
         isInternalSoaMetadataHelperPath(callee->fullPath)) {
-      return InlineCallDispatchResult::NotHandled;
-    }
-    if (isCollectionAccessReceiverExpr && !expr.args.empty() &&
-        isCollectionAccessReceiverExpr(expr.args.front()) &&
-        isMapBuiltinInlinePath(expr, *callee)) {
       return InlineCallDispatchResult::NotHandled;
     }
     const auto emitResult = emitResolvedInlineDefinitionCall(
