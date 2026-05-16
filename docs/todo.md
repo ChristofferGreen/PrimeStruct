@@ -289,7 +289,9 @@ Task template:
   roots through collection path helpers instead of split-string map roots, and
   lowerer fallback setup plus struct-layout generated map classifiers now
   derive experimental map backing paths through shared collection helpers
-  instead of direct backing path roots. The remaining production lowerer/emitter
+  instead of direct backing path roots, and uninitialized-struct specialized
+  map detection now derives generated experimental map backing recognition
+  through the same helper. The remaining production lowerer/emitter
   experimental-map traces
   are source-locked as temporary internal backing substrate by
   `test_stdlib_map_ownership.cpp`, and

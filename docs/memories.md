@@ -173,7 +173,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   normalization should derive canonical `MapValue` roots through collection
   path helpers instead of split-string map roots; lowerer fallback setup and
   struct-layout generated map classifiers should derive experimental map
-  backing paths through shared collection helpers; generated collection struct
+  backing paths through shared collection helpers; uninitialized-struct
+  specialized map detection should use the same helper for generated
+  experimental map backing paths; generated collection struct
   classification should derive the canonical map `MapValue__*` prefix through
   `collectionTypePath("map")` instead of carrying a split-string map root.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated

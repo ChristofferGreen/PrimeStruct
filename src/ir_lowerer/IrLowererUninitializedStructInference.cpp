@@ -22,7 +22,8 @@ bool isSpecializedExperimentalMapStructPath(const std::string &typeText) {
   if (!normalized.empty() && normalized.front() != '/') {
     normalized.insert(normalized.begin(), '/');
   }
-  return normalized.rfind("/std/collections/experimental_map/Map__", 0) == 0;
+  return isExperimentalCollectionTypeName(normalized, "map", "Map") &&
+         normalized.find("__") != std::string::npos;
 }
 
 bool isBuiltinVectorTypeName(const std::string &typeName) {
