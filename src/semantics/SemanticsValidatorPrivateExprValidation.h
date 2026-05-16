@@ -517,12 +517,8 @@
       ExprMethodCompatibilitySetup &setupOut);
   struct ExprCollectionDispatchSetup {
     bool isNamespacedVectorHelperCall = false;
-    bool isStdNamespacedMapCountCall = false;
     bool isNamespacedMapHelperCall = false;
     std::string namespacedHelper;
-    bool isNamespacedMapCountCall = false;
-    bool isUnnamespacedMapCountFallbackCall = false;
-    bool isResolvedMapCountCall = false;
     bool isNamespacedVectorCapacityCall = false;
     bool isDirectStdNamespacedVectorCountWrapperMapTarget = false;
     bool isStdNamespacedVectorAccessCall = false;
@@ -591,15 +587,9 @@
   struct ExprCollectionCountCapacityDispatchContext {
     bool isNamespacedVectorHelperCall = false;
     std::string namespacedHelper;
-    bool isStdNamespacedMapCountCall = false;
-    bool isNamespacedMapCountCall = false;
-    bool isUnnamespacedMapCountFallbackCall = false;
-    bool isResolvedMapCountCall = false;
     bool isNamespacedVectorCapacityCall = false;
     bool isDirectStdNamespacedVectorCountWrapperMapTarget = false;
-    bool shouldBuiltinValidateBareMapCountCall = false;
     std::function<bool(const Expr &)> resolveMapTarget;
-    std::function<bool(const Expr &)> isIndexedArgsPackMapReceiverTarget;
     std::function<bool(const Expr &)> isArrayNamespacedVectorCountCompatibilityCall;
     std::function<bool(const std::string &, Expr &)> tryRewriteBareVectorHelperCall;
     std::function<void(const Expr &, std::string &, bool &, bool)> promoteCapacityToBuiltinValidation;

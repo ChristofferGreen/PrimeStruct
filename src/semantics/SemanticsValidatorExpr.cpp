@@ -661,8 +661,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
     ExprDispatchBootstrap dispatchBootstrap;
     prepareExprDispatchBootstrap(params, locals, dispatchBootstrap);
-    const bool shouldBuiltinValidateBareMapCountCall =
-        shouldBuiltinValidateCurrentMapWrapperHelper("count");
     const bool shouldBuiltinValidateBareMapContainsCall =
         shouldBuiltinValidateCurrentMapWrapperHelper("contains");
     const bool shouldBuiltinValidateBareMapTryAtCall =
@@ -1008,30 +1006,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         collectionDispatchSetup.isNamespacedVectorHelperCall;
     collectionCountCapacityDispatchContext.namespacedHelper =
         collectionDispatchSetup.namespacedHelper;
-    collectionCountCapacityDispatchContext.isStdNamespacedMapCountCall =
-        collectionDispatchSetup.isStdNamespacedMapCountCall;
-    collectionCountCapacityDispatchContext.isNamespacedMapCountCall =
-        collectionDispatchSetup.isNamespacedMapCountCall;
-    collectionCountCapacityDispatchContext
-        .isUnnamespacedMapCountFallbackCall =
-        collectionDispatchSetup.isUnnamespacedMapCountFallbackCall;
-    collectionCountCapacityDispatchContext.isResolvedMapCountCall =
-        collectionDispatchSetup.isResolvedMapCountCall;
     collectionCountCapacityDispatchContext.isNamespacedVectorCapacityCall =
         collectionDispatchSetup.isNamespacedVectorCapacityCall;
     collectionCountCapacityDispatchContext
         .isDirectStdNamespacedVectorCountWrapperMapTarget =
         collectionDispatchSetup.isDirectStdNamespacedVectorCountWrapperMapTarget;
-    collectionCountCapacityDispatchContext.shouldBuiltinValidateBareMapCountCall =
-        shouldBuiltinValidateBareMapCountCall;
     collectionCountCapacityDispatchContext.resolveMapTarget =
         dispatchBootstrap.resolveMapTarget;
-    collectionCountCapacityDispatchContext
-        .isIndexedArgsPackMapReceiverTarget =
-        [&](const Expr &target) {
-          return this->isIndexedArgsPackMapReceiverTarget(
-              target, dispatchBootstrap.dispatchResolvers);
-        };
     collectionCountCapacityDispatchContext
         .isArrayNamespacedVectorCountCompatibilityCall =
         [&](const Expr &target) {

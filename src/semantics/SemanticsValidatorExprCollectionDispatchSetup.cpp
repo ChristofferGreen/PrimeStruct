@@ -38,25 +38,12 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
       getNamespacedCollectionHelperName(expr, namespacedCollection, setupOut.namespacedHelper);
   setupOut.isNamespacedVectorHelperCall =
       isNamespacedCollectionHelperCall && namespacedCollection == "vector";
-  setupOut.isStdNamespacedMapCountCall =
-      !expr.isMethodCall &&
-      (resolveCalleePath(expr) == "/std/collections/map/count" ||
-       resolveCalleePath(expr) == "/std/collections/map/count_ref");
   setupOut.isNamespacedMapHelperCall =
       isNamespacedCollectionHelperCall && namespacedCollection == "map";
   const std::string directRemovedMapCompatibilityPath =
       !expr.isMethodCall
           ? this->directMapHelperCompatibilityPath(expr, params, locals, dispatchResolverAdapters)
           : std::string();
-  const bool isMapNamespacedCountCompatibilityCall =
-      directRemovedMapCompatibilityPath == "/map/count";
-  setupOut.isNamespacedMapCountCall =
-      !expr.isMethodCall && setupOut.isNamespacedMapHelperCall &&
-      (setupOut.namespacedHelper == "count" ||
-       setupOut.namespacedHelper == "count_ref") &&
-      !setupOut.isStdNamespacedMapCountCall &&
-      !isMapNamespacedCountCompatibilityCall &&
-      !hasDefinitionPath(resolved);
 
   auto resolveMapTarget = [&](const Expr &target) -> bool {
     std::string keyType;
@@ -125,13 +112,6 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
           hasVisibleCanonicalVectorHelperPath(
               canonicalVectorCompatibilityHelperPathOrFallback("capacity")));
 
-  setupOut.isUnnamespacedMapCountFallbackCall =
-      !expr.isMethodCall &&
-      this->isUnnamespacedMapCountBuiltinFallbackCall(expr, params, locals, dispatchResolverAdapters);
-  setupOut.isResolvedMapCountCall =
-      !expr.isMethodCall && resolved == "/map/count" &&
-      !isMapNamespacedCountCompatibilityCall &&
-      !setupOut.isUnnamespacedMapCountFallbackCall;
   setupOut.isNamespacedVectorCapacityCall =
       !expr.isMethodCall && !callsStdNamespacedVectorCapacityHelper &&
       setupOut.isNamespacedVectorHelperCall && setupOut.namespacedHelper == "capacity" &&
