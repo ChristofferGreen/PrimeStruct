@@ -8,7 +8,11 @@ bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind(
     const Expr &receiverExpr,
     const BuiltinCollectionDispatchResolvers &resolvers,
     ReturnKind &kindOut) const {
-  if (resolvedPath.rfind("/std/collections/map/", 0) == 0) {
+  std::string resolvedMapHelperName;
+  if (resolvePublishedCollectionHelperResolvedPath(
+          resolvedPath,
+          StdlibSurfaceId::CollectionsMapHelpers,
+          resolvedMapHelperName)) {
     auto declaredReturnKind = [](const Definition &definition,
                                  ReturnKind &declaredKindOut) {
       for (const Transform &transform : definition.transforms) {
@@ -64,8 +68,8 @@ bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind(
     kindOut = ReturnKind::Int;
     return true;
   }
-  if (resolvedPath == "/std/collections/map/contains" ||
-      resolvedPath == "/std/collections/map/contains_ref") {
+  if (resolvedMapHelperName == "contains" ||
+      resolvedMapHelperName == "contains_ref") {
     kindOut = ReturnKind::Bool;
     return true;
   }
@@ -119,9 +123,10 @@ bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind(
     }
     return false;
   }
-  if (resolvedPath == "/std/collections/map/at" || resolvedPath == "/std/collections/map/at_unsafe" ||
-      resolvedPath == "/std/collections/map/at_ref" ||
-      resolvedPath == "/std/collections/map/at_unsafe_ref") {
+  if (resolvedMapHelperName == "at" ||
+      resolvedMapHelperName == "at_unsafe" ||
+      resolvedMapHelperName == "at_ref" ||
+      resolvedMapHelperName == "at_unsafe_ref") {
     std::string keyType;
     std::string valueType;
     if ((resolvers.resolveMapTarget != nullptr &&
@@ -150,9 +155,16 @@ bool SemanticsValidator::resolveBuiltinCollectionAccessCallReturnKind(
   std::string builtinName;
   if (!getBuiltinArrayAccessName(callExpr, builtinName)) {
     const std::string resolvedPath = resolveCalleePath(callExpr);
-    if (resolvedPath == "/std/collections/map/at_ref") {
+    std::string resolvedMapHelperName;
+    if (!resolvePublishedCollectionHelperResolvedPath(
+            resolvedPath,
+            StdlibSurfaceId::CollectionsMapHelpers,
+            resolvedMapHelperName)) {
+      return false;
+    }
+    if (resolvedMapHelperName == "at_ref") {
       builtinName = "at_ref";
-    } else if (resolvedPath == "/std/collections/map/at_unsafe_ref") {
+    } else if (resolvedMapHelperName == "at_unsafe_ref") {
       builtinName = "at_unsafe_ref";
     } else {
       return false;
