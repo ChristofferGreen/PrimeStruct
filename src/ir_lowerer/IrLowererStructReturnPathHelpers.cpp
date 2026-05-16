@@ -153,8 +153,10 @@ std::string normalizeCollectionMethodName(std::string methodName) {
   const std::string arrayPrefix = "array/";
   const std::string stdVectorPrefix =
       collectionMemberRoot("vector", false);
-  const std::string mapPrefix = "map/";
-  const std::string stdMapPrefix = "std/collections/map/";
+  const std::string mapPrefix =
+      normalizeBuiltinCollectionStructPath("map").substr(1) + "/";
+  const std::string stdMapPrefix =
+      collectionMemberRoot("map", false);
   if (methodName.rfind(vectorPrefix, 0) == 0) {
     return methodName.substr(vectorPrefix.size());
   }
@@ -239,13 +241,17 @@ std::vector<std::string> collectionMethodPathCandidates(const std::string &recei
     if (!normalizedRawMethodName.empty() && normalizedRawMethodName.front() == '/') {
       normalizedRawMethodName.erase(normalizedRawMethodName.begin());
     }
-    if (normalizedRawMethodName.rfind("map/", 0) == 0) {
-      return {"/map/" + methodName};
+    const std::string mapPrefix =
+        normalizeBuiltinCollectionStructPath("map").substr(1) + "/";
+    const std::string stdMapPrefix =
+        collectionMemberRoot("map", false);
+    if (normalizedRawMethodName.rfind(mapPrefix, 0) == 0) {
+      return {normalizeBuiltinCollectionStructPath("map") + "/" + methodName};
     }
-    if (normalizedRawMethodName.rfind("std/collections/map/", 0) == 0) {
-      return {"/std/collections/map/" + methodName};
+    if (normalizedRawMethodName.rfind(stdMapPrefix, 0) == 0) {
+      return {collectionMemberPath("map", methodName)};
     }
-    return {"/std/collections/map/" + methodName};
+    return {collectionMemberPath("map", methodName)};
   }
   return {receiverStruct + "/" + methodName};
 }
@@ -268,8 +274,9 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
   if (!normalizedPath.empty() && normalizedPath.front() != '/') {
     if (normalizedPath.rfind("array/", 0) == 0 ||
         normalizedPath.rfind(normalizeBuiltinCollectionStructPath("vector").substr(1) + "/", 0) == 0 ||
-        normalizedPath.rfind(collectionMemberRoot("vector", false), 0) == 0 || normalizedPath.rfind("map/", 0) == 0 ||
-        normalizedPath.rfind("std/collections/map/", 0) == 0) {
+        normalizedPath.rfind(collectionMemberRoot("vector", false), 0) == 0 ||
+        normalizedPath.rfind(normalizeBuiltinCollectionStructPath("map").substr(1) + "/", 0) == 0 ||
+        normalizedPath.rfind(collectionMemberRoot("map", false), 0) == 0) {
       normalizedPath.insert(normalizedPath.begin(), '/');
     }
   }

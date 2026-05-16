@@ -249,6 +249,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererSetupTypeMethodTargetHelpers.cpp");
   const std::string setupTypeMethodCallSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererSetupTypeMethodCallResolution.cpp");
+  const std::string lowererStructReturnPathSource =
+      readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererStructReturnPathHelpers.cpp");
 
   REQUIRE(!mapSource.empty());
   REQUIRE(!experimentalSource.empty());
@@ -302,6 +304,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!inferenceBaseKindSource.empty());
   REQUIRE(!setupTypeMethodTargetSource.empty());
   REQUIRE(!setupTypeMethodCallSource.empty());
+  REQUIRE(!lowererStructReturnPathSource.empty());
 
   CHECK(mapSource.find("import /std/collections/internal_map/*") == std::string::npos);
   CHECK(mapSource.find("import /std/collections/internal_vector/*") != std::string::npos);
@@ -392,6 +395,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inferStructReturnHelpersSource.find("isExplicitMapAccessStructReturnCompatibilityCall") ==
         std::string::npos);
   CHECK(inferStructReturnHelpersSource.find("normalized == \"map/at\"") ==
+        std::string::npos);
+  CHECK(lowererStructReturnPathSource.find("const std::string mapPrefix = \"map/\"") ==
+        std::string::npos);
+  CHECK(lowererStructReturnPathSource.find("const std::string stdMapPrefix = \"std/collections/map/\"") ==
+        std::string::npos);
+  CHECK(lowererStructReturnPathSource.find("collectionMemberPath(\"map\", methodName)") !=
+        std::string::npos);
+  CHECK(lowererStructReturnPathSource.find("return {\"/std/collections/map/\" + methodName}") ==
         std::string::npos);
   CHECK(inferMethodResolutionSource.find("joinMethodTarget(\"/std/collections/map\", helperSuffix)") ==
         std::string::npos);

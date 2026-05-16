@@ -306,7 +306,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   through collection path helpers instead of direct map path strings; inference
   base-kind map `tryAt`/`contains` call-name checks should derive slashless
   canonical helper paths through collection path helpers instead of direct map
-  helper path strings;
+  helper path strings; lowerer struct-return map helper candidate paths should
+  derive rooted and canonical prefixes through collection path helpers instead
+  of direct map helper path strings;
   statement-expression map count/access target classification should reuse
   local experimental collection type and generated-specialization helpers
   instead of direct experimental map backing path text;

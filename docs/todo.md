@@ -463,6 +463,9 @@ Task template:
   Inference base-kind map `tryAt`/`contains` call-name checks now derive
   slashless canonical helper paths through collection path helpers instead of
   direct map helper path strings.
+  Lowerer struct-return map helper candidate paths now derive rooted and
+  canonical prefixes through collection path helpers instead of direct map
+  helper path strings.
   SoA public helper, constructor, import-alias, field-view, and conversion
   metadata now lives in
   `stdlib/std/collections/surfaces.psmeta` and is consumed through the generic

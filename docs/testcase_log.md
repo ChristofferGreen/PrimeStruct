@@ -105,6 +105,23 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-16 21:07 local | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer struct return helpers keep bare map access canonical forwarding,ir lowerer struct return helpers keep canonical slash-path map access forwarding,ir lowerer struct return helpers keep canonical map access call forwarding,ir lowerer struct return helpers reject map access compatibility call forwarding,ir lowerer struct return helpers reject map tryAt compatibility call forwarding" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: lowerer struct-return map helper candidate paths now derive rooted
+  and canonical prefixes through collection path helpers instead of direct map
+  helper path strings; the map surface inventory now observes 381 production
+  traces and backing traces remain at 0.
+- 2026-05-16 21:06 local | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`
+  | failures: `canonical map surface owns standalone stdlib implementation` |
+  notes: first source-lock assertion checked the semantic struct-return source
+  instead of the lowerer struct-return helper source; the follow-up run above
+  passed after adding the correct lowerer source fixture.
 - 2026-05-16 21:03 local | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer inference base-kind helpers resolve parser-shaped canonical map result helpers" --no-skip`;
