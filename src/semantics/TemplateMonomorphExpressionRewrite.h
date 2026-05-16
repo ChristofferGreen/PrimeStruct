@@ -1746,7 +1746,7 @@ bool rewriteExpr(Expr &expr,
         preferredPath != originalResolvedPath && ctx.templateDefs.count(preferredPath) > 0;
     const bool resolvedWasTemplate = ctx.templateDefs.count(resolvedPath) > 0;
     const bool isBuiltinMapCountPath =
-        resolvedPath == "/std/collections/map/count" || resolvedPath == "/map/count";
+        resolvedPath == "/std/collections/map/count";
     const bool isKnownDef = ctx.sourceDefs.count(resolvedPath) > 0;
     if (!expr.templateArgs.empty() && !resolvedWasTemplate && !isKnownDef && isBuiltinMapCountPath) {
       error = "count does not accept template arguments";

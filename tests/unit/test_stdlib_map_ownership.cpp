@@ -144,6 +144,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string templateReceiverSource =
       readText(repoRoot() / "src" / "semantics" /
                "TemplateMonomorphExperimentalCollectionReceiverResolution.h");
+  const std::string templateExpressionRewriteSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "TemplateMonomorphExpressionRewrite.h");
   const std::string inferStructReturnSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorInferStructReturn.cpp");
@@ -226,6 +229,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!methodTargetResolutionSource.empty());
   REQUIRE(!templateCoreSource.empty());
   REQUIRE(!templateReceiverSource.empty());
+  REQUIRE(!templateExpressionRewriteSource.empty());
   REQUIRE(!inferStructReturnSource.empty());
   REQUIRE(!inferStructReturnHelpersSource.empty());
   REQUIRE(!inferMethodResolutionSource.empty());
@@ -325,6 +329,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(templateCoreSource.find("\"/map/entry\"") == std::string::npos);
   CHECK(templateCoreSource.find("\"/map/entry__\"") == std::string::npos);
   CHECK(templateReceiverSource.find("|| resolvedPath == \"/map/") ==
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find(
+            "resolvedPath == \"/std/collections/map/count\" || resolvedPath == \"/map/count\"") ==
         std::string::npos);
   CHECK(inferStructReturnSource.find("\"/std/collections/map/\" + methodName, \"/map/\" + methodName") ==
         std::string::npos);

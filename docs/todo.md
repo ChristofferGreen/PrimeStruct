@@ -1829,6 +1829,10 @@ Task template:
     - 2026-05-16: Lowerer statement-call receiver inference comments no
       longer preserve a rooted `/map/at` args-pack example; source-lock
       coverage now keeps that retired rooted trace absent.
+    - 2026-05-16: Template monomorphization no longer treats rooted
+      `/map/count` as equivalent to canonical `/std/collections/map/count`
+      when reporting template arguments on non-templated count calls; the
+      stdlib map ownership source lock keeps that diagnostic shortcut absent.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.
