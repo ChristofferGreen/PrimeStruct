@@ -2062,6 +2062,9 @@ Task template:
     - 2026-05-16: Setup-type collection helper generated map struct path
       inference no longer hard-codes the experimental map backing prefix; it
       now derives that prefix through `experimentalCollectionTypePath`.
+    - 2026-05-16: Inference base-kind map-family detection no longer
+      hard-codes unspecialized or generated experimental map backing bases;
+      both now derive through `experimentalCollectionTypePath`.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

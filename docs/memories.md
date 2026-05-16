@@ -250,6 +250,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   setup-type collection helper generated map struct path inference should
   derive the experimental map backing prefix through
   `experimentalCollectionTypePath`;
+  inference base-kind map-family detection should derive unspecialized and
+  generated experimental map backing bases through
+  `experimentalCollectionTypePath`;
   generated collection struct classification should derive the canonical map
   `MapValue__*` prefix through `collectionTypePath("map")` instead of
   carrying a split-string map root.
