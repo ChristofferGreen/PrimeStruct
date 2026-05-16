@@ -1974,6 +1974,10 @@ Task template:
     - 2026-05-16: Generated collection struct classification no longer
       carries a split-string canonical map `MapValue__*` prefix; it now
       derives that prefix through `collectionTypePath("map")`.
+    - 2026-05-16: Semantic argument-validation extraction for generated map
+      backing struct fields no longer hard-codes the experimental map backing
+      path; it now gates `Map__*` backing structs through the shared
+      experimental collection backing helper.
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.

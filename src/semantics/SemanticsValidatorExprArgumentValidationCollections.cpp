@@ -101,6 +101,18 @@ bool definitionReturnTypeTextForArgumentValidation(const Definition &definition,
   return false;
 }
 
+bool isSpecializedExperimentalMapBackingStructPath(std::string structPath) {
+  structPath = normalizeBindingTypeName(std::move(structPath));
+  if (!structPath.empty() && structPath.front() == '/') {
+    structPath.erase(structPath.begin());
+  }
+  const size_t leafStart = structPath.find_last_of('/');
+  const std::string leaf =
+      leafStart == std::string::npos ? structPath : structPath.substr(leafStart + 1);
+  return leaf.rfind("Map__", 0) == 0 &&
+         isExperimentalCollectionBackingTypeName("map", "Map", structPath);
+}
+
 } // namespace
 
 bool SemanticsValidator::isBuiltinCollectionLiteralExpr(const Expr &candidate) const {
@@ -269,7 +281,7 @@ bool SemanticsValidator::extractExperimentalMapFieldTypesFromStructPath(
     std::string &valueTypeOut) const {
   keyTypeOut.clear();
   valueTypeOut.clear();
-  if (structPath.rfind("/std/collections/experimental_map/Map__", 0) != 0) {
+  if (!isSpecializedExperimentalMapBackingStructPath(structPath)) {
     return false;
   }
   auto defIt = defMap_.find(structPath);
