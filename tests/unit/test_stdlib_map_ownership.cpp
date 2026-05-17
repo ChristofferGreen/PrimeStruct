@@ -293,6 +293,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererCountAccessHelpers.cpp");
   const std::string resultMetadataSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererResultMetadataHelpers.cpp");
+  const std::string semanticsResultHelpersSource =
+      readText(repoRoot() / "src" / "semantics" / "SemanticsValidatorResultHelpers.cpp");
   const std::string inlineCallContextSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererInlineCallContextHelpers.cpp");
 
@@ -363,6 +365,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!setupTypeCollectionSource.empty());
   REQUIRE(!countAccessSource.empty());
   REQUIRE(!resultMetadataSource.empty());
+  REQUIRE(!semanticsResultHelpersSource.empty());
   REQUIRE(!inlineCallContextSource.empty());
 
   CHECK(mapSource.find("import /std/collections/internal_map/*") == std::string::npos);
@@ -862,6 +865,23 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(resultMetadataSource.find("\"std/collections/map/map\"") ==
         std::string::npos);
   CHECK(resultMetadataSource.find("\"std/collections/map/map__\"") ==
+        std::string::npos);
+  CHECK(semanticsResultHelpersSource.find(
+            "resolved == \"/std/collections/map/tryAt\"") ==
+        std::string::npos);
+  CHECK(semanticsResultHelpersSource.find(
+            "resolved == \"/std/collections/map/tryAt_ref\"") ==
+        std::string::npos);
+  CHECK(semanticsResultHelpersSource.find("resolved == \"/map/tryAt\"") ==
+        std::string::npos);
+  CHECK(semanticsResultHelpersSource.find(
+            "isMapTryAtResultHelperCall(resolved, expr)") !=
+        std::string::npos);
+  CHECK(semanticsResultHelpersSource.find(
+            "metadataBackedCanonicalMapHelperPath(\"tryAt\")") !=
+        std::string::npos);
+  CHECK(semanticsResultHelpersSource.find(
+            "metadataBackedMapHelperRootAliasMethodName(resolvedPath)") !=
         std::string::npos);
   CHECK(inlineCallContextSource.find("collectionMemberRoot(\"map\") + \"map__\"") !=
         std::string::npos);

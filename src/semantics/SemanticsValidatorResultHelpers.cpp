@@ -104,6 +104,25 @@ bool isSpecializedExperimentalMapBackingPath(std::string typeName) {
          typeName.find("__") != std::string::npos;
 }
 
+bool isMapTryAtResultHelperCall(std::string_view resolvedPath,
+                                const Expr &expr) {
+  if (isSimpleCallName(expr, "tryAt") ||
+      isSimpleCallName(expr, "tryAt_ref")) {
+    return true;
+  }
+  const std::string canonicalTryAt =
+      metadataBackedCanonicalMapHelperPath("tryAt");
+  const std::string canonicalTryAtRef =
+      metadataBackedCanonicalMapHelperPath("tryAt_ref");
+  if ((!canonicalTryAt.empty() && resolvedPath == canonicalTryAt) ||
+      (!canonicalTryAtRef.empty() && resolvedPath == canonicalTryAtRef)) {
+    return true;
+  }
+  const std::string rootAliasHelper =
+      metadataBackedMapHelperRootAliasMethodName(resolvedPath);
+  return rootAliasHelper == "tryAt" || rootAliasHelper == "tryAt_ref";
+}
+
 bool isResultTypeBaseName(const std::string &base) {
   const std::string normalized = normalizeBindingTypeName(trimText(base));
   return normalized == "Result" || normalized == "/std/result/Result" ||
@@ -954,12 +973,7 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     if (it != defMap_.end() && it->second != nullptr) {
       return resolveDefinitionResultType(*it->second, out);
     }
-    if ((resolved == "/std/collections/map/tryAt" ||
-         resolved == "/std/collections/map/tryAt_ref" ||
-         resolved == "/map/tryAt" ||
-         isSimpleCallName(expr, "tryAt") ||
-         isSimpleCallName(expr, "tryAt_ref")) &&
-        !expr.args.empty()) {
+    if (isMapTryAtResultHelperCall(resolved, expr) && !expr.args.empty()) {
       const Expr *receiverExpr = &expr.args.front();
       if (hasNamedArguments(expr.argNames)) {
         for (size_t i = 0; i < expr.args.size(); ++i) {

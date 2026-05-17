@@ -2392,6 +2392,12 @@ Task template:
       and the
       `src/semantics/TemplateMonomorphExperimentalCollectionConstructorRewrites.h`
       map-surface inventory allowance dropped from 6 traces to 5.
+    - 2026-05-17: Semantic Result helper inference no longer hard-codes
+      canonical or rooted map `tryAt` helper paths when classifying
+      map-result calls; it now derives canonical helpers and rooted aliases
+      through `collections.map_helpers` metadata, and the
+      `src/semantics/SemanticsValidatorResultHelpers.cpp` map-surface
+      inventory allowance dropped from 5 traces to 2.
     - 2026-05-16: Collection access target resolution no longer hard-codes
       canonical map access/contains helper paths, namespace checks, or
       missing-definition diagnostics; it now resolves them through stdlib

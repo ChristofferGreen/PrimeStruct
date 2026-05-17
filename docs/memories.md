@@ -463,7 +463,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   template monomorph canonical experimental map constructor rewrites should
   derive the canonical constructor path and rooted import alias from the same
   metadata instead of direct `/map` and `/std/collections/map/map`
-  comparisons.
+  comparisons; semantic Result helper inference should derive canonical
+  `tryAt`/`tryAt_ref` helper paths and rooted map helper aliases from
+  `collections.map_helpers` metadata instead of direct map path comparisons.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
