@@ -1,6 +1,11 @@
 # Testcase Log
 
 ## Current Known Failures
+- `PrimeStruct_semantics_tests --test-case="graph type resolver infers map value return kinds through shared infer helper" --no-skip`
+  is stale after the map stdlib-ownership cutover. On 2026-05-17 it failed
+  validation before return-kind assertions; the fixture still imports
+  `internal_map` and uses the retired `/std/collections/mapPair` constructor
+  path.
 - `PrimeStruct_backend_ir_tests --test-case="ir lowerer materializes variadic borrowed map packs with indexed count_ref helpers,ir lowerer materializes variadic pointer map packs with indexed count_ref helpers" --no-skip`
   is stale after the map stdlib-ownership cutover. On 2026-05-17 both cases
   still failed during lowering on retired `/at` expression calls before
@@ -165,6 +170,22 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-17 10:33 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: infer collection-dispatch map helper return-kind lookup now obtains
+  `collections.map_helpers` metadata through the bridge key instead of
+  directly naming the map helper surface ID; the map surface inventory
+  dropped to 251 production traces and backing traces remain at 0.
+- 2026-05-17 10:33 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="graph type resolver infers map value return kinds through shared infer helper" --no-skip` |
+  failures: graph type resolver infers map value return kinds through shared
+  infer helper | notes: stale fixture still imports `internal_map` and uses
+  retired `/std/collections/mapPair`, so validation fails before return-kind
+  assertions.
 - 2026-05-17 10:29 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="omitted initializer rejects Create with canonical map method precedence when constructor is not effect-free,omitted initializer accepts effect-free Create with canonical slash-path map call helper,omitted initializer accepts effect-free Create with wrapper-returned canonical map method helper fallback" --no-skip`;

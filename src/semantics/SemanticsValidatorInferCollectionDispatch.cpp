@@ -2,6 +2,24 @@
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 namespace primec::semantics {
+namespace {
+
+const StdlibSurfaceMetadata *mapHelperSurfaceMetadataForInferCollectionDispatch() {
+  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+}
+
+bool resolveMapHelperResolvedPathForInferCollectionDispatch(
+    const std::string &resolvedPath,
+    std::string &resolvedMapHelperNameOut) {
+  resolvedMapHelperNameOut.clear();
+  const StdlibSurfaceMetadata *metadata =
+      mapHelperSurfaceMetadataForInferCollectionDispatch();
+  return metadata != nullptr &&
+         resolvePublishedCollectionHelperResolvedPath(
+             resolvedPath, metadata->id, resolvedMapHelperNameOut);
+}
+
+} // namespace
 
 bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind(
     const std::string &resolvedPath,
@@ -9,10 +27,8 @@ bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind(
     const BuiltinCollectionDispatchResolvers &resolvers,
     ReturnKind &kindOut) const {
   std::string resolvedMapHelperName;
-  if (resolvePublishedCollectionHelperResolvedPath(
-          resolvedPath,
-          StdlibSurfaceId::CollectionsMapHelpers,
-          resolvedMapHelperName)) {
+  if (resolveMapHelperResolvedPathForInferCollectionDispatch(
+          resolvedPath, resolvedMapHelperName)) {
     auto declaredReturnKind = [](const Definition &definition,
                                  ReturnKind &declaredKindOut) {
       for (const Transform &transform : definition.transforms) {
@@ -156,10 +172,8 @@ bool SemanticsValidator::resolveBuiltinCollectionAccessCallReturnKind(
   if (!getBuiltinArrayAccessName(callExpr, builtinName)) {
     const std::string resolvedPath = resolveCalleePath(callExpr);
     std::string resolvedMapHelperName;
-    if (!resolvePublishedCollectionHelperResolvedPath(
-            resolvedPath,
-            StdlibSurfaceId::CollectionsMapHelpers,
-            resolvedMapHelperName)) {
+    if (!resolveMapHelperResolvedPathForInferCollectionDispatch(
+            resolvedPath, resolvedMapHelperName)) {
       return false;
     }
     if (resolvedMapHelperName == "at_ref") {

@@ -505,7 +505,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   constructor rewriting should use the same bridge-key metadata lookup instead
   of directly naming the map constructor surface ID; effect-free collection
   map helper lookup should use `collections.map_helpers` bridge-key metadata
-  instead of directly naming the map helper surface ID.
+  instead of directly naming the map helper surface ID; infer
+  collection-dispatch map helper return-kind lookup should use the same
+  bridge-key metadata lookup instead of directly naming the map helper surface
+  ID.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
