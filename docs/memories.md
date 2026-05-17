@@ -470,7 +470,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   through map helper metadata instead of direct rooted `/map` checks;
   statement return auto-diagnostic fallback should derive unknown rooted map
   access method diagnostics from `collections.map_helpers` metadata instead
-  of hard-coded `/map/at*` message strings.
+  of hard-coded `/map/at*` message strings; statement return collection
+  normalization should derive the rooted map collection marker from
+  `collections.map_constructors` import-alias metadata instead of a direct
+  `/map` string.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

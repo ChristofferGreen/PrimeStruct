@@ -2409,6 +2409,12 @@ Task template:
       metadata, and the
       `src/semantics/SemanticsValidatorStatementReturns.cpp` map-surface
       inventory allowance dropped from 7 traces to 3.
+    - 2026-05-17: Statement return collection normalization no longer
+      hard-codes rooted `/map` as the normalized map collection marker; it
+      derives that marker from `collections.map_constructors` import-alias
+      metadata, and the
+      `src/semantics/SemanticsValidatorStatementReturns.cpp` map-surface
+      inventory allowance dropped from 3 traces to 0.
     - 2026-05-16: Collection access target resolution no longer hard-codes
       canonical map access/contains helper paths, namespace checks, or
       missing-definition diagnostics; it now resolves them through stdlib

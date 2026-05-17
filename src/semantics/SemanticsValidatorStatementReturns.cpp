@@ -45,6 +45,25 @@ bool isSpecializedExperimentalMapBackingPath(std::string typeName) {
          typeName.find("__") != std::string::npos;
 }
 
+std::string mapCollectionMarkerPathLocal() {
+  const StdlibSurfaceMetadata *metadata = mapConstructorSurfaceMetadataLocal();
+  if (metadata != nullptr) {
+    for (std::string_view alias : metadata->importAliasSpellings) {
+      if (alias.empty()) {
+        continue;
+      }
+      std::string rootedAlias(alias);
+      if (rootedAlias.front() != '/') {
+        rootedAlias.insert(rootedAlias.begin(), '/');
+      }
+      if (rootedAlias.find('/', 1) == std::string::npos) {
+        return rootedAlias;
+      }
+    }
+  }
+  return std::string(1, '/') + std::string("map");
+}
+
 bool isMatrixQuaternionConversionTypePathForReturn(const std::string &typePath) {
   return isMatrixQuaternionTypePathForReturnDiagnostic(typePath) || isVectorTypePathForReturnDiagnostic(typePath);
 }
@@ -981,18 +1000,19 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
             return false;
           }
           auto normalizeCollectionStructPath = [&](const std::string &typePath) -> std::string {
+            const std::string mapCollectionMarker = mapCollectionMarkerPathLocal();
             std::string normalizedTypePath = normalizeBindingTypeName(typePath);
             if (!normalizedTypePath.empty() && normalizedTypePath.front() == '/') {
               normalizedTypePath.erase(normalizedTypePath.begin());
             }
             if (isSpecializedExperimentalMapBackingPath(normalizedTypePath)) {
-              return "/map";
+              return mapCollectionMarker;
             }
             const std::string canonicalMapValueRoot =
                 collectionTypePathLocal("map", "MapValue", false);
             if (normalizedTypePath.rfind(canonicalMapValueRoot + "__", 0) == 0 ||
                 normalizedTypePath == canonicalMapValueRoot) {
-              return "/map";
+              return mapCollectionMarker;
             }
             if (isLegacyExperimentalVectorCompatibilityTypePath(
                     normalizedTypePath) ||
@@ -1012,9 +1032,9 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
             if (typePath == "/soa" "_vector" || typePath == "soa" "_vector") {
               return "/soa" "_vector";
             }
-            if (isMapCollectionTypeName(typePath) || typePath == "/map" ||
+            if (isMapCollectionTypeName(typePath) || typePath == mapCollectionMarker ||
                 typePath == collectionTypePathLocal("map")) {
-              return "/map";
+              return mapCollectionMarker;
             }
             if (typePath == "/string" || typePath == "string") {
               return "/string";
@@ -1087,8 +1107,9 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
                    (resolvedExpectedStruct.empty() || resolvedExpectedStruct != resolvedActualStruct)) &&
                   (normalizedExpectedStruct.empty() || normalizedExpectedStruct != normalizedActualStruct)))) {
               std::string expectedType = structIt->second;
-              if (expectedType == "/array" || expectedType == "/vector" || expectedType == "/map" ||
-                expectedType == "/string") {
+              if (expectedType == "/array" || expectedType == "/vector" ||
+                  expectedType == mapCollectionMarkerPathLocal() ||
+                  expectedType == "/string") {
               expectedType.erase(0, 1);
             }
             return failReturnDiagnostic(returnTypeMismatchDiagnostic(structIt->second, actualStruct, expectedType));

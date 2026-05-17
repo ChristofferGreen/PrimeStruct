@@ -905,7 +905,15 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(statementReturnsSource.find("unknown method: /map/at_unsafe_ref") ==
         std::string::npos);
+  CHECK(statementReturnsSource.find("return \"/map\"") == std::string::npos);
+  CHECK(statementReturnsSource.find("typePath == \"/map\"") == std::string::npos);
+  CHECK(statementReturnsSource.find("expectedType == \"/map\"") ==
+        std::string::npos);
   CHECK(statementReturnsSource.find("mapHelperSurfaceMetadataLocal()") !=
+        std::string::npos);
+  CHECK(statementReturnsSource.find("mapConstructorSurfaceMetadataLocal()") !=
+        std::string::npos);
+  CHECK(statementReturnsSource.find("mapCollectionMarkerPathLocal()") !=
         std::string::npos);
   CHECK(statementReturnsSource.find("AccessHelpers") != std::string::npos);
   CHECK(inlineCallContextSource.find("collectionMemberRoot(\"map\") + \"map__\"") !=

@@ -162,7 +162,7 @@ ALLOWED_MAX_FILE_COUNTS: dict[str, int] = {
     "src/semantics/SemanticsValidatorInferStructReturnHelpers.cpp": 6,
     "src/semantics/SemanticsValidatorResultHelpers.cpp": 2,
     "src/semantics/SemanticsValidatorStatement.cpp": 4,
-    "src/semantics/SemanticsValidatorStatementReturns.cpp": 3,
+    "src/semantics/SemanticsValidatorStatementReturns.cpp": 0,
     "src/semantics/TemplateMonomorphBindingCallInference.h": 6,
     "src/semantics/TemplateMonomorphCollectionCompatibilityPaths.h": 9,
     "src/semantics/TemplateMonomorphCoreUtilities.h": 10,

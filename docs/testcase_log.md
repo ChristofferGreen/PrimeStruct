@@ -146,6 +146,17 @@
   coverage until the bare helper fixture is retired or refreshed.
 
 ## Recent Test Runs
+- 2026-05-17 09:35 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="inferred canonical map returns rewrite canonical constructors,inferred canonical map returns keep constructor mismatch diagnostics,block-bodied inferred canonical map returns rewrite constructors,block-bodied inferred canonical map returns keep mismatch diagnostics" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: statement return collection normalization now derives the rooted map
+  collection marker from `collections.map_constructors` metadata instead of a
+  direct `/map` string; the `SemanticsValidatorStatementReturns.cpp` inventory
+  allowance is now zero and backing traces remain at 0.
 - 2026-05-17 09:29 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="map method alias access accepts matching receiver during inference,map method alias access rejects missing receiver method during inference" --no-skip`;
