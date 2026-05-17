@@ -8,6 +8,7 @@
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/StdlibSurfaceRegistry.h"
 
 #include <vector>
 
@@ -150,6 +151,18 @@ bool resolveDispatchSetupSemanticReceiverTypeText(const Expr &receiver,
                                                   const SemanticProgram *semanticProgram,
                                                   const SemanticProductIndex *semanticIndex,
                                                   std::string &typeTextOut);
+
+const StdlibSurfaceMetadata *mapHelperSurfaceMetadataForDispatchSetup() {
+  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+}
+
+std::string canonicalMapHelperPathForDispatchSetup(std::string_view helperName) {
+  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataForDispatchSetup();
+  if (metadata == nullptr) {
+    return {};
+  }
+  return stdlibSurfaceCanonicalHelperPath(metadata->id, helperName);
+}
 
 bool isDispatchSetupMapFamilyText(const std::string &familyText) {
   std::string normalized = trimTemplateTypeText(familyText);
@@ -1193,18 +1206,20 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
           };
           if (resolveAccessReceiverMapValueKind(expr.args.front(),
                                                 mapValueKind) &&
-              mapValueKind != LocalInfo::ValueKind::String &&
-              ((stateInOut.getReturnInfo &&
-                stateInOut.getReturnInfo(
-                    "/std/collections/map/" + accessNameForCanonicalMapOverride,
-                    accessReturnInfo) &&
-                !accessReturnInfo.returnsVoid &&
-                !accessReturnInfo.returnsArray &&
-                accessReturnInfo.kind == LocalInfo::ValueKind::String) ||
-               semanticCallableReturnsString(
-                   "/std/collections/map/" +
-                   accessNameForCanonicalMapOverride))) {
-            return LocalInfo::ValueKind::String;
+              mapValueKind != LocalInfo::ValueKind::String) {
+            const std::string canonicalAccessPath =
+                canonicalMapHelperPathForDispatchSetup(
+                    accessNameForCanonicalMapOverride);
+            if (!canonicalAccessPath.empty() &&
+                ((stateInOut.getReturnInfo &&
+                  stateInOut.getReturnInfo(canonicalAccessPath,
+                                           accessReturnInfo) &&
+                  !accessReturnInfo.returnsVoid &&
+                  !accessReturnInfo.returnsArray &&
+                  accessReturnInfo.kind == LocalInfo::ValueKind::String) ||
+                 semanticCallableReturnsString(canonicalAccessPath))) {
+              return LocalInfo::ValueKind::String;
+            }
           }
         }
 

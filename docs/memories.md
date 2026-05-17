@@ -642,7 +642,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `collections.map_helpers` metadata instead of directly naming the map
   helper surface ID; infer-method map helper target selection should derive
   canonical helper paths from that same bridge-key metadata instead of
-  concatenating canonical map helper paths.
+  concatenating canonical map helper paths; lowerer dispatch setup should do
+  the same for semantic-product map access helper return-kind checks.
   The stale
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`

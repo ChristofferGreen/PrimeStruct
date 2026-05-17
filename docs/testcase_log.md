@@ -90,6 +90,15 @@
   wrapper-returned setup-inference fixtures failed to resolve expected map
   access element kinds, while adjacent local-map and string map-reference
   lowerer setup-inference coverage still passes.
+- `PrimeStruct_backend_ir_tests --test-case="ir lowerer setup inference helper resolves array and map access kinds" --no-skip`
+  is stale after the map stdlib-ownership cutover. On 2026-05-17 it
+  returned `NotResolved` for the old direct array/map access helper
+  expectations before exercising semantic-product helper return inference.
+- `PrimeStruct_backend_ir_tests --test-case="ir lowerer setup inference helper resolves wrapper-returned canonical map access int32 kinds" --no-skip`
+  is stale after the map stdlib-ownership cutover. On 2026-05-17 it
+  returned `NotResolved` for the old wrapper-returned canonical map access
+  expectations, matching the already-known wrapper-returned string/slash
+  setup-inference drift.
 - `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers dispatch inline calls with locals"`
   has stale assertion-count coverage around explicit vector-count resolver
   calls. On 2026-05-16 it failed with
@@ -170,6 +179,28 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-17 10:44 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: lowerer dispatch setup now obtains canonical map access helper
+  paths through `collections.map_helpers` metadata instead of directly
+  concatenating canonical map helper paths; the map surface inventory
+  dropped to 245 production traces and backing traces remain at 0.
+- 2026-05-17 10:44 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup inference helper resolves array and map access kinds" --no-skip` |
+  failures: ir lowerer setup inference helper resolves array and map access
+  kinds | notes: stale fixture returned `NotResolved` for the old direct
+  array/map access expectations before semantic-product helper return
+  inference was reached.
+- 2026-05-17 10:44 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup inference helper resolves wrapper-returned canonical map access int32 kinds" --no-skip` |
+  failures: ir lowerer setup inference helper resolves wrapper-returned
+  canonical map access int32 kinds | notes: stale fixture returned
+  `NotResolved` for the old wrapper-returned canonical map access
+  expectations, matching the known wrapper-returned setup-inference drift.
 - 2026-05-17 10:40 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="map method alias access accepts matching receiver during inference" --no-skip`;
