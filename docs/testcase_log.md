@@ -131,8 +131,31 @@
   validated `values./map/count()` successfully instead of rejecting with the
   old `unknown method: /map/count` diagnostic; adjacent slash-path map
   method normalization coverage still passes.
+- `PrimeStruct_semantics_tests --test-case="map wrapper temporary bare helper calls validate target classification" --no-skip`
+  is stale after the map stdlib-ownership cutover. On 2026-05-17 it failed
+  while the direct wrapper temporary canonical access cases passed; keep
+  using the direct canonical access fixtures as focused return-inference
+  coverage until the bare helper fixture is retired or refreshed.
 
 ## Recent Test Runs
+- 2026-05-17 09:09 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map wrapper temporary access call validates map target classification,map wrapper temporary unsafe access validates direct stdlib helper,map wrapper temporary access keeps canonical key diagnostics" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: collection return inference now derives canonical map access helper
+  return lookup paths through `collections.map_helpers` metadata instead of
+  direct string concatenation; the map surface inventory dropped to 278
+  production traces and backing traces remain at 0.
+- 2026-05-17 09:09 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map wrapper temporary access call validates map target classification,map wrapper temporary unsafe access validates direct stdlib helper,map wrapper temporary access keeps canonical key diagnostics,map wrapper temporary bare helper calls validate target classification" --no-skip` |
+  failures: map wrapper temporary bare helper calls validate target
+  classification |
+  notes: the direct wrapper temporary canonical map access cases passed in
+  the same run and were rerun as the selected passing gate above; the bare
+  helper wrapper fixture is stale after the map stdlib-ownership cutover.
 - 2026-05-17 09:05 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="map slash-path explicit-template count method reports canonical return mismatch,map namespaced at method now validates through slash-path routing,map namespaced at_unsafe method auto inference now validates through slash-path routing,map namespaced tryAt method validates through slash-path routing,map namespaced at method expression body arguments validate through slash-path target" --no-skip`;

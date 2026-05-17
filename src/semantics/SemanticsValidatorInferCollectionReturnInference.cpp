@@ -820,7 +820,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
             (builtinAccessName == "at" || builtinAccessName == "at_unsafe")) {
           std::string declaredReturnType;
           if (inferNonTemplateDefinitionReturnType(
-                  "/std/collections/map/" + builtinAccessName,
+                  metadataBackedCanonicalMapHelperPath(builtinAccessName),
                   declaredReturnType)) {
             currentTypeTextOut = declaredReturnType;
             return true;

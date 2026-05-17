@@ -335,7 +335,9 @@ Task template:
   validation now derives canonical map tryAt helper paths through that
   metadata instead of direct map surface IDs, and pointer-like collection
   method normalization now derives the unrooted canonical map helper prefix
-  through that metadata instead of direct map surface IDs. The
+  through that metadata instead of direct map surface IDs, and collection
+  return inference now derives canonical map access helper return lookup
+  paths through that metadata instead of direct path concatenation. The
   remaining production
   lowerer/emitter
   experimental-map traces
@@ -2370,6 +2372,12 @@ Task template:
       `collections.map_helpers` bridge key, and the
       `src/semantics/SemanticsValidatorExprPointerLike.cpp` map-surface
       inventory allowance dropped from 8 traces to 7.
+    - 2026-05-17: Collection return inference no longer concatenates
+      canonical map access helper paths while looking up declared returns for
+      direct map access calls; it now derives those paths through
+      `collections.map_helpers` metadata, and the
+      `src/semantics/SemanticsValidatorInferCollectionReturnInference.cpp`
+      map-surface inventory allowance dropped from 6 traces to 5.
     - 2026-05-16: Collection access target resolution no longer hard-codes
       canonical map access/contains helper paths, namespace checks, or
       missing-definition diagnostics; it now resolves them through stdlib
