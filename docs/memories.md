@@ -473,6 +473,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   same bridge key instead of directly naming the map constructor surface ID;
   direct Result value collection metadata should resolve constructor metadata
   through the same bridge key instead of naming the map constructor surface ID;
+  lowerer builtin-name and shared helper map-helper metadata lookups should
+  resolve through `collections.map_helpers` metadata instead of naming the map
+  helper surface ID directly;
   semantic Result helper inference should derive canonical
   `tryAt`/`tryAt_ref` helper paths and rooted map helper aliases from
   `collections.map_helpers` metadata instead of direct map path comparisons;

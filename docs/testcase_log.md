@@ -152,8 +152,28 @@
 - `PrimeStruct_backend_ir_tests --test-case="ir lowerer supports direct map Result payloads" --no-skip`
   still fails during parse/validate before reaching lowerer execution after
   the map stdlib-ownership cutover.
+- `PrimeStruct_backend_ir_tests --test-case="stdlib surface metadata resolves collection helper member tokens" --no-skip`
+  still has stale SoA helper token expectations for `soaVectorCountRef`,
+  `soaVectorFieldView`, and `soaVectorToAos`.
 
 ## Recent Test Runs
+- 2026-05-17 10:01 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers preserve canonical map helper method return chains,ir lowerer call helpers gate canonical map helpers with semantic target facts" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: lowerer builtin-name and shared helper map-helper metadata lookups now
+  resolve through the `collections.map_helpers` bridge key instead of directly
+  naming the map helper surface ID; the map surface inventory dropped to 262
+  production traces and backing traces remain at 0.
+- 2026-05-17 10:01 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers preserve canonical map helper method return chains,ir lowerer call helpers gate canonical map helpers with semantic target facts,stdlib surface metadata resolves collection helper member tokens" --no-skip` |
+  failures: stdlib surface metadata resolves collection helper member tokens |
+  notes: the two focused map-helper cases passed; the bundled metadata case
+  still fails on stale SoA helper token expectations for
+  `soaVectorCountRef`, `soaVectorFieldView`, and `soaVectorToAos`.
 - 2026-05-17 09:58 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer result helpers resolve map Result payload metadata,ir lowerer result helpers resolve function-returned map Result payload metadata,ir lowerer result helpers use semantic query facts for direct Result ok payload metadata" --no-skip`;

@@ -32,7 +32,7 @@ std::string collectionWrapperAlias(std::string_view collectionName,
 
 bool resolvesMapHelperSurfacePath(std::string_view path) {
   const auto *metadata =
-      findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsMapHelpers);
+      findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
   if (metadata == nullptr) {
     return false;
   }
