@@ -128,6 +128,17 @@
   shadow and return-mismatch method-resolution coverage still passes.
 
 ## Recent Test Runs
+- 2026-05-17 09:00 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib namespaced map tryAt requires imported stdlib helper or explicit definition,stdlib namespaced map tryAt does not inherit alias-only helper definition,map wrapper temporary tryAt auto inference requires canonical helper definition" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: try builtin validation now derives canonical map tryAt helper paths
+  through `collections.map_helpers` metadata instead of direct map surface
+  IDs; the map surface inventory dropped to 280 production traces and backing
+  traces remain at 0.
 - 2026-05-17 08:56 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib canonical map access count shadow keeps canonical precedence over alias helper,stdlib canonical map access count shadow currently validates mixed canonical and alias returns,wrapper-returned referenced canonical map access count call auto inference keeps string helper mismatch diagnostics" --no-skip`;

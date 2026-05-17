@@ -61,9 +61,9 @@ bool SemanticsValidator::validateExprTryBuiltin(
         shouldBuiltinValidateCurrentMapWrapperHelper("at_unsafe") ||
         shouldBuiltinValidateCurrentMapWrapperHelper("at_unsafe_ref");
     const std::string canonicalTryAtPath =
-        canonicalCollectionHelperPath(StdlibSurfaceId::CollectionsMapHelpers, "tryAt");
+        metadataBackedCanonicalMapHelperPath("tryAt");
     const std::string canonicalTryAtRefPath =
-        canonicalCollectionHelperPath(StdlibSurfaceId::CollectionsMapHelpers, "tryAt_ref");
+        metadataBackedCanonicalMapHelperPath("tryAt_ref");
     const bool isCanonicalTryAtTarget =
         tryTargetPath == canonicalTryAtPath || tryTargetPath == canonicalTryAtRefPath;
     const std::string canonicalTryAtDiagnosticPath =

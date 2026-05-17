@@ -184,6 +184,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string lateMapAccessBuiltinsSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprLateMapAccessBuiltins.cpp");
+  const std::string exprTrySource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorExprTry.cpp");
   const std::string pointerLikeSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprPointerLike.cpp");
@@ -308,6 +311,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!inferCollectionDispatchSetupSource.empty());
   REQUIRE(!inferDefinitionSource.empty());
   REQUIRE(!lateMapAccessBuiltinsSource.empty());
+  REQUIRE(!exprTrySource.empty());
   REQUIRE(!pointerLikeSource.empty());
   REQUIRE(!statementPrintabilitySource.empty());
   REQUIRE(!scalarPointerMemorySource.empty());
@@ -528,6 +532,13 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(lateMapAccessBuiltinsSource.find("namespacePrefix == \"map\"") ==
         std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find("methodResolved = \"/map/\" + helperName") ==
+        std::string::npos);
+  CHECK(exprTrySource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
+        std::string::npos);
+  CHECK(exprTrySource.find("metadataBackedCanonicalMapHelperPath(\"tryAt\")") !=
+        std::string::npos);
+  CHECK(exprTrySource.find(
+            "metadataBackedCanonicalMapHelperPath(\"tryAt_ref\")") !=
         std::string::npos);
   CHECK(mapSoaBuiltinsSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
         std::string::npos);

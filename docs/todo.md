@@ -331,7 +331,9 @@ Task template:
   expression collection-dispatch setup now resolves canonical map access
   helper paths through that metadata instead of direct map surface IDs, and
   expression method resolution now derives canonical map access helper paths
-  through that metadata instead of direct map surface IDs. The
+  through that metadata instead of direct map surface IDs, and try builtin
+  validation now derives canonical map tryAt helper paths through that
+  metadata instead of direct map surface IDs. The
   remaining production
   lowerer/emitter
   experimental-map traces
@@ -2282,6 +2284,11 @@ Task template:
     - 2026-05-16: Semantic `try` builtin validation no longer hard-codes
       canonical map tryAt helper paths; it now obtains them from stdlib
       surface metadata.
+    - 2026-05-17: Try builtin validation no longer names the map helper
+      surface ID directly while building canonical map tryAt helper paths;
+      it now derives those paths through `collections.map_helpers` metadata,
+      and the `src/semantics/SemanticsValidatorExprTry.cpp` map-surface
+      inventory allowance dropped from 11 traces to 9.
     - 2026-05-16: Semantic infer pre-dispatch map helper visibility checks no
       longer hard-code canonical map helper paths; they now resolve helper
       names through stdlib surface metadata before checking builtin return
