@@ -170,6 +170,17 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-17 10:40 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map method alias access accepts matching receiver during inference" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: infer-method map helper target selection now obtains
+  `collections.map_helpers` metadata through the bridge key instead of
+  directly concatenating canonical map helper paths; the map surface
+  inventory dropped to 247 production traces and backing traces remain at 0.
 - 2026-05-17 10:37 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical namespaced map helpers keep builtin key diagnostics for borrowed canonical map receivers" --no-skip`;

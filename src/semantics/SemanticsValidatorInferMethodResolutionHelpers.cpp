@@ -81,6 +81,20 @@ void appendSurfaceExactHelperFallbacks(std::vector<std::string> &out,
   appendFrom(metadata.loweringSpellings);
 }
 
+const StdlibSurfaceMetadata *mapHelperSurfaceMetadataForInferMethodResolution() {
+  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+}
+
+std::string canonicalMapHelperPathForInferMethodResolution(
+    std::string_view helperName) {
+  const StdlibSurfaceMetadata *metadata =
+      mapHelperSurfaceMetadataForInferMethodResolution();
+  if (metadata == nullptr) {
+    return {};
+  }
+  return stdlibSurfaceCanonicalHelperPath(metadata->id, helperName);
+}
+
 std::string_view normalizeFileHelperName(std::string_view helperName) {
   if (helperName == "openRead") {
     return "open_read";
@@ -530,18 +544,23 @@ std::string SemanticsValidator::preferredMapMethodTargetForCall(
   const std::string selectedHelperName = borrowedHelperNameForReceiver(helperName);
   std::string keyType;
   std::string valueType;
+  const std::string canonical =
+      canonicalMapHelperPathForInferMethodResolution(selectedHelperName);
   if (resolveInferExperimentalMapTarget(params, locals, receiverExpr, keyType, valueType)) {
-    const std::string canonical = "/std/collections/map/" + selectedHelperName;
-    if (hasDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
+    if (!canonical.empty() &&
+        (hasDefinitionPath(canonical) || hasImportedDefinitionPath(canonical))) {
       return canonical;
     }
     return preferredCanonicalExperimentalMapHelperTarget(selectedHelperName);
   }
-  const std::string canonical = "/std/collections/map/" + selectedHelperName;
-  if (hasDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
+  if (!canonical.empty() &&
+      (hasDefinitionPath(canonical) || hasImportedDefinitionPath(canonical))) {
     return canonical;
   }
-  return canonical;
+  if (!canonical.empty()) {
+    return canonical;
+  }
+  return preferredCanonicalExperimentalMapHelperTarget(selectedHelperName);
 }
 
 std::string SemanticsValidator::preferredBufferMethodTargetForCall(
