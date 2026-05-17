@@ -2470,6 +2470,12 @@ Task template:
       derives that marker from `collections.map_constructors` import-alias
       metadata, and the source-lock coverage now keeps the direct `"/map"`
       return from reappearing there.
+    - 2026-05-17: IR access-target forwarded empty map constructor checks no
+      longer spell the `mapNew` member token directly; they derive it from
+      `collections.map_constructors` metadata plus the existing empty
+      constructor suffix convention, and
+      `src/ir_lowerer/IrLowererAccessTargetResolution.cpp` is removed from
+      the map-surface trace inventory allowlist.
     - 2026-05-16: Collection access target resolution no longer hard-codes
       canonical map access/contains helper paths, namespace checks, or
       missing-definition diagnostics; it now resolves them through stdlib

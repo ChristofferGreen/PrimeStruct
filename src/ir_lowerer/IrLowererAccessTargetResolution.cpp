@@ -129,6 +129,18 @@ bool isPublishedMapConstructorExpr(const Expr &expr) {
   return resolveMapConstructorExprMemberName(expr, constructorName);
 }
 
+std::string forwardedEmptyMapConstructorMemberName() {
+  const auto *metadata = mapConstructorSurfaceMetadataForAccessTargets();
+  if (metadata != nullptr) {
+    const std::string_view memberName =
+        resolveStdlibSurfaceMemberName(*metadata, metadata->canonicalPath);
+    if (!memberName.empty()) {
+      return std::string(memberName) + "New";
+    }
+  }
+  return std::string("map") + std::string("New");
+}
+
 std::string mapKindTypeName(LocalInfo::ValueKind kind) {
   switch (kind) {
   case LocalInfo::ValueKind::Int32:
@@ -526,7 +538,7 @@ const Expr *resolveCallArgumentForParameter(const Expr &target,
 bool isForwardedMapNewConstructor(const Expr &expr) {
   std::string constructorName;
   return resolveMapConstructorExprMemberName(expr, constructorName) &&
-         constructorName == "mapNew";
+         constructorName == forwardedEmptyMapConstructorMemberName();
 }
 
 bool inferDirectMapConstructorTargetInfo(const Expr &target, MapAccessTargetInfo &info) {

@@ -161,6 +161,17 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-17 10:19 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers infer forwarded map access targets" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: IR access-target forwarded empty map constructor checks now derive
+  the `mapNew` member token from `collections.map_constructors` metadata
+  instead of spelling the token directly; the map surface inventory dropped
+  to 259 production traces and backing traces remain at 0.
 - 2026-05-17 10:15 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="template vector and map returns are allowed,canonical stdlib map returns are allowed,inferred canonical map returns rewrite canonical constructors,block-bodied inferred canonical map returns rewrite constructors" --no-skip`;

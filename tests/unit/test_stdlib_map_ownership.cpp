@@ -308,6 +308,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
       readText(repoRoot() / "src" / "semantics" / "SemanticsValidatorStatementReturns.cpp");
   const std::string inlineCallContextSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererInlineCallContextHelpers.cpp");
+  const std::string accessTargetResolutionSource =
+      readText(repoRoot() / "src" / "ir_lowerer" /
+               "IrLowererAccessTargetResolution.cpp");
 
   REQUIRE(!mapSource.empty());
   REQUIRE(!experimentalSource.empty());
@@ -382,6 +385,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!semanticsResultHelpersSource.empty());
   REQUIRE(!statementReturnsSource.empty());
   REQUIRE(!inlineCallContextSource.empty());
+  REQUIRE(!accessTargetResolutionSource.empty());
 
   CHECK(mapSource.find("import /std/collections/internal_map/*") == std::string::npos);
   CHECK(mapSource.find("import /std/collections/internal_vector/*") != std::string::npos);
@@ -963,6 +967,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inlineCallContextSource.find("collectionMemberRoot(\"map\") + \"map__\"") !=
         std::string::npos);
   CHECK(inlineCallContextSource.find("\"/std/collections/map/map__\"") ==
+        std::string::npos);
+  CHECK(accessTargetResolutionSource.find("constructorName == \"mapNew\"") ==
+        std::string::npos);
+  CHECK(accessTargetResolutionSource.find(
+            "forwardedEmptyMapConstructorMemberName()") !=
+        std::string::npos);
+  CHECK(accessTargetResolutionSource.find(
+            "resolveStdlibSurfaceMemberName(*metadata, metadata->canonicalPath)") !=
         std::string::npos);
   CHECK(statementLowererSource.find("callee->fullPath.rfind(\"/std/collections/internal_map/insertImpl__\", 0)") !=
         std::string::npos);
