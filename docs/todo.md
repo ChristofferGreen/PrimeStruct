@@ -2324,6 +2324,11 @@ Task template:
       map helper names and paths through `collections.map_helpers` metadata,
       and `src/semantics/SemanticsValidatorBuildInitializerInference.cpp`
       is removed from the map-surface trace inventory allowlist.
+    - 2026-05-17: Build-parameter map default classification no longer
+      hard-codes the canonical map type spelling; it now uses the shared map
+      collection classifier, and
+      `src/semantics/SemanticsValidatorBuildParameters.cpp` is removed from
+      the map-surface trace inventory allowlist.
     - 2026-05-17: Semantic struct-return map method probing no longer
       hard-codes rooted or canonical map access helper spellings, canonical
       method candidate construction, or canonical candidate prefix filters;

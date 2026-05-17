@@ -439,7 +439,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   carrying a split-string map root; semantic initializer helper preference
   should derive explicit stdlib map helper names and canonical helper paths
   through `collections.map_helpers` metadata instead of a hard-coded
-  canonical map namespace, helper-name table, or path concatenation; semantic
+  canonical map namespace, helper-name table, or path concatenation;
+  build-parameter default classification should use the shared map collection
+  classifier instead of direct canonical map type text; semantic
   struct-return map method probing should also resolve explicit access helper
   spellings, canonical method candidates, and canonical candidate filtering
   through that metadata instead of direct rooted/canonical map helper strings;

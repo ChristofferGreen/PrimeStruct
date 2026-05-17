@@ -144,8 +144,30 @@
   while the direct wrapper temporary canonical access cases passed; keep
   using the direct canonical access fixtures as focused return-inference
   coverage until the bare helper fixture is retired or refreshed.
+- `PrimeStruct_semantics_tests --test-case="stdlib map constructors accept inferred canonical map default parameters,helper-wrapped inferred canonical map default parameters validate" --no-skip`
+  has stale canonical default-parameter access expectations after the map
+  stdlib-ownership cutover. On 2026-05-17 both cases still failed, with the
+  helper-wrapped case reporting `unknown method: /std/collections/map/at`;
+  adjacent default-parameter mismatch and Result-wrapped map cases passed.
 
 ## Recent Test Runs
+- 2026-05-17 09:44 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib map constructors keep mismatch diagnostics on inferred canonical map default parameters,helper-wrapped inferred experimental result map default parameters validate,helper-wrapped inferred experimental result map default parameters keep mismatch diagnostics" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: build-parameter map default classification now uses the shared map
+  collection classifier instead of direct canonical map type text; the map
+  surface inventory dropped to 267 production traces and backing traces remain
+  at 0.
+- 2026-05-17 09:44 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib map constructors accept inferred canonical map default parameters,stdlib map constructors keep mismatch diagnostics on inferred canonical map default parameters,helper-wrapped inferred canonical map default parameters validate,helper-wrapped inferred experimental result map default parameters validate" --no-skip` |
+  failures: stdlib map constructors accept inferred canonical map default
+  parameters; helper-wrapped inferred canonical map default parameters validate |
+  notes: the adjacent mismatch and Result-wrapped default-parameter cases
+  passed in the same run and were rerun as the selected passing gate above.
 - 2026-05-17 09:40 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="wrapper reference templated map count method rejects missing canonical helper,wrapper reference templated map count method rejects missing canonical ref helper,map slash-path explicit-template count method reports canonical return mismatch" --no-skip`;
