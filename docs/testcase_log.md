@@ -116,8 +116,32 @@
   with `argument type mismatch for /scoreValues parameter values: expected
   map<string, i32> got /std/collections/map/MapValue__...`; adjacent explicit
   experimental parameter and canonical helper access coverage passes.
+- `PrimeStruct_semantics_tests --test-case="canonical map borrowed receiver validates direct stdlib contains,canonical map borrowed receiver keeps contains key diagnostics" --no-skip`
+  is stale after the map stdlib-ownership cutover. On 2026-05-17 both cases
+  failed after semantic validation reached IR lowering with
+  `native backend only supports ... call=/std/collections/map/contains`;
+  direct bare/namespaced map contains semantic validation still passes.
 
 ## Recent Test Runs
+- 2026-05-17 08:45 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="bare map contains call requires imported canonical helper or explicit definition,bare map contains call resolves through canonical helper definition,map namespaced contains method now validates through slash-path routing,map stdlib namespaced contains method now validates through slash-path routing" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: semantic map/SOA builtin validation now resolves canonical map
+  contains helper paths through `collections.map_helpers` metadata instead
+  of direct map surface IDs; the map surface inventory dropped to 285
+  production traces and backing traces remain at 0.
+- 2026-05-17 08:45 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="bare map contains call requires imported canonical helper or explicit definition,bare map contains call resolves through canonical helper definition,canonical map borrowed receiver validates direct stdlib contains,canonical map borrowed receiver keeps contains key diagnostics" --no-skip` |
+  failures: canonical map borrowed receiver validates direct stdlib contains;
+  canonical map borrowed receiver keeps contains key diagnostics |
+  notes: borrowed canonical contains cases fail after semantic validation
+  reaches IR lowering with unsupported direct canonical map contains lowering;
+  replaced as this slice's selected gate by the passing direct bare/namespaced
+  contains semantic cases above.
 - 2026-05-17 08:40 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="map method access keeps canonical struct-return forwarding,map namespaced access call keeps canonical struct-return forwarding,map namespaced access alias rejects canonical struct-return forwarding,map namespaced unsafe access alias rejects canonical struct-return forwarding" --no-skip`;

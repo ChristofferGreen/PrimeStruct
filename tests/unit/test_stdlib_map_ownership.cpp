@@ -199,6 +199,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string collectionAccessSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprCollectionAccess.cpp");
+  const std::string mapSoaBuiltinsSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorExprMapSoaBuiltins.cpp");
   const std::string countCapacityMapBuiltinSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprCountCapacityBuiltins.cpp");
@@ -514,6 +517,13 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(lateMapAccessBuiltinsSource.find("namespacePrefix == \"map\"") ==
         std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find("methodResolved = \"/map/\" + helperName") ==
+        std::string::npos);
+  CHECK(mapSoaBuiltinsSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
+        std::string::npos);
+  CHECK(mapSoaBuiltinsSource.find(
+            "metadataBackedCanonicalMapHelperPath(helperName)") !=
+        std::string::npos);
+  CHECK(mapSoaBuiltinsSource.find("mapHelperSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(pointerLikeSource.find("appendUnique(\"/std/collections/map/\" + suffix)") ==
         std::string::npos);

@@ -11,16 +11,18 @@ namespace primec::semantics {
 namespace {
 
 std::string canonicalMapHelperPathLocal(std::string_view helperName) {
-  return canonicalCollectionHelperPath(StdlibSurfaceId::CollectionsMapHelpers,
-                                       helperName);
+  return metadataBackedCanonicalMapHelperPath(helperName);
 }
 
 bool isCanonicalMapHelperResolvedPath(const std::string &path,
                                       std::string_view helperName) {
+  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return false;
+  }
   std::string resolvedHelperName;
   return resolvePublishedCollectionHelperResolvedPath(
-             path, StdlibSurfaceId::CollectionsMapHelpers,
-             resolvedHelperName) &&
+             path, metadata->id, resolvedHelperName) &&
          resolvedHelperName == helperName;
 }
 
