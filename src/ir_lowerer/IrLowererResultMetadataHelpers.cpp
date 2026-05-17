@@ -30,6 +30,10 @@ std::string resolveScopedCallPath(const Expr &expr) {
   return expr.namespacePrefix + "/" + expr.name;
 }
 
+const StdlibSurfaceMetadata *mapConstructorSurfaceMetadataLocal() {
+  return findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
+}
+
 bool isFileHandleTypeText(const std::string &typeText) {
   std::string base;
   std::string arg;
@@ -713,9 +717,12 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
           collectionMemberPath("map", "map");
       const std::string unrootedMapConstructor =
           collectionMemberPath("map", "map", false);
-      return isPublishedStdlibSurfaceConstructorExpr(
-                 candidate,
-                 primec::StdlibSurfaceId::CollectionsMapConstructors) ||
+      const StdlibSurfaceMetadata *metadata =
+          mapConstructorSurfaceMetadataLocal();
+      return (metadata != nullptr &&
+              isPublishedStdlibSurfaceConstructorExpr(
+                  candidate,
+                  metadata->id)) ||
              scopedPath == rootedMapConstructor ||
              scopedPath.rfind(rootedMapConstructor + "__", 0) == 0 ||
              scopedPath == unrootedMapConstructor ||

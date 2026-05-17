@@ -154,6 +154,19 @@
   the map stdlib-ownership cutover.
 
 ## Recent Test Runs
+- 2026-05-17 09:58 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer result helpers resolve map Result payload metadata,ir lowerer result helpers resolve function-returned map Result payload metadata,ir lowerer result helpers use semantic query facts for direct Result ok payload metadata" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_backend_runtime_tests`;
+  `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="direct Result ok payload metadata uses semantic-product type facts first" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: direct Result value map-constructor metadata now resolves constructor
+  metadata through `collections.map_constructors` instead of directly naming
+  the map constructor surface ID; the map surface inventory dropped to 264
+  production traces and backing traces remain at 0.
 - 2026-05-17 09:55 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer result helpers resolve map Result payload metadata" --no-skip`;

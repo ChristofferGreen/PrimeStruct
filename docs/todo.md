@@ -2437,6 +2437,12 @@ Task template:
       `collections.map_constructors` bridge key, and the
       `src/ir_lowerer/IrLowererPackedResultHelpers.cpp` map-surface inventory
       allowance dropped from 3 traces to 2.
+    - 2026-05-17: Direct Result value collection metadata no longer names the
+      map constructor surface ID directly while classifying direct map
+      constructor payloads; it now obtains constructor metadata through the
+      `collections.map_constructors` bridge key, and the
+      `src/ir_lowerer/IrLowererResultMetadataHelpers.cpp` map-surface
+      inventory allowance dropped from 8 traces to 7.
     - 2026-05-16: Collection access target resolution no longer hard-codes
       canonical map access/contains helper paths, namespace checks, or
       missing-definition diagnostics; it now resolves them through stdlib

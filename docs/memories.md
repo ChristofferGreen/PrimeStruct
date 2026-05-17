@@ -471,6 +471,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   instead of naming the map constructor surface ID directly; packed Result
   map-constructor rewriting should resolve constructor metadata through the
   same bridge key instead of directly naming the map constructor surface ID;
+  direct Result value collection metadata should resolve constructor metadata
+  through the same bridge key instead of naming the map constructor surface ID;
   semantic Result helper inference should derive canonical
   `tryAt`/`tryAt_ref` helper paths and rooted map helper aliases from
   `collections.map_helpers` metadata instead of direct map path comparisons;
