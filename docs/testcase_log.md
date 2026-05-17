@@ -146,6 +146,17 @@
   coverage until the bare helper fixture is retired or refreshed.
 
 ## Recent Test Runs
+- 2026-05-17 09:40 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="wrapper reference templated map count method rejects missing canonical helper,wrapper reference templated map count method rejects missing canonical ref helper,map slash-path explicit-template count method reports canonical return mismatch" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: pointer-like collection method normalization now derives the rooted
+  map import-alias helper prefix from `collections.map_helpers` metadata
+  instead of direct `map/` text; the map surface inventory dropped to 268
+  production traces and backing traces remain at 0.
 - 2026-05-17 09:35 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="inferred canonical map returns rewrite canonical constructors,inferred canonical map returns keep constructor mismatch diagnostics,block-bodied inferred canonical map returns rewrite constructors,block-bodied inferred canonical map returns keep mismatch diagnostics" --no-skip`;

@@ -28,6 +28,24 @@ std::string unrootedCanonicalMapHelperPrefix() {
   return prefix;
 }
 
+std::string unrootedMapImportAliasHelperPrefix() {
+  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return "";
+  }
+  for (std::string_view alias : metadata->importAliasSpellings) {
+    std::string prefix(alias);
+    if (!prefix.empty() && prefix.front() == '/') {
+      prefix.erase(prefix.begin());
+    }
+    if (!prefix.empty() && prefix.find('/') == std::string::npos) {
+      prefix += "/";
+      return prefix;
+    }
+  }
+  return "";
+}
+
 std::vector<std::string> pointerLikeCallPathCandidates(const std::string &path) {
   std::vector<std::string> candidates;
   auto appendUnique = [&](const std::string &candidate) {
@@ -70,7 +88,7 @@ std::string SemanticsValidator::normalizeCollectionMethodName(const std::string 
     normalized.erase(normalized.begin());
   }
   const std::string arrayPrefix = "array/";
-  const std::string mapPrefix = "map/";
+  const std::string mapPrefix = unrootedMapImportAliasHelperPrefix();
   const std::string stdMapPrefix = unrootedCanonicalMapHelperPrefix();
   if (isUnrootedVectorHelperPath(normalized)) {
     normalized = normalized.substr(unrootedVectorHelperPrefix().size());
@@ -79,7 +97,7 @@ std::string SemanticsValidator::normalizeCollectionMethodName(const std::string 
   } else if (isUnrootedCanonicalVectorCompatibilityPath(normalized)) {
     normalized =
         std::string(stripUnrootedCanonicalVectorCompatibilityPrefix(normalized));
-  } else if (normalized.rfind(mapPrefix, 0) == 0) {
+  } else if (!mapPrefix.empty() && normalized.rfind(mapPrefix, 0) == 0) {
     normalized = normalized.substr(mapPrefix.size());
   } else if (!stdMapPrefix.empty() && normalized.rfind(stdMapPrefix, 0) == 0) {
     normalized = normalized.substr(stdMapPrefix.size());

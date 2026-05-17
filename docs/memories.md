@@ -454,7 +454,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   IDs; try builtin validation should derive canonical map tryAt helper paths
   through the same metadata instead of direct map surface IDs; pointer-like
   collection method normalization should derive the unrooted canonical map
-  helper prefix through the same metadata instead of direct map surface IDs;
+  helper prefix and rooted import-alias helper prefix through the same metadata
+  instead of direct map surface IDs or direct `map/` text;
   collection return inference should derive canonical map access helper
   return lookup paths through the same metadata instead of direct path
   concatenation; collection buffer/map resolver inference should derive the

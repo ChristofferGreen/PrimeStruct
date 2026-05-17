@@ -609,9 +609,13 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(pointerLikeSource.find("appendUnique(\"/map/\" + suffix)") ==
         std::string::npos);
+  CHECK(pointerLikeSource.find("const std::string mapPrefix = \"map/\"") ==
+        std::string::npos);
   CHECK(pointerLikeSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
         std::string::npos);
   CHECK(pointerLikeSource.find("mapHelperSurfaceMetadataLocal()") !=
+        std::string::npos);
+  CHECK(pointerLikeSource.find("unrootedMapImportAliasHelperPrefix()") !=
         std::string::npos);
   CHECK(statementPrintabilitySource.find("resolvedPath == \"/map/at\"") ==
         std::string::npos);

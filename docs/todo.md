@@ -2372,6 +2372,11 @@ Task template:
       `collections.map_helpers` bridge key, and the
       `src/semantics/SemanticsValidatorExprPointerLike.cpp` map-surface
       inventory allowance dropped from 8 traces to 7.
+    - 2026-05-17: Pointer-like collection method normalization no longer
+      hard-codes the rooted map import-alias helper prefix; it now derives
+      that prefix from `collections.map_helpers` import-alias metadata, and
+      the `src/semantics/SemanticsValidatorExprPointerLike.cpp` map-surface
+      inventory allowance dropped from 7 traces to 6.
     - 2026-05-17: Collection return inference no longer concatenates
       canonical map access helper paths while looking up declared returns for
       direct map access calls; it now derives those paths through
