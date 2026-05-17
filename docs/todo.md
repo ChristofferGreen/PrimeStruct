@@ -333,7 +333,9 @@ Task template:
   expression method resolution now derives canonical map access helper paths
   through that metadata instead of direct map surface IDs, and try builtin
   validation now derives canonical map tryAt helper paths through that
-  metadata instead of direct map surface IDs. The
+  metadata instead of direct map surface IDs, and pointer-like collection
+  method normalization now derives the unrooted canonical map helper prefix
+  through that metadata instead of direct map surface IDs. The
   remaining production
   lowerer/emitter
   experimental-map traces
@@ -2362,6 +2364,12 @@ Task template:
       hard-codes the canonical map helper prefix; it now derives it through
       stdlib surface metadata, and stale method-alias diagnostics were
       refreshed to current receiver-method behavior.
+    - 2026-05-17: Pointer-like collection method normalization no longer
+      names the map helper surface ID directly while deriving the unrooted
+      canonical map helper prefix; it now obtains that metadata through the
+      `collections.map_helpers` bridge key, and the
+      `src/semantics/SemanticsValidatorExprPointerLike.cpp` map-surface
+      inventory allowance dropped from 8 traces to 7.
     - 2026-05-16: Collection access target resolution no longer hard-codes
       canonical map access/contains helper paths, namespace checks, or
       missing-definition diagnostics; it now resolves them through stdlib

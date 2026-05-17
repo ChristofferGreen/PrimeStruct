@@ -126,8 +126,30 @@
   On 2026-05-17 the case still rejected the program, but no longer emitted
   the old `unknown method: /i32/count` text; adjacent map access string-count
   shadow and return-mismatch method-resolution coverage still passes.
+- `PrimeStruct_semantics_tests --test-case="map namespaced count method compatibility alias is rejected" --no-skip`
+  is stale after the map stdlib-ownership cutover. On 2026-05-17 it
+  validated `values./map/count()` successfully instead of rejecting with the
+  old `unknown method: /map/count` diagnostic; adjacent slash-path map
+  method normalization coverage still passes.
 
 ## Recent Test Runs
+- 2026-05-17 09:05 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map slash-path explicit-template count method reports canonical return mismatch,map namespaced at method now validates through slash-path routing,map namespaced at_unsafe method auto inference now validates through slash-path routing,map namespaced tryAt method validates through slash-path routing,map namespaced at method expression body arguments validate through slash-path target" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: pointer-like collection method normalization now derives the
+  unrooted canonical map helper prefix through `collections.map_helpers`
+  metadata instead of direct map surface IDs; the map surface inventory
+  dropped to 279 production traces and backing traces remain at 0.
+- 2026-05-17 09:05 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map namespaced count method compatibility alias is rejected,map slash-path explicit-template count method reports canonical return mismatch,map namespaced at method now validates through slash-path routing,map namespaced at_unsafe method auto inference now validates through slash-path routing,map namespaced tryAt method validates through slash-path routing,map namespaced at method expression body arguments validate through slash-path target" --no-skip` |
+  failures: map namespaced count method compatibility alias is rejected |
+  notes: the count alias fixture is stale and now validates successfully;
+  the five adjacent slash-path normalization cases passed and were rerun as
+  the selected passing gate above.
 - 2026-05-17 09:00 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib namespaced map tryAt requires imported stdlib helper or explicit definition,stdlib namespaced map tryAt does not inherit alias-only helper definition,map wrapper temporary tryAt auto inference requires canonical helper definition" --no-skip`;

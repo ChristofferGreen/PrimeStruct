@@ -14,8 +14,7 @@ bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
 }
 
 std::string unrootedCanonicalMapHelperPrefix() {
-  const StdlibSurfaceMetadata *metadata =
-      findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsMapHelpers);
+  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return "";
   }

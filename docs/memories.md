@@ -452,7 +452,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   derive canonical map access helper paths for string-count shadow rejection
   through `collections.map_helpers` metadata instead of direct map surface
   IDs; try builtin validation should derive canonical map tryAt helper paths
-  through the same metadata instead of direct map surface IDs.
+  through the same metadata instead of direct map surface IDs; pointer-like
+  collection method normalization should derive the unrooted canonical map
+  helper prefix through the same metadata instead of direct map surface IDs.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
