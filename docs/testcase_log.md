@@ -161,6 +161,17 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-17 10:12 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="template vector and map returns are allowed,canonical stdlib map returns are allowed" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: build-return-kind map collection normalization now derives the
+  rooted map collection marker from `collections.map_constructors`
+  import-alias metadata instead of a direct `"/map"` string; the map surface
+  inventory remains at 260 production traces and backing traces remain at 0.
 - 2026-05-17 10:08 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer binding normalization guards explicit map helper defs,ir lowerer direct expr and inference rewrites guard explicit map defs" --no-skip`;

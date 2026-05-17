@@ -1,6 +1,33 @@
 #include "SemanticsValidator.h"
 
+#include "MapConstructorHelpers.h"
+
+#include <string>
+#include <string_view>
+
 namespace primec::semantics {
+namespace {
+
+std::string mapCollectionMarkerPathForBuildReturnKinds() {
+  const StdlibSurfaceMetadata *metadata = mapConstructorSurfaceMetadataLocal();
+  if (metadata != nullptr) {
+    for (std::string_view alias : metadata->importAliasSpellings) {
+      if (alias.empty()) {
+        continue;
+      }
+      std::string rootedAlias(alias);
+      if (rootedAlias.front() != '/') {
+        rootedAlias.insert(rootedAlias.begin(), '/');
+      }
+      if (rootedAlias.find('/', 1) == std::string::npos) {
+        return rootedAlias;
+      }
+    }
+  }
+  return std::string(1, '/') + std::string("map");
+}
+
+} // namespace
 
 std::string SemanticsValidator::resolveStructReturnPathForBuild(const std::string &typeName,
                                                                const std::string &namespacePrefix) const {
@@ -13,7 +40,7 @@ std::string SemanticsValidator::resolveStructReturnPathForBuild(const std::strin
       return "/" + baseName;
     }
     if (isMapCollectionTypeName(baseName)) {
-      return "/map";
+      return mapCollectionMarkerPathForBuildReturnKinds();
     }
     return "";
   };

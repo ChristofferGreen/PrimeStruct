@@ -2460,6 +2460,11 @@ Task template:
       `collections.map_helpers` bridge key, and the
       `src/ir_lowerer/IrLowererLowerStatementsBindings.h` map-surface inventory
       allowance dropped from 4 traces to 3.
+    - 2026-05-17: Build-return-kind map collection normalization no longer
+      hard-codes rooted `/map` as the normalized map collection marker; it
+      derives that marker from `collections.map_constructors` import-alias
+      metadata, and the source-lock coverage now keeps the direct `"/map"`
+      return from reappearing there.
     - 2026-05-16: Collection access target resolution no longer hard-codes
       canonical map access/contains helper paths, namespace checks, or
       missing-definition diagnostics; it now resolves them through stdlib

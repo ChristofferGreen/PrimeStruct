@@ -492,7 +492,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   of hard-coded `/map/at*` message strings; statement return collection
   normalization should derive the rooted map collection marker from
   `collections.map_constructors` import-alias metadata instead of a direct
-  `/map` string.
+  `/map` string; build-return-kind map collection normalization should derive
+  the same rooted marker from constructor import-alias metadata instead of a
+  direct `/map` string.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
