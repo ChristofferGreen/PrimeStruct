@@ -199,6 +199,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string collectionAccessSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprCollectionAccess.cpp");
+  const std::string collectionDispatchSetupSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorExprCollectionDispatchSetup.cpp");
   const std::string mapSoaBuiltinsSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprMapSoaBuiltins.cpp");
@@ -552,6 +555,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(collectionAccessValidationSource.find("namespacePrefix == \"map\"") ==
         std::string::npos);
   CHECK(collectionAccessValidationSource.find("diagnosticTarget.rfind(\"/map/\"") ==
+        std::string::npos);
+  CHECK(collectionDispatchSetupSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
+        std::string::npos);
+  CHECK(collectionDispatchSetupSource.find("mapHelperSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(collectionAccessSource.find("resolvedPath == \"/map/at_ref\" ||\n"
                                     "            resolvedPath == \"/std/collections/map/at_ref\"") ==

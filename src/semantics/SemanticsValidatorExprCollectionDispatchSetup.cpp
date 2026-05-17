@@ -11,9 +11,13 @@ bool isCanonicalMapAccessHelperName(const std::string &helperName) {
 }
 
 bool isStdNamespacedCanonicalMapAccessPath(const std::string &path) {
+  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return false;
+  }
   std::string helperName;
   return resolvePublishedCollectionHelperResolvedPath(
-             path, StdlibSurfaceId::CollectionsMapHelpers, helperName) &&
+             path, metadata->id, helperName) &&
          isCanonicalMapAccessHelperName(helperName);
 }
 
