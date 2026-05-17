@@ -1,6 +1,10 @@
 # Testcase Log
 
 ## Current Known Failures
+- `PrimeStruct_backend_ir_tests --test-case="ir lowerer materializes variadic borrowed map packs with indexed count_ref helpers,ir lowerer materializes variadic pointer map packs with indexed count_ref helpers" --no-skip`
+  is stale after the map stdlib-ownership cutover. On 2026-05-17 both cases
+  still failed during lowering on retired `/at` expression calls before
+  variadic map constructor packed-argument rewriting was reached.
 - `PrimeStruct_semantics_tests --test-case="wrapper-returned slash-method map access count keeps primitive diagnostics" --no-skip`
   is stale after the map stdlib-ownership cutover. On 2026-05-17 it
   validated successfully instead of reporting `unknown method: /map/at`;
@@ -161,6 +165,23 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-17 10:23 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: inline packed-args map constructor rewriting now obtains
+  `collections.map_constructors` metadata through the bridge key instead of
+  directly naming the map constructor surface ID; the map surface inventory
+  dropped to 257 production traces and backing traces remain at 0.
+- 2026-05-17 10:23 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer materializes variadic borrowed map packs with indexed count_ref helpers,ir lowerer materializes variadic pointer map packs with indexed count_ref helpers" --no-skip` |
+  failures: ir lowerer materializes variadic borrowed map packs with indexed
+  count_ref helpers; ir lowerer materializes variadic pointer map packs with
+  indexed count_ref helpers | notes: both stale map variadic fixtures still
+  fail during lowering on retired `/at` expression calls before the inline
+  packed-args map constructor rewrite path is exercised.
 - 2026-05-17 10:19 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers infer forwarded map access targets" --no-skip`;

@@ -498,7 +498,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   derive the same rooted marker from constructor import-alias metadata instead
   of a direct `/map` string; IR access-target forwarded empty map constructor
   checks should derive the `mapNew` token from map constructor metadata plus
-  the empty-constructor suffix convention instead of spelling it directly.
+  the empty-constructor suffix convention instead of spelling it directly;
+  inline packed-args map constructor rewriting should obtain constructor
+  metadata through the `collections.map_constructors` bridge key instead of
+  directly naming the map constructor surface ID.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

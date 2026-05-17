@@ -11,13 +11,17 @@ namespace primec::ir_lowerer {
 
 namespace {
 
+const StdlibSurfaceMetadata *mapConstructorSurfaceMetadataForInlinePackedArgs() {
+  return findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
+}
+
 bool isPublishedMapConstructorExpr(const Expr &callExpr) {
   if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
     return false;
   }
-  return isPublishedStdlibSurfaceConstructorExpr(
-      callExpr,
-      primec::StdlibSurfaceId::CollectionsMapConstructors);
+  const auto *metadata = mapConstructorSurfaceMetadataForInlinePackedArgs();
+  return metadata != nullptr &&
+         isPublishedStdlibSurfaceConstructorExpr(callExpr, metadata->id);
 }
 
 std::string extractParameterTypeName(const Expr &paramExpr) {
@@ -98,11 +102,13 @@ bool rewritePublishedMapConstructorExpr(const Expr &callExpr,
     return false;
   }
   const Definition *callee = resolveDefinitionCall ? resolveDefinitionCall(callExpr) : nullptr;
+  const auto *mapConstructorMetadata =
+      mapConstructorSurfaceMetadataForInlinePackedArgs();
   const bool isResolvedPublishedConstructor =
       callee != nullptr &&
+      mapConstructorMetadata != nullptr &&
       isResolvedCanonicalPublishedStdlibSurfaceConstructorPath(
-          callee->fullPath,
-          primec::StdlibSurfaceId::CollectionsMapConstructors);
+          callee->fullPath, mapConstructorMetadata->id);
   if (!isPublishedMapConstructorExpr(callExpr) && !isResolvedPublishedConstructor) {
     return false;
   }
