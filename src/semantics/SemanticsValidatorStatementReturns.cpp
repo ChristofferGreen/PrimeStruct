@@ -2,6 +2,7 @@
 
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
+#include <array>
 #include <cctype>
 #include <functional>
 #include <limits>
@@ -74,10 +75,27 @@ std::string returnTypeMismatchDiagnostic(const std::string &expectedTypePath,
 }
 
 bool isUnknownBorrowedMapAccessMethodDiagnostic(const std::string &message) {
-  return message == "unknown method: /map/at" ||
-         message == "unknown method: /map/at_ref" ||
-         message == "unknown method: /map/at_unsafe" ||
-         message == "unknown method: /map/at_unsafe_ref";
+  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return false;
+  }
+  static constexpr std::array<std::string_view, 4> AccessHelpers = {
+      "at", "at_ref", "at_unsafe", "at_unsafe_ref"};
+  for (std::string_view alias : metadata->importAliasSpellings) {
+    if (!alias.empty() && alias.front() == '/') {
+      alias.remove_prefix(1);
+    }
+    if (alias.find('/') != std::string_view::npos) {
+      continue;
+    }
+    for (std::string_view helperName : AccessHelpers) {
+      if (message == "unknown method: /" + std::string(alias) + "/" +
+                         std::string(helperName)) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 } // namespace

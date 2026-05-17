@@ -1,6 +1,10 @@
 # Testcase Log
 
 ## Current Known Failures
+- `PrimeStruct_semantics_tests --test-case="wrapper-returned slash-method map access count keeps primitive diagnostics" --no-skip`
+  is stale after the map stdlib-ownership cutover. On 2026-05-17 it
+  validated successfully instead of reporting `unknown method: /map/at`;
+  adjacent map method-alias receiver-path inference cases passed.
 - `PrimeStruct_semantics_tests --test-case="wrapper-returned map method alias access keeps primitive receiver diagnostics during inference" --no-skip`
   is stale after the map stdlib-ownership cutover. On 2026-05-17 it no
   longer reported `unable to infer return type on /project`, while adjacent
@@ -142,6 +146,24 @@
   coverage until the bare helper fixture is retired or refreshed.
 
 ## Recent Test Runs
+- 2026-05-17 09:29 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map method alias access accepts matching receiver during inference,map method alias access rejects missing receiver method during inference" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: statement return auto-diagnostic fallback now derives rooted map
+  access unknown-method messages from `collections.map_helpers` metadata
+  instead of hard-coded `/map/at*` strings; the map surface inventory dropped
+  to 269 production traces and backing traces remain at 0.
+- 2026-05-17 09:29 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="wrapper-returned slash-method map access count keeps primitive diagnostics,map method alias access accepts matching receiver during inference,map method alias access rejects missing receiver method during inference" --no-skip` |
+  failures: wrapper-returned slash-method map access count keeps primitive
+  diagnostics |
+  notes: the two adjacent receiver-path inference cases passed in the same
+  run and were rerun as the selected passing gate above; the count fixture
+  now validates instead of reporting stale `unknown method: /map/at`.
 - 2026-05-17 09:25 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="map method alias access accepts matching receiver during inference,map method alias access rejects missing receiver method during inference,wrapper-returned map method alias access keeps primitive argument diagnostics during inference" --no-skip`;

@@ -298,6 +298,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererResultMetadataHelpers.cpp");
   const std::string semanticsResultHelpersSource =
       readText(repoRoot() / "src" / "semantics" / "SemanticsValidatorResultHelpers.cpp");
+  const std::string statementReturnsSource =
+      readText(repoRoot() / "src" / "semantics" / "SemanticsValidatorStatementReturns.cpp");
   const std::string inlineCallContextSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererInlineCallContextHelpers.cpp");
 
@@ -370,6 +372,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!countAccessSource.empty());
   REQUIRE(!resultMetadataSource.empty());
   REQUIRE(!semanticsResultHelpersSource.empty());
+  REQUIRE(!statementReturnsSource.empty());
   REQUIRE(!inlineCallContextSource.empty());
 
   CHECK(mapSource.find("import /std/collections/internal_map/*") == std::string::npos);
@@ -894,6 +897,17 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(semanticsResultHelpersSource.find(
             "metadataBackedMapHelperRootAliasMethodName(resolvedPath)") !=
         std::string::npos);
+  CHECK(statementReturnsSource.find("unknown method: /map/at") ==
+        std::string::npos);
+  CHECK(statementReturnsSource.find("unknown method: /map/at_ref") ==
+        std::string::npos);
+  CHECK(statementReturnsSource.find("unknown method: /map/at_unsafe") ==
+        std::string::npos);
+  CHECK(statementReturnsSource.find("unknown method: /map/at_unsafe_ref") ==
+        std::string::npos);
+  CHECK(statementReturnsSource.find("mapHelperSurfaceMetadataLocal()") !=
+        std::string::npos);
+  CHECK(statementReturnsSource.find("AccessHelpers") != std::string::npos);
   CHECK(inlineCallContextSource.find("collectionMemberRoot(\"map\") + \"map__\"") !=
         std::string::npos);
   CHECK(inlineCallContextSource.find("\"/std/collections/map/map__\"") ==

@@ -2403,6 +2403,12 @@ Task template:
       temporaries; it now uses the shared map collection classifier, and the
       `src/semantics/SemanticsValidatorExprReceiverPaths.cpp` map-surface
       inventory allowance dropped from 4 traces to 3.
+    - 2026-05-17: Statement return auto-diagnostic fallback no longer
+      hard-codes unknown rooted map access method diagnostics; it now
+      derives rooted access-helper messages from `collections.map_helpers`
+      metadata, and the
+      `src/semantics/SemanticsValidatorStatementReturns.cpp` map-surface
+      inventory allowance dropped from 7 traces to 3.
     - 2026-05-16: Collection access target resolution no longer hard-codes
       canonical map access/contains helper paths, namespace checks, or
       missing-definition diagnostics; it now resolves them through stdlib
