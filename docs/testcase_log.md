@@ -151,6 +151,17 @@
   adjacent default-parameter mismatch and Result-wrapped map cases passed.
 
 ## Recent Test Runs
+- 2026-05-17 09:48 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer constructor metadata helpers retire duplicated constructor tables,ir lowerer setup type infers referenced declared collection receivers" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: IR lowerer declared-collection inference now resolves map constructor
+  metadata through `collections.map_constructors` instead of directly naming
+  the map constructor surface ID; the map surface inventory dropped to 266
+  production traces and backing traces remain at 0.
 - 2026-05-17 09:44 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib map constructors keep mismatch diagnostics on inferred canonical map default parameters,helper-wrapped inferred experimental result map default parameters validate,helper-wrapped inferred experimental result map default parameters keep mismatch diagnostics" --no-skip`;

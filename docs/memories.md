@@ -466,7 +466,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   template monomorph canonical experimental map constructor rewrites should
   derive the canonical constructor path and rooted import alias from the same
   metadata instead of direct `/map` and `/std/collections/map/map`
-  comparisons; semantic Result helper inference should derive canonical
+  comparisons; IR lowerer declared-collection inference should resolve map
+  constructor metadata through the `collections.map_constructors` bridge key
+  instead of naming the map constructor surface ID directly; semantic Result
+  helper inference should derive canonical
   `tryAt`/`tryAt_ref` helper paths and rooted map helper aliases from
   `collections.map_helpers` metadata instead of direct map path comparisons;
   semantic receiver-path resolution should skip map collection temporaries

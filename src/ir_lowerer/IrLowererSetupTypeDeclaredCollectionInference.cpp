@@ -9,6 +9,14 @@
 
 namespace primec::ir_lowerer {
 
+namespace {
+
+const StdlibSurfaceMetadata *mapConstructorSurfaceMetadataLocal() {
+  return findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
+}
+
+} // namespace
+
 std::string normalizeDeclaredCollectionTypeBase(const std::string &base) {
   if (isExperimentalCollectionTypeName(base, "vector", "Vector")) {
     return "vector";
@@ -159,9 +167,13 @@ bool inferDeclaredReturnCollection(const Definition &definition,
       normalizedName.erase(normalizedName.begin());
     }
     auto isDirectMapConstructor = [&]() {
+      const StdlibSurfaceMetadata *metadata = mapConstructorSurfaceMetadataLocal();
+      if (metadata == nullptr) {
+        return false;
+      }
       return isPublishedStdlibSurfaceConstructorExpr(
           candidate,
-          primec::StdlibSurfaceId::CollectionsMapConstructors);
+          metadata->id);
     };
     auto isDirectVectorConstructor = [&]() {
       const std::string constructorPath =
