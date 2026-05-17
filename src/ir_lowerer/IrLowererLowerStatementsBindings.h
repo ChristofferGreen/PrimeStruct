@@ -55,9 +55,12 @@
           }
           const std::string rawPath = resolveDirectMapHelperPath(exprIn);
           std::string directHelperName;
-          if (resolvePublishedStdlibSurfaceMemberName(
+          const auto *metadata =
+              findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+          if (metadata != nullptr &&
+              resolvePublishedStdlibSurfaceMemberName(
                   rawPath,
-                  StdlibSurfaceId::CollectionsMapHelpers,
+                  metadata->id,
                   directHelperName) &&
               findDirectMapHelperDefinition(rawPath) != nullptr) {
             return;

@@ -155,8 +155,29 @@
 - `PrimeStruct_backend_ir_tests --test-case="stdlib surface metadata resolves collection helper member tokens" --no-skip`
   still has stale SoA helper token expectations for `soaVectorCountRef`,
   `soaVectorFieldView`, and `soaVectorToAos`.
+- `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers keep explicit map helper same-path defs" --no-skip`
+  still has stale alias access fallback expectations; on 2026-05-17 the
+  alias `at` and `at_unsafe` checks still resolved compatibility defs instead
+  of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-17 10:08 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer binding normalization guards explicit map helper defs,ir lowerer direct expr and inference rewrites guard explicit map defs" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: statement-binding explicit map helper canonicalization now resolves
+  map helper metadata through `collections.map_helpers` instead of directly
+  naming the map helper surface ID; the map surface inventory dropped to 260
+  production traces and backing traces remain at 0.
+- 2026-05-17 10:08 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer binding normalization guards explicit map helper defs,ir lowerer direct expr and inference rewrites guard explicit map defs,ir lowerer call helpers keep explicit map helper same-path defs" --no-skip` |
+  failures: ir lowerer call helpers keep explicit map helper same-path defs |
+  notes: the two statement-binding guard cases passed; the broader stale
+  same-path map-helper case still resolves alias `at` and `at_unsafe`
+  compatibility defs where the fixture expects `nullptr`.
 - 2026-05-17 10:04 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer map constructor rewrite checks constructor surface before resolving defs,ir lowerer setup type helper rejects canonical map constructor fallback to compatibility defs,ir lowerer setup type helper prefers canonical map method return structs over alias defs" --no-skip`;

@@ -2454,6 +2454,12 @@ Task template:
       metadata through the `collections.map_constructors` bridge key, and the
       `src/ir_lowerer/IrLowererSetupTypeMethodCallResolution.cpp` map-surface
       inventory allowance dropped from 25 traces to 24.
+    - 2026-05-17: Statement-binding explicit map helper canonicalization no
+      longer names the map helper surface ID directly while checking for
+      direct helper definitions; it now obtains helper metadata through the
+      `collections.map_helpers` bridge key, and the
+      `src/ir_lowerer/IrLowererLowerStatementsBindings.h` map-surface inventory
+      allowance dropped from 4 traces to 3.
     - 2026-05-16: Collection access target resolution no longer hard-codes
       canonical map access/contains helper paths, namespace checks, or
       missing-definition diagnostics; it now resolves them through stdlib

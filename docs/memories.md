@@ -479,6 +479,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   setup-type method-call bridge path filtering should resolve map constructor
   metadata through `collections.map_constructors` instead of naming the map
   constructor surface ID directly;
+  statement-binding explicit map helper canonicalization should resolve map
+  helper metadata through `collections.map_helpers` instead of naming the map
+  helper surface ID directly;
   semantic Result helper inference should derive canonical
   `tryAt`/`tryAt_ref` helper paths and rooted map helper aliases from
   `collections.map_helpers` metadata instead of direct map path comparisons;
