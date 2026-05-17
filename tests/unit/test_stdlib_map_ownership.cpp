@@ -676,6 +676,11 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(argumentValidationCollectionsSource.find("resolvedBasePath == \"/map/at\"") ==
         std::string::npos);
+  CHECK(argumentValidationCollectionsSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
+        std::string::npos);
+  CHECK(argumentValidationCollectionsSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+        std::string::npos);
   CHECK(collectionAccessValidationSource.find("path == \"/map/at\"") ==
         std::string::npos);
   CHECK(collectionAccessValidationSource.find("normalizedName == \"map/at_ref\"") ==

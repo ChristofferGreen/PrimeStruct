@@ -637,7 +637,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   statement printability now uses the same metadata for canonical map access
   helper matching instead of direct map surface IDs; expression
   collection-dispatch setup now also uses metadata-backed canonical map
-  access helper matching instead of direct map surface IDs.
+  access helper matching instead of direct map surface IDs; argument
+  validation map access helper lookup should also use the bridge-key
+  `collections.map_helpers` metadata instead of directly naming the map
+  helper surface ID.
   The stale
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`

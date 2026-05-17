@@ -23,9 +23,17 @@ std::string stripGeneratedHelperSuffix(std::string path) {
   return path;
 }
 
+const StdlibSurfaceMetadata *mapHelperSurfaceMetadataForArgumentValidation() {
+  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+}
+
 std::string canonicalMapHelperPathLocal(std::string_view helperName) {
-  return canonicalCollectionHelperPath(StdlibSurfaceId::CollectionsMapHelpers,
-                                       helperName);
+  const StdlibSurfaceMetadata *metadata =
+      mapHelperSurfaceMetadataForArgumentValidation();
+  if (metadata == nullptr) {
+    return "";
+  }
+  return canonicalCollectionHelperPath(metadata->id, helperName);
 }
 
 bool resolveCanonicalMapHelperNameFromSpelling(std::string path,
@@ -34,8 +42,11 @@ bool resolveCanonicalMapHelperNameFromSpelling(std::string path,
   if (!path.empty() && path.front() != '/') {
     path.insert(path.begin(), '/');
   }
-  return resolvePublishedCollectionHelperResolvedPath(
-      path, StdlibSurfaceId::CollectionsMapHelpers, helperNameOut);
+  const StdlibSurfaceMetadata *metadata =
+      mapHelperSurfaceMetadataForArgumentValidation();
+  return metadata != nullptr &&
+         resolvePublishedCollectionHelperResolvedPath(
+             path, metadata->id, helperNameOut);
 }
 
 bool isCanonicalMapAccessResolvedPath(const std::string &path) {

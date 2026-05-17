@@ -2496,6 +2496,11 @@ Task template:
       metadata through the `collections.map_helpers` bridge key, and
       `src/semantics/SemanticsValidatorInferCollectionDispatch.cpp` is removed
       from the map-surface trace inventory allowlist.
+    - 2026-05-17: Argument-validation map access helper lookup no longer
+      names the map helper surface ID directly; it obtains helper metadata
+      through the `collections.map_helpers` bridge key, and
+      `src/semantics/SemanticsValidatorExprArgumentValidationCollections.cpp`
+      is removed from the map-surface trace inventory allowlist.
     - 2026-05-16: Collection access target resolution no longer hard-codes
       canonical map access/contains helper paths, namespace checks, or
       missing-definition diagnostics; it now resolves them through stdlib
