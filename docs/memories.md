@@ -459,7 +459,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   return lookup paths through the same metadata instead of direct path
   concatenation; collection buffer/map resolver inference should derive the
   canonical map constructor path from `collections.map_constructors`
-  metadata instead of a hard-coded `/std/collections/map/map` string.
+  metadata instead of a hard-coded `/std/collections/map/map` string;
+  template monomorph canonical experimental map constructor rewrites should
+  derive the canonical constructor path and rooted import alias from the same
+  metadata instead of direct `/map` and `/std/collections/map/map`
+  comparisons.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

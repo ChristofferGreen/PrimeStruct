@@ -2385,6 +2385,13 @@ Task template:
       metadata, and the
       `src/semantics/SemanticsValidatorInferCollectionBufferAndMapResolvers.cpp`
       map-surface inventory allowance dropped from 10 traces to 9.
+    - 2026-05-17: Template monomorph canonical experimental map constructor
+      rewrites no longer compare source call paths to hard-coded rooted and
+      canonical map constructor strings; they now derive the canonical path
+      and rooted import alias from `collections.map_constructors` metadata,
+      and the
+      `src/semantics/TemplateMonomorphExperimentalCollectionConstructorRewrites.h`
+      map-surface inventory allowance dropped from 6 traces to 5.
     - 2026-05-16: Collection access target resolution no longer hard-codes
       canonical map access/contains helper paths, namespace checks, or
       missing-definition diagnostics; it now resolves them through stdlib

@@ -151,6 +151,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string templateExpressionRewriteSource =
       readText(repoRoot() / "src" / "semantics" /
                "TemplateMonomorphExpressionRewrite.h");
+  const std::string templateConstructorRewriteSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "TemplateMonomorphExperimentalCollectionConstructorRewrites.h");
   const std::string inferStructReturnSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorInferStructReturn.cpp");
@@ -306,6 +309,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!templateCoreSource.empty());
   REQUIRE(!templateReceiverSource.empty());
   REQUIRE(!templateExpressionRewriteSource.empty());
+  REQUIRE(!templateConstructorRewriteSource.empty());
   REQUIRE(!inferStructReturnSource.empty());
   REQUIRE(!inferStructReturnHelpersSource.empty());
   REQUIRE(!inferMethodResolutionSource.empty());
@@ -466,6 +470,20 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(templateExpressionRewriteSource.find("const std::string compatibilityPath = \"/map/\" +") ==
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("resolvedPath.rfind(\"/map/\", 0) == 0) &&") ==
+        std::string::npos);
+  CHECK(templateConstructorRewriteSource.find("originalPath == \"/map\"") ==
+        std::string::npos);
+  CHECK(templateConstructorRewriteSource.find(
+            "originalPath == \"/std/collections/map/map\"") ==
+        std::string::npos);
+  CHECK(templateConstructorRewriteSource.find(
+            "isCanonicalMapConstructorRewriteSourcePath(originalPath)") !=
+        std::string::npos);
+  CHECK(templateConstructorRewriteSource.find(
+            "mapConstructorSurfaceMetadataLocal()") !=
+        std::string::npos);
+  CHECK(templateConstructorRewriteSource.find(
+            "metadata->importAliasSpellings") !=
         std::string::npos);
   CHECK(inferStructReturnSource.find("\"/std/collections/map/\" + methodName, \"/map/\" + methodName") ==
         std::string::npos);

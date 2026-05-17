@@ -78,6 +78,24 @@ bool inferExperimentalCollectionConstructorTemplateArgs(const std::string &origi
   return false;
 }
 
+bool isCanonicalMapConstructorRewriteSourcePath(std::string_view originalPath) {
+  const primec::StdlibSurfaceMetadata *metadata =
+      mapConstructorSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return false;
+  }
+  if (originalPath == metadata->canonicalPath) {
+    return true;
+  }
+  return std::any_of(
+      metadata->importAliasSpellings.begin(),
+      metadata->importAliasSpellings.end(),
+      [&](std::string_view alias) {
+        return alias.find('/') == std::string_view::npos &&
+               originalPath == "/" + std::string(alias);
+      });
+}
+
 bool rewriteCanonicalExperimentalMapConstructorExpr(Expr &valueExpr,
                                                     const LocalTypeMap &locals,
                                                     const std::vector<ParameterInfo> &params,
@@ -92,7 +110,7 @@ bool rewriteCanonicalExperimentalMapConstructorExpr(Expr &valueExpr,
   }
   const std::string originalPath = resolveCalleePath(valueExpr, namespacePrefix, ctx);
   std::string helperPath;
-  if ((originalPath == "/map" || originalPath == "/std/collections/map/map") && !valueExpr.args.empty()) {
+  if (isCanonicalMapConstructorRewriteSourcePath(originalPath) && !valueExpr.args.empty()) {
     const bool usesEntryArgs = std::all_of(valueExpr.args.begin(), valueExpr.args.end(), [&](const Expr &argExpr) {
       return isExperimentalMapEntryArgument(argExpr, params, locals, allowMathBare, namespacePrefix, ctx);
     });

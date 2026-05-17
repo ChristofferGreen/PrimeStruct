@@ -138,6 +138,18 @@
   coverage until the bare helper fixture is retired or refreshed.
 
 ## Recent Test Runs
+- 2026-05-17 09:17 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib namespaced map constructor resolves through imported stdlib helper,stdlib namespaced map constructor keeps same-path definition before wrapper fallback,stdlib namespaced map constructor requires imported stdlib helper,canonical stdlib map helpers accept constructor receivers" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: template monomorph canonical experimental map constructor rewrites
+  now derive the canonical constructor path and rooted import alias through
+  `collections.map_constructors` metadata instead of direct rooted/canonical
+  string comparisons; the map surface inventory dropped to 276 production
+  traces and backing traces remain at 0.
 - 2026-05-17 09:12 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib namespaced map constructor resolves through imported stdlib helper,stdlib namespaced map constructor keeps same-path definition before wrapper fallback,stdlib namespaced map constructor requires imported stdlib helper,canonical stdlib map helpers accept constructor receivers" --no-skip`;
