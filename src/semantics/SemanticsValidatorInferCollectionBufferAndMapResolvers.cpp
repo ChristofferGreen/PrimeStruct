@@ -291,8 +291,11 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
       }
     }
     if (target.kind == Expr::Kind::Call) {
+      const auto *mapConstructorMetadata = mapConstructorSurfaceMetadataLocal();
       const bool hasVisibleCanonicalMapConstructor =
-          hasVisibleDefinitionPathForCurrentImports("/std/collections/map/map");
+          mapConstructorMetadata != nullptr &&
+          hasVisibleDefinitionPathForCurrentImports(
+              std::string(mapConstructorMetadata->canonicalPath));
       const bool allowRootMapConstructorAlias =
           hasVisibleCanonicalMapConstructor && !hasRootMapDefinitionFamily();
       const std::string resolvedTarget = resolveCalleePath(target);

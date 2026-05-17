@@ -2378,6 +2378,13 @@ Task template:
       `collections.map_helpers` metadata, and the
       `src/semantics/SemanticsValidatorInferCollectionReturnInference.cpp`
       map-surface inventory allowance dropped from 6 traces to 5.
+    - 2026-05-17: Collection buffer/map resolver inference no longer
+      hard-codes the canonical map constructor path when deciding whether
+      rooted `/map` constructor aliases may resolve; it now reads the
+      constructor canonical path from `collections.map_constructors`
+      metadata, and the
+      `src/semantics/SemanticsValidatorInferCollectionBufferAndMapResolvers.cpp`
+      map-surface inventory allowance dropped from 10 traces to 9.
     - 2026-05-16: Collection access target resolution no longer hard-codes
       canonical map access/contains helper paths, namespace checks, or
       missing-definition diagnostics; it now resolves them through stdlib

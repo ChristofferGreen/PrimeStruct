@@ -138,6 +138,17 @@
   coverage until the bare helper fixture is retired or refreshed.
 
 ## Recent Test Runs
+- 2026-05-17 09:12 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib namespaced map constructor resolves through imported stdlib helper,stdlib namespaced map constructor keeps same-path definition before wrapper fallback,stdlib namespaced map constructor requires imported stdlib helper,canonical stdlib map helpers accept constructor receivers" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: collection buffer/map resolver inference now derives the canonical
+  map constructor path through `collections.map_constructors` metadata
+  instead of a direct `/std/collections/map/map` literal; the map surface
+  inventory dropped to 277 production traces and backing traces remain at 0.
 - 2026-05-17 09:09 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="map wrapper temporary access call validates map target classification,map wrapper temporary unsafe access validates direct stdlib helper,map wrapper temporary access keeps canonical key diagnostics" --no-skip`;
