@@ -15,6 +15,23 @@ bool isSpecializedExperimentalMapBackingPath(std::string typeName) {
   return isExperimentalCollectionBackingTypeName("map", "Map", typeName) &&
          typeName.find("__") != std::string::npos;
 }
+
+bool isRootMapCollectionReceiverPath(std::string_view path) {
+  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return false;
+  }
+  for (std::string_view alias : metadata->importAliasSpellings) {
+    if (!alias.empty() && alias.front() == '/') {
+      alias.remove_prefix(1);
+    }
+    if (alias.find('/') == std::string_view::npos &&
+        path == "/" + std::string(alias)) {
+      return true;
+    }
+  }
+  return false;
+}
 } // namespace
 
 bool SemanticsValidator::resolveNonCollectionAccessHelperPathFromTypeText(
@@ -120,7 +137,7 @@ bool SemanticsValidator::resolveLeadingNonCollectionAccessReceiverPath(
   }
   const std::string resolvedReceiverPath = resolveCalleePath(receiverExpr);
   if (resolvedReceiverPath == "/array" || resolvedReceiverPath == "/vector" ||
-      resolvedReceiverPath == "/map" || resolvedReceiverPath == "/soa" "_vector") {
+      isRootMapCollectionReceiverPath(resolvedReceiverPath) || resolvedReceiverPath == "/soa" "_vector") {
     return false;
   }
   auto defIt = defMap_.find(resolvedReceiverPath);

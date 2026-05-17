@@ -2398,6 +2398,11 @@ Task template:
       through `collections.map_helpers` metadata, and the
       `src/semantics/SemanticsValidatorResultHelpers.cpp` map-surface
       inventory allowance dropped from 5 traces to 2.
+    - 2026-05-17: Semantic receiver-path resolution no longer hard-codes
+      the rooted `/map` collection receiver path while skipping collection
+      temporaries; it now uses the shared map collection classifier, and the
+      `src/semantics/SemanticsValidatorExprReceiverPaths.cpp` map-surface
+      inventory allowance dropped from 4 traces to 3.
     - 2026-05-16: Collection access target resolution no longer hard-codes
       canonical map access/contains helper paths, namespace checks, or
       missing-definition diagnostics; it now resolves them through stdlib

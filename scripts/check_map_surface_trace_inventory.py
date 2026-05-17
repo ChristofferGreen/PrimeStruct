@@ -141,7 +141,7 @@ ALLOWED_MAX_FILE_COUNTS: dict[str, int] = {
     "src/semantics/SemanticsValidatorExprMethodTargetResolution.cpp": 66,
     "src/semantics/SemanticsValidatorExprPointerLike.cpp": 7,
     "src/semantics/SemanticsValidatorExprPreDispatchDirectCalls.cpp": 28,
-    "src/semantics/SemanticsValidatorExprReceiverPaths.cpp": 4,
+    "src/semantics/SemanticsValidatorExprReceiverPaths.cpp": 3,
     "src/semantics/SemanticsValidatorExprScalarPointerMemory.cpp": 6,
     "src/semantics/SemanticsValidatorExprTry.cpp": 9,
     "src/semantics/SemanticsValidatorExprVectorHelpers.cpp": 4,

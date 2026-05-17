@@ -465,7 +465,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   metadata instead of direct `/map` and `/std/collections/map/map`
   comparisons; semantic Result helper inference should derive canonical
   `tryAt`/`tryAt_ref` helper paths and rooted map helper aliases from
-  `collections.map_helpers` metadata instead of direct map path comparisons.
+  `collections.map_helpers` metadata instead of direct map path comparisons;
+  semantic receiver-path resolution should skip map collection temporaries
+  through `isMapCollectionTypeName` instead of direct rooted `/map` checks.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

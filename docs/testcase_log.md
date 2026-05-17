@@ -1,6 +1,10 @@
 # Testcase Log
 
 ## Current Known Failures
+- `PrimeStruct_semantics_tests --test-case="wrapper-returned map method alias access keeps primitive receiver diagnostics during inference" --no-skip`
+  is stale after the map stdlib-ownership cutover. On 2026-05-17 it no
+  longer reported `unable to infer return type on /project`, while adjacent
+  map method-alias receiver-path inference cases passed.
 - `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable"`
   still has stale source-lock assertions after the map/SoA cleanup. On
   2026-05-16 it reported 31 failures for already-removed map builtin
@@ -138,6 +142,25 @@
   coverage until the bare helper fixture is retired or refreshed.
 
 ## Recent Test Runs
+- 2026-05-17 09:25 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map method alias access accepts matching receiver during inference,map method alias access rejects missing receiver method during inference,wrapper-returned map method alias access keeps primitive argument diagnostics during inference" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: semantic receiver-path resolution now derives the rooted map
+  collection receiver alias from map helper metadata instead of a direct
+  `/map` literal; the map surface inventory stayed at 273 production traces,
+  the receiver-path file allowance dropped to 3, and backing traces remain
+  at 0.
+- 2026-05-17 09:25 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map method alias access accepts matching receiver during inference,map method alias access rejects missing receiver method during inference,wrapper-returned map method alias access keeps primitive receiver diagnostics during inference,wrapper-returned map method alias access keeps primitive argument diagnostics during inference" --no-skip` |
+  failures: wrapper-returned map method alias access keeps primitive receiver
+  diagnostics during inference |
+  notes: the three adjacent receiver-path cases passed in the same run and
+  were rerun as the selected passing gate above; the primitive-receiver
+  wrapper fixture no longer reports the stale `/project` inference message.
 - 2026-05-17 09:20 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib canonical map contains and tryAt helpers resolve in method-call sugar,map compatibility tryAt call rejects visible canonical definition,stdlib namespaced map tryAt requires imported stdlib helper or explicit definition,stdlib namespaced map tryAt does not inherit alias-only helper definition,map wrapper temporary tryAt auto inference requires canonical helper definition" --no-skip`;
