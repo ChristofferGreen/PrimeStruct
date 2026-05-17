@@ -52,7 +52,7 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Evidence: The retained `struct_transforms_11_20` shard failed because `[thing] a{thing{}}` reached block validation as a final binding; `Parser::finalizeBindingInitializer` now rewrites that matching shape and focused parser/semantic regressions cover it.
 
 ### map-compatibility-aliases-require-source-definitions
-- Updated: 2026-05-16
+- Updated: 2026-05-17
 - Tags: semantics, collections, compatibility
 - Fact: Removed map aliases such as `/map/count` should count as
   available only when an explicit source definition family exists, not when
@@ -436,7 +436,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   canonical map path literals;
   generated collection struct classification should derive the canonical map
   `MapValue__*` prefix through `collectionTypePath("map")` instead of
-  carrying a split-string map root.
+  carrying a split-string map root; semantic initializer helper preference
+  should derive explicit stdlib map helper names and canonical helper paths
+  through `collections.map_helpers` metadata instead of a hard-coded
+  canonical map namespace, helper-name table, or path concatenation.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -553,7 +556,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   of a local slashless `map/` helper table; semantic collection dispatch
   setup now recognizes rooted map access compatibility paths through
   `CollectionsMapHelpers` import-alias metadata instead of a literal
-  `/map/at*` table. The stale
+  `/map/at*` table; and semantic initializer helper preference now resolves
+  explicit stdlib map helper names through `collections.map_helpers` metadata
+  instead of hard-coded `std/collections/map` namespace and helper tables.
+  The stale
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`
   return type, which allowed the emitter collection-type rooted map access

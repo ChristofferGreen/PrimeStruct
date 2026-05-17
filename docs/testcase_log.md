@@ -118,6 +118,18 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-17 08:25 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical stdlib map wrappers resolve through explicit namespaced helpers" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: semantic initializer helper preference now resolves explicit stdlib
+  map helper names and canonical helper paths through
+  `collections.map_helpers` metadata instead of a literal
+  `std/collections/map` namespace/helper table; the map surface inventory
+  dropped to 293 production traces and backing traces remain at 0.
 - 2026-05-17 00:15 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical map Ref helper calls accept borrowed map references" --no-skip`;

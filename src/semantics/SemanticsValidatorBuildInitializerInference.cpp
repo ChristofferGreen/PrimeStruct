@@ -116,28 +116,28 @@ std::string SemanticsValidator::preferredCollectionHelperResolvedPath(
   }
 
   auto explicitStdMapHelperName = [&]() -> std::string {
-    if (normalizedPrefix == "std/collections/map" &&
-        (normalizedName == "count" || normalizedName == "count_ref" ||
-         normalizedName == "contains" || normalizedName == "contains_ref" ||
-         normalizedName == "tryAt" || normalizedName == "tryAt_ref" ||
-         normalizedName == "at" || normalizedName == "at_ref" ||
-         normalizedName == "at_unsafe" || normalizedName == "at_unsafe_ref" ||
-         normalizedName == "insert" || normalizedName == "insert_ref")) {
-      return normalizedName;
+    const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+    if (metadata == nullptr) {
+      return {};
     }
-    if (normalizedName.rfind("std/collections/map/", 0) == 0) {
+    auto canonicalMemberName = [&](std::string_view path) -> std::string {
+      std::string helperName;
+      if (!stripStdlibSurfaceRootedMemberName(path, metadata->canonicalPath,
+                                              helperName)) {
+        return {};
+      }
+      const std::string_view memberName =
+          resolveStdlibSurfaceMemberName(*metadata, helperName);
+      return memberName.empty() ? std::string{} : std::string(memberName);
+    };
+    if (!normalizedPrefix.empty()) {
       const std::string helperName =
-          normalizedName.substr(std::string("std/collections/map/").size());
-      if (helperName == "count" || helperName == "count_ref" ||
-          helperName == "contains" || helperName == "contains_ref" ||
-          helperName == "tryAt" || helperName == "tryAt_ref" ||
-          helperName == "at" || helperName == "at_ref" ||
-          helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
-          helperName == "insert" || helperName == "insert_ref") {
+          canonicalMemberName(normalizedPrefix + "/" + normalizedName);
+      if (!helperName.empty()) {
         return helperName;
       }
     }
-    return {};
+    return canonicalMemberName(normalizedName);
   };
   auto explicitStdVectorHelperName = [&]() -> std::string {
     if (isCanonicalVectorCompatibilityNamespace(normalizedPrefix) &&
@@ -180,7 +180,8 @@ std::string SemanticsValidator::preferredCollectionHelperResolvedPath(
 
   if (const std::string helperName = explicitStdMapHelperName();
       !helperName.empty()) {
-    const std::string canonical = "/std/collections/map/" + helperName;
+    const std::string canonical =
+        metadataBackedCanonicalMapHelperPath(helperName);
     if (defMap_.count(canonical) > 0) {
       return canonical;
     }

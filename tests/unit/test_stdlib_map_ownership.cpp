@@ -467,6 +467,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find("const std::string alias = \"/map/\" + helperName") ==
         std::string::npos);
+  CHECK(buildInitializerInferenceSource.find("normalizedPrefix == \"std/collections/map\"") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find("normalizedName.rfind(\"std/collections/map/\", 0)") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find("metadataBackedCanonicalMapHelperPath(helperName)") !=
+        std::string::npos);
   CHECK(inferCollectionDispatchSource.find("resolvedPath.rfind(\"/map/\"") ==
         std::string::npos);
   CHECK(inferCollectionDispatchSource.find("resolvedPath == \"/map/at\"") ==

@@ -318,7 +318,10 @@ Task template:
   instead of a local slashless `map/` helper table, and semantic collection
   dispatch setup now recognizes rooted map access compatibility paths
   through `CollectionsMapHelpers` import-alias metadata instead of a literal
-  `/map/at*` table. The remaining production
+  `/map/at*` table, and semantic initializer helper preference now resolves
+  explicit stdlib map helper names through `collections.map_helpers` metadata
+  instead of a hard-coded canonical map namespace and helper-name table. The
+  remaining production
   lowerer/emitter
   experimental-map traces
   are source-locked as temporary internal backing substrate by
@@ -2293,6 +2296,12 @@ Task template:
     - 2026-05-16: Late map access builtin validation no longer hard-codes
       canonical map helper paths, namespace checks, or unknown-target
       diagnostics; it now resolves them through stdlib surface metadata.
+    - 2026-05-17: Semantic initializer helper preference no longer
+      hard-codes canonical map helper namespaces, helper-name tables, or
+      canonical helper path concatenation; it now resolves explicit stdlib
+      map helper names and paths through `collections.map_helpers` metadata,
+      and `src/semantics/SemanticsValidatorBuildInitializerInference.cpp`
+      is removed from the map-surface trace inventory allowlist.
     - 2026-05-16: Map/SOA builtin validation no longer hard-codes canonical
       map contains helper paths or diagnostics; it now resolves them through
       stdlib surface metadata.
