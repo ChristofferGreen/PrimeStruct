@@ -5,6 +5,7 @@
 #include <cctype>
 #include <cstdint>
 #include <sstream>
+#include <string_view>
 
 namespace primec::semantics {
 
@@ -31,6 +32,25 @@ std::string collectionTypePathLocal(const std::string &collectionName,
     path += typeName;
   }
   return path;
+}
+
+std::string mapCollectionMarkerPathForInferStructReturn() {
+  const StdlibSurfaceMetadata *metadata = mapConstructorSurfaceMetadataLocal();
+  if (metadata != nullptr) {
+    for (std::string_view alias : metadata->importAliasSpellings) {
+      if (alias.empty()) {
+        continue;
+      }
+      std::string rootedAlias(alias);
+      if (rootedAlias.front() != '/') {
+        rootedAlias.insert(rootedAlias.begin(), '/');
+      }
+      if (rootedAlias.find('/', 1) == std::string::npos) {
+        return rootedAlias;
+      }
+    }
+  }
+  return std::string(1, '/') + std::string("map");
 }
 
 } // namespace
@@ -63,7 +83,7 @@ std::string SemanticsValidator::inferStructReturnCollectionPath(const std::strin
     if (splitTopLevelTemplateArgs(normalizedTypeTemplateArg, args) && args.size() == 2) {
       return specializedExperimentalMapStructReturnPath(args);
     }
-    return "/map";
+    return mapCollectionMarkerPathForInferStructReturn();
   }
 
   std::string base;

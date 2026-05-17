@@ -534,6 +534,13 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferStructReturnHelpersSource.find("normalized == \"map/at\"") ==
         std::string::npos);
+  CHECK(inferStructReturnHelpersSource.find("return \"/map\"") ==
+        std::string::npos);
+  CHECK(inferStructReturnHelpersSource.find(
+            "mapCollectionMarkerPathForInferStructReturn()") !=
+        std::string::npos);
+  CHECK(inferStructReturnHelpersSource.find("mapConstructorSurfaceMetadataLocal()") !=
+        std::string::npos);
   CHECK(lowererStructReturnPathSource.find("const std::string mapPrefix = \"map/\"") ==
         std::string::npos);
   CHECK(lowererStructReturnPathSource.find("const std::string stdMapPrefix = \"std/collections/map/\"") ==
