@@ -468,8 +468,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   metadata instead of direct `/map` and `/std/collections/map/map`
   comparisons; IR lowerer declared-collection inference should resolve map
   constructor metadata through the `collections.map_constructors` bridge key
-  instead of naming the map constructor surface ID directly; semantic Result
-  helper inference should derive canonical
+  instead of naming the map constructor surface ID directly; packed Result
+  map-constructor rewriting should resolve constructor metadata through the
+  same bridge key instead of directly naming the map constructor surface ID;
+  semantic Result helper inference should derive canonical
   `tryAt`/`tryAt_ref` helper paths and rooted map helper aliases from
   `collections.map_helpers` metadata instead of direct map path comparisons;
   semantic receiver-path resolution should skip map collection temporaries

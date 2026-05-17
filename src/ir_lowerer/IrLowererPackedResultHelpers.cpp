@@ -76,6 +76,10 @@ bool resultErrorTypesMatch(std::string left, std::string right) {
   return !right.empty() && right.front() != '/' && left == "/" + right;
 }
 
+const StdlibSurfaceMetadata *mapConstructorSurfaceMetadataLocal() {
+  return findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
+}
+
 bool resolveSemanticProductResultOkPayloadInfo(
     const Expr &payloadExpr,
     const SemanticProductTargetAdapter *semanticProductTargets,
@@ -180,10 +184,12 @@ bool rewritePackedResultMapConstructorExpr(const Expr &callExpr,
     return false;
   }
   const Definition *callee = resolveDefinitionCall ? resolveDefinitionCall(callExpr) : nullptr;
+  const StdlibSurfaceMetadata *metadata = mapConstructorSurfaceMetadataLocal();
   if (callee == nullptr ||
+      metadata == nullptr ||
       !isResolvedCanonicalPublishedStdlibSurfaceConstructorPath(
           callee->fullPath,
-          primec::StdlibSurfaceId::CollectionsMapConstructors)) {
+          metadata->id)) {
     return false;
   }
 

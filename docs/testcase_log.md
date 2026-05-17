@@ -149,8 +149,30 @@
   stdlib-ownership cutover. On 2026-05-17 both cases still failed, with the
   helper-wrapped case reporting `unknown method: /std/collections/map/at`;
   adjacent default-parameter mismatch and Result-wrapped map cases passed.
+- `PrimeStruct_backend_ir_tests --test-case="ir lowerer supports direct map Result payloads" --no-skip`
+  still fails during parse/validate before reaching lowerer execution after
+  the map stdlib-ownership cutover.
 
 ## Recent Test Runs
+- 2026-05-17 09:55 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer result helpers resolve map Result payload metadata" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `cmake --build build-release --target PrimeStruct_backend_runtime_tests`;
+  `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="native Result ok emission uses semantic-product payload facts" --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: packed Result map-constructor rewriting now resolves constructor
+  metadata through `collections.map_constructors` instead of directly naming
+  the map constructor surface ID; the map surface inventory dropped to 265
+  production traces and backing traces remain at 0.
+- 2026-05-17 09:55 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer supports direct map Result payloads,native Result ok emission uses semantic-product payload facts" --no-skip` |
+  failures: ir lowerer supports direct map Result payloads |
+  notes: the direct map Result payload case failed during parse/validate before
+  the lowerer path; the runtime source-lock case lives in
+  `PrimeStruct_backend_runtime_tests` and passed separately.
 - 2026-05-17 09:48 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer constructor metadata helpers retire duplicated constructor tables,ir lowerer setup type infers referenced declared collection receivers" --no-skip`;

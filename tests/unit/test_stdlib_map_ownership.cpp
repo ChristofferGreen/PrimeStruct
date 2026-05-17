@@ -1027,6 +1027,11 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inlineParamHelpersSource.find("rewrittenExpr.name = collectionMemberPath(\"map\", \"map\")") !=
         std::string::npos);
   CHECK(packedResultSource.find("rewrittenExpr.name = \"/map/map\"") == std::string::npos);
+  CHECK(packedResultSource.find("StdlibSurfaceId::CollectionsMapConstructors") ==
+        std::string::npos);
+  CHECK(packedResultSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_constructors\")") !=
+        std::string::npos);
   CHECK(packedResultSource.find("rewrittenExpr.name = collectionMemberPath(\"map\", \"map\")") !=
         std::string::npos);
 }
