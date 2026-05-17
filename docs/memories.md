@@ -445,7 +445,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   through that metadata instead of direct rooted/canonical map helper strings;
   semantic map/SOA builtin validation should derive canonical map contains
   helper paths and resolved helper matching through the same metadata instead
-  of direct map surface IDs.
+  of direct map surface IDs; statement printability should derive canonical
+  map access helper matching through the same metadata instead of direct map
+  surface IDs.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -570,7 +572,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   candidate filtering instead of direct rooted/canonical map helper strings;
   semantic map/SOA builtin validation now derives canonical map contains
   helper paths and resolved helper matching through
-  `collections.map_helpers` metadata instead of direct map surface IDs.
+  `collections.map_helpers` metadata instead of direct map surface IDs;
+  statement printability now uses the same metadata for canonical map access
+  helper matching instead of direct map surface IDs.
   The stale
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`

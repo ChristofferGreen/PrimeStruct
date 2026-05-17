@@ -41,10 +41,13 @@ bool isUnspecializedExperimentalMapBackingBaseForPrintability(std::string base) 
 
 bool isCanonicalMapHelperResolvedPath(const std::string &path,
                                       std::string_view helperName) {
+  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return false;
+  }
   std::string resolvedHelperName;
   return resolvePublishedCollectionHelperResolvedPath(
-             path, StdlibSurfaceId::CollectionsMapHelpers,
-             resolvedHelperName) &&
+             path, metadata->id, resolvedHelperName) &&
          resolvedHelperName == helperName;
 }
 

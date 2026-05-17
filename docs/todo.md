@@ -326,7 +326,8 @@ Task template:
   instead of direct rooted/canonical map helper strings, and semantic
   map/SOA builtin validation now resolves canonical map contains helper paths
   through `collections.map_helpers` metadata instead of direct map surface
-  IDs. The
+  IDs, and statement printability now resolves canonical map access helper
+  paths through the same metadata instead of direct map surface IDs. The
   remaining production
   lowerer/emitter
   experimental-map traces
@@ -2319,6 +2320,11 @@ Task template:
       helper paths or matching resolved contains helper calls; it now derives
       those paths through `collections.map_helpers` metadata, and
       `src/semantics/SemanticsValidatorExprMapSoaBuiltins.cpp` is removed
+      from the map-surface trace inventory allowlist.
+    - 2026-05-17: Statement printability no longer names the map helper
+      surface ID directly while matching canonical map access helpers; it now
+      derives that matching through `collections.map_helpers` metadata, and
+      `src/semantics/SemanticsValidatorStatementPrintability.cpp` is removed
       from the map-surface trace inventory allowlist.
     - 2026-05-16: Map/SOA builtin validation no longer hard-codes canonical
       map contains helper paths or diagnostics; it now resolves them through

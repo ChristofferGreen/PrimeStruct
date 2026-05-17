@@ -123,6 +123,17 @@
   direct bare/namespaced map contains semantic validation still passes.
 
 ## Recent Test Runs
+- 2026-05-17 08:49 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="print accepts string map access,explicit canonical map parameter keeps print statement string validation,canonical map reference parameter keeps print statement string validation,wrapper-returned canonical map keeps print statement string validation,wrapper-returned referenced canonical map keeps print statement string validation" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: statement printability now resolves canonical map access helper
+  paths through `collections.map_helpers` metadata instead of direct map
+  surface IDs; the map surface inventory dropped to 284 production traces
+  and backing traces remain at 0.
 - 2026-05-17 08:45 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="bare map contains call requires imported canonical helper or explicit definition,bare map contains call resolves through canonical helper definition,map namespaced contains method now validates through slash-path routing,map stdlib namespaced contains method now validates through slash-path routing" --no-skip`;
