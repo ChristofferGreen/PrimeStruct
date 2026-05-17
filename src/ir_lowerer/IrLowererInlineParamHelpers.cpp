@@ -180,9 +180,10 @@ bool isPublishedMapConstructorExpr(const Expr &callExpr) {
   if (getBuiltinCollectionName(callExpr, collectionName) && collectionName == "map") {
     return true;
   }
-  return isPublishedStdlibSurfaceConstructorExpr(
-      callExpr,
-      primec::StdlibSurfaceId::CollectionsMapConstructors);
+  const auto *metadata =
+      findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
+  return metadata != nullptr &&
+         isPublishedStdlibSurfaceConstructorExpr(callExpr, metadata->id);
 }
 
 std::string extractParameterTypeName(const Expr &paramExpr) {
@@ -223,11 +224,13 @@ bool rewritePublishedMapConstructorExpr(const Expr &callExpr,
     return false;
   }
   const Definition *callee = resolveDefinitionCall ? resolveDefinitionCall(callExpr) : nullptr;
+  const auto *mapConstructorMetadata =
+      findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
   const bool isResolvedPublishedConstructor =
       callee != nullptr &&
+      mapConstructorMetadata != nullptr &&
       isResolvedCanonicalPublishedStdlibSurfaceConstructorPath(
-          callee->fullPath,
-          primec::StdlibSurfaceId::CollectionsMapConstructors);
+          callee->fullPath, mapConstructorMetadata->id);
   if (!isPublishedMapConstructorExpr(callExpr) && !isResolvedPublishedConstructor) {
     return false;
   }

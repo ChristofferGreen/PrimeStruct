@@ -165,6 +165,16 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-17 10:26 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: inline parameter map constructor rewriting now obtains
+  `collections.map_constructors` metadata through the bridge key instead of
+  directly naming the map constructor surface ID; the map surface inventory
+  dropped to 255 production traces and backing traces remain at 0.
 - 2026-05-17 10:23 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cmake --build build-release --target PrimeStruct_misc_tests`;

@@ -2481,6 +2481,11 @@ Task template:
       through the `collections.map_constructors` bridge key, and
       `src/ir_lowerer/IrLowererInlinePackedArgs.cpp` is removed from the
       map-surface trace inventory allowlist.
+    - 2026-05-17: Inline parameter map constructor rewriting no longer names
+      the map constructor surface ID directly; it obtains constructor metadata
+      through the `collections.map_constructors` bridge key, and
+      `src/ir_lowerer/IrLowererInlineParamHelpers.cpp` is removed from the
+      map-surface trace inventory allowlist.
     - 2026-05-16: Collection access target resolution no longer hard-codes
       canonical map access/contains helper paths, namespace checks, or
       missing-definition diagnostics; it now resolves them through stdlib
