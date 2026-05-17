@@ -847,6 +847,11 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(setupTypeMethodCallSource.find("collectionMemberPath(\"map\", \"map\")") !=
         std::string::npos);
+  CHECK(setupTypeMethodCallSource.find("StdlibSurfaceId::CollectionsMapConstructors") ==
+        std::string::npos);
+  CHECK(setupTypeMethodCallSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_constructors\")") !=
+        std::string::npos);
   CHECK(setupTypeMethodCallSource.find("path == \"/std/collections/map/map\"") ==
         std::string::npos);
   CHECK(setupTypeMethodCallSource.find("collectionMemberRoot(\"map\", false)") !=

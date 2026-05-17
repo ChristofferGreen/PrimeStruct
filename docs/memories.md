@@ -476,6 +476,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   lowerer builtin-name and shared helper map-helper metadata lookups should
   resolve through `collections.map_helpers` metadata instead of naming the map
   helper surface ID directly;
+  setup-type method-call bridge path filtering should resolve map constructor
+  metadata through `collections.map_constructors` instead of naming the map
+  constructor surface ID directly;
   semantic Result helper inference should derive canonical
   `tryAt`/`tryAt_ref` helper paths and rooted map helper aliases from
   `collections.map_helpers` metadata instead of direct map path comparisons;

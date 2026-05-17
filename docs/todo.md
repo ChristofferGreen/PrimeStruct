@@ -2449,6 +2449,11 @@ Task template:
       `src/ir_lowerer/IrLowererBuiltinNameHelpers.cpp` plus
       `src/ir_lowerer/IrLowererHelpers.cpp` map-surface inventory allowances
       dropped by 2 traces in total.
+    - 2026-05-17: Setup-type method-call bridge path filtering no longer names
+      the map constructor surface ID directly; it now obtains constructor
+      metadata through the `collections.map_constructors` bridge key, and the
+      `src/ir_lowerer/IrLowererSetupTypeMethodCallResolution.cpp` map-surface
+      inventory allowance dropped from 25 traces to 24.
     - 2026-05-16: Collection access target resolution no longer hard-codes
       canonical map access/contains helper paths, namespace checks, or
       missing-definition diagnostics; it now resolves them through stdlib

@@ -45,10 +45,18 @@ bool isMapConstructorDirectTargetPath(std::string path) {
   return path == collectionMemberPath("map", "map");
 }
 
+const StdlibSurfaceMetadata *mapConstructorSurfaceMetadataLocal() {
+  return findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
+}
+
 std::string findMapConstructorBridgePathChoiceBySource(
     const SemanticProgram *semanticProgram,
     const Expr &expr) {
   if (semanticProgram == nullptr || expr.sourceLine <= 0 || expr.sourceColumn <= 0) {
+    return {};
+  }
+  const StdlibSurfaceMetadata *metadata = mapConstructorSurfaceMetadataLocal();
+  if (metadata == nullptr) {
     return {};
   }
   const auto bridgePathChoices = semanticProgramBridgePathChoiceView(*semanticProgram);
@@ -57,7 +65,7 @@ std::string findMapConstructorBridgePathChoiceBySource(
         entry->sourceLine != expr.sourceLine ||
         entry->sourceColumn != expr.sourceColumn ||
         semanticProgramBridgePathChoiceStdlibSurfaceId(*entry) !=
-            StdlibSurfaceId::CollectionsMapConstructors ||
+            metadata->id ||
         entry->chosenPathId == InvalidSymbolId) {
       continue;
     }
