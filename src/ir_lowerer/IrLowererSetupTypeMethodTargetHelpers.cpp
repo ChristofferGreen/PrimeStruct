@@ -287,7 +287,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
              : (shouldPreferCanonicalSoaPath(resolvedTypeWithoutSlash)
                     ? "/std/collections/" "soa" "_vector"
              : (shouldPreferCanonicalMapPath(resolvedTypeWithoutSlash)
-                    ? "/std/collections/map"
+                    ? collectionTypePath("map")
                     : normalizedResolvedTypePath)));
     const std::string resolved = resolvedBase + "/" + normalizedMethodName;
     if (normalizedMethodName == "to_soa" && isVectorReceiverTarget(resolvedTypeWithoutSlash)) {
@@ -356,7 +356,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
            : (shouldPreferCanonicalSoaPath(normalizedTypeName)
                   ? "/std/collections/" "soa" "_vector"
            : (shouldPreferCanonicalMapPath(normalizedTypeName)
-                  ? "/std/collections/map"
+                  ? collectionTypePath("map")
                   : "/" + normalizedTypeName)));
   const std::string resolved = resolvedBase + "/" + normalizedMethodName;
   if (normalizedMethodName == "to_soa" && isVectorReceiverTarget(normalizedTypeName)) {

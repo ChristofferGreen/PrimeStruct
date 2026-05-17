@@ -2512,6 +2512,11 @@ Task template:
       bridge key, and
       `src/ir_lowerer/IrLowererLowerInferenceDispatchSetup.cpp` is removed
       from the map-surface trace inventory allowlist.
+    - 2026-05-17: Lowerer setup-type method-target resolution no longer
+      spells the canonical map root directly while preferring canonical map
+      helper targets; it derives that root through `collectionTypePath("map")`,
+      and `src/ir_lowerer/IrLowererSetupTypeMethodTargetHelpers.cpp` is
+      removed from the map-surface trace inventory allowlist.
     - 2026-05-16: Collection access target resolution no longer hard-codes
       canonical map access/contains helper paths, namespace checks, or
       missing-definition diagnostics; it now resolves them through stdlib

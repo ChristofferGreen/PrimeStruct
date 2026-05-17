@@ -109,7 +109,7 @@ ALLOWED_MAX_FILE_COUNTS: dict[str, int] = {
     "src/ir_lowerer/IrLowererSetupTypeCollectionHelpers.cpp": 20,
     "src/ir_lowerer/IrLowererSetupTypeDeclaredCollectionInference.cpp": 0,
     "src/ir_lowerer/IrLowererSetupTypeMethodCallResolution.cpp": 24,
-    "src/ir_lowerer/IrLowererSetupTypeMethodTargetHelpers.cpp": 13,
+    "src/ir_lowerer/IrLowererSetupTypeMethodTargetHelpers.cpp": 0,
     "src/ir_lowerer/IrLowererStatementBindingHelpers.cpp": 6,
     "src/ir_lowerer/IrLowererStatementBindingTypeMetadata.cpp": 4,
     "src/ir_lowerer/IrLowererStatementCallEmission.cpp": 21,
