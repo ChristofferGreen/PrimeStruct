@@ -118,6 +118,18 @@
   experimental parameter and canonical helper access coverage passes.
 
 ## Recent Test Runs
+- 2026-05-17 08:40 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map method access keeps canonical struct-return forwarding,map namespaced access call keeps canonical struct-return forwarding,map namespaced access alias rejects canonical struct-return forwarding,map namespaced unsafe access alias rejects canonical struct-return forwarding" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: semantic struct-return map helper probing now derives explicit map
+  access helper names and canonical map method candidates through
+  `collections.map_helpers` metadata instead of direct rooted/canonical map
+  helper strings; the map surface inventory dropped to 287 production traces
+  and backing traces remain at 0.
 - 2026-05-17 08:25 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical stdlib map wrappers resolve through explicit namespaced helpers" --no-skip`;

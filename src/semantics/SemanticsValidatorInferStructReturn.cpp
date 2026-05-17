@@ -330,9 +330,13 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
           (receiverStruct == "/vector" || receiverStruct == "/array")) {
         return "";
       }
-      const bool isExplicitRemovedMapAliasStructReturnMethod =
-          rawMethodName == "map/at" || rawMethodName == "map/at_unsafe" ||
-          rawMethodName == "std/collections/map/at" || rawMethodName == "std/collections/map/at_unsafe";
+      std::string explicitMapHelperName;
+      const bool isExplicitMapAccessStructReturnMethod =
+          resolveExplicitPublishedMapHelperExprMemberName(rawMethodName,
+                                                          expr.namespacePrefix,
+                                                          explicitMapHelperName) &&
+          (explicitMapHelperName == "at" ||
+           explicitMapHelperName == "at_unsafe");
       std::vector<std::string> methodCandidates;
       auto appendMethodCandidate = [&](const std::string &candidate) {
         if (candidate.empty()) {
@@ -363,8 +367,8 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
           }
         }
       } else if (receiverStruct == "/map") {
-        if (!isExplicitRemovedMapAliasStructReturnMethod) {
-          methodCandidates = {"/std/collections/map/" + methodName};
+        if (!isExplicitMapAccessStructReturnMethod) {
+          appendMethodCandidate(metadataBackedCanonicalMapHelperPath(methodName));
         }
       } else {
         methodCandidates = {receiverStruct + "/" + methodName};
@@ -405,7 +409,9 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
       };
       if (receiverStruct == "/map") {
         for (const auto &candidate : methodCandidates) {
-          if (candidate.rfind("/std/collections/map/", 0) != 0) {
+          std::string candidateHelperName;
+          if (!resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(
+                  candidate, candidateHelperName)) {
             continue;
           }
           if (std::string structPath = declaredDefinitionStructReturn(candidate);

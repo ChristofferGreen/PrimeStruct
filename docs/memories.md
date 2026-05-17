@@ -439,7 +439,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   carrying a split-string map root; semantic initializer helper preference
   should derive explicit stdlib map helper names and canonical helper paths
   through `collections.map_helpers` metadata instead of a hard-coded
-  canonical map namespace, helper-name table, or path concatenation.
+  canonical map namespace, helper-name table, or path concatenation; semantic
+  struct-return map method probing should also resolve explicit access helper
+  spellings, canonical method candidates, and canonical candidate filtering
+  through that metadata instead of direct rooted/canonical map helper strings.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
@@ -558,7 +561,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `CollectionsMapHelpers` import-alias metadata instead of a literal
   `/map/at*` table; and semantic initializer helper preference now resolves
   explicit stdlib map helper names through `collections.map_helpers` metadata
-  instead of hard-coded `std/collections/map` namespace and helper tables.
+  instead of hard-coded `std/collections/map` namespace and helper tables;
+  semantic struct-return map method probing now uses the same metadata for
+  explicit access helper detection, canonical method candidates, and
+  candidate filtering instead of direct rooted/canonical map helper strings.
   The stale
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`

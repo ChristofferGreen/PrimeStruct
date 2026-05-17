@@ -445,6 +445,22 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferStructReturnSource.find("isExplicitMapAccessStructReturnCompatibilityCall") ==
         std::string::npos);
+  CHECK(inferStructReturnSource.find("rawMethodName == \"map/at\"") ==
+        std::string::npos);
+  CHECK(inferStructReturnSource.find("rawMethodName == \"std/collections/map/at\"") ==
+        std::string::npos);
+  CHECK(inferStructReturnSource.find("\"/std/collections/map/\" + methodName") ==
+        std::string::npos);
+  CHECK(inferStructReturnSource.find("candidate.rfind(\"/std/collections/map/\", 0)") ==
+        std::string::npos);
+  CHECK(inferStructReturnSource.find(
+            "resolveExplicitPublishedMapHelperExprMemberName(rawMethodName") !=
+        std::string::npos);
+  CHECK(inferStructReturnSource.find("metadataBackedCanonicalMapHelperPath(methodName)") !=
+        std::string::npos);
+  CHECK(inferStructReturnSource.find(
+            "resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(") !=
+        std::string::npos);
   CHECK(inferStructReturnHelpersSource.find("isExplicitMapAccessStructReturnCompatibilityCall") ==
         std::string::npos);
   CHECK(inferStructReturnHelpersSource.find("normalized == \"map/at\"") ==

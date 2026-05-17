@@ -320,7 +320,10 @@ Task template:
   through `CollectionsMapHelpers` import-alias metadata instead of a literal
   `/map/at*` table, and semantic initializer helper preference now resolves
   explicit stdlib map helper names through `collections.map_helpers` metadata
-  instead of a hard-coded canonical map namespace and helper-name table. The
+  instead of a hard-coded canonical map namespace and helper-name table, and
+  semantic struct-return map helper probing now derives explicit map access
+  helper names and canonical method candidates through the same metadata
+  instead of direct rooted/canonical map helper strings. The
   remaining production
   lowerer/emitter
   experimental-map traces
@@ -2302,6 +2305,12 @@ Task template:
       map helper names and paths through `collections.map_helpers` metadata,
       and `src/semantics/SemanticsValidatorBuildInitializerInference.cpp`
       is removed from the map-surface trace inventory allowlist.
+    - 2026-05-17: Semantic struct-return map method probing no longer
+      hard-codes rooted or canonical map access helper spellings, canonical
+      method candidate construction, or canonical candidate prefix filters;
+      it now resolves those through `collections.map_helpers` metadata, and
+      `src/semantics/SemanticsValidatorInferStructReturn.cpp` is removed
+      from the map-surface trace inventory allowlist.
     - 2026-05-16: Map/SOA builtin validation no longer hard-codes canonical
       map contains helper paths or diagnostics; it now resolves them through
       stdlib surface metadata.
