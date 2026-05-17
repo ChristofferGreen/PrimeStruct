@@ -503,7 +503,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   metadata through the `collections.map_constructors` bridge key instead of
   directly naming the map constructor surface ID; inline parameter map
   constructor rewriting should use the same bridge-key metadata lookup instead
-  of directly naming the map constructor surface ID.
+  of directly naming the map constructor surface ID; effect-free collection
+  map helper lookup should use `collections.map_helpers` bridge-key metadata
+  instead of directly naming the map helper surface ID.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

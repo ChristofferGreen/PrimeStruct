@@ -7,14 +7,22 @@
 namespace primec::semantics {
 namespace {
 
+const StdlibSurfaceMetadata *mapHelperSurfaceMetadataForEffectFreeCollections() {
+  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+}
+
 std::string canonicalMapHelperPathLocal(std::string_view helperName) {
-  return canonicalCollectionHelperPath(StdlibSurfaceId::CollectionsMapHelpers,
-                                       helperName);
+  const StdlibSurfaceMetadata *metadata =
+      mapHelperSurfaceMetadataForEffectFreeCollections();
+  if (metadata == nullptr) {
+    return "";
+  }
+  return canonicalCollectionHelperPath(metadata->id, helperName);
 }
 
 std::string unrootedCanonicalMapHelperPrefixLocal() {
   const StdlibSurfaceMetadata *metadata =
-      findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsMapHelpers);
+      mapHelperSurfaceMetadataForEffectFreeCollections();
   if (metadata == nullptr) {
     return "";
   }

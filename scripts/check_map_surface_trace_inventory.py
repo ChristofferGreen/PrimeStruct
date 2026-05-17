@@ -130,7 +130,7 @@ ALLOWED_MAX_FILE_COUNTS: dict[str, int] = {
     "src/semantics/SemanticsValidatorBuildInitializerInferenceCalls.cpp": 4,
     "src/semantics/SemanticsValidatorBuildParameters.cpp": 0,
     "src/semantics/SemanticsValidatorCollectionHelperRewrites.cpp": 10,
-    "src/semantics/SemanticsValidatorEffectFreeCollections.cpp": 6,
+    "src/semantics/SemanticsValidatorEffectFreeCollections.cpp": 0,
     "src/semantics/SemanticsValidatorExprArgumentValidation.cpp": 9,
     "src/semantics/SemanticsValidatorExprArgumentValidationCollections.cpp": 15,
     "src/semantics/SemanticsValidatorExprCallResolution.cpp": 13,
