@@ -448,7 +448,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   of direct map surface IDs; statement printability should derive canonical
   map access helper matching through the same metadata instead of direct map
   surface IDs; expression collection-dispatch setup should use the same
-  metadata-backed map access matching.
+  metadata-backed map access matching; expression method resolution should
+  derive canonical map access helper paths for string-count shadow rejection
+  through `collections.map_helpers` metadata instead of direct map surface
+  IDs.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

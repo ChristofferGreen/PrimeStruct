@@ -139,6 +139,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string methodTargetResolutionSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprMethodTargetResolution.cpp");
+  const std::string exprMethodResolutionSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorExprMethodResolution.cpp");
   const std::string templateCoreSource =
       readText(repoRoot() / "src" / "semantics" /
                "TemplateMonomorphCoreUtilities.h");
@@ -435,6 +438,11 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(methodTargetResolutionSource.find(
             "metadataBackedMapHelperRootAliasMethodName(candidate)") !=
+        std::string::npos);
+  CHECK(exprMethodResolutionSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
+        std::string::npos);
+  CHECK(exprMethodResolutionSource.find(
+            "metadataBackedCanonicalMapHelperPath(helperName)") !=
         std::string::npos);
   CHECK(templateCoreSource.find("\"/map/entry\"") == std::string::npos);
   CHECK(templateCoreSource.find("\"/map/entry__\"") == std::string::npos);

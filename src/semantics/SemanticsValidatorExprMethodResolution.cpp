@@ -162,8 +162,8 @@ bool SemanticsValidator::validateExprMethodCallTarget(
           helperName != "at_ref" && helperName != "at_unsafe_ref") {
         return false;
       }
-      const std::string helperPath = canonicalCollectionHelperPath(
-          StdlibSurfaceId::CollectionsMapHelpers, helperName);
+      const std::string helperPath =
+          metadataBackedCanonicalMapHelperPath(helperName);
       auto defIt = defMap_.find(helperPath);
       if (defIt == defMap_.end() || defIt->second == nullptr) {
         return false;

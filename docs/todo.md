@@ -329,7 +329,9 @@ Task template:
   IDs, and statement printability now resolves canonical map access helper
   paths through the same metadata instead of direct map surface IDs, and
   expression collection-dispatch setup now resolves canonical map access
-  helper paths through that metadata instead of direct map surface IDs. The
+  helper paths through that metadata instead of direct map surface IDs, and
+  expression method resolution now derives canonical map access helper paths
+  through that metadata instead of direct map surface IDs. The
   remaining production
   lowerer/emitter
   experimental-map traces
@@ -2334,6 +2336,12 @@ Task template:
       metadata, and
       `src/semantics/SemanticsValidatorExprCollectionDispatchSetup.cpp` is
       removed from the map-surface trace inventory allowlist.
+    - 2026-05-17: Expression method resolution no longer names the map
+      helper surface ID directly while checking canonical map access helper
+      return bindings for string-count shadow rejection; it now derives the
+      helper path through `collections.map_helpers` metadata, and
+      `src/semantics/SemanticsValidatorExprMethodResolution.cpp` is removed
+      from the map-surface trace inventory allowlist.
     - 2026-05-16: Map/SOA builtin validation no longer hard-codes canonical
       map contains helper paths or diagnostics; it now resolves them through
       stdlib surface metadata.

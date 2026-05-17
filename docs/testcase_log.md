@@ -121,8 +121,32 @@
   failed after semantic validation reached IR lowering with
   `native backend only supports ... call=/std/collections/map/contains`;
   direct bare/namespaced map contains semantic validation still passes.
+- `PrimeStruct_semantics_tests --test-case="non-imported wrapper-returned canonical map reference access keeps primitive receiver diagnostics" --no-skip`
+  has a stale diagnostic expectation after the map stdlib-ownership cutover.
+  On 2026-05-17 the case still rejected the program, but no longer emitted
+  the old `unknown method: /i32/count` text; adjacent map access string-count
+  shadow and return-mismatch method-resolution coverage still passes.
 
 ## Recent Test Runs
+- 2026-05-17 08:56 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib canonical map access count shadow keeps canonical precedence over alias helper,stdlib canonical map access count shadow currently validates mixed canonical and alias returns,wrapper-returned referenced canonical map access count call auto inference keeps string helper mismatch diagnostics" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `python3 scripts/check_map_surface_trace_inventory.py`;
+  `python3 scripts/check_map_backing_traces.py` | failures: none |
+  notes: expression method resolution now derives canonical map access helper
+  paths through `collections.map_helpers` metadata instead of direct map
+  surface IDs; the map surface inventory dropped to 282 production traces and
+  backing traces remain at 0.
+- 2026-05-17 08:56 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib canonical map access count shadow keeps canonical precedence over alias helper,stdlib canonical map access count shadow currently validates mixed canonical and alias returns,non-imported wrapper-returned canonical map reference access keeps primitive receiver diagnostics" --no-skip` |
+  failures: non-imported wrapper-returned canonical map reference access keeps
+  primitive receiver diagnostics |
+  notes: the program still rejects, but the stale expectation for
+  `unknown method: /i32/count` no longer matches current diagnostics; the
+  directly affected map access string-count shadow cases passed in the same
+  run and were rerun with the passing gate above.
 - 2026-05-17 08:52 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical namespaced map access helpers accept experimental map values,stdlib namespaced map access helpers accept imported stdlib wrappers,stdlib namespaced map access keeps canonical target over alias,map namespaced access call keeps canonical struct-return forwarding" --no-skip`;
