@@ -215,10 +215,10 @@ std::string SemanticsValidator::diagnosticCallTargetPath(const std::string &path
   if (path.empty()) {
     return path;
   }
-  const std::string mapHelperName = metadataBackedMapHelperMethodName(path);
-  const size_t mapTemplateSuffix = mapHelperName.find("__t");
+  const std::string keyValueHelperName = metadataBackedMapHelperMethodName(path);
+  const size_t mapTemplateSuffix = keyValueHelperName.find("__t");
   if (mapTemplateSuffix != std::string::npos &&
-      mapHelperName.substr(0, mapTemplateSuffix) == "count") {
+      keyValueHelperName.substr(0, mapTemplateSuffix) == "count") {
     const std::string canonicalMapCount =
         metadataBackedCanonicalMapHelperPath("count");
     if (!canonicalMapCount.empty()) {
