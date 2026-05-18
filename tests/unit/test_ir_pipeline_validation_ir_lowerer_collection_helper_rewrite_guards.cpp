@@ -44,10 +44,12 @@ TEST_CASE("ir lowerer collection helper rewrite guards explicit map defs") {
             "if (callExpr.namespacePrefix.empty() &&\n"
             "              callExpr.name == helperName) {") !=
         std::string::npos);
-  CHECK(source.find("const std::string canonicalMapHelperRoot = collectionMemberRoot(\"map\");") !=
+  CHECK(source.find("mapHelperSurfaceMetadataForLowerEmitExpr()") !=
         std::string::npos);
   CHECK(source.find(
-            "if (directHelperPath.rfind(canonicalMapHelperRoot, 0) == 0) {") !=
+            "ir_lowerer::isCanonicalPublishedStdlibSurfaceHelperPath(\n"
+            "                  directHelperPath,\n"
+            "                  metadata->id)") !=
         std::string::npos);
   CHECK(source.find("directHelperPath.rfind(\"/std/collections/map/\", 0)") ==
         std::string::npos);
@@ -99,7 +101,7 @@ TEST_CASE("ir lowerer materialized collection receivers use published helper que
         std::string::npos);
   CHECK(source.find("auto resolvePublishedLateVectorMemberName =") !=
         std::string::npos);
-  CHECK(source.find("!resolvePublishedLateCollectionMemberName(") !=
+  CHECK(source.find("!resolvePublishedLateMapMemberName(") !=
         std::string::npos);
   CHECK(source.find("if (!resolveMaterializedCollectionHelperName(callExpr, helperName)) {") !=
         std::string::npos);
@@ -143,7 +145,7 @@ TEST_CASE("ir lowerer late collection constructor guards use published construct
 
   CHECK(source.find("auto resolvePublishedLateCollectionConstructorName =") !=
         std::string::npos);
-  CHECK(source.find("primec::StdlibSurfaceId::CollectionsMapConstructors") !=
+  CHECK(source.find("mapConstructorSurfaceMetadataForLowerEmitExpr()") !=
         std::string::npos);
   CHECK(source.find("primec::StdlibSurfaceId::CollectionsVectorConstructors") !=
         std::string::npos);
@@ -557,10 +559,8 @@ TEST_CASE("ir lowerer map constructor rewrite checks constructor surface before 
   const std::string source = readText(collectionHelpersPath);
 
   const size_t constructorSurfaceCheck = source.find(
-      "if (!resolvePublishedLateCollectionConstructorName(\n"
-      "                  callExpr,\n"
-      "                  primec::StdlibSurfaceId::CollectionsMapConstructors,\n"
-      "                  constructorName) ||");
+      "if (!resolvePublishedLateMapConstructorName(callExpr,\n"
+      "                                                      constructorName) ||");
   const size_t resolveDefinitionCallPos =
       source.find("resolveDefinitionCall(callExpr)", constructorSurfaceCheck);
 
@@ -1943,7 +1943,7 @@ TEST_CASE("ir lowerer canonical map contains and tryAt rewrites stay recognized 
   const std::string collectionHelpersSource = readText(collectionHelpersPath);
   const std::string tailDispatchSource = readText(tailDispatchPath);
 
-  CHECK(collectionHelpersSource.find("const std::string canonicalMapHelperRoot = collectionMemberRoot(\"map\");") !=
+  CHECK(collectionHelpersSource.find("mapHelperSurfaceMetadataForLowerEmitExpr()") !=
         std::string::npos);
   CHECK(collectionHelpersSource.find("helperName != \"count\" && helperName != \"contains\" &&") !=
         std::string::npos);

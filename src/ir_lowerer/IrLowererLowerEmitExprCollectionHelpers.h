@@ -95,6 +95,13 @@
             helperName = "insert";
           }
         };
+        auto mapHelperSurfaceMetadataForLowerEmitExpr = []() {
+          return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+        };
+        auto mapConstructorSurfaceMetadataForLowerEmitExpr = []() {
+          return findStdlibSurfaceMetadataByBridgeKey(
+              "collections.map_constructors");
+        };
         auto resolvePublishedLateCollectionMemberName =
             [&](const Expr &candidate,
                 primec::StdlibSurfaceId surfaceId,
@@ -118,7 +125,8 @@
                       resolveCollectionExprDirectPath(candidate),
                       surfaceId,
                       memberNameOut);
-              if (resolved && surfaceId == primec::StdlibSurfaceId::CollectionsMapHelpers) {
+              const auto *metadata = mapHelperSurfaceMetadataForLowerEmitExpr();
+              if (resolved && metadata != nullptr && surfaceId == metadata->id) {
                 normalizeLateCollectionHelperName(memberNameOut);
               }
               return resolved;
@@ -127,6 +135,13 @@
             [&](const Expr &candidate, std::string &memberNameOut) {
               const auto *metadata =
                   findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
+              return metadata != nullptr &&
+                     resolvePublishedLateCollectionMemberName(
+                         candidate, metadata->id, memberNameOut);
+            };
+        auto resolvePublishedLateMapMemberName =
+            [&](const Expr &candidate, std::string &memberNameOut) {
+              const auto *metadata = mapHelperSurfaceMetadataForLowerEmitExpr();
               return metadata != nullptr &&
                      resolvePublishedLateCollectionMemberName(
                          candidate, metadata->id, memberNameOut);
@@ -149,15 +164,21 @@
                          surfaceId,
                          memberNameOut);
             };
+        auto resolvePublishedLateMapConstructorName =
+            [&](const Expr &candidate, std::string &memberNameOut) {
+              const auto *metadata =
+                  mapConstructorSurfaceMetadataForLowerEmitExpr();
+              return metadata != nullptr &&
+                     resolvePublishedLateCollectionConstructorName(
+                         candidate, metadata->id, memberNameOut);
+            };
         auto isEntryArgsPackMapConstructorExpr = [&](const Expr &callExpr) {
           if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
             return false;
           }
           std::string constructorName;
-          if (!resolvePublishedLateCollectionConstructorName(
-                  callExpr,
-                  primec::StdlibSurfaceId::CollectionsMapConstructors,
-                  constructorName) ||
+          if (!resolvePublishedLateMapConstructorName(callExpr,
+                                                      constructorName) ||
               constructorName == "entry") {
             return false;
           }
@@ -178,9 +199,11 @@
           return false;
         }
         auto rewriteExplicitBuiltinMapHelperExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
-          constexpr auto MapHelperSurfaceId =
-              primec::StdlibSurfaceId::CollectionsMapHelpers;
           if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall || callExpr.args.empty()) {
+            return false;
+          }
+          const auto *metadata = mapHelperSurfaceMetadataForLowerEmitExpr();
+          if (metadata == nullptr) {
             return false;
           }
           auto isRootedAliasSamePathCountLikeCall = [&](const Expr &candidate) {
@@ -188,11 +211,11 @@
             std::string directHelperName;
             if (!ir_lowerer::resolvePublishedStdlibSurfaceMemberName(
                     rawPath,
-                    MapHelperSurfaceId,
+                    metadata->id,
                     directHelperName) ||
                 ir_lowerer::isCanonicalPublishedStdlibSurfaceHelperPath(
                     rawPath,
-                    MapHelperSurfaceId)) {
+                    metadata->id)) {
               return false;
             }
             const std::string resolvedPath = resolveExprPath(candidate);
@@ -201,10 +224,7 @@
           };
           std::string helperName;
           if ((!resolveMapHelperAliasName(callExpr, helperName) &&
-               !resolvePublishedLateCollectionMemberName(
-                   callExpr,
-                   MapHelperSurfaceId,
-                   helperName)) ||
+               !resolvePublishedLateMapMemberName(callExpr, helperName)) ||
               (helperName != "count" && helperName != "contains" &&
                helperName != "tryAt" && helperName != "insert")) {
             return false;
@@ -216,15 +236,15 @@
           const std::string directHelperPath = resolveCollectionExprDirectPath(callExpr);
           if (ir_lowerer::isCanonicalPublishedStdlibSurfaceHelperPath(
                   directHelperPath,
-                  MapHelperSurfaceId)) {
+                  metadata->id)) {
             return false;
           }
           if (ir_lowerer::isPublishedStdlibSurfaceLoweringPath(
                   directHelperPath,
-                  MapHelperSurfaceId) &&
+                  metadata->id) &&
               !ir_lowerer::isCanonicalPublishedStdlibSurfaceHelperPath(
                   directHelperPath,
-                  MapHelperSurfaceId)) {
+                  metadata->id)) {
             return false;
           }
           if (helperName != "insert" && isRootedAliasSamePathCountLikeCall(callExpr)) {
@@ -346,10 +366,8 @@
                 if (resolveMapHelperAliasName(candidate, helperNameOut)) {
                   return true;
                 }
-                return resolvePublishedLateCollectionMemberName(
-                           candidate,
-                           primec::StdlibSurfaceId::CollectionsMapHelpers,
-                           helperNameOut) ||
+                return resolvePublishedLateMapMemberName(candidate,
+                                                         helperNameOut) ||
                        resolvePublishedLateVectorMemberName(candidate, helperNameOut);
               };
           auto matchesDirectHelperName = [&](const Expr &candidate, std::string_view bareName) {

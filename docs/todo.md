@@ -2148,6 +2148,11 @@ Task template:
       or constructor surface IDs directly and no longer spells the forwarded
       empty map constructor member name directly; it derives those from
       `collections.map_helpers` and `collections.map_constructors` metadata.
+    - 2026-05-18: IR lower emit-expression collection helpers no longer name
+      map helper or constructor surface IDs directly in late helper,
+      constructor, explicit-helper rewrite, or materialized receiver paths; the
+      local dispatch now uses `collections.map_helpers` and
+      `collections.map_constructors` metadata wrappers.
     - 2026-05-16: Map literal lowering no longer hard-codes the empty
       inferred-map backing path as `/std/collections/experimental_map/Map`;
       it now uses the shared `experimentalCollectionTypePath("map", "Map")`

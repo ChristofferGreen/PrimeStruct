@@ -93,7 +93,7 @@ ALLOWED_MAX_FILE_COUNTS: dict[str, int] = {
     "src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp": 0,
     "src/ir_lowerer/IrLowererInlinePackedArgs.cpp": 0,
     "src/ir_lowerer/IrLowererInlineParamHelpers.cpp": 0,
-    "src/ir_lowerer/IrLowererLowerEmitExprCollectionHelpers.h": 17,
+    "src/ir_lowerer/IrLowererLowerEmitExprCollectionHelpers.h": 0,
     "src/ir_lowerer/IrLowererLowerEmitExprTailDispatch.h": 13,
     "src/ir_lowerer/IrLowererLowerEmitExprTryHelpers.h": 2,
     "src/ir_lowerer/IrLowererLowerInferenceBaseKindHelpers.cpp": 8,

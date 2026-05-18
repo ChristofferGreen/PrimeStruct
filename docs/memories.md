@@ -515,7 +515,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   validation should use the same metadata-backed helper path, namespace,
   resolved-name, and rooted-alias derivation pattern; IR uninitialized-struct
   inference should derive map helper and constructor surface IDs and the
-  forwarded empty constructor member name from stdlib surface metadata.
+  forwarded empty constructor member name from stdlib surface metadata; IR
+  lower emit-expression collection helper late dispatch should also derive map
+  helper and constructor surface IDs from stdlib metadata wrappers.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

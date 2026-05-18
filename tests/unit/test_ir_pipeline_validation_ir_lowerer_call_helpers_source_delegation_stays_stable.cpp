@@ -1347,7 +1347,7 @@ TEST_CASE("native tail and late collection helper metadata dispatch stays source
         std::string::npos);
   CHECK(collectionHelpersSource.find("callResolutionAdapters.semanticProgram") !=
         std::string::npos);
-  CHECK(collectionHelpersSource.find("primec::StdlibSurfaceId::CollectionsMapConstructors") !=
+  CHECK(collectionHelpersSource.find("mapConstructorSurfaceMetadataForLowerEmitExpr()") !=
         std::string::npos);
   CHECK(collectionHelpersSource.find("primec::StdlibSurfaceId::CollectionsVectorConstructors") !=
         std::string::npos);
