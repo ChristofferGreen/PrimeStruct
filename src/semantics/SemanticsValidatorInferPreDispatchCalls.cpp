@@ -188,12 +188,25 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
       }
       candidates.push_back(candidate);
     };
+    auto isUnrootedMapHelperSurfacePath = [](std::string_view candidatePath) {
+      const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+      if (metadata == nullptr) {
+        return false;
+      }
+      std::string canonicalRoot(metadata->canonicalPath);
+      if (!canonicalRoot.empty() && canonicalRoot.front() == '/') {
+        canonicalRoot.erase(canonicalRoot.begin());
+      }
+      return candidatePath.size() > canonicalRoot.size() &&
+             candidatePath.rfind(canonicalRoot, 0) == 0 &&
+             candidatePath[canonicalRoot.size()] == '/';
+    };
 
     std::string normalizedPath = path;
     if (!normalizedPath.empty() && normalizedPath.front() != '/') {
       if (normalizedPath.rfind("array/", 0) == 0 ||
           isUnrootedCanonicalVectorCompatibilityPath(normalizedPath) ||
-          normalizedPath.rfind("std/collections/map/", 0) == 0) {
+          isUnrootedMapHelperSurfacePath(normalizedPath)) {
         normalizedPath.insert(normalizedPath.begin(), '/');
       }
     }
@@ -283,9 +296,13 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
                                              locals,
                                              builtinCollectionDispatchResolverAdapters)
           : std::string();
+  auto isRemovedMapAccessCompatibilityPath = [](std::string_view path) {
+    const std::string helperName =
+        metadataBackedMapHelperRootAliasMethodName(path);
+    return helperName == "at" || helperName == "at_unsafe";
+  };
   const bool isMapNamespacedAccessCompatibilityCall =
-      directRemovedMapCompatibilityPath == "/map/at" ||
-      directRemovedMapCompatibilityPath == "/map/at_unsafe";
+      isRemovedMapAccessCompatibilityPath(directRemovedMapCompatibilityPath);
   if (!expr.isMethodCall && isMapNamespacedAccessCompatibilityCall) {
     return finish(ReturnKind::Unknown);
   }

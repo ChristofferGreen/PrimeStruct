@@ -171,6 +171,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string inferMethodResolutionHelpersSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorInferMethodResolutionHelpers.cpp");
+  const std::string inferPreDispatchCallsSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorInferPreDispatchCalls.cpp");
   const std::string collectionHelperRewritesSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorCollectionHelperRewrites.cpp");
@@ -340,6 +343,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!inferStructReturnHelpersSource.empty());
   REQUIRE(!inferMethodResolutionSource.empty());
   REQUIRE(!inferMethodResolutionHelpersSource.empty());
+  REQUIRE(!inferPreDispatchCallsSource.empty());
   REQUIRE(!collectionHelperRewritesSource.empty());
   REQUIRE(!effectFreeCollectionsSource.empty());
   REQUIRE(!buildParametersSource.empty());
@@ -585,6 +589,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferMethodResolutionHelpersSource.find(
             "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+        std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find("std/collections/map/") ==
+        std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find("directRemovedMapCompatibilityPath == \"/map/") ==
+        std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find("isUnrootedMapHelperSurfacePath") !=
+        std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find("metadataBackedMapHelperRootAliasMethodName") !=
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find("const std::string alias = \"/map/\" + std::string(helperName)") ==
         std::string::npos);

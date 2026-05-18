@@ -2101,6 +2101,9 @@ Task template:
       canonical map helper root, public map constructor path, or canonical map
       helper namespace prefix directly; it derives those paths from stdlib
       surface metadata.
+    - 2026-05-18: Semantic infer pre-dispatch call handling no longer spells
+      the slashless canonical map helper prefix or rooted map access alias
+      paths directly; it derives both from stdlib surface metadata.
     - 2026-05-16: Map literal lowering no longer hard-codes the empty
       inferred-map backing path as `/std/collections/experimental_map/Map`;
       it now uses the shared `experimentalCollectionTypePath("map", "Map")`

@@ -658,7 +658,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   metadata wrappers instead of directly naming the map helper surface ID;
   semantic build call resolution should derive the canonical map helper root,
   public map constructor path, and map helper namespace prefix from stdlib
-  surface metadata instead of direct canonical map path literals.
+  surface metadata instead of direct canonical map path literals; semantic
+  infer pre-dispatch call handling should derive slashless canonical map
+  helper path detection and rooted map access alias classification from
+  stdlib surface metadata instead of direct map path literals.
   The stale
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`
