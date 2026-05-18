@@ -1725,6 +1725,21 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(collectionAccessSource.find("resolvedCanonicalMapHelper") ==
         std::string::npos);
+  CHECK(collectionAccessSource.find(
+            "getCanonicalMapAccessHelperNameForDispatch") ==
+        std::string::npos);
+  CHECK(collectionAccessSource.find("isNamespacedMapAccessCall") ==
+        std::string::npos);
+  CHECK(collectionAccessSource.find("explicitCanonicalMapAccessHelperName") ==
+        std::string::npos);
+  CHECK(collectionAccessSource.find("explicitCanonicalMapAccessCall") ==
+        std::string::npos);
+  CHECK(collectionAccessSource.find("canonicalMapAccessHelperTarget") ==
+        std::string::npos);
+  CHECK(collectionAccessSource.find("resolvedCanonicalMapAccessMethod") ==
+        std::string::npos);
+  CHECK(collectionAccessSource.find("resolvedDeclaredCanonicalMapHelper") ==
+        std::string::npos);
   CHECK(collectionAccessSource.find("isCanonicalMapAccessHelperName(") ==
         std::string::npos);
   CHECK(collectionAccessSource.find("canonicalStdlibMapAccessPathForHelper(") ==
@@ -1749,6 +1764,22 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(collectionAccessSource.find("canonicalKeyValueMethodHelperName") !=
         std::string::npos);
   CHECK(collectionAccessSource.find("resolvedCanonicalKeyValueHelper") !=
+        std::string::npos);
+  CHECK(collectionAccessSource.find(
+            "getCanonicalKeyValueAccessHelperNameForDispatch") !=
+        std::string::npos);
+  CHECK(collectionAccessSource.find("isNamespacedKeyValueAccessCall") !=
+        std::string::npos);
+  CHECK(collectionAccessSource.find(
+            "explicitCanonicalKeyValueAccessHelperName") !=
+        std::string::npos);
+  CHECK(collectionAccessSource.find("explicitCanonicalKeyValueAccessCall") !=
+        std::string::npos);
+  CHECK(collectionAccessSource.find("canonicalKeyValueAccessHelperTarget") !=
+        std::string::npos);
+  CHECK(collectionAccessSource.find("resolvedCanonicalKeyValueAccessMethod") !=
+        std::string::npos);
+  CHECK(collectionAccessSource.find("resolvedDeclaredCanonicalKeyValueHelper") !=
         std::string::npos);
   CHECK(collectionAccessSource.find("isCanonicalKeyValueAccessHelperName(") !=
         std::string::npos);

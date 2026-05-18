@@ -164,7 +164,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
   };
 
   std::string accessHelperName;
-  auto getCanonicalMapAccessHelperNameForDispatch =
+  auto getCanonicalKeyValueAccessHelperNameForDispatch =
       [&](const Expr &candidate, std::string &helperNameOut) -> bool {
         helperNameOut.clear();
         if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
@@ -214,7 +214,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       };
   const bool hasBuiltinAccessSpelling =
       !expr.isMethodCall &&
-      getCanonicalMapAccessHelperNameForDispatch(expr, accessHelperName);
+      getCanonicalKeyValueAccessHelperNameForDispatch(expr, accessHelperName);
   const bool isStdNamespacedVectorAccessCall =
       hasBuiltinAccessSpelling && !expr.isMethodCall &&
       isValueSurfaceAccessHelperName(accessHelperName) &&
@@ -228,7 +228,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       context.isNamespacedVectorHelperCall &&
       isValueSurfaceAccessHelperName(context.namespacedHelper) &&
       defMap_.find(resolved) == defMap_.end();
-  const bool isNamespacedMapAccessCall =
+  const bool isNamespacedKeyValueAccessCall =
       isBuiltinAccessName && context.isNamespacedMapHelperCall &&
       isCanonicalKeyValueAccessHelperName(context.namespacedHelper) &&
       defMap_.find(resolved) == defMap_.end();
@@ -242,22 +242,22 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
     return this->resolveDirectSoaVectorOrExperimentalBorrowedReceiver(
         target, params, locals, context.resolveSoaVectorTarget, elemTypeOut);
   };
-  std::string explicitCanonicalMapAccessHelperName;
-  const bool explicitCanonicalMapAccessCall =
+  std::string explicitCanonicalKeyValueAccessHelperName;
+  const bool explicitCanonicalKeyValueAccessCall =
       resolveCanonicalKeyValueHelperNameFromSpelling(
-          explicitCallPath(expr), explicitCanonicalMapAccessHelperName) &&
-      isCanonicalKeyValueAccessHelperName(explicitCanonicalMapAccessHelperName);
+          explicitCallPath(expr), explicitCanonicalKeyValueAccessHelperName) &&
+      isCanonicalKeyValueAccessHelperName(explicitCanonicalKeyValueAccessHelperName);
 
   if ((hasBuiltinAccessSpelling ||
-       isCanonicalKeyValueAccessHelperName(explicitCanonicalMapAccessHelperName)) &&
+       isCanonicalKeyValueAccessHelperName(explicitCanonicalKeyValueAccessHelperName)) &&
       !expr.isMethodCall &&
-      explicitCanonicalMapAccessCall && expr.args.size() == 2 &&
+      explicitCanonicalKeyValueAccessCall && expr.args.size() == 2 &&
       isCanonicalKeyValueAccessHelperName(hasBuiltinAccessSpelling
                                          ? accessHelperName
-                                         : explicitCanonicalMapAccessHelperName)) {
+                                         : explicitCanonicalKeyValueAccessHelperName)) {
     const std::string helperPath = canonicalStdlibKeyValueAccessPathForHelper(
         hasBuiltinAccessSpelling ? accessHelperName
-                                 : explicitCanonicalMapAccessHelperName);
+                                 : explicitCanonicalKeyValueAccessHelperName);
     auto helperIt = defMap_.find(helperPath);
     if ((helperIt != defMap_.end() && helperIt->second != nullptr) ||
         hasDefinitionFamilyPath(helperPath) ||
@@ -277,7 +277,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
   if (isBuiltinAccessName &&
       !(isStdNamespacedVectorAccessCall && hasNamedArguments(expr.argNames)) &&
       (defMap_.find(resolved) == defMap_.end() || isNamespacedVectorAccessCall ||
-       isNamespacedMapAccessCall)) {
+       isNamespacedKeyValueAccessCall)) {
     handledOut = true;
     const bool hasNamedArgs = hasNamedArguments(expr.argNames);
     const bool usesBuiltinVectorSurfaceMethodSemantics =
@@ -297,7 +297,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       return canonicalVectorCompatibilityHelperPathOrFallback(
           accessHelperName);
     };
-    auto canonicalMapAccessHelperTarget = [&]() {
+    auto canonicalKeyValueAccessHelperTarget = [&]() {
       return canonicalStdlibKeyValueAccessPathForHelper(accessHelperName);
     };
     auto hasVisibleCanonicalVectorAccessHelper = [&]() {
@@ -352,7 +352,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       bool isBuiltinMethod = false;
       std::string methodResolved;
       bool resolvedVectorAccessMethod = false;
-      bool resolvedCanonicalMapAccessMethod = false;
+      bool resolvedCanonicalKeyValueAccessMethod = false;
       std::string ignoredVectorElemType;
       const bool receiverSupportsBuiltinVectorSurfaceSemantics =
           usesBuiltinVectorSurfaceMethodSemantics &&
@@ -375,12 +375,12 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
           return true;
         }
       }
-      if (explicitCanonicalMapAccessCall &&
+      if (explicitCanonicalKeyValueAccessCall &&
           isCanonicalKeyValueAccessHelperName(accessHelperName) &&
           context.resolveMapTarget(receiverCandidate)) {
-        methodResolved = canonicalMapAccessHelperTarget();
+        methodResolved = canonicalKeyValueAccessHelperTarget();
         isBuiltinMethod = true;
-        resolvedCanonicalMapAccessMethod = true;
+        resolvedCanonicalKeyValueAccessMethod = true;
         if (!hasDefinitionPath(methodResolved) &&
             !hasDeclaredDefinitionPath(methodResolved) &&
             !hasImportedDefinitionPath(methodResolved)) {
@@ -421,7 +421,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
           resolvedVectorAccessMethod = true;
         }
       }
-      if (!resolvedVectorAccessMethod && !resolvedCanonicalMapAccessMethod &&
+      if (!resolvedVectorAccessMethod && !resolvedCanonicalKeyValueAccessMethod &&
           !resolveMethodTarget(params, locals, expr.namespacePrefix, receiverCandidate, accessHelperName,
                                methodResolved, isBuiltinMethod)) {
         (void)validateExpr(params, locals, receiverCandidate);
@@ -501,7 +501,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       bool isBuiltinMethod = false;
       std::string methodResolved;
       bool resolvedVectorAccessMethod = false;
-      bool resolvedCanonicalMapAccessMethod = false;
+      bool resolvedCanonicalKeyValueAccessMethod = false;
       std::string ignoredVectorElemType;
       const bool receiverSupportsBuiltinVectorSurfaceSemantics =
           usesBuiltinVectorSurfaceMethodSemantics &&
@@ -522,12 +522,12 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
               "unknown call target: " + methodResolved);
         }
       }
-      if (explicitCanonicalMapAccessCall &&
+      if (explicitCanonicalKeyValueAccessCall &&
           isCanonicalKeyValueAccessHelperName(accessHelperName) &&
           context.resolveMapTarget(expr.args.front())) {
-        methodResolved = canonicalMapAccessHelperTarget();
+        methodResolved = canonicalKeyValueAccessHelperTarget();
         isBuiltinMethod = true;
-        resolvedCanonicalMapAccessMethod = true;
+        resolvedCanonicalKeyValueAccessMethod = true;
         if (!hasDefinitionPath(methodResolved) &&
             !hasDeclaredDefinitionPath(methodResolved) &&
             !hasImportedDefinitionPath(methodResolved)) {
@@ -567,7 +567,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
         }
       }
       if (resolvedVectorAccessMethod ||
-          resolvedCanonicalMapAccessMethod ||
+          resolvedCanonicalKeyValueAccessMethod ||
           resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), accessHelperName,
                               methodResolved, isBuiltinMethod)) {
         if (!isBuiltinMethod &&
@@ -818,7 +818,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
   if (!expr.isMethodCall && expr.args.size() == 2 &&
       defMap_.find(resolved) == defMap_.end() &&
       (isSimpleCallName(expr, "contains") ||
-       getCanonicalMapAccessHelperNameForDispatch(expr, accessHelperName))) {
+       getCanonicalKeyValueAccessHelperNameForDispatch(expr, accessHelperName))) {
     handledOut = true;
     const Expr &receiverCandidate = expr.args.front();
     if (context.resolveMapTarget(receiverCandidate) &&
@@ -850,7 +850,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
             canonicalStdlibKeyValueContainsPathForResolvedMethod(methodResolved));
       }
       if (isBuiltinMethod) {
-        const bool resolvedDeclaredCanonicalMapHelper =
+        const bool resolvedDeclaredCanonicalKeyValueHelper =
             resolvedCanonicalKeyValueHelper &&
             hasDeclaredDefinitionPath(
                 canonicalKeyValueHelperPathLocal(canonicalKeyValueMethodHelperName));
@@ -861,7 +861,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
         const bool resolvedCanonicalAccessHelper =
             resolvedCanonicalKeyValueHelper &&
             isCanonicalKeyValueAccessHelperName(canonicalKeyValueMethodHelperName);
-        if (resolvedDeclaredCanonicalMapHelper &&
+        if (resolvedDeclaredCanonicalKeyValueHelper &&
             !(resolvedCanonicalContainsHelper &&
               context.shouldBuiltinValidateBareMapContainsCall) &&
             !(resolvedCanonicalAccessHelper &&
