@@ -1,6 +1,29 @@
 #include "SemanticsValidator.h"
+#include "MapConstructorHelpers.h"
 
 namespace primec::semantics {
+
+namespace {
+
+bool isInferDefinitionCanonicalMapAccessHelperPath(std::string_view path) {
+  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  if (metadata == nullptr || path.empty()) {
+    return false;
+  }
+  std::string normalizedPath(path);
+  if (!normalizedPath.empty() && normalizedPath.front() != '/') {
+    normalizedPath.insert(normalizedPath.begin(), '/');
+  }
+  if (normalizedPath.rfind(std::string(metadata->canonicalPath) + "/", 0) != 0) {
+    return false;
+  }
+  const std::string_view helperName =
+      resolveStdlibSurfaceMemberName(*metadata, normalizedPath);
+  return helperName == "at" || helperName == "at_ref" ||
+         helperName == "at_unsafe" || helperName == "at_unsafe_ref";
+}
+
+} // namespace
 
 bool SemanticsValidator::recordDefinitionInferredReturn(
     const Definition &def,
@@ -83,21 +106,14 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
   auto containsDeferredMapAliasInference = [&](const Expr &candidate, auto &&containsDeferredMapAliasInferenceRef)
       -> bool {
     std::string builtinAccessName;
+    const std::string resolvedCandidatePath = resolveCalleePath(candidate);
     if (candidate.kind == Expr::Kind::Call && candidate.isMethodCall &&
         (getBuiltinArrayAccessName(candidate, builtinAccessName) ||
-         resolveCalleePath(candidate) == "/std/collections/map/at_ref" ||
-         resolveCalleePath(candidate) == "/std/collections/map/at_unsafe_ref")) {
+         isInferDefinitionCanonicalMapAccessHelperPath(resolvedCandidatePath))) {
       if (builtinAccessName.empty()) {
-        builtinAccessName =
-            resolveCalleePath(candidate) == "/std/collections/map/at_ref"
-                ? "at_ref"
-                : "at_unsafe_ref";
+        builtinAccessName = metadataBackedMapHelperMethodName(resolvedCandidatePath);
       }
-      const std::string resolvedPath = resolveCalleePath(candidate);
-      if (resolvedPath == "/std/collections/map/at" ||
-          resolvedPath == "/std/collections/map/at_ref" ||
-          resolvedPath == "/std/collections/map/at_unsafe" ||
-          resolvedPath == "/std/collections/map/at_unsafe_ref") {
+      if (isInferDefinitionCanonicalMapAccessHelperPath(resolvedCandidatePath)) {
         return true;
       }
     }

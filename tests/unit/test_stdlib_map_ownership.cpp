@@ -771,6 +771,16 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferDefinitionSource.find("resolvedPath == \"/map/at\"") ==
         std::string::npos);
+  CHECK(inferDefinitionSource.find("resolveCalleePath(candidate) == \"/std/collections/map/at_ref\"") ==
+        std::string::npos);
+  CHECK(inferDefinitionSource.find("resolvedPath == \"/std/collections/map/at\"") ==
+        std::string::npos);
+  CHECK(inferDefinitionSource.find(
+            "isInferDefinitionCanonicalMapAccessHelperPath(resolvedCandidatePath)") !=
+        std::string::npos);
+  CHECK(inferDefinitionSource.find(
+            "metadataBackedMapHelperMethodName(resolvedCandidatePath)") !=
+        std::string::npos);
   CHECK(inferLateFallbackBuiltinsSource.find("path == \"/map/at\"") ==
         std::string::npos);
   CHECK(inferLateFallbackBuiltinsSource.find("path == \"/map/at_ref\"") ==

@@ -686,7 +686,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   naming the map helper surface ID; expression argument validation should
   derive canonical map access helper matching through stdlib map helper
   metadata and map template-base checks through `isMapCollectionTypeName`
-  instead of direct canonical map path and type spellings.
+  instead of direct canonical map path and type spellings; definition return
+  inference should detect deferred canonical map access helpers through stdlib
+  map helper metadata instead of direct canonical map access path literals.
   The stale
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`

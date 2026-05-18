@@ -355,7 +355,9 @@ Task template:
   argument validation now derives canonical map access helper matching through
   stdlib map helper metadata and map template-base checks through
   `isMapCollectionTypeName` instead of direct canonical map path and type
-  spellings. The
+  spellings, and definition return inference now detects deferred canonical
+  map access helpers through stdlib map helper metadata instead of direct
+  canonical map access path literals. The
   remaining production
   lowerer/emitter
   experimental-map traces
