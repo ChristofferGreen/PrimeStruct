@@ -2354,6 +2354,11 @@ Task template:
       resolve helper tokens, unrooted paths, direct-import diagnostics, and
       removed-helper paths through `collections.map_helpers` metadata, with the
       file inventory cap reduced to zero.
+    - 2026-05-18: Semantic collection-compatibility inference no longer checks
+      canonical map type roots, imports, explicit helper names, or removed
+      helper paths through literal map path strings; it now routes those
+      decisions through `collections.map_helpers` metadata, with the file
+      inventory cap reduced to zero.
     - 2026-05-16: Inline native map helper recognition no longer names
       `StdlibSurfaceId::CollectionsMapHelpers` directly; it now resolves the
       helper family through `collections.map_helpers` metadata.

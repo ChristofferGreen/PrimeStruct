@@ -92,14 +92,6 @@ std::string canonicalMapHelperRootPathLocal() {
   return metadata == nullptr ? std::string{} : std::string(metadata->canonicalPath);
 }
 
-std::string unrootedCanonicalMapHelperRootPathLocal() {
-  std::string root = canonicalMapHelperRootPathLocal();
-  if (!root.empty() && root.front() == '/') {
-    root.erase(root.begin());
-  }
-  return root;
-}
-
 std::string canonicalMapHelperPathLocal(std::string_view helperName) {
   const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
@@ -136,6 +128,12 @@ bool isCanonicalMapHelperResolvedPathLocal(std::string path) {
   return resolvePublishedMapHelperResolvedPathLocal(path, helperName);
 }
 
+bool isCanonicalMapCollectionTypeRootLocal(std::string_view typeName) {
+  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  return metadata != nullptr &&
+         trimLeadingSlash(typeName) == trimLeadingSlash(metadata->canonicalPath);
+}
+
 bool isSpecializedExperimentalMapBackingPath(std::string typeName) {
   typeName = normalizeBindingTypeName(typeName);
   if (!typeName.empty() && typeName.front() == '/') {
@@ -167,7 +165,7 @@ std::string SemanticsValidator::normalizeCollectionTypePath(const std::string &t
       return "/soa" "_vector";
     }
     if ((base == "Map" || isMapCollectionTypeName(base) || base == "/map" ||
-         base == "/std/collections/map") &&
+         isCanonicalMapCollectionTypeRootLocal(base)) &&
         splitTopLevelTemplateArgs(argText, args) && args.size() == 2) {
       return "/map";
     }
@@ -203,8 +201,9 @@ std::string SemanticsValidator::normalizeCollectionTypePath(const std::string &t
       normalizedType.rfind("std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0) {
     return "/soa" "_vector";
   }
-  if (normalizedType == "Map" || isMapCollectionTypeName(normalizedType) || normalizedType == "/map" ||
-      normalizedType == "/std/collections/map") {
+  if (normalizedType == "Map" || isMapCollectionTypeName(normalizedType) ||
+      normalizedType == "/map" ||
+      isCanonicalMapCollectionTypeRootLocal(normalizedType)) {
     return "/map";
   }
   if (isSpecializedExperimentalMapBackingPath(normalizedType)) {
@@ -245,7 +244,7 @@ bool SemanticsValidator::hasImportedDefinitionPath(const std::string &path) cons
           isCanonicalVectorCompatibilityPath(canonicalPath)) {
         return true;
       }
-      if (importPath == "/std/collections/map" &&
+      if (importPath == canonicalMapHelperRootPathLocal() &&
           canonicalPath.rfind(importPath + "/", 0) == 0) {
         return true;
       }
@@ -615,15 +614,9 @@ std::string SemanticsValidator::mapNamespacedMethodCompatibilityPath(
       candidate.args.empty()) {
     return "";
   }
-  const std::string normalizedName = std::string(trimLeadingSlash(candidate.name));
-  const std::string normalizedPrefix =
-      std::string(trimLeadingSlash(candidate.namespacePrefix));
-  const bool explicitlyNamespacedMapHelper =
-      normalizedPrefix == "map" ||
-      normalizedPrefix == unrootedCanonicalMapHelperRootPathLocal() ||
-      normalizedName.rfind("map/", 0) == 0 ||
-      normalizedName.rfind(unrootedCanonicalMapHelperRootPathLocal() + "/", 0) == 0;
-  if (!explicitlyNamespacedMapHelper) {
+  std::string helperName;
+  if (!resolveExplicitPublishedMapHelperExprMemberName(
+          candidate.name, candidate.namespacePrefix, helperName)) {
     return "";
   }
   const BuiltinCollectionDispatchResolvers dispatchResolvers =
@@ -634,12 +627,10 @@ std::string SemanticsValidator::mapNamespacedMethodCompatibilityPath(
     return dispatchResolvers.resolveMapTarget(target, keyType, valueType) ||
            dispatchResolvers.resolveExperimentalMapTarget(target, keyType, valueType);
   };
-  std::string helperName;
-  if (!resolveExplicitPublishedMapHelperExprMemberName(
-          candidate.name, candidate.namespacePrefix, helperName)) {
+  const std::string removedPath = rootedMapCompatibilityHelperPath(helperName);
+  if (removedPath.empty()) {
     return "";
   }
-  const std::string removedPath = "/map/" + helperName;
   if (hasExplicitDefinitionFamilyPath(program_, defMap_, removedPath)) {
     return "";
   }
@@ -685,7 +676,7 @@ std::string SemanticsValidator::directMapHelperCompatibilityPath(
                                                 explicitSurfaceHelperName) &&
       explicitSurfaceHelperName == helperName &&
       trimLeadingSlash(candidate.name) != helperName &&
-      explicitPath.rfind("/map/", 0) != 0 &&
+      metadataBackedMapHelperRootAliasMethodName(explicitPath).empty() &&
       !isCanonicalMapHelperResolvedPathLocal(explicitPath);
   if (!resolvedCompatibilityHelper &&
       !resolveExplicitPublishedMapHelperExprMemberName(
@@ -710,12 +701,15 @@ std::string SemanticsValidator::directMapHelperCompatibilityPath(
   if (resolvedCompatibilityHelper && spellsCurrentMapWrapperSurface) {
     return "";
   }
-  const std::string removedPath = "/map/" + helperName;
+  const std::string removedPath = rootedMapCompatibilityHelperPath(helperName);
+  if (removedPath.empty()) {
+    return "";
+  }
   if (hasExplicitDefinitionFamilyPath(program_, defMap_, removedPath) ||
       candidate.args.empty()) {
     return "";
   }
-  if (explicitPath.rfind("/map/", 0) == 0) {
+  if (!metadataBackedMapHelperRootAliasMethodName(explicitPath).empty()) {
     return removedPath;
   }
   if (resolvedCompatibilityHelper &&

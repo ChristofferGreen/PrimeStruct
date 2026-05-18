@@ -726,7 +726,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   unrooted helper paths, direct-import diagnostics, and removed-helper rooted
   paths from `collections.map_helpers` metadata instead of direct map helper
   surface IDs, literal namespace comparisons, or hard-coded rooted path
-  construction.
+  construction; semantic collection-compatibility inference should also derive
+  canonical map type-root checks, import matching, explicit helper-name routing,
+  removed-helper path construction, and explicit rooted-alias detection from
+  `collections.map_helpers` metadata rather than literal map path strings.
   The stale
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`

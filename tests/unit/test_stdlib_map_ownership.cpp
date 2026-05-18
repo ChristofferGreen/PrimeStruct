@@ -821,6 +821,24 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferCollectionCompatibilitySource.find("const std::string alias = \"/map/\" + std::string(helperName)") ==
         std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("base == \"/std/collections/map\"") ==
+        std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("normalizedType == \"/std/collections/map\"") ==
+        std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("importPath == \"/std/collections/map\"") ==
+        std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("normalizedName.rfind(\"map/\", 0)") ==
+        std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("explicitPath.rfind(\"/map/\", 0)") ==
+        std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("const std::string removedPath = \"/map/\" + helperName") ==
+        std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("isCanonicalMapCollectionTypeRootLocal(") !=
+        std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("rootedMapCompatibilityHelperPath(helperName)") !=
+        std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("metadataBackedMapHelperRootAliasMethodName(explicitPath)") !=
+        std::string::npos);
   CHECK(inferCollectionCompatibilityInternalSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
         std::string::npos);
   CHECK(inferCollectionCompatibilityInternalSource.find("namespacePrefix == \"map\"") ==

@@ -2599,6 +2599,24 @@ main() {
             "resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(") !=
         std::string::npos);
   CHECK(collectionCompatibilitySource.find(
+            "base == \"/std/collections/map\"") ==
+        std::string::npos);
+  CHECK(collectionCompatibilitySource.find(
+            "normalizedType == \"/std/collections/map\"") ==
+        std::string::npos);
+  CHECK(collectionCompatibilitySource.find(
+            "importPath == \"/std/collections/map\"") ==
+        std::string::npos);
+  CHECK(collectionCompatibilitySource.find(
+            "normalizedName.rfind(\"map/\", 0)") ==
+        std::string::npos);
+  CHECK(collectionCompatibilitySource.find(
+            "explicitPath.rfind(\"/map/\", 0)") ==
+        std::string::npos);
+  CHECK(collectionCompatibilitySource.find(
+            "rootedMapCompatibilityHelperPath(helperName)") !=
+        std::string::npos);
+  CHECK(collectionCompatibilitySource.find(
             "normalizedType.rfind(\"/std/collections/experimental_soa_vector/SoaVector__\", 0) == 0") !=
         std::string::npos);
   CHECK(collectionCompatibilitySource.find(
