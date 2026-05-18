@@ -544,7 +544,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   carrying a direct experimental-map entry fallback; statement init type
   matching should classify generated experimental map backing paths through
   shared map backing helpers and derive the public map collection alias from
-  constructor metadata instead of direct map strings.
+  constructor metadata instead of direct map strings; infer-struct-return
+  helpers should derive rooted map aliases, unrooted helper prefixes, and
+  canonical `MapValue` roots from stdlib surface metadata instead of local
+  collection path builders.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

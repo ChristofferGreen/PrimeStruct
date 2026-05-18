@@ -21,36 +21,47 @@ void eraseStructReturnCandidate(std::vector<std::string> &candidates, const std:
   }
 }
 
-std::string collectionTypePathLocal(const std::string &collectionName,
-                                    const std::string &typeName = {},
-                                    bool leadingSlash = true) {
-  std::string path = leadingSlash ? "/" : "";
-  path += "std/collections/";
-  path += collectionName;
-  if (!typeName.empty()) {
-    path += "/";
-    path += typeName;
-  }
-  return path;
-}
-
 std::string mapCollectionMarkerPathForInferStructReturn() {
   const StdlibSurfaceMetadata *metadata = mapConstructorSurfaceMetadataLocal();
-  if (metadata != nullptr) {
-    for (std::string_view alias : metadata->importAliasSpellings) {
-      if (alias.empty()) {
-        continue;
-      }
-      std::string rootedAlias(alias);
-      if (rootedAlias.front() != '/') {
-        rootedAlias.insert(rootedAlias.begin(), '/');
-      }
-      if (rootedAlias.find('/', 1) == std::string::npos) {
-        return rootedAlias;
-      }
+  if (metadata == nullptr) {
+    return {};
+  }
+  for (std::string_view alias : metadata->importAliasSpellings) {
+    if (alias.empty()) {
+      continue;
+    }
+    std::string rootedAlias(alias);
+    if (rootedAlias.front() != '/') {
+      rootedAlias.insert(rootedAlias.begin(), '/');
+    }
+    if (rootedAlias.find('/', 1) == std::string::npos) {
+      return rootedAlias;
     }
   }
-  return std::string(1, '/') + std::string("map");
+  return {};
+}
+
+std::string unrootedMapHelperPrefixForInferStructReturn() {
+  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  if (metadata == nullptr || metadata->canonicalPath.empty()) {
+    return {};
+  }
+  std::string prefix(metadata->canonicalPath);
+  if (!prefix.empty() && prefix.front() == '/') {
+    prefix.erase(prefix.begin());
+  }
+  if (!prefix.empty() && prefix.back() != '/') {
+    prefix.push_back('/');
+  }
+  return prefix;
+}
+
+std::string mapValueRootForInferStructReturn() {
+  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  if (metadata == nullptr || metadata->canonicalPath.empty()) {
+    return {};
+  }
+  return std::string(metadata->canonicalPath) + "/MapValue";
 }
 
 } // namespace
@@ -233,10 +244,11 @@ std::string SemanticsValidator::normalizeInferStructReturnHelperPath(const std::
   std::string normalizedPath = path;
   if (!normalizedPath.empty() && normalizedPath.front() != '/') {
     const std::string unrootedMapPrefix =
-        collectionTypePathLocal("map", {}, false) + "/";
+        unrootedMapHelperPrefixForInferStructReturn();
     if (normalizedPath.rfind("array/", 0) == 0 || isUnrootedVectorHelperPath(normalizedPath) ||
         isUnrootedCanonicalVectorCompatibilityPath(normalizedPath) ||
-        normalizedPath.rfind(unrootedMapPrefix, 0) == 0) {
+        (!unrootedMapPrefix.empty() &&
+         normalizedPath.rfind(unrootedMapPrefix, 0) == 0)) {
       normalizedPath.insert(normalizedPath.begin(), '/');
     }
   }
@@ -346,8 +358,11 @@ std::string SemanticsValidator::specializedExperimentalMapStructReturnPath(
   }
 
   std::ostringstream specializedPath;
-  specializedPath << collectionTypePathLocal("map", "MapValue") << "__t"
-                  << std::hex
+  const std::string mapValueRoot = mapValueRootForInferStructReturn();
+  if (mapValueRoot.empty()) {
+    return {};
+  }
+  specializedPath << mapValueRoot << "__t" << std::hex
                   << fnv1a64(canonicalArgs.str());
   return specializedPath.str();
 }

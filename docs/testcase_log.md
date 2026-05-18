@@ -196,6 +196,19 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-18 11:46 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="public stdlib map Ref wrappers validate through canonical borrowed helpers" --no-skip`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical stdlib map returns are allowed" --no-skip`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map return accepts array value type during semantics validation" --no-skip`;
+  `rg --pcre2 -n '/?std/collections/map(?:/|")|/?std/collections/experimental_map(?:/|")|(?<![A-Za-z0-9_/])/?map/|\bmap(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bCollectionsMap[A-Za-z0-9_]*\b|\bMap<' src/semantics/SemanticsValidatorInferStructReturnHelpers.cpp`;
+  `git diff --check` | failures: none | notes:
+  `SemanticsValidatorInferStructReturnHelpers.cpp` now derives rooted map
+  aliases, unrooted helper prefixes, and canonical `MapValue` roots from
+  stdlib surface metadata. The targeted direct scan returned no matches. The
+  Python inventory script was intentionally not run.
 - 2026-05-18 11:41 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_misc_tests`;
   `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
