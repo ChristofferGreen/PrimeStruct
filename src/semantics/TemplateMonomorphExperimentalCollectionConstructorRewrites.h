@@ -15,7 +15,7 @@ bool isExperimentalMapEntryArgument(const Expr &argExpr,
   }
   const std::string resolvedArgPath =
       canonicalizeExperimentalCollectionResolvedPath(resolveCalleePath(argExpr, namespacePrefix, ctx));
-  if (resolvedArgPath == experimentalCollectionConstructorPathLocal("map", "entry")) {
+  if (isExperimentalMapConstructorMemberPathLocal(resolvedArgPath, "entry")) {
     return true;
   }
   BindingInfo argInfo;
@@ -30,7 +30,7 @@ bool isExperimentalMapEntryArgument(const Expr &argExpr,
   if (!normalizedArgType.empty() && normalizedArgType.front() == '/') {
     normalizedArgType.erase(normalizedArgType.begin());
   }
-  return isExperimentalCollectionBackingTypeName("map", "Entry", normalizedArgType);
+  return isExperimentalMapEntryBackingTypeName(normalizedArgType);
 }
 
 bool inferExperimentalCollectionConstructorTemplateArgs(const std::string &originalPath,
@@ -115,7 +115,7 @@ bool rewriteCanonicalExperimentalMapConstructorExpr(Expr &valueExpr,
       return isExperimentalMapEntryArgument(argExpr, params, locals, allowMathBare, namespacePrefix, ctx);
     });
     if (usesEntryArgs) {
-      helperPath = experimentalCollectionConstructorPathLocal("map", "map");
+      helperPath = experimentalMapConstructorMemberPathLocal("map");
     } else {
       helperPath.clear();
     }

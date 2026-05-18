@@ -44,6 +44,18 @@ inline bool isExperimentalCollectionConstructorPathLocal(
   return path == expected || path.rfind(expected + "__", 0) == 0;
 }
 
+inline std::string experimentalMapConstructorMemberPathLocal(
+    std::string_view memberName) {
+  return experimentalCollectionConstructorPathLocal("map", memberName);
+}
+
+inline bool isExperimentalMapConstructorMemberPathLocal(
+    const std::string &path,
+    std::string_view memberName) {
+  const std::string expected = experimentalMapConstructorMemberPathLocal(memberName);
+  return path == expected || path.rfind(expected + "__", 0) == 0;
+}
+
 inline bool isExperimentalCollectionBackingTypeName(
     std::string_view collectionName,
     std::string_view backingTypeName,
@@ -58,6 +70,14 @@ inline bool isExperimentalCollectionBackingTypeName(
   expected += std::string(backingTypeName);
   const std::string specializedExpected = expected + "__";
   return typeName == expected || typeName.rfind(specializedExpected, 0) == 0;
+}
+
+inline bool isExperimentalMapEntryBackingTypeName(std::string_view typeName) {
+  std::string normalized(typeName);
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  return isExperimentalCollectionBackingTypeName("map", "Entry", normalized);
 }
 
 inline std::string experimentalMapBackingLeafName(std::string typeName) {

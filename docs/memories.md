@@ -547,7 +547,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   constructor metadata instead of direct map strings; infer-struct-return
   helpers should derive rooted map aliases, unrooted helper prefixes, and
   canonical `MapValue` roots from stdlib surface metadata instead of local
-  collection path builders.
+  collection path builders; template-monomorph canonical map constructor
+  rewrites should use shared map constructor member and `Entry` backing
+  helpers instead of direct experimental-map constructor paths.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

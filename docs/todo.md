@@ -2764,6 +2764,10 @@ Task template:
       `SemanticsValidatorInferStructReturnHelpers.cpp` now derives rooted
       map aliases, unrooted helper prefixes, and canonical `MapValue` roots
       from stdlib surface metadata; its inventory cap is zero.
+    - 2026-05-18:
+      `TemplateMonomorphExperimentalCollectionConstructorRewrites.h` now uses
+      shared map constructor member and `Entry` backing helpers for canonical
+      map constructor rewrites; its inventory cap is zero.
     - Tighten or replace the TODO-4473 and TODO-4472 allowed-count
       inventories as traces are deleted; the final TODO-4464 state is zero
       tolerance for all PrimeStruct-map-specific production C++ traces, not a

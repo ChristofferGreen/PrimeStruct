@@ -710,6 +710,21 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
             "originalPath == \"/std/collections/map/map\"") ==
         std::string::npos);
   CHECK(templateConstructorRewriteSource.find(
+            "experimentalCollectionConstructorPathLocal(\"map\"") ==
+        std::string::npos);
+  CHECK(templateConstructorRewriteSource.find(
+            "isExperimentalCollectionBackingTypeName(\"map\"") ==
+        std::string::npos);
+  CHECK(templateConstructorRewriteSource.find(
+            "isExperimentalMapConstructorMemberPathLocal(resolvedArgPath, \"entry\")") !=
+        std::string::npos);
+  CHECK(templateConstructorRewriteSource.find(
+            "isExperimentalMapEntryBackingTypeName(normalizedArgType)") !=
+        std::string::npos);
+  CHECK(templateConstructorRewriteSource.find(
+            "experimentalMapConstructorMemberPathLocal(\"map\")") !=
+        std::string::npos);
+  CHECK(templateConstructorRewriteSource.find(
             "isCanonicalMapConstructorRewriteSourcePath(originalPath)") !=
         std::string::npos);
   CHECK(templateConstructorRewriteSource.find(
