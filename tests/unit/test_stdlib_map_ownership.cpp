@@ -617,11 +617,45 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(methodTargetResolutionSource.find("normalized == \"map/count\"") ==
         std::string::npos);
-  CHECK(methodTargetResolutionSource.find("rootedMapHelperAliasPathForMethodTargets(") !=
+  CHECK(methodTargetResolutionSource.find("canonicalMapHelperPathLocal(") ==
         std::string::npos);
-  CHECK(methodTargetResolutionSource.find("rootAliasMapHelperNameForMethodTargets(") !=
+  CHECK(methodTargetResolutionSource.find("canonicalMapHelperNamespaceLocal(") ==
         std::string::npos);
-  CHECK(methodTargetResolutionSource.find("isRootedMapHelperAliasPathForMethodTargets(") !=
+  CHECK(methodTargetResolutionSource.find("resolveCanonicalMapHelperNameFromSpelling(") ==
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("isMapHelperImportAliasNamespaceForMethodTargets(") ==
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("rootedMapHelperAliasPathForMethodTargets(") ==
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("rootAliasMapHelperNameForMethodTargets(") ==
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("isRootedMapHelperAliasPathForMethodTargets(") ==
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("isStdNamespacedMapHelper") ==
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("resolvedCanonicalMapHelperName") ==
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("canonicalMapHelperName") ==
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("canonicalKeyValueHelperPathLocal(") !=
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("canonicalKeyValueHelperNamespaceLocal(") !=
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("resolveCanonicalKeyValueHelperNameFromSpelling(") !=
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("isKeyValueHelperImportAliasNamespaceForMethodTargets(") !=
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("rootedKeyValueHelperAliasPathForMethodTargets(") !=
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("rootAliasKeyValueHelperNameForMethodTargets(") !=
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("isRootedKeyValueHelperAliasPathForMethodTargets(") !=
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("isStdNamespacedKeyValueHelper") !=
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("resolvedCanonicalKeyValueHelperName") !=
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("canonicalKeyValueHelperName") !=
         std::string::npos);
   CHECK(methodTargetResolutionSource.find(
             "metadataBackedMapHelperRootAliasMethodName(candidate)") !=

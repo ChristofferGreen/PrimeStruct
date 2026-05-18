@@ -30,7 +30,7 @@ bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
          helperName == "insert" || helperName == "insert_ref";
 }
 
-std::string canonicalMapHelperPathLocal(std::string_view helperName) {
+std::string canonicalKeyValueHelperPathLocal(std::string_view helperName) {
   const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return {};
@@ -38,7 +38,7 @@ std::string canonicalMapHelperPathLocal(std::string_view helperName) {
   return canonicalCollectionHelperPath(metadata->id, helperName);
 }
 
-std::string canonicalMapHelperNamespaceLocal() {
+std::string canonicalKeyValueHelperNamespaceLocal() {
   const StdlibSurfaceMetadata *metadata =
       mapHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
@@ -51,8 +51,9 @@ std::string canonicalMapHelperNamespaceLocal() {
   return namespacePath;
 }
 
-bool resolveCanonicalMapHelperNameFromSpelling(std::string path,
-                                               std::string &helperNameOut) {
+bool resolveCanonicalKeyValueHelperNameFromSpelling(
+    std::string path,
+    std::string &helperNameOut) {
   helperNameOut.clear();
   if (!path.empty() && path.front() != '/') {
     path.insert(path.begin(), '/');
@@ -65,7 +66,7 @@ bool resolveCanonicalMapHelperNameFromSpelling(std::string path,
       path, metadata->id, helperNameOut);
 }
 
-bool isMapHelperImportAliasNamespaceForMethodTargets(
+bool isKeyValueHelperImportAliasNamespaceForMethodTargets(
     std::string_view namespacePrefix) {
   const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
@@ -86,7 +87,7 @@ bool isMapHelperImportAliasNamespaceForMethodTargets(
   return false;
 }
 
-std::string rootedMapHelperAliasPathForMethodTargets(
+std::string rootedKeyValueHelperAliasPathForMethodTargets(
     std::string_view helperName) {
   const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
   if (metadata == nullptr || helperName.empty()) {
@@ -101,14 +102,14 @@ std::string rootedMapHelperAliasPathForMethodTargets(
   return {};
 }
 
-std::string rootAliasMapHelperNameForMethodTargets(
+std::string rootAliasKeyValueHelperNameForMethodTargets(
     std::string_view rawPath,
     std::string_view namespacePrefix) {
   std::string helperName = metadataBackedMapHelperRootAliasMethodName(rawPath);
   if (!helperName.empty()) {
     return helperName;
   }
-  if (!isMapHelperImportAliasNamespaceForMethodTargets(namespacePrefix)) {
+  if (!isKeyValueHelperImportAliasNamespaceForMethodTargets(namespacePrefix)) {
     return {};
   }
   const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
@@ -120,7 +121,7 @@ std::string rootAliasMapHelperNameForMethodTargets(
   return std::string(memberName);
 }
 
-bool isRootedMapHelperAliasPathForMethodTargets(std::string_view rawPath) {
+bool isRootedKeyValueHelperAliasPathForMethodTargets(std::string_view rawPath) {
   return !metadataBackedMapHelperRootAliasMethodName(rawPath).empty();
 }
 
@@ -267,8 +268,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     std::string_view helperName;
     bool isStdNamespacedVectorHelper = false;
-    bool isStdNamespacedMapHelper = false;
-    std::string resolvedCanonicalMapHelperName;
+    bool isStdNamespacedKeyValueHelper = false;
+    std::string resolvedCanonicalKeyValueHelperName;
     std::string compatibilityCollection;
     if (normalizedPrefix == "array") {
       helperName = candidate;
@@ -280,13 +281,13 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       helperName = candidate;
       isStdNamespacedVectorHelper = true;
       compatibilityCollection = "vector";
-    } else if (isMapHelperImportAliasNamespaceForMethodTargets(
+    } else if (isKeyValueHelperImportAliasNamespaceForMethodTargets(
                    normalizedPrefix)) {
       helperName = candidate;
       compatibilityCollection = "map";
-    } else if (normalizedPrefix == canonicalMapHelperNamespaceLocal()) {
+    } else if (normalizedPrefix == canonicalKeyValueHelperNamespaceLocal()) {
       helperName = candidate;
-      isStdNamespacedMapHelper = true;
+      isStdNamespacedKeyValueHelper = true;
       compatibilityCollection = "map";
     } else if (candidate.rfind("array/", 0) == 0) {
       helperName = std::string_view(candidate).substr(std::string_view("array/").size());
@@ -303,23 +304,23 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
                !rootAliasHelperName.empty()) {
       helperName = rootAliasHelperName;
       compatibilityCollection = "map";
-    } else if (resolveCanonicalMapHelperNameFromSpelling(
-                   candidate, resolvedCanonicalMapHelperName)) {
-      helperName = resolvedCanonicalMapHelperName;
-      isStdNamespacedMapHelper = true;
+    } else if (resolveCanonicalKeyValueHelperNameFromSpelling(
+                   candidate, resolvedCanonicalKeyValueHelperName)) {
+      helperName = resolvedCanonicalKeyValueHelperName;
+      isStdNamespacedKeyValueHelper = true;
       compatibilityCollection = "map";
     }
     if (helperName.empty()) {
       return "";
     }
     if (compatibilityCollection == "map") {
-      if (isStdNamespacedMapHelper) {
+      if (isStdNamespacedKeyValueHelper) {
         return "";
       }
       if (!isRemovedMapCompatibilityHelper(helperName)) {
         return "";
       }
-      return rootedMapHelperAliasPathForMethodTargets(helperName);
+      return rootedKeyValueHelperAliasPathForMethodTargets(helperName);
     }
     if (!isRemovedVectorCompatibilityHelper(helperName)) {
       return "";
@@ -369,19 +370,19 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
       normalizedPrefix.erase(normalizedPrefix.begin());
     }
-    if (isMapHelperImportAliasNamespaceForMethodTargets(normalizedPrefix)) {
-      return rootedMapHelperAliasPathForMethodTargets(candidate);
+    if (isKeyValueHelperImportAliasNamespaceForMethodTargets(normalizedPrefix)) {
+      return rootedKeyValueHelperAliasPathForMethodTargets(candidate);
     }
-    if (normalizedPrefix == canonicalMapHelperNamespaceLocal()) {
-      return canonicalMapHelperPathLocal(candidate);
+    if (normalizedPrefix == canonicalKeyValueHelperNamespaceLocal()) {
+      return canonicalKeyValueHelperPathLocal(candidate);
     }
     if (!metadataBackedMapHelperRootAliasMethodName(candidate).empty()) {
       return "/" + candidate;
     }
-    std::string canonicalMapHelperName;
-    if (resolveCanonicalMapHelperNameFromSpelling(candidate,
-                                                  canonicalMapHelperName)) {
-      return canonicalMapHelperPathLocal(canonicalMapHelperName);
+    std::string canonicalKeyValueHelperName;
+    if (resolveCanonicalKeyValueHelperNameFromSpelling(candidate,
+                                                  canonicalKeyValueHelperName)) {
+      return canonicalKeyValueHelperPathLocal(canonicalKeyValueHelperName);
     }
     return "";
   };
@@ -402,10 +403,10 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   } else if (isUnrootedCanonicalVectorCompatibilityPath(normalizedMethodName)) {
     normalizedMethodName = std::string(
         stripUnrootedCanonicalVectorCompatibilityPrefix(normalizedMethodName));
-  } else if (std::string canonicalMapHelperName;
-             resolveCanonicalMapHelperNameFromSpelling(
-                 normalizedMethodName, canonicalMapHelperName)) {
-    normalizedMethodName = canonicalMapHelperName;
+  } else if (std::string canonicalKeyValueHelperName;
+             resolveCanonicalKeyValueHelperNameFromSpelling(
+                 normalizedMethodName, canonicalKeyValueHelperName)) {
+    normalizedMethodName = canonicalKeyValueHelperName;
   }
   auto isExperimentalVectorMetadataMethodName = [](std::string_view name) {
     return name == "field_count" || name == "field_capacity" ||
@@ -1735,13 +1736,13 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return "";
     }
     std::string helperName;
-    helperName = rootAliasMapHelperNameForMethodTargets(
+    helperName = rootAliasKeyValueHelperNameForMethodTargets(
         candidate.name, candidate.namespacePrefix);
     if (helperName.empty() || !isRemovedMapCompatibilityHelper(helperName)) {
       return "";
     }
     const std::string removedPath =
-        rootedMapHelperAliasPathForMethodTargets(helperName);
+        rootedKeyValueHelperAliasPathForMethodTargets(helperName);
     if (removedPath.empty()) {
       return "";
     }
@@ -1749,7 +1750,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return "";
     }
     if (isCanonicalMapAccessMethodName(helperName)) {
-      const std::string canonicalPath = canonicalMapHelperPathLocal(helperName);
+      const std::string canonicalPath = canonicalKeyValueHelperPathLocal(helperName);
       auto defIt = defMap_.find(canonicalPath);
       if (defIt != defMap_.end() && defIt->second != nullptr) {
         for (const auto &transform : defIt->second->transforms) {
@@ -1925,12 +1926,12 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       isBuiltinOut = true;
       return true;
     }
-    std::string resolvedCanonicalMapHelperName;
-    if (resolveCanonicalMapHelperNameFromSpelling(
-            resolvedOut, resolvedCanonicalMapHelperName) &&
-        isCanonicalMapBuiltinMethodHelper(resolvedCanonicalMapHelperName) &&
+    std::string resolvedCanonicalKeyValueHelperName;
+    if (resolveCanonicalKeyValueHelperNameFromSpelling(
+            resolvedOut, resolvedCanonicalKeyValueHelperName) &&
+        isCanonicalMapBuiltinMethodHelper(resolvedCanonicalKeyValueHelperName) &&
         (this->shouldBuiltinValidateCurrentMapWrapperHelper(
-             resolvedCanonicalMapHelperName) ||
+             resolvedCanonicalKeyValueHelperName) ||
          hasImportedDefinitionPath(resolvedOut))) {
       isBuiltinOut = true;
       return true;
@@ -2009,16 +2010,16 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             : helperName;
     std::string keyType;
     std::string valueType;
-    const std::string canonical = canonicalMapHelperPathLocal(resolvedHelperName);
+    const std::string canonical = canonicalKeyValueHelperPathLocal(resolvedHelperName);
     if (resolveExperimentalMapTarget(receiverExpr, keyType, valueType)) {
       if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
         return canonical;
       }
       return this->preferredCanonicalExperimentalMapHelperTarget(resolvedHelperName);
     }
-    std::string explicitCanonicalMapHelperName;
-    if (resolveCanonicalMapHelperNameFromSpelling(
-            explicitMapHelperPath, explicitCanonicalMapHelperName)) {
+    std::string explicitCanonicalKeyValueHelperName;
+    if (resolveCanonicalKeyValueHelperNameFromSpelling(
+            explicitMapHelperPath, explicitCanonicalKeyValueHelperName)) {
       return canonical;
     }
     if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
@@ -2037,7 +2038,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return setCollectionMethodTarget(preferredMapHelper);
   };
   auto resolveExplicitRootMapMethodPath = [&]() -> bool {
-    if (!isRootedMapHelperAliasPathForMethodTargets(explicitMapHelperPath)) {
+    if (!isRootedKeyValueHelperAliasPathForMethodTargets(explicitMapHelperPath)) {
       return false;
     }
     if (hasDeclaredDefinitionPath(explicitMapHelperPath)) {
@@ -3398,13 +3399,13 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
        normalizedMethodName == "tryAt" || normalizedMethodName == "tryAt_ref" ||
        isCanonicalMapAccessMethodName(normalizedMethodName) ||
        normalizedMethodName == "insert" || normalizedMethodName == "insert_ref")) {
-    if (isRootedMapHelperAliasPathForMethodTargets(explicitMapHelperPath)) {
+    if (isRootedKeyValueHelperAliasPathForMethodTargets(explicitMapHelperPath)) {
       return resolveExplicitRootMapMethodPath();
     }
-    const std::string canonicalMapHelper =
-        canonicalMapHelperPathLocal(normalizedMethodName);
-    if (hasDeclaredDefinitionPath(canonicalMapHelper) || hasImportedDefinitionPath(canonicalMapHelper)) {
-      resolvedOut = canonicalMapHelper;
+    const std::string canonicalKeyValueHelper =
+        canonicalKeyValueHelperPathLocal(normalizedMethodName);
+    if (hasDeclaredDefinitionPath(canonicalKeyValueHelper) || hasImportedDefinitionPath(canonicalKeyValueHelper)) {
+      resolvedOut = canonicalKeyValueHelper;
       isBuiltinOut = false;
       return true;
     }
@@ -3474,7 +3475,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
          normalizedMethodName == "at" ||
          normalizedMethodName == "at_unsafe" ||
          normalizedMethodName == "insert")) {
-      if (isRootedMapHelperAliasPathForMethodTargets(explicitMapHelperPath)) {
+      if (isRootedKeyValueHelperAliasPathForMethodTargets(explicitMapHelperPath)) {
         return resolveExplicitRootMapMethodPath();
       }
       std::string borrowedHelperName = normalizedMethodName;
