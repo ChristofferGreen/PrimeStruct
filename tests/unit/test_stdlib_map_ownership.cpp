@@ -2050,6 +2050,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(emitterMethodMetadataSource.find("canonicalMapMemberName") ==
         std::string::npos);
+  CHECK(emitterMethodMetadataSource.find("const std::string_view mapHelperName") ==
+        std::string::npos);
+  CHECK(emitterMethodMetadataSource.find("const std::string_view keyValueHelperName") !=
+        std::string::npos);
   CHECK(emitterMethodMetadataSource.find("normalizeMapImportAliasPath") ==
         std::string::npos);
   CHECK(emitterMethodMetadataSource.find("path.rfind(\"/map/\", 0) == 0 || path.rfind(\"/std/collections/map/\", 0) == 0") ==

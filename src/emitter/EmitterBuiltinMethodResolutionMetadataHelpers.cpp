@@ -312,11 +312,11 @@ bool isRemovedCollectionMethodAliasPath(std::string_view rawMethodName) {
 
 bool removedCollectionAliasNeedsDefinitionPath(std::string_view rawMethodName) {
   const std::string normalizedPath = normalizeCollectionHelperPath(std::string(rawMethodName));
-  const std::string_view mapHelperName = mapHelperNameFromPath(normalizedPath);
+  const std::string_view keyValueHelperName = mapHelperNameFromPath(normalizedPath);
   std::string vectorHelperName;
   const auto *vectorMetadata = findVectorHelperSurfaceMetadata();
-  return (!mapHelperName.empty() &&
-          isCanonicalMapCountHelperName(mapHelperName)) ||
+  return (!keyValueHelperName.empty() &&
+          isCanonicalMapCountHelperName(keyValueHelperName)) ||
          normalizedPath == "/array/count" ||
          normalizedPath == "/array/capacity" ||
          (vectorMetadata != nullptr &&
