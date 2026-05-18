@@ -812,9 +812,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Evidence: Direct scans found no map-surface traces in lowerer try-expression
   helpers, packed Result helpers, Result metadata helpers, struct-layout
   helpers, struct-type helpers, inference fallback setup, statement-binding
-  helpers, or operator collection mutation helpers; their inventory caps are
-  now zero and the obsolete backing-trace ownership allowlist entries were
-  removed.
+  helpers, operator collection mutation helpers, count-access helpers,
+  statement-binding type metadata, or struct-field binding helpers; their
+  inventory caps are now zero and the obsolete backing-trace ownership
+  allowlist entries were removed.
 
 ### mapvalue-public-insert-uses-stdlib
 - Updated: 2026-05-16

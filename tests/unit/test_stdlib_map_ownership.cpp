@@ -74,9 +74,7 @@ bool isAllowedMapBackingFile(const std::string &relativePath) {
       "src/ir_lowerer/IrLowererSetupTypeDeclaredCollectionInference.cpp",
       "src/ir_lowerer/IrLowererSetupTypeMethodTargetHelpers.cpp",
       "src/ir_lowerer/IrLowererStatementBindingHelpers.cpp",
-      "src/ir_lowerer/IrLowererStatementBindingTypeMetadata.cpp",
       "src/ir_lowerer/IrLowererStatementCallEmission.cpp",
-      "src/ir_lowerer/IrLowererStructFieldBindingHelpers.cpp",
       "src/ir_lowerer/IrLowererStructSlotLayoutHelpers.cpp",
       "src/ir_lowerer/IrLowererUninitializedStructInference.cpp",
   };
