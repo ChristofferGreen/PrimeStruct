@@ -608,6 +608,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(builtinPathHelpersSource.find("resolvedMapHelperName") ==
         std::string::npos);
+  CHECK(builtinPathHelpersSource.find("mapHelperName") ==
+        std::string::npos);
   CHECK(builtinPathHelpersSource.find("mapHelperSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find("resolveMapHelperMemberNameLocal(") !=
@@ -615,6 +617,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(builtinPathHelpersSource.find("resolveRootMapAliasHelperMemberNameLocal(") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find("resolvedKeyValueHelperName") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find("keyValueHelperName") !=
         std::string::npos);
   CHECK(methodTargetResolutionSource.find("const std::string alias = \"/map/\" + resolvedHelperName") ==
         std::string::npos);

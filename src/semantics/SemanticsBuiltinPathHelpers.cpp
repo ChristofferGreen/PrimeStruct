@@ -1212,9 +1212,9 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   if (name.rfind("array/", 0) == 0) {
     return false;
   }
-  std::string mapHelperName;
-  if (resolveMapHelperMemberNameLocal(name, mapHelperName)) {
-    if (accessAliasFromMemberName(mapHelperName)) {
+  std::string keyValueHelperName;
+  if (resolveMapHelperMemberNameLocal(name, keyValueHelperName)) {
+    if (accessAliasFromMemberName(keyValueHelperName)) {
       return true;
     }
     return false;
@@ -1269,10 +1269,10 @@ bool getNamespacedCollectionHelperName(const Expr &expr, std::string &collection
   if (extractHelper(collectionMemberRootLocal("vector"), "vector")) {
     return true;
   }
-  std::string mapHelperName;
-  if (resolveMapHelperMemberNameLocal(normalized, mapHelperName)) {
+  std::string keyValueHelperName;
+  if (resolveMapHelperMemberNameLocal(normalized, keyValueHelperName)) {
     collectionOut = "map";
-    helperOut = mapHelperName;
+    helperOut = keyValueHelperName;
     return true;
   }
   if (extractHelper("array/", "vector")) {
