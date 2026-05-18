@@ -553,6 +553,9 @@ Task template:
   Semantic vector helper method-target normalization now derives published map
   helper member names through stdlib surface metadata instead of direct
   `map/` and `std/collections/map/` prefix stripping.
+  Infer-method method-name normalization now derives explicit map helper names
+  through stdlib surface metadata instead of direct `map/` and
+  `std/collections/map/` prefix stripping.
   Semantic-product collection specialization publication now derives map
   type-root recognition and helper/constructor surface ids through stdlib
   surface metadata instead of direct map paths and map surface enum constants.

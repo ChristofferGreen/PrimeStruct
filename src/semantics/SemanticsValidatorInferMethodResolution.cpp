@@ -79,8 +79,10 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       normalizedMethodName = std::string(
           stripUnrootedCanonicalVectorCompatibilityPrefix(
               normalizedMethodName));
-    } else if (normalizedMethodName.rfind("std/collections/map/", 0) == 0) {
-      normalizedMethodName = normalizedMethodName.substr(std::string("std/collections/map/").size());
+    } else if (const std::string mapHelperName =
+                   metadataBackedMapHelperMethodName(normalizedMethodName);
+               mapHelperName != normalizedMethodName) {
+      normalizedMethodName = mapHelperName;
     }
     return normalizedMethodName;
   };
@@ -782,10 +784,10 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     if (!receiverHelperName.empty() && receiverHelperName.front() == '/') {
       receiverHelperName.erase(receiverHelperName.begin());
     }
-    if (receiverHelperName.rfind("map/", 0) == 0) {
-      receiverHelperName.erase(0, std::string("map/").size());
-    } else if (receiverHelperName.rfind("std/collections/map/", 0) == 0) {
-      receiverHelperName.erase(0, std::string("std/collections/map/").size());
+    if (const std::string mapHelperName =
+            metadataBackedMapHelperMethodName(receiverHelperName);
+        mapHelperName != receiverHelperName) {
+      receiverHelperName = mapHelperName;
     }
     std::string keyType;
     std::string valueType;

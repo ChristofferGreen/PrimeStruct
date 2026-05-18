@@ -179,6 +179,17 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-18 07:15 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map namespaced at method now validates through slash-path routing,map namespaced at_unsafe method auto inference now validates through slash-path routing,stdlib canonical map helpers resolve in method-call sugar" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `rg -n 'std/collections/map|experimental_map|/map/|CollectionsMap|map(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bMap<' src/semantics/SemanticsValidatorInferMethodResolution.cpp` |
+  failures: none | notes: infer-method method-name normalization now
+  derives explicit map helper names through stdlib surface metadata instead of
+  direct `map/` or `std/collections/map/` prefix stripping; the edited file has
+  zero targeted map-surface matches. The Python inventory scripts were
+  intentionally not run in this pass.
 - 2026-05-18 07:12 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="semantic product publishes vector map and soa_vector collection specializations" --no-skip`;

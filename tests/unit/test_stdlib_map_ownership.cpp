@@ -605,6 +605,18 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferMethodResolutionSource.find("joinMethodTarget(\"/map\", helperSuffix)") ==
         std::string::npos);
+  CHECK(inferMethodResolutionSource.find("normalizedMethodName.rfind(\"std/collections/map/\", 0)") ==
+        std::string::npos);
+  CHECK(inferMethodResolutionSource.find("receiverHelperName.rfind(\"map/\", 0)") ==
+        std::string::npos);
+  CHECK(inferMethodResolutionSource.find("receiverHelperName.rfind(\"std/collections/map/\", 0)") ==
+        std::string::npos);
+  CHECK(inferMethodResolutionSource.find(
+            "metadataBackedMapHelperMethodName(normalizedMethodName)") !=
+        std::string::npos);
+  CHECK(inferMethodResolutionSource.find(
+            "metadataBackedMapHelperMethodName(receiverHelperName)") !=
+        std::string::npos);
   CHECK(inferMethodResolutionHelpersSource.find("const std::string alias = \"/map/\" + selectedHelperName") ==
         std::string::npos);
   CHECK(inferMethodResolutionHelpersSource.find("\"/std/collections/map/\" + selectedHelperName") ==
