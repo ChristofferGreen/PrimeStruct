@@ -77,7 +77,7 @@ ALLOWED_MAX_FILE_COUNTS: dict[str, int] = {
     "src/StdlibSurfaceRegistry.cpp": 12,
     "src/emitter/EmitterBuiltinCallPathHelpers.cpp": 23,
     "src/emitter/EmitterBuiltinMethodResolutionHelpers.cpp": 8,
-    "src/emitter/EmitterBuiltinMethodResolutionMetadataHelpers.cpp": 26,
+    "src/emitter/EmitterBuiltinMethodResolutionMetadataHelpers.cpp": 0,
     "src/emitter/EmitterBuiltinMethodResolutionTypeInferenceHelpers.cpp": 10,
     "src/emitter/EmitterEmitSetupReturnInferenceCollections.h": 31,
     "src/emitter/EmitterExprCollectionTypeHelpers.h": 10,

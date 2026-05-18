@@ -2079,6 +2079,10 @@ Task template:
       the identity `normalizeMapImportAliasPath` helper.
     - 2026-05-16: Emitter method metadata no longer adds slashless candidates
       for rooted map helper metadata paths.
+    - 2026-05-18: Emitter method metadata no longer names
+      `StdlibSurfaceId::CollectionsMapHelpers` directly when classifying map
+      helper surface identity or removed map helper aliases; it now resolves
+      the map helper surface through `collections.map_helpers` metadata.
     - 2026-05-16: Emitter return inference no longer normalizes slashless
       rooted/canonical map helper paths to leading-slash candidates.
     - 2026-05-16: Emitter return inference no longer strips `map/` or

@@ -16,6 +16,7 @@ std::string stripGeneratedHelperSuffix(std::string helperName) {
 }
 
 constexpr std::string_view VectorHelperSurfaceBridgeKey = "collections.vector_helpers";
+constexpr std::string_view MapHelperSurfaceBridgeKey = "collections.map_helpers";
 
 std::string_view trimLeadingSlash(std::string_view text) {
   return !text.empty() && text.front() == '/' ? text.substr(1) : text;
@@ -72,6 +73,21 @@ const StdlibSurfaceMetadata *findVectorHelperSurfaceMetadata() {
   return findStdlibSurfaceMetadataByBridgeKey(VectorHelperSurfaceBridgeKey);
 }
 
+const StdlibSurfaceMetadata *findMapHelperSurfaceMetadata() {
+  return findStdlibSurfaceMetadataByBridgeKey(MapHelperSurfaceBridgeKey);
+}
+
+bool isSurfaceMetadataForBridgeKey(StdlibSurfaceId surfaceId,
+                                   std::string_view bridgeKey) {
+  const auto *metadata = findStdlibSurfaceMetadata(surfaceId);
+  const auto *expectedMetadata = findStdlibSurfaceMetadataByBridgeKey(bridgeKey);
+  return metadata != nullptr && metadata == expectedMetadata;
+}
+
+bool isMapHelperSurface(StdlibSurfaceId surfaceId) {
+  return isSurfaceMetadataForBridgeKey(surfaceId, MapHelperSurfaceBridgeKey);
+}
+
 bool resolveSurfaceMemberToken(const StdlibSurfaceMetadata &metadata,
                                std::string_view memberToken,
                                std::string &memberNameOut) {
@@ -93,6 +109,18 @@ bool resolveCanonicalSurfacePathMemberName(const StdlibSurfaceMetadata &metadata
   memberNameOut.clear();
   std::string_view suffix;
   if (!surfaceMemberSuffix(path, metadata, false, suffix)) {
+    return false;
+  }
+  return resolveSurfaceMemberToken(metadata, suffix, memberNameOut);
+}
+
+bool resolveHelperSurfacePathMemberName(const StdlibSurfaceMetadata &metadata,
+                                        std::string_view path,
+                                        bool includeImportAliases,
+                                        std::string &memberNameOut) {
+  memberNameOut.clear();
+  std::string_view suffix;
+  if (!surfaceMemberSuffix(path, metadata, includeImportAliases, suffix)) {
     return false;
   }
   return resolveSurfaceMemberToken(metadata, suffix, memberNameOut);
@@ -162,10 +190,9 @@ bool isRemovedExactPublishedVectorHelper(std::string_view helperName) {
 
 bool isRemovedExactPublishedMapHelper(std::string_view helperName) {
   std::string canonicalMemberName;
-  return resolvePublishedCollectionSurfaceMemberToken(
-             helperName,
-             StdlibSurfaceId::CollectionsMapHelpers,
-             canonicalMemberName) &&
+  const auto *metadata = findMapHelperSurfaceMetadata();
+  return metadata != nullptr &&
+         resolveSurfaceMemberToken(*metadata, helperName, canonicalMemberName) &&
          canonicalMemberName == stripGeneratedHelperSuffix(std::string(helperName)) &&
          isCanonicalMapHelperName(canonicalMemberName);
 }
@@ -240,7 +267,7 @@ bool resolvePublishedCollectionSurfaceExprMemberName(const Expr &expr,
   if (resolvePublishedCollectionSurfaceMemberName(normalizedPath, surfaceId, memberNameOut)) {
     return true;
   }
-  if (surfaceId == StdlibSurfaceId::CollectionsMapHelpers &&
+  if (isMapHelperSurface(surfaceId) &&
       normalizedPath.rfind("/std/collections/Map", 0) == 0) {
     return resolvePublishedCollectionSurfaceMemberToken(
         normalizedPath.substr(std::string("/std/collections/Map").size()),
@@ -270,9 +297,13 @@ bool isRemovedCollectionMethodAliasPath(std::string_view rawMethodName) {
     }
   }
   std::string canonicalMapMemberName;
-  if (resolvePublishedCollectionSurfaceMemberName(
-          normalizeCollectionHelperPath(candidate),
-          StdlibSurfaceId::CollectionsMapHelpers,
+  const auto *mapMetadata = findMapHelperSurfaceMetadata();
+  const std::string normalizedCandidate = normalizeCollectionHelperPath(candidate);
+  if (mapMetadata != nullptr &&
+      resolveHelperSurfacePathMemberName(
+          *mapMetadata,
+          normalizedCandidate,
+          true,
           canonicalMapMemberName)) {
     return isRemovedExactPublishedMapHelper(canonicalMapMemberName);
   }
