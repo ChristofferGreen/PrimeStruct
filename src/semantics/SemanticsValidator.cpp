@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "MapConstructorHelpers.h"
 #include "SemanticsValidatorExprCaptureSplitStep.h"
 
 #include "primec/Lexer.h"
@@ -29,10 +30,11 @@ namespace primec::semantics {
 namespace {
 
 bool isSlashlessMapHelperName(std::string_view name) {
-  if (!name.empty() && name.front() == '/') {
-    name.remove_prefix(1);
+  std::string normalizedName(name);
+  if (!normalizedName.empty() && normalizedName.front() == '/') {
+    normalizedName.erase(normalizedName.begin());
   }
-  return name.rfind("map/", 0) == 0 || name.rfind("std/collections/map/", 0) == 0;
+  return metadataBackedMapHelperMethodName(normalizedName) != normalizedName;
 }
 
 uint64_t captureCurrentResidentBytes() {
@@ -213,8 +215,15 @@ std::string SemanticsValidator::diagnosticCallTargetPath(const std::string &path
   if (path.empty()) {
     return path;
   }
-  if (path.rfind("/std/collections/map/count__t", 0) == 0) {
-    return "/std/collections/map/count";
+  const std::string mapHelperName = metadataBackedMapHelperMethodName(path);
+  const size_t mapTemplateSuffix = mapHelperName.find("__t");
+  if (mapTemplateSuffix != std::string::npos &&
+      mapHelperName.substr(0, mapTemplateSuffix) == "count") {
+    const std::string canonicalMapCount =
+        metadataBackedCanonicalMapHelperPath("count");
+    if (!canonicalMapCount.empty()) {
+      return canonicalMapCount;
+    }
   }
   const size_t lastSlash = path.find_last_of('/');
   const size_t nameStart = lastSlash == std::string::npos ? 0 : lastSlash + 1;

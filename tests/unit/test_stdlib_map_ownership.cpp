@@ -488,7 +488,18 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(semanticsSource.find("isCanonicalBuiltinMapReadHelperName") != std::string::npos);
   CHECK(semanticsSource.find("helperName = \"/std/collections/map/\" + helperName") !=
         std::string::npos);
+  CHECK(validatorSource.find("name.rfind(\"map/\", 0)") ==
+        std::string::npos);
+  CHECK(validatorSource.find("name.rfind(\"std/collections/map/\", 0)") ==
+        std::string::npos);
+  CHECK(validatorSource.find("path.rfind(\"/std/collections/map/count__t\"") ==
+        std::string::npos);
   CHECK(validatorSource.find("path.rfind(\"/map/count__t\"") ==
+        std::string::npos);
+  CHECK(validatorSource.find(
+            "metadataBackedMapHelperMethodName(normalizedName)") !=
+        std::string::npos);
+  CHECK(validatorSource.find("metadataBackedCanonicalMapHelperPath(\"count\")") !=
         std::string::npos);
   CHECK(callResolutionSource.find("\"/map/entry\"") == std::string::npos);
   CHECK(callResolutionSource.find("\"/map/entry__\"") == std::string::npos);

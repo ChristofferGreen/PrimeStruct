@@ -672,7 +672,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   direct map paths and map surface enum constants; template monomorph
   collection compatibility should derive explicit map helper member names and
   map collection-root matching through stdlib surface metadata instead of
-  direct `map/` or `std/collections/map` checks.
+  direct `map/` or `std/collections/map` checks; core semantic unknown-call
+  formatting and diagnostic target normalization should derive map helper
+  membership and canonical count paths through that metadata instead of direct
+  map path checks.
   The stale
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`

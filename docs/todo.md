@@ -340,7 +340,10 @@ Task template:
   paths through that metadata instead of direct path concatenation, and
   template monomorph collection compatibility now derives explicit map helper
   member names and map collection-root matching through stdlib surface
-  metadata instead of direct `map/` or `std/collections/map` checks. The
+  metadata instead of direct `map/` or `std/collections/map` checks, and core
+  semantic unknown-call formatting and diagnostic target normalization now
+  derive map helper membership and canonical count paths through that metadata
+  instead of direct map path checks. The
   remaining production
   lowerer/emitter
   experimental-map traces
