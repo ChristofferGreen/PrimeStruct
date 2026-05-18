@@ -8,12 +8,8 @@
 namespace primec::semantics {
 namespace {
 bool isSpecializedExperimentalMapBackingPath(std::string typeName) {
-  typeName = normalizeBindingTypeName(typeName);
-  if (!typeName.empty() && typeName.front() == '/') {
-    typeName.erase(typeName.begin());
-  }
-  return isExperimentalCollectionBackingTypeName("map", "Map", typeName) &&
-         typeName.find("__") != std::string::npos;
+  return isQualifiedExperimentalMapBackingTypeName(
+      normalizeBindingTypeName(std::move(typeName)));
 }
 
 bool extractBuiltinSoaVectorElementTypeFromTypeText(const std::string &typeText,
@@ -108,8 +104,12 @@ bool SemanticsValidator::inferCollectionBindingFromExpr(const Expr &expr,
       bindingOut.typeTemplateArg = expr.templateArgs.front();
       return true;
     }
-    if (collection == "map" && expr.templateArgs.size() == 2) {
-      bindingOut.typeName = "map";
+    if (isMapCollectionTypeName(collection) && expr.templateArgs.size() == 2) {
+      const std::string mapAlias = mapCollectionAliasToken();
+      if (mapAlias.empty()) {
+        return false;
+      }
+      bindingOut.typeName = mapAlias;
       bindingOut.typeTemplateArg = joinTemplateArgs(expr.templateArgs);
       return true;
     }
@@ -894,7 +894,9 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
         return true;
       }
       std::vector<std::string> mapArgs;
-      if (resolveCallCollectionTemplateArgs(*initializerExprForInference, "map", params, locals, mapArgs) &&
+      const std::string mapAlias = mapCollectionAliasToken();
+      if (!mapAlias.empty() &&
+          resolveCallCollectionTemplateArgs(*initializerExprForInference, mapAlias, params, locals, mapArgs) &&
           mapArgs.size() == 2) {
         bindingOut.typeName = "Map";
         bindingOut.typeTemplateArg = joinTemplateArgs(mapArgs);
@@ -1004,8 +1006,13 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
               initializerExprForInference->templateArgs.size() == 1) {
             bindingOut.typeName = collectionName;
             bindingOut.typeTemplateArg = initializerExprForInference->templateArgs.front();
-          } else if (collectionName == "map" && initializerExprForInference->templateArgs.size() == 2) {
-            bindingOut.typeName = "map";
+          } else if (isMapCollectionTypeName(collectionName) &&
+                     initializerExprForInference->templateArgs.size() == 2) {
+            const std::string mapAlias = mapCollectionAliasToken();
+            if (mapAlias.empty()) {
+              return false;
+            }
+            bindingOut.typeName = mapAlias;
             bindingOut.typeTemplateArg = joinTemplateArgs(initializerExprForInference->templateArgs);
           }
         }

@@ -209,6 +209,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string buildInitializerInferenceSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorBuildInitializerInference.cpp");
+  const std::string buildInitializerInferenceCallsSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorBuildInitializerInferenceCalls.cpp");
   const std::string inferCollectionDispatchSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorInferCollectionDispatch.cpp");
@@ -849,6 +852,21 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(buildInitializerInferenceSource.find("normalizedName.rfind(\"std/collections/map/\", 0)") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find("metadataBackedCanonicalMapHelperPath(helperName)") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
+            "isExperimentalCollectionBackingTypeName(\"map\"") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find("collection == \"map\"") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find("collectionName == \"map\"") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
+            "resolveCallCollectionTemplateArgs(*initializerExprForInference, \"map\"") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
+            "isQualifiedExperimentalMapBackingTypeName(") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find("mapCollectionAliasToken()") !=
         std::string::npos);
   CHECK(inferCollectionDispatchSource.find("resolvedPath.rfind(\"/map/\"") ==
         std::string::npos);

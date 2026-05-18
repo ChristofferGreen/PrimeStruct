@@ -536,7 +536,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   from `MapConstructorHelpers.h` instead of local direct experimental map
   backing predicates; collection return inference should also use those shared
   backing classifiers and the metadata-derived map alias token for map return
-  type text.
+  type text; initializer call binding should use shared map backing
+  classifiers, map collection type classification, and the metadata-derived
+  map alias token instead of direct map collection strings.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
