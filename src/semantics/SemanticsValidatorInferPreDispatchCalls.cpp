@@ -188,7 +188,8 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
       }
       candidates.push_back(candidate);
     };
-    auto isUnrootedMapHelperSurfacePath = [](std::string_view candidatePath) {
+    auto isUnrootedKeyValueHelperSurfacePath =
+        [](std::string_view candidatePath) {
       const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
       if (metadata == nullptr) {
         return false;
@@ -206,7 +207,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
     if (!normalizedPath.empty() && normalizedPath.front() != '/') {
       if (normalizedPath.rfind("array/", 0) == 0 ||
           isUnrootedCanonicalVectorCompatibilityPath(normalizedPath) ||
-          isUnrootedMapHelperSurfacePath(normalizedPath)) {
+          isUnrootedKeyValueHelperSurfacePath(normalizedPath)) {
         normalizedPath.insert(normalizedPath.begin(), '/');
       }
     }
@@ -258,30 +259,29 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
   }
 
   std::string resolvedCallee = resolveCalleePath(expr);
-  std::string canonicalExperimentalMapHelperResolved;
+  std::string canonicalExperimentalKeyValueHelperResolved;
   if (!expr.isMethodCall &&
       (defMap_.count(resolvedCallee) == 0 ||
        shouldLogicalCanonicalizeDefinedExperimentalMapHelperPath(resolvedCallee)) &&
       canonicalizeExperimentalMapHelperResolvedPath(
-          resolvedCallee, canonicalExperimentalMapHelperResolved)) {
-    resolvedCallee = canonicalExperimentalMapHelperResolved;
+          resolvedCallee, canonicalExperimentalKeyValueHelperResolved)) {
+    resolvedCallee = canonicalExperimentalKeyValueHelperResolved;
   }
-  Expr rewrittenCanonicalExperimentalMapHelperCall;
+  Expr rewrittenCanonicalExperimentalKeyValueHelperCall;
   if (!expr.isMethodCall &&
       tryRewriteCanonicalExperimentalMapHelperCall(
           expr,
           builtinCollectionDispatchResolvers,
-          rewrittenCanonicalExperimentalMapHelperCall)) {
-    return finish(inferExprReturnKind(rewrittenCanonicalExperimentalMapHelperCall,
-                                      params,
-                                      locals));
+          rewrittenCanonicalExperimentalKeyValueHelperCall)) {
+    return finish(inferExprReturnKind(
+        rewrittenCanonicalExperimentalKeyValueHelperCall, params, locals));
   }
-  std::string borrowedExplicitCanonicalExperimentalMapHelperPath;
+  std::string borrowedExplicitCanonicalExperimentalKeyValueHelperPath;
   if (!expr.isMethodCall &&
       explicitCanonicalExperimentalMapBorrowedHelperPath(
           expr,
           builtinCollectionDispatchResolvers,
-          borrowedExplicitCanonicalExperimentalMapHelperPath)) {
+          borrowedExplicitCanonicalExperimentalKeyValueHelperPath)) {
     return finish(ReturnKind::Unknown);
   }
   if (!expr.isMethodCall &&
@@ -289,21 +289,22 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
           expr, builtinCollectionDispatchResolvers)) {
     return finish(ReturnKind::Unknown);
   }
-  const std::string directRemovedMapCompatibilityPath =
+  const std::string directRemovedKeyValueCompatibilityPath =
       !expr.isMethodCall
           ? directMapHelperCompatibilityPath(expr,
                                              params,
                                              locals,
                                              builtinCollectionDispatchResolverAdapters)
           : std::string();
-  auto isRemovedMapAccessCompatibilityPath = [](std::string_view path) {
+  auto isRemovedKeyValueAccessCompatibilityPath = [](std::string_view path) {
     const std::string helperName =
         metadataBackedMapHelperRootAliasMethodName(path);
     return helperName == "at" || helperName == "at_unsafe";
   };
-  const bool isMapNamespacedAccessCompatibilityCall =
-      isRemovedMapAccessCompatibilityPath(directRemovedMapCompatibilityPath);
-  if (!expr.isMethodCall && isMapNamespacedAccessCompatibilityCall) {
+  const bool isKeyValueNamespacedAccessCompatibilityCall =
+      isRemovedKeyValueAccessCompatibilityPath(
+          directRemovedKeyValueCompatibilityPath);
+  if (!expr.isMethodCall && isKeyValueNamespacedAccessCompatibilityCall) {
     return finish(ReturnKind::Unknown);
   }
   const std::string removedCollectionMethodCompatibilityPath =

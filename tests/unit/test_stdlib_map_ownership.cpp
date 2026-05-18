@@ -879,9 +879,43 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferPreDispatchCallsSource.find("std/collections/map/") ==
         std::string::npos);
-  CHECK(inferPreDispatchCallsSource.find("directRemovedMapCompatibilityPath == \"/map/") ==
+  CHECK(inferPreDispatchCallsSource.find(
+            "directRemovedKeyValueCompatibilityPath == \"/map/") ==
         std::string::npos);
-  CHECK(inferPreDispatchCallsSource.find("isUnrootedMapHelperSurfacePath") !=
+  CHECK(inferPreDispatchCallsSource.find("isUnrootedMapHelperSurfacePath") ==
+        std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find(
+            "canonicalExperimentalMapHelperResolved") == std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find(
+            "rewrittenCanonicalExperimentalMapHelperCall") ==
+        std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find(
+            "borrowedExplicitCanonicalExperimentalMapHelperPath") ==
+        std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find("directRemovedMapCompatibilityPath") ==
+        std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find("isRemovedMapAccessCompatibilityPath") ==
+        std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find(
+            "isMapNamespacedAccessCompatibilityCall") == std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find("isUnrootedKeyValueHelperSurfacePath") !=
+        std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find(
+            "canonicalExperimentalKeyValueHelperResolved") !=
+        std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find(
+            "rewrittenCanonicalExperimentalKeyValueHelperCall") !=
+        std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find(
+            "borrowedExplicitCanonicalExperimentalKeyValueHelperPath") !=
+        std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find(
+            "directRemovedKeyValueCompatibilityPath") != std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find(
+            "isRemovedKeyValueAccessCompatibilityPath") !=
+        std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find(
+            "isKeyValueNamespacedAccessCompatibilityCall") !=
         std::string::npos);
   CHECK(inferPreDispatchCallsSource.find("metadataBackedMapHelperRootAliasMethodName") !=
         std::string::npos);
