@@ -190,7 +190,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
   auto failCollectionAccessMapKeyMismatch = [&](const std::string &helperName,
                                                 const std::string &mapKeyType) {
     const bool hasSourceShape = !expr.sourceName.empty();
-    const bool isExplicitCanonicalMapAccessCall =
+    const bool isExplicitCanonicalKeyValueAccessCall =
         expr.sourceIsMethodCall ||
         (!expr.isMethodCall &&
          (isSourceSpelledCanonicalKeyValueAccessCall(expr) ||
@@ -199,7 +199,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
             isCanonicalKeyValueAccessResolvedPath(expr.name) ||
             canonicalKeyValueHelperNamespaceLocal() ==
                 trimLeadingSlash(expr.namespacePrefix)))));
-    if (isExplicitCanonicalMapAccessCall) {
+    if (isExplicitCanonicalKeyValueAccessCall) {
       return failCollectionAccessDiagnostic("argument type mismatch for " +
                                             resolved + " parameter key");
     }
@@ -294,7 +294,8 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     return true;
   };
 
-  auto validateMethodMapAccessBuiltin = [&](const std::string &helperName) -> bool {
+  auto validateMethodKeyValueAccessBuiltin =
+      [&](const std::string &helperName) -> bool {
     if (!expr.templateArgs.empty()) {
       std::string diagnosticTarget = resolved;
       return failCollectionAccessDiagnostic("unknown call target: " +
@@ -335,7 +336,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
                    ? "at_unsafe"
                    : (resolved.find("at_ref") != std::string::npos ? "at_ref"
                                                                    : "at"));
-    return validateMethodMapAccessBuiltin(helperName);
+    return validateMethodKeyValueAccessBuiltin(helperName);
   }
 
   if (!resolvedMethod && resolvedMissing &&
@@ -604,14 +605,14 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
         }
       }
     }
-    const bool isExplicitMapAccessHelper =
+    const bool isExplicitKeyValueAccessHelper =
         isCanonicalKeyValueAccessResolvedPath(resolved);
-    if (isExplicitMapAccessHelper && !isMap && !isExperimentalMap) {
+    if (isExplicitKeyValueAccessHelper && !isMap && !isExperimentalMap) {
       handledOut = false;
       return true;
     }
     if (!expr.templateArgs.empty() &&
-        (isMap || isExperimentalMap || isExplicitMapAccessHelper)) {
+        (isMap || isExperimentalMap || isExplicitKeyValueAccessHelper)) {
       return true;
     }
     handledOut = true;

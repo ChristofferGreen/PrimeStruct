@@ -716,7 +716,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   metadata; semantic method-resolution access/string-return/helper-name locals
   should use key/value naming around map helper metadata; semantic
   collection-dispatch setup access-helper predicates should use key/value
-  naming around map helper metadata.
+  naming around map helper metadata; semantic collection-access validation
+  explicit-access helper locals should use key/value naming around map helper
+  metadata.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
