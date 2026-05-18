@@ -87,12 +87,12 @@ const StdlibSurfaceMetadata *mapHelperSurfaceMetadataLocal() {
   return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
 }
 
-std::string canonicalMapHelperRootPathLocal() {
+std::string canonicalKeyValueHelperRootPathLocal() {
   const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
   return metadata == nullptr ? std::string{} : std::string(metadata->canonicalPath);
 }
 
-std::string canonicalMapHelperPathLocal(std::string_view helperName) {
+std::string canonicalKeyValueHelperPathLocal(std::string_view helperName) {
   const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return {};
@@ -100,8 +100,9 @@ std::string canonicalMapHelperPathLocal(std::string_view helperName) {
   return canonicalCollectionHelperPath(metadata->id, helperName);
 }
 
-bool resolvePublishedMapHelperMemberTokenLocal(std::string_view memberToken,
-                                               std::string &memberNameOut) {
+bool resolvePublishedKeyValueHelperMemberTokenLocal(
+    std::string_view memberToken,
+    std::string &memberNameOut) {
   memberNameOut.clear();
   const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
   return metadata != nullptr &&
@@ -110,8 +111,9 @@ bool resolvePublishedMapHelperMemberTokenLocal(std::string_view memberToken,
                                                      memberNameOut);
 }
 
-bool resolvePublishedMapHelperResolvedPathLocal(std::string_view resolvedPath,
-                                                std::string &memberNameOut) {
+bool resolvePublishedKeyValueHelperResolvedPathLocal(
+    std::string_view resolvedPath,
+    std::string &memberNameOut) {
   memberNameOut.clear();
   const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
   return metadata != nullptr &&
@@ -120,12 +122,12 @@ bool resolvePublishedMapHelperResolvedPathLocal(std::string_view resolvedPath,
                                                       memberNameOut);
 }
 
-bool isCanonicalMapHelperResolvedPathLocal(std::string path) {
+bool isCanonicalKeyValueHelperResolvedPathLocal(std::string path) {
   if (!path.empty() && path.front() != '/') {
     path.insert(path.begin(), '/');
   }
   std::string helperName;
-  return resolvePublishedMapHelperResolvedPathLocal(path, helperName);
+  return resolvePublishedKeyValueHelperResolvedPathLocal(path, helperName);
 }
 
 bool isCanonicalMapCollectionTypeRootLocal(std::string_view typeName) {
@@ -244,7 +246,7 @@ bool SemanticsValidator::hasImportedDefinitionPath(const std::string &path) cons
           isCanonicalVectorCompatibilityPath(canonicalPath)) {
         return true;
       }
-      if (importPath == canonicalMapHelperRootPathLocal() &&
+      if (importPath == canonicalKeyValueHelperRootPathLocal() &&
           canonicalPath.rfind(importPath + "/", 0) == 0) {
         return true;
       }
@@ -514,7 +516,7 @@ bool SemanticsValidator::canonicalExperimentalMapHelperPath(const std::string &r
     helperNameOut.clear();
     return false;
   }
-  canonicalPathOut = canonicalMapHelperPathLocal(helperNameOut);
+  canonicalPathOut = canonicalKeyValueHelperPathLocal(helperNameOut);
   return !canonicalPathOut.empty();
 }
 
@@ -525,7 +527,7 @@ bool SemanticsValidator::canonicalizeExperimentalMapHelperResolvedPath(const std
     return false;
   }
   std::string helperName;
-  if (!resolvePublishedMapHelperResolvedPathLocal(resolvedPath, helperName)) {
+  if (!resolvePublishedKeyValueHelperResolvedPathLocal(resolvedPath, helperName)) {
     return false;
   }
   if (helperName == "count_ref") {
@@ -539,7 +541,7 @@ bool SemanticsValidator::canonicalizeExperimentalMapHelperResolvedPath(const std
   } else if (helperName == "at_unsafe_ref") {
     helperName = "at_unsafe";
   }
-  canonicalPathOut = canonicalMapHelperPathLocal(helperName);
+  canonicalPathOut = canonicalKeyValueHelperPathLocal(helperName);
   return !canonicalPathOut.empty();
 }
 
@@ -550,7 +552,7 @@ bool SemanticsValidator::shouldLogicalCanonicalizeDefinedExperimentalMapHelperPa
   }
   const std::string &definitionPath =
       currentValidationState_.context.definitionPath;
-  return isCanonicalMapHelperResolvedPathLocal(definitionPath);
+  return isCanonicalKeyValueHelperResolvedPathLocal(definitionPath);
 }
 
 bool SemanticsValidator::shouldBuiltinValidateCurrentMapWrapperHelper(std::string_view helperName) const {
@@ -668,34 +670,34 @@ std::string SemanticsValidator::directMapHelperCompatibilityPath(
   const bool resolvedCompatibilityHelper =
       resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(
           resolvedPath, helperName);
-  bool resolvedBareMapHelper = false;
+  bool resolvedBareKeyValueHelper = false;
   std::string explicitSurfaceHelperName;
   const bool spellsCurrentMapWrapperSurface =
       candidate.namespacePrefix.empty() &&
-      resolvePublishedMapHelperMemberTokenLocal(candidate.name,
-                                                explicitSurfaceHelperName) &&
+      resolvePublishedKeyValueHelperMemberTokenLocal(candidate.name,
+                                                     explicitSurfaceHelperName) &&
       explicitSurfaceHelperName == helperName &&
       trimLeadingSlash(candidate.name) != helperName &&
       metadataBackedMapHelperRootAliasMethodName(explicitPath).empty() &&
-      !isCanonicalMapHelperResolvedPathLocal(explicitPath);
+      !isCanonicalKeyValueHelperResolvedPathLocal(explicitPath);
   if (!resolvedCompatibilityHelper &&
       !resolveExplicitPublishedMapHelperExprMemberName(
           candidate.name, candidate.namespacePrefix, helperName)) {
     if (candidate.namespacePrefix.empty() &&
-        resolvePublishedMapHelperMemberTokenLocal(candidate.name, helperName) &&
+        resolvePublishedKeyValueHelperMemberTokenLocal(candidate.name, helperName) &&
         isPublishedMapBaseHelperName(helperName)) {
-      resolvedBareMapHelper = true;
+      resolvedBareKeyValueHelper = true;
     } else {
       return "";
     }
   }
-  const std::string canonicalPath = canonicalMapHelperPathLocal(helperName);
+  const std::string canonicalPath = canonicalKeyValueHelperPathLocal(helperName);
   std::string resolvedExperimentalHelperName;
-  if (isCanonicalMapHelperResolvedPathLocal(
+  if (isCanonicalKeyValueHelperResolvedPathLocal(
           currentValidationState_.context.definitionPath) &&
       resolvedPath.rfind(experimentalCollectionConstructorRootLocal("map"), 0) == 0 &&
-      resolvePublishedMapHelperResolvedPathLocal(resolvedPath,
-                                                 resolvedExperimentalHelperName)) {
+      resolvePublishedKeyValueHelperResolvedPathLocal(resolvedPath,
+                                                      resolvedExperimentalHelperName)) {
     return "";
   }
   if (resolvedCompatibilityHelper && spellsCurrentMapWrapperSurface) {
@@ -721,7 +723,7 @@ std::string SemanticsValidator::directMapHelperCompatibilityPath(
         helperName != "at_ref" && helperName != "at_unsafe_ref") {
       return false;
     }
-    const std::string canonicalPath = canonicalMapHelperPathLocal(helperName);
+    const std::string canonicalPath = canonicalKeyValueHelperPathLocal(helperName);
     auto defIt = defMap_.find(canonicalPath);
     if (defIt == defMap_.end() || defIt->second == nullptr) {
       return false;
@@ -760,7 +762,7 @@ std::string SemanticsValidator::directMapHelperCompatibilityPath(
     return receiverIndex < candidate.args.size() &&
            resolveAnyMapTarget(candidate.args[receiverIndex]);
   };
-  if (resolvedBareMapHelper) {
+  if (resolvedBareKeyValueHelper) {
     if (hasMapReceiver() &&
         !hasDeclaredDefinitionPath(canonicalPath) &&
         !hasImportedDefinitionPath(canonicalPath)) {
@@ -1036,8 +1038,8 @@ bool SemanticsValidator::resolveRemovedMapBodyArgumentTarget(const Expr &candida
            dispatchResolvers.resolveExperimentalMapTarget(target, keyType, valueType);
   };
 
-  auto preferredRemovedMapHelperPath = [&](std::string_view helperName) {
-    return canonicalMapHelperPathLocal(helperName);
+  auto preferredRemovedKeyValueHelperPath = [&](std::string_view helperName) {
+    return canonicalKeyValueHelperPathLocal(helperName);
   };
 
   if (candidate.kind != Expr::Kind::Call || candidate.name.empty() || candidate.args.empty()) {
@@ -1064,7 +1066,7 @@ bool SemanticsValidator::resolveRemovedMapBodyArgumentTarget(const Expr &candida
       if (!resolveAnyMapTarget(candidate.args[index])) {
         return false;
       }
-      targetPathOut = preferredRemovedMapHelperPath(helperName);
+      targetPathOut = preferredRemovedKeyValueHelperPath(helperName);
       return true;
     };
     if (hasNamedArguments(candidate.argNames)) {
@@ -1105,7 +1107,7 @@ bool SemanticsValidator::resolveRemovedMapBodyArgumentTarget(const Expr &candida
   std::string helperName;
   if (!resolveExplicitPublishedMapHelperExprMemberName(
           wrappedResolvedPath, "", helperName)) {
-    if (!resolvePublishedMapHelperMemberTokenLocal(wrappedResolvedPath,
+    if (!resolvePublishedKeyValueHelperMemberTokenLocal(wrappedResolvedPath,
                                                    helperName)) {
       return false;
     }
@@ -1135,7 +1137,7 @@ bool SemanticsValidator::resolveRemovedMapBodyArgumentTarget(const Expr &candida
     return false;
   }
 
-  targetPathOut = preferredRemovedMapHelperPath(helperName);
+  targetPathOut = preferredRemovedKeyValueHelperPath(helperName);
   return true;
 }
 

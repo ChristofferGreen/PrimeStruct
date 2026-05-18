@@ -1025,6 +1025,34 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferCollectionCompatibilitySource.find("const std::string removedPath = \"/map/\" + helperName") ==
         std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("canonicalMapHelperRootPathLocal(") ==
+        std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("canonicalMapHelperPathLocal(") ==
+        std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("resolvePublishedMapHelperMemberTokenLocal(") ==
+        std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("resolvePublishedMapHelperResolvedPathLocal(") ==
+        std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("isCanonicalMapHelperResolvedPathLocal(") ==
+        std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("resolvedBareMapHelper") ==
+        std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("preferredRemovedMapHelperPath") ==
+        std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("canonicalKeyValueHelperRootPathLocal(") !=
+        std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("canonicalKeyValueHelperPathLocal(") !=
+        std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("resolvePublishedKeyValueHelperMemberTokenLocal(") !=
+        std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("resolvePublishedKeyValueHelperResolvedPathLocal(") !=
+        std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("isCanonicalKeyValueHelperResolvedPathLocal(") !=
+        std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("resolvedBareKeyValueHelper") !=
+        std::string::npos);
+  CHECK(inferCollectionCompatibilitySource.find("preferredRemovedKeyValueHelperPath") !=
+        std::string::npos);
   CHECK(inferCollectionCompatibilitySource.find("isCanonicalMapCollectionTypeRootLocal(") !=
         std::string::npos);
   CHECK(inferCollectionCompatibilitySource.find("rootedMapCompatibilityHelperPath(helperName)") !=
