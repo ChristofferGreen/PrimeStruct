@@ -69,7 +69,6 @@ bool isAllowedMapBackingFile(const std::string &relativePath) {
       "src/ir_lowerer/IrLowererLowerEmitExprTailDispatch.h",
       "src/ir_lowerer/IrLowererLowerInferenceBaseKindHelpers.cpp",
       "src/ir_lowerer/IrLowererLowerInferenceDispatchSetup.cpp",
-      "src/ir_lowerer/IrLowererLowerInferenceFallbackSetup.cpp",
       "src/ir_lowerer/IrLowererLowerInlineCalls.h",
       "src/ir_lowerer/IrLowererLowerStatementsExpr.h",
       "src/ir_lowerer/IrLowererSetupTypeDeclaredCollectionInference.cpp",

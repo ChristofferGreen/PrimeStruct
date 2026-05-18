@@ -2568,6 +2568,11 @@ Task template:
       helpers, struct-layout helpers, or struct-type helpers. Their inventory
       allowances are now zero, and the obsolete backing-trace source-lock
       allowances for those files were removed.
+    - 2026-05-18: Direct targeted scans confirmed no map-surface traces in
+      lowerer inference fallback setup, lowerer statement-binding helpers, or
+      operator collection mutation helpers. Their inventory allowances are now
+      zero, and the obsolete fallback-setup backing-trace source-lock allowance
+      was removed.
     - 2026-05-17: Lowerer builtin-name and shared helper map-helper lookups no
       longer name the map helper surface ID directly; they now obtain helper
       metadata through the `collections.map_helpers` bridge key, and the
