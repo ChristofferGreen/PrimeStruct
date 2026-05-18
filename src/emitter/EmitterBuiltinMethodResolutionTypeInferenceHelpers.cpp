@@ -9,7 +9,7 @@ namespace primec::emitter {
 namespace {
 
 constexpr std::string_view VectorHelperSurfaceBridgeKey = "collections.vector_helpers";
-constexpr std::string_view MapHelperSurfaceBridgeKey = "collections.map_helpers";
+constexpr std::string_view KeyValueHelperSurfaceBridgeKey = "collections.map_helpers";
 
 std::string resolvedCollectionHelperName(const Expr &candidate) {
   std::string normalized = resolveExprPath(candidate);
@@ -57,36 +57,36 @@ std::string vectorHelperPath(std::string_view memberName) {
       memberName);
 }
 
-std::string mapHelperPath(std::string_view memberName) {
+std::string keyValueHelperPath(std::string_view memberName) {
   return publishedCollectionSurfaceHelperPath(
-      MapHelperSurfaceBridgeKey,
+      KeyValueHelperSurfaceBridgeKey,
       memberName);
 }
 
-std::string mapHelperMemberNameFromPath(std::string_view path) {
+std::string keyValueHelperMemberNameFromPath(std::string_view path) {
   return std::string(mapHelperNameFromPath(path));
 }
 
-bool isCanonicalMapHelperMemberPath(std::string_view path,
-                                    std::string &memberNameOut) {
+bool isCanonicalKeyValueHelperMemberPath(std::string_view path,
+                                         std::string &memberNameOut) {
   if (path.find('/') == std::string_view::npos) {
     memberNameOut.clear();
     return false;
   }
-  memberNameOut = mapHelperMemberNameFromPath(path);
+  memberNameOut = keyValueHelperMemberNameFromPath(path);
   return !memberNameOut.empty() &&
-         rootedHelperPath(path) == mapHelperPath(memberNameOut);
+         rootedHelperPath(path) == keyValueHelperPath(memberNameOut);
 }
 
-bool isMapImportAliasHelperMemberPath(std::string_view path,
-                                      std::string &memberNameOut) {
+bool isKeyValueImportAliasHelperMemberPath(std::string_view path,
+                                           std::string &memberNameOut) {
   if (path.find('/') == std::string_view::npos) {
     memberNameOut.clear();
     return false;
   }
-  memberNameOut = mapHelperMemberNameFromPath(path);
+  memberNameOut = keyValueHelperMemberNameFromPath(path);
   return !memberNameOut.empty() &&
-         rootedHelperPath(path) != mapHelperPath(memberNameOut);
+         rootedHelperPath(path) != keyValueHelperPath(memberNameOut);
 }
 
 bool isSoaVectorReceiverTypeNameLocal(const std::string &typeName) {
@@ -296,7 +296,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     if (!isBareMapAccessMethod(candidate)) {
       return "";
     }
-    const std::string canonicalPath = mapHelperPath(candidate.name);
+    const std::string canonicalPath = keyValueHelperPath(candidate.name);
     if (hasDefinitionOrMetadata(view, canonicalPath)) {
       return canonicalPath;
     }
@@ -308,7 +308,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     }
     const std::string normalized = resolvedCollectionHelperName(candidate);
     std::string helperName;
-    if (!isMapImportAliasHelperMemberPath(normalized, helperName) ||
+    if (!isKeyValueImportAliasHelperMemberPath(normalized, helperName) ||
         !isCanonicalMapAccessHelperName(helperName)) {
       return false;
     }
@@ -394,13 +394,13 @@ std::string inferMethodResolutionPrimitiveTypeName(
     }
     const std::string normalized = resolvedCollectionHelperName(candidate);
     std::string helperName;
-    if (!isCanonicalMapHelperMemberPath(normalized, helperName) ||
+    if (!isCanonicalKeyValueHelperMemberPath(normalized, helperName) ||
         !isCanonicalMapAccessHelperName(helperName)) {
       return "";
     }
     const std::string resolvedExprPath = resolveExprPath(candidate);
     std::string resolvedHelperName;
-    if (!isCanonicalMapHelperMemberPath(resolvedExprPath, resolvedHelperName) ||
+    if (!isCanonicalKeyValueHelperMemberPath(resolvedExprPath, resolvedHelperName) ||
         resolvedHelperName != helperName) {
       return "";
     }
@@ -428,7 +428,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     }
     const std::string normalized = resolvedCollectionHelperName(candidate);
     std::string helperName;
-    if (!isCanonicalMapHelperMemberPath(normalized, helperName) ||
+    if (!isCanonicalKeyValueHelperMemberPath(normalized, helperName) ||
         !isCanonicalMapAccessHelperName(helperName)) {
       return "";
     }
@@ -452,7 +452,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     }
     const std::string resolvedExprPath = resolveExprPath(candidate);
     std::string helperName;
-    if (!isMapImportAliasHelperMemberPath(resolvedExprPath, helperName)) {
+    if (!isKeyValueImportAliasHelperMemberPath(resolvedExprPath, helperName)) {
       return false;
     }
     return isRemovedMapDirectCallResultCompatibilityHelperName(helperName);

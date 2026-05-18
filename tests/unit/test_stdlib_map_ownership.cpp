@@ -1799,9 +1799,27 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(emitterMethodTypeInferenceSource.find("resolvedExprPath.rfind(\"/map/\", 0)") ==
         std::string::npos);
-  CHECK(emitterMethodTypeInferenceSource.find("isCanonicalMapHelperMemberPath(normalized, helperName)") !=
+  CHECK(emitterMethodTypeInferenceSource.find(
+            "isCanonicalKeyValueHelperMemberPath(normalized, helperName)") !=
         std::string::npos);
-  CHECK(emitterMethodTypeInferenceSource.find("isMapImportAliasHelperMemberPath(resolvedExprPath, helperName)") !=
+  CHECK(emitterMethodTypeInferenceSource.find("isCanonicalMapHelperMemberPath(") ==
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find(
+            "isKeyValueImportAliasHelperMemberPath(resolvedExprPath, helperName)") !=
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("isMapImportAliasHelperMemberPath(") ==
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("KeyValueHelperSurfaceBridgeKey") !=
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("MapHelperSurfaceBridgeKey") ==
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("keyValueHelperPath(") !=
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("mapHelperPath(") ==
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("keyValueHelperMemberNameFromPath(") !=
+        std::string::npos);
+  CHECK(emitterMethodTypeInferenceSource.find("mapHelperMemberNameFromPath(") ==
         std::string::npos);
   CHECK(emitterHelpersTypesSource.find("base += \"map/Map\"") == std::string::npos);
   CHECK(emitterHelpersTypesSource.find("experimentalCollectionTypePathLocal(\"map\", \"Map\"") !=
