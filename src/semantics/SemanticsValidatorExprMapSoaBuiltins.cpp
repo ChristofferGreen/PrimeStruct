@@ -10,12 +10,12 @@ namespace primec::semantics {
 
 namespace {
 
-std::string canonicalMapHelperPathLocal(std::string_view helperName) {
+std::string canonicalKeyValueHelperPathLocal(std::string_view helperName) {
   return metadataBackedCanonicalMapHelperPath(helperName);
 }
 
-bool isCanonicalMapHelperResolvedPath(const std::string &path,
-                                      std::string_view helperName) {
+bool isCanonicalKeyValueHelperResolvedPath(const std::string &path,
+                                           std::string_view helperName) {
   const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
@@ -78,12 +78,12 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     return failExprDiagnostic(expr, std::move(message));
   };
   auto hasBareMapContainsBuiltinDefinition = [&]() {
-    return hasImportedDefinitionPath(canonicalMapHelperPathLocal("contains")) ||
-           hasDeclaredDefinitionPath(canonicalMapHelperPathLocal("contains")) ||
+    return hasImportedDefinitionPath(canonicalKeyValueHelperPathLocal("contains")) ||
+           hasDeclaredDefinitionPath(canonicalKeyValueHelperPathLocal("contains")) ||
            hasImportedDefinitionPath(
-               canonicalMapHelperPathLocal("contains_ref")) ||
+               canonicalKeyValueHelperPathLocal("contains_ref")) ||
            hasDeclaredDefinitionPath(
-               canonicalMapHelperPathLocal("contains_ref")) ||
+               canonicalKeyValueHelperPathLocal("contains_ref")) ||
            hasImportedDefinitionPath("/contains") ||
            hasDeclaredDefinitionPath("/contains");
   };
@@ -359,17 +359,17 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     handledOut = true;
     if (!hasBareMapContainsBuiltinDefinition()) {
       return failMapSoaBuiltinDiagnostic(
-          "unknown call target: " + canonicalMapHelperPathLocal("contains"));
+          "unknown call target: " + canonicalKeyValueHelperPathLocal("contains"));
     }
     return validateContainsBuiltin("contains");
   }
 
   if (resolvedMethod &&
-      (isCanonicalMapHelperResolvedPath(resolved, "contains") ||
-       isCanonicalMapHelperResolvedPath(resolved, "contains_ref"))) {
+      (isCanonicalKeyValueHelperResolvedPath(resolved, "contains") ||
+       isCanonicalKeyValueHelperResolvedPath(resolved, "contains_ref"))) {
     handledOut = true;
     return validateContainsBuiltin(
-        isCanonicalMapHelperResolvedPath(resolved, "contains_ref")
+        isCanonicalKeyValueHelperResolvedPath(resolved, "contains_ref")
             ? "contains_ref"
             : "contains");
   }

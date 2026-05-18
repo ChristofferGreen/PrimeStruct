@@ -1178,6 +1178,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(mapSoaBuiltinsSource.find("mapHelperSurfaceMetadataLocal()") !=
         std::string::npos);
+  CHECK(mapSoaBuiltinsSource.find("canonicalMapHelperPathLocal(") ==
+        std::string::npos);
+  CHECK(mapSoaBuiltinsSource.find("isCanonicalMapHelperResolvedPath(") ==
+        std::string::npos);
+  CHECK(mapSoaBuiltinsSource.find("canonicalKeyValueHelperPathLocal(") !=
+        std::string::npos);
+  CHECK(mapSoaBuiltinsSource.find("isCanonicalKeyValueHelperResolvedPath(") !=
+        std::string::npos);
   CHECK(pointerLikeSource.find("appendUnique(\"/std/collections/map/\" + suffix)") ==
         std::string::npos);
   CHECK(pointerLikeSource.find("appendUnique(\"/map/\" + suffix)") ==
