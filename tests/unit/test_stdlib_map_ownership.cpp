@@ -2327,6 +2327,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(nativeTailSource.find(
             "isKeyValueReadHelperName(directKeyValueReadHelperName)") !=
         std::string::npos);
+  CHECK(nativeTailSource.find("importsMapReadHelper") == std::string::npos);
+  CHECK(nativeTailSource.find("importsKeyValueReadHelper") !=
+        std::string::npos);
   CHECK(nativeTailSource.find("importsMapHelpers") == std::string::npos);
   CHECK(nativeTailSource.find("importsKeyValueHelpers") != std::string::npos);
   CHECK(lowerStatementsExprSource.find("Keep direct canonical map access helpers") == std::string::npos);

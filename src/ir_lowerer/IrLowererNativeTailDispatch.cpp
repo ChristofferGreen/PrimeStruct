@@ -180,7 +180,7 @@ bool hasSemanticKeyValueReadHelperDefinition(const SemanticProgram *semanticProg
       return true;
     }
   }
-  auto importsMapReadHelper = [&](const std::vector<std::string> &imports) {
+  auto importsKeyValueReadHelper = [&](const std::vector<std::string> &imports) {
     for (const std::string &importPath : imports) {
       if (importPathCoversNativeTailTarget(importPath, helperPath)) {
         return true;
@@ -188,8 +188,8 @@ bool hasSemanticKeyValueReadHelperDefinition(const SemanticProgram *semanticProg
     }
     return false;
   };
-  return importsMapReadHelper(semanticProgram->sourceImports) ||
-         importsMapReadHelper(semanticProgram->imports);
+  return importsKeyValueReadHelper(semanticProgram->sourceImports) ||
+         importsKeyValueReadHelper(semanticProgram->imports);
 }
 
 bool isExplicitDirectVectorCountCall(const SemanticProgram *semanticProgram,
