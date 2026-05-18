@@ -1725,6 +1725,17 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(collectionAccessSource.find("resolvedCanonicalMapHelper") ==
         std::string::npos);
+  CHECK(collectionAccessSource.find("isCanonicalMapAccessHelperName(") ==
+        std::string::npos);
+  CHECK(collectionAccessSource.find("canonicalStdlibMapAccessPathForHelper(") ==
+        std::string::npos);
+  CHECK(collectionAccessSource.find("isCanonicalMapContainsResolvedPath(") ==
+        std::string::npos);
+  CHECK(collectionAccessSource.find("isCanonicalMapAccessResolvedPath(") ==
+        std::string::npos);
+  CHECK(collectionAccessSource.find(
+            "canonicalStdlibMapContainsPathForResolvedMethod(") ==
+        std::string::npos);
   CHECK(collectionAccessSource.find("collectionAccessKeyValueHelperMetadata()") !=
         std::string::npos);
   CHECK(collectionAccessSource.find("canonicalKeyValueHelperPathLocal(") !=
@@ -1738,6 +1749,20 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(collectionAccessSource.find("canonicalKeyValueMethodHelperName") !=
         std::string::npos);
   CHECK(collectionAccessSource.find("resolvedCanonicalKeyValueHelper") !=
+        std::string::npos);
+  CHECK(collectionAccessSource.find("isCanonicalKeyValueAccessHelperName(") !=
+        std::string::npos);
+  CHECK(collectionAccessSource.find(
+            "canonicalStdlibKeyValueAccessPathForHelper(") !=
+        std::string::npos);
+  CHECK(collectionAccessSource.find(
+            "isCanonicalKeyValueContainsResolvedPath(") !=
+        std::string::npos);
+  CHECK(collectionAccessSource.find(
+            "isCanonicalKeyValueAccessResolvedPath(") !=
+        std::string::npos);
+  CHECK(collectionAccessSource.find(
+            "canonicalStdlibKeyValueContainsPathForResolvedMethod(") !=
         std::string::npos);
   CHECK(collectionAccessSource.find(
             "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
