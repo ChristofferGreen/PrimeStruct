@@ -172,7 +172,7 @@ bool emitBuiltinSoaToAosStructBridge(
   return true;
 }
 
-bool isPublishedMapConstructorExpr(const Expr &callExpr) {
+bool isPublishedKeyValueConstructorExpr(const Expr &callExpr) {
   if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
     return false;
   }
@@ -215,23 +215,23 @@ std::string extractParameterTypeName(const Expr &paramExpr) {
   return {};
 }
 
-bool rewritePublishedMapConstructorExpr(const Expr &callExpr,
-                                        LocalInfo::ValueKind fallbackKeyKind,
-                                        LocalInfo::ValueKind fallbackValueKind,
-                                        const ResolveInlineParameterDefinitionCallFn &resolveDefinitionCall,
-                                        Expr &rewrittenExpr) {
+bool rewritePublishedKeyValueConstructorExpr(const Expr &callExpr,
+                                             LocalInfo::ValueKind fallbackKeyKind,
+                                             LocalInfo::ValueKind fallbackValueKind,
+                                             const ResolveInlineParameterDefinitionCallFn &resolveDefinitionCall,
+                                             Expr &rewrittenExpr) {
   if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
     return false;
   }
   const Definition *callee = resolveDefinitionCall ? resolveDefinitionCall(callExpr) : nullptr;
-  const auto *mapConstructorMetadata =
+  const auto *keyValueConstructorMetadata =
       findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
   const bool isResolvedPublishedConstructor =
       callee != nullptr &&
-      mapConstructorMetadata != nullptr &&
+      keyValueConstructorMetadata != nullptr &&
       isResolvedCanonicalPublishedStdlibSurfaceConstructorPath(
-          callee->fullPath, mapConstructorMetadata->id);
-  if (!isPublishedMapConstructorExpr(callExpr) && !isResolvedPublishedConstructor) {
+          callee->fullPath, keyValueConstructorMetadata->id);
+  if (!isPublishedKeyValueConstructorExpr(callExpr) && !isResolvedPublishedConstructor) {
     return false;
   }
   rewrittenExpr = callExpr;
@@ -1062,15 +1062,19 @@ bool emitInlineDefinitionCallParameters(
       error = "argument count mismatch";
       return false;
     }
-    Expr rewrittenMapArgExpr;
+    Expr rewrittenKeyValueArgExpr;
     const Expr *emittedArgExpr = orderedArg;
     Expr rewrittenMapReferenceArgExpr;
     if (paramInfo.kind == LocalInfo::Kind::KeyValueCollection &&
         paramInfo.structTypeName.empty() &&
         orderedArg->kind == Expr::Kind::Call &&
-        rewritePublishedMapConstructorExpr(
-            *orderedArg, paramInfo.keyValueKeyKind, paramInfo.keyValueValueKind, resolveDefinitionCall, rewrittenMapArgExpr)) {
-      emittedArgExpr = &rewrittenMapArgExpr;
+        rewritePublishedKeyValueConstructorExpr(
+            *orderedArg,
+            paramInfo.keyValueKeyKind,
+            paramInfo.keyValueValueKind,
+            resolveDefinitionCall,
+            rewrittenKeyValueArgExpr)) {
+      emittedArgExpr = &rewrittenKeyValueArgExpr;
     } else if (shouldRewriteMapReferenceReceiverForParam(paramInfo) &&
                orderedArg->kind == Expr::Kind::Call &&
                rewriteMapReferenceFieldAccessReceiverExpr(
