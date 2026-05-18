@@ -2666,6 +2666,10 @@ Task template:
       slashless alias token from `collections.map_constructors` metadata, and
       `src/ir_lowerer/IrLowererBuiltinNameHelpers.cpp` now has a zero
       map-surface inventory allowance.
+    - 2026-05-18: Lowerer builtin-name helper classification local names now
+      use key/value terminology for helper-surface and constructor-alias
+      metadata lookups while still deriving the public map surface from
+      stdlib metadata.
     - 2026-05-17: Setup-type method-call bridge path filtering no longer names
       the map constructor surface ID directly; it now obtains constructor
       metadata through the `collections.map_constructors` bridge key, and the

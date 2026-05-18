@@ -61,7 +61,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   inline/native-tail contains/tryAt predicates carry backing details until
   later TODO-4464 slices remove the remaining C++ map substrate; key
   comparison opcode selection plus inline native dispatch published-helper
-  metadata wrappers are also named in key/value terms.
+  metadata wrappers and builtin-name helper-surface checks are also named in
+  key/value terms.
 - Evidence: The release `PrimeStruct_backend_ir_tests` target rebuilt after
   the kind, field, target-info, lookup-helper, and setup-inference access
   renames, focused backend IR windows passed, and direct `rg` scans over
@@ -73,7 +74,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `resolveArrayMapAccessElementKind`, `isMapContainsHelperName`, or
   `isMapTryAtHelperName`, or `mapKeyCompareOpcode`; the inline native
   dispatch source lock passed after renaming the local published-helper
-  metadata wrappers away from `MapHelper`/`mapHelper` names.
+  metadata wrappers away from `MapHelper`/`mapHelper` names, and the
+  builtin-name helper source lock passed after renaming the metadata-backed
+  helper-surface and constructor-alias locals away from map-specific names.
 
 ### map-compatibility-aliases-require-source-definitions
 - Updated: 2026-05-18

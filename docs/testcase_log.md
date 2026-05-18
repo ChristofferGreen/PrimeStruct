@@ -238,6 +238,14 @@
   access fallback rejection coverage passed.
 
 ## Recent Test Runs
+- 2026-05-18 19:53 CEST | pass | mode: release | command:
+  `git diff --check`;
+  `rg -n 'resolvesMapHelperSurfacePath|mapConstructorAliasToken|\bmapAlias\b' src/ir_lowerer/IrLowererBuiltinNameHelpers.cpp`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable" --no-skip`
+  | failures: none | notes: Builtin-name helper classification now uses
+  key/value local names for metadata-backed helper-surface and constructor
+  alias lookups.
 - 2026-05-18 19:52 CEST | pass | mode: release | command:
   `git diff --check`;
   `rg -n 'canonicalInlineMapHelperName|inlineMapHelperMetadata|resolvePublishedInlineMapHelperName|resolvePublishedInlineMapSurfaceMemberName|isCanonicalPublishedInlineMapHelperPath|isSemanticBarePublishedMapHelperCall|isExplicitSamePathMapCountLikeDefinitionCall|isDirectMapAccessHelperCall|isExplicitDirectMapAccessHelperCall|isExplicitRemovedMapAccessHelperCall|isSemanticBarePreferredMapHelperDefinitionCall|keepsBuiltinInlineReturnForPublishedMapHelper|isBareDirectWrapperMapAccessDefinitionCall|mapMetadata|mapHelperName|canonicalMapHelperExpr|isCanonicalStdMapHelperCall|isRewrittenSlashMethodMapAccess' src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp tests/unit/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp`;

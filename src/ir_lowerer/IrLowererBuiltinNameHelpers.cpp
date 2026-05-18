@@ -30,7 +30,7 @@ std::string collectionWrapperAlias(std::string_view collectionName,
   return std::string(collectionName) + std::string(suffix);
 }
 
-bool resolvesMapHelperSurfacePath(std::string_view path) {
+bool resolvesKeyValueHelperSurfacePath(std::string_view path) {
   const auto *metadata =
       findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
   if (metadata == nullptr) {
@@ -46,7 +46,7 @@ bool resolvesMapHelperSurfacePath(std::string_view path) {
   return false;
 }
 
-std::string mapConstructorAliasToken() {
+std::string keyValueConstructorAliasToken() {
   const auto *metadata =
       findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
   if (metadata == nullptr) {
@@ -83,7 +83,7 @@ std::string resolveMathExprName(const Expr &expr) {
 }
 
 bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
-  const std::string mapAlias = mapConstructorAliasToken();
+  const std::string keyValueAlias = keyValueConstructorAliasToken();
   return alias == "assign" || alias == "if" || alias == "while" ||
          alias == "take" || alias == "borrow" || alias == "init" ||
          alias == "drop" || alias == "increment" ||
@@ -106,7 +106,7 @@ bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
          alias == "get" || alias == "get_ref" || alias == "ref" ||
          alias == "ref_ref" || alias == "at" ||
          alias == "at_unsafe" || alias == "array" ||
-         alias == "vector" || (!mapAlias.empty() && alias == mapAlias) ||
+         alias == "vector" || (!keyValueAlias.empty() && alias == keyValueAlias) ||
          alias == "soa" "_vector" || alias == "convert" ||
          alias == "clamp" || alias == "min" || alias == "max" ||
          alias == "lerp" || alias == "fma" || alias == "hypot" ||
@@ -610,7 +610,7 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   if (scopedName.rfind(builtinVectorPrefix, 0) == 0) {
     return false;
   }
-  if (resolvesMapHelperSurfacePath(scopedName)) {
+  if (resolvesKeyValueHelperSurfacePath(scopedName)) {
     return false;
   }
   rawName = stripGeneratedSuffix(std::move(rawName));
@@ -696,9 +696,9 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   if (rawName.find('/') != std::string::npos) {
     return false;
   }
-  const std::string mapAlias = mapConstructorAliasToken();
+  const std::string keyValueAlias = keyValueConstructorAliasToken();
   if (rawName == "array" || rawName == "vector" ||
-      (!mapAlias.empty() && rawName == mapAlias) ||
+      (!keyValueAlias.empty() && rawName == keyValueAlias) ||
       rawName == "soa" "_vector") {
     out = rawName;
     return true;
