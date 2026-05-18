@@ -780,6 +780,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("removedMapCompatibilityHelperFromPath") !=
         std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("borrowedCanonicalMapUnknownTarget") ==
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("borrowedCanonicalKeyValueUnknownTarget") !=
+        std::string::npos);
   CHECK(templateCollectionCompatibilitySource.find("rawMethodName.rfind(\"map/\", 0)") ==
         std::string::npos);
   CHECK(templateCollectionCompatibilitySource.find(

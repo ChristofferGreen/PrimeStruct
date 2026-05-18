@@ -1486,10 +1486,11 @@ bool rewriteExpr(Expr &expr,
     const bool resolvesBorrowedExperimentalMapReceiver =
         resolvesExperimentalMapBorrowedReceiver(
             mapHelperReceiverExpr(expr), params, locals, allowMathBare, mapping, allowedParams, namespacePrefix, ctx);
-    const std::string borrowedCanonicalMapUnknownTarget = canonicalMapHelperUnknownTargetPath(resolvedPath);
-    if (!borrowedCanonicalMapUnknownTarget.empty() &&
+    const std::string borrowedCanonicalKeyValueUnknownTarget =
+        canonicalMapHelperUnknownTargetPath(resolvedPath);
+    if (!borrowedCanonicalKeyValueUnknownTarget.empty() &&
         resolvesBorrowedExperimentalMapReceiver) {
-      error = "unknown call target: " + borrowedCanonicalMapUnknownTarget;
+      error = "unknown call target: " + borrowedCanonicalKeyValueUnknownTarget;
       return false;
     }
     auto stripGeneratedSuffix = [](std::string path) {
@@ -1578,12 +1579,12 @@ bool rewriteExpr(Expr &expr,
         !experimentalMapReceiverExpr->isFieldAccess &&
         !receiverIsPublishedMapConstructor &&
         isTemplateMonomorphCanonicalMapValueAccessPath(
-            borrowedCanonicalMapUnknownTarget);
+            borrowedCanonicalKeyValueUnknownTarget);
     if (!experimentalMapPath.empty() && ctx.sourceDefs.count(experimentalMapPath) > 0 &&
         resolvesExperimentalMapValueReceiver(
             experimentalMapReceiverExpr, params, locals, allowMathBare, mapping, allowedParams, namespacePrefix, ctx)) {
       if (rejectsWrapperReturnedExperimentalMapAccess) {
-        error = "unknown call target: " + borrowedCanonicalMapUnknownTarget;
+        error = "unknown call target: " + borrowedCanonicalKeyValueUnknownTarget;
         return false;
       }
       resolvedPath = experimentalMapPath;
