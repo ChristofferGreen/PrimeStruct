@@ -1,6 +1,11 @@
 # Testcase Log
 
 ## Current Known Failures
+- `PrimeStruct_backend_ir_tests --test-case="ir lowerer result helpers resolve indexed args-pack Result expressions" --no-skip`
+  is stale after the map stdlib-ownership cutover. On 2026-05-18 it failed to
+  resolve `resolveResultExprInfoFromLocals` for the indexed args-pack Result
+  expression while the adjacent statement-binding args-pack lowerer probe
+  passed.
 - `PrimeStruct_semantics_tests --test-case="graph type resolver infers map value return kinds through shared infer helper" --no-skip`
   is stale after the map stdlib-ownership cutover. On 2026-05-17 it failed
   validation before return-kind assertions; the fixture still imports
@@ -179,6 +184,24 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-18 08:02 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer statement binding helper uses semantic-product args-pack binding types" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `rg -n 'std/collections/map|experimental_map|/map/|CollectionsMap|map(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bMap<' src/ir_lowerer/IrLowererUninitializedStructInference.cpp`;
+  `rg --pcre2 -n '/?std/collections/map(?:/|")|/?std/collections/experimental_map(?:/|")|(?<![A-Za-z0-9_/])/?map/|\bmap(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bCollectionsMap[A-Za-z0-9_]*\b|\bMap<' src/ir_lowerer/IrLowererUninitializedStructInference.cpp` |
+  failures: none | notes: uninitialized struct inference now derives map
+  helper and constructor surface IDs from bridge-key metadata and derives the
+  forwarded empty constructor member from constructor metadata; the edited
+  file has zero targeted map-surface matches. The Python inventory scripts
+  were intentionally not run in this pass.
+- 2026-05-18 08:02 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer statement binding helper uses semantic-product args-pack binding types,ir lowerer result helpers resolve indexed args-pack Result expressions" --no-skip` |
+  failures: ir lowerer result helpers resolve indexed args-pack Result
+  expressions | notes: existing stale result-helper args-pack probe failed
+  `resolveResultExprInfoFromLocals`; rerunning only the statement-binding
+  args-pack probe passed.
 - 2026-05-18 07:56 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="map namespaced at method now validates through slash-path routing,map namespaced at_unsafe method auto inference now validates through slash-path routing,stdlib canonical map helpers resolve in method-call sugar" --no-skip`;

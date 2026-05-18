@@ -1039,7 +1039,23 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(uninitializedStructInferenceSource.find("scopedCallPath == \"/std/collections/map/at\"") ==
         std::string::npos);
+  CHECK(uninitializedStructInferenceSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
+        std::string::npos);
+  CHECK(uninitializedStructInferenceSource.find(
+            "StdlibSurfaceId::CollectionsMapConstructors") ==
+        std::string::npos);
+  CHECK(uninitializedStructInferenceSource.find("constructorName == \"mapNew\"") ==
+        std::string::npos);
   CHECK(uninitializedStructInferenceSource.find("publishedMapHelperName == \"at\"") !=
+        std::string::npos);
+  CHECK(uninitializedStructInferenceSource.find(
+            "mapHelperSurfaceMetadataForUninitializedStructs()") !=
+        std::string::npos);
+  CHECK(uninitializedStructInferenceSource.find(
+            "mapConstructorSurfaceMetadataForUninitializedStructs()") !=
+        std::string::npos);
+  CHECK(uninitializedStructInferenceSource.find(
+            "forwardedEmptyMapConstructorMemberName()") !=
         std::string::npos);
   CHECK(structSlotLayoutSource.find("isBuiltinCollectionTypeName(typeName, \"map\")") !=
         std::string::npos);

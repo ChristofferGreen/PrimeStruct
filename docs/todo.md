@@ -2144,6 +2144,10 @@ Task template:
       Direct `rg` checks also confirmed and lowered stale zero caps for
       call-path helpers, receiver paths, pointer-like, try, and Result helper
       files without running the Python inventory script.
+    - 2026-05-18: IR uninitialized-struct inference no longer names map helper
+      or constructor surface IDs directly and no longer spells the forwarded
+      empty map constructor member name directly; it derives those from
+      `collections.map_helpers` and `collections.map_constructors` metadata.
     - 2026-05-16: Map literal lowering no longer hard-codes the empty
       inferred-map backing path as `/std/collections/experimental_map/Map`;
       it now uses the shared `experimentalCollectionTypePath("map", "Map")`

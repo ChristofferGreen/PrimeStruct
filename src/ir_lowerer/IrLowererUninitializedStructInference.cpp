@@ -26,6 +26,28 @@ bool isSpecializedExperimentalMapStructPath(const std::string &typeText) {
          normalized.find("__") != std::string::npos;
 }
 
+const StdlibSurfaceMetadata *mapHelperSurfaceMetadataForUninitializedStructs() {
+  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+}
+
+const StdlibSurfaceMetadata *
+mapConstructorSurfaceMetadataForUninitializedStructs() {
+  return findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
+}
+
+std::string forwardedEmptyMapConstructorMemberName() {
+  const StdlibSurfaceMetadata *metadata =
+      mapConstructorSurfaceMetadataForUninitializedStructs();
+  if (metadata != nullptr) {
+    const std::string_view memberName =
+        resolveStdlibSurfaceMemberName(*metadata, metadata->canonicalPath);
+    if (!memberName.empty()) {
+      return std::string(memberName) + "New";
+    }
+  }
+  return std::string("map") + std::string("New");
+}
+
 bool isBuiltinVectorTypeName(const std::string &typeName) {
   return isBuiltinCollectionTypeName(typeName, "vector");
 }
@@ -140,11 +162,14 @@ const Expr *resolveCallArgumentForParameter(const Expr &callExpr,
 
 bool isForwardedMapNewConstructor(const Expr &expr) {
   std::string constructorName;
+  const StdlibSurfaceMetadata *metadata =
+      mapConstructorSurfaceMetadataForUninitializedStructs();
+  if (metadata == nullptr) {
+    return false;
+  }
   return resolvePublishedStdlibSurfaceConstructorExprMemberName(
-             expr,
-             primec::StdlibSurfaceId::CollectionsMapConstructors,
-             constructorName) &&
-         constructorName == "mapNew";
+             expr, metadata->id, constructorName) &&
+         constructorName == forwardedEmptyMapConstructorMemberName();
 }
 
 std::string normalizeUninitializedVectorStructPath(const std::string &typeName) {
@@ -827,11 +852,14 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
       }
       std::string accessName;
       std::string publishedMapHelperName;
+      const StdlibSurfaceMetadata *mapHelperMetadata =
+          mapHelperSurfaceMetadataForUninitializedStructs();
       const bool isExplicitMapArgsPackAt =
           !exprIn.isMethodCall &&
+          mapHelperMetadata != nullptr &&
           resolvePublishedStdlibSurfaceExprMemberName(
               exprIn,
-              primec::StdlibSurfaceId::CollectionsMapHelpers,
+              mapHelperMetadata->id,
               publishedMapHelperName) &&
           publishedMapHelperName == "at" &&
           exprIn.args.size() == 2;
@@ -866,9 +894,13 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
           return std::string{};
         };
         if (exprIn.templateArgs.size() == 2 &&
-            isPublishedStdlibSurfaceConstructorExpr(
-                exprIn,
-                primec::StdlibSurfaceId::CollectionsMapConstructors)) {
+            [&]() {
+              const StdlibSurfaceMetadata *metadata =
+                  mapConstructorSurfaceMetadataForUninitializedStructs();
+              return metadata != nullptr &&
+                     isPublishedStdlibSurfaceConstructorExpr(exprIn,
+                                                             metadata->id);
+            }()) {
           const std::string mapType =
               "map<" + trimTemplateTypeText(exprIn.templateArgs.front()) + ", " +
               trimTemplateTypeText(exprIn.templateArgs.back()) + ">";
