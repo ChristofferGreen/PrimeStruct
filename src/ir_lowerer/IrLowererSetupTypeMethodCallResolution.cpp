@@ -33,7 +33,7 @@ std::string describeMethodCallExpr(const Expr &expr) {
   return "<unnamed>";
 }
 
-bool isMapConstructorDirectTargetPath(std::string path) {
+bool isKeyValueConstructorDirectTargetPath(std::string path) {
   const size_t specializationSuffix = path.find("__t");
   if (specializationSuffix != std::string::npos) {
     path.erase(specializationSuffix);
@@ -45,17 +45,17 @@ bool isMapConstructorDirectTargetPath(std::string path) {
   return path == collectionMemberPath("map", "map");
 }
 
-const StdlibSurfaceMetadata *mapConstructorSurfaceMetadataLocal() {
+const StdlibSurfaceMetadata *keyValueConstructorSurfaceMetadataLocal() {
   return findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
 }
 
-std::string findMapConstructorBridgePathChoiceBySource(
+std::string findKeyValueConstructorBridgePathChoiceBySource(
     const SemanticProgram *semanticProgram,
     const Expr &expr) {
   if (semanticProgram == nullptr || expr.sourceLine <= 0 || expr.sourceColumn <= 0) {
     return {};
   }
-  const StdlibSurfaceMetadata *metadata = mapConstructorSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata = keyValueConstructorSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return {};
   }
@@ -579,7 +579,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
           findSemanticProductBridgePathChoice(semanticProgram, callExpr);
       const std::string sourceMatchedBridgePathChoice =
           bridgePathChoice.empty()
-              ? findMapConstructorBridgePathChoiceBySource(semanticProgram, callExpr)
+              ? findKeyValueConstructorBridgePathChoiceBySource(semanticProgram, callExpr)
               : std::string{};
       const std::string fallbackDirectTarget =
           !directCallTarget.empty()
@@ -593,7 +593,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
              isSimpleCallName(callExpr, "at_unsafe")) &&
             !blocksSyntheticCollectionFallbackDirectTarget(fallbackDirectTarget)) ||
            (isSimpleCallName(callExpr, "map") &&
-            isMapConstructorDirectTargetPath(fallbackDirectTarget)));
+            isKeyValueConstructorDirectTargetPath(fallbackDirectTarget)));
       if (directTargetKeepsSyntheticCollectionFallback) {
         if (const Definition *resolvedDef =
                 resolveLoweredDefinitionPath(fallbackDirectTarget);
@@ -1050,7 +1050,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       }
     } else {
       LocalInfo::ValueKind inferredReceiverKind = LocalInfo::ValueKind::Unknown;
-      auto isBareMapAccessReceiverProbeExpr = [&](const Expr &candidateExpr) {
+      auto isBareKeyValueAccessReceiverProbeExpr = [&](const Expr &candidateExpr) {
         if (candidateExpr.kind != Expr::Kind::Call || candidateExpr.args.size() != 2) {
           return false;
         }
@@ -1063,7 +1063,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
                                           semanticIndexPtr)
                    .isKeyValueTarget;
       };
-      auto isBareMapTryAtReceiverProbeExpr = [&](const Expr &candidateExpr) {
+      auto isBareKeyValueTryAtReceiverProbeExpr = [&](const Expr &candidateExpr) {
         return candidateExpr.kind == Expr::Kind::Call && candidateExpr.args.size() == 2 &&
                isSimpleCallName(candidateExpr, "tryAt") &&
                resolveKeyValueAccessTargetInfo(candidateExpr.args.front(),
@@ -1073,17 +1073,17 @@ const Definition *resolveMethodCallDefinitionFromExpr(
                                           semanticIndexPtr)
                    .isKeyValueTarget;
       };
-      const bool blocksExplicitMapReceiverProbeKindFallback =
+      const bool blocksExplicitKeyValueReceiverProbeKindFallback =
           isExplicitKeyValueReceiverProbeHelperExpr(*receiver);
-      const bool blocksBareMapAccessReceiverProbeKindFallback =
-          isBareMapAccessReceiverProbeExpr(*receiver);
-      const bool blocksBareMapTryAtReceiverProbeKindFallback =
-          isBareMapTryAtReceiverProbeExpr(*receiver);
+      const bool blocksBareKeyValueAccessReceiverProbeKindFallback =
+          isBareKeyValueAccessReceiverProbeExpr(*receiver);
+      const bool blocksBareKeyValueTryAtReceiverProbeKindFallback =
+          isBareKeyValueTryAtReceiverProbeExpr(*receiver);
       const bool blocksExplicitVectorReceiverProbeKindFallback =
           blocksExplicitVectorReceiverProbeKindFallbackExpr(*receiver);
-      if (!blocksExplicitMapReceiverProbeKindFallback &&
-          !blocksBareMapAccessReceiverProbeKindFallback &&
-          !blocksBareMapTryAtReceiverProbeKindFallback &&
+      if (!blocksExplicitKeyValueReceiverProbeKindFallback &&
+          !blocksBareKeyValueAccessReceiverProbeKindFallback &&
+          !blocksBareKeyValueTryAtReceiverProbeKindFallback &&
           !blocksExplicitVectorReceiverProbeKindFallback) {
         if (!inferBuiltinAccessReceiverResultKind(
                 *receiver, localsIn, inferExprKind, resolveExprPath, getReturnInfo, defMap, inferredReceiverKind) &&

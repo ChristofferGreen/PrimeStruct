@@ -1505,6 +1505,30 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(setupTypeMethodCallSource.find("canonicalMapHelper") ==
         std::string::npos);
+  CHECK(setupTypeMethodCallSource.find("isKeyValueConstructorDirectTargetPath(") !=
+        std::string::npos);
+  CHECK(setupTypeMethodCallSource.find("isMapConstructorDirectTargetPath(") ==
+        std::string::npos);
+  CHECK(setupTypeMethodCallSource.find("keyValueConstructorSurfaceMetadataLocal()") !=
+        std::string::npos);
+  CHECK(setupTypeMethodCallSource.find("mapConstructorSurfaceMetadataLocal()") ==
+        std::string::npos);
+  CHECK(setupTypeMethodCallSource.find(
+            "findKeyValueConstructorBridgePathChoiceBySource(") !=
+        std::string::npos);
+  CHECK(setupTypeMethodCallSource.find(
+            "findMapConstructorBridgePathChoiceBySource(") ==
+        std::string::npos);
+  CHECK(setupTypeMethodCallSource.find("isBareKeyValueAccessReceiverProbeExpr(") !=
+        std::string::npos);
+  CHECK(setupTypeMethodCallSource.find("isBareMapAccessReceiverProbeExpr(") ==
+        std::string::npos);
+  CHECK(setupTypeMethodCallSource.find(
+            "blocksBareKeyValueAccessReceiverProbeKindFallback") !=
+        std::string::npos);
+  CHECK(setupTypeMethodCallSource.find(
+            "blocksBareMapAccessReceiverProbeKindFallback") ==
+        std::string::npos);
   CHECK(setupTypeMethodCallSource.find("isBuiltinKeyValueContainsOrTryAtCall") !=
         std::string::npos);
   CHECK(setupTypeMethodCallSource.find("isBuiltinMapContainsOrTryAtCall") ==
