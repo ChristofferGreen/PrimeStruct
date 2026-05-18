@@ -361,7 +361,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return "";
   };
   const std::string explicitVectorHelperPath = explicitVectorMethodPath(methodName);
-  auto explicitMapMethodPath = [&](const std::string &rawMethodName) -> std::string {
+  auto explicitKeyValueMethodPath = [&](const std::string &rawMethodName) -> std::string {
     std::string candidate = rawMethodName;
     if (!candidate.empty() && candidate.front() == '/') {
       candidate.erase(candidate.begin());
@@ -386,7 +386,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return "";
   };
-  const std::string explicitMapHelperPath = explicitMapMethodPath(methodName);
+  const std::string explicitKeyValueHelperPath = explicitKeyValueMethodPath(methodName);
   std::string normalizedMethodName = methodName;
   if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
     normalizedMethodName.erase(normalizedMethodName.begin());
@@ -1978,7 +1978,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return false;
   };
-  auto borrowedMapHelperNameForReceiver = [&](const Expr &receiverExpr,
+  auto borrowedKeyValueHelperNameForReceiver = [&](const Expr &receiverExpr,
                                               const std::string &helperName) {
     if (!isWrappedMapReceiver(receiverExpr)) {
       return helperName;
@@ -2003,10 +2003,10 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return helperName;
   };
-  auto preferredMapMethodTarget = [&](const Expr &receiverExpr, const std::string &helperName) {
+  auto preferredKeyValueMethodTarget = [&](const Expr &receiverExpr, const std::string &helperName) {
     const std::string resolvedHelperName =
-        explicitMapHelperPath.empty()
-            ? borrowedMapHelperNameForReceiver(receiverExpr, helperName)
+        explicitKeyValueHelperPath.empty()
+            ? borrowedKeyValueHelperNameForReceiver(receiverExpr, helperName)
             : helperName;
     std::string keyType;
     std::string valueType;
@@ -2019,7 +2019,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     std::string explicitCanonicalKeyValueHelperName;
     if (resolveCanonicalKeyValueHelperNameFromSpelling(
-            explicitMapHelperPath, explicitCanonicalKeyValueHelperName)) {
+            explicitKeyValueHelperPath, explicitCanonicalKeyValueHelperName)) {
       return canonical;
     }
     if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
@@ -2027,33 +2027,33 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return canonical;
   };
-  auto setPreferredMapMethodTarget = [&](const Expr &receiverExpr, const std::string &helperName) {
-    const std::string preferredMapHelper = preferredMapMethodTarget(receiverExpr, helperName);
-    if (hasDeclaredDefinitionPath(preferredMapHelper) ||
-        hasDefinitionFamilyPath(preferredMapHelper)) {
-      resolvedOut = preferredMapHelper;
+  auto setPreferredKeyValueMethodTarget = [&](const Expr &receiverExpr, const std::string &helperName) {
+    const std::string preferredKeyValueHelper = preferredKeyValueMethodTarget(receiverExpr, helperName);
+    if (hasDeclaredDefinitionPath(preferredKeyValueHelper) ||
+        hasDefinitionFamilyPath(preferredKeyValueHelper)) {
+      resolvedOut = preferredKeyValueHelper;
       isBuiltinOut = false;
       return true;
     }
-    return setCollectionMethodTarget(preferredMapHelper);
+    return setCollectionMethodTarget(preferredKeyValueHelper);
   };
-  auto resolveExplicitRootMapMethodPath = [&]() -> bool {
-    if (!isRootedKeyValueHelperAliasPathForMethodTargets(explicitMapHelperPath)) {
+  auto resolveExplicitRootKeyValueMethodPath = [&]() -> bool {
+    if (!isRootedKeyValueHelperAliasPathForMethodTargets(explicitKeyValueHelperPath)) {
       return false;
     }
-    if (hasDeclaredDefinitionPath(explicitMapHelperPath)) {
-      resolvedOut = explicitMapHelperPath;
+    if (hasDeclaredDefinitionPath(explicitKeyValueHelperPath)) {
+      resolvedOut = explicitKeyValueHelperPath;
       isBuiltinOut = false;
       return true;
     }
     return failMethodTargetResolutionDiagnostic("unknown method: " +
-                                                explicitMapHelperPath);
+                                                explicitKeyValueHelperPath);
   };
-  if (!explicitMapHelperPath.empty()) {
-    const bool resolvedExplicitRootMapMethod =
-        resolveExplicitRootMapMethodPath();
-    if (resolvedExplicitRootMapMethod || !error_.empty()) {
-      return resolvedExplicitRootMapMethod;
+  if (!explicitKeyValueHelperPath.empty()) {
+    const bool resolvedExplicitRootKeyValueMethod =
+        resolveExplicitRootKeyValueMethodPath();
+    if (resolvedExplicitRootKeyValueMethod || !error_.empty()) {
+      return resolvedExplicitRootKeyValueMethod;
     }
   }
   auto resolveDirectReceiver = [&](const Expr &directCandidate,
@@ -2387,7 +2387,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             return *explicitTarget;
           }
         }
-        return setPreferredMapMethodTarget(receiver, normalizedMethodName);
+        return setPreferredKeyValueMethodTarget(receiver, normalizedMethodName);
       }
       if (normalizedMethodName == "count" && collectionTypePath == "/Buffer") {
         return setCollectionMethodTarget(preferredBufferMethodTarget("count"));
@@ -2408,16 +2408,16 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return setCollectionMethodTarget(preferredBufferMethodTarget(normalizedMethodName));
     }
     if (normalizedMethodName == "contains" && collectionTypePath == "/map") {
-      return setPreferredMapMethodTarget(receiver, "contains");
+      return setPreferredKeyValueMethodTarget(receiver, "contains");
     }
     if (normalizedMethodName == "tryAt" && collectionTypePath == "/map") {
-      return setPreferredMapMethodTarget(receiver, "tryAt");
+      return setPreferredKeyValueMethodTarget(receiver, "tryAt");
     }
     if (normalizedMethodName == "insert" && collectionTypePath == "/map") {
-      return setPreferredMapMethodTarget(receiver, "insert");
+      return setPreferredKeyValueMethodTarget(receiver, "insert");
     }
     if (normalizedMethodName == "size" && collectionTypePath == "/map") {
-      return setPreferredMapMethodTarget(receiver, "size");
+      return setPreferredKeyValueMethodTarget(receiver, "size");
     }
     if (isValueSurfaceAccessMethodName(normalizedMethodName)) {
       if (collectionTypePath == "/array") {
@@ -2432,7 +2432,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     if (isCanonicalMapAccessMethodName(normalizedMethodName) &&
         collectionTypePath == "/map") {
-      return setPreferredMapMethodTarget(receiver, normalizedMethodName);
+      return setPreferredKeyValueMethodTarget(receiver, normalizedMethodName);
     }
     if ((normalizedMethodName == "get" || normalizedMethodName == "get_ref") &&
         (isInternalSoaCollectionTypePath(collectionTypePath) ||
@@ -2520,7 +2520,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         return setCollectionMethodTarget(preferredBufferMethodTarget(normalizedMethodName));
       }
       if (isMapCollectionTypeName(elemBase)) {
-        return setPreferredMapMethodTarget(receiverExpr, normalizedMethodName);
+        return setPreferredKeyValueMethodTarget(receiverExpr, normalizedMethodName);
       }
       if (elemBase == "File" && isFileMethodName(normalizedMethodName)) {
         resolvedOut = preferredFileHelperTarget(normalizedMethodName,
@@ -2575,7 +2575,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (!resolvedIndexedMapType && !resolvedReceiverPackType) {
       return false;
     }
-    return setPreferredMapMethodTarget(receiverExpr, helperName);
+    return setPreferredKeyValueMethodTarget(receiverExpr, helperName);
   };
   auto isDirectMapConstructorReceiverCall = [&](const Expr &receiverExpr) {
     if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding || receiverExpr.isMethodCall) {
@@ -2647,7 +2647,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
            normalizedMethodName == "tryAt" || normalizedMethodName == "tryAt_ref" ||
            isCanonicalMapAccessMethodName(normalizedMethodName) ||
            normalizedMethodName == "insert" || normalizedMethodName == "insert_ref")) {
-        return setPreferredMapMethodTarget(receiver, normalizedMethodName);
+        return setPreferredKeyValueMethodTarget(receiver, normalizedMethodName);
       }
     }
     if (isPrimitiveBindingTypeName(normalizedBaseType)) {
@@ -2689,7 +2689,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           this->preferredCanonicalExperimentalMapHelperTarget(
               normalizedMethodName));
     }
-    return setPreferredMapMethodTarget(receiver, normalizedMethodName);
+    return setPreferredKeyValueMethodTarget(receiver, normalizedMethodName);
   }
   auto explicitVectorReceiverFamily = classifyExplicitVectorHelperReceiver(receiver);
   const bool isExplicitVectorFamilyReceiver =
@@ -2777,7 +2777,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           return *explicitTarget;
         }
       }
-      return setPreferredMapMethodTarget(receiver, normalizedMethodName);
+      return setPreferredKeyValueMethodTarget(receiver, normalizedMethodName);
     }
   }
   if (normalizedMethodName == "contains" || normalizedMethodName == "tryAt" ||
@@ -2786,12 +2786,12 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return true;
     }
     if (normalizedMethodName != "insert" && resolveMapTarget(receiver)) {
-      return setPreferredMapMethodTarget(receiver, normalizedMethodName);
+      return setPreferredKeyValueMethodTarget(receiver, normalizedMethodName);
     }
   }
   if (normalizedMethodName == "insert") {
     if (resolveMapTarget(receiver)) {
-      return setPreferredMapMethodTarget(receiver, "insert");
+      return setPreferredKeyValueMethodTarget(receiver, "insert");
     }
   }
   if (normalizedMethodName == "capacity") {
@@ -2830,7 +2830,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   }
   if (isCanonicalMapAccessMethodName(normalizedMethodName) &&
       resolveMapTarget(receiver)) {
-    return setPreferredMapMethodTarget(receiver, normalizedMethodName);
+    return setPreferredKeyValueMethodTarget(receiver, normalizedMethodName);
   }
   if (normalizedMethodName == "get" || normalizedMethodName == "get_ref") {
     if (resolveVectorTarget(receiver, elemType) &&
@@ -3022,7 +3022,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
               if (setIndexedArgsPackMapMethodTarget(receiver, normalizedMethodName)) {
                 return true;
               }
-              return setPreferredMapMethodTarget(receiver, normalizedMethodName);
+              return setPreferredKeyValueMethodTarget(receiver, normalizedMethodName);
             }
             if (elemBase == "File" && isFileMethodName(normalizedMethodName)) {
               resolvedOut = preferredFileHelperTarget(normalizedMethodName,
@@ -3068,7 +3068,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           const bool isExplicitAccessAlias =
               normalizedAccessName.find('/') != std::string::npos;
           const std::string preferredAccessPath =
-              preferredMapMethodTarget(receiver, accessHelperName);
+              preferredKeyValueMethodTarget(receiver, accessHelperName);
           auto defIt = defMap_.find(preferredAccessPath);
           if (defIt != defMap_.end() && defIt->second != nullptr) {
             BindingInfo inferredReturn;
@@ -3399,8 +3399,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
        normalizedMethodName == "tryAt" || normalizedMethodName == "tryAt_ref" ||
        isCanonicalMapAccessMethodName(normalizedMethodName) ||
        normalizedMethodName == "insert" || normalizedMethodName == "insert_ref")) {
-    if (isRootedKeyValueHelperAliasPathForMethodTargets(explicitMapHelperPath)) {
-      return resolveExplicitRootMapMethodPath();
+    if (isRootedKeyValueHelperAliasPathForMethodTargets(explicitKeyValueHelperPath)) {
+      return resolveExplicitRootKeyValueMethodPath();
     }
     const std::string canonicalKeyValueHelper =
         canonicalKeyValueHelperPathLocal(normalizedMethodName);
@@ -3409,7 +3409,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       isBuiltinOut = false;
       return true;
     }
-    return setPreferredMapMethodTarget(receiver, normalizedMethodName);
+    return setPreferredKeyValueMethodTarget(receiver, normalizedMethodName);
   }
   if (typeName == "Reference" &&
       (normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
@@ -3475,8 +3475,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
          normalizedMethodName == "at" ||
          normalizedMethodName == "at_unsafe" ||
          normalizedMethodName == "insert")) {
-      if (isRootedKeyValueHelperAliasPathForMethodTargets(explicitMapHelperPath)) {
-        return resolveExplicitRootMapMethodPath();
+      if (isRootedKeyValueHelperAliasPathForMethodTargets(explicitKeyValueHelperPath)) {
+        return resolveExplicitRootKeyValueMethodPath();
       }
       std::string borrowedHelperName = normalizedMethodName;
       if (borrowedHelperName == "count") {
@@ -3492,7 +3492,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       } else if (borrowedHelperName == "insert") {
         borrowedHelperName = "insert_ref";
       }
-      return setPreferredMapMethodTarget(receiver, borrowedHelperName);
+      return setPreferredKeyValueMethodTarget(receiver, borrowedHelperName);
     }
     if (isInternalSoaCollectionTypePath(normalizedPointeeCollectionTypePath) &&
         isCanonicalBorrowedSoaWrapperMethod) {

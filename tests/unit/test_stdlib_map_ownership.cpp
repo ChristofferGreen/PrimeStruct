@@ -635,6 +635,34 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(methodTargetResolutionSource.find("explicitMapHelperPath.rfind(\"/map/\", 0)") ==
         std::string::npos);
+  CHECK(methodTargetResolutionSource.find("explicitMapMethodPath") ==
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("explicitMapHelperPath") ==
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("borrowedMapHelperNameForReceiver") ==
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("preferredMapMethodTarget") ==
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("preferredMapHelper") ==
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("resolveExplicitRootMapMethodPath") ==
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("resolvedExplicitRootMapMethod") ==
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("explicitKeyValueMethodPath") !=
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("explicitKeyValueHelperPath") !=
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("borrowedKeyValueHelperNameForReceiver") !=
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("preferredKeyValueMethodTarget") !=
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("preferredKeyValueHelper") !=
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("resolveExplicitRootKeyValueMethodPath") !=
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("resolvedExplicitRootKeyValueMethod") !=
+        std::string::npos);
   CHECK(methodTargetResolutionSource.find("normalized == \"map/count\"") ==
         std::string::npos);
   CHECK(methodTargetResolutionSource.find("canonicalMapHelperPathLocal(") ==
