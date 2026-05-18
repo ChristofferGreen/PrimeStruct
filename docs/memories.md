@@ -824,6 +824,15 @@ This file stores durable session-derived facts that are useful in later work. Ke
   map-surface inventory allowance is down to the metadata ID and resolver
   switch traces.
 
+### collection-member-resolution-is-generic
+- Updated: 2026-05-18
+- Tags: stdlib, registry, collections
+- Fact: Collection helper/constructor member resolution should depend on
+  surface domain and shape, not individual vector/map/SoA surface IDs.
+- Evidence: `resolveSurfaceMemberNameImpl` now sends every non-error
+  collection surface through `resolveMetadataMemberName`, removing the
+  map-specific resolver switch cases from `StdlibSurfaceRegistry.cpp`.
+
 ### map-low-count-lowerer-caps-are-stale
 - Updated: 2026-05-18
 - Tags: ir, collections, audit

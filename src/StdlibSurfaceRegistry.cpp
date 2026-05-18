@@ -658,20 +658,14 @@ std::string_view resolveMetadataMemberName(const StdlibSurfaceMetadata &metadata
 
 std::string_view resolveSurfaceMemberNameImpl(const StdlibSurfaceMetadata &metadata,
                                               std::string_view memberName) {
-  switch (metadata.id) {
-    case StdlibSurfaceId::CollectionsVectorHelperSurface:
-    case StdlibSurfaceId::CollectionsVectorConstructors:
-    case StdlibSurfaceId::CollectionsMapHelpers:
-    case StdlibSurfaceId::CollectionsMapConstructors:
-    case StdlibSurfaceId::CollectionsColumnarHelpers:
-    case StdlibSurfaceId::CollectionsColumnarConstructors:
-      return resolveMetadataMemberName(metadata, memberName);
-    default:
-      if (matchesAny(metadata.memberNames, memberName)) {
-        return memberName;
-      }
-      return {};
+  if (metadata.domain == StdlibSurfaceDomain::Collections &&
+      metadata.shape != StdlibSurfaceShape::ErrorFamily) {
+    return resolveMetadataMemberName(metadata, memberName);
   }
+  if (matchesAny(metadata.memberNames, memberName)) {
+    return memberName;
+  }
+  return {};
 }
 
 } // namespace

@@ -201,6 +201,17 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-18 13:58 CEST | pass | mode: release | command:
+  `rg --pcre2 -n '/?std/collections/map(?:/|")|/?std/collections/experimental_map(?:/|")|(?<![A-Za-z0-9_/])/?map/|\bmap(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bCollectionsMap[A-Za-z0-9_]*\b|\bMap<' include/primec/StdlibSurfaceRegistry.h src/StdlibSurfaceRegistry.cpp`;
+  `cmake --build build-release --target PrimeStruct_misc_tests PrimeStruct_backend_runtime_tests PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="stdlib surface registry stays source locked,map insert surface registry rejects legacy compatibility spellings,collection helper surface registry resolves preferred compatibility spellings" --no-skip`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="stdlib surface metadata classifies collection helper categories" --no-skip`
+  | failures: none | notes: Collection surface member resolution now routes
+  every non-error collection surface through the generic manifest-backed member
+  resolver instead of switching on vector/map/SoA IDs. The direct scan now
+  reports only the two public header enum entries and the two map metadata ID
+  assignments in `StdlibSurfaceRegistry.cpp`.
 - 2026-05-18 13:56 CEST | pass | mode: release | command:
   `rg --pcre2 -n '/?std/collections/map(?:/|")|/?std/collections/experimental_map(?:/|")|(?<![A-Za-z0-9_/])/?map/|\bmap(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bCollectionsMap[A-Za-z0-9_]*\b|\bMap<' include/primec/StdlibSurfaceRegistry.h src/StdlibSurfaceRegistry.cpp`;
   `cmake --build build-release --target PrimeStruct_misc_tests PrimeStruct_backend_runtime_tests PrimeStruct_backend_ir_tests`;
