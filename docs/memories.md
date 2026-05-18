@@ -64,9 +64,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   metadata wrappers, builtin-name helper-surface checks, and access-target
   metadata/classifier helpers are also named in key/value terms; count-access
   local classifier wrappers, string-valued access helpers, native-tail
-  access resolver metadata, shared setup-type collection alias APIs, and
-  uninitialized-struct inference stdlib helper metadata follow the same
-  naming.
+  access resolver metadata, shared setup-type collection alias APIs,
+  uninitialized-struct inference stdlib helper metadata, and lowerer
+  tail-dispatch rewrite locals follow the same naming.
 - Evidence: The release `PrimeStruct_backend_ir_tests` target rebuilt after
   the kind, field, target-info, lookup-helper, and setup-inference access
   renames, focused backend IR windows passed, and direct `rg` scans over
@@ -92,7 +92,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   also passed after renaming the shared setup-type collection alias APIs and
   downstream call-site locals away from map-specific helper names; the same
   focused release target and source-lock test passed after renaming
-  uninitialized-struct inference helper metadata and published-helper locals.
+  uninitialized-struct inference helper metadata and published-helper locals;
+  the native-tail metadata source-lock test passed after renaming tail-dispatch
+  helper surface, insert rewrite, explicit helper rewrite, and borrowed
+  receiver locals to key/value terms.
 
 ### map-compatibility-aliases-require-source-definitions
 - Updated: 2026-05-18
