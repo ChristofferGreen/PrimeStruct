@@ -551,7 +551,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   rewrites should use shared map constructor member and `Entry` backing
   helpers instead of direct experimental-map constructor paths; template
   monomorph binding-call inference currently has no direct map-surface traces
-  and should stay source-locked at a zero inventory cap.
+  and should stay source-locked at a zero inventory cap; template-monomorph
+  fallback type inference should use shared map backing classifiers and
+  metadata-derived map collection aliases instead of direct map strings.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

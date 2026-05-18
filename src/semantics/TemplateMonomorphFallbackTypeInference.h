@@ -162,33 +162,16 @@ std::string resolveStructLikeExprPathForTemplatedVectorFallback(const Expr &expr
   return {};
 }
 
-std::string experimentalMapBackingLeafForFallbackInference(std::string typeName) {
-  typeName = normalizeBindingTypeName(std::move(typeName));
-  if (!typeName.empty() && typeName.front() == '/') {
-    typeName.erase(typeName.begin());
-  }
-  const size_t leafStart = typeName.find_last_of('/');
-  return leafStart == std::string::npos ? typeName : typeName.substr(leafStart + 1);
-}
-
 bool isUnspecializedExperimentalMapBackingTypeForFallbackInference(
     std::string typeName) {
   typeName = normalizeBindingTypeName(std::move(typeName));
-  if (!typeName.empty() && typeName.front() == '/') {
-    typeName.erase(typeName.begin());
-  }
-  return experimentalMapBackingLeafForFallbackInference(typeName) == "Map" &&
-         isExperimentalCollectionBackingTypeName("map", "Map", typeName);
+  return isUnspecializedExperimentalMapBackingTypeName(typeName);
 }
 
 bool isSpecializedExperimentalMapBackingTypeForFallbackInference(
     std::string typeName) {
   typeName = normalizeBindingTypeName(std::move(typeName));
-  if (!typeName.empty() && typeName.front() == '/') {
-    typeName.erase(typeName.begin());
-  }
-  return experimentalMapBackingLeafForFallbackInference(typeName) != "Map" &&
-         isExperimentalCollectionBackingTypeName("map", "Map", typeName);
+  return isQualifiedExperimentalMapBackingTypeName(typeName);
 }
 
 bool resolvesExperimentalMapValueTypeText(const std::string &typeText,
@@ -380,13 +363,16 @@ std::string inferExprTypeTextForTemplatedVectorFallback(const Expr &expr,
   }
   std::string builtinCollection;
   if (getBuiltinCollectionName(expr, builtinCollection)) {
+    const std::string mapCollectionAlias = mapCollectionAliasToken();
     if ((builtinCollection == "array" || builtinCollection == "vector" ||
          isTemplateMonomorphSoaReceiverType(builtinCollection)) &&
         expr.templateArgs.size() == 1) {
       return builtinCollection + "<" + expr.templateArgs.front() + ">";
     }
-    if (builtinCollection == "map" && expr.templateArgs.size() == 2) {
-      return "map<" + expr.templateArgs.front() + ", " + expr.templateArgs[1] + ">";
+    if (!mapCollectionAlias.empty() && builtinCollection == mapCollectionAlias &&
+        expr.templateArgs.size() == 2) {
+      return mapCollectionAlias + "<" + expr.templateArgs.front() + ", " +
+             expr.templateArgs[1] + ">";
     }
   }
   std::string resolved;
@@ -479,8 +465,10 @@ bool shouldPreferTemplatedVectorFallbackForTypeMismatch(const Definition &def,
     }
     return false;
   };
+  const std::string mapCollectionAlias = mapCollectionAliasToken();
   auto isCollectionEnvelopeBase = [&](const std::string &base) {
-    return base == "array" || base == "vector" || base == "map" ||
+    return base == "array" || base == "vector" ||
+           (!mapCollectionAlias.empty() && base == mapCollectionAlias) ||
            isTemplateMonomorphSoaReceiverType(base);
   };
   auto hasUnknownEnvelopeMismatch = [&](const std::string &normalizedExpected,

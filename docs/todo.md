@@ -2771,6 +2771,9 @@ Task template:
     - 2026-05-18: `TemplateMonomorphBindingCallInference.h` now has a
       source lock and zero inventory cap after its map-surface scan returned
       no production traces.
+    - 2026-05-18: `TemplateMonomorphFallbackTypeInference.h` now uses shared
+      map backing classifiers and metadata-derived map collection aliases for
+      fallback envelope inference; its inventory cap is zero.
     - Tighten or replace the TODO-4473 and TODO-4472 allowed-count
       inventories as traces are deleted; the final TODO-4464 state is zero
       tolerance for all PrimeStruct-map-specific production C++ traces, not a

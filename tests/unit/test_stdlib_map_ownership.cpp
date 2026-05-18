@@ -162,6 +162,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string templateExpressionRewriteSource =
       readText(repoRoot() / "src" / "semantics" /
                "TemplateMonomorphExpressionRewrite.h");
+  const std::string templateFallbackTypeInferenceSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "TemplateMonomorphFallbackTypeInference.h");
   const std::string templateCollectionCompatibilitySource =
       readText(repoRoot() / "src" / "semantics" /
                "TemplateMonomorphCollectionCompatibilityPaths.h");
@@ -376,6 +379,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!templateCoreSource.empty());
   REQUIRE(!templateReceiverSource.empty());
   REQUIRE(!templateExpressionRewriteSource.empty());
+  REQUIRE(!templateFallbackTypeInferenceSource.empty());
   REQUIRE(!templateBindingCallInferenceSource.empty());
   REQUIRE(!templateConstructorRewriteSource.empty());
   REQUIRE(!mapConstructorHelpersSource.empty());
@@ -716,6 +720,29 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(templateBindingCallInferenceSource.find(
             "isExperimentalCollectionBackingTypeName(\"map\"") ==
+        std::string::npos);
+  CHECK(templateFallbackTypeInferenceSource.find("std/collections/map") ==
+        std::string::npos);
+  CHECK(templateFallbackTypeInferenceSource.find("experimental_map") ==
+        std::string::npos);
+  CHECK(templateFallbackTypeInferenceSource.find("CollectionsMap") ==
+        std::string::npos);
+  CHECK(templateFallbackTypeInferenceSource.find("base == \"map\"") ==
+        std::string::npos);
+  CHECK(templateFallbackTypeInferenceSource.find("builtinCollection == \"map\"") ==
+        std::string::npos);
+  CHECK(templateFallbackTypeInferenceSource.find("return \"map<\"") ==
+        std::string::npos);
+  CHECK(templateFallbackTypeInferenceSource.find(
+            "isExperimentalCollectionBackingTypeName(\"map\"") ==
+        std::string::npos);
+  CHECK(templateFallbackTypeInferenceSource.find(
+            "isUnspecializedExperimentalMapBackingTypeName(typeName)") !=
+        std::string::npos);
+  CHECK(templateFallbackTypeInferenceSource.find(
+            "isQualifiedExperimentalMapBackingTypeName(typeName)") !=
+        std::string::npos);
+  CHECK(templateFallbackTypeInferenceSource.find("mapCollectionAliasToken()") !=
         std::string::npos);
   CHECK(templateConstructorRewriteSource.find("originalPath == \"/map\"") ==
         std::string::npos);
