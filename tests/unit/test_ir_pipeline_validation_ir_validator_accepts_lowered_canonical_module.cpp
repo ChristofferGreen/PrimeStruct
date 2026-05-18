@@ -1312,13 +1312,18 @@ TEST_CASE("stdlib surface metadata classifies collection helper categories") {
   CHECK(primec::isStdlibVectorStatementHelperName("remove_swap"));
   CHECK_FALSE(primec::isStdlibVectorStatementHelperName("count"));
 
-  CHECK(primec::isStdlibMapBaseHelperName("contains"));
-  CHECK(primec::isStdlibMapBaseHelperName("insert"));
-  CHECK_FALSE(primec::isStdlibMapBaseHelperName("contains_ref"));
-
-  CHECK(primec::isStdlibMapBorrowedHelperName("contains_ref"));
-  CHECK(primec::isStdlibMapBorrowedHelperName("at_ref"));
-  CHECK_FALSE(primec::isStdlibMapBorrowedHelperName("contains"));
+  const auto *mapHelperMetadata =
+      primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  REQUIRE(mapHelperMetadata != nullptr);
+  auto resolvedMapHelperName = [&](std::string_view memberName) {
+    return primec::resolveStdlibSurfaceMemberName(*mapHelperMetadata, memberName);
+  };
+  CHECK(resolvedMapHelperName("contains") == "contains");
+  CHECK(resolvedMapHelperName("insert") == "insert");
+  CHECK_FALSE(resolvedMapHelperName("contains_ref").empty());
+  CHECK(resolvedMapHelperName("contains_ref").ends_with("_ref"));
+  CHECK(resolvedMapHelperName("at_ref").ends_with("_ref"));
+  CHECK_FALSE(resolvedMapHelperName("contains").ends_with("_ref"));
 }
 
 TEST_CASE("ir lowerer helper keeps parser-shaped intrinsic memory builtins") {

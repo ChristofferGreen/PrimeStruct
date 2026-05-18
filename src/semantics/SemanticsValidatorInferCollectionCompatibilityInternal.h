@@ -249,11 +249,24 @@ enum class RemovedCollectionHelperFamily {
 }
 
 [[maybe_unused]] bool isPublishedMapBaseHelperName(std::string_view helperName) {
-  return isStdlibMapBaseHelperName(helperName);
+  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return false;
+  }
+  const std::string_view resolvedMemberName =
+      resolveStdlibSurfaceMemberName(*metadata, helperName);
+  return !resolvedMemberName.empty() && resolvedMemberName != "entry" &&
+         resolvedMemberName != "map" && !resolvedMemberName.ends_with("_ref");
 }
 
 [[maybe_unused]] bool isPublishedBorrowedMapHelperName(std::string_view helperName) {
-  return isStdlibMapBorrowedHelperName(helperName);
+  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return false;
+  }
+  const std::string_view resolvedMemberName =
+      resolveStdlibSurfaceMemberName(*metadata, helperName);
+  return resolvedMemberName.ends_with("_ref");
 }
 
 [[maybe_unused]] bool isRemovedPublishedVectorStatementHelperName(

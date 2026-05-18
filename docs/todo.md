@@ -2607,6 +2607,11 @@ Task template:
       those checks through `collections.map_helpers` and
       `collections.map_constructors` metadata, and its inventory allowance is
       zero.
+    - 2026-05-18: The public stdlib surface registry API no longer exposes
+      map-specific base/borrowed helper classifier functions. The only
+      production semantic consumer now derives that classification locally from
+      `collections.map_helpers` metadata, and the registry source inventory
+      allowance dropped to its remaining enum/manifest traces.
     - 2026-05-17: Lowerer builtin-name and shared helper map-helper lookups no
       longer name the map helper surface ID directly; they now obtain helper
       metadata through the `collections.map_helpers` bridge key, and the

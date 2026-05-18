@@ -810,27 +810,6 @@ bool isStdlibVectorStatementHelperName(std::string_view memberName) {
   return metadata != nullptr && matchesAny(metadata->statementMemberNames, memberName);
 }
 
-bool isStdlibMapBaseHelperName(std::string_view memberName) {
-  const auto *metadata = findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsMapHelpers);
-  if (metadata == nullptr) {
-    return false;
-  }
-  const std::string_view resolvedMemberName =
-      resolveMetadataMemberName(*metadata, memberName);
-  return !resolvedMemberName.empty() && resolvedMemberName != "entry" &&
-         resolvedMemberName != "map" && !resolvedMemberName.ends_with("_ref");
-}
-
-bool isStdlibMapBorrowedHelperName(std::string_view memberName) {
-  const auto *metadata = findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsMapHelpers);
-  if (metadata == nullptr) {
-    return false;
-  }
-  const std::string_view resolvedMemberName =
-      resolveMetadataMemberName(*metadata, memberName);
-  return resolvedMemberName.ends_with("_ref");
-}
-
 const StdlibSurfaceMetadata *findStdlibSurfaceMetadataBySpelling(std::string_view spelling) {
   const auto it = std::find_if(
       Registry.begin(), Registry.end(), [spelling](const StdlibSurfaceMetadata &metadata) {
