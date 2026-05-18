@@ -221,6 +221,15 @@
   instructions; adjacent key/value target metadata validation cases passed.
 
 ## Recent Test Runs
+- 2026-05-18 18:46 CEST | pass | mode: release | command:
+  `git diff --check`;
+  `rg -n 'ArrayMapAccessElementKindResolution|resolveArrayMapAccessElementKind|arrayMapAccess|ArrayMapAccess' include src tests/unit/test_ir_pipeline_validation_ir_lowerer_*`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup inference helpers tolerate missing callbacks,ir lowerer setup inference helper handles invalid comparison/operator calls,ir lowerer setup inference helper rejects reordered bare key/value access kinds,ir lowerer setup inference helper rejects bare key/value reference access kinds" --no-skip`
+  | failures: none | notes: Setup-inference access element-kind APIs now
+  use array/key-value names instead of array/map names, and stale bare
+  `at`/`at_unsafe` fixture expectations were refreshed to the current
+  canonical-only behavior.
 - 2026-05-18 18:32 CEST | pass | mode: release | command:
   `git diff --check`;
   `rg -n 'MapAccessLookupEmitResult|tryEmitMapAccessLookup|tryEmitMapContainsLookup|MapLookupStringKeyResult|MapLookupKeyLocalEmitResult|MapLookupLoopLocals|MapLookupLoopConditionAnchors|MapLookupLoopMatchAnchors|tryResolveMapLookupStringKey|tryEmitMapLookupStringKeyLocal|emitMapLookupNonStringKeyLocal|emitMapLookupKeyLocal|emitMapLookupTargetPointerLocal|emitMapLookupLoopSearchScaffold|emitMapLookupAccessEpilogue|emitMapLookupContainsResult|emitMapLookupAccess|emitMapLookupContains|emitMapLookupTryAt|emitMapLookupLoopLocals|emitMapLookupLoopCondition|emitMapLookupLoopMatchCheck|emitMapLookupLoopAdvanceAndPatch|emitMapLookupAtKeyNotFoundGuard|emitMapLookupValueLoad|validateMapLookupKeyKind|mapLookup' include/primec/testing/ir_lowerer_helpers src/ir_lowerer tests/unit/test_ir_pipeline_validation_ir_lowerer_*`;

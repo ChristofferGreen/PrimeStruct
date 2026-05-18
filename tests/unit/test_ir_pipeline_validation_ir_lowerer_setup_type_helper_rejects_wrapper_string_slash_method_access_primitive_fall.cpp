@@ -1392,7 +1392,7 @@ TEST_CASE("ir lowerer setup type helper resolves dereferenced indexed variadic m
 }
 
 TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned slash-method map access kinds") {
-  using Resolution = primec::ir_lowerer::ArrayMapAccessElementKindResolution;
+  using Resolution = primec::ir_lowerer::ArrayKeyValueAccessElementKindResolution;
 
   primec::Expr wrapMapCall;
   wrapMapCall.kind = primec::Expr::Kind::Call;
@@ -1420,7 +1420,7 @@ TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned slash-met
     return true;
   };
 
-  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+  CHECK(primec::ir_lowerer::resolveArrayKeyValueAccessElementKind(
             accessExpr,
             {},
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
@@ -1430,7 +1430,7 @@ TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned slash-met
 
   accessExpr.name = "/std/collections/map/at_unsafe";
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+  CHECK(primec::ir_lowerer::resolveArrayKeyValueAccessElementKind(
             accessExpr,
             {},
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
@@ -1440,7 +1440,7 @@ TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned slash-met
 }
 
 TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned canonical map access int32 kinds") {
-  using Resolution = primec::ir_lowerer::ArrayMapAccessElementKindResolution;
+  using Resolution = primec::ir_lowerer::ArrayKeyValueAccessElementKindResolution;
 
   primec::Expr wrapMapCall;
   wrapMapCall.kind = primec::Expr::Kind::Call;
@@ -1467,7 +1467,7 @@ TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned canonical
     return true;
   };
 
-  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+  CHECK(primec::ir_lowerer::resolveArrayKeyValueAccessElementKind(
             accessExpr,
             {},
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
@@ -1477,7 +1477,7 @@ TEST_CASE("ir lowerer setup inference helper resolves wrapper-returned canonical
 
   accessExpr.name = "/std/collections/map/at_unsafe";
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+  CHECK(primec::ir_lowerer::resolveArrayKeyValueAccessElementKind(
             accessExpr,
             {},
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },

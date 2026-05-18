@@ -310,7 +310,7 @@ CallExpressionReturnKindResolution resolveCallExpressionReturnKind(
   return CallExpressionReturnKindResolution::NotResolved;
 }
 
-ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
+ArrayKeyValueAccessElementKindResolution resolveArrayKeyValueAccessElementKind(
     const Expr &expr,
     const LocalMap &localsIn,
     const IsSetupInferenceEntryArgsNameFn &isEntryArgsName,
@@ -339,10 +339,10 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
 
   std::string accessName;
   if (!getBuiltinArrayAccessName(expr, accessName)) {
-    return ArrayMapAccessElementKindResolution::NotMatched;
+    return ArrayKeyValueAccessElementKindResolution::NotMatched;
   }
   if (expr.args.size() != 2) {
-    return ArrayMapAccessElementKindResolution::Resolved;
+    return ArrayKeyValueAccessElementKindResolution::Resolved;
   }
 
   auto hasNamedArgs = [&]() {
@@ -432,18 +432,18 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
     const Expr &target = expr.args[receiverIndex];
     if (target.kind == Expr::Kind::StringLiteral) {
       kindOut = LocalInfo::ValueKind::Int32;
-      return ArrayMapAccessElementKindResolution::Resolved;
+      return ArrayKeyValueAccessElementKindResolution::Resolved;
     }
     if (target.kind == Expr::Kind::Name) {
       auto it = localsIn.find(target.name);
       const LocalInfo *info = it != localsIn.end() ? &it->second : nullptr;
       if (isGraphOrFallbackStringReceiver(target, info)) {
         kindOut = LocalInfo::ValueKind::Int32;
-        return ArrayMapAccessElementKindResolution::Resolved;
+        return ArrayKeyValueAccessElementKindResolution::Resolved;
       }
     }
     if (isEntryArgsNameFn(target, localsIn)) {
-      return ArrayMapAccessElementKindResolution::Resolved;
+      return ArrayKeyValueAccessElementKindResolution::Resolved;
     }
 
     if (target.kind == Expr::Kind::Name) {
@@ -454,21 +454,21 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
            (it->second.kind == LocalInfo::Kind::Pointer && it->second.pointerToKeyValueCollection)) &&
           it->second.keyValueValueKind != LocalInfo::ValueKind::Unknown) {
         kindOut = it->second.keyValueValueKind;
-        return ArrayMapAccessElementKindResolution::Resolved;
+        return ArrayKeyValueAccessElementKindResolution::Resolved;
       }
     } else if (target.kind == Expr::Kind::Call) {
       LocalInfo::ValueKind callValueKind = LocalInfo::ValueKind::Unknown;
       if (resolveCallCollectionAccessValueKind &&
           resolveCallCollectionAccessValueKind(target, localsIn, callValueKind)) {
         kindOut = callValueKind;
-        return ArrayMapAccessElementKindResolution::Resolved;
+        return ArrayKeyValueAccessElementKindResolution::Resolved;
       }
       std::string collection;
       if (getBuiltinCollectionName(target, collection) && collection == "map" && target.templateArgs.size() == 2) {
         const LocalInfo::ValueKind valueKind = valueKindFromTypeName(target.templateArgs[1]);
         if (valueKind != LocalInfo::ValueKind::Unknown) {
           kindOut = valueKind;
-          return ArrayMapAccessElementKindResolution::Resolved;
+          return ArrayKeyValueAccessElementKindResolution::Resolved;
         }
       }
     }
@@ -497,10 +497,10 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
     }
     if (elementKind != LocalInfo::ValueKind::Unknown) {
       kindOut = elementKind;
-      return ArrayMapAccessElementKindResolution::Resolved;
+      return ArrayKeyValueAccessElementKindResolution::Resolved;
     }
   }
-  return ArrayMapAccessElementKindResolution::Resolved;
+  return ArrayKeyValueAccessElementKindResolution::Resolved;
 }
 
 LocalInfo::ValueKind inferBodyValueKindWithLocalsScaffolding(

@@ -280,7 +280,7 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
 
         if (isBuiltinCountLikeCall(expr) && expr.args.size() == 1) {
           LocalInfo::ValueKind accessElementKind = LocalInfo::ValueKind::Unknown;
-          if (resolveArrayMapAccessElementKind(
+          if (resolveArrayKeyValueAccessElementKind(
                   expr.args.front(),
                   localsIn,
                   [&](const Expr &candidate, const LocalMap &candidateLocals) {
@@ -292,7 +292,7 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
                   },
                   [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
                     return inferExprKindOrUnknown(candidateExpr, candidateLocals);
-                  }) == ArrayMapAccessElementKindResolution::Resolved &&
+                  }) == ArrayKeyValueAccessElementKindResolution::Resolved &&
               accessElementKind == LocalInfo::ValueKind::String) {
             kindOut = LocalInfo::ValueKind::Int32;
             return true;
@@ -359,7 +359,7 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
         }
 
         LocalInfo::ValueKind accessElementKind = LocalInfo::ValueKind::Unknown;
-        if (resolveArrayMapAccessElementKind(
+        if (resolveArrayKeyValueAccessElementKind(
                 expr,
                 localsIn,
                 [&](const Expr &candidate, const LocalMap &candidateLocals) {
@@ -371,7 +371,7 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
                 },
                 [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
                   return inferExprKindOrUnknown(candidateExpr, candidateLocals);
-                }) == ArrayMapAccessElementKindResolution::Resolved) {
+                }) == ArrayKeyValueAccessElementKindResolution::Resolved) {
           kindOut = accessElementKind;
           return true;
         }

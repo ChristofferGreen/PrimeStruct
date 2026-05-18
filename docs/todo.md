@@ -358,7 +358,9 @@ Task template:
   spellings, and definition return inference now detects deferred canonical
   map access helpers through stdlib map helper metadata instead of direct
   canonical map access path literals, and lowerer map lookup helper APIs now
-  use key/value lookup names instead of map-specific lookup helper names. The
+  use key/value lookup names instead of map-specific lookup helper names, and
+  setup-inference access element-kind helpers now use array/key-value names
+  instead of array/map API names. The
   remaining production
   lowerer/emitter
   experimental-map traces

@@ -41,11 +41,11 @@ TEST_CASE("ir lowerer setup inference helpers tolerate missing callbacks") {
   accessCall.kind = primec::Expr::Kind::Call;
   accessCall.name = "at";
   accessCall.args = {receiver, index};
-  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+  CHECK(primec::ir_lowerer::resolveArrayKeyValueAccessElementKind(
             accessCall,
             {},
             primec::ir_lowerer::IsSetupInferenceEntryArgsNameFn{},
-            kindOut) == primec::ir_lowerer::ArrayMapAccessElementKindResolution::Resolved);
+            kindOut) == primec::ir_lowerer::ArrayKeyValueAccessElementKindResolution::NotMatched);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
   primec::Expr returnCall;

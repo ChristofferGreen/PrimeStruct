@@ -42,7 +42,7 @@ enum class CallExpressionReturnKindResolution {
   Resolved,
   MatchedButUnsupported,
 };
-enum class ArrayMapAccessElementKindResolution {
+enum class ArrayKeyValueAccessElementKindResolution {
   NotMatched,
   Resolved,
 };
@@ -99,7 +99,7 @@ CallExpressionReturnKindResolution resolveCallExpressionReturnKind(
     const ResolveSetupInferenceCallReturnKindFn &resolveCountMethodCallReturnKind,
     const ResolveSetupInferenceCallReturnKindFn &resolveMethodCallReturnKind,
     LocalInfo::ValueKind &kindOut);
-ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
+ArrayKeyValueAccessElementKindResolution resolveArrayKeyValueAccessElementKind(
     const Expr &expr,
     const LocalMap &localsIn,
     const IsSetupInferenceEntryArgsNameFn &isEntryArgsName,

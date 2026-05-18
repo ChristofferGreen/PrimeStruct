@@ -56,16 +56,18 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Tags: ir, lowerer, collections
 - Fact: Lowerer locals classify map-shaped collection values with
   `LocalInfo::Kind::KeyValueCollection`; `LocalInfo::Kind::Map` is retired.
-  Temporary key/value collection metadata, access-target helpers, and lookup
-  helper APIs carry backing details until later TODO-4464 slices remove the
-  remaining C++ map substrate.
+  Temporary key/value collection metadata, access-target helpers, lookup
+  helper APIs, and setup-inference access element-kind helpers carry backing
+  details until later TODO-4464 slices remove the remaining C++ map substrate.
 - Evidence: The release `PrimeStruct_backend_ir_tests` target rebuilt after
-  the kind, field, target-info, and lookup-helper renames, focused backend IR
-  windows passed, and direct `rg` scans over `include`, `src`, and `tests`
-  found no remaining `LocalInfo::Kind::Map`, `mapKeyKind`, `mapValueKind`,
-  `referenceToMap`, `pointerToMap`, `MapAccessTargetInfo`, `isMapTarget`,
-  `resolveMapAccessTargetInfo`, `MapLookupStringKeyResult`, or
-  `emitMapLookupAccess`.
+  the kind, field, target-info, lookup-helper, and setup-inference access
+  renames, focused backend IR windows passed, and direct `rg` scans over
+  `include`, `src`, and `tests` found no remaining `LocalInfo::Kind::Map`,
+  `mapKeyKind`, `mapValueKind`, `referenceToMap`, `pointerToMap`,
+  `MapAccessTargetInfo`, `isMapTarget`, `resolveMapAccessTargetInfo`,
+  `MapLookupStringKeyResult`, `emitMapLookupAccess`,
+  `ArrayMapAccessElementKindResolution`, or
+  `resolveArrayMapAccessElementKind`.
 
 ### map-compatibility-aliases-require-source-definitions
 - Updated: 2026-05-18

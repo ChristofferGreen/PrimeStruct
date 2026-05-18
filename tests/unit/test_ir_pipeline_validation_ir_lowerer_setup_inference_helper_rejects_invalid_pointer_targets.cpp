@@ -558,7 +558,7 @@ TEST_CASE("ir lowerer setup inference helper handles unresolved call return kind
 }
 
 TEST_CASE("ir lowerer setup inference helper resolves array and map access kinds") {
-  using Resolution = primec::ir_lowerer::ArrayMapAccessElementKindResolution;
+  using Resolution = primec::ir_lowerer::ArrayKeyValueAccessElementKindResolution;
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo mapInfo;
@@ -584,7 +584,7 @@ TEST_CASE("ir lowerer setup inference helper resolves array and map access kinds
   stringAccess.args = {stringTarget, indexExpr};
 
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+  CHECK(primec::ir_lowerer::resolveArrayKeyValueAccessElementKind(
             stringAccess,
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
@@ -598,7 +598,7 @@ TEST_CASE("ir lowerer setup inference helper resolves array and map access kinds
   mapAccess.kind = primec::Expr::Kind::Call;
   mapAccess.name = "at";
   mapAccess.args = {mapTarget, indexExpr};
-  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+  CHECK(primec::ir_lowerer::resolveArrayKeyValueAccessElementKind(
             mapAccess,
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
@@ -612,7 +612,7 @@ TEST_CASE("ir lowerer setup inference helper resolves array and map access kinds
   arrayAccess.kind = primec::Expr::Kind::Call;
   arrayAccess.name = "at_unsafe";
   arrayAccess.args = {arrayTarget, indexExpr};
-  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+  CHECK(primec::ir_lowerer::resolveArrayKeyValueAccessElementKind(
             arrayAccess,
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
@@ -620,8 +620,8 @@ TEST_CASE("ir lowerer setup inference helper resolves array and map access kinds
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Float32);
 }
 
-TEST_CASE("ir lowerer setup inference helper resolves reordered positional access kinds") {
-  using Resolution = primec::ir_lowerer::ArrayMapAccessElementKindResolution;
+TEST_CASE("ir lowerer setup inference helper rejects reordered bare key/value access kinds") {
+  using Resolution = primec::ir_lowerer::ArrayKeyValueAccessElementKindResolution;
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo mapInfo;
@@ -647,16 +647,16 @@ TEST_CASE("ir lowerer setup inference helper resolves reordered positional acces
   accessExpr.args = {keyNameExpr, valuesExpr};
 
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+  CHECK(primec::ir_lowerer::resolveArrayKeyValueAccessElementKind(
             accessExpr,
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            kindOut) == Resolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
+            kindOut) == Resolution::NotMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
-TEST_CASE("ir lowerer setup inference helper resolves string map reference access kinds") {
-  using Resolution = primec::ir_lowerer::ArrayMapAccessElementKindResolution;
+TEST_CASE("ir lowerer setup inference helper rejects bare key/value reference access kinds") {
+  using Resolution = primec::ir_lowerer::ArrayKeyValueAccessElementKindResolution;
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo mapRefInfo;
@@ -679,12 +679,12 @@ TEST_CASE("ir lowerer setup inference helper resolves string map reference acces
   accessExpr.args = {valuesExpr, indexExpr};
 
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+  CHECK(primec::ir_lowerer::resolveArrayKeyValueAccessElementKind(
             accessExpr,
             locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            kindOut) == Resolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
+            kindOut) == Resolution::NotMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
 
