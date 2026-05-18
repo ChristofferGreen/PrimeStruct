@@ -171,7 +171,7 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
   const bool isExplicitKeyValueMethodAlias = isExplicitKeyValueMethodAliasPath(scopedMethodPath);
   const bool isExplicitKeyValueContainsOrTryAtMethod =
       isExplicitKeyValueContainsOrTryAtMethodPath(scopedMethodPath);
-  const bool isBuiltinMapContainsOrTryAtCall =
+  const bool isBuiltinKeyValueContainsOrTryAtCall =
       isSimpleCallName(callExpr, "contains") || isSimpleCallName(callExpr, "tryAt") ||
       isSimpleCallName(callExpr, "insert");
   const bool allowBuiltinFallback =
@@ -179,7 +179,7 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
       !isExplicitKeyValueContainsOrTryAtMethod &&
       !isBuiltinBareVectorCapacityMethod &&
       (isBuiltinCountOrCapacityCall || isBuiltinVectorMutatorCall ||
-       isBuiltinMapContainsOrTryAtCall ||
+       isBuiltinKeyValueContainsOrTryAtCall ||
        (isArrayCountCall && isArrayCountCall(callExpr, localsIn)) ||
        (isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn)) || isBuiltinAccessCall);
   const Expr &receiver = callExpr.args.front();
@@ -693,7 +693,7 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
         return true;
       }
     }
-    auto isBareMapAccessReceiverProbeExpr = [&](const Expr &candidateExpr) {
+    auto isBareKeyValueAccessReceiverProbeExpr = [&](const Expr &candidateExpr) {
       if (candidateExpr.kind != Expr::Kind::Call || candidateExpr.args.size() != 2) {
         return false;
       }
@@ -706,7 +706,7 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
                                         semanticIndex)
                  .isKeyValueTarget;
     };
-    auto isBareMapTryAtReceiverProbeExpr = [&](const Expr &candidateExpr) {
+    auto isBareKeyValueTryAtReceiverProbeExpr = [&](const Expr &candidateExpr) {
       return candidateExpr.kind == Expr::Kind::Call && candidateExpr.args.size() == 2 &&
              isSimpleCallName(candidateExpr, "tryAt") &&
              resolveKeyValueAccessTargetInfo(candidateExpr.args.front(),
@@ -716,25 +716,25 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
                                         semanticIndex)
                  .isKeyValueTarget;
     };
-    const bool blocksExplicitMapReceiverProbeKindFallback =
+    const bool blocksExplicitKeyValueReceiverProbeKindFallback =
         isExplicitKeyValueReceiverProbeHelperExpr(receiverExpr);
-    const bool blocksBareMapAccessReceiverProbeKindFallback =
-        isBareMapAccessReceiverProbeExpr(receiverExpr);
-    const bool blocksBareMapTryAtReceiverProbeKindFallback =
-        isBareMapTryAtReceiverProbeExpr(receiverExpr);
+    const bool blocksBareKeyValueAccessReceiverProbeKindFallback =
+        isBareKeyValueAccessReceiverProbeExpr(receiverExpr);
+    const bool blocksBareKeyValueTryAtReceiverProbeKindFallback =
+        isBareKeyValueTryAtReceiverProbeExpr(receiverExpr);
     const bool blocksExplicitVectorReceiverProbeKindFallback =
         blocksExplicitVectorReceiverProbeKindFallbackExpr(receiverExpr);
     const LocalInfo::ValueKind inferredKind =
-        (inferExprKind && !blocksExplicitMapReceiverProbeKindFallback &&
-         !blocksBareMapAccessReceiverProbeKindFallback &&
-         !blocksBareMapTryAtReceiverProbeKindFallback &&
+        (inferExprKind && !blocksExplicitKeyValueReceiverProbeKindFallback &&
+         !blocksBareKeyValueAccessReceiverProbeKindFallback &&
+         !blocksBareKeyValueTryAtReceiverProbeKindFallback &&
          !blocksExplicitVectorReceiverProbeKindFallback)
             ? inferExprKind(receiverExpr, localsIn)
             : LocalInfo::ValueKind::Unknown;
     typeNameOut = resolveMethodReceiverTypeNameFromCallExpr(receiverExpr, inferredKind, resolveExprPath);
-    if (typeNameOut.empty() && !blocksExplicitMapReceiverProbeKindFallback &&
-        !blocksBareMapAccessReceiverProbeKindFallback &&
-        !blocksBareMapTryAtReceiverProbeKindFallback &&
+    if (typeNameOut.empty() && !blocksExplicitKeyValueReceiverProbeKindFallback &&
+        !blocksBareKeyValueAccessReceiverProbeKindFallback &&
+        !blocksBareKeyValueTryAtReceiverProbeKindFallback &&
         !blocksExplicitVectorReceiverProbeKindFallback && receiverExpr.isMethodCall &&
         receiverExpr.args.size() == 2) {
       std::string accessName;

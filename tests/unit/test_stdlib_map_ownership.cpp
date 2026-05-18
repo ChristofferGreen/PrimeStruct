@@ -320,6 +320,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererSetupTypeMethodTargetHelpers.cpp");
   const std::string setupTypeMethodCallSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererSetupTypeMethodCallResolution.cpp");
+  const std::string setupTypeReceiverTargetSource =
+      readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererSetupTypeReceiverTargetHelpers.cpp");
   const std::string lowererStructReturnPathSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererStructReturnPathHelpers.cpp");
   const std::string setupTypeCollectionSource =
@@ -417,6 +419,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!inferenceBaseKindSource.empty());
   REQUIRE(!setupTypeMethodTargetSource.empty());
   REQUIRE(!setupTypeMethodCallSource.empty());
+  REQUIRE(!setupTypeReceiverTargetSource.empty());
   REQUIRE(!lowererStructReturnPathSource.empty());
   REQUIRE(!setupTypeCollectionSource.empty());
   REQUIRE(!countAccessSource.empty());
@@ -1513,6 +1516,30 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(setupTypeMethodCallSource.find("collectionMemberPath(\"map\", \"count\")") !=
         std::string::npos);
   CHECK(setupTypeMethodCallSource.find("\"/std/collections/map/count\"") ==
+        std::string::npos);
+  CHECK(setupTypeReceiverTargetSource.find("isBuiltinKeyValueContainsOrTryAtCall") !=
+        std::string::npos);
+  CHECK(setupTypeReceiverTargetSource.find("isBuiltinMapContainsOrTryAtCall") ==
+        std::string::npos);
+  CHECK(setupTypeReceiverTargetSource.find("isBareKeyValueAccessReceiverProbeExpr(") !=
+        std::string::npos);
+  CHECK(setupTypeReceiverTargetSource.find("isBareMapAccessReceiverProbeExpr(") ==
+        std::string::npos);
+  CHECK(setupTypeReceiverTargetSource.find("isBareKeyValueTryAtReceiverProbeExpr(") !=
+        std::string::npos);
+  CHECK(setupTypeReceiverTargetSource.find("isBareMapTryAtReceiverProbeExpr(") ==
+        std::string::npos);
+  CHECK(setupTypeReceiverTargetSource.find(
+            "blocksExplicitKeyValueReceiverProbeKindFallback") !=
+        std::string::npos);
+  CHECK(setupTypeReceiverTargetSource.find(
+            "blocksExplicitMapReceiverProbeKindFallback") ==
+        std::string::npos);
+  CHECK(setupTypeReceiverTargetSource.find(
+            "blocksBareKeyValueAccessReceiverProbeKindFallback") !=
+        std::string::npos);
+  CHECK(setupTypeReceiverTargetSource.find(
+            "blocksBareMapAccessReceiverProbeKindFallback") ==
         std::string::npos);
   CHECK(setupTypeCollectionSource.find("const std::string mapPrefix = \"map/\"") ==
         std::string::npos);
