@@ -785,7 +785,7 @@ TEST_CASE("ir lowerer call helpers map key compare opcode selection") {
 
 TEST_CASE("ir lowerer call helpers resolve map lookup string keys") {
   using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
-  using Result = primec::ir_lowerer::MapLookupStringKeyResult;
+  using Result = primec::ir_lowerer::KeyValueLookupStringKeyResult;
 
   primec::Expr keyExpr;
   keyExpr.kind = primec::Expr::Kind::Name;
@@ -794,7 +794,7 @@ TEST_CASE("ir lowerer call helpers resolve map lookup string keys") {
   std::string error;
   int32_t stringIndex = -1;
 
-  CHECK(primec::ir_lowerer::tryResolveMapLookupStringKey(
+  CHECK(primec::ir_lowerer::tryResolveKeyValueLookupStringKey(
             Kind::Int32,
             keyExpr,
             locals,
@@ -803,7 +803,7 @@ TEST_CASE("ir lowerer call helpers resolve map lookup string keys") {
             stringIndex,
             error) == Result::NotHandled);
 
-  CHECK(primec::ir_lowerer::tryResolveMapLookupStringKey(
+  CHECK(primec::ir_lowerer::tryResolveKeyValueLookupStringKey(
             Kind::String,
             keyExpr,
             locals,
@@ -815,7 +815,7 @@ TEST_CASE("ir lowerer call helpers resolve map lookup string keys") {
 
   error.clear();
   stringIndex = -1;
-  CHECK(primec::ir_lowerer::tryResolveMapLookupStringKey(
+  CHECK(primec::ir_lowerer::tryResolveKeyValueLookupStringKey(
             Kind::String,
             keyExpr,
             locals,
@@ -831,7 +831,7 @@ TEST_CASE("ir lowerer call helpers resolve map lookup string keys") {
   CHECK(error.empty());
 
   error.clear();
-  CHECK(primec::ir_lowerer::tryResolveMapLookupStringKey(
+  CHECK(primec::ir_lowerer::tryResolveKeyValueLookupStringKey(
             Kind::String,
             keyExpr,
             locals,
@@ -847,7 +847,7 @@ TEST_CASE("ir lowerer call helpers resolve map lookup string keys") {
   CHECK(error.empty());
 
   error.clear();
-  CHECK(primec::ir_lowerer::tryResolveMapLookupStringKey(
+  CHECK(primec::ir_lowerer::tryResolveKeyValueLookupStringKey(
             Kind::String,
             keyExpr,
             locals,
@@ -865,7 +865,7 @@ TEST_CASE("ir lowerer call helpers resolve map lookup string keys") {
 
 TEST_CASE("ir lowerer call helpers emit map lookup string key locals") {
   using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
-  using Result = primec::ir_lowerer::MapLookupKeyLocalEmitResult;
+  using Result = primec::ir_lowerer::KeyValueLookupKeyLocalEmitResult;
 
   primec::Expr keyExpr;
   keyExpr.kind = primec::Expr::Kind::Name;
@@ -875,7 +875,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup string key locals") {
   int32_t pushed = -1;
   int32_t stored = -1;
 
-  CHECK(primec::ir_lowerer::tryEmitMapLookupStringKeyLocal(
+  CHECK(primec::ir_lowerer::tryEmitKeyValueLookupStringKeyLocal(
             Kind::Int64,
             keyExpr,
             locals,
@@ -886,7 +886,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup string key locals") {
             4,
             error) == Result::NotHandled);
 
-  CHECK(primec::ir_lowerer::tryEmitMapLookupStringKeyLocal(
+  CHECK(primec::ir_lowerer::tryEmitKeyValueLookupStringKeyLocal(
             Kind::String,
             keyExpr,
             locals,
@@ -899,7 +899,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup string key locals") {
   CHECK(error.empty());
 
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitMapLookupStringKeyLocal(
+  CHECK(primec::ir_lowerer::tryEmitKeyValueLookupStringKeyLocal(
             Kind::String,
             keyExpr,
             locals,
@@ -927,7 +927,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup non-string key locals") {
   std::string error;
   int32_t stored = -1;
 
-  CHECK_FALSE(primec::ir_lowerer::emitMapLookupNonStringKeyLocal(
+  CHECK_FALSE(primec::ir_lowerer::emitKeyValueLookupNonStringKeyLocal(
       Kind::String,
       keyExpr,
       locals,
@@ -939,7 +939,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup non-string key locals") {
   CHECK(error == "native backend requires map lookup key type to match map key type");
 
   error.clear();
-  CHECK_FALSE(primec::ir_lowerer::emitMapLookupNonStringKeyLocal(
+  CHECK_FALSE(primec::ir_lowerer::emitKeyValueLookupNonStringKeyLocal(
       Kind::Int32,
       keyExpr,
       locals,
@@ -951,7 +951,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup non-string key locals") {
   CHECK(error == "native backend requires map lookup key type to match map key type");
 
   error.clear();
-  CHECK_FALSE(primec::ir_lowerer::emitMapLookupNonStringKeyLocal(
+  CHECK_FALSE(primec::ir_lowerer::emitKeyValueLookupNonStringKeyLocal(
       Kind::Int64,
       keyExpr,
       locals,
@@ -963,7 +963,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup non-string key locals") {
   CHECK(error == "native backend requires map lookup key type to match map key type");
 
   error.clear();
-  CHECK_FALSE(primec::ir_lowerer::emitMapLookupNonStringKeyLocal(
+  CHECK_FALSE(primec::ir_lowerer::emitKeyValueLookupNonStringKeyLocal(
       Kind::Int32,
       keyExpr,
       locals,
@@ -974,7 +974,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup non-string key locals") {
       error));
 
   error.clear();
-  CHECK(primec::ir_lowerer::emitMapLookupNonStringKeyLocal(
+  CHECK(primec::ir_lowerer::emitKeyValueLookupNonStringKeyLocal(
       Kind::Int32,
       keyExpr,
       locals,
@@ -1000,7 +1000,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup target pointer local") {
   primec::Expr capturedExpr;
   bool emitCalled = false;
   int32_t ptrLocal = -1;
-  CHECK(primec::ir_lowerer::emitMapLookupTargetPointerLocal(
+  CHECK(primec::ir_lowerer::emitKeyValueLookupTargetPointerLocal(
       targetExpr,
       locals,
       [&]() { return nextLocal++; },
@@ -1019,7 +1019,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup target pointer local") {
 
   stored = -1;
   emitCalled = false;
-  CHECK_FALSE(primec::ir_lowerer::emitMapLookupTargetPointerLocal(
+  CHECK_FALSE(primec::ir_lowerer::emitKeyValueLookupTargetPointerLocal(
       targetExpr,
       locals,
       [&]() { return nextLocal++; },
@@ -1051,7 +1051,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup key local") {
   int32_t keyLocal = -1;
   std::string error;
 
-  CHECK(primec::ir_lowerer::emitMapLookupKeyLocal(
+  CHECK(primec::ir_lowerer::emitKeyValueLookupKeyLocal(
       Kind::String,
       keyExpr,
       locals,
@@ -1085,7 +1085,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup key local") {
   inferCalled = false;
   emitCalled = false;
   error.clear();
-  CHECK_FALSE(primec::ir_lowerer::emitMapLookupKeyLocal(
+  CHECK_FALSE(primec::ir_lowerer::emitKeyValueLookupKeyLocal(
       Kind::String,
       keyExpr,
       locals,
@@ -1119,7 +1119,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup key local") {
   inferCalled = false;
   emitCalled = false;
   error.clear();
-  CHECK(primec::ir_lowerer::emitMapLookupKeyLocal(
+  CHECK(primec::ir_lowerer::emitKeyValueLookupKeyLocal(
       Kind::Int32,
       keyExpr,
       locals,
@@ -1149,7 +1149,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup key local") {
   inferCalled = false;
   emitCalled = false;
   error.clear();
-  CHECK_FALSE(primec::ir_lowerer::emitMapLookupKeyLocal(
+  CHECK_FALSE(primec::ir_lowerer::emitKeyValueLookupKeyLocal(
       Kind::String,
       keyExpr,
       locals,

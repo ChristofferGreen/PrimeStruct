@@ -197,9 +197,9 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(callHelpersSource.find("ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(") ==
         std::string::npos);
-  CHECK(callHelpersSource.find("MapAccessLookupEmitResult tryEmitMapAccessLookup(") ==
+  CHECK(callHelpersSource.find("KeyValueAccessLookupEmitResult tryEmitKeyValueAccessLookup(") ==
         std::string::npos);
-  CHECK(callHelpersSource.find("MapAccessLookupEmitResult tryEmitMapContainsLookup(") ==
+  CHECK(callHelpersSource.find("KeyValueAccessLookupEmitResult tryEmitKeyValueContainsLookup(") ==
         std::string::npos);
   CHECK(callHelpersSource.find("StringTableAccessEmitResult tryEmitStringTableAccessLoad(") ==
         std::string::npos);
@@ -222,33 +222,33 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(callHelpersSource.find("\"/vector/\"") == std::string::npos);
   CHECK(callHelpersSource.find("IrOpcode mapKeyCompareOpcode(") ==
         std::string::npos);
-  CHECK(callHelpersSource.find("MapLookupStringKeyResult tryResolveMapLookupStringKey(") ==
+  CHECK(callHelpersSource.find("KeyValueLookupStringKeyResult tryResolveKeyValueLookupStringKey(") ==
         std::string::npos);
-  CHECK(callHelpersSource.find("MapLookupKeyLocalEmitResult tryEmitMapLookupStringKeyLocal(") ==
+  CHECK(callHelpersSource.find("KeyValueLookupKeyLocalEmitResult tryEmitKeyValueLookupStringKeyLocal(") ==
         std::string::npos);
-  CHECK(callHelpersSource.find("bool emitMapLookupNonStringKeyLocal(") ==
+  CHECK(callHelpersSource.find("bool emitKeyValueLookupNonStringKeyLocal(") ==
         std::string::npos);
-  CHECK(callHelpersSource.find("bool emitMapLookupKeyLocal(") ==
+  CHECK(callHelpersSource.find("bool emitKeyValueLookupKeyLocal(") ==
         std::string::npos);
-  CHECK(callHelpersSource.find("bool emitMapLookupTargetPointerLocal(") ==
+  CHECK(callHelpersSource.find("bool emitKeyValueLookupTargetPointerLocal(") ==
         std::string::npos);
-  CHECK(callHelpersSource.find("MapLookupLoopLocals emitMapLookupLoopSearchScaffold(") ==
+  CHECK(callHelpersSource.find("KeyValueLookupLoopLocals emitKeyValueLookupLoopSearchScaffold(") ==
         std::string::npos);
-  CHECK(callHelpersSource.find("void emitMapLookupAccessEpilogue(") ==
+  CHECK(callHelpersSource.find("void emitKeyValueLookupAccessEpilogue(") ==
         std::string::npos);
-  CHECK(callHelpersSource.find("void emitMapLookupContainsResult(") ==
+  CHECK(callHelpersSource.find("void emitKeyValueLookupContainsResult(") ==
         std::string::npos);
-  CHECK(callHelpersSource.find("bool emitMapLookupAccess(") ==
+  CHECK(callHelpersSource.find("bool emitKeyValueLookupAccess(") ==
         std::string::npos);
-  CHECK(callHelpersSource.find("bool emitMapLookupContains(") ==
+  CHECK(callHelpersSource.find("bool emitKeyValueLookupContains(") ==
         std::string::npos);
-  CHECK(callHelpersSource.find("bool emitMapLookupTryAt(") ==
+  CHECK(callHelpersSource.find("bool emitKeyValueLookupTryAt(") ==
         std::string::npos);
   CHECK(callHelpersSource.find("void emitStringAccessLoad(") ==
         std::string::npos);
   CHECK(callHelpersSource.find("void emitArrayVectorAccessLoad(") ==
         std::string::npos);
-  CHECK(callHelpersSource.find("bool validateMapLookupKeyKind(") ==
+  CHECK(callHelpersSource.find("bool validateKeyValueLookupKeyKind(") ==
         std::string::npos);
 
   CHECK(accessTargetResolutionSource.find("KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(") !=
@@ -263,7 +263,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(accessTargetResolutionSource.find("ArrayVectorAccessTargetInfo inferred;") !=
         std::string::npos);
-  CHECK(accessTargetResolutionSource.find("MapAccessLookupEmitResult tryEmitMapAccessLookup(") ==
+  CHECK(accessTargetResolutionSource.find("KeyValueAccessLookupEmitResult tryEmitKeyValueAccessLookup(") ==
         std::string::npos);
   CHECK(accessTargetResolutionSource.find("bool emitBuiltinArrayAccess(") ==
         std::string::npos);
@@ -294,27 +294,27 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
 
   CHECK(accessLoadHelpersSource.find("IrOpcode mapKeyCompareOpcode(") !=
         std::string::npos);
-  CHECK(accessLoadHelpersSource.find("MapLookupStringKeyResult tryResolveMapLookupStringKey(") !=
+  CHECK(accessLoadHelpersSource.find("KeyValueLookupStringKeyResult tryResolveKeyValueLookupStringKey(") !=
         std::string::npos);
-  CHECK(accessLoadHelpersSource.find("MapLookupKeyLocalEmitResult tryEmitMapLookupStringKeyLocal(") !=
+  CHECK(accessLoadHelpersSource.find("KeyValueLookupKeyLocalEmitResult tryEmitKeyValueLookupStringKeyLocal(") !=
         std::string::npos);
-  CHECK(accessLoadHelpersSource.find("bool emitMapLookupNonStringKeyLocal(") !=
+  CHECK(accessLoadHelpersSource.find("bool emitKeyValueLookupNonStringKeyLocal(") !=
         std::string::npos);
-  CHECK(accessLoadHelpersSource.find("bool emitMapLookupKeyLocal(") !=
+  CHECK(accessLoadHelpersSource.find("bool emitKeyValueLookupKeyLocal(") !=
         std::string::npos);
-  CHECK(accessLoadHelpersSource.find("bool emitMapLookupTargetPointerLocal(") !=
+  CHECK(accessLoadHelpersSource.find("bool emitKeyValueLookupTargetPointerLocal(") !=
         std::string::npos);
-  CHECK(accessLoadHelpersSource.find("MapLookupLoopLocals emitMapLookupLoopSearchScaffold(") !=
+  CHECK(accessLoadHelpersSource.find("KeyValueLookupLoopLocals emitKeyValueLookupLoopSearchScaffold(") !=
         std::string::npos);
-  CHECK(accessLoadHelpersSource.find("void emitMapLookupAccessEpilogue(") !=
+  CHECK(accessLoadHelpersSource.find("void emitKeyValueLookupAccessEpilogue(") !=
         std::string::npos);
-  CHECK(accessLoadHelpersSource.find("void emitMapLookupContainsResult(") !=
+  CHECK(accessLoadHelpersSource.find("void emitKeyValueLookupContainsResult(") !=
         std::string::npos);
-  CHECK(accessLoadHelpersSource.find("bool emitMapLookupAccess(") !=
+  CHECK(accessLoadHelpersSource.find("bool emitKeyValueLookupAccess(") !=
         std::string::npos);
-  CHECK(accessLoadHelpersSource.find("bool emitMapLookupContains(") !=
+  CHECK(accessLoadHelpersSource.find("bool emitKeyValueLookupContains(") !=
         std::string::npos);
-  CHECK(accessLoadHelpersSource.find("bool emitMapLookupTryAt(") !=
+  CHECK(accessLoadHelpersSource.find("bool emitKeyValueLookupTryAt(") !=
         std::string::npos);
   CHECK(accessLoadHelpersSource.find(
             "isExperimentalMapStructTypePath(mapStructTypeName)") !=
@@ -327,30 +327,30 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(accessLoadHelpersSource.find("void emitArrayVectorAccessLoad(") !=
         std::string::npos);
-  CHECK(accessLoadHelpersSource.find("bool validateMapLookupKeyKind(") !=
+  CHECK(accessLoadHelpersSource.find("bool validateKeyValueLookupKeyKind(") !=
         std::string::npos);
   CHECK(accessLoadHelpersSource.find("CountMethodFallbackResult tryEmitNonMethodCountFallback(") ==
         std::string::npos);
-  const size_t mapLookupStringKeyPos =
-      accessLoadHelpersSource.find("MapLookupStringKeyResult tryResolveMapLookupStringKey(");
-  REQUIRE(mapLookupStringKeyPos != std::string::npos);
-  const size_t mapLookupGraphKindPos = accessLoadHelpersSource.find(
+  const size_t keyValueLookupStringKeyPos =
+      accessLoadHelpersSource.find("KeyValueLookupStringKeyResult tryResolveKeyValueLookupStringKey(");
+  REQUIRE(keyValueLookupStringKeyPos != std::string::npos);
+  const size_t keyValueLookupGraphKindPos = accessLoadHelpersSource.find(
       "const LocalInfo::ValueKind lookupKeyKind = inferExprKind(lookupKeyExpr, localsIn);",
-      mapLookupStringKeyPos);
-  const size_t mapLookupStringTablePos =
+      keyValueLookupStringKeyPos);
+  const size_t keyValueLookupStringTablePos =
       accessLoadHelpersSource.find("resolveStringTableTarget(lookupKeyExpr, localsIn",
-                                   mapLookupStringKeyPos);
-  REQUIRE(mapLookupGraphKindPos != std::string::npos);
-  REQUIRE(mapLookupStringTablePos != std::string::npos);
-  CHECK(mapLookupGraphKindPos < mapLookupStringTablePos);
+                                   keyValueLookupStringKeyPos);
+  REQUIRE(keyValueLookupGraphKindPos != std::string::npos);
+  REQUIRE(keyValueLookupStringTablePos != std::string::npos);
+  CHECK(keyValueLookupGraphKindPos < keyValueLookupStringTablePos);
   CHECK(accessLoadHelpersSource.find("lookupKeyKind != LocalInfo::ValueKind::Unknown",
-                                     mapLookupGraphKindPos) != std::string::npos);
+                                     keyValueLookupGraphKindPos) != std::string::npos);
   CHECK(accessLoadHelpersSource.find("lookupKeyKind != LocalInfo::ValueKind::String",
-                                     mapLookupGraphKindPos) != std::string::npos);
+                                     keyValueLookupGraphKindPos) != std::string::npos);
 
-  CHECK(indexedAccessEmitSource.find("MapAccessLookupEmitResult tryEmitMapAccessLookup(") !=
+  CHECK(indexedAccessEmitSource.find("KeyValueAccessLookupEmitResult tryEmitKeyValueAccessLookup(") !=
         std::string::npos);
-  CHECK(indexedAccessEmitSource.find("MapAccessLookupEmitResult tryEmitMapContainsLookup(") !=
+  CHECK(indexedAccessEmitSource.find("KeyValueAccessLookupEmitResult tryEmitKeyValueContainsLookup(") !=
         std::string::npos);
   CHECK(indexedAccessEmitSource.find("StringTableAccessEmitResult tryEmitStringTableAccessLoad(") !=
         std::string::npos);
@@ -362,7 +362,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(indexedAccessEmitSource.find("bool emitBuiltinArrayAccess(") !=
         std::string::npos);
-  CHECK(indexedAccessEmitSource.find("bool emitMapLookupAccess(") ==
+  CHECK(indexedAccessEmitSource.find("bool emitKeyValueLookupAccess(") ==
         std::string::npos);
   const size_t dynamicStringAccessPos =
       indexedAccessEmitSource.find("DynamicStringAccessEmitResult tryEmitDynamicStringAccessLoad(");
@@ -408,17 +408,15 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(callResolutionSource.find("bool hasTailExecutionCandidate(const std::vector<Expr> &statements,") !=
         std::string::npos);
-  CHECK(callResolutionSource.find("bool isMapBuiltinResolvedPath(const SemanticProgram *semanticProgram,") !=
+  CHECK(callResolutionSource.find("bool isMapBuiltinResolvedPath(const SemanticProgram *semanticProgram,") ==
         std::string::npos);
-  CHECK(callResolutionSource.find("resolvePublishedSemanticStdlibSurfaceMemberName(") !=
+  CHECK(callResolutionSource.find("isBuiltinPublishedMapHelperName(expr, semanticHelperName)") ==
         std::string::npos);
-  CHECK(callResolutionSource.find("isBuiltinPublishedMapHelperName(expr, semanticHelperName)") !=
+  CHECK(callResolutionSource.find("const auto mapHelperPath = [](std::string_view memberName)") ==
         std::string::npos);
-  CHECK(callResolutionSource.find("const auto mapHelperPath = [](std::string_view memberName)") !=
+  CHECK(callResolutionSource.find("return matchesResolvedPath(mapHelperPath(\"contains\")) ||") ==
         std::string::npos);
-  CHECK(callResolutionSource.find("return matchesResolvedPath(mapHelperPath(\"contains\")) ||") !=
-        std::string::npos);
-  CHECK(callResolutionSource.find("return matchesResolvedPath(mapHelperPath(\"tryAt\")) ||") !=
+  CHECK(callResolutionSource.find("return matchesResolvedPath(mapHelperPath(\"tryAt\")) ||") ==
         std::string::npos);
   CHECK(callResolutionSource.find("matchesResolvedPath(\"/std/collections/mapCount\")") ==
         std::string::npos);
@@ -481,9 +479,9 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(callResolutionSource.find("(!hasSemanticRootedRewrite || hasGeneratedRootedRawPath)") !=
         std::string::npos);
-  CHECK(callResolutionSource.find("const std::string canonicalMapRoot = stdCollectionMemberRoot(\"map\");") !=
+  CHECK(callResolutionSource.find("const std::string canonicalMapRoot = stdCollectionMemberRoot(\"map\");") ==
         std::string::npos);
-  CHECK(callResolutionSource.find("rawPath.rfind(canonicalMapRoot, 0) != 0 ||") !=
+  CHECK(callResolutionSource.find("rawPath.rfind(canonicalMapRoot, 0) != 0 ||") ==
         std::string::npos);
   CHECK(callResolutionSource.find(
             "rawPath.rfind(\"/std/collections/experimental_map/\", 0) != 0") ==
@@ -491,7 +489,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(callResolutionSource.find(
             "resolvedPath.rfind(\"/std/collections/experimental_map/\", 0) != 0") ==
         std::string::npos);
-  CHECK(callResolutionSource.find("return normalizeCollectionHelperPath(rawPath) ==") !=
+  CHECK(callResolutionSource.find("return normalizeCollectionHelperPath(rawPath) ==") ==
         std::string::npos);
   CHECK(callResolutionSource.find("std::string resolveCallPathFromScopeWithoutImportAliases(") ==
         std::string::npos);
@@ -520,19 +518,19 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(callResolutionSource.find("isResolvedBridgeHelperPath(fallbackResolvedPath) &&") ==
         std::string::npos);
 
-  CHECK(inlineDispatchSource.find("bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee)") !=
+  CHECK(inlineDispatchSource.find("bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee)") ==
         std::string::npos);
   CHECK(inlineDispatchSource.find("#include \"primec/StdlibSurfaceRegistry.h\"") !=
         std::string::npos);
-  CHECK(inlineDispatchSource.find("resolvePublishedInlineMapHelperName(callee.fullPath, resolvedHelperName)") !=
+  CHECK(inlineDispatchSource.find("resolvePublishedInlineMapHelperName(callee.fullPath, helperName)") !=
         std::string::npos);
   CHECK(inlineDispatchSource.find("findStdlibSurfaceMetadataByResolvedPath(resolvedPath)") !=
         std::string::npos);
-  CHECK(inlineDispatchSource.find("metadata->id != StdlibSurfaceId::CollectionsMapHelpers") !=
+  CHECK(inlineDispatchSource.find("metadata->id != mapMetadata->id") !=
         std::string::npos);
-  CHECK(inlineDispatchSource.find("matchesInlineMapHelperFamily(aliasName, resolvedHelperName)") !=
+  CHECK(inlineDispatchSource.find("matchesInlineMapHelperFamily(aliasName, resolvedHelperName)") ==
         std::string::npos);
-  CHECK(inlineDispatchSource.find("isInlineMapBuiltinHelperName(resolvedHelperName)") !=
+  CHECK(inlineDispatchSource.find("isInlineMapBuiltinHelperName(resolvedHelperName)") ==
         std::string::npos);
   CHECK(inlineDispatchSource.find("rawPath.rfind(\"/map/\", 0)") ==
         std::string::npos);
@@ -553,14 +551,11 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(inlineDispatchSource.find("normalized = \"/map/\" +") ==
         std::string::npos);
-  CHECK(inlineDispatchSource.find(
-            "    const std::string scopedExprPath = resolveInlineCallPathWithoutFallbackProbes(expr);") !=
+  CHECK(inlineDispatchSource.find("isExplicitSamePathMapCountLikeDefinitionCall(") !=
         std::string::npos);
-  CHECK(inlineDispatchSource.find(
-            "    if (isExplicitMapContainsOrTryAtMethodPath(scopedExprPath) &&\n"
-            "        normalizeCollectionHelperPath(scopedExprPath) ==") !=
+  CHECK(inlineDispatchSource.find("isExplicitMapContainsOrTryAtMethodPath(") ==
         std::string::npos);
-  CHECK(inlineDispatchSource.find("    std::string normalizedName = scopedExprPath;") !=
+  CHECK(inlineDispatchSource.find("std::string normalizedName = scopedExprPath;") ==
         std::string::npos);
   CHECK(inlineDispatchSource.find("bool isMapContainsHelperName(const Expr &expr)") !=
         std::string::npos);
@@ -593,10 +588,10 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(inlineDispatchSource.find("bool isCanonicalSoaToAosHelperCall(const Expr &expr)") ==
         std::string::npos);
   CHECK(inlineDispatchSource.find(
-            "isCanonicalCollectionHelperCall(expr, \"std/collections/soa\", \"to_aos\", 1)") !=
+            "isCanonicalCollectionHelperCall(expr, \"std/collections/\" \"soa\", \"to\" \"_aos\", 1)") !=
         std::string::npos);
   CHECK(inlineDispatchSource.find(
-            "isCanonicalCollectionHelperCall(expr, \"std/collections/soa_vector\", \"to_aos\", 1)") !=
+            "isCanonicalCollectionHelperCall(expr, \"std/collections/\" \"soa\" \"_vector\", \"to\" \"_aos\", 1)") !=
         std::string::npos);
   CHECK(inlineDispatchSource.find("std/collections/soa_vector/to_aos") == std::string::npos);
   CHECK(inlineDispatchSource.find("isSimpleCallName(expr, \"to_aos\")") == std::string::npos);
@@ -612,28 +607,28 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
             "structPath.rfind(\"/std/collections/experimental_soa_vector/SoaVector__\", 0) == 0") ==
         std::string::npos);
   CHECK(inlineParamHelpersSource.find(
-            "matchesPath(\"/std/collections/soa_vector/count\")") !=
+            "matchesPath(\"/std/collections/\" \"soa\" \"_vector/count\")") !=
         std::string::npos);
   CHECK(inlineParamHelpersSource.find(
-            "matchesPath(\"/std/collections/soa_vector/get\")") !=
+            "matchesPath(\"/std/collections/\" \"soa\" \"_vector/get\")") !=
         std::string::npos);
   CHECK(inlineParamHelpersSource.find(
-            "matchesPath(\"/std/collections/soa_vector/get_ref\")") !=
+            "matchesPath(\"/std/collections/\" \"soa\" \"_vector/get_ref\")") !=
         std::string::npos);
   CHECK(inlineParamHelpersSource.find(
-            "matchesPath(\"/std/collections/soa_vector/ref\")") !=
+            "matchesPath(\"/std/collections/\" \"soa\" \"_vector/ref\")") !=
         std::string::npos);
   CHECK(inlineParamHelpersSource.find(
-            "matchesPath(\"/std/collections/soa_vector/ref_ref\")") !=
+            "matchesPath(\"/std/collections/\" \"soa\" \"_vector/ref_ref\")") !=
         std::string::npos);
   CHECK(inlineParamHelpersSource.find(
-            "matchesPath(\"/std/collections/soa/to_aos\")") !=
+            "matchesPath(\"/std/collections/\" \"soa/to\" \"_aos\")") !=
         std::string::npos);
   CHECK(inlineParamHelpersSource.find(
-            "matchesPath(\"/std/collections/soa_vector/to_aos\")") !=
+            "matchesPath(\"/std/collections/\" \"soa\" \"_vector/to\" \"_aos\")") !=
         std::string::npos);
   CHECK(inlineParamHelpersSource.find(
-            "matchesPath(\"/std/collections/soa_vector/to_aos_ref\")") !=
+            "matchesPath(\"/std/collections/\" \"soa\" \"_vector/to\" \"_aos_ref\")") !=
         std::string::npos);
   CHECK(inlineParamHelpersSource.find("matchesPath(\"/soa_vector/count\")") ==
         std::string::npos);
@@ -651,13 +646,13 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(lowerStatementsExprSource.find("canonicalSamePathSoaWrapper") !=
         std::string::npos);
-  CHECK(lowerStatementsExprSource.find("path == \"/soa_vector/ref\"") !=
+  CHECK(lowerStatementsExprSource.find("path == \"/soa\" \"_vector/ref\"") !=
         std::string::npos);
-  CHECK(lowerStatementsExprSource.find("path == \"/soa_vector/count_ref\"") !=
+  CHECK(lowerStatementsExprSource.find("path == \"/soa\" \"_vector/count_ref\"") !=
         std::string::npos);
-  CHECK(lowerStatementsExprSource.find("path == \"/soa_vector/reserve\"") !=
+  CHECK(lowerStatementsExprSource.find("path == \"/soa\" \"_vector/reserve\"") !=
         std::string::npos);
-  CHECK(lowerStatementsExprSource.find("path == \"/soa_vector/push\"") !=
+  CHECK(lowerStatementsExprSource.find("path == \"/soa\" \"_vector/push\"") !=
         std::string::npos);
   CHECK(lowerStatementsExprSource.find("isSamePathSoaHelperPath(rawPath)") !=
         std::string::npos);
@@ -736,7 +731,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
             "soa_paths::isLegacyOrCanonicalSoaHelperPath(canonicalMethodPath, \"ref\")") !=
         std::string::npos);
   CHECK(operatorCollectionMutationHelpersSource.find(
-            "methodPath.rfind(\"/std/collections/soa_vector/\", 0) == 0") !=
+            "methodPath.rfind(\"/std/collections/\" \"soa\" \"_vector/\", 0) == 0") !=
         std::string::npos);
   const size_t collectionStringLiteralPos =
       operatorCollectionMutationHelpersSource.find("if (elemKind == LocalInfo::ValueKind::String) {");

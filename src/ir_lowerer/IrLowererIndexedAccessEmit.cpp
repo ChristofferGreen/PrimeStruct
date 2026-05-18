@@ -21,7 +21,7 @@ bool usesBuiltinVectorValueStorage(const ArrayVectorAccessTargetInfo &targetInfo
 
 } // namespace
 
-MapAccessLookupEmitResult tryEmitMapAccessLookup(
+KeyValueAccessLookupEmitResult tryEmitKeyValueAccessLookup(
     const std::string &accessName,
     const Expr &targetExpr,
     const Expr &lookupKeyExpr,
@@ -45,12 +45,12 @@ MapAccessLookupEmitResult tryEmitMapAccessLookup(
       semanticProgram,
       semanticIndex);
   if (!keyValueTargetInfo.isKeyValueTarget) {
-    return MapAccessLookupEmitResult::NotHandled;
+    return KeyValueAccessLookupEmitResult::NotHandled;
   }
   if (!validateKeyValueAccessTargetInfo(keyValueTargetInfo, accessName, error)) {
-    return MapAccessLookupEmitResult::Error;
+    return KeyValueAccessLookupEmitResult::Error;
   }
-  if (!emitMapLookupAccess(
+  if (!emitKeyValueLookupAccess(
           accessName,
           keyValueTargetInfo.keyValueKeyKind,
           keyValueTargetInfo.structTypeName,
@@ -66,12 +66,12 @@ MapAccessLookupEmitResult tryEmitMapAccessLookup(
           emitInstruction,
           patchInstructionImm,
           error)) {
-    return MapAccessLookupEmitResult::Error;
+    return KeyValueAccessLookupEmitResult::Error;
   }
-  return MapAccessLookupEmitResult::Emitted;
+  return KeyValueAccessLookupEmitResult::Emitted;
 }
 
-MapAccessLookupEmitResult tryEmitMapAccessLookup(
+KeyValueAccessLookupEmitResult tryEmitKeyValueAccessLookup(
     const std::string &accessName,
     const Expr &targetExpr,
     const Expr &lookupKeyExpr,
@@ -85,7 +85,7 @@ MapAccessLookupEmitResult tryEmitMapAccessLookup(
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error) {
-  return tryEmitMapAccessLookup(
+  return tryEmitKeyValueAccessLookup(
       accessName,
       targetExpr,
       lookupKeyExpr,
@@ -104,7 +104,7 @@ MapAccessLookupEmitResult tryEmitMapAccessLookup(
       nullptr);
 }
 
-MapAccessLookupEmitResult tryEmitMapContainsLookup(
+KeyValueAccessLookupEmitResult tryEmitKeyValueContainsLookup(
     const Expr &targetExpr,
     const Expr &lookupKeyExpr,
     const LocalMap &localsIn,
@@ -120,12 +120,12 @@ MapAccessLookupEmitResult tryEmitMapContainsLookup(
   const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(
       targetExpr, localsIn, resolveCallKeyValueAccessTargetInfo);
   if (!keyValueTargetInfo.isKeyValueTarget) {
-    return MapAccessLookupEmitResult::NotHandled;
+    return KeyValueAccessLookupEmitResult::NotHandled;
   }
   if (!validateKeyValueAccessTargetInfo(keyValueTargetInfo, "contains", error)) {
-    return MapAccessLookupEmitResult::Error;
+    return KeyValueAccessLookupEmitResult::Error;
   }
-  if (!emitMapLookupContains(
+  if (!emitKeyValueLookupContains(
           keyValueTargetInfo.keyValueKeyKind,
           keyValueTargetInfo.structTypeName,
           targetExpr,
@@ -139,9 +139,9 @@ MapAccessLookupEmitResult tryEmitMapContainsLookup(
           emitInstruction,
           patchInstructionImm,
           error)) {
-    return MapAccessLookupEmitResult::Error;
+    return KeyValueAccessLookupEmitResult::Error;
   }
-  return MapAccessLookupEmitResult::Emitted;
+  return KeyValueAccessLookupEmitResult::Emitted;
 }
 
 StringTableAccessEmitResult tryEmitStringTableAccessLoad(
@@ -571,7 +571,7 @@ bool emitBuiltinArrayAccess(
         semanticIndex);
   }
 
-  const auto mapLookupResult = tryEmitMapAccessLookup(
+  const auto keyValueLookupResult = tryEmitKeyValueAccessLookup(
       accessName,
       targetExpr,
       indexExpr,
@@ -588,10 +588,10 @@ bool emitBuiltinArrayAccess(
       error,
       semanticProgram,
       semanticIndex);
-  if (mapLookupResult == MapAccessLookupEmitResult::Error) {
+  if (keyValueLookupResult == KeyValueAccessLookupEmitResult::Error) {
     return false;
   }
-  if (mapLookupResult == MapAccessLookupEmitResult::Emitted) {
+  if (keyValueLookupResult == KeyValueAccessLookupEmitResult::Emitted) {
     return true;
   }
 

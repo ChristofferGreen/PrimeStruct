@@ -357,7 +357,8 @@ Task template:
   `isMapCollectionTypeName` instead of direct canonical map path and type
   spellings, and definition return inference now detects deferred canonical
   map access helpers through stdlib map helper metadata instead of direct
-  canonical map access path literals. The
+  canonical map access path literals, and lowerer map lookup helper APIs now
+  use key/value lookup names instead of map-specific lookup helper names. The
   remaining production
   lowerer/emitter
   experimental-map traces

@@ -361,7 +361,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
 ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     const Expr &target, const LocalMap &localsIn);
 bool validateArrayVectorAccessTargetInfo(const ArrayVectorAccessTargetInfo &targetInfo, std::string &error);
-MapAccessLookupEmitResult tryEmitMapAccessLookup(
+KeyValueAccessLookupEmitResult tryEmitKeyValueAccessLookup(
     const std::string &accessName,
     const Expr &targetExpr,
     const Expr &lookupKeyExpr,
@@ -378,7 +378,7 @@ MapAccessLookupEmitResult tryEmitMapAccessLookup(
     std::string &error,
     const SemanticProgram *semanticProgram = nullptr,
     const SemanticProductIndex *semanticIndex = nullptr);
-MapAccessLookupEmitResult tryEmitMapAccessLookup(
+KeyValueAccessLookupEmitResult tryEmitKeyValueAccessLookup(
     const std::string &accessName,
     const Expr &targetExpr,
     const Expr &lookupKeyExpr,
@@ -544,7 +544,7 @@ bool resolveValidatedAccessIndexKind(
     const SemanticProgram *semanticProgram,
     const SemanticProductIndex *semanticIndex);
 IrOpcode mapKeyCompareOpcode(LocalInfo::ValueKind keyValueKeyKind);
-MapLookupStringKeyResult tryResolveMapLookupStringKey(
+KeyValueLookupStringKeyResult tryResolveKeyValueLookupStringKey(
     LocalInfo::ValueKind keyValueKeyKind,
     const Expr &lookupKeyExpr,
     const LocalMap &localsIn,
@@ -552,7 +552,7 @@ MapLookupStringKeyResult tryResolveMapLookupStringKey(
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     int32_t &stringIndexOut,
     std::string &error);
-MapLookupKeyLocalEmitResult tryEmitMapLookupStringKeyLocal(
+KeyValueLookupKeyLocalEmitResult tryEmitKeyValueLookupStringKeyLocal(
     LocalInfo::ValueKind keyValueKeyKind,
     const Expr &lookupKeyExpr,
     const LocalMap &localsIn,
@@ -562,7 +562,7 @@ MapLookupKeyLocalEmitResult tryEmitMapLookupStringKeyLocal(
     const std::function<void(int32_t)> &emitStoreLocal,
     int32_t keyLocal,
     std::string &error);
-bool emitMapLookupNonStringKeyLocal(
+bool emitKeyValueLookupNonStringKeyLocal(
     LocalInfo::ValueKind keyValueKeyKind,
     const Expr &lookupKeyExpr,
     const LocalMap &localsIn,
@@ -571,7 +571,7 @@ bool emitMapLookupNonStringKeyLocal(
     const std::function<void(int32_t)> &emitStoreLocal,
     int32_t keyLocal,
     std::string &error);
-bool emitMapLookupKeyLocal(
+bool emitKeyValueLookupKeyLocal(
     LocalInfo::ValueKind keyValueKeyKind,
     const Expr &lookupKeyExpr,
     const LocalMap &localsIn,
@@ -583,14 +583,14 @@ bool emitMapLookupKeyLocal(
     const std::function<void(int32_t)> &emitStoreLocal,
     int32_t &keyLocalOut,
     std::string &error);
-bool emitMapLookupTargetPointerLocal(
+bool emitKeyValueLookupTargetPointerLocal(
     const Expr &targetExpr,
     const LocalMap &localsIn,
     const std::function<int32_t()> &allocTempLocal,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<void(int32_t)> &emitStoreLocal,
     int32_t &ptrLocalOut);
-MapLookupLoopLocals emitMapLookupLoopSearchScaffold(
+KeyValueLookupLoopLocals emitKeyValueLookupLoopSearchScaffold(
     int32_t ptrLocal,
     int32_t keyLocal,
     LocalInfo::ValueKind keyValueKeyKind,
@@ -598,7 +598,7 @@ MapLookupLoopLocals emitMapLookupLoopSearchScaffold(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm);
-void emitMapLookupAccessEpilogue(
+void emitKeyValueLookupAccessEpilogue(
     const std::string &accessName,
     int32_t ptrLocal,
     int32_t indexLocal,
@@ -607,7 +607,7 @@ void emitMapLookupAccessEpilogue(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm);
-bool emitMapLookupAccess(
+bool emitKeyValueLookupAccess(
     const std::string &accessName,
     LocalInfo::ValueKind keyValueKeyKind,
     const std::string &mapStructTypeName,
@@ -623,7 +623,7 @@ bool emitMapLookupAccess(
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error);
-bool emitMapLookupContains(
+bool emitKeyValueLookupContains(
     LocalInfo::ValueKind keyValueKeyKind,
     const std::string &mapStructTypeName,
     const Expr &targetExpr,
@@ -672,23 +672,23 @@ void emitArrayVectorAccessLoad(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm);
-MapLookupLoopLocals emitMapLookupLoopLocals(
+KeyValueLookupLoopLocals emitKeyValueLookupLoopLocals(
     int32_t ptrLocal,
     const std::function<int32_t()> &allocTempLocal,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
-MapLookupLoopConditionAnchors emitMapLookupLoopCondition(
+KeyValueLookupLoopConditionAnchors emitKeyValueLookupLoopCondition(
     int32_t indexLocal,
     int32_t countLocal,
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
-MapLookupLoopMatchAnchors emitMapLookupLoopMatchCheck(
+KeyValueLookupLoopMatchAnchors emitKeyValueLookupLoopMatchCheck(
     int32_t ptrLocal,
     int32_t indexLocal,
     int32_t keyLocal,
     LocalInfo::ValueKind keyValueKeyKind,
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
-void emitMapLookupLoopAdvanceAndPatch(
+void emitKeyValueLookupLoopAdvanceAndPatch(
     size_t jumpNotMatch,
     size_t jumpLoopEnd,
     size_t jumpFound,
@@ -697,22 +697,22 @@ void emitMapLookupLoopAdvanceAndPatch(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm);
-void emitMapLookupAtKeyNotFoundGuard(
+void emitKeyValueLookupAtKeyNotFoundGuard(
     int32_t indexLocal,
     int32_t countLocal,
     const std::function<void()> &emitMapKeyNotFound,
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm);
-void emitMapLookupContainsResult(
+void emitKeyValueLookupContainsResult(
     int32_t indexLocal,
     int32_t countLocal,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
-void emitMapLookupValueLoad(
+void emitKeyValueLookupValueLoad(
     int32_t ptrLocal,
     int32_t indexLocal,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
-bool emitMapLookupTryAt(
+bool emitKeyValueLookupTryAt(
     LocalInfo::ValueKind keyValueKeyKind,
     const std::string &mapStructTypeName,
     const Expr &targetExpr,
@@ -726,7 +726,7 @@ bool emitMapLookupTryAt(
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error);
-bool validateMapLookupKeyKind(LocalInfo::ValueKind keyValueKeyKind,
+bool validateKeyValueLookupKeyKind(LocalInfo::ValueKind keyValueKeyKind,
                               LocalInfo::ValueKind lookupKeyKind,
                               std::string &error);
 CountMethodFallbackResult tryEmitNonMethodCountFallback(

@@ -7,7 +7,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup loop search scaffold") {
 
   std::vector<primec::IrInstruction> instructions;
   int nextLocal = 40;
-  const auto loopLocals = primec::ir_lowerer::emitMapLookupLoopSearchScaffold(
+  const auto loopLocals = primec::ir_lowerer::emitKeyValueLookupLoopSearchScaffold(
       3,
       7,
       Kind::Int32,
@@ -71,7 +71,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup loop search scaffold") {
 TEST_CASE("ir lowerer call helpers emit map lookup access epilogue") {
   std::vector<primec::IrInstruction> instructions;
   int keyNotFoundCalls = 0;
-  primec::ir_lowerer::emitMapLookupAccessEpilogue(
+  primec::ir_lowerer::emitKeyValueLookupAccessEpilogue(
       "at",
       5,
       6,
@@ -107,7 +107,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup access epilogue") {
 
   instructions.clear();
   keyNotFoundCalls = 0;
-  primec::ir_lowerer::emitMapLookupAccessEpilogue(
+  primec::ir_lowerer::emitKeyValueLookupAccessEpilogue(
       "find",
       5,
       6,
@@ -154,7 +154,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup access") {
   int inferCalls = 0;
   int keyNotFoundCalls = 0;
   std::string error;
-  CHECK(primec::ir_lowerer::emitMapLookupAccess(
+  CHECK(primec::ir_lowerer::emitKeyValueLookupAccess(
       "at",
       Kind::Int32,
       "",
@@ -203,7 +203,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup access") {
   inferCalls = 0;
   keyNotFoundCalls = 0;
   error.clear();
-  CHECK(primec::ir_lowerer::emitMapLookupAccess(
+  CHECK(primec::ir_lowerer::emitKeyValueLookupAccess(
       "at",
       Kind::Int32,
       "/std/collections/experimental_map/Map__tstring_i32",
@@ -250,7 +250,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup access") {
   inferCalls = 0;
   keyNotFoundCalls = 0;
   error.clear();
-  CHECK_FALSE(primec::ir_lowerer::emitMapLookupAccess(
+  CHECK_FALSE(primec::ir_lowerer::emitKeyValueLookupAccess(
       "at",
       Kind::Int32,
       "",
@@ -284,7 +284,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup access") {
   inferCalls = 0;
   keyNotFoundCalls = 0;
   error.clear();
-  CHECK_FALSE(primec::ir_lowerer::emitMapLookupAccess(
+  CHECK_FALSE(primec::ir_lowerer::emitKeyValueLookupAccess(
       "at",
       Kind::String,
       "",
@@ -508,7 +508,7 @@ TEST_CASE("ir lowerer call helpers emit array vector access load") {
 TEST_CASE("ir lowerer call helpers emit map lookup loop locals") {
   std::vector<primec::IrInstruction> instructions;
   int nextLocal = 30;
-  auto locals = primec::ir_lowerer::emitMapLookupLoopLocals(
+  auto locals = primec::ir_lowerer::emitKeyValueLookupLoopLocals(
       12,
       [&]() { return nextLocal++; },
       [&](primec::IrOpcode op, uint64_t imm) {
@@ -531,7 +531,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup loop locals") {
 
 TEST_CASE("ir lowerer call helpers emit map lookup loop condition") {
   std::vector<primec::IrInstruction> instructions;
-  auto anchors = primec::ir_lowerer::emitMapLookupLoopCondition(
+  auto anchors = primec::ir_lowerer::emitKeyValueLookupLoopCondition(
       7,
       9,
       [&]() { return instructions.size(); },
@@ -551,7 +551,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup loop condition") {
 
 TEST_CASE("ir lowerer call helpers emit map lookup loop match check") {
   std::vector<primec::IrInstruction> instructions;
-  auto anchors = primec::ir_lowerer::emitMapLookupLoopMatchCheck(
+  auto anchors = primec::ir_lowerer::emitKeyValueLookupLoopMatchCheck(
       4,
       5,
       6,
@@ -587,7 +587,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup loop advance patching") {
       {primec::IrOpcode::PushI32, 13},
   };
 
-  primec::ir_lowerer::emitMapLookupLoopAdvanceAndPatch(
+  primec::ir_lowerer::emitKeyValueLookupLoopAdvanceAndPatch(
       1,
       3,
       4,
@@ -618,7 +618,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup at key-not-found guard") {
   };
   int notFoundCalls = 0;
 
-  primec::ir_lowerer::emitMapLookupAtKeyNotFoundGuard(
+  primec::ir_lowerer::emitKeyValueLookupAtKeyNotFoundGuard(
       11,
       12,
       [&]() {
@@ -644,7 +644,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup at key-not-found guard") {
 
 TEST_CASE("ir lowerer call helpers emit map lookup value load") {
   std::vector<primec::IrInstruction> instructions;
-  primec::ir_lowerer::emitMapLookupValueLoad(
+  primec::ir_lowerer::emitKeyValueLookupValueLoad(
       21,
       22,
       [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); });
@@ -671,18 +671,18 @@ TEST_CASE("ir lowerer call helpers validate map lookup key kinds") {
   using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
 
   std::string error;
-  CHECK(primec::ir_lowerer::validateMapLookupKeyKind(Kind::Int32, Kind::Int32, error));
+  CHECK(primec::ir_lowerer::validateKeyValueLookupKeyKind(Kind::Int32, Kind::Int32, error));
   CHECK(error.empty());
 
-  CHECK_FALSE(primec::ir_lowerer::validateMapLookupKeyKind(Kind::Int32, Kind::Unknown, error));
+  CHECK_FALSE(primec::ir_lowerer::validateKeyValueLookupKeyKind(Kind::Int32, Kind::Unknown, error));
   CHECK(error == "native backend requires map lookup key type to match map key type");
 
   error.clear();
-  CHECK_FALSE(primec::ir_lowerer::validateMapLookupKeyKind(Kind::Int32, Kind::String, error));
+  CHECK_FALSE(primec::ir_lowerer::validateKeyValueLookupKeyKind(Kind::Int32, Kind::String, error));
   CHECK(error == "native backend requires map lookup key to be numeric/bool");
 
   error.clear();
-  CHECK_FALSE(primec::ir_lowerer::validateMapLookupKeyKind(Kind::Int64, Kind::Float64, error));
+  CHECK_FALSE(primec::ir_lowerer::validateKeyValueLookupKeyKind(Kind::Int64, Kind::Float64, error));
   CHECK(error == "native backend requires map lookup key type to match map key type");
 }
 

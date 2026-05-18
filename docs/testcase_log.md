@@ -35,12 +35,6 @@
   is stale after the map stdlib-ownership cutover. On 2026-05-17 it no
   longer reported `unable to infer return type on /project`, while adjacent
   map method-alias receiver-path inference cases passed.
-- `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable"`
-  still has stale source-lock assertions after the map/SoA cleanup. On
-  2026-05-16 it reported 31 failures for already-removed map builtin
-  resolved-path helpers, inline-dispatch map helper classifiers, and SoA
-  helper path strings. The map bridge-key assertion updated in the same run
-  did not fail.
 - `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers handle non-method count fallback"`
   has stale count-fallback expectations after the map stdlib-ownership
   cutover. On 2026-05-17 it still expected removed `/map/count` and
@@ -227,6 +221,15 @@
   instructions; adjacent key/value target metadata validation cases passed.
 
 ## Recent Test Runs
+- 2026-05-18 18:32 CEST | pass | mode: release | command:
+  `git diff --check`;
+  `rg -n 'MapAccessLookupEmitResult|tryEmitMapAccessLookup|tryEmitMapContainsLookup|MapLookupStringKeyResult|MapLookupKeyLocalEmitResult|MapLookupLoopLocals|MapLookupLoopConditionAnchors|MapLookupLoopMatchAnchors|tryResolveMapLookupStringKey|tryEmitMapLookupStringKeyLocal|emitMapLookupNonStringKeyLocal|emitMapLookupKeyLocal|emitMapLookupTargetPointerLocal|emitMapLookupLoopSearchScaffold|emitMapLookupAccessEpilogue|emitMapLookupContainsResult|emitMapLookupAccess|emitMapLookupContains|emitMapLookupTryAt|emitMapLookupLoopLocals|emitMapLookupLoopCondition|emitMapLookupLoopMatchCheck|emitMapLookupLoopAdvanceAndPatch|emitMapLookupAtKeyNotFoundGuard|emitMapLookupValueLoad|validateMapLookupKeyKind|mapLookup' include/primec/testing/ir_lowerer_helpers src/ir_lowerer tests/unit/test_ir_pipeline_validation_ir_lowerer_*`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers emit map lookup loop search scaffold,ir lowerer call helpers try emit map access lookup,ir lowerer call helpers resolve map lookup string keys,ir lowerer call helpers source delegation stays stable" --no-skip`
+  | failures: none | notes: Lowerer lookup helper APIs now use
+  key/value names instead of map-specific lookup helper identifiers, and the
+  stale call-helper source-delegation lock was updated to assert old
+  map-special-case helpers are absent.
 - 2026-05-18 16:44 CEST | pass | mode: release | command:
   `git diff --check`;
   `rg -n 'MapAccessTargetInfo|ResolveCallMapAccessTargetInfoFn|resolveMapAccessTargetInfo|validateMapAccessTargetInfo|inferCallMapTargetInfo|resolveCallMapAccessTargetInfo|mapTargetInfo|isMapTarget|isWrappedMapTarget' include src tests`;
@@ -4510,6 +4513,7 @@
 - 2026-05-12 17:28 local | fail | mode: release | command: `./scripts/compile.sh --release` | failures: 146 CTest targets | notes: baseline after preflight checkpoint failed; stabilization blocks TODO work
 
 ## Resolved Failures
+- [x] ir lowerer call helpers source delegation stays stable | resolved: 2026-05-18 18:32 local | validating command: `cmake --build build-release --target PrimeStruct_backend_ir_tests`; `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers emit map lookup loop search scaffold,ir lowerer call helpers try emit map access lookup,ir lowerer call helpers resolve map lookup string keys,ir lowerer call helpers source delegation stays stable" --no-skip` | notes: source lock now matches the current key/value lookup helper names, asserts removed map-specific call-resolution and inline-dispatch helpers are absent, and preserves the SoA split-string source checks.
 - [x] map method alias primitive argument stale diagnostic | resolved: 2026-05-16 19:13 local | validating command: `cmake --build build-release --target PrimeStruct_semantics_tests`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="map method alias access accepts matching receiver during inference"`; `cd build-release && ./PrimeStruct_semantics_tests --test-case="map method alias access rejects missing receiver method during inference"` | notes: updated stale expectations so the matching `/Marker/tag` receiver path validates and the missing receiver method case expects `unknown method: /Marker/tag`.
 - [x] type pack storage expands into deterministic struct fields | resolved: 2026-05-15 21:07 local | validating command: `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.semantics.manual --test-case="type pack storage expands into deterministic struct fields,type pack storage rejects invalid placements and shapes,type pack specializations bind zero one and many arguments,type pack parameters cannot be used as scalar types before expansion"` | notes: parent-run rerun passed after replacing the parser-dependent source fixture with direct AST construction for the storage-expansion cases.
 - [x] todo queue and skipped doctest debt stay source locked | resolved: 2026-05-15 18:56 local | validating command: `cd build-release && ./PrimeStruct_compile_run_tests --test-case="todo queue and skipped doctest debt stay source locked"` | notes: TODO queue source lock now matches completed TODO-4270, TODO-4532, and TODO-4526 bookkeeping plus active TODO-4275 and TODO-4527 successors.

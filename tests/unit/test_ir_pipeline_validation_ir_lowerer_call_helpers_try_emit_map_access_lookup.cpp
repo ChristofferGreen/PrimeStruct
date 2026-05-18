@@ -4,7 +4,7 @@ TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
 TEST_CASE("ir lowerer call helpers try emit map access lookup") {
   using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
-  using Result = primec::ir_lowerer::MapAccessLookupEmitResult;
+  using Result = primec::ir_lowerer::KeyValueAccessLookupEmitResult;
 
   primec::Expr targetExpr;
   targetExpr.kind = primec::Expr::Kind::Name;
@@ -26,7 +26,7 @@ TEST_CASE("ir lowerer call helpers try emit map access lookup") {
   int inferCalls = 0;
   int keyNotFoundCalls = 0;
   std::string error;
-  CHECK(primec::ir_lowerer::tryEmitMapAccessLookup(
+  CHECK(primec::ir_lowerer::tryEmitKeyValueAccessLookup(
             "at",
             targetExpr,
             keyExpr,
@@ -60,7 +60,7 @@ TEST_CASE("ir lowerer call helpers try emit map access lookup") {
   error = "stale";
   primec::Expr nonMapTarget = targetExpr;
   nonMapTarget.name = "plain";
-  CHECK(primec::ir_lowerer::tryEmitMapAccessLookup(
+  CHECK(primec::ir_lowerer::tryEmitKeyValueAccessLookup(
             "at",
             nonMapTarget,
             keyExpr,
@@ -97,7 +97,7 @@ TEST_CASE("ir lowerer call helpers try emit map access lookup") {
   untypedMapInfo.keyValueKeyKind = Kind::Unknown;
   untypedMapInfo.keyValueValueKind = Kind::Int32;
   untypedLocals.emplace(targetExpr.name, untypedMapInfo);
-  CHECK(primec::ir_lowerer::tryEmitMapAccessLookup(
+  CHECK(primec::ir_lowerer::tryEmitKeyValueAccessLookup(
             "at",
             targetExpr,
             keyExpr,

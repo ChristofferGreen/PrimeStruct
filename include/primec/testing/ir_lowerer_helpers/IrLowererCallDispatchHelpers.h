@@ -108,7 +108,7 @@ enum class BufferBuiltinDispatchResult {
   Emitted,
   Error,
 };
-enum class MapAccessLookupEmitResult {
+enum class KeyValueAccessLookupEmitResult {
   NotHandled,
   Emitted,
   Error,
@@ -150,24 +150,24 @@ struct ArrayVectorAccessTargetInfo {
 using ResolveCallKeyValueAccessTargetInfoFn = std::function<bool(const Expr &, KeyValueAccessTargetInfo &)>;
 using ResolveCallArrayVectorAccessTargetInfoFn =
     std::function<bool(const Expr &, ArrayVectorAccessTargetInfo &)>;
-struct MapLookupLoopLocals {
+struct KeyValueLookupLoopLocals {
   int32_t countLocal = -1;
   int32_t indexLocal = -1;
 };
-struct MapLookupLoopConditionAnchors {
+struct KeyValueLookupLoopConditionAnchors {
   size_t loopStart = 0;
   size_t jumpLoopEnd = 0;
 };
-struct MapLookupLoopMatchAnchors {
+struct KeyValueLookupLoopMatchAnchors {
   size_t jumpNotMatch = 0;
   size_t jumpFound = 0;
 };
-enum class MapLookupStringKeyResult {
+enum class KeyValueLookupStringKeyResult {
   NotHandled,
   Resolved,
   Error,
 };
-enum class MapLookupKeyLocalEmitResult {
+enum class KeyValueLookupKeyLocalEmitResult {
   NotHandled,
   Emitted,
   Error,

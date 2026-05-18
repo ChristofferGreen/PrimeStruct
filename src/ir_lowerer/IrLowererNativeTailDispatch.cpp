@@ -387,7 +387,7 @@ bool isMapContainsHelperName(const Expr &expr);
 bool isMapTryAtHelperName(const Expr &expr);
 bool isVectorTarget(const Expr &expr, const LocalMap &localsIn);
 bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn);
-MapAccessLookupEmitResult tryEmitMapContainsLookup(
+KeyValueAccessLookupEmitResult tryEmitKeyValueContainsLookup(
     const Expr &targetExpr,
     const Expr &lookupKeyExpr,
     const LocalMap &localsIn,
@@ -400,7 +400,7 @@ MapAccessLookupEmitResult tryEmitMapContainsLookup(
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error);
-bool emitMapLookupTryAt(
+bool emitKeyValueLookupTryAt(
     LocalInfo::ValueKind keyValueKeyKind,
     const std::string &mapStructTypeName,
     const Expr &targetExpr,
@@ -782,7 +782,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     if (expr.args.front().kind == Expr::Kind::Call && !keyValueTargetInfo.isKeyValueTarget) {
       return NativeCallTailDispatchResult::NotHandled;
     }
-    const auto containsResult = tryEmitMapContainsLookup(
+    const auto containsResult = tryEmitKeyValueContainsLookup(
         expr.args.front(),
         expr.args[1],
         localsIn,
@@ -795,10 +795,10 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
         emitInstruction,
         patchInstructionImm,
         error);
-    if (containsResult == MapAccessLookupEmitResult::Emitted) {
+    if (containsResult == KeyValueAccessLookupEmitResult::Emitted) {
       return NativeCallTailDispatchResult::Emitted;
     }
-    if (containsResult == MapAccessLookupEmitResult::Error) {
+    if (containsResult == KeyValueAccessLookupEmitResult::Error) {
       return NativeCallTailDispatchResult::Error;
     }
     error = "contains requires map target";
@@ -819,7 +819,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
         (!keyValueTargetInfo.isKeyValueTarget || keyValueTargetInfo.isWrappedKeyValueTarget)) {
       return NativeCallTailDispatchResult::NotHandled;
     }
-    const auto containsResult = tryEmitMapContainsLookup(
+    const auto containsResult = tryEmitKeyValueContainsLookup(
         expr.args.front(),
         expr.args[1],
         localsIn,
@@ -832,10 +832,10 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
         emitInstruction,
         patchInstructionImm,
         error);
-    if (containsResult == MapAccessLookupEmitResult::Emitted) {
+    if (containsResult == KeyValueAccessLookupEmitResult::Emitted) {
       return NativeCallTailDispatchResult::Emitted;
     }
-    if (containsResult == MapAccessLookupEmitResult::Error) {
+    if (containsResult == KeyValueAccessLookupEmitResult::Error) {
       return NativeCallTailDispatchResult::Error;
     }
     error = "contains requires map target";
@@ -859,7 +859,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     if (!validateKeyValueAccessTargetInfo(keyValueTargetInfo, "tryAt", error)) {
       return NativeCallTailDispatchResult::Error;
     }
-    if (!emitMapLookupTryAt(
+    if (!emitKeyValueLookupTryAt(
             keyValueTargetInfo.keyValueKeyKind,
             keyValueTargetInfo.structTypeName,
             expr.args.front(),
@@ -899,7 +899,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     if (!validateKeyValueAccessTargetInfo(keyValueTargetInfo, "tryAt", error)) {
       return NativeCallTailDispatchResult::Error;
     }
-    if (!emitMapLookupTryAt(
+    if (!emitKeyValueLookupTryAt(
             keyValueTargetInfo.keyValueKeyKind,
             keyValueTargetInfo.structTypeName,
             expr.args.front(),
