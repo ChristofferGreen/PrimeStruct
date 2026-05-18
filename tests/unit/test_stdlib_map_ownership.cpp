@@ -221,6 +221,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string inferCollectionDispatchSetupSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorInferCollectionDispatchSetup.cpp");
+  const std::string inferCollectionsSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorInferCollections.cpp");
   const std::string inferCollectionReturnInferenceSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorInferCollectionReturnInference.cpp");
@@ -909,6 +912,15 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferCollectionDispatchSetupSource.find(
             "resolveDispatchSetupMapHelperPath(resolvedPath,") !=
+        std::string::npos);
+  CHECK(inferCollectionsSource.find(
+            "isExperimentalCollectionBackingTypeName(\"map\"") ==
+        std::string::npos);
+  CHECK(inferCollectionsSource.find(
+            "isUnspecializedExperimentalMapBackingTypeName(base)") !=
+        std::string::npos);
+  CHECK(inferCollectionsSource.find(
+            "isQualifiedExperimentalMapBackingTypeName(normalizedResolvedPath)") !=
         std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find(
             "\"/std/collections/map/\" + builtinAccessName") ==

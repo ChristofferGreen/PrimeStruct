@@ -531,7 +531,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   tokens from `collections.map_constructors` metadata instead of direct `/map`
   strings; scalar pointer/memory builtin validation should classify map-like
   builtin collection calls through the shared collection type classifier
-  instead of a direct `map` collection token.
+  instead of a direct `map` collection token; semantic collection dispatch
+  resolver construction should use shared experimental map backing classifiers
+  from `MapConstructorHelpers.h` instead of local direct experimental map
+  backing predicates.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

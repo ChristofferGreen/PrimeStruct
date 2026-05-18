@@ -60,12 +60,29 @@ inline bool isExperimentalCollectionBackingTypeName(
   return typeName == expected || typeName.rfind(specializedExpected, 0) == 0;
 }
 
+inline std::string experimentalMapBackingLeafName(std::string typeName) {
+  if (!typeName.empty() && typeName.front() == '/') {
+    typeName.erase(typeName.begin());
+  }
+  const size_t leafStart = typeName.find_last_of('/');
+  return leafStart == std::string::npos ? typeName : typeName.substr(leafStart + 1);
+}
+
+inline bool isUnspecializedExperimentalMapBackingTypeName(std::string_view typeName) {
+  std::string normalized(typeName);
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  return experimentalMapBackingLeafName(normalized) == "Map" &&
+         isExperimentalCollectionBackingTypeName("map", "Map", normalized);
+}
+
 inline bool isQualifiedExperimentalMapBackingTypeName(std::string_view typeName) {
   std::string normalized(typeName);
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
-  return normalized != "Map" &&
+  return experimentalMapBackingLeafName(normalized) != "Map" &&
          isExperimentalCollectionBackingTypeName("map", "Map", normalized);
 }
 

@@ -1,6 +1,12 @@
 # Testcase Log
 
 ## Current Known Failures
+- `PrimeStruct_semantics_tests --test-case="semantic product validates direct return method-like borrowed helper-return experimental soa_vector reads" --no-skip`
+  is not a clean map-cutover gate. On 2026-05-18 a selected validation window
+  for a map inference slice failed this unrelated SoA semantic product fixture
+  at `semantics.validate(...)`; the adjacent map-focused validation window
+  passed after removing direct map backing predicates from
+  `SemanticsValidatorInferCollections.cpp`.
 - `PrimeStruct_backend_ir_tests --test-case="ir lowerer result helpers resolve indexed args-pack Result expressions" --no-skip`
   is stale after the map stdlib-ownership cutover. On 2026-05-18 it failed to
   resolve `resolveResultExprInfoFromLocals` for the indexed args-pack Result
@@ -184,6 +190,23 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-18 10:50 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="public stdlib map Ref wrappers validate through canonical borrowed helpers,canonical map borrowed helper calls validate ownership-sensitive values through ref helpers,canonical stdlib map returns are allowed" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `rg -n 'isExperimentalCollectionBackingTypeName\("map"|"/map"|/map|std/collections/map|experimental_map|CollectionsMap|\bMap__|\bEntry__|\bMap<' src/semantics/SemanticsValidatorInferCollections.cpp`;
+  `rg --pcre2 -n '/?std/collections/map(?:/|")|/?std/collections/experimental_map(?:/|")|(?<![A-Za-z0-9_/])/?map/|\bmap(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bCollectionsMap[A-Za-z0-9_]*\b|\bMap<' src/semantics/SemanticsValidatorInferCollections.cpp`;
+  `git diff --check` | failures: none | notes:
+  `SemanticsValidatorInferCollections.cpp` now uses shared experimental map
+  backing classifiers and has no targeted direct map-residue matches. The
+  Python inventory script was intentionally not run.
+- 2026-05-18 10:48 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="public stdlib map Ref wrappers validate through canonical borrowed helpers,canonical map borrowed helper calls validate ownership-sensitive values through ref helpers,canonical stdlib map returns are allowed,semantic product validates direct return method-like borrowed helper-return experimental soa_vector reads" --no-skip` |
+  failures: semantic product validates direct return method-like borrowed
+  helper-return experimental soa_vector reads | notes: unrelated SoA semantic
+  product fixture failed at `semantics.validate(...)`; the map-focused subset
+  was rerun separately and passed.
 - 2026-05-18 10:37 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="memory at validates checked pointer access,memory at rejects non-pointer target,memory at rejects mismatched index and count kinds,canonical stdlib map returns are allowed,canonical map borrowed helper calls validate ownership-sensitive values through ref helpers" --no-skip`;
