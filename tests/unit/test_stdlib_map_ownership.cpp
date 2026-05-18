@@ -2265,7 +2265,18 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(lowererCallHelpersSource.find("const std::string unrooted = \"map/\" + std::string(helperName)") ==
         std::string::npos);
-  CHECK(lowererCallHelpersSource.find("resolveMapHelperDefinitionMember(directHelperPath, helperName)") !=
+  CHECK(lowererCallHelpersSource.find("resolveMapHelperDefinitionMember(") ==
+        std::string::npos);
+  CHECK(lowererCallHelpersSource.find("isRemovedCountFallbackMapHelper(") ==
+        std::string::npos);
+  CHECK(lowererCallHelpersSource.find("isExplicitRemovedMapHelperAliasCall") ==
+        std::string::npos);
+  CHECK(lowererCallHelpersSource.find(
+            "resolveKeyValueHelperDefinitionMember(directHelperPath, helperName)") !=
+        std::string::npos);
+  CHECK(lowererCallHelpersSource.find("isRemovedCountFallbackKeyValueHelper(") !=
+        std::string::npos);
+  CHECK(lowererCallHelpersSource.find("isExplicitRemovedKeyValueHelperAliasCall") !=
         std::string::npos);
   CHECK(inlineNativeSource.find("return helperName == \"insert\" || helperName == \"insert_ref\"") ==
         std::string::npos);

@@ -87,8 +87,8 @@ bool isRemovedVectorHelperDefinitionPath(const std::string &path) {
          memberName != "vector";
 }
 
-bool resolveMapHelperDefinitionMember(const std::string &path,
-                                      std::string &memberNameOut) {
+bool resolveKeyValueHelperDefinitionMember(const std::string &path,
+                                           std::string &memberNameOut) {
   memberNameOut.clear();
   if (path.find('/') == std::string::npos) {
     return false;
@@ -115,7 +115,7 @@ bool resolveMapHelperDefinitionMember(const std::string &path,
   return true;
 }
 
-bool isRemovedCountFallbackMapHelper(std::string_view helperName) {
+bool isRemovedCountFallbackKeyValueHelper(std::string_view helperName) {
   return helperName == "count" || helperName == "contains" ||
          helperName == "tryAt" || helperName == "at" ||
          helperName == "at_unsafe" || helperName == "count_ref" ||
@@ -207,14 +207,14 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
            matchesCollectionRoot("array") ||
            matchesCollectionRoot("soa" "_vector");
   };
-  auto isExplicitRemovedMapHelperAliasCall = [&]() {
+  auto isExplicitRemovedKeyValueHelperAliasCall = [&]() {
     if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
       return false;
     }
     const std::string directHelperPath = resolveDirectHelperPath();
     std::string helperName;
-    return resolveMapHelperDefinitionMember(directHelperPath, helperName) &&
-           isRemovedCountFallbackMapHelper(helperName);
+    return resolveKeyValueHelperDefinitionMember(directHelperPath, helperName) &&
+           isRemovedCountFallbackKeyValueHelper(helperName);
   };
   if (!expr.isMethodCall) {
     const std::string directHelperPath = resolveDirectHelperPath();
@@ -223,7 +223,7 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
     }
     if (isExplicitRemovedCountLikeAliasCall("count") ||
         isExplicitRemovedCountLikeAliasCall("capacity") ||
-        isExplicitRemovedMapHelperAliasCall()) {
+        isExplicitRemovedKeyValueHelperAliasCall()) {
       return CountMethodFallbackResult::NotHandled;
     }
   }

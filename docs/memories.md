@@ -697,7 +697,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   key/value naming around map helper metadata; native-tail import-probe and
   read-helper import locals should use key/value naming around map helper
   metadata; IR setup return-kind canonical helper locals should use key/value
-  naming around map helper metadata.
+  naming around map helper metadata; lowerer call-helper removed-alias
+  fallback locals should use key/value naming around map helper metadata.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
