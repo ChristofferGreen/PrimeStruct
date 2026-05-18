@@ -677,7 +677,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   membership and canonical count paths through that metadata instead of direct
   map path checks; late fallback map access diagnostics should derive rooted
   import-alias access helper recognition from stdlib map import-alias metadata
-  instead of a direct `/map/at*` path table.
+  instead of a direct `/map/at*` path table; template monomorph core
+  collection-base/import coverage plus map entry and constructor overload
+  checks should derive roots and member paths through stdlib surface metadata
+  instead of direct map path literals.
   The stale
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`

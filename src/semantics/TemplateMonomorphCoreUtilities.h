@@ -99,6 +99,52 @@ bool stripTemplateMonomorphSoaHelperPrefix(std::string_view path,
   return false;
 }
 
+bool isTemplateMonomorphMapImportAlias(std::string_view name) {
+  const primec::StdlibSurfaceMetadata *metadata =
+      mapConstructorSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return false;
+  }
+  const std::string normalizedName = std::string(trimLeadingSlash(name));
+  for (std::string_view alias : metadata->importAliasSpellings) {
+    if (normalizedName == trimLeadingSlash(alias)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool isTemplateMonomorphMapConstructorCallPath(std::string_view path) {
+  const primec::StdlibSurfaceMetadata *metadata =
+      mapConstructorSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return false;
+  }
+  const std::string normalizedPath =
+      stripCollectionConstructorSuffixes(std::string(path));
+  std::string memberName;
+  if (resolveMapConstructorMemberPath(normalizedPath, memberName) &&
+      memberName == "map") {
+    return true;
+  }
+  const std::string unrootedPath = std::string(trimLeadingSlash(normalizedPath));
+  for (std::string_view alias : metadata->importAliasSpellings) {
+    if (unrootedPath == trimLeadingSlash(alias)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool isTemplateMonomorphMapEntryConstructorPath(std::string path) {
+  const size_t generatedSuffix = path.find("__");
+  if (generatedSuffix != std::string::npos) {
+    path.erase(generatedSuffix);
+  }
+  return metadataBackedMapHelperMethodName(path) == "entry" ||
+         isExperimentalCollectionConstructorPathLocal(path, "map", "entry");
+}
+
 std::string normalizeBuiltinCollectionTemplateBase(const std::string &name) {
   if (name == "array" || name == "/array") {
     return "array";
@@ -113,7 +159,7 @@ std::string normalizeBuiltinCollectionTemplateBase(const std::string &name) {
       name == trimLeadingSlash(publicSoaHelperTargetPath(""))) {
     return templateMonomorphSoaReceiverTypeName();
   }
-  if (name == "map" || name == "/map" || name == "std/collections/map" || name == "/std/collections/map") {
+  if (isTemplateMonomorphMapImportAlias(name)) {
     return "map";
   }
   return {};
@@ -140,7 +186,7 @@ bool importPathCoversTarget(const std::string &importPath, const std::string &ta
     return true;
   }
   if (importPath == canonicalVectorCompatibilityPrefixOrFallback() ||
-      importPath == "/std/collections/map" ||
+      isTemplateMonomorphMapImportAlias(importPath) ||
       importPath == publicSoaHelperTargetPath("")) {
     return targetPath.rfind(importPath + "/", 0) == 0;
   }
@@ -234,20 +280,15 @@ std::string selectHelperOverloadPath(const Expr &expr, const std::string &resolv
     }
     return prefix + "/" + callExpr.name;
   };
-  auto isMapEntryConstructorPath = [](const std::string &path) {
-    return path == "/std/collections/map/entry" ||
-           path.rfind("/std/collections/map/entry__", 0) == 0 ||
-           isExperimentalCollectionConstructorPathLocal(path, "map", "entry");
-  };
   auto isMapEntryConstructorExpr = [&](const Expr &argExpr) {
     if (argExpr.kind != Expr::Kind::Call || argExpr.isMethodCall) {
       return false;
     }
-    return isMapEntryConstructorPath(explicitCallPath(argExpr));
+    return isTemplateMonomorphMapEntryConstructorPath(explicitCallPath(argExpr));
   };
   const bool preferMapEntryArgsPackOverload =
       !expr.isMethodCall &&
-      (resolvedPath == "/std/collections/map/map" || resolvedPath == "/map") &&
+      isTemplateMonomorphMapConstructorCallPath(resolvedPath) &&
       !expr.args.empty() &&
       ([&]() {
         for (const Expr &argExpr : expr.args) {

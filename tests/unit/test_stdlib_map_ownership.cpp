@@ -550,8 +550,22 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(exprMethodResolutionSource.find(
             "metadataBackedCanonicalMapHelperPath(helperName)") !=
         std::string::npos);
+  CHECK(templateCoreSource.find("name == \"/map\"") == std::string::npos);
+  CHECK(templateCoreSource.find("name == \"std/collections/map\"") ==
+        std::string::npos);
+  CHECK(templateCoreSource.find("importPath == \"/std/collections/map\"") ==
+        std::string::npos);
+  CHECK(templateCoreSource.find("path == \"/std/collections/map/entry\"") ==
+        std::string::npos);
   CHECK(templateCoreSource.find("\"/map/entry\"") == std::string::npos);
   CHECK(templateCoreSource.find("\"/map/entry__\"") == std::string::npos);
+  CHECK(templateCoreSource.find("isTemplateMonomorphMapImportAlias(name)") !=
+        std::string::npos);
+  CHECK(templateCoreSource.find(
+            "isTemplateMonomorphMapConstructorCallPath(resolvedPath)") !=
+        std::string::npos);
+  CHECK(templateCoreSource.find("metadataBackedMapHelperMethodName(path)") !=
+        std::string::npos);
   CHECK(templateReceiverSource.find("|| resolvedPath == \"/map/") ==
         std::string::npos);
   CHECK(templateReceiverSource.find("path.rfind(\"/map/\", 0)") ==

@@ -345,7 +345,10 @@ Task template:
   derive map helper membership and canonical count paths through that metadata
   instead of direct map path checks, and late fallback map access diagnostics
   now derive rooted import-alias access helper recognition from stdlib map
-  import-alias metadata instead of a direct `/map/at*` path table. The
+  import-alias metadata instead of a direct `/map/at*` path table, and
+  template monomorph core collection-base/import coverage plus map entry and
+  constructor overload checks now derive roots and member paths through stdlib
+  surface metadata instead of direct map path literals. The
   remaining production
   lowerer/emitter
   experimental-map traces
