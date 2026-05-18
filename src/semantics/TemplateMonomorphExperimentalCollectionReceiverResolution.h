@@ -621,7 +621,7 @@ bool isTemplateMonomorphCanonicalKeyValueCountPath(const std::string &path) {
          helperName == "count";
 }
 
-std::string templateMonomorphPreferredMapHelperSpellingForMember(
+std::string templateMonomorphPreferredKeyValueHelperSpellingForMember(
     std::string_view spelling,
     std::string_view preferredPrefix) {
   std::string helperName;
@@ -713,7 +713,7 @@ std::string experimentalMapHelperPathForCanonicalHelper(const std::string &path)
   if (isTemplateMonomorphMapImportAliasHelperPath(path)) {
     return {};
   }
-  return templateMonomorphPreferredMapHelperSpellingForMember(
+  return templateMonomorphPreferredKeyValueHelperSpellingForMember(
       path, experimentalCollectionConstructorRootLocal("map"));
 }
 
@@ -827,7 +827,7 @@ std::string experimentalMapHelperPathForWrapperHelper(const std::string &path) {
   if (isTemplateMonomorphMapImportAliasHelperPath(path)) {
     return {};
   }
-  return templateMonomorphPreferredMapHelperSpellingForMember(
+  return templateMonomorphPreferredKeyValueHelperSpellingForMember(
       path, experimentalCollectionConstructorRootLocal("map"));
 }
 
