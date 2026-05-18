@@ -52,7 +52,7 @@ std::string canonicalMapHelperPath(std::string_view helperName) {
 
 struct SemanticReturnKindTargetInfo {
   ArrayVectorAccessTargetInfo arrayVectorInfo{};
-  KeyValueAccessTargetInfo mapInfo{};
+  KeyValueAccessTargetInfo keyValueInfo{};
   LocalInfo::ValueKind valueKind{LocalInfo::ValueKind::Unknown};
 };
 
@@ -88,9 +88,9 @@ bool classifySemanticReturnKindCollectionTypeText(
     return true;
   }
   if (base == "map" && args.size() == 2) {
-    infoOut.mapInfo.isKeyValueTarget = true;
-    infoOut.mapInfo.keyValueKeyKind = valueKindFromTypeName(args.front());
-    infoOut.mapInfo.keyValueValueKind = valueKindFromTypeName(args.back());
+    infoOut.keyValueInfo.isKeyValueTarget = true;
+    infoOut.keyValueInfo.keyValueKeyKind = valueKindFromTypeName(args.front());
+    infoOut.keyValueInfo.keyValueValueKind = valueKindFromTypeName(args.back());
     return true;
   }
   return true;
@@ -115,11 +115,11 @@ bool classifySemanticReturnKindCollectionSpecialization(
     return true;
   }
   if (family == "map") {
-    infoOut.mapInfo.isKeyValueTarget = true;
-    infoOut.mapInfo.keyValueKeyKind =
+    infoOut.keyValueInfo.isKeyValueTarget = true;
+    infoOut.keyValueInfo.keyValueKeyKind =
         valueKindFromTypeName(resolveSemanticProductTypeText(
             semanticProgram, fact.keyTypeText, fact.keyTypeTextId));
-    infoOut.mapInfo.keyValueValueKind =
+    infoOut.keyValueInfo.keyValueValueKind =
         valueKindFromTypeName(resolveSemanticProductTypeText(
             semanticProgram, fact.valueTypeText, fact.valueTypeTextId));
     return true;
@@ -280,9 +280,9 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
         }
         return true;
       }
-      if (semanticInfo.mapInfo.isKeyValueTarget &&
-          semanticInfo.mapInfo.keyValueValueKind != LocalInfo::ValueKind::Unknown) {
-        kindOut = semanticInfo.mapInfo.keyValueValueKind;
+      if (semanticInfo.keyValueInfo.isKeyValueTarget &&
+          semanticInfo.keyValueInfo.keyValueValueKind != LocalInfo::ValueKind::Unknown) {
+        kindOut = semanticInfo.keyValueInfo.keyValueValueKind;
         if (methodResolvedOut != nullptr) {
           *methodResolvedOut = true;
         }
@@ -456,9 +456,9 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
             builtinKindOut = semanticInfo.arrayVectorInfo.elemKind;
             return true;
           }
-          if (semanticInfo.mapInfo.isKeyValueTarget &&
-              semanticInfo.mapInfo.keyValueValueKind != LocalInfo::ValueKind::Unknown) {
-            builtinKindOut = semanticInfo.mapInfo.keyValueValueKind;
+          if (semanticInfo.keyValueInfo.isKeyValueTarget &&
+              semanticInfo.keyValueInfo.keyValueValueKind != LocalInfo::ValueKind::Unknown) {
+            builtinKindOut = semanticInfo.keyValueInfo.keyValueValueKind;
             return true;
           }
           return false;
@@ -480,7 +480,7 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
       if (isBuiltinCountMethodName(normalizedName) || isBuiltinCapacityMethodName(normalizedName)) {
         if (hasSemanticReceiverFact) {
           if (semanticInfo.arrayVectorInfo.isArrayOrVectorTarget ||
-              semanticInfo.mapInfo.isKeyValueTarget) {
+              semanticInfo.keyValueInfo.isKeyValueTarget) {
             builtinKindOut = LocalInfo::ValueKind::Int32;
             return true;
           }
@@ -505,7 +505,7 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
 
       if (isBuiltinContainsMethodName(normalizedName)) {
         if (hasSemanticReceiverFact) {
-          if (semanticInfo.mapInfo.isKeyValueTarget) {
+          if (semanticInfo.keyValueInfo.isKeyValueTarget) {
             builtinKindOut = LocalInfo::ValueKind::Bool;
             return true;
           }
@@ -525,9 +525,9 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
 
       if (isBuiltinTryAtMethodName(normalizedName)) {
         if (hasSemanticReceiverFact) {
-          if (semanticInfo.mapInfo.isKeyValueTarget &&
-              semanticInfo.mapInfo.keyValueValueKind != LocalInfo::ValueKind::Unknown) {
-            builtinKindOut = semanticInfo.mapInfo.keyValueValueKind;
+          if (semanticInfo.keyValueInfo.isKeyValueTarget &&
+              semanticInfo.keyValueInfo.keyValueValueKind != LocalInfo::ValueKind::Unknown) {
+            builtinKindOut = semanticInfo.keyValueInfo.keyValueValueKind;
             return true;
           }
           return false;
@@ -729,14 +729,14 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
         infoOut = semanticInfo.arrayVectorInfo;
         return true;
       };
-  auto resolveSemanticMapTargetInfo =
+  auto resolveSemanticKeyValueTargetInfo =
       [&](const Expr &candidate, KeyValueAccessTargetInfo &infoOut) {
         SemanticReturnKindTargetInfo semanticInfo;
         if (!resolveSemanticReturnKindTargetInfo(
                 candidate, semanticProgram, semanticIndex, semanticInfo)) {
           return false;
         }
-        infoOut = semanticInfo.mapInfo;
+        infoOut = semanticInfo.keyValueInfo;
         return true;
       };
   auto arrayVectorTargetInfoFor = [&](const Expr &candidate) {
@@ -745,7 +745,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   };
   auto keyValueTargetInfoFor = [&](const Expr &candidate) {
     return resolveKeyValueAccessTargetInfo(
-        candidate, localsIn, resolveSemanticMapTargetInfo);
+        candidate, localsIn, resolveSemanticKeyValueTargetInfo);
   };
 
   auto isKnownCollectionAccessReceiverExpr = [&](const Expr &candidate) -> bool {
@@ -778,16 +778,16 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     return it != localsIn.end() && it->second.kind == LocalInfo::Kind::Value &&
            it->second.valueKind == LocalInfo::ValueKind::String;
   };
-  auto isKnownMapReceiverExpr = [&](const Expr &candidate) -> bool {
+  auto isKnownKeyValueReceiverExpr = [&](const Expr &candidate) -> bool {
     return keyValueTargetInfoFor(candidate).isKeyValueTarget;
   };
-  auto hasNonMapReceiverSemanticFact = [&](const Expr &candidate) {
+  auto hasNonKeyValueReceiverSemanticFact = [&](const Expr &candidate) {
     SemanticReturnKindTargetInfo semanticInfo;
     if (!resolveSemanticReturnKindTargetInfo(
             candidate, semanticProgram, semanticIndex, semanticInfo)) {
       return false;
     }
-    return !semanticInfo.mapInfo.isKeyValueTarget;
+    return !semanticInfo.keyValueInfo.isKeyValueTarget;
   };
   auto hasNonCountReceiverSemanticFact = [&](const Expr &candidate) {
     SemanticReturnKindTargetInfo semanticInfo;
@@ -796,7 +796,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
       return false;
     }
     return !semanticInfo.arrayVectorInfo.isArrayOrVectorTarget &&
-           !semanticInfo.mapInfo.isKeyValueTarget &&
+           !semanticInfo.keyValueInfo.isKeyValueTarget &&
            semanticInfo.valueKind != LocalInfo::ValueKind::String;
   };
   auto isKnownVectorMutatorReceiverExpr = [&](const Expr &candidate) -> bool {
@@ -833,7 +833,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
       return false;
     }
     return !semanticInfo.arrayVectorInfo.isArrayOrVectorTarget &&
-           !semanticInfo.mapInfo.isKeyValueTarget &&
+           !semanticInfo.keyValueInfo.isKeyValueTarget &&
            semanticInfo.valueKind != LocalInfo::ValueKind::String;
   };
   auto isKnownLocalName = [&](const Expr &candidate) -> bool {
@@ -1023,14 +1023,14 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
         continue;
       }
     }
-    if (isContainsCall && isKnownMapReceiverExpr(methodExpr.args.front())) {
+    if (isContainsCall && isKnownKeyValueReceiverExpr(methodExpr.args.front())) {
       if (methodResolvedOut != nullptr) {
         *methodResolvedOut = true;
       }
       kindOut = LocalInfo::ValueKind::Bool;
       return true;
     }
-    if (isContainsCall && hasNonMapReceiverSemanticFact(methodExpr.args.front())) {
+    if (isContainsCall && hasNonKeyValueReceiverSemanticFact(methodExpr.args.front())) {
       continue;
     }
     if (isCountCall && !requireArrayReturn) {
@@ -1098,7 +1098,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     kindOut = LocalInfo::ValueKind::Int32;
     return true;
   }
-  if (isContainsCall && isKnownMapReceiverExpr(callExpr.args.front())) {
+  if (isContainsCall && isKnownKeyValueReceiverExpr(callExpr.args.front())) {
     kindOut = LocalInfo::ValueKind::Bool;
     return true;
   }

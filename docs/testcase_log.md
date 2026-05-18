@@ -224,8 +224,28 @@
   stdlib-ownership cutover. On 2026-05-18 it expected malformed and valid
   bare `at(...)` calls to use the old native-tail access path, but current
   dispatch returns `NotHandled`; the adjacent source-delegation lock passed.
+- `PrimeStruct_backend_ir_tests --test-case="ir lowerer setup type helper resolves access call method return kinds" --no-skip`
+  has stale bare `at`/`at_unsafe` direct return-kind expectations after the
+  map stdlib-ownership cutover. On 2026-05-18 both isolated probes returned
+  false instead of borrowing the old generic access return info from direct
+  `/array/at` definitions; adjacent count-call return-kind and canonical map
+  access fallback rejection coverage passed.
 
 ## Recent Test Runs
+- 2026-05-18 19:48 CEST | pass | mode: release | command:
+  `git diff --check`;
+  `rg -n '\bmapInfo\b|resolveSemanticMapTargetInfo|isKnownMapReceiverExpr|hasNonMapReceiverSemanticFact' src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup type helper resolves count call method return kinds,ir lowerer setup type helper rejects canonical map access fallback to compatibility defs,ir lowerer call helpers source delegation stays stable" --no-skip`
+  | failures: none | notes: Setup-type semantic return-kind target metadata
+  now uses key/value names instead of `mapInfo` and related local map-receiver
+  helper names.
+- 2026-05-18 19:48 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer setup type helper resolves count call method return kinds,ir lowerer setup type helper resolves access call method return kinds,ir lowerer setup type helper rejects canonical map access fallback to compatibility defs,ir lowerer call helpers source delegation stays stable" --no-skip`
+  | failures: `ir lowerer setup type helper resolves access call method
+  return kinds` | notes: stale direct `at`/`at_unsafe` expectations still
+  require old generic access return-kind inference; reran the adjacent
+  non-stale slices separately and they passed.
 - 2026-05-18 19:46 CEST | pass | mode: release | command:
   `git diff --check`;
   `rg -n 'mapKeyCompareOpcode|map key compare opcode' src/ir_lowerer include/primec/testing/ir_lowerer_helpers tests/unit/test_ir_pipeline_validation_ir_lowerer_*`;

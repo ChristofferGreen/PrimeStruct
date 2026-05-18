@@ -2752,6 +2752,11 @@ Task template:
     - TODO-4487 removed the hard-coded canonical map access return-kind path
       from `src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`, so the
       file should stay absent from the map-surface trace inventory.
+    - 2026-05-18: Setup-type semantic return-kind target metadata now uses
+      key/value names for its map collection facts instead of `mapInfo` and
+      related map-receiver local helper names. The behavior stays unchanged
+      while the remaining lowerer wording moves away from map-specific
+      implementation terminology.
     - TODO-4488 removed the hard-coded canonical map access named-argument
       guard from `src/semantics/SemanticsValidatorExprNamedArgumentBuiltins.cpp`,
       so the file should stay absent from the map-surface trace inventory.

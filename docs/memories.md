@@ -896,6 +896,17 @@ This file stores durable session-derived facts that are useful in later work. Ke
   their inventory caps are now zero and the obsolete backing-trace ownership
   allowlist entries were removed.
 
+### map-return-kind-targets-use-key-value-names
+- Updated: 2026-05-18
+- Tags: ir, collections, stdlib
+- Fact: Lowerer setup-type semantic return-kind target metadata should use
+  key/value terminology for map collection facts instead of `mapInfo` or
+  map-receiver helper names.
+- Evidence: `SemanticReturnKindTargetInfo` now stores `keyValueInfo`, the
+  setup-type local semantic target resolver is named
+  `resolveSemanticKeyValueTargetInfo`, and focused release setup-type/source
+  delegation tests passed after the rename.
+
 ### mapvalue-public-insert-uses-stdlib
 - Updated: 2026-05-16
 - Tags: ir, collections, native
