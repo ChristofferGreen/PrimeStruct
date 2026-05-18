@@ -2825,6 +2825,11 @@ Task template:
       access-target preservation, so
       `src/ir_lowerer/IrLowererAccessTargetResolution.cpp` should keep using
       the shared lowerer map backing predicate for preservation checks.
+    - 2026-05-18: IR access-target resolution now uses key/value local names
+      for helper-surface metadata, constructor metadata, access-helper path
+      matching, semantic type-text classification, and args-pack access
+      checks. Dereferenced args-pack key/value access now uses the same
+      explicit published helper-path detection as direct args-pack access.
     - 2026-05-18: `SemanticsValidate.cpp` builtin map insert/read rewrite now
       derives map helper insert/read members, canonical helper paths,
       constructor detection, and removed rooted access alias paths from

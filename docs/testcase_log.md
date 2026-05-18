@@ -238,6 +238,15 @@
   access fallback rejection coverage passed.
 
 ## Recent Test Runs
+- 2026-05-18 19:56 CEST | pass | mode: release | command:
+  `git diff --check`;
+  `rg -n 'mapHelperSurfaceMetadataForAccessTargets|mapConstructorSurfaceMetadataForAccessTargets|isMapAccessHelperName|resolveMapAccessHelperPathMemberName|isExplicitMapAccessHelperPath|resolveMapConstructorExprMemberName|classifySemanticMapAccessTypeText|hasInferredTypedWrappedMap|preSemanticAliasMapAccess|preSemanticExplicitMapAccess|isAliasMapArgsPackAccess|isExplicitMapArgsPackAccess|inferredWrappedMap|\bisWrappedMap\b|\bmapArgs\b' src/ir_lowerer/IrLowererAccessTargetResolution.cpp`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable,ir lowerer call helpers resolve and validate map access targets" --no-skip`
+  | failures: none | notes: Access-target helper metadata and semantic
+  classifier locals now use key/value names; dereferenced args-pack
+  key/value access now recognizes the same explicit published helper paths as
+  the direct args-pack path.
 - 2026-05-18 19:53 CEST | pass | mode: release | command:
   `git diff --check`;
   `rg -n 'resolvesMapHelperSurfacePath|mapConstructorAliasToken|\bmapAlias\b' src/ir_lowerer/IrLowererBuiltinNameHelpers.cpp`;

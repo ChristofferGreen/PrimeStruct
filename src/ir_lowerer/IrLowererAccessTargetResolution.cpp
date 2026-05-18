@@ -65,29 +65,29 @@ std::string inferExperimentalVectorStructPathFromTypeName(
   return specializedExperimentalVectorStructPathForElementType(normalizedArg);
 }
 
-bool hasInferredTypedWrappedMap(const LocalInfo &localInfo, LocalInfo::Kind kind) {
+bool hasInferredTypedWrappedKeyValue(const LocalInfo &localInfo, LocalInfo::Kind kind) {
   return (kind == LocalInfo::Kind::Reference || kind == LocalInfo::Kind::Pointer) &&
          localInfo.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
          localInfo.keyValueValueKind != LocalInfo::ValueKind::Unknown;
 }
 
-const StdlibSurfaceMetadata *mapHelperSurfaceMetadataForAccessTargets() {
+const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataForAccessTargets() {
   return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
 }
 
-const StdlibSurfaceMetadata *mapConstructorSurfaceMetadataForAccessTargets() {
+const StdlibSurfaceMetadata *keyValueConstructorSurfaceMetadataForAccessTargets() {
   return findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
 }
 
-bool isMapAccessHelperName(std::string_view helperName) {
+bool isKeyValueAccessHelperName(std::string_view helperName) {
   return helperName == "at" || helperName == "at_ref" ||
          helperName == "at_unsafe" || helperName == "at_unsafe_ref";
 }
 
-bool resolveMapAccessHelperPathMemberName(std::string_view path,
+bool resolveKeyValueAccessHelperPathMemberName(std::string_view path,
                                           std::string &helperNameOut) {
   helperNameOut.clear();
-  const auto *metadata = mapHelperSurfaceMetadataForAccessTargets();
+  const auto *metadata = keyValueHelperSurfaceMetadataForAccessTargets();
   if (metadata == nullptr) {
     return false;
   }
@@ -100,16 +100,16 @@ bool resolveMapAccessHelperPathMemberName(std::string_view path,
   return true;
 }
 
-bool isExplicitMapAccessHelperPath(std::string_view path) {
+bool isExplicitKeyValueAccessHelperPath(std::string_view path) {
   std::string helperName;
-  return resolveMapAccessHelperPathMemberName(path, helperName) &&
-         isMapAccessHelperName(helperName);
+  return resolveKeyValueAccessHelperPathMemberName(path, helperName) &&
+         isKeyValueAccessHelperName(helperName);
 }
 
-bool resolveMapConstructorExprMemberName(const Expr &expr,
+bool resolveKeyValueConstructorExprMemberName(const Expr &expr,
                                          std::string &constructorNameOut) {
   constructorNameOut.clear();
-  const auto *metadata = mapConstructorSurfaceMetadataForAccessTargets();
+  const auto *metadata = keyValueConstructorSurfaceMetadataForAccessTargets();
   return metadata != nullptr &&
          resolvePublishedStdlibSurfaceConstructorExprMemberName(
              expr, metadata->id, constructorNameOut);
@@ -118,7 +118,7 @@ bool resolveMapConstructorExprMemberName(const Expr &expr,
 bool resolveMapConstructorPathMemberName(std::string_view path,
                                          std::string &constructorNameOut) {
   constructorNameOut.clear();
-  const auto *metadata = mapConstructorSurfaceMetadataForAccessTargets();
+  const auto *metadata = keyValueConstructorSurfaceMetadataForAccessTargets();
   return metadata != nullptr &&
          resolvePublishedStdlibSurfaceConstructorMemberName(
              path, metadata->id, constructorNameOut);
@@ -126,11 +126,11 @@ bool resolveMapConstructorPathMemberName(std::string_view path,
 
 bool isPublishedMapConstructorExpr(const Expr &expr) {
   std::string constructorName;
-  return resolveMapConstructorExprMemberName(expr, constructorName);
+  return resolveKeyValueConstructorExprMemberName(expr, constructorName);
 }
 
 std::string forwardedEmptyMapConstructorMemberName() {
-  const auto *metadata = mapConstructorSurfaceMetadataForAccessTargets();
+  const auto *metadata = keyValueConstructorSurfaceMetadataForAccessTargets();
   if (metadata != nullptr) {
     const std::string_view memberName =
         resolveStdlibSurfaceMemberName(*metadata, metadata->canonicalPath);
@@ -253,7 +253,7 @@ bool classifySemanticArrayVectorAccessTypeText(const std::string &typeText,
   return true;
 }
 
-bool classifySemanticMapAccessTypeText(const std::string &typeText,
+bool classifySemanticKeyValueAccessTypeText(const std::string &typeText,
                                        KeyValueAccessTargetInfo &targetInfoOut) {
   std::string base;
   std::string argText;
@@ -261,7 +261,7 @@ bool classifySemanticMapAccessTypeText(const std::string &typeText,
     return false;
   }
   base = normalizeAccessCollectionFamily(base);
-  bool isWrappedMap = false;
+  bool isWrappedKeyValue = false;
   if (base == "Reference" || base == "Pointer") {
     std::vector<std::string> wrappedArgs;
     if (!splitTemplateArgs(argText, wrappedArgs) || wrappedArgs.size() != 1) {
@@ -271,22 +271,22 @@ bool classifySemanticMapAccessTypeText(const std::string &typeText,
       return false;
     }
     base = normalizeAccessCollectionFamily(base);
-    isWrappedMap = true;
+    isWrappedKeyValue = true;
   }
   if (base != "map") {
     return false;
   }
 
-  std::vector<std::string> mapArgs;
-  if (!splitTemplateArgs(argText, mapArgs) || mapArgs.size() != 2) {
+  std::vector<std::string> keyValueArgs;
+  if (!splitTemplateArgs(argText, keyValueArgs) || keyValueArgs.size() != 2) {
     return false;
   }
 
   targetInfoOut = {};
   targetInfoOut.isKeyValueTarget = true;
-  targetInfoOut.keyValueKeyKind = valueKindFromTypeName(trimTemplateTypeText(mapArgs.front()));
-  targetInfoOut.keyValueValueKind = valueKindFromTypeName(trimTemplateTypeText(mapArgs.back()));
-  targetInfoOut.isWrappedKeyValueTarget = isWrappedMap;
+  targetInfoOut.keyValueKeyKind = valueKindFromTypeName(trimTemplateTypeText(keyValueArgs.front()));
+  targetInfoOut.keyValueValueKind = valueKindFromTypeName(trimTemplateTypeText(keyValueArgs.back()));
+  targetInfoOut.isWrappedKeyValueTarget = isWrappedKeyValue;
   targetInfoOut.structTypeName =
       inferExperimentalMapStructPathFromKinds(targetInfoOut.keyValueKeyKind,
                                               targetInfoOut.keyValueValueKind);
@@ -384,7 +384,7 @@ bool resolveSemanticKeyValueAccessTargetInfo(
   auto tryClassifyType = [&](const std::string &typeText, SymbolId typeTextId) {
     const std::string resolvedTypeText =
         resolveAccessSemanticTypeText(semanticProgram, typeText, typeTextId);
-    return classifySemanticMapAccessTypeText(resolvedTypeText, targetInfoOut);
+    return classifySemanticKeyValueAccessTypeText(resolvedTypeText, targetInfoOut);
   };
 
   if (const auto *collectionFact =
@@ -537,7 +537,7 @@ const Expr *resolveCallArgumentForParameter(const Expr &target,
 
 bool isForwardedMapNewConstructor(const Expr &expr) {
   std::string constructorName;
-  return resolveMapConstructorExprMemberName(expr, constructorName) &&
+  return resolveKeyValueConstructorExprMemberName(expr, constructorName) &&
          constructorName == forwardedEmptyMapConstructorMemberName();
 }
 
@@ -697,11 +697,11 @@ KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(
     return current;
   };
   auto populateFromDirectLocal = [&](const LocalInfo &localInfo, bool dereferenced) {
-    const bool inferredWrappedMap = hasInferredTypedWrappedMap(localInfo, localInfo.kind);
+    const bool inferredWrappedKeyValue = hasInferredTypedWrappedKeyValue(localInfo, localInfo.kind);
     if (localInfo.kind != LocalInfo::Kind::KeyValueCollection &&
         !(localInfo.kind == LocalInfo::Kind::Reference && localInfo.referenceToKeyValueCollection) &&
         !(localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToKeyValueCollection) &&
-        !inferredWrappedMap) {
+        !inferredWrappedKeyValue) {
       return false;
     }
     auto resolvedExperimentalMapStructPath = [&](const std::string &structTypeName) {
@@ -731,11 +731,11 @@ KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(
     info.isKeyValueTarget = true;
     info.keyValueKeyKind = localInfo.keyValueKeyKind;
     info.keyValueValueKind = localInfo.keyValueValueKind;
-    const bool isWrappedMap =
+    const bool isWrappedKeyValue =
         (localInfo.kind == LocalInfo::Kind::Reference && localInfo.referenceToKeyValueCollection) ||
         (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToKeyValueCollection) ||
-        inferredWrappedMap;
-    info.isWrappedKeyValueTarget = isWrappedMap && !dereferenced;
+        inferredWrappedKeyValue;
+    info.isWrappedKeyValueTarget = isWrappedKeyValue && !dereferenced;
     const bool isDirectMapStorage = localInfo.kind == LocalInfo::Kind::KeyValueCollection;
     const std::string resolvedStructTypeName =
         resolvedExperimentalMapStructPath(localInfo.structTypeName);
@@ -777,19 +777,19 @@ KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(
       return structTypeName;
     };
     const bool isDirectMap = localInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection;
-    const bool inferredWrappedMap =
-        hasInferredTypedWrappedMap(localInfo, localInfo.argsPackElementKind);
-    const bool isWrappedMap =
+    const bool inferredWrappedKeyValue =
+        hasInferredTypedWrappedKeyValue(localInfo, localInfo.argsPackElementKind);
+    const bool isWrappedKeyValue =
         (localInfo.argsPackElementKind == LocalInfo::Kind::Reference && localInfo.referenceToKeyValueCollection) ||
         (localInfo.argsPackElementKind == LocalInfo::Kind::Pointer && localInfo.pointerToKeyValueCollection) ||
-        inferredWrappedMap;
-    if (!isDirectMap && !isWrappedMap) {
+        inferredWrappedKeyValue;
+    if (!isDirectMap && !isWrappedKeyValue) {
       return false;
     }
     info.isKeyValueTarget = true;
     info.keyValueKeyKind = localInfo.keyValueKeyKind;
     info.keyValueValueKind = localInfo.keyValueValueKind;
-    info.isWrappedKeyValueTarget = isWrappedMap && !dereferenced;
+    info.isWrappedKeyValueTarget = isWrappedKeyValue && !dereferenced;
     const bool isDirectMapStorage =
         localInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection;
     const std::string resolvedStructTypeName =
@@ -833,17 +833,17 @@ KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(
     std::string preSemanticAccessName;
     std::string preSemanticHelperName;
     const std::string preSemanticScopedPath = resolveScopedCallPath(target);
-    const bool preSemanticAliasMapAccess =
+    const bool preSemanticAliasKeyValueAccess =
         resolveMapHelperAliasName(target, preSemanticHelperName) &&
-        isMapAccessHelperName(preSemanticHelperName);
-    const bool preSemanticExplicitMapAccess =
+        isKeyValueAccessHelperName(preSemanticHelperName);
+    const bool preSemanticExplicitKeyValueAccess =
         !target.isMethodCall &&
-        (isExplicitMapAccessHelperPath(preSemanticScopedPath) ||
-         preSemanticAliasMapAccess) &&
+        (isExplicitKeyValueAccessHelperPath(preSemanticScopedPath) ||
+         preSemanticAliasKeyValueAccess) &&
         target.args.size() == 2;
     if (((getBuiltinArrayAccessName(target, preSemanticAccessName) &&
           target.args.size() == 2) ||
-         preSemanticExplicitMapAccess) &&
+         preSemanticExplicitKeyValueAccess) &&
         resolveArgsPackAccessTarget(target.args.front(), false)) {
       return info;
     }
@@ -886,8 +886,15 @@ KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(
         }
       }
       std::string derefAccessName;
-      if (derefTarget.kind == Expr::Kind::Call && getBuiltinArrayAccessName(derefTarget, derefAccessName) &&
-          derefTarget.args.size() == 2 && derefTarget.args.front().kind == Expr::Kind::Name) {
+      const std::string derefScopedPath = resolveScopedCallPath(derefTarget);
+      const bool isDerefKeyValueAccess =
+          derefTarget.kind == Expr::Kind::Call &&
+          ((getBuiltinArrayAccessName(derefTarget, derefAccessName) &&
+            derefTarget.args.size() == 2) ||
+           (isExplicitKeyValueAccessHelperPath(derefScopedPath) &&
+            derefTarget.args.size() == 2));
+      if (isDerefKeyValueAccess &&
+          derefTarget.args.front().kind == Expr::Kind::Name) {
         auto it = localsIn.find(derefTarget.args.front().name);
         if (it != localsIn.end() && populateFromArgsPackElement(it->second, true)) {
           return info;
@@ -897,16 +904,16 @@ KeyValueAccessTargetInfo resolveKeyValueAccessTargetInfo(
     std::string accessName;
     std::string helperName;
     const std::string scopedTargetPath = resolveScopedCallPath(target);
-    const bool isAliasMapArgsPackAccess =
+    const bool isAliasKeyValueArgsPackAccess =
         resolveMapHelperAliasName(target, helperName) &&
-        isMapAccessHelperName(helperName);
-    const bool isExplicitMapArgsPackAccess =
+        isKeyValueAccessHelperName(helperName);
+    const bool isExplicitKeyValueArgsPackAccess =
         !target.isMethodCall &&
-        (isExplicitMapAccessHelperPath(scopedTargetPath) ||
-         isAliasMapArgsPackAccess) &&
+        (isExplicitKeyValueAccessHelperPath(scopedTargetPath) ||
+         isAliasKeyValueArgsPackAccess) &&
         target.args.size() == 2;
     if ((getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) ||
-        isExplicitMapArgsPackAccess) {
+        isExplicitKeyValueArgsPackAccess) {
       if (resolveArgsPackAccessTarget(target.args.front(), false)) {
         return info;
       }
@@ -1394,16 +1401,16 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     std::string accessName;
     std::string helperName;
     const std::string scopedTargetPath = resolveScopedCallPath(target);
-    const bool isAliasMapArgsPackAccess =
+    const bool isAliasKeyValueArgsPackAccess =
         resolveMapHelperAliasName(target, helperName) &&
-        isMapAccessHelperName(helperName);
-    const bool isExplicitMapArgsPackAccess =
+        isKeyValueAccessHelperName(helperName);
+    const bool isExplicitKeyValueArgsPackAccess =
         !target.isMethodCall &&
-        (isExplicitMapAccessHelperPath(scopedTargetPath) ||
-         isAliasMapArgsPackAccess) &&
+        (isExplicitKeyValueAccessHelperPath(scopedTargetPath) ||
+         isAliasKeyValueArgsPackAccess) &&
         target.args.size() == 2;
     if ((getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) ||
-        isExplicitMapArgsPackAccess) {
+        isExplicitKeyValueArgsPackAccess) {
       const Expr &accessReceiver = target.args.front();
       if (accessReceiver.kind == Expr::Kind::Name) {
         auto localIt = localsIn.find(accessReceiver.name);
