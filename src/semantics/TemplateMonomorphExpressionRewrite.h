@@ -1567,7 +1567,7 @@ bool rewriteExpr(Expr &expr,
       expr.name = removedMapCompatibilityPath;
       expr.namespacePrefix.clear();
     }
-    const std::string experimentalMapPath = experimentalMapHelperPathForCanonicalHelper(resolvedPath);
+    const std::string experimentalMapPath = experimentalKeyValueHelperPathForCanonicalHelper(resolvedPath);
     const Expr *experimentalMapReceiverExpr = mapHelperReceiverExpr(expr);
     const bool receiverIsPublishedMapConstructor =
         isPublishedMapConstructorReceiverExpr(experimentalMapReceiverExpr,

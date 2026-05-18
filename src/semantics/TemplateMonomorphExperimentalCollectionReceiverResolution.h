@@ -709,7 +709,7 @@ bool resolveExperimentalMapValueReceiverTemplateArgs(const Expr *receiverExpr,
       templateArgsOut);
 }
 
-std::string experimentalMapHelperPathForCanonicalHelper(const std::string &path) {
+std::string experimentalKeyValueHelperPathForCanonicalHelper(const std::string &path) {
   if (isTemplateMonomorphMapImportAliasHelperPath(path)) {
     return {};
   }
