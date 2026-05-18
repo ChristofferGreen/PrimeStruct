@@ -184,6 +184,20 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-18 09:10 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map namespaced at method now validates through slash-path routing,map namespaced at_unsafe method auto inference now validates through slash-path routing,stdlib canonical map helpers resolve in method-call sugar,map stdlib namespaced count expression ignores templated alias helper fallback,map compatibility explicit-template count call keeps alias precedence with canonical templated helper" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="semantics validator expr source delegation stays stable" --no-skip`;
+  `rg -n 'std/collections/map|experimental_map|/map/|CollectionsMap|map(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bMap<' src/semantics/SemanticsValidatorCollectionHelperRewrites.cpp`;
+  `rg --pcre2 -n '/?std/collections/map(?:/|")|/?std/collections/experimental_map(?:/|")|(?<![A-Za-z0-9_/])/?map/|\bmap(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bCollectionsMap[A-Za-z0-9_]*\b|\bMap<' src/semantics/SemanticsValidatorCollectionHelperRewrites.cpp` |
+  failures: none | notes: semantic collection-helper rewrites now
+  derive map helper canonical paths, explicit helper-path recognition, member
+  tokens, and lowering spelling preference from `collections.map_helpers`
+  metadata; the edited C++ file has zero targeted map-surface matches. The
+  Python inventory scripts were intentionally not run in this pass.
 - 2026-05-18 09:04 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer collection helper rewrite guards explicit map defs,ir lowerer call helpers keep lowered collection helper paths reachable via published surface ids,native tail and late collection helper metadata dispatch stays source locked" --no-skip`;

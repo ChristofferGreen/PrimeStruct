@@ -2326,6 +2326,12 @@ Task template:
       `StdlibSurfaceId::CollectionsMapHelpers` directly; they now resolve the
       map helper family through `collections.map_helpers` metadata and the
       stdlib surface canonical-helper API.
+    - 2026-05-18: Semantic collection-helper rewrites no longer name
+      `StdlibSurfaceId::CollectionsMapHelpers` directly or concatenate rooted
+      and canonical helper paths for explicit-helper checks; they now resolve
+      helper paths, member tokens, and preferred lowering spellings through
+      `collections.map_helpers` metadata, with the file inventory cap reduced
+      to zero.
     - 2026-05-16: Inline native map helper recognition no longer names
       `StdlibSurfaceId::CollectionsMapHelpers` directly; it now resolves the
       helper family through `collections.map_helpers` metadata.

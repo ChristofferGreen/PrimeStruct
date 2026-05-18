@@ -744,6 +744,22 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find("const std::string alias = \"/map/\" + std::string(helperName)") ==
         std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("\"/std/collections/map/\" + std::string(helperName)") ==
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("\"/map/\" + std::string(helperName)") ==
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("collectionRewriteMapHelperMetadata()") !=
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("canonicalMapHelperPathForRewrite(") !=
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("resolveMapHelperMemberTokenForRewrite(") !=
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("resolveExplicitMapHelperPathForRewrite(") !=
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("preferredMapHelperLoweringPathForRewrite(") !=
+        std::string::npos);
   CHECK(effectFreeCollectionsSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
         std::string::npos);
   CHECK(effectFreeCollectionsSource.find(

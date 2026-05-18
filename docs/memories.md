@@ -706,7 +706,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   metadata and map template-base checks through `isMapCollectionTypeName`
   instead of direct canonical map path and type spellings; definition return
   inference should detect deferred canonical map access helpers through stdlib
-  map helper metadata instead of direct canonical map access path literals.
+  map helper metadata instead of direct canonical map access path literals;
+  semantic collection-helper rewrites should derive canonical helper paths,
+  explicit helper-path recognition, member-token resolution, and lowering
+  spelling preference through `collections.map_helpers` metadata instead of
+  direct map surface IDs or rooted/canonical helper path concatenation.
   The stale
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`

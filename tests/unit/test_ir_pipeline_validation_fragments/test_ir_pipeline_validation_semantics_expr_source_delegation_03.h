@@ -935,8 +935,10 @@
   CHECK(semanticsCollectionHelperRewritesSource.find("std::string SemanticsValidator::preferredBareMapHelperTarget") !=
         std::string::npos);
   CHECK(semanticsCollectionHelperRewritesSource.find(
-            "canonicalCollectionHelperPath(\n"
-            "      StdlibSurfaceId::CollectionsMapHelpers, helperName)") !=
+            "collectionRewriteMapHelperMetadata()") !=
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find(
+            "canonicalMapHelperPathForRewrite(helperName)") !=
         std::string::npos);
   CHECK(semanticsCollectionHelperRewritesSource.find("preferredCanonicalExperimentalMapHelperTarget(helperName)") !=
         std::string::npos);
@@ -975,16 +977,12 @@
             "isStdNamespacedVectorCompatibilityHelperPath(path, helperName)") !=
         std::string::npos);
   CHECK(semanticsCollectionHelperRewritesSource.find(
-            "resolvePublishedCollectionHelperMemberToken(\n"
-            "            normalizedMethod,\n"
-            "            StdlibSurfaceId::CollectionsMapHelpers,\n"
-            "            helperName)") !=
+            "resolveMapHelperMemberTokenForRewrite(normalizedMethod,\n"
+            "                                               helperName)") !=
         std::string::npos);
   CHECK(semanticsCollectionHelperRewritesSource.find(
-            "preferredPublishedCollectionLoweringPath(\n"
-            "          \"insert_ref\",\n"
-            "          StdlibSurfaceId::CollectionsMapHelpers,\n"
-            "          \"/std/collections/experimental_map/\")") !=
+            "preferredMapHelperLoweringPathForRewrite(\n"
+            "          \"insert_ref\", experimentalCollectionConstructorRootLocal(\"map\"))") !=
         std::string::npos);
   CHECK(semanticsCollectionHelperRewritesSource.find(
             "normalizedMethod != \"count\" && normalizedMethod != \"capacity\" &&") ==
@@ -993,7 +991,10 @@
             "normalizedMethod != \"count\" && normalizedMethod != \"contains\" && normalizedMethod != \"tryAt\" &&") ==
         std::string::npos);
   CHECK(semanticsCollectionHelperRewritesSource.find(
-            "rewrittenOut.name = \"/std/collections/experimental_map/mapInsertRef\";") !=
+            "canonicalMapHelperPathForRewrite(\"insert_ref\")") !=
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find(
+            "resolveExplicitMapHelperPathForRewrite(") !=
         std::string::npos);
   CHECK(semanticsCollectionHelperRewritesSource.find(
             "bool SemanticsValidator::tryRewriteCanonicalExperimentalMapHelperCall") !=

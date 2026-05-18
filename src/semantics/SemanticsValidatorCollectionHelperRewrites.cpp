@@ -33,6 +33,58 @@ bool isBareMapAccessHelperName(std::string_view helperName) {
          helperName == "at_unsafe" || helperName == "at_unsafe_ref";
 }
 
+const StdlibSurfaceMetadata *collectionRewriteMapHelperMetadata() {
+  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+}
+
+std::string canonicalMapHelperPathForRewrite(std::string_view helperName) {
+  const StdlibSurfaceMetadata *metadata =
+      collectionRewriteMapHelperMetadata();
+  if (metadata == nullptr) {
+    return "";
+  }
+  return canonicalCollectionHelperPath(metadata->id, helperName);
+}
+
+bool resolveMapHelperMemberTokenForRewrite(std::string_view memberToken,
+                                           std::string &helperNameOut) {
+  helperNameOut.clear();
+  const StdlibSurfaceMetadata *metadata =
+      collectionRewriteMapHelperMetadata();
+  return metadata != nullptr &&
+         resolvePublishedCollectionHelperMemberToken(memberToken, metadata->id,
+                                                     helperNameOut);
+}
+
+bool resolveExplicitMapHelperPathForRewrite(std::string_view path,
+                                            std::string &helperNameOut) {
+  helperNameOut.clear();
+  const StdlibSurfaceMetadata *metadata =
+      collectionRewriteMapHelperMetadata();
+  if (metadata == nullptr) {
+    return false;
+  }
+  const std::string_view helperName =
+      resolveStdlibSurfaceMemberName(*metadata, path);
+  if (helperName.empty()) {
+    return false;
+  }
+  helperNameOut.assign(helperName);
+  return true;
+}
+
+std::string preferredMapHelperLoweringPathForRewrite(
+    std::string_view helperName,
+    std::string_view preferredPrefix) {
+  const StdlibSurfaceMetadata *metadata =
+      collectionRewriteMapHelperMetadata();
+  if (metadata == nullptr) {
+    return "";
+  }
+  return preferredPublishedCollectionLoweringPath(helperName, metadata->id,
+                                                 preferredPrefix);
+}
+
 } // namespace
 
 size_t SemanticsValidator::mapHelperReceiverIndex(
@@ -91,8 +143,7 @@ std::string SemanticsValidator::preferredBareMapHelperTarget(std::string_view he
            hasImportedDefinitionPath(path) ||
            hasDefinitionFamilyPath(path);
   };
-  const std::string canonical = canonicalCollectionHelperPath(
-      StdlibSurfaceId::CollectionsMapHelpers, helperName);
+  const std::string canonical = canonicalMapHelperPathForRewrite(helperName);
   if (hasVisibleMapHelperFamily(canonical)) {
     return canonical;
   }
@@ -248,8 +299,10 @@ bool SemanticsValidator::tryRewriteBareMapHelperCall(
       dispatchResolvers.resolveMapTarget == nullptr) {
     return false;
   }
-  if (candidate.name == "/std/collections/map/" + std::string(helperName) ||
-      candidate.name == "/map/" + std::string(helperName)) {
+  std::string explicitHelperName;
+  if (resolveExplicitMapHelperPathForRewrite(
+          explicitCallPathForCandidate(candidate), explicitHelperName) &&
+      explicitHelperName == helperName) {
     return false;
   }
   const size_t receiverIndex = mapHelperReceiverIndex(candidate, dispatchResolvers);
@@ -533,10 +586,8 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalMapHelperCall(
     if (!normalizedMethod.empty() && normalizedMethod.front() == '/') {
       normalizedMethod.erase(normalizedMethod.begin());
     }
-    if (!resolvePublishedCollectionHelperMemberToken(
-            normalizedMethod,
-            StdlibSurfaceId::CollectionsMapHelpers,
-            helperName) ||
+    if (!resolveMapHelperMemberTokenForRewrite(normalizedMethod,
+                                               helperName) ||
         !isPublishedMapBaseHelperName(helperName)) {
       return false;
     }
@@ -556,13 +607,10 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalMapHelperCall(
       rewrittenOut = candidate;
       rewrittenOut.isMethodCall = false;
       rewrittenOut.isFieldAccess = false;
-      rewrittenOut.name = preferredPublishedCollectionLoweringPath(
-          "insert_ref",
-          StdlibSurfaceId::CollectionsMapHelpers,
-          experimentalCollectionConstructorRootLocal("map"));
+      rewrittenOut.name = preferredMapHelperLoweringPathForRewrite(
+          "insert_ref", experimentalCollectionConstructorRootLocal("map"));
       if (rewrittenOut.name.empty()) {
-        rewrittenOut.name = canonicalCollectionHelperPath(
-            StdlibSurfaceId::CollectionsMapHelpers, "insert_ref");
+        rewrittenOut.name = canonicalMapHelperPathForRewrite("insert_ref");
       }
       if (rewrittenOut.name.empty()) {
         return false;
@@ -573,8 +621,7 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalMapHelperCall(
       }
       return true;
     }
-    canonicalPath = canonicalCollectionHelperPath(
-        StdlibSurfaceId::CollectionsMapHelpers, helperName);
+    canonicalPath = canonicalMapHelperPathForRewrite(helperName);
     if (canonicalPath.empty()) {
       helperName.clear();
       return false;
