@@ -538,7 +538,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   backing classifiers and the metadata-derived map alias token for map return
   type text; initializer call binding should use shared map backing
   classifiers, map collection type classification, and the metadata-derived
-  map alias token instead of direct map collection strings.
+  map alias token instead of direct map collection strings; concrete call
+  resolution should classify map entry constructor arguments by resolving the
+  `entry` member through map helper stdlib surface metadata instead of
+  carrying a direct experimental-map entry fallback.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

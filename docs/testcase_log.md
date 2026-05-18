@@ -196,6 +196,21 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-18 11:31 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib namespaced map constructor resolves through imported stdlib helper" --no-skip`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib namespaced map constructor keeps same-path definition before wrapper fallback" --no-skip`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="stdlib namespaced map constructor does not resolve map alias helper fallback" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_compile_run_tests primec`;
+  `cd build-release && ./PrimeStruct_compile_run_tests --test-case="native rejects map constructor literal parity with canonical entries" --no-skip`;
+  `rg --pcre2 -n '/?std/collections/map(?:/|")|/?std/collections/experimental_map(?:/|")|(?<![A-Za-z0-9_/])/?map/|\bmap(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bCollectionsMap[A-Za-z0-9_]*\b|\bMap<' src/semantics/SemanticsValidatorExprCallResolution.cpp`;
+  `git diff --check` | failures: none | notes:
+  `SemanticsValidatorExprCallResolution.cpp` now resolves map entry
+  constructor argument paths through stdlib surface metadata and no longer
+  falls back to a direct experimental-map entry path. The targeted direct scan
+  returned no matches. The Python inventory script was intentionally not run.
 - 2026-05-18 11:22 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="canonical stdlib map returns are allowed,map return accepts array value type during semantics validation,public stdlib map Ref wrappers validate through canonical borrowed helpers,canonical map borrowed helper calls validate ownership-sensitive values through ref helpers" --no-skip`;

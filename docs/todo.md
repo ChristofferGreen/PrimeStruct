@@ -2751,6 +2751,11 @@ Task template:
       map backing classifiers, map collection type classification, and the
       metadata-derived map alias token for initializer call binding; its
       inventory cap is zero.
+    - 2026-05-18:
+      `SemanticsValidatorExprCallResolution.cpp` now classifies map entry
+      constructor arguments by resolving the `entry` member through stdlib
+      surface metadata instead of carrying a direct experimental-map entry
+      fallback; its inventory cap is zero.
     - Tighten or replace the TODO-4473 and TODO-4472 allowed-count
       inventories as traces are deleted; the final TODO-4464 state is zero
       tolerance for all PrimeStruct-map-specific production C++ traces, not a

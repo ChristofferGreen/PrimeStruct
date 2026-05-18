@@ -223,15 +223,11 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
     }
   };
   auto isMapEntryConstructorPath = [](const std::string &path) {
-    if (const auto *metadata = mapHelperSurfaceMetadataLocal();
-        metadata != nullptr) {
-      const std::string entryPath =
-          std::string(metadata->canonicalPath) + "/entry";
-      if (path == entryPath || path.rfind(entryPath + "__", 0) == 0) {
-        return true;
-      }
+    const auto *metadata = mapHelperSurfaceMetadataLocal();
+    if (metadata == nullptr) {
+      return false;
     }
-    return isExperimentalCollectionConstructorPathLocal(path, "map", "entry");
+    return primec::resolveStdlibSurfaceMemberName(*metadata, path) == "entry";
   };
   auto explicitCallPath = [](const Expr &callExpr) -> std::string {
     if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall ||
