@@ -157,6 +157,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string templateExpressionRewriteSource =
       readText(repoRoot() / "src" / "semantics" /
                "TemplateMonomorphExpressionRewrite.h");
+  const std::string templateCollectionCompatibilitySource =
+      readText(repoRoot() / "src" / "semantics" /
+               "TemplateMonomorphCollectionCompatibilityPaths.h");
   const std::string templateConstructorRewriteSource =
       readText(repoRoot() / "src" / "semantics" /
                "TemplateMonomorphExperimentalCollectionConstructorRewrites.h");
@@ -547,6 +550,19 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(templateExpressionRewriteSource.find("const std::string compatibilityPath = \"/map/\" +") ==
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("resolvedPath.rfind(\"/map/\", 0) == 0) &&") ==
+        std::string::npos);
+  CHECK(templateCollectionCompatibilitySource.find("rawMethodName.rfind(\"map/\", 0)") ==
+        std::string::npos);
+  CHECK(templateCollectionCompatibilitySource.find(
+            "rawMethodName.rfind(\"std/collections/map/\", 0)") ==
+        std::string::npos);
+  CHECK(templateCollectionCompatibilitySource.find("value == \"std/collections/map\"") ==
+        std::string::npos);
+  CHECK(templateCollectionCompatibilitySource.find(
+            "metadataBackedMapHelperMethodName(rawMethodName)") !=
+        std::string::npos);
+  CHECK(templateCollectionCompatibilitySource.find(
+            "mapHelperSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(templateConstructorRewriteSource.find("originalPath == \"/map\"") ==
         std::string::npos);

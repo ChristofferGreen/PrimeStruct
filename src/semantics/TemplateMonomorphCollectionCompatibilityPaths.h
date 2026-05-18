@@ -29,6 +29,26 @@ std::string_view mapCompatibilityHelperBase(std::string_view helperName) {
   return helperName;
 }
 
+bool isTemplateMonomorphMapCollectionRoot(std::string_view value) {
+  const primec::StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return false;
+  }
+  const std::string normalizedValue = std::string(trimLeadingSlash(value));
+  auto matchesRoot = [&](std::string_view root) {
+    return normalizedValue == trimLeadingSlash(root);
+  };
+  if (matchesRoot(metadata->canonicalPath)) {
+    return true;
+  }
+  for (std::string_view alias : metadata->importAliasSpellings) {
+    if (matchesRoot(alias)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverTypeName,
                                             std::string rawMethodName) {
   if (!rawMethodName.empty() && rawMethodName.front() == '/') {
@@ -63,11 +83,9 @@ bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverTypeName,
   if (receiverTypeName != "map") {
     return false;
   }
-  if (rawMethodName.rfind("map/", 0) == 0) {
-    helperName = std::string_view(rawMethodName).substr(std::string_view("map/").size());
-  } else if (rawMethodName.rfind("std/collections/map/", 0) == 0) {
-    helperName =
-        std::string_view(rawMethodName).substr(std::string_view("std/collections/map/").size());
+  helperNameString = metadataBackedMapHelperMethodName(rawMethodName);
+  if (helperNameString != rawMethodName) {
+    helperName = helperNameString;
   }
   return !helperName.empty() &&
          isRemovedMapCompatibilityHelper(mapCompatibilityHelperBase(helperName));
@@ -232,7 +250,7 @@ std::string normalizeCollectionReceiverTypeName(std::string value) {
   if (isExperimentalSoaVectorTypePath(value)) {
     return templateMonomorphSoaReceiverTypeName();
   }
-  if (value == "std/collections/map") {
+  if (isTemplateMonomorphMapCollectionRoot(value)) {
     return "map";
   }
   const std::string mapBackingName = "Map";
