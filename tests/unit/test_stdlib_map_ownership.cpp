@@ -1327,12 +1327,26 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(emitterMethodMetadataSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
         std::string::npos);
   CHECK(emitterMethodMetadataSource.find(
-            "constexpr std::string_view MapHelperSurfaceBridgeKey = "
+            "constexpr std::string_view KeyValueHelperSurfaceBridgeKey = "
             "\"collections.map_helpers\"") !=
         std::string::npos);
-  CHECK(emitterMethodMetadataSource.find("findMapHelperSurfaceMetadata()") !=
+  CHECK(emitterMethodMetadataSource.find("MapHelperSurfaceBridgeKey") ==
         std::string::npos);
-  CHECK(emitterMethodMetadataSource.find("isMapHelperSurface(surfaceId)") !=
+  CHECK(emitterMethodMetadataSource.find("findKeyValueHelperSurfaceMetadata()") !=
+        std::string::npos);
+  CHECK(emitterMethodMetadataSource.find("findMapHelperSurfaceMetadata()") ==
+        std::string::npos);
+  CHECK(emitterMethodMetadataSource.find("isKeyValueHelperSurface(surfaceId)") !=
+        std::string::npos);
+  CHECK(emitterMethodMetadataSource.find("isMapHelperSurface(surfaceId)") ==
+        std::string::npos);
+  CHECK(emitterMethodMetadataSource.find("isRemovedExactPublishedKeyValueHelper(") !=
+        std::string::npos);
+  CHECK(emitterMethodMetadataSource.find("isRemovedExactPublishedMapHelper(") ==
+        std::string::npos);
+  CHECK(emitterMethodMetadataSource.find("canonicalKeyValueMemberName") !=
+        std::string::npos);
+  CHECK(emitterMethodMetadataSource.find("canonicalMapMemberName") ==
         std::string::npos);
   CHECK(emitterMethodMetadataSource.find("normalizeMapImportAliasPath") ==
         std::string::npos);

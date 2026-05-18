@@ -16,7 +16,7 @@ std::string stripGeneratedHelperSuffix(std::string helperName) {
 }
 
 constexpr std::string_view VectorHelperSurfaceBridgeKey = "collections.vector_helpers";
-constexpr std::string_view MapHelperSurfaceBridgeKey = "collections.map_helpers";
+constexpr std::string_view KeyValueHelperSurfaceBridgeKey = "collections.map_helpers";
 
 std::string_view trimLeadingSlash(std::string_view text) {
   return !text.empty() && text.front() == '/' ? text.substr(1) : text;
@@ -73,8 +73,8 @@ const StdlibSurfaceMetadata *findVectorHelperSurfaceMetadata() {
   return findStdlibSurfaceMetadataByBridgeKey(VectorHelperSurfaceBridgeKey);
 }
 
-const StdlibSurfaceMetadata *findMapHelperSurfaceMetadata() {
-  return findStdlibSurfaceMetadataByBridgeKey(MapHelperSurfaceBridgeKey);
+const StdlibSurfaceMetadata *findKeyValueHelperSurfaceMetadata() {
+  return findStdlibSurfaceMetadataByBridgeKey(KeyValueHelperSurfaceBridgeKey);
 }
 
 bool isSurfaceMetadataForBridgeKey(StdlibSurfaceId surfaceId,
@@ -84,8 +84,8 @@ bool isSurfaceMetadataForBridgeKey(StdlibSurfaceId surfaceId,
   return metadata != nullptr && metadata == expectedMetadata;
 }
 
-bool isMapHelperSurface(StdlibSurfaceId surfaceId) {
-  return isSurfaceMetadataForBridgeKey(surfaceId, MapHelperSurfaceBridgeKey);
+bool isKeyValueHelperSurface(StdlibSurfaceId surfaceId) {
+  return isSurfaceMetadataForBridgeKey(surfaceId, KeyValueHelperSurfaceBridgeKey);
 }
 
 bool resolveSurfaceMemberToken(const StdlibSurfaceMetadata &metadata,
@@ -188,9 +188,9 @@ bool isRemovedExactPublishedVectorHelper(std::string_view helperName) {
          canonicalMemberName == stripGeneratedHelperSuffix(std::string(helperName));
 }
 
-bool isRemovedExactPublishedMapHelper(std::string_view helperName) {
+bool isRemovedExactPublishedKeyValueHelper(std::string_view helperName) {
   std::string canonicalMemberName;
-  const auto *metadata = findMapHelperSurfaceMetadata();
+  const auto *metadata = findKeyValueHelperSurfaceMetadata();
   return metadata != nullptr &&
          resolveSurfaceMemberToken(*metadata, helperName, canonicalMemberName) &&
          canonicalMemberName == stripGeneratedHelperSuffix(std::string(helperName)) &&
@@ -267,7 +267,7 @@ bool resolvePublishedCollectionSurfaceExprMemberName(const Expr &expr,
   if (resolvePublishedCollectionSurfaceMemberName(normalizedPath, surfaceId, memberNameOut)) {
     return true;
   }
-  if (isMapHelperSurface(surfaceId) &&
+  if (isKeyValueHelperSurface(surfaceId) &&
       normalizedPath.rfind("/std/collections/Map", 0) == 0) {
     return resolvePublishedCollectionSurfaceMemberToken(
         normalizedPath.substr(std::string("/std/collections/Map").size()),
@@ -296,16 +296,16 @@ bool isRemovedCollectionMethodAliasPath(std::string_view rawMethodName) {
       return isRemovedExactPublishedVectorHelper(canonicalMemberName);
     }
   }
-  std::string canonicalMapMemberName;
-  const auto *mapMetadata = findMapHelperSurfaceMetadata();
+  std::string canonicalKeyValueMemberName;
+  const auto *keyValueMetadata = findKeyValueHelperSurfaceMetadata();
   const std::string normalizedCandidate = normalizeCollectionHelperPath(candidate);
-  if (mapMetadata != nullptr &&
+  if (keyValueMetadata != nullptr &&
       resolveHelperSurfacePathMemberName(
-          *mapMetadata,
+          *keyValueMetadata,
           normalizedCandidate,
           true,
-          canonicalMapMemberName)) {
-    return isRemovedExactPublishedMapHelper(canonicalMapMemberName);
+          canonicalKeyValueMemberName)) {
+    return isRemovedExactPublishedKeyValueHelper(canonicalKeyValueMemberName);
   }
   return false;
 }
