@@ -593,7 +593,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(callPathHelpersSource.find("name.rfind(\"std/collections/map/\", 0)") ==
         std::string::npos);
-  CHECK(callPathHelpersSource.find("resolveMapHelperMemberName(name, mapHelperName)") !=
+  CHECK(callPathHelpersSource.find("mapHelperName") == std::string::npos);
+  CHECK(callPathHelpersSource.find("resolveMapHelperMemberName(name, keyValueHelperName)") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find("rawMethodName.rfind(\"map/\", 0)") ==
         std::string::npos);

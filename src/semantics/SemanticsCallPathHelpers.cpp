@@ -106,9 +106,9 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   if (resolveCanonicalVectorHelperMemberName(name, vectorHelperName)) {
     return vectorHelperName == targetName;
   }
-  std::string mapHelperName;
-  if (resolveMapHelperMemberName(name, mapHelperName)) {
-    return mapHelperName == targetName;
+  std::string keyValueHelperName;
+  if (resolveMapHelperMemberName(name, keyValueHelperName)) {
+    return keyValueHelperName == targetName;
   }
   if (name.find('/') != std::string::npos) {
     return false;
