@@ -240,7 +240,6 @@ struct MemberAliasStore {
 };
 
 struct ManifestSurfaceRecord {
-  std::optional<StdlibSurfaceId> id;
   std::string bridgeKey;
   std::string canonicalImportRoot;
   std::string canonicalPath;
@@ -292,36 +291,10 @@ std::string trimAscii(std::string_view value) {
   return std::string(value);
 }
 
-std::optional<StdlibSurfaceId> parseManifestSurfaceId(std::string_view value) {
-  const std::string legacyVectorHelperSurfaceId =
-      std::string("Collections") + "Vector" + "Helpers";
-  if (value == legacyVectorHelperSurfaceId) {
-    return StdlibSurfaceId::CollectionsVectorHelperSurface;
-  }
-  if (value == "CollectionsVectorConstructors") {
-    return StdlibSurfaceId::CollectionsVectorConstructors;
-  }
-  if (value == "CollectionsMapHelpers") {
-    return StdlibSurfaceId::CollectionsMapHelpers;
-  }
-  if (value == "CollectionsMapConstructors") {
-    return StdlibSurfaceId::CollectionsMapConstructors;
-  }
-  if (value == "CollectionsColumnarHelpers") {
-    return StdlibSurfaceId::CollectionsColumnarHelpers;
-  }
-  if (value == "CollectionsColumnarConstructors") {
-    return StdlibSurfaceId::CollectionsColumnarConstructors;
-  }
-  return std::nullopt;
-}
-
 void appendManifestValue(ManifestSurfaceRecord &record,
                          std::string_view key,
                          std::string value) {
-  if (key == "id") {
-    record.id = parseManifestSurfaceId(value);
-  } else if (key == "bridge_key") {
+  if (key == "bridge_key") {
     record.bridgeKey = std::move(value);
   } else if (key == "canonical_import_root") {
     record.canonicalImportRoot = std::move(value);
@@ -435,32 +408,21 @@ void applyManifestSurfaceRecord(ManifestSurfaceData &surface,
 
 CollectionsManifestSurfaces loadCollectionsManifestSurfaces() {
   CollectionsManifestSurfaces surfaces;
+  std::array<ManifestSurfaceData *, 6> slots = {
+      &surfaces.vectorHelpers,
+      &surfaces.vectorConstructors,
+      &surfaces.mapHelpers,
+      &surfaces.mapConstructors,
+      &surfaces.soaHelpers,
+      &surfaces.soaConstructors,
+  };
+  std::size_t nextSlot = 0;
   for (ManifestSurfaceRecord &record : readStdlibSurfaceManifest()) {
-    if (!record.id.has_value()) {
+    if (nextSlot >= slots.size()) {
       continue;
     }
-    switch (*record.id) {
-      case StdlibSurfaceId::CollectionsVectorHelperSurface:
-        applyManifestSurfaceRecord(surfaces.vectorHelpers, std::move(record));
-        break;
-      case StdlibSurfaceId::CollectionsVectorConstructors:
-        applyManifestSurfaceRecord(surfaces.vectorConstructors, std::move(record));
-        break;
-      case StdlibSurfaceId::CollectionsMapHelpers:
-        applyManifestSurfaceRecord(surfaces.mapHelpers, std::move(record));
-        break;
-      case StdlibSurfaceId::CollectionsMapConstructors:
-        applyManifestSurfaceRecord(surfaces.mapConstructors, std::move(record));
-        break;
-      case StdlibSurfaceId::CollectionsColumnarHelpers:
-        applyManifestSurfaceRecord(surfaces.soaHelpers, std::move(record));
-        break;
-      case StdlibSurfaceId::CollectionsColumnarConstructors:
-        applyManifestSurfaceRecord(surfaces.soaConstructors, std::move(record));
-        break;
-      default:
-        break;
-    }
+    applyManifestSurfaceRecord(*slots[nextSlot], std::move(record));
+    ++nextSlot;
   }
   return surfaces;
 }

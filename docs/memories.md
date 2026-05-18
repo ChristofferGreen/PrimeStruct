@@ -813,6 +813,17 @@ This file stores durable session-derived facts that are useful in later work. Ke
   were removed from `StdlibSurfaceRegistry`; the semantic compatibility helper
   now resolves member names through bridge-key metadata directly.
 
+### collection-manifest-loader-is-id-agnostic
+- Updated: 2026-05-18
+- Tags: stdlib, registry, collections
+- Fact: The collection surface manifest loader should not parse map-specific
+  manifest IDs in C++; collection records are applied to their ordered surface
+  slots and the manifest remains the data source for bridge keys and members.
+- Evidence: `StdlibSurfaceRegistry.cpp` no longer has
+  `parseManifestSurfaceId` or a `CollectionsMap*` manifest-load switch; its
+  map-surface inventory allowance is down to the metadata ID and resolver
+  switch traces.
+
 ### map-low-count-lowerer-caps-are-stale
 - Updated: 2026-05-18
 - Tags: ir, collections, audit

@@ -2612,6 +2612,11 @@ Task template:
       production semantic consumer now derives that classification locally from
       `collections.map_helpers` metadata, and the registry source inventory
       allowance dropped to its remaining enum/manifest traces.
+    - 2026-05-18: The collection surface manifest loader no longer parses or
+      switches on map-specific manifest IDs. It applies ordered manifest
+      records to the collection surface slots, dropping the registry source
+      inventory allowance to the remaining public metadata ID and resolver
+      switch traces.
     - 2026-05-17: Lowerer builtin-name and shared helper map-helper lookups no
       longer name the map helper surface ID directly; they now obtain helper
       metadata through the `collections.map_helpers` bridge key, and the

@@ -190,12 +190,37 @@
 - `PrimeStruct_backend_ir_tests --test-case="stdlib surface metadata resolves collection helper member tokens" --no-skip`
   still has stale SoA helper token expectations for `soaVectorCountRef`,
   `soaVectorFieldView`, and `soaVectorToAos`.
+- `PrimeStruct_backend_ir_tests --test-case="stdlib surface metadata resolves collection alias paths" --no-skip`
+  has a stale contradictory map helper lookup expectation after the map
+  stdlib-ownership cutover. On 2026-05-18 the case first required
+  `/std/collections/map/tryAt_ref` metadata to exist, then asserted the same
+  lookup was `nullptr`.
 - `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers keep explicit map helper same-path defs" --no-skip`
   still has stale alias access fallback expectations; on 2026-05-17 the
   alias `at` and `at_unsafe` checks still resolved compatibility defs instead
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-18 13:56 CEST | pass | mode: release | command:
+  `rg --pcre2 -n '/?std/collections/map(?:/|")|/?std/collections/experimental_map(?:/|")|(?<![A-Za-z0-9_/])/?map/|\bmap(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bCollectionsMap[A-Za-z0-9_]*\b|\bMap<' include/primec/StdlibSurfaceRegistry.h src/StdlibSurfaceRegistry.cpp`;
+  `cmake --build build-release --target PrimeStruct_misc_tests PrimeStruct_backend_runtime_tests PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="stdlib surface registry stays source locked,map insert surface registry rejects legacy compatibility spellings,collection helper surface registry resolves preferred compatibility spellings" --no-skip`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="stdlib surface metadata classifies collection helper categories" --no-skip`
+  | failures: none | notes: `StdlibSurfaceRegistry.cpp` no longer parses or
+  switches on map-specific collection manifest IDs, and the direct source scan
+  is down to the two public map metadata IDs plus the two resolver switch
+  cases. The broader backend IR metadata trio was intentionally not used as a
+  gate because it contains known stale SoA and contradictory map alias
+  expectations recorded above.
+- 2026-05-18 13:54 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="stdlib surface metadata resolves collection helper member tokens,stdlib surface metadata resolves collection alias paths,stdlib surface metadata classifies collection helper categories" --no-skip`
+  | failures: `stdlib surface metadata resolves collection helper member
+  tokens`; `stdlib surface metadata resolves collection alias paths` | notes:
+  The helper-token failures are the existing stale SoA alias expectations, and
+  the alias-path failure is the stale contradictory
+  `/std/collections/map/tryAt_ref` expectation logged in Current Known
+  Failures.
 - 2026-05-18 13:48 CEST | pass | mode: release | command:
   `rg -n 'isStdlibMapBaseHelperName|isStdlibMapBorrowedHelperName' src include tests`;
   `rg --pcre2 -n '/?std/collections/map(?:/|")|/?std/collections/experimental_map(?:/|")|(?<![A-Za-z0-9_/])/?map/|\bmap(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bCollectionsMap[A-Za-z0-9_]*\b|\bMap<' include/primec/StdlibSurfaceRegistry.h src/StdlibSurfaceRegistry.cpp src/semantics/SemanticsValidatorInferCollectionCompatibilityInternal.h`;
