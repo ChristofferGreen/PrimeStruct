@@ -1281,7 +1281,29 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(collectionAccessValidationSource.find("metadataBackedCanonicalMapHelperPath(") !=
         std::string::npos);
-  CHECK(collectionAccessValidationSource.find("rootedMapHelperAliasPathLocal(") !=
+  CHECK(collectionAccessValidationSource.find("canonicalMapHelperPathLocal(") ==
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find("canonicalMapHelperNamespaceLocal(") ==
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find("resolveCanonicalMapHelperNameFromSpelling(") ==
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find("rootedMapHelperAliasPathLocal(") ==
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find("resolvedMapHelperName") ==
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find("rewrittenMapHelperCall") ==
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find("canonicalKeyValueHelperPathLocal(") !=
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find("canonicalKeyValueHelperNamespaceLocal(") !=
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find("resolveCanonicalKeyValueHelperNameFromSpelling(") !=
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find("rootedKeyValueHelperAliasPathLocal(") !=
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find("resolvedKeyValueHelperName") !=
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find("rewrittenKeyValueHelperCall") !=
         std::string::npos);
   CHECK(collectionDispatchSetupSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
         std::string::npos);
