@@ -2621,6 +2621,10 @@ Task template:
       map-specific metadata IDs. Non-error collection surfaces now use the
       generic manifest-backed member resolver, leaving only the public map
       metadata ID assignments in the registry source allowance.
+    - 2026-05-18: `StdlibSurfaceRegistry.cpp` no longer spells the public map
+      metadata enum names. Collection registry entries derive their IDs from
+      ordered manifest slots, so the registry source inventory allowance is
+      zero and only the public header enum names remain.
     - 2026-05-17: Lowerer builtin-name and shared helper map-helper lookups no
       longer name the map helper surface ID directly; they now obtain helper
       metadata through the `collections.map_helpers` bridge key, and the

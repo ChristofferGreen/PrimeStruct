@@ -429,6 +429,15 @@ CollectionsManifestSurfaces loadCollectionsManifestSurfaces() {
 
 const CollectionsManifestSurfaces CollectionsSurfaces = loadCollectionsManifestSurfaces();
 
+constexpr StdlibSurfaceId collectionSurfaceId(std::size_t slotIndex) {
+  return static_cast<StdlibSurfaceId>(
+      static_cast<int>(StdlibSurfaceId::CollectionsVectorHelperSurface) +
+      static_cast<int>(slotIndex));
+}
+
+static_assert(collectionSurfaceId(0) == StdlibSurfaceId::CollectionsVectorHelperSurface);
+static_assert(collectionSurfaceId(5) == StdlibSurfaceId::CollectionsColumnarConstructors);
+
 const std::array<StdlibSurfaceMetadata, 11> Registry = {{
     {
         .id = StdlibSurfaceId::FileHelpers,
@@ -459,7 +468,7 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .loweringSpellings = FileErrorLoweringSpellings,
     },
     {
-        .id = StdlibSurfaceId::CollectionsVectorHelperSurface,
+        .id = collectionSurfaceId(0),
         .domain = StdlibSurfaceDomain::Collections,
         .shape = StdlibSurfaceShape::HelperFamily,
         .bridgeKey = CollectionsSurfaces.vectorHelpers.bridgeKey,
@@ -473,7 +482,7 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .loweringSpellings = CollectionsSurfaces.vectorHelpers.loweringSpellings.views,
     },
     {
-        .id = StdlibSurfaceId::CollectionsVectorConstructors,
+        .id = collectionSurfaceId(1),
         .domain = StdlibSurfaceDomain::Collections,
         .shape = StdlibSurfaceShape::ConstructorFamily,
         .bridgeKey = CollectionsSurfaces.vectorConstructors.bridgeKey,
@@ -487,7 +496,7 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .loweringSpellings = CollectionsSurfaces.vectorConstructors.loweringSpellings.views,
     },
     {
-        .id = StdlibSurfaceId::CollectionsMapHelpers,
+        .id = collectionSurfaceId(2),
         .domain = StdlibSurfaceDomain::Collections,
         .shape = StdlibSurfaceShape::HelperFamily,
         .bridgeKey = CollectionsSurfaces.mapHelpers.bridgeKey,
@@ -501,7 +510,7 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .loweringSpellings = CollectionsSurfaces.mapHelpers.loweringSpellings.views,
     },
     {
-        .id = StdlibSurfaceId::CollectionsMapConstructors,
+        .id = collectionSurfaceId(3),
         .domain = StdlibSurfaceDomain::Collections,
         .shape = StdlibSurfaceShape::ConstructorFamily,
         .bridgeKey = CollectionsSurfaces.mapConstructors.bridgeKey,
@@ -515,7 +524,7 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .loweringSpellings = CollectionsSurfaces.mapConstructors.loweringSpellings.views,
     },
     {
-        .id = StdlibSurfaceId::CollectionsColumnarHelpers,
+        .id = collectionSurfaceId(4),
         .domain = StdlibSurfaceDomain::Collections,
         .shape = StdlibSurfaceShape::HelperFamily,
         .bridgeKey = CollectionsSurfaces.soaHelpers.bridgeKey,
@@ -529,7 +538,7 @@ const std::array<StdlibSurfaceMetadata, 11> Registry = {{
         .loweringSpellings = CollectionsSurfaces.soaHelpers.loweringSpellings.views,
     },
     {
-        .id = StdlibSurfaceId::CollectionsColumnarConstructors,
+        .id = collectionSurfaceId(5),
         .domain = StdlibSurfaceDomain::Collections,
         .shape = StdlibSurfaceShape::ConstructorFamily,
         .bridgeKey = CollectionsSurfaces.soaConstructors.bridgeKey,

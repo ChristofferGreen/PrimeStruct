@@ -218,7 +218,8 @@ TEST_CASE("stdlib surface registry stays source locked") {
   CHECK(source.find("\"/std/collections/experimental_vector/vectorRemoveSwap\"") ==
         std::string::npos);
 
-  CHECK(source.find("StdlibSurfaceId::CollectionsVectorConstructors") != std::string::npos);
+  CHECK(source.find("StdlibSurfaceId::CollectionsVectorConstructors") == std::string::npos);
+  CHECK(source.find(".id = collectionSurfaceId(1)") != std::string::npos);
   CHECK(source.find("\"/std/collections/vector/vector\"") == std::string::npos);
   CHECK(source.find("\"vectorSingle\"") == std::string::npos);
   CHECK(source.find("\"/std/collections/experimental_vector/vectorPair\"") ==
@@ -252,7 +253,8 @@ TEST_CASE("stdlib surface registry stays source locked") {
             "compatibility_spelling = /std/collections/experimental_vector/vectorPair") ==
         std::string::npos);
 
-  CHECK(source.find("StdlibSurfaceId::CollectionsMapHelpers") != std::string::npos);
+  CHECK(source.find("StdlibSurfaceId::CollectionsMapHelpers") == std::string::npos);
+  CHECK(source.find(".id = collectionSurfaceId(2)") != std::string::npos);
   CHECK(source.find("\"collections.map_helpers\"") == std::string::npos);
   CHECK(source.find("\"/map/count\"") == std::string::npos);
   CHECK(source.find("\"/std/collections/mapInsert\"") == std::string::npos);
@@ -271,7 +273,8 @@ TEST_CASE("stdlib surface registry stays source locked") {
         std::string::npos);
   CHECK(source.find("matchesResolvedRootedMemberPath(") != std::string::npos);
 
-  CHECK(source.find("StdlibSurfaceId::CollectionsMapConstructors") != std::string::npos);
+  CHECK(source.find("StdlibSurfaceId::CollectionsMapConstructors") == std::string::npos);
+  CHECK(source.find(".id = collectionSurfaceId(3)") != std::string::npos);
   CHECK(source.find("\"collections.map_constructors\"") == std::string::npos);
   CHECK(source.find("\"/std/collections/mapNew\"") == std::string::npos);
   CHECK(source.find("\"mapOct\"") == std::string::npos);
@@ -305,7 +308,8 @@ TEST_CASE("stdlib surface registry stays source locked") {
             "compatibility_spelling = /std/collections/experimental_map/mapOct") ==
         std::string::npos);
 
-  CHECK(source.find("StdlibSurfaceId::CollectionsColumnarHelpers") != std::string::npos);
+  CHECK(source.find("StdlibSurfaceId::CollectionsColumnarHelpers") == std::string::npos);
+  CHECK(source.find(".id = collectionSurfaceId(4)") != std::string::npos);
   CHECK(source.find("\"collections.soa_helpers\"") == std::string::npos);
   CHECK(source.find("\"/std/collections/soa\"") == std::string::npos);
   CHECK(source.find("\"/std/collections/soa_vector\"") == std::string::npos);

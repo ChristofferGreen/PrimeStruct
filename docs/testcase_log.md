@@ -201,6 +201,19 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-18 14:02 CEST | pass | mode: release | command:
+  `rg --pcre2 -n '/?std/collections/map(?:/|")|/?std/collections/experimental_map(?:/|")|(?<![A-Za-z0-9_/])/?map/|\bmap(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bCollectionsMap[A-Za-z0-9_]*\b|\bMap<' include/primec/StdlibSurfaceRegistry.h src/StdlibSurfaceRegistry.cpp`;
+  `cmake --build build-release --target PrimeStruct_misc_tests PrimeStruct_backend_runtime_tests PrimeStruct_backend_ir_tests`;
+  `cmake --build build-release --target PrimeStruct_backend_runtime_tests`;
+  `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="stdlib surface registry stays source locked,map insert surface registry rejects legacy compatibility spellings,collection helper surface registry resolves preferred compatibility spellings" --no-skip`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="stdlib surface metadata classifies collection helper categories" --no-skip`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`
+  | failures: none | notes: Collection registry entries now derive their
+  public IDs from ordered manifest slots, removing the final map-specific
+  traces from `StdlibSurfaceRegistry.cpp`. The first runtime source-lock rerun
+  exposed stale direct vector/SoA enum-name expectations from the same slot-ID
+  derivation; those assertions were updated and the focused runtime gate then
+  passed.
 - 2026-05-18 13:58 CEST | pass | mode: release | command:
   `rg --pcre2 -n '/?std/collections/map(?:/|")|/?std/collections/experimental_map(?:/|")|(?<![A-Za-z0-9_/])/?map/|\bmap(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bCollectionsMap[A-Za-z0-9_]*\b|\bMap<' include/primec/StdlibSurfaceRegistry.h src/StdlibSurfaceRegistry.cpp`;
   `cmake --build build-release --target PrimeStruct_misc_tests PrimeStruct_backend_runtime_tests PrimeStruct_backend_ir_tests`;

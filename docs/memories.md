@@ -833,6 +833,16 @@ This file stores durable session-derived facts that are useful in later work. Ke
   collection surface through `resolveMetadataMemberName`, removing the
   map-specific resolver switch cases from `StdlibSurfaceRegistry.cpp`.
 
+### collection-surface-ids-are-slot-derived
+- Updated: 2026-05-18
+- Tags: stdlib, registry, collections
+- Fact: Collection registry metadata should derive public surface IDs from the
+  ordered manifest slot contract instead of spelling map-specific enum names
+  in `StdlibSurfaceRegistry.cpp`.
+- Evidence: Collection registry entries now use `collectionSurfaceId(slot)`;
+  the direct map-surface trace inventory allowance for
+  `src/StdlibSurfaceRegistry.cpp` is zero.
+
 ### map-low-count-lowerer-caps-are-stale
 - Updated: 2026-05-18
 - Tags: ir, collections, audit
