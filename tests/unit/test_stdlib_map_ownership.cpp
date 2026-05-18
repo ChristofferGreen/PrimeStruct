@@ -1241,7 +1241,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(argumentValidationSource.find("normalizedExpectedBase == \"std/collections/map\"") ==
         std::string::npos);
   CHECK(argumentValidationSource.find(
-            "resolveCanonicalArgumentValidationMapAccessHelper(") !=
+            "resolveCanonicalArgumentValidationMapAccessHelper(") ==
+        std::string::npos);
+  CHECK(argumentValidationSource.find("canonicalMapAccessHelperName") ==
+        std::string::npos);
+  CHECK(argumentValidationSource.find(
+            "resolveCanonicalArgumentValidationKeyValueAccessHelper(") !=
+        std::string::npos);
+  CHECK(argumentValidationSource.find("canonicalKeyValueAccessHelperName") !=
         std::string::npos);
   CHECK(argumentValidationSource.find("mapHelperSurfaceMetadataLocal()") !=
         std::string::npos);

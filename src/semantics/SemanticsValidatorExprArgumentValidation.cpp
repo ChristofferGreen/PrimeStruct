@@ -18,7 +18,7 @@ bool isCollectionLikeTemplateBase(std::string_view baseName) {
          isMapCollectionTypeName(normalizedBase);
 }
 
-bool resolveCanonicalArgumentValidationMapAccessHelper(
+bool resolveCanonicalArgumentValidationKeyValueAccessHelper(
     std::string_view path,
     std::string &helperNameOut) {
   helperNameOut.clear();
@@ -171,11 +171,11 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
   };
   auto maybePreferExplicitCanonicalMapKeyDiagnostic =
       [&](const std::vector<std::string> &expectedTemplateArgs) -> bool {
-    std::string canonicalMapAccessHelperName;
+    std::string canonicalKeyValueAccessHelperName;
     if (param.name != "values" || callExpr.isMethodCall ||
         hasNamedArguments(callExpr.argNames) || callExpr.args.size() != 2 ||
-        !resolveCanonicalArgumentValidationMapAccessHelper(
-            diagnosticResolved, canonicalMapAccessHelperName)) {
+        !resolveCanonicalArgumentValidationKeyValueAccessHelper(
+            diagnosticResolved, canonicalKeyValueAccessHelperName)) {
       return false;
     }
 
