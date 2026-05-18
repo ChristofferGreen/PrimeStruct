@@ -921,7 +921,13 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(buildReturnKindsSource.find("return \"/map\"") == std::string::npos);
   CHECK(buildReturnKindsSource.find(
-            "mapCollectionMarkerPathForBuildReturnKinds()") !=
+            "mapCollectionMarkerPathForBuildReturnKinds()") ==
+        std::string::npos);
+  CHECK(buildReturnKindsSource.find(
+            "keyValueCollectionMarkerPathForBuildReturnKinds()") !=
+        std::string::npos);
+  CHECK(buildReturnKindsSource.find(
+            "keyValueConstructorSurfaceMetadataForBuildReturnKinds()") !=
         std::string::npos);
   CHECK(buildReturnKindsSource.find("mapConstructorSurfaceMetadataLocal()") !=
         std::string::npos);

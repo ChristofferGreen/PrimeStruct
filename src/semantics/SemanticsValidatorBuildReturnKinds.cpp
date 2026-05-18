@@ -8,8 +8,14 @@
 namespace primec::semantics {
 namespace {
 
-std::string mapCollectionMarkerPathForBuildReturnKinds() {
-  const StdlibSurfaceMetadata *metadata = mapConstructorSurfaceMetadataLocal();
+const StdlibSurfaceMetadata *
+keyValueConstructorSurfaceMetadataForBuildReturnKinds() {
+  return mapConstructorSurfaceMetadataLocal();
+}
+
+std::string keyValueCollectionMarkerPathForBuildReturnKinds() {
+  const StdlibSurfaceMetadata *metadata =
+      keyValueConstructorSurfaceMetadataForBuildReturnKinds();
   if (metadata != nullptr) {
     for (std::string_view alias : metadata->importAliasSpellings) {
       if (alias.empty()) {
@@ -40,7 +46,7 @@ std::string SemanticsValidator::resolveStructReturnPathForBuild(const std::strin
       return "/" + baseName;
     }
     if (isMapCollectionTypeName(baseName)) {
-      return mapCollectionMarkerPathForBuildReturnKinds();
+      return keyValueCollectionMarkerPathForBuildReturnKinds();
     }
     return "";
   };
