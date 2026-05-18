@@ -2361,6 +2361,12 @@ Task template:
       hard-code experimental map helper roots; they now use shared
       experimental map root/path helpers. `check_map_backing_traces.py` now
       observes zero production backing traces.
+    - 2026-05-18: Semantic builtin path helpers no longer carry direct
+      rooted or canonical map helper prefixes for removed alias detection,
+      builtin collection-name filtering, array-access helper recognition, or
+      namespaced helper extraction; those paths now resolve through
+      `collections.map_helpers` metadata, and the file's map-surface
+      inventory allowance is zero.
     - 2026-05-16: Semantic `try` builtin validation no longer hard-codes
       canonical map tryAt helper paths; it now obtains them from stdlib
       surface metadata.

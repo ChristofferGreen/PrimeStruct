@@ -1,6 +1,7 @@
 #include "SemanticsHelpers.h"
 
 #include "primec/SoaPathHelpers.h"
+#include "primec/StdlibSurfaceRegistry.h"
 
 #include <array>
 #include <string_view>
@@ -154,6 +155,90 @@ std::string pathWithoutLeadingSlash(std::string path) {
     path.erase(path.begin());
   }
   return path;
+}
+
+const primec::StdlibSurfaceMetadata *mapHelperSurfaceMetadataLocal() {
+  return primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+}
+
+bool stripStdlibSurfaceRootedMemberNameLocal(std::string_view rawPath,
+                                             std::string_view rawRoot,
+                                             std::string &memberNameOut) {
+  memberNameOut.clear();
+  if (rawPath.empty() || rawRoot.empty()) {
+    return false;
+  }
+  std::string path(rawPath);
+  if (!path.empty() && path.front() == '/') {
+    path.erase(path.begin());
+  }
+  std::string root(rawRoot);
+  if (!root.empty() && root.front() == '/') {
+    root.erase(root.begin());
+  }
+  if (path.size() <= root.size() || path.rfind(root, 0) != 0 ||
+      path[root.size()] != '/') {
+    return false;
+  }
+  std::string memberName = path.substr(root.size() + 1);
+  if (memberName.empty() || memberName.find('/') != std::string::npos) {
+    return false;
+  }
+  memberNameOut = std::move(memberName);
+  return true;
+}
+
+bool resolveMapHelperMemberNameLocal(std::string rawPath,
+                                     std::string &memberNameOut) {
+  memberNameOut.clear();
+  const primec::StdlibSurfaceMetadata *metadata =
+      mapHelperSurfaceMetadataLocal();
+  if (metadata == nullptr || rawPath.empty()) {
+    return false;
+  }
+  if (rawPath.find('/') == std::string::npos) {
+    return false;
+  }
+  if (rawPath.find('/') != std::string::npos && rawPath.front() != '/') {
+    rawPath.insert(rawPath.begin(), '/');
+  }
+  if (rawPath.find('/') != std::string::npos) {
+    const primec::StdlibSurfaceMetadata *pathMetadata =
+        primec::findStdlibSurfaceMetadataByResolvedPath(rawPath);
+    if (pathMetadata == nullptr || pathMetadata->id != metadata->id) {
+      return false;
+    }
+  }
+  const std::string_view memberName =
+      primec::resolveStdlibSurfaceMemberName(*metadata, rawPath);
+  if (memberName.empty()) {
+    return false;
+  }
+  memberNameOut.assign(memberName);
+  return true;
+}
+
+bool resolveRootMapAliasHelperMemberNameLocal(std::string_view rawPath,
+                                              std::string &memberNameOut) {
+  memberNameOut.clear();
+  const primec::StdlibSurfaceMetadata *metadata =
+      mapHelperSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return false;
+  }
+  for (std::string_view alias : metadata->importAliasSpellings) {
+    if (!alias.empty() && alias.front() == '/') {
+      alias.remove_prefix(1);
+    }
+    if (alias.find('/') != std::string_view::npos) {
+      continue;
+    }
+    if (stripStdlibSurfaceRootedMemberNameLocal(rawPath, alias,
+                                                memberNameOut)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 std::string collectionPathPrefixLocal(std::string_view collectionName) {
@@ -543,10 +628,9 @@ bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverPath, std
   if (receiverPath != "/map") {
     return false;
   }
-  if (rawMethodName.rfind("map/", 0) == 0) {
-    helperName = std::string_view(rawMethodName).substr(std::string_view("map/").size());
-  } else if (rawMethodName.rfind("std/collections/map/", 0) == 0) {
-    helperName = std::string_view(rawMethodName).substr(std::string_view("std/collections/map/").size());
+  std::string resolvedMapHelperName;
+  if (resolveMapHelperMemberNameLocal(rawMethodName, resolvedMapHelperName)) {
+    helperName = resolvedMapHelperName;
   }
   return !helperName.empty() && isRemovedMapCompatibilityHelper(helperName);
 }
@@ -566,8 +650,10 @@ bool isExplicitRemovedCollectionCallAlias(std::string rawPath) {
     helperName = std::string_view(rawPath).substr(std::string_view("array/").size());
     return !helperName.empty() && isRemovedVectorCompatibilityHelper(helperName);
   }
-  if (rawPath.rfind("map/", 0) == 0) {
-    helperName = std::string_view(rawPath).substr(std::string_view("map/").size());
+  std::string rootMapAliasHelperName;
+  if (resolveRootMapAliasHelperMemberNameLocal(rawPath,
+                                               rootMapAliasHelperName)) {
+    helperName = rootMapAliasHelperName;
     return !helperName.empty() && isRemovedMapCompatibilityHelper(helperName);
   }
   return false;
@@ -719,15 +805,17 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   if (name.rfind(collectionMemberRootLocal("vector"), 0) == 0) {
     return false;
   }
-  if (name.rfind("map/", 0) == 0) {
-    std::string alias = name.substr(std::string("map/").size());
-    if (alias == "map") {
+  std::string rootMapAliasHelperName;
+  if (resolveRootMapAliasHelperMemberNameLocal(name,
+                                               rootMapAliasHelperName)) {
+    if (rootMapAliasHelperName == "map") {
       out = "map";
       return true;
     }
     return false;
   }
-  if (name.rfind("std/collections/map/", 0) == 0) {
+  std::string resolvedMapHelperName;
+  if (resolveMapHelperMemberNameLocal(name, resolvedMapHelperName)) {
     return false;
   }
   if (name.find('/') != std::string::npos) {
@@ -1123,9 +1211,9 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   if (name.rfind("array/", 0) == 0) {
     return false;
   }
-  if (name.rfind("std/collections/map/", 0) == 0) {
-    std::string alias = stripTemplateSpecializationSuffix(name.substr(std::string("std/collections/map/").size()));
-    if (accessAliasFromMemberName(alias)) {
+  std::string mapHelperName;
+  if (resolveMapHelperMemberNameLocal(name, mapHelperName)) {
+    if (accessAliasFromMemberName(mapHelperName)) {
       return true;
     }
     return false;
@@ -1177,8 +1265,13 @@ bool getNamespacedCollectionHelperName(const Expr &expr, std::string &collection
     return !helperOut.empty();
   };
 
-  if (extractHelper(collectionMemberRootLocal("vector"), "vector") || extractHelper("map/", "map") ||
-      extractHelper("std/collections/map/", "map")) {
+  if (extractHelper(collectionMemberRootLocal("vector"), "vector")) {
+    return true;
+  }
+  std::string mapHelperName;
+  if (resolveMapHelperMemberNameLocal(normalized, mapHelperName)) {
+    collectionOut = "map";
+    helperOut = mapHelperName;
     return true;
   }
   if (extractHelper("array/", "vector")) {

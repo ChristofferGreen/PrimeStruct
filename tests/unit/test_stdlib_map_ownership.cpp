@@ -139,6 +139,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string callPathHelpersSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsCallPathHelpers.cpp");
+  const std::string builtinPathHelpersSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsBuiltinPathHelpers.cpp");
   const std::string methodTargetResolutionSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprMethodTargetResolution.cpp");
@@ -536,6 +539,23 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(callPathHelpersSource.find("name.rfind(\"std/collections/map/\", 0)") ==
         std::string::npos);
   CHECK(callPathHelpersSource.find("resolveMapHelperMemberName(name, mapHelperName)") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find("rawMethodName.rfind(\"map/\", 0)") ==
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
+            "rawMethodName.rfind(\"std/collections/map/\", 0)") ==
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find("name.rfind(\"map/\", 0)") ==
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find("name.rfind(\"std/collections/map/\", 0)") ==
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find("extractHelper(\"map/\", \"map\")") ==
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find("mapHelperSurfaceMetadataLocal()") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find("resolveMapHelperMemberNameLocal(") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find("resolveRootMapAliasHelperMemberNameLocal(") !=
         std::string::npos);
   CHECK(methodTargetResolutionSource.find("const std::string alias = \"/map/\" + resolvedHelperName") ==
         std::string::npos);

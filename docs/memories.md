@@ -520,7 +520,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   helper and constructor surface IDs from stdlib metadata wrappers; template
   expression rewriting should derive forwarded empty constructor paths from
   `collections.map_constructors` metadata and removed rooted-alias helper
-  matching from `collections.map_helpers` import-alias metadata.
+  matching from `collections.map_helpers` import-alias metadata; semantic
+  builtin path helpers should resolve map helper member names and rooted
+  import-alias helpers through `collections.map_helpers` metadata instead of
+  direct rooted/canonical map helper prefixes.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
