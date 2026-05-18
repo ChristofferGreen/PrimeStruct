@@ -330,13 +330,13 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
           (receiverStruct == "/vector" || receiverStruct == "/array")) {
         return "";
       }
-      std::string explicitMapHelperName;
-      const bool isExplicitMapAccessStructReturnMethod =
+      std::string explicitKeyValueHelperName;
+      const bool isExplicitKeyValueAccessStructReturnMethod =
           resolveExplicitPublishedMapHelperExprMemberName(rawMethodName,
                                                           expr.namespacePrefix,
-                                                          explicitMapHelperName) &&
-          (explicitMapHelperName == "at" ||
-           explicitMapHelperName == "at_unsafe");
+                                                          explicitKeyValueHelperName) &&
+          (explicitKeyValueHelperName == "at" ||
+           explicitKeyValueHelperName == "at_unsafe");
       std::vector<std::string> methodCandidates;
       auto appendMethodCandidate = [&](const std::string &candidate) {
         if (candidate.empty()) {
@@ -367,7 +367,7 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
           }
         }
       } else if (receiverStruct == "/map") {
-        if (!isExplicitMapAccessStructReturnMethod) {
+        if (!isExplicitKeyValueAccessStructReturnMethod) {
           appendMethodCandidate(metadataBackedCanonicalMapHelperPath(methodName));
         }
       } else {
@@ -409,9 +409,9 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
       };
       if (receiverStruct == "/map") {
         for (const auto &candidate : methodCandidates) {
-          std::string candidateHelperName;
+          std::string candidateKeyValueHelperName;
           if (!resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(
-                  candidate, candidateHelperName)) {
+                  candidate, candidateKeyValueHelperName)) {
             continue;
           }
           if (std::string structPath = declaredDefinitionStructReturn(candidate);
@@ -467,7 +467,8 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
       return inferStructReturnPath(*valueExpr, params, locals);
     }
 
-    auto sourceMethodMapHelperPath = [&](const Expr &candidate) -> std::string {
+    auto sourceMethodKeyValueHelperPath =
+        [&](const Expr &candidate) -> std::string {
       if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
           !candidate.sourceIsMethodCall || !candidate.namespacePrefix.empty() ||
           candidate.name.empty() || candidate.args.empty()) {
@@ -564,9 +565,11 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
       }
       return {};
     };
-    if (const std::string sourceMapHelperPath = sourceMethodMapHelperPath(expr);
-        !sourceMapHelperPath.empty()) {
-      if (std::string structPath = definitionStructReturnPath(sourceMapHelperPath);
+    if (const std::string sourceKeyValueHelperPath =
+            sourceMethodKeyValueHelperPath(expr);
+        !sourceKeyValueHelperPath.empty()) {
+      if (std::string structPath =
+              definitionStructReturnPath(sourceKeyValueHelperPath);
           !structPath.empty()) {
         return structPath;
       }

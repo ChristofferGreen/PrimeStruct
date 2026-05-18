@@ -802,6 +802,27 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferStructReturnSource.find("candidate.rfind(\"/std/collections/map/\", 0)") ==
         std::string::npos);
+  CHECK(inferStructReturnSource.find("explicitMapHelperName") ==
+        std::string::npos);
+  CHECK(inferStructReturnSource.find("isExplicitMapAccessStructReturnMethod") ==
+        std::string::npos);
+  CHECK(inferStructReturnSource.find("candidateHelperName") ==
+        std::string::npos);
+  CHECK(inferStructReturnSource.find("sourceMethodMapHelperPath") ==
+        std::string::npos);
+  CHECK(inferStructReturnSource.find("sourceMapHelperPath") ==
+        std::string::npos);
+  CHECK(inferStructReturnSource.find("explicitKeyValueHelperName") !=
+        std::string::npos);
+  CHECK(inferStructReturnSource.find(
+            "isExplicitKeyValueAccessStructReturnMethod") !=
+        std::string::npos);
+  CHECK(inferStructReturnSource.find("candidateKeyValueHelperName") !=
+        std::string::npos);
+  CHECK(inferStructReturnSource.find("sourceMethodKeyValueHelperPath") !=
+        std::string::npos);
+  CHECK(inferStructReturnSource.find("sourceKeyValueHelperPath") !=
+        std::string::npos);
   CHECK(inferStructReturnSource.find(
             "resolveExplicitPublishedMapHelperExprMemberName(rawMethodName") !=
         std::string::npos);

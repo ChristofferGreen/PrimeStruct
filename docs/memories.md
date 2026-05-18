@@ -681,7 +681,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   resolved-helper, and rewritten-call locals should use key/value naming
   around map helper metadata; semantic pre-dispatch inferred-call unrooted
   surface, canonicalized target, rewritten-call, borrowed-path, and removed
-  compatibility locals should use key/value naming around map helper metadata.
+  compatibility locals should use key/value naming around map helper metadata;
+  semantic infer-struct-return explicit-access, candidate-helper, and source
+  method-path locals should use key/value naming around map helper metadata.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
