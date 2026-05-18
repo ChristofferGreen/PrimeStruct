@@ -15,7 +15,7 @@
   };
   constexpr std::string_view CollectionTypeVectorHelperSurfaceBridgeKey =
       "collections.vector_helpers";
-  constexpr std::string_view CollectionTypeMapHelperSurfaceBridgeKey =
+  constexpr std::string_view CollectionTypeKeyValueHelperSurfaceBridgeKey =
       "collections.map_helpers";
   auto collectionTypeVectorHelperMemberName = [&](std::string_view path,
                                                   bool includeImportAliases)
@@ -45,20 +45,20 @@
     return isCollectionTypeVectorAccessHelper(
         collectionTypeVectorHelperMemberName(resolveExprPath(candidate), false));
   };
-  auto collectionTypeMapHelperMemberName = [&](std::string_view path,
-                                               bool includeImportAliases)
+  auto collectionTypeKeyValueHelperMemberName = [&](std::string_view path,
+                                                    bool includeImportAliases)
       -> std::string {
     std::string memberName;
     if (!resolvePublishedCollectionSurfacePathMemberName(
             path,
-            CollectionTypeMapHelperSurfaceBridgeKey,
+            CollectionTypeKeyValueHelperSurfaceBridgeKey,
             includeImportAliases,
             memberName)) {
       return "";
     }
     return memberName;
   };
-  auto isCollectionTypeMapAccessHelper = [](std::string_view memberName) {
+  auto isCollectionTypeKeyValueAccessHelper = [](std::string_view memberName) {
     return isCanonicalMapAccessHelperName(memberName);
   };
   auto explicitVectorAccessResolvedTypePath = [&](const Expr &candidate) -> std::string {
@@ -194,8 +194,8 @@
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return "";
     }
-    if (!isCollectionTypeMapAccessHelper(
-            collectionTypeMapHelperMemberName(resolveExprPath(candidate), false))) {
+    if (!isCollectionTypeKeyValueAccessHelper(
+            collectionTypeKeyValueHelperMemberName(resolveExprPath(candidate), false))) {
       return "";
     }
     if (candidate.args.empty()) {

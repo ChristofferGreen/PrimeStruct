@@ -1293,9 +1293,18 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(emitterCollectionTypeHelpersSource.find("std::string_view(\"std/collections/map/\").size()") ==
         std::string::npos);
-  CHECK(emitterCollectionTypeHelpersSource.find("CollectionTypeMapHelperSurfaceBridgeKey") !=
+  CHECK(emitterCollectionTypeHelpersSource.find("CollectionTypeKeyValueHelperSurfaceBridgeKey") !=
         std::string::npos);
-  CHECK(emitterCollectionTypeHelpersSource.find("collectionTypeMapHelperMemberName(resolveExprPath(candidate), false)") !=
+  CHECK(emitterCollectionTypeHelpersSource.find("CollectionTypeMapHelperSurfaceBridgeKey") ==
+        std::string::npos);
+  CHECK(emitterCollectionTypeHelpersSource.find(
+            "collectionTypeKeyValueHelperMemberName(resolveExprPath(candidate), false)") !=
+        std::string::npos);
+  CHECK(emitterCollectionTypeHelpersSource.find("collectionTypeMapHelperMemberName(") ==
+        std::string::npos);
+  CHECK(emitterCollectionTypeHelpersSource.find("isCollectionTypeKeyValueAccessHelper(") !=
+        std::string::npos);
+  CHECK(emitterCollectionTypeHelpersSource.find("isCollectionTypeMapAccessHelper(") ==
         std::string::npos);
   CHECK(emitterMethodMetadataSource.find("} else if (normalizedPath.rfind(\"/std/collections/map/\", 0) == 0) {\n"
                                          "    const std::string suffix =") ==
