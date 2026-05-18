@@ -69,7 +69,7 @@ bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
          alias == "fract" || alias == "sqrt" || alias == "cbrt";
 }
 
-bool resolvesMapHelperSurfacePath(std::string_view path) {
+bool resolvesKeyValueHelperSurfacePath(std::string_view path) {
   const auto *metadata =
       findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
   if (metadata == nullptr) {
@@ -285,7 +285,7 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   auto isRemovedScopedCollectionAlias = [](const std::string &candidate) {
     return candidate.rfind(std::string("vector") + "/", 0) == 0 ||
            candidate.rfind("array/", 0) == 0 ||
-           resolvesMapHelperSurfacePath(candidate);
+           resolvesKeyValueHelperSurfacePath(candidate);
   };
   const std::string internalSoaAlias =
       normalizeInternalSoaStorageBuiltinAlias(name);

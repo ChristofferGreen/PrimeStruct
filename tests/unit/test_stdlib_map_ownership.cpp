@@ -1922,7 +1922,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(lowererHelpersSource.find(
             "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
         std::string::npos);
-  CHECK(lowererHelpersSource.find("resolvesMapHelperSurfacePath(candidate)") !=
+  CHECK(lowererHelpersSource.find("resolvesKeyValueHelperSurfacePath(candidate)") !=
+        std::string::npos);
+  CHECK(lowererHelpersSource.find("resolvesMapHelperSurfacePath(candidate)") ==
         std::string::npos);
   CHECK(inlinePackedArgsSource.find("rewrittenExpr.name = \"/map/map\"") == std::string::npos);
   CHECK(inlinePackedArgsSource.find("rewriteBuiltinMapConstructorExpr") == std::string::npos);
