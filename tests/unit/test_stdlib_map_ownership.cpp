@@ -1603,7 +1603,40 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(argumentValidationCollectionsSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
         std::string::npos);
   CHECK(argumentValidationCollectionsSource.find(
+            "mapHelperSurfaceMetadataForArgumentValidation(") ==
+        std::string::npos);
+  CHECK(argumentValidationCollectionsSource.find("canonicalMapHelperPathLocal(") ==
+        std::string::npos);
+  CHECK(argumentValidationCollectionsSource.find(
+            "resolveCanonicalMapHelperNameFromSpelling(") ==
+        std::string::npos);
+  CHECK(argumentValidationCollectionsSource.find(
+            "isCanonicalMapAccessResolvedPath(") ==
+        std::string::npos);
+  CHECK(argumentValidationCollectionsSource.find(
+            "getCanonicalMapAccessBuiltinName(") ==
+        std::string::npos);
+  CHECK(argumentValidationCollectionsSource.find("resolvedMapHelperName") ==
+        std::string::npos);
+  CHECK(argumentValidationCollectionsSource.find(
             "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+        std::string::npos);
+  CHECK(argumentValidationCollectionsSource.find(
+            "keyValueHelperSurfaceMetadataForArgumentValidation(") !=
+        std::string::npos);
+  CHECK(argumentValidationCollectionsSource.find(
+            "canonicalKeyValueHelperPathForArgumentValidation(") !=
+        std::string::npos);
+  CHECK(argumentValidationCollectionsSource.find(
+            "resolveCanonicalKeyValueHelperNameFromSpelling(") !=
+        std::string::npos);
+  CHECK(argumentValidationCollectionsSource.find(
+            "isCanonicalKeyValueAccessResolvedPath(") !=
+        std::string::npos);
+  CHECK(argumentValidationCollectionsSource.find(
+            "getCanonicalKeyValueAccessBuiltinName(") !=
+        std::string::npos);
+  CHECK(argumentValidationCollectionsSource.find("resolvedKeyValueHelperName") !=
         std::string::npos);
   CHECK(collectionAccessValidationSource.find("path == \"/map/at\"") ==
         std::string::npos);

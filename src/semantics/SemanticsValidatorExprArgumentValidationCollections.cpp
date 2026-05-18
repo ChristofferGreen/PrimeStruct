@@ -23,43 +23,45 @@ std::string stripGeneratedHelperSuffix(std::string path) {
   return path;
 }
 
-const StdlibSurfaceMetadata *mapHelperSurfaceMetadataForArgumentValidation() {
+const StdlibSurfaceMetadata *
+keyValueHelperSurfaceMetadataForArgumentValidation() {
   return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
 }
 
-std::string canonicalMapHelperPathLocal(std::string_view helperName) {
+std::string canonicalKeyValueHelperPathForArgumentValidation(
+    std::string_view helperName) {
   const StdlibSurfaceMetadata *metadata =
-      mapHelperSurfaceMetadataForArgumentValidation();
+      keyValueHelperSurfaceMetadataForArgumentValidation();
   if (metadata == nullptr) {
     return "";
   }
   return canonicalCollectionHelperPath(metadata->id, helperName);
 }
 
-bool resolveCanonicalMapHelperNameFromSpelling(std::string path,
-                                               std::string &helperNameOut) {
+bool resolveCanonicalKeyValueHelperNameFromSpelling(std::string path,
+                                                    std::string &helperNameOut) {
   helperNameOut.clear();
   if (!path.empty() && path.front() != '/') {
     path.insert(path.begin(), '/');
   }
   const StdlibSurfaceMetadata *metadata =
-      mapHelperSurfaceMetadataForArgumentValidation();
+      keyValueHelperSurfaceMetadataForArgumentValidation();
   return metadata != nullptr &&
          resolvePublishedCollectionHelperResolvedPath(
              path, metadata->id, helperNameOut);
 }
 
-bool isCanonicalMapAccessResolvedPath(const std::string &path) {
+bool isCanonicalKeyValueAccessResolvedPath(const std::string &path) {
   std::string helperName;
-  if (!resolveCanonicalMapHelperNameFromSpelling(path, helperName)) {
+  if (!resolveCanonicalKeyValueHelperNameFromSpelling(path, helperName)) {
     return false;
   }
   return helperName == "at" || helperName == "at_ref" ||
          helperName == "at_unsafe" || helperName == "at_unsafe_ref";
 }
 
-bool getCanonicalMapAccessBuiltinName(const Expr &candidate,
-                                      std::string &helperOut) {
+bool getCanonicalKeyValueAccessBuiltinName(const Expr &candidate,
+                                           std::string &helperOut) {
   helperOut.clear();
   if (candidate.kind != Expr::Kind::Call || candidate.name.empty() ||
       candidate.args.size() != 2) {
@@ -72,12 +74,12 @@ bool getCanonicalMapAccessBuiltinName(const Expr &candidate,
   if (!normalizedName.empty() && normalizedName.front() == '/') {
     normalizedName.erase(normalizedName.begin());
   }
-  std::string resolvedMapHelperName;
-  if (resolveCanonicalMapHelperNameFromSpelling(
-          normalizedName, resolvedMapHelperName) &&
-      (resolvedMapHelperName == "at_ref" ||
-       resolvedMapHelperName == "at_unsafe_ref")) {
-    helperOut = resolvedMapHelperName;
+  std::string resolvedKeyValueHelperName;
+  if (resolveCanonicalKeyValueHelperNameFromSpelling(
+          normalizedName, resolvedKeyValueHelperName) &&
+      (resolvedKeyValueHelperName == "at_ref" ||
+       resolvedKeyValueHelperName == "at_unsafe_ref")) {
+    helperOut = resolvedKeyValueHelperName;
     return true;
   }
   return false;
@@ -184,7 +186,7 @@ bool SemanticsValidator::isStringExprForArgumentValidation(
       }
       helperName = stripGeneratedHelperSuffix(std::move(helperName));
       if (helperName != "at" && helperName != "at_unsafe") {
-        if (!getCanonicalMapAccessBuiltinName(arg, helperName) ||
+        if (!getCanonicalKeyValueAccessBuiltinName(arg, helperName) ||
             (helperName != "at" && helperName != "at_unsafe")) {
           return false;
         }
@@ -209,7 +211,8 @@ bool SemanticsValidator::isStringExprForArgumentValidation(
       if (!receiverIsMap) {
         return false;
       }
-      const std::string helperPath = canonicalMapHelperPathLocal(helperName);
+      const std::string helperPath =
+          canonicalKeyValueHelperPathForArgumentValidation(helperName);
       auto defIt = defMap_.find(helperPath);
       if (defIt == defMap_.end()) {
         for (auto candidateIt = defMap_.begin(); candidateIt != defMap_.end(); ++candidateIt) {
@@ -265,7 +268,7 @@ bool SemanticsValidator::isStringExprForArgumentValidation(
       return true;
     }
     const bool isExplicitMapAccessPath =
-        isCanonicalMapAccessResolvedPath(resolvedBasePath);
+        isCanonicalKeyValueAccessResolvedPath(resolvedBasePath);
     if (isExplicitMapAccessPath) {
       auto defIt = defMap_.find(resolvedPath);
       if (defIt == defMap_.end()) {
@@ -286,7 +289,7 @@ bool SemanticsValidator::isStringExprForArgumentValidation(
         isExplicitMapAccessPath;
     std::string accessName;
     if (treatAsBuiltinAccess &&
-        getCanonicalMapAccessBuiltinName(arg, accessName) &&
+        getCanonicalKeyValueAccessBuiltinName(arg, accessName) &&
         arg.args.size() == 2) {
       std::string mapValueType;
       std::string experimentalMapKeyType;
