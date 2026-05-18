@@ -582,7 +582,7 @@ std::string templateMonomorphCanonicalKeyValueHelperPath(std::string_view spelli
   return std::string(metadata->canonicalPath) + "/" + helperName;
 }
 
-bool resolveTemplateMonomorphCanonicalMapHelperName(
+bool resolveTemplateMonomorphCanonicalKeyValueHelperName(
     std::string path,
     std::string &helperNameOut) {
   helperNameOut.clear();
@@ -605,19 +605,19 @@ bool resolveTemplateMonomorphCanonicalMapHelperName(
 
 bool isTemplateMonomorphCanonicalMapHelperPath(const std::string &path) {
   std::string helperName;
-  return resolveTemplateMonomorphCanonicalMapHelperName(path, helperName) &&
+  return resolveTemplateMonomorphCanonicalKeyValueHelperName(path, helperName) &&
          helperName != "map" && helperName != "entry";
 }
 
 bool isTemplateMonomorphCanonicalMapValueAccessPath(const std::string &path) {
   std::string helperName;
-  return resolveTemplateMonomorphCanonicalMapHelperName(path, helperName) &&
+  return resolveTemplateMonomorphCanonicalKeyValueHelperName(path, helperName) &&
          (helperName == "at" || helperName == "at_unsafe");
 }
 
 bool isTemplateMonomorphCanonicalMapCountPath(const std::string &path) {
   std::string helperName;
-  return resolveTemplateMonomorphCanonicalMapHelperName(path, helperName) &&
+  return resolveTemplateMonomorphCanonicalKeyValueHelperName(path, helperName) &&
          helperName == "count";
 }
 
@@ -655,7 +655,7 @@ std::string templateMonomorphPreferredMapHelperSpellingForMember(
 
 std::string canonicalMapHelperUnknownTargetPath(const std::string &resolvedPath) {
   std::string helperName;
-  if (!resolveTemplateMonomorphCanonicalMapHelperName(resolvedPath,
+  if (!resolveTemplateMonomorphCanonicalKeyValueHelperName(resolvedPath,
                                                       helperName) ||
       helperName == "map" || helperName == "entry" ||
       helperName.ends_with("_ref")) {

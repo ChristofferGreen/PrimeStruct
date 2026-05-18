@@ -765,11 +765,15 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(templateReceiverSource.find("templateMonomorphCanonicalMapHelperPath") ==
         std::string::npos);
+  CHECK(templateReceiverSource.find("resolveTemplateMonomorphCanonicalMapHelperName") ==
+        std::string::npos);
   CHECK(templateReceiverSource.find("templateMonomorphKeyValueHelperSurfaceMetadata") !=
         std::string::npos);
   CHECK(templateReceiverSource.find("resolveTemplateMonomorphKeyValueHelperName") !=
         std::string::npos);
   CHECK(templateReceiverSource.find("templateMonomorphCanonicalKeyValueHelperPath") !=
+        std::string::npos);
+  CHECK(templateReceiverSource.find("resolveTemplateMonomorphCanonicalKeyValueHelperName") !=
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("templateMonomorphCanonicalMapHelperPath") ==
         std::string::npos);
