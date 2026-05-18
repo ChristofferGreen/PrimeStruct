@@ -1650,6 +1650,15 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(collectionAccessValidationSource.find("metadataBackedCanonicalMapHelperPath(") !=
         std::string::npos);
+  CHECK(collectionAccessValidationSource.find("isCanonicalMapAccessHelperName(") ==
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find("isSourceSpelledCanonicalMapAccessCall(") ==
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find("isCanonicalKeyValueAccessHelperName(") !=
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find(
+            "isSourceSpelledCanonicalKeyValueAccessCall(") !=
+        std::string::npos);
   CHECK(collectionAccessValidationSource.find("canonicalMapHelperPathLocal(") ==
         std::string::npos);
   CHECK(collectionAccessValidationSource.find("canonicalMapHelperNamespaceLocal(") ==

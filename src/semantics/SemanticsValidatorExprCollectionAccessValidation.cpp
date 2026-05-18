@@ -9,7 +9,7 @@
 namespace primec::semantics {
 namespace {
 
-bool isCanonicalMapAccessHelperName(const std::string &helperName) {
+bool isCanonicalKeyValueAccessHelperName(const std::string &helperName) {
   return helperName == "at" || helperName == "at_ref" ||
          helperName == "at_unsafe" || helperName == "at_unsafe_ref";
 }
@@ -67,16 +67,16 @@ std::string rootedKeyValueHelperAliasPathLocal(std::string_view helperName) {
   return {};
 }
 
-bool isCanonicalMapAccessResolvedPath(const std::string &path) {
+bool isCanonicalKeyValueAccessResolvedPath(const std::string &path) {
   std::string helperName;
   return resolveCanonicalKeyValueHelperNameFromSpelling(path, helperName) &&
-         isCanonicalMapAccessHelperName(helperName);
+         isCanonicalKeyValueAccessHelperName(helperName);
 }
 
-bool isSourceSpelledCanonicalMapAccessCall(const Expr &expr) {
+bool isSourceSpelledCanonicalKeyValueAccessCall(const Expr &expr) {
   const std::string &sourceName =
       expr.sourceName.empty() ? expr.name : expr.sourceName;
-  return isCanonicalMapAccessResolvedPath(sourceName);
+  return isCanonicalKeyValueAccessResolvedPath(sourceName);
 }
 
 bool isUnqualifiedCollectionAccessCall(const Expr &candidate,
@@ -124,12 +124,12 @@ bool getCanonicalCollectionAccessBuiltinName(const Expr &candidate,
     namespacePrefix.erase(namespacePrefix.begin());
   }
   if (namespacePrefix == canonicalKeyValueHelperNamespaceLocal() &&
-      isCanonicalMapAccessHelperName(candidate.name)) {
+      isCanonicalKeyValueAccessHelperName(candidate.name)) {
     helperOut = candidate.name;
     return true;
   }
   if (candidate.name.find('/') == std::string::npos &&
-      isCanonicalMapAccessHelperName(candidate.name)) {
+      isCanonicalKeyValueAccessHelperName(candidate.name)) {
     helperOut = candidate.name;
     return true;
   }
@@ -193,10 +193,10 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     const bool isExplicitCanonicalMapAccessCall =
         expr.sourceIsMethodCall ||
         (!expr.isMethodCall &&
-         (isSourceSpelledCanonicalMapAccessCall(expr) ||
+         (isSourceSpelledCanonicalKeyValueAccessCall(expr) ||
           (!hasSourceShape &&
-           (isCanonicalMapAccessResolvedPath(resolved) ||
-            isCanonicalMapAccessResolvedPath(expr.name) ||
+           (isCanonicalKeyValueAccessResolvedPath(resolved) ||
+            isCanonicalKeyValueAccessResolvedPath(expr.name) ||
             canonicalKeyValueHelperNamespaceLocal() ==
                 trimLeadingSlash(expr.namespacePrefix)))));
     if (isExplicitCanonicalMapAccessCall) {
@@ -326,7 +326,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
   };
 
   if (expr.isMethodCall && resolvedMethod &&
-      isCanonicalMapAccessResolvedPath(resolved)) {
+      isCanonicalKeyValueAccessResolvedPath(resolved)) {
     handledOut = true;
     const std::string helperName =
         resolved.find("unsafe_ref") != std::string::npos
@@ -403,7 +403,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     }
     if (!expr.templateArgs.empty()) {
       if (context.isStdNamespacedMapAccessCall ||
-          isCanonicalMapAccessResolvedPath(resolved)) {
+          isCanonicalKeyValueAccessResolvedPath(resolved)) {
         std::string diagnosticTarget = resolved;
         if (diagnosticTarget.empty()) {
           diagnosticTarget = canonicalKeyValueHelperPathLocal(builtinName);
@@ -605,7 +605,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       }
     }
     const bool isExplicitMapAccessHelper =
-        isCanonicalMapAccessResolvedPath(resolved);
+        isCanonicalKeyValueAccessResolvedPath(resolved);
     if (isExplicitMapAccessHelper && !isMap && !isExperimentalMap) {
       handledOut = false;
       return true;
