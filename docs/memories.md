@@ -602,7 +602,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   monomorph binding-call inference currently has no direct map-surface traces
   and should stay source-locked at a zero inventory cap; template-monomorph
   fallback type inference should use shared map backing classifiers and
-  metadata-derived map collection aliases instead of direct map strings.
+  metadata-derived map collection aliases instead of direct map strings;
+  statement-binding explicit helper canonicalization local helpers should use
+  key/value naming even while they still resolve `collections.map_helpers`
+  metadata during the map substrate migration.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

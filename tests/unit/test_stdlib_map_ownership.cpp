@@ -1607,6 +1607,18 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(lowerStatementsBindingsSource.find(
             "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
         std::string::npos);
+  CHECK(lowerStatementsBindingsSource.find("canonicalizeExplicitBuiltinKeyValueHelpers") !=
+        std::string::npos);
+  CHECK(lowerStatementsBindingsSource.find("canonicalizeExplicitBuiltinMapHelpers") ==
+        std::string::npos);
+  CHECK(lowerStatementsBindingsSource.find("resolveDirectKeyValueHelperPath") !=
+        std::string::npos);
+  CHECK(lowerStatementsBindingsSource.find("resolveDirectMapHelperPath") ==
+        std::string::npos);
+  CHECK(lowerStatementsBindingsSource.find("findDirectKeyValueHelperDefinition") !=
+        std::string::npos);
+  CHECK(lowerStatementsBindingsSource.find("findDirectMapHelperDefinition") ==
+        std::string::npos);
   CHECK(lowerStatementsBindingsSource.find("rawPath.rfind(\"/map/\", 0)") ==
         std::string::npos);
   CHECK(lowerStatementsBindingsSource.find("rawPath.rfind(\"/std/collections/map/\", 0)") ==

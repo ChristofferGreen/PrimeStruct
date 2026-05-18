@@ -1,6 +1,6 @@
   emitStatement = [&](const Expr &stmtInput, LocalMap &localsIn) -> bool {
     Expr normalizedStmt = stmtInput;
-    auto resolveDirectMapHelperPath = [&](const Expr &exprIn) {
+    auto resolveDirectKeyValueHelperPath = [&](const Expr &exprIn) {
       if (!exprIn.name.empty() && exprIn.name.front() == '/') {
         return exprIn.name;
       }
@@ -13,7 +13,7 @@
       }
       return exprIn.name;
     };
-    auto findDirectMapHelperDefinition = [&](const std::string &rawPath) -> const Definition * {
+    auto findDirectKeyValueHelperDefinition = [&](const std::string &rawPath) -> const Definition * {
       auto defIt = defMap.find(rawPath);
       if (defIt != defMap.end()) {
         return defIt->second;
@@ -31,13 +31,13 @@
       }
       return nullptr;
     };
-    std::function<void(Expr &)> canonicalizeExplicitBuiltinMapHelpers =
+    std::function<void(Expr &)> canonicalizeExplicitBuiltinKeyValueHelpers =
         [&](Expr &exprIn) {
           for (auto &argExpr : exprIn.args) {
-            canonicalizeExplicitBuiltinMapHelpers(argExpr);
+            canonicalizeExplicitBuiltinKeyValueHelpers(argExpr);
           }
           for (auto &bodyExpr : exprIn.bodyArguments) {
-            canonicalizeExplicitBuiltinMapHelpers(bodyExpr);
+            canonicalizeExplicitBuiltinKeyValueHelpers(bodyExpr);
           }
           if (exprIn.kind != Expr::Kind::Call || exprIn.isMethodCall || exprIn.args.empty()) {
             return;
@@ -53,7 +53,7 @@
               exprIn.templateArgs.empty()) {
             return;
           }
-          const std::string rawPath = resolveDirectMapHelperPath(exprIn);
+          const std::string rawPath = resolveDirectKeyValueHelperPath(exprIn);
           std::string directHelperName;
           const auto *metadata =
               findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
@@ -62,14 +62,14 @@
                   rawPath,
                   metadata->id,
                   directHelperName) &&
-              findDirectMapHelperDefinition(rawPath) != nullptr) {
+              findDirectKeyValueHelperDefinition(rawPath) != nullptr) {
             return;
           }
           exprIn.name = helperName;
           exprIn.namespacePrefix.clear();
           exprIn.templateArgs.clear();
         };
-    canonicalizeExplicitBuiltinMapHelpers(normalizedStmt);
+    canonicalizeExplicitBuiltinKeyValueHelpers(normalizedStmt);
     const Expr &stmt = normalizedStmt;
     auto extractDeclaredStructReturnPath = [&]() {
       const std::string &definitionPath =
