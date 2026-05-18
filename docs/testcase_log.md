@@ -179,6 +179,17 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-18 06:55 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer inline native dispatch prefers published canonical map access helpers" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `rg -n 'std/collections/map|experimental_map|/map/|CollectionsMap|map(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bMap<' src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp` |
+  failures: none | notes: inline native map access helper classification
+  now resolves map helper member names and canonical helper paths through
+  `collections.map_helpers` metadata instead of directly naming the map
+  helper surface ID; the edited file has zero targeted map-surface matches.
+  The Python inventory scripts were intentionally not run in this pass.
 - 2026-05-18 06:51 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_compile_run_tests`;
   `cd build-release && ./PrimeStruct_compile_run_tests --test-case="C++ emitter resolves stdlib canonical map count helper in method-call sugar" --no-skip`;

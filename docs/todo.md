@@ -2092,6 +2092,11 @@ Task template:
       published bridge helper surfaces; it now resolves the map helper
       surface through `collections.map_helpers` metadata like the vector
       helper path.
+    - 2026-05-18: Inline native dispatch no longer names
+      `StdlibSurfaceId::CollectionsMapHelpers` directly when recognizing
+      removed explicit map access helpers or canonical stdlib map helper
+      paths; it now routes those checks through local
+      `collections.map_helpers` metadata wrappers.
     - 2026-05-16: Map literal lowering no longer hard-codes the empty
       inferred-map backing path as `/std/collections/experimental_map/Map`;
       it now uses the shared `experimentalCollectionTypePath("map", "Map")`

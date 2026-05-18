@@ -1055,6 +1055,14 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inlineNativeSource.find("rawPath == \"map/at_unsafe\"") == std::string::npos);
   CHECK(inlineNativeSource.find("rawPath == \"map/at_ref\"") == std::string::npos);
   CHECK(inlineNativeSource.find("rawPath == \"map/at_unsafe_ref\"") == std::string::npos);
+  CHECK(inlineNativeSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
+        std::string::npos);
+  CHECK(inlineNativeSource.find("inlineMapHelperMetadata()") !=
+        std::string::npos);
+  CHECK(inlineNativeSource.find("resolvePublishedInlineMapSurfaceMemberName") !=
+        std::string::npos);
+  CHECK(inlineNativeSource.find("isCanonicalPublishedInlineMapHelperPath") !=
+        std::string::npos);
   CHECK(inlineNativeSource.find("emitCanonicalInlineDefinitionCall(expr, *callee)") != std::string::npos);
   CHECK(emitterMethodResolutionSource.find("!hasAliasHelperDefinition && !hasCanonicalHelperDefinition") ==
         std::string::npos);

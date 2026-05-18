@@ -652,7 +652,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   same bridge-key metadata lookup instead of directly naming the map helper
   surface ID; emitter method metadata should classify map helper surface
   identity and removed map helper aliases through `collections.map_helpers`
-  metadata instead of directly naming the map helper surface ID.
+  metadata instead of directly naming the map helper surface ID; inline
+  native dispatch should also resolve removed explicit map access helpers and
+  canonical published map helper paths through local `collections.map_helpers`
+  metadata wrappers instead of directly naming the map helper surface ID.
   The stale
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`
