@@ -653,10 +653,10 @@ std::string templateMonomorphPreferredKeyValueHelperSpellingForMember(
   return findPreferred(metadata->compatibilitySpellings);
 }
 
-std::string canonicalMapHelperUnknownTargetPath(const std::string &resolvedPath) {
+std::string canonicalKeyValueHelperUnknownTargetPath(const std::string &resolvedPath) {
   std::string helperName;
   if (!resolveTemplateMonomorphCanonicalKeyValueHelperName(resolvedPath,
-                                                      helperName) ||
+                                                           helperName) ||
       helperName == "map" || helperName == "entry" ||
       helperName.ends_with("_ref")) {
     return {};

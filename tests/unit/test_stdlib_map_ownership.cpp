@@ -775,6 +775,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(templateReceiverSource.find("templateMonomorphPreferredMapHelperSpellingForMember") ==
         std::string::npos);
+  CHECK(templateReceiverSource.find("canonicalMapHelperUnknownTargetPath") ==
+        std::string::npos);
   CHECK(templateReceiverSource.find("templateMonomorphKeyValueHelperSurfaceMetadata") !=
         std::string::npos);
   CHECK(templateReceiverSource.find("resolveTemplateMonomorphKeyValueHelperName") !=
@@ -791,6 +793,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(templateReceiverSource.find("templateMonomorphPreferredKeyValueHelperSpellingForMember") !=
         std::string::npos);
+  CHECK(templateReceiverSource.find("canonicalKeyValueHelperUnknownTargetPath") !=
+        std::string::npos);
   CHECK(templateExpressionRewriteSource.find("templateMonomorphCanonicalMapHelperPath") ==
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("isTemplateMonomorphCanonicalMapHelperPath") ==
@@ -799,6 +803,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("isTemplateMonomorphCanonicalMapCountPath") ==
         std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("canonicalMapHelperUnknownTargetPath") ==
+        std::string::npos);
   CHECK(templateExpressionRewriteSource.find("templateMonomorphCanonicalKeyValueHelperPath") !=
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("isTemplateMonomorphCanonicalKeyValueHelperPath") !=
@@ -806,6 +812,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(templateExpressionRewriteSource.find("isTemplateMonomorphCanonicalKeyValueAccessPath") !=
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find("isTemplateMonomorphCanonicalKeyValueCountPath") !=
+        std::string::npos);
+  CHECK(templateExpressionRewriteSource.find("canonicalKeyValueHelperUnknownTargetPath") !=
         std::string::npos);
   CHECK(templateExpressionRewriteSource.find(
             "resolvedPath == \"/std/collections/map/count\" || resolvedPath == \"/map/count\"") ==

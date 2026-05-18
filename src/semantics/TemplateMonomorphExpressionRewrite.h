@@ -1487,7 +1487,7 @@ bool rewriteExpr(Expr &expr,
         resolvesExperimentalMapBorrowedReceiver(
             mapHelperReceiverExpr(expr), params, locals, allowMathBare, mapping, allowedParams, namespacePrefix, ctx);
     const std::string borrowedCanonicalKeyValueUnknownTarget =
-        canonicalMapHelperUnknownTargetPath(resolvedPath);
+        canonicalKeyValueHelperUnknownTargetPath(resolvedPath);
     if (!borrowedCanonicalKeyValueUnknownTarget.empty() &&
         resolvesBorrowedExperimentalMapReceiver) {
       error = "unknown call target: " + borrowedCanonicalKeyValueUnknownTarget;
