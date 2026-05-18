@@ -823,7 +823,8 @@ bool hasVisibleStdCollectionsImportForPath(const Context &ctx, const std::string
   return false;
 }
 
-std::string experimentalMapHelperPathForWrapperHelper(const std::string &path) {
+std::string experimentalKeyValueHelperPathForWrapperHelper(
+    const std::string &path) {
   if (isTemplateMonomorphMapImportAliasHelperPath(path)) {
     return {};
   }

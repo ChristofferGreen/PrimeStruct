@@ -1603,12 +1603,14 @@ bool rewriteExpr(Expr &expr,
         }
       }
     }
-    const std::string experimentalWrapperMapPath = experimentalMapHelperPathForWrapperHelper(resolvedPath);
-    if (!experimentalWrapperMapPath.empty() && ctx.sourceDefs.count(experimentalWrapperMapPath) > 0 &&
+    const std::string experimentalWrapperKeyValuePath =
+        experimentalKeyValueHelperPathForWrapperHelper(resolvedPath);
+    if (!experimentalWrapperKeyValuePath.empty() &&
+        ctx.sourceDefs.count(experimentalWrapperKeyValuePath) > 0 &&
         resolvesExperimentalMapValueReceiver(
             mapHelperReceiverExpr(expr), params, locals, allowMathBare, mapping, allowedParams, namespacePrefix, ctx)) {
-      resolvedPath = experimentalWrapperMapPath;
-      expr.name = experimentalWrapperMapPath;
+      resolvedPath = experimentalWrapperKeyValuePath;
+      expr.name = experimentalWrapperKeyValuePath;
       expr.namespacePrefix.clear();
       if (expr.templateArgs.empty()) {
         std::vector<std::string> receiverTemplateArgs;
