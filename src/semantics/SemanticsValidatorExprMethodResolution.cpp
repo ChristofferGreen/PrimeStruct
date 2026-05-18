@@ -282,7 +282,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
                                               helperName);
     std::string resolvedMapHelperName;
     isBuiltinMethod =
-        resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(
+        resolveCanonicalCompatibilityKeyValueHelperNameFromResolvedPath(
             resolved, resolvedMapHelperName) &&
         (shouldBuiltinValidateCurrentMapWrapperHelper(resolvedMapHelperName) ||
          hasImportedDefinitionPath(resolved));
@@ -491,7 +491,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       resolved = preferredMapMethodTargetForCall(params, locals, expr.args.front(),
                                                 helperName);
       std::string canonicalMapHelperName;
-      if (resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(
+      if (resolveCanonicalCompatibilityKeyValueHelperNameFromResolvedPath(
               resolved, canonicalMapHelperName) &&
           (shouldBuiltinValidateCurrentMapWrapperHelper(canonicalMapHelperName) ||
            hasImportedDefinitionPath(resolved))) {
@@ -637,7 +637,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   };
   auto isMissingStdlibMapMethodDefinition = [&](const std::string &path) {
     std::string helperName;
-    return resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(
+    return resolveCanonicalCompatibilityKeyValueHelperNameFromResolvedPath(
                path, helperName) &&
            !hasVisibleStdlibMapMethodDefinition(path);
   };

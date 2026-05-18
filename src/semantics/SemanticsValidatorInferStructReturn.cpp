@@ -332,9 +332,8 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
       }
       std::string explicitKeyValueHelperName;
       const bool isExplicitKeyValueAccessStructReturnMethod =
-          resolveExplicitPublishedMapHelperExprMemberName(rawMethodName,
-                                                          expr.namespacePrefix,
-                                                          explicitKeyValueHelperName) &&
+          resolveExplicitPublishedKeyValueHelperExprMemberName(
+              rawMethodName, expr.namespacePrefix, explicitKeyValueHelperName) &&
           (explicitKeyValueHelperName == "at" ||
            explicitKeyValueHelperName == "at_unsafe");
       std::vector<std::string> methodCandidates;
@@ -410,7 +409,7 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
       if (receiverStruct == "/map") {
         for (const auto &candidate : methodCandidates) {
           std::string candidateKeyValueHelperName;
-          if (!resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(
+          if (!resolveCanonicalCompatibilityKeyValueHelperNameFromResolvedPath(
                   candidate, candidateKeyValueHelperName)) {
             continue;
           }

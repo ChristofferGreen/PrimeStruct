@@ -812,6 +812,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferStructReturnSource.find("sourceMapHelperPath") ==
         std::string::npos);
+  CHECK(inferStructReturnSource.find(
+            "resolveExplicitPublishedMapHelperExprMemberName(") ==
+        std::string::npos);
+  CHECK(inferStructReturnSource.find(
+            "resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(") ==
+        std::string::npos);
   CHECK(inferStructReturnSource.find("explicitKeyValueHelperName") !=
         std::string::npos);
   CHECK(inferStructReturnSource.find(
@@ -824,12 +830,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inferStructReturnSource.find("sourceKeyValueHelperPath") !=
         std::string::npos);
   CHECK(inferStructReturnSource.find(
-            "resolveExplicitPublishedMapHelperExprMemberName(rawMethodName") !=
+            "resolveExplicitPublishedKeyValueHelperExprMemberName(") !=
         std::string::npos);
   CHECK(inferStructReturnSource.find("metadataBackedCanonicalMapHelperPath(methodName)") !=
         std::string::npos);
   CHECK(inferStructReturnSource.find(
-            "resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(") !=
+            "resolveCanonicalCompatibilityKeyValueHelperNameFromResolvedPath(") !=
         std::string::npos);
   CHECK(inferStructReturnHelpersSource.find("isExplicitMapAccessStructReturnCompatibilityCall") ==
         std::string::npos);
@@ -1155,6 +1161,30 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inferCollectionCompatibilityInternalSource.find("rawMethodName.rfind(\"map/\", 0)") ==
         std::string::npos);
   CHECK(inferCollectionCompatibilityInternalSource.find("use /std/collections/map/*") ==
+        std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find(
+            "isPublishedMapBaseHelperName(") == std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find(
+            "isPublishedBorrowedMapHelperName(") == std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find(
+            "isMapHelperImportAliasNamespace(") == std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find(
+            "resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(") ==
+        std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find(
+            "resolveExplicitPublishedMapHelperExprMemberName(") ==
+        std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find(
+            "isPublishedKeyValueBaseHelperName(") != std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find(
+            "isPublishedBorrowedKeyValueHelperName(") != std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find(
+            "isKeyValueHelperImportAliasNamespace(") != std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find(
+            "resolveCanonicalCompatibilityKeyValueHelperNameFromResolvedPath(") !=
+        std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find(
+            "resolveExplicitPublishedKeyValueHelperExprMemberName(") !=
         std::string::npos);
   CHECK(inferCollectionCompatibilityInternalSource.find("resolveMapCompatibilityUnrootedPath(") !=
         std::string::npos);

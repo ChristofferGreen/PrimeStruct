@@ -510,7 +510,7 @@ bool SemanticsValidator::canonicalExperimentalVectorHelperPath(
 bool SemanticsValidator::canonicalExperimentalMapHelperPath(const std::string &resolvedPath,
                                                             std::string &canonicalPathOut,
                                                             std::string &helperNameOut) const {
-  if (!resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(
+  if (!resolveCanonicalCompatibilityKeyValueHelperNameFromResolvedPath(
           resolvedPath, helperNameOut)) {
     canonicalPathOut.clear();
     helperNameOut.clear();
@@ -617,7 +617,7 @@ std::string SemanticsValidator::mapNamespacedMethodCompatibilityPath(
     return "";
   }
   std::string helperName;
-  if (!resolveExplicitPublishedMapHelperExprMemberName(
+  if (!resolveExplicitPublishedKeyValueHelperExprMemberName(
           candidate.name, candidate.namespacePrefix, helperName)) {
     return "";
   }
@@ -668,7 +668,7 @@ std::string SemanticsValidator::directMapHelperCompatibilityPath(
   const std::string explicitPath = explicitCallPathForCandidate(candidate);
   std::string helperName;
   const bool resolvedCompatibilityHelper =
-      resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(
+      resolveCanonicalCompatibilityKeyValueHelperNameFromResolvedPath(
           resolvedPath, helperName);
   bool resolvedBareKeyValueHelper = false;
   std::string explicitSurfaceHelperName;
@@ -681,11 +681,11 @@ std::string SemanticsValidator::directMapHelperCompatibilityPath(
       metadataBackedMapHelperRootAliasMethodName(explicitPath).empty() &&
       !isCanonicalKeyValueHelperResolvedPathLocal(explicitPath);
   if (!resolvedCompatibilityHelper &&
-      !resolveExplicitPublishedMapHelperExprMemberName(
+      !resolveExplicitPublishedKeyValueHelperExprMemberName(
           candidate.name, candidate.namespacePrefix, helperName)) {
     if (candidate.namespacePrefix.empty() &&
         resolvePublishedKeyValueHelperMemberTokenLocal(candidate.name, helperName) &&
-        isPublishedMapBaseHelperName(helperName)) {
+        isPublishedKeyValueBaseHelperName(helperName)) {
       resolvedBareKeyValueHelper = true;
     } else {
       return "";
@@ -1048,13 +1048,13 @@ bool SemanticsValidator::resolveRemovedMapBodyArgumentTarget(const Expr &candida
 
   if (!candidate.isMethodCall) {
     std::string helperName;
-    if (!resolveExplicitPublishedMapHelperExprMemberName(
+    if (!resolveExplicitPublishedKeyValueHelperExprMemberName(
             candidate.name, "", helperName) &&
-        !resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(
+        !resolveCanonicalCompatibilityKeyValueHelperNameFromResolvedPath(
             resolvedPath, helperName)) {
       return false;
     }
-    if (!isPublishedMapBaseHelperName(helperName) ||
+    if (!isPublishedKeyValueBaseHelperName(helperName) ||
         defMap_.count("/" + helperName) > 0) {
       return false;
     }
@@ -1105,14 +1105,14 @@ bool SemanticsValidator::resolveRemovedMapBodyArgumentTarget(const Expr &candida
     wrappedResolvedPath.erase(0, std::string("Pointer/").size());
   }
   std::string helperName;
-  if (!resolveExplicitPublishedMapHelperExprMemberName(
+  if (!resolveExplicitPublishedKeyValueHelperExprMemberName(
           wrappedResolvedPath, "", helperName)) {
     if (!resolvePublishedKeyValueHelperMemberTokenLocal(wrappedResolvedPath,
                                                    helperName)) {
       return false;
     }
   }
-  if (!isPublishedMapBaseHelperName(helperName)) {
+  if (!isPublishedKeyValueBaseHelperName(helperName)) {
     return false;
   }
 

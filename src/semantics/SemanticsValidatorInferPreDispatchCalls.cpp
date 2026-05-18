@@ -454,7 +454,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
       };
       auto resolveStdlibMapMethodHelperName = [&](const std::string &path,
                                                   std::string &helperNameOut) {
-        return resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(
+        return resolveCanonicalCompatibilityKeyValueHelperNameFromResolvedPath(
             path, helperNameOut);
       };
       auto isMapMethodWithBuiltinReturn = [&](std::string_view helperName) {

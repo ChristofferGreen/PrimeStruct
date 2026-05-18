@@ -149,8 +149,8 @@ std::string SemanticsValidator::preferredBareMapHelperTarget(std::string_view he
   if (hasVisibleMapHelperFamily(canonical)) {
     return canonical;
   }
-  if (isPublishedMapBaseHelperName(helperName) ||
-      isPublishedBorrowedMapHelperName(helperName)) {
+  if (isPublishedKeyValueBaseHelperName(helperName) ||
+      isPublishedBorrowedKeyValueHelperName(helperName)) {
     return canonical;
   }
   return canonical;
@@ -590,7 +590,7 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalMapHelperCall(
     }
     if (!resolveKeyValueHelperMemberTokenForRewrite(normalizedMethod,
                                                helperName) ||
-        !isPublishedMapBaseHelperName(helperName)) {
+        !isPublishedKeyValueBaseHelperName(helperName)) {
       return false;
     }
     if (isBareMapAccessHelperName(helperName) &&
