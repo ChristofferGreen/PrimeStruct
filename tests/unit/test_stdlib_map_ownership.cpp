@@ -682,10 +682,22 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(exprMethodResolutionSource.find("resolvedMapHelperName") ==
         std::string::npos);
+  CHECK(exprMethodResolutionSource.find("isCanonicalMapAccessMethodName") ==
+        std::string::npos);
+  CHECK(exprMethodResolutionSource.find("canonicalMapAccessReturnsString") ==
+        std::string::npos);
+  CHECK(exprMethodResolutionSource.find("canonicalMapHelperName") ==
+        std::string::npos);
   CHECK(exprMethodResolutionSource.find(
             "metadataBackedCanonicalMapHelperPath(helperName)") !=
         std::string::npos);
   CHECK(exprMethodResolutionSource.find("resolvedKeyValueHelperName") !=
+        std::string::npos);
+  CHECK(exprMethodResolutionSource.find("isCanonicalKeyValueAccessMethodName") !=
+        std::string::npos);
+  CHECK(exprMethodResolutionSource.find("canonicalKeyValueAccessReturnsString") !=
+        std::string::npos);
+  CHECK(exprMethodResolutionSource.find("canonicalKeyValueHelperName") !=
         std::string::npos);
   CHECK(templateCoreSource.find("name == \"/map\"") == std::string::npos);
   CHECK(templateCoreSource.find("name == \"std/collections/map\"") ==

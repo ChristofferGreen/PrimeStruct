@@ -60,7 +60,8 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   const auto isValueSurfaceAccessMethodName = [](std::string_view helperName) {
     return helperName == "at" || helperName == "at_unsafe";
   };
-  const auto isCanonicalMapAccessMethodName = [&](std::string_view helperName) {
+  const auto isCanonicalKeyValueAccessMethodName =
+      [&](std::string_view helperName) {
     return isValueSurfaceAccessMethodName(helperName) ||
            helperName == "size" ||
            helperName == "at_ref" || helperName == "at_unsafe_ref";
@@ -154,10 +155,10 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     }
     std::string accessHelperName;
     if (!getBuiltinArrayAccessName(receiverExpr, accessHelperName) ||
-        !isCanonicalMapAccessMethodName(accessHelperName)) {
+        !isCanonicalKeyValueAccessMethodName(accessHelperName)) {
       return false;
     }
-    auto canonicalMapAccessReturnsString = [&](std::string helperName) {
+    auto canonicalKeyValueAccessReturnsString = [&](std::string helperName) {
       if (helperName != "at" && helperName != "at_unsafe" &&
           helperName != "at_ref" && helperName != "at_unsafe_ref") {
         return false;
@@ -173,7 +174,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
              normalizeBindingTypeName(inferredReturn.typeName) == "string" &&
              inferredReturn.typeTemplateArg.empty();
     };
-    if (canonicalMapAccessReturnsString(accessHelperName)) {
+    if (canonicalKeyValueAccessReturnsString(accessHelperName)) {
       return false;
     }
     const Expr *accessReceiver = this->resolveBuiltinAccessReceiverExpr(receiverExpr);
@@ -491,10 +492,11 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       }
       resolved = preferredMapMethodTargetForCall(params, locals, expr.args.front(),
                                                 helperName);
-      std::string canonicalMapHelperName;
+      std::string canonicalKeyValueHelperName;
       if (resolveCanonicalCompatibilityKeyValueHelperNameFromResolvedPath(
-              resolved, canonicalMapHelperName) &&
-          (shouldBuiltinValidateCurrentMapWrapperHelper(canonicalMapHelperName) ||
+              resolved, canonicalKeyValueHelperName) &&
+          (shouldBuiltinValidateCurrentMapWrapperHelper(
+               canonicalKeyValueHelperName) ||
            hasImportedDefinitionPath(resolved))) {
         isBuiltinMethod = true;
       } else {
