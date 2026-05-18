@@ -2308,7 +2308,7 @@ TEST_CASE("ir lowerer call helpers keep source-shaped method paths when semantic
       .chosenPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram,
                                                         "/std/collections/map/contains"),
-      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsMapHelpers,
+      .stdlibSurfaceId = primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id,
   });
   auto resolveExprPath =
       primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases, &semanticProgram);
@@ -2522,7 +2522,7 @@ TEST_CASE("ir lowerer semantic-product adapter exposes published stdlib surface 
       .helperNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "contains_ref"),
       .chosenPathId = primec::semanticProgramInternCallTargetString(
           semanticProgram, "/std/collections/experimental_map/mapContainsRef"),
-      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsMapHelpers,
+      .stdlibSurfaceId = primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id,
   });
   semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr.insert_or_assign(
       52, primec::StdlibSurfaceId::FileErrorHelpers);
@@ -2536,7 +2536,7 @@ TEST_CASE("ir lowerer semantic-product adapter exposes published stdlib surface 
       53,
       primec::semanticProgramInternCallTargetString(semanticProgram, "/FileError/status"));
   semanticProgram.publishedRoutingLookups.bridgePathChoiceStdlibSurfaceIdsByExpr.insert_or_assign(
-      54, primec::StdlibSurfaceId::CollectionsMapHelpers);
+      54, primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id);
 
   const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
   REQUIRE(adapter.publishedRoutingLookups != nullptr);
@@ -2569,7 +2569,7 @@ TEST_CASE("ir lowerer semantic-product adapter exposes published stdlib surface 
   const auto bridgeSurfaceId =
       primec::ir_lowerer::findSemanticProductBridgePathChoiceStdlibSurfaceId(adapter, bridgeExpr);
   REQUIRE(bridgeSurfaceId.has_value());
-  CHECK(*bridgeSurfaceId == primec::StdlibSurfaceId::CollectionsMapHelpers);
+  CHECK(*bridgeSurfaceId == primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id);
 }
 
 TEST_CASE("ir lowerer semantic-product adapter ignores method-call targets missing resolved path ids") {
@@ -4715,12 +4715,12 @@ TEST_CASE("ir lowerer call helpers keep lowered collection helper paths reachabl
       .semanticNodeId = 81,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(
           semanticProgram, "/std/collections/map/contains"),
-      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsMapHelpers,
+      .stdlibSurfaceId = primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id,
   });
   semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.insert_or_assign(
       81, semanticProgram.directCallTargets.front().resolvedPathId);
   semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr.insert_or_assign(
-      81, primec::StdlibSurfaceId::CollectionsMapHelpers);
+      81, primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id);
 
   const auto resolveExprPath =
       primec::ir_lowerer::makeResolveCallPathFromScope(
@@ -4754,12 +4754,12 @@ TEST_CASE("ir lowerer call helpers classify lowered map helper overloads through
       .semanticNodeId = 83,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(
           semanticProgram, loweredMapContainsOverloadDef.fullPath),
-      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsMapHelpers,
+      .stdlibSurfaceId = primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id,
   });
   semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.insert_or_assign(
       83, semanticProgram.directCallTargets.front().resolvedPathId);
   semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr.insert_or_assign(
-      83, primec::StdlibSurfaceId::CollectionsMapHelpers);
+      83, primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id);
 
   const auto resolveExprPath = [&](const primec::Expr &) {
     return loweredMapContainsOverloadDef.fullPath;
@@ -4899,12 +4899,12 @@ TEST_CASE("ir lowerer bridge coverage uses published collection surface ids for 
       .semanticNodeId = 82,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(
           semanticProgram, "/std/collections/map/contains"),
-      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsMapHelpers,
+      .stdlibSurfaceId = primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id,
   });
   semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.insert_or_assign(
       82, semanticProgram.directCallTargets.front().resolvedPathId);
   semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr.insert_or_assign(
-      82, primec::StdlibSurfaceId::CollectionsMapHelpers);
+      82, primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id);
 
   std::string error;
   CHECK_FALSE(primec::ir_lowerer::validateSemanticProductBridgePathCoverage(

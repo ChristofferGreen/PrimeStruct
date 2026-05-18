@@ -72,7 +72,7 @@ TRACE_PATTERNS = [
 # counts, so deleting residue does not require touching the audit; adding new
 # map-specific production C++ residue does.
 ALLOWED_MAX_FILE_COUNTS: dict[str, int] = {
-    "include/primec/StdlibSurfaceRegistry.h": 2,
+    "include/primec/StdlibSurfaceRegistry.h": 0,
     "src/IrPrinterHelpers.cpp": 0,
     "src/StdlibSurfaceRegistry.cpp": 0,
     "src/emitter/EmitterBuiltinCallPathHelpers.cpp": 0,

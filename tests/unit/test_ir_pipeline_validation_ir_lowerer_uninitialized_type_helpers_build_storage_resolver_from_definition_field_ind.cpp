@@ -777,8 +777,8 @@ TEST_CASE("ir lowerer binding type helpers prefer semantic collection specializa
           .elementTypeTextId = primec::InvalidSymbolId,
           .keyTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
           .valueTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "i64"),
-          .helperSurfaceId = primec::StdlibSurfaceId::CollectionsMapHelpers,
-          .constructorSurfaceId = primec::StdlibSurfaceId::CollectionsMapConstructors,
+          .helperSurfaceId = primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id,
+          .constructorSurfaceId = primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors")->id,
       });
   semanticProgram.publishedRoutingLookups.collectionSpecializationIndicesByExpr.emplace(119, 0);
 

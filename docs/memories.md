@@ -843,6 +843,16 @@ This file stores durable session-derived facts that are useful in later work. Ke
   the direct map-surface trace inventory allowance for
   `src/StdlibSurfaceRegistry.cpp` is zero.
 
+### public-surface-enum-is-map-agnostic
+- Updated: 2026-05-18
+- Tags: stdlib, registry, collections
+- Fact: Public stdlib surface IDs should not expose map-specific enum names.
+  Consumers that need a map helper or constructor surface ID should resolve it
+  from bridge-key metadata.
+- Evidence: `StdlibSurfaceId` now uses generic manifest surface slots for the
+  former map helper/constructor positions, and the trace inventory allowance
+  for `include/primec/StdlibSurfaceRegistry.h` is zero.
+
 ### map-low-count-lowerer-caps-are-stale
 - Updated: 2026-05-18
 - Tags: ir, collections, audit

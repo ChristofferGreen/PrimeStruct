@@ -2625,6 +2625,10 @@ Task template:
       metadata enum names. Collection registry entries derive their IDs from
       ordered manifest slots, so the registry source inventory allowance is
       zero and only the public header enum names remain.
+    - 2026-05-18: The public stdlib surface ID enum no longer names map
+      surfaces. Those slots are generic manifest surface IDs, and tests now
+      resolve map helper/constructor IDs through bridge-key metadata instead
+      of hard-coding map-specific enum values.
     - 2026-05-17: Lowerer builtin-name and shared helper map-helper lookups no
       longer name the map helper surface ID directly; they now obtain helper
       metadata through the `collections.map_helpers` bridge key, and the

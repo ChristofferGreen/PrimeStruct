@@ -383,7 +383,7 @@ TEST_CASE("stdlib surface registry stays source locked") {
 
 TEST_CASE("map insert surface registry rejects legacy compatibility spellings") {
   const primec::StdlibSurfaceMetadata *metadata =
-      primec::findStdlibSurfaceMetadata(primec::StdlibSurfaceId::CollectionsMapHelpers);
+      primec::findStdlibSurfaceMetadata(primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id);
   REQUIRE(metadata != nullptr);
 
   CHECK(primec::resolveStdlibSurfaceMemberName(*metadata, "insert") == "insert");
@@ -402,13 +402,13 @@ TEST_CASE("map insert surface registry rejects legacy compatibility spellings") 
             *metadata, "/std/collections/experimental_map/mapInsertRef").empty());
 
   CHECK(primec::stdlibSurfaceCanonicalHelperPath(
-            primec::StdlibSurfaceId::CollectionsMapHelpers, "insert") ==
+            primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id, "insert") ==
         "/std/collections/map/insert");
   CHECK(primec::stdlibSurfaceCanonicalHelperPath(
-            primec::StdlibSurfaceId::CollectionsMapHelpers,
+            primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id,
             "/std/collections/map/insert_ref") == "/std/collections/map/insert_ref");
   CHECK(primec::stdlibSurfaceCanonicalHelperPath(
-            primec::StdlibSurfaceId::CollectionsMapHelpers,
+            primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id,
             "/std/collections/mapInsertRef") == "");
 }
 
@@ -424,15 +424,15 @@ TEST_CASE("collection helper surface registry resolves preferred compatibility s
             "/std/collections/experimental_vector/") ==
         "");
   CHECK(primec::stdlibSurfacePreferredSpellingForMember(
-            primec::StdlibSurfaceId::CollectionsMapHelpers,
+            primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id,
             "/std/collections/map/contains_ref",
             "/std/collections/experimental_map/") == "");
   CHECK(primec::stdlibSurfacePreferredSpellingForMember(
-            primec::StdlibSurfaceId::CollectionsMapHelpers,
+            primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id,
             "/std/collections/mapAtUnsafe",
             "/std/collections/experimental_map/") == "");
   CHECK(primec::stdlibSurfacePreferredSpellingForMember(
-            primec::StdlibSurfaceId::CollectionsMapHelpers,
+            primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id,
             "/not_map/count",
             "/std/collections/experimental_map/") == "");
   CHECK(primec::stdlibSurfacePreferredSpellingForMember(

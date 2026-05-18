@@ -1219,7 +1219,7 @@ TEST_CASE("ir lowerer stdlib surface metadata rejects experimental map lowering 
   const auto *canonicalMapMetadata = primec::findStdlibSurfaceMetadataByResolvedPath(
       "/std/collections/map/at_unsafe");
   REQUIRE(canonicalMapMetadata != nullptr);
-  CHECK(canonicalMapMetadata->id == primec::StdlibSurfaceId::CollectionsMapHelpers);
+  CHECK(canonicalMapMetadata->id == primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id);
   CHECK(primec::resolveStdlibSurfaceMemberName(
             *canonicalMapMetadata, "/std/collections/map/at_unsafe") == "at_unsafe");
 
@@ -1264,7 +1264,7 @@ TEST_CASE("stdlib surface metadata resolves collection helper member tokens") {
         "vector");
 
   const auto *mapMetadata =
-      primec::findStdlibSurfaceMetadata(primec::StdlibSurfaceId::CollectionsMapHelpers);
+      primec::findStdlibSurfaceMetadata(primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id);
   REQUIRE(mapMetadata != nullptr);
   CHECK(primec::resolveStdlibSurfaceMemberName(*mapMetadata, "at_unsafe_ref") ==
         "at_unsafe_ref");
@@ -1302,7 +1302,7 @@ TEST_CASE("stdlib surface metadata classifies collection helper categories") {
   CHECK(primec::isStdlibSurfaceMemberName(
       primec::StdlibSurfaceId::CollectionsVectorHelperSurface, "capacity"));
   CHECK(primec::isStdlibSurfaceMemberName(
-      primec::StdlibSurfaceId::CollectionsMapHelpers, "tryAt_ref"));
+      primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id, "tryAt_ref"));
   CHECK(primec::isStdlibSurfaceMemberName(
       primec::StdlibSurfaceId::CollectionsColumnarHelpers, "ref_ref"));
   CHECK_FALSE(primec::isStdlibSurfaceMemberName(
@@ -1775,7 +1775,7 @@ TEST_CASE("stdlib surface metadata resolves collection alias paths") {
   const auto *mapCtorMetadata = primec::findStdlibSurfaceMetadataByResolvedPath(
       "/std/collections/map/map");
   REQUIRE(mapCtorMetadata != nullptr);
-  CHECK(mapCtorMetadata->id == primec::StdlibSurfaceId::CollectionsMapConstructors);
+  CHECK(mapCtorMetadata->id == primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors")->id);
   CHECK(primec::resolveStdlibSurfaceMemberName(
             *mapCtorMetadata, "/std/collections/map/map") == "map");
   CHECK(primec::resolveStdlibSurfaceMemberName(
@@ -1784,7 +1784,7 @@ TEST_CASE("stdlib surface metadata resolves collection alias paths") {
   const auto *mapRefMetadata = primec::findStdlibSurfaceMetadataByResolvedPath(
       "/std/collections/map/tryAt_ref");
   REQUIRE(mapRefMetadata != nullptr);
-  CHECK(mapRefMetadata->id == primec::StdlibSurfaceId::CollectionsMapHelpers);
+  CHECK(mapRefMetadata->id == primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id);
   CHECK(primec::resolveStdlibSurfaceMemberName(
             *mapRefMetadata, "/std/collections/map/tryAt_ref") == "tryAt_ref");
   CHECK(primec::findStdlibSurfaceMetadataByResolvedPath(

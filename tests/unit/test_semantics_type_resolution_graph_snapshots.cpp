@@ -4004,10 +4004,10 @@ main() {
   CHECK(mapEntry->isReference);
   CHECK_FALSE(mapEntry->isPointer);
   REQUIRE(mapEntry->helperSurfaceId.has_value());
-  CHECK(*mapEntry->helperSurfaceId == primec::StdlibSurfaceId::CollectionsMapHelpers);
+  CHECK(*mapEntry->helperSurfaceId == primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id);
   REQUIRE(mapEntry->constructorSurfaceId.has_value());
   CHECK(*mapEntry->constructorSurfaceId ==
-        primec::StdlibSurfaceId::CollectionsMapConstructors);
+        primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors")->id);
 
   const auto *soaEntry = findSemanticEntry(
       primec::semanticProgramCollectionSpecializationView(semanticProgram),
@@ -4101,10 +4101,10 @@ main() {
   REQUIRE(pairsEntry != nullptr);
   REQUIRE(pairsEntry->initializerStdlibSurfaceId.has_value());
   CHECK(*pairsEntry->initializerStdlibSurfaceId ==
-        primec::StdlibSurfaceId::CollectionsMapConstructors);
+        primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors")->id);
   REQUIRE(pairsEntry->initializerDirectCallStdlibSurfaceId.has_value());
   CHECK(*pairsEntry->initializerDirectCallStdlibSurfaceId ==
-        primec::StdlibSurfaceId::CollectionsMapConstructors);
+        primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors")->id);
 
   auto resolveBridgeScopePath =
       [&semanticProgram](const primec::SemanticProgramBridgePathChoice &entry) {
@@ -4156,12 +4156,12 @@ main() {
   REQUIRE(mapBridgeEntry != nullptr);
   REQUIRE(mapBridgeEntry->stdlibSurfaceId.has_value());
   CHECK(*mapBridgeEntry->stdlibSurfaceId ==
-        primec::StdlibSurfaceId::CollectionsMapHelpers);
+        primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id);
   const auto mapBridgeSurfaceId =
       primec::semanticProgramLookupPublishedBridgePathChoiceStdlibSurfaceId(
           semanticProgram, mapBridgeEntry->semanticNodeId);
   REQUIRE(mapBridgeSurfaceId.has_value());
-  CHECK(*mapBridgeSurfaceId == primec::StdlibSurfaceId::CollectionsMapHelpers);
+  CHECK(*mapBridgeSurfaceId == primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id);
 }
 
 TEST_CASE("semantic product keeps graph-backed local auto facts for nested borrowed array access helpers") {

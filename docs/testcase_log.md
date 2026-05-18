@@ -122,6 +122,11 @@
   `explicitVectorCountLocalResolveDefinitionCalls == 1` seeing `2`, while
   adjacent call-helper struct classifier and bundled entry setup coverage
   still passes.
+- `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers keep explicit map helpers out of native builtin emission" --no-skip`
+  still has stale native-tail dispatch expectations after the map
+  stdlib-ownership cutover. On 2026-05-18 it failed expected dispatch and
+  instruction-emission assertions for current canonical map helper calls,
+  while adjacent metadata and semantic collection-specialization checks pass.
 - `PrimeStruct_backend_ir_tests --test-case="ir lowerer binding type helpers classify binding kind and string/fileerror types"`
   has stale source-lock coverage for exact SoA experimental type strings. On
   2026-05-16 it failed four source-string assertions for
@@ -195,12 +200,42 @@
   stdlib-ownership cutover. On 2026-05-18 the case first required
   `/std/collections/map/tryAt_ref` metadata to exist, then asserted the same
   lookup was `nullptr`.
+- `PrimeStruct_semantics_tests --test-case="semantic product keeps vector and map bridge parity" --no-skip`
+  is stale after the map stdlib-ownership cutover. On 2026-05-18 it failed
+  during validation with a canonical map count helper parameter mismatch
+  (`expected map<i32, i32> got Map<i32, i32>`), while the adjacent collection
+  specialization surface-ID publication test passed.
 - `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers keep explicit map helper same-path defs" --no-skip`
   still has stale alias access fallback expectations; on 2026-05-17 the
   alias `at` and `at_unsafe` checks still resolved compatibility defs instead
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-18 15:05 CEST | pass | mode: release | command:
+  `rg -n 'CollectionsMapHelpers|CollectionsMapConstructors|StdlibSurfaceId::CollectionsMap' include src`;
+  `rg --pcre2 -n '/?std/collections/map(?:/|")|/?std/collections/experimental_map(?:/|")|(?<![A-Za-z0-9_/])/?map/|\bmap(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bCollectionsMap[A-Za-z0-9_]*\b|\bMap<' include/primec/StdlibSurfaceRegistry.h src/StdlibSurfaceRegistry.cpp`;
+  `cmake --build build-release --target PrimeStruct_misc_tests PrimeStruct_backend_runtime_tests PrimeStruct_backend_ir_tests PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `cd build-release && ./PrimeStruct_backend_runtime_tests --test-case="stdlib surface registry stays source locked,map insert surface registry rejects legacy compatibility spellings,collection helper surface registry resolves preferred compatibility spellings,published target lookups ignore raw routing facts without maps,semantic-product coverage validators ignore raw routing facts without maps,semantic-product local-auto call paths accept stdlib surface equivalents" --no-skip`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="stdlib surface metadata classifies collection helper categories,ir lowerer binding type helpers prefer semantic collection specialization facts" --no-skip`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="semantic product publishes vector map and soa_vector collection specializations" --no-skip`
+  | failures: none | notes: Public `StdlibSurfaceId` names are now
+  map-agnostic; map helper/constructor ID test fixtures resolve IDs from
+  bridge-key metadata. The direct production scan returned no map-specific
+  stdlib surface ID names or registry map-surface trace matches.
+- 2026-05-18 15:02 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="stdlib surface metadata classifies collection helper categories,ir lowerer call helpers infer forwarded map access targets,ir lowerer call helpers keep explicit map helpers out of native builtin emission,ir lowerer call helpers lower explicit map access for args-pack receivers,ir lowerer binding type helpers prefer semantic collection specialization facts" --no-skip`
+  | failures: `ir lowerer call helpers keep explicit map helpers out of native
+  builtin emission`; `ir lowerer call helpers lower explicit map access for
+  args-pack receivers` | notes: The failures match stale native-tail map
+  helper emission expectations already isolated from this enum-name removal;
+  the metadata and semantic collection-specialization checks passed.
+- 2026-05-18 15:03 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="semantic product publishes vector map and soa_vector collection specializations,semantic product keeps vector and map bridge parity" --no-skip`
+  | failures: `semantic product keeps vector and map bridge parity` | notes:
+  The failure is a stale validation mismatch for canonical map count helper
+  parameter type text; rerunning only `semantic product publishes vector map
+  and soa_vector collection specializations` passed.
 - 2026-05-18 14:02 CEST | pass | mode: release | command:
   `rg --pcre2 -n '/?std/collections/map(?:/|")|/?std/collections/experimental_map(?:/|")|(?<![A-Za-z0-9_/])/?map/|\bmap(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bCollectionsMap[A-Za-z0-9_]*\b|\bMap<' include/primec/StdlibSurfaceRegistry.h src/StdlibSurfaceRegistry.cpp`;
   `cmake --build build-release --target PrimeStruct_misc_tests PrimeStruct_backend_runtime_tests PrimeStruct_backend_ir_tests`;

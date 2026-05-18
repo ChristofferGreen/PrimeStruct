@@ -623,7 +623,7 @@ TEST_CASE("published target lookups ignore raw routing facts without maps") {
       .callNameId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "helper"),
       .resolvedPathId = directPathId,
-      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsMapHelpers,
+      .stdlibSurfaceId = primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id,
   });
   semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
       .scopePath = "/main",
@@ -722,7 +722,7 @@ TEST_CASE("published target lookups ignore raw routing facts without maps") {
   semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr
       .insert_or_assign(13, bridgePathId);
   semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr
-      .insert_or_assign(11, primec::StdlibSurfaceId::CollectionsMapHelpers);
+      .insert_or_assign(11, primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id);
   semanticProgram.publishedRoutingLookups.methodCallStdlibSurfaceIdsByExpr
       .insert_or_assign(12, primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
   semanticProgram.publishedRoutingLookups.bridgePathChoiceStdlibSurfaceIdsByExpr
@@ -739,7 +739,7 @@ TEST_CASE("published target lookups ignore raw routing facts without maps") {
             .value_or(primec::InvalidSymbolId) == bridgePathId);
   CHECK(primec::semanticProgramLookupPublishedDirectCallTargetStdlibSurfaceId(
             semanticProgram, 11) ==
-        primec::StdlibSurfaceId::CollectionsMapHelpers);
+        primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id);
   CHECK(primec::semanticProgramLookupPublishedMethodCallTargetStdlibSurfaceId(
             semanticProgram, 12) ==
         primec::StdlibSurfaceId::CollectionsVectorHelperSurface);
@@ -753,7 +753,7 @@ TEST_CASE("published target lookups ignore raw routing facts without maps") {
             publishedLookupAdapter, directExpr) == "/helper");
   CHECK(primec::ir_lowerer::findSemanticProductDirectCallStdlibSurfaceId(
             publishedLookupAdapter, directExpr) ==
-        primec::StdlibSurfaceId::CollectionsMapHelpers);
+        primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id);
   CHECK(primec::ir_lowerer::findSemanticProductMethodCallTarget(
             publishedLookupAdapter, methodExpr) == "/vector/count");
   CHECK(primec::ir_lowerer::findSemanticProductMethodCallStdlibSurfaceId(
@@ -3794,7 +3794,7 @@ TEST_CASE("ir lowerer production entry reports native diagnostic without bridge-
       .semanticNodeId = 5207,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(
           semanticProgram, "/std/collections/map/contains"),
-      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsMapHelpers,
+      .stdlibSurfaceId = primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id,
   });
   semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.insert_or_assign(
       5207, semanticProgram.directCallTargets.front().resolvedPathId);
@@ -4797,7 +4797,7 @@ TEST_CASE("semantic-product local-auto call paths accept stdlib surface equivale
   CHECK(error.empty());
 
   semanticProgram.localAutoFacts.back().initializerDirectCallStdlibSurfaceId =
-      primec::StdlibSurfaceId::CollectionsMapHelpers;
+      primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id;
   semanticProgram.localAutoFacts.back().initializerDirectCallResolvedPathId =
       primec::semanticProgramInternCallTargetString(
           semanticProgram, "/std/collections/map/contains__t25a78a513414c3bf");

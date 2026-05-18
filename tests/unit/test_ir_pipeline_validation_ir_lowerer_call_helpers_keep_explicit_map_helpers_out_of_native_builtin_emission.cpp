@@ -308,12 +308,12 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
       .semanticNodeId = 91,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(
           semanticProgram, "/std/collections/mapContains__ov1"),
-      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsMapHelpers,
+      .stdlibSurfaceId = primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id,
   });
   semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.insert_or_assign(
       91, semanticProgram.directCallTargets.front().resolvedPathId);
   semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr.insert_or_assign(
-      91, primec::StdlibSurfaceId::CollectionsMapHelpers);
+      91, primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers")->id);
 
   primec::Expr semanticContainsCall;
   semanticContainsCall.kind = primec::Expr::Kind::Call;
