@@ -91,15 +91,48 @@ std::string rebuildScopedCollectionHelperPath(const Expr &expr) {
   return normalizeCollectionHelperPath(normalized);
 }
 
+std::optional<StdlibSurfaceId> mapHelperSurfaceId() {
+  const auto *metadata =
+      findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+  if (metadata == nullptr) {
+    return std::nullopt;
+  }
+  return metadata->id;
+}
+
+std::optional<StdlibSurfaceId> mapConstructorSurfaceId() {
+  const auto *metadata =
+      findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
+  if (metadata == nullptr) {
+    return std::nullopt;
+  }
+  return metadata->id;
+}
+
+bool isMapHelperSurfaceId(StdlibSurfaceId surfaceId) {
+  const std::optional<StdlibSurfaceId> mapSurfaceId = mapHelperSurfaceId();
+  return mapSurfaceId.has_value() && surfaceId == *mapSurfaceId;
+}
+
+bool resolveMapSurfaceMemberToken(std::string_view memberToken,
+                                  std::string &memberNameOut) {
+  const std::optional<StdlibSurfaceId> surfaceId = mapHelperSurfaceId();
+  return surfaceId.has_value() &&
+         resolvePublishedStdlibSurfaceMemberToken(
+             memberToken, *surfaceId, memberNameOut);
+}
+
 bool isBorrowedMapHelperSurface(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
+  const std::optional<StdlibSurfaceId> surfaceId = mapHelperSurfaceId();
+  if (!surfaceId.has_value()) {
+    return false;
+  }
   std::string helperName;
-  return resolvePublishedStdlibSurfaceExprMemberName(
-             expr,
-             StdlibSurfaceId::CollectionsMapHelpers,
-             helperName) &&
+  return resolvePublishedStdlibSurfaceExprMemberName(expr, *surfaceId,
+                                                     helperName) &&
          helperName.ends_with("_ref");
 }
 
@@ -559,19 +592,15 @@ bool isExplicitMapMethodAliasPath(const std::string &methodName) {
   const std::string stdMapPrefix = collectionMemberRoot("map", false);
   if (normalized.rfind(mapPrefix, 0) == 0) {
     std::string helperName;
-    return resolvePublishedStdlibSurfaceMemberToken(
-               normalized.substr(mapPrefix.size()),
-               StdlibSurfaceId::CollectionsMapHelpers,
-               helperName) &&
+    return resolveMapSurfaceMemberToken(
+               normalized.substr(mapPrefix.size()), helperName) &&
            (helperName == "count" || helperName == "at" ||
             helperName == "at_unsafe" || helperName == "insert");
   }
   if (normalized.rfind(stdMapPrefix, 0) == 0) {
     std::string helperName;
-    return resolvePublishedStdlibSurfaceMemberToken(
-               normalized.substr(stdMapPrefix.size()),
-               StdlibSurfaceId::CollectionsMapHelpers,
-               helperName) &&
+    return resolveMapSurfaceMemberToken(
+               normalized.substr(stdMapPrefix.size()), helperName) &&
            (helperName == "count" || helperName == "at" ||
             helperName == "at_unsafe" || helperName == "insert");
   }
@@ -591,18 +620,14 @@ bool isExplicitMapContainsOrTryAtMethodPath(const std::string &methodName) {
   const std::string stdMapPrefix = collectionMemberRoot("map", false);
   if (normalized.rfind(mapPrefix, 0) == 0) {
     std::string helperName;
-    return resolvePublishedStdlibSurfaceMemberToken(
-               normalized.substr(mapPrefix.size()),
-               StdlibSurfaceId::CollectionsMapHelpers,
-               helperName) &&
+    return resolveMapSurfaceMemberToken(
+               normalized.substr(mapPrefix.size()), helperName) &&
            (helperName == "contains" || helperName == "tryAt");
   }
   if (normalized.rfind(stdMapPrefix, 0) == 0) {
     std::string helperName;
-    return resolvePublishedStdlibSurfaceMemberToken(
-               normalized.substr(stdMapPrefix.size()),
-               StdlibSurfaceId::CollectionsMapHelpers,
-               helperName) &&
+    return resolveMapSurfaceMemberToken(
+               normalized.substr(stdMapPrefix.size()), helperName) &&
            (helperName == "contains" || helperName == "tryAt");
   }
   return false;
@@ -755,7 +780,7 @@ bool resolvePublishedStdlibSurfaceExprMemberName(const Expr &expr,
     return true;
   }
 
-  if (surfaceId == StdlibSurfaceId::CollectionsMapHelpers &&
+  if (isMapHelperSurfaceId(surfaceId) &&
       normalizedPath.rfind("/std/collections/Map", 0) == 0) {
     return resolvePublishedStdlibSurfaceMemberToken(
         normalizedPath.substr(std::string("/std/collections/Map").size()),
@@ -859,9 +884,13 @@ bool isPublishedStdlibSurfaceConstructorExpr(const Expr &expr,
 
 std::string inferPublishedExperimentalMapStructPathFromConstructorPath(std::string_view path) {
   std::string memberName;
+  const std::optional<StdlibSurfaceId> surfaceId = mapConstructorSurfaceId();
+  if (!surfaceId.has_value()) {
+    return "";
+  }
   if (!resolvePublishedStdlibSurfaceConstructorMemberName(
           path,
-          StdlibSurfaceId::CollectionsMapConstructors,
+          *surfaceId,
           memberName) ||
       memberName == "map") {
     return "";

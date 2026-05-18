@@ -74,7 +74,6 @@ bool isAllowedMapBackingFile(const std::string &relativePath) {
       "src/ir_lowerer/IrLowererLowerInlineCalls.h",
       "src/ir_lowerer/IrLowererLowerStatementsExpr.h",
       "src/ir_lowerer/IrLowererResultMetadataHelpers.cpp",
-      "src/ir_lowerer/IrLowererSetupTypeCollectionHelpers.cpp",
       "src/ir_lowerer/IrLowererSetupTypeDeclaredCollectionInference.cpp",
       "src/ir_lowerer/IrLowererSetupTypeMethodTargetHelpers.cpp",
       "src/ir_lowerer/IrLowererStatementBindingHelpers.cpp",
@@ -1195,6 +1194,20 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(setupTypeCollectionSource.find("collectionMemberRoot(\"map\", false)") !=
         std::string::npos);
   CHECK(setupTypeCollectionSource.find("normalizeBuiltinCollectionStructPath(\"map\").substr(1) + \"/\"") !=
+        std::string::npos);
+  CHECK(setupTypeCollectionSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
+        std::string::npos);
+  CHECK(setupTypeCollectionSource.find("StdlibSurfaceId::CollectionsMapConstructors") ==
+        std::string::npos);
+  CHECK(setupTypeCollectionSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+        std::string::npos);
+  CHECK(setupTypeCollectionSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_constructors\")") !=
+        std::string::npos);
+  CHECK(setupTypeCollectionSource.find("mapHelperSurfaceId()") !=
+        std::string::npos);
+  CHECK(setupTypeCollectionSource.find("mapConstructorSurfaceId()") !=
         std::string::npos);
   CHECK(countAccessSource.find("canonicalCollectionMemberPath(\"map\", accessName)") !=
         std::string::npos);

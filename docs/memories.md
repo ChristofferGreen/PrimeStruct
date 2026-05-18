@@ -249,7 +249,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   builder;
   setup-type collection helper generated map struct path inference should
   derive the experimental map backing prefix through
-  `experimentalCollectionTypePath`;
+  `experimentalCollectionTypePath`; setup-type collection helper map helper
+  and constructor surface checks should derive surface IDs from
+  `collections.map_helpers` and `collections.map_constructors` bridge-key
+  metadata wrappers instead of direct map surface IDs;
   inference base-kind map-family detection should derive unspecialized and
   generated experimental map backing bases through
   `experimentalCollectionTypePath`;

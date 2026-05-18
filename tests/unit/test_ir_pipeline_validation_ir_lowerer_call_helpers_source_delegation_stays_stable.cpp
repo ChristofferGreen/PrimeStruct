@@ -1363,7 +1363,13 @@ TEST_CASE("native tail and late collection helper metadata dispatch stays source
         std::string::npos);
   CHECK(collectionHelpersSource.find("isPublishedStdlibSurfaceLoweringPath(") !=
         std::string::npos);
-  CHECK(collectionHelpersSource.find("primec::StdlibSurfaceId::CollectionsMapHelpers") !=
+  CHECK(collectionHelpersSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
+        std::string::npos);
+  CHECK(collectionHelpersSource.find("StdlibSurfaceId::CollectionsMapConstructors") ==
+        std::string::npos);
+  CHECK(collectionHelpersSource.find("findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+        std::string::npos);
+  CHECK(collectionHelpersSource.find("\"collections.map_constructors\"") !=
         std::string::npos);
   CHECK(tailDispatchSource.find("resolvePublishedStdlibSurfaceMemberName(") !=
         std::string::npos);

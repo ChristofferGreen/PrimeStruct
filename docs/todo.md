@@ -2295,6 +2295,11 @@ Task template:
     - 2026-05-16: Setup-type collection helper generated map struct path
       inference no longer hard-codes the experimental map backing prefix; it
       now derives that prefix through `experimentalCollectionTypePath`.
+    - 2026-05-18: Setup-type collection helper map helper and constructor
+      surface checks no longer name the map helper or constructor surface IDs
+      directly; they now derive both through `collections.map_helpers` and
+      `collections.map_constructors` bridge-key metadata wrappers, and the
+      file's map-surface inventory allowance is zero.
     - 2026-05-16: Inference base-kind map-family detection no longer
       hard-codes unspecialized or generated experimental map backing bases;
       both now derive through `experimentalCollectionTypePath`.
