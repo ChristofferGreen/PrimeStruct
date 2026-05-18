@@ -11,9 +11,9 @@ TEST_CASE("ir lowerer setup type helper resolves indexed args-pack pointer map r
   valuesLocal.kind = LocalInfo::Kind::Array;
   valuesLocal.isArgsPack = true;
   valuesLocal.argsPackElementKind = LocalInfo::Kind::Pointer;
-  valuesLocal.pointerToMap = true;
-  valuesLocal.mapKeyKind = ValueKind::Int32;
-  valuesLocal.mapValueKind = ValueKind::Int32;
+  valuesLocal.pointerToKeyValueCollection = true;
+  valuesLocal.keyValueKeyKind = ValueKind::Int32;
+  valuesLocal.keyValueValueKind = ValueKind::Int32;
   valuesLocal.valueKind = ValueKind::Int32;
   locals.emplace("values", valuesLocal);
 
@@ -386,7 +386,7 @@ TEST_CASE("ir lowerer setup type helper resolves dereferenced indexed args-pack 
   valuesLocal.argsPackElementKind = LocalInfo::Kind::Reference;
   valuesLocal.referenceToArray = false;
   valuesLocal.referenceToVector = false;
-  valuesLocal.referenceToMap = false;
+  valuesLocal.referenceToKeyValueCollection = false;
   valuesLocal.referenceToBuffer = false;
   valuesLocal.valueKind = ValueKind::Int64;
   valuesLocal.structTypeName = "/std/file/File<Read>";
@@ -439,7 +439,7 @@ TEST_CASE("ir lowerer setup type helper resolves dereferenced indexed args-pack 
   valuesLocal.argsPackElementKind = LocalInfo::Kind::Pointer;
   valuesLocal.pointerToArray = false;
   valuesLocal.pointerToVector = false;
-  valuesLocal.pointerToMap = false;
+  valuesLocal.pointerToKeyValueCollection = false;
   valuesLocal.pointerToBuffer = false;
   valuesLocal.valueKind = ValueKind::Int64;
   valuesLocal.structTypeName = "/std/file/File<Write>";
@@ -558,8 +558,8 @@ TEST_CASE("ir lowerer setup type helper resolves indexed args-pack map receivers
   valuesLocal.kind = LocalInfo::Kind::Array;
   valuesLocal.isArgsPack = true;
   valuesLocal.argsPackElementKind = LocalInfo::Kind::KeyValueCollection;
-  valuesLocal.mapKeyKind = ValueKind::Int32;
-  valuesLocal.mapValueKind = ValueKind::Int32;
+  valuesLocal.keyValueKeyKind = ValueKind::Int32;
+  valuesLocal.keyValueValueKind = ValueKind::Int32;
   valuesLocal.valueKind = ValueKind::Int32;
   locals.emplace("values", valuesLocal);
 

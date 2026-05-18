@@ -8,8 +8,8 @@ struct LocalInfo {
   enum class ValueKind { Unknown, Int32, Int64, UInt64, Float32, Float64, Bool, String } valueKind = ValueKind::Unknown;
   std::string structTypeName;
   int32_t structFieldCount = 0;
-  ValueKind mapKeyKind = ValueKind::Unknown;
-  ValueKind mapValueKind = ValueKind::Unknown;
+  ValueKind keyValueKeyKind = ValueKind::Unknown;
+  ValueKind keyValueValueKind = ValueKind::Unknown;
   Kind argsPackElementKind = Kind::Value;
   int32_t structSlotCount = 0;
   bool isFileHandle = false;
@@ -35,8 +35,8 @@ struct LocalInfo {
   bool pointerToVector = false;
   bool referenceToBuffer = false;
   bool pointerToBuffer = false;
-  bool referenceToMap = false;
-  bool pointerToMap = false;
+  bool referenceToKeyValueCollection = false;
+  bool pointerToKeyValueCollection = false;
   bool isUninitializedStorage = false;
   bool targetsUninitializedStorage = false;
   bool isSoaVector = false;

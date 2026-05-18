@@ -81,8 +81,8 @@ struct ReturnStatementInlineContext {
 struct StatementBindingTypeInfo {
   LocalInfo::Kind kind = LocalInfo::Kind::Value;
   LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
-  LocalInfo::ValueKind mapKeyKind = LocalInfo::ValueKind::Unknown;
-  LocalInfo::ValueKind mapValueKind = LocalInfo::ValueKind::Unknown;
+  LocalInfo::ValueKind keyValueKeyKind = LocalInfo::ValueKind::Unknown;
+  LocalInfo::ValueKind keyValueValueKind = LocalInfo::ValueKind::Unknown;
   std::string structTypeName;
   bool referenceToArray = false;
   bool pointerToArray = false;
@@ -90,8 +90,8 @@ struct StatementBindingTypeInfo {
   bool pointerToVector = false;
   bool referenceToBuffer = false;
   bool pointerToBuffer = false;
-  bool referenceToMap = false;
-  bool pointerToMap = false;
+  bool referenceToKeyValueCollection = false;
+  bool pointerToKeyValueCollection = false;
   bool isSoaVector = false;
   bool usesBuiltinCollectionLayout = false;
 };

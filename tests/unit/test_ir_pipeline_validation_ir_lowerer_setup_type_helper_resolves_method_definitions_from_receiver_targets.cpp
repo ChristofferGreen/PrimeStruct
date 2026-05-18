@@ -846,8 +846,8 @@ TEST_CASE("ir lowerer setup type helper gates bare map receiver probes with sema
   primec::ir_lowerer::LocalMap staleMapLocals;
   LocalInfo staleMapInfo;
   staleMapInfo.kind = LocalInfo::Kind::KeyValueCollection;
-  staleMapInfo.mapKeyKind = ValueKind::Int32;
-  staleMapInfo.mapValueKind = ValueKind::Int32;
+  staleMapInfo.keyValueKeyKind = ValueKind::Int32;
+  staleMapInfo.keyValueValueKind = ValueKind::Int32;
   staleMapLocals.emplace("values", staleMapInfo);
 
   primec::ir_lowerer::LocalMap staleScalarLocals;
@@ -1123,9 +1123,9 @@ TEST_CASE("ir lowerer setup type helper resolves indexed args-pack borrowed map 
   valuesLocal.kind = LocalInfo::Kind::Array;
   valuesLocal.isArgsPack = true;
   valuesLocal.argsPackElementKind = LocalInfo::Kind::Reference;
-  valuesLocal.referenceToMap = true;
-  valuesLocal.mapKeyKind = ValueKind::Int32;
-  valuesLocal.mapValueKind = ValueKind::Int32;
+  valuesLocal.referenceToKeyValueCollection = true;
+  valuesLocal.keyValueKeyKind = ValueKind::Int32;
+  valuesLocal.keyValueValueKind = ValueKind::Int32;
   valuesLocal.valueKind = ValueKind::Int32;
   locals.emplace("values", valuesLocal);
 

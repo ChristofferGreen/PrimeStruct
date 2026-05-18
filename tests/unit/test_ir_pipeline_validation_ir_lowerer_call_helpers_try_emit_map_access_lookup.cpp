@@ -16,8 +16,8 @@ TEST_CASE("ir lowerer call helpers try emit map access lookup") {
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo mapInfo;
   mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
-  mapInfo.mapKeyKind = Kind::Int32;
-  mapInfo.mapValueKind = Kind::Float64;
+  mapInfo.keyValueKeyKind = Kind::Int32;
+  mapInfo.keyValueValueKind = Kind::Float64;
   locals.emplace(targetExpr.name, mapInfo);
 
   std::vector<primec::IrInstruction> instructions;
@@ -94,8 +94,8 @@ TEST_CASE("ir lowerer call helpers try emit map access lookup") {
   primec::ir_lowerer::LocalMap untypedLocals;
   primec::ir_lowerer::LocalInfo untypedMapInfo;
   untypedMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
-  untypedMapInfo.mapKeyKind = Kind::Unknown;
-  untypedMapInfo.mapValueKind = Kind::Int32;
+  untypedMapInfo.keyValueKeyKind = Kind::Unknown;
+  untypedMapInfo.keyValueValueKind = Kind::Int32;
   untypedLocals.emplace(targetExpr.name, untypedMapInfo);
   CHECK(primec::ir_lowerer::tryEmitMapAccessLookup(
             "at",

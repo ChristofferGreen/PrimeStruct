@@ -2164,6 +2164,12 @@ Task template:
       `LocalInfo::Kind::KeyValueCollection`, preserving the temporary key/value
       metadata fields while removing one more direct stdlib map concept from
       shared lowerer classification.
+    - 2026-05-18: Lowerer local-info metadata no longer names map-specific
+      key/value fields or pointer/reference flags. The temporary fields now
+      use key/value collection names (`keyValueKeyKind`,
+      `keyValueValueKind`, `referenceToKeyValueCollection`, and
+      `pointerToKeyValueCollection`) until later slices remove the remaining
+      C++ key/value collection substrate.
     - 2026-05-16: Map literal lowering no longer hard-codes the empty
       inferred-map backing path as `/std/collections/experimental_map/Map`;
       it now uses the shared `experimentalCollectionTypePath("map", "Map")`

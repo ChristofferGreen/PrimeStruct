@@ -1134,7 +1134,7 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
             expr.args.size() == 2 &&
             (accessNameForCanonicalMapOverride == "at" ||
              accessNameForCanonicalMapOverride == "at_unsafe")) {
-          LocalInfo::ValueKind mapValueKind = LocalInfo::ValueKind::Unknown;
+          LocalInfo::ValueKind keyValueValueKind = LocalInfo::ValueKind::Unknown;
           ReturnInfo accessReturnInfo;
           auto resolveAccessReceiverMapValueKind =
               [&](const Expr &receiverExpr,
@@ -1164,9 +1164,9 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
                       (localIt->second.kind == LocalInfo::Kind::KeyValueCollection ||
                        ((localIt->second.kind == LocalInfo::Kind::Reference ||
                          localIt->second.kind == LocalInfo::Kind::Pointer) &&
-                        (localIt->second.referenceToMap ||
-                         localIt->second.pointerToMap)))) {
-                    receiverMapValueKindOut = localIt->second.mapValueKind;
+                        (localIt->second.referenceToKeyValueCollection ||
+                         localIt->second.pointerToKeyValueCollection)))) {
+                    receiverMapValueKindOut = localIt->second.keyValueValueKind;
                     return receiverMapValueKindOut !=
                            LocalInfo::ValueKind::Unknown;
                   }
@@ -1205,8 +1205,8 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
             return trimTemplateTypeText(returnKind) == "string";
           };
           if (resolveAccessReceiverMapValueKind(expr.args.front(),
-                                                mapValueKind) &&
-              mapValueKind != LocalInfo::ValueKind::String) {
+                                                keyValueValueKind) &&
+              keyValueValueKind != LocalInfo::ValueKind::String) {
             const std::string canonicalAccessPath =
                 canonicalMapHelperPathForDispatchSetup(
                     accessNameForCanonicalMapOverride);
@@ -1343,8 +1343,8 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
               auto it = localsIn.find(accessTarget.name);
               if (it != localsIn.end() &&
                   ((it->second.kind == LocalInfo::Kind::KeyValueCollection) ||
-                   (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToMap)) &&
-                  it->second.mapValueKind == LocalInfo::ValueKind::String) {
+                   (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToKeyValueCollection)) &&
+                  it->second.keyValueValueKind == LocalInfo::ValueKind::String) {
                 return LocalInfo::ValueKind::Int32;
               }
             } else if (accessTarget.kind == Expr::Kind::Call) {

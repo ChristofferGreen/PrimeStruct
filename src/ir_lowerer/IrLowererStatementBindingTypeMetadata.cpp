@@ -412,10 +412,10 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
       if (!splitTemplateArgs(pointerArg, args) || args.size() != 2) {
         return;
       }
-      infoOut.pointerToMap = true;
-      infoOut.mapKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
-      infoOut.mapValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
-      infoOut.valueKind = infoOut.mapValueKind;
+      infoOut.pointerToKeyValueCollection = true;
+      infoOut.keyValueKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
+      infoOut.keyValueValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
+      infoOut.valueKind = infoOut.keyValueValueKind;
       resolveSpecializedExperimentalMapStructPath(pointerTargetType, infoOut.structTypeName);
       return;
     }
@@ -571,10 +571,10 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
         return;
       }
       infoOut.argsPackElementKind = LocalInfo::Kind::Reference;
-      infoOut.referenceToMap = true;
-      infoOut.mapKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
-      infoOut.mapValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
-      infoOut.valueKind = infoOut.mapValueKind;
+      infoOut.referenceToKeyValueCollection = true;
+      infoOut.keyValueKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
+      infoOut.keyValueValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
+      infoOut.valueKind = infoOut.keyValueValueKind;
       resolveSpecializedExperimentalMapStructPath(refBase + "<" + refArg + ">", infoOut.structTypeName);
       return;
     }
@@ -614,9 +614,9 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
       return;
     }
     infoOut.argsPackElementKind = LocalInfo::Kind::KeyValueCollection;
-    infoOut.mapKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
-    infoOut.mapValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
-    infoOut.valueKind = infoOut.mapValueKind;
+    infoOut.keyValueKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
+    infoOut.keyValueValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
+    infoOut.valueKind = infoOut.keyValueValueKind;
   }
 }
 

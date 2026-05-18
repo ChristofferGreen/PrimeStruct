@@ -487,12 +487,12 @@
                         targetExpr, *callee, localsIn, {}, out);
                   }
                   out.isMapTarget = true;
-                  out.mapKeyKind =
+                  out.keyValueKeyKind =
                       ir_lowerer::valueKindFromTypeName(inferredCollectionArgs.front());
-                  out.mapValueKind =
+                  out.keyValueValueKind =
                       ir_lowerer::valueKindFromTypeName(inferredCollectionArgs.back());
-                  return out.mapKeyKind != ir_lowerer::LocalInfo::ValueKind::Unknown &&
-                         out.mapValueKind != ir_lowerer::LocalInfo::ValueKind::Unknown;
+                  return out.keyValueKeyKind != ir_lowerer::LocalInfo::ValueKind::Unknown &&
+                         out.keyValueValueKind != ir_lowerer::LocalInfo::ValueKind::Unknown;
                 };
             const auto mapTargetInfo =
                 ir_lowerer::resolveMapAccessTargetInfo(
@@ -514,11 +514,11 @@
             }
             if (mapTargetInfo.isMapTarget) {
               collectionName = "map";
-              if (mapTargetInfo.mapKeyKind != ir_lowerer::LocalInfo::ValueKind::Unknown &&
-                  mapTargetInfo.mapValueKind != ir_lowerer::LocalInfo::ValueKind::Unknown) {
+              if (mapTargetInfo.keyValueKeyKind != ir_lowerer::LocalInfo::ValueKind::Unknown &&
+                  mapTargetInfo.keyValueValueKind != ir_lowerer::LocalInfo::ValueKind::Unknown) {
                 collectionArgs = {
-                    ir_lowerer::typeNameForValueKind(mapTargetInfo.mapKeyKind),
-                    ir_lowerer::typeNameForValueKind(mapTargetInfo.mapValueKind),
+                    ir_lowerer::typeNameForValueKind(mapTargetInfo.keyValueKeyKind),
+                    ir_lowerer::typeNameForValueKind(mapTargetInfo.keyValueValueKind),
                 };
               }
               collectionStructPath = !mapTargetInfo.structTypeName.empty()
@@ -619,8 +619,8 @@
             materializedInfo.structTypeName = collectionStructPath;
             materializedInfo.structSlotCount = layout.totalSlots;
             if (collectionArgs.size() == 2) {
-              materializedInfo.mapKeyKind = ir_lowerer::valueKindFromTypeName(collectionArgs.front());
-              materializedInfo.mapValueKind = ir_lowerer::valueKindFromTypeName(collectionArgs.back());
+              materializedInfo.keyValueKeyKind = ir_lowerer::valueKindFromTypeName(collectionArgs.front());
+              materializedInfo.keyValueValueKind = ir_lowerer::valueKindFromTypeName(collectionArgs.back());
             }
 
             if (!emitCollectionReceiverValue(*receiverExpr)) {
@@ -651,13 +651,13 @@
               materializedInfo.kind = materializedWrappedMapReceiver
                                           ? materializedMapReceiverKind
                                           : ir_lowerer::LocalInfo::Kind::KeyValueCollection;
-              materializedInfo.mapKeyKind = ir_lowerer::valueKindFromTypeName(collectionArgs.front());
-              materializedInfo.mapValueKind = ir_lowerer::valueKindFromTypeName(collectionArgs.back());
-              materializedInfo.valueKind = materializedInfo.mapValueKind;
-              materializedInfo.referenceToMap =
+              materializedInfo.keyValueKeyKind = ir_lowerer::valueKindFromTypeName(collectionArgs.front());
+              materializedInfo.keyValueValueKind = ir_lowerer::valueKindFromTypeName(collectionArgs.back());
+              materializedInfo.valueKind = materializedInfo.keyValueValueKind;
+              materializedInfo.referenceToKeyValueCollection =
                   materializedWrappedMapReceiver &&
                   materializedMapReceiverKind == ir_lowerer::LocalInfo::Kind::Reference;
-              materializedInfo.pointerToMap =
+              materializedInfo.pointerToKeyValueCollection =
                   materializedWrappedMapReceiver &&
                   materializedMapReceiverKind == ir_lowerer::LocalInfo::Kind::Pointer;
               if (collectionStructPath.rfind(

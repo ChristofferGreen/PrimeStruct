@@ -297,16 +297,16 @@ void setReferenceCollectionInfoFromSpecialization(
   }
   if (collectionFamily == "map") {
     if (info.kind == LocalInfo::Kind::Reference) {
-      info.referenceToMap = true;
+      info.referenceToKeyValueCollection = true;
     } else {
-      info.pointerToMap = true;
+      info.pointerToKeyValueCollection = true;
     }
-    info.mapKeyKind = valueKindFromTypeName(resolveSemanticCollectionSpecializationText(
+    info.keyValueKeyKind = valueKindFromTypeName(resolveSemanticCollectionSpecializationText(
         semanticProgram, collectionFact.keyTypeText, collectionFact.keyTypeTextId));
-    info.mapValueKind = valueKindFromTypeName(resolveSemanticCollectionSpecializationText(
+    info.keyValueValueKind = valueKindFromTypeName(resolveSemanticCollectionSpecializationText(
         semanticProgram, collectionFact.valueTypeText, collectionFact.valueTypeTextId));
     if (info.valueKind == LocalInfo::ValueKind::Unknown) {
-      info.valueKind = info.mapValueKind;
+      info.valueKind = info.keyValueValueKind;
     }
   }
 }
@@ -508,14 +508,14 @@ void setReferenceArrayInfoFromTypeText(const std::string &typeText, LocalInfo &i
       return;
     }
     if (info.kind == LocalInfo::Kind::Reference) {
-      info.referenceToMap = true;
+      info.referenceToKeyValueCollection = true;
     } else {
-      info.pointerToMap = true;
+      info.pointerToKeyValueCollection = true;
     }
-    info.mapKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
-    info.mapValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
+    info.keyValueKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
+    info.keyValueValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
     if (info.valueKind == LocalInfo::ValueKind::Unknown) {
-      info.valueKind = info.mapValueKind;
+      info.valueKind = info.keyValueValueKind;
     }
     return;
   }
@@ -1307,14 +1307,14 @@ void setReferenceArrayInfoFromTransforms(const Expr &expr, LocalInfo &info) {
         return;
       }
       if (info.kind == LocalInfo::Kind::Reference) {
-        info.referenceToMap = true;
+        info.referenceToKeyValueCollection = true;
       } else {
-        info.pointerToMap = true;
+        info.pointerToKeyValueCollection = true;
       }
-      info.mapKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
-      info.mapValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
+      info.keyValueKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
+      info.keyValueValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
       if (info.valueKind == LocalInfo::ValueKind::Unknown) {
-        info.valueKind = info.mapValueKind;
+        info.valueKind = info.keyValueValueKind;
       }
       return;
     }

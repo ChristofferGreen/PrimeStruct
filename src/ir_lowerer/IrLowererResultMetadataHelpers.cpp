@@ -180,14 +180,14 @@ bool resolveSpecializedExperimentalMapTypeKinds(const std::string &typeText,
 void assignDeclaredResultCollectionInfo(const std::string &typeText,
                                         LocalInfo::Kind &collectionKindOut,
                                         LocalInfo::ValueKind &valueKindOut,
-                                        LocalInfo::ValueKind &mapKeyKindOut) {
+                                        LocalInfo::ValueKind &keyValueKeyKindOut) {
   collectionKindOut = LocalInfo::Kind::Value;
   valueKindOut = LocalInfo::ValueKind::Unknown;
-  mapKeyKindOut = LocalInfo::ValueKind::Unknown;
-  if (!resolveSupportedResultCollectionType(typeText, collectionKindOut, valueKindOut, &mapKeyKindOut)) {
+  keyValueKeyKindOut = LocalInfo::ValueKind::Unknown;
+  if (!resolveSupportedResultCollectionType(typeText, collectionKindOut, valueKindOut, &keyValueKeyKindOut)) {
     collectionKindOut = LocalInfo::Kind::Value;
     valueKindOut = LocalInfo::ValueKind::Unknown;
-    mapKeyKindOut = LocalInfo::ValueKind::Unknown;
+    keyValueKeyKindOut = LocalInfo::ValueKind::Unknown;
   }
 }
 
@@ -653,11 +653,11 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
                                           const ResolveCallDefinitionFn &resolveDefinitionCall,
                                           LocalInfo::Kind &collectionKindOut,
                                           LocalInfo::ValueKind &valueKindOut,
-                                          LocalInfo::ValueKind &mapKeyKindOut,
+                                          LocalInfo::ValueKind &keyValueKeyKindOut,
                                           bool suppressCallDefinitionFallback) {
   collectionKindOut = LocalInfo::Kind::Value;
   valueKindOut = LocalInfo::ValueKind::Unknown;
-  mapKeyKindOut = LocalInfo::ValueKind::Unknown;
+  keyValueKeyKindOut = LocalInfo::ValueKind::Unknown;
   if (expr.kind == Expr::Kind::Name) {
     auto localIt = localsIn.find(expr.name);
     if (localIt == localsIn.end()) {
@@ -665,7 +665,7 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
     }
     if (!isSupportedPackedResultCollectionKind(localIt->second.kind) &&
         resolveSpecializedExperimentalMapTypeKinds(
-            localIt->second.structTypeName, resolveDefinitionCall, mapKeyKindOut, valueKindOut)) {
+            localIt->second.structTypeName, resolveDefinitionCall, keyValueKeyKindOut, valueKindOut)) {
       collectionKindOut = LocalInfo::Kind::KeyValueCollection;
       return true;
     }
@@ -674,7 +674,7 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
     }
     collectionKindOut = localIt->second.kind;
     valueKindOut = localIt->second.valueKind;
-    mapKeyKindOut = localIt->second.mapKeyKind;
+    keyValueKeyKindOut = localIt->second.keyValueKeyKind;
     return valueKindOut != LocalInfo::ValueKind::Unknown;
   }
 
@@ -684,12 +684,12 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
 
   const auto assignCollection = [&](LocalInfo::Kind kind,
                                     const std::string &elemType,
-                                    LocalInfo::ValueKind mapKeyKind = LocalInfo::ValueKind::Unknown) {
+                                    LocalInfo::ValueKind keyValueKeyKind = LocalInfo::ValueKind::Unknown) {
     collectionKindOut = kind;
     valueKindOut = valueKindFromTypeName(trimTemplateTypeText(elemType));
-    mapKeyKindOut = mapKeyKind;
+    keyValueKeyKindOut = keyValueKeyKind;
     return valueKindOut != LocalInfo::ValueKind::Unknown &&
-           (kind != LocalInfo::Kind::KeyValueCollection || mapKeyKindOut != LocalInfo::ValueKind::Unknown);
+           (kind != LocalInfo::Kind::KeyValueCollection || keyValueKeyKindOut != LocalInfo::ValueKind::Unknown);
   };
 
   std::string collectionName;
@@ -826,7 +826,7 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
                                                  suppressCallDefinitionFallback)) {
           collectionKindOut = LocalInfo::Kind::Buffer;
           valueKindOut = sourceValueKind;
-          mapKeyKindOut = LocalInfo::ValueKind::Unknown;
+          keyValueKeyKindOut = LocalInfo::ValueKind::Unknown;
           return valueKindOut != LocalInfo::ValueKind::Unknown;
         }
       }
@@ -846,7 +846,7 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
       continue;
     }
     if (resolveSpecializedExperimentalMapTypeKinds(
-            transform.templateArgs.front(), resolveDefinitionCall, mapKeyKindOut, valueKindOut)) {
+            transform.templateArgs.front(), resolveDefinitionCall, keyValueKeyKindOut, valueKindOut)) {
       collectionKindOut = LocalInfo::Kind::KeyValueCollection;
       return true;
     }
@@ -871,7 +871,7 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
       return false;
     }
     collectionKindOut = LocalInfo::Kind::KeyValueCollection;
-    mapKeyKindOut = valueKindFromTypeName(trimTemplateTypeText(declaredCollectionArgs.front()));
+    keyValueKeyKindOut = valueKindFromTypeName(trimTemplateTypeText(declaredCollectionArgs.front()));
   } else if (declaredCollection == "Buffer") {
     if (declaredCollectionArgs.size() != 1) {
       return false;
@@ -882,12 +882,12 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
   }
   valueKindOut = valueKindFromTypeName(trimTemplateTypeText(declaredCollectionArgs.front()));
   if (collectionKindOut == LocalInfo::Kind::KeyValueCollection) {
-    mapKeyKindOut = valueKindFromTypeName(trimTemplateTypeText(declaredCollectionArgs.front()));
+    keyValueKeyKindOut = valueKindFromTypeName(trimTemplateTypeText(declaredCollectionArgs.front()));
     valueKindOut = valueKindFromTypeName(trimTemplateTypeText(declaredCollectionArgs.back()));
-    if ((mapKeyKindOut == LocalInfo::ValueKind::Unknown ||
+    if ((keyValueKeyKindOut == LocalInfo::ValueKind::Unknown ||
          valueKindOut == LocalInfo::ValueKind::Unknown) &&
         expr.templateArgs.size() == 2) {
-      mapKeyKindOut = valueKindFromTypeName(trimTemplateTypeText(expr.templateArgs.front()));
+      keyValueKeyKindOut = valueKindFromTypeName(trimTemplateTypeText(expr.templateArgs.front()));
       valueKindOut = valueKindFromTypeName(trimTemplateTypeText(expr.templateArgs.back()));
     }
   } else if (valueKindOut == LocalInfo::ValueKind::Unknown && expr.templateArgs.size() == 1) {
@@ -910,7 +910,7 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
     }
   }
   return valueKindOut != LocalInfo::ValueKind::Unknown &&
-         (collectionKindOut != LocalInfo::Kind::KeyValueCollection || mapKeyKindOut != LocalInfo::ValueKind::Unknown);
+         (collectionKindOut != LocalInfo::Kind::KeyValueCollection || keyValueKeyKindOut != LocalInfo::ValueKind::Unknown);
 }
 
 void applyResultValueInfoToLocal(const ResultExprInfo &resultInfo, LocalInfo &paramInfo) {
@@ -918,8 +918,8 @@ void applyResultValueInfoToLocal(const ResultExprInfo &resultInfo, LocalInfo &pa
   if (isSupportedPackedResultCollectionKind(resultInfo.valueCollectionKind)) {
     paramInfo.valueKind = resultInfo.valueKind;
     if (resultInfo.valueCollectionKind == LocalInfo::Kind::KeyValueCollection) {
-      paramInfo.mapKeyKind = resultInfo.valueMapKeyKind;
-      paramInfo.mapValueKind = resultInfo.valueKind;
+      paramInfo.keyValueKeyKind = resultInfo.valueMapKeyKind;
+      paramInfo.keyValueValueKind = resultInfo.valueKind;
     }
     return;
   }
@@ -982,7 +982,7 @@ void applyDirectResultValueMetadata(const Expr &valueExpr,
       if (isSupportedPackedResultCollectionKind(localInfo.kind)) {
         out.valueCollectionKind = localInfo.kind;
         out.valueKind = localInfo.valueKind;
-        out.valueMapKeyKind = localInfo.mapKeyKind;
+        out.valueMapKeyKind = localInfo.keyValueKeyKind;
         out.valueStructType.clear();
         out.valueIsFileHandle = false;
         return;

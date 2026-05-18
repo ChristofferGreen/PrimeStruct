@@ -845,7 +845,7 @@ LocalInfo::ValueKind inferBaseSetupSimpleExprKind(const Expr &expr,
         return it->second.valueKind;
       }
       if (it->second.kind == LocalInfo::Kind::Reference && !it->second.referenceToArray &&
-          !it->second.referenceToVector && !it->second.referenceToMap) {
+          !it->second.referenceToVector && !it->second.referenceToKeyValueCollection) {
         return it->second.valueKind;
       }
       return LocalInfo::ValueKind::Unknown;
@@ -1018,10 +1018,10 @@ bool inferMapTryAtResultValueKind(const Expr &expr,
   }
   const auto targetInfo =
       resolveMapAccessTargetInfo(expr.args.front(), localsIn, {}, semanticProgram, semanticIndex);
-  if (!targetInfo.isMapTarget || targetInfo.mapValueKind == LocalInfo::ValueKind::Unknown) {
+  if (!targetInfo.isMapTarget || targetInfo.keyValueValueKind == LocalInfo::ValueKind::Unknown) {
     return false;
   }
-  kindOut = targetInfo.mapValueKind;
+  kindOut = targetInfo.keyValueValueKind;
   return true;
 }
 
@@ -1150,7 +1150,7 @@ bool inferLiteralOrNameExprKindImpl(const Expr &expr,
         return true;
       }
       if (it->second.kind == LocalInfo::Kind::Reference) {
-        kindOut = (it->second.referenceToArray || it->second.referenceToVector || it->second.referenceToMap)
+        kindOut = (it->second.referenceToArray || it->second.referenceToVector || it->second.referenceToKeyValueCollection)
                       ? LocalInfo::ValueKind::Unknown
                       : it->second.valueKind;
         return true;

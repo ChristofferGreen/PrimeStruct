@@ -326,11 +326,11 @@ bool isSupportedPackedResultCollectionKind(LocalInfo::Kind kind) {
 bool resolveSupportedResultCollectionType(const std::string &typeText,
                                           LocalInfo::Kind &collectionKindOut,
                                           LocalInfo::ValueKind &valueKindOut,
-                                          LocalInfo::ValueKind *mapKeyKindOut) {
+                                          LocalInfo::ValueKind *keyValueKeyKindOut) {
   collectionKindOut = LocalInfo::Kind::Value;
   valueKindOut = LocalInfo::ValueKind::Unknown;
-  if (mapKeyKindOut != nullptr) {
-    *mapKeyKindOut = LocalInfo::ValueKind::Unknown;
+  if (keyValueKeyKindOut != nullptr) {
+    *keyValueKeyKindOut = LocalInfo::ValueKind::Unknown;
   }
   std::string base;
   std::string argList;
@@ -357,12 +357,12 @@ bool resolveSupportedResultCollectionType(const std::string &typeText,
       return false;
     }
     collectionKindOut = LocalInfo::Kind::KeyValueCollection;
-    const LocalInfo::ValueKind mapKeyKind = valueKindFromTypeName(trimTemplateTypeText(args.front()));
-    if (mapKeyKind == LocalInfo::ValueKind::Unknown) {
+    const LocalInfo::ValueKind keyValueKeyKind = valueKindFromTypeName(trimTemplateTypeText(args.front()));
+    if (keyValueKeyKind == LocalInfo::ValueKind::Unknown) {
       return false;
     }
-    if (mapKeyKindOut != nullptr) {
-      *mapKeyKindOut = mapKeyKind;
+    if (keyValueKeyKindOut != nullptr) {
+      *keyValueKeyKindOut = keyValueKeyKind;
     }
   } else if (base == "Buffer") {
     if (args.size() != 1) {

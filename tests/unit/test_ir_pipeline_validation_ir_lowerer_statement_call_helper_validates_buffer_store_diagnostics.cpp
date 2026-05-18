@@ -688,8 +688,8 @@ TEST_CASE("ir lowerer map insert rewrite uses semantic receiver facts before sta
   auto addStaleLocalMap = [&](const std::string &name) {
     primec::ir_lowerer::LocalInfo local;
     local.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
-    local.mapKeyKind = ValueKind::Int64;
-    local.mapValueKind = ValueKind::Int64;
+    local.keyValueKeyKind = ValueKind::Int64;
+    local.keyValueValueKind = ValueKind::Int64;
     local.valueKind = ValueKind::Int64;
     local.index = 7;
     staleLocals[name] = local;
@@ -2547,8 +2547,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
   primec::ir_lowerer::LocalMap localMapLocals;
   primec::ir_lowerer::LocalInfo localMapInfo;
   localMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
-  localMapInfo.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-  localMapInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  localMapInfo.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  localMapInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   localMapInfo.index = 4;
   localMapLocals.emplace("valuesLocal", localMapInfo);
 
@@ -2691,9 +2691,9 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
   primec::ir_lowerer::LocalInfo mapsPackInfo;
   mapsPackInfo.isArgsPack = true;
   mapsPackInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-  mapsPackInfo.referenceToMap = true;
-  mapsPackInfo.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-  mapsPackInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  mapsPackInfo.referenceToKeyValueCollection = true;
+  mapsPackInfo.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  mapsPackInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   mapsPackLocals.emplace("mapsPack", mapsPackInfo);
 
   primec::Expr mapInsertArgsPackWrappedInferredStmt = mapInsertStmt;

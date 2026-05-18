@@ -465,10 +465,10 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       }
       const LocalInfo &info = localIt->second;
       return info.kind == LocalInfo::Kind::KeyValueCollection ||
-             info.referenceToMap ||
-             info.pointerToMap ||
-             info.mapKeyKind != LocalInfo::ValueKind::Unknown ||
-             info.mapValueKind != LocalInfo::ValueKind::Unknown;
+             info.referenceToKeyValueCollection ||
+             info.pointerToKeyValueCollection ||
+             info.keyValueKeyKind != LocalInfo::ValueKind::Unknown ||
+             info.keyValueValueKind != LocalInfo::ValueKind::Unknown;
     };
     if (!mapHelperName.empty() &&
         (receiverHasMapLocalInfo() ||

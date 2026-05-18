@@ -2249,8 +2249,8 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic map rece
 
   primec::ir_lowerer::LocalInfo staleMapInfo;
   staleMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
-  staleMapInfo.mapKeyKind = ValueKind::Int32;
-  staleMapInfo.mapValueKind = ValueKind::Int32;
+  staleMapInfo.keyValueKeyKind = ValueKind::Int32;
+  staleMapInfo.keyValueValueKind = ValueKind::Int32;
 
   primec::ir_lowerer::LocalMap staleLocals;
   staleLocals.emplace("values", staleMapInfo);
@@ -2424,8 +2424,8 @@ TEST_CASE("ir lowerer inference base-kind helpers resolve parser-shaped canonica
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo mapInfo;
   mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
-  mapInfo.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-  mapInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  mapInfo.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  mapInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
   locals.emplace("values", mapInfo);
 
   primec::Expr valuesName;

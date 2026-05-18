@@ -311,7 +311,7 @@ TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for explicit sl
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo valuesLocal;
   valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
-  valuesLocal.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  valuesLocal.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   locals.emplace("values", valuesLocal);
 
   auto inferExprKind = [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &localsIn) {
@@ -911,7 +911,7 @@ TEST_CASE("ir lowerer setup type helper resolves explicit map count and contains
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo valuesLocal;
   valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
-  valuesLocal.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  valuesLocal.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   locals.emplace("values", valuesLocal);
 
   auto expectCurrentBehavior = [&](const char *receiverName, primec::ir_lowerer::LocalInfo::ValueKind inferredKind) {
@@ -1339,18 +1339,18 @@ TEST_CASE("ir lowerer setup type helper resolves dereferenced indexed variadic m
   borrowedPackInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
   borrowedPackInfo.isArgsPack = true;
   borrowedPackInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-  borrowedPackInfo.referenceToMap = true;
-  borrowedPackInfo.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-  borrowedPackInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  borrowedPackInfo.referenceToKeyValueCollection = true;
+  borrowedPackInfo.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  borrowedPackInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   locals.emplace("mapRefs", borrowedPackInfo);
 
   primec::ir_lowerer::LocalInfo pointerPackInfo;
   pointerPackInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
   pointerPackInfo.isArgsPack = true;
   pointerPackInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
-  pointerPackInfo.pointerToMap = true;
-  pointerPackInfo.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-  pointerPackInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  pointerPackInfo.pointerToKeyValueCollection = true;
+  pointerPackInfo.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  pointerPackInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   locals.emplace("mapPtrs", pointerPackInfo);
 
   auto resolveExprPath = [](const primec::Expr &expr) { return expr.name; };

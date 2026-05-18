@@ -351,8 +351,8 @@ void emitInternalSoaStorageMetadataLoad(
 
 bool hasInferredTypedWrappedMap(const LocalInfo &info, LocalInfo::Kind kind) {
   return (kind == LocalInfo::Kind::Reference || kind == LocalInfo::Kind::Pointer) &&
-         info.mapKeyKind != LocalInfo::ValueKind::Unknown &&
-         info.mapValueKind != LocalInfo::ValueKind::Unknown;
+         info.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
+         info.keyValueValueKind != LocalInfo::ValueKind::Unknown;
 }
 
 struct SemanticCountTargetInfo {
@@ -1120,12 +1120,12 @@ bool isArrayCountCall(const Expr &expr,
     }
     if (it->second.kind == LocalInfo::Kind::Reference) {
       return it->second.referenceToArray || it->second.referenceToVector ||
-             it->second.referenceToBuffer || it->second.referenceToMap ||
+             it->second.referenceToBuffer || it->second.referenceToKeyValueCollection ||
              hasInferredTypedWrappedMap(it->second, it->second.kind);
     }
     if (it->second.kind == LocalInfo::Kind::Pointer) {
       return it->second.pointerToArray || it->second.pointerToVector ||
-             it->second.pointerToBuffer || it->second.pointerToMap ||
+             it->second.pointerToBuffer || it->second.pointerToKeyValueCollection ||
              hasInferredTypedWrappedMap(it->second, it->second.kind);
     }
     return it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector ||
@@ -1152,13 +1152,13 @@ bool isArrayCountCall(const Expr &expr,
               info.argsPackElementKind == LocalInfo::Kind::Buffer ||
               info.argsPackElementKind == LocalInfo::Kind::KeyValueCollection ||
               (info.argsPackElementKind == LocalInfo::Kind::Reference &&
-               (info.referenceToArray || info.referenceToVector || info.referenceToBuffer || info.referenceToMap ||
+               (info.referenceToArray || info.referenceToVector || info.referenceToBuffer || info.referenceToKeyValueCollection ||
                 hasInferredTypedWrappedMap(info, info.argsPackElementKind))) ||
               (info.argsPackElementKind == LocalInfo::Kind::Pointer && info.pointerToArray) ||
               (info.argsPackElementKind == LocalInfo::Kind::Pointer && info.pointerToVector) ||
               (info.argsPackElementKind == LocalInfo::Kind::Pointer && info.pointerToBuffer) ||
               (info.argsPackElementKind == LocalInfo::Kind::Pointer &&
-               (info.pointerToMap || hasInferredTypedWrappedMap(info, info.argsPackElementKind))) ||
+               (info.pointerToKeyValueCollection || hasInferredTypedWrappedMap(info, info.argsPackElementKind))) ||
               info.isSoaVector) {
             return true;
           }
@@ -1819,9 +1819,9 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
           const LocalInfo &info = it->second;
           stringMapAccess =
               ((info.kind == LocalInfo::Kind::KeyValueCollection) ||
-               (info.kind == LocalInfo::Kind::Reference && info.referenceToMap) ||
-               (info.kind == LocalInfo::Kind::Pointer && info.pointerToMap)) &&
-              info.mapValueKind == LocalInfo::ValueKind::String;
+               (info.kind == LocalInfo::Kind::Reference && info.referenceToKeyValueCollection) ||
+               (info.kind == LocalInfo::Kind::Pointer && info.pointerToKeyValueCollection)) &&
+              info.keyValueValueKind == LocalInfo::ValueKind::String;
         }
       } else if (accessTarget.kind == Expr::Kind::Call) {
         std::string collection;

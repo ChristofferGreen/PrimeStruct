@@ -60,8 +60,8 @@ LocalInfo::ValueKind inferPointerTargetValueKind(
       return LocalInfo::ValueKind::Unknown;
     }
     if (it->second.kind == LocalInfo::Kind::Pointer || it->second.kind == LocalInfo::Kind::Reference) {
-      if (it->second.referenceToMap || it->second.pointerToMap) {
-        return it->second.mapValueKind;
+      if (it->second.referenceToKeyValueCollection || it->second.pointerToKeyValueCollection) {
+        return it->second.keyValueValueKind;
       }
       if (it->second.referenceToArray || it->second.referenceToVector ||
           it->second.pointerToArray || it->second.pointerToVector) {
@@ -79,8 +79,8 @@ LocalInfo::ValueKind inferPointerTargetValueKind(
       if (it != localsIn.end() && it->second.isArgsPack &&
           (it->second.argsPackElementKind == LocalInfo::Kind::Pointer ||
            it->second.argsPackElementKind == LocalInfo::Kind::Reference)) {
-        if (it->second.referenceToMap || it->second.pointerToMap) {
-          return it->second.mapValueKind;
+        if (it->second.referenceToKeyValueCollection || it->second.pointerToKeyValueCollection) {
+          return it->second.keyValueValueKind;
         }
         return it->second.valueKind;
       }
@@ -90,8 +90,8 @@ LocalInfo::ValueKind inferPointerTargetValueKind(
       if (target.kind == Expr::Kind::Name) {
         auto it = localsIn.find(target.name);
         if (it != localsIn.end()) {
-          if (it->second.referenceToMap || it->second.pointerToMap) {
-            return it->second.mapValueKind;
+          if (it->second.referenceToKeyValueCollection || it->second.pointerToKeyValueCollection) {
+            return it->second.keyValueValueKind;
           }
           if (it->second.referenceToArray || it->second.referenceToVector ||
               it->second.pointerToArray || it->second.pointerToVector) {
@@ -367,10 +367,10 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
     const LocalInfo &info = it->second;
     return info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector || info.kind == LocalInfo::Kind::KeyValueCollection ||
            (info.kind == LocalInfo::Kind::Reference &&
-            (info.referenceToArray || info.referenceToVector || info.referenceToMap)) ||
+            (info.referenceToArray || info.referenceToVector || info.referenceToKeyValueCollection)) ||
            (info.kind == LocalInfo::Kind::Pointer && info.pointerToArray) ||
            (info.kind == LocalInfo::Kind::Pointer && info.pointerToVector) ||
-           (info.kind == LocalInfo::Kind::Pointer && info.pointerToMap) ||
+           (info.kind == LocalInfo::Kind::Pointer && info.pointerToKeyValueCollection) ||
            info.isSoaVector ||
            isGraphOrFallbackStringReceiver(candidate, &info);
   };
@@ -450,10 +450,10 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
       auto it = localsIn.find(target.name);
       if (it != localsIn.end() &&
           ((it->second.kind == LocalInfo::Kind::KeyValueCollection) ||
-           (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToMap) ||
-           (it->second.kind == LocalInfo::Kind::Pointer && it->second.pointerToMap)) &&
-          it->second.mapValueKind != LocalInfo::ValueKind::Unknown) {
-        kindOut = it->second.mapValueKind;
+           (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToKeyValueCollection) ||
+           (it->second.kind == LocalInfo::Kind::Pointer && it->second.pointerToKeyValueCollection)) &&
+          it->second.keyValueValueKind != LocalInfo::ValueKind::Unknown) {
+        kindOut = it->second.keyValueValueKind;
         return ArrayMapAccessElementKindResolution::Resolved;
       }
     } else if (target.kind == Expr::Kind::Call) {
@@ -572,8 +572,8 @@ LocalInfo::ValueKind inferBodyValueKindWithLocalsScaffolding(
                                         semanticIndex);
       info.kind = typeInfo.kind;
       info.valueKind = typeInfo.valueKind;
-      info.mapKeyKind = typeInfo.mapKeyKind;
-      info.mapValueKind = typeInfo.mapValueKind;
+      info.keyValueKeyKind = typeInfo.keyValueKeyKind;
+      info.keyValueValueKind = typeInfo.keyValueValueKind;
       info.structTypeName = typeInfo.structTypeName;
       if (info.valueKind == LocalInfo::ValueKind::Unknown && info.kind == LocalInfo::Kind::Value) {
         std::string builtinComparison;

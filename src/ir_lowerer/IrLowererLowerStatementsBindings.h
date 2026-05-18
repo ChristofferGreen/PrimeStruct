@@ -225,8 +225,8 @@
         info.isUninitializedStorage = true;
         info.kind = uninitInfo.kind;
         info.valueKind = uninitInfo.valueKind;
-        info.mapKeyKind = uninitInfo.mapKeyKind;
-        info.mapValueKind = uninitInfo.mapValueKind;
+        info.keyValueKeyKind = uninitInfo.keyValueKeyKind;
+        info.keyValueValueKind = uninitInfo.keyValueValueKind;
         info.structTypeName = uninitInfo.structPath;
         if (info.kind == LocalInfo::Kind::Value && !info.structTypeName.empty()) {
           StructSlotLayout layout;
@@ -324,8 +324,8 @@
           &callResolutionAdapters.semanticProductTargets.semanticIndex);
       LocalInfo::Kind kind = bindingTypeInfo.kind;
       LocalInfo::ValueKind valueKind = bindingTypeInfo.valueKind;
-      LocalInfo::ValueKind mapKeyKind = bindingTypeInfo.mapKeyKind;
-      LocalInfo::ValueKind mapValueKind = bindingTypeInfo.mapValueKind;
+      LocalInfo::ValueKind keyValueKeyKind = bindingTypeInfo.keyValueKeyKind;
+      LocalInfo::ValueKind keyValueValueKind = bindingTypeInfo.keyValueValueKind;
       std::string structTypeName = bindingTypeInfo.structTypeName;
       LocalInfo info;
       auto extractDeclaredResultValueType = [&](const std::string &typeText, std::string &valueTypeOut) {
@@ -386,8 +386,8 @@
       info.isMutable = isBindingMutable(stmt);
       info.kind = kind;
       info.valueKind = valueKind;
-      info.mapKeyKind = mapKeyKind;
-      info.mapValueKind = mapValueKind;
+      info.keyValueKeyKind = keyValueKeyKind;
+      info.keyValueValueKind = keyValueValueKind;
       info.structTypeName = structTypeName;
       info.referenceToArray = bindingTypeInfo.referenceToArray;
       info.pointerToArray = bindingTypeInfo.pointerToArray;
@@ -395,8 +395,8 @@
       info.pointerToVector = bindingTypeInfo.pointerToVector;
       info.referenceToBuffer = bindingTypeInfo.referenceToBuffer;
       info.pointerToBuffer = bindingTypeInfo.pointerToBuffer;
-      info.referenceToMap = bindingTypeInfo.referenceToMap;
-      info.pointerToMap = bindingTypeInfo.pointerToMap;
+      info.referenceToKeyValueCollection = bindingTypeInfo.referenceToKeyValueCollection;
+      info.pointerToKeyValueCollection = bindingTypeInfo.pointerToKeyValueCollection;
       info.isSoaVector = bindingTypeInfo.isSoaVector;
       info.usesBuiltinCollectionLayout = bindingTypeInfo.usesBuiltinCollectionLayout;
       const bool semanticLocalAutoBinding = bindingTypeExpr != &stmt;

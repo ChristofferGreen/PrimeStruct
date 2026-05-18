@@ -98,7 +98,7 @@
       auto applySpecializedWrappedMapBindingInfo = [&](const Expr &bindingExpr, LocalInfo &bindingInfo) {
         if ((bindingInfo.kind != LocalInfo::Kind::Reference &&
              bindingInfo.kind != LocalInfo::Kind::Pointer) ||
-            bindingInfo.referenceToMap || bindingInfo.pointerToMap) {
+            bindingInfo.referenceToKeyValueCollection || bindingInfo.pointerToKeyValueCollection) {
           return;
         }
         for (const auto &transform : bindingExpr.transforms) {
@@ -119,12 +119,12 @@
             continue;
           }
           if (bindingInfo.kind == LocalInfo::Kind::Reference) {
-            bindingInfo.referenceToMap = true;
+            bindingInfo.referenceToKeyValueCollection = true;
           } else {
-            bindingInfo.pointerToMap = true;
+            bindingInfo.pointerToKeyValueCollection = true;
           }
-          bindingInfo.mapKeyKind = keyKind;
-          bindingInfo.mapValueKind = valueKind;
+          bindingInfo.keyValueKeyKind = keyKind;
+          bindingInfo.keyValueValueKind = valueKind;
           bindingInfo.valueKind = valueKind;
           if (bindingInfo.structTypeName.empty()) {
             ir_lowerer::resolveSpecializedExperimentalMapStructPathForBindingType(

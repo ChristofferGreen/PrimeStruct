@@ -926,8 +926,8 @@ static bool rewriteMapInsertHelperStatementToCanonical(
         return false;
       }
       if (!inferMapKindsFromTypeText(resolvedTypeText,
-                                     targetInfoOut.mapKeyKind,
-                                     targetInfoOut.mapValueKind)) {
+                                     targetInfoOut.keyValueKeyKind,
+                                     targetInfoOut.keyValueValueKind)) {
         return false;
       }
       targetInfoOut.isMapTarget = true;
@@ -965,8 +965,8 @@ static bool rewriteMapInsertHelperStatementToCanonical(
         return false;
       }
       targetInfoOut.isMapTarget = true;
-      targetInfoOut.mapKeyKind = keyKind;
-      targetInfoOut.mapValueKind = valueKind;
+      targetInfoOut.keyValueKeyKind = keyKind;
+      targetInfoOut.keyValueValueKind = valueKind;
       return true;
     };
     auto tryPopulateFromSemanticReceiverFact =
@@ -1137,8 +1137,8 @@ static bool rewriteMapInsertHelperStatementToCanonical(
       canonicalTargetInfo.isWrappedMapTarget = false;
     }
     if (canonicalTargetInfo.isMapTarget &&
-        canonicalTargetInfo.mapKeyKind != LocalInfo::ValueKind::Unknown &&
-        canonicalTargetInfo.mapValueKind != LocalInfo::ValueKind::Unknown) {
+        canonicalTargetInfo.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
+        canonicalTargetInfo.keyValueValueKind != LocalInfo::ValueKind::Unknown) {
       targetInfoOut = canonicalTargetInfo;
       return true;
     }
@@ -1157,19 +1157,19 @@ static bool rewriteMapInsertHelperStatementToCanonical(
         const LocalInfo &localInfo = localIt->second;
         const bool directMap = localInfo.kind == LocalInfo::Kind::KeyValueCollection;
         const bool wrappedMap =
-            (localInfo.kind == LocalInfo::Kind::Reference && localInfo.referenceToMap) ||
-            (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToMap);
+            (localInfo.kind == LocalInfo::Kind::Reference && localInfo.referenceToKeyValueCollection) ||
+            (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToKeyValueCollection);
         const bool argsPackMap =
             localInfo.isArgsPack &&
             (localInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection ||
-             (localInfo.argsPackElementKind == LocalInfo::Kind::Reference && localInfo.referenceToMap) ||
-             (localInfo.argsPackElementKind == LocalInfo::Kind::Pointer && localInfo.pointerToMap));
+             (localInfo.argsPackElementKind == LocalInfo::Kind::Reference && localInfo.referenceToKeyValueCollection) ||
+             (localInfo.argsPackElementKind == LocalInfo::Kind::Pointer && localInfo.pointerToKeyValueCollection));
         if (directMap || wrappedMap || argsPackMap) {
           targetInfoOut.isMapTarget = true;
-          targetInfoOut.mapKeyKind = localInfo.mapKeyKind;
-          targetInfoOut.mapValueKind = localInfo.mapValueKind;
-          if (targetInfoOut.mapKeyKind != LocalInfo::ValueKind::Unknown &&
-              targetInfoOut.mapValueKind != LocalInfo::ValueKind::Unknown) {
+          targetInfoOut.keyValueKeyKind = localInfo.keyValueKeyKind;
+          targetInfoOut.keyValueValueKind = localInfo.keyValueValueKind;
+          if (targetInfoOut.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
+              targetInfoOut.keyValueValueKind != LocalInfo::ValueKind::Unknown) {
             return true;
           }
         }
@@ -1189,10 +1189,10 @@ static bool rewriteMapInsertHelperStatementToCanonical(
             *canonicalReceiverExpr, *resolvedCallee, localsIn, {}, targetInfoOut);
       }
       targetInfoOut.isMapTarget = true;
-      targetInfoOut.mapKeyKind = valueKindFromTypeName(collectionArgs.front());
-      targetInfoOut.mapValueKind = valueKindFromTypeName(collectionArgs.back());
-      return targetInfoOut.mapKeyKind != LocalInfo::ValueKind::Unknown &&
-             targetInfoOut.mapValueKind != LocalInfo::ValueKind::Unknown;
+      targetInfoOut.keyValueKeyKind = valueKindFromTypeName(collectionArgs.front());
+      targetInfoOut.keyValueValueKind = valueKindFromTypeName(collectionArgs.back());
+      return targetInfoOut.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
+             targetInfoOut.keyValueValueKind != LocalInfo::ValueKind::Unknown;
     };
 
     if (tryPopulateFromResolvedCallee(resolveDefinitionCall(*canonicalReceiverExpr))) {
@@ -1207,8 +1207,8 @@ static bool rewriteMapInsertHelperStatementToCanonical(
         const std::string receiverTypeText =
             extractParameterTypeName(mapAccessCallee->parameters.front());
         if (inferMapKindsFromArgsPackTypeText(receiverTypeText,
-                                              targetInfoOut.mapKeyKind,
-                                              targetInfoOut.mapValueKind)) {
+                                              targetInfoOut.keyValueKeyKind,
+                                              targetInfoOut.keyValueValueKind)) {
           targetInfoOut.isMapTarget = true;
           return true;
         }
@@ -1222,10 +1222,10 @@ static bool rewriteMapInsertHelperStatementToCanonical(
     if (nonLocalFieldReceiver != nullptr &&
         stmt.templateArgs.size() == 2) {
       targetInfoOut.isMapTarget = true;
-      targetInfoOut.mapKeyKind = valueKindFromTypeName(stmt.templateArgs.front());
-      targetInfoOut.mapValueKind = valueKindFromTypeName(stmt.templateArgs.back());
-      return targetInfoOut.mapKeyKind != LocalInfo::ValueKind::Unknown &&
-             targetInfoOut.mapValueKind != LocalInfo::ValueKind::Unknown;
+      targetInfoOut.keyValueKeyKind = valueKindFromTypeName(stmt.templateArgs.front());
+      targetInfoOut.keyValueValueKind = valueKindFromTypeName(stmt.templateArgs.back());
+      return targetInfoOut.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
+             targetInfoOut.keyValueValueKind != LocalInfo::ValueKind::Unknown;
     }
 
     if (!stmt.isMethodCall &&
@@ -1236,8 +1236,8 @@ static bool rewriteMapInsertHelperStatementToCanonical(
           !directCallee->parameters.empty()) {
         const std::string receiverTypeText = extractParameterTypeName(directCallee->parameters.front());
         if (inferMapKindsFromTypeText(receiverTypeText,
-                                      targetInfoOut.mapKeyKind,
-                                      targetInfoOut.mapValueKind)) {
+                                      targetInfoOut.keyValueKeyKind,
+                                      targetInfoOut.keyValueValueKind)) {
           targetInfoOut.isMapTarget = true;
           return true;
         }
@@ -1249,8 +1249,8 @@ static bool rewriteMapInsertHelperStatementToCanonical(
           if (keyKind != LocalInfo::ValueKind::Unknown &&
               valueKind != LocalInfo::ValueKind::Unknown) {
             targetInfoOut.isMapTarget = true;
-            targetInfoOut.mapKeyKind = keyKind;
-            targetInfoOut.mapValueKind = valueKind;
+            targetInfoOut.keyValueKeyKind = keyKind;
+            targetInfoOut.keyValueValueKind = valueKind;
             return true;
           }
         }
@@ -1265,8 +1265,8 @@ static bool rewriteMapInsertHelperStatementToCanonical(
           !methodCallee->parameters.empty()) {
         const std::string receiverTypeText = extractParameterTypeName(methodCallee->parameters.front());
         if (inferMapKindsFromTypeText(receiverTypeText,
-                                     targetInfoOut.mapKeyKind,
-                                     targetInfoOut.mapValueKind)) {
+                                     targetInfoOut.keyValueKeyKind,
+                                     targetInfoOut.keyValueValueKind)) {
           targetInfoOut.isMapTarget = true;
           return true;
         }
@@ -1278,8 +1278,8 @@ static bool rewriteMapInsertHelperStatementToCanonical(
           if (keyKind != LocalInfo::ValueKind::Unknown &&
               valueKind != LocalInfo::ValueKind::Unknown) {
             targetInfoOut.isMapTarget = true;
-            targetInfoOut.mapKeyKind = keyKind;
-            targetInfoOut.mapValueKind = valueKind;
+            targetInfoOut.keyValueKeyKind = keyKind;
+            targetInfoOut.keyValueValueKind = valueKind;
             return true;
           }
         }
@@ -1316,11 +1316,11 @@ static bool rewriteMapInsertHelperStatementToCanonical(
   rewrittenStmt.isFieldAccess = false;
   rewrittenStmt.semanticNodeId = 0;
   if (rewrittenStmt.templateArgs.empty() &&
-      targetInfo.mapKeyKind != LocalInfo::ValueKind::Unknown &&
-      targetInfo.mapValueKind != LocalInfo::ValueKind::Unknown) {
+      targetInfo.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
+      targetInfo.keyValueValueKind != LocalInfo::ValueKind::Unknown) {
     rewrittenStmt.templateArgs = {
-        typeNameForValueKind(targetInfo.mapKeyKind),
-        typeNameForValueKind(targetInfo.mapValueKind),
+        typeNameForValueKind(targetInfo.keyValueKeyKind),
+        typeNameForValueKind(targetInfo.keyValueValueKind),
     };
   }
   return true;

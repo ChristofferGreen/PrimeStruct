@@ -14,8 +14,8 @@ namespace {
 
 bool hasInferredTypedWrappedMap(const LocalInfo &info, LocalInfo::Kind kind) {
   return (kind == LocalInfo::Kind::Reference || kind == LocalInfo::Kind::Pointer) &&
-         info.mapKeyKind != LocalInfo::ValueKind::Unknown &&
-         info.mapValueKind != LocalInfo::ValueKind::Unknown;
+         info.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
+         info.keyValueValueKind != LocalInfo::ValueKind::Unknown;
 }
 
 bool isVectorTargetImpl(const Expr &target, const LocalMap &localsIn);
@@ -283,8 +283,8 @@ bool isDereferencedCollectionCountTarget(const Expr &, const Expr &target, const
         (kind == LocalInfo::Kind::Reference && info.referenceToBuffer) ||
         (kind == LocalInfo::Kind::Pointer && info.pointerToBuffer);
     const bool isMapTarget =
-        (kind == LocalInfo::Kind::Reference && info.referenceToMap) ||
-        (kind == LocalInfo::Kind::Pointer && info.pointerToMap) ||
+        (kind == LocalInfo::Kind::Reference && info.referenceToKeyValueCollection) ||
+        (kind == LocalInfo::Kind::Pointer && info.pointerToKeyValueCollection) ||
         hasInferredTypedWrappedMap(info, kind);
     if (!isArrayTarget && !isVectorTarget && !isSoaVectorTarget && !isBufferTarget && !isMapTarget) {
       return false;

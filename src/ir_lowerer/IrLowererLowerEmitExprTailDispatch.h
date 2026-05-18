@@ -187,15 +187,15 @@
         auto populateTailDispatchMapStructPathFromKinds =
             [&](ir_lowerer::MapAccessTargetInfo &targetInfo) {
               if (!targetInfo.structTypeName.empty() ||
-                  targetInfo.mapKeyKind == LocalInfo::ValueKind::Unknown ||
-                  targetInfo.mapValueKind == LocalInfo::ValueKind::Unknown) {
+                  targetInfo.keyValueKeyKind == LocalInfo::ValueKind::Unknown ||
+                  targetInfo.keyValueValueKind == LocalInfo::ValueKind::Unknown) {
                 return;
               }
               const std::string typeText =
                   ir_lowerer::collectionTypePath("map", false) + "<" +
-                  ir_lowerer::typeNameForValueKind(targetInfo.mapKeyKind) +
+                  ir_lowerer::typeNameForValueKind(targetInfo.keyValueKeyKind) +
                   ", " +
-                  ir_lowerer::typeNameForValueKind(targetInfo.mapValueKind) +
+                  ir_lowerer::typeNameForValueKind(targetInfo.keyValueValueKind) +
                   ">";
               std::string structPath;
               if (ir_lowerer::resolveSpecializedExperimentalMapStructPathForBindingType(
@@ -219,11 +219,11 @@
                 targetExpr, *callee, localsIn, {}, out);
           }
           out.isMapTarget = true;
-          out.mapKeyKind = ir_lowerer::valueKindFromTypeName(collectionArgs.front());
-          out.mapValueKind = ir_lowerer::valueKindFromTypeName(collectionArgs.back());
+          out.keyValueKeyKind = ir_lowerer::valueKindFromTypeName(collectionArgs.front());
+          out.keyValueValueKind = ir_lowerer::valueKindFromTypeName(collectionArgs.back());
           const bool resolvedKinds =
-              out.mapKeyKind != ir_lowerer::LocalInfo::ValueKind::Unknown &&
-              out.mapValueKind != ir_lowerer::LocalInfo::ValueKind::Unknown;
+              out.keyValueKeyKind != ir_lowerer::LocalInfo::ValueKind::Unknown &&
+              out.keyValueValueKind != ir_lowerer::LocalInfo::ValueKind::Unknown;
           if (resolvedKinds) {
             populateTailDispatchMapStructPathFromKinds(out);
           }
@@ -326,11 +326,11 @@
           // instead of stale semantic-product call-target facts.
           rewrittenExpr.semanticNodeId = 0;
           if (rewrittenExpr.templateArgs.empty() &&
-              targetInfo.mapKeyKind != LocalInfo::ValueKind::Unknown &&
-              targetInfo.mapValueKind != LocalInfo::ValueKind::Unknown) {
+              targetInfo.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
+              targetInfo.keyValueValueKind != LocalInfo::ValueKind::Unknown) {
             rewrittenExpr.templateArgs = {
-                ir_lowerer::typeNameForValueKind(targetInfo.mapKeyKind),
-                ir_lowerer::typeNameForValueKind(targetInfo.mapValueKind),
+                ir_lowerer::typeNameForValueKind(targetInfo.keyValueKeyKind),
+                ir_lowerer::typeNameForValueKind(targetInfo.keyValueValueKind),
             };
           }
           return true;

@@ -116,7 +116,7 @@
           const bool isAggregateReference =
               it->second.kind == LocalInfo::Kind::Reference &&
               (!it->second.structTypeName.empty() || it->second.referenceToArray ||
-               it->second.referenceToVector || it->second.referenceToMap || it->second.referenceToBuffer);
+               it->second.referenceToVector || it->second.referenceToKeyValueCollection || it->second.referenceToBuffer);
           if (it->second.kind == LocalInfo::Kind::Reference && !isAggregateReference) {
             function.instructions.push_back({IrOpcode::LoadIndirect, 0});
           }

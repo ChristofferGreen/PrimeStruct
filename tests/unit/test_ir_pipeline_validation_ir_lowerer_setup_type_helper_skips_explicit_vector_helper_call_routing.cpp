@@ -495,7 +495,7 @@ TEST_CASE("ir lowerer setup type helper rejects explicit slash-method map access
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo itemsLocal;
   itemsLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
-  itemsLocal.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  itemsLocal.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   locals.emplace("items", itemsLocal);
 
   auto expectUnknownKind = [&](const char *methodName) {

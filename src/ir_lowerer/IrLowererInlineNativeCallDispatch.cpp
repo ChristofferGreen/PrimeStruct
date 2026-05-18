@@ -983,10 +983,10 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
           targetExpr, *callee, localsIn, {}, targetInfoOut);
     }
     targetInfoOut.isMapTarget = true;
-    targetInfoOut.mapKeyKind = valueKindFromTypeName(collectionArgs.front());
-    targetInfoOut.mapValueKind = valueKindFromTypeName(collectionArgs.back());
-    return targetInfoOut.mapKeyKind != LocalInfo::ValueKind::Unknown &&
-           targetInfoOut.mapValueKind != LocalInfo::ValueKind::Unknown;
+    targetInfoOut.keyValueKeyKind = valueKindFromTypeName(collectionArgs.front());
+    targetInfoOut.keyValueValueKind = valueKindFromTypeName(collectionArgs.back());
+    return targetInfoOut.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
+           targetInfoOut.keyValueValueKind != LocalInfo::ValueKind::Unknown;
   };
   std::function<bool(const std::string &)> isInlineCollectionAccessTypeText;
   isInlineCollectionAccessTypeText = [&](const std::string &typeText) {
@@ -1217,8 +1217,8 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
               inferExprKind ? inferExprKind(expr.args.front(), localsIn)
                             : LocalInfo::ValueKind::Unknown;
           if (keyKind == LocalInfo::ValueKind::Unknown ||
-              alternateTargetInfo.mapKeyKind == LocalInfo::ValueKind::Unknown ||
-              keyKind != alternateTargetInfo.mapKeyKind) {
+              alternateTargetInfo.keyValueKeyKind == LocalInfo::ValueKind::Unknown ||
+              keyKind != alternateTargetInfo.keyValueKeyKind) {
             return InlineCallDispatchResult::NotHandled;
           }
           if (const Definition *callee = resolveDefinitionCallFn(expr);
@@ -1593,11 +1593,11 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
             return true;
           }
           if (info.kind == LocalInfo::Kind::Reference &&
-              (info.referenceToArray || info.referenceToVector || info.referenceToMap)) {
+              (info.referenceToArray || info.referenceToVector || info.referenceToKeyValueCollection)) {
             return true;
           }
           if (info.kind == LocalInfo::Kind::Pointer &&
-              (info.pointerToArray || info.pointerToVector || info.pointerToMap ||
+              (info.pointerToArray || info.pointerToVector || info.pointerToKeyValueCollection ||
                info.pointerToBuffer)) {
             return true;
           }

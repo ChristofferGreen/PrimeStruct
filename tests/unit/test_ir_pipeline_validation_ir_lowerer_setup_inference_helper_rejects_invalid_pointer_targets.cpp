@@ -563,7 +563,7 @@ TEST_CASE("ir lowerer setup inference helper resolves array and map access kinds
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo mapInfo;
   mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
-  mapInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::UInt64;
+  mapInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::UInt64;
   locals.emplace("scores", mapInfo);
 
   primec::ir_lowerer::LocalInfo arrayInfo;
@@ -626,7 +626,7 @@ TEST_CASE("ir lowerer setup inference helper resolves reordered positional acces
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo mapInfo;
   mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
-  mapInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::UInt64;
+  mapInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::UInt64;
   locals.emplace("values", mapInfo);
 
   primec::ir_lowerer::LocalInfo keyInfo;
@@ -661,8 +661,8 @@ TEST_CASE("ir lowerer setup inference helper resolves string map reference acces
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo mapRefInfo;
   mapRefInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-  mapRefInfo.referenceToMap = true;
-  mapRefInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::String;
+  mapRefInfo.referenceToKeyValueCollection = true;
+  mapRefInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::String;
   locals.emplace("values", mapRefInfo);
 
   primec::Expr valuesExpr;

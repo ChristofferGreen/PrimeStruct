@@ -452,8 +452,8 @@ bool declareForConditionBinding(
   info.isMutable = isBindingMutable(binding);
   info.kind = bindingKind(binding);
   info.valueKind = LocalInfo::ValueKind::Unknown;
-  info.mapKeyKind = LocalInfo::ValueKind::Unknown;
-  info.mapValueKind = LocalInfo::ValueKind::Unknown;
+  info.keyValueKeyKind = LocalInfo::ValueKind::Unknown;
+  info.keyValueValueKind = LocalInfo::ValueKind::Unknown;
   if (hasExplicitBindingTypeTransform(binding)) {
     info.valueKind = bindingValueKind(binding, info.kind);
   } else if (info.kind == LocalInfo::Kind::Value) {

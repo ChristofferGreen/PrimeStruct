@@ -82,15 +82,15 @@ TEST_CASE("ir lowerer uninitialized type helpers classify supported types") {
 
   REQUIRE(primec::ir_lowerer::resolveUninitializedTypeInfo("map<i32, f64>", "/pkg", resolveStruct, info, error));
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection);
-  CHECK(info.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
-  CHECK(info.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
+  CHECK(info.keyValueKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(info.keyValueValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
 
   REQUIRE(primec::ir_lowerer::resolveUninitializedTypeInfo(
       "/std/collections/map<i32, bool>", "/pkg", resolveStruct, info, error));
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection);
-  CHECK(info.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
-  CHECK(info.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+  CHECK(info.keyValueKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(info.keyValueValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
 
   REQUIRE(primec::ir_lowerer::resolveUninitializedTypeInfo("Pointer<i32>", "/pkg", resolveStruct, info, error));
@@ -158,16 +158,16 @@ TEST_CASE("ir lowerer uninitialized type helpers resolve local storage metadata"
   local.isUninitializedStorage = true;
   local.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   local.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
-  local.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-  local.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Float64;
+  local.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  local.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Float64;
   local.structTypeName = "/pkg/MyStruct";
 
   primec::ir_lowerer::UninitializedTypeInfo out;
   REQUIRE(primec::ir_lowerer::resolveUninitializedTypeInfoFromLocalStorage(local, out));
   CHECK(out.kind == primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection);
   CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
-  CHECK(out.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
-  CHECK(out.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
+  CHECK(out.keyValueKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(out.keyValueValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
   CHECK(out.structPath == "/pkg/MyStruct");
 
   local.isUninitializedStorage = false;

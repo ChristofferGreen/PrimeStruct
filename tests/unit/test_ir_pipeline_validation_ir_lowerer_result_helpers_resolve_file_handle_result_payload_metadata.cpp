@@ -602,8 +602,8 @@ TEST_CASE("ir lowerer result helpers resolve map Result payload metadata") {
 
   primec::ir_lowerer::LocalInfo mapLocal;
   mapLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
-  mapLocal.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-  mapLocal.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  mapLocal.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  mapLocal.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   mapLocal.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   locals.emplace("values", mapLocal);
 

@@ -826,8 +826,8 @@
                                        valueKind)) {
           return false;
         }
-        infoOut.mapKeyKind = keyKind;
-        infoOut.mapValueKind = valueKind;
+        infoOut.keyValueKeyKind = keyKind;
+        infoOut.keyValueValueKind = valueKind;
         return true;
       };
       auto tryApplySemanticCollectionSpecialization = [&](const Expr &receiverExpr,
@@ -858,8 +858,8 @@
             valueKind == LocalInfo::ValueKind::Unknown) {
           return false;
         }
-        infoOut.mapKeyKind = keyKind;
-        infoOut.mapValueKind = valueKind;
+        infoOut.keyValueKeyKind = keyKind;
+        infoOut.keyValueValueKind = valueKind;
         return true;
       };
       auto tryPopulateMapKindsFromSemanticReceiver = [&](const Expr &receiverExpr,
@@ -935,11 +935,11 @@
         if (originalValuesArg->kind == Expr::Kind::Name) {
           auto callerValuesIt = callerLocals.find(originalValuesArg->name);
           if (callerValuesIt != callerLocals.end() &&
-              valuesIt->second.mapKeyKind == LocalInfo::ValueKind::Unknown &&
-              callerValuesIt->second.mapKeyKind != LocalInfo::ValueKind::Unknown &&
-              callerValuesIt->second.mapValueKind != LocalInfo::ValueKind::Unknown) {
-            valuesIt->second.mapKeyKind = callerValuesIt->second.mapKeyKind;
-            valuesIt->second.mapValueKind = callerValuesIt->second.mapValueKind;
+              valuesIt->second.keyValueKeyKind == LocalInfo::ValueKind::Unknown &&
+              callerValuesIt->second.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
+              callerValuesIt->second.keyValueValueKind != LocalInfo::ValueKind::Unknown) {
+            valuesIt->second.keyValueKeyKind = callerValuesIt->second.keyValueKeyKind;
+            valuesIt->second.keyValueValueKind = callerValuesIt->second.keyValueValueKind;
           }
         }
       }
@@ -964,17 +964,17 @@
         // because this helper path mutates the flat map storage layout, not
         // the struct-backed experimental map layout.
       } else {
-        if (valuesIt->second.mapKeyKind == LocalInfo::ValueKind::Unknown &&
+        if (valuesIt->second.keyValueKeyKind == LocalInfo::ValueKind::Unknown &&
             callee.parameters.size() >= 3) {
           LocalInfo::ValueKind inferredKeyKind = LocalInfo::ValueKind::Unknown;
           LocalInfo::ValueKind inferredValueKind = LocalInfo::ValueKind::Unknown;
           if (inferValueKindFromTypeText(extractParameterTypeName(callee.parameters[1]), inferredKeyKind) &&
               inferValueKindFromTypeText(extractParameterTypeName(callee.parameters[2]), inferredValueKind)) {
-            valuesIt->second.mapKeyKind = inferredKeyKind;
-            valuesIt->second.mapValueKind = inferredValueKind;
+            valuesIt->second.keyValueKeyKind = inferredKeyKind;
+            valuesIt->second.keyValueValueKind = inferredValueKind;
           }
         }
-        if (valuesIt->second.mapKeyKind == LocalInfo::ValueKind::Unknown) {
+        if (valuesIt->second.keyValueKeyKind == LocalInfo::ValueKind::Unknown) {
           error = "builtin canonical map insert lowering requires typed map bindings";
           popInlineStack();
           return false;
@@ -982,8 +982,8 @@
         auto isDirectMapStorageLocal = [](const LocalInfo &info) {
           return info.kind == LocalInfo::Kind::KeyValueCollection ||
                  (info.kind == LocalInfo::Kind::Value &&
-                  info.mapKeyKind != LocalInfo::ValueKind::Unknown &&
-                  info.mapValueKind != LocalInfo::ValueKind::Unknown);
+                  info.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
+                  info.keyValueValueKind != LocalInfo::ValueKind::Unknown);
         };
         int32_t valuesLocal =
             isDirectMapStorageLocal(valuesIt->second) ? valuesIt->second.index : -1;
@@ -996,9 +996,9 @@
               if (isDirectMapStorageLocal(callerValuesIt->second)) {
                 valuesLocal = callerValuesIt->second.index;
               } else if ((callerValuesIt->second.kind == LocalInfo::Kind::Reference &&
-                          callerValuesIt->second.referenceToMap) ||
+                          callerValuesIt->second.referenceToKeyValueCollection) ||
                          (callerValuesIt->second.kind == LocalInfo::Kind::Pointer &&
-                          callerValuesIt->second.pointerToMap)) {
+                          callerValuesIt->second.pointerToKeyValueCollection)) {
                 valuesWrapperLocal = callerValuesIt->second.index;
               }
             }
@@ -1006,7 +1006,7 @@
         }
         if (valuesIt->second.kind == LocalInfo::Kind::Reference ||
             valuesIt->second.kind == LocalInfo::Kind::Pointer) {
-          if (valuesIt->second.referenceToMap || valuesIt->second.pointerToMap) {
+          if (valuesIt->second.referenceToKeyValueCollection || valuesIt->second.pointerToKeyValueCollection) {
             valuesWrapperLocal = valuesIt->second.index;
             ptrLocal = allocTempLocal();
             function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valuesIt->second.index)});
@@ -1022,7 +1022,7 @@
                 ptrLocal,
                 keyIt->second.index,
                 valueIt->second.index,
-                valuesIt->second.mapKeyKind,
+                valuesIt->second.keyValueKeyKind,
                 [&]() { return allocTempLocal(); },
                 [&]() { return function.instructions.size(); },
                 [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },

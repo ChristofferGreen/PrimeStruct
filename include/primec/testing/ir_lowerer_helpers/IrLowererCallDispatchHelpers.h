@@ -130,8 +130,8 @@ enum class SemanticStringAccessTargetKind {
 };
 struct MapAccessTargetInfo {
   bool isMapTarget = false;
-  LocalInfo::ValueKind mapKeyKind = LocalInfo::ValueKind::Unknown;
-  LocalInfo::ValueKind mapValueKind = LocalInfo::ValueKind::Unknown;
+  LocalInfo::ValueKind keyValueKeyKind = LocalInfo::ValueKind::Unknown;
+  LocalInfo::ValueKind keyValueValueKind = LocalInfo::ValueKind::Unknown;
   bool isWrappedMapTarget = false;
   std::string structTypeName;
 };

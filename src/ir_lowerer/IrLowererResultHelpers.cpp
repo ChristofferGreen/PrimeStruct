@@ -999,8 +999,8 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
           targetExpr, *callee, localsIn, {}, targetInfoOut);
     }
     targetInfoOut.isMapTarget = true;
-    targetInfoOut.mapKeyKind = valueKindFromTypeName(collectionArgs[0]);
-    targetInfoOut.mapValueKind = valueKindFromTypeName(collectionArgs[1]);
+    targetInfoOut.keyValueKeyKind = valueKindFromTypeName(collectionArgs[0]);
+    targetInfoOut.keyValueValueKind = valueKindFromTypeName(collectionArgs[1]);
     return true;
   };
   if (expr.kind == Expr::Kind::Call && expr.isMethodCall && !expr.args.empty() &&
@@ -1370,7 +1370,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
       return true;
     };
     const auto methodTargetInfo = resolveMapAccessTargetInfo(expr.args.front(), localsIn, inferCallMapTargetInfo);
-    if (methodTargetInfo.isMapTarget && assignTryAtMapResultInfo(methodTargetInfo.mapValueKind)) {
+    if (methodTargetInfo.isMapTarget && assignTryAtMapResultInfo(methodTargetInfo.keyValueValueKind)) {
       return true;
     }
     if (expr.args.front().kind == Expr::Kind::Call) {
@@ -1404,10 +1404,10 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
   }
   if (expr.kind == Expr::Kind::Call && !expr.args.empty() && isMapTryAtCallName(expr)) {
     const auto targetInfo = resolveMapAccessTargetInfo(expr.args.front(), localsIn, inferCallMapTargetInfo);
-    if (targetInfo.isMapTarget && targetInfo.mapValueKind != LocalInfo::ValueKind::Unknown) {
+    if (targetInfo.isMapTarget && targetInfo.keyValueValueKind != LocalInfo::ValueKind::Unknown) {
       out.isResult = true;
       out.hasValue = true;
-      out.valueKind = targetInfo.mapValueKind;
+      out.valueKind = targetInfo.keyValueValueKind;
       out.errorType = "ContainerError";
       return true;
     }

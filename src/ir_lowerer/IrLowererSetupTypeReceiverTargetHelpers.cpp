@@ -239,12 +239,12 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
     return true;
   }
   if (localInfo.kind == LocalInfo::Kind::Reference &&
-      (localInfo.referenceToArray || localInfo.referenceToVector || localInfo.referenceToMap ||
+      (localInfo.referenceToArray || localInfo.referenceToVector || localInfo.referenceToKeyValueCollection ||
        localInfo.referenceToBuffer)) {
     if (!localInfo.structTypeName.empty()) {
       resolvedTypePathOut = localInfo.structTypeName;
     } else {
-      typeNameOut = localInfo.referenceToMap ? "map"
+      typeNameOut = localInfo.referenceToKeyValueCollection ? "map"
                                              : (localInfo.referenceToVector ? (localInfo.isSoaVector ? "soa" "_vector"
                                                                                                      : "vector")
                                                                             : (localInfo.referenceToBuffer ? "Buffer"
@@ -260,7 +260,7 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
     typeNameOut = localInfo.isSoaVector ? "soa" "_vector" : "vector";
     return true;
   }
-  if (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToMap) {
+  if (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToKeyValueCollection) {
     typeNameOut = "map";
     return true;
   }
@@ -379,9 +379,9 @@ bool inferBuiltinAccessReceiverResultKind(const Expr &receiverCallExpr,
       return assignKind(receiverInfo.valueKind);
     }
     if (receiverInfo.kind == LocalInfo::Kind::KeyValueCollection ||
-        (receiverInfo.kind == LocalInfo::Kind::Reference && receiverInfo.referenceToMap) ||
-        (receiverInfo.kind == LocalInfo::Kind::Pointer && receiverInfo.pointerToMap)) {
-      return assignKind(receiverInfo.mapValueKind);
+        (receiverInfo.kind == LocalInfo::Kind::Reference && receiverInfo.referenceToKeyValueCollection) ||
+        (receiverInfo.kind == LocalInfo::Kind::Pointer && receiverInfo.pointerToKeyValueCollection)) {
+      return assignKind(receiverInfo.keyValueValueKind);
     }
     if (receiverInfo.kind == LocalInfo::Kind::Value && receiverInfo.valueKind == LocalInfo::ValueKind::String) {
       if (inferredReceiverKind != LocalInfo::ValueKind::Unknown) {
@@ -555,8 +555,8 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
         const bool isPointerArray = receiverKind == LocalInfo::Kind::Pointer && localInfo.pointerToArray;
         const bool isReferenceVector = receiverKind == LocalInfo::Kind::Reference && localInfo.referenceToVector;
         const bool isPointerVector = receiverKind == LocalInfo::Kind::Pointer && localInfo.pointerToVector;
-        const bool isReferenceMap = receiverKind == LocalInfo::Kind::Reference && localInfo.referenceToMap;
-        const bool isPointerMap = receiverKind == LocalInfo::Kind::Pointer && localInfo.pointerToMap;
+        const bool isReferenceMap = receiverKind == LocalInfo::Kind::Reference && localInfo.referenceToKeyValueCollection;
+        const bool isPointerMap = receiverKind == LocalInfo::Kind::Pointer && localInfo.pointerToKeyValueCollection;
         const bool isReferenceBuffer = receiverKind == LocalInfo::Kind::Reference && localInfo.referenceToBuffer;
         const bool isPointerBuffer = receiverKind == LocalInfo::Kind::Pointer && localInfo.pointerToBuffer;
         if (localInfo.isFileError &&
@@ -653,12 +653,12 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
             return true;
           }
           if (localIt->second.argsPackElementKind == LocalInfo::Kind::Reference &&
-              localIt->second.referenceToMap) {
+              localIt->second.referenceToKeyValueCollection) {
             typeNameOut = "map";
             return true;
           }
           if (localIt->second.argsPackElementKind == LocalInfo::Kind::Pointer &&
-              localIt->second.pointerToMap) {
+              localIt->second.pointerToKeyValueCollection) {
             typeNameOut = "map";
             return true;
           }

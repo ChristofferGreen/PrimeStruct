@@ -52,7 +52,7 @@ MapAccessLookupEmitResult tryEmitMapAccessLookup(
   }
   if (!emitMapLookupAccess(
           accessName,
-          mapTargetInfo.mapKeyKind,
+          mapTargetInfo.keyValueKeyKind,
           mapTargetInfo.structTypeName,
           targetExpr,
           lookupKeyExpr,
@@ -126,7 +126,7 @@ MapAccessLookupEmitResult tryEmitMapContainsLookup(
     return MapAccessLookupEmitResult::Error;
   }
   if (!emitMapLookupContains(
-          mapTargetInfo.mapKeyKind,
+          mapTargetInfo.keyValueKeyKind,
           mapTargetInfo.structTypeName,
           targetExpr,
           lookupKeyExpr,

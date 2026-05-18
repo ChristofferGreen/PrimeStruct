@@ -611,8 +611,8 @@ TEST_CASE("ir lowerer statement binding helper keeps canonical map constructor v
 
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
-  CHECK(info.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
-  CHECK(info.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(info.keyValueKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(info.keyValueValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
 TEST_CASE("ir lowerer statement binding helper keeps scoped Buffer ctor as Buffer metadata") {
@@ -657,8 +657,8 @@ TEST_CASE("ir lowerer statement binding helper inherits map metadata from named 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo sourceInfo;
   sourceInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
-  sourceInfo.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Bool;
-  sourceInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Float64;
+  sourceInfo.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Bool;
+  sourceInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Float64;
   locals.emplace("srcMap", sourceInfo);
 
   const primec::ir_lowerer::StatementBindingTypeInfo info = primec::ir_lowerer::inferStatementBindingTypeInfo(
@@ -675,8 +675,8 @@ TEST_CASE("ir lowerer statement binding helper inherits map metadata from named 
       });
 
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection);
-  CHECK(info.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
-  CHECK(info.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
+  CHECK(info.keyValueKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+  CHECK(info.keyValueValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
 }
 

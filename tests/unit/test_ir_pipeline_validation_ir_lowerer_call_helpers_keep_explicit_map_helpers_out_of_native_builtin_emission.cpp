@@ -33,8 +33,8 @@ TEST_CASE("ir lowerer call helpers infer forwarded map access targets") {
   CHECK(primec::ir_lowerer::inferForwardedMapAccessTargetInfo(
       wrapCall, wrapDef, {}, {}, info));
   CHECK(info.isMapTarget);
-  CHECK(info.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::String);
-  CHECK(info.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(info.keyValueKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::String);
+  CHECK(info.keyValueValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(info.structTypeName.rfind("/std/collections/map/MapValue__", 0) == 0);
 }
 
@@ -48,8 +48,8 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
   LocalInfo mapInfo;
   mapInfo.kind = LocalInfo::Kind::KeyValueCollection;
   mapInfo.index = 7;
-  mapInfo.mapKeyKind = LocalInfo::ValueKind::Int32;
-  mapInfo.mapValueKind = LocalInfo::ValueKind::Int64;
+  mapInfo.keyValueKeyKind = LocalInfo::ValueKind::Int32;
+  mapInfo.keyValueValueKind = LocalInfo::ValueKind::Int64;
   locals.emplace("items", mapInfo);
 
   LocalInfo keyInfo;
@@ -100,8 +100,8 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
           return false;
         }
         out.isMapTarget = true;
-        out.mapKeyKind = LocalInfo::ValueKind::Int32;
-        out.mapValueKind = LocalInfo::ValueKind::Int64;
+        out.keyValueKeyKind = LocalInfo::ValueKind::Int32;
+        out.keyValueValueKind = LocalInfo::ValueKind::Int64;
         return true;
       };
   auto resolveArrayVectorAccessTargetInfo =
@@ -364,26 +364,26 @@ TEST_CASE("ir lowerer call helpers lower explicit map access for args-pack recei
   valuesInfo.index = 5;
   valuesInfo.isArgsPack = true;
   valuesInfo.argsPackElementKind = LocalInfo::Kind::KeyValueCollection;
-  valuesInfo.mapKeyKind = LocalInfo::ValueKind::Int32;
-  valuesInfo.mapValueKind = LocalInfo::ValueKind::Int64;
+  valuesInfo.keyValueKeyKind = LocalInfo::ValueKind::Int32;
+  valuesInfo.keyValueValueKind = LocalInfo::ValueKind::Int64;
   locals.emplace("values", valuesInfo);
 
   LocalInfo pointerValuesInfo;
   pointerValuesInfo.index = 7;
   pointerValuesInfo.isArgsPack = true;
   pointerValuesInfo.argsPackElementKind = LocalInfo::Kind::Pointer;
-  pointerValuesInfo.pointerToMap = true;
-  pointerValuesInfo.mapKeyKind = LocalInfo::ValueKind::Int32;
-  pointerValuesInfo.mapValueKind = LocalInfo::ValueKind::Int64;
+  pointerValuesInfo.pointerToKeyValueCollection = true;
+  pointerValuesInfo.keyValueKeyKind = LocalInfo::ValueKind::Int32;
+  pointerValuesInfo.keyValueValueKind = LocalInfo::ValueKind::Int64;
   locals.emplace("pointerValues", pointerValuesInfo);
 
   LocalInfo referenceValuesInfo;
   referenceValuesInfo.index = 8;
   referenceValuesInfo.isArgsPack = true;
   referenceValuesInfo.argsPackElementKind = LocalInfo::Kind::Reference;
-  referenceValuesInfo.referenceToMap = true;
-  referenceValuesInfo.mapKeyKind = LocalInfo::ValueKind::Int32;
-  referenceValuesInfo.mapValueKind = LocalInfo::ValueKind::Int64;
+  referenceValuesInfo.referenceToKeyValueCollection = true;
+  referenceValuesInfo.keyValueKeyKind = LocalInfo::ValueKind::Int32;
+  referenceValuesInfo.keyValueValueKind = LocalInfo::ValueKind::Int64;
   locals.emplace("referenceValues", referenceValuesInfo);
 
   LocalInfo indexInfo;

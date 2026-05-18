@@ -6,8 +6,8 @@
 struct UninitializedTypeInfo {
   LocalInfo::Kind kind = LocalInfo::Kind::Value;
   LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
-  LocalInfo::ValueKind mapKeyKind = LocalInfo::ValueKind::Unknown;
-  LocalInfo::ValueKind mapValueKind = LocalInfo::ValueKind::Unknown;
+  LocalInfo::ValueKind keyValueKeyKind = LocalInfo::ValueKind::Unknown;
+  LocalInfo::ValueKind keyValueValueKind = LocalInfo::ValueKind::Unknown;
   std::string structPath;
 };
 

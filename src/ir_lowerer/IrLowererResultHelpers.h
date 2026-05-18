@@ -256,7 +256,7 @@ bool isSupportedPackedResultCollectionKind(LocalInfo::Kind kind);
 bool resolveSupportedResultCollectionType(const std::string &typeText,
                                           LocalInfo::Kind &collectionKindOut,
                                           LocalInfo::ValueKind &valueKindOut,
-                                          LocalInfo::ValueKind *mapKeyKindOut = nullptr);
+                                          LocalInfo::ValueKind *keyValueKeyKindOut = nullptr);
 bool isSupportedPackedResultValueKind(LocalInfo::ValueKind kind);
 bool isSupportedPackedResultValueInfo(const ResultExprInfo &info,
                                      const std::function<bool(const std::string &, StructSlotLayoutInfo &)>

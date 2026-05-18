@@ -205,9 +205,9 @@ bool resolveValidatedAccessIndexKind(
     std::string &error,
     const SemanticProgram *semanticProgram,
     const SemanticProductIndex *semanticIndex);
-IrOpcode mapKeyCompareOpcode(LocalInfo::ValueKind mapKeyKind);
+IrOpcode mapKeyCompareOpcode(LocalInfo::ValueKind keyValueKeyKind);
 MapLookupStringKeyResult tryResolveMapLookupStringKey(
-    LocalInfo::ValueKind mapKeyKind,
+    LocalInfo::ValueKind keyValueKeyKind,
     const Expr &lookupKeyExpr,
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
@@ -215,7 +215,7 @@ MapLookupStringKeyResult tryResolveMapLookupStringKey(
     int32_t &stringIndexOut,
     std::string &error);
 MapLookupKeyLocalEmitResult tryEmitMapLookupStringKeyLocal(
-    LocalInfo::ValueKind mapKeyKind,
+    LocalInfo::ValueKind keyValueKeyKind,
     const Expr &lookupKeyExpr,
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
@@ -225,7 +225,7 @@ MapLookupKeyLocalEmitResult tryEmitMapLookupStringKeyLocal(
     int32_t keyLocal,
     std::string &error);
 bool emitMapLookupNonStringKeyLocal(
-    LocalInfo::ValueKind mapKeyKind,
+    LocalInfo::ValueKind keyValueKeyKind,
     const Expr &lookupKeyExpr,
     const LocalMap &localsIn,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
@@ -234,7 +234,7 @@ bool emitMapLookupNonStringKeyLocal(
     int32_t keyLocal,
     std::string &error);
 bool emitMapLookupKeyLocal(
-    LocalInfo::ValueKind mapKeyKind,
+    LocalInfo::ValueKind keyValueKeyKind,
     const Expr &lookupKeyExpr,
     const LocalMap &localsIn,
     const std::function<int32_t()> &allocTempLocal,
@@ -255,7 +255,7 @@ bool emitMapLookupTargetPointerLocal(
 MapLookupLoopLocals emitMapLookupLoopSearchScaffold(
     int32_t ptrLocal,
     int32_t keyLocal,
-    LocalInfo::ValueKind mapKeyKind,
+    LocalInfo::ValueKind keyValueKeyKind,
     const std::function<int32_t()> &allocTempLocal,
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
@@ -271,7 +271,7 @@ void emitMapLookupAccessEpilogue(
     const std::function<void(size_t, uint64_t)> &patchInstructionImm);
 bool emitMapLookupAccess(
     const std::string &accessName,
-    LocalInfo::ValueKind mapKeyKind,
+    LocalInfo::ValueKind keyValueKeyKind,
     const std::string &mapStructTypeName,
     const Expr &targetExpr,
     const Expr &lookupKeyExpr,
@@ -286,7 +286,7 @@ bool emitMapLookupAccess(
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error);
 bool emitMapLookupContains(
-    LocalInfo::ValueKind mapKeyKind,
+    LocalInfo::ValueKind keyValueKeyKind,
     const std::string &mapStructTypeName,
     const Expr &targetExpr,
     const Expr &lookupKeyExpr,
@@ -305,7 +305,7 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrGrow(
     int32_t ptrLocal,
     int32_t keyLocal,
     int32_t valueLocal,
-    LocalInfo::ValueKind mapKeyKind,
+    LocalInfo::ValueKind keyValueKeyKind,
     const std::function<int32_t()> &allocTempLocal,
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
@@ -347,7 +347,7 @@ MapLookupLoopMatchAnchors emitMapLookupLoopMatchCheck(
     int32_t ptrLocal,
     int32_t indexLocal,
     int32_t keyLocal,
-    LocalInfo::ValueKind mapKeyKind,
+    LocalInfo::ValueKind keyValueKeyKind,
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
 void emitMapLookupLoopAdvanceAndPatch(
@@ -370,7 +370,7 @@ void emitMapLookupValueLoad(
     int32_t ptrLocal,
     int32_t indexLocal,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
-bool validateMapLookupKeyKind(LocalInfo::ValueKind mapKeyKind,
+bool validateMapLookupKeyKind(LocalInfo::ValueKind keyValueKeyKind,
                               LocalInfo::ValueKind lookupKeyKind,
                               std::string &error);
 CountMethodFallbackResult tryEmitNonMethodCountFallback(

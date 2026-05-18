@@ -112,8 +112,8 @@ bool resolveUninitializedTypeInfo(const std::string &typeText,
       }
       out.kind = LocalInfo::Kind::KeyValueCollection;
       out.valueKind = valueKind;
-      out.mapKeyKind = keyKind;
-      out.mapValueKind = valueKind;
+      out.keyValueKeyKind = keyKind;
+      out.keyValueValueKind = valueKind;
       return true;
     }
     if (base == "Pointer" || base == "Reference" || base == "Buffer") {
@@ -152,8 +152,8 @@ bool resolveUninitializedTypeInfoFromLocalStorage(const LocalInfo &local, Uninit
   }
   out.kind = local.kind;
   out.valueKind = local.valueKind;
-  out.mapKeyKind = local.mapKeyKind;
-  out.mapValueKind = local.mapValueKind;
+  out.keyValueKeyKind = local.keyValueKeyKind;
+  out.keyValueValueKind = local.keyValueValueKind;
   out.structPath = local.structTypeName;
   return true;
 }
@@ -170,14 +170,14 @@ bool resolveUninitializedTypeInfoFromPointerTargetLocal(const LocalInfo &local, 
     out.kind = LocalInfo::Kind::Array;
   } else if (local.referenceToVector || local.pointerToVector) {
     out.kind = LocalInfo::Kind::Vector;
-  } else if (local.referenceToMap || local.pointerToMap) {
+  } else if (local.referenceToKeyValueCollection || local.pointerToKeyValueCollection) {
     out.kind = LocalInfo::Kind::KeyValueCollection;
   } else if (local.referenceToBuffer || local.pointerToBuffer) {
     out.kind = LocalInfo::Kind::Buffer;
   }
   out.valueKind = local.valueKind;
-  out.mapKeyKind = local.mapKeyKind;
-  out.mapValueKind = local.mapValueKind;
+  out.keyValueKeyKind = local.keyValueKeyKind;
+  out.keyValueValueKind = local.keyValueValueKind;
   out.structPath = local.structTypeName;
   return true;
 }
@@ -195,14 +195,14 @@ bool resolveUninitializedTypeInfoFromArgsPackPointerTargetLocal(const LocalInfo 
     out.kind = LocalInfo::Kind::Array;
   } else if (local.referenceToVector || local.pointerToVector) {
     out.kind = LocalInfo::Kind::Vector;
-  } else if (local.referenceToMap || local.pointerToMap) {
+  } else if (local.referenceToKeyValueCollection || local.pointerToKeyValueCollection) {
     out.kind = LocalInfo::Kind::KeyValueCollection;
   } else if (local.referenceToBuffer || local.pointerToBuffer) {
     out.kind = LocalInfo::Kind::Buffer;
   }
   out.valueKind = local.valueKind;
-  out.mapKeyKind = local.mapKeyKind;
-  out.mapValueKind = local.mapValueKind;
+  out.keyValueKeyKind = local.keyValueKeyKind;
+  out.keyValueValueKind = local.keyValueValueKind;
   out.structPath = local.structTypeName;
   return true;
 }

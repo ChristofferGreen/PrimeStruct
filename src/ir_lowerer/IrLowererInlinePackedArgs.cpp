@@ -160,12 +160,12 @@ bool emitInlinePackedCallParameter(
       ((paramInfo.argsPackElementKind == LocalInfo::Kind::Reference &&
         !paramInfo.referenceToArray &&
         !paramInfo.referenceToVector &&
-        !paramInfo.referenceToMap &&
+        !paramInfo.referenceToKeyValueCollection &&
         !paramInfo.referenceToBuffer) ||
        (paramInfo.argsPackElementKind == LocalInfo::Kind::Pointer &&
         !paramInfo.pointerToArray &&
         !paramInfo.pointerToVector &&
-        !paramInfo.pointerToMap &&
+        !paramInfo.pointerToKeyValueCollection &&
         !paramInfo.pointerToBuffer)) &&
       paramInfo.valueKind == LocalInfo::ValueKind::String;
   if (isUnsupportedStringPointerReferenceArgsPack) {
@@ -207,11 +207,11 @@ bool emitInlinePackedCallParameter(
     }
     if (paramInfo.argsPackElementKind == LocalInfo::Kind::Reference) {
       return !(paramInfo.referenceToArray || paramInfo.referenceToVector ||
-               paramInfo.referenceToMap || paramInfo.referenceToBuffer);
+               paramInfo.referenceToKeyValueCollection || paramInfo.referenceToBuffer);
     }
     if (paramInfo.argsPackElementKind == LocalInfo::Kind::Pointer) {
       return !(paramInfo.pointerToArray || paramInfo.pointerToVector ||
-               paramInfo.pointerToMap || paramInfo.pointerToBuffer);
+               paramInfo.pointerToKeyValueCollection || paramInfo.pointerToBuffer);
     }
     return true;
   };
@@ -233,7 +233,7 @@ bool emitInlinePackedCallParameter(
     const bool expectsVector =
         expectedKind == LocalInfo::Kind::Reference ? paramInfo.referenceToVector : paramInfo.pointerToVector;
     const bool expectsMap =
-        expectedKind == LocalInfo::Kind::Reference ? paramInfo.referenceToMap : paramInfo.pointerToMap;
+        expectedKind == LocalInfo::Kind::Reference ? paramInfo.referenceToKeyValueCollection : paramInfo.pointerToKeyValueCollection;
     const bool expectsBuffer =
         expectedKind == LocalInfo::Kind::Reference ? paramInfo.referenceToBuffer : paramInfo.pointerToBuffer;
     const bool expectsAggregate = expectsArray || expectsVector || expectsMap || expectsBuffer;
@@ -254,9 +254,9 @@ bool emitInlinePackedCallParameter(
                targetInfo.isSoaVector == paramInfo.isSoaVector;
       }
       if (expectsMap) {
-        return targetInfo.referenceToMap &&
-               targetInfo.mapKeyKind == paramInfo.mapKeyKind &&
-               targetInfo.mapValueKind == paramInfo.mapValueKind;
+        return targetInfo.referenceToKeyValueCollection &&
+               targetInfo.keyValueKeyKind == paramInfo.keyValueKeyKind &&
+               targetInfo.keyValueValueKind == paramInfo.keyValueValueKind;
       }
       if (expectsBuffer) {
         return targetInfo.referenceToBuffer && targetInfo.valueKind == paramInfo.valueKind;
@@ -266,7 +266,7 @@ bool emitInlinePackedCallParameter(
       }
       return !targetInfo.referenceToArray &&
              !targetInfo.referenceToVector &&
-             !targetInfo.referenceToMap &&
+             !targetInfo.referenceToKeyValueCollection &&
              !targetInfo.referenceToBuffer &&
              targetInfo.referenceToBuffer == paramInfo.referenceToBuffer &&
              targetInfo.targetsUninitializedStorage == paramInfo.targetsUninitializedStorage &&
@@ -291,8 +291,8 @@ bool emitInlinePackedCallParameter(
     if (expectsMap) {
       return targetInfo.kind == LocalInfo::Kind::KeyValueCollection &&
              matchesDirectStorageFlag(targetInfo) &&
-             targetInfo.mapKeyKind == paramInfo.mapKeyKind &&
-             targetInfo.mapValueKind == paramInfo.mapValueKind;
+             targetInfo.keyValueKeyKind == paramInfo.keyValueKeyKind &&
+             targetInfo.keyValueValueKind == paramInfo.keyValueValueKind;
     }
     if (expectsBuffer) {
       return targetInfo.kind == LocalInfo::Kind::Buffer &&
@@ -331,14 +331,14 @@ bool emitInlinePackedCallParameter(
         paramInfo.structTypeName.empty() &&
         argExpr.kind == Expr::Kind::Call &&
         rewritePublishedMapConstructorExpr(
-            argExpr, paramInfo.mapKeyKind, paramInfo.mapValueKind, resolveDefinitionCall, rewrittenMapArgExpr)) {
+            argExpr, paramInfo.keyValueKeyKind, paramInfo.keyValueValueKind, resolveDefinitionCall, rewrittenMapArgExpr)) {
       emittedArgExpr = &rewrittenMapArgExpr;
     }
     if (paramInfo.argsPackElementKind == LocalInfo::Kind::Array ||
         paramInfo.argsPackElementKind == LocalInfo::Kind::Vector ||
         paramInfo.argsPackElementKind == LocalInfo::Kind::Buffer ||
         (paramInfo.argsPackElementKind == LocalInfo::Kind::Reference &&
-         (paramInfo.referenceToArray || paramInfo.referenceToVector || paramInfo.referenceToMap)) ||
+         (paramInfo.referenceToArray || paramInfo.referenceToVector || paramInfo.referenceToKeyValueCollection)) ||
         paramInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection) {
       if (!emitExpr(*emittedArgExpr, callerLocals)) {
         return false;
@@ -347,11 +347,11 @@ bool emitInlinePackedCallParameter(
       return true;
     }
     if (paramInfo.argsPackElementKind == LocalInfo::Kind::Reference &&
-        !paramInfo.referenceToArray && !paramInfo.referenceToVector && !paramInfo.referenceToMap) {
+        !paramInfo.referenceToArray && !paramInfo.referenceToVector && !paramInfo.referenceToKeyValueCollection) {
       if (argExpr.kind == Expr::Kind::Name) {
         auto it = callerLocals.find(argExpr.name);
         if (it == callerLocals.end() || it->second.kind != LocalInfo::Kind::Reference ||
-            it->second.referenceToArray || it->second.referenceToVector || it->second.referenceToMap ||
+            it->second.referenceToArray || it->second.referenceToVector || it->second.referenceToKeyValueCollection ||
             it->second.referenceToBuffer != paramInfo.referenceToBuffer ||
             it->second.targetsUninitializedStorage != paramInfo.targetsUninitializedStorage ||
             it->second.isFileHandle != paramInfo.isFileHandle ||
@@ -394,14 +394,14 @@ bool emitInlinePackedCallParameter(
             it->second.pointerToBuffer != paramInfo.pointerToBuffer ||
             it->second.isSoaVector != paramInfo.isSoaVector ||
             it->second.pointerToVector != paramInfo.pointerToVector ||
-            it->second.pointerToMap != paramInfo.pointerToMap ||
+            it->second.pointerToKeyValueCollection != paramInfo.pointerToKeyValueCollection ||
             it->second.targetsUninitializedStorage != paramInfo.targetsUninitializedStorage ||
             it->second.isFileHandle != paramInfo.isFileHandle ||
             it->second.isFileError != paramInfo.isFileError ||
             !matchesResultMetadata(it->second) ||
-            (paramInfo.pointerToMap &&
-             (it->second.mapKeyKind != paramInfo.mapKeyKind ||
-              it->second.mapValueKind != paramInfo.mapValueKind)) ||
+            (paramInfo.pointerToKeyValueCollection &&
+             (it->second.keyValueKeyKind != paramInfo.keyValueKeyKind ||
+              it->second.keyValueValueKind != paramInfo.keyValueValueKind)) ||
             !matchesWrappedScalarOrStructValueKind(it->second) ||
             (requiresWrappedStructTypeMatch() &&
              it->second.structTypeName != paramInfo.structTypeName)) {
@@ -460,16 +460,16 @@ bool emitInlinePackedCallParameter(
         paramInfo.argsPackElementKind == LocalInfo::Kind::Vector ||
         paramInfo.argsPackElementKind == LocalInfo::Kind::Buffer ||
         (paramInfo.argsPackElementKind == LocalInfo::Kind::Reference &&
-         (paramInfo.referenceToArray || paramInfo.referenceToVector || paramInfo.referenceToMap)) ||
+         (paramInfo.referenceToArray || paramInfo.referenceToVector || paramInfo.referenceToKeyValueCollection)) ||
         paramInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection) {
       return true;
     }
     if (paramInfo.argsPackElementKind == LocalInfo::Kind::Reference &&
-        !paramInfo.referenceToArray && !paramInfo.referenceToVector && !paramInfo.referenceToMap) {
+        !paramInfo.referenceToArray && !paramInfo.referenceToVector && !paramInfo.referenceToKeyValueCollection) {
       if (argExpr.kind == Expr::Kind::Name) {
         auto it = callerLocals.find(argExpr.name);
         if (it == callerLocals.end() || it->second.kind != LocalInfo::Kind::Reference ||
-            it->second.referenceToArray || it->second.referenceToVector || it->second.referenceToMap ||
+            it->second.referenceToArray || it->second.referenceToVector || it->second.referenceToKeyValueCollection ||
             it->second.referenceToBuffer != paramInfo.referenceToBuffer ||
             it->second.targetsUninitializedStorage != paramInfo.targetsUninitializedStorage ||
             it->second.isFileHandle != paramInfo.isFileHandle ||
@@ -502,14 +502,14 @@ bool emitInlinePackedCallParameter(
             it->second.pointerToBuffer != paramInfo.pointerToBuffer ||
             it->second.isSoaVector != paramInfo.isSoaVector ||
             it->second.pointerToVector != paramInfo.pointerToVector ||
-            it->second.pointerToMap != paramInfo.pointerToMap ||
+            it->second.pointerToKeyValueCollection != paramInfo.pointerToKeyValueCollection ||
             it->second.targetsUninitializedStorage != paramInfo.targetsUninitializedStorage ||
             it->second.isFileHandle != paramInfo.isFileHandle ||
             it->second.isFileError != paramInfo.isFileError ||
             !matchesResultMetadata(it->second) ||
-            (paramInfo.pointerToMap &&
-             (it->second.mapKeyKind != paramInfo.mapKeyKind ||
-              it->second.mapValueKind != paramInfo.mapValueKind)) ||
+            (paramInfo.pointerToKeyValueCollection &&
+             (it->second.keyValueKeyKind != paramInfo.keyValueKeyKind ||
+              it->second.keyValueValueKind != paramInfo.keyValueValueKind)) ||
             !matchesWrappedScalarOrStructValueKind(it->second) ||
             (requiresWrappedStructTypeMatch() &&
              it->second.structTypeName != paramInfo.structTypeName)) {
@@ -612,16 +612,16 @@ bool emitInlinePackedCallParameter(
         callerIt->second.pointerToVector != paramInfo.pointerToVector ||
         callerIt->second.referenceToBuffer != paramInfo.referenceToBuffer ||
         callerIt->second.pointerToBuffer != paramInfo.pointerToBuffer ||
-        callerIt->second.referenceToMap != paramInfo.referenceToMap ||
-        callerIt->second.pointerToMap != paramInfo.pointerToMap) {
+        callerIt->second.referenceToKeyValueCollection != paramInfo.referenceToKeyValueCollection ||
+        callerIt->second.pointerToKeyValueCollection != paramInfo.pointerToKeyValueCollection) {
       error = "variadic parameter type mismatch";
       return false;
     }
     if ((paramInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection ||
-         (paramInfo.argsPackElementKind == LocalInfo::Kind::Reference && paramInfo.referenceToMap) ||
-         (paramInfo.argsPackElementKind == LocalInfo::Kind::Pointer && paramInfo.pointerToMap)) &&
-        (callerIt->second.mapKeyKind != paramInfo.mapKeyKind ||
-         callerIt->second.mapValueKind != paramInfo.mapValueKind)) {
+         (paramInfo.argsPackElementKind == LocalInfo::Kind::Reference && paramInfo.referenceToKeyValueCollection) ||
+         (paramInfo.argsPackElementKind == LocalInfo::Kind::Pointer && paramInfo.pointerToKeyValueCollection)) &&
+        (callerIt->second.keyValueKeyKind != paramInfo.keyValueKeyKind ||
+         callerIt->second.keyValueValueKind != paramInfo.keyValueValueKind)) {
       error = "variadic parameter type mismatch";
       return false;
     }
@@ -638,16 +638,16 @@ bool emitInlinePackedCallParameter(
       paramInfo.structTypeName = callerIt->second.structTypeName;
     }
     paramInfo.structSlotCount = callerIt->second.structSlotCount;
-    paramInfo.mapKeyKind = callerIt->second.mapKeyKind;
-    paramInfo.mapValueKind = callerIt->second.mapValueKind;
+    paramInfo.keyValueKeyKind = callerIt->second.keyValueKeyKind;
+    paramInfo.keyValueValueKind = callerIt->second.keyValueValueKind;
     paramInfo.referenceToArray = callerIt->second.referenceToArray;
     paramInfo.pointerToArray = callerIt->second.pointerToArray;
     paramInfo.referenceToVector = callerIt->second.referenceToVector;
     paramInfo.pointerToVector = callerIt->second.pointerToVector;
     paramInfo.referenceToBuffer = callerIt->second.referenceToBuffer;
     paramInfo.pointerToBuffer = callerIt->second.pointerToBuffer;
-    paramInfo.referenceToMap = callerIt->second.referenceToMap;
-    paramInfo.pointerToMap = callerIt->second.pointerToMap;
+    paramInfo.referenceToKeyValueCollection = callerIt->second.referenceToKeyValueCollection;
+    paramInfo.pointerToKeyValueCollection = callerIt->second.pointerToKeyValueCollection;
     paramInfo.isSoaVector = callerIt->second.isSoaVector;
     paramInfo.usesBuiltinCollectionLayout = callerIt->second.usesBuiltinCollectionLayout;
     paramInfo.isFileHandle = callerIt->second.isFileHandle;

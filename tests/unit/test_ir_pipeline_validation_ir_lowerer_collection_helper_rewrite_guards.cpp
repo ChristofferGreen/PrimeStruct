@@ -933,10 +933,10 @@ TEST_CASE("ir lowerer inline map insert helper prefers semantic receiver facts")
   CHECK(source.find("tryApplySemanticMapTypeText(queryFact->queryTypeTextId,") !=
         std::string::npos);
   CHECK(source.find("tryPopulateMapKindsFromSemanticReceiver(*originalValuesArg, valuesIt->second)") <
-        source.find("callerValuesIt->second.mapKeyKind != LocalInfo::ValueKind::Unknown"));
-  CHECK(source.find("valuesIt->second.mapKeyKind == LocalInfo::ValueKind::Unknown &&") <
-        source.find("callerValuesIt->second.mapKeyKind != LocalInfo::ValueKind::Unknown"));
-  CHECK(source.find("callerValuesIt->second.mapKeyKind != LocalInfo::ValueKind::Unknown") !=
+        source.find("callerValuesIt->second.keyValueKeyKind != LocalInfo::ValueKind::Unknown"));
+  CHECK(source.find("valuesIt->second.keyValueKeyKind == LocalInfo::ValueKind::Unknown &&") <
+        source.find("callerValuesIt->second.keyValueKeyKind != LocalInfo::ValueKind::Unknown"));
+  CHECK(source.find("callerValuesIt->second.keyValueKeyKind != LocalInfo::ValueKind::Unknown") !=
         std::string::npos);
   CHECK(source.find("callee.parameters.size() >= 3") !=
         std::string::npos);
@@ -948,11 +948,11 @@ TEST_CASE("ir lowerer inline map insert helper prefers semantic receiver facts")
         source.find("extractParameterTypeName(callee.parameters[1])"));
   CHECK(source.find("info.kind == LocalInfo::Kind::Value &&") !=
         std::string::npos);
-  CHECK(source.find("info.mapKeyKind != LocalInfo::ValueKind::Unknown &&") !=
+  CHECK(source.find("info.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&") !=
         std::string::npos);
-  CHECK(source.find("info.mapValueKind != LocalInfo::ValueKind::Unknown") !=
+  CHECK(source.find("info.keyValueValueKind != LocalInfo::ValueKind::Unknown") !=
         std::string::npos);
-  CHECK(source.find("if (valuesIt->second.referenceToMap || valuesIt->second.pointerToMap) {") !=
+  CHECK(source.find("if (valuesIt->second.referenceToKeyValueCollection || valuesIt->second.pointerToKeyValueCollection) {") !=
         std::string::npos);
   CHECK(source.find("ptrLocal = valuesIt->second.index;") !=
         std::string::npos);

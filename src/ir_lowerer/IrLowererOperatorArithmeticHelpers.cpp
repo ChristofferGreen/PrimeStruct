@@ -294,7 +294,7 @@ OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
     if (info.kind != LocalInfo::Kind::Reference) {
       return false;
     }
-    if (info.referenceToArray || info.referenceToVector || info.referenceToBuffer || info.referenceToMap ||
+    if (info.referenceToArray || info.referenceToVector || info.referenceToBuffer || info.referenceToKeyValueCollection ||
         info.isFileHandle || info.isResult || info.isUninitializedStorage || info.targetsUninitializedStorage ||
         info.isSoaVector || !info.structTypeName.empty()) {
       return false;

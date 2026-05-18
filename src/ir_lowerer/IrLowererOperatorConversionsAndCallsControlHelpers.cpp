@@ -228,8 +228,8 @@ bool emitConversionsAndCallsControlExprTail(
         return false;
       }
       if (left.kind == LocalInfo::Kind::KeyValueCollection) {
-        return left.mapKeyKind == right.mapKeyKind &&
-               left.mapValueKind == right.mapValueKind;
+        return left.keyValueKeyKind == right.keyValueKeyKind &&
+               left.keyValueValueKind == right.keyValueValueKind;
       }
       if (left.kind == LocalInfo::Kind::Value) {
         if (!left.structTypeName.empty() || !right.structTypeName.empty()) {

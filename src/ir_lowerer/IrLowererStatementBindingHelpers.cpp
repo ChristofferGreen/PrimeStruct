@@ -27,8 +27,8 @@ void mergeStatementBindingAuxTypeInfo(const StatementBindingTypeInfo &source,
   dest.pointerToVector = dest.pointerToVector || source.pointerToVector;
   dest.referenceToBuffer = dest.referenceToBuffer || source.referenceToBuffer;
   dest.pointerToBuffer = dest.pointerToBuffer || source.pointerToBuffer;
-  dest.referenceToMap = dest.referenceToMap || source.referenceToMap;
-  dest.pointerToMap = dest.pointerToMap || source.pointerToMap;
+  dest.referenceToKeyValueCollection = dest.referenceToKeyValueCollection || source.referenceToKeyValueCollection;
+  dest.pointerToKeyValueCollection = dest.pointerToKeyValueCollection || source.pointerToKeyValueCollection;
   dest.isSoaVector = dest.isSoaVector || source.isSoaVector;
   dest.usesBuiltinCollectionLayout =
       dest.usesBuiltinCollectionLayout || source.usesBuiltinCollectionLayout;
@@ -422,9 +422,9 @@ bool populateBindingTypeInfoFromTypeText(
       return false;
     }
     infoOut.kind = LocalInfo::Kind::KeyValueCollection;
-    infoOut.mapKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
-    infoOut.mapValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
-    infoOut.valueKind = infoOut.mapValueKind;
+    infoOut.keyValueKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
+    infoOut.keyValueValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
+    infoOut.valueKind = infoOut.keyValueValueKind;
     resolveSpecializedExperimentalMapStructPathFromTypeText(normalizedTypeText, infoOut.structTypeName);
     return true;
   }
@@ -509,13 +509,13 @@ bool populateBindingTypeInfoFromTypeText(
           return false;
         }
         if (infoOut.kind == LocalInfo::Kind::Reference) {
-          infoOut.referenceToMap = true;
+          infoOut.referenceToKeyValueCollection = true;
         } else {
-          infoOut.pointerToMap = true;
+          infoOut.pointerToKeyValueCollection = true;
         }
-        infoOut.mapKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
-        infoOut.mapValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
-        infoOut.valueKind = infoOut.mapValueKind;
+        infoOut.keyValueKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
+        infoOut.keyValueValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
+        infoOut.valueKind = infoOut.keyValueValueKind;
         resolveSpecializedExperimentalMapStructPathFromTypeText(targetType,
                                                                 infoOut.structTypeName);
         return true;
@@ -587,8 +587,8 @@ bool populateBindingTypeInfoFromTypeText(
     LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
     if (resolveSpecializedExperimentalMapTypeKinds(normalizedTypeText, resolveDefinitionCall, keyKind, valueKind)) {
       infoOut.kind = LocalInfo::Kind::KeyValueCollection;
-      infoOut.mapKeyKind = keyKind;
-      infoOut.mapValueKind = valueKind;
+      infoOut.keyValueKeyKind = keyKind;
+      infoOut.keyValueValueKind = valueKind;
       infoOut.valueKind = valueKind;
       infoOut.structTypeName = normalizedTypeText;
       return true;
@@ -643,8 +643,8 @@ bool inferExprBindingTypeInfo(const Expr &expr,
     }
     infoOut.kind = it->second.kind;
     infoOut.valueKind = it->second.valueKind;
-    infoOut.mapKeyKind = it->second.mapKeyKind;
-    infoOut.mapValueKind = it->second.mapValueKind;
+    infoOut.keyValueKeyKind = it->second.keyValueKeyKind;
+    infoOut.keyValueValueKind = it->second.keyValueValueKind;
     infoOut.structTypeName = it->second.structTypeName;
     infoOut.referenceToArray = it->second.referenceToArray;
     infoOut.pointerToArray = it->second.pointerToArray;
@@ -652,8 +652,8 @@ bool inferExprBindingTypeInfo(const Expr &expr,
     infoOut.pointerToVector = it->second.pointerToVector;
     infoOut.referenceToBuffer = it->second.referenceToBuffer;
     infoOut.pointerToBuffer = it->second.pointerToBuffer;
-    infoOut.referenceToMap = it->second.referenceToMap;
-    infoOut.pointerToMap = it->second.pointerToMap;
+    infoOut.referenceToKeyValueCollection = it->second.referenceToKeyValueCollection;
+    infoOut.pointerToKeyValueCollection = it->second.pointerToKeyValueCollection;
     infoOut.isSoaVector = it->second.isSoaVector;
     infoOut.usesBuiltinCollectionLayout = it->second.usesBuiltinCollectionLayout;
     return true;
@@ -699,7 +699,7 @@ bool inferExprBindingTypeInfo(const Expr &expr,
       return false;
     }
     if (thenInfo.kind == LocalInfo::Kind::KeyValueCollection) {
-      if (thenInfo.mapKeyKind != elseInfo.mapKeyKind || thenInfo.mapValueKind != elseInfo.mapValueKind) {
+      if (thenInfo.keyValueKeyKind != elseInfo.keyValueKeyKind || thenInfo.keyValueValueKind != elseInfo.keyValueValueKind) {
         return false;
       }
     } else if (thenInfo.kind == LocalInfo::Kind::Value) {
@@ -744,9 +744,9 @@ bool inferExprBindingTypeInfo(const Expr &expr,
     }
     if (collection == "map" && expr.templateArgs.size() == 2) {
       infoOut.kind = LocalInfo::Kind::KeyValueCollection;
-      infoOut.mapKeyKind = valueKindFromTypeName(trimTemplateTypeText(expr.templateArgs[0]));
-      infoOut.mapValueKind = valueKindFromTypeName(trimTemplateTypeText(expr.templateArgs[1]));
-      infoOut.valueKind = infoOut.mapValueKind;
+      infoOut.keyValueKeyKind = valueKindFromTypeName(trimTemplateTypeText(expr.templateArgs[0]));
+      infoOut.keyValueValueKind = valueKindFromTypeName(trimTemplateTypeText(expr.templateArgs[1]));
+      infoOut.valueKind = infoOut.keyValueValueKind;
       return true;
     }
   }
@@ -892,11 +892,11 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
       if (info.valueKind == LocalInfo::ValueKind::Unknown) {
         info.valueKind = inferredExprInfo.valueKind;
       }
-      if (info.mapKeyKind == LocalInfo::ValueKind::Unknown) {
-        info.mapKeyKind = inferredExprInfo.mapKeyKind;
+      if (info.keyValueKeyKind == LocalInfo::ValueKind::Unknown) {
+        info.keyValueKeyKind = inferredExprInfo.keyValueKeyKind;
       }
-      if (info.mapValueKind == LocalInfo::ValueKind::Unknown) {
-        info.mapValueKind = inferredExprInfo.mapValueKind;
+      if (info.keyValueValueKind == LocalInfo::ValueKind::Unknown) {
+        info.keyValueValueKind = inferredExprInfo.keyValueValueKind;
       }
       if (info.structTypeName.empty()) {
         info.structTypeName = inferredExprInfo.structTypeName;
@@ -912,8 +912,8 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
       for (const auto &transform : stmt.transforms) {
         const std::string normalizedName = normalizeDeclaredCollectionTypeBase(transform.name);
         if (normalizedName == "map" && transform.templateArgs.size() == 2) {
-          info.mapKeyKind = valueKindFromTypeName(transform.templateArgs[0]);
-          info.mapValueKind = valueKindFromTypeName(transform.templateArgs[1]);
+          info.keyValueKeyKind = valueKindFromTypeName(transform.templateArgs[0]);
+          info.keyValueValueKind = valueKindFromTypeName(transform.templateArgs[1]);
           if (info.structTypeName.empty()) {
             std::string declaredType = transform.name + "<" +
                                        trimTemplateTypeText(transform.templateArgs[0]) + ", " +
@@ -925,7 +925,7 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
         }
         if (normalizedName == "map" && transform.templateArgs.empty() &&
             resolveSpecializedExperimentalMapTypeKinds(
-                transform.name, safeResolveDefinitionCall, info.mapKeyKind, info.mapValueKind)) {
+                transform.name, safeResolveDefinitionCall, info.keyValueKeyKind, info.keyValueValueKind)) {
           if (info.structTypeName.empty()) {
             resolveSpecializedExperimentalMapStructPathFromTypeText(
                 transform.name, info.structTypeName);
@@ -935,15 +935,15 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
       }
     } else if (init.kind == Expr::Kind::Name) {
       if (hasSemanticInitBindingInfo && semanticInitInfo.kind == LocalInfo::Kind::KeyValueCollection) {
-        info.mapKeyKind = semanticInitInfo.mapKeyKind;
-        info.mapValueKind = semanticInitInfo.mapValueKind;
+        info.keyValueKeyKind = semanticInitInfo.keyValueKeyKind;
+        info.keyValueValueKind = semanticInitInfo.keyValueValueKind;
         if (info.structTypeName.empty()) {
           info.structTypeName = semanticInitInfo.structTypeName;
         }
       } else if (auto it = localsIn.find(init.name);
                  it != localsIn.end() && it->second.kind == LocalInfo::Kind::KeyValueCollection) {
-        info.mapKeyKind = it->second.mapKeyKind;
-        info.mapValueKind = it->second.mapValueKind;
+        info.keyValueKeyKind = it->second.keyValueKeyKind;
+        info.keyValueValueKind = it->second.keyValueValueKind;
         if (info.structTypeName.empty()) {
           info.structTypeName = it->second.structTypeName;
         }
@@ -951,8 +951,8 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
     } else if (init.kind == Expr::Kind::Call) {
       std::string collection;
       if (getBuiltinCollectionName(init, collection) && collection == "map" && init.templateArgs.size() == 2) {
-        info.mapKeyKind = valueKindFromTypeName(init.templateArgs[0]);
-        info.mapValueKind = valueKindFromTypeName(init.templateArgs[1]);
+        info.keyValueKeyKind = valueKindFromTypeName(init.templateArgs[0]);
+        info.keyValueValueKind = valueKindFromTypeName(init.templateArgs[1]);
         if (info.structTypeName.empty()) {
           std::string initType = "map<" + trimTemplateTypeText(init.templateArgs[0]) + ", " +
                                  trimTemplateTypeText(init.templateArgs[1]) + ">";
@@ -961,7 +961,7 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
         }
       }
     }
-    info.valueKind = info.mapValueKind;
+    info.valueKind = info.keyValueValueKind;
     return info;
   }
 
@@ -990,11 +990,11 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
         if (info.valueKind == LocalInfo::ValueKind::Unknown) {
           info.valueKind = explicitTypeInfo.valueKind;
         }
-        if (info.mapKeyKind == LocalInfo::ValueKind::Unknown) {
-          info.mapKeyKind = explicitTypeInfo.mapKeyKind;
+        if (info.keyValueKeyKind == LocalInfo::ValueKind::Unknown) {
+          info.keyValueKeyKind = explicitTypeInfo.keyValueKeyKind;
         }
-        if (info.mapValueKind == LocalInfo::ValueKind::Unknown) {
-          info.mapValueKind = explicitTypeInfo.mapValueKind;
+        if (info.keyValueValueKind == LocalInfo::ValueKind::Unknown) {
+          info.keyValueValueKind = explicitTypeInfo.keyValueValueKind;
         }
         if (info.structTypeName.empty()) {
           info.structTypeName = explicitTypeInfo.structTypeName;
@@ -1011,11 +1011,11 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
       if (info.valueKind == LocalInfo::ValueKind::Unknown) {
         info.valueKind = semanticInfo.valueKind;
       }
-      if (info.mapKeyKind == LocalInfo::ValueKind::Unknown) {
-        info.mapKeyKind = semanticInfo.mapKeyKind;
+      if (info.keyValueKeyKind == LocalInfo::ValueKind::Unknown) {
+        info.keyValueKeyKind = semanticInfo.keyValueKeyKind;
       }
-      if (info.mapValueKind == LocalInfo::ValueKind::Unknown) {
-        info.mapValueKind = semanticInfo.mapValueKind;
+      if (info.keyValueValueKind == LocalInfo::ValueKind::Unknown) {
+        info.keyValueValueKind = semanticInfo.keyValueValueKind;
       }
       if (info.structTypeName.empty()) {
         info.structTypeName = semanticInfo.structTypeName;
@@ -1028,7 +1028,7 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
     }
     if (info.valueKind == LocalInfo::ValueKind::Unknown &&
         info.kind == LocalInfo::Kind::KeyValueCollection) {
-      info.valueKind = info.mapValueKind;
+      info.valueKind = info.keyValueValueKind;
     }
     return info;
   }
@@ -1038,8 +1038,8 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
       return false;
     }
     info.valueKind = semanticInitInfo.valueKind;
-    info.mapKeyKind = semanticInitInfo.mapKeyKind;
-    info.mapValueKind = semanticInitInfo.mapValueKind;
+    info.keyValueKeyKind = semanticInitInfo.keyValueKeyKind;
+    info.keyValueValueKind = semanticInitInfo.keyValueValueKind;
     info.structTypeName = semanticInitInfo.structTypeName;
     info.usesBuiltinCollectionLayout =
         info.usesBuiltinCollectionLayout || semanticInitInfo.usesBuiltinCollectionLayout;
@@ -1253,8 +1253,8 @@ bool inferCallParameterLocalInfo(const Expr &param,
           param, resolveDefinitionCallFn, semanticProgram, semanticIndex, semanticBindingTypeInfo)) {
     infoOut.kind = semanticBindingTypeInfo.kind;
     infoOut.valueKind = semanticBindingTypeInfo.valueKind;
-    infoOut.mapKeyKind = semanticBindingTypeInfo.mapKeyKind;
-    infoOut.mapValueKind = semanticBindingTypeInfo.mapValueKind;
+    infoOut.keyValueKeyKind = semanticBindingTypeInfo.keyValueKeyKind;
+    infoOut.keyValueValueKind = semanticBindingTypeInfo.keyValueValueKind;
     infoOut.structTypeName = semanticBindingTypeInfo.structTypeName;
     infoOut.referenceToArray = semanticBindingTypeInfo.referenceToArray;
     infoOut.pointerToArray = semanticBindingTypeInfo.pointerToArray;
@@ -1262,8 +1262,8 @@ bool inferCallParameterLocalInfo(const Expr &param,
     infoOut.pointerToVector = semanticBindingTypeInfo.pointerToVector;
     infoOut.referenceToBuffer = semanticBindingTypeInfo.referenceToBuffer;
     infoOut.pointerToBuffer = semanticBindingTypeInfo.pointerToBuffer;
-    infoOut.referenceToMap = semanticBindingTypeInfo.referenceToMap;
-    infoOut.pointerToMap = semanticBindingTypeInfo.pointerToMap;
+    infoOut.referenceToKeyValueCollection = semanticBindingTypeInfo.referenceToKeyValueCollection;
+    infoOut.pointerToKeyValueCollection = semanticBindingTypeInfo.pointerToKeyValueCollection;
     infoOut.isSoaVector = semanticBindingTypeInfo.isSoaVector;
     infoOut.usesBuiltinCollectionLayout =
         semanticBindingTypeInfo.usesBuiltinCollectionLayout;
@@ -1282,9 +1282,9 @@ bool inferCallParameterLocalInfo(const Expr &param,
     for (const auto &transform : param.transforms) {
       const std::string normalizedName = normalizeDeclaredCollectionTypeBase(transform.name);
       if (normalizedName == "map" && transform.templateArgs.size() == 2) {
-        infoOut.mapKeyKind = valueKindFromTypeName(transform.templateArgs[0]);
-        infoOut.mapValueKind = valueKindFromTypeName(transform.templateArgs[1]);
-        infoOut.valueKind = infoOut.mapValueKind;
+        infoOut.keyValueKeyKind = valueKindFromTypeName(transform.templateArgs[0]);
+        infoOut.keyValueValueKind = valueKindFromTypeName(transform.templateArgs[1]);
+        infoOut.valueKind = infoOut.keyValueValueKind;
         if (infoOut.structTypeName.empty()) {
           std::string declaredType = transform.name + "<" +
                                      trimTemplateTypeText(transform.templateArgs[0]) + ", " +
@@ -1418,10 +1418,10 @@ bool inferCallParameterLocalInfo(const Expr &param,
           normalizeCollectionBindingTypeName(wrappedBase) == "map") {
         std::vector<std::string> args;
         if (splitTemplateArgs(wrappedArg, args) && args.size() == 2) {
-          infoOut.pointerToMap = true;
-          infoOut.mapKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
-          infoOut.mapValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
-          infoOut.valueKind = infoOut.mapValueKind;
+          infoOut.pointerToKeyValueCollection = true;
+          infoOut.keyValueKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
+          infoOut.keyValueValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
+          infoOut.valueKind = infoOut.keyValueValueKind;
           if (infoOut.structTypeName.empty()) {
             resolveSpecializedExperimentalMapStructPathFromTypeText(targetType, infoOut.structTypeName);
           }
@@ -1513,7 +1513,7 @@ bool inferCallParameterLocalInfo(const Expr &param,
   auto applySpecializedWrappedMapBindingInfo = [&](const Expr &bindingExpr, LocalInfo &bindingInfo) {
     if ((bindingInfo.kind != LocalInfo::Kind::Reference &&
          bindingInfo.kind != LocalInfo::Kind::Pointer) ||
-        bindingInfo.referenceToMap || bindingInfo.pointerToMap) {
+        bindingInfo.referenceToKeyValueCollection || bindingInfo.pointerToKeyValueCollection) {
       return;
     }
     for (const auto &transform : bindingExpr.transforms) {
@@ -1530,12 +1530,12 @@ bool inferCallParameterLocalInfo(const Expr &param,
         continue;
       }
       if (bindingInfo.kind == LocalInfo::Kind::Reference) {
-        bindingInfo.referenceToMap = true;
+        bindingInfo.referenceToKeyValueCollection = true;
       } else {
-        bindingInfo.pointerToMap = true;
+        bindingInfo.pointerToKeyValueCollection = true;
       }
-      bindingInfo.mapKeyKind = keyKind;
-      bindingInfo.mapValueKind = valueKind;
+      bindingInfo.keyValueKeyKind = keyKind;
+      bindingInfo.keyValueValueKind = valueKind;
       bindingInfo.valueKind = valueKind;
       if (bindingInfo.structTypeName.empty()) {
         resolveSpecializedExperimentalMapStructPathForBindingType(

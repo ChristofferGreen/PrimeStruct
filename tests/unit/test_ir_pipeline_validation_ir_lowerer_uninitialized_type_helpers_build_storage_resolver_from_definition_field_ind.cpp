@@ -799,9 +799,9 @@ TEST_CASE("ir lowerer binding type helpers prefer semantic collection specializa
   info.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
   info.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   adapters.setReferenceArrayInfo(tempMapCall, info);
-  CHECK(info.referenceToMap);
-  CHECK(info.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
-  CHECK(info.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(info.referenceToKeyValueCollection);
+  CHECK(info.keyValueKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(info.keyValueValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 
   semanticProgram.collectionSpecializations.push_back(
@@ -1114,9 +1114,9 @@ TEST_CASE("ir lowerer count access helpers classify entry args and count calls")
   mapRefArgs.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
   mapRefArgs.isArgsPack = true;
   mapRefArgs.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-  mapRefArgs.referenceToMap = true;
-  mapRefArgs.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-  mapRefArgs.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  mapRefArgs.referenceToKeyValueCollection = true;
+  mapRefArgs.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  mapRefArgs.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   locals.emplace("mapRefs", mapRefArgs);
 
   primec::Expr mapRefsName;
@@ -1141,9 +1141,9 @@ TEST_CASE("ir lowerer count access helpers classify entry args and count calls")
   mapPtrArgs.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
   mapPtrArgs.isArgsPack = true;
   mapPtrArgs.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
-  mapPtrArgs.pointerToMap = true;
-  mapPtrArgs.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-  mapPtrArgs.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  mapPtrArgs.pointerToKeyValueCollection = true;
+  mapPtrArgs.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  mapPtrArgs.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   locals.emplace("mapPtrs", mapPtrArgs);
 
   primec::Expr mapPtrsName;

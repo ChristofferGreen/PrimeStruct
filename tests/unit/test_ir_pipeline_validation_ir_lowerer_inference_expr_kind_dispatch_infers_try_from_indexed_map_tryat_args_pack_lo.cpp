@@ -71,16 +71,16 @@ TEST_CASE("ir lowerer inference expr-kind dispatch infers try from indexed map t
   CHECK(static_cast<bool>(state.inferExprKind));
 
   auto makeArgsPackInfo = [](primec::ir_lowerer::LocalInfo::Kind elementKind,
-                             bool referenceToMap,
-                             bool pointerToMap) {
+                             bool referenceToKeyValueCollection,
+                             bool pointerToKeyValueCollection) {
     primec::ir_lowerer::LocalInfo info;
     info.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
     info.isArgsPack = true;
     info.argsPackElementKind = elementKind;
-    info.referenceToMap = referenceToMap;
-    info.pointerToMap = pointerToMap;
-    info.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-    info.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+    info.referenceToKeyValueCollection = referenceToKeyValueCollection;
+    info.pointerToKeyValueCollection = pointerToKeyValueCollection;
+    info.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+    info.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
     info.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
     return info;
   };
@@ -280,8 +280,8 @@ TEST_CASE("ir lowerer inference expr-kind dispatch prefers graph-backed indexed 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo staleMapInfo;
   staleMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
-  staleMapInfo.mapKeyKind = Kind::Int32;
-  staleMapInfo.mapValueKind = Kind::String;
+  staleMapInfo.keyValueKeyKind = Kind::Int32;
+  staleMapInfo.keyValueValueKind = Kind::String;
   locals.emplace("values", staleMapInfo);
 
   primec::Expr valuesName;
@@ -493,8 +493,8 @@ TEST_CASE("ir lowerer inference expr-kind dispatch uses semantic map receiver fa
 
   primec::ir_lowerer::LocalInfo staleMapInfo;
   staleMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
-  staleMapInfo.mapKeyKind = Kind::Int32;
-  staleMapInfo.mapValueKind = Kind::Int32;
+  staleMapInfo.keyValueKeyKind = Kind::Int32;
+  staleMapInfo.keyValueValueKind = Kind::Int32;
 
   primec::ir_lowerer::LocalMap staleLocals;
   staleLocals.emplace("values", staleMapInfo);

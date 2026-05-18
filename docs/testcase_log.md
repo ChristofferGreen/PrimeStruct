@@ -222,6 +222,15 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-18 16:08 CEST | pass | mode: release | command:
+  `git diff --check`;
+  `rg -n 'mapKeyKind|mapValueKind|referenceToMap|pointerToMap' include src tests`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer binding type helpers prefer semantic collection specialization facts,ir lowerer inline param helper aliases pure map variadic forwarding,ir lowerer count access helpers emit count access calls,ir lowerer result helpers resolve file handle result payload metadata" --no-skip`
+  | failures: none | notes: The lowerer local-info metadata fields now use
+  key/value collection names instead of map-specific field names, and the
+  direct source scan found no remaining old field names in `include`, `src`, or
+  `tests`.
 - 2026-05-18 15:34 CEST | pass | mode: release | command:
   `git diff --check`;
   `rg -n 'LocalInfo::Kind::Map|Kind \{ Value, Pointer, Reference, Array, Vector, Map, Buffer \}' include src tests`;

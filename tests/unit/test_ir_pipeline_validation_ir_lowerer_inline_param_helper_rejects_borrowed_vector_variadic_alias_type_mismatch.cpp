@@ -702,8 +702,8 @@ TEST_CASE("ir lowerer inline param helper materializes map variadic args packs")
       [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
         infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
         infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-        infoOut.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-        infoOut.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+        infoOut.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+        infoOut.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
         infoOut.isArgsPack = true;
         infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
         return true;
@@ -735,8 +735,8 @@ TEST_CASE("ir lowerer inline param helper materializes map variadic args packs")
   REQUIRE(calleeLocals.count("values") == 1u);
   CHECK(calleeLocals.at("values").isArgsPack);
   CHECK(calleeLocals.at("values").argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection);
-  CHECK(calleeLocals.at("values").mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
-  CHECK(calleeLocals.at("values").mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(calleeLocals.at("values").keyValueKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(calleeLocals.at("values").keyValueValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(calleeLocals.at("values").argsPackElementCount == 2);
   REQUIRE(instructions.size() == 8u);
   CHECK(instructions[0].op == primec::IrOpcode::PushI32);
@@ -774,8 +774,8 @@ TEST_CASE("ir lowerer inline param helper aliases immutable concrete map params 
   valuesInfo.index = 21;
   valuesInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   valuesInfo.structTypeName = MapStructPath;
-  valuesInfo.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-  valuesInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  valuesInfo.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  valuesInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   callerLocals.emplace("values", valuesInfo);
 
   int32_t nextLocal = 3;
@@ -795,8 +795,8 @@ TEST_CASE("ir lowerer inline param helper aliases immutable concrete map params 
         infoOut.index = 7;
         infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
         infoOut.structTypeName = MapStructPath;
-        infoOut.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-        infoOut.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+        infoOut.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+        infoOut.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
         return true;
       },
       [](const primec::Expr &) { return false; },
@@ -850,8 +850,8 @@ TEST_CASE("ir lowerer inline param helper aliases mutable concrete map params fr
   valuesInfo.index = 23;
   valuesInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   valuesInfo.structTypeName = MapStructPath;
-  valuesInfo.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-  valuesInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  valuesInfo.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  valuesInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   callerLocals.emplace("values", valuesInfo);
 
   int32_t nextLocal = 5;
@@ -872,8 +872,8 @@ TEST_CASE("ir lowerer inline param helper aliases mutable concrete map params fr
         infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
         infoOut.isMutable = true;
         infoOut.structTypeName = MapStructPath;
-        infoOut.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-        infoOut.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+        infoOut.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+        infoOut.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
         return true;
       },
       [](const primec::Expr &) { return false; },

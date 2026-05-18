@@ -502,7 +502,7 @@ ReturnStatementEmitResult tryEmitReturnStatement(
           info.kind == LocalInfo::Kind::KeyValueCollection || info.kind == LocalInfo::Kind::Buffer ||
           !info.structTypeName.empty() || info.referenceToArray || info.pointerToArray ||
           info.referenceToVector || info.pointerToVector || info.referenceToBuffer || info.pointerToBuffer ||
-          info.referenceToMap || info.pointerToMap || info.isFileHandle || info.isResult;
+          info.referenceToKeyValueCollection || info.pointerToKeyValueCollection || info.isFileHandle || info.isResult;
       if (!isOpaqueHandle) {
         return false;
       }
@@ -601,7 +601,7 @@ ReturnStatementEmitResult tryEmitReturnStatement(
         info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector ||
         info.kind == LocalInfo::Kind::KeyValueCollection || info.kind == LocalInfo::Kind::Buffer || !info.structTypeName.empty() ||
         info.referenceToArray || info.pointerToArray || info.referenceToVector || info.pointerToVector ||
-        info.referenceToBuffer || info.pointerToBuffer || info.referenceToMap || info.pointerToMap ||
+        info.referenceToBuffer || info.pointerToBuffer || info.referenceToKeyValueCollection || info.pointerToKeyValueCollection ||
         info.isFileHandle || info.isResult;
     if (!isOpaqueHandle) {
       return false;

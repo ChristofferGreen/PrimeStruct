@@ -231,8 +231,8 @@ TEST_CASE("ir lowerer setup type helper rejects synthetic direct-call probes for
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo valuesLocal;
   valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
-  valuesLocal.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-  valuesLocal.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  valuesLocal.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  valuesLocal.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   locals.emplace("values", valuesLocal);
 
   primec::SemanticProgram semanticProgram;

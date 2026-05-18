@@ -111,8 +111,8 @@
             paramInfo.kind = sourceResultInfo.valueCollectionKind;
             paramInfo.valueKind = sourceResultInfo.valueKind;
             if (sourceResultInfo.valueCollectionKind == LocalInfo::Kind::KeyValueCollection) {
-              paramInfo.mapKeyKind = sourceResultInfo.valueMapKeyKind;
-              paramInfo.mapValueKind = sourceResultInfo.valueKind;
+              paramInfo.keyValueKeyKind = sourceResultInfo.valueMapKeyKind;
+              paramInfo.keyValueValueKind = sourceResultInfo.valueKind;
             }
           } else if (!sourceResultInfo.valueStructType.empty()) {
             if (!materializePackedResultStructLocal(payloadLocal, sourceResultInfo.valueStructType, paramInfo)) {
@@ -225,8 +225,8 @@
             paramInfo.kind = sourceResultInfo.valueCollectionKind;
             paramInfo.valueKind = sourceResultInfo.valueKind;
             if (sourceResultInfo.valueCollectionKind == LocalInfo::Kind::KeyValueCollection) {
-              paramInfo.mapKeyKind = sourceResultInfo.valueMapKeyKind;
-              paramInfo.mapValueKind = sourceResultInfo.valueKind;
+              paramInfo.keyValueKeyKind = sourceResultInfo.valueMapKeyKind;
+              paramInfo.keyValueValueKind = sourceResultInfo.valueKind;
             }
           } else if (!sourceResultInfo.valueStructType.empty()) {
             if (!materializePackedResultStructLocal(payloadLocal, sourceResultInfo.valueStructType, paramInfo)) {
@@ -395,8 +395,8 @@
             leftParamInfo.kind = leftResultInfo.valueCollectionKind;
             leftParamInfo.valueKind = leftResultInfo.valueKind;
             if (leftResultInfo.valueCollectionKind == LocalInfo::Kind::KeyValueCollection) {
-              leftParamInfo.mapKeyKind = leftResultInfo.valueMapKeyKind;
-              leftParamInfo.mapValueKind = leftResultInfo.valueKind;
+              leftParamInfo.keyValueKeyKind = leftResultInfo.valueMapKeyKind;
+              leftParamInfo.keyValueValueKind = leftResultInfo.valueKind;
             }
           } else if (!leftResultInfo.valueStructType.empty()) {
             if (!materializePackedResultStructLocal(leftPayloadLocal, leftResultInfo.valueStructType, leftParamInfo)) {
@@ -422,8 +422,8 @@
             rightParamInfo.kind = rightResultInfo.valueCollectionKind;
             rightParamInfo.valueKind = rightResultInfo.valueKind;
             if (rightResultInfo.valueCollectionKind == LocalInfo::Kind::KeyValueCollection) {
-              rightParamInfo.mapKeyKind = rightResultInfo.valueMapKeyKind;
-              rightParamInfo.mapValueKind = rightResultInfo.valueKind;
+              rightParamInfo.keyValueKeyKind = rightResultInfo.valueMapKeyKind;
+              rightParamInfo.keyValueValueKind = rightResultInfo.valueKind;
             }
           } else if (!rightResultInfo.valueStructType.empty()) {
             if (!materializePackedResultStructLocal(rightPayloadLocal, rightResultInfo.valueStructType, rightParamInfo)) {

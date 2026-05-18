@@ -321,7 +321,7 @@ bool isAggregatePointerLikeLocal(const LocalInfo &info, bool fromArgsPack) {
     return false;
   }
   return !info.structTypeName.empty() || info.referenceToArray || info.pointerToArray || info.referenceToVector ||
-         info.pointerToVector || info.referenceToMap || info.pointerToMap || info.referenceToBuffer ||
+         info.pointerToVector || info.referenceToKeyValueCollection || info.pointerToKeyValueCollection || info.referenceToBuffer ||
          info.pointerToBuffer;
 }
 

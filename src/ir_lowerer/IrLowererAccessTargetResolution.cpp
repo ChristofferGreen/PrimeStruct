@@ -67,8 +67,8 @@ std::string inferExperimentalVectorStructPathFromTypeName(
 
 bool hasInferredTypedWrappedMap(const LocalInfo &localInfo, LocalInfo::Kind kind) {
   return (kind == LocalInfo::Kind::Reference || kind == LocalInfo::Kind::Pointer) &&
-         localInfo.mapKeyKind != LocalInfo::ValueKind::Unknown &&
-         localInfo.mapValueKind != LocalInfo::ValueKind::Unknown;
+         localInfo.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
+         localInfo.keyValueValueKind != LocalInfo::ValueKind::Unknown;
 }
 
 const StdlibSurfaceMetadata *mapHelperSurfaceMetadataForAccessTargets() {
@@ -284,12 +284,12 @@ bool classifySemanticMapAccessTypeText(const std::string &typeText,
 
   targetInfoOut = {};
   targetInfoOut.isMapTarget = true;
-  targetInfoOut.mapKeyKind = valueKindFromTypeName(trimTemplateTypeText(mapArgs.front()));
-  targetInfoOut.mapValueKind = valueKindFromTypeName(trimTemplateTypeText(mapArgs.back()));
+  targetInfoOut.keyValueKeyKind = valueKindFromTypeName(trimTemplateTypeText(mapArgs.front()));
+  targetInfoOut.keyValueValueKind = valueKindFromTypeName(trimTemplateTypeText(mapArgs.back()));
   targetInfoOut.isWrappedMapTarget = isWrappedMap;
   targetInfoOut.structTypeName =
-      inferExperimentalMapStructPathFromKinds(targetInfoOut.mapKeyKind,
-                                              targetInfoOut.mapValueKind);
+      inferExperimentalMapStructPathFromKinds(targetInfoOut.keyValueKeyKind,
+                                              targetInfoOut.keyValueValueKind);
   return true;
 }
 
@@ -401,14 +401,14 @@ bool resolveSemanticMapAccessTargetInfo(
     }
     targetInfoOut = {};
     targetInfoOut.isMapTarget = true;
-    targetInfoOut.mapKeyKind = valueKindFromTypeName(resolveAccessSemanticTypeText(
+    targetInfoOut.keyValueKeyKind = valueKindFromTypeName(resolveAccessSemanticTypeText(
         semanticProgram, collectionFact->keyTypeText, collectionFact->keyTypeTextId));
-    targetInfoOut.mapValueKind = valueKindFromTypeName(resolveAccessSemanticTypeText(
+    targetInfoOut.keyValueValueKind = valueKindFromTypeName(resolveAccessSemanticTypeText(
         semanticProgram, collectionFact->valueTypeText, collectionFact->valueTypeTextId));
     targetInfoOut.isWrappedMapTarget = collectionFact->isReference || collectionFact->isPointer;
     targetInfoOut.structTypeName =
-        inferExperimentalMapStructPathFromKinds(targetInfoOut.mapKeyKind,
-                                                targetInfoOut.mapValueKind);
+        inferExperimentalMapStructPathFromKinds(targetInfoOut.keyValueKeyKind,
+                                                targetInfoOut.keyValueValueKind);
     return true;
   }
   if (const auto *queryFact =
@@ -585,10 +585,10 @@ bool inferDirectMapConstructorTargetInfo(const Expr &target, MapAccessTargetInfo
 
   if (target.templateArgs.size() == 2) {
     info.isMapTarget = true;
-    info.mapKeyKind = valueKindFromTypeName(target.templateArgs[0]);
-    info.mapValueKind = valueKindFromTypeName(target.templateArgs[1]);
+    info.keyValueKeyKind = valueKindFromTypeName(target.templateArgs[0]);
+    info.keyValueValueKind = valueKindFromTypeName(target.templateArgs[1]);
     info.structTypeName =
-        inferExperimentalMapStructPathFromKinds(info.mapKeyKind, info.mapValueKind);
+        inferExperimentalMapStructPathFromKinds(info.keyValueKeyKind, info.keyValueValueKind);
     return true;
   }
 
@@ -618,10 +618,10 @@ bool inferDirectMapConstructorTargetInfo(const Expr &target, MapAccessTargetInfo
     }
   }
 
-  info.mapKeyKind = keyKind;
-  info.mapValueKind = valueKind;
+  info.keyValueKeyKind = keyKind;
+  info.keyValueValueKind = valueKind;
   info.structTypeName =
-      inferExperimentalMapStructPathFromKinds(info.mapKeyKind, info.mapValueKind);
+      inferExperimentalMapStructPathFromKinds(info.keyValueKeyKind, info.keyValueValueKind);
   return true;
 }
 
@@ -699,8 +699,8 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
   auto populateFromDirectLocal = [&](const LocalInfo &localInfo, bool dereferenced) {
     const bool inferredWrappedMap = hasInferredTypedWrappedMap(localInfo, localInfo.kind);
     if (localInfo.kind != LocalInfo::Kind::KeyValueCollection &&
-        !(localInfo.kind == LocalInfo::Kind::Reference && localInfo.referenceToMap) &&
-        !(localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToMap) &&
+        !(localInfo.kind == LocalInfo::Kind::Reference && localInfo.referenceToKeyValueCollection) &&
+        !(localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToKeyValueCollection) &&
         !inferredWrappedMap) {
       return false;
     }
@@ -711,8 +711,8 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
           experimentalCollectionTypePath("map", "Map");
       if (structTypeName.empty()) {
         const std::string specialized =
-            inferExperimentalMapStructPathFromKinds(localInfo.mapKeyKind,
-                                                    localInfo.mapValueKind);
+            inferExperimentalMapStructPathFromKinds(localInfo.keyValueKeyKind,
+                                                    localInfo.keyValueValueKind);
         if (!specialized.empty()) {
           return specialized;
         }
@@ -720,8 +720,8 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
       if (structTypeName == experimentalMapType ||
           structTypeName == rootedExperimentalMapType) {
         const std::string specialized =
-            inferExperimentalMapStructPathFromKinds(localInfo.mapKeyKind,
-                                                    localInfo.mapValueKind);
+            inferExperimentalMapStructPathFromKinds(localInfo.keyValueKeyKind,
+                                                    localInfo.keyValueValueKind);
         if (!specialized.empty()) {
           return specialized;
         }
@@ -729,11 +729,11 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
       return structTypeName;
     };
     info.isMapTarget = true;
-    info.mapKeyKind = localInfo.mapKeyKind;
-    info.mapValueKind = localInfo.mapValueKind;
+    info.keyValueKeyKind = localInfo.keyValueKeyKind;
+    info.keyValueValueKind = localInfo.keyValueValueKind;
     const bool isWrappedMap =
-        (localInfo.kind == LocalInfo::Kind::Reference && localInfo.referenceToMap) ||
-        (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToMap) ||
+        (localInfo.kind == LocalInfo::Kind::Reference && localInfo.referenceToKeyValueCollection) ||
+        (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToKeyValueCollection) ||
         inferredWrappedMap;
     info.isWrappedMapTarget = isWrappedMap && !dereferenced;
     const bool isDirectMapStorage = localInfo.kind == LocalInfo::Kind::KeyValueCollection;
@@ -759,8 +759,8 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
           experimentalCollectionTypePath("map", "Map");
       if (structTypeName.empty()) {
         const std::string specialized =
-            inferExperimentalMapStructPathFromKinds(localInfo.mapKeyKind,
-                                                    localInfo.mapValueKind);
+            inferExperimentalMapStructPathFromKinds(localInfo.keyValueKeyKind,
+                                                    localInfo.keyValueValueKind);
         if (!specialized.empty()) {
           return specialized;
         }
@@ -768,8 +768,8 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
       if (structTypeName == experimentalMapType ||
           structTypeName == rootedExperimentalMapType) {
         const std::string specialized =
-            inferExperimentalMapStructPathFromKinds(localInfo.mapKeyKind,
-                                                    localInfo.mapValueKind);
+            inferExperimentalMapStructPathFromKinds(localInfo.keyValueKeyKind,
+                                                    localInfo.keyValueValueKind);
         if (!specialized.empty()) {
           return specialized;
         }
@@ -780,15 +780,15 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
     const bool inferredWrappedMap =
         hasInferredTypedWrappedMap(localInfo, localInfo.argsPackElementKind);
     const bool isWrappedMap =
-        (localInfo.argsPackElementKind == LocalInfo::Kind::Reference && localInfo.referenceToMap) ||
-        (localInfo.argsPackElementKind == LocalInfo::Kind::Pointer && localInfo.pointerToMap) ||
+        (localInfo.argsPackElementKind == LocalInfo::Kind::Reference && localInfo.referenceToKeyValueCollection) ||
+        (localInfo.argsPackElementKind == LocalInfo::Kind::Pointer && localInfo.pointerToKeyValueCollection) ||
         inferredWrappedMap;
     if (!isDirectMap && !isWrappedMap) {
       return false;
     }
     info.isMapTarget = true;
-    info.mapKeyKind = localInfo.mapKeyKind;
-    info.mapValueKind = localInfo.mapValueKind;
+    info.keyValueKeyKind = localInfo.keyValueKeyKind;
+    info.keyValueValueKind = localInfo.keyValueValueKind;
     info.isWrappedMapTarget = isWrappedMap && !dereferenced;
     const bool isDirectMapStorage =
         localInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection;
@@ -926,8 +926,8 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
     if (getBuiltinCollectionName(target, collection) && collection == "map" &&
         target.templateArgs.size() == 2) {
       info.isMapTarget = true;
-      info.mapKeyKind = valueKindFromTypeName(target.templateArgs[0]);
-      info.mapValueKind = valueKindFromTypeName(target.templateArgs[1]);
+      info.keyValueKeyKind = valueKindFromTypeName(target.templateArgs[0]);
+      info.keyValueValueKind = valueKindFromTypeName(target.templateArgs[1]);
       return info;
     }
   }
@@ -986,8 +986,8 @@ bool validateMapAccessTargetInfo(const MapAccessTargetInfo &targetInfo,
   if (!targetInfo.isMapTarget) {
     return true;
   }
-  if (targetInfo.mapKeyKind == LocalInfo::ValueKind::Unknown ||
-      targetInfo.mapValueKind == LocalInfo::ValueKind::Unknown) {
+  if (targetInfo.keyValueKeyKind == LocalInfo::ValueKind::Unknown ||
+      targetInfo.keyValueValueKind == LocalInfo::ValueKind::Unknown) {
     error = "native backend requires typed map bindings for " + accessName;
     return false;
   }
@@ -1151,12 +1151,12 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     }
     if (localInfo.argsPackElementKind == LocalInfo::Kind::Reference &&
         (localInfo.referenceToArray || localInfo.referenceToVector || localInfo.referenceToBuffer ||
-         localInfo.referenceToMap || !localInfo.structTypeName.empty())) {
+         localInfo.referenceToKeyValueCollection || !localInfo.structTypeName.empty())) {
       info.isArrayOrVectorTarget = true;
       info.isVectorTarget = localInfo.referenceToVector;
-      info.isMapTarget = localInfo.referenceToMap && dereferenced;
-      info.isWrappedMapTarget = localInfo.referenceToMap && !dereferenced;
-      if (localInfo.referenceToMap && dereferenced) {
+      info.isMapTarget = localInfo.referenceToKeyValueCollection && dereferenced;
+      info.isWrappedMapTarget = localInfo.referenceToKeyValueCollection && !dereferenced;
+      if (localInfo.referenceToKeyValueCollection && dereferenced) {
         info.structTypeName = localInfo.structTypeName;
       }
       return true;
@@ -1169,12 +1169,12 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     }
     if (localInfo.argsPackElementKind == LocalInfo::Kind::Pointer &&
         (localInfo.pointerToArray || localInfo.pointerToVector || localInfo.pointerToBuffer ||
-         localInfo.pointerToMap || !localInfo.structTypeName.empty())) {
+         localInfo.pointerToKeyValueCollection || !localInfo.structTypeName.empty())) {
       info.isArrayOrVectorTarget = true;
       info.isVectorTarget = localInfo.pointerToVector;
-      info.isMapTarget = localInfo.pointerToMap && dereferenced;
-      info.isWrappedMapTarget = localInfo.pointerToMap && !dereferenced;
-      if (localInfo.pointerToMap && dereferenced) {
+      info.isMapTarget = localInfo.pointerToKeyValueCollection && dereferenced;
+      info.isWrappedMapTarget = localInfo.pointerToKeyValueCollection && !dereferenced;
+      if (localInfo.pointerToKeyValueCollection && dereferenced) {
         info.structTypeName = localInfo.structTypeName;
       }
       return true;

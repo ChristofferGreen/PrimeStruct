@@ -124,7 +124,7 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
                 return kindOut != LocalInfo::ValueKind::Unknown;
               }
               if (info.argsPackElementKind == LocalInfo::Kind::KeyValueCollection) {
-                kindOut = info.mapValueKind;
+                kindOut = info.keyValueValueKind;
                 return kindOut != LocalInfo::ValueKind::Unknown;
               }
               if ((info.argsPackElementKind == LocalInfo::Kind::Reference ||
@@ -134,8 +134,8 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
                   kindOut = info.valueKind;
                   return kindOut != LocalInfo::ValueKind::Unknown;
                 }
-                if (info.referenceToMap || info.pointerToMap) {
-                  kindOut = info.mapValueKind;
+                if (info.referenceToKeyValueCollection || info.pointerToKeyValueCollection) {
+                  kindOut = info.keyValueValueKind;
                   return kindOut != LocalInfo::ValueKind::Unknown;
                 }
               }
@@ -175,8 +175,8 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
 
           if (receiver.kind == Expr::Kind::Call) {
             const auto mapTargetInfo = resolveMapAccessTargetInfo(receiver, candidateLocals);
-            if (mapTargetInfo.isMapTarget && mapTargetInfo.mapValueKind != LocalInfo::ValueKind::Unknown) {
-              kindOut = mapTargetInfo.mapValueKind;
+            if (mapTargetInfo.isMapTarget && mapTargetInfo.keyValueValueKind != LocalInfo::ValueKind::Unknown) {
+              kindOut = mapTargetInfo.keyValueValueKind;
               return true;
             }
 

@@ -339,7 +339,7 @@ bool shouldRewriteMapReferenceReceiverForParam(const LocalInfo &paramInfo) {
   if (paramInfo.structTypeName.empty()) {
     return paramInfo.kind == LocalInfo::Kind::KeyValueCollection ||
            ((paramInfo.kind == LocalInfo::Kind::Reference || paramInfo.kind == LocalInfo::Kind::Pointer) &&
-            (paramInfo.referenceToMap || paramInfo.pointerToMap));
+            (paramInfo.referenceToKeyValueCollection || paramInfo.pointerToKeyValueCollection));
   }
   if (paramInfo.kind == LocalInfo::Kind::KeyValueCollection) {
     return true;
@@ -415,19 +415,19 @@ void preservePointerTargetArgumentInfo(LocalInfo &paramInfo,
   paramInfo.pointerToArray = paramInfo.pointerToArray || argInfo.pointerToArray;
   paramInfo.pointerToVector = paramInfo.pointerToVector || argInfo.pointerToVector;
   paramInfo.pointerToBuffer = paramInfo.pointerToBuffer || argInfo.pointerToBuffer;
-  paramInfo.pointerToMap = paramInfo.pointerToMap || argInfo.pointerToMap;
+  paramInfo.pointerToKeyValueCollection = paramInfo.pointerToKeyValueCollection || argInfo.pointerToKeyValueCollection;
   paramInfo.targetsUninitializedStorage =
       paramInfo.targetsUninitializedStorage || argInfo.targetsUninitializedStorage;
   paramInfo.isSoaVector = paramInfo.isSoaVector || argInfo.isSoaVector;
   paramInfo.usesBuiltinCollectionLayout =
       paramInfo.usesBuiltinCollectionLayout || argInfo.usesBuiltinCollectionLayout;
-  if (paramInfo.mapKeyKind == LocalInfo::ValueKind::Unknown &&
-      argInfo.mapKeyKind != LocalInfo::ValueKind::Unknown) {
-    paramInfo.mapKeyKind = argInfo.mapKeyKind;
+  if (paramInfo.keyValueKeyKind == LocalInfo::ValueKind::Unknown &&
+      argInfo.keyValueKeyKind != LocalInfo::ValueKind::Unknown) {
+    paramInfo.keyValueKeyKind = argInfo.keyValueKeyKind;
   }
-  if (paramInfo.mapValueKind == LocalInfo::ValueKind::Unknown &&
-      argInfo.mapValueKind != LocalInfo::ValueKind::Unknown) {
-    paramInfo.mapValueKind = argInfo.mapValueKind;
+  if (paramInfo.keyValueValueKind == LocalInfo::ValueKind::Unknown &&
+      argInfo.keyValueValueKind != LocalInfo::ValueKind::Unknown) {
+    paramInfo.keyValueValueKind = argInfo.keyValueValueKind;
   }
 }
 
@@ -739,7 +739,7 @@ bool emitInlineDefinitionCallParameters(
               !it->second.isFileError && !it->second.isResult) {
             if (it->second.kind == LocalInfo::Kind::Reference &&
                 !it->second.referenceToArray && !it->second.referenceToVector &&
-                !it->second.referenceToMap && !it->second.referenceToBuffer) {
+                !it->second.referenceToKeyValueCollection && !it->second.referenceToBuffer) {
               emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
               return true;
             }
@@ -765,7 +765,7 @@ bool emitInlineDefinitionCallParameters(
       LocalInfo aliasedParamInfo = paramInfo;
       aliasedParamInfo.kind = LocalInfo::Kind::Reference;
       if (paramInfo.kind == LocalInfo::Kind::KeyValueCollection) {
-        aliasedParamInfo.referenceToMap = true;
+        aliasedParamInfo.referenceToKeyValueCollection = true;
       }
       calleeLocals.emplace(param.name, aliasedParamInfo);
       emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(aliasedParamInfo.index));
@@ -833,10 +833,10 @@ bool emitInlineDefinitionCallParameters(
       if (argIt != callerLocals.end() &&
           argIt->second.kind == LocalInfo::Kind::KeyValueCollection &&
           isStructParamMatch(calleePath, paramInfo.structTypeName, argIt->second.structTypeName) &&
-          (paramInfo.mapKeyKind == LocalInfo::ValueKind::Unknown ||
-           paramInfo.mapKeyKind == argIt->second.mapKeyKind) &&
-          (paramInfo.mapValueKind == LocalInfo::ValueKind::Unknown ||
-           paramInfo.mapValueKind == argIt->second.mapValueKind)) {
+          (paramInfo.keyValueKeyKind == LocalInfo::ValueKind::Unknown ||
+           paramInfo.keyValueKeyKind == argIt->second.keyValueKeyKind) &&
+          (paramInfo.keyValueValueKind == LocalInfo::ValueKind::Unknown ||
+           paramInfo.keyValueValueKind == argIt->second.keyValueValueKind)) {
         emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(argIt->second.index));
         calleeLocals.emplace(param.name, paramInfo);
         emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(paramInfo.index));
@@ -986,7 +986,7 @@ bool emitInlineDefinitionCallParameters(
     if (paramInfo.kind == LocalInfo::Kind::Reference &&
         paramInfo.structTypeName.empty() &&
         !paramInfo.referenceToArray && !paramInfo.referenceToVector &&
-        !paramInfo.referenceToMap && !paramInfo.referenceToBuffer &&
+        !paramInfo.referenceToKeyValueCollection && !paramInfo.referenceToBuffer &&
         !paramInfo.isFileHandle && !paramInfo.isFileError && !paramInfo.isResult &&
         paramInfo.valueKind != LocalInfo::ValueKind::Unknown &&
         paramInfo.valueKind != LocalInfo::ValueKind::String) {
@@ -1003,7 +1003,7 @@ bool emitInlineDefinitionCallParameters(
               !it->second.isFileError && !it->second.isResult) {
             if (it->second.kind == LocalInfo::Kind::Reference &&
                 !it->second.referenceToArray && !it->second.referenceToVector &&
-                !it->second.referenceToMap && !it->second.referenceToBuffer) {
+                !it->second.referenceToKeyValueCollection && !it->second.referenceToBuffer) {
               emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
               return true;
             }
@@ -1069,7 +1069,7 @@ bool emitInlineDefinitionCallParameters(
         paramInfo.structTypeName.empty() &&
         orderedArg->kind == Expr::Kind::Call &&
         rewritePublishedMapConstructorExpr(
-            *orderedArg, paramInfo.mapKeyKind, paramInfo.mapValueKind, resolveDefinitionCall, rewrittenMapArgExpr)) {
+            *orderedArg, paramInfo.keyValueKeyKind, paramInfo.keyValueValueKind, resolveDefinitionCall, rewrittenMapArgExpr)) {
       emittedArgExpr = &rewrittenMapArgExpr;
     } else if (shouldRewriteMapReferenceReceiverForParam(paramInfo) &&
                orderedArg->kind == Expr::Kind::Call &&

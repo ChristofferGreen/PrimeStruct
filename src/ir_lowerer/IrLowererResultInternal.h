@@ -30,7 +30,7 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
                                           const ResolveCallDefinitionFn &resolveDefinitionCall,
                                           LocalInfo::Kind &collectionKindOut,
                                           LocalInfo::ValueKind &valueKindOut,
-                                          LocalInfo::ValueKind &mapKeyKindOut,
+                                          LocalInfo::ValueKind &keyValueKeyKindOut,
                                           bool suppressCallDefinitionFallback = false);
 void applyResultValueInfoToLocal(const ResultExprInfo &resultInfo, LocalInfo &paramInfo);
 void applyDirectResultValueMetadata(const Expr &valueExpr,

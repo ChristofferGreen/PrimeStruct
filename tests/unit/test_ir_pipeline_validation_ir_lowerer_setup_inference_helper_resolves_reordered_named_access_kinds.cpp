@@ -44,12 +44,12 @@ TEST_CASE("ir lowerer setup inference helper keeps leading collection receiver f
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo leadingMapInfo;
   leadingMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
-  leadingMapInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  leadingMapInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   locals.emplace("values", leadingMapInfo);
 
   primec::ir_lowerer::LocalInfo fallbackMapInfo;
   fallbackMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
-  fallbackMapInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  fallbackMapInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
   locals.emplace("fallback", fallbackMapInfo);
 
   primec::Expr valuesExpr;
@@ -114,12 +114,12 @@ TEST_CASE("ir lowerer setup inference helper keeps labeled named receiver for ac
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo leadingMapInfo;
   leadingMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
-  leadingMapInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  leadingMapInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   locals.emplace("values", leadingMapInfo);
 
   primec::ir_lowerer::LocalInfo fallbackMapInfo;
   fallbackMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
-  fallbackMapInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  fallbackMapInfo.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
   locals.emplace("fallback", fallbackMapInfo);
 
   primec::Expr valuesExpr;
