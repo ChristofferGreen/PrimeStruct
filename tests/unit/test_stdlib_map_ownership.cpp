@@ -840,10 +840,34 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
             "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
         std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find(
-            "resolvePreDispatchMapHelperMemberToken(") !=
+            "resolvePreDispatchKeyValueHelperMemberToken(") !=
         std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find(
-            "resolvePreDispatchMapHelperResolvedPath(") !=
+            "resolvePreDispatchMapHelperMemberToken(") ==
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find(
+            "resolvePreDispatchKeyValueHelperResolvedPath(") !=
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find(
+            "resolvePreDispatchMapHelperResolvedPath(") ==
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("preDispatchKeyValueHelperSurfaceMetadata()") !=
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("preDispatchMapHelperSurfaceMetadata()") ==
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("canonicalKeyValueHelperPathLocal(") !=
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("canonicalMapHelperPathLocal(") ==
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find(
+            "resolveCanonicalKeyValueHelperNameFromSpelling(") !=
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find(
+            "resolveCanonicalMapHelperNameFromSpelling(") ==
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("sourceMethodKeyValueHelperName") !=
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("sourceMethodMapHelperName") ==
         std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find("rootedMapAliasHelperPath(") !=
         std::string::npos);
