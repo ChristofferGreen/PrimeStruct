@@ -383,8 +383,8 @@ bool hasExplicitStdMapSourceSpelling(const Expr &expr) {
 
 } // namespace
 
-bool isMapContainsHelperName(const Expr &expr);
-bool isMapTryAtHelperName(const Expr &expr);
+bool isKeyValueContainsHelperName(const Expr &expr);
+bool isKeyValueTryAtHelperName(const Expr &expr);
 bool isVectorTarget(const Expr &expr, const LocalMap &localsIn);
 bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn);
 KeyValueAccessLookupEmitResult tryEmitKeyValueContainsLookup(
@@ -805,7 +805,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     return NativeCallTailDispatchResult::Error;
   }
 
-  if (!expr.isMethodCall && isMapContainsHelperName(expr)) {
+  if (!expr.isMethodCall && isKeyValueContainsHelperName(expr)) {
     if (expr.args.size() != 2) {
       error = "contains requires exactly two arguments";
       return NativeCallTailDispatchResult::Error;
@@ -878,7 +878,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     return NativeCallTailDispatchResult::Emitted;
   }
 
-  if (!expr.isMethodCall && isMapTryAtHelperName(expr)) {
+  if (!expr.isMethodCall && isKeyValueTryAtHelperName(expr)) {
     if (expr.args.size() != 2) {
       error = "tryAt requires exactly two arguments";
       return NativeCallTailDispatchResult::Error;

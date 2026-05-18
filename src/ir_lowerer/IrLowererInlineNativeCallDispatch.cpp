@@ -314,7 +314,7 @@ Expr makeInlineEmitDirectTypeNamespaceCall(const Expr &callExpr, const Definitio
 
 } // namespace
 
-bool isMapContainsHelperName(const Expr &expr) {
+bool isKeyValueContainsHelperName(const Expr &expr) {
   if (isSimpleCallName(expr, "contains")) {
     return true;
   }
@@ -322,7 +322,7 @@ bool isMapContainsHelperName(const Expr &expr) {
   return resolveMapHelperAliasName(expr, aliasName) && aliasName == "contains";
 }
 
-bool isMapTryAtHelperName(const Expr &expr) {
+bool isKeyValueTryAtHelperName(const Expr &expr) {
   if (isSimpleCallName(expr, "tryAt")) {
     return true;
   }
@@ -656,13 +656,13 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
     const bool isBuiltinAccessMethod = getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2;
     const bool isBuiltinCountName = isSimpleCallName(expr, "count") && expr.args.size() == 1;
     const bool isBuiltinCapacityName = isSimpleCallName(expr, "capacity") && expr.args.size() == 1;
-    const bool isBuiltinMapContainsName = isMapContainsHelperName(expr) && expr.args.size() == 2;
-    const bool isBuiltinMapTryAtName = isMapTryAtHelperName(expr) && expr.args.size() == 2;
-    const bool isBuiltinMapInsertName = isSimpleCallName(expr, "insert") && expr.args.size() == 3;
+    const bool isBuiltinKeyValueContainsName = isKeyValueContainsHelperName(expr) && expr.args.size() == 2;
+    const bool isBuiltinKeyValueTryAtName = isKeyValueTryAtHelperName(expr) && expr.args.size() == 2;
+    const bool isBuiltinKeyValueInsertName = isSimpleCallName(expr, "insert") && expr.args.size() == 3;
     const bool isBuiltinCountLikeMethod =
         isBuiltinCountName || isBuiltinCapacityName || isArrayCountCall(expr) || isStringCountCall(expr) ||
-        isVectorCapacityCall(expr) || isBuiltinAccessMethod || isBuiltinMapContainsName ||
-        isBuiltinMapTryAtName || isBuiltinMapInsertName;
+        isVectorCapacityCall(expr) || isBuiltinAccessMethod || isBuiltinKeyValueContainsName ||
+        isBuiltinKeyValueTryAtName || isBuiltinKeyValueInsertName;
     const Definition *callee = resolveMethodCallDefinition(expr);
     if (callee != nullptr) {
       if (expr.args.size() == 1 &&

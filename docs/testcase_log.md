@@ -219,8 +219,25 @@
   case still expected the experimental-vector method `at` tail path to emit
   instructions, but the current lowerer returned `NotHandled` and emitted no
   instructions; adjacent key/value target metadata validation cases passed.
+- `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers dispatch native call tail orchestration" --no-skip`
+  has stale bare-`at` native-tail expectations after the map
+  stdlib-ownership cutover. On 2026-05-18 it expected malformed and valid
+  bare `at(...)` calls to use the old native-tail access path, but current
+  dispatch returns `NotHandled`; the adjacent source-delegation lock passed.
 
 ## Recent Test Runs
+- 2026-05-18 19:33 CEST | pass | mode: release | command:
+  `git diff --check`;
+  `rg -n 'isMapContainsHelperName|isMapTryAtHelperName|isBuiltinMapContainsName|isBuiltinMapTryAtName' src/ir_lowerer tests/unit/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable" --no-skip`
+  | failures: none | notes: Inline/native tail helper predicates now use
+  key/value names for contains and tryAt helper-name checks.
+- 2026-05-18 19:33 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable,ir lowerer call helpers dispatch native call tail orchestration" --no-skip`
+  | failures: `ir lowerer call helpers dispatch native call tail
+  orchestration` | notes: The source-delegation lock passed; the failed
+  native-tail orchestration case is the stale bare-`at` fixture logged above.
 - 2026-05-18 18:46 CEST | pass | mode: release | command:
   `git diff --check`;
   `rg -n 'ArrayMapAccessElementKindResolution|resolveArrayMapAccessElementKind|arrayMapAccess|ArrayMapAccess' include src tests/unit/test_ir_pipeline_validation_ir_lowerer_*`;

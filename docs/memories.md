@@ -57,8 +57,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: Lowerer locals classify map-shaped collection values with
   `LocalInfo::Kind::KeyValueCollection`; `LocalInfo::Kind::Map` is retired.
   Temporary key/value collection metadata, access-target helpers, lookup
-  helper APIs, and setup-inference access element-kind helpers carry backing
-  details until later TODO-4464 slices remove the remaining C++ map substrate.
+  helper APIs, setup-inference access element-kind helpers, and
+  inline/native-tail contains/tryAt predicates carry backing details until
+  later TODO-4464 slices remove the remaining C++ map substrate.
 - Evidence: The release `PrimeStruct_backend_ir_tests` target rebuilt after
   the kind, field, target-info, lookup-helper, and setup-inference access
   renames, focused backend IR windows passed, and direct `rg` scans over
@@ -67,7 +68,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `MapAccessTargetInfo`, `isMapTarget`, `resolveMapAccessTargetInfo`,
   `MapLookupStringKeyResult`, `emitMapLookupAccess`,
   `ArrayMapAccessElementKindResolution`, or
-  `resolveArrayMapAccessElementKind`.
+  `resolveArrayMapAccessElementKind`, `isMapContainsHelperName`, or
+  `isMapTryAtHelperName`.
 
 ### map-compatibility-aliases-require-source-definitions
 - Updated: 2026-05-18

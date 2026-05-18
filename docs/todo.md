@@ -360,7 +360,9 @@ Task template:
   canonical map access path literals, and lowerer map lookup helper APIs now
   use key/value lookup names instead of map-specific lookup helper names, and
   setup-inference access element-kind helpers now use array/key-value names
-  instead of array/map API names. The
+  instead of array/map API names, and inline/native-tail contains/tryAt helper
+  predicates now use key/value names instead of map-specific predicate names.
+  The
   remaining production
   lowerer/emitter
   experimental-map traces

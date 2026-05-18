@@ -170,9 +170,9 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(callHelpersSource.find("InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(") ==
         std::string::npos);
-  CHECK(callHelpersSource.find("bool isMapContainsHelperName(const Expr &expr) {") ==
+  CHECK(callHelpersSource.find("bool isKeyValueContainsHelperName(const Expr &expr) {") ==
         std::string::npos);
-  CHECK(callHelpersSource.find("bool isMapTryAtHelperName(const Expr &expr) {") ==
+  CHECK(callHelpersSource.find("bool isKeyValueTryAtHelperName(const Expr &expr) {") ==
         std::string::npos);
   CHECK(callHelpersSource.find(
             "directHelperPath.rfind(\"/std/collections/experimental_map/\", 0) == 0") ==
@@ -557,9 +557,9 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(inlineDispatchSource.find("std::string normalizedName = scopedExprPath;") ==
         std::string::npos);
-  CHECK(inlineDispatchSource.find("bool isMapContainsHelperName(const Expr &expr)") !=
+  CHECK(inlineDispatchSource.find("bool isKeyValueContainsHelperName(const Expr &expr)") !=
         std::string::npos);
-  CHECK(inlineDispatchSource.find("bool isMapTryAtHelperName(const Expr &expr)") !=
+  CHECK(inlineDispatchSource.find("bool isKeyValueTryAtHelperName(const Expr &expr)") !=
         std::string::npos);
   CHECK(inlineDispatchSource.find("matchesHelper(\"/std/collections/map/contains\")") ==
         std::string::npos);
