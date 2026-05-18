@@ -322,6 +322,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererSetupTypeMethodCallResolution.cpp");
   const std::string setupTypeReceiverTargetSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererSetupTypeReceiverTargetHelpers.cpp");
+  const std::string setupTypeReturnKindSource =
+      readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererSetupTypeReturnKindHelpers.cpp");
   const std::string lowererStructReturnPathSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererStructReturnPathHelpers.cpp");
   const std::string setupTypeCollectionSource =
@@ -420,6 +422,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!setupTypeMethodTargetSource.empty());
   REQUIRE(!setupTypeMethodCallSource.empty());
   REQUIRE(!setupTypeReceiverTargetSource.empty());
+  REQUIRE(!setupTypeReturnKindSource.empty());
   REQUIRE(!lowererStructReturnPathSource.empty());
   REQUIRE(!setupTypeCollectionSource.empty());
   REQUIRE(!countAccessSource.empty());
@@ -1904,6 +1907,11 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferenceDispatchSetupSource.find(
             "canonicalMapHelperPathForDispatchSetup(") ==
+        std::string::npos);
+  CHECK(setupTypeReturnKindSource.find("canonicalMapHelperPath(") ==
+        std::string::npos);
+  CHECK(setupTypeReturnKindSource.find(
+            "canonicalKeyValueHelperPathForSetupReturnKind(") !=
         std::string::npos);
   CHECK(inferenceDispatchSetupSource.find(
             "inferDispatchSetupKeyValueKindsFromTypeText(") !=

@@ -42,7 +42,8 @@ bool prefersExactDirectMapCountLikeReturnPath(const Expr &callExpr) {
           helperName == "tryAt");
 }
 
-std::string canonicalMapHelperPath(std::string_view helperName) {
+std::string canonicalKeyValueHelperPathForSetupReturnKind(
+    std::string_view helperName) {
   const auto *metadata = findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
   if (metadata == nullptr) {
     return {};
@@ -358,7 +359,7 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
             return false;
           }
           const std::string canonicalAccessPath =
-              canonicalMapHelperPath(normalizedName);
+              canonicalKeyValueHelperPathForSetupReturnKind(normalizedName);
           ReturnInfo info;
           if (!getReturnInfo || canonicalAccessPath.empty() ||
               !getReturnInfo(canonicalAccessPath, info) ||
