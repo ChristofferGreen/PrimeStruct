@@ -1686,12 +1686,41 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(lowerEmitExprCollectionSource.find("StdlibSurfaceId::CollectionsMapConstructors") ==
         std::string::npos);
   CHECK(lowerEmitExprCollectionSource.find(
-            "mapHelperSurfaceMetadataForLowerEmitExpr()") !=
+            "keyValueHelperSurfaceMetadataForLowerEmitExpr()") !=
         std::string::npos);
   CHECK(lowerEmitExprCollectionSource.find(
-            "mapConstructorSurfaceMetadataForLowerEmitExpr()") !=
+            "mapHelperSurfaceMetadataForLowerEmitExpr()") ==
         std::string::npos);
-  CHECK(lowerEmitExprCollectionSource.find("resolvePublishedLateMapMemberName(") !=
+  CHECK(lowerEmitExprCollectionSource.find(
+            "keyValueConstructorSurfaceMetadataForLowerEmitExpr()") !=
+        std::string::npos);
+  CHECK(lowerEmitExprCollectionSource.find(
+            "mapConstructorSurfaceMetadataForLowerEmitExpr()") ==
+        std::string::npos);
+  CHECK(lowerEmitExprCollectionSource.find("resolvePublishedLateKeyValueMemberName(") !=
+        std::string::npos);
+  CHECK(lowerEmitExprCollectionSource.find("resolvePublishedLateMapMemberName(") ==
+        std::string::npos);
+  CHECK(lowerEmitExprCollectionSource.find(
+            "resolvePublishedLateKeyValueConstructorName(") !=
+        std::string::npos);
+  CHECK(lowerEmitExprCollectionSource.find("resolvePublishedLateMapConstructorName(") ==
+        std::string::npos);
+  CHECK(lowerEmitExprCollectionSource.find("isEntryArgsPackKeyValueConstructorExpr(") !=
+        std::string::npos);
+  CHECK(lowerEmitExprCollectionSource.find("isEntryArgsPackMapConstructorExpr(") ==
+        std::string::npos);
+  CHECK(lowerEmitExprCollectionSource.find("rewriteExplicitBuiltinKeyValueHelperExpr(") !=
+        std::string::npos);
+  CHECK(lowerEmitExprCollectionSource.find("rewriteExplicitBuiltinMapHelperExpr(") ==
+        std::string::npos);
+  CHECK(lowerEmitExprCollectionSource.find("isKeyValueAccessValueCall(") !=
+        std::string::npos);
+  CHECK(lowerEmitExprCollectionSource.find("isMapAccessValueCall(") ==
+        std::string::npos);
+  CHECK(lowerEmitExprCollectionSource.find("rewriteBareKeyValueAccessMethodExpr(") !=
+        std::string::npos);
+  CHECK(lowerEmitExprCollectionSource.find("rewriteBareMapAccessMethodExpr(") ==
         std::string::npos);
   CHECK(lowerEmitExprCollectionSource.find("rawPath.rfind(\"/map/\", 0)") ==
         std::string::npos);

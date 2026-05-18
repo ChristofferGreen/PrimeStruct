@@ -95,10 +95,10 @@
             helperName = "insert";
           }
         };
-        auto mapHelperSurfaceMetadataForLowerEmitExpr = []() {
+        auto keyValueHelperSurfaceMetadataForLowerEmitExpr = []() {
           return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
         };
-        auto mapConstructorSurfaceMetadataForLowerEmitExpr = []() {
+        auto keyValueConstructorSurfaceMetadataForLowerEmitExpr = []() {
           return findStdlibSurfaceMetadataByBridgeKey(
               "collections.map_constructors");
         };
@@ -125,7 +125,7 @@
                       resolveCollectionExprDirectPath(candidate),
                       surfaceId,
                       memberNameOut);
-              const auto *metadata = mapHelperSurfaceMetadataForLowerEmitExpr();
+              const auto *metadata = keyValueHelperSurfaceMetadataForLowerEmitExpr();
               if (resolved && metadata != nullptr && surfaceId == metadata->id) {
                 normalizeLateCollectionHelperName(memberNameOut);
               }
@@ -139,9 +139,9 @@
                      resolvePublishedLateCollectionMemberName(
                          candidate, metadata->id, memberNameOut);
             };
-        auto resolvePublishedLateMapMemberName =
+        auto resolvePublishedLateKeyValueMemberName =
             [&](const Expr &candidate, std::string &memberNameOut) {
-              const auto *metadata = mapHelperSurfaceMetadataForLowerEmitExpr();
+              const auto *metadata = keyValueHelperSurfaceMetadataForLowerEmitExpr();
               return metadata != nullptr &&
                      resolvePublishedLateCollectionMemberName(
                          candidate, metadata->id, memberNameOut);
@@ -164,21 +164,21 @@
                          surfaceId,
                          memberNameOut);
             };
-        auto resolvePublishedLateMapConstructorName =
+        auto resolvePublishedLateKeyValueConstructorName =
             [&](const Expr &candidate, std::string &memberNameOut) {
               const auto *metadata =
-                  mapConstructorSurfaceMetadataForLowerEmitExpr();
+                  keyValueConstructorSurfaceMetadataForLowerEmitExpr();
               return metadata != nullptr &&
                      resolvePublishedLateCollectionConstructorName(
                          candidate, metadata->id, memberNameOut);
             };
-        auto isEntryArgsPackMapConstructorExpr = [&](const Expr &callExpr) {
+        auto isEntryArgsPackKeyValueConstructorExpr = [&](const Expr &callExpr) {
           if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
             return false;
           }
           std::string constructorName;
-          if (!resolvePublishedLateMapConstructorName(callExpr,
-                                                      constructorName) ||
+          if (!resolvePublishedLateKeyValueConstructorName(callExpr,
+                                                           constructorName) ||
               constructorName == "entry") {
             return false;
           }
@@ -194,15 +194,15 @@
           }
           return true;
         };
-        if (isEntryArgsPackMapConstructorExpr(expr)) {
+        if (isEntryArgsPackKeyValueConstructorExpr(expr)) {
           error = "native backend does not support variadic entry map constructors";
           return false;
         }
-        auto rewriteExplicitBuiltinMapHelperExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
+        auto rewriteExplicitBuiltinKeyValueHelperExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
           if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall || callExpr.args.empty()) {
             return false;
           }
-          const auto *metadata = mapHelperSurfaceMetadataForLowerEmitExpr();
+          const auto *metadata = keyValueHelperSurfaceMetadataForLowerEmitExpr();
           if (metadata == nullptr) {
             return false;
           }
@@ -224,7 +224,7 @@
           };
           std::string helperName;
           if ((!resolveKeyValueHelperAliasName(callExpr, helperName) &&
-               !resolvePublishedLateMapMemberName(callExpr, helperName)) ||
+               !resolvePublishedLateKeyValueMemberName(callExpr, helperName)) ||
               (helperName != "count" && helperName != "contains" &&
                helperName != "tryAt" && helperName != "insert")) {
             return false;
@@ -259,9 +259,10 @@
           rewrittenExpr.templateArgs.clear();
           return true;
         };
-        Expr rewrittenExplicitBuiltinMapHelperExpr;
-        if (rewriteExplicitBuiltinMapHelperExpr(expr, rewrittenExplicitBuiltinMapHelperExpr)) {
-          return emitExpr(rewrittenExplicitBuiltinMapHelperExpr, localsIn);
+        Expr rewrittenExplicitBuiltinKeyValueHelperExpr;
+        if (rewriteExplicitBuiltinKeyValueHelperExpr(
+                expr, rewrittenExplicitBuiltinKeyValueHelperExpr)) {
+          return emitExpr(rewrittenExplicitBuiltinKeyValueHelperExpr, localsIn);
         }
         auto rejectCanonicalVectorTemporaryReceiverExpr = [&](const Expr &callExpr) -> bool {
           if (callExpr.kind != Expr::Kind::Call || callExpr.args.empty()) {
@@ -366,8 +367,8 @@
                 if (resolveKeyValueHelperAliasName(candidate, helperNameOut)) {
                   return true;
                 }
-                return resolvePublishedLateMapMemberName(candidate,
-                                                         helperNameOut) ||
+                return resolvePublishedLateKeyValueMemberName(candidate,
+                                                              helperNameOut) ||
                        resolvePublishedLateVectorMemberName(candidate, helperNameOut);
               };
           auto matchesDirectHelperName = [&](const Expr &candidate, std::string_view bareName) {
@@ -455,7 +456,7 @@
           const auto *lateCollectionSemanticIndex =
               &callResolutionAdapters.semanticProductTargets.semanticIndex;
           if (!resolvedCollectionFromDef) {
-            auto isMapAccessValueCall = [&](const Expr &candidateExpr) {
+            auto isKeyValueAccessValueCall = [&](const Expr &candidateExpr) {
               if (candidateExpr.kind != Expr::Kind::Call || candidateExpr.isMethodCall) {
                 return false;
               }
@@ -466,7 +467,7 @@
               return keyValueHelperAlias == "at" || keyValueHelperAlias == "at_unsafe" ||
                      keyValueHelperAlias == "tryAt" || keyValueHelperAlias == "contains";
             };
-            if (isMapAccessValueCall(*receiverExpr)) {
+            if (isKeyValueAccessValueCall(*receiverExpr)) {
               return std::nullopt;
             }
             const auto inferCallKeyValueTargetInfo =
@@ -1108,7 +1109,7 @@
           error = priorError;
           return true;
         }
-        auto rewriteBareMapAccessMethodExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
+        auto rewriteBareKeyValueAccessMethodExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
           if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall || callExpr.args.size() != 2) {
             return false;
           }
@@ -1139,10 +1140,10 @@
           rewrittenExpr.isMethodCall = true;
           return true;
         };
-        Expr rewrittenBareMapAccessMethodExpr;
-        if (rewriteBareMapAccessMethodExpr(expr, rewrittenBareMapAccessMethodExpr)) {
+        Expr rewrittenBareKeyValueAccessMethodExpr;
+        if (rewriteBareKeyValueAccessMethodExpr(expr, rewrittenBareKeyValueAccessMethodExpr)) {
           const std::string priorError = error;
-          if (!emitExpr(rewrittenBareMapAccessMethodExpr, localsIn)) {
+          if (!emitExpr(rewrittenBareKeyValueAccessMethodExpr, localsIn)) {
             return false;
           }
           error = priorError;

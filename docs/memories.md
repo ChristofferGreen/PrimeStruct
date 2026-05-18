@@ -610,7 +610,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   key/value naming while they still route through the map collection
   metadata bridge; inference dispatch setup map-family type and access
   override locals should use key/value naming while still resolving the
-  current map helper metadata bridge.
+  current map helper metadata bridge; lower emit-expression collection helper
+  local metadata, constructor, helper rewrite, and access rewrite names should
+  use key/value terminology around the current map bridge metadata.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
