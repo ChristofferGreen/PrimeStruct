@@ -440,7 +440,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
            normalizedHelperName == "at" || normalizedHelperName == "at_ref" ||
            normalizedHelperName == "at_unsafe" || normalizedHelperName == "at_unsafe_ref" ||
            normalizedHelperName == "insert" || normalizedHelperName == "insert_ref")) {
-        resolvedOut = preferredBareMapHelperTarget(normalizedHelperName);
+        resolvedOut = preferredBareKeyValueHelperTarget(normalizedHelperName);
         return true;
       }
     }
@@ -517,7 +517,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
          normalizedHelperName == "at" || normalizedHelperName == "at_ref" ||
          normalizedHelperName == "at_unsafe" || normalizedHelperName == "at_unsafe_ref" ||
          normalizedHelperName == "insert" || normalizedHelperName == "insert_ref")) {
-      resolvedOut = preferredBareMapHelperTarget(normalizedHelperName);
+      resolvedOut = preferredBareKeyValueHelperTarget(normalizedHelperName);
       return true;
     }
     if (resolvedType == "/vector" &&

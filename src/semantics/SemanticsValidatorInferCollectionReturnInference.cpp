@@ -886,7 +886,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       if (!isMapReceiver && !isExperimentalMapReceiver) {
         return {};
       }
-      return preferredBareMapHelperTarget(helperName);
+      return preferredBareKeyValueHelperTarget(helperName);
     };
     if (canonicalResolvedCandidate == "/vector" &&
         !hasDirectExperimentalVectorImport() &&

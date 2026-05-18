@@ -506,7 +506,7 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
       if (!isMapReceiver && !isExperimentalMapReceiver) {
         return {};
       }
-      return preferredBareMapHelperTarget(helperName);
+      return preferredBareKeyValueHelperTarget(helperName);
     };
     auto definitionStructReturnPath = [&](const std::string &path) -> std::string {
       auto returnStructFromDefinition = [&](const Definition &definition) -> std::string {

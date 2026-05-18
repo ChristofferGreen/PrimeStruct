@@ -507,7 +507,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
           dispatchBootstrap.dispatchResolvers.resolveExperimentalMapTarget(
               expr.args[receiverIndex], keyType, valueType);
       if (isMapReceiver || isExperimentalMapReceiver) {
-        resolvedOut = preferredBareMapHelperTarget(helperName);
+        resolvedOut = preferredBareKeyValueHelperTarget(helperName);
       }
     }
   }

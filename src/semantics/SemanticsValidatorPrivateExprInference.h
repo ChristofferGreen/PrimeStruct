@@ -132,10 +132,12 @@
                                    const BuiltinCollectionDispatchResolvers &dispatchResolvers,
                                    size_t &receiverIndexOut,
                                    size_t &keyIndexOut) const;
-  std::string preferredBareMapHelperTarget(std::string_view helperName) const;
-  std::string specializedExperimentalMapHelperTarget(std::string_view helperName,
-                                                     const std::string &keyType,
-                                                     const std::string &valueType) const;
+  std::string preferredBareKeyValueHelperTarget(
+      std::string_view helperName) const;
+  std::string specializedExperimentalKeyValueHelperTarget(
+      std::string_view helperName,
+      const std::string &keyType,
+      const std::string &valueType) const;
   std::string preferredCanonicalExperimentalVectorHelperTarget(std::string_view helperName) const;
   std::string specializedExperimentalVectorHelperTarget(std::string_view helperName,
                                                         const std::string &elemType) const;

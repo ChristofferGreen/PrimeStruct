@@ -139,7 +139,8 @@ bool SemanticsValidator::bareMapHelperOperandIndices(
   return keyIndexOut < candidate.args.size();
 }
 
-std::string SemanticsValidator::preferredBareMapHelperTarget(std::string_view helperName) const {
+std::string SemanticsValidator::preferredBareKeyValueHelperTarget(
+    std::string_view helperName) const {
   auto hasVisibleKeyValueHelperFamily = [&](const std::string &path) {
     return hasDeclaredDefinitionPath(path) ||
            hasImportedDefinitionPath(path) ||
@@ -156,7 +157,7 @@ std::string SemanticsValidator::preferredBareMapHelperTarget(std::string_view he
   return canonical;
 }
 
-std::string SemanticsValidator::specializedExperimentalMapHelperTarget(
+std::string SemanticsValidator::specializedExperimentalKeyValueHelperTarget(
     std::string_view helperName,
     const std::string &keyType,
     const std::string &valueType) const {
@@ -323,14 +324,15 @@ bool SemanticsValidator::tryRewriteBareMapHelperCall(
     if (isBareMapAccessHelperName(helperName)) {
       return false;
     }
-    rewrittenOut.name = specializedExperimentalMapHelperTarget(helperName, keyType, valueType);
+    rewrittenOut.name =
+        specializedExperimentalKeyValueHelperTarget(helperName, keyType, valueType);
     if (rewrittenOut.name.find("__t") != std::string::npos) {
       rewrittenOut.templateArgs.clear();
     } else if (rewrittenOut.templateArgs.empty()) {
       rewrittenOut.templateArgs = {keyType, valueType};
     }
   } else {
-    rewrittenOut.name = preferredBareMapHelperTarget(helperName);
+    rewrittenOut.name = preferredBareKeyValueHelperTarget(helperName);
   }
   rewrittenOut.namespacePrefix.clear();
   return true;
@@ -729,7 +731,8 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalMapHelperCall(
     rewrittenOut.templateArgs = {keyType, valueType};
   }
   if (!candidate.isMethodCall) {
-    rewrittenOut.name = specializedExperimentalMapHelperTarget(helperName, keyType, valueType);
+    rewrittenOut.name =
+        specializedExperimentalKeyValueHelperTarget(helperName, keyType, valueType);
     rewrittenOut.namespacePrefix.clear();
     if (rewrittenOut.name.find("__t") != std::string::npos) {
       rewrittenOut.templateArgs.clear();

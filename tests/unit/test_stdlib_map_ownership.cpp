@@ -779,6 +779,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(privateExprInferenceSource.find(
             "shouldLogicalCanonicalizeDefinedExperimentalMapHelperPath") ==
         std::string::npos);
+  CHECK(privateExprInferenceSource.find("preferredBareMapHelperTarget") ==
+        std::string::npos);
+  CHECK(privateExprInferenceSource.find("specializedExperimentalMapHelperTarget") ==
+        std::string::npos);
   CHECK(privateExprInferenceSource.find(
             "preferredExperimentalKeyValueHelperTarget") !=
         std::string::npos);
@@ -792,6 +796,11 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(privateExprInferenceSource.find(
             "shouldLogicalCanonicalizeDefinedExperimentalKeyValueHelperPath") !=
+        std::string::npos);
+  CHECK(privateExprInferenceSource.find("preferredBareKeyValueHelperTarget") !=
+        std::string::npos);
+  CHECK(privateExprInferenceSource.find(
+            "specializedExperimentalKeyValueHelperTarget") !=
         std::string::npos);
   CHECK(templateCoreSource.find("name == \"/map\"") == std::string::npos);
   CHECK(templateCoreSource.find("name == \"std/collections/map\"") ==
@@ -1254,7 +1263,11 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(exprVectorHelpersSource.find("normalizedHelperName.rfind(\"map/\", 0)") ==
         std::string::npos);
   CHECK(exprVectorHelpersSource.find("mapHelperName") == std::string::npos);
+  CHECK(exprVectorHelpersSource.find("preferredBareMapHelperTarget") ==
+        std::string::npos);
   CHECK(exprVectorHelpersSource.find("keyValueHelperName") !=
+        std::string::npos);
+  CHECK(exprVectorHelpersSource.find("preferredBareKeyValueHelperTarget") !=
         std::string::npos);
   CHECK(exprVectorHelpersSource.find(
             "metadataBackedMapHelperMethodName(normalizedHelperName)") !=
@@ -1281,6 +1294,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find("canonicalExperimentalMapHelperPath") ==
         std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("preferredBareMapHelperTarget") ==
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("specializedExperimentalMapHelperTarget") ==
+        std::string::npos);
   CHECK(collectionHelperRewritesSource.find("hasVisibleMapHelperFamily") ==
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find("collectionRewriteKeyValueHelperMetadata()") !=
@@ -1296,6 +1313,11 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(collectionHelperRewritesSource.find("directExperimentalKeyValueHelperSpelling") !=
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find("canonicalExperimentalKeyValueHelperPath") !=
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find("preferredBareKeyValueHelperTarget") !=
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find(
+            "specializedExperimentalKeyValueHelperTarget") !=
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find("hasVisibleKeyValueHelperFamily") !=
         std::string::npos);
