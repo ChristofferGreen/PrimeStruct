@@ -1559,9 +1559,25 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(setupTypeCollectionSource.find(
             "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_constructors\")") !=
         std::string::npos);
-  CHECK(setupTypeCollectionSource.find("mapHelperSurfaceId()") !=
+  CHECK(setupTypeCollectionSource.find("keyValueHelperSurfaceId()") !=
         std::string::npos);
-  CHECK(setupTypeCollectionSource.find("mapConstructorSurfaceId()") !=
+  CHECK(setupTypeCollectionSource.find("mapHelperSurfaceId()") ==
+        std::string::npos);
+  CHECK(setupTypeCollectionSource.find("keyValueConstructorSurfaceId()") !=
+        std::string::npos);
+  CHECK(setupTypeCollectionSource.find("mapConstructorSurfaceId()") ==
+        std::string::npos);
+  CHECK(setupTypeCollectionSource.find("isKeyValueHelperSurfaceId(") !=
+        std::string::npos);
+  CHECK(setupTypeCollectionSource.find("isMapHelperSurfaceId(") ==
+        std::string::npos);
+  CHECK(setupTypeCollectionSource.find("resolveKeyValueSurfaceMemberToken(") !=
+        std::string::npos);
+  CHECK(setupTypeCollectionSource.find("resolveMapSurfaceMemberToken(") ==
+        std::string::npos);
+  CHECK(setupTypeCollectionSource.find("isBorrowedKeyValueHelperSurface(") !=
+        std::string::npos);
+  CHECK(setupTypeCollectionSource.find("isBorrowedMapHelperSurface(") ==
         std::string::npos);
   CHECK(countAccessSource.find("canonicalCollectionMemberPath(\"map\", accessName)") !=
         std::string::npos);
