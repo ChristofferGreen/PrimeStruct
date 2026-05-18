@@ -628,9 +628,10 @@ bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverPath, std
   if (receiverPath != "/map") {
     return false;
   }
-  std::string resolvedMapHelperName;
-  if (resolveMapHelperMemberNameLocal(rawMethodName, resolvedMapHelperName)) {
-    helperName = resolvedMapHelperName;
+  std::string resolvedKeyValueHelperName;
+  if (resolveMapHelperMemberNameLocal(rawMethodName,
+                                      resolvedKeyValueHelperName)) {
+    helperName = resolvedKeyValueHelperName;
   }
   return !helperName.empty() && isRemovedMapCompatibilityHelper(helperName);
 }
@@ -814,8 +815,8 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
     }
     return false;
   }
-  std::string resolvedMapHelperName;
-  if (resolveMapHelperMemberNameLocal(name, resolvedMapHelperName)) {
+  std::string resolvedKeyValueHelperName;
+  if (resolveMapHelperMemberNameLocal(name, resolvedKeyValueHelperName)) {
     return false;
   }
   if (name.find('/') != std::string::npos) {

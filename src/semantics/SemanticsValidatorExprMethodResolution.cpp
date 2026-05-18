@@ -280,11 +280,12 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     }
     resolved = preferredMapMethodTargetForCall(params, locals, receiverExpr,
                                               helperName);
-    std::string resolvedMapHelperName;
+    std::string resolvedKeyValueHelperName;
     isBuiltinMethod =
         resolveCanonicalCompatibilityKeyValueHelperNameFromResolvedPath(
-            resolved, resolvedMapHelperName) &&
-        (shouldBuiltinValidateCurrentMapWrapperHelper(resolvedMapHelperName) ||
+            resolved, resolvedKeyValueHelperName) &&
+        (shouldBuiltinValidateCurrentMapWrapperHelper(
+             resolvedKeyValueHelperName) ||
          hasImportedDefinitionPath(resolved));
     return true;
   };

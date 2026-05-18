@@ -606,11 +606,15 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(builtinPathHelpersSource.find("extractHelper(\"map/\", \"map\")") ==
         std::string::npos);
+  CHECK(builtinPathHelpersSource.find("resolvedMapHelperName") ==
+        std::string::npos);
   CHECK(builtinPathHelpersSource.find("mapHelperSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find("resolveMapHelperMemberNameLocal(") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find("resolveRootMapAliasHelperMemberNameLocal(") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find("resolvedKeyValueHelperName") !=
         std::string::npos);
   CHECK(methodTargetResolutionSource.find("const std::string alias = \"/map/\" + resolvedHelperName") ==
         std::string::npos);
@@ -676,8 +680,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(exprMethodResolutionSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
         std::string::npos);
+  CHECK(exprMethodResolutionSource.find("resolvedMapHelperName") ==
+        std::string::npos);
   CHECK(exprMethodResolutionSource.find(
             "metadataBackedCanonicalMapHelperPath(helperName)") !=
+        std::string::npos);
+  CHECK(exprMethodResolutionSource.find("resolvedKeyValueHelperName") !=
         std::string::npos);
   CHECK(templateCoreSource.find("name == \"/map\"") == std::string::npos);
   CHECK(templateCoreSource.find("name == \"std/collections/map\"") ==
