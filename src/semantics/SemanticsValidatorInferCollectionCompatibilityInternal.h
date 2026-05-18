@@ -234,12 +234,12 @@ enum class RemovedCollectionHelperFamily {
 
 [[maybe_unused]] inline std::string classifyStdNamespacedVectorCountDiagnosticMessage(
     bool callsInvisibleHelper,
-    bool isDirectWrapperMapTarget,
+    bool isDirectWrapperKeyValueTarget,
     bool callsUndeclaredHelper,
     bool resolvesMapTarget,
     bool callsUnresolvableHelper) {
   if (callsInvisibleHelper ||
-      (isDirectWrapperMapTarget && callsUndeclaredHelper)) {
+      (isDirectWrapperKeyValueTarget && callsUndeclaredHelper)) {
     return vectorCompatibilityUnknownCallTargetDiagnostic("count");
   }
   if (resolvesMapTarget && callsUnresolvableHelper) {

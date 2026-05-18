@@ -127,6 +127,15 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string exprMethodResolutionSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprMethodResolution.cpp");
+  const std::string privateExprValidationSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorPrivateExprValidation.h");
+  const std::string exprCollectionDispatchSetupSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorExprCollectionDispatchSetup.cpp");
+  const std::string exprCollectionCountCapacitySource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorExprCollectionCountCapacity.cpp");
   const std::string templateCoreSource =
       readText(repoRoot() / "src" / "semantics" /
                "TemplateMonomorphCoreUtilities.h");
@@ -735,6 +744,24 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(exprMethodResolutionSource.find("canonicalKeyValueAccessReturnsString") !=
         std::string::npos);
   CHECK(exprMethodResolutionSource.find("canonicalKeyValueHelperName") !=
+        std::string::npos);
+  CHECK(privateExprValidationSource.find(
+            "isDirectStdNamespacedVectorCountWrapperMapTarget") ==
+        std::string::npos);
+  CHECK(privateExprValidationSource.find(
+            "isDirectStdNamespacedVectorCountWrapperKeyValueTarget") !=
+        std::string::npos);
+  CHECK(exprCollectionDispatchSetupSource.find(
+            "isDirectStdNamespacedVectorCountWrapperMapTarget") ==
+        std::string::npos);
+  CHECK(exprCollectionDispatchSetupSource.find(
+            "isDirectStdNamespacedVectorCountWrapperKeyValueTarget") !=
+        std::string::npos);
+  CHECK(exprCollectionCountCapacitySource.find(
+            "isDirectStdNamespacedVectorCountWrapperMapTarget") ==
+        std::string::npos);
+  CHECK(exprCollectionCountCapacitySource.find(
+            "isDirectStdNamespacedVectorCountWrapperKeyValueTarget") !=
         std::string::npos);
   CHECK(templateCoreSource.find("name == \"/map\"") == std::string::npos);
   CHECK(templateCoreSource.find("name == \"std/collections/map\"") ==
@@ -1402,6 +1429,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
             "resolveExplicitPublishedMapHelperExprMemberName(") ==
         std::string::npos);
   CHECK(inferCollectionCompatibilityInternalSource.find(
+            "isDirectWrapperMapTarget") == std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find(
             "isPublishedKeyValueBaseHelperName(") != std::string::npos);
   CHECK(inferCollectionCompatibilityInternalSource.find(
             "isPublishedBorrowedKeyValueHelperName(") != std::string::npos);
@@ -1413,6 +1442,8 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inferCollectionCompatibilityInternalSource.find(
             "resolveExplicitPublishedKeyValueHelperExprMemberName(") !=
         std::string::npos);
+  CHECK(inferCollectionCompatibilityInternalSource.find(
+            "isDirectWrapperKeyValueTarget") != std::string::npos);
   CHECK(inferCollectionCompatibilityInternalSource.find("resolveMapCompatibilityUnrootedPath(") !=
         std::string::npos);
   CHECK(inferCollectionCompatibilityInternalSource.find("rootedMapCompatibilityHelperPath(") !=

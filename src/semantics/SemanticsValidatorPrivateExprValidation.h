@@ -520,7 +520,7 @@
     bool isNamespacedMapHelperCall = false;
     std::string namespacedHelper;
     bool isNamespacedVectorCapacityCall = false;
-    bool isDirectStdNamespacedVectorCountWrapperMapTarget = false;
+    bool isDirectStdNamespacedVectorCountWrapperKeyValueTarget = false;
     bool isStdNamespacedVectorAccessCall = false;
     bool hasStdNamespacedVectorAccessDefinition = false;
     bool isStdNamespacedMapAccessCall = false;
@@ -588,7 +588,7 @@
     bool isNamespacedVectorHelperCall = false;
     std::string namespacedHelper;
     bool isNamespacedVectorCapacityCall = false;
-    bool isDirectStdNamespacedVectorCountWrapperMapTarget = false;
+    bool isDirectStdNamespacedVectorCountWrapperKeyValueTarget = false;
     std::function<bool(const Expr &)> resolveMapTarget;
     std::function<bool(const Expr &)> isArrayNamespacedVectorCountCompatibilityCall;
     std::function<bool(const std::string &, Expr &)> tryRewriteBareVectorHelperCall;

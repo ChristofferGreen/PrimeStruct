@@ -177,7 +177,7 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
       }
     }
   }
-  setupOut.isDirectStdNamespacedVectorCountWrapperMapTarget =
+  setupOut.isDirectStdNamespacedVectorCountWrapperKeyValueTarget =
       isStdNamespacedVectorCompatibilityDirectCall(
           expr.isMethodCall, resolveCalleePath(expr), "count") &&
       expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Call &&

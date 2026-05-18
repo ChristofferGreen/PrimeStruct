@@ -346,7 +346,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         if (const std::string stdNamespacedVectorCountDiagnosticMessage =
                 classifyStdNamespacedVectorCountDiagnosticMessage(
                     false,
-                    context.isDirectStdNamespacedVectorCountWrapperMapTarget,
+                    context.isDirectStdNamespacedVectorCountWrapperKeyValueTarget,
                     isUndeclaredStdNamespacedVectorCompatibilityDirectCall(
                         expr.isMethodCall,
                         resolveCalleePath(expr),
