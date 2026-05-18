@@ -1474,9 +1474,37 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(setupTypeMethodCallSource.find("normalizedMethodName.rfind(\"std/collections/map/\", 0)") ==
         std::string::npos);
-  CHECK(setupTypeMethodCallSource.find("collectionMemberPath(\"map\", mapHelperName)") !=
+  CHECK(setupTypeMethodCallSource.find("collectionMemberPath(\"map\", keyValueHelperName)") !=
+        std::string::npos);
+  CHECK(setupTypeMethodCallSource.find("collectionMemberPath(\"map\", mapHelperName)") ==
+        std::string::npos);
+  CHECK(setupTypeMethodCallSource.find("\"/std/collections/map/\" + keyValueHelperName") ==
         std::string::npos);
   CHECK(setupTypeMethodCallSource.find("\"/std/collections/map/\" + mapHelperName") ==
+        std::string::npos);
+  CHECK(setupTypeMethodCallSource.find("const std::string rootedKeyValuePrefix") !=
+        std::string::npos);
+  CHECK(setupTypeMethodCallSource.find("const std::string rootedMapPrefix") ==
+        std::string::npos);
+  CHECK(setupTypeMethodCallSource.find("const std::string canonicalKeyValuePrefix") !=
+        std::string::npos);
+  CHECK(setupTypeMethodCallSource.find("const std::string canonicalMapPrefix") ==
+        std::string::npos);
+  CHECK(setupTypeMethodCallSource.find("sourceKeyValueMethodHelperName(") !=
+        std::string::npos);
+  CHECK(setupTypeMethodCallSource.find("sourceMapMethodHelperName(") ==
+        std::string::npos);
+  CHECK(setupTypeMethodCallSource.find("receiverHasKeyValueLocalInfo(") !=
+        std::string::npos);
+  CHECK(setupTypeMethodCallSource.find("receiverHasMapLocalInfo(") ==
+        std::string::npos);
+  CHECK(setupTypeMethodCallSource.find("canonicalKeyValueHelper") !=
+        std::string::npos);
+  CHECK(setupTypeMethodCallSource.find("canonicalMapHelper") ==
+        std::string::npos);
+  CHECK(setupTypeMethodCallSource.find("isBuiltinKeyValueContainsOrTryAtCall") !=
+        std::string::npos);
+  CHECK(setupTypeMethodCallSource.find("isBuiltinMapContainsOrTryAtCall") ==
         std::string::npos);
   CHECK(setupTypeMethodCallSource.find("normalized.rfind(\"/map/\", 0)") ==
         std::string::npos);

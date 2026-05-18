@@ -402,18 +402,18 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   const std::string explicitMethodPath = describeMethodCallExpr(callExpr);
   const bool allowsReceiverResolvedVectorMetadataFallback =
       isExperimentalVectorMetadataMethodPath(explicitMethodPath);
-  const std::string rootedMapPrefix =
+  const std::string rootedKeyValuePrefix =
       normalizeBuiltinCollectionStructPath("map").substr(1) + "/";
-  const std::string canonicalMapPrefix = collectionMemberRoot("map", false);
-  auto sourceMapMethodHelperName = [&]() -> std::string {
+  const std::string canonicalKeyValuePrefix = collectionMemberRoot("map", false);
+  auto sourceKeyValueMethodHelperName = [&]() -> std::string {
     std::string helperName = explicitMethodPath;
     if (!helperName.empty() && helperName.front() == '/') {
       helperName.erase(helperName.begin());
     }
-    if (helperName.rfind(canonicalMapPrefix, 0) == 0) {
-      helperName.erase(0, canonicalMapPrefix.size());
-    } else if (helperName.rfind(rootedMapPrefix, 0) == 0) {
-      helperName.erase(0, rootedMapPrefix.size());
+    if (helperName.rfind(canonicalKeyValuePrefix, 0) == 0) {
+      helperName.erase(0, canonicalKeyValuePrefix.size());
+    } else if (helperName.rfind(rootedKeyValuePrefix, 0) == 0) {
+      helperName.erase(0, rootedKeyValuePrefix.size());
     }
     if (helperName == "count" || helperName == "count_ref" ||
         helperName == "size" ||
@@ -453,8 +453,8 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     return nullptr;
   };
   if (!callExpr.args.empty()) {
-    const std::string mapHelperName = sourceMapMethodHelperName();
-    auto receiverHasMapLocalInfo = [&]() {
+    const std::string keyValueHelperName = sourceKeyValueMethodHelperName();
+    auto receiverHasKeyValueLocalInfo = [&]() {
       const Expr &receiverExpr = callExpr.args.front();
       if (receiverExpr.kind != Expr::Kind::Name) {
         return false;
@@ -470,18 +470,18 @@ const Definition *resolveMethodCallDefinitionFromExpr(
              info.keyValueKeyKind != LocalInfo::ValueKind::Unknown ||
              info.keyValueValueKind != LocalInfo::ValueKind::Unknown;
     };
-    if (!mapHelperName.empty() &&
-        (receiverHasMapLocalInfo() ||
+    if (!keyValueHelperName.empty() &&
+        (receiverHasKeyValueLocalInfo() ||
          resolveKeyValueAccessTargetInfo(callExpr.args.front(),
                                     localsIn,
                                     {},
                                     semanticProgram,
                                     semanticIndexPtr)
              .isKeyValueTarget)) {
-      const std::string canonicalMapHelper =
-          collectionMemberPath("map", mapHelperName);
+      const std::string canonicalKeyValueHelper =
+          collectionMemberPath("map", keyValueHelperName);
       if (const Definition *canonicalDef =
-              resolveDefinitionFamilyByArity(canonicalMapHelper,
+              resolveDefinitionFamilyByArity(canonicalKeyValueHelper,
                                              callExpr.args.size())) {
         return canonicalDef;
       }
@@ -720,7 +720,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       isExplicitKeyValueMethodAliasPath(explicitMethodPath);
   const bool isExplicitKeyValueContainsOrTryAtMethod =
       isExplicitKeyValueContainsOrTryAtMethodPath(explicitMethodPath);
-  const bool isBuiltinMapContainsOrTryAtCall =
+  const bool isBuiltinKeyValueContainsOrTryAtCall =
       isSimpleCallName(callExpr, "contains") || isSimpleCallName(callExpr, "tryAt") ||
       isSimpleCallName(callExpr, "insert");
   const bool allowBuiltinFallback =
@@ -729,7 +729,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       !isBuiltinBareVectorCapacityMethod && !isBuiltinBareVectorAccessMethod &&
       !isBuiltinBareVectorMutatorMethod &&
       (isBuiltinCountOrCapacityCall || isBuiltinVectorMutatorCall ||
-       isBuiltinMapContainsOrTryAtCall ||
+       isBuiltinKeyValueContainsOrTryAtCall ||
        (isArrayCountCall && isArrayCountCall(callExpr, localsIn)) ||
        (isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn)) || isBuiltinAccessCall);
 
@@ -766,10 +766,10 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       normalizedMethodName = normalizedMethodName.substr(std::string("array/").size());
     } else if (normalizedMethodName.rfind(canonicalVectorPrefix, 0) == 0) {
       normalizedMethodName = normalizedMethodName.substr(canonicalVectorPrefix.size());
-    } else if (normalizedMethodName.rfind(rootedMapPrefix, 0) == 0) {
-      normalizedMethodName = normalizedMethodName.substr(rootedMapPrefix.size());
-    } else if (normalizedMethodName.rfind(canonicalMapPrefix, 0) == 0) {
-      normalizedMethodName = normalizedMethodName.substr(canonicalMapPrefix.size());
+    } else if (normalizedMethodName.rfind(rootedKeyValuePrefix, 0) == 0) {
+      normalizedMethodName = normalizedMethodName.substr(rootedKeyValuePrefix.size());
+    } else if (normalizedMethodName.rfind(canonicalKeyValuePrefix, 0) == 0) {
+      normalizedMethodName = normalizedMethodName.substr(canonicalKeyValuePrefix.size());
     }
     std::string helperPath;
     if (receiver->name == "FileError" &&
