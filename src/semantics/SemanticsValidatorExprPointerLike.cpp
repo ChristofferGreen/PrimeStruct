@@ -13,7 +13,7 @@ bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
          suffix != "remove_at" && suffix != "remove_swap";
 }
 
-std::string unrootedCanonicalMapHelperPrefix() {
+std::string unrootedCanonicalKeyValueHelperPrefix() {
   const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return "";
@@ -28,7 +28,7 @@ std::string unrootedCanonicalMapHelperPrefix() {
   return prefix;
 }
 
-std::string unrootedMapImportAliasHelperPrefix() {
+std::string unrootedKeyValueImportAliasHelperPrefix() {
   const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return "";
@@ -88,8 +88,10 @@ std::string SemanticsValidator::normalizeCollectionMethodName(const std::string 
     normalized.erase(normalized.begin());
   }
   const std::string arrayPrefix = "array/";
-  const std::string mapPrefix = unrootedMapImportAliasHelperPrefix();
-  const std::string stdMapPrefix = unrootedCanonicalMapHelperPrefix();
+  const std::string keyValueAliasPrefix =
+      unrootedKeyValueImportAliasHelperPrefix();
+  const std::string canonicalKeyValuePrefix =
+      unrootedCanonicalKeyValueHelperPrefix();
   if (isUnrootedVectorHelperPath(normalized)) {
     normalized = normalized.substr(unrootedVectorHelperPrefix().size());
   } else if (normalized.rfind(arrayPrefix, 0) == 0) {
@@ -97,10 +99,12 @@ std::string SemanticsValidator::normalizeCollectionMethodName(const std::string 
   } else if (isUnrootedCanonicalVectorCompatibilityPath(normalized)) {
     normalized =
         std::string(stripUnrootedCanonicalVectorCompatibilityPrefix(normalized));
-  } else if (!mapPrefix.empty() && normalized.rfind(mapPrefix, 0) == 0) {
-    normalized = normalized.substr(mapPrefix.size());
-  } else if (!stdMapPrefix.empty() && normalized.rfind(stdMapPrefix, 0) == 0) {
-    normalized = normalized.substr(stdMapPrefix.size());
+  } else if (!keyValueAliasPrefix.empty() &&
+             normalized.rfind(keyValueAliasPrefix, 0) == 0) {
+    normalized = normalized.substr(keyValueAliasPrefix.size());
+  } else if (!canonicalKeyValuePrefix.empty() &&
+             normalized.rfind(canonicalKeyValuePrefix, 0) == 0) {
+    normalized = normalized.substr(canonicalKeyValuePrefix.size());
   }
   return normalized;
 }

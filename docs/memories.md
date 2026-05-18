@@ -658,7 +658,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   collection marker, helper-prefix, and backing-root locals should use
   key/value naming around map metadata; semantic return-statement collection
   marker, borrowed-access diagnostic, and backing-root locals should use
-  key/value naming around map metadata.
+  key/value naming around map metadata; semantic pointer-like helper-prefix
+  locals should use key/value naming around map helper metadata.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

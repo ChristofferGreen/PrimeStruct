@@ -1188,7 +1188,21 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(pointerLikeSource.find("mapHelperSurfaceMetadataLocal()") !=
         std::string::npos);
-  CHECK(pointerLikeSource.find("unrootedMapImportAliasHelperPrefix()") !=
+  CHECK(pointerLikeSource.find("unrootedMapImportAliasHelperPrefix()") ==
+        std::string::npos);
+  CHECK(pointerLikeSource.find("unrootedCanonicalMapHelperPrefix()") ==
+        std::string::npos);
+  CHECK(pointerLikeSource.find("const std::string mapPrefix") ==
+        std::string::npos);
+  CHECK(pointerLikeSource.find("const std::string stdMapPrefix") ==
+        std::string::npos);
+  CHECK(pointerLikeSource.find("unrootedKeyValueImportAliasHelperPrefix()") !=
+        std::string::npos);
+  CHECK(pointerLikeSource.find("unrootedCanonicalKeyValueHelperPrefix()") !=
+        std::string::npos);
+  CHECK(pointerLikeSource.find("keyValueAliasPrefix") !=
+        std::string::npos);
+  CHECK(pointerLikeSource.find("canonicalKeyValuePrefix") !=
         std::string::npos);
   CHECK(statementPrintabilitySource.find("resolvedPath == \"/map/at\"") ==
         std::string::npos);
