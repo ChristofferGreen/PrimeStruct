@@ -734,6 +734,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   insert/read member names, canonical helper paths, constructor detection, and
   removed rooted access alias paths from `collections.map_helpers` and map
   constructor metadata instead of direct map surface IDs or path strings.
+  Semantic binding type helpers should derive public map roots and `MapValue`
+  roots from `collections.map_helpers` metadata, and route experimental map
+  backing return-kind detection through the shared map backing predicate
+  instead of direct public map root strings.
   The stale
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`

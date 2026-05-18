@@ -1,5 +1,8 @@
 #include "SemanticsHelpers.h"
 
+#include "MapConstructorHelpers.h"
+
+#include <array>
 #include <cctype>
 #include <string_view>
 #include <utility>
@@ -26,19 +29,6 @@ std::string experimentalCollectionTypePathLocal(std::string_view collectionName,
   return path;
 }
 
-std::string collectionTypePathLocal(std::string_view collectionName,
-                                    std::string_view typeName = {},
-                                    bool leadingSlash = false) {
-  std::string path = leadingSlash ? "/" : "";
-  path += "std/collections/";
-  path += std::string(collectionName);
-  if (!typeName.empty()) {
-    path += "/";
-    path += std::string(typeName);
-  }
-  return path;
-}
-
 bool isExperimentalCollectionTypeBaseLocal(const std::string &base,
                                            std::string_view collectionName,
                                            std::string_view typeName) {
@@ -58,6 +48,64 @@ bool isUnspecializedExperimentalCollectionTypeBaseLocal(
   const std::string rooted =
       experimentalCollectionTypePathLocal(collectionName, typeName, true);
   return base == typeName || base == bare || base == rooted;
+}
+
+std::string stripLeadingSlashLocal(std::string_view text) {
+  if (!text.empty() && text.front() == '/') {
+    text.remove_prefix(1);
+  }
+  return std::string(text);
+}
+
+bool matchesMapCollectionRootMetadataLocal(std::string_view normalized) {
+  const primec::StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return false;
+  }
+  if (primec::stdlibSurfaceMatchesSpelling(*metadata, normalized)) {
+    return true;
+  }
+  for (std::string_view alias : metadata->importAliasSpellings) {
+    if (alias.empty() || alias.front() == '/') {
+      continue;
+    }
+    if (normalized == "/" + std::string(alias)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool matchesMapValueRootMetadataLocal(const std::string &normalized) {
+  const primec::StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return false;
+  }
+  auto matchesRoot = [&](std::string_view root) {
+    const std::string unrootedRoot = stripLeadingSlashLocal(root);
+    if (unrootedRoot.empty()) {
+      return false;
+    }
+    const std::array<std::string, 2> roots = {
+        unrootedRoot + "/MapValue",
+        "/" + unrootedRoot + "/MapValue",
+    };
+    for (const std::string &candidate : roots) {
+      if (normalized == candidate || normalized.rfind(candidate + "__", 0) == 0) {
+        return true;
+      }
+    }
+    return false;
+  };
+  if (matchesRoot(metadata->canonicalPath)) {
+    return true;
+  }
+  for (std::string_view alias : metadata->importAliasSpellings) {
+    if (matchesRoot(alias)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 bool hasExplicitBindingTypeTransform(const Expr &expr) {
@@ -221,18 +269,8 @@ bool validateBuiltinMapKeyType(const BindingInfo &binding,
 
 bool isMapCollectionTypeName(const std::string &name) {
   const std::string normalized = normalizeBindingTypeName(name);
-  const std::string mapRoot = collectionTypePathLocal("map");
-  const std::string rootedMapRoot = collectionTypePathLocal("map", {}, true);
-  const std::string mapValueRoot = collectionTypePathLocal("map", "MapValue");
-  const std::string rootedMapValueRoot =
-      collectionTypePathLocal("map", "MapValue", true);
-  return normalized == "map" || normalized == "/map" ||
-         normalized == mapRoot ||
-         normalized == rootedMapRoot ||
-         normalized == mapValueRoot ||
-         normalized == rootedMapValueRoot ||
-         normalized.rfind(mapValueRoot + "__", 0) == 0 ||
-         normalized.rfind(rootedMapValueRoot + "__", 0) == 0 ||
+  return matchesMapCollectionRootMetadataLocal(normalized) ||
+         matchesMapValueRootMetadataLocal(normalized) ||
          isUnspecializedExperimentalCollectionTypeBaseLocal(
              normalized, "map", "Map");
 }
@@ -551,8 +589,7 @@ ReturnKind returnKindForTypeName(const std::string &name) {
     if (isVectorLike && args.size() == 1) {
       return ReturnKind::Array;
     }
-    const bool isMapLike =
-        base != "Map" && isExperimentalCollectionTypeBaseLocal(base, "map", "Map");
+    const bool isMapLike = isQualifiedExperimentalMapBackingTypeName(base);
     if (isMapLike && args.size() == 2) {
       return ReturnKind::Array;
     }

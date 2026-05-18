@@ -106,7 +106,8 @@ ReturnKind getReturnKind(const Definition &def,
       kind = ReturnKind::Unknown;
       continue;
     }
-    auto isAllowedCollectionTypeArg = [&](const std::string &typeArg) -> bool {
+    std::function<bool(const std::string &)> isAllowedCollectionTypeArg =
+        [&](const std::string &typeArg) -> bool {
       const std::string normalizedArg = normalizeBindingTypeName(typeArg);
       if (isPrimitiveBindingTypeName(normalizedArg)) {
         return true;
@@ -122,6 +123,26 @@ ReturnKind getReturnKind(const Definition &def,
       auto importIt = importAliases.find(normalizedArg);
       if (importIt != importAliases.end() && structNames.count(importIt->second) > 0) {
         return true;
+      }
+      std::string base;
+      std::string arg;
+      if (!splitTemplateTypeName(normalizedArg, base, arg)) {
+        return false;
+      }
+      base = normalizeBindingTypeName(base);
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(arg, args)) {
+        return false;
+      }
+      if (base == "array" || base == "vector" || base == "soa" "_vector" ||
+          base == "Buffer" || base == "Reference" || base == "Pointer" ||
+          base == "uninitialized") {
+        return args.size() == 1 && isAllowedCollectionTypeArg(args.front());
+      }
+      if (isMapCollectionTypeName(base)) {
+        return args.size() == 2 &&
+               validateBuiltinMapKeyType(args.front(), &def.templateArgs, error) &&
+               isAllowedCollectionTypeArg(args.back());
       }
       return false;
     };

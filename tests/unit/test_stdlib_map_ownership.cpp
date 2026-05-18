@@ -130,6 +130,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
       readText(repoRoot() / "src" / "semantics" /
                "SemanticPublicationBuilders.cpp");
   const std::string semanticsSource = readText(repoRoot() / "src" / "semantics" / "SemanticsValidate.cpp");
+  const std::string semanticBindingTypeHelpersSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsBindingTypeHelpers.cpp");
   const std::string validatorSource =
       readText(repoRoot() / "src" / "semantics" / "SemanticsValidator.cpp");
   const std::string callResolutionSource =
@@ -363,6 +366,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!templateExpressionRewriteSource.empty());
   REQUIRE(!templateConstructorRewriteSource.empty());
   REQUIRE(!mapConstructorHelpersSource.empty());
+  REQUIRE(!semanticBindingTypeHelpersSource.empty());
   REQUIRE(!inferStructReturnSource.empty());
   REQUIRE(!inferStructReturnHelpersSource.empty());
   REQUIRE(!inferMethodResolutionSource.empty());
@@ -526,6 +530,19 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
             "metadataBackedCanonicalMapHelperPath(helperName)") !=
         std::string::npos);
   CHECK(semanticsSource.find("isResolvedMapConstructorPath(path)") !=
+        std::string::npos);
+  CHECK(semanticBindingTypeHelpersSource.find(
+            "collectionTypePathLocal(\"map\")") == std::string::npos);
+  CHECK(semanticBindingTypeHelpersSource.find(
+            "std/collections/map") == std::string::npos);
+  CHECK(semanticBindingTypeHelpersSource.find(
+            "matchesMapCollectionRootMetadataLocal(normalized)") !=
+        std::string::npos);
+  CHECK(semanticBindingTypeHelpersSource.find(
+            "matchesMapValueRootMetadataLocal(normalized)") !=
+        std::string::npos);
+  CHECK(semanticBindingTypeHelpersSource.find(
+            "isQualifiedExperimentalMapBackingTypeName(base)") !=
         std::string::npos);
   CHECK(validatorSource.find("name.rfind(\"map/\", 0)") ==
         std::string::npos);

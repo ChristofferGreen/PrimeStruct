@@ -60,6 +60,15 @@ inline bool isExperimentalCollectionBackingTypeName(
   return typeName == expected || typeName.rfind(specializedExpected, 0) == 0;
 }
 
+inline bool isQualifiedExperimentalMapBackingTypeName(std::string_view typeName) {
+  std::string normalized(typeName);
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  return normalized != "Map" &&
+         isExperimentalCollectionBackingTypeName("map", "Map", normalized);
+}
+
 inline const primec::StdlibSurfaceMetadata *mapHelperSurfaceMetadataLocal() {
   return primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
 }

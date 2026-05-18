@@ -2724,6 +2724,11 @@ Task template:
       constructor detection, and removed rooted access alias paths from
       `collections.map_helpers` / map constructor metadata; its inventory cap
       is zero.
+    - 2026-05-18: `SemanticsBindingTypeHelpers.cpp` map collection type-root
+      recognition now derives public roots and `MapValue` roots from
+      `collections.map_helpers` metadata, and experimental map return-kind
+      detection goes through a shared map backing predicate; its inventory cap
+      is zero.
     - Tighten or replace the TODO-4473 and TODO-4472 allowed-count
       inventories as traces are deleted; the final TODO-4464 state is zero
       tolerance for all PrimeStruct-map-specific production C++ traces, not a
