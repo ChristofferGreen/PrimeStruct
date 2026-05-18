@@ -893,6 +893,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(collectionAccessValidationSource.find("diagnosticTarget.rfind(\"/map/\"") ==
         std::string::npos);
+  CHECK(collectionAccessValidationSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find("metadataBackedCanonicalMapHelperPath(") !=
+        std::string::npos);
+  CHECK(collectionAccessValidationSource.find("rootedMapHelperAliasPathLocal(") !=
+        std::string::npos);
   CHECK(collectionDispatchSetupSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
         std::string::npos);
   CHECK(collectionDispatchSetupSource.find("mapHelperSurfaceMetadataLocal()") !=

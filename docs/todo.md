@@ -2137,6 +2137,13 @@ Task template:
       the map helper surface ID or constructs rooted map alias paths directly;
       it derives canonical helper paths, rooted removed-alias paths, and member
       token resolution from `collections.map_helpers` metadata.
+    - 2026-05-18: Semantic collection-access validation no longer names the
+      map helper surface ID or builds rooted map helper aliases directly; it
+      derives canonical helper paths, namespace lookup, resolved helper names,
+      and rooted alias probes from `collections.map_helpers` metadata.
+      Direct `rg` checks also confirmed and lowered stale zero caps for
+      call-path helpers, receiver paths, pointer-like, try, and Result helper
+      files without running the Python inventory script.
     - 2026-05-16: Map literal lowering no longer hard-codes the empty
       inferred-map backing path as `/std/collections/experimental_map/Map`;
       it now uses the shared `experimentalCollectionTypePath("map", "Map")`

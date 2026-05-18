@@ -511,7 +511,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   ID; pre-dispatch direct-call validation should derive canonical helper
   paths, rooted removed-alias paths, and helper member resolution from
   `collections.map_helpers` metadata instead of directly naming the map helper
-  surface ID or constructing rooted map helper aliases.
+  surface ID or constructing rooted map helper aliases; collection-access
+  validation should use the same metadata-backed helper path, namespace,
+  resolved-name, and rooted-alias derivation pattern.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

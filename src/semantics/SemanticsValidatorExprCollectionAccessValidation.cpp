@@ -15,13 +15,11 @@ bool isCanonicalMapAccessHelperName(const std::string &helperName) {
 }
 
 std::string canonicalMapHelperPathLocal(std::string_view helperName) {
-  return canonicalCollectionHelperPath(StdlibSurfaceId::CollectionsMapHelpers,
-                                       helperName);
+  return metadataBackedCanonicalMapHelperPath(helperName);
 }
 
 std::string canonicalMapHelperNamespaceLocal() {
-  const StdlibSurfaceMetadata *metadata =
-      findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsMapHelpers);
+  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return "";
   }
@@ -38,8 +36,34 @@ bool resolveCanonicalMapHelperNameFromSpelling(std::string path,
   if (!path.empty() && path.front() != '/') {
     path.insert(path.begin(), '/');
   }
+  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return false;
+  }
   return resolvePublishedCollectionHelperResolvedPath(
-      path, StdlibSurfaceId::CollectionsMapHelpers, helperNameOut);
+      path, metadata->id, helperNameOut);
+}
+
+std::string rootedMapHelperAliasPathLocal(std::string_view helperName) {
+  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return {};
+  }
+  for (std::string_view alias : metadata->importAliasSpellings) {
+    std::string root(alias);
+    if (root.empty()) {
+      continue;
+    }
+    if (root.front() != '/') {
+      root.insert(root.begin(), '/');
+    }
+    std::string unrootedRoot = std::string(trimLeadingSlash(root));
+    if (unrootedRoot.find('/') != std::string::npos) {
+      continue;
+    }
+    return root + "/" + std::string(helperName);
+  }
+  return {};
 }
 
 bool isCanonicalMapAccessResolvedPath(const std::string &path) {
@@ -656,7 +680,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
         !context.shouldBuiltinValidateBareMapAccessCall &&
         !(context.isIndexedArgsPackMapReceiverTarget != nullptr &&
           context.isIndexedArgsPackMapReceiverTarget(expr.args.front())) &&
-        !hasDeclaredDefinitionPath("/map/" + builtinName) &&
+        !hasDeclaredDefinitionPath(rootedMapHelperAliasPathLocal(builtinName)) &&
         !hasImportedDefinitionPath(canonicalMapHelperPathLocal(builtinName)) &&
         !hasDeclaredDefinitionPath(canonicalMapHelperPathLocal(builtinName))) {
       return failCollectionAccessDiagnostic(
