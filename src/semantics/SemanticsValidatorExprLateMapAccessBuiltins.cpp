@@ -10,22 +10,22 @@ namespace primec::semantics {
 
 namespace {
 
-const StdlibSurfaceMetadata *mapHelperSurfaceMetadataForLateMapAccess() {
+const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataForLateAccess() {
   return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
 }
 
-std::string canonicalMapHelperPathLocal(std::string_view helperName) {
+std::string canonicalKeyValueHelperPathLocal(std::string_view helperName) {
   const StdlibSurfaceMetadata *metadata =
-      mapHelperSurfaceMetadataForLateMapAccess();
+      keyValueHelperSurfaceMetadataForLateAccess();
   if (metadata == nullptr) {
     return "";
   }
   return canonicalCollectionHelperPath(metadata->id, helperName);
 }
 
-std::string canonicalMapHelperNamespaceLocal() {
+std::string canonicalKeyValueHelperNamespaceLocal() {
   const StdlibSurfaceMetadata *metadata =
-      mapHelperSurfaceMetadataForLateMapAccess();
+      keyValueHelperSurfaceMetadataForLateAccess();
   if (metadata == nullptr) {
     return "";
   }
@@ -36,29 +36,30 @@ std::string canonicalMapHelperNamespaceLocal() {
   return namespacePath;
 }
 
-bool resolveCanonicalMapHelperNameFromSpelling(std::string path,
-                                               std::string &helperNameOut) {
+bool resolveCanonicalKeyValueHelperNameFromSpelling(
+    std::string path, std::string &helperNameOut) {
   helperNameOut.clear();
   if (!path.empty() && path.front() != '/') {
     path.insert(path.begin(), '/');
   }
   const StdlibSurfaceMetadata *metadata =
-      mapHelperSurfaceMetadataForLateMapAccess();
+      keyValueHelperSurfaceMetadataForLateAccess();
   return metadata != nullptr &&
          resolvePublishedCollectionHelperResolvedPath(path, metadata->id,
                                                       helperNameOut);
 }
 
-bool isCanonicalMapHelperResolvedPath(const std::string &path,
-                                      std::string_view helperName) {
+bool isCanonicalKeyValueHelperResolvedPath(const std::string &path,
+                                           std::string_view helperName) {
   std::string resolvedHelperName;
-  return resolveCanonicalMapHelperNameFromSpelling(path, resolvedHelperName) &&
+  return resolveCanonicalKeyValueHelperNameFromSpelling(path,
+                                                        resolvedHelperName) &&
          resolvedHelperName == helperName;
 }
 
 bool isCanonicalMapAccessHelperPath(const std::string &path) {
   std::string resolvedHelperName;
-  if (!resolveCanonicalMapHelperNameFromSpelling(path, resolvedHelperName)) {
+  if (!resolveCanonicalKeyValueHelperNameFromSpelling(path, resolvedHelperName)) {
     return false;
   }
   return resolvedHelperName == "at" || resolvedHelperName == "at_ref" ||
@@ -80,19 +81,19 @@ bool getCanonicalMapAccessBuiltinName(const Expr &candidate,
   if (!normalizedName.empty() && normalizedName.front() == '/') {
     normalizedName.erase(normalizedName.begin());
   }
-  std::string resolvedMapHelperName;
-  if (resolveCanonicalMapHelperNameFromSpelling(
-          normalizedName, resolvedMapHelperName) &&
-      (resolvedMapHelperName == "at_ref" ||
-       resolvedMapHelperName == "at_unsafe_ref")) {
-    helperOut = resolvedMapHelperName;
+  std::string resolvedKeyValueHelperName;
+  if (resolveCanonicalKeyValueHelperNameFromSpelling(
+          normalizedName, resolvedKeyValueHelperName) &&
+      (resolvedKeyValueHelperName == "at_ref" ||
+       resolvedKeyValueHelperName == "at_unsafe_ref")) {
+    helperOut = resolvedKeyValueHelperName;
     return true;
   }
   std::string namespacePrefix = candidate.namespacePrefix;
   if (!namespacePrefix.empty() && namespacePrefix.front() == '/') {
     namespacePrefix.erase(namespacePrefix.begin());
   }
-  if (namespacePrefix == canonicalMapHelperNamespaceLocal() &&
+  if (namespacePrefix == canonicalKeyValueHelperNamespaceLocal() &&
       (candidate.name == "at_ref" || candidate.name == "at_unsafe_ref")) {
     helperOut = candidate.name;
     return true;
@@ -193,7 +194,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     if (canonicalMapAccessDiagnostic) {
       return failLateMapAccessBuiltinDiagnostic(
           "argument type mismatch for " +
-          canonicalMapHelperPathLocal(helperName) +
+          canonicalKeyValueHelperPathLocal(helperName) +
           " parameter key");
     }
     if (normalizeBindingTypeName(mapKeyType) == "string") {
@@ -205,17 +206,17 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
                                               mapKeyType);
   };
   auto hasBareMapContainsBuiltinDefinition = [&]() {
-    return hasImportedDefinitionPath(canonicalMapHelperPathLocal("contains")) ||
-           hasDeclaredDefinitionPath(canonicalMapHelperPathLocal("contains")) ||
+    return hasImportedDefinitionPath(canonicalKeyValueHelperPathLocal("contains")) ||
+           hasDeclaredDefinitionPath(canonicalKeyValueHelperPathLocal("contains")) ||
            hasImportedDefinitionPath(
-               canonicalMapHelperPathLocal("contains_ref")) ||
+               canonicalKeyValueHelperPathLocal("contains_ref")) ||
            hasDeclaredDefinitionPath(
-               canonicalMapHelperPathLocal("contains_ref")) ||
+               canonicalKeyValueHelperPathLocal("contains_ref")) ||
            hasImportedDefinitionPath("/contains") ||
            hasDeclaredDefinitionPath("/contains");
   };
   auto hasVisibleStdlibMapBuiltinDefinition = [&](const std::string &helperName) {
-    const std::string path = canonicalMapHelperPathLocal(helperName);
+    const std::string path = canonicalKeyValueHelperPathLocal(helperName);
     return hasImportedDefinitionPath(path) || hasDeclaredDefinitionPath(path);
   };
   auto isLocalRootMapAliasCall = [&](const Expr &candidate) {
@@ -276,7 +277,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     const Expr &receiverExpr = expr.args.front();
     if (isExperimentalMapReceiver(receiverExpr)) {
       return failLateMapAccessBuiltinDiagnostic(
-          "unknown call target: " + canonicalMapHelperPathLocal(builtinName));
+          "unknown call target: " + canonicalKeyValueHelperPathLocal(builtinName));
     }
   }
 
@@ -294,43 +295,43 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
 
   if (!expr.isMethodCall && isSimpleCallName(expr, "contains") &&
       !context.shouldBuiltinValidateBareMapContainsCall) {
-    Expr rewrittenMapHelperCall;
+    Expr rewrittenKeyValueHelperCall;
     if (this->tryRewriteBareMapHelperCall(expr, "contains",
                                           *context.dispatchResolvers,
-                                          rewrittenMapHelperCall)) {
+                                          rewrittenKeyValueHelperCall)) {
       handledOut = true;
-      return validateExpr(params, locals, rewrittenMapHelperCall);
+      return validateExpr(params, locals, rewrittenKeyValueHelperCall);
     }
   }
 
   if (!expr.isMethodCall && isSimpleCallName(expr, "tryAt") &&
       !context.shouldBuiltinValidateBareMapTryAtCall) {
-    Expr rewrittenMapHelperCall;
+    Expr rewrittenKeyValueHelperCall;
     if (this->tryRewriteBareMapHelperCall(expr, "tryAt",
                                           *context.dispatchResolvers,
-                                          rewrittenMapHelperCall)) {
-      if (isCanonicalMapHelperResolvedPath(rewrittenMapHelperCall.name,
-                                           "tryAt") &&
+                                          rewrittenKeyValueHelperCall)) {
+      if (isCanonicalKeyValueHelperResolvedPath(
+              rewrittenKeyValueHelperCall.name, "tryAt") &&
           !hasVisibleStdlibMapBuiltinDefinition("tryAt") &&
           !hasImportedDefinitionPath("/tryAt") &&
           !hasDeclaredDefinitionPath("/tryAt")) {
         return failLateMapAccessBuiltinDiagnostic(
-            "unknown call target: " + canonicalMapHelperPathLocal("tryAt"));
+            "unknown call target: " + canonicalKeyValueHelperPathLocal("tryAt"));
       }
       handledOut = true;
-      return validateExpr(params, locals, rewrittenMapHelperCall);
+      return validateExpr(params, locals, rewrittenKeyValueHelperCall);
     }
   }
 
   if (!expr.isMethodCall &&
       getCanonicalMapAccessBuiltinName(expr, builtinName) &&
       !context.shouldBuiltinValidateBareMapAccessCall) {
-    Expr rewrittenMapHelperCall;
+    Expr rewrittenKeyValueHelperCall;
     if (this->tryRewriteBareMapHelperCall(expr, builtinName,
                                           *context.dispatchResolvers,
-                                          rewrittenMapHelperCall)) {
+                                          rewrittenKeyValueHelperCall)) {
       handledOut = true;
-      return validateExpr(params, locals, rewrittenMapHelperCall);
+      return validateExpr(params, locals, rewrittenKeyValueHelperCall);
     }
   }
 
@@ -357,7 +358,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
            expr.args.front(), *context.dispatchResolvers))) {
     if (!hasBareMapContainsBuiltinDefinition()) {
       return failLateMapAccessBuiltinDiagnostic(
-          "unknown call target: " + canonicalMapHelperPathLocal("contains"));
+          "unknown call target: " + canonicalKeyValueHelperPathLocal("contains"));
     }
     size_t receiverIndex = 0;
     size_t keyIndex = 1;
@@ -408,11 +409,11 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
   }
 
   if (((expr.isMethodCall &&
-        (isCanonicalMapHelperResolvedPath(resolved, "tryAt") ||
-         isCanonicalMapHelperResolvedPath(resolved, "tryAt_ref"))) ||
+        (isCanonicalKeyValueHelperResolvedPath(resolved, "tryAt") ||
+         isCanonicalKeyValueHelperResolvedPath(resolved, "tryAt_ref"))) ||
        (!expr.isMethodCall &&
         (isSimpleCallName(expr, "tryAt") ||
-         isCanonicalMapHelperResolvedPath(resolved, "tryAt")))) &&
+         isCanonicalKeyValueHelperResolvedPath(resolved, "tryAt")))) &&
       expr.args.size() == 2 &&
       (expr.isMethodCall || !hasDeclaredDefinitionPath(resolved)) &&
       (context.shouldBuiltinValidateBareMapTryAtCall ||
@@ -431,21 +432,21 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     const Expr &keyExpr =
         hasBareMapOperands ? expr.args[keyIndex] : expr.args[1];
     const bool resolvesTryAtRef =
-        isCanonicalMapHelperResolvedPath(resolved, "tryAt_ref");
+        isCanonicalKeyValueHelperResolvedPath(resolved, "tryAt_ref");
     const bool resolvesCanonicalTryAt =
-        isCanonicalMapHelperResolvedPath(resolved, "tryAt");
+        isCanonicalKeyValueHelperResolvedPath(resolved, "tryAt");
     if (((!expr.isMethodCall && resolvesCanonicalTryAt) || resolvesTryAtRef) &&
         !hasImportedDefinitionPath(
-            canonicalMapHelperPathLocal(resolvesTryAtRef ? "tryAt_ref"
+            canonicalKeyValueHelperPathLocal(resolvesTryAtRef ? "tryAt_ref"
                                                          : "tryAt")) &&
         !hasDeclaredDefinitionPath(
-            canonicalMapHelperPathLocal(resolvesTryAtRef ? "tryAt_ref"
+            canonicalKeyValueHelperPathLocal(resolvesTryAtRef ? "tryAt_ref"
                                                          : "tryAt")) &&
         !hasImportedDefinitionPath("/tryAt") &&
         !hasDeclaredDefinitionPath("/tryAt")) {
       return failLateMapAccessBuiltinDiagnostic(
           "unknown call target: " +
-          canonicalMapHelperPathLocal(resolvesTryAtRef ? "tryAt_ref"
+          canonicalKeyValueHelperPathLocal(resolvesTryAtRef ? "tryAt_ref"
                                                        : "tryAt"));
     }
     std::string mapKeyType;
@@ -517,7 +518,7 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     if (isCanonicalMapAccessHelperPath(expr.name) &&
         !hasVisibleStdlibMapBuiltinDefinition(builtinName)) {
       return failLateMapAccessBuiltinDiagnostic(
-          "unknown call target: " + canonicalMapHelperPathLocal(builtinName));
+          "unknown call target: " + canonicalKeyValueHelperPathLocal(builtinName));
     }
     std::string mapKeyType;
     if (rootMapConstructorKeyType(receiverExpr, mapKeyType) ||

@@ -1239,8 +1239,27 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
         std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find("canonicalMapHelperPathLocal(") ==
+        std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find(
+            "resolveCanonicalMapHelperNameFromSpelling(") ==
+        std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find("isCanonicalMapHelperResolvedPath(") ==
+        std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find("rewrittenMapHelperCall") ==
+        std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find(
             "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+        std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find("canonicalKeyValueHelperPathLocal(") !=
+        std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find(
+            "resolveCanonicalKeyValueHelperNameFromSpelling(") !=
+        std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find(
+            "isCanonicalKeyValueHelperResolvedPath(") !=
+        std::string::npos);
+  CHECK(lateMapAccessBuiltinsSource.find("rewrittenKeyValueHelperCall") !=
         std::string::npos);
   CHECK(exprTrySource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
         std::string::npos);
