@@ -226,6 +226,13 @@
   dispatch returns `NotHandled`; the adjacent source-delegation lock passed.
 
 ## Recent Test Runs
+- 2026-05-18 19:46 CEST | pass | mode: release | command:
+  `git diff --check`;
+  `rg -n 'mapKeyCompareOpcode|map key compare opcode' src/ir_lowerer include/primec/testing/ir_lowerer_helpers tests/unit/test_ir_pipeline_validation_ir_lowerer_*`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers key/value key compare opcode selection,ir lowerer call helpers source delegation stays stable" --no-skip`
+  | failures: none | notes: Key comparison opcode selection now uses
+  `keyValueKeyCompareOpcode` instead of `mapKeyCompareOpcode`.
 - 2026-05-18 19:33 CEST | pass | mode: release | command:
   `git diff --check`;
   `rg -n 'isMapContainsHelperName|isMapTryAtHelperName|isBuiltinMapContainsName|isBuiltinMapTryAtName' src/ir_lowerer tests/unit/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp`;

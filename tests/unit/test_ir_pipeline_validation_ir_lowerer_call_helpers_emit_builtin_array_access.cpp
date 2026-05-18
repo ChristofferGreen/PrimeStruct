@@ -771,16 +771,16 @@ TEST_CASE("ir lowerer call helpers validate non literal string access target") {
   CHECK(error == "unchanged");
 }
 
-TEST_CASE("ir lowerer call helpers map key compare opcode selection") {
+TEST_CASE("ir lowerer call helpers key/value key compare opcode selection") {
   using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
   using primec::IrOpcode;
 
-  CHECK(primec::ir_lowerer::mapKeyCompareOpcode(Kind::Int32) == IrOpcode::CmpEqI32);
-  CHECK(primec::ir_lowerer::mapKeyCompareOpcode(Kind::Bool) == IrOpcode::CmpEqI32);
-  CHECK(primec::ir_lowerer::mapKeyCompareOpcode(Kind::Int64) == IrOpcode::CmpEqI64);
-  CHECK(primec::ir_lowerer::mapKeyCompareOpcode(Kind::UInt64) == IrOpcode::CmpEqI64);
-  CHECK(primec::ir_lowerer::mapKeyCompareOpcode(Kind::Float32) == IrOpcode::CmpEqF32);
-  CHECK(primec::ir_lowerer::mapKeyCompareOpcode(Kind::Float64) == IrOpcode::CmpEqF64);
+  CHECK(primec::ir_lowerer::keyValueKeyCompareOpcode(Kind::Int32) == IrOpcode::CmpEqI32);
+  CHECK(primec::ir_lowerer::keyValueKeyCompareOpcode(Kind::Bool) == IrOpcode::CmpEqI32);
+  CHECK(primec::ir_lowerer::keyValueKeyCompareOpcode(Kind::Int64) == IrOpcode::CmpEqI64);
+  CHECK(primec::ir_lowerer::keyValueKeyCompareOpcode(Kind::UInt64) == IrOpcode::CmpEqI64);
+  CHECK(primec::ir_lowerer::keyValueKeyCompareOpcode(Kind::Float32) == IrOpcode::CmpEqF32);
+  CHECK(primec::ir_lowerer::keyValueKeyCompareOpcode(Kind::Float64) == IrOpcode::CmpEqF64);
 }
 
 TEST_CASE("ir lowerer call helpers resolve map lookup string keys") {

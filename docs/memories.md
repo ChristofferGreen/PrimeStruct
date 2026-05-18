@@ -59,7 +59,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   Temporary key/value collection metadata, access-target helpers, lookup
   helper APIs, setup-inference access element-kind helpers, and
   inline/native-tail contains/tryAt predicates carry backing details until
-  later TODO-4464 slices remove the remaining C++ map substrate.
+  later TODO-4464 slices remove the remaining C++ map substrate; key
+  comparison opcode selection is also named in key/value terms.
 - Evidence: The release `PrimeStruct_backend_ir_tests` target rebuilt after
   the kind, field, target-info, lookup-helper, and setup-inference access
   renames, focused backend IR windows passed, and direct `rg` scans over
@@ -69,7 +70,7 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `MapLookupStringKeyResult`, `emitMapLookupAccess`,
   `ArrayMapAccessElementKindResolution`, or
   `resolveArrayMapAccessElementKind`, `isMapContainsHelperName`, or
-  `isMapTryAtHelperName`.
+  `isMapTryAtHelperName`, or `mapKeyCompareOpcode`.
 
 ### map-compatibility-aliases-require-source-definitions
 - Updated: 2026-05-18

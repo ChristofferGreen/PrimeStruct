@@ -72,7 +72,7 @@ KeyValueLookupLoopLocals emitExperimentalMapLookupLoopSearchScaffold(
       locals.indexLocal, locals.countLocal, instructionCount, emitInstruction);
   emitExperimentalMapKeyLoad(keysDataPtrLocal, locals.indexLocal, emitInstruction);
   emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(keyLocal));
-  emitInstruction(mapKeyCompareOpcode(keyValueKeyKind), 0);
+  emitInstruction(keyValueKeyCompareOpcode(keyValueKeyKind), 0);
   const size_t jumpNotMatch = instructionCount();
   emitInstruction(IrOpcode::JumpIfZero, 0);
   const size_t jumpFound = instructionCount();
@@ -261,7 +261,7 @@ bool emitExperimentalMapLookupTryAt(
 
 } // namespace
 
-IrOpcode mapKeyCompareOpcode(LocalInfo::ValueKind keyValueKeyKind) {
+IrOpcode keyValueKeyCompareOpcode(LocalInfo::ValueKind keyValueKeyKind) {
   if (keyValueKeyKind == LocalInfo::ValueKind::Int64 || keyValueKeyKind == LocalInfo::ValueKind::UInt64) {
     return IrOpcode::CmpEqI64;
   }
@@ -1071,7 +1071,7 @@ KeyValueLookupLoopMatchAnchors emitKeyValueLookupLoopMatchCheck(
   emitInstruction(IrOpcode::AddI64, 0);
   emitInstruction(IrOpcode::LoadIndirect, 0);
   emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(keyLocal));
-  emitInstruction(mapKeyCompareOpcode(keyValueKeyKind), 0);
+  emitInstruction(keyValueKeyCompareOpcode(keyValueKeyKind), 0);
 
   KeyValueLookupLoopMatchAnchors anchors;
   anchors.jumpNotMatch = instructionCount();

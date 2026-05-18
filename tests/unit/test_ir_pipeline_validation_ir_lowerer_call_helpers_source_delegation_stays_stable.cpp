@@ -220,7 +220,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(callHelpersSource.find("StdlibSurfaceId::CollectionsVectorHelperSurface") ==
         std::string::npos);
   CHECK(callHelpersSource.find("\"/vector/\"") == std::string::npos);
-  CHECK(callHelpersSource.find("IrOpcode mapKeyCompareOpcode(") ==
+  CHECK(callHelpersSource.find("IrOpcode keyValueKeyCompareOpcode(") ==
         std::string::npos);
   CHECK(callHelpersSource.find("KeyValueLookupStringKeyResult tryResolveKeyValueLookupStringKey(") ==
         std::string::npos);
@@ -292,7 +292,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(accessTargetResolutionSource.find("targetKind == LocalInfo::ValueKind::String",
                                           nonLiteralStringGraphKindPos) != std::string::npos);
 
-  CHECK(accessLoadHelpersSource.find("IrOpcode mapKeyCompareOpcode(") !=
+  CHECK(accessLoadHelpersSource.find("IrOpcode keyValueKeyCompareOpcode(") !=
         std::string::npos);
   CHECK(accessLoadHelpersSource.find("KeyValueLookupStringKeyResult tryResolveKeyValueLookupStringKey(") !=
         std::string::npos);

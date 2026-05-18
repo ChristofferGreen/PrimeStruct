@@ -543,7 +543,7 @@ bool resolveValidatedAccessIndexKind(
     std::string &error,
     const SemanticProgram *semanticProgram,
     const SemanticProductIndex *semanticIndex);
-IrOpcode mapKeyCompareOpcode(LocalInfo::ValueKind keyValueKeyKind);
+IrOpcode keyValueKeyCompareOpcode(LocalInfo::ValueKind keyValueKeyKind);
 KeyValueLookupStringKeyResult tryResolveKeyValueLookupStringKey(
     LocalInfo::ValueKind keyValueKeyKind,
     const Expr &lookupKeyExpr,
