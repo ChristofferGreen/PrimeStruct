@@ -62,7 +62,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   later TODO-4464 slices remove the remaining C++ map substrate; key
   comparison opcode selection plus inline native dispatch published-helper
   metadata wrappers, builtin-name helper-surface checks, and access-target
-  metadata/classifier helpers are also named in key/value terms.
+  metadata/classifier helpers are also named in key/value terms; count-access
+  local classifier wrappers and string-valued access helpers follow the same
+  naming.
 - Evidence: The release `PrimeStruct_backend_ir_tests` target rebuilt after
   the kind, field, target-info, lookup-helper, and setup-inference access
   renames, focused backend IR windows passed, and direct `rg` scans over
@@ -79,7 +81,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   helper-surface and constructor-alias locals away from map-specific names;
   access-target validation passed after renaming metadata/classifier locals
   and making dereferenced args-pack key/value access use the same explicit
-  published helper-path detection as direct args-pack access.
+  published helper-path detection as direct args-pack access; count-access
+  source-delegation coverage passed after renaming local classifier wrappers,
+  semantic string access resolution, and explicit source-spelling helpers to
+  key/value terms.
 
 ### map-compatibility-aliases-require-source-definitions
 - Updated: 2026-05-18

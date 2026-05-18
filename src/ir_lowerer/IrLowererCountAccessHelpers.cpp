@@ -23,8 +23,8 @@
 namespace primec::ir_lowerer {
 using count_access_detail::isDereferencedCollectionCountTarget;
 using count_access_detail::isExplicitArrayCountName;
-using count_access_detail::isMapBuiltinName;
-using count_access_detail::resolveMapHelperAliasName;
+using count_access_detail::isKeyValueBuiltinName;
+using count_access_detail::resolveKeyValueHelperAliasName;
 using count_access_detail::resolveVectorHelperAliasName;
 using count_access_detail::isVectorBuiltinName;
 using count_access_detail::isVectorCountTarget;
@@ -349,7 +349,7 @@ void emitInternalSoaStorageMetadataLoad(
   emitInstruction(IrOpcode::LoadIndirect, 0);
 }
 
-bool hasInferredTypedWrappedMap(const LocalInfo &info, LocalInfo::Kind kind) {
+bool hasInferredTypedWrappedKeyValue(const LocalInfo &info, LocalInfo::Kind kind) {
   return (kind == LocalInfo::Kind::Reference || kind == LocalInfo::Kind::Pointer) &&
          info.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
          info.keyValueValueKind != LocalInfo::ValueKind::Unknown;
@@ -361,10 +361,10 @@ struct SemanticCountTargetInfo {
   bool isString = false;
 };
 
-enum class SemanticStringMapAccessResolution {
+enum class SemanticStringKeyValueAccessResolution {
   NoFact,
-  StringMapAccess,
-  NonStringMapAccess,
+  StringKeyValueAccess,
+  NonStringKeyValueAccess,
 };
 
 enum class SemanticDereferencedCountTargetResolution {
@@ -420,9 +420,9 @@ bool classifySemanticCountTargetTypeText(std::string typeText,
   return true;
 }
 
-bool classifySemanticStringMapTargetTypeText(std::string typeText,
-                                             bool &isStringMapOut) {
-  isStringMapOut = false;
+bool classifySemanticStringKeyValueTargetTypeText(std::string typeText,
+                                             bool &isStringKeyValueOut) {
+  isStringKeyValueOut = false;
   typeText = trimTemplateTypeText(std::move(typeText));
   if (typeText.empty()) {
     return false;
@@ -439,30 +439,30 @@ bool classifySemanticStringMapTargetTypeText(std::string typeText,
     return true;
   }
   if ((base == "Reference" || base == "Pointer") && args.size() == 1) {
-    return classifySemanticStringMapTargetTypeText(args.front(), isStringMapOut);
+    return classifySemanticStringKeyValueTargetTypeText(args.front(), isStringKeyValueOut);
   }
   if (base != "map" || args.size() != 2) {
     return true;
   }
-  isStringMapOut =
+  isStringKeyValueOut =
       valueKindFromTypeName(args.back()) == LocalInfo::ValueKind::String;
   return true;
 }
 
-bool classifySemanticStringMapTargetTypeText(const SemanticProgram &semanticProgram,
+bool classifySemanticStringKeyValueTargetTypeText(const SemanticProgram &semanticProgram,
                                              const std::string &typeText,
                                              SymbolId typeTextId,
-                                             bool &isStringMapOut) {
+                                             bool &isStringKeyValueOut) {
   const std::string resolvedTypeText =
       std::string(resolveSemanticProductText(semanticProgram, typeTextId, typeText));
-  return classifySemanticStringMapTargetTypeText(resolvedTypeText, isStringMapOut);
+  return classifySemanticStringKeyValueTargetTypeText(resolvedTypeText, isStringKeyValueOut);
 }
 
-bool classifySemanticStringMapCollectionTarget(
+bool classifySemanticStringKeyValueCollectionTarget(
     const SemanticProgram &semanticProgram,
     const SemanticProgramCollectionSpecialization &collectionFact,
-    bool &isStringMapOut) {
-  isStringMapOut = false;
+    bool &isStringKeyValueOut) {
+  isStringKeyValueOut = false;
   const std::string collectionFamily = normalizeCollectionBindingTypeName(
       std::string(resolveSemanticProductText(semanticProgram,
                                              collectionFact.collectionFamilyId,
@@ -474,90 +474,90 @@ bool classifySemanticStringMapCollectionTarget(
       std::string(resolveSemanticProductText(semanticProgram,
                                              collectionFact.valueTypeTextId,
                                              collectionFact.valueTypeText));
-  isStringMapOut =
+  isStringKeyValueOut =
       valueKindFromTypeName(valueType) == LocalInfo::ValueKind::String;
   return true;
 }
 
-bool classifySemanticStringMapTarget(const Expr &target,
+bool classifySemanticStringKeyValueTarget(const Expr &target,
                                      const SemanticProgram *semanticProgram,
                                      const SemanticProductIndex *semanticIndex,
-                                     bool &isStringMapOut) {
-  isStringMapOut = false;
+                                     bool &isStringKeyValueOut) {
+  isStringKeyValueOut = false;
   if (semanticProgram == nullptr ||
       semanticIndex == nullptr || target.semanticNodeId == 0) {
     return false;
   }
   if (const auto *collectionFact =
           findSemanticProductCollectionSpecialization(*semanticIndex, target)) {
-    return classifySemanticStringMapCollectionTarget(
-        *semanticProgram, *collectionFact, isStringMapOut);
+    return classifySemanticStringKeyValueCollectionTarget(
+        *semanticProgram, *collectionFact, isStringKeyValueOut);
   }
   if (const auto *bindingFact = findSemanticProductBindingFact(*semanticIndex, target)) {
-    return classifySemanticStringMapTargetTypeText(*semanticProgram,
+    return classifySemanticStringKeyValueTargetTypeText(*semanticProgram,
                                                   bindingFact->bindingTypeText,
                                                   bindingFact->bindingTypeTextId,
-                                                  isStringMapOut);
+                                                  isStringKeyValueOut);
   }
   if (const auto *localAutoFact =
           findSemanticProductLocalAutoFact(semanticProgram, *semanticIndex, target)) {
-    return classifySemanticStringMapTargetTypeText(*semanticProgram,
+    return classifySemanticStringKeyValueTargetTypeText(*semanticProgram,
                                                   localAutoFact->bindingTypeText,
                                                   localAutoFact->bindingTypeTextId,
-                                                  isStringMapOut);
+                                                  isStringKeyValueOut);
   }
   if (const auto *queryFact =
           findSemanticProductQueryFact(semanticProgram, *semanticIndex, target)) {
-    if (classifySemanticStringMapTargetTypeText(*semanticProgram,
+    if (classifySemanticStringKeyValueTargetTypeText(*semanticProgram,
                                                queryFact->queryTypeText,
                                                queryFact->queryTypeTextId,
-                                               isStringMapOut)) {
+                                               isStringKeyValueOut)) {
       return true;
     }
-    if (classifySemanticStringMapTargetTypeText(*semanticProgram,
+    if (classifySemanticStringKeyValueTargetTypeText(*semanticProgram,
                                                queryFact->bindingTypeText,
                                                queryFact->bindingTypeTextId,
-                                               isStringMapOut)) {
+                                               isStringKeyValueOut)) {
       return true;
     }
-    return classifySemanticStringMapTargetTypeText(*semanticProgram,
+    return classifySemanticStringKeyValueTargetTypeText(*semanticProgram,
                                                   queryFact->receiverBindingTypeText,
                                                   queryFact->receiverBindingTypeTextId,
-                                                  isStringMapOut);
+                                                  isStringKeyValueOut);
   }
   return false;
 }
 
-SemanticStringMapAccessResolution classifySemanticStringMapAccess(
+SemanticStringKeyValueAccessResolution classifySemanticStringKeyValueAccess(
     const Expr &accessExpr,
     const SemanticProgram *semanticProgram,
     const SemanticProductIndex *semanticIndex) {
   if (semanticProgram == nullptr || semanticIndex == nullptr) {
-    return SemanticStringMapAccessResolution::NoFact;
+    return SemanticStringKeyValueAccessResolution::NoFact;
   }
   if (hasPublishedSemanticCountTargetFact(accessExpr, semanticIndex)) {
     SemanticCountTargetInfo accessInfo;
     if (classifySemanticCountTarget(
             accessExpr, semanticProgram, semanticIndex, accessInfo) &&
         accessInfo.isString) {
-      return SemanticStringMapAccessResolution::StringMapAccess;
+      return SemanticStringKeyValueAccessResolution::StringKeyValueAccess;
     }
-    return SemanticStringMapAccessResolution::NonStringMapAccess;
+    return SemanticStringKeyValueAccessResolution::NonStringKeyValueAccess;
   }
   if (accessExpr.args.empty()) {
-    return SemanticStringMapAccessResolution::NoFact;
+    return SemanticStringKeyValueAccessResolution::NoFact;
   }
   const Expr &accessTarget = accessExpr.args.front();
   if (!hasPublishedSemanticCountTargetFact(accessTarget, semanticIndex)) {
-    return SemanticStringMapAccessResolution::NoFact;
+    return SemanticStringKeyValueAccessResolution::NoFact;
   }
-  bool isStringMapTarget = false;
-  if (classifySemanticStringMapTarget(
-          accessTarget, semanticProgram, semanticIndex, isStringMapTarget) &&
-      isStringMapTarget) {
-    return SemanticStringMapAccessResolution::StringMapAccess;
+  bool isStringKeyValueTarget = false;
+  if (classifySemanticStringKeyValueTarget(
+          accessTarget, semanticProgram, semanticIndex, isStringKeyValueTarget) &&
+      isStringKeyValueTarget) {
+    return SemanticStringKeyValueAccessResolution::StringKeyValueAccess;
   }
-  return SemanticStringMapAccessResolution::NonStringMapAccess;
+  return SemanticStringKeyValueAccessResolution::NonStringKeyValueAccess;
 }
 
 bool classifySemanticCountTargetTypeText(const SemanticProgram &semanticProgram,
@@ -735,7 +735,7 @@ const SemanticProgramQueryFact *findSourceMethodAccessQueryFact(
   return nullptr;
 }
 
-bool isSourceMethodStringMapAccessTarget(
+bool isSourceMethodStringKeyValueAccessTarget(
     const Expr &target,
     const SemanticProgram *semanticProgram,
     const SemanticProductIndex *semanticIndex,
@@ -775,7 +775,7 @@ bool isSourceMethodStringMapAccessTarget(
   return true;
 }
 
-bool publishedMapAccessHelperReturnsString(const SemanticProgram *semanticProgram,
+bool publishedKeyValueAccessHelperReturnsString(const SemanticProgram *semanticProgram,
                                            std::string_view accessName) {
   if (semanticProgram == nullptr ||
       (accessName != "at" && accessName != "at_unsafe")) {
@@ -805,7 +805,7 @@ bool publishedMapAccessHelperReturnsString(const SemanticProgram *semanticProgra
          bindingType == "/string" || bindingType == "string";
 }
 
-bool hasExplicitStdMapSourceSpelling(const Expr &expr) {
+bool hasExplicitStdKeyValueSourceSpelling(const Expr &expr) {
   const auto hasStdMapPrefix = [](std::string_view text) {
     return hasCanonicalCollectionMemberPrefix(text, "map");
   };
@@ -1055,7 +1055,7 @@ bool isArrayCountCall(const Expr &expr,
                       const SemanticProductIndex *semanticIndex) {
   const bool isSemanticVectorCountBridge =
       isSemanticVectorCountBridgeCall(expr, semanticProgram);
-  if (!(isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count") ||
+  if (!(isVectorBuiltinName(expr, "count") || isKeyValueBuiltinName(expr, "count") ||
         isSemanticVectorCountBridge) ||
       expr.args.size() != 1) {
     return false;
@@ -1121,24 +1121,24 @@ bool isArrayCountCall(const Expr &expr,
     if (it->second.kind == LocalInfo::Kind::Reference) {
       return it->second.referenceToArray || it->second.referenceToVector ||
              it->second.referenceToBuffer || it->second.referenceToKeyValueCollection ||
-             hasInferredTypedWrappedMap(it->second, it->second.kind);
+             hasInferredTypedWrappedKeyValue(it->second, it->second.kind);
     }
     if (it->second.kind == LocalInfo::Kind::Pointer) {
       return it->second.pointerToArray || it->second.pointerToVector ||
              it->second.pointerToBuffer || it->second.pointerToKeyValueCollection ||
-             hasInferredTypedWrappedMap(it->second, it->second.kind);
+             hasInferredTypedWrappedKeyValue(it->second, it->second.kind);
     }
     return it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector ||
            it->second.kind == LocalInfo::Kind::Buffer || it->second.isSoaVector ||
            it->second.kind == LocalInfo::Kind::KeyValueCollection;
   }
   if (target.kind == Expr::Kind::Call) {
-    std::string mapHelperAlias;
-    const bool isNamespacedMapAccessCall =
-        resolveMapHelperAliasName(target, mapHelperAlias) &&
-        (mapHelperAlias == "at" || mapHelperAlias == "at_unsafe") &&
+    std::string keyValueHelperAlias;
+    const bool isNamespacedKeyValueAccessCall =
+        resolveKeyValueHelperAliasName(target, keyValueHelperAlias) &&
+        (keyValueHelperAlias == "at" || keyValueHelperAlias == "at_unsafe") &&
         (target.name.find('/') != std::string::npos || !target.namespacePrefix.empty());
-    if (isNamespacedMapAccessCall) {
+    if (isNamespacedKeyValueAccessCall) {
       return false;
     }
     std::string accessName;
@@ -1153,12 +1153,12 @@ bool isArrayCountCall(const Expr &expr,
               info.argsPackElementKind == LocalInfo::Kind::KeyValueCollection ||
               (info.argsPackElementKind == LocalInfo::Kind::Reference &&
                (info.referenceToArray || info.referenceToVector || info.referenceToBuffer || info.referenceToKeyValueCollection ||
-                hasInferredTypedWrappedMap(info, info.argsPackElementKind))) ||
+                hasInferredTypedWrappedKeyValue(info, info.argsPackElementKind))) ||
               (info.argsPackElementKind == LocalInfo::Kind::Pointer && info.pointerToArray) ||
               (info.argsPackElementKind == LocalInfo::Kind::Pointer && info.pointerToVector) ||
               (info.argsPackElementKind == LocalInfo::Kind::Pointer && info.pointerToBuffer) ||
               (info.argsPackElementKind == LocalInfo::Kind::Pointer &&
-               (info.pointerToKeyValueCollection || hasInferredTypedWrappedMap(info, info.argsPackElementKind))) ||
+               (info.pointerToKeyValueCollection || hasInferredTypedWrappedKeyValue(info, info.argsPackElementKind))) ||
               info.isSoaVector) {
             return true;
           }
@@ -1295,7 +1295,7 @@ bool isStringCountCall(const Expr &expr,
                        const LocalMap &localsIn,
                        const SemanticProgram *semanticProgram,
                        const SemanticProductIndex *semanticIndex) {
-  if (!(isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) || expr.args.size() != 1) {
+  if (!(isVectorBuiltinName(expr, "count") || isKeyValueBuiltinName(expr, "count")) || expr.args.size() != 1) {
     return false;
   }
   if (isExplicitVectorCountMethodCall(expr)) {
@@ -1385,7 +1385,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       isExplicitPublishedVectorMetadataCall(expr, "capacity");
   const auto isCountLikeCall = [&]() {
     return (isVectorBuiltinName(expr, "count") ||
-            isMapBuiltinName(expr, "count") ||
+            isKeyValueBuiltinName(expr, "count") ||
             explicitPublishedVectorCountCall) &&
            expr.args.size() == 1;
   };
@@ -1545,7 +1545,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
   }
   const bool namedArgVectorTemporaryCountTarget =
       (isVectorBuiltinName(expr, "count") ||
-       isMapBuiltinName(expr, "count") ||
+       isKeyValueBuiltinName(expr, "count") ||
        explicitPublishedVectorCountCall) &&
       expr.args.size() == 1 &&
       isNamedArgumentCollectionTemporary(expr.args.front(), "vector");
@@ -1585,7 +1585,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     if (semanticStringTarget == SemanticStringCountTargetResolution::NonString) {
       return false;
     }
-    if (isSourceMethodStringMapAccessTarget(target, semanticProgram, semanticIndex)) {
+    if (isSourceMethodStringKeyValueAccessTarget(target, semanticProgram, semanticIndex)) {
       return true;
     }
     if (inferExprKind) {
@@ -1607,12 +1607,12 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
   };
   const auto emitRuntimeStringCountTarget = [&]() {
     Expr rewrittenStringTarget = expr.args.front();
-    std::string explicitMapAccessName;
-    if (hasExplicitStdMapSourceSpelling(rewrittenStringTarget) &&
-        getBuiltinArrayAccessName(rewrittenStringTarget, explicitMapAccessName) &&
-        (explicitMapAccessName == "at" ||
-         explicitMapAccessName == "at_unsafe")) {
-      rewrittenStringTarget.name = explicitMapAccessName;
+    std::string explicitKeyValueAccessName;
+    if (hasExplicitStdKeyValueSourceSpelling(rewrittenStringTarget) &&
+        getBuiltinArrayAccessName(rewrittenStringTarget, explicitKeyValueAccessName) &&
+        (explicitKeyValueAccessName == "at" ||
+         explicitKeyValueAccessName == "at_unsafe")) {
+      rewrittenStringTarget.name = explicitKeyValueAccessName;
       rewrittenStringTarget.namespacePrefix.clear();
       rewrittenStringTarget.isMethodCall = false;
       rewrittenStringTarget.isFieldAccess = false;
@@ -1620,7 +1620,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       rewrittenStringTarget.templateArgs.clear();
     } else {
       std::string sourceMethodAccessName;
-      if (isSourceMethodStringMapAccessTarget(
+      if (isSourceMethodStringKeyValueAccessTarget(
               rewrittenStringTarget, semanticProgram, semanticIndex,
               &sourceMethodAccessName)) {
         rewrittenStringTarget.name = sourceMethodAccessName;
@@ -1641,17 +1641,17 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     const Expr &target = expr.args.front();
     std::string accessName;
     if (target.name.find('/') == std::string::npos &&
-        !hasExplicitStdMapSourceSpelling(target) &&
+        !hasExplicitStdKeyValueSourceSpelling(target) &&
         getBuiltinArrayAccessName(target, accessName) &&
-        (isSourceMethodStringMapAccessTarget(target, semanticProgram, semanticIndex) ||
-         (publishedMapAccessHelperReturnsString(semanticProgram, accessName) &&
+        (isSourceMethodStringKeyValueAccessTarget(target, semanticProgram, semanticIndex) ||
+         (publishedKeyValueAccessHelperReturnsString(semanticProgram, accessName) &&
           !target.args.empty() &&
           !isVectorCountTarget(target.args.front(), localsIn)))) {
       return emitRuntimeStringCountTarget();
     }
   }
   if (isArrayCountCallFn(expr, localsIn)) {
-    if ((isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) && expr.args.size() == 1 &&
+    if ((isVectorBuiltinName(expr, "count") || isKeyValueBuiltinName(expr, "count")) && expr.args.size() == 1 &&
         expr.args.front().kind == Expr::Kind::Name) {
       auto it = localsIn.find(expr.args.front().name);
       if (it != localsIn.end() &&
@@ -1736,7 +1736,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
   }
 
   if ((isVectorBuiltinName(expr, "count") ||
-       isMapBuiltinName(expr, "count") ||
+       isKeyValueBuiltinName(expr, "count") ||
        explicitPublishedVectorCountCall) && expr.args.size() == 1 &&
       isDynamicCollectionCountTargetFn && isDynamicCollectionCountTargetFn(expr.args.front(), localsIn)) {
     if (inferExprKind &&
@@ -1779,23 +1779,23 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     return CountAccessCallEmitResult::Emitted;
   }
 
-  if ((isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) && expr.args.size() == 1 &&
+  if ((isVectorBuiltinName(expr, "count") || isKeyValueBuiltinName(expr, "count")) && expr.args.size() == 1 &&
       expr.args.front().kind == Expr::Kind::Call) {
     std::string accessName;
     const Expr &target = expr.args.front();
     if (getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) {
-      const auto semanticStringMapAccess =
-          classifySemanticStringMapAccess(target, semanticProgram, semanticIndex);
-      if (semanticStringMapAccess ==
-          SemanticStringMapAccessResolution::StringMapAccess) {
+      const auto semanticStringKeyValueAccess =
+          classifySemanticStringKeyValueAccess(target, semanticProgram, semanticIndex);
+      if (semanticStringKeyValueAccess ==
+          SemanticStringKeyValueAccessResolution::StringKeyValueAccess) {
         if (!emitExpr(target, localsIn)) {
           return CountAccessCallEmitResult::Error;
         }
         emitInstruction(IrOpcode::LoadStringLength, 0);
         return CountAccessCallEmitResult::Emitted;
       }
-      if (semanticStringMapAccess ==
-          SemanticStringMapAccessResolution::NonStringMapAccess) {
+      if (semanticStringKeyValueAccess ==
+          SemanticStringKeyValueAccessResolution::NonStringKeyValueAccess) {
         return CountAccessCallEmitResult::NotHandled;
       }
       if (inferExprKind) {
@@ -1812,12 +1812,12 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
         }
       }
       const Expr &accessTarget = target.args.front();
-      bool stringMapAccess = false;
+      bool stringKeyValueAccess = false;
       if (accessTarget.kind == Expr::Kind::Name) {
         auto it = localsIn.find(accessTarget.name);
         if (it != localsIn.end()) {
           const LocalInfo &info = it->second;
-          stringMapAccess =
+          stringKeyValueAccess =
               ((info.kind == LocalInfo::Kind::KeyValueCollection) ||
                (info.kind == LocalInfo::Kind::Reference && info.referenceToKeyValueCollection) ||
                (info.kind == LocalInfo::Kind::Pointer && info.pointerToKeyValueCollection)) &&
@@ -1827,11 +1827,11 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
         std::string collection;
         if (getBuiltinCollectionName(accessTarget, collection) && collection == "map" &&
             accessTarget.templateArgs.size() == 2) {
-          stringMapAccess =
+          stringKeyValueAccess =
               accessTarget.templateArgs[1] == "string" || accessTarget.templateArgs[1] == "/string";
         }
       }
-      if (stringMapAccess) {
+      if (stringKeyValueAccess) {
         if (!emitExpr(target, localsIn)) {
           return CountAccessCallEmitResult::Error;
         }
@@ -1841,7 +1841,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     }
   }
 
-  if ((isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) && expr.args.size() == 1 &&
+  if ((isVectorBuiltinName(expr, "count") || isKeyValueBuiltinName(expr, "count")) && expr.args.size() == 1 &&
       inferExprKind) {
     const SemanticStringCountTargetResolution semanticStringTarget =
         classifySemanticStringCountTarget(expr.args.front(), semanticProgram, semanticIndex);
@@ -1854,7 +1854,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     }
     Expr rewrittenStringTarget = expr.args.front();
     std::string accessName;
-    if (isSourceMethodStringMapAccessTarget(
+    if (isSourceMethodStringKeyValueAccessTarget(
             rewrittenStringTarget, semanticProgram, semanticIndex, &accessName)) {
       rewrittenStringTarget.isMethodCall = false;
       rewrittenStringTarget.isFieldAccess = false;

@@ -1716,7 +1716,9 @@ TEST_CASE("soa field-view backend cleanup stays stable") {
         std::string::npos);
   CHECK(countAccessClassifiersSource.find("primec::ir_lowerer::resolveVectorHelperAliasName(") !=
         std::string::npos);
-  CHECK(countAccessClassifiersSource.find("primec::ir_lowerer::resolveMapHelperAliasName(") !=
+  CHECK(countAccessClassifiersSource.find("bool resolveKeyValueHelperAliasName(") !=
+        std::string::npos);
+  CHECK(countAccessClassifiersSource.find("primec::ir_lowerer::resolveMapHelperAliasName(") ==
         std::string::npos);
 
   CHECK(nativeTailDispatchSource.find("field_view") == std::string::npos);

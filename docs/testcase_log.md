@@ -236,8 +236,30 @@
   false instead of borrowing the old generic access return info from direct
   `/array/at` definitions; adjacent count-call return-kind and canonical map
   access fallback rejection coverage passed.
+- `PrimeStruct_backend_ir_tests --test-case="ir lowerer count access classifiers prefer semantic indexed target facts,ir lowerer count access helpers prefer graph facts for string map access emission" --no-skip`
+  has stale count-access expectations after the map stdlib-ownership cutover.
+  On 2026-05-18 both cases still failed on the committed baseline before the
+  count-access naming slice: the syntax-only indexed target stayed false, and
+  the string-valued map access emission fixture returned `NotHandled`.
 
 ## Recent Test Runs
+- 2026-05-18 20:03 CEST | pass | mode: release | command:
+  `git diff --check`;
+  `rg -n 'hasInferredTypedWrappedMap|SemanticStringMapAccessResolution|StringMapAccess|NonStringMapAccess|classifySemanticStringMap|isSourceMethodStringMapAccessTarget|publishedMapAccessHelperReturnsString|hasExplicitStdMapSourceSpelling|mapHelperAlias|isNamespacedMapAccessCall|explicitMapAccessName|semanticStringMapAccess|stringMapAccess|isStringMapTarget|isStringMapOut|isMapBuiltinName|resolveMapHelperAliasName' src/ir_lowerer/IrLowererCountAccessHelpers.cpp src/ir_lowerer/IrLowererCountAccessClassifiers.cpp src/ir_lowerer/IrLowererCountAccessClassifiers.h`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable" --no-skip`
+  | failures: none | notes: Count-access classifier and string-valued
+  key/value access helpers now use key/value names for local map-shaped
+  helper APIs while preserving existing behavior.
+- 2026-05-18 20:03 CEST | fail | mode: release | command:
+  `git stash push -u -m count-access-keyvalue-rename-probe`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer count access classifiers prefer semantic indexed target facts,ir lowerer count access helpers prefer graph facts for string map access emission" --no-skip`;
+  `git stash pop`
+  | failures: `ir lowerer count access classifiers prefer semantic indexed
+  target facts`; `ir lowerer count access helpers prefer graph facts for
+  string map access emission` | notes: Baseline probe confirmed both failures
+  pre-existed the count-access key/value rename.
 - 2026-05-18 19:56 CEST | pass | mode: release | command:
   `git diff --check`;
   `rg -n 'mapHelperSurfaceMetadataForAccessTargets|mapConstructorSurfaceMetadataForAccessTargets|isMapAccessHelperName|resolveMapAccessHelperPathMemberName|isExplicitMapAccessHelperPath|resolveMapConstructorExprMemberName|classifySemanticMapAccessTypeText|hasInferredTypedWrappedMap|preSemanticAliasMapAccess|preSemanticExplicitMapAccess|isAliasMapArgsPackAccess|isExplicitMapArgsPackAccess|inferredWrappedMap|\bisWrappedMap\b|\bmapArgs\b' src/ir_lowerer/IrLowererAccessTargetResolution.cpp`;

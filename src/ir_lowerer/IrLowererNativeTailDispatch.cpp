@@ -759,7 +759,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
 
   if (expr.args.size() == 1 &&
       (count_access_detail::isVectorBuiltinName(expr, "count") ||
-       count_access_detail::isMapBuiltinName(expr, "count") ||
+       count_access_detail::isKeyValueBuiltinName(expr, "count") ||
        isSimpleCallName(expr, "count") ||
        resolveNativeTailCallPathWithoutFallbackProbes(expr) == "/string/count")) {
     const Expr &target = expr.args.front();

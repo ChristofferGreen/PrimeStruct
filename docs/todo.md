@@ -2830,6 +2830,12 @@ Task template:
       matching, semantic type-text classification, and args-pack access
       checks. Dereferenced args-pack key/value access now uses the same
       explicit published helper-path detection as direct args-pack access.
+    - 2026-05-18: Count-access classifier and string-valued access helpers
+      now use key/value terminology for local map-shaped helper wrappers,
+      semantic string access classification, explicit stdlib source-spelling
+      checks, and simple count builtin tests. The remaining behavior still
+      routes through stdlib map metadata until the C++ map substrate is fully
+      deleted.
     - 2026-05-18: `SemanticsValidate.cpp` builtin map insert/read rewrite now
       derives map helper insert/read members, canonical helper paths,
       constructor detection, and removed rooted access alias paths from

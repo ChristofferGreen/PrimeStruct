@@ -12,7 +12,7 @@ namespace primec::ir_lowerer::count_access_detail {
 
 namespace {
 
-bool hasInferredTypedWrappedMap(const LocalInfo &info, LocalInfo::Kind kind) {
+bool hasInferredTypedWrappedKeyValue(const LocalInfo &info, LocalInfo::Kind kind) {
   return (kind == LocalInfo::Kind::Reference || kind == LocalInfo::Kind::Pointer) &&
          info.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
          info.keyValueValueKind != LocalInfo::ValueKind::Unknown;
@@ -285,7 +285,7 @@ bool isDereferencedCollectionCountTarget(const Expr &, const Expr &target, const
     const bool isKeyValueTarget =
         (kind == LocalInfo::Kind::Reference && info.referenceToKeyValueCollection) ||
         (kind == LocalInfo::Kind::Pointer && info.pointerToKeyValueCollection) ||
-        hasInferredTypedWrappedMap(info, kind);
+        hasInferredTypedWrappedKeyValue(info, kind);
     if (!isArrayTarget && !isVectorTarget && !isSoaVectorTarget && !isBufferTarget && !isKeyValueTarget) {
       return false;
     }
@@ -312,8 +312,10 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   return primec::ir_lowerer::resolveVectorHelperAliasName(expr, helperNameOut);
 }
 
-bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
-  return primec::ir_lowerer::resolveMapHelperAliasName(expr, helperNameOut);
+bool resolveKeyValueHelperAliasName(const Expr &expr, std::string &helperNameOut) {
+  (void)expr;
+  helperNameOut.clear();
+  return false;
 }
 
 bool isVectorBuiltinName(const Expr &expr, const char *name) {
@@ -348,10 +350,12 @@ bool isVectorBuiltinName(const Expr &expr, const char *name) {
   return false;
 }
 
-bool isMapBuiltinName(const Expr &expr, const char *name) {
-  (void)expr;
-  (void)name;
-  return false;
+bool isKeyValueBuiltinName(const Expr &expr, const char *name) {
+  if (isSimpleCallName(expr, name)) {
+    return true;
+  }
+  std::string aliasName;
+  return resolveKeyValueHelperAliasName(expr, aliasName) && aliasName == name;
 }
 
 } // namespace primec::ir_lowerer::count_access_detail
