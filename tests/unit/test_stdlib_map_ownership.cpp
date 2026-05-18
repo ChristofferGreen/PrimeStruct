@@ -61,18 +61,15 @@ bool isAllowedMapBackingFile(const std::string &relativePath) {
       "src/emitter/EmitterHelpersTypes.cpp",
       "src/ir_lowerer/IrLowererAccessTargetResolution.cpp",
       "src/ir_lowerer/IrLowererCallHelpers.cpp",
-      "src/ir_lowerer/IrLowererInlineCallContextHelpers.cpp",
       "src/ir_lowerer/IrLowererInlinePackedArgs.cpp",
       "src/ir_lowerer/IrLowererInlineParamHelpers.cpp",
       "src/ir_lowerer/IrLowererLowerEmitExprCollectionHelpers.h",
       "src/ir_lowerer/IrLowererLowerEmitExprTailDispatch.h",
       "src/ir_lowerer/IrLowererLowerInferenceDispatchSetup.cpp",
-      "src/ir_lowerer/IrLowererLowerInlineCalls.h",
       "src/ir_lowerer/IrLowererLowerStatementsExpr.h",
       "src/ir_lowerer/IrLowererSetupTypeDeclaredCollectionInference.cpp",
       "src/ir_lowerer/IrLowererSetupTypeMethodTargetHelpers.cpp",
       "src/ir_lowerer/IrLowererStatementCallEmission.cpp",
-      "src/ir_lowerer/IrLowererStructSlotLayoutHelpers.cpp",
       "src/ir_lowerer/IrLowererUninitializedStructInference.cpp",
   };
   return std::find(files.begin(), files.end(), relativePath) != files.end();
@@ -97,10 +94,6 @@ bool isAllowedExperimentalMapTrace(const std::string &relativePath,
   }
   if (relativePath == "src/ir_lowerer/IrLowererLowerEmitExprCollectionHelpers.h" &&
       contains("receiverDef->fullPath.rfind(\"/std/collections/experimental_map/\", 0) == 0")) {
-    return true;
-  }
-  if (relativePath == "src/ir_lowerer/IrLowererInlineCallContextHelpers.cpp" &&
-      contains("isSinglePathSegmentWithPrefix(path, \"/std/collections/experimental_map/map__\")")) {
     return true;
   }
   return false;

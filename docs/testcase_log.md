@@ -196,6 +196,16 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-18 12:45 CEST | pass | mode: release | command:
+  `rg --pcre2 -n '/?std/collections/map(?:/|")|/?std/collections/experimental_map(?:/|")|(?<![A-Za-z0-9_/])/?map/|\bmap(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bCollectionsMap[A-Za-z0-9_]*\b|\bMap<' src/ir_lowerer/IrLowererInlineCallContextHelpers.cpp src/ir_lowerer/IrLowererLowerInlineCalls.h src/ir_lowerer/IrLowererNativeTailDispatch.cpp src/ir_lowerer/IrLowererStructSlotLayoutHelpers.cpp || true`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `git diff --check` | failures: none | notes:
+  Four lowerer files returned no targeted map-surface matches, so their stale
+  inventory caps were lowered to zero, obsolete backing-trace source-lock
+  allowances were removed, and the generated experimental-map inline-call
+  context exception was retired. The Python inventory script was intentionally
+  not run.
 - 2026-05-18 12:42 CEST | pass | mode: release | command:
   `rg --pcre2 -n '/?std/collections/map(?:/|")|/?std/collections/experimental_map(?:/|")|(?<![A-Za-z0-9_/])/?map/|\bmap(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bCollectionsMap[A-Za-z0-9_]*\b|\bMap<' src/ir_lowerer/IrLowererStatementBindingHelpers.cpp src/ir_lowerer/IrLowererBindingTypeHelpers.cpp src/ir_lowerer/IrLowererLowerInferenceBaseKindHelpers.cpp src/ir_lowerer/IrLowererStructReturnPathHelpers.cpp || true`;
   `cmake --build build-release --target PrimeStruct_misc_tests`;
