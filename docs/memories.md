@@ -702,7 +702,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   semantic infer-dispatch metadata and resolved-helper locals should use
   key/value naming around map helper metadata; semantic statement body-argument
   compatibility, metadata, canonical-path, alias-path, and receiver locals
-  should use key/value naming around map helper metadata.
+  should use key/value naming around map helper metadata; semantic
+  infer-struct-return helper metadata locals should use key/value naming around
+  map helper metadata.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

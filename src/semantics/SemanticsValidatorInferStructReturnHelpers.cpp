@@ -41,8 +41,13 @@ std::string keyValueCollectionMarkerPathForInferStructReturn() {
   return {};
 }
 
+const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataForInferStructReturn() {
+  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+}
+
 std::string unrootedKeyValueHelperPrefixForInferStructReturn() {
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata =
+      keyValueHelperSurfaceMetadataForInferStructReturn();
   if (metadata == nullptr || metadata->canonicalPath.empty()) {
     return {};
   }
@@ -57,7 +62,8 @@ std::string unrootedKeyValueHelperPrefixForInferStructReturn() {
 }
 
 std::string keyValueBackingRootForInferStructReturn() {
-  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  const StdlibSurfaceMetadata *metadata =
+      keyValueHelperSurfaceMetadataForInferStructReturn();
   if (metadata == nullptr || metadata->canonicalPath.empty()) {
     return {};
   }
