@@ -1051,7 +1051,7 @@ bool rewriteExpr(Expr &expr,
     if (!resolvesVectorFamilyPath && receiverFamily == "map" &&
         (helperName == "count" || helperName == "count_ref")) {
       const std::string preferred =
-          templateMonomorphCanonicalMapHelperPath(helperName);
+          templateMonomorphCanonicalKeyValueHelperPath(helperName);
       if (hasVisibleStdCollectionsImportForPath(ctx, preferred) &&
           ctx.sourceDefs.count(preferred) > 0) {
         return preferred;

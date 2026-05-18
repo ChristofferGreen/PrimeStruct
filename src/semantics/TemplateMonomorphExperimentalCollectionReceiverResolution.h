@@ -568,7 +568,7 @@ bool isTemplateMonomorphMapImportAliasHelperPath(std::string_view path) {
   return false;
 }
 
-std::string templateMonomorphCanonicalMapHelperPath(std::string_view spelling) {
+std::string templateMonomorphCanonicalKeyValueHelperPath(std::string_view spelling) {
   std::string helperName;
   if (!resolveTemplateMonomorphKeyValueHelperName(std::string(spelling),
                                                   helperName)) {
@@ -661,7 +661,7 @@ std::string canonicalMapHelperUnknownTargetPath(const std::string &resolvedPath)
       helperName.ends_with("_ref")) {
     return {};
   }
-  return templateMonomorphCanonicalMapHelperPath(helperName);
+  return templateMonomorphCanonicalKeyValueHelperPath(helperName);
 }
 
 bool resolveExperimentalMapValueReceiverTemplateArgs(const Expr *receiverExpr,
