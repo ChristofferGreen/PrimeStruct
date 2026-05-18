@@ -740,7 +740,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   key/value naming around map helper metadata; template expression rewrite
   borrowed unknown-target locals should use key/value naming around map helper
   metadata; template monomorph receiver helper metadata accessors should use
-  key/value naming around map helper metadata.
+  key/value naming around map helper metadata; template monomorph receiver
+  helper-name resolvers should use key/value naming around map helper
+  metadata.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

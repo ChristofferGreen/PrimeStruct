@@ -518,8 +518,9 @@ const StdlibSurfaceMetadata *templateMonomorphKeyValueHelperSurfaceMetadata() {
   return primec::findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
 }
 
-bool resolveTemplateMonomorphMapHelperName(std::string path,
-                                           std::string &helperNameOut) {
+bool resolveTemplateMonomorphKeyValueHelperName(
+    std::string path,
+    std::string &helperNameOut) {
   helperNameOut.clear();
   const StdlibSurfaceMetadata *metadata =
       templateMonomorphKeyValueHelperSurfaceMetadata();
@@ -569,8 +570,8 @@ bool isTemplateMonomorphMapImportAliasHelperPath(std::string_view path) {
 
 std::string templateMonomorphCanonicalMapHelperPath(std::string_view spelling) {
   std::string helperName;
-  if (!resolveTemplateMonomorphMapHelperName(std::string(spelling),
-                                             helperName)) {
+  if (!resolveTemplateMonomorphKeyValueHelperName(std::string(spelling),
+                                                  helperName)) {
     return {};
   }
   const StdlibSurfaceMetadata *metadata =
@@ -598,8 +599,8 @@ bool resolveTemplateMonomorphCanonicalMapHelperName(
   if (path.rfind(canonicalPrefix, 0) != 0) {
     return false;
   }
-  return resolveTemplateMonomorphMapHelperName(std::move(path),
-                                               helperNameOut);
+  return resolveTemplateMonomorphKeyValueHelperName(std::move(path),
+                                                    helperNameOut);
 }
 
 bool isTemplateMonomorphCanonicalMapHelperPath(const std::string &path) {
@@ -624,8 +625,8 @@ std::string templateMonomorphPreferredMapHelperSpellingForMember(
     std::string_view spelling,
     std::string_view preferredPrefix) {
   std::string helperName;
-  if (!resolveTemplateMonomorphMapHelperName(std::string(spelling),
-                                             helperName)) {
+  if (!resolveTemplateMonomorphKeyValueHelperName(std::string(spelling),
+                                                  helperName)) {
     return {};
   }
   const StdlibSurfaceMetadata *metadata =
@@ -637,8 +638,8 @@ std::string templateMonomorphPreferredMapHelperSpellingForMember(
     for (const std::string_view candidate : spellings) {
       std::string candidateHelperName;
       if (candidate.rfind(preferredPrefix, 0) == 0 &&
-          resolveTemplateMonomorphMapHelperName(std::string(candidate),
-                                                candidateHelperName) &&
+          resolveTemplateMonomorphKeyValueHelperName(std::string(candidate),
+                                                     candidateHelperName) &&
           candidateHelperName == helperName) {
         return std::string(candidate);
       }
