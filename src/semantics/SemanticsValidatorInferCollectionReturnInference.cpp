@@ -59,41 +59,6 @@ bool extractBuiltinSoaVectorElementTypeFromTypeTextForQueryInference(
   return true;
 }
 
-std::string experimentalMapBackingLeafForReturnInference(std::string typeName) {
-  typeName = normalizeBindingTypeName(std::move(typeName));
-  if (!typeName.empty() && typeName.front() == '/') {
-    typeName.erase(typeName.begin());
-  }
-  const size_t leafStart = typeName.find_last_of('/');
-  return leafStart == std::string::npos ? typeName : typeName.substr(leafStart + 1);
-}
-
-bool isUnspecializedExperimentalMapBackingTypeForReturnInference(std::string typeName) {
-  typeName = normalizeBindingTypeName(std::move(typeName));
-  if (!typeName.empty() && typeName.front() == '/') {
-    typeName.erase(typeName.begin());
-  }
-  return experimentalMapBackingLeafForReturnInference(typeName) == "Map" &&
-         isExperimentalCollectionBackingTypeName("map", "Map", typeName);
-}
-
-bool isSpecializedExperimentalMapBackingTypeForReturnInference(std::string typeName) {
-  typeName = normalizeBindingTypeName(std::move(typeName));
-  if (!typeName.empty() && typeName.front() == '/') {
-    typeName.erase(typeName.begin());
-  }
-  return experimentalMapBackingLeafForReturnInference(typeName) != "Map" &&
-         isExperimentalCollectionBackingTypeName("map", "Map", typeName);
-}
-
-bool isBareExperimentalMapBackingNameForReturnInference(std::string typeName) {
-  typeName = normalizeBindingTypeName(std::move(typeName));
-  if (!typeName.empty() && typeName.front() == '/') {
-    typeName.erase(typeName.begin());
-  }
-  return typeName == "Map";
-}
-
 } // namespace
 
 bool SemanticsValidator::inferDefinitionReturnBinding(const Definition &def, BindingInfo &bindingOut) {
@@ -152,7 +117,7 @@ bool SemanticsValidator::inferDefinitionReturnBinding(const Definition &def, Bin
         base == "vector" || base == "soa" "_vector" || isMapCollectionTypeName(base) ||
         base == "Vector" ||
         isLegacyExperimentalVectorCompatibilityPath("/" + base) ||
-        isUnspecializedExperimentalMapBackingTypeForReturnInference(base) ||
+        isUnspecializedExperimentalMapBackingTypeName(base) ||
         !resolveStructTypePath(base, def.namespacePrefix, structNames_).empty()) {
       std::vector<std::string> args;
       if (!splitTopLevelTemplateArgs(argText, args) || args.empty()) {
@@ -942,8 +907,9 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
                  candidate.templateArgs.size() == 1) {
         currentTypeTextOut = collection + "<" + candidate.templateArgs.front() + ">";
         return true;
-      } else if (collection == "map" && candidate.templateArgs.size() == 2) {
-        currentTypeTextOut = "map<" + candidate.templateArgs[0] + ", " + candidate.templateArgs[1] + ">";
+      } else if (isMapCollectionTypeName(collection) && candidate.templateArgs.size() == 2) {
+        currentTypeTextOut = collection + "<" + candidate.templateArgs[0] + ", " +
+                             candidate.templateArgs[1] + ">";
         return true;
       }
     }
@@ -1086,8 +1052,13 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       return resolvedMethodTarget;
     };
     if (isDirectMapConstructorPath(resolvedCandidate)) {
+      const std::string mapAlias = mapCollectionAliasToken();
+      if (mapAlias.empty()) {
+        return false;
+      }
       if (candidate.templateArgs.size() == 2) {
-        currentTypeTextOut = "map<" + candidate.templateArgs[0] + ", " + candidate.templateArgs[1] + ">";
+        currentTypeTextOut = mapAlias + "<" + candidate.templateArgs[0] + ", " +
+                             candidate.templateArgs[1] + ">";
         return true;
       }
       if (candidate.args.empty() || candidate.args.size() % 2 != 0) {
@@ -1116,7 +1087,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       if (keyTypeText.empty() || valueTypeText.empty()) {
         return false;
       }
-      currentTypeTextOut = "map<" + keyTypeText + ", " + valueTypeText + ">";
+      currentTypeTextOut = mapAlias + "<" + keyTypeText + ", " + valueTypeText + ">";
       return true;
     }
     std::string collectionMethodFallbackTypeText;
@@ -1133,9 +1104,9 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
                   collectionMethodFallbackTypeText) ||
               isLegacyExperimentalVectorCompatibilityTypePath(
                   "/" + collectionMethodFallbackTypeText) ||
-              isBareExperimentalMapBackingNameForReturnInference(
+              isBareExperimentalMapBackingTypeName(
                   collectionMethodFallbackTypeText) ||
-              isSpecializedExperimentalMapBackingTypeForReturnInference(
+              isQualifiedExperimentalMapBackingTypeName(
                   collectionMethodFallbackTypeText);
           if (!keepExperimentalCollectionPath) {
             collectionMethodFallbackTypeText = normalizedCollectionType.substr(1);

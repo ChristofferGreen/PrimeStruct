@@ -534,7 +534,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   instead of a direct `map` collection token; semantic collection dispatch
   resolver construction should use shared experimental map backing classifiers
   from `MapConstructorHelpers.h` instead of local direct experimental map
-  backing predicates.
+  backing predicates; collection return inference should also use those shared
+  backing classifiers and the metadata-derived map alias token for map return
+  type text.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

@@ -190,6 +190,18 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-18 11:08 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="template vector and map returns are allowed,canonical stdlib map returns are allowed,vector return accepts array element type during semantics validation,map return accepts array value type during semantics validation,map return rejects wrong template arity,map return rejects unsupported builtin Comparable key contract,canonical stdlib map return rejects direct template arguments,public stdlib map Ref wrappers validate through canonical borrowed helpers,canonical map borrowed helper calls validate ownership-sensitive values through ref helpers" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `rg --pcre2 -n 'isExperimentalCollectionBackingTypeName\("map"|"/map"|(?<![A-Za-z0-9_])map<|/map|std/collections/map|experimental_map|CollectionsMap|\bMap__|\bEntry__|\bMap<' src/semantics/SemanticsValidatorInferCollectionReturnInference.cpp`;
+  `rg --pcre2 -n '/?std/collections/map(?:/|")|/?std/collections/experimental_map(?:/|")|(?<![A-Za-z0-9_/])/?map/|\bmap(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bCollectionsMap[A-Za-z0-9_]*\b|\bMap<' src/semantics/SemanticsValidatorInferCollectionReturnInference.cpp`;
+  `git diff --check` | failures: none | notes:
+  `SemanticsValidatorInferCollectionReturnInference.cpp` now uses shared map
+  backing classifiers and metadata-derived map alias return text. Both
+  targeted direct scans returned no matches. The Python inventory script was
+  intentionally not run.
 - 2026-05-18 10:50 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="public stdlib map Ref wrappers validate through canonical borrowed helpers,canonical map borrowed helper calls validate ownership-sensitive values through ref helpers,canonical stdlib map returns are allowed" --no-skip`;

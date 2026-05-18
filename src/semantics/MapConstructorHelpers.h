@@ -77,6 +77,14 @@ inline bool isUnspecializedExperimentalMapBackingTypeName(std::string_view typeN
          isExperimentalCollectionBackingTypeName("map", "Map", normalized);
 }
 
+inline bool isBareExperimentalMapBackingTypeName(std::string_view typeName) {
+  std::string normalized(typeName);
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  return normalized == "Map";
+}
+
 inline bool isQualifiedExperimentalMapBackingTypeName(std::string_view typeName) {
   std::string normalized(typeName);
   if (!normalized.empty() && normalized.front() == '/') {

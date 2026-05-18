@@ -2742,6 +2742,10 @@ Task template:
       experimental map backing classifiers from `MapConstructorHelpers.h`
       instead of local direct experimental map backing predicates; its
       inventory cap is zero.
+    - 2026-05-18:
+      `SemanticsValidatorInferCollectionReturnInference.cpp` now uses shared
+      map backing classifiers and the metadata-derived map alias token for
+      map return type text; its inventory cap is zero.
     - Tighten or replace the TODO-4473 and TODO-4472 allowed-count
       inventories as traces are deleted; the final TODO-4464 state is zero
       tolerance for all PrimeStruct-map-specific production C++ traces, not a

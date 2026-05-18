@@ -926,6 +926,21 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
             "\"/std/collections/map/\" + builtinAccessName") ==
         std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find(
+            "isExperimentalCollectionBackingTypeName(\"map\"") ==
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find("collection == \"map\"") ==
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find("currentTypeTextOut = \"map<\"") ==
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find(
+            "isUnspecializedExperimentalMapBackingTypeName(base)") !=
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find(
+            "isQualifiedExperimentalMapBackingTypeName(") !=
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find("mapCollectionAliasToken()") !=
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find(
             "metadataBackedCanonicalMapHelperPath(builtinAccessName)") !=
         std::string::npos);
   CHECK(inferCollectionBufferAndMapResolversSource.find(
