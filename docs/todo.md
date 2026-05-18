@@ -2133,6 +2133,10 @@ Task template:
     - 2026-05-18: Semantic infer pre-dispatch call handling no longer spells
       the slashless canonical map helper prefix or rooted map access alias
       paths directly; it derives both from stdlib surface metadata.
+    - 2026-05-18: Semantic pre-dispatch direct-call handling no longer names
+      the map helper surface ID or constructs rooted map alias paths directly;
+      it derives canonical helper paths, rooted removed-alias paths, and member
+      token resolution from `collections.map_helpers` metadata.
     - 2026-05-16: Map literal lowering no longer hard-codes the empty
       inferred-map backing path as `/std/collections/experimental_map/Map`;
       it now uses the shared `experimentalCollectionTypePath("map", "Map")`

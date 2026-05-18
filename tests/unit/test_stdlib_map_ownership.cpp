@@ -180,6 +180,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string inferPreDispatchCallsSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorInferPreDispatchCalls.cpp");
+  const std::string exprPreDispatchDirectCallsSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorExprPreDispatchDirectCalls.cpp");
   const std::string exprVectorHelpersSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprVectorHelpers.cpp");
@@ -360,6 +363,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!inferMethodResolutionSource.empty());
   REQUIRE(!inferMethodResolutionHelpersSource.empty());
   REQUIRE(!inferPreDispatchCallsSource.empty());
+  REQUIRE(!exprPreDispatchDirectCallsSource.empty());
   REQUIRE(!exprVectorHelpersSource.empty());
   REQUIRE(!collectionHelperRewritesSource.empty());
   REQUIRE(!effectFreeCollectionsSource.empty());
@@ -680,6 +684,23 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inferPreDispatchCallsSource.find("isUnrootedMapHelperSurfacePath") !=
         std::string::npos);
   CHECK(inferPreDispatchCallsSource.find("metadataBackedMapHelperRootAliasMethodName") !=
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("std/collections/map/") ==
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("\"/map/\" +") ==
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find(
+            "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find(
+            "resolvePreDispatchMapHelperMemberToken(") !=
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find(
+            "resolvePreDispatchMapHelperResolvedPath(") !=
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find("rootedMapAliasHelperPath(") !=
         std::string::npos);
   CHECK(exprVectorHelpersSource.find("std/collections/map/") ==
         std::string::npos);

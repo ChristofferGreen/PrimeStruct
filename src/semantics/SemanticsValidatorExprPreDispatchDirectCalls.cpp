@@ -58,9 +58,28 @@ bool isUnqualifiedCollectionAccessCall(const Expr &candidate,
          resolvedHelperName == helperName;
 }
 
+const StdlibSurfaceMetadata *preDispatchMapHelperSurfaceMetadata() {
+  return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
+}
+
 std::string canonicalMapHelperPathLocal(std::string_view helperName) {
-  return canonicalCollectionHelperPath(StdlibSurfaceId::CollectionsMapHelpers,
-                                       helperName);
+  const StdlibSurfaceMetadata *metadata = preDispatchMapHelperSurfaceMetadata();
+  if (metadata == nullptr) {
+    return {};
+  }
+  return canonicalCollectionHelperPath(metadata->id, helperName);
+}
+
+bool resolvePreDispatchMapHelperResolvedPath(std::string_view path,
+                                             std::string &helperNameOut) {
+  helperNameOut.clear();
+  const StdlibSurfaceMetadata *metadata =
+      preDispatchMapHelperSurfaceMetadata();
+  if (metadata == nullptr) {
+    return false;
+  }
+  return resolvePublishedCollectionHelperResolvedPath(
+      path, metadata->id, helperNameOut);
 }
 
 std::string stripGeneratedMapHelperSuffix(std::string path) {
@@ -76,16 +95,35 @@ std::string stripGeneratedMapHelperSuffix(std::string path) {
 bool resolveCanonicalMapHelperNameFromSpelling(std::string path,
                                                std::string &helperNameOut) {
   helperNameOut.clear();
+  if (preDispatchMapHelperSurfaceMetadata() == nullptr) {
+    return false;
+  }
   if (!path.empty() && path.front() != '/') {
     path.insert(path.begin(), '/');
   }
-  if (resolvePublishedCollectionHelperResolvedPath(
-          path, StdlibSurfaceId::CollectionsMapHelpers, helperNameOut)) {
+  if (resolvePreDispatchMapHelperResolvedPath(path, helperNameOut)) {
     return true;
   }
   path = stripGeneratedMapHelperSuffix(std::move(path));
-  return resolvePublishedCollectionHelperResolvedPath(
-      path, StdlibSurfaceId::CollectionsMapHelpers, helperNameOut);
+  return resolvePreDispatchMapHelperResolvedPath(path, helperNameOut);
+}
+
+bool resolvePreDispatchMapHelperMemberToken(std::string_view memberToken,
+                                            std::string &helperNameOut) {
+  helperNameOut.clear();
+  const StdlibSurfaceMetadata *metadata =
+      preDispatchMapHelperSurfaceMetadata();
+  if (metadata == nullptr) {
+    return false;
+  }
+  std::string normalizedToken(memberToken);
+  if (!normalizedToken.empty() &&
+      normalizedToken.find('/') != std::string::npos &&
+      normalizedToken.front() != '/') {
+    normalizedToken.insert(normalizedToken.begin(), '/');
+  }
+  return resolvePublishedCollectionHelperMemberToken(
+      normalizedToken, metadata->id, helperNameOut);
 }
 
 bool isCanonicalMapAccessReturnStructHelperName(std::string_view helperName) {
@@ -99,6 +137,12 @@ bool isCanonicalMapBuiltinPreDispatchHelperName(std::string_view helperName) {
          helperName == "tryAt" || helperName == "tryAt_ref" ||
          isCanonicalMapAccessReturnStructHelperName(helperName) ||
          helperName == "insert" || helperName == "insert_ref";
+}
+
+bool isRemovedMapCompatibilityPreDispatchHelperName(
+    std::string_view helperName) {
+  return helperName == "size" ||
+         isCanonicalMapBuiltinPreDispatchHelperName(helperName);
 }
 
 bool isSourceSpelledCanonicalMapAccessCall(const Expr &expr) {
@@ -153,25 +197,58 @@ bool isPublishedMapConstructorExpr(const Expr &candidate) {
 }
 
 std::string removedMapCompatibilityHelperFromPath(std::string path) {
+  const StdlibSurfaceMetadata *metadata =
+      preDispatchMapHelperSurfaceMetadata();
+  if (metadata == nullptr) {
+    return {};
+  }
   if (!path.empty() && path.front() != '/') {
     path.insert(path.begin(), '/');
   }
-  if (path.rfind("/map/", 0) != 0) {
+  path = stripGeneratedMapHelperSuffix(std::move(path));
+  for (std::string_view alias : metadata->importAliasSpellings) {
+    std::string root(alias);
+    if (root.empty()) {
+      continue;
+    }
+    if (root.front() != '/') {
+      root.insert(root.begin(), '/');
+    }
+    const std::string unrootedRoot =
+        std::string(trimLeadingSlash(root));
+    if (unrootedRoot.find('/') != std::string::npos ||
+        path.size() <= root.size() || path.rfind(root, 0) != 0 ||
+        path[root.size()] != '/') {
+      continue;
+    }
+    const std::string helper = path.substr(root.size() + 1);
+    if (isRemovedMapCompatibilityPreDispatchHelperName(helper)) {
+      return helper;
+    }
+  }
+  return {};
+}
+
+std::string rootedMapAliasHelperPath(std::string_view helperName) {
+  const StdlibSurfaceMetadata *metadata =
+      preDispatchMapHelperSurfaceMetadata();
+  if (metadata == nullptr) {
     return {};
   }
-  std::string helper = path.substr(std::string("/map/").size());
-  const size_t specializationSuffix = helper.find("__");
-  if (specializationSuffix != std::string::npos) {
-    helper.erase(specializationSuffix);
-  }
-  if (helper == "count" || helper == "count_ref" ||
-      helper == "size" ||
-      helper == "contains" || helper == "contains_ref" ||
-      helper == "tryAt" || helper == "tryAt_ref" ||
-      helper == "at" || helper == "at_ref" ||
-      helper == "at_unsafe" || helper == "at_unsafe_ref" ||
-      helper == "insert" || helper == "insert_ref") {
-    return helper;
+  for (std::string_view alias : metadata->importAliasSpellings) {
+    std::string root(alias);
+    if (root.empty()) {
+      continue;
+    }
+    if (root.front() != '/') {
+      root.insert(root.begin(), '/');
+    }
+    const std::string unrootedRoot =
+        std::string(trimLeadingSlash(root));
+    if (unrootedRoot.find('/') != std::string::npos) {
+      continue;
+    }
+    return root + "/" + std::string(helperName);
   }
   return {};
 }
@@ -198,22 +275,21 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     }
     const std::string normalizedName =
         std::string(trimLeadingSlash(candidate.name));
-    if (!resolvePublishedCollectionHelperMemberToken(
+    if (!resolvePreDispatchMapHelperMemberToken(
             normalizedName,
-            StdlibSurfaceId::CollectionsMapHelpers,
             helperNameOut) ||
         normalizedName == helperNameOut) {
       helperNameOut.clear();
       return std::string();
     }
-    return "/std/collections/" + normalizedName;
+    return canonicalMapHelperPathLocal(helperNameOut);
   };
   std::string bareMapWrapperHelperName;
   const std::string normalizedBareMapWrapperHelperPath =
       bareMapWrapperHelperPath(expr, bareMapWrapperHelperName);
   if (!normalizedBareMapWrapperHelperPath.empty()) {
     const std::string removedCompatibilityPath =
-        "/map/" + bareMapWrapperHelperName;
+        rootedMapAliasHelperPath(bareMapWrapperHelperName);
     auto hasDefinitionFamilyPath = [&](const std::string &path) {
       if (defMap_.count(path) > 0 || paramsByDef_.count(path) > 0) {
         return true;
@@ -241,7 +317,8 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     const bool resolvesRemovedCompatibilityPath =
         resolvedOut == removedCompatibilityPath ||
         resolvedOut.rfind(removedCompatibilityPath + "__t", 0) == 0;
-    if ((resolvedOut.empty() || resolvesRemovedCompatibilityPath) &&
+    if (!removedCompatibilityPath.empty() &&
+        (resolvedOut.empty() || resolvesRemovedCompatibilityPath) &&
         !hasDefinitionFamilyPath(removedCompatibilityPath) &&
         (hasImportedDefinitionPath(normalizedBareMapWrapperHelperPath) ||
          hasDeclaredDefinitionPath(normalizedBareMapWrapperHelperPath) ||
@@ -296,10 +373,13 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     }
     return false;
   };
+  const std::string removedAliasPath =
+      rootedMapAliasHelperPath(removedMapCompatibilityHelper);
   if (!expr.isMethodCall && !removedMapCompatibilityHelper.empty() &&
-      !hasExactRemovedMapAliasDefinition("/map/" + removedMapCompatibilityHelper)) {
+      !removedAliasPath.empty() &&
+      !hasExactRemovedMapAliasDefinition(removedAliasPath)) {
     handledOut = true;
-    const std::string removedPath = "/map/" + removedMapCompatibilityHelper;
+    const std::string removedPath = removedAliasPath;
     auto canonicalHelperReturnsStruct = [&]() {
       if (!isCanonicalMapAccessReturnStructHelperName(
               removedMapCompatibilityHelper)) {
@@ -554,11 +634,14 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
         isUnqualifiedCollectionAccessCall(expr, builtinAccessName);
     const std::string builtinAccessPath =
         canonicalMapHelperPathLocal(builtinAccessName);
+    const std::string rootedBuiltinAccessAlias =
+        rootedMapAliasHelperPath(builtinAccessName);
     if (!builtinAccessName.empty() &&
+        !rootedBuiltinAccessAlias.empty() &&
         hasVisibleStdlibMapAccessDefinition(builtinAccessName) &&
         (isBareMapAccessBuiltinSurface ||
          defMap_.find(builtinAccessPath) == defMap_.end()) &&
-        !hasDeclaredDefinitionPath("/map/" + builtinAccessName)) {
+        !hasDeclaredDefinitionPath(rootedBuiltinAccessAlias)) {
       size_t receiverIndex = 0;
       size_t keyIndex = 1;
       const bool hasBareMapOperands = this->bareMapHelperOperandIndices(
