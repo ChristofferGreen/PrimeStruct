@@ -5,30 +5,30 @@ namespace primec::semantics {
 
 namespace {
 
-bool isCanonicalMapAccessHelperName(const std::string &helperName) {
+bool isCanonicalKeyValueAccessHelperName(const std::string &helperName) {
   return helperName == "at" || helperName == "at_ref" ||
          helperName == "at_unsafe" || helperName == "at_unsafe_ref";
 }
 
-const StdlibSurfaceMetadata *dispatchSetupMapHelperSurfaceMetadata() {
+const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataForDispatchSetup() {
   return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
 }
 
-bool resolveDispatchSetupMapHelperPath(std::string_view path,
-                                       std::string &helperNameOut) {
+bool resolveDispatchSetupKeyValueHelperPath(std::string_view path,
+                                            std::string &helperNameOut) {
   helperNameOut.clear();
   const StdlibSurfaceMetadata *metadata =
-      dispatchSetupMapHelperSurfaceMetadata();
+      keyValueHelperSurfaceMetadataForDispatchSetup();
   return metadata != nullptr &&
          resolvePublishedCollectionHelperResolvedPath(path, metadata->id,
                                                       helperNameOut);
 }
 
-bool resolveRootMapHelperAliasPath(std::string_view rawPath,
-                                   std::string &helperNameOut) {
+bool resolveRootKeyValueHelperAliasPath(std::string_view rawPath,
+                                        std::string &helperNameOut) {
   helperNameOut.clear();
   const StdlibSurfaceMetadata *metadata =
-      dispatchSetupMapHelperSurfaceMetadata();
+      keyValueHelperSurfaceMetadataForDispatchSetup();
   if (metadata == nullptr) {
     return false;
   }
@@ -47,25 +47,25 @@ bool resolveRootMapHelperAliasPath(std::string_view rawPath,
   if (!matchesRootAlias) {
     return false;
   }
-  return resolveDispatchSetupMapHelperPath("/" + std::string(path),
-                                           helperNameOut);
+  return resolveDispatchSetupKeyValueHelperPath("/" + std::string(path),
+                                                helperNameOut);
 }
 
-bool isMapAccessCompatibilityPath(const std::string &path) {
+bool isKeyValueAccessCompatibilityPath(const std::string &path) {
   std::string helperName;
-  return resolveRootMapHelperAliasPath(path, helperName) &&
-         isCanonicalMapAccessHelperName(helperName);
+  return resolveRootKeyValueHelperAliasPath(path, helperName) &&
+         isCanonicalKeyValueAccessHelperName(helperName);
 }
 
-bool isStdNamespacedCanonicalMapAccessPath(const std::string &path) {
+bool isStdNamespacedCanonicalKeyValueAccessPath(const std::string &path) {
   std::string helperName;
-  return resolveDispatchSetupMapHelperPath(path, helperName) &&
-         isCanonicalMapAccessHelperName(helperName);
+  return resolveDispatchSetupKeyValueHelperPath(path, helperName) &&
+         isCanonicalKeyValueAccessHelperName(helperName);
 }
 
-std::string canonicalMapHelperNamespace() {
+std::string canonicalKeyValueHelperNamespace() {
   const StdlibSurfaceMetadata *metadata =
-      dispatchSetupMapHelperSurfaceMetadata();
+      keyValueHelperSurfaceMetadataForDispatchSetup();
   if (metadata == nullptr) {
     return "";
   }
@@ -96,7 +96,7 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
       getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper);
   const bool isNamespacedVectorHelperCall =
       isNamespacedCollectionHelperCall && namespacedCollection == "vector";
-  const bool isNamespacedMapHelperCall =
+  const bool isNamespacedKeyValueHelperCall =
       isNamespacedCollectionHelperCall && namespacedCollection == "map";
   const std::string resolvedCalleePath = resolveCalleePath(expr);
   auto hasImportedCanonicalVectorHelperDefinition =
@@ -116,14 +116,14 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
       !expr.isMethodCall && isNamespacedVectorHelperCall && namespacedHelper == "count" &&
       isVectorBuiltinName(expr, "count") &&
       !isArrayNamespacedVectorCountCompatibilityCall(expr, builtinCollectionDispatchResolvers);
-  const std::string directRemovedMapCompatibilityPath =
+  const std::string directRemovedKeyValueCompatibilityPath =
       !expr.isMethodCall
           ? directMapHelperCompatibilityPath(
                 expr, params, locals, BuiltinCollectionDispatchResolverAdapters{})
           : std::string();
-  const bool isMapNamespacedAccessCompatibilityCall =
-      isMapAccessCompatibilityPath(directRemovedMapCompatibilityPath);
-  auto getCanonicalMapAccessHelperNameForDispatch =
+  const bool isKeyValueNamespacedAccessCompatibilityCall =
+      isKeyValueAccessCompatibilityPath(directRemovedKeyValueCompatibilityPath);
+  auto getCanonicalKeyValueAccessHelperNameForDispatch =
       [&](const Expr &candidate, std::string &helperNameOut) -> bool {
         helperNameOut.clear();
         if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
@@ -134,36 +134,36 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
           return true;
         }
         const std::string resolvedPath = resolveCalleePath(candidate);
-        std::string resolvedMapHelperName;
-        if (resolveDispatchSetupMapHelperPath(resolvedPath,
-                                              resolvedMapHelperName) &&
-            (resolvedMapHelperName == "at_ref" ||
-             resolvedMapHelperName == "at_unsafe_ref")) {
-          helperNameOut = resolvedMapHelperName;
+        std::string resolvedKeyValueHelperName;
+        if (resolveDispatchSetupKeyValueHelperPath(resolvedPath,
+                                                   resolvedKeyValueHelperName) &&
+            (resolvedKeyValueHelperName == "at_ref" ||
+             resolvedKeyValueHelperName == "at_unsafe_ref")) {
+          helperNameOut = resolvedKeyValueHelperName;
           return true;
         }
         std::string namespacePrefix = candidate.namespacePrefix;
         if (!namespacePrefix.empty() && namespacePrefix.front() == '/') {
           namespacePrefix.erase(namespacePrefix.begin());
         }
-        if (namespacePrefix == canonicalMapHelperNamespace() &&
-            isCanonicalMapAccessHelperName(candidate.name)) {
+        if (namespacePrefix == canonicalKeyValueHelperNamespace() &&
+            isCanonicalKeyValueAccessHelperName(candidate.name)) {
           helperNameOut = candidate.name;
           return true;
         }
         if (candidate.name.find('/') == std::string::npos &&
-            isCanonicalMapAccessHelperName(candidate.name)) {
+            isCanonicalKeyValueAccessHelperName(candidate.name)) {
           helperNameOut = candidate.name;
           return true;
         }
         return false;
       };
-  std::string directMapAccessHelperName;
+  std::string directKeyValueAccessHelperName;
   setupOut.hasBuiltinAccessSpelling =
-      getCanonicalMapAccessHelperNameForDispatch(expr,
-                                                 directMapAccessHelperName);
+      getCanonicalKeyValueAccessHelperNameForDispatch(expr,
+                                                      directKeyValueAccessHelperName);
   if (setupOut.hasBuiltinAccessSpelling) {
-    setupOut.builtinAccessName = directMapAccessHelperName;
+    setupOut.builtinAccessName = directKeyValueAccessHelperName;
   }
   const bool isNamespacedVectorCapacityCall =
       !expr.isMethodCall && isNamespacedVectorHelperCall &&
@@ -195,15 +195,15 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
        isStdlibVectorAccessWrapperDefinition);
   setupOut.isStdNamespacedMapAccessSpelling =
       setupOut.hasBuiltinAccessSpelling && !expr.isMethodCall &&
-      isStdNamespacedCanonicalMapAccessPath(resolvedCalleePath);
+      isStdNamespacedCanonicalKeyValueAccessPath(resolvedCalleePath);
   setupOut.hasStdNamespacedMapAccessDefinition =
       setupOut.isStdNamespacedMapAccessSpelling &&
       (hasImportedDefinitionPath(resolvedCalleePath) ||
        hasDeclaredDefinitionPath(resolvedCalleePath));
-  const bool isResolvedMapAccessCall =
+  const bool isResolvedKeyValueAccessCall =
       !expr.isMethodCall &&
-      isMapAccessCompatibilityPath(resolved) &&
-      !isMapNamespacedAccessCompatibilityCall;
+      isKeyValueAccessCompatibilityPath(resolved) &&
+      !isKeyValueNamespacedAccessCompatibilityCall;
   setupOut.shouldAllowStdAccessCompatibilityFallback = false;
   if (setupOut.isStdNamespacedVectorAccessSpelling && expr.args.size() == 2) {
     size_t receiverIndex = 0;
@@ -242,15 +242,15 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
       setupOut.hasBuiltinAccessSpelling &&
       (!setupOut.isStdNamespacedVectorAccessSpelling ||
        hasStdNamespacedVectorAccessDefinition) &&
-      !setupOut.isStdNamespacedMapAccessSpelling && !isResolvedMapAccessCall;
+      !setupOut.isStdNamespacedMapAccessSpelling && !isResolvedKeyValueAccessCall;
   const bool isNamespacedVectorAccessCall =
       !expr.isMethodCall && setupOut.isBuiltinAccess &&
       isNamespacedVectorHelperCall &&
       (namespacedHelper == "at" || namespacedHelper == "at_unsafe");
-  const bool isNamespacedMapAccessCall =
-      !expr.isMethodCall && setupOut.isBuiltinAccess && isNamespacedMapHelperCall &&
-      isCanonicalMapAccessHelperName(namespacedHelper) &&
-      !isMapNamespacedAccessCompatibilityCall && !hasDefinitionPath(resolved);
+  const bool isNamespacedKeyValueAccessCall =
+      !expr.isMethodCall && setupOut.isBuiltinAccess && isNamespacedKeyValueHelperCall &&
+      isCanonicalKeyValueAccessHelperName(namespacedHelper) &&
+      !isKeyValueNamespacedAccessCompatibilityCall && !hasDefinitionPath(resolved);
   setupOut.shouldInferBuiltinBareMapContainsCall =
       shouldBuiltinValidateCurrentMapWrapperHelper("contains");
   setupOut.shouldInferBuiltinBareMapTryAtCall =
@@ -300,14 +300,14 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
     }
     return normalized;
   }();
-  const bool isStdNamespacedMapAccessPath =
-      isStdNamespacedCanonicalMapAccessPath("/" + normalizedCallName);
+  const bool isStdNamespacedKeyValueAccessPath =
+      isStdNamespacedCanonicalKeyValueAccessPath("/" + normalizedCallName);
   setupOut.shouldDeferNamespacedVectorAccessCall =
       isNamespacedVectorAccessCall &&
       (!hasResolvedDefinition || setupOut.isStdNamespacedVectorAccessSpelling);
   setupOut.shouldDeferNamespacedMapAccessCall =
-      isNamespacedMapAccessCall &&
-      (!hasResolvedDefinition || isStdNamespacedMapAccessPath);
+      isNamespacedKeyValueAccessCall &&
+      (!hasResolvedDefinition || isStdNamespacedKeyValueAccessPath);
   setupOut.hasPreferredBuiltinAccessKind =
       setupOut.hasBuiltinAccessSpelling &&
       resolveBuiltinCollectionAccessCallReturnKind(

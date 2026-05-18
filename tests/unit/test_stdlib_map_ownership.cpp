@@ -978,10 +978,34 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inferCollectionDispatchSetupSource.find(
             "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
         std::string::npos);
-  CHECK(inferCollectionDispatchSetupSource.find("resolveRootMapHelperAliasPath(path, helperName)") !=
+  CHECK(inferCollectionDispatchSetupSource.find(
+            "keyValueHelperSurfaceMetadataForDispatchSetup()") !=
         std::string::npos);
   CHECK(inferCollectionDispatchSetupSource.find(
-            "resolveDispatchSetupMapHelperPath(resolvedPath,") !=
+            "dispatchSetupMapHelperSurfaceMetadata()") ==
+        std::string::npos);
+  CHECK(inferCollectionDispatchSetupSource.find(
+            "resolveRootKeyValueHelperAliasPath(path, helperName)") !=
+        std::string::npos);
+  CHECK(inferCollectionDispatchSetupSource.find("resolveRootMapHelperAliasPath(") ==
+        std::string::npos);
+  CHECK(inferCollectionDispatchSetupSource.find(
+            "resolveDispatchSetupKeyValueHelperPath(resolvedPath,") !=
+        std::string::npos);
+  CHECK(inferCollectionDispatchSetupSource.find("resolveDispatchSetupMapHelperPath(") ==
+        std::string::npos);
+  CHECK(inferCollectionDispatchSetupSource.find(
+            "isCanonicalKeyValueAccessHelperName(") !=
+        std::string::npos);
+  CHECK(inferCollectionDispatchSetupSource.find("isCanonicalMapAccessHelperName(") ==
+        std::string::npos);
+  CHECK(inferCollectionDispatchSetupSource.find("canonicalKeyValueHelperNamespace()") !=
+        std::string::npos);
+  CHECK(inferCollectionDispatchSetupSource.find("canonicalMapHelperNamespace()") ==
+        std::string::npos);
+  CHECK(inferCollectionDispatchSetupSource.find("isNamespacedKeyValueHelperCall") !=
+        std::string::npos);
+  CHECK(inferCollectionDispatchSetupSource.find("isNamespacedMapHelperCall") ==
         std::string::npos);
   CHECK(inferCollectionsSource.find(
             "isExperimentalCollectionBackingTypeName(\"map\"") ==
