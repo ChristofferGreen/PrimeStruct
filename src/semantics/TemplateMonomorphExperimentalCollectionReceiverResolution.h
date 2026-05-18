@@ -609,13 +609,13 @@ bool isTemplateMonomorphCanonicalKeyValueHelperPath(const std::string &path) {
          helperName != "map" && helperName != "entry";
 }
 
-bool isTemplateMonomorphCanonicalMapValueAccessPath(const std::string &path) {
+bool isTemplateMonomorphCanonicalKeyValueAccessPath(const std::string &path) {
   std::string helperName;
   return resolveTemplateMonomorphCanonicalKeyValueHelperName(path, helperName) &&
          (helperName == "at" || helperName == "at_unsafe");
 }
 
-bool isTemplateMonomorphCanonicalMapCountPath(const std::string &path) {
+bool isTemplateMonomorphCanonicalKeyValueCountPath(const std::string &path) {
   std::string helperName;
   return resolveTemplateMonomorphCanonicalKeyValueHelperName(path, helperName) &&
          helperName == "count";

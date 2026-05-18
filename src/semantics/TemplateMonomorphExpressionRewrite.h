@@ -1578,7 +1578,7 @@ bool rewriteExpr(Expr &expr,
         experimentalMapReceiverExpr->kind == Expr::Kind::Call &&
         !experimentalMapReceiverExpr->isFieldAccess &&
         !receiverIsPublishedMapConstructor &&
-        isTemplateMonomorphCanonicalMapValueAccessPath(
+        isTemplateMonomorphCanonicalKeyValueAccessPath(
             borrowedCanonicalKeyValueUnknownTarget);
     if (!experimentalMapPath.empty() && ctx.sourceDefs.count(experimentalMapPath) > 0 &&
         resolvesExperimentalMapValueReceiver(
@@ -1760,7 +1760,7 @@ bool rewriteExpr(Expr &expr,
         preferredPath != originalResolvedPath && ctx.templateDefs.count(preferredPath) > 0;
     const bool resolvedWasTemplate = ctx.templateDefs.count(resolvedPath) > 0;
     const bool isBuiltinMapCountPath =
-        isTemplateMonomorphCanonicalMapCountPath(resolvedPath);
+        isTemplateMonomorphCanonicalKeyValueCountPath(resolvedPath);
     const bool isKnownDef = ctx.sourceDefs.count(resolvedPath) > 0;
     if (!expr.templateArgs.empty() && !resolvedWasTemplate && !isKnownDef && isBuiltinMapCountPath) {
       error = "count does not accept template arguments";
