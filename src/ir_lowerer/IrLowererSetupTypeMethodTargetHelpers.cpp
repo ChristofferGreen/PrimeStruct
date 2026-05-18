@@ -22,9 +22,9 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
       normalizeBuiltinCollectionStructPath("vector").substr(1) + "/";
   const std::string canonicalVectorPrefix =
       collectionMemberRoot("vector", false);
-  const std::string rootedMapPrefix =
+  const std::string rootedKeyValuePrefix =
       normalizeBuiltinCollectionStructPath("map").substr(1) + "/";
-  const std::string canonicalMapPrefix =
+  const std::string canonicalKeyValuePrefix =
       collectionMemberRoot("map", false);
   if (normalizedMethodName.rfind(rootedVectorPrefix, 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(rootedVectorPrefix.size());
@@ -35,21 +35,21 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
         normalizedMethodName.substr(std::string("std/collections/" "soa" "_vector/").size());
   } else if (normalizedMethodName.rfind(canonicalVectorPrefix, 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(canonicalVectorPrefix.size());
-  } else if (normalizedMethodName.rfind(rootedMapPrefix, 0) == 0) {
-    normalizedMethodName = normalizedMethodName.substr(rootedMapPrefix.size());
-  } else if (normalizedMethodName.rfind(canonicalMapPrefix, 0) == 0) {
-    normalizedMethodName = normalizedMethodName.substr(canonicalMapPrefix.size());
+  } else if (normalizedMethodName.rfind(rootedKeyValuePrefix, 0) == 0) {
+    normalizedMethodName = normalizedMethodName.substr(rootedKeyValuePrefix.size());
+  } else if (normalizedMethodName.rfind(canonicalKeyValuePrefix, 0) == 0) {
+    normalizedMethodName = normalizedMethodName.substr(canonicalKeyValuePrefix.size());
   }
   std::string normalizedOriginalMethodName = methodName;
   if (!normalizedOriginalMethodName.empty() && normalizedOriginalMethodName.front() == '/') {
     normalizedOriginalMethodName.erase(normalizedOriginalMethodName.begin());
   }
-  const bool isExplicitCanonicalMapMethodAlias =
-      normalizedOriginalMethodName.rfind(canonicalMapPrefix, 0) == 0;
-  const bool isExplicitCompatibilityMapMethodAlias =
-      isExplicitKeyValueMethodAlias && !isExplicitCanonicalMapMethodAlias;
-  const bool isExplicitMapContainsOrTryAtCompatibilityMethodAlias =
-      normalizedOriginalMethodName.rfind(rootedMapPrefix, 0) == 0 &&
+  const bool isExplicitCanonicalKeyValueMethodAlias =
+      normalizedOriginalMethodName.rfind(canonicalKeyValuePrefix, 0) == 0;
+  const bool isExplicitCompatibilityKeyValueMethodAlias =
+      isExplicitKeyValueMethodAlias && !isExplicitCanonicalKeyValueMethodAlias;
+  const bool isExplicitKeyValueContainsOrTryAtCompatibilityMethodAlias =
+      normalizedOriginalMethodName.rfind(rootedKeyValuePrefix, 0) == 0 &&
       isExplicitKeyValueContainsOrTryAtMethod;
   const bool isExplicitVectorAliasMethod =
       normalizedOriginalMethodName.rfind(rootedVectorPrefix, 0) == 0;
@@ -84,7 +84,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     const std::string normalized = stripReceiverPrefix(candidate);
     return normalized.rfind("std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__", 0) == 0;
   };
-  auto isMapReceiverTarget = [&](const std::string &candidate) {
+  auto isKeyValueReceiverTarget = [&](const std::string &candidate) {
     const std::string normalized = stripReceiverPrefix(candidate);
     return isBuiltinCollectionTypeName(normalized, "map") ||
            isExperimentalCollectionTypeName(normalized, "map", "Map");
@@ -96,10 +96,10 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     return std::string("struct parameter type mismatch for /std/collections/" "soa" "_vector/") + helperName +
            " parameter values: expected /std/collections/experimental" "_soa" "_vector/Soa" "Vector" "__ specialization";
   };
-  auto shouldPreferCanonicalMapPath = [&](const std::string &candidate) {
-    return !isExplicitCompatibilityMapMethodAlias && !isExplicitMapContainsOrTryAtCompatibilityMethodAlias &&
-           isMapReceiverTarget(candidate) &&
-           (isExplicitCanonicalMapMethodAlias || normalizedMethodName == "count" ||
+  auto shouldPreferCanonicalKeyValuePath = [&](const std::string &candidate) {
+    return !isExplicitCompatibilityKeyValueMethodAlias && !isExplicitKeyValueContainsOrTryAtCompatibilityMethodAlias &&
+           isKeyValueReceiverTarget(candidate) &&
+           (isExplicitCanonicalKeyValueMethodAlias || normalizedMethodName == "count" ||
             normalizedMethodName == "contains" || normalizedMethodName == "tryAt" ||
             normalizedMethodName == "at" || normalizedMethodName == "at_unsafe" ||
             normalizedMethodName == "insert");
@@ -286,7 +286,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
              ? collectionTypePath("vector")
              : (shouldPreferCanonicalSoaPath(resolvedTypeWithoutSlash)
                     ? "/std/collections/" "soa" "_vector"
-             : (shouldPreferCanonicalMapPath(resolvedTypeWithoutSlash)
+             : (shouldPreferCanonicalKeyValuePath(resolvedTypeWithoutSlash)
                     ? collectionTypePath("map")
                     : normalizedResolvedTypePath)));
     const std::string resolved = resolvedBase + "/" + normalizedMethodName;
@@ -299,7 +299,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
       return nullptr;
     }
     if ((isExplicitKeyValueMethodAlias || isExplicitKeyValueContainsOrTryAtMethod) &&
-        isMapReceiverTarget(resolvedTypeWithoutSlash)) {
+        isKeyValueReceiverTarget(resolvedTypeWithoutSlash)) {
       errorOut = "unknown method: " + resolved;
       return nullptr;
     }
@@ -309,9 +309,9 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
       return nullptr;
     }
     if (resolvedDef == nullptr) {
-      if (!isExplicitCanonicalMapMethodAlias && !isExplicitCompatibilityMapMethodAlias &&
+      if (!isExplicitCanonicalKeyValueMethodAlias && !isExplicitCompatibilityKeyValueMethodAlias &&
           !isExplicitKeyValueContainsOrTryAtMethod &&
-          isMapReceiverTarget(resolvedTypeWithoutSlash) &&
+          isKeyValueReceiverTarget(resolvedTypeWithoutSlash) &&
           (normalizedMethodName == "contains" || normalizedMethodName == "tryAt" ||
            normalizedMethodName == "insert")) {
         errorOut.clear();
@@ -355,7 +355,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
            ? collectionTypePath("vector")
            : (shouldPreferCanonicalSoaPath(normalizedTypeName)
                   ? "/std/collections/" "soa" "_vector"
-           : (shouldPreferCanonicalMapPath(normalizedTypeName)
+           : (shouldPreferCanonicalKeyValuePath(normalizedTypeName)
                   ? collectionTypePath("map")
                   : "/" + normalizedTypeName)));
   const std::string resolved = resolvedBase + "/" + normalizedMethodName;
@@ -368,7 +368,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     return nullptr;
   }
   if ((isExplicitKeyValueMethodAlias || isExplicitKeyValueContainsOrTryAtMethod) &&
-      isMapReceiverTarget(normalizedTypeName)) {
+      isKeyValueReceiverTarget(normalizedTypeName)) {
     errorOut = "unknown method: " + resolved;
     return nullptr;
   }
@@ -378,9 +378,9 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     return nullptr;
   }
   if (resolvedDef == nullptr) {
-    if (!isExplicitCanonicalMapMethodAlias && !isExplicitCompatibilityMapMethodAlias &&
+    if (!isExplicitCanonicalKeyValueMethodAlias && !isExplicitCompatibilityKeyValueMethodAlias &&
         !isExplicitKeyValueContainsOrTryAtMethod &&
-        isMapReceiverTarget(normalizedTypeName) &&
+        isKeyValueReceiverTarget(normalizedTypeName) &&
         (normalizedMethodName == "contains" || normalizedMethodName == "tryAt" ||
          normalizedMethodName == "insert")) {
       errorOut.clear();

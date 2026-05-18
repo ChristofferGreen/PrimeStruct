@@ -605,7 +605,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   metadata-derived map collection aliases instead of direct map strings;
   statement-binding explicit helper canonicalization local helpers should use
   key/value naming even while they still resolve `collections.map_helpers`
-  metadata during the map substrate migration.
+  metadata during the map substrate migration; setup-type method-target
+  local receiver and canonical helper preference predicates should use
+  key/value naming while they still route through the map collection
+  metadata bridge.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
