@@ -1081,6 +1081,14 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("const auto unsupportedCallResult = emitUnsupportedNativeCallDiagnosticImpl(") !=
         std::string::npos);
+  CHECK(nativeTailDispatchSource.find("resolvePublishedNativeTailKeyValueHelperName(") !=
+        std::string::npos);
+  CHECK(nativeTailDispatchSource.find("semanticKeyValueAccessHelperKeepsBuiltinReturn(") !=
+        std::string::npos);
+  CHECK(nativeTailDispatchSource.find("resolvePublishedNativeTailMapHelperName(") ==
+        std::string::npos);
+  CHECK(nativeTailDispatchSource.find("semanticMapAccessHelperKeepsBuiltinReturn(") ==
+        std::string::npos);
   CHECK(nativeTailDispatchSource.find("isDirectExperimentalMapAccessImplementationCall") ==
         std::string::npos);
   CHECK(nativeTailDispatchSource.find(

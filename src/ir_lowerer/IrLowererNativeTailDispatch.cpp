@@ -37,7 +37,7 @@ const StdlibSurfaceMetadata *nativeTailVectorHelperMetadata() {
   return findStdlibSurfaceMetadataByBridgeKey("collections.vector_helpers");
 }
 
-const StdlibSurfaceMetadata *nativeTailMapHelperMetadata() {
+const StdlibSurfaceMetadata *nativeTailKeyValueHelperMetadata() {
   return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
 }
 
@@ -66,16 +66,16 @@ bool resolvePublishedNativeTailVectorHelperName(const SemanticProgram *semanticP
          resolvePublishedNativeTailHelperName(semanticProgram, expr, metadata->id, helperNameOut);
 }
 
-bool resolvePublishedNativeTailMapHelperName(const SemanticProgram *semanticProgram,
-                                             const Expr &expr,
-                                             std::string &helperNameOut) {
-  const auto *metadata = nativeTailMapHelperMetadata();
+bool resolvePublishedNativeTailKeyValueHelperName(const SemanticProgram *semanticProgram,
+                                                  const Expr &expr,
+                                                  std::string &helperNameOut) {
+  const auto *metadata = nativeTailKeyValueHelperMetadata();
   return metadata != nullptr &&
          resolvePublishedNativeTailHelperName(semanticProgram, expr, metadata->id, helperNameOut);
 }
 
-std::string nativeTailMapHelperPath(std::string_view helperName) {
-  const auto *metadata = nativeTailMapHelperMetadata();
+std::string nativeTailKeyValueHelperPath(std::string_view helperName) {
+  const auto *metadata = nativeTailKeyValueHelperMetadata();
   if (metadata == nullptr) {
     return {};
   }
@@ -88,14 +88,14 @@ bool isCanonicalPublishedNativeTailVectorHelperPath(std::string_view path) {
          isCanonicalPublishedStdlibSurfaceHelperPath(path, metadata->id);
 }
 
-bool isCanonicalPublishedNativeTailMapHelperPath(std::string_view path) {
-  const auto *metadata = nativeTailMapHelperMetadata();
+bool isCanonicalPublishedNativeTailKeyValueHelperPath(std::string_view path) {
+  const auto *metadata = nativeTailKeyValueHelperMetadata();
   return metadata != nullptr &&
          isCanonicalPublishedStdlibSurfaceHelperPath(path, metadata->id);
 }
 
-bool hasCanonicalNativeTailMapHelperPrefix(std::string_view text) {
-  const auto *metadata = nativeTailMapHelperMetadata();
+bool hasCanonicalNativeTailKeyValueHelperPrefix(std::string_view text) {
+  const auto *metadata = nativeTailKeyValueHelperMetadata();
   if (metadata == nullptr || metadata->canonicalPath.empty()) {
     return false;
   }
@@ -119,22 +119,22 @@ bool semanticDirectCallMatchesVectorHelperSurface(const SemanticProgram *semanti
                                 nativeTailVectorHelperMetadata());
 }
 
-bool isExplicitDirectMapCountContainsTryAtCall(const SemanticProgram *semanticProgram,
-                                               const Expr &expr) {
+bool isExplicitDirectKeyValueCountContainsTryAtCall(const SemanticProgram *semanticProgram,
+                                                    const Expr &expr) {
   if (expr.isMethodCall || expr.kind != Expr::Kind::Call) {
     return false;
   }
   std::string helperName;
-  return resolvePublishedNativeTailMapHelperName(
+  return resolvePublishedNativeTailKeyValueHelperName(
              semanticProgram, expr, helperName) &&
          (helperName == "count" || helperName == "contains" || helperName == "tryAt");
 }
 
-bool shouldPreserveExplicitDirectMapHelperCall(
+bool shouldPreserveExplicitDirectKeyValueHelperCall(
     const SemanticProgram *semanticProgram,
     const Expr &expr,
     const KeyValueAccessTargetInfo &keyValueTargetInfo) {
-  if (!isExplicitDirectMapCountContainsTryAtCall(semanticProgram, expr)) {
+  if (!isExplicitDirectKeyValueCountContainsTryAtCall(semanticProgram, expr)) {
     return false;
   }
   return expr.args.empty() ||
@@ -143,7 +143,7 @@ bool shouldPreserveExplicitDirectMapHelperCall(
          keyValueTargetInfo.isWrappedKeyValueTarget;
 }
 
-bool isMapReadHelperName(std::string_view helperName) {
+bool isKeyValueReadHelperName(std::string_view helperName) {
   return helperName == "count" || helperName == "count_ref" ||
          helperName == "contains" || helperName == "contains_ref" ||
          helperName == "tryAt" || helperName == "tryAt_ref";
@@ -165,12 +165,12 @@ bool importPathCoversNativeTailTarget(const std::string &importPath,
   return false;
 }
 
-bool hasSemanticMapReadHelperDefinition(const SemanticProgram *semanticProgram,
-                                        std::string_view helperName) {
-  if (semanticProgram == nullptr || !isMapReadHelperName(helperName)) {
+bool hasSemanticKeyValueReadHelperDefinition(const SemanticProgram *semanticProgram,
+                                             std::string_view helperName) {
+  if (semanticProgram == nullptr || !isKeyValueReadHelperName(helperName)) {
     return false;
   }
-  const std::string helperPath = nativeTailMapHelperPath(helperName);
+  const std::string helperPath = nativeTailKeyValueHelperPath(helperName);
   if (helperPath.empty()) {
     return false;
   }
@@ -227,14 +227,14 @@ bool isExplicitDirectSoaAccessCall(const Expr &expr) {
          rawPath == "/std/collections/" "soa/get_ref";
 }
 
-bool hasSemanticMapAccessHelperDefinition(const SemanticProgram *semanticProgram,
+bool hasSemanticKeyValueAccessHelperDefinition(const SemanticProgram *semanticProgram,
                                           std::string_view accessName) {
   if (semanticProgram == nullptr ||
       (accessName != "at" && accessName != "at_unsafe")) {
     return false;
   }
-  const std::string canonicalPath = nativeTailMapHelperPath(accessName);
-  const std::string canonicalRefPath = nativeTailMapHelperPath(
+  const std::string canonicalPath = nativeTailKeyValueHelperPath(accessName);
+  const std::string canonicalRefPath = nativeTailKeyValueHelperPath(
       std::string(accessName) + "_ref");
   if (canonicalPath.empty() || canonicalRefPath.empty()) {
     return false;
@@ -268,7 +268,7 @@ bool hasSemanticMapAccessHelperDefinition(const SemanticProgram *semanticProgram
   return false;
 }
 
-bool semanticMapAccessHelperKeepsBuiltinReturn(
+bool semanticKeyValueAccessHelperKeepsBuiltinReturn(
     const SemanticProgram *semanticProgram,
     std::string_view helperPath) {
   if (semanticProgram == nullptr || helperPath.empty()) {
@@ -301,7 +301,7 @@ bool semanticMapAccessHelperKeepsBuiltinReturn(
          structPath == "array";
 }
 
-const SemanticProgramQueryFact *findSourceMapAccessAliasQueryFact(
+const SemanticProgramQueryFact *findSourceKeyValueAccessAliasQueryFact(
     const SemanticProgram *semanticProgram,
     const SemanticProductIndex *semanticIndex,
     const Expr &expr) {
@@ -347,12 +347,12 @@ const SemanticProgramQueryFact *findSourceMapAccessAliasQueryFact(
   return nullptr;
 }
 
-bool isStringReturningMapAccessAlias(
+bool isStringReturningKeyValueAccessAlias(
     const SemanticProgram *semanticProgram,
     const SemanticProductIndex *semanticIndex,
     const Expr &expr) {
   const auto *queryFact =
-      findSourceMapAccessAliasQueryFact(semanticProgram, semanticIndex, expr);
+      findSourceKeyValueAccessAliasQueryFact(semanticProgram, semanticIndex, expr);
   if (queryFact == nullptr || queryFact->resolvedPathId == InvalidSymbolId) {
     return false;
   }
@@ -376,9 +376,9 @@ bool isStringReturningMapAccessAlias(
          bindingType == "string" || bindingType == "/string";
 }
 
-bool hasExplicitStdMapSourceSpelling(const Expr &expr) {
-  return hasCanonicalNativeTailMapHelperPrefix(expr.name) ||
-         hasCanonicalNativeTailMapHelperPrefix(expr.namespacePrefix);
+bool hasExplicitStdKeyValueSourceSpelling(const Expr &expr) {
+  return hasCanonicalNativeTailKeyValueHelperPrefix(expr.name) ||
+         hasCanonicalNativeTailKeyValueHelperPrefix(expr.namespacePrefix);
 }
 
 } // namespace
@@ -701,13 +701,13 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     error = "native backend does not support math builtin: " + mathName;
     return NativeCallTailDispatchResult::Error;
   }
-  std::string directMapReadHelperName;
+  std::string directKeyValueReadHelperName;
   if (!expr.isMethodCall &&
-      resolvePublishedNativeTailMapHelperName(
-          semanticProgram, expr, directMapReadHelperName) &&
-      isMapReadHelperName(directMapReadHelperName) &&
-      hasSemanticMapReadHelperDefinition(semanticProgram,
-                                         directMapReadHelperName)) {
+      resolvePublishedNativeTailKeyValueHelperName(
+          semanticProgram, expr, directKeyValueReadHelperName) &&
+      isKeyValueReadHelperName(directKeyValueReadHelperName) &&
+      hasSemanticKeyValueReadHelperDefinition(semanticProgram,
+                                              directKeyValueReadHelperName)) {
     return NativeCallTailDispatchResult::NotHandled;
   }
   if (!isExplicitDirectVectorCountCall(semanticProgram, expr) &&
@@ -812,7 +812,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     }
     const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(
         expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo);
-    if (shouldPreserveExplicitDirectMapHelperCall(semanticProgram, expr, keyValueTargetInfo)) {
+    if (shouldPreserveExplicitDirectKeyValueHelperCall(semanticProgram, expr, keyValueTargetInfo)) {
       return NativeCallTailDispatchResult::NotHandled;
     }
     if (expr.args.front().kind == Expr::Kind::Call &&
@@ -885,7 +885,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     }
     const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(
         expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo);
-    if (shouldPreserveExplicitDirectMapHelperCall(semanticProgram, expr, keyValueTargetInfo)) {
+    if (shouldPreserveExplicitDirectKeyValueHelperCall(semanticProgram, expr, keyValueTargetInfo)) {
       return NativeCallTailDispatchResult::NotHandled;
     }
     if (expr.args.front().kind == Expr::Kind::Call &&
@@ -925,7 +925,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
   }
 
   std::string accessName;
-  if (isExplicitDirectMapCountContainsTryAtCall(semanticProgram, expr) &&
+  if (isExplicitDirectKeyValueCountContainsTryAtCall(semanticProgram, expr) &&
       !expr.args.empty() &&
       resolveKeyValueAccessTargetInfo(expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo).isKeyValueTarget) {
     return NativeCallTailDispatchResult::NotHandled;
@@ -952,12 +952,12 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
         !expr.args.empty() &&
         expr.args.front().kind == Expr::Kind::Call &&
         (accessName == "at" || accessName == "at_unsafe");
-    const bool isMapMethodTempReceiver =
+    const bool isKeyValueMethodTempReceiver =
         isMethodCallTempReceiver &&
         resolveKeyValueAccessTargetInfo(
             expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo)
             .isKeyValueTarget;
-    if (isMethodCallTempReceiver && !isMapMethodTempReceiver) {
+    if (isMethodCallTempReceiver && !isKeyValueMethodTempReceiver) {
       return NativeCallTailDispatchResult::NotHandled;
     }
     const auto arrayVectorTargetInfo = !expr.args.empty()
@@ -993,31 +993,31 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
         arrayVectorTargetInfo.isSoaVector) {
       return NativeCallTailDispatchResult::NotHandled;
     }
-    const bool isExplicitMapAccessCall =
+    const bool isExplicitKeyValueAccessCall =
         !expr.isMethodCall &&
-        resolvePublishedNativeTailMapHelperName(
+        resolvePublishedNativeTailKeyValueHelperName(
             semanticProgram, expr, explicitHelperName) &&
         (explicitHelperName == "at" || explicitHelperName == "at_ref" ||
          explicitHelperName == "at_unsafe" ||
          explicitHelperName == "at_unsafe_ref");
-    const bool isExplicitMapAccessMethodCall =
+    const bool isExplicitKeyValueAccessMethodCall =
         expr.isMethodCall &&
-        resolvePublishedNativeTailMapHelperName(
+        resolvePublishedNativeTailKeyValueHelperName(
             semanticProgram, expr, explicitHelperName) &&
         (explicitHelperName == "at" || explicitHelperName == "at_ref" ||
          explicitHelperName == "at_unsafe" ||
          explicitHelperName == "at_unsafe_ref");
-    const std::string explicitMapAccessMethodPath =
-        isCanonicalPublishedNativeTailMapHelperPath(directHelperPath)
+    const std::string explicitKeyValueAccessMethodPath =
+        isCanonicalPublishedNativeTailKeyValueHelperPath(directHelperPath)
             ? directHelperPath
-            : nativeTailMapHelperPath(explicitHelperName);
-    if (isExplicitMapAccessMethodCall &&
-        !semanticMapAccessHelperKeepsBuiltinReturn(semanticProgram,
-                                                   explicitMapAccessMethodPath)) {
+            : nativeTailKeyValueHelperPath(explicitHelperName);
+    if (isExplicitKeyValueAccessMethodCall &&
+        !semanticKeyValueAccessHelperKeepsBuiltinReturn(semanticProgram,
+                                                        explicitKeyValueAccessMethodPath)) {
       return NativeCallTailDispatchResult::NotHandled;
     }
-    const auto isMapArgsPackAccessReceiver = [&](const Expr &receiver) {
-      const auto isMapArgsPackAccessReceiverImpl =
+    const auto isKeyValueArgsPackAccessReceiver = [&](const Expr &receiver) {
+      const auto isKeyValueArgsPackAccessReceiverImpl =
           [&](const Expr &candidate, const auto &self) -> bool {
         if (candidate.kind == Expr::Kind::Call &&
             isSimpleCallName(candidate, "dereference") &&
@@ -1030,24 +1030,24 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
                (accessTargetInfo.isKeyValueTarget ||
                 accessTargetInfo.isWrappedKeyValueTarget);
       };
-      return isMapArgsPackAccessReceiverImpl(receiver,
-                                             isMapArgsPackAccessReceiverImpl);
+      return isKeyValueArgsPackAccessReceiverImpl(receiver,
+                                                  isKeyValueArgsPackAccessReceiverImpl);
     };
-    if (isExplicitMapAccessCall && !expr.args.empty() &&
+    if (isExplicitKeyValueAccessCall && !expr.args.empty() &&
         expr.args.front().kind == Expr::Kind::Call) {
       const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(
           expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo);
       if (!keyValueTargetInfo.isKeyValueTarget ||
-          !isMapArgsPackAccessReceiver(expr.args.front())) {
+          !isKeyValueArgsPackAccessReceiver(expr.args.front())) {
         return NativeCallTailDispatchResult::NotHandled;
       }
     }
-    if (isExplicitMapAccessCall && !expr.args.empty()) {
+    if (isExplicitKeyValueAccessCall && !expr.args.empty()) {
       const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(
           expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo);
       if (keyValueTargetInfo.isKeyValueTarget &&
           (expr.args.front().kind != Expr::Kind::Call ||
-           !isMapArgsPackAccessReceiver(expr.args.front()))) {
+           !isKeyValueArgsPackAccessReceiver(expr.args.front()))) {
         return NativeCallTailDispatchResult::NotHandled;
       }
     }
@@ -1058,12 +1058,12 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     if (!expr.isMethodCall &&
         expr.namespacePrefix.empty() &&
         (expr.name == "at" || expr.name == "at_unsafe") &&
-        !isExplicitMapAccessCall &&
-        !hasSemanticMapAccessHelperDefinition(semanticProgram, accessName)) {
+        !isExplicitKeyValueAccessCall &&
+        !hasSemanticKeyValueAccessHelperDefinition(semanticProgram, accessName)) {
       const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(
           expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo);
       if (keyValueTargetInfo.isKeyValueTarget) {
-        const std::string helperPath = nativeTailMapHelperPath(accessName);
+        const std::string helperPath = nativeTailKeyValueHelperPath(accessName);
         error = "unknown call target: " + helperPath;
         return NativeCallTailDispatchResult::Error;
       }
@@ -1072,12 +1072,12 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       const auto keyValueTargetInfo = resolveKeyValueAccessTargetInfo(
           expr.args.front(), localsIn, resolveCallKeyValueAccessTargetInfo);
       if (keyValueTargetInfo.isKeyValueTarget &&
-          (isStringReturningMapAccessAlias(
+          (isStringReturningKeyValueAccessAlias(
                semanticProgram, semanticIndexPtr, expr) ||
            (expr.name.find('/') == std::string::npos &&
-            !hasExplicitStdMapSourceSpelling(expr) &&
-            !semanticMapAccessHelperKeepsBuiltinReturn(
-                semanticProgram, nativeTailMapHelperPath(accessName))))) {
+            !hasExplicitStdKeyValueSourceSpelling(expr) &&
+            !semanticKeyValueAccessHelperKeepsBuiltinReturn(
+                semanticProgram, nativeTailKeyValueHelperPath(accessName))))) {
         return NativeCallTailDispatchResult::NotHandled;
       }
     }

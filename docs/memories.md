@@ -63,8 +63,8 @@ This file stores durable session-derived facts that are useful in later work. Ke
   comparison opcode selection plus inline native dispatch published-helper
   metadata wrappers, builtin-name helper-surface checks, and access-target
   metadata/classifier helpers are also named in key/value terms; count-access
-  local classifier wrappers and string-valued access helpers follow the same
-  naming.
+  local classifier wrappers, string-valued access helpers, and native-tail
+  access resolver metadata follow the same naming.
 - Evidence: The release `PrimeStruct_backend_ir_tests` target rebuilt after
   the kind, field, target-info, lookup-helper, and setup-inference access
   renames, focused backend IR windows passed, and direct `rg` scans over
@@ -84,7 +84,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   published helper-path detection as direct args-pack access; count-access
   source-delegation coverage passed after renaming local classifier wrappers,
   semantic string access resolution, and explicit source-spelling helpers to
-  key/value terms.
+  key/value terms; native-tail source-delegation coverage passed after
+  renaming local helper metadata, access-definition, access-alias, and
+  builtin-return wrappers to key/value terms.
 
 ### map-compatibility-aliases-require-source-definitions
 - Updated: 2026-05-18
