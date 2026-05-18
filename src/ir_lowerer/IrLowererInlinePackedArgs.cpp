@@ -11,15 +11,15 @@ namespace primec::ir_lowerer {
 
 namespace {
 
-const StdlibSurfaceMetadata *mapConstructorSurfaceMetadataForInlinePackedArgs() {
+const StdlibSurfaceMetadata *keyValueConstructorSurfaceMetadataForInlinePackedArgs() {
   return findStdlibSurfaceMetadataByBridgeKey("collections.map_constructors");
 }
 
-bool isPublishedMapConstructorExpr(const Expr &callExpr) {
+bool isPublishedKeyValueConstructorExpr(const Expr &callExpr) {
   if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
     return false;
   }
-  const auto *metadata = mapConstructorSurfaceMetadataForInlinePackedArgs();
+  const auto *metadata = keyValueConstructorSurfaceMetadataForInlinePackedArgs();
   return metadata != nullptr &&
          isPublishedStdlibSurfaceConstructorExpr(callExpr, metadata->id);
 }
@@ -93,23 +93,23 @@ bool namesExplicitExperimentalMapType(const std::string &typeText) {
          base.rfind(experimentalMapType + "__", 0) == 0;
 }
 
-bool rewritePublishedMapConstructorExpr(const Expr &callExpr,
-                                        LocalInfo::ValueKind fallbackKeyKind,
-                                        LocalInfo::ValueKind fallbackValueKind,
-                                        const ResolveInlineParameterDefinitionCallFn &resolveDefinitionCall,
-                                        Expr &rewrittenExpr) {
+bool rewritePublishedKeyValueConstructorExpr(const Expr &callExpr,
+                                             LocalInfo::ValueKind fallbackKeyKind,
+                                             LocalInfo::ValueKind fallbackValueKind,
+                                             const ResolveInlineParameterDefinitionCallFn &resolveDefinitionCall,
+                                             Expr &rewrittenExpr) {
   if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
     return false;
   }
   const Definition *callee = resolveDefinitionCall ? resolveDefinitionCall(callExpr) : nullptr;
-  const auto *mapConstructorMetadata =
-      mapConstructorSurfaceMetadataForInlinePackedArgs();
+  const auto *keyValueConstructorMetadata =
+      keyValueConstructorSurfaceMetadataForInlinePackedArgs();
   const bool isResolvedPublishedConstructor =
       callee != nullptr &&
-      mapConstructorMetadata != nullptr &&
+      keyValueConstructorMetadata != nullptr &&
       isResolvedCanonicalPublishedStdlibSurfaceConstructorPath(
-          callee->fullPath, mapConstructorMetadata->id);
-  if (!isPublishedMapConstructorExpr(callExpr) && !isResolvedPublishedConstructor) {
+          callee->fullPath, keyValueConstructorMetadata->id);
+  if (!isPublishedKeyValueConstructorExpr(callExpr) && !isResolvedPublishedConstructor) {
     return false;
   }
   rewrittenExpr = callExpr;
@@ -325,14 +325,18 @@ bool emitInlinePackedCallParameter(
   };
 
   auto emitPackedValueToLocal = [&](const Expr &argExpr, int32_t destLocal) -> bool {
-    Expr rewrittenMapArgExpr;
+    Expr rewrittenKeyValueArgExpr;
     const Expr *emittedArgExpr = &argExpr;
     if (paramInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection &&
         paramInfo.structTypeName.empty() &&
         argExpr.kind == Expr::Kind::Call &&
-        rewritePublishedMapConstructorExpr(
-            argExpr, paramInfo.keyValueKeyKind, paramInfo.keyValueValueKind, resolveDefinitionCall, rewrittenMapArgExpr)) {
-      emittedArgExpr = &rewrittenMapArgExpr;
+        rewritePublishedKeyValueConstructorExpr(
+            argExpr,
+            paramInfo.keyValueKeyKind,
+            paramInfo.keyValueValueKind,
+            resolveDefinitionCall,
+            rewrittenKeyValueArgExpr)) {
+      emittedArgExpr = &rewrittenKeyValueArgExpr;
     }
     if (paramInfo.argsPackElementKind == LocalInfo::Kind::Array ||
         paramInfo.argsPackElementKind == LocalInfo::Kind::Vector ||

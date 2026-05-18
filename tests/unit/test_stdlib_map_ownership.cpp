@@ -1904,6 +1904,24 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inlinePackedArgsSource.find(
             "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_constructors\")") !=
         std::string::npos);
+  CHECK(inlinePackedArgsSource.find(
+            "keyValueConstructorSurfaceMetadataForInlinePackedArgs()") !=
+        std::string::npos);
+  CHECK(inlinePackedArgsSource.find(
+            "mapConstructorSurfaceMetadataForInlinePackedArgs()") ==
+        std::string::npos);
+  CHECK(inlinePackedArgsSource.find("isPublishedKeyValueConstructorExpr(") !=
+        std::string::npos);
+  CHECK(inlinePackedArgsSource.find("isPublishedMapConstructorExpr(") ==
+        std::string::npos);
+  CHECK(inlinePackedArgsSource.find("rewritePublishedKeyValueConstructorExpr(") !=
+        std::string::npos);
+  CHECK(inlinePackedArgsSource.find("rewritePublishedMapConstructorExpr(") ==
+        std::string::npos);
+  CHECK(inlinePackedArgsSource.find("keyValueConstructorMetadata") !=
+        std::string::npos);
+  CHECK(inlinePackedArgsSource.find("mapConstructorMetadata") ==
+        std::string::npos);
   CHECK(inlinePackedArgsSource.find("rewrittenExpr.name = collectionMemberPath(\"map\", \"map\")") !=
         std::string::npos);
   CHECK(inlineParamHelpersSource.find("rewrittenExpr.name = \"/map/map\"") == std::string::npos);
