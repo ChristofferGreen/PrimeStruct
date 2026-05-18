@@ -237,6 +237,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string scalarPointerMemorySource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprScalarPointerMemory.cpp");
+  const std::string argumentValidationSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorExprArgumentValidation.cpp");
   const std::string argumentValidationCollectionsSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprArgumentValidationCollections.cpp");
@@ -376,6 +379,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!pointerLikeSource.empty());
   REQUIRE(!statementPrintabilitySource.empty());
   REQUIRE(!scalarPointerMemorySource.empty());
+  REQUIRE(!argumentValidationSource.empty());
   REQUIRE(!argumentValidationCollectionsSource.empty());
   REQUIRE(!collectionAccessValidationSource.empty());
   REQUIRE(!collectionAccessSource.empty());
@@ -829,6 +833,17 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(scalarPointerMemorySource.find("resolved == \"/map/at\"") ==
         std::string::npos);
   CHECK(scalarPointerMemorySource.find("resolved == \"/std/collections/map/at_ref\"") ==
+        std::string::npos);
+  CHECK(argumentValidationSource.find("normalizedBase == \"std/collections/map\"") ==
+        std::string::npos);
+  CHECK(argumentValidationSource.find("diagnosticResolved != \"/std/collections/map/at\"") ==
+        std::string::npos);
+  CHECK(argumentValidationSource.find("normalizedExpectedBase == \"std/collections/map\"") ==
+        std::string::npos);
+  CHECK(argumentValidationSource.find(
+            "resolveCanonicalArgumentValidationMapAccessHelper(") !=
+        std::string::npos);
+  CHECK(argumentValidationSource.find("mapHelperSurfaceMetadataLocal()") !=
         std::string::npos);
   CHECK(argumentValidationCollectionsSource.find("normalizedName == \"map/at_ref\"") ==
         std::string::npos);

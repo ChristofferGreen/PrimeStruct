@@ -351,7 +351,11 @@ Task template:
   surface metadata instead of direct map path literals, and infer collection
   dispatch setup now derives map helper metadata through the bridge key before
   resolving rooted aliases, canonical access helpers, and namespace checks
-  instead of directly naming the map helper surface ID. The
+  instead of directly naming the map helper surface ID, and expression
+  argument validation now derives canonical map access helper matching through
+  stdlib map helper metadata and map template-base checks through
+  `isMapCollectionTypeName` instead of direct canonical map path and type
+  spellings. The
   remaining production
   lowerer/emitter
   experimental-map traces

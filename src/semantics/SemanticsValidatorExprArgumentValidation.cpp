@@ -15,7 +15,34 @@ bool isCollectionLikeTemplateBase(std::string_view baseName) {
   const std::string normalizedBase = normalizeBindingTypeName(std::string(baseName));
   return normalizedBase == "array" || normalizedBase == "vector" ||
          normalizedBase == "soa" "_vector" || normalizedBase == "map" ||
-         normalizedBase == "std/collections/map";
+         isMapCollectionTypeName(normalizedBase);
+}
+
+bool resolveCanonicalArgumentValidationMapAccessHelper(
+    std::string_view path,
+    std::string &helperNameOut) {
+  helperNameOut.clear();
+  const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
+  if (metadata == nullptr || path.empty()) {
+    return false;
+  }
+  std::string normalizedPath(path);
+  if (!normalizedPath.empty() && normalizedPath.front() != '/') {
+    normalizedPath.insert(normalizedPath.begin(), '/');
+  }
+  const std::string canonicalRoot(metadata->canonicalPath);
+  if (normalizedPath.size() <= canonicalRoot.size() ||
+      normalizedPath.rfind(canonicalRoot + "/", 0) != 0) {
+    return false;
+  }
+  const std::string_view helperName =
+      resolveStdlibSurfaceMemberName(*metadata, normalizedPath);
+  if (helperName != "at" && helperName != "at_ref" &&
+      helperName != "at_unsafe" && helperName != "at_unsafe_ref") {
+    return false;
+  }
+  helperNameOut.assign(helperName);
+  return true;
 }
 
 bool isExperimentalMapBackingTemplateBaseForArgumentValidation(std::string base) {
@@ -144,12 +171,11 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
   };
   auto maybePreferExplicitCanonicalMapKeyDiagnostic =
       [&](const std::vector<std::string> &expectedTemplateArgs) -> bool {
+    std::string canonicalMapAccessHelperName;
     if (param.name != "values" || callExpr.isMethodCall ||
         hasNamedArguments(callExpr.argNames) || callExpr.args.size() != 2 ||
-        (diagnosticResolved != "/std/collections/map/at" &&
-         diagnosticResolved != "/std/collections/map/at_ref" &&
-         diagnosticResolved != "/std/collections/map/at_unsafe" &&
-         diagnosticResolved != "/std/collections/map/at_unsafe_ref")) {
+        !resolveCanonicalArgumentValidationMapAccessHelper(
+            diagnosticResolved, canonicalMapAccessHelperName)) {
       return false;
     }
 
@@ -412,8 +438,7 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
               "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
                   ": expected " + expectedTypeText + " got array<" + actualElemType + ">");
         }
-      } else if ((normalizedExpectedBase == "map" ||
-                  normalizedExpectedBase == "std/collections/map") &&
+      } else if (isMapCollectionTypeName(normalizedExpectedBase) &&
                  expectedTemplateArgs.size() == 2) {
         std::string actualKeyType;
         std::string actualValueType;

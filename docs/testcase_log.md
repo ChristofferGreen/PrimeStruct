@@ -179,6 +179,19 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-18 07:40 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map namespaced at method now validates through slash-path routing,map namespaced at_unsafe method auto inference now validates through slash-path routing,stdlib canonical map helpers resolve in method-call sugar" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `rg -n 'std/collections/map|experimental_map|/map/|CollectionsMap|map(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bMap<' src/semantics/SemanticsValidatorExprArgumentValidation.cpp`;
+  `rg --pcre2 -n '/?std/collections/map(?:/|")|/?std/collections/experimental_map(?:/|")|(?<![A-Za-z0-9_/])/?map/|\bmap(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bCollectionsMap[A-Za-z0-9_]*\b|\bMap<' src/semantics/SemanticsValidatorExprArgumentValidation.cpp` |
+  failures: none | notes: expression argument validation now derives
+  canonical map access helper matching through stdlib map helper metadata and
+  map template-base checks through `isMapCollectionTypeName` instead of direct
+  canonical map path and type spellings; the edited file has zero targeted
+  map-surface matches. The Python inventory scripts were intentionally not run
+  in this pass.
 - 2026-05-18 07:36 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_semantics_tests`;
   `cd build-release && ./PrimeStruct_semantics_tests --test-case="map namespaced at method now validates through slash-path routing,map namespaced at_unsafe method auto inference now validates through slash-path routing,stdlib canonical map helpers resolve in method-call sugar" --no-skip`;
