@@ -55,39 +55,41 @@ bool matchesCollectionTypeText(std::string_view text,
          text == collectionTypePath(collectionName);
 }
 
-std::string canonicalInlineMapHelperName(std::string helperName) {
+std::string canonicalInlineKeyValueHelperName(std::string helperName) {
   helperName = stripGeneratedInlineHelperSuffix(std::move(helperName));
   return helperName;
 }
 
-const StdlibSurfaceMetadata *inlineMapHelperMetadata() {
+const StdlibSurfaceMetadata *inlineKeyValueHelperMetadata() {
   return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
 }
 
-bool resolvePublishedInlineMapHelperName(std::string_view resolvedPath, std::string &helperNameOut) {
+bool resolvePublishedInlineKeyValueHelperName(
+    std::string_view resolvedPath, std::string &helperNameOut) {
   const auto *metadata = findStdlibSurfaceMetadataByResolvedPath(resolvedPath);
-  const auto *mapMetadata = inlineMapHelperMetadata();
-  if (metadata == nullptr || mapMetadata == nullptr ||
-      metadata->id != mapMetadata->id) {
+  const auto *keyValueMetadata = inlineKeyValueHelperMetadata();
+  if (metadata == nullptr || keyValueMetadata == nullptr ||
+      metadata->id != keyValueMetadata->id) {
     return false;
   }
   const size_t slash = resolvedPath.find_last_of('/');
   if (slash == std::string_view::npos || slash + 1 >= resolvedPath.size()) {
     return false;
   }
-  helperNameOut = canonicalInlineMapHelperName(std::string(resolvedPath.substr(slash + 1)));
+  helperNameOut = canonicalInlineKeyValueHelperName(
+      std::string(resolvedPath.substr(slash + 1)));
   return !helperNameOut.empty();
 }
 
-bool resolvePublishedInlineMapSurfaceMemberName(std::string_view path,
-                                                std::string &helperNameOut) {
-  const auto *metadata = inlineMapHelperMetadata();
+bool resolvePublishedInlineKeyValueSurfaceMemberName(std::string_view path,
+                                                     std::string &helperNameOut) {
+  const auto *metadata = inlineKeyValueHelperMetadata();
   return metadata != nullptr &&
          resolvePublishedStdlibSurfaceMemberName(path, metadata->id, helperNameOut);
 }
 
-bool isCanonicalPublishedInlineMapHelperPath(std::string_view path) {
-  const auto *metadata = inlineMapHelperMetadata();
+bool isCanonicalPublishedInlineKeyValueHelperPath(std::string_view path) {
+  const auto *metadata = inlineKeyValueHelperMetadata();
   return metadata != nullptr &&
          isCanonicalPublishedStdlibSurfaceHelperPath(path, metadata->id);
 }
@@ -106,8 +108,8 @@ std::string resolveInlineCallPathWithoutFallbackProbes(const Expr &expr) {
   return expr.name;
 }
 
-bool isSemanticBarePublishedMapHelperCall(const Expr &expr,
-                                          std::string_view helperName) {
+bool isSemanticBarePublishedKeyValueHelperCall(const Expr &expr,
+                                               std::string_view helperName) {
   if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.semanticNodeId == 0 ||
       !expr.namespacePrefix.empty() || expr.name.empty() || expr.name.front() == '/') {
     return false;
@@ -119,8 +121,8 @@ bool isSemanticBarePublishedMapHelperCall(const Expr &expr,
   return getBuiltinArrayAccessName(expr, accessName) && accessName == helperName;
 }
 
-bool isExplicitSamePathMapCountLikeDefinitionCall(const Expr &expr,
-                                                  const Definition &callee) {
+bool isExplicitSamePathKeyValueCountLikeDefinitionCall(const Expr &expr,
+                                                       const Definition &callee) {
   if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
     return false;
   }
@@ -129,7 +131,7 @@ bool isExplicitSamePathMapCountLikeDefinitionCall(const Expr &expr,
     return false;
   }
   std::string helperName;
-  if (!resolvePublishedInlineMapHelperName(
+  if (!resolvePublishedInlineKeyValueHelperName(
           normalizeCollectionHelperPath(callee.fullPath), helperName)) {
     return false;
   }
@@ -137,7 +139,7 @@ bool isExplicitSamePathMapCountLikeDefinitionCall(const Expr &expr,
   if (slash == std::string::npos || slash + 1 >= callee.fullPath.size()) {
     return false;
   }
-  helperName = canonicalInlineMapHelperName(std::move(helperName));
+  helperName = canonicalInlineKeyValueHelperName(std::move(helperName));
   if (helperName != "count" && helperName != "contains" &&
       helperName != "tryAt" && helperName != "count_ref" &&
       helperName != "contains_ref" && helperName != "tryAt_ref") {
@@ -147,7 +149,7 @@ bool isExplicitSamePathMapCountLikeDefinitionCall(const Expr &expr,
          normalizeCollectionHelperPath(callee.fullPath);
 }
 
-bool isDirectMapAccessHelperCall(const Expr &expr) {
+bool isDirectKeyValueAccessHelperCall(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
     return false;
   }
@@ -156,51 +158,51 @@ bool isDirectMapAccessHelperCall(const Expr &expr) {
          (helperName == "at" || helperName == "at_unsafe");
 }
 
-bool isExplicitDirectMapAccessHelperCall(const Expr &expr) {
-  if (!isDirectMapAccessHelperCall(expr)) {
+bool isExplicitDirectKeyValueAccessHelperCall(const Expr &expr) {
+  if (!isDirectKeyValueAccessHelperCall(expr)) {
     return false;
   }
   const std::string rawPath = resolveInlineCallPathWithoutFallbackProbes(expr);
   return !rawPath.empty() && rawPath.front() == '/';
 }
 
-bool isExplicitRemovedMapAccessHelperCall(const Expr &expr) {
+bool isExplicitRemovedKeyValueAccessHelperCall(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
     return false;
   }
   const std::string originalPath = resolveInlineCallPathWithoutFallbackProbes(expr);
   std::string rawPath = originalPath;
   std::string helperName;
-  if (!resolvePublishedInlineMapSurfaceMemberName(rawPath, helperName) &&
+  if (!resolvePublishedInlineKeyValueSurfaceMemberName(rawPath, helperName) &&
       !rawPath.empty() && rawPath.front() == '/') {
     rawPath.erase(rawPath.begin());
-    if (!resolvePublishedInlineMapSurfaceMemberName(rawPath, helperName)) {
+    if (!resolvePublishedInlineKeyValueSurfaceMemberName(rawPath, helperName)) {
       return false;
     }
   }
-  return !isCanonicalPublishedInlineMapHelperPath(originalPath) &&
+  return !isCanonicalPublishedInlineKeyValueHelperPath(originalPath) &&
          (helperName == "at" || helperName == "at_unsafe" ||
           helperName == "at_ref" || helperName == "at_unsafe_ref");
 }
 
-bool isSemanticBarePreferredMapHelperDefinitionCall(const Expr &expr,
-                                                    const Definition &callee) {
+bool isSemanticBarePreferredKeyValueHelperDefinitionCall(const Expr &expr,
+                                                         const Definition &callee) {
   std::string helperName;
-  if (!resolvePublishedInlineMapHelperName(callee.fullPath, helperName)) {
+  if (!resolvePublishedInlineKeyValueHelperName(callee.fullPath, helperName)) {
     return false;
   }
-  return isSemanticBarePublishedMapHelperCall(
-      expr, canonicalInlineMapHelperName(helperName));
+  return isSemanticBarePublishedKeyValueHelperCall(
+      expr, canonicalInlineKeyValueHelperName(helperName));
 }
 
-bool isBareDirectWrapperMapAccessDefinitionCall(const Expr &expr) {
+bool isBareDirectWrapperKeyValueAccessDefinitionCall(const Expr &expr) {
   const bool isBareAccessHelper =
       expr.kind == Expr::Kind::Call && !expr.isMethodCall &&
       expr.namespacePrefix.empty() &&
       (isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_unsafe"));
   return expr.kind == Expr::Kind::Call && !expr.isMethodCall &&
          isBareAccessHelper &&
-         !isExplicitDirectMapAccessHelperCall(expr) &&
+         !isExplicitDirectKeyValueAccessHelperCall(expr) &&
          !expr.args.empty() &&
          expr.args.front().kind == Expr::Kind::Call;
 }
@@ -223,7 +225,7 @@ bool prefersBuiltinCountFallbackOverRemovedShadow(
   return false;
 }
 
-bool keepsBuiltinInlineReturnForPublishedMapHelper(std::string_view helperName,
+bool keepsBuiltinInlineReturnForPublishedKeyValueHelper(std::string_view helperName,
                                                    const Definition &callee) {
   std::string declaredReturnType;
   if (!inferReceiverTypeFromDeclaredReturn(callee, declaredReturnType)) {
@@ -611,8 +613,8 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
     }
     if (directCallee != nullptr && isCollectionAccessReceiverExpr &&
         !expr.args.empty() && isCollectionAccessReceiverExpr(expr.args.front()) &&
-        (isExplicitDirectMapAccessHelperCall(expr) ||
-         isExplicitRemovedMapAccessHelperCall(expr))) {
+        (isExplicitDirectKeyValueAccessHelperCall(expr) ||
+         isExplicitRemovedKeyValueAccessHelperCall(expr))) {
       return InlineCallDispatchResult::NotHandled;
     }
     if (directCallee != nullptr &&
@@ -621,9 +623,9 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
       return InlineCallDispatchResult::NotHandled;
     }
     if (directCallee != nullptr &&
-        (isSemanticBarePreferredMapHelperDefinitionCall(expr, *directCallee) ||
-         isBareDirectWrapperMapAccessDefinitionCall(expr) ||
-         isExplicitSamePathMapCountLikeDefinitionCall(expr, *directCallee))) {
+        (isSemanticBarePreferredKeyValueHelperDefinitionCall(expr, *directCallee) ||
+         isBareDirectWrapperKeyValueAccessDefinitionCall(expr) ||
+         isExplicitSamePathKeyValueCountLikeDefinitionCall(expr, *directCallee))) {
       const auto emitResult = emitResolvedInlineDefinitionCall(
           expr, directCallee, emitInlineDefinitionCall, error);
       if (emitResult == ResolvedInlineCallResult::Emitted) {
@@ -1086,7 +1088,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     return InlineCollectionAccessTargetFact::Unknown;
   };
   if (!expr.isMethodCall) {
-    std::string mapHelperName;
+    std::string keyValueHelperName;
     const std::string rawPath = resolveInlineCallPathWithoutFallbackProbes(expr);
     if (expr.args.size() == 1 &&
         isSemanticOrLegacyVectorTarget(expr.args.front())) {
@@ -1176,9 +1178,9 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
                    : InlineCallDispatchResult::Error;
       }
     }
-    const bool isCanonicalStdMapHelperCall =
-        isCanonicalPublishedInlineMapHelperPath(rawPath);
-    if (isCanonicalStdMapHelperCall && !expr.args.empty()) {
+    const bool isCanonicalStdKeyValueHelperCall =
+        isCanonicalPublishedInlineKeyValueHelperPath(rawPath);
+    if (isCanonicalStdKeyValueHelperCall && !expr.args.empty()) {
       const auto targetInfo =
           resolveKeyValueAccessTargetInfo(expr.args.front(),
                                      localsIn,
@@ -1190,7 +1192,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       if (lastSlash != std::string::npos) {
         directHelperName = directHelperName.substr(lastSlash + 1);
       }
-      directHelperName = canonicalInlineMapHelperName(std::move(directHelperName));
+      directHelperName = canonicalInlineKeyValueHelperName(std::move(directHelperName));
       if (targetInfo.isKeyValueTarget &&
           (directHelperName == "count" || directHelperName == "contains" ||
            directHelperName == "tryAt" || directHelperName == "at" ||
@@ -1231,16 +1233,16 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       }
     }
     if (!expr.args.empty() &&
-        (resolveMapHelperAliasName(expr, mapHelperName) ||
-         (getBuiltinArrayAccessName(expr, mapHelperName) && expr.args.size() == 2))) {
-      mapHelperName = canonicalInlineMapHelperName(std::move(mapHelperName));
+        (resolveMapHelperAliasName(expr, keyValueHelperName) ||
+         (getBuiltinArrayAccessName(expr, keyValueHelperName) && expr.args.size() == 2))) {
+      keyValueHelperName = canonicalInlineKeyValueHelperName(std::move(keyValueHelperName));
       const auto keyValueTargetInfo =
           resolveKeyValueAccessTargetInfo(expr.args.front(),
                                      localsIn,
                                      inferCallKeyValueTargetInfo,
                                      semanticProgram,
                                      semanticIndexPtr);
-      auto isRewrittenSlashMethodMapAccess = [&]() {
+      auto isRewrittenSlashMethodKeyValueAccess = [&]() {
         if (semanticProgram == nullptr) {
           return false;
         }
@@ -1301,28 +1303,28 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
         return queryType == "string" || queryType == "/string" ||
                bindingType == "string" || bindingType == "/string";
       };
-      if (keyValueTargetInfo.isKeyValueTarget && !isCanonicalStdMapHelperCall &&
-          (expr.sourceIsMethodCall || isRewrittenSlashMethodMapAccess() ||
+      if (keyValueTargetInfo.isKeyValueTarget && !isCanonicalStdKeyValueHelperCall &&
+          (expr.sourceIsMethodCall || isRewrittenSlashMethodKeyValueAccess() ||
            expr.name.find('/') == std::string::npos) &&
-          (mapHelperName == "at" || mapHelperName == "at_unsafe")) {
-        Expr canonicalMapHelperExpr = expr;
-        canonicalMapHelperExpr.isMethodCall = false;
-        canonicalMapHelperExpr.isFieldAccess = false;
-        canonicalMapHelperExpr.namespacePrefix.clear();
-        canonicalMapHelperExpr.name = collectionMemberPath("map", mapHelperName);
+          (keyValueHelperName == "at" || keyValueHelperName == "at_unsafe")) {
+        Expr canonicalKeyValueHelperExpr = expr;
+        canonicalKeyValueHelperExpr.isMethodCall = false;
+        canonicalKeyValueHelperExpr.isFieldAccess = false;
+        canonicalKeyValueHelperExpr.namespacePrefix.clear();
+        canonicalKeyValueHelperExpr.name = collectionMemberPath("map", keyValueHelperName);
         if (const Definition *callee =
-                resolveDefinitionCallFn(canonicalMapHelperExpr);
+                resolveDefinitionCallFn(canonicalKeyValueHelperExpr);
             callee != nullptr &&
-            !keepsBuiltinInlineReturnForPublishedMapHelper(mapHelperName,
-                                                           *callee)) {
-          return emitCanonicalInlineDefinitionCall(canonicalMapHelperExpr,
+            !keepsBuiltinInlineReturnForPublishedKeyValueHelper(
+                keyValueHelperName, *callee)) {
+          return emitCanonicalInlineDefinitionCall(canonicalKeyValueHelperExpr,
                                                    *callee)
                      ? InlineCallDispatchResult::Emitted
                      : InlineCallDispatchResult::Error;
         }
       }
       if (keyValueTargetInfo.isKeyValueTarget &&
-          !isCanonicalStdMapHelperCall &&
+          !isCanonicalStdKeyValueHelperCall &&
           resolveDefinitionCallFn(expr) == nullptr) {
         return InlineCallDispatchResult::NotHandled;
       }
@@ -1609,10 +1611,10 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
         if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding) {
           return false;
         }
-        std::string mapHelperName;
-        if (resolveMapHelperAliasName(receiverExpr, mapHelperName) &&
-            (mapHelperName == "at" || mapHelperName == "at_unsafe" ||
-             mapHelperName == "tryAt" || mapHelperName == "contains") &&
+        std::string keyValueHelperName;
+        if (resolveMapHelperAliasName(receiverExpr, keyValueHelperName) &&
+            (keyValueHelperName == "at" || keyValueHelperName == "at_unsafe" ||
+             keyValueHelperName == "tryAt" || keyValueHelperName == "contains") &&
             receiverExpr.args.size() == 2) {
           return false;
         }

@@ -116,6 +116,12 @@
   `explicitVectorCountLocalResolveDefinitionCalls == 1` seeing `2`, while
   adjacent call-helper struct classifier and bundled entry setup coverage
   still passes.
+- `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers dispatch inline call with count fallbacks" --no-skip`
+  has stale inline map-count/access fallback expectations after the map
+  stdlib-ownership cutover. On 2026-05-18 it still expected a method
+  `at(...)` probe to return `NotHandled` and a canonical map `count` call to
+  stay method-shaped, while current dispatch routes through canonical stdlib
+  helper paths; the adjacent source-delegation lock passed.
 - `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers keep explicit map helpers out of native builtin emission" --no-skip`
   still has stale native-tail dispatch expectations after the map
   stdlib-ownership cutover. On 2026-05-18 it failed expected dispatch and
@@ -232,6 +238,19 @@
   access fallback rejection coverage passed.
 
 ## Recent Test Runs
+- 2026-05-18 19:52 CEST | pass | mode: release | command:
+  `git diff --check`;
+  `rg -n 'canonicalInlineMapHelperName|inlineMapHelperMetadata|resolvePublishedInlineMapHelperName|resolvePublishedInlineMapSurfaceMemberName|isCanonicalPublishedInlineMapHelperPath|isSemanticBarePublishedMapHelperCall|isExplicitSamePathMapCountLikeDefinitionCall|isDirectMapAccessHelperCall|isExplicitDirectMapAccessHelperCall|isExplicitRemovedMapAccessHelperCall|isSemanticBarePreferredMapHelperDefinitionCall|keepsBuiltinInlineReturnForPublishedMapHelper|isBareDirectWrapperMapAccessDefinitionCall|mapMetadata|mapHelperName|canonicalMapHelperExpr|isCanonicalStdMapHelperCall|isRewrittenSlashMethodMapAccess' src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp tests/unit/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable" --no-skip`
+  | failures: none | notes: Inline native dispatch map-helper metadata
+  helpers now use key/value names instead of local map-helper terminology.
+- 2026-05-18 19:52 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers source delegation stays stable,ir lowerer call helpers dispatch inline call with count fallbacks" --no-skip`
+  | failures: `ir lowerer call helpers dispatch inline call with count
+  fallbacks` | notes: stale canonical map access/count expectations remain
+  in the broader inline fallback slice; reran the non-stale
+  source-delegation lock separately and it passed.
 - 2026-05-18 19:48 CEST | pass | mode: release | command:
   `git diff --check`;
   `rg -n '\bmapInfo\b|resolveSemanticMapTargetInfo|isKnownMapReceiverExpr|hasNonMapReceiverSemanticFact' src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp`;

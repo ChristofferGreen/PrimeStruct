@@ -2138,6 +2138,10 @@ Task template:
       removed explicit map access helpers or canonical stdlib map helper
       paths; it now routes those checks through local
       `collections.map_helpers` metadata wrappers.
+    - 2026-05-18: Inline native dispatch local metadata helper names now use
+      key/value terminology instead of map-specific local helper names for
+      published helper resolution, explicit removed access checks, semantic
+      bare helper calls, and same-path count-like definition routing.
     - 2026-05-18: Semantic build call resolution no longer spells the
       canonical map helper root, public map constructor path, or canonical map
       helper namespace prefix directly; it derives those paths from stdlib

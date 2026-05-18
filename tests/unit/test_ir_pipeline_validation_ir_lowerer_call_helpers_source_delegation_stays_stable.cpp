@@ -522,11 +522,11 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(inlineDispatchSource.find("#include \"primec/StdlibSurfaceRegistry.h\"") !=
         std::string::npos);
-  CHECK(inlineDispatchSource.find("resolvePublishedInlineMapHelperName(callee.fullPath, helperName)") !=
+  CHECK(inlineDispatchSource.find("resolvePublishedInlineKeyValueHelperName(callee.fullPath, helperName)") !=
         std::string::npos);
   CHECK(inlineDispatchSource.find("findStdlibSurfaceMetadataByResolvedPath(resolvedPath)") !=
         std::string::npos);
-  CHECK(inlineDispatchSource.find("metadata->id != mapMetadata->id") !=
+  CHECK(inlineDispatchSource.find("metadata->id != keyValueMetadata->id") !=
         std::string::npos);
   CHECK(inlineDispatchSource.find("matchesInlineMapHelperFamily(aliasName, resolvedHelperName)") ==
         std::string::npos);
@@ -551,7 +551,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(inlineDispatchSource.find("normalized = \"/map/\" +") ==
         std::string::npos);
-  CHECK(inlineDispatchSource.find("isExplicitSamePathMapCountLikeDefinitionCall(") !=
+  CHECK(inlineDispatchSource.find("isExplicitSamePathKeyValueCountLikeDefinitionCall(") !=
         std::string::npos);
   CHECK(inlineDispatchSource.find("isExplicitMapContainsOrTryAtMethodPath(") ==
         std::string::npos);
