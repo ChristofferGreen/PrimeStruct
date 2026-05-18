@@ -675,7 +675,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   direct `map/` or `std/collections/map` checks; core semantic unknown-call
   formatting and diagnostic target normalization should derive map helper
   membership and canonical count paths through that metadata instead of direct
-  map path checks.
+  map path checks; late fallback map access diagnostics should derive rooted
+  import-alias access helper recognition from stdlib map import-alias metadata
+  instead of a direct `/map/at*` path table.
   The stale
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`

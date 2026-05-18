@@ -343,7 +343,9 @@ Task template:
   metadata instead of direct `map/` or `std/collections/map` checks, and core
   semantic unknown-call formatting and diagnostic target normalization now
   derive map helper membership and canonical count paths through that metadata
-  instead of direct map path checks. The
+  instead of direct map path checks, and late fallback map access diagnostics
+  now derive rooted import-alias access helper recognition from stdlib map
+  import-alias metadata instead of a direct `/map/at*` path table. The
   remaining production
   lowerer/emitter
   experimental-map traces

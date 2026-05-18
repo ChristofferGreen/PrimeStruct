@@ -91,9 +91,36 @@ bool isCanonicalMapAccessHelperPath(const std::string &path) {
           helperName == "at_unsafe" || helperName == "at_unsafe_ref");
 }
 
-bool isRootedMapAccessHelperPath(const std::string &path) {
-  return path == "/map/at" || path == "/map/at_ref" ||
-         path == "/map/at_unsafe" || path == "/map/at_unsafe_ref";
+bool isLateFallbackMapAccessHelperName(std::string_view helperName) {
+  return helperName == "at" || helperName == "at_ref" ||
+         helperName == "at_unsafe" || helperName == "at_unsafe_ref";
+}
+
+bool isMapImportAliasAccessHelperPath(std::string path) {
+  const StdlibSurfaceMetadata *metadata =
+      lateFallbackMapHelperSurfaceMetadata();
+  if (metadata == nullptr || path.empty()) {
+    return false;
+  }
+  if (path.front() != '/') {
+    path.insert(path.begin(), '/');
+  }
+  std::string helperName;
+  if (!resolveLateFallbackMapHelperName(path, helperName) ||
+      !isLateFallbackMapAccessHelperName(helperName)) {
+    return false;
+  }
+  for (std::string_view alias : metadata->importAliasSpellings) {
+    std::string rootedAlias(alias);
+    if (!rootedAlias.empty() && rootedAlias.front() != '/') {
+      rootedAlias.insert(rootedAlias.begin(), '/');
+    }
+    if (!rootedAlias.empty() && path.size() > rootedAlias.size() &&
+        path.rfind(rootedAlias + "/", 0) == 0) {
+      return true;
+    }
+  }
+  return false;
 }
 
 } // namespace
@@ -478,7 +505,7 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
             isCanonicalAccessPath
                 ? methodResolved
                 : lateFallbackCanonicalMapHelperPath(builtinAccessName);
-        if ((isRootedMapAccessHelperPath(methodResolved) ||
+        if ((isMapImportAliasAccessHelperPath(methodResolved) ||
              isCanonicalAccessPath) &&
             !inferCollectionDispatchSetup.shouldInferBuiltinBareMapAccessCall &&
             !inferCollectionDispatchSetup.isIndexedArgsPackMapReceiverTarget(

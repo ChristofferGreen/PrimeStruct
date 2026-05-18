@@ -219,6 +219,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string inferDefinitionSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorInferDefinition.cpp");
+  const std::string inferLateFallbackBuiltinsSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorInferLateFallbackBuiltins.cpp");
   const std::string lateMapAccessBuiltinsSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprLateMapAccessBuiltins.cpp");
@@ -367,6 +370,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!inferCollectionReturnInferenceSource.empty());
   REQUIRE(!inferCollectionBufferAndMapResolversSource.empty());
   REQUIRE(!inferDefinitionSource.empty());
+  REQUIRE(!inferLateFallbackBuiltinsSource.empty());
   REQUIRE(!lateMapAccessBuiltinsSource.empty());
   REQUIRE(!exprTrySource.empty());
   REQUIRE(!pointerLikeSource.empty());
@@ -740,6 +744,20 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
             "std::string(mapConstructorMetadata->canonicalPath)") !=
         std::string::npos);
   CHECK(inferDefinitionSource.find("resolvedPath == \"/map/at\"") ==
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find("path == \"/map/at\"") ==
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find("path == \"/map/at_ref\"") ==
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find("path == \"/map/at_unsafe\"") ==
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find("path == \"/map/at_unsafe_ref\"") ==
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find(
+            "isMapImportAliasAccessHelperPath(methodResolved)") !=
+        std::string::npos);
+  CHECK(inferLateFallbackBuiltinsSource.find(
+            "metadata->importAliasSpellings") !=
         std::string::npos);
   CHECK(lateMapAccessBuiltinsSource.find("normalizedName == \"map/at_ref\"") ==
         std::string::npos);
