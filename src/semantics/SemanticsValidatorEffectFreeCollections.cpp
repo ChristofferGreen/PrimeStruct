@@ -7,22 +7,23 @@
 namespace primec::semantics {
 namespace {
 
-const StdlibSurfaceMetadata *mapHelperSurfaceMetadataForEffectFreeCollections() {
+const StdlibSurfaceMetadata *
+keyValueHelperSurfaceMetadataForEffectFreeCollections() {
   return findStdlibSurfaceMetadataByBridgeKey("collections.map_helpers");
 }
 
-std::string canonicalMapHelperPathLocal(std::string_view helperName) {
+std::string canonicalKeyValueHelperPathLocal(std::string_view helperName) {
   const StdlibSurfaceMetadata *metadata =
-      mapHelperSurfaceMetadataForEffectFreeCollections();
+      keyValueHelperSurfaceMetadataForEffectFreeCollections();
   if (metadata == nullptr) {
     return "";
   }
   return canonicalCollectionHelperPath(metadata->id, helperName);
 }
 
-std::string unrootedCanonicalMapHelperPrefixLocal() {
+std::string unrootedCanonicalKeyValueHelperPrefixLocal() {
   const StdlibSurfaceMetadata *metadata =
-      mapHelperSurfaceMetadataForEffectFreeCollections();
+      keyValueHelperSurfaceMetadataForEffectFreeCollections();
   if (metadata == nullptr) {
     return "";
   }
@@ -35,8 +36,9 @@ std::string unrootedCanonicalMapHelperPrefixLocal() {
 
 } // namespace
 
-std::string SemanticsValidator::normalizeEffectFreeCollectionMethodName(const std::string &receiverPath,
-                                                                        std::string methodName) const {
+std::string SemanticsValidator::normalizeEffectFreeCollectionMethodName(
+    const std::string &receiverPath,
+    std::string methodName) const {
   if (!methodName.empty() && methodName.front() == '/') {
     methodName.erase(methodName.begin());
   }
@@ -55,9 +57,11 @@ std::string SemanticsValidator::normalizeEffectFreeCollectionMethodName(const st
     }
   }
   if (receiverPath == "/map") {
-    const std::string stdMapPrefix = unrootedCanonicalMapHelperPrefixLocal();
-    if (!stdMapPrefix.empty() && methodName.rfind(stdMapPrefix, 0) == 0) {
-      return methodName.substr(stdMapPrefix.size());
+    const std::string stdKeyValueHelperPrefix =
+        unrootedCanonicalKeyValueHelperPrefixLocal();
+    if (!stdKeyValueHelperPrefix.empty() &&
+        methodName.rfind(stdKeyValueHelperPrefix, 0) == 0) {
+      return methodName.substr(stdKeyValueHelperPrefix.size());
     }
   }
   return methodName;
@@ -81,7 +85,7 @@ std::vector<std::string> SemanticsValidator::effectFreeMethodPathCandidatesForRe
             canonicalVectorCompatibilityHelperPathOrFallback(methodName)};
   }
   if (receiverPath == "/map") {
-    return {canonicalMapHelperPathLocal(methodName)};
+    return {canonicalKeyValueHelperPathLocal(methodName)};
   }
   return {receiverPath + "/" + methodName};
 }
@@ -127,12 +131,13 @@ std::vector<std::string> SemanticsValidator::effectFreeCollectionHelperPathCandi
 
   std::string normalizedPath = path;
   if (!normalizedPath.empty() && normalizedPath.front() != '/') {
-    const std::string stdMapPrefix =
-        unrootedCanonicalMapHelperPrefixLocal();
-    if (normalizedPath.rfind("array/", 0) == 0 || isUnrootedVectorHelperPath(normalizedPath) ||
+    const std::string stdKeyValueHelperPrefix =
+        unrootedCanonicalKeyValueHelperPrefixLocal();
+    if (normalizedPath.rfind("array/", 0) == 0 ||
+        isUnrootedVectorHelperPath(normalizedPath) ||
         isUnrootedCanonicalVectorCompatibilityPath(normalizedPath) ||
-        (!stdMapPrefix.empty() &&
-         normalizedPath.rfind(stdMapPrefix, 0) == 0)) {
+        (!stdKeyValueHelperPrefix.empty() &&
+         normalizedPath.rfind(stdKeyValueHelperPrefix, 0) == 0)) {
       normalizedPath.insert(normalizedPath.begin(), '/');
     }
   }
@@ -279,7 +284,7 @@ std::string SemanticsValidator::resolveEffectFreeBareMapCallPath(const Expr &cal
           *callExpr.argNames[i] == "values") {
         foundValues = true;
         if (tryResolveReceiverIndex(i)) {
-          return canonicalMapHelperPathLocal(helperName);
+          return canonicalKeyValueHelperPathLocal(helperName);
         }
         break;
       }
@@ -287,14 +292,14 @@ std::string SemanticsValidator::resolveEffectFreeBareMapCallPath(const Expr &cal
     if (!foundValues) {
       for (size_t i = 0; i < callExpr.args.size(); ++i) {
         if (tryResolveReceiverIndex(i)) {
-          return canonicalMapHelperPathLocal(helperName);
+          return canonicalKeyValueHelperPathLocal(helperName);
         }
       }
     }
   } else {
     for (size_t i = 0; i < callExpr.args.size(); ++i) {
       if (tryResolveReceiverIndex(i)) {
-        return canonicalMapHelperPathLocal(helperName);
+        return canonicalKeyValueHelperPathLocal(helperName);
       }
     }
   }

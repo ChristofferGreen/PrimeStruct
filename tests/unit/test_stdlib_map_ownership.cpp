@@ -1047,7 +1047,26 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(effectFreeCollectionsSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
         std::string::npos);
   CHECK(effectFreeCollectionsSource.find(
+            "mapHelperSurfaceMetadataForEffectFreeCollections(") ==
+        std::string::npos);
+  CHECK(effectFreeCollectionsSource.find("canonicalMapHelperPathLocal(") ==
+        std::string::npos);
+  CHECK(effectFreeCollectionsSource.find("unrootedCanonicalMapHelperPrefixLocal(") ==
+        std::string::npos);
+  CHECK(effectFreeCollectionsSource.find("stdMapPrefix") ==
+        std::string::npos);
+  CHECK(effectFreeCollectionsSource.find(
             "findStdlibSurfaceMetadataByBridgeKey(\"collections.map_helpers\")") !=
+        std::string::npos);
+  CHECK(effectFreeCollectionsSource.find(
+            "keyValueHelperSurfaceMetadataForEffectFreeCollections(") !=
+        std::string::npos);
+  CHECK(effectFreeCollectionsSource.find("canonicalKeyValueHelperPathLocal(") !=
+        std::string::npos);
+  CHECK(effectFreeCollectionsSource.find(
+            "unrootedCanonicalKeyValueHelperPrefixLocal(") !=
+        std::string::npos);
+  CHECK(effectFreeCollectionsSource.find("stdKeyValueHelperPrefix") !=
         std::string::npos);
   CHECK(buildParametersSource.find("normalizedType == \"std/collections/map\"") ==
         std::string::npos);

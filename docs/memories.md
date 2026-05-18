@@ -690,7 +690,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   direct-call canonicalized target, rewritten-call, and borrowed-path locals
   should use key/value naming around map helper metadata; semantic
   collection-rewrite direct experimental spelling locals should use key/value
-  naming around map helper metadata.
+  naming around map helper metadata; semantic effect-free collection metadata,
+  canonical-path, and unrooted-prefix locals should use key/value naming
+  around map helper metadata.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later
