@@ -2594,6 +2594,12 @@ Task template:
       Their inventory allowances are now zero, and the obsolete backing-trace
       source-lock allowances plus the setup-method-call experimental-map
       exception were removed.
+    - 2026-05-18: Direct targeted scans confirmed no map-surface traces in
+      IR printer helpers, emitter method-resolution helpers, emitter
+      method-resolution type inference helpers, emitter setup-return inference
+      collection helpers, emitter collection-type helpers, or emitter helper
+      type parsing. Their inventory allowances are now zero, and the obsolete
+      emitter helper-type backing-trace source-lock allowance was removed.
     - 2026-05-17: Lowerer builtin-name and shared helper map-helper lookups no
       longer name the map helper surface ID directly; they now obtain helper
       metadata through the `collections.map_helpers` bridge key, and the

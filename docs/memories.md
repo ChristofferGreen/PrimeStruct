@@ -818,7 +818,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
   struct-return path helpers, inline-call context helpers, lowerer inline
   calls, native tail dispatch, struct-slot layout helpers, call helpers, call
   resolution, lower-statement expression helpers, setup-type method-call
-  resolution, or statement-call emission; their inventory caps are now zero
+  resolution, statement-call emission, IR printer helpers, emitter
+  method-resolution helpers, emitter method-resolution type inference helpers,
+  emitter setup-return inference collection helpers, emitter collection-type
+  helpers, or emitter helper type parsing; their inventory caps are now zero
   and the obsolete backing-trace ownership allowlist entries were removed.
 
 ### mapvalue-public-insert-uses-stdlib

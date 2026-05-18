@@ -196,6 +196,15 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-18 12:52 CEST | pass | mode: release | command:
+  `rg --pcre2 -n '/?std/collections/map(?:/|")|/?std/collections/experimental_map(?:/|")|(?<![A-Za-z0-9_/])/?map/|\bmap(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bCollectionsMap[A-Za-z0-9_]*\b|\bMap<' src/IrPrinterHelpers.cpp src/emitter/EmitterBuiltinMethodResolutionHelpers.cpp src/emitter/EmitterBuiltinMethodResolutionTypeInferenceHelpers.cpp src/emitter/EmitterEmitSetupReturnInferenceCollections.h src/emitter/EmitterExprCollectionTypeHelpers.h src/emitter/EmitterHelpersTypes.cpp || true`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `git diff --check` | failures: none | notes:
+  Six non-lowerer files returned no targeted map-surface matches, so their
+  stale inventory caps were lowered to zero and the obsolete emitter helper
+  type backing-trace source-lock allowance was removed. The Python inventory
+  script was intentionally not run.
 - 2026-05-18 12:48 CEST | pass | mode: release | command:
   `rg --pcre2 -n '/?std/collections/map(?:/|")|/?std/collections/experimental_map(?:/|")|(?<![A-Za-z0-9_/])/?map/|\bmap(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bCollectionsMap[A-Za-z0-9_]*\b|\bMap<' src/ir_lowerer/IrLowererCallHelpers.cpp src/ir_lowerer/IrLowererCallResolution.cpp src/ir_lowerer/IrLowererLowerStatementsExpr.h src/ir_lowerer/IrLowererSetupTypeMethodCallResolution.cpp src/ir_lowerer/IrLowererStatementCallEmission.cpp || true`;
   `cmake --build build-release --target PrimeStruct_misc_tests`;

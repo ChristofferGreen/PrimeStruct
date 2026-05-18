@@ -58,7 +58,6 @@ std::vector<std::filesystem::path> productionMapTraceFiles() {
 bool isAllowedMapBackingFile(const std::string &relativePath) {
   static const std::vector<std::string> files = {
       "src/emitter/EmitterBuiltinCallPathHelpers.cpp",
-      "src/emitter/EmitterHelpersTypes.cpp",
       "src/ir_lowerer/IrLowererAccessTargetResolution.cpp",
       "src/ir_lowerer/IrLowererInlinePackedArgs.cpp",
       "src/ir_lowerer/IrLowererInlineParamHelpers.cpp",
