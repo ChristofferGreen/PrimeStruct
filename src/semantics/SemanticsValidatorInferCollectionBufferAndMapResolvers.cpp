@@ -209,10 +209,6 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
     }
     keyTypeOut.clear();
     valueTypeOut.clear();
-    auto isRootMapAliasPath = [](const std::string &path) {
-      return path == "/map" ||
-             path.rfind("/map__", 0) == 0;
-    };
     auto explicitCallPath = [](const Expr &candidate) -> std::string {
       if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
         return {};
@@ -230,12 +226,17 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
       return prefix + "/" + candidate.name;
     };
     auto hasRootMapDefinitionFamily = [&]() {
-      if (defMap_.find("/map") != defMap_.end()) {
+      const std::string alias = mapCollectionAliasToken();
+      if (alias.empty()) {
+        return false;
+      }
+      const std::string rootedAlias = "/" + alias;
+      if (defMap_.find(rootedAlias) != defMap_.end()) {
         return true;
       }
       for (const auto &[path, defPtr] : defMap_) {
         (void)defPtr;
-        if (path.rfind("/map__", 0) == 0) {
+        if (path.rfind(rootedAlias + "__", 0) == 0) {
           return true;
         }
       }
@@ -244,8 +245,8 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
     if (target.kind == Expr::Kind::Call) {
       const std::string resolvedTarget = resolveCalleePath(target);
       const std::string explicitTarget = explicitCallPath(target);
-      if (isRootMapAliasPath(resolvedTarget) ||
-          isRootMapAliasPath(explicitTarget)) {
+      if (isRootMapConstructorAliasPath(resolvedTarget) ||
+          isRootMapConstructorAliasPath(explicitTarget)) {
         return false;
       }
     }
@@ -272,8 +273,7 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
           target.kind == Expr::Kind::Call &&
           ([&]() {
             const std::string resolvedPath = resolveCalleePath(target);
-            return resolvedPath == "/map" ||
-                   resolvedPath.rfind("/map__", 0) == 0;
+            return isRootMapConstructorAliasPath(resolvedPath);
           })();
       std::string base;
       std::string argText;
@@ -301,15 +301,17 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
       const std::string resolvedTarget = resolveCalleePath(target);
       if (isDirectMapConstructorPath(resolvedTarget) &&
           target.templateArgs.size() == 2 &&
-          (!isRootMapAliasPath(resolvedTarget) || allowRootMapConstructorAlias)) {
+          (!isRootMapConstructorAliasPath(resolvedTarget) || allowRootMapConstructorAlias)) {
         keyTypeOut = target.templateArgs[0];
         valueTypeOut = target.templateArgs[1];
         return true;
       }
       if (isDirectMapConstructorPath(resolvedTarget) &&
-          (!isRootMapAliasPath(resolvedTarget) || allowRootMapConstructorAlias)) {
+          (!isRootMapConstructorAliasPath(resolvedTarget) || allowRootMapConstructorAlias)) {
         std::vector<std::string> args;
-        if (resolveCallCollectionTemplateArgs(target, "map", params, locals, args) &&
+        const std::string collectionAlias = mapCollectionAliasToken();
+        if (!collectionAlias.empty() &&
+            resolveCallCollectionTemplateArgs(target, collectionAlias, params, locals, args) &&
             args.size() == 2) {
           keyTypeOut = args[0];
           valueTypeOut = args[1];
@@ -317,10 +319,12 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
         }
       }
       std::string builtinCollectionName;
+      const std::string collectionAlias = mapCollectionAliasToken();
       if (getBuiltinCollectionName(target, builtinCollectionName) &&
-          builtinCollectionName == "map" &&
+          !collectionAlias.empty() &&
+          builtinCollectionName == collectionAlias &&
           target.templateArgs.size() == 2 &&
-          (!isRootMapAliasPath(resolvedTarget) || allowRootMapConstructorAlias)) {
+          (!isRootMapConstructorAliasPath(resolvedTarget) || allowRootMapConstructorAlias)) {
         keyTypeOut = target.templateArgs[0];
         valueTypeOut = target.templateArgs[1];
         return true;
@@ -361,9 +365,12 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
       }
       std::string collectionTypePath;
       if (resolveCallCollectionTypePath(target, params, locals, collectionTypePath) &&
-          collectionTypePath == "/map") {
+          isRootMapConstructorAliasPath(collectionTypePath)) {
         std::vector<std::string> args;
-        if (resolveCallCollectionTemplateArgs(target, "map", params, locals, args) && args.size() == 2) {
+        const std::string collectionAlias = mapCollectionAliasToken();
+        if (!collectionAlias.empty() &&
+            resolveCallCollectionTemplateArgs(target, collectionAlias, params, locals, args) &&
+            args.size() == 2) {
           keyTypeOut = args[0];
           valueTypeOut = args[1];
           return true;
@@ -435,7 +442,10 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
     }
     if (isDirectMapConstructorCall(target)) {
       std::vector<std::string> args;
-      if (resolveCallCollectionTemplateArgs(target, "map", params, locals, args) && args.size() == 2) {
+      const std::string collectionAlias = mapCollectionAliasToken();
+      if (!collectionAlias.empty() &&
+          resolveCallCollectionTemplateArgs(target, collectionAlias, params, locals, args) &&
+          args.size() == 2) {
         keyTypeOut = args[0];
         valueTypeOut = args[1];
         return true;

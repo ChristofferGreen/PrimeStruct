@@ -2729,6 +2729,10 @@ Task template:
       `collections.map_helpers` metadata, and experimental map return-kind
       detection goes through a shared map backing predicate; its inventory cap
       is zero.
+    - 2026-05-18:
+      `SemanticsValidatorInferCollectionBufferAndMapResolvers.cpp` derives
+      rooted map alias checks and map collection alias tokens from
+      `collections.map_constructors` metadata; its inventory cap is zero.
     - Tighten or replace the TODO-4473 and TODO-4472 allowed-count
       inventories as traces are deleted; the final TODO-4464 state is zero
       tolerance for all PrimeStruct-map-specific production C++ traces, not a

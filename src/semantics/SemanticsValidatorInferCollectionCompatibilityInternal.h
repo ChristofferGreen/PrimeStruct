@@ -26,6 +26,29 @@ enum class RemovedCollectionHelperFamily {
   return isResolvedMapConstructorPath(std::string(resolvedCandidate));
 }
 
+[[maybe_unused]] std::string mapCollectionAliasToken() {
+  const StdlibSurfaceMetadata *metadata = mapConstructorSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return {};
+  }
+  for (std::string_view alias : metadata->importAliasSpellings) {
+    if (!alias.empty() && alias.find('/') == std::string_view::npos) {
+      return std::string(alias);
+    }
+  }
+  return {};
+}
+
+[[maybe_unused]] bool isRootMapConstructorAliasPath(std::string_view path) {
+  const std::string alias = mapCollectionAliasToken();
+  if (alias.empty()) {
+    return false;
+  }
+  const std::string rootedAlias = "/" + alias;
+  return path == rootedAlias ||
+         path.rfind(rootedAlias + "__", 0) == 0;
+}
+
 [[maybe_unused]] bool matchesResolvedPath(std::string_view resolvedPath,
                                           std::string_view basePath) {
   return resolvedPath == basePath ||

@@ -925,6 +925,23 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inferCollectionBufferAndMapResolversSource.find(
             "std::string(mapConstructorMetadata->canonicalPath)") !=
         std::string::npos);
+  CHECK(inferCollectionBufferAndMapResolversSource.find("mapCollectionAliasToken()") !=
+        std::string::npos);
+  CHECK(inferCollectionBufferAndMapResolversSource.find("isRootMapConstructorAliasPath(") !=
+        std::string::npos);
+  CHECK(inferCollectionBufferAndMapResolversSource.find("path == \"/map\"") ==
+        std::string::npos);
+  CHECK(inferCollectionBufferAndMapResolversSource.find("path.rfind(\"/map__\", 0)") ==
+        std::string::npos);
+  CHECK(inferCollectionBufferAndMapResolversSource.find("defMap_.find(\"/map\")") ==
+        std::string::npos);
+  CHECK(inferCollectionBufferAndMapResolversSource.find(
+            "resolveCallCollectionTemplateArgs(target, \"map\"") ==
+        std::string::npos);
+  CHECK(inferCollectionBufferAndMapResolversSource.find("builtinCollectionName == \"map\"") ==
+        std::string::npos);
+  CHECK(inferCollectionBufferAndMapResolversSource.find("collectionTypePath == \"/map\"") ==
+        std::string::npos);
   CHECK(inferDefinitionSource.find("resolvedPath == \"/map/at\"") ==
         std::string::npos);
   CHECK(inferDefinitionSource.find("resolveCalleePath(candidate) == \"/std/collections/map/at_ref\"") ==
