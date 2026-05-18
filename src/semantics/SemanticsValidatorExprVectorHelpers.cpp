@@ -165,10 +165,10 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
                                        &soaHelperName,
                                        nullptr)) {
     normalizedHelperName = soaHelperName;
-  } else if (const std::string mapHelperName =
+  } else if (const std::string keyValueHelperName =
                  metadataBackedMapHelperMethodName(normalizedHelperName);
-             mapHelperName != normalizedHelperName) {
-    normalizedHelperName = mapHelperName;
+             keyValueHelperName != normalizedHelperName) {
+    normalizedHelperName = keyValueHelperName;
   }
   auto explicitCallPath = [](const Expr &callExpr) -> std::string {
     if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall ||

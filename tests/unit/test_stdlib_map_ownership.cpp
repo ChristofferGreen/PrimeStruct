@@ -1043,6 +1043,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(exprVectorHelpersSource.find("normalizedHelperName.rfind(\"map/\", 0)") ==
         std::string::npos);
+  CHECK(exprVectorHelpersSource.find("mapHelperName") == std::string::npos);
+  CHECK(exprVectorHelpersSource.find("keyValueHelperName") !=
+        std::string::npos);
   CHECK(exprVectorHelpersSource.find(
             "metadataBackedMapHelperMethodName(normalizedHelperName)") !=
         std::string::npos);
