@@ -57,7 +57,7 @@ std::string stripLeadingSlashLocal(std::string_view text) {
   return std::string(text);
 }
 
-bool matchesMapCollectionRootMetadataLocal(std::string_view normalized) {
+bool matchesKeyValueCollectionRootMetadataLocal(std::string_view normalized) {
   const primec::StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
@@ -76,7 +76,7 @@ bool matchesMapCollectionRootMetadataLocal(std::string_view normalized) {
   return false;
 }
 
-bool matchesMapValueRootMetadataLocal(const std::string &normalized) {
+bool matchesKeyValueBackingRootMetadataLocal(const std::string &normalized) {
   const primec::StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
@@ -269,8 +269,8 @@ bool validateBuiltinMapKeyType(const BindingInfo &binding,
 
 bool isMapCollectionTypeName(const std::string &name) {
   const std::string normalized = normalizeBindingTypeName(name);
-  return matchesMapCollectionRootMetadataLocal(normalized) ||
-         matchesMapValueRootMetadataLocal(normalized) ||
+  return matchesKeyValueCollectionRootMetadataLocal(normalized) ||
+         matchesKeyValueBackingRootMetadataLocal(normalized) ||
          isUnspecializedExperimentalCollectionTypeBaseLocal(
              normalized, "map", "Map");
 }
