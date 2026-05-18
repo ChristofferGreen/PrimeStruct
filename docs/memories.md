@@ -654,7 +654,9 @@ This file stores durable session-derived facts that are useful in later work. Ke
   metadata; semantic return-kind collection marker locals should use key/value
   naming around map constructor metadata; semantic call-resolution local
   helper-root, alias-path, constructor-metadata, and namespace-prefix probes
-  should use key/value naming around map metadata.
+  should use key/value naming around map metadata; semantic infer-struct-return
+  collection marker, helper-prefix, and backing-root locals should use
+  key/value naming around map metadata.
 - Evidence: Field-bound `Map<K, V>` compatibility triage showed generated
   map helper specializations could mask missing `/map/count` aliases unless
   removed-alias checks ignored generated-only definition paths; later

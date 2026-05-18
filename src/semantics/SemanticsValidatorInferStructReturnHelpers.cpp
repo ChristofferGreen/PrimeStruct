@@ -21,7 +21,7 @@ void eraseStructReturnCandidate(std::vector<std::string> &candidates, const std:
   }
 }
 
-std::string mapCollectionMarkerPathForInferStructReturn() {
+std::string keyValueCollectionMarkerPathForInferStructReturn() {
   const StdlibSurfaceMetadata *metadata = mapConstructorSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return {};
@@ -41,7 +41,7 @@ std::string mapCollectionMarkerPathForInferStructReturn() {
   return {};
 }
 
-std::string unrootedMapHelperPrefixForInferStructReturn() {
+std::string unrootedKeyValueHelperPrefixForInferStructReturn() {
   const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
   if (metadata == nullptr || metadata->canonicalPath.empty()) {
     return {};
@@ -56,7 +56,7 @@ std::string unrootedMapHelperPrefixForInferStructReturn() {
   return prefix;
 }
 
-std::string mapValueRootForInferStructReturn() {
+std::string keyValueBackingRootForInferStructReturn() {
   const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
   if (metadata == nullptr || metadata->canonicalPath.empty()) {
     return {};
@@ -94,7 +94,7 @@ std::string SemanticsValidator::inferStructReturnCollectionPath(const std::strin
     if (splitTopLevelTemplateArgs(normalizedTypeTemplateArg, args) && args.size() == 2) {
       return specializedExperimentalMapStructReturnPath(args);
     }
-    return mapCollectionMarkerPathForInferStructReturn();
+    return keyValueCollectionMarkerPathForInferStructReturn();
   }
 
   std::string base;
@@ -243,12 +243,12 @@ std::string SemanticsValidator::inferStructReturnPointerTargetTypeText(
 std::string SemanticsValidator::normalizeInferStructReturnHelperPath(const std::string &path) const {
   std::string normalizedPath = path;
   if (!normalizedPath.empty() && normalizedPath.front() != '/') {
-    const std::string unrootedMapPrefix =
-        unrootedMapHelperPrefixForInferStructReturn();
+    const std::string unrootedKeyValuePrefix =
+        unrootedKeyValueHelperPrefixForInferStructReturn();
     if (normalizedPath.rfind("array/", 0) == 0 || isUnrootedVectorHelperPath(normalizedPath) ||
         isUnrootedCanonicalVectorCompatibilityPath(normalizedPath) ||
-        (!unrootedMapPrefix.empty() &&
-         normalizedPath.rfind(unrootedMapPrefix, 0) == 0)) {
+        (!unrootedKeyValuePrefix.empty() &&
+         normalizedPath.rfind(unrootedKeyValuePrefix, 0) == 0)) {
       normalizedPath.insert(normalizedPath.begin(), '/');
     }
   }
@@ -358,11 +358,12 @@ std::string SemanticsValidator::specializedExperimentalMapStructReturnPath(
   }
 
   std::ostringstream specializedPath;
-  const std::string mapValueRoot = mapValueRootForInferStructReturn();
-  if (mapValueRoot.empty()) {
+  const std::string keyValueBackingRoot =
+      keyValueBackingRootForInferStructReturn();
+  if (keyValueBackingRoot.empty()) {
     return {};
   }
-  specializedPath << mapValueRoot << "__t" << std::hex
+  specializedPath << keyValueBackingRoot << "__t" << std::hex
                   << fnv1a64(canonicalArgs.str());
   return specializedPath.str();
 }

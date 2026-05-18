@@ -779,13 +779,28 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inferStructReturnHelpersSource.find("collectionTypePathLocal(\"map\"") ==
         std::string::npos);
   CHECK(inferStructReturnHelpersSource.find(
-            "mapCollectionMarkerPathForInferStructReturn()") !=
+            "mapCollectionMarkerPathForInferStructReturn()") ==
         std::string::npos);
   CHECK(inferStructReturnHelpersSource.find(
-            "unrootedMapHelperPrefixForInferStructReturn()") !=
+            "unrootedMapHelperPrefixForInferStructReturn()") ==
         std::string::npos);
   CHECK(inferStructReturnHelpersSource.find(
-            "mapValueRootForInferStructReturn()") !=
+            "mapValueRootForInferStructReturn()") ==
+        std::string::npos);
+  CHECK(inferStructReturnHelpersSource.find(
+            "unrootedMapPrefix") ==
+        std::string::npos);
+  CHECK(inferStructReturnHelpersSource.find(
+            "keyValueCollectionMarkerPathForInferStructReturn()") !=
+        std::string::npos);
+  CHECK(inferStructReturnHelpersSource.find(
+            "unrootedKeyValueHelperPrefixForInferStructReturn()") !=
+        std::string::npos);
+  CHECK(inferStructReturnHelpersSource.find(
+            "keyValueBackingRootForInferStructReturn()") !=
+        std::string::npos);
+  CHECK(inferStructReturnHelpersSource.find(
+            "unrootedKeyValuePrefix") !=
         std::string::npos);
   CHECK(inferStructReturnHelpersSource.find("mapConstructorSurfaceMetadataLocal()") !=
         std::string::npos);
