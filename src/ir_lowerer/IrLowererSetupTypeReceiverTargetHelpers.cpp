@@ -230,7 +230,7 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
     typeNameOut = "vector";
     return true;
   }
-  if (localInfo.kind == LocalInfo::Kind::Map) {
+  if (localInfo.kind == LocalInfo::Kind::KeyValueCollection) {
     typeNameOut = "map";
     return true;
   }
@@ -378,7 +378,7 @@ bool inferBuiltinAccessReceiverResultKind(const Expr &receiverCallExpr,
         (receiverInfo.kind == LocalInfo::Kind::Pointer && receiverInfo.pointerToVector)) {
       return assignKind(receiverInfo.valueKind);
     }
-    if (receiverInfo.kind == LocalInfo::Kind::Map ||
+    if (receiverInfo.kind == LocalInfo::Kind::KeyValueCollection ||
         (receiverInfo.kind == LocalInfo::Kind::Reference && receiverInfo.referenceToMap) ||
         (receiverInfo.kind == LocalInfo::Kind::Pointer && receiverInfo.pointerToMap)) {
       return assignKind(receiverInfo.mapValueKind);
@@ -666,7 +666,7 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
             typeNameOut = "array";
             return true;
           }
-          if (localIt->second.argsPackElementKind == LocalInfo::Kind::Map) {
+          if (localIt->second.argsPackElementKind == LocalInfo::Kind::KeyValueCollection) {
             typeNameOut = "map";
             return true;
           }

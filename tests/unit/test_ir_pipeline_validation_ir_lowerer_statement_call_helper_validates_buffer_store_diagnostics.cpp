@@ -687,7 +687,7 @@ TEST_CASE("ir lowerer map insert rewrite uses semantic receiver facts before sta
   primec::ir_lowerer::LocalMap staleLocals;
   auto addStaleLocalMap = [&](const std::string &name) {
     primec::ir_lowerer::LocalInfo local;
-    local.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+    local.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
     local.mapKeyKind = ValueKind::Int64;
     local.mapValueKind = ValueKind::Int64;
     local.valueKind = ValueKind::Int64;
@@ -2546,7 +2546,7 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
   localMapValuesLocationExpr.argNames = {std::nullopt};
   primec::ir_lowerer::LocalMap localMapLocals;
   primec::ir_lowerer::LocalInfo localMapInfo;
-  localMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  localMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   localMapInfo.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   localMapInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   localMapInfo.index = 4;

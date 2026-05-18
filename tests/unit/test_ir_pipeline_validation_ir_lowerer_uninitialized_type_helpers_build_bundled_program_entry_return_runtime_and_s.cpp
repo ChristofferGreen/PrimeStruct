@@ -338,7 +338,7 @@ TEST_CASE("ir lowerer setup type helper resolves method receiver local targets")
   CHECK(resolvedTypePath.empty());
 
   LocalInfo mapLocal;
-  mapLocal.kind = LocalInfo::Kind::Map;
+  mapLocal.kind = LocalInfo::Kind::KeyValueCollection;
   CHECK(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(mapLocal, typeName, resolvedTypePath));
   CHECK(typeName == "map");
   CHECK(resolvedTypePath.empty());

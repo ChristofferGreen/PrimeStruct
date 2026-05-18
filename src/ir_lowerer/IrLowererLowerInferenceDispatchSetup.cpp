@@ -1161,7 +1161,7 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
                 if (receiverExpr.kind == Expr::Kind::Name) {
                   auto localIt = localsIn.find(receiverExpr.name);
                   if (localIt != localsIn.end() &&
-                      (localIt->second.kind == LocalInfo::Kind::Map ||
+                      (localIt->second.kind == LocalInfo::Kind::KeyValueCollection ||
                        ((localIt->second.kind == LocalInfo::Kind::Reference ||
                          localIt->second.kind == LocalInfo::Kind::Pointer) &&
                         (localIt->second.referenceToMap ||
@@ -1342,7 +1342,7 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
             if (accessTarget.kind == Expr::Kind::Name) {
               auto it = localsIn.find(accessTarget.name);
               if (it != localsIn.end() &&
-                  ((it->second.kind == LocalInfo::Kind::Map) ||
+                  ((it->second.kind == LocalInfo::Kind::KeyValueCollection) ||
                    (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToMap)) &&
                   it->second.mapValueKind == LocalInfo::ValueKind::String) {
                 return LocalInfo::ValueKind::Int32;

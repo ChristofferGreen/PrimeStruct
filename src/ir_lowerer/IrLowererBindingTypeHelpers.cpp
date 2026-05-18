@@ -237,7 +237,7 @@ LocalInfo::Kind bindingKindFromCollectionSpecialization(
     return LocalInfo::Kind::Vector;
   }
   if (collectionFamily == "map") {
-    return LocalInfo::Kind::Map;
+    return LocalInfo::Kind::KeyValueCollection;
   }
   return LocalInfo::Kind::Value;
 }
@@ -332,7 +332,7 @@ LocalInfo::Kind bindingKindFromTypeText(const std::string &typeText) {
     return LocalInfo::Kind::Vector;
   }
   if (normalizedType == "map") {
-    return LocalInfo::Kind::Map;
+    return LocalInfo::Kind::KeyValueCollection;
   }
   if (normalizedType == "Buffer") {
     return LocalInfo::Kind::Buffer;
@@ -1134,7 +1134,7 @@ LocalInfo::Kind bindingKindFromTransforms(const Expr &expr) {
       return LocalInfo::Kind::Vector;
     }
     if (normalizedName == "map") {
-      return LocalInfo::Kind::Map;
+      return LocalInfo::Kind::KeyValueCollection;
     }
     if (normalizedName == "Buffer") {
       return LocalInfo::Kind::Buffer;

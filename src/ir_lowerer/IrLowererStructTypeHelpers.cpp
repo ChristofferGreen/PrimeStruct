@@ -668,7 +668,7 @@ std::string inferStructPathFromNameExpr(const Expr &expr, const LocalMap &locals
     return localIt->second.structTypeName;
   }
   const bool isMapLikeLocal =
-      localIt->second.kind == LocalInfo::Kind::Map ||
+      localIt->second.kind == LocalInfo::Kind::KeyValueCollection ||
       ((localIt->second.kind == LocalInfo::Kind::Reference || localIt->second.kind == LocalInfo::Kind::Pointer) &&
        (localIt->second.referenceToMap || localIt->second.pointerToMap));
   if (isMapLikeLocal) {

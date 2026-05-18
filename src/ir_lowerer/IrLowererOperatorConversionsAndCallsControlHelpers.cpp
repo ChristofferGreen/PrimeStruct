@@ -227,7 +227,7 @@ bool emitConversionsAndCallsControlExprTail(
       if (left.kind != right.kind) {
         return false;
       }
-      if (left.kind == LocalInfo::Kind::Map) {
+      if (left.kind == LocalInfo::Kind::KeyValueCollection) {
         return left.mapKeyKind == right.mapKeyKind &&
                left.mapValueKind == right.mapValueKind;
       }

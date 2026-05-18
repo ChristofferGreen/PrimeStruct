@@ -562,7 +562,7 @@ TEST_CASE("ir lowerer setup inference helper resolves array and map access kinds
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo mapInfo;
-  mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   mapInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::UInt64;
   locals.emplace("scores", mapInfo);
 
@@ -625,7 +625,7 @@ TEST_CASE("ir lowerer setup inference helper resolves reordered positional acces
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo mapInfo;
-  mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   mapInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::UInt64;
   locals.emplace("values", mapInfo);
 

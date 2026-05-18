@@ -1587,7 +1587,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
             return false;
           }
           if (info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector ||
-              info.kind == LocalInfo::Kind::Map ||
+              info.kind == LocalInfo::Kind::KeyValueCollection ||
               (info.kind == LocalInfo::Kind::Value &&
                isExperimentalVectorStructPath(info.structTypeName))) {
             return true;

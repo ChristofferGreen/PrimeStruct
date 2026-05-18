@@ -220,7 +220,7 @@ TEST_CASE("ir lowerer setup type helper resolves reordered positional access cal
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo mapLocal;
-  mapLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  mapLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   locals.emplace("items", mapLocal);
 
   int resolveCalls = 0;
@@ -290,7 +290,7 @@ TEST_CASE("ir lowerer setup type helper prefers graph facts for reordered access
   staleStringInfo.valueKind = ValueKind::String;
   staleLocals.emplace("key", staleStringInfo);
   primec::ir_lowerer::LocalInfo mapLocal;
-  mapLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  mapLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   staleLocals.emplace("items", mapLocal);
 
   const auto noCountClassifier = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
@@ -406,7 +406,7 @@ TEST_CASE("ir lowerer setup type helper keeps leading collection receiver for po
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo mapLocal;
-  mapLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  mapLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   locals.emplace("items", mapLocal);
   locals.emplace("fallback", mapLocal);
 
@@ -473,7 +473,7 @@ TEST_CASE("ir lowerer setup type helper resolves reordered named access call met
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo mapLocal;
-  mapLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  mapLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   locals.emplace("items", mapLocal);
 
   int resolveCalls = 0;
@@ -538,12 +538,12 @@ TEST_CASE("ir lowerer setup type helper keeps labeled named access receiver lead
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo leadingMapInfo;
-  leadingMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  leadingMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   leadingMapInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   locals.emplace("values", leadingMapInfo);
 
   primec::ir_lowerer::LocalInfo fallbackMapInfo;
-  fallbackMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  fallbackMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   fallbackMapInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
   locals.emplace("fallback", fallbackMapInfo);
 

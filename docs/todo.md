@@ -2159,6 +2159,11 @@ Task template:
       constructor, explicit-helper rewrite, or materialized receiver paths; the
       local dispatch now uses `collections.map_helpers` and
       `collections.map_constructors` metadata wrappers.
+    - 2026-05-18: IR lowerer local-kind taxonomy no longer exposes a
+      map-named enum case. `LocalInfo::Kind::Map` is now the generic
+      `LocalInfo::Kind::KeyValueCollection`, preserving the temporary key/value
+      metadata fields while removing one more direct stdlib map concept from
+      shared lowerer classification.
     - 2026-05-16: Map literal lowering no longer hard-codes the empty
       inferred-map backing path as `/std/collections/experimental_map/Map`;
       it now uses the shared `experimentalCollectionTypePath("map", "Map")`

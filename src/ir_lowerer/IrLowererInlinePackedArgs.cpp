@@ -289,7 +289,7 @@ bool emitInlinePackedCallParameter(
              targetInfo.isSoaVector == paramInfo.isSoaVector;
     }
     if (expectsMap) {
-      return targetInfo.kind == LocalInfo::Kind::Map &&
+      return targetInfo.kind == LocalInfo::Kind::KeyValueCollection &&
              matchesDirectStorageFlag(targetInfo) &&
              targetInfo.mapKeyKind == paramInfo.mapKeyKind &&
              targetInfo.mapValueKind == paramInfo.mapValueKind;
@@ -327,7 +327,7 @@ bool emitInlinePackedCallParameter(
   auto emitPackedValueToLocal = [&](const Expr &argExpr, int32_t destLocal) -> bool {
     Expr rewrittenMapArgExpr;
     const Expr *emittedArgExpr = &argExpr;
-    if (paramInfo.argsPackElementKind == LocalInfo::Kind::Map &&
+    if (paramInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection &&
         paramInfo.structTypeName.empty() &&
         argExpr.kind == Expr::Kind::Call &&
         rewritePublishedMapConstructorExpr(
@@ -339,7 +339,7 @@ bool emitInlinePackedCallParameter(
         paramInfo.argsPackElementKind == LocalInfo::Kind::Buffer ||
         (paramInfo.argsPackElementKind == LocalInfo::Kind::Reference &&
          (paramInfo.referenceToArray || paramInfo.referenceToVector || paramInfo.referenceToMap)) ||
-        paramInfo.argsPackElementKind == LocalInfo::Kind::Map) {
+        paramInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection) {
       if (!emitExpr(*emittedArgExpr, callerLocals)) {
         return false;
       }
@@ -461,7 +461,7 @@ bool emitInlinePackedCallParameter(
         paramInfo.argsPackElementKind == LocalInfo::Kind::Buffer ||
         (paramInfo.argsPackElementKind == LocalInfo::Kind::Reference &&
          (paramInfo.referenceToArray || paramInfo.referenceToVector || paramInfo.referenceToMap)) ||
-        paramInfo.argsPackElementKind == LocalInfo::Kind::Map) {
+        paramInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection) {
       return true;
     }
     if (paramInfo.argsPackElementKind == LocalInfo::Kind::Reference &&
@@ -617,7 +617,7 @@ bool emitInlinePackedCallParameter(
       error = "variadic parameter type mismatch";
       return false;
     }
-    if ((paramInfo.argsPackElementKind == LocalInfo::Kind::Map ||
+    if ((paramInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection ||
          (paramInfo.argsPackElementKind == LocalInfo::Kind::Reference && paramInfo.referenceToMap) ||
          (paramInfo.argsPackElementKind == LocalInfo::Kind::Pointer && paramInfo.pointerToMap)) &&
         (callerIt->second.mapKeyKind != paramInfo.mapKeyKind ||
@@ -667,7 +667,7 @@ bool emitInlinePackedCallParameter(
   };
 
   auto recoverStructPackTypeFromArguments = [&]() -> bool {
-    if (paramInfo.argsPackElementKind != LocalInfo::Kind::Map || !paramInfo.structTypeName.empty()) {
+    if (paramInfo.argsPackElementKind != LocalInfo::Kind::KeyValueCollection || !paramInfo.structTypeName.empty()) {
       return true;
     }
     std::string declaredElementType;
@@ -727,7 +727,7 @@ bool emitInlinePackedCallParameter(
   const bool isStructPack =
       !paramInfo.structTypeName.empty() &&
       (paramInfo.argsPackElementKind == LocalInfo::Kind::Value ||
-       paramInfo.argsPackElementKind == LocalInfo::Kind::Map);
+       paramInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection);
   const bool isWrappedStructPack =
       !paramInfo.structTypeName.empty() &&
       (paramInfo.argsPackElementKind == LocalInfo::Kind::Pointer ||

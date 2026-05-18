@@ -310,7 +310,7 @@ TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for explicit sl
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo valuesLocal;
-  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   valuesLocal.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   locals.emplace("values", valuesLocal);
 
@@ -866,7 +866,7 @@ TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for explicit ma
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo valuesLocal;
-  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   locals.emplace("values", valuesLocal);
 
   std::string error;
@@ -910,7 +910,7 @@ TEST_CASE("ir lowerer setup type helper resolves explicit map count and contains
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo valuesLocal;
-  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   valuesLocal.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   locals.emplace("values", valuesLocal);
 
@@ -1024,7 +1024,7 @@ TEST_CASE("ir lowerer setup type helper keeps explicit map count and contains re
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo valuesLocal;
-  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   locals.emplace("values", valuesLocal);
 
   auto expectResolvedTag = [&](const char *receiverName, const primec::Definition *expectedTagDef) {
@@ -1121,7 +1121,7 @@ TEST_CASE("ir lowerer setup type helper keeps bare map method receiver canonical
 
     primec::ir_lowerer::LocalMap locals;
     primec::ir_lowerer::LocalInfo valuesLocal;
-    valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+    valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
     locals.emplace("values", valuesLocal);
 
     std::string error;
@@ -1188,7 +1188,7 @@ TEST_CASE("ir lowerer setup type helper rejects bare map method receiver alias f
 
     primec::ir_lowerer::LocalMap locals;
     primec::ir_lowerer::LocalInfo valuesLocal;
-    valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+    valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
     locals.emplace("values", valuesLocal);
 
     std::string error;
@@ -1265,7 +1265,7 @@ TEST_CASE("ir lowerer setup type helper keeps explicit map tryAt receiver alias 
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo valuesLocal;
-  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   locals.emplace("values", valuesLocal);
 
   std::string error;

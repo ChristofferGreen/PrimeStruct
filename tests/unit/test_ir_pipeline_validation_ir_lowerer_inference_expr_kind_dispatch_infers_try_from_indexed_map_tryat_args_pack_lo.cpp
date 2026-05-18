@@ -86,7 +86,7 @@ TEST_CASE("ir lowerer inference expr-kind dispatch infers try from indexed map t
   };
 
   primec::ir_lowerer::LocalMap locals;
-  locals.emplace("maps", makeArgsPackInfo(primec::ir_lowerer::LocalInfo::Kind::Map, false, false));
+  locals.emplace("maps", makeArgsPackInfo(primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection, false, false));
   locals.emplace("mapRefs", makeArgsPackInfo(primec::ir_lowerer::LocalInfo::Kind::Reference, true, false));
   locals.emplace("mapPtrs", makeArgsPackInfo(primec::ir_lowerer::LocalInfo::Kind::Pointer, false, true));
 
@@ -279,7 +279,7 @@ TEST_CASE("ir lowerer inference expr-kind dispatch prefers graph-backed indexed 
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo staleMapInfo;
-  staleMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  staleMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   staleMapInfo.mapKeyKind = Kind::Int32;
   staleMapInfo.mapValueKind = Kind::String;
   locals.emplace("values", staleMapInfo);
@@ -492,7 +492,7 @@ TEST_CASE("ir lowerer inference expr-kind dispatch uses semantic map receiver fa
       primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
 
   primec::ir_lowerer::LocalInfo staleMapInfo;
-  staleMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  staleMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   staleMapInfo.mapKeyKind = Kind::Int32;
   staleMapInfo.mapValueKind = Kind::Int32;
 

@@ -214,7 +214,7 @@ TEST_CASE("ir lowerer setup inference helper handles invalid non-math scalar cal
   invalidAssign.args = {mapTarget, nonScalar};
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo mapInfo;
-  mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   mapInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
   locals.emplace("m", mapInfo);
   CHECK(primec::ir_lowerer::inferNonMathScalarCallReturnKind(

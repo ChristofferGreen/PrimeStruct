@@ -51,6 +51,17 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: A single lower-case `Type{...}` value inside an explicitly typed binding initializer must be reinterpreted from binding-shaped parser output to a brace constructor when its name matches the binding type.
 - Evidence: The retained `struct_transforms_11_20` shard failed because `[thing] a{thing{}}` reached block validation as a final binding; `Parser::finalizeBindingInitializer` now rewrites that matching shape and focused parser/semantic regressions cover it.
 
+### lowerer-key-value-collection-kind-is-map-agnostic
+- Updated: 2026-05-18
+- Tags: ir, lowerer, collections
+- Fact: Lowerer locals classify map-shaped collection values with
+  `LocalInfo::Kind::KeyValueCollection`; `LocalInfo::Kind::Map` is retired.
+  Temporary key/value metadata fields still carry the map-backing details
+  until later TODO-4464 slices remove the remaining C++ map substrate.
+- Evidence: The release `PrimeStruct_backend_ir_tests` target rebuilt after
+  the rename, a focused backend IR window passed, and a direct `rg` scan over
+  `include`, `src`, and `tests` found no remaining `LocalInfo::Kind::Map`.
+
 ### map-compatibility-aliases-require-source-definitions
 - Updated: 2026-05-18
 - Tags: semantics, collections, compatibility

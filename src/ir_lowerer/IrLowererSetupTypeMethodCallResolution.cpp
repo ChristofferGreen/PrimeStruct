@@ -464,7 +464,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         return false;
       }
       const LocalInfo &info = localIt->second;
-      return info.kind == LocalInfo::Kind::Map ||
+      return info.kind == LocalInfo::Kind::KeyValueCollection ||
              info.referenceToMap ||
              info.pointerToMap ||
              info.mapKeyKind != LocalInfo::ValueKind::Unknown ||

@@ -331,7 +331,7 @@
           std::string helperName;
           const Expr *receiverExpr = nullptr;
           bool materializedWrappedMapReceiver = false;
-          ir_lowerer::LocalInfo::Kind materializedMapReceiverKind = ir_lowerer::LocalInfo::Kind::Map;
+          ir_lowerer::LocalInfo::Kind materializedMapReceiverKind = ir_lowerer::LocalInfo::Kind::KeyValueCollection;
           auto resolveMaterializedCollectionHelperName =
               [&](const Expr &candidate, std::string &helperNameOut) {
                 helperNameOut.clear();
@@ -613,7 +613,7 @@
             nextLocal += layout.totalSlots;
             materializedInfo.index = nextLocal++;
             materializedInfo.kind = collectionName == "map"
-                                        ? ir_lowerer::LocalInfo::Kind::Map
+                                        ? ir_lowerer::LocalInfo::Kind::KeyValueCollection
                                         : ir_lowerer::LocalInfo::Kind::Value;
             materializedInfo.valueKind = ir_lowerer::LocalInfo::ValueKind::Int64;
             materializedInfo.structTypeName = collectionStructPath;
@@ -650,7 +650,7 @@
             if (collectionArgs.size() == 2) {
               materializedInfo.kind = materializedWrappedMapReceiver
                                           ? materializedMapReceiverKind
-                                          : ir_lowerer::LocalInfo::Kind::Map;
+                                          : ir_lowerer::LocalInfo::Kind::KeyValueCollection;
               materializedInfo.mapKeyKind = ir_lowerer::valueKindFromTypeName(collectionArgs.front());
               materializedInfo.mapValueKind = ir_lowerer::valueKindFromTypeName(collectionArgs.back());
               materializedInfo.valueKind = materializedInfo.mapValueKind;

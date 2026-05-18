@@ -110,7 +110,7 @@
             paramInfo.index = payloadLocal;
             paramInfo.kind = sourceResultInfo.valueCollectionKind;
             paramInfo.valueKind = sourceResultInfo.valueKind;
-            if (sourceResultInfo.valueCollectionKind == LocalInfo::Kind::Map) {
+            if (sourceResultInfo.valueCollectionKind == LocalInfo::Kind::KeyValueCollection) {
               paramInfo.mapKeyKind = sourceResultInfo.valueMapKeyKind;
               paramInfo.mapValueKind = sourceResultInfo.valueKind;
             }
@@ -224,7 +224,7 @@
             paramInfo.index = payloadLocal;
             paramInfo.kind = sourceResultInfo.valueCollectionKind;
             paramInfo.valueKind = sourceResultInfo.valueKind;
-            if (sourceResultInfo.valueCollectionKind == LocalInfo::Kind::Map) {
+            if (sourceResultInfo.valueCollectionKind == LocalInfo::Kind::KeyValueCollection) {
               paramInfo.mapKeyKind = sourceResultInfo.valueMapKeyKind;
               paramInfo.mapValueKind = sourceResultInfo.valueKind;
             }
@@ -394,7 +394,7 @@
             leftParamInfo.index = leftPayloadLocal;
             leftParamInfo.kind = leftResultInfo.valueCollectionKind;
             leftParamInfo.valueKind = leftResultInfo.valueKind;
-            if (leftResultInfo.valueCollectionKind == LocalInfo::Kind::Map) {
+            if (leftResultInfo.valueCollectionKind == LocalInfo::Kind::KeyValueCollection) {
               leftParamInfo.mapKeyKind = leftResultInfo.valueMapKeyKind;
               leftParamInfo.mapValueKind = leftResultInfo.valueKind;
             }
@@ -421,7 +421,7 @@
             rightParamInfo.index = rightPayloadLocal;
             rightParamInfo.kind = rightResultInfo.valueCollectionKind;
             rightParamInfo.valueKind = rightResultInfo.valueKind;
-            if (rightResultInfo.valueCollectionKind == LocalInfo::Kind::Map) {
+            if (rightResultInfo.valueCollectionKind == LocalInfo::Kind::KeyValueCollection) {
               rightParamInfo.mapKeyKind = rightResultInfo.valueMapKeyKind;
               rightParamInfo.mapValueKind = rightResultInfo.valueKind;
             }

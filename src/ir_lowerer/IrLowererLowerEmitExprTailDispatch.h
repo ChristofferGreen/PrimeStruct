@@ -598,14 +598,14 @@
               callExpr.args.front().args.size() == 2;
           if (helperName == "at" &&
               receiverTargetInfo.isArgsPackTarget &&
-              receiverTargetInfo.argsPackElementKind == LocalInfo::Kind::Map) {
+              receiverTargetInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection) {
             rewrittenExpr = callExpr;
             rewrittenExpr.name = "at";
             rewrittenExpr.namespacePrefix.clear();
             return true;
           }
           if (receiverTargetInfo.isArgsPackTarget &&
-              receiverTargetInfo.argsPackElementKind == LocalInfo::Kind::Map &&
+              receiverTargetInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection &&
               !receiverIsIndexedArgsPackElement) {
             return false;
           }

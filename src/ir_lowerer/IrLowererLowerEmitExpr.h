@@ -546,12 +546,12 @@
                     LocalInfo::ValueKind::Unknown) {
                   return false;
                 }
-                collectionKindOut = LocalInfo::Kind::Map;
+                collectionKindOut = LocalInfo::Kind::KeyValueCollection;
               } else {
                 return false;
               }
               collectionValueKindOut = valueKindFromTypeName(
-                  trimTemplateTypeText(collectionKindOut == LocalInfo::Kind::Map ? valueExpr.templateArgs.back()
+                  trimTemplateTypeText(collectionKindOut == LocalInfo::Kind::KeyValueCollection ? valueExpr.templateArgs.back()
                                                                                 : valueExpr.templateArgs.front()));
               return collectionValueKindOut != LocalInfo::ValueKind::Unknown;
             }
@@ -645,7 +645,7 @@
                   LocalInfo::ValueKind::Unknown) {
                 return false;
               }
-              collectionKindOut = LocalInfo::Kind::Map;
+              collectionKindOut = LocalInfo::Kind::KeyValueCollection;
             } else if (declaredCollection == "Buffer") {
               if (declaredCollectionArgs.size() != 1) {
                 return false;
@@ -655,7 +655,7 @@
               return false;
             }
             collectionValueKindOut = valueKindFromTypeName(
-                trimTemplateTypeText(collectionKindOut == LocalInfo::Kind::Map ? declaredCollectionArgs.back()
+                trimTemplateTypeText(collectionKindOut == LocalInfo::Kind::KeyValueCollection ? declaredCollectionArgs.back()
                                                                               : declaredCollectionArgs.front()));
             return collectionValueKindOut != LocalInfo::ValueKind::Unknown;
           };

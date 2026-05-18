@@ -613,7 +613,7 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
     if (!splitTemplateArgs(arg, args) || args.size() != 2) {
       return;
     }
-    infoOut.argsPackElementKind = LocalInfo::Kind::Map;
+    infoOut.argsPackElementKind = LocalInfo::Kind::KeyValueCollection;
     infoOut.mapKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
     infoOut.mapValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
     infoOut.valueKind = infoOut.mapValueKind;

@@ -129,9 +129,20 @@
   while adjacent metadata and semantic collection-specialization checks pass.
 - `PrimeStruct_backend_ir_tests --test-case="ir lowerer binding type helpers classify binding kind and string/fileerror types"`
   has stale source-lock coverage for exact SoA experimental type strings. On
-  2026-05-16 it failed four source-string assertions for
+  2026-05-18 it still failed four source-string assertions for
   `experimental_soa_vector/SoaVector`, while adjacent binding value-kind and
   semantic collection specialization coverage still passes.
+- `PrimeStruct_backend_ir_tests --test-case="ir lowerer setup inference helper resolves reordered named access kinds"`
+  has stale bare-`at` helper expectations after the map stdlib-ownership
+  cutover. On 2026-05-18 the direct helper fixture returned `NotMatched`
+  before resolving the reordered vector receiver because slashless `at` is
+  now visible to the map helper surface rather than acting as a generic
+  collection builtin in that isolated test setup.
+- `PrimeStruct_backend_ir_tests --test-case="ir lowerer setup type helper resolves indexed args-pack pointer map receivers"`
+  has stale bare-`at` helper expectations after the map stdlib-ownership
+  cutover. On 2026-05-18 the indexed args-pack receiver fixture left the
+  method target type empty because the direct `at(values, 0)` probe no longer
+  classifies as the old generic builtin access path in that isolated helper.
 - `PrimeStruct_backend_ir_tests --test-case="ir lowerer call helpers lower explicit map access for args-pack receivers"`
   is stale after the map stdlib-ownership cutover. On 2026-05-16 it failed
   the expected native-tail dispatch and instruction-emission assertions after
@@ -211,6 +222,24 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-18 15:34 CEST | pass | mode: release | command:
+  `git diff --check`;
+  `rg -n 'LocalInfo::Kind::Map|Kind \{ Value, Pointer, Reference, Array, Vector, Map, Buffer \}' include src tests`;
+  `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer binding type helpers prefer semantic collection specialization facts,ir lowerer inline param helper aliases pure map variadic forwarding,ir lowerer count access helpers emit count access calls,ir lowerer result helpers resolve file handle result payload metadata" --no-skip`
+  | failures: none | notes: The lowerer local kind taxonomy now uses
+  `KeyValueCollection` instead of a `Map` enum kind, and the direct source scan
+  found no remaining `LocalInfo::Kind::Map` declarations or uses.
+- 2026-05-18 15:33 CEST | fail | mode: release | command:
+  `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer binding type helpers classify binding kind and string/fileerror types,ir lowerer binding type helpers prefer semantic collection specialization facts,ir lowerer call helpers source delegation stays stable,ir lowerer setup type helper resolves indexed args-pack pointer map receivers,ir lowerer inline param helper aliases pure map variadic forwarding,ir lowerer count access helpers emit count access calls,ir lowerer result helpers resolve file handle result payload metadata,ir lowerer setup inference helper resolves reordered named access kinds" --no-skip`
+  | failures: `ir lowerer call helpers source delegation stays stable`;
+  `ir lowerer setup inference helper resolves reordered named access kinds`;
+  `ir lowerer setup type helper resolves indexed args-pack pointer map
+  receivers`; `ir lowerer binding type helpers classify binding kind and
+  string/fileerror types` | notes: The failing cases are stale source-lock or
+  bare-`at` helper fixtures already isolated from this local-kind rename; the
+  adjacent semantic collection specialization, inline param, count access, and
+  Result metadata checks passed.
 - 2026-05-18 15:05 CEST | pass | mode: release | command:
   `rg -n 'CollectionsMapHelpers|CollectionsMapConstructors|StdlibSurfaceId::CollectionsMap' include src`;
   `rg --pcre2 -n '/?std/collections/map(?:/|")|/?std/collections/experimental_map(?:/|")|(?<![A-Za-z0-9_/])/?map/|\bmap(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bCollectionsMap[A-Za-z0-9_]*\b|\bMap<' include/primec/StdlibSurfaceRegistry.h src/StdlibSurfaceRegistry.cpp`;

@@ -446,7 +446,7 @@ bool inferReturnInferenceBindingIntoLocals(const Expr &bindingExpr,
     return false;
   }
   if (isStringBinding(bindingExpr) && bindingInfo.kind != LocalInfo::Kind::Value &&
-      bindingInfo.kind != LocalInfo::Kind::Map) {
+      bindingInfo.kind != LocalInfo::Kind::KeyValueCollection) {
     error = "native backend does not support string pointers or references";
     return false;
   }

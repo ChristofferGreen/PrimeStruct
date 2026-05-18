@@ -123,7 +123,7 @@ bool runLowerInferenceExprKindCallFallbackSetup(const LowerInferenceExprKindCall
                 kindOut = info.valueKind;
                 return kindOut != LocalInfo::ValueKind::Unknown;
               }
-              if (info.argsPackElementKind == LocalInfo::Kind::Map) {
+              if (info.argsPackElementKind == LocalInfo::Kind::KeyValueCollection) {
                 kindOut = info.mapValueKind;
                 return kindOut != LocalInfo::ValueKind::Unknown;
               }

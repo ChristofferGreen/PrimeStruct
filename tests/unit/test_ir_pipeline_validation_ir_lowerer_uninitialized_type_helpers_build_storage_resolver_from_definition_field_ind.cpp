@@ -326,7 +326,7 @@ TEST_CASE("ir lowerer binding type helpers classify binding kind and string/file
   canonicalMapTransform.name = "/std/collections/map";
   canonicalMapTransform.templateArgs = {"i32", "i64"};
   canonicalMapExpr.transforms.push_back(canonicalMapTransform);
-  CHECK(primec::ir_lowerer::bindingKindFromTransforms(canonicalMapExpr) == primec::ir_lowerer::LocalInfo::Kind::Map);
+  CHECK(primec::ir_lowerer::bindingKindFromTransforms(canonicalMapExpr) == primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection);
 
   primec::Expr defaultExpr;
   CHECK(primec::ir_lowerer::bindingKindFromTransforms(defaultExpr) == primec::ir_lowerer::LocalInfo::Kind::Value);
@@ -441,7 +441,7 @@ TEST_CASE("ir lowerer binding type helpers resolve value kinds from transforms")
   mapTransform.name = "map";
   mapTransform.templateArgs = {"bool", "f64"};
   mapExpr.transforms.push_back(mapTransform);
-  CHECK(primec::ir_lowerer::bindingValueKindFromTransforms(mapExpr, primec::ir_lowerer::LocalInfo::Kind::Map) ==
+  CHECK(primec::ir_lowerer::bindingValueKindFromTransforms(mapExpr, primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection) ==
         primec::ir_lowerer::LocalInfo::ValueKind::Float64);
 
   primec::Expr canonicalMapExpr;
@@ -449,7 +449,7 @@ TEST_CASE("ir lowerer binding type helpers resolve value kinds from transforms")
   canonicalMapTransform.name = "/std/collections/map";
   canonicalMapTransform.templateArgs = {"i32", "f64"};
   canonicalMapExpr.transforms.push_back(canonicalMapTransform);
-  CHECK(primec::ir_lowerer::bindingValueKindFromTransforms(canonicalMapExpr, primec::ir_lowerer::LocalInfo::Kind::Map) ==
+  CHECK(primec::ir_lowerer::bindingValueKindFromTransforms(canonicalMapExpr, primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection) ==
         primec::ir_lowerer::LocalInfo::ValueKind::Float64);
 
   primec::Expr soaVectorValueExpr;
@@ -554,7 +554,7 @@ TEST_CASE("ir lowerer binding type helpers build bundled setup adapters") {
   mapTransform.name = "map";
   mapTransform.templateArgs = {"bool", "f64"};
   mapExpr.transforms.push_back(mapTransform);
-  CHECK(adapters.bindingValueKind(mapExpr, primec::ir_lowerer::LocalInfo::Kind::Map) ==
+  CHECK(adapters.bindingValueKind(mapExpr, primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection) ==
         primec::ir_lowerer::LocalInfo::ValueKind::Float64);
 
   primec::ir_lowerer::LocalInfo info;

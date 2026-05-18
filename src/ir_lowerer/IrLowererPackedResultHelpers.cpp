@@ -320,7 +320,7 @@ bool isSupportedPackedResultValueKind(LocalInfo::ValueKind kind) {
 
 bool isSupportedPackedResultCollectionKind(LocalInfo::Kind kind) {
   return kind == LocalInfo::Kind::Array || kind == LocalInfo::Kind::Vector ||
-         kind == LocalInfo::Kind::Map || kind == LocalInfo::Kind::Buffer;
+         kind == LocalInfo::Kind::KeyValueCollection || kind == LocalInfo::Kind::Buffer;
 }
 
 bool resolveSupportedResultCollectionType(const std::string &typeText,
@@ -356,7 +356,7 @@ bool resolveSupportedResultCollectionType(const std::string &typeText,
     if (args.size() != 2) {
       return false;
     }
-    collectionKindOut = LocalInfo::Kind::Map;
+    collectionKindOut = LocalInfo::Kind::KeyValueCollection;
     const LocalInfo::ValueKind mapKeyKind = valueKindFromTypeName(trimTemplateTypeText(args.front()));
     if (mapKeyKind == LocalInfo::ValueKind::Unknown) {
       return false;
@@ -373,7 +373,7 @@ bool resolveSupportedResultCollectionType(const std::string &typeText,
     return false;
   }
   valueKindOut =
-      valueKindFromTypeName(trimTemplateTypeText(collectionKindOut == LocalInfo::Kind::Map ? args.back() : args.front()));
+      valueKindFromTypeName(trimTemplateTypeText(collectionKindOut == LocalInfo::Kind::KeyValueCollection ? args.back() : args.front()));
   return valueKindOut != LocalInfo::ValueKind::Unknown;
 }
 
@@ -577,7 +577,7 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
       hasSemanticPayloadInfo &&
       isSupportedPackedResultCollectionKind(collectionKind) &&
       collectionValueKind != LocalInfo::ValueKind::Unknown &&
-      (collectionKind != LocalInfo::Kind::Map ||
+      (collectionKind != LocalInfo::Kind::KeyValueCollection ||
        collectionMapKeyKind != LocalInfo::ValueKind::Unknown);
   bool hasCollectionPayload = hasCompleteSemanticCollectionPayload;
   if (!hasCollectionPayload) {
@@ -596,7 +596,7 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
       isSupportedPackedResultCollectionKind(collectionKind)) {
     const Expr *collectionPayloadExpr = &payloadExpr;
     Expr rewrittenMapExpr;
-    if (collectionKind == LocalInfo::Kind::Map &&
+    if (collectionKind == LocalInfo::Kind::KeyValueCollection &&
         rewritePackedResultMapConstructorExpr(
             *collectionPayloadExpr,
             collectionMapKeyKind,

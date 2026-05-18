@@ -193,7 +193,7 @@ LocalInfo::ValueKind inferArrayElementValueKind(
     auto it = localsIn.find(expr.name);
     if (it != localsIn.end()) {
       if (it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector ||
-          it->second.kind == LocalInfo::Kind::Map || it->second.kind == LocalInfo::Kind::Buffer ||
+          it->second.kind == LocalInfo::Kind::KeyValueCollection || it->second.kind == LocalInfo::Kind::Buffer ||
           (it->second.kind == LocalInfo::Kind::Reference &&
            (it->second.referenceToArray || it->second.referenceToVector))) {
         return it->second.valueKind;
@@ -365,7 +365,7 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
       return false;
     }
     const LocalInfo &info = it->second;
-    return info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector || info.kind == LocalInfo::Kind::Map ||
+    return info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector || info.kind == LocalInfo::Kind::KeyValueCollection ||
            (info.kind == LocalInfo::Kind::Reference &&
             (info.referenceToArray || info.referenceToVector || info.referenceToMap)) ||
            (info.kind == LocalInfo::Kind::Pointer && info.pointerToArray) ||
@@ -449,7 +449,7 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
     if (target.kind == Expr::Kind::Name) {
       auto it = localsIn.find(target.name);
       if (it != localsIn.end() &&
-          ((it->second.kind == LocalInfo::Kind::Map) ||
+          ((it->second.kind == LocalInfo::Kind::KeyValueCollection) ||
            (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToMap) ||
            (it->second.kind == LocalInfo::Kind::Pointer && it->second.pointerToMap)) &&
           it->second.mapValueKind != LocalInfo::ValueKind::Unknown) {

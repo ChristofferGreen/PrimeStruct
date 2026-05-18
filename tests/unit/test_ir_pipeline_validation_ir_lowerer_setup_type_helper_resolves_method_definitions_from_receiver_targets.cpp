@@ -845,7 +845,7 @@ TEST_CASE("ir lowerer setup type helper gates bare map receiver probes with sema
 
   primec::ir_lowerer::LocalMap staleMapLocals;
   LocalInfo staleMapInfo;
-  staleMapInfo.kind = LocalInfo::Kind::Map;
+  staleMapInfo.kind = LocalInfo::Kind::KeyValueCollection;
   staleMapInfo.mapKeyKind = ValueKind::Int32;
   staleMapInfo.mapValueKind = ValueKind::Int32;
   staleMapLocals.emplace("values", staleMapInfo);

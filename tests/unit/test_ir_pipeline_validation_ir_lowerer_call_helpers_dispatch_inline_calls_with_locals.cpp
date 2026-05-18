@@ -349,7 +349,7 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
             error) == Result::Emitted);
 
   primec::ir_lowerer::LocalInfo mapInfo;
-  mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   mapInfo.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   mapInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
   locals.emplace("items", mapInfo);
@@ -585,7 +585,7 @@ TEST_CASE("ir lowerer call helpers leave direct experimental map helpers unadapt
   primec::ir_lowerer::LocalMap locals;
 
   LocalInfo mapInfo;
-  mapInfo.kind = LocalInfo::Kind::Map;
+  mapInfo.kind = LocalInfo::Kind::KeyValueCollection;
   mapInfo.mapKeyKind = LocalInfo::ValueKind::String;
   mapInfo.mapValueKind = LocalInfo::ValueKind::Int32;
   mapInfo.structTypeName = "/std/collections/experimental_map/Map__td48f7c0fb764e3c0";
@@ -649,7 +649,7 @@ TEST_CASE("ir lowerer call helpers inline direct canonical map count-like helper
   primec::ir_lowerer::LocalMap locals;
 
   LocalInfo mapInfo;
-  mapInfo.kind = LocalInfo::Kind::Map;
+  mapInfo.kind = LocalInfo::Kind::KeyValueCollection;
   mapInfo.mapKeyKind = LocalInfo::ValueKind::Int32;
   mapInfo.mapValueKind = LocalInfo::ValueKind::Int64;
   locals.emplace("values", mapInfo);

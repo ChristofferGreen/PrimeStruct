@@ -612,7 +612,7 @@ TEST_CASE("ir lowerer result helpers resolve function-returned map Result payloa
     infoOut.isResult = true;
     infoOut.resultHasValue = true;
     infoOut.resultValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-    infoOut.resultValueCollectionKind = primec::ir_lowerer::LocalInfo::Kind::Map;
+    infoOut.resultValueCollectionKind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
     infoOut.resultValueMapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
     infoOut.resultErrorType = "FileError";
     return true;
@@ -626,7 +626,7 @@ TEST_CASE("ir lowerer result helpers resolve function-returned map Result payloa
       makeValuesExpr, {}, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
   CHECK(out.isResult);
   CHECK(out.hasValue);
-  CHECK(out.valueCollectionKind == primec::ir_lowerer::LocalInfo::Kind::Map);
+  CHECK(out.valueCollectionKind == primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection);
   CHECK(out.valueMapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(out.errorType == "FileError");

@@ -980,7 +980,7 @@
           return false;
         }
         auto isDirectMapStorageLocal = [](const LocalInfo &info) {
-          return info.kind == LocalInfo::Kind::Map ||
+          return info.kind == LocalInfo::Kind::KeyValueCollection ||
                  (info.kind == LocalInfo::Kind::Value &&
                   info.mapKeyKind != LocalInfo::ValueKind::Unknown &&
                   info.mapValueKind != LocalInfo::ValueKind::Unknown);

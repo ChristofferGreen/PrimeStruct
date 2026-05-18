@@ -557,7 +557,7 @@ TEST_CASE("ir lowerer setup type helper resolves indexed args-pack map receivers
   LocalInfo valuesLocal;
   valuesLocal.kind = LocalInfo::Kind::Array;
   valuesLocal.isArgsPack = true;
-  valuesLocal.argsPackElementKind = LocalInfo::Kind::Map;
+  valuesLocal.argsPackElementKind = LocalInfo::Kind::KeyValueCollection;
   valuesLocal.mapKeyKind = ValueKind::Int32;
   valuesLocal.mapValueKind = ValueKind::Int32;
   valuesLocal.valueKind = ValueKind::Int32;

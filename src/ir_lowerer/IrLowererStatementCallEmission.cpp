@@ -1155,13 +1155,13 @@ static bool rewriteMapInsertHelperStatementToCanonical(
       auto localIt = localsIn.find(canonicalReceiverExpr->name);
       if (localIt != localsIn.end()) {
         const LocalInfo &localInfo = localIt->second;
-        const bool directMap = localInfo.kind == LocalInfo::Kind::Map;
+        const bool directMap = localInfo.kind == LocalInfo::Kind::KeyValueCollection;
         const bool wrappedMap =
             (localInfo.kind == LocalInfo::Kind::Reference && localInfo.referenceToMap) ||
             (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToMap);
         const bool argsPackMap =
             localInfo.isArgsPack &&
-            (localInfo.argsPackElementKind == LocalInfo::Kind::Map ||
+            (localInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection ||
              (localInfo.argsPackElementKind == LocalInfo::Kind::Reference && localInfo.referenceToMap) ||
              (localInfo.argsPackElementKind == LocalInfo::Kind::Pointer && localInfo.pointerToMap));
         if (directMap || wrappedMap || argsPackMap) {

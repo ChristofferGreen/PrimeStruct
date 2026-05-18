@@ -585,7 +585,7 @@ TEST_CASE("ir lowerer setup type helper rejects slash-path map methods from expr
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo valuesLocal;
-  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   locals.emplace("values", valuesLocal);
 
   auto expectUnknownMethod = [&](const char *methodName, const std::vector<primec::Expr> &args,
@@ -656,7 +656,7 @@ TEST_CASE("ir lowerer setup type helper rejects canonical fallback for explicit 
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo valuesLocal;
-  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   locals.emplace("values", valuesLocal);
 
   auto expectUnknownMethod = [&](const char *methodName, const char *expectedError) {
@@ -718,7 +718,7 @@ TEST_CASE("ir lowerer setup type helper prefers canonical bare map contains and 
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo valuesLocal;
-  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   locals.emplace("values", valuesLocal);
 
   auto expectResolvedMethod = [&](const char *methodName, const primec::Definition *expected) {
@@ -778,7 +778,7 @@ TEST_CASE("ir lowerer setup type helper rejects explicit map contains and tryAt 
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo valuesLocal;
-  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   locals.emplace("values", valuesLocal);
 
   auto expectUnknownMethod = [&](const char *methodName, const char *expectedError) {

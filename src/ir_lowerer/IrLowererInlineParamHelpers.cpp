@@ -337,11 +337,11 @@ bool isMapLikeStructTypeName(const std::string &structTypeName) {
 
 bool shouldRewriteMapReferenceReceiverForParam(const LocalInfo &paramInfo) {
   if (paramInfo.structTypeName.empty()) {
-    return paramInfo.kind == LocalInfo::Kind::Map ||
+    return paramInfo.kind == LocalInfo::Kind::KeyValueCollection ||
            ((paramInfo.kind == LocalInfo::Kind::Reference || paramInfo.kind == LocalInfo::Kind::Pointer) &&
             (paramInfo.referenceToMap || paramInfo.pointerToMap));
   }
-  if (paramInfo.kind == LocalInfo::Kind::Map) {
+  if (paramInfo.kind == LocalInfo::Kind::KeyValueCollection) {
     return true;
   }
   if (paramInfo.kind == LocalInfo::Kind::Value || paramInfo.kind == LocalInfo::Kind::Reference ||
@@ -647,7 +647,7 @@ bool emitInlineDefinitionCallParameters(
         (paramInfo.isArgsPack || !packedArgs.empty() || orderedArg == nullptr);
     const bool reserveIndexEarly =
         isPackedParam ||
-        paramInfo.kind != LocalInfo::Kind::Map ||
+        paramInfo.kind != LocalInfo::Kind::KeyValueCollection ||
         !paramInfo.structTypeName.empty();
     if (reserveIndexEarly) {
       paramInfo.index = nextLocal++;
@@ -764,7 +764,7 @@ bool emitInlineDefinitionCallParameters(
       }
       LocalInfo aliasedParamInfo = paramInfo;
       aliasedParamInfo.kind = LocalInfo::Kind::Reference;
-      if (paramInfo.kind == LocalInfo::Kind::Map) {
+      if (paramInfo.kind == LocalInfo::Kind::KeyValueCollection) {
         aliasedParamInfo.referenceToMap = true;
       }
       calleeLocals.emplace(param.name, aliasedParamInfo);
@@ -773,7 +773,7 @@ bool emitInlineDefinitionCallParameters(
     }
 
     if ((paramInfo.kind == LocalInfo::Kind::Value ||
-         paramInfo.kind == LocalInfo::Kind::Map) &&
+         paramInfo.kind == LocalInfo::Kind::KeyValueCollection) &&
         paramInfo.isMutable && !paramInfo.isFileHandle &&
         !paramInfo.structTypeName.empty()) {
       if (!orderedArg) {
@@ -805,7 +805,7 @@ bool emitInlineDefinitionCallParameters(
               return true;
             }
             if ((it->second.kind == LocalInfo::Kind::Value ||
-                 it->second.kind == LocalInfo::Kind::Map) &&
+                 it->second.kind == LocalInfo::Kind::KeyValueCollection) &&
                 !it->second.structTypeName.empty()) {
               emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
               return true;
@@ -825,13 +825,13 @@ bool emitInlineDefinitionCallParameters(
     }
 
     if ((paramInfo.kind == LocalInfo::Kind::Value ||
-         paramInfo.kind == LocalInfo::Kind::Map) &&
+         paramInfo.kind == LocalInfo::Kind::KeyValueCollection) &&
         !paramInfo.isMutable && !paramInfo.isFileHandle &&
         !paramInfo.structTypeName.empty() && orderedArg != nullptr &&
         orderedArg->kind == Expr::Kind::Name) {
       auto argIt = callerLocals.find(orderedArg->name);
       if (argIt != callerLocals.end() &&
-          argIt->second.kind == LocalInfo::Kind::Map &&
+          argIt->second.kind == LocalInfo::Kind::KeyValueCollection &&
           isStructParamMatch(calleePath, paramInfo.structTypeName, argIt->second.structTypeName) &&
           (paramInfo.mapKeyKind == LocalInfo::ValueKind::Unknown ||
            paramInfo.mapKeyKind == argIt->second.mapKeyKind) &&
@@ -845,7 +845,7 @@ bool emitInlineDefinitionCallParameters(
     }
 
     if ((paramInfo.kind == LocalInfo::Kind::Value ||
-         paramInfo.kind == LocalInfo::Kind::Map) &&
+         paramInfo.kind == LocalInfo::Kind::KeyValueCollection) &&
         !paramInfo.isFileHandle && !paramInfo.structTypeName.empty()) {
       if (!orderedArg) {
         error = "argument count mismatch";
@@ -965,7 +965,7 @@ bool emitInlineDefinitionCallParameters(
               return true;
             }
             if ((it->second.kind == LocalInfo::Kind::Value ||
-                 it->second.kind == LocalInfo::Kind::Map) &&
+                 it->second.kind == LocalInfo::Kind::KeyValueCollection) &&
                 !it->second.structTypeName.empty()) {
               emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
               return true;
@@ -1065,7 +1065,7 @@ bool emitInlineDefinitionCallParameters(
     Expr rewrittenMapArgExpr;
     const Expr *emittedArgExpr = orderedArg;
     Expr rewrittenMapReferenceArgExpr;
-    if (paramInfo.kind == LocalInfo::Kind::Map &&
+    if (paramInfo.kind == LocalInfo::Kind::KeyValueCollection &&
         paramInfo.structTypeName.empty() &&
         orderedArg->kind == Expr::Kind::Call &&
         rewritePublishedMapConstructorExpr(

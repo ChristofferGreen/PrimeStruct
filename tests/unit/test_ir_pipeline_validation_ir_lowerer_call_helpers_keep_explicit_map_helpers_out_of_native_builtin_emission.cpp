@@ -46,7 +46,7 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
 
   primec::ir_lowerer::LocalMap locals;
   LocalInfo mapInfo;
-  mapInfo.kind = LocalInfo::Kind::Map;
+  mapInfo.kind = LocalInfo::Kind::KeyValueCollection;
   mapInfo.index = 7;
   mapInfo.mapKeyKind = LocalInfo::ValueKind::Int32;
   mapInfo.mapValueKind = LocalInfo::ValueKind::Int64;
@@ -363,7 +363,7 @@ TEST_CASE("ir lowerer call helpers lower explicit map access for args-pack recei
   LocalInfo valuesInfo;
   valuesInfo.index = 5;
   valuesInfo.isArgsPack = true;
-  valuesInfo.argsPackElementKind = LocalInfo::Kind::Map;
+  valuesInfo.argsPackElementKind = LocalInfo::Kind::KeyValueCollection;
   valuesInfo.mapKeyKind = LocalInfo::ValueKind::Int32;
   valuesInfo.mapValueKind = LocalInfo::ValueKind::Int64;
   locals.emplace("values", valuesInfo);

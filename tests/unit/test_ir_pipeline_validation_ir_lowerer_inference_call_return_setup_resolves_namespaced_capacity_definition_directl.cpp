@@ -204,7 +204,7 @@ TEST_CASE("ir lowerer inference call-return setup uses semantic access receiver 
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo staleLocal;
-  staleLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  staleLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   staleLocal.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   staleLocal.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
   locals.emplace("values", staleLocal);
@@ -348,7 +348,7 @@ TEST_CASE("ir lowerer inference call-return setup uses semantic access stale fac
     }
     const auto localIt = localsIn.find(methodExpr.args.front().name);
     if (localIt == localsIn.end() ||
-        localIt->second.kind != primec::ir_lowerer::LocalInfo::Kind::Map) {
+        localIt->second.kind != primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection) {
       return nullptr;
     }
     ++staleMapResolutions;
@@ -374,7 +374,7 @@ TEST_CASE("ir lowerer inference call-return setup uses semantic access stale fac
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo staleMapLocal;
-  staleMapLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  staleMapLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   staleMapLocal.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   staleMapLocal.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
   locals.emplace("candidate", staleMapLocal);
@@ -469,7 +469,7 @@ TEST_CASE("ir lowerer inference call-return setup uses semantic contains receive
     }
     const auto localIt = localsIn.find(methodExpr.args.front().name);
     if (localIt == localsIn.end() ||
-        localIt->second.kind != primec::ir_lowerer::LocalInfo::Kind::Map) {
+        localIt->second.kind != primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection) {
       return nullptr;
     }
     ++staleMapResolutions;
@@ -495,7 +495,7 @@ TEST_CASE("ir lowerer inference call-return setup uses semantic contains receive
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo staleMapLocal;
-  staleMapLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  staleMapLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   staleMapLocal.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   staleMapLocal.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
   locals.emplace("candidate", staleMapLocal);
@@ -590,7 +590,7 @@ TEST_CASE("ir lowerer inference call-return setup uses semantic count receiver f
     }
     const auto localIt = localsIn.find(methodExpr.args.front().name);
     if (localIt == localsIn.end() ||
-        localIt->second.kind != primec::ir_lowerer::LocalInfo::Kind::Map) {
+        localIt->second.kind != primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection) {
       return nullptr;
     }
     ++staleMapResolutions;
@@ -611,7 +611,7 @@ TEST_CASE("ir lowerer inference call-return setup uses semantic count receiver f
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo staleMapLocal;
-  staleMapLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  staleMapLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   staleMapLocal.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   staleMapLocal.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
   locals.emplace("candidate", staleMapLocal);
@@ -875,7 +875,7 @@ TEST_CASE("ir lowerer inference call-return setup uses semantic unresolved built
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo staleMapLocal;
-  staleMapLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  staleMapLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   staleMapLocal.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
   locals.emplace("values", staleMapLocal);
 
@@ -1511,7 +1511,7 @@ TEST_CASE("ir lowerer inference call-return setup rejects explicit map access al
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo valuesLocal;
-  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   locals.emplace("values", valuesLocal);
 
   primec::Expr keyExpr;

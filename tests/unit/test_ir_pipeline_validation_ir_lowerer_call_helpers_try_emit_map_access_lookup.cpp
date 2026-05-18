@@ -15,7 +15,7 @@ TEST_CASE("ir lowerer call helpers try emit map access lookup") {
 
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo mapInfo;
-  mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   mapInfo.mapKeyKind = Kind::Int32;
   mapInfo.mapValueKind = Kind::Float64;
   locals.emplace(targetExpr.name, mapInfo);
@@ -93,7 +93,7 @@ TEST_CASE("ir lowerer call helpers try emit map access lookup") {
   error.clear();
   primec::ir_lowerer::LocalMap untypedLocals;
   primec::ir_lowerer::LocalInfo untypedMapInfo;
-  untypedMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  untypedMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::KeyValueCollection;
   untypedMapInfo.mapKeyKind = Kind::Unknown;
   untypedMapInfo.mapValueKind = Kind::Int32;
   untypedLocals.emplace(targetExpr.name, untypedMapInfo);

@@ -698,7 +698,7 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
   };
   auto populateFromDirectLocal = [&](const LocalInfo &localInfo, bool dereferenced) {
     const bool inferredWrappedMap = hasInferredTypedWrappedMap(localInfo, localInfo.kind);
-    if (localInfo.kind != LocalInfo::Kind::Map &&
+    if (localInfo.kind != LocalInfo::Kind::KeyValueCollection &&
         !(localInfo.kind == LocalInfo::Kind::Reference && localInfo.referenceToMap) &&
         !(localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToMap) &&
         !inferredWrappedMap) {
@@ -736,7 +736,7 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
         (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToMap) ||
         inferredWrappedMap;
     info.isWrappedMapTarget = isWrappedMap && !dereferenced;
-    const bool isDirectMapStorage = localInfo.kind == LocalInfo::Kind::Map;
+    const bool isDirectMapStorage = localInfo.kind == LocalInfo::Kind::KeyValueCollection;
     const std::string resolvedStructTypeName =
         resolvedExperimentalMapStructPath(localInfo.structTypeName);
     const bool preserveDirectExperimentalMapStruct =
@@ -776,7 +776,7 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
       }
       return structTypeName;
     };
-    const bool isDirectMap = localInfo.argsPackElementKind == LocalInfo::Kind::Map;
+    const bool isDirectMap = localInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection;
     const bool inferredWrappedMap =
         hasInferredTypedWrappedMap(localInfo, localInfo.argsPackElementKind);
     const bool isWrappedMap =
@@ -791,7 +791,7 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
     info.mapValueKind = localInfo.mapValueKind;
     info.isWrappedMapTarget = isWrappedMap && !dereferenced;
     const bool isDirectMapStorage =
-        localInfo.argsPackElementKind == LocalInfo::Kind::Map;
+        localInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection;
     const std::string resolvedStructTypeName =
         resolvedExperimentalMapStructPath(localInfo.structTypeName);
     const bool preserveDirectExperimentalMapStruct =
@@ -1089,7 +1089,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     if (localInfo.isArgsPack) {
       const bool isInlineStructPack =
           (localInfo.argsPackElementKind == LocalInfo::Kind::Value ||
-           localInfo.argsPackElementKind == LocalInfo::Kind::Map) &&
+           localInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection) &&
           !localInfo.structTypeName.empty() &&
           localInfo.structSlotCount > 0;
       return isInlineStructPack ? localInfo.structSlotCount : 1;
@@ -1118,7 +1118,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
           dereferenced && localInfo.argsPackElementKind == LocalInfo::Kind::Vector;
       return true;
     }
-    if (localInfo.argsPackElementKind == LocalInfo::Kind::Map) {
+    if (localInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection) {
       info.isArrayOrVectorTarget = true;
       info.isVectorTarget = false;
       info.isMapTarget = true;
@@ -1144,7 +1144,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     }
     if (!localInfo.structTypeName.empty() &&
         (localInfo.argsPackElementKind == LocalInfo::Kind::Value ||
-         localInfo.argsPackElementKind == LocalInfo::Kind::Map)) {
+         localInfo.argsPackElementKind == LocalInfo::Kind::KeyValueCollection)) {
       info.isArrayOrVectorTarget = true;
       info.isVectorTarget = false;
       return true;

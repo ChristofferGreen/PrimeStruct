@@ -421,7 +421,7 @@ bool populateBindingTypeInfoFromTypeText(
     if (!splitTemplateArgs(argText, args) || args.size() != 2) {
       return false;
     }
-    infoOut.kind = LocalInfo::Kind::Map;
+    infoOut.kind = LocalInfo::Kind::KeyValueCollection;
     infoOut.mapKeyKind = valueKindFromTypeName(trimTemplateTypeText(args[0]));
     infoOut.mapValueKind = valueKindFromTypeName(trimTemplateTypeText(args[1]));
     infoOut.valueKind = infoOut.mapValueKind;
@@ -586,7 +586,7 @@ bool populateBindingTypeInfoFromTypeText(
     LocalInfo::ValueKind keyKind = LocalInfo::ValueKind::Unknown;
     LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
     if (resolveSpecializedExperimentalMapTypeKinds(normalizedTypeText, resolveDefinitionCall, keyKind, valueKind)) {
-      infoOut.kind = LocalInfo::Kind::Map;
+      infoOut.kind = LocalInfo::Kind::KeyValueCollection;
       infoOut.mapKeyKind = keyKind;
       infoOut.mapValueKind = valueKind;
       infoOut.valueKind = valueKind;
@@ -698,7 +698,7 @@ bool inferExprBindingTypeInfo(const Expr &expr,
     if (thenInfo.kind != elseInfo.kind) {
       return false;
     }
-    if (thenInfo.kind == LocalInfo::Kind::Map) {
+    if (thenInfo.kind == LocalInfo::Kind::KeyValueCollection) {
       if (thenInfo.mapKeyKind != elseInfo.mapKeyKind || thenInfo.mapValueKind != elseInfo.mapValueKind) {
         return false;
       }
@@ -743,7 +743,7 @@ bool inferExprBindingTypeInfo(const Expr &expr,
       return true;
     }
     if (collection == "map" && expr.templateArgs.size() == 2) {
-      infoOut.kind = LocalInfo::Kind::Map;
+      infoOut.kind = LocalInfo::Kind::KeyValueCollection;
       infoOut.mapKeyKind = valueKindFromTypeName(trimTemplateTypeText(expr.templateArgs[0]));
       infoOut.mapValueKind = valueKindFromTypeName(trimTemplateTypeText(expr.templateArgs[1]));
       infoOut.valueKind = infoOut.mapValueKind;
@@ -874,7 +874,7 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
           } else if (collection == "vector") {
             info.kind = LocalInfo::Kind::Vector;
           } else if (collection == "map") {
-            info.kind = LocalInfo::Kind::Map;
+            info.kind = LocalInfo::Kind::KeyValueCollection;
           }
         }
       }
@@ -907,7 +907,7 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
     }
   }
 
-  if (info.kind == LocalInfo::Kind::Map) {
+  if (info.kind == LocalInfo::Kind::KeyValueCollection) {
     if (hasExplicitType) {
       for (const auto &transform : stmt.transforms) {
         const std::string normalizedName = normalizeDeclaredCollectionTypeBase(transform.name);
@@ -934,14 +934,14 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
         }
       }
     } else if (init.kind == Expr::Kind::Name) {
-      if (hasSemanticInitBindingInfo && semanticInitInfo.kind == LocalInfo::Kind::Map) {
+      if (hasSemanticInitBindingInfo && semanticInitInfo.kind == LocalInfo::Kind::KeyValueCollection) {
         info.mapKeyKind = semanticInitInfo.mapKeyKind;
         info.mapValueKind = semanticInitInfo.mapValueKind;
         if (info.structTypeName.empty()) {
           info.structTypeName = semanticInitInfo.structTypeName;
         }
       } else if (auto it = localsIn.find(init.name);
-                 it != localsIn.end() && it->second.kind == LocalInfo::Kind::Map) {
+                 it != localsIn.end() && it->second.kind == LocalInfo::Kind::KeyValueCollection) {
         info.mapKeyKind = it->second.mapKeyKind;
         info.mapValueKind = it->second.mapValueKind;
         if (info.structTypeName.empty()) {
@@ -1027,7 +1027,7 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
       info.valueKind = declaredValueKind;
     }
     if (info.valueKind == LocalInfo::ValueKind::Unknown &&
-        info.kind == LocalInfo::Kind::Map) {
+        info.kind == LocalInfo::Kind::KeyValueCollection) {
       info.valueKind = info.mapValueKind;
     }
     return info;
@@ -1278,7 +1278,7 @@ bool inferCallParameterLocalInfo(const Expr &param,
     }
   }
 
-  if (infoOut.kind == LocalInfo::Kind::Map) {
+  if (infoOut.kind == LocalInfo::Kind::KeyValueCollection) {
     for (const auto &transform : param.transforms) {
       const std::string normalizedName = normalizeDeclaredCollectionTypeBase(transform.name);
       if (normalizedName == "map" && transform.templateArgs.size() == 2) {
@@ -1332,7 +1332,7 @@ bool inferCallParameterLocalInfo(const Expr &param,
                 resolveDefinitionCallFn,
                 infoOut.resultValueMapKeyKind,
                 infoOut.resultValueKind)) {
-          infoOut.resultValueCollectionKind = LocalInfo::Kind::Map;
+          infoOut.resultValueCollectionKind = LocalInfo::Kind::KeyValueCollection;
         } else if (infoOut.resultValueCollectionKind == LocalInfo::Kind::Value) {
           LocalInfo resultValueInfo;
           if (applyErrorTypeMetadata(transform.templateArgs.front(), resultValueInfo) &&
@@ -1593,7 +1593,7 @@ bool inferCallParameterLocalInfo(const Expr &param,
   if (!isStringBindingFn(param)) {
     return true;
   }
-  if (infoOut.kind != LocalInfo::Kind::Value && infoOut.kind != LocalInfo::Kind::Map) {
+  if (infoOut.kind != LocalInfo::Kind::Value && infoOut.kind != LocalInfo::Kind::KeyValueCollection) {
     error = "native backend does not support string pointers or references";
     return false;
   }
@@ -1653,7 +1653,7 @@ bool selectUninitializedStorageZeroInstruction(LocalInfo::Kind kind,
                                                std::string &error) {
   zeroOp = IrOpcode::PushI32;
   zeroImm = 0;
-  if (kind == LocalInfo::Kind::Array || kind == LocalInfo::Kind::Vector || kind == LocalInfo::Kind::Map ||
+  if (kind == LocalInfo::Kind::Array || kind == LocalInfo::Kind::Vector || kind == LocalInfo::Kind::KeyValueCollection ||
       kind == LocalInfo::Kind::Buffer) {
     zeroOp = IrOpcode::PushI64;
     return true;

@@ -4,7 +4,7 @@
 struct LocalInfo {
   int32_t index = 0;
   bool isMutable = false;
-  enum class Kind { Value, Pointer, Reference, Array, Vector, Map, Buffer } kind = Kind::Value;
+  enum class Kind { Value, Pointer, Reference, Array, Vector, KeyValueCollection, Buffer } kind = Kind::Value;
   enum class ValueKind { Unknown, Int32, Int64, UInt64, Float32, Float64, Bool, String } valueKind = ValueKind::Unknown;
   std::string structTypeName;
   int32_t structFieldCount = 0;
