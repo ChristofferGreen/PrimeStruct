@@ -572,7 +572,7 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalVectorHelperCall(
   return true;
 }
 
-bool SemanticsValidator::tryRewriteCanonicalExperimentalMapHelperCall(
+bool SemanticsValidator::tryRewriteCanonicalExperimentalKeyValueHelperCall(
     const Expr &candidate,
     const BuiltinCollectionDispatchResolvers &dispatchResolvers,
     Expr &rewrittenOut) const {
@@ -741,7 +741,7 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalMapHelperCall(
   return true;
 }
 
-bool SemanticsValidator::explicitCanonicalExperimentalMapBorrowedHelperPath(
+bool SemanticsValidator::explicitCanonicalExperimentalKeyValueBorrowedHelperPath(
     const Expr &candidate,
     const BuiltinCollectionDispatchResolvers &dispatchResolvers,
     std::string &resolvedPathOut) const {

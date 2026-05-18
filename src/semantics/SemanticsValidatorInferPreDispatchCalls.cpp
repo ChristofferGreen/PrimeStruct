@@ -270,7 +270,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
   }
   Expr rewrittenCanonicalExperimentalKeyValueHelperCall;
   if (!expr.isMethodCall &&
-      tryRewriteCanonicalExperimentalMapHelperCall(
+      tryRewriteCanonicalExperimentalKeyValueHelperCall(
           expr,
           builtinCollectionDispatchResolvers,
           rewrittenCanonicalExperimentalKeyValueHelperCall)) {
@@ -279,7 +279,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
   }
   std::string borrowedExplicitCanonicalExperimentalKeyValueHelperPath;
   if (!expr.isMethodCall &&
-      explicitCanonicalExperimentalMapBorrowedHelperPath(
+      explicitCanonicalExperimentalKeyValueBorrowedHelperPath(
           expr,
           builtinCollectionDispatchResolvers,
           borrowedExplicitCanonicalExperimentalKeyValueHelperPath)) {

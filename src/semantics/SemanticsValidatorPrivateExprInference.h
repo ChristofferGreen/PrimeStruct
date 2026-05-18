@@ -160,7 +160,7 @@
                                       std::string_view helperName,
                                       const BuiltinCollectionDispatchResolvers &dispatchResolvers,
                                       Expr &rewrittenOut) const;
-  bool tryRewriteCanonicalExperimentalMapHelperCall(
+  bool tryRewriteCanonicalExperimentalKeyValueHelperCall(
       const Expr &candidate,
       const BuiltinCollectionDispatchResolvers &dispatchResolvers,
       Expr &rewrittenOut) const;
@@ -168,7 +168,7 @@
       const Expr &candidate,
       const BuiltinCollectionDispatchResolvers &dispatchResolvers,
       Expr &rewrittenOut) const;
-  bool explicitCanonicalExperimentalMapBorrowedHelperPath(
+  bool explicitCanonicalExperimentalKeyValueBorrowedHelperPath(
       const Expr &candidate,
       const BuiltinCollectionDispatchResolvers &dispatchResolvers,
       std::string &resolvedPathOut) const;

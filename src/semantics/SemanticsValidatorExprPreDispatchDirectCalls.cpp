@@ -554,7 +554,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
   }
 
   Expr rewrittenCanonicalExperimentalKeyValueHelperCall;
-  if (this->tryRewriteCanonicalExperimentalMapHelperCall(
+  if (this->tryRewriteCanonicalExperimentalKeyValueHelperCall(
           expr, dispatchBootstrap.dispatchResolvers,
           rewrittenCanonicalExperimentalKeyValueHelperCall)) {
     rewrittenExprOut = rewrittenCanonicalExperimentalKeyValueHelperCall;
@@ -563,7 +563,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
 
   std::string borrowedCanonicalExperimentalKeyValueHelperPath;
   if (!expr.isMethodCall &&
-      this->explicitCanonicalExperimentalMapBorrowedHelperPath(
+      this->explicitCanonicalExperimentalKeyValueBorrowedHelperPath(
           expr, dispatchBootstrap.dispatchResolvers,
           borrowedCanonicalExperimentalKeyValueHelperPath)) {
     return failPreDispatchDirectCallDiagnostic(

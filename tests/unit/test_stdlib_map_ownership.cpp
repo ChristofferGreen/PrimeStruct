@@ -784,6 +784,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(privateExprInferenceSource.find("specializedExperimentalMapHelperTarget") ==
         std::string::npos);
   CHECK(privateExprInferenceSource.find(
+            "tryRewriteCanonicalExperimentalMapHelperCall") ==
+        std::string::npos);
+  CHECK(privateExprInferenceSource.find(
+            "explicitCanonicalExperimentalMapBorrowedHelperPath") ==
+        std::string::npos);
+  CHECK(privateExprInferenceSource.find(
             "preferredExperimentalKeyValueHelperTarget") !=
         std::string::npos);
   CHECK(privateExprInferenceSource.find(
@@ -801,6 +807,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(privateExprInferenceSource.find(
             "specializedExperimentalKeyValueHelperTarget") !=
+        std::string::npos);
+  CHECK(privateExprInferenceSource.find(
+            "tryRewriteCanonicalExperimentalKeyValueHelperCall") !=
+        std::string::npos);
+  CHECK(privateExprInferenceSource.find(
+            "explicitCanonicalExperimentalKeyValueBorrowedHelperPath") !=
         std::string::npos);
   CHECK(templateCoreSource.find("name == \"/map\"") == std::string::npos);
   CHECK(templateCoreSource.find("name == \"std/collections/map\"") ==
@@ -1149,6 +1161,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
             "borrowedExplicitCanonicalExperimentalMapHelperPath") ==
         std::string::npos);
   CHECK(inferPreDispatchCallsSource.find(
+            "tryRewriteCanonicalExperimentalMapHelperCall") ==
+        std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find(
+            "explicitCanonicalExperimentalMapBorrowedHelperPath") ==
+        std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find(
             "canonicalizeExperimentalMapHelperResolvedPath") ==
         std::string::npos);
   CHECK(inferPreDispatchCallsSource.find(
@@ -1170,6 +1188,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(inferPreDispatchCallsSource.find(
             "borrowedExplicitCanonicalExperimentalKeyValueHelperPath") !=
+        std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find(
+            "tryRewriteCanonicalExperimentalKeyValueHelperCall") !=
+        std::string::npos);
+  CHECK(inferPreDispatchCallsSource.find(
+            "explicitCanonicalExperimentalKeyValueBorrowedHelperPath") !=
         std::string::npos);
   CHECK(inferPreDispatchCallsSource.find(
             "canonicalizeExperimentalKeyValueHelperResolvedPath") !=
@@ -1236,6 +1260,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
             "borrowedCanonicalExperimentalMapHelperPath") ==
         std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find(
+            "tryRewriteCanonicalExperimentalMapHelperCall") ==
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find(
+            "explicitCanonicalExperimentalMapBorrowedHelperPath") ==
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find(
             "canonicalizeExperimentalMapHelperResolvedPath") ==
         std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find(
@@ -1249,6 +1279,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find(
             "borrowedCanonicalExperimentalKeyValueHelperPath") !=
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find(
+            "tryRewriteCanonicalExperimentalKeyValueHelperCall") !=
+        std::string::npos);
+  CHECK(exprPreDispatchDirectCallsSource.find(
+            "explicitCanonicalExperimentalKeyValueBorrowedHelperPath") !=
         std::string::npos);
   CHECK(exprPreDispatchDirectCallsSource.find(
             "canonicalizeExperimentalKeyValueHelperResolvedPath") !=
@@ -1298,6 +1334,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find("specializedExperimentalMapHelperTarget") ==
         std::string::npos);
+  CHECK(collectionHelperRewritesSource.find(
+            "tryRewriteCanonicalExperimentalMapHelperCall") ==
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find(
+            "explicitCanonicalExperimentalMapBorrowedHelperPath") ==
+        std::string::npos);
   CHECK(collectionHelperRewritesSource.find("hasVisibleMapHelperFamily") ==
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find("collectionRewriteKeyValueHelperMetadata()") !=
@@ -1318,6 +1360,12 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find(
             "specializedExperimentalKeyValueHelperTarget") !=
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find(
+            "tryRewriteCanonicalExperimentalKeyValueHelperCall") !=
+        std::string::npos);
+  CHECK(collectionHelperRewritesSource.find(
+            "explicitCanonicalExperimentalKeyValueBorrowedHelperPath") !=
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find("hasVisibleKeyValueHelperFamily") !=
         std::string::npos);
