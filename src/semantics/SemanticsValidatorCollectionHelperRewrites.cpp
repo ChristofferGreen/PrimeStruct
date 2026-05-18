@@ -645,7 +645,8 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalMapHelperCall(
     }();
     directExperimentalKeyValueHelperSpelling =
         explicitTarget.rfind(experimentalCollectionConstructorRootLocal("map"), 0) == 0;
-    if (!canonicalExperimentalMapHelperPath(resolvedOrExplicitPath, canonicalPath, helperName)) {
+    if (!canonicalExperimentalKeyValueHelperPath(
+            resolvedOrExplicitPath, canonicalPath, helperName)) {
       return false;
     }
     const bool alreadyCanonicalDirectCall =
@@ -754,7 +755,8 @@ bool SemanticsValidator::explicitCanonicalExperimentalMapBorrowedHelperPath(
     }
     return explicitCallPathForCandidate(candidate);
   }();
-  if (!canonicalExperimentalMapHelperPath(resolvedOrExplicitPath, resolvedPathOut, helperName)) {
+  if (!canonicalExperimentalKeyValueHelperPath(
+          resolvedOrExplicitPath, resolvedPathOut, helperName)) {
     return false;
   }
   if (helperName.size() >= std::string_view("_ref").size() &&

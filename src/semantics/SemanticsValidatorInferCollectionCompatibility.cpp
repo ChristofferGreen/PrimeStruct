@@ -509,9 +509,10 @@ bool SemanticsValidator::canonicalExperimentalVectorHelperPath(
   return !canonicalPathOut.empty();
 }
 
-bool SemanticsValidator::canonicalExperimentalMapHelperPath(const std::string &resolvedPath,
-                                                            std::string &canonicalPathOut,
-                                                            std::string &helperNameOut) const {
+bool SemanticsValidator::canonicalExperimentalKeyValueHelperPath(
+    const std::string &resolvedPath,
+    std::string &canonicalPathOut,
+    std::string &helperNameOut) const {
   if (!resolveCanonicalCompatibilityKeyValueHelperNameFromResolvedPath(
           resolvedPath, helperNameOut)) {
     canonicalPathOut.clear();
@@ -522,8 +523,9 @@ bool SemanticsValidator::canonicalExperimentalMapHelperPath(const std::string &r
   return !canonicalPathOut.empty();
 }
 
-bool SemanticsValidator::canonicalizeExperimentalMapHelperResolvedPath(const std::string &resolvedPath,
-                                                                       std::string &canonicalPathOut) const {
+bool SemanticsValidator::canonicalizeExperimentalKeyValueHelperResolvedPath(
+    const std::string &resolvedPath,
+    std::string &canonicalPathOut) const {
   canonicalPathOut.clear();
   if (resolvedPath.rfind(experimentalCollectionConstructorRootLocal("map"), 0) != 0) {
     return false;
@@ -547,7 +549,7 @@ bool SemanticsValidator::canonicalizeExperimentalMapHelperResolvedPath(const std
   return !canonicalPathOut.empty();
 }
 
-bool SemanticsValidator::shouldLogicalCanonicalizeDefinedExperimentalMapHelperPath(
+bool SemanticsValidator::shouldLogicalCanonicalizeDefinedExperimentalKeyValueHelperPath(
     const std::string &resolvedPath) const {
   if (resolvedPath.rfind(experimentalCollectionConstructorRootLocal("map"), 0) != 0) {
     return false;

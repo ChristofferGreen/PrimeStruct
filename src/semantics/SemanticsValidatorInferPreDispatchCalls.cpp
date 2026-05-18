@@ -262,8 +262,9 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
   std::string canonicalExperimentalKeyValueHelperResolved;
   if (!expr.isMethodCall &&
       (defMap_.count(resolvedCallee) == 0 ||
-       shouldLogicalCanonicalizeDefinedExperimentalMapHelperPath(resolvedCallee)) &&
-      canonicalizeExperimentalMapHelperResolvedPath(
+       shouldLogicalCanonicalizeDefinedExperimentalKeyValueHelperPath(
+           resolvedCallee)) &&
+      canonicalizeExperimentalKeyValueHelperResolvedPath(
           resolvedCallee, canonicalExperimentalKeyValueHelperResolved)) {
     resolvedCallee = canonicalExperimentalKeyValueHelperResolved;
   }
@@ -445,7 +446,7 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
       methodResolved = preferVectorStdlibHelperPath(methodResolved);
       std::string logicalMethodResolved = methodResolved;
       std::string canonicalMethodResolved;
-      if (canonicalizeExperimentalMapHelperResolvedPath(
+      if (canonicalizeExperimentalKeyValueHelperResolvedPath(
               methodResolved, canonicalMethodResolved)) {
         logicalMethodResolved = canonicalMethodResolved;
       }

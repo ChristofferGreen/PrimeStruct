@@ -61,12 +61,14 @@
       std::string_view helperName) const;
   std::string preferredCanonicalExperimentalKeyValueHelperTarget(
       std::string_view helperName) const;
-  bool canonicalExperimentalMapHelperPath(const std::string &resolvedPath,
-                                          std::string &canonicalPathOut,
-                                          std::string &helperNameOut) const;
-  bool canonicalizeExperimentalMapHelperResolvedPath(const std::string &resolvedPath,
-                                                     std::string &canonicalPathOut) const;
-  bool shouldLogicalCanonicalizeDefinedExperimentalMapHelperPath(
+  bool canonicalExperimentalKeyValueHelperPath(
+      const std::string &resolvedPath,
+      std::string &canonicalPathOut,
+      std::string &helperNameOut) const;
+  bool canonicalizeExperimentalKeyValueHelperResolvedPath(
+      const std::string &resolvedPath,
+      std::string &canonicalPathOut) const;
+  bool shouldLogicalCanonicalizeDefinedExperimentalKeyValueHelperPath(
       const std::string &resolvedPath) const;
   bool shouldBuiltinValidateCurrentMapWrapperHelper(std::string_view helperName) const;
   std::string mapNamespacedMethodCompatibilityPath(
