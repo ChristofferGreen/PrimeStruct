@@ -1384,7 +1384,10 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inferDefinitionSource.find("resolvedPath == \"/std/collections/map/at\"") ==
         std::string::npos);
   CHECK(inferDefinitionSource.find(
-            "isInferDefinitionCanonicalMapAccessHelperPath(resolvedCandidatePath)") !=
+            "isInferDefinitionCanonicalMapAccessHelperPath(resolvedCandidatePath)") ==
+        std::string::npos);
+  CHECK(inferDefinitionSource.find(
+            "isInferDefinitionCanonicalKeyValueAccessHelperPath(resolvedCandidatePath)") !=
         std::string::npos);
   CHECK(inferDefinitionSource.find(
             "metadataBackedMapHelperMethodName(resolvedCandidatePath)") !=

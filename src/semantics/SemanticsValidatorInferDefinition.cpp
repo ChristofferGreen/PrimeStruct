@@ -5,7 +5,7 @@ namespace primec::semantics {
 
 namespace {
 
-bool isInferDefinitionCanonicalMapAccessHelperPath(std::string_view path) {
+bool isInferDefinitionCanonicalKeyValueAccessHelperPath(std::string_view path) {
   const StdlibSurfaceMetadata *metadata = mapHelperSurfaceMetadataLocal();
   if (metadata == nullptr || path.empty()) {
     return false;
@@ -109,11 +109,11 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
     const std::string resolvedCandidatePath = resolveCalleePath(candidate);
     if (candidate.kind == Expr::Kind::Call && candidate.isMethodCall &&
         (getBuiltinArrayAccessName(candidate, builtinAccessName) ||
-         isInferDefinitionCanonicalMapAccessHelperPath(resolvedCandidatePath))) {
+         isInferDefinitionCanonicalKeyValueAccessHelperPath(resolvedCandidatePath))) {
       if (builtinAccessName.empty()) {
         builtinAccessName = metadataBackedMapHelperMethodName(resolvedCandidatePath);
       }
-      if (isInferDefinitionCanonicalMapAccessHelperPath(resolvedCandidatePath)) {
+      if (isInferDefinitionCanonicalKeyValueAccessHelperPath(resolvedCandidatePath)) {
         return true;
       }
     }
