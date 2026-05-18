@@ -550,6 +550,9 @@ Task template:
   and rewritten parser-shaped map access receivers now derive canonical map
   helper paths and prefixes through collection path helpers instead of direct
   map path strings.
+  Semantic vector helper method-target normalization now derives published map
+  helper member names through stdlib surface metadata instead of direct
+  `map/` and `std/collections/map/` prefix stripping.
   Result metadata direct map constructor recognition now derives rooted and
   unrooted canonical map constructor paths through collection path helpers
   instead of direct map path strings.

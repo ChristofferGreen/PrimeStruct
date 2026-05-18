@@ -174,6 +174,9 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   const std::string inferPreDispatchCallsSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorInferPreDispatchCalls.cpp");
+  const std::string exprVectorHelpersSource =
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorExprVectorHelpers.cpp");
   const std::string collectionHelperRewritesSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorCollectionHelperRewrites.cpp");
@@ -344,6 +347,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   REQUIRE(!inferMethodResolutionSource.empty());
   REQUIRE(!inferMethodResolutionHelpersSource.empty());
   REQUIRE(!inferPreDispatchCallsSource.empty());
+  REQUIRE(!exprVectorHelpersSource.empty());
   REQUIRE(!collectionHelperRewritesSource.empty());
   REQUIRE(!effectFreeCollectionsSource.empty());
   REQUIRE(!buildParametersSource.empty());
@@ -597,6 +601,13 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
   CHECK(inferPreDispatchCallsSource.find("isUnrootedMapHelperSurfacePath") !=
         std::string::npos);
   CHECK(inferPreDispatchCallsSource.find("metadataBackedMapHelperRootAliasMethodName") !=
+        std::string::npos);
+  CHECK(exprVectorHelpersSource.find("std/collections/map/") ==
+        std::string::npos);
+  CHECK(exprVectorHelpersSource.find("normalizedHelperName.rfind(\"map/\", 0)") ==
+        std::string::npos);
+  CHECK(exprVectorHelpersSource.find(
+            "metadataBackedMapHelperMethodName(normalizedHelperName)") !=
         std::string::npos);
   CHECK(collectionHelperRewritesSource.find("const std::string alias = \"/map/\" + std::string(helperName)") ==
         std::string::npos);

@@ -146,7 +146,6 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     const std::string &helperName,
     std::string &resolvedOut) {
   resolvedOut.clear();
-  const std::string rawHelperName = helperName;
   std::string normalizedHelperName = helperName;
   if (!normalizedHelperName.empty() && normalizedHelperName.front() == '/') {
     normalizedHelperName.erase(normalizedHelperName.begin());
@@ -166,10 +165,10 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
                                        &soaHelperName,
                                        nullptr)) {
     normalizedHelperName = soaHelperName;
-  } else if (normalizedHelperName.rfind("std/collections/map/", 0) == 0) {
-    normalizedHelperName.erase(0, std::string("std/collections/map/").size());
-  } else if (normalizedHelperName.rfind("map/", 0) == 0) {
-    normalizedHelperName.erase(0, std::string("map/").size());
+  } else if (const std::string mapHelperName =
+                 metadataBackedMapHelperMethodName(normalizedHelperName);
+             mapHelperName != normalizedHelperName) {
+    normalizedHelperName = mapHelperName;
   }
   auto explicitCallPath = [](const Expr &callExpr) -> std::string {
     if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall ||
