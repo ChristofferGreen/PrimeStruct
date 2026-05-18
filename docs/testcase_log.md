@@ -184,6 +184,18 @@
   of `nullptr`.
 
 ## Recent Test Runs
+- 2026-05-18 09:31 CEST | pass | mode: release | command:
+  `cmake --build build-release --target PrimeStruct_semantics_tests`;
+  `cd build-release && ./PrimeStruct_semantics_tests --test-case="map method calls resolve to definitions,imported map size method calls resolve to local definitions,rooted map helper aliases use ordinary explicit path diagnostics,map namespaced count method expression body arguments validate through stdlib helper target,map namespaced at method expression body arguments validate through slash-path target" --no-skip`;
+  `cmake --build build-release --target PrimeStruct_misc_tests`;
+  `cd build-release && ./PrimeStruct_misc_tests --test-suite=primestruct.stdlib.map_ownership --no-skip`;
+  `rg -n 'std/collections/map|experimental_map|/map/|CollectionsMap|map(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bMap<' src/semantics/SemanticsValidatorExprMethodTargetResolution.cpp`;
+  `rg --pcre2 -n '/?std/collections/map(?:/|")|/?std/collections/experimental_map(?:/|")|(?<![A-Za-z0-9_/])/?map/|\bmap(?:At|AtUnsafe|Contains|Count|Double|Empty|FromEntries|Insert|New|Oct|Pair|Quad|Quint|Sept|Sext|Single|Triple|TryAt)(?:Ref)?\b|\bMap__|\bEntry__|\bCollectionsMap[A-Za-z0-9_]*\b|\bMap<' src/semantics/SemanticsValidatorExprMethodTargetResolution.cpp` |
+  failures: none | notes: method-target resolution now derives map helper
+  surface identity, rooted import-alias helper paths, and explicit-root
+  detection through `collections.map_helpers` metadata; the edited C++ file has
+  zero targeted map-surface matches. The Python inventory scripts were
+  intentionally not run in this pass.
 - 2026-05-18 09:24 CEST | pass | mode: release | command:
   `cmake --build build-release --target PrimeStruct_backend_ir_tests`;
   `cd build-release && ./PrimeStruct_backend_ir_tests --test-case="ir lowerer collection helper rewrite guards explicit map defs,ir lowerer call helpers keep lowered collection helper paths reachable via published surface ids,native tail and late collection helper metadata dispatch stays source locked" --no-skip`;

@@ -562,6 +562,18 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation") {
         std::string::npos);
   CHECK(methodTargetResolutionSource.find("candidate.rfind(\"map/\", 0)") ==
         std::string::npos);
+  CHECK(methodTargetResolutionSource.find("StdlibSurfaceId::CollectionsMapHelpers") ==
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("explicitMapHelperPath.rfind(\"/map/\", 0)") ==
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("normalized == \"map/count\"") ==
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("rootedMapHelperAliasPathForMethodTargets(") !=
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("rootAliasMapHelperNameForMethodTargets(") !=
+        std::string::npos);
+  CHECK(methodTargetResolutionSource.find("isRootedMapHelperAliasPathForMethodTargets(") !=
+        std::string::npos);
   CHECK(methodTargetResolutionSource.find(
             "metadataBackedMapHelperRootAliasMethodName(candidate)") !=
         std::string::npos);

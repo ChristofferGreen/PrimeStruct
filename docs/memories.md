@@ -717,7 +717,11 @@ This file stores durable session-derived facts that are useful in later work. Ke
   through as ordinary unresolved calls; lower emit-expression tail dispatch
   should derive map helper surface IDs and import-alias helper checks through
   `collections.map_helpers` metadata instead of direct map surface enum
-  constants or raw rooted alias string checks.
+  constants or raw rooted alias string checks; semantic method-target
+  resolution should derive canonical map helper IDs, root-alias helper paths,
+  direct-call compatibility helper names, and explicit rooted-helper detection
+  from `collections.map_helpers` metadata instead of direct map surface IDs,
+  literal rooted helper tables, or raw rooted path-prefix checks.
   The stale
   rooted-alias struct-return semantic fixture now expects `values.at()` to use
   the canonical map helper return type instead of a user-defined `/map/at`

@@ -2342,6 +2342,12 @@ Task template:
       rooted map alias string check; it now resolves the map helper surface ID
       and alias helper recognition through `collections.map_helpers` metadata,
       with the file inventory cap reduced to zero.
+    - 2026-05-18: Semantic method-target resolution no longer names the map
+      helper surface ID directly, no longer carries a literal rooted map helper
+      table, and no longer probes explicit rooted map helper paths through raw
+      string-prefix checks; it now derives those decisions from
+      `collections.map_helpers` metadata, with the file inventory cap reduced
+      to zero.
     - 2026-05-16: Inline native map helper recognition no longer names
       `StdlibSurfaceId::CollectionsMapHelpers` directly; it now resolves the
       helper family through `collections.map_helpers` metadata.
